@@ -26,7 +26,7 @@ class Scale
     static auto constexpr kCols     = NestedType::kCols;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Scale(ScalarType k, NestedType const& A) : k(k), A(A) {}
+    PBAT_HOST_DEVICE Scale(ScalarType _k, NestedType const& _A) : k(_k), A(_A) {}
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return k * A(i, j); }
 

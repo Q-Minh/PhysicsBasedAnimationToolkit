@@ -3,33 +3,33 @@
 #include <cstddef>
 #include <pbat/gpu/geometry/Aabb.h>
 #include <pbat/gpu/geometry/SweepAndPrune.h>
-#include <pybind11/eigen.h>
+#include <nanobind/eigen/dense.h>
 
 namespace pbat {
 namespace py {
 namespace gpu {
 namespace geometry {
 
-void BindSweepAndPrune([[maybe_unused]] pybind11::module& m)
+void BindSweepAndPrune([[maybe_unused]] nanobind::module_& m)
 {
 #ifdef PBAT_USE_CUDA
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     using namespace pbat::gpu::geometry;
     using pbat::gpu::common::Buffer;
-    pyb::class_<SweepAndPrune>(m, "SweepAndPrune")
-        .def(pyb::init<std::size_t, std::size_t>(), pyb::arg("max_boxes"), pyb::arg("max_overlaps"))
+    nb::class_<SweepAndPrune>(m, "SweepAndPrune")
+        .def(nb::init<std::size_t, std::size_t>(), nb::arg("max_boxes"), nb::arg("max_overlaps"))
         .def(
             "sort_and_sweep",
             [](SweepAndPrune& sap, Aabb& aabbs) { return sap.SortAndSweep(aabbs); },
-            pyb::arg("aabbs"),
+            nb::arg("aabbs"),
             "Detect all overlaps between bounding boxes in aabbs.")
         .def(
             "sort_and_sweep",
             [](SweepAndPrune& sap, Buffer const& set, Aabb& aabbs) {
                 return sap.SortAndSweep(set, aabbs);
             },
-            pyb::arg("set"),
-            pyb::arg("aabbs"),
+            nb::arg("set"),
+            nb::arg("aabbs"),
             "Detect all overlaps between bounding boxes of subsets S1 (of size n) and S2 (of size "
             "#aabbs-n) of aabbs.\n"
             "Args:\n"

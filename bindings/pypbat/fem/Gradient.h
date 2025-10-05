@@ -1,13 +1,13 @@
 #ifndef PYPBAT_FEM_GRADIENT_H
 #define PYPBAT_FEM_GRADIENT_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindGradient(pybind11::module& m);
+void BindGradient(nanobind::module_& m);
 
 } // namespace fem
 } // namespace py

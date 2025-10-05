@@ -39,5 +39,5 @@ set_target_properties(PhysicsBasedAnimationToolkit_Tests
     EXPORT_NAME "Tests"
 )
 
-include(doctest)
+include(${PBAT_DOCTEST_MODULES_DIR}/doctest.cmake)
 doctest_discover_tests(PhysicsBasedAnimationToolkit_Tests)

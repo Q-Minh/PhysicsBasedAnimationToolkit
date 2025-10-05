@@ -52,22 +52,22 @@ class TriangleAabbHierarchy3D : public BoundingVolumeHierarchy<
      * @param C `3x|# triangles|` matrix of cell vertex indices
      * @param maxPointsInLeaf Maximum number of simplices in a leaf node
      */
-    TriangleAabbHierarchy3D(
+    PBAT_API TriangleAabbHierarchy3D(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& C,
-        std::size_t maxPointsInLeaf = 10ULL);
+        Index maxPointsInLeaf = 10);
     /**
      * @brief Returns the primitive at index p
      * @param p Index of the primitive
      * @return The primitive at index p
      */
-    PrimitiveType Primitive(Index p) const;
+    PBAT_API PrimitiveType Primitive(Index p) const;
     /**
      * @brief Returns the location of the primitive
      * @param primitive The primitive
      * @return The location of the primitive
      */
-    Vector<kDims> PrimitiveLocation(PrimitiveType const& primitive) const;
+    PBAT_API Vector<kDims> PrimitiveLocation(PrimitiveType const& primitive) const;
     /**
      * @brief Returns the bounding volume of the primitive
      * @tparam RPrimitiveIndices Index range type
@@ -79,7 +79,7 @@ class TriangleAabbHierarchy3D : public BoundingVolumeHierarchy<
     /**
      * @brief Updates the AABBs
      */
-    void Update();
+    PBAT_API void Update();
     /**
      * @brief Returns the overlapping primitives of this BVH and another BVH
      * @param bvh The other BVH
@@ -87,7 +87,7 @@ class TriangleAabbHierarchy3D : public BoundingVolumeHierarchy<
      * @return `2x|# overlaps|` matrix `O` of overlapping primitive pairs s.t. primitives `O(0,o)`
      * in this bvh, and `O(1,o)` in the other bvh overlap.
      */
-    IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
+    PBAT_API IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
     /**
      * @brief For each point in P, returns the index of the primitive containing it
      * @tparam TDerivedP Eigen matrix type
@@ -275,22 +275,22 @@ class TriangleAabbHierarchy2D : public BoundingVolumeHierarchy<
      * @param C `3x|# triangles|` matrix of cell vertex indices
      * @param maxPointsInLeaf Maximum number of simplices in a leaf node
      */
-    TriangleAabbHierarchy2D(
+    PBAT_API TriangleAabbHierarchy2D(
         Eigen::Ref<MatrixX const> const& V,
         Eigen::Ref<IndexMatrixX const> const& C,
-        std::size_t maxPointsInLeaf = 10ULL);
+        Index maxPointsInLeaf = 10);
     /**
      * @brief Returns the primitive at index p
      * @param p Index of the primitive
      * @return The primitive at index p
      */
-    PrimitiveType Primitive(Index p) const;
+    PBAT_API PrimitiveType Primitive(Index p) const;
     /**
      * @brief Returns the location of the primitive
      * @param primitive The primitive
      * @return The location of the primitive
      */
-    Vector<kDims> PrimitiveLocation(PrimitiveType const& primitive) const;
+    PBAT_API Vector<kDims> PrimitiveLocation(PrimitiveType const& primitive) const;
     /**
      * @brief Returns the bounding volume of the primitive
      * @tparam RPrimitiveIndices Index range type
@@ -302,7 +302,7 @@ class TriangleAabbHierarchy2D : public BoundingVolumeHierarchy<
     /**
      * @brief Updates the AABBs
      */
-    void Update();
+    PBAT_API void Update();
     /**
      * @brief Returns the overlapping primitives of this BVH and another BVH
      * @param bvh The other BVH
@@ -310,7 +310,7 @@ class TriangleAabbHierarchy2D : public BoundingVolumeHierarchy<
      * @return `2x|# overlaps|` matrix `O` of overlapping primitive pairs s.t. primitives `O(0,o)`
      * in this bvh, and `O(1,o)` in the other bvh overlap.
      */
-    IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
+    PBAT_API IndexMatrixX OverlappingPrimitives(SelfType const& bvh, std::size_t reserve = 1000ULL) const;
     /**
      * @brief For each point in P, returns the index of the primitive containing it
      * @tparam TDerivedP Eigen matrix type
@@ -405,9 +405,9 @@ inline IndexVectorX TriangleAabbHierarchy2D::PrimitivesContainingPoints(
 }
 
 template <class TDerivedP>
-inline std::pair<IndexVectorX, VectorX> TriangleAabbHierarchy2D::NearestPrimitivesToPoints(
+inline auto TriangleAabbHierarchy2D::NearestPrimitivesToPoints(
     Eigen::MatrixBase<TDerivedP> const& P,
-    bool bParallelize) const
+    bool bParallelize) const -> std::pair<IndexVectorX, VectorX>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.TriangleAabbHierarchy2D.NearestPrimitivesToPoints");
     using math::linalg::mini::FromEigen;
@@ -442,7 +442,7 @@ inline std::pair<IndexVectorX, VectorX> TriangleAabbHierarchy2D::NearestPrimitiv
         for (auto i = 0; i < P.cols(); ++i)
             FindNearestPrimitive(i);
     }
-    return {p, d};
+    return std::make_pair(p, d);
 }
 
 } // namespace pbat::geometry

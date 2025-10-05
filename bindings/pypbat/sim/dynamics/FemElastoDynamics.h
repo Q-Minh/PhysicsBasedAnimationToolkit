@@ -1,0 +1,23 @@
+/**
+ * @file FemElastoDynamics.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2025-09-25
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
+#ifndef PYPBAT_SIM_DYNAMICS_FEMELASTODYNAMICS_H
+#define PYPBAT_SIM_DYNAMICS_FEMELASTODYNAMICS_H
+
+#include <nanobind/nanobind.h>
+
+namespace pbat::py::sim::dynamics {
+
+void BindFemElastoDynamics(nanobind::module_& m);
+
+} // namespace pbat::py::sim::dynamics
+
+#endif // PYPBAT_SIM_DYNAMICS_FEMELASTODYNAMICS_H

@@ -1,13 +1,13 @@
 #ifndef PYPBAT_GRAPH_ADJACENCY_H
 #define PYPBAT_GRAPH_ADJACENCY_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace graph {
 
-void BindAdjacency(pybind11::module& m);
+void BindAdjacency(nanobind::module_& m);
 
 } // namespace graph
 } // namespace py

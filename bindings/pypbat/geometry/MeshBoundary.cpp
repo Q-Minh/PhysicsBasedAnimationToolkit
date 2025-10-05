@@ -1,23 +1,23 @@
 #include "MeshBoundary.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/tuple.h>
 #include <pbat/geometry/MeshBoundary.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 
 namespace pbat {
 namespace py {
 namespace geometry {
 
-void BindMeshBoundary(pybind11::module& m)
+void BindMeshBoundary(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     m.def(
         "simplex_mesh_boundary",
         [](Eigen::Ref<IndexMatrixX const> const& C, Index n) {
             return pbat::geometry::SimplexMeshBoundary(C, n);
         },
-        pyb::arg("C"),
-        pyb::arg("n") = Index(-1),
+        nb::arg("C"),
+        nb::arg("n") = Index(-1),
         "Extracts the boundary of simplex mesh with n vertices and simplices C.\n"
         "Args:\n"
         "C (np.ndarray): |#simplex vertices|x|#simplices| array of simplices. Only triangles "

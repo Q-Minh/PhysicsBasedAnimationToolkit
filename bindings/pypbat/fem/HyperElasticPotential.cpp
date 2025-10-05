@@ -1,525 +1,190 @@
 #include "HyperElasticPotential.h"
 
-#include "Mesh.h"
-
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/tuple.h>
+#include <pbat/fem/Hexahedron.h>
 #include <pbat/fem/HyperElasticPotential.h>
+#include <pbat/physics/Enums.h>
 #include <pbat/physics/SaintVenantKirchhoffEnergy.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
-#include <pybind11/eigen.h>
 #include <tuple>
-#include <type_traits>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
 template <class Func>
-inline void HepApplyToMesh(int meshDims, int meshOrder, EElement meshElement, Func&& f)
+inline void ApplyToElementInDimsWithHyperElasticEnergy(
+    EElement eElement,
+    int order,
+    int dims,
+    pbat::physics::EHyperElasticEnergy eEnergy,
+    Func f)
 {
-    using namespace pbat::fem;
-    using namespace pbat::common;
-    ForValues<1, 2, 3>([&]<auto Order>() {
-        ForTypes<Line<Order>, Triangle<Order>, Quadrilateral<Order>, Tetrahedron<Order>>(
-            [&]<CElement ElementType>() {
-                EElement const eElementCandidate = []() {
-                    if constexpr (std::is_same_v<ElementType, Line<Order>>)
-                        return EElement::Line;
-                    if constexpr (std::is_same_v<ElementType, Triangle<Order>>)
-                        return EElement::Triangle;
-                    if constexpr (std::is_same_v<ElementType, Quadrilateral<Order>>)
-                        return EElement::Quadrilateral;
-                    if constexpr (std::is_same_v<ElementType, Tetrahedron<Order>>)
-                        return EElement::Tetrahedron;
-                }();
-
-                auto constexpr DimsIn = ElementType::kDims;
-                if ((meshOrder == Order) and (meshDims == DimsIn) and
-                    (meshElement == eElementCandidate))
-                {
-                    using MeshType = pbat::fem::Mesh<ElementType, DimsIn>;
-                    f.template operator()<MeshType>();
-                }
-            });
-    });
-
-    // Elasticity can't handle cubic (or higher) hexahedra, because elastic hessians are stored on
-    // the stack, and 3rd (or higher) order hexahedra have too many DOFs for the stack to allocate.
-    ForValues<1, 2>([&]<auto Order>() {
-        ForTypes<Hexahedron<Order>>([&]<CElement ElementType>() {
-            EElement const eElementCandidate = EElement::Hexahedron;
-
-            auto constexpr DimsIn = ElementType::kDims;
-            if ((meshOrder == Order) and (meshDims == DimsIn) and
-                (meshElement == eElementCandidate))
-            {
-                using MeshType = pbat::fem::Mesh<ElementType, DimsIn>;
-                f.template operator()<MeshType>();
+    ApplyToElementInDims(eElement, order, dims, [&]<pbat::fem::CElement ElementType, int Dims>() {
+        switch (eEnergy)
+        {
+            case pbat::physics::EHyperElasticEnergy::SaintVenantKirchhoff: {
+                using EnergyType = pbat::physics::SaintVenantKirchhoffEnergy<Dims>;
+                // clang-format off
+                f.template operator()<ElementType, Dims, EnergyType>();
+                // clang-format on
+                break;
             }
-        });
+            case pbat::physics::EHyperElasticEnergy::StableNeoHookean: {
+                using EnergyType = pbat::physics::StableNeoHookeanEnergy<Dims>;
+                // clang-format off
+                f.template operator()<ElementType, Dims, EnergyType>();
+                // clang-format on
+                break;
+            }
+            default: break;
+        }
     });
 }
 
-enum class EHyperElasticEnergy { SaintVenantKirchhoff, StableNeoHookean };
-
-class HyperElasticPotential
+void BindHyperElasticPotential(nanobind::module_& m)
 {
-  public:
-    HyperElasticPotential(
-        Mesh const& M,
-        Eigen::Ref<IndexVectorX const> const& eg,
-        Eigen::Ref<VectorX const> const& wg,
-        Eigen::Ref<MatrixX const> const& GNeg,
-        Scalar Y,
-        Scalar nu,
-        EHyperElasticEnergy eHyperElasticEnergy);
-
-    HyperElasticPotential(
-        Mesh const& M,
-        Eigen::Ref<IndexVectorX const> const& eg,
-        Eigen::Ref<VectorX const> const& wg,
-        Eigen::Ref<MatrixX const> const& GNeg,
-        Eigen::Ref<MatrixX const> const& Y,
-        Eigen::Ref<MatrixX const> const& nu,
-        EHyperElasticEnergy eHyperElasticEnergy);
-
-    HyperElasticPotential(HyperElasticPotential&& other);
-    HyperElasticPotential& operator=(HyperElasticPotential&& other);
-
-    HyperElasticPotential(HyperElasticPotential const&)            = delete;
-    HyperElasticPotential& operator=(HyperElasticPotential const&) = delete;
-
-    template <class Func>
-    void Apply(Func&& f) const;
-
-    void PrecomputeHessianSparsity();
-
-    void ComputeElementElasticity(
-        Eigen::Ref<VectorX const> const& x,
-        bool bWithGradient,
-        bool bWithHessian,
-        bool bWithSpdProjection);
-
-    Scalar Eval() const;
-    VectorX ToVector() const;
-    CSCMatrix ToMatrix() const;
-    std::tuple<Index, Index> Shape() const;
-
-    VectorX const& mug() const;
-    VectorX& mug();
-
-    VectorX const& lambdag() const;
-    VectorX& lambdag();
-
-    MatrixX const& Hessians() const;
-    MatrixX& Hessians();
-
-    MatrixX const& Gradients() const;
-    MatrixX& Gradients();
-
-    VectorX const& Potentials() const;
-    VectorX& Potentials();
-
-    ~HyperElasticPotential();
-
-    EElement eMeshElement;
-    int mMeshDims;
-    int mMeshOrder;
-    EHyperElasticEnergy eHyperElasticEnergy;
-    int mDims;
-
-  private:
-    void* mHyperElasticPotential;
-};
-
-void BindHyperElasticPotential(pybind11::module& m)
-{
-    namespace pyb = pybind11;
-
-    pyb::enum_<EHyperElasticEnergy>(m, "HyperElasticEnergy")
-        .value("SaintVenantKirchhoff", EHyperElasticEnergy::SaintVenantKirchhoff)
-        .value("StableNeoHookean", EHyperElasticEnergy::StableNeoHookean)
+    namespace nb = nanobind;
+    nb::enum_<pbat::physics::EHyperElasticEnergy>(m, "HyperElasticEnergy")
+        .value("SaintVenantKirchhoff", pbat::physics::EHyperElasticEnergy::SaintVenantKirchhoff)
+        .value("StableNeoHookean", pbat::physics::EHyperElasticEnergy::StableNeoHookean)
         .export_values();
 
-    pyb::class_<HyperElasticPotential>(m, "HyperElasticPotential")
-        .def(
-            pyb::init<
-                Mesh const&,
-                Eigen::Ref<IndexVectorX const> const&,
-                Eigen::Ref<VectorX const> const&,
-                Eigen::Ref<MatrixX const> const&,
-                Scalar,
-                Scalar,
-                EHyperElasticEnergy>(),
-            pyb::arg("mesh"),
-            pyb::arg("eg").noconvert(),
-            pyb::arg("wg").noconvert(),
-            pyb::arg("GNeg").noconvert(),
-            pyb::arg("Y")      = 1e6,
-            pyb::arg("nu")     = 0.45,
-            pyb::arg("energy") = EHyperElasticEnergy::StableNeoHookean,
-            "Construct a HyperElasticPotential on mesh mesh, given precomputed quadrature "
-            "weights wg in elements eg and shape function gradients GNeg at mesh element "
-            "quadrature points. The corresponding energy has Young's modulus Y and Poisson's ratio "
-            "nu.")
-        .def(
-            pyb::init<
-                Mesh const&,
-                Eigen::Ref<IndexVectorX const> const&,
-                Eigen::Ref<VectorX const> const&,
-                Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<MatrixX const> const&,
-                EHyperElasticEnergy>(),
-            pyb::arg("mesh"),
-            pyb::arg("eg").noconvert(),
-            pyb::arg("wg").noconvert(),
-            pyb::arg("GNeg").noconvert(),
-            pyb::arg("Y"),
-            pyb::arg("nu"),
-            pyb::arg("energy") = EHyperElasticEnergy::StableNeoHookean,
-            "Construct a HyperElasticPotential on mesh mesh, given precomputed quadrature "
-            "weights wg in elements eg and shape function gradients GNeg at mesh element "
-            "quadrature points. The corresponding energy has piecewise constant (at elements) "
-            "Young's modulus Y and Poisson's ratio nu.")
-        .def_readonly("dims", &HyperElasticPotential::mDims)
-        .def(
-            "precompute_hessian_sparsity",
-            &HyperElasticPotential::PrecomputeHessianSparsity,
-            "Precompute sparsity pattern of the hessian for reusable and efficient hessian "
-            "construction.")
-        .def(
-            "compute_element_elasticity",
-            &HyperElasticPotential::ComputeElementElasticity,
-            pyb::arg("x"),
-            pyb::arg("grad")    = true,
-            pyb::arg("hessian") = true,
-            pyb::arg("spd")     = true,
-            "Compute per-element potential energy and its derivatives, projecting the hessian to a "
-            "positive definite state if spd=True.")
-        .def("eval", &HyperElasticPotential::Eval)
-        .def("gradient", &HyperElasticPotential::ToVector)
-        .def("hessian", &HyperElasticPotential::ToMatrix)
-        .def_property(
-            "mug",
-            [](HyperElasticPotential const& M) { return M.mug(); },
-            [](HyperElasticPotential& M, Eigen::Ref<MatrixX const> const& mug) { M.mug() = mug; },
-            "|#quad.pts.|x1 array of first Lame coefficients")
-        .def_property(
-            "lambdag",
-            [](HyperElasticPotential const& M) { return M.lambdag(); },
-            [](HyperElasticPotential& M, Eigen::Ref<MatrixX const> const& lambdag) {
-                M.lambdag() = lambdag;
-            },
-            "|#quad.pts.|x1 array of second Lame coefficients")
-        .def_property_readonly(
-            "Ug",
-            [](HyperElasticPotential const& M) { return M.Potentials(); },
-            "|#quad.pts.| vector of hyper elastic potentials at quadrature points")
-        .def_property_readonly(
-            "Gg",
-            [](HyperElasticPotential const& M) { return M.Gradients(); },
-            "|#element nodes * #dims|x|#quad.pts.| matrix of element hyper elastic potential "
-            "gradients at quadrature points")
-        .def_property_readonly(
-            "Hg",
-            [](HyperElasticPotential const& M) { return M.Hessians(); },
-            "|#element nodes * dims|x|#elements nodes * dims * #quad.pts.| matrix of element hyper "
-            "elastic potential hessians at quadrature points")
-        .def_property_readonly("shape", &HyperElasticPotential::Shape)
-        .def("to_matrix", &HyperElasticPotential::ToMatrix);
-}
+    nb::enum_<pbat::fem::EHyperElasticSpdCorrection>(m, "HyperElasticSpdCorrection")
+        .value("NoCorrection", pbat::fem::EHyperElasticSpdCorrection::None)
+        .value("Projection", pbat::fem::EHyperElasticSpdCorrection::Projection)
+        .value("Absolute", pbat::fem::EHyperElasticSpdCorrection::Absolute)
+        .export_values();
 
-HyperElasticPotential::HyperElasticPotential(
-    Mesh const& M,
-    Eigen::Ref<IndexVectorX const> const& eg,
-    Eigen::Ref<VectorX const> const& wg,
-    Eigen::Ref<MatrixX const> const& GNeg,
-    Scalar Y,
-    Scalar nu,
-    EHyperElasticEnergy ePsi)
-    : eMeshElement(M.eElement),
-      mMeshDims(M.mDims),
-      mMeshOrder(M.mOrder),
-      eHyperElasticEnergy(ePsi),
-      mDims(),
-      mHyperElasticPotential(nullptr)
-{
-    M.Apply([&]<pbat::fem::CMesh MeshType>(MeshType* mesh) {
-        pbat::common::ForTypes<
-            pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>,
-            pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>(
-            [&]<class HyperElasticEnergyType>() {
-                using HyperElasticPotentialType =
-                    pbat::fem::HyperElasticPotential<MeshType, HyperElasticEnergyType>;
-                if (ePsi == EHyperElasticEnergy::SaintVenantKirchhoff and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
-                {
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
-                    mDims = HyperElasticPotentialType::kDims;
-                }
-                if (ePsi == EHyperElasticEnergy::StableNeoHookean and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
-                {
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
-                    mDims = HyperElasticPotentialType::kDims;
-                }
-            });
-    });
-}
+    nb::enum_<pbat::fem::EElementElasticityComputationFlags>(
+        m,
+        "ElementElasticityComputationFlags",
+        nb::is_arithmetic())
+        .value("Potential", pbat::fem::EElementElasticityComputationFlags::Potential)
+        .value("Gradient", pbat::fem::EElementElasticityComputationFlags::Gradient)
+        .value("Hessian", pbat::fem::EElementElasticityComputationFlags::Hessian)
+        .export_values();
 
-HyperElasticPotential::HyperElasticPotential(
-    Mesh const& M,
-    Eigen::Ref<IndexVectorX const> const& eg,
-    Eigen::Ref<VectorX const> const& wg,
-    Eigen::Ref<MatrixX const> const& GNeg,
-    Eigen::Ref<MatrixX const> const& Y,
-    Eigen::Ref<MatrixX const> const& nu,
-    EHyperElasticEnergy ePsi)
-    : eMeshElement(M.eElement),
-      mMeshDims(M.mDims),
-      mMeshOrder(M.mOrder),
-      eHyperElasticEnergy(ePsi),
-      mDims(),
-      mHyperElasticPotential(nullptr)
-{
-    M.Apply([&]<pbat::fem::CMesh MeshType>(MeshType* mesh) {
-        pbat::common::ForTypes<
-            pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>,
-            pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>(
-            [&]<class HyperElasticEnergyType>() {
-                using HyperElasticPotentialType =
-                    pbat::fem::HyperElasticPotential<MeshType, HyperElasticEnergyType>;
-                if (ePsi == EHyperElasticEnergy::SaintVenantKirchhoff and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
-                {
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
-                    mDims = HyperElasticPotentialType::kDims;
-                }
-                if (ePsi == EHyperElasticEnergy::StableNeoHookean and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
-                {
-                    mHyperElasticPotential =
-                        new HyperElasticPotentialType(*mesh, eg, wg, GNeg, Y, nu);
-                    mDims = HyperElasticPotentialType::kDims;
-                }
-            });
-    });
-}
+    using TScalar = pbat::Scalar;
+    using TIndex  = pbat::Index;
 
-HyperElasticPotential::HyperElasticPotential(HyperElasticPotential&& other)
-    : mHyperElasticPotential(other.mHyperElasticPotential)
-{
-    other.mHyperElasticPotential = nullptr;
-}
-
-HyperElasticPotential& HyperElasticPotential::operator=(HyperElasticPotential&& other)
-{
-    mHyperElasticPotential       = other.mHyperElasticPotential;
-    other.mHyperElasticPotential = nullptr;
-    return *this;
-}
-
-void HyperElasticPotential::PrecomputeHessianSparsity()
-{
-    Apply([]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        hyperElasticPotential->PrecomputeHessianSparsity();
-    });
-}
-
-void HyperElasticPotential::ComputeElementElasticity(
-    Eigen::Ref<VectorX const> const& x,
-    bool bWithGradient,
-    bool bWithHessian,
-    bool bWithSpdProjection)
-{
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        hyperElasticPotential->template ComputeElementElasticity<Eigen::Ref<VectorX const>>(
-            x,
-            bWithGradient,
-            bWithHessian,
-            bWithSpdProjection);
-    });
-}
-
-Scalar HyperElasticPotential::Eval() const
-{
-    Scalar U{};
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        U = hyperElasticPotential->Eval();
-    });
-    return U;
-}
-
-VectorX HyperElasticPotential::ToVector() const
-{
-    VectorX G{};
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        G = hyperElasticPotential->ToVector();
-    });
-    return G;
-}
-
-CSCMatrix HyperElasticPotential::ToMatrix() const
-{
-    CSCMatrix H;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        H = hyperElasticPotential->ToMatrix();
-    });
-    return H;
-}
-
-std::tuple<Index, Index> HyperElasticPotential::Shape() const
-{
-    Index rows{0}, cols{0};
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        rows = hyperElasticPotential->OutputDimensions();
-        cols = hyperElasticPotential->InputDimensions();
-    });
-    return std::make_tuple(rows, cols);
-}
-
-VectorX const& HyperElasticPotential::mug() const
-{
-    VectorX* mugPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        mugPtr = std::addressof(hyperElasticPotential->mug);
-    });
-    return *mugPtr;
-}
-
-VectorX& HyperElasticPotential::mug()
-{
-    VectorX* mugPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        mugPtr = std::addressof(hyperElasticPotential->mug);
-    });
-    return *mugPtr;
-}
-
-VectorX const& HyperElasticPotential::lambdag() const
-{
-    VectorX* lambdagPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        lambdagPtr = std::addressof(hyperElasticPotential->lambdag);
-    });
-    return *lambdagPtr;
-}
-
-VectorX& HyperElasticPotential::lambdag()
-{
-    VectorX* lambdagPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        lambdagPtr = std::addressof(hyperElasticPotential->lambdag);
-    });
-    return *lambdagPtr;
-}
-
-MatrixX const& HyperElasticPotential::Hessians() const
-{
-    MatrixX* HgPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        HgPtr = std::addressof(hyperElasticPotential->Hg);
-    });
-    return *HgPtr;
-}
-
-MatrixX& HyperElasticPotential::Hessians()
-{
-    MatrixX* HgPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        HgPtr = std::addressof(hyperElasticPotential->Hg);
-    });
-    return *HgPtr;
-}
-
-MatrixX const& HyperElasticPotential::Gradients() const
-{
-    MatrixX* ggPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        ggPtr = std::addressof(hyperElasticPotential->Gg);
-    });
-    return *ggPtr;
-}
-
-MatrixX& HyperElasticPotential::Gradients()
-{
-    MatrixX* ggPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        ggPtr = std::addressof(hyperElasticPotential->Gg);
-    });
-    return *ggPtr;
-}
-
-VectorX const& HyperElasticPotential::Potentials() const
-{
-    VectorX* UgPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        UgPtr = std::addressof(hyperElasticPotential->Ug);
-    });
-    return *UgPtr;
-}
-
-VectorX& HyperElasticPotential::Potentials()
-{
-    VectorX* UgPtr;
-    Apply([&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-        UgPtr = std::addressof(hyperElasticPotential->Ug);
-    });
-    return *UgPtr;
-}
-
-HyperElasticPotential::~HyperElasticPotential()
-{
-    if (mHyperElasticPotential != nullptr)
-    {
-        Apply(
-            [&]<class HyperElasticPotentialType>(HyperElasticPotentialType* hyperElasticPotential) {
-                delete hyperElasticPotential;
-            });
-    }
-}
-
-template <class Func>
-void HyperElasticPotential::Apply(Func&& f) const
-{
-    HepApplyToMesh(mMeshDims, mMeshOrder, eMeshElement, [&]<pbat::fem::CMesh MeshType>() {
-        pbat::common::ForTypes<
-            pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>,
-            pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>(
-            [&]<class HyperElasticEnergyType>() {
-                using HyperElasticPotentialType =
-                    pbat::fem::HyperElasticPotential<MeshType, HyperElasticEnergyType>;
-                if (eHyperElasticEnergy == EHyperElasticEnergy::SaintVenantKirchhoff and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::SaintVenantKirchhoffEnergy<MeshType::kDims>>)
-                {
-                    HyperElasticPotentialType* hyperElasticPotential =
-                        reinterpret_cast<HyperElasticPotentialType*>(mHyperElasticPotential);
-                    f.template operator()<HyperElasticPotentialType>(hyperElasticPotential);
-                }
-                if (eHyperElasticEnergy == EHyperElasticEnergy::StableNeoHookean and
-                    std::is_same_v<
-                        HyperElasticEnergyType,
-                        pbat::physics::StableNeoHookeanEnergy<MeshType::kDims>>)
-                {
-                    HyperElasticPotentialType* hyperElasticPotential =
-                        reinterpret_cast<HyperElasticPotentialType*>(mHyperElasticPotential);
-                    f.template operator()<HyperElasticPotentialType>(hyperElasticPotential);
-                }
-            });
-    });
+    m.def(
+        "hyper_elastic_potential",
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           TIndex nNodes,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> mug,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> lambdag,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> x,
+           pbat::physics::EHyperElasticEnergy eEnergy,
+           int eFlags,
+           pbat::fem::EHyperElasticSpdCorrection eSpdCorrection,
+           EElement eElement,
+           int order,
+           int dims)
+            -> std::tuple<
+                TScalar,
+                Eigen::Vector<TScalar, Eigen::Dynamic>,
+                Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex>> {
+            if (eElement == EElement::Hexahedron and order > 2)
+            {
+                throw std::invalid_argument(
+                    "Hyperelastic energy for hexahedra is only supported for order 1 and "
+                    "2.");
+            }
+            TScalar potential;
+            Eigen::Vector<TScalar, Eigen::Dynamic> gradient;
+            Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> hessian;
+            ApplyToElementInDimsWithHyperElasticEnergy(
+                eElement,
+                order,
+                dims,
+                eEnergy,
+                [&]<class ElementType, int Dims, class HyperElasticEnergyType>() {
+                    if constexpr (not std::is_same_v<ElementType, pbat::fem::Hexahedron<3>>)
+                    {
+                        Eigen::Vector<TScalar, Eigen::Dynamic> Ug;
+                        Eigen::Matrix<TScalar, Dims * ElementType::kNodes, Eigen::Dynamic> Gg;
+                        Eigen::Matrix<TScalar, Dims * ElementType::kNodes, Eigen::Dynamic> Hg;
+                        pbat::fem::ToElementElasticity<ElementType, Dims, HyperElasticEnergyType>(
+                            E.template topRows<ElementType::kNodes>(),
+                            nNodes,
+                            eg,
+                            wg,
+                            GNeg.template topRows<ElementType::kNodes>(),
+                            mug,
+                            lambdag,
+                            x,
+                            Ug,
+                            Gg,
+                            Hg,
+                            eFlags,
+                            eSpdCorrection);
+                        if (eFlags & pbat::fem::EElementElasticityComputationFlags::Potential)
+                        {
+                            potential = pbat::fem::HyperElasticPotential(Ug);
+                        }
+                        if (eFlags & pbat::fem::EElementElasticityComputationFlags::Gradient)
+                        {
+                            gradient = pbat::fem::HyperElasticGradient<ElementType, Dims>(
+                                E.template topRows<ElementType::kNodes>(),
+                                nNodes,
+                                eg,
+                                Gg);
+                        }
+                        if (eFlags & pbat::fem::EElementElasticityComputationFlags::Hessian)
+                        {
+                            hessian =
+                                pbat::fem::HyperElasticHessian<ElementType, Dims, Eigen::RowMajor>(
+                                    E.template topRows<ElementType::kNodes>(),
+                                    nNodes,
+                                    eg,
+                                    Hg);
+                        }
+                    }
+                });
+            return {potential, gradient, hessian};
+        },
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("wg"),
+        nb::arg("GNeg"),
+        nb::arg("mug"),
+        nb::arg("lambdag"),
+        nb::arg("x"),
+        nb::arg("energy")         = pbat::physics::EHyperElasticEnergy::StableNeoHookean,
+        nb::arg("flags")          = pbat::fem::EElementElasticityComputationFlags::Potential,
+        nb::arg("spd_correction") = pbat::fem::EHyperElasticSpdCorrection::Absolute,
+        nb::arg("element"),
+        nb::arg("order") = 1,
+        nb::arg("dims")  = 3,
+        "Compute hyperelastic potential, gradient and/or hessian for a given mesh.\n\n"
+        "Args\n"
+        "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
+        "elements.\n"
+        "    n_nodes (int): Number of nodes in the mesh.\n"
+        "    eg (numpy.ndarray): `|# quad.pts.| x 1` vector of element indices associated with "
+        "quadrature points.\n"
+        "    wg (numpy.ndarray): `|# quad.pts.| x 1` vector of quadrature weights.\n"
+        "    GNeg (numpy.ndarray): `|# nodes per element| x |# dims * # quad.pts.|` shape "
+        "function gradients.\n"
+        "    mug (numpy.ndarray): `|# quad.pts.| x 1` first Lame coefficient.\n"
+        "    lambdag (numpy.ndarray): `|# quad.pts.| x 1` second Lame coefficient.\n"
+        "    x (numpy.ndarray): `|# dims * # nodes| x 1` deformed nodal positions.\n"
+        "    energy (HyperElasticEnergy): Type of hyperelastic energy to compute.\n"
+        "    flags (ElementElasticityComputationFlags): Flags for the computation.\n"
+        "    spd_correction (HyperElasticSpdCorrection): SPD correction type.\n"
+        "    element (EElement): Type of element.\n"
+        "    order (int): Order of the element (default: 1).\n"
+        "    dims (int): Number of spatial dimensions (default: 3).\n\n"
+        "Returns\n"
+        "    Tuple[float, numpy.ndarray, scipy.sparse.csr_matrix]: The tuple (U, gradU, hessU) "
+        "based on requested flags.\n");
 }
 
 } // namespace fem

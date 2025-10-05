@@ -1,9 +1,23 @@
 include(FetchContent)
 
-find_package(doctest CONFIG REQUIRED)
+find_package(OpenMP REQUIRED COMPONENTS CXX)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
+
+if(NOT TARGET doctest::doctest)
+    FetchContent_Declare(
+        _doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG 3a01ec37828affe4c9650004edb5b304fb9d5b75
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(_doctest)
+    get_target_property(PBAT_DOCTEST_SOURCE_DIR doctest::doctest SOURCE_DIR)
+    message(VERBOSE "PBAT -- Doctest source directory: ${PBAT_DOCTEST_SOURCE_DIR}")
+    set(PBAT_DOCTEST_MODULES_DIR ${PBAT_DOCTEST_SOURCE_DIR}/scripts/cmake/)
+endif()
 
 if(NOT TARGET Eigen3::Eigen)
     FetchContent_Declare(
@@ -11,17 +25,41 @@ if(NOT TARGET Eigen3::Eigen)
         GIT_REPOSITORY https://gitlab.com/libeigen/eigen
         GIT_TAG 7fd305ecae2410714cde018cb6851f49138568c8
         GIT_PROGRESS TRUE
+        SYSTEM
     )
     FetchContent_MakeAvailable(eigen)
-    set_target_properties(eigen PROPERTIES SYSTEM ON)
 endif()
 
-if(PBAT_BUILD_PYTHON_BINDINGS)
-    find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-    find_package(pybind11 CONFIG REQUIRED)
+find_package(HDF5 CONFIG REQUIRED)
+if(NOT TARGET HighFive::HighFive)
+    set(HIGHFIVE_FIND_HDF5 OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        HighFive
+        GIT_REPOSITORY https://github.com/highfive-devs/highfive.git
+        GIT_TAG e950d07369344a5821b8a63697de3bd84664186e
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(HighFive)
 endif()
 
-if(PBAT_ENABLE_PROFILER)
+if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
+    find_package(
+        Python 
+        COMPONENTS Interpreter Development.Module 
+        REQUIRED
+    )
+    FetchContent_Declare(
+        _nanobind
+        GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+        GIT_TAG v2.9.2
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(_nanobind)
+endif()
+
+if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
     set(TRACY_ON_DEMAND ${PBAT_PROFILE_ON_DEMAND} CACHE BOOL "" FORCE)
     FetchContent_Declare(
         tracy
@@ -29,9 +67,21 @@ if(PBAT_ENABLE_PROFILER)
         GIT_TAG v0.10
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
+        SYSTEM
     )
     FetchContent_MakeAvailable(tracy)
-    set_target_properties(TracyClient PROPERTIES SYSTEM ON)
+endif()
+
+if(NOT TARGET cpp-sort::cpp-sort)
+    FetchContent_Declare(
+        _cppsort
+        GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
+        GIT_TAG 2.x.y-stable
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(_cppsort)
 endif()
 
 if(PBAT_USE_INTEL_MKL)
@@ -54,15 +104,15 @@ if(PBAT_USE_INTEL_MKL)
 endif()
 
 if(PBAT_USE_SUITESPARSE)
-    # find_package(metis CONFIG)
-    # if (${metis_FOUND})
-    # get_target_property(_metis_configurations metis IMPORTED_CONFIGURATIONS)
-    # foreach(_metis_configuration IN ITEMS ${_metis_configurations})
-    # get_target_property(_metis_location metis IMPORTED_LOCATION_${_metis_configuration})
-    # message(VERBOSE "Found metis: ${_metis_location}")
-    # endforeach()
-    # endif()
-    find_package(suitesparse CONFIG REQUIRED)
+    include(CheckLanguage)
+    check_language(C)
+    if(DEFINED CMAKE_C_COMPILER)
+        enable_language(C)
+    else()
+        message(FATAL_ERROR "PBAT -- Could not find CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+    endif()
+    find_package(OpenMP REQUIRED COMPONENTS C)
+    find_package(CHOLMOD CONFIG REQUIRED)
 endif()
 
 if(PBAT_USE_METIS)
@@ -76,8 +126,24 @@ if(PBAT_USE_CUDA)
     if(DEFINED CMAKE_CUDA_COMPILER)
         enable_language(CUDA)
         find_package(CUDAToolkit REQUIRED)
-        find_package(cuda-api-wrappers CONFIG REQUIRED)
+        FetchContent_Declare(
+            _caw
+            GIT_REPOSITORY https://github.com/eyalroz/cuda-api-wrappers.git
+            GIT_TAG v0.8.1
+            GIT_SHALLOW TRUE
+            GIT_PROGRESS TRUE
+            SYSTEM
+        )
+        FetchContent_MakeAvailable(_caw)
     else()
         message(FATAL_ERROR "PBAT -- Could not find CMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}")
     endif()
+endif()
+
+if(PBAT_BUILD_DOC)
+    find_package(
+        Doxygen 
+        REQUIRED 
+        OPTIONAL_COMPONENTS dot mscgen dia
+    )
 endif()

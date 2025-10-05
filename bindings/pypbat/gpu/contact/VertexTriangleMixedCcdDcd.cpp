@@ -2,26 +2,27 @@
 
 #include "pypbat/gpu/common/Buffer.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/gpu/contact/VertexTriangleMixedCcdDcd.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 
 namespace pbat::py::gpu::contact {
 
-void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
+void BindVertexTriangleMixedCcdDcd([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+#ifdef PBAT_USE_CUDA
+    namespace nb = nanobind;
     using namespace pbat::gpu::contact;
 
-    pyb::class_<VertexTriangleMixedCcdDcd>(m, "VertexTriangleMixedCcdDcd")
+    nb::class_<VertexTriangleMixedCcdDcd>(m, "VertexTriangleMixedCcdDcd")
         .def(
-            pyb::init<
+            nb::init<
                 Eigen::Ref<GpuIndexVectorX const>,
                 Eigen::Ref<GpuIndexVectorX const>,
                 Eigen::Ref<GpuIndexMatrixX const>>(),
-            pyb::arg("B"),
-            pyb::arg("V"),
-            pyb::arg("F"),
+            nb::arg("B"),
+            nb::arg("V"),
+            nb::arg("F"),
             "Construct a triangle mesh collision detection system considering only vertex-triangle "
             "contacts\n\n"
             "Args:\n"
@@ -32,10 +33,10 @@ void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
         .def(
             "initialize_active_set",
             &VertexTriangleMixedCcdDcd::InitializeActiveSet,
-            pyb::arg("xt"),
-            pyb::arg("xtp1"),
-            pyb::arg("wmin"),
-            pyb::arg("wmax"),
+            nb::arg("xt"),
+            nb::arg("xtp1"),
+            nb::arg("wmin"),
+            nb::arg("wmax"),
             "Computes the initial active set\n\n"
             "Args:\n"
             "    xt (pbat.gpu.common.Buffer): 3x|#points| buffer of point positions at time t\n"
@@ -46,8 +47,8 @@ void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
         .def(
             "update_active_set",
             &VertexTriangleMixedCcdDcd::UpdateActiveSet,
-            pyb::arg("x"),
-            pyb::arg("bComputeBoxes") = true,
+            nb::arg("x"),
+            nb::arg("bComputeBoxes") = true,
             "Updates constraints involved with active vertices\n\n"
             "Args:\n"
             "    x (pbat.gpu.common.Buffer): 3x|#points| buffer of current point positions\n"
@@ -56,31 +57,32 @@ void BindVertexTriangleMixedCcdDcd(pybind11::module& m)
         .def(
             "finalize_active_set",
             &VertexTriangleMixedCcdDcd::FinalizeActiveSet,
-            pyb::arg("x"),
-            pyb::arg("bComputeBoxes") = true,
+            nb::arg("x"),
+            nb::arg("bComputeBoxes") = true,
             "Removes inactive vertices from the active set\n\n"
             "Args:\n"
             "    x (pbat.gpu.common.Buffer): 3x|#points| buffer of current point positions\n"
             "    bComputeBoxes (bool): If true, computes the bounding boxes of (non-swept) "
             "triangles")
-        .def_property(
+        .def_prop_rw(
             "eps",
             nullptr,
             &VertexTriangleMixedCcdDcd::SetNearestNeighbourFloatingPointTolerance,
             "Floating point tolerance for nearest neighbour search")
-        .def_property_readonly(
+        .def_prop_ro(
             "active_set",
             &VertexTriangleMixedCcdDcd::ActiveVertexTriangleConstraints,
             "Returns a 2x|#vertex-triangle constraints| matrix where each column is a "
             "vertex-triangle constraint pair")
-        .def_property_readonly(
+        .def_prop_ro(
             "active_vertices",
             &VertexTriangleMixedCcdDcd::ActiveVertices,
             "Returns |#active verts| 1D array of active vertex indices into V")
-        .def_property_readonly(
+        .def_prop_ro(
             "active_mask",
             &VertexTriangleMixedCcdDcd::ActiveMask,
             "Returns |#verts| 1D mask for active vertices");
+#endif // PBAT_USE_CUDA
 }
 
 } // namespace pbat::py::gpu::contact

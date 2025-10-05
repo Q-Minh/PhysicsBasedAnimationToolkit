@@ -1,13 +1,13 @@
 #ifndef PYPBAT_GRAPH_COLOR_H
 #define PYPBAT_GRAPH_COLOR_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace graph {
 
-void BindColor(pybind11::module& m);
+void BindColor(nanobind::module_& m);
 
 } // namespace graph
 } // namespace py

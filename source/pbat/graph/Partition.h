@@ -10,6 +10,7 @@
 #ifndef PBAT_GRAPH_PARTITION_H
 #define PBAT_GRAPH_PARTITION_H
 
+#include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 
 namespace pbat {
@@ -74,7 +75,7 @@ struct PartitioningOptions
  * @brief Partition input graph
  *
  * Internally delegates to METIS @cite karypis1997metis
- * 
+ *
  * @param ptr Offset pointers of adjacency list
  * @param adj Indices of adjacency list
  * @param wadj Edge weights of adjacency list
@@ -82,7 +83,7 @@ struct PartitioningOptions
  * @param opts Partitioning options
  * @return `|# vertices|` array p of partition indices (i.e. p[i] = partition of vertex i)
  */
-IndexVectorX Partition(
+PBAT_API IndexVectorX Partition(
     Eigen::Ref<IndexVectorX const> const& ptr,
     Eigen::Ref<IndexVectorX const> const& adj,
     Eigen::Ref<IndexVectorX const> const& wadj,

@@ -11,7 +11,7 @@ namespace sim {
 namespace vbd {
 namespace multigrid {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindLevel(m);
     BindHierarchy(m);

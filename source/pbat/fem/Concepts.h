@@ -11,12 +11,12 @@
 #ifndef PBAT_FEM_CONCEPTS_H
 #define PBAT_FEM_CONCEPTS_H
 
-#include <concepts>
-#include <pbat/Aliases.h>
-#include <pbat/common/Concepts.h>
+#include "pbat/Aliases.h"
+#include "pbat/common/Concepts.h"
 
-namespace pbat {
-namespace fem {
+#include <concepts>
+
+namespace pbat::fem {
 
 /**
  * @brief Reference finite element
@@ -37,7 +37,8 @@ namespace fem {
  *     static bool constexpr bHasConstantJacobian;
  *
  *     template <int PolynomialOrder>
- *     using QuadratureType = math::SymmetricSimplexPolynomialQuadratureRule<kDims, PolynomialOrder>;
+ *     using QuadratureType = math::SymmetricSimplexPolynomialQuadratureRule<kDims,
+ * PolynomialOrder>;
  *
  *     template <class TDerived, class TScalar = typename TDerived::Scalar>
  *     static Eigen::Vector<TScalar, kNodes>
@@ -62,28 +63,16 @@ template <class T>
 concept CElement = requires(T t)
 {
     typename T::AffineBaseType;
-    {
-        T::bHasConstantJacobian
-    } -> std::convertible_to<bool>;
+    {T::bHasConstantJacobian}->std::convertible_to<bool>;
     // Should be valid for argument > 1 as well, but we don't check that.
-    typename T::template QuadratureType<1>;
-    {
-        T::kOrder
-    } -> std::convertible_to<int>;
-    {
-        T::kDims
-    } -> std::convertible_to<int>;
-    {
-        T::kNodes
-    } -> std::convertible_to<int>;
+    typename T::template QuadratureType<1, Scalar>;
+    {T::kOrder}->std::convertible_to<int>;
+    {T::kDims}->std::convertible_to<int>;
+    {T::kNodes}->std::convertible_to<int>;
     requires common::CContiguousIndexRange<decltype(T::Coordinates)>;
     requires common::CContiguousIndexRange<decltype(T::Vertices)>;
-    {
-        t.N(Vector<T::kDims>{})
-    } -> std::convertible_to<Vector<T::kNodes>>;
-    {
-        t.GradN(Vector<T::kDims>{})
-    } -> std::convertible_to<Matrix<T::kNodes, T::kDims>>;
+    {t.N(Vector<T::kDims>{})}->std::convertible_to<Vector<T::kNodes>>;
+    {t.GradN(Vector<T::kDims>{})}->std::convertible_to<Matrix<T::kNodes, T::kDims>>;
 };
 
 /**
@@ -95,21 +84,18 @@ template <class M>
 concept CMesh = requires(M m)
 {
     requires CElement<typename M::ElementType>;
-    {
-        M::kDims
-    } -> std::convertible_to<int>;
-    {
-        M::kOrder
-    } -> std::convertible_to<int>;
-    {
-        m.X
-    } -> std::convertible_to<MatrixX>;
-    {
-        m.E
-    } -> std::convertible_to<IndexMatrixX>;
+    requires common::CFloatingPoint<typename M::ScalarType>;
+    requires common::CIndex<typename M::IndexType>;
+    {M::kDims}->std::convertible_to<int>;
+    {M::kOrder}->std::convertible_to<int>;
+    {m.X} /*->std::
+         convertible_to<Eigen::Matrix<typename M::ScalarType, Eigen::Dynamic, Eigen::Dynamic>>*/
+    ;
+    {m.E} /*->std::convertible_to<Eigen::Matrix<typename M::IndexType, Eigen::Dynamic,
+             Eigen::Dynamic>>*/
+    ;
 };
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
 #endif // PBAT_FEM_CONCEPTS_H

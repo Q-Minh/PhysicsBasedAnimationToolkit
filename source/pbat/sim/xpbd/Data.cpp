@@ -128,11 +128,11 @@ Data& Data::Construct(bool bValidate)
     if (aext.size() == 0)
     {
         aext.setZero(x.rows(), x.cols());
-        aext.bottomRows(1).setConstant(Scalar(-9.81));
+        aext.bottomRows(1).setConstant(Scalar{-9.81});
     }
     if (minv.size() == 0)
     {
-        minv.setConstant(x.cols(), Scalar(1e-3));
+        minv.setConstant(x.cols(), Scalar{1e-3});
     }
     if (BV.size() == 0)
     {
@@ -147,7 +147,7 @@ Data& Data::Construct(bool bValidate)
     if (lame.size() == 0)
     {
         lame.setZero(2, T.cols());
-        auto const [lmu, llambda] = physics::LameCoefficients(Scalar(1e6), Scalar(0.45));
+        auto const [lmu, llambda] = physics::LameCoefficients(Scalar{1e6}, Scalar{0.45});
         lame.row(0).setConstant(lmu);
         lame.row(1).setConstant(llambda);
     }
@@ -157,8 +157,8 @@ Data& Data::Construct(bool bValidate)
     gammaSNH.resize(T.cols());
     tbb::parallel_for(Index(0), T.cols(), [&](Index t) {
         // Load vertex positions of element c
-        IndexVector<4> v = T.col(t);
-        Matrix<3, 4> xc  = x(Eigen::placeholders::all, v);
+        IndexVector<4> nodes = T.col(t);
+        Matrix<3, 4> xc      = x(Eigen::placeholders::all, nodes);
         // Compute shape matrix and its inverse
         Matrix<3, 3> Ds = xc.block<3, 3>(0, 1).colwise() - xc.col(0);
         auto DmInvC     = DmInv.block<3, 3>(0, t * 3);

@@ -1,14 +1,14 @@
 #ifndef PYPBAT_MATH_LINALG_PARDISO_H
 #define PYPBAT_MATH_LINALG_PARDISO_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace math {
 namespace linalg {
 
-void BindPardiso(pybind11::module& m);
+void BindPardiso(nanobind::module_& m);
 
 } // namespace linalg
 } // namespace math

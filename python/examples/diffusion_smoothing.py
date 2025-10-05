@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import igl
 import polyscope as ps
 import polyscope.imgui as imgui
@@ -17,13 +17,14 @@ if __name__ == "__main__":
 
     imesh = meshio.read(args.input)
     V, F = imesh.points, imesh.cells_dict["triangle"]
-    V, F = V.astype(np.float64, order='c'), F.astype(np.int64, order='c')
 
     # Construct Galerkin laplacian, mass and gradient operators
-    mesh = pbat.fem.Mesh(
-        V.T, F.T, element=pbat.fem.Element.Triangle, order=1)
-    L, egL, wgL, GNegL = pbat.fem.laplacian(mesh)
-    M, detJeM = pbat.fem.mass_matrix(mesh, dims=1)
+    element = pbat.fem.Element.Triangle
+    order = 1
+    X, E = pbat.fem.mesh(
+        V.T, F.T, element=element, order=1)
+    L = pbat.fem.laplacian_matrix(E, X, element=element, order=order)
+    M = pbat.fem.mass_matrix(E, X, rho=1, dims=1, element=element, order=order)
     # Setup heat diffusion
     dt = 0.016
     c = 1

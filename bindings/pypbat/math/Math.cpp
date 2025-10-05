@@ -9,7 +9,7 @@ namespace pbat {
 namespace py {
 namespace math {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindMomentFitting(m);
     auto mlinalg = m.def_submodule("linalg");

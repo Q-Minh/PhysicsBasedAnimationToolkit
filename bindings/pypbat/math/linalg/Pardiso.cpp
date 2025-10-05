@@ -6,10 +6,12 @@
     // Eigen/src/SparseCore/SparseUtil.h line 52.
     #define MKL_INT int
     #include <Eigen/PardisoSupport>
+    #include <nanobind/eigen/dense.h>
+    #include <nanobind/eigen/sparse.h>
+    #include <nanobind/eigen/tuple.h>
     #include <pbat/Aliases.h>
     #include <pbat/common/ConstexprFor.h>
     #include <pbat/profiling/Profiling.h>
-    #include <pybind11/eigen.h>
     #include <string>
     #include <tuple>
     #include <type_traits>
@@ -20,9 +22,9 @@ namespace py {
 namespace math {
 namespace linalg {
 
-void BindPardiso([[maybe_unused]] pybind11::module& m)
+void BindPardiso([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 #ifdef PBAT_USE_INTEL_MKL
     using PardisoLuCsc   = Eigen::PardisoLU<CSCMatrix>;
     using PardisoLuCsr   = Eigen::PardisoLU<CSRMatrix>;
@@ -56,8 +58,8 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
         using PardisoParameterArrayType =
             std::remove_cvref_t<decltype(std::declval<SolverType>().pardisoParameterArray())>;
 
-        pyb::class_<SolverType>(m, className.data())
-            .def(pyb::init<>())
+        nb::class_<SolverType>(m, className.data())
+            .def(nb::init<>())
             .def(
                 "analyze",
                 [=](SolverType& solver, SparseMatrixType const& A) {
@@ -65,7 +67,7 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
                         solver.analyzePattern(A);
                     });
                 },
-                pyb::arg("A"))
+                nb::arg("A"))
             .def(
                 "compute",
                 [=](SolverType& solver, SparseMatrixType const& A) -> SolverType& {
@@ -74,7 +76,7 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
                     });
                     return solver;
                 },
-                pyb::arg("A"))
+                nb::arg("A"))
             .def(
                 "factorize",
                 [=](SolverType& solver, SparseMatrixType const& A) {
@@ -82,8 +84,8 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
                         solver.factorize(A);
                     });
                 },
-                pyb::arg("A"))
-            .def_property_readonly(
+                nb::arg("A"))
+            .def_prop_ro(
                 "shape",
                 [](SolverType const& solver) {
                     return std::make_tuple(solver.rows(), solver.cols());
@@ -91,13 +93,15 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
             .def(
                 "solve",
                 [=](SolverType const& solver, Eigen::Ref<MatrixX const> const& B) -> MatrixX {
-                    return pbat::profiling::Profile("pbat.math.linalg." + className + ".solve", [&]() {
-                        MatrixX X = solver.solve(B);
-                        return X;
-                    });
+                    return pbat::profiling::Profile(
+                        "pbat.math.linalg." + className + ".solve",
+                        [&]() {
+                            MatrixX X = solver.solve(B);
+                            return X;
+                        });
                 },
-                pyb::arg("B"))
-            .def_property_readonly(
+                nb::arg("B"))
+            .def_prop_ro(
                 "status",
                 [](SolverType const& solver) -> std::string {
                     Eigen::ComputationInfo const info = solver.info();
@@ -110,7 +114,7 @@ void BindPardiso([[maybe_unused]] pybind11::module& m)
                         default: return "";
                     }
                 })
-            .def_property(
+            .def_prop_rw(
                 "iparm",
                 [](SolverType& solver) -> PardisoParameterArrayType const& {
                     return solver.pardisoParameterArray();

@@ -18,14 +18,20 @@
 namespace pbat::geometry {
 } // namespace pbat::geometry
 
+#include "AabbKdTreeHierarchy.h"
+#include "AabbRadixTreeHierarchy.h"
 #include "AxisAlignedBoundingBox.h"
 #include "BoundingVolumeHierarchy.h"
 #include "ClosestPointQueries.h"
 #include "DistanceQueries.h"
+#include "EdgeEdgeCcd.h"
 #include "IntersectionQueries.h"
 #include "KdTree.h"
+#include "MeshBoundary.h"
 #include "Morton.h"
 #include "OverlapQueries.h"
+#include "PointTriangleCcd.h"
+#include "SpatialSearch.h"
 #include "TetrahedralAabbHierarchy.h"
 #include "TriangleAabbHierarchy.h"
 

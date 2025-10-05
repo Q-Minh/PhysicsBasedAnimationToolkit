@@ -18,6 +18,9 @@
 namespace pbat::sim::vbd {
 } // namespace pbat::sim::vbd
 
+#include "AndersonIntegrator.h"
+#include "BroydenIntegrator.h"
+#include "ChebyshevIntegrator.h"
 #include "Data.h"
 #include "Enums.h"
 #include "Integrator.h"

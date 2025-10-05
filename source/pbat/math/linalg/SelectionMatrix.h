@@ -8,12 +8,12 @@ namespace math {
 namespace linalg {
 
 /**
- * @brief Construct the selection matrix S s.t. X*S selects all columns E of X.
+ * @brief Construct the selection matrix S s.t. X*S selects all columns C of X.
  *
- * @tparam TDerivedC
- * @param C
- * @param n
- * @return 
+ * @tparam TDerivedC Type of the index vector
+ * @param C Vector of indices
+ * @param n Number of rows in the selection matrix
+ * @return `n x |C|` selection matrix
  */
 template <class TDerivedC>
 CSCMatrix SelectionMatrix(Eigen::DenseBase<TDerivedC> const& C, Index n = Index(-1))

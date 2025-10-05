@@ -13,8 +13,8 @@
 
 #include "pbat/HostDevice.h"
 
+#include <algorithm>
 #include <array>
-#include <cmath>
 #include <cstdint>
 #include <type_traits>
 
@@ -69,12 +69,13 @@ template <detail::CMorton3dPoint Point>
 [[maybe_unused]] PBAT_HOST_DEVICE inline MortonCodeType Morton3D(Point x)
 {
     using namespace std;
-    MortonCodeType xx =
-        ExpandBits(static_cast<MortonCodeType>(min(max(x[0] * 1024.0f, 0.0f), 1023.0f)));
-    MortonCodeType yy =
-        ExpandBits(static_cast<MortonCodeType>(min(max(x[1] * 1024.0f, 0.0f), 1023.0f)));
-    MortonCodeType zz =
-        ExpandBits(static_cast<MortonCodeType>(min(max(x[2] * 1024.0f, 0.0f), 1023.0f)));
+    using ScalarType  = std::remove_cvref_t<decltype(x[0])>;
+    MortonCodeType xx = ExpandBits(static_cast<MortonCodeType>(
+        min(max(x[0] * ScalarType(1024), ScalarType(0)), ScalarType(1023))));
+    MortonCodeType yy = ExpandBits(static_cast<MortonCodeType>(
+        min(max(x[1] * ScalarType(1024), ScalarType(0)), ScalarType(1023))));
+    MortonCodeType zz = ExpandBits(static_cast<MortonCodeType>(
+        min(max(x[2] * ScalarType(1024), ScalarType(0)), ScalarType(1023))));
     return xx * 4 + yy * 2 + zz;
 }
 

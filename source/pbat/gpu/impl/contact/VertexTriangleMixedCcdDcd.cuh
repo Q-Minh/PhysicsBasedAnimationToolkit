@@ -11,11 +11,15 @@
 
 namespace pbat::gpu::impl::contact {
 
+/**
+ * @brief Vertex-triangle contact detection using a mixed CCD/DCD approach.
+ */
 class VertexTriangleMixedCcdDcd
 {
   public:
-    static auto constexpr kDims          = 3;
-    static auto constexpr kMaxNeighbours = 8;
+    static auto constexpr kDims = 3; ///< Spatial dimensionality of the problem
+    static auto constexpr kMaxNeighbours =
+        8; ///< Maximum number of nearest neighbours to consider per vertex
 
     /**
      * @brief Construct a new Vertex Triangle Mixed Ccd Dcd object
@@ -81,23 +85,23 @@ class VertexTriangleMixedCcdDcd
     void UpdateBvh(common::Buffer<GpuScalar, 3> const& x);
 
   public:
-    common::Buffer<GpuIndex> av;   ///< Active vertices
-    GpuIndex nActive;              ///< Number of active vertices
-    common::Buffer<GpuIndex> nn;   ///< |#verts*kMaxNeighbours| nearest neighbours f to vertices v.
-                                   ///< nn[v*kMaxNeighbours+j] < 0 if no neighbour
-    common::Buffer<GpuIndex> B;    ///< |#pts| body map
+    common::Buffer<GpuIndex> av; ///< Active vertices
+    GpuIndex nActive;            ///< Number of active vertices
+    common::Buffer<GpuIndex> nn; ///< `|# verts * kMaxNeighbours|` nearest neighbours `f` to
+                                 ///< vertices `v`. `nn[v*kMaxNeighbours+j] < 0` if no neighbour
+    common::Buffer<GpuIndex> B;    ///< `|# pts|` body map
     common::Buffer<GpuIndex> V;    ///< Vertices
     common::Buffer<GpuIndex, 3> F; ///< Triangles
 
-    common::Buffer<GpuIndex> inds; ///< |#verts| vertex indices v
-    geometry::Morton morton;       ///< |#verts| morton codes for vertices
+    common::Buffer<GpuIndex> inds; ///< `|# verts|` vertex indices `v`
+    geometry::Morton morton;       ///< `|# verts|` morton codes for vertices
     geometry::Aabb<kDims>
-        Paabbs; ///< |#verts| axis-aligned bounding boxes of swept vertices (i.e. line segments)
+        Paabbs; ///< `|# verts|` axis-aligned bounding boxes of swept vertices (i.e. line segments)
     geometry::Aabb<kDims>
-        Faabbs;         ///< |#tris| axis-aligned bounding boxes of (potentially swept) triangles
+        Faabbs;         ///< `|# tris|` axis-aligned bounding boxes of (potentially swept) triangles
     geometry::Bvh Fbvh; ///< Bounding volume hierarchy over (potentially swept) triangles
-    common::Buffer<bool> active;      ///< |#verts| active mask
-    common::Buffer<GpuScalar> dupper; ///< |#verts| NN search radius
+    common::Buffer<bool> active;      ///< `|# verts|` active mask
+    common::Buffer<GpuScalar> dupper; ///< `|# verts|` NN search radius
     GpuScalar eps;                    ///< Tolerance for NN searches
 };
 

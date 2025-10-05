@@ -21,16 +21,19 @@ void ToBuffer(Eigen::PlainObjectBase<TDerived> const& A, Buffer<ScalarType, D>& 
     }
 
     using SizeType = decltype(buf.Size());
+    auto ncols     = static_cast<SizeType>(A.cols());
+    auto nrows     = static_cast<SizeType>(A.rows());
     if constexpr (D > 1)
     {
-        if (static_cast<SizeType>(A.rows()) != buf.Dimensions() and
-            static_cast<SizeType>(A.cols()) != buf.Size())
+        if (nrows != buf.Dimensions())
         {
             std::ostringstream ss{};
             ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
                << ", but got " << A.rows() << "x" << A.cols() << "\n";
             throw std::invalid_argument(ss.str());
         }
+        if (buf.Size() != ncols)
+            buf.Resize(ncols);
         for (auto d = 0; d < buf.Dimensions(); ++d)
         {
             thrust::copy(A.row(d).begin(), A.row(d).end(), buf[d].begin());
@@ -38,13 +41,9 @@ void ToBuffer(Eigen::PlainObjectBase<TDerived> const& A, Buffer<ScalarType, D>& 
     }
     else
     {
-        if (static_cast<SizeType>(A.size()) != buf.Size())
-        {
-            std::ostringstream ss{};
-            ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
-               << " or its transpose, but got " << A.rows() << "x" << A.cols() << "\n";
-            throw std::invalid_argument(ss.str());
-        }
+        auto nsize = static_cast<SizeType>(A.size());
+        if (buf.Size() != nsize)
+            buf.Resize(nsize);
         thrust::copy(A.data(), A.data() + A.size(), buf.Data());
     }
 }
@@ -62,14 +61,17 @@ void ToBuffer(
     using SizeType = decltype(buf.Size());
     if constexpr (D > 1)
     {
-        if (static_cast<SizeType>(A.rows()) != buf.Dimensions() and
-            static_cast<SizeType>(A.cols()) != buf.Size())
+        auto nrows = static_cast<SizeType>(A.rows());
+        auto ncols = static_cast<SizeType>(A.cols());
+        if (nrows != buf.Dimensions())
         {
             std::ostringstream ss{};
             ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
                << ", but got " << A.rows() << "x" << A.cols() << "\n";
             throw std::invalid_argument(ss.str());
         }
+        if (buf.Size() != ncols)
+            buf.Resize(ncols);
         for (auto d = 0; d < buf.Dimensions(); ++d)
         {
             thrust::copy(A.row(d).begin(), A.row(d).end(), buf[d].begin());
@@ -77,13 +79,9 @@ void ToBuffer(
     }
     else
     {
-        if (static_cast<SizeType>(A.size()) != buf.Size())
-        {
-            std::ostringstream ss{};
-            ss << "Expected input dimensions " << buf.Dimensions() << "x" << buf.Size()
-               << " or its transpose, but got " << A.rows() << "x" << A.cols() << "\n";
-            throw std::invalid_argument(ss.str());
-        }
+        auto nsize = static_cast<SizeType>(A.size());
+        if (buf.Size() != nsize)
+            buf.Resize(nsize);
         thrust::copy(A.data(), A.data() + A.size(), buf.Data());
     }
 }
@@ -100,6 +98,28 @@ ToEigen(Buffer<ScalarType, D> const& buf)
     {
         return pbat::common::ToEigen(buf.Get());
     }
+}
+
+template <class ScalarType, auto D, class TDerived>
+Buffer<ScalarType, D> EigenToBuffer(Eigen::PlainObjectBase<TDerived> const& A)
+{
+    Buffer<ScalarType, D> buf;
+    ToBuffer(A, buf);
+    return buf;
+}
+
+template <
+    class ScalarType,
+    auto D,
+    auto StorageOrder = Eigen::ColMajor,
+    auto EigenRows    = Eigen::Dynamic,
+    auto EigenCols    = Eigen::Dynamic>
+Buffer<ScalarType, D> EigenToBuffer(
+    Eigen::Ref<Eigen::Matrix<ScalarType, EigenRows, EigenCols, StorageOrder> const> const& A)
+{
+    Buffer<ScalarType, D> buf;
+    ToBuffer(A, buf);
+    return buf;
 }
 
 } // namespace common

@@ -1,13 +1,13 @@
 #ifndef PYPBAT_GEOMETRY_GEOMETRY_H
 #define PYPBAT_GEOMETRY_GEOMETRY_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace geometry {
 
-void Bind(pybind11::module& m);
+void Bind(nanobind::module_& m);
 
 } // namespace geometry
 } // namespace py

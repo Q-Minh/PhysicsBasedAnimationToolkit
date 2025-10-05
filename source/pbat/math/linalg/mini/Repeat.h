@@ -24,7 +24,7 @@ class TiledView
     static auto constexpr kCols     = RepeatCols * NestedType::kCols;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE TiledView(NestedType const& A) : A(A) {}
+    PBAT_HOST_DEVICE TiledView(NestedType const& _A) : A(_A) {}
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
     {

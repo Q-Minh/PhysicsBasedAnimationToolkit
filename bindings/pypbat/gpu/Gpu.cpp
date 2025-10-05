@@ -10,9 +10,9 @@ namespace pbat {
 namespace py {
 namespace gpu {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     auto mcommon  = m.def_submodule("common");
     common::Bind(mcommon);
     auto mgeometry = m.def_submodule("geometry");

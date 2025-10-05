@@ -1,181 +1,186 @@
+/**
+ * @file Integrator.cuh
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief VBD integrator implementation
+ * @date 2025-02-14
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #ifndef PBAT_GPU_IMPL_VBD_INTEGRATOR_H
 #define PBAT_GPU_IMPL_VBD_INTEGRATOR_H
 
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/contact/VertexTriangleMixedCcdDcd.cuh"
-#include "pbat/gpu/impl/geometry/Primitives.cuh"
 #include "pbat/sim/vbd/Data.h"
 #include "pbat/sim/vbd/Enums.h"
+// clang-format off
+/**
+ * @warning Kernels.cuh includes cuda-api-wrappers headers, whose cuda::span interferes with 
+ * libcu++ (i.e. libcudacxx) cuda::span. To avoid compilation errors, we include Kernels.cuh after all other
+ * headers, and we do not use cuda::span when both libcu++ and cuda-api-wrappers headers are present.
+ */
+#include "Kernels.cuh"
+// clang-format on
 
 #include <cuda/api/stream.hpp>
+#include <string_view>
 #include <vector>
 
-namespace pbat {
-namespace gpu {
-namespace impl {
-namespace vbd {
+namespace pbat::gpu::impl::vbd {
 
+/**
+ * @brief VBD integrator \cite anka2024vbd
+ *
+ */
 class Integrator
 {
   public:
-    using EInitializationStrategy = pbat::sim::vbd::EInitializationStrategy;
-    using Data                    = pbat::sim::vbd::Data;
+    using EInitializationStrategy =
+        pbat::sim::vbd::EInitializationStrategy; ///< Enum type for initialization strategy
+    using Data = pbat::sim::vbd::Data;           ///< Data type for VBD
 
+    /**
+     * @brief Construct Integrator from data
+     *
+     * @param data VBD simulation scenario
+     */
     Integrator(Data const& data);
     /**
-     * @brief
-     * @param dt
-     * @param iterations
-     * @param substeps
-     * @param rho Chebyshev semi-iterative method's estimated spectral radius. If rho >= 1,
-     * Chebyshev acceleration is not used.
+     * @brief Execute one simulation step
+     * @param dt Time step
+     * @param iterations Number of optimization iterations per substep
+     * @param substeps Number of substeps
      */
-    void Step(
+    void Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps = GpuIndex{1});
+    /**
+     * @brief Execute one simulation step with tracing to disk.
+     *
+     * Saves matrix market files which follow the pattern
+     * `{variable}.t.{timestep}.s.{substep}[.k.{iteration}].mtx`
+     *
+     * @param dt Time step
+     * @param iterations Number of optimization iterations per substep
+     * @param substeps Number of substeps
+     * @param t Current time step
+     * @param dir Directory to save matrix market files
+     */
+    void TracedStep(
         GpuScalar dt,
         GpuIndex iterations,
-        GpuIndex substeps = GpuIndex{1},
-        GpuScalar rho     = GpuScalar{1});
+        GpuIndex substeps,
+        GpuIndex t,
+        std::string_view dir = ".");
     /**
-     * @brief
-     * @param X
-     */
-    void SetPositions(Eigen::Ref<GpuMatrixX const> const& X);
-    /**
-     * @brief
-     * @param v
-     */
-    void SetVelocities(Eigen::Ref<GpuMatrixX const> const& v);
-    /**
-     * @brief
-     * @param aext
-     */
-    void SetExternalAcceleration(Eigen::Ref<GpuMatrixX const> const& aext);
-    /**
-     * @brief
-     * @param m
-     */
-    void SetMass(Eigen::Ref<GpuVectorX const> const& m);
-    /**
-     * @brief
-     * @param wg
-     */
-    void SetQuadratureWeights(Eigen::Ref<GpuVectorX const> const& wg);
-    /**
-     * @brief
-     * @param GP
-     */
-    void SetShapeFunctionGradients(Eigen::Ref<GpuMatrixX const> const& GP);
-    /**
-     * @brief
-     * @param l
-     */
-    void SetLameCoefficients(Eigen::Ref<GpuMatrixX const> const& l);
-    /**
-     * @brief
-     * @param zero
-     */
-    void SetNumericalZeroForHessianDeterminant(GpuScalar zero);
-    /**
-     * @brief
-     * @param GVTp
-     * @param GVTn
-     * @param GVTilocal
-     */
-    void SetVertexTetrahedronAdjacencyList(
-        Eigen::Ref<GpuIndexVectorX const> const& GVTp,
-        Eigen::Ref<GpuIndexVectorX const> const& GVTn,
-        Eigen::Ref<GpuIndexVectorX const> const& GVTilocal);
-    /**
-     * @brief
-     * @param kD
-     */
-    void SetRayleighDampingCoefficient(GpuScalar kD);
-    /**
-     * @brief
-     * @param Pptr
-     * @param Padj
-     */
-    void SetVertexPartitions(
-        Eigen::Ref<GpuIndexVectorX const> const& Pptr,
-        Eigen::Ref<GpuIndexVectorX const> const& Padj);
-    /**
-     * @brief
-     * @param strategy
-     */
-    void SetInitializationStrategy(EInitializationStrategy strategy);
-    /**
-     * @brief
-     * @param min
-     * @param max
+     * @brief Set the bounding box over the scene used for spatial partitioning
+     * @param min Minimum corner
+     * @param max Maximum corner
      */
     void SetSceneBoundingBox(
         Eigen::Vector<GpuScalar, 3> const& min,
         Eigen::Vector<GpuScalar, 3> const& max);
     /**
-     * @brief
-     * @param blockSize
+     * @brief Set the number of threads per GPU block for per-vertex elastic energy computation
+     * @param blockSize Number of threads per block
      */
     void SetBlockSize(GpuIndex blockSize);
 
     /**
-     * @brief
-     * @return
+     * @brief Detect candidate contact pairs for the current time step
+     *
+     * @param dt Time step
      */
-    common::Buffer<GpuScalar, 3> const& GetVelocity() const;
+    void InitializeActiveSet(GpuScalar dt);
     /**
-     * @brief
-     * @return
+     * @brief Compute the inertial target positions of the BDF1 objective
+     *
+     * @param sdt Time step
+     * @param sdt2 Time step squared
      */
-    common::Buffer<GpuScalar, 3> const& GetExternalAcceleration() const;
+    void ComputeInertialTargets(GpuScalar sdt, GpuScalar sdt2);
     /**
-     * @brief
-     * @return
+     * @brief Compute starting point of BCD minimization
+     *
+     * @param sdt Time step
+     * @param sdt2 Time step squared
      */
-    common::Buffer<GpuScalar> const& GetMass() const;
+    void InitializeBcdSolution(GpuScalar sdt, GpuScalar sdt2);
     /**
-     * @brief
-     * @return
+     * @brief Computes active contact pairs in the current configuration
      */
-    common::Buffer<GpuScalar> const& GetShapeFunctionGradients() const;
+    void UpdateActiveSet();
     /**
-     * @brief
-     * @return
+     * @brief VBD to iterate on the BDF minimization problem
+     *
+     * Override this method to implement different VBD optimization strategies
+     *
+     * @param bdf Device BDF minimization problem
+     * @param iterations Number of iterations
      */
-    common::Buffer<GpuScalar> const& GetLameCoefficients() const;
+    virtual void Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations);
+    /**
+     * @brief VBD to iterate on the BDF minimization problem
+     *
+     * Saves all iterates to disk.
+     *
+     * @param bdf Device BDF minimization problem
+     * @param iterations Number of iterations
+     * @param t Current time step
+     * @param s Current substep
+     * @param dir Directory to save matrix market files
+     */
+    void TracedSolve(
+        kernels::BackwardEulerMinimization& bdf,
+        GpuIndex iterations,
+        GpuIndex t,
+        GpuIndex s,
+        std::string_view dir);
+    /**
+     * @brief Run a single iteration of the VBD's BDF minimization
+     *
+     * @param bdf Device BDF minimization problem
+     */
+    void RunVbdIteration(kernels::BackwardEulerMinimization& bdf);
+    /**
+     * @brief Update the BDF state (i.e. positions and velocities) after solving the BDF
+     * minimization
+     *
+     * @param sdt Time step
+     */
+    void UpdateBdfState(GpuScalar sdt);
 
   public:
-    common::Buffer<GpuScalar, 3> x;
-    common::Buffer<GpuIndex, 4> T; ///< Tetrahedral mesh elements
-  private:
+    common::Buffer<GpuScalar, 3> x; ///< Vertex positions
+    common::Buffer<GpuIndex, 4> T;  ///< Tetrahedral mesh elements
+
     Eigen::Vector<GpuScalar, 3> mWorldMin; ///< World AABB min
     Eigen::Vector<GpuScalar, 3> mWorldMax; ///< World AABB max
     GpuIndex mActiveSetUpdateFrequency;    ///< Active set update frequency
     contact::VertexTriangleMixedCcdDcd cd; ///< Collision detector
     common::Buffer<GpuIndex>
-        fc; ///< |#verts*kMaxCollidingTrianglesPerVertex| array of vertex-triangle contact pairs
-            ///< (i,f), s.t. f = fc[i*kMaxCollidingTrianglesPerVertex+c] for 0 <= c <
-            ///< kMaxCollidingTrianglesPerVertex. If f(c) < 0, there is no contact, and f(c+j) < 0
-            ///< is also true, for j > 0.
-    common::Buffer<GpuScalar> XVA; ///< |x.Size()| array of vertex areas for contact response
-    common::Buffer<GpuScalar> FA;  ///< |F.Size()| array of triangle areas for contact response
+        fc; ///< `|# verts * kMaxCollidingTrianglesPerVertex|` array of vertex-triangle contact
+            ///< pairs `(i,f)`, s.t. `f = fc[i*kMaxCollidingTrianglesPerVertex+c]` for `0 <= c <
+            ///< kMaxCollidingTrianglesPerVertex`. If `f(c) < 0`, there is no contact, and `f(c+j) <
+            ///< 0` is also true, for `j > 0`.
+    common::Buffer<GpuScalar> XVA; ///< `|x.Size()|` array of vertex areas for contact response
+    common::Buffer<GpuScalar> FA;  ///< `|F.Size()|` array of triangle areas for contact response
 
     common::Buffer<GpuScalar, 3> mPositionsAtT;            ///< Previous vertex positions
     common::Buffer<GpuScalar, 3> mInertialTargetPositions; ///< Inertial target for vertex positions
-    common::Buffer<GpuScalar, 3>
-        mChebyshevPositionsM2; ///< x^{k-2} used in Chebyshev semi-iterative method
-    common::Buffer<GpuScalar, 3>
-        mChebyshevPositionsM1;       ///< x^{k-1} used in Chebyshev semi-iterative method
     common::Buffer<GpuScalar, 3> xb; ///< Write buffer for positions which handles data races
+
     common::Buffer<GpuScalar, 3> mVelocitiesAtT;        ///< Previous vertex velocities
     common::Buffer<GpuScalar, 3> mVelocities;           ///< Current vertex velocities
     common::Buffer<GpuScalar, 3> mExternalAcceleration; ///< External acceleration
     common::Buffer<GpuScalar> mMass;                    ///< Lumped mass matrix diagonals
 
-    common::Buffer<GpuScalar> mQuadratureWeights; ///< |#elements| array of quadrature weights (i.e.
-                                                  ///< tetrahedron volumes for order 1)
-    common::Buffer<GpuScalar> mShapeFunctionGradients; ///< 4x3x|#elements| shape function gradients
-    common::Buffer<GpuScalar> mLameCoefficients; ///< 2x|#elements| 1st and 2nd Lame parameters
+    common::Buffer<GpuScalar> mQuadratureWeights; ///< `|# elements|` array of quadrature weights
+                                                  ///< (i.e. tetrahedron volumes for order 1)
+    common::Buffer<GpuScalar>
+        mShapeFunctionGradients;                 ///< `4x3x|# elements|` shape function gradients
+    common::Buffer<GpuScalar> mLameCoefficients; ///< `2x|# elements|` 1st and 2nd Lame parameters
     GpuScalar mDetHZero;                         ///< Numerical zero for hessian determinant check
 
     common::Buffer<GpuIndex>
@@ -191,19 +196,24 @@ class Integrator
     GpuScalar mSmoothFrictionRelativeVelocityThreshold; ///< IPC smooth friction transition
                                                         ///< function's relative velocity threshold
 
-    GpuIndexVectorX mPptr; ///< |#partitions+1| partition pointers, s.t. the range [Pptr[p],
-                           ///< Pptr[p+1]) indexes into Padj vertices from partition p
+    GpuIndexVectorX mPptr; ///< `|#partitions+1|` partition pointers, s.t. the range `[Pptr[p],
+                           ///< Pptr[p+1])` indexes into `Padj` vertices from partition `p`
     common::Buffer<GpuIndex> mPadj; ///< Partition vertices
 
     EInitializationStrategy
         mInitializationStrategy;  ///< Strategy to use to determine the initial BCD iterate
     GpuIndex mGpuThreadBlockSize; ///< Number of threads per CUDA thread block
     cuda::stream_t mStream;       ///< Cuda stream on which this VBD instance will run
+
+    /**
+     * @brief Obtain Backward Euler time stepping minimization problem for device code
+     * @param dt Time step
+     * @param dt2 Time step squared
+     * @return Backward Euler minimization problem for device code
+     */
+    kernels::BackwardEulerMinimization BdfDeviceParameters(GpuScalar dt, GpuScalar dt2);
 };
 
-} // namespace vbd
-} // namespace impl
-} // namespace gpu
-} // namespace pbat
+} // namespace pbat::gpu::impl::vbd
 
 #endif // PBAT_GPU_IMPL_VBD_INTEGRATOR_H

@@ -188,9 +188,9 @@ PBAT_HOST_DEVICE auto AxisAlignedBoundingBoxes(
     auto constexpr kDims                = TMatrixL1::kRows;
     mini::SVector<ScalarType, kDims> LI = Max(L1, L2);
     mini::SVector<ScalarType, kDims> UI = Min(U1, U2);
-    auto LGU                            = Cast<ScalarType>(LI > UI);
+    auto LGU                            = LI > UI;
     mini::SVector<ScalarType, kDims> DI = LI - UI;
-    ScalarType d2                       = Dot(LGU, Squared(DI));
+    ScalarType d2                       = Dot(Cast<ScalarType>(LGU), Squared(DI));
     return d2;
 }
 

@@ -12,13 +12,14 @@
 #define PBAT_MATH_LINALG_LINALG_H
 
 /**
- * @namespace pbat::math::linalg 
+ * @namespace pbat::math::linalg
  * @brief Linear Algebra related functionality.
  */
 namespace pbat::math::linalg {
 } // namespace pbat::math::linalg
 
 #include "Cholmod.h"
+#include "FilterEigenvalues.h"
 #include "SelectionMatrix.h"
 #include "SparsityPattern.h"
 #include "mini/Mini.h"

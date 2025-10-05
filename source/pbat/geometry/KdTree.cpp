@@ -15,18 +15,18 @@ TEST_CASE("[geometry] KdTree")
         geometry::KdTree<Dims> const kdTree(P, maxPointsInLeaf);
         for (auto const& node : kdTree.Nodes())
         {
-            if (node.IsLeafNode())
+            if (node.IsLeaf())
             {
                 CHECK_LE(node.n, maxPointsInLeaf);
             }
         }
-        std::vector<Index> const& permutation = kdTree.Permutation();
+        IndexVectorX const& permutation = kdTree.Permutation();
         CHECK_EQ(permutation.size(), N);
-        std::vector<std::size_t> counts(N, 0ULL);
+        IndexVectorX counts(N);
+        counts.setZero();
         for (auto idx : permutation)
-            ++counts[static_cast<std::size_t>(idx)];
-        bool const bIndicesAreUnique =
-            std::ranges::all_of(counts, [](std::size_t count) { return count == 1ULL; });
+            ++counts(idx);
+        bool const bIndicesAreUnique = (counts.array() == 1).all();
         CHECK(bIndicesAreUnique);
     });
 }

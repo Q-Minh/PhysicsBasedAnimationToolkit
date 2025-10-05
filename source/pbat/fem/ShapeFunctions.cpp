@@ -3,10 +3,10 @@
 #include "Jacobian.h"
 #include "Mesh.h"
 #include "Tetrahedron.h"
+#include "pbat/common/ConstexprFor.h"
+#include "pbat/math/polynomial/Basis.h"
 
 #include <doctest/doctest.h>
-#include <pbat/common/ConstexprFor.h>
-#include <pbat/math/PolynomialBasis.h>
 
 TEST_CASE("[fem] ShapeFunctions")
 {
@@ -32,15 +32,10 @@ TEST_CASE("[fem] ShapeFunctions")
 
         Mesh const mesh{V, C};
 
-        MatrixX const detJe         = fem::DeterminantOfJacobian<QuadratureOrder>(mesh);
-        MatrixX const intNe         = fem::IntegratedShapeFunctions<QuadratureOrder>(mesh, detJe);
-        auto const numberOfElements = mesh.E.cols();
+        MatrixX const detJe             = fem::DeterminantOfJacobian<QuadratureOrder>(mesh);
+        auto const numberOfElements     = mesh.E.cols();
         auto constexpr kNodesPerElement = Element::kNodes;
-        CHECK_EQ(intNe.rows(), kNodesPerElement);
-        CHECK_EQ(intNe.cols(), numberOfElements);
-        bool const bIsStrictlyPositive = (intNe.array() > 0.).all();
-        CHECK(bIsStrictlyPositive);
-        MatrixX const gradNe = fem::ShapeFunctionGradients<QuadratureOrder>(mesh);
+        MatrixX const gradNe            = fem::ShapeFunctionGradients<QuadratureOrder>(mesh);
         CHECK_EQ(gradNe.rows(), kNodesPerElement);
         CHECK_EQ(
             gradNe.cols(),
@@ -110,7 +105,7 @@ TEST_CASE("[fem] ShapeFunctionGradients")
     BXi(0)                = 1. - Xi.sum();
     BXi.segment(1, kDims) = Xi;
 
-    Matrix<kNodes, kDims> const GP = fem::ShapeFunctionGradients<ElementType>(Xi, X);
+    Matrix<kNodes, kDims> const GP = fem::ElementShapeFunctionGradients<ElementType>(Xi, X);
 
     // Numerically compute basis functions and their gradients.
     // We know that the basis functions are interpolating polynomials,
@@ -119,7 +114,7 @@ TEST_CASE("[fem] ShapeFunctionGradients")
     // P(X_i)^T a_j = \delta_{ij} ,
     // where a_j is the j^{th} column of some matrix of polynomial coefficients A.
     // This amounts to computing the inverse of P(X)^T .
-    math::MonomialBasis<kDims, kOrder> const P{};
+    math::polynomial::MonomialBasis<kDims, kOrder> const P{};
     Matrix<kNodes, kNodes> PXT{};
     for (auto i = 0; i < kNodes; ++i)
         PXT.row(i) = P.eval(X.col(i)).transpose();
@@ -171,7 +166,7 @@ TEST_CASE("[fem] ShapeFunctionGradientsAt")
                 Xi.col(e * kQuadPts + g) = Xg.col(g);
             }
         }
-        MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi, true);
+        MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi);
         MatrixX const GNeExpected = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
         Scalar const GNeError     = (GNe - GNeExpected).squaredNorm();
         Scalar constexpr zero     = 1e-15;

@@ -20,8 +20,6 @@ namespace pbat::gpu::geometry {
 
 #include "Aabb.h"
 #include "Bvh.h"
-#include "BvhQuery.h"
-#include "Primitives.h"
 #include "SweepAndPrune.h"
 
 #endif // PBAT_GPU_GEOMETRY_GEOMETRY_H

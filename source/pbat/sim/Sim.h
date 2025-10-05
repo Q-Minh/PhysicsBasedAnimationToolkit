@@ -18,6 +18,9 @@
 namespace pbat::sim {
 } // namespace pbat::sim
 
+#include "contact/Contact.h"
+#include "dynamics/Dynamics.h"
+#include "integration/Integration.h"
 #include "vbd/Vbd.h"
 #include "xpbd/Xpbd.h"
 

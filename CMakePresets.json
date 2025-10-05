@@ -82,7 +82,7 @@
             "name": "msvc",
             "hidden": true,
             "cacheVariables": {
-                "CMAKE_CXX_FLAGS": {
+                "PBAT_CMAKE_CXX_FLAGS": {
                     "type": "STRING",
                     "value": "/EHsc /bigobj /MP /permissive- /W4 /WX /w44061 /w44062 /w34191 /w44242 /w44254 /w44263 /w14264 /w34265 /w44266 /w34287 /w44289 /w44296 /w44339 /w44355 /w44365 /w44388 /w44437 /w44471 /w44514 /w14545 /w14546 /w14547 /w14548 /w14549 /w14555 /w44582 /w44583 /w44596 /w44623 /w44625 /w34640 /w44643 /w34738 /w44774 /w44777 /w44800 /w14822 /w24826 /w14928 /w14946 /w44988 /w15022 /w15023 /w45024 /w45025 /wd4324"
                 }
@@ -92,9 +92,9 @@
             "name": "gcc",
             "hidden": true,
             "cacheVariables": {
-                "CMAKE_CXX_FLAGS": {
+                "PBAT_CMAKE_CXX_FLAGS": {
                     "type": "STRING",
-                    "value": "-Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wpedantic -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wuseless-cast -Wdouble-promotion -Wformat=2 -Wimplicit-fallthrough -Wno-inline"
+                    "value": "-Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wpedantic -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wimplicit-fallthrough -Wno-inline"
                 }
             }
         },
@@ -102,9 +102,9 @@
             "name": "clang",
             "hidden": true,
             "cacheVariables": {
-                "CMAKE_CXX_FLAGS": {
+                "PBAT_CMAKE_CXX_FLAGS": {
                     "type": "STRING",
-                    "value": "-Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wpedantic -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wuseless-cast -Wdouble-promotion -Wformat=2 -Wimplicit-fallthrough -Wno-inline"
+                    "value": "-Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wpedantic -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wimplicit-fallthrough -Wno-inline"
                 }
             }
         },
@@ -134,7 +134,6 @@
             "name": "python",
             "hidden": true,
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "python",
                 "PBAT_BUILD_PYTHON_BINDINGS": {
                     "type": "BOOL",
                     "value": "ON"
@@ -186,15 +185,12 @@
             "inherits": [
                 "default",
                 "profile",
-                "pic"
+                "pic",
+                "python"
             ],
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "cuda;python",
+                "VCPKG_MANIFEST_FEATURES": "cuda",
                 "PBAT_USE_CUDA": {
-                    "type": "BOOL",
-                    "value": "ON"
-                },
-                "PBAT_BUILD_PYTHON_BINDINGS": {
                     "type": "BOOL",
                     "value": "ON"
                 }

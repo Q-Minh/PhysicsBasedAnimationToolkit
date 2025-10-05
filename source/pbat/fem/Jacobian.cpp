@@ -2,9 +2,9 @@
 
 #include "Mesh.h"
 #include "Tetrahedron.h"
+#include "pbat/common/ConstexprFor.h"
 
 #include <doctest/doctest.h>
-#include <pbat/common/ConstexprFor.h>
 
 TEST_CASE("[fem] Jacobian")
 {
@@ -55,26 +55,21 @@ TEST_CASE("[fem] Jacobian")
                 static_cast<Scalar>(Element::kOrder);
 
             // Compute reference positions
-            IndexVectorX E(mesh.E.cols() * Element::kNodes);
-            MatrixX X(kDims, E.size());
-            for (auto e = 0; e < mesh.E.cols(); ++e)
-            {
-                E(Eigen::seqN(e * Element::kNodes, Element::kNodes)).array() = e;
-                auto const nodes                                             = mesh.E.col(e);
-                X.block<Mesh::kDims, Element::kNodes>(0, e * Element::kNodes) =
-                    mesh.X(Eigen::placeholders::all, nodes);
-            }
-
             auto constexpr maxIterations = 2;
             Scalar constexpr eps         = 1e-10;
-            MatrixX const XiComputed     = fem::ReferencePositions(mesh, E, X, maxIterations, eps);
+            auto eg = IndexVectorX::LinSpaced(mesh.E.cols(), 0, mesh.E.cols() - 1)
+                          .replicate(1, Element::kNodes)
+                          .transpose()
+                          .reshaped()
+                          .eval();
+            MatrixX Xg               = mesh.X(Eigen::placeholders::all, mesh.E.reshaped());
+            MatrixX const XiComputed = fem::ReferencePositions(mesh, eg, Xg, maxIterations, eps);
 
             // Assert
             CHECK_EQ(XiComputed.rows(), Element::kDims);
-            CHECK_EQ(XiComputed.cols(), E.size());
+            CHECK_EQ(XiComputed.cols(), eg.size());
             for (auto e = 0; e < mesh.E.cols(); ++e)
             {
-                auto const nodes = mesh.E.col(e);
                 Matrix<Element::kDims, Element::kNodes> const XiComputedBlock =
                     XiComputed.block<Element::kDims, Element::kNodes>(0, e * Element::kNodes);
                 Matrix<Element::kDims, Element::kNodes> const error = XiComputedBlock - XiExpected;

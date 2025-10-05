@@ -1,111 +1,14 @@
 #include "MeshBoundary.h"
 
-#include "pbat/common/Hash.h"
+namespace pbat::geometry {
+} // namespace pbat::geometry
 
-#include <algorithm>
-#include <exception>
-#include <fmt/format.h>
-#include <string>
-#include <unordered_map>
-
-namespace pbat {
-namespace geometry {
-
-auto SimplexMeshBoundary(IndexMatrixX const& C, Index n) -> std::tuple<IndexVectorX, IndexMatrixX>
-{
-    if (n < 0)
-        n = C.maxCoeff() + 1;
-
-    auto nSimplexNodes  = C.rows();
-    auto nSimplexFacets = nSimplexNodes;
-    if (nSimplexFacets < 3 or nSimplexFacets > 4)
-    {
-        std::string const what = fmt::format(
-            "SimplexMeshBoundary expected triangle (3x|#elems|) or tetrahedral (4x|#elems|) input "
-            "mesh, but got {}x{}",
-            C.rows(),
-            C.cols());
-        throw std::invalid_argument(what);
-    }
-    auto nFacetNodes = nSimplexNodes - 1;
-    auto nSimplices  = C.cols();
-    IndexMatrixX F(nFacetNodes, nSimplexFacets * nSimplices);
-    for (Index c = 0; c < nSimplices; ++c)
-    {
-        // Tetrahedra
-        if (nSimplexFacets == 4)
-        {
-            auto Fc = F.block<3, 4>(0, c * 4);
-            Fc.col(0) << C(0, c), C(1, c), C(3, c);
-            Fc.col(1) << C(1, c), C(2, c), C(3, c);
-            Fc.col(2) << C(2, c), C(0, c), C(3, c);
-            Fc.col(3) << C(0, c), C(2, c), C(1, c);
-        }
-        // Triangles
-        if (nSimplexFacets == 3)
-        {
-            auto Fc = F.block<2, 3>(0, c * 3);
-            Fc.col(0) << C(0, c), C(1, c);
-            Fc.col(1) << C(1, c), C(2, c);
-            Fc.col(2) << C(2, c), C(0, c);
-        }
-    }
-    // Sort face indices to identify duplicates next
-    IndexMatrixX FS = F;
-    for (Index f = 0; f < FS.cols(); ++f)
-    {
-        std::sort(FS.col(f).begin(), FS.col(f).end());
-    }
-    // Count face occurrences and pick out boundary facets
-    auto fExtractBoundary = [&](auto const& FU) {
-        Index nFacets{0};
-        for (auto f = 0; f < FS.cols(); ++f)
-            nFacets += (FU.at(FS.col(f)) == 1);
-        IndexMatrixX B(nFacetNodes, nFacets);
-        for (auto f = 0, b = 0; f < F.cols(); ++f)
-            if (FU.at(FS.col(f)) == 1)
-                B.col(b++) = F.col(f);
-        return B;
-    };
-    auto fExtractVertices = [&](IndexMatrixX B) {
-        auto begin = B.data();
-        auto end   = B.data() + B.size();
-        std::sort(begin, end);
-        auto it                = std::unique(begin, end);
-        auto nBoundaryVertices = std::distance(begin, it);
-        IndexVectorX V(nBoundaryVertices);
-        std::copy(begin, it, V.data());
-        return V;
-    };
-    IndexMatrixX B{};
-    if (nSimplexFacets == 4)
-    {
-        std::unordered_map<IndexVector<3>, Index> FU{};
-        FU.reserve(static_cast<std::size_t>(FS.cols()));
-        for (Index f = 0; f < FS.cols(); ++f)
-            ++FU[FS.col(f)];
-        B = fExtractBoundary(FU);
-    }
-    if (nSimplexFacets == 3)
-    {
-        std::unordered_map<IndexVector<2>, Index> FU{};
-        FU.reserve(static_cast<std::size_t>(FS.cols()));
-        for (Index f = 0; f < FS.cols(); ++f)
-            ++FU[FS.col(f)];
-        B = fExtractBoundary(FU);
-    }
-    IndexVectorX V = fExtractVertices(B);
-    return {V, B};
-}
-
-} // namespace geometry
-} // namespace pbat
+#include "pbat/fem/Line.h"
+#include "pbat/fem/Mesh.h"
+#include "pbat/fem/MeshQuadrature.h"
+#include "pbat/fem/Triangle.h"
 
 #include <doctest/doctest.h>
-#include <pbat/fem/Jacobian.h>
-#include <pbat/fem/Line.h>
-#include <pbat/fem/Mesh.h>
-#include <pbat/fem/Triangle.h>
 
 TEST_CASE("[geometry] MeshBoundary")
 {
@@ -128,8 +31,8 @@ TEST_CASE("[geometry] MeshBoundary")
     // clang-format on
 
     // Act
-    auto [VC, BC] = geometry::SimplexMeshBoundary(C, 8);
-    auto [VF, BF] = geometry::SimplexMeshBoundary(F, 4);
+    auto [VC, BC] = geometry::SimplexMeshBoundary<Index>(C, 8);
+    auto [VF, BF] = geometry::SimplexMeshBoundary<Index>(F, 4);
     // Assert
     CHECK_EQ(VC.size(), 8);
     CHECK_EQ(VF.size(), 4);
@@ -142,15 +45,15 @@ TEST_CASE("[geometry] MeshBoundary")
     using LinearTriangle = fem::Triangle<1>;
     using TriangleMesh   = fem::Mesh<LinearTriangle, 3>;
     TriangleMesh FM(V, BC);
-    VectorX FA = fem::InnerProductWeights<1>(FM).reshaped();
+    VectorX FA = fem::MeshQuadratureWeights<1>(FM).reshaped();
     bool const bTrianglesHaveCorrectAreas =
-        (FA.array() - Scalar(0.5)).square().sum() < Scalar(1e-10);
+        (FA.array() - Scalar{0.5}).square().sum() < Scalar{1e-10};
     CHECK(bTrianglesHaveCorrectAreas);
     using LinearLine = fem::Line<1>;
     using LineMesh   = fem::Mesh<LinearLine, 3>;
     LineMesh EM(V, BF);
-    VectorX EL = fem::InnerProductWeights<1>(EM).reshaped();
+    VectorX EL = fem::MeshQuadratureWeights<1>(EM).reshaped();
     bool const bLineSegmentsHaveCorrectLengths =
-        (EL.array() - Scalar(1)).square().sum() < Scalar(1e-10);
+        (EL.array() - Scalar{1}).square().sum() < Scalar{1e-10};
     CHECK(bLineSegmentsHaveCorrectLengths);
 }

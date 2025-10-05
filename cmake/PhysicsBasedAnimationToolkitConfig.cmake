@@ -1,5 +1,6 @@
 include(CMakeFindDependencyMacro)
 
+find_dependency(cpp-sort)
 find_dependency(doctest)
 find_dependency(Eigen3)
 find_dependency(fmt)
@@ -19,7 +20,7 @@ endif()
 
 if(PBAT_BUILD_PYTHON_BINDINGS)
     find_package(Python COMPONENTS Interpreter Development.Module ${_pbat_find_pkg_args})
-    find_package(pybind11 CONFIG ${_pbat_find_pkg_args})
+    find_package(nanobind CONFIG ${_pbat_find_pkg_args})
 endif()
 
 if(PBAT_USE_INTEL_MKL)

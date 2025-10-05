@@ -15,11 +15,11 @@ namespace pbat {
 namespace graph {
 
 IndexVectorX Partition(
-    Eigen::Ref<IndexVectorX const> const& ptr,
-    Eigen::Ref<IndexVectorX const> const& adj,
-    Eigen::Ref<IndexVectorX const> const& wadj,
-    Index nPartitions,
-    PartitioningOptions opts)
+    [[maybe_unused]] Eigen::Ref<IndexVectorX const> const& ptr,
+    [[maybe_unused]] Eigen::Ref<IndexVectorX const> const& adj,
+    [[maybe_unused]] Eigen::Ref<IndexVectorX const> const& wadj,
+    [[maybe_unused]] Index nPartitions,
+    [[maybe_unused]] PartitioningOptions opts)
 {
 #ifdef PBAT_USE_METIS
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.Partition");
@@ -95,13 +95,13 @@ IndexVectorX Partition(
     options[METIS_OPTION_NSEPS]   = static_cast<idx_t>(opts.nSeparators);
     options[METIS_OPTION_NITER]   = static_cast<idx_t>(opts.nRefinementIters);
     options[METIS_OPTION_SEED]    = static_cast<idx_t>(opts.rngSeed);
-    options[METIS_OPTION_MINCONN] = opts.bMinimizeSupernodalGraphDegree ? idx_t(1) : idx_t(0);
-    options[METIS_OPTION_NO2HOP]  = opts.bPerform2HopMatching ? idx_t(0) : idx_t(1);
-    options[METIS_OPTION_CONTIG]  = opts.bEnforceContiguousPartitions ? idx_t(1) : idx_t(0);
-    options[METIS_OPTION_CCORDER] = opts.bIdentifyConnectedComponents ? idx_t(1) : idx_t(0);
+    options[METIS_OPTION_MINCONN] = opts.bMinimizeSupernodalGraphDegree ? idx_t{1} : idx_t{0};
+    options[METIS_OPTION_NO2HOP]  = opts.bPerform2HopMatching ? idx_t{0} : idx_t{1};
+    options[METIS_OPTION_CONTIG]  = opts.bEnforceContiguousPartitions ? idx_t{1} : idx_t{0};
+    options[METIS_OPTION_CCORDER] = opts.bIdentifyConnectedComponents ? idx_t{1} : idx_t{0};
     // Invoke partitioning implementation
     idx_t objval(-1);
-    std::vector<idx_t> part(static_cast<std::size_t>(nVertices), idx_t(-1));
+    std::vector<idx_t> part(static_cast<std::size_t>(nVertices), idx_t{-1});
     int const ec = METIS_PartGraphKway(
         &nVertices,
         &nBalancingConstraints,

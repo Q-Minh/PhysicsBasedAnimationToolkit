@@ -107,8 +107,6 @@ PBAT_HOST_DEVICE auto Trace(TMatrix&& A)
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto Dot(TLhsMatrix&& A, TRhsMatrix&& B)
 {
-    using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
-    using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
     return Trace(std::forward<TLhsMatrix>(A).Transpose() * std::forward<TRhsMatrix>(B));
 }
 

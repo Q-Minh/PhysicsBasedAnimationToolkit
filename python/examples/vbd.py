@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import meshio
 import numpy as np
 import igl
@@ -6,6 +6,9 @@ import polyscope as ps
 import polyscope.imgui as imgui
 import argparse
 import itertools
+import scipy as sp
+import os
+import pathlib
 
 
 def combine(V: list, C: list):
@@ -16,6 +19,19 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     B = np.hstack([np.full(NV[i], i) for i in range(len(NV))])
     return V, C, B
+
+
+def export_data(args, V, C, F, B, aext, rhoe, mue, lambdae, vdbc):
+    pathlib.Path(args.output).mkdir(parents=True, exist_ok=True)
+    sp.io.mmwrite(os.path.join(args.output, "V.mtx"), V)
+    sp.io.mmwrite(os.path.join(args.output, "C.mtx"), C)
+    sp.io.mmwrite(os.path.join(args.output, "F.mtx"), F)
+    sp.io.mmwrite(os.path.join(args.output, "B.mtx"), B[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "aext.mtx"), aext)
+    sp.io.mmwrite(os.path.join(args.output, "rhoe.mtx"), rhoe[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "mue.mtx"), mue[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "lambdae.mtx"), lambdae[:, np.newaxis])
+    sp.io.mmwrite(os.path.join(args.output, "vdbc.mtx"), np.array(vdbc)[:, np.newaxis])
 
 
 if __name__ == "__main__":
@@ -106,6 +122,111 @@ if __name__ == "__main__":
         dest="gpu",
         default=False,
     )
+    parser.add_argument(
+        "--rho-chebyshev",
+        help="Chebyshev estimated spectral radius. Chebyshev acceleration is disabled if 0 < rho < 1 is not true",
+        type=float,
+        default=1.0,
+        dest="rho_chebyshev",
+    )
+    parser.add_argument(
+        "--window",
+        help="Accelerated VBD window size. Acceleration methods are disabled if window size <= 0",
+        type=int,
+        default=0,
+        dest="window",
+    )
+    parser.add_argument(
+        "--anderson-acceleration",
+        action="store_true",
+        help="Use Anderson acceleration",
+        dest="anderson_acceleration",
+    )
+    parser.add_argument(
+        "--broyden-acceleration",
+        action="store_true",
+        help="Use Broyden acceleration",
+        dest="broyden_acceleration",
+    )
+    parser.add_argument(
+        "--use-trust-region",
+        help="Use trust region acceleration",
+        action="store_true",
+        dest="use_trust_region",
+        default=False,
+    )
+    parser.add_argument(
+        "--use-curved-tr",
+        help="Use curved trust region path",
+        action="store_true",
+        dest="use_curved_tr",
+        default=False,
+    )
+    parser.add_argument(
+        "--tr-eta",
+        help="Trust region energy reduction ratio threshold",
+        type=float,
+        default=0.1,
+    )
+    parser.add_argument(
+        "--tr-tau",
+        help="Trust region radius scaling factor",
+        type=float,
+        default=2.0,
+    )
+    parser.add_argument(
+        "--trace",
+        help="Enable trace output",
+        action="store_true",
+        dest="trace",
+        default=False,
+    )
+    parser.add_argument(
+        "--heterogeneous",
+        help="Use heterogeneous material properties",
+        action="store_true",
+        dest="heterogeneous",
+        default=False,
+    )
+    parser.add_argument(
+        "--heterogeneous-slices",
+        help="Number of slices for heterogeneous material "
+        "properties. Splits the bounding box of the scene "
+        "into the requested number of slices, and uses "
+        "the heterogeneous material properties every 2nd "
+        "slice.",
+        type=int,
+        dest="heterogeneous_slices",
+        default=2,
+    )
+    parser.add_argument(
+        "--heterogeneous-young-modulus",
+        help="Young's modulus for the heterogeneous material",
+        type=float,
+        dest="heterogeneous_Y",
+        default=1e8,
+    )
+    parser.add_argument(
+        "--heterogeneous-poisson-ratio",
+        help="Poisson's ratio for the heterogeneous material",
+        type=float,
+        dest="heterogeneous_nu",
+        default=0.3,
+    )
+    parser.add_argument(
+        "--heterogeneous-mass-density",
+        help="Mass density for the heterogeneous material",
+        type=float,
+        dest="heterogeneous_rho",
+        default=1e5,
+    )
+    parser.add_argument(
+        "--heterogeneous-slice-axis",
+        help="Axis along which to slice the scene for heterogeneous material properties",
+        type=int,
+        dest="heterogeneous_slice_axis",
+        default=0,
+    )
     args = parser.parse_args()
 
     # Construct FEM quantities for simulation
@@ -118,20 +239,46 @@ if __name__ == "__main__":
         offset = V[i][:, -1].max() - V[i + 1][:, -1].min()
         V[i + 1][:, -1] += offset + extent * args.translation
     V, C, B = combine(V, C)
-    mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+    element = pbat.fem.Element.Tetrahedron
+    X, E = pbat.fem.mesh(V.T, C.T, element=element, order=1)
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
-    # Compute material (Lame) constants
-    rhoe = np.full(mesh.E.shape[1], args.rho)
-    Y = np.full(mesh.E.shape[1], args.Y)
-    nu = np.full(mesh.E.shape[1], args.nu)
-    mue = Y / (2 * (1 + nu))
-    lambdae = (Y * nu) / ((1 + nu) * (1 - 2 * nu))
+    # Apply material properties
+    rhoe = np.full(E.shape[1], args.rho)
+    Y = np.full(E.shape[1], args.Y)
+    nu = np.full(E.shape[1], args.nu)
+    heteromask = np.full(E.shape[1], False)
+    if args.heterogeneous:
+        Xmin = X.min(axis=1)
+        Xmax = X.max(axis=1)
+        barycenters = 0.25 * (
+            X[:, E[0, :]]
+            + X[:, E[1, :]]
+            + X[:, E[2, :]]
+            + X[:, E[3, :]]
+        )
+        nslices = max(2, args.heterogeneous_slices)
+        axis = args.heterogeneous_slice_axis
+        extent = Xmax[axis] - Xmin[axis]
+        width = extent / nslices
+        for s in range(1, nslices, 2):
+            smin = Xmin.copy()
+            smax = Xmax.copy()
+            smin[axis] = Xmin[axis] + s * width
+            smax[axis] = Xmin[axis] + (s + 1) * width
+            aabb = pypbat.geometry.aabb(np.vstack((smin, smax)).T)
+            vhetero = aabb.contained(barycenters)
+            heteromask[vhetero] = True
+
+    rhoe[heteromask] = args.heterogeneous_rho
+    Y[heteromask] = args.heterogeneous_Y
+    nu[heteromask] = args.heterogeneous_nu
+    mue, lambdae = pypbat.fem.lame_coefficients(Y, nu)
 
     # Set Dirichlet boundary conditions
-    Xmin = mesh.X.min(axis=1)
-    Xmax = mesh.X.max(axis=1)
+    Xmin = X.min(axis=1)
+    Xmax = X.max(axis=1)
     extent = Xmax - Xmin
     if args.fixed_end == "min":
         Xmax[args.fixed_axis] = (
@@ -143,8 +290,8 @@ if __name__ == "__main__":
             Xmax[args.fixed_axis] - args.percent_fixed * extent[args.fixed_axis]
         )
         Xmax[args.fixed_axis] += args.percent_fixed * extent[args.fixed_axis]
-    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(mesh.X)
+    aabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    vdbc = np.array(aabb.contained(X))
 
     # Setup VBD
     data = (
@@ -158,10 +305,23 @@ if __name__ == "__main__":
             pbat.sim.vbd.InitializationStrategy.KineticEnergyMinimum
         )
         .with_contact_parameters(args.muC, args.muF, args.epsv)
-        .construct(validate=True)
     )
-    thread_block_size = 64
+    if args.rho_chebyshev < 1.0 and args.rho_chebyshev > 0.0:
+        data = data.with_chebyshev_acceleration(args.rho_chebyshev)
+    elif args.window > 0:
+        if args.broyden_acceleration:
+            data = data.with_broyden_acceleration(args.window)
+        elif args.anderson_acceleration:
+            data = data.with_anderson_acceleration(args.window)
+    elif args.use_trust_region:
+        data = data.with_trust_region_acceleration(
+            args.tr_eta, args.tr_tau, args.use_curved_tr
+        )
+    data = data.construct(validate=True)
+    if args.trace:
+        export_data(args, V, C, F, B, data.aext, rhoe, mue, lambdae, vdbc)
 
+    thread_block_size = 64
     vbd = None
     if args.gpu:
         vbd = pbat.gpu.vbd.Integrator(data)
@@ -189,6 +349,13 @@ if __name__ == "__main__":
     ps.init()
     vm = ps.register_volume_mesh("Simulation mesh", V, C)
     vm.add_scalar_quantity("Coloring", data.colors, defined_on="vertices", cmap="jet")
+    vm.add_scalar_quantity(
+        "Heterogeneous",
+        heteromask,
+        defined_on="cells",
+        cmap="blues",
+        enabled=args.heterogeneous,
+    )
     pc = ps.register_point_cloud("Dirichlet", V[vdbc, :])
     dt = 0.01
     iterations = 20
@@ -200,7 +367,7 @@ if __name__ == "__main__":
     export = False
     t = 0
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global dt, iterations, substeps
@@ -212,7 +379,6 @@ if __name__ == "__main__":
         changed, dt = imgui.InputFloat("dt", dt)
         changed, iterations = imgui.InputInt("Iterations", iterations)
         changed, substeps = imgui.InputInt("Substeps", substeps)
-        changed, rho_chebyshev = imgui.InputFloat("Chebyshev rho", rho_chebyshev)
         changed, kD = imgui.InputFloat("Damping", kD, format="%.8f")
         changed, RdetH = imgui.InputFloat("Residual det(H)", RdetH, format="%.15f")
         changed, thread_block_size = imgui.InputInt(
@@ -239,17 +405,21 @@ if __name__ == "__main__":
         reset = imgui.Button("Reset")
 
         if reset:
-            vbd.x = mesh.X
-            vbd.v = np.zeros(mesh.X.shape)
-            vm.update_vertex_positions(mesh.X.T)
+            vbd.x = X
+            vbd.v = np.zeros(X.shape)
+            vm.update_vertex_positions(X.T)
             t = 0
 
         if args.gpu:
             vbd.gpu_block_size = thread_block_size
 
         if animate or step:
+            if args.trace:
+                sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
+                sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)
+
             profiler.begin_frame("Physics")
-            vbd.step(dt, iterations, substeps, rho_chebyshev)
+            vbd.step(dt, iterations, substeps)
             profiler.end_frame("Physics")
 
             # Update visuals
@@ -275,3 +445,7 @@ if __name__ == "__main__":
 
     ps.set_user_callback(callback)
     ps.show()
+
+    if args.trace:
+        sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
+        sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)

@@ -7,15 +7,8 @@ if platform.system() == "Windows":
         if os.path.isdir(dll_search_dir):
             os.add_dll_directory(dll_search_dir)
 
-import pbatoolkit.fem
-import pbatoolkit.geometry
-import pbatoolkit.graph
-import pbatoolkit.sim
-import pbatoolkit.sim.vbd
-import pbatoolkit.sim.xpbd
-import pbatoolkit.profiling
-import pbatoolkit.math
-import pbatoolkit.math.linalg
+import pbatoolkit.py as pypbat
+from . import _pbat as pbat
 
 # Some users may not have CUDA Toolkit libraries installed or discoverable.
 # They should still be allowed to use pbatoolkit's CPU APIs.
@@ -30,4 +23,3 @@ import pbatoolkit.math.linalg
 # - Scenario 3 forces pbatoolkit users to have a CUDA GPU and libraries.
 # Because lazy loading of dynamic libraries is hard to achieve on linux,
 # I distribute 2 packages, pbatoolkit (CPU only) and pbatoolkit-gpu (CPU and GPU).
-import pbatoolkit.gpu

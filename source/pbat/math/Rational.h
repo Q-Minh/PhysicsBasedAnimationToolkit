@@ -40,8 +40,8 @@ struct PBAT_API Rational
      * @param b Denominator
      */
     template <std::integral Integer>
-    Rational(Integer a, Integer b)
-        : a(static_cast<std::int64_t>(a)), b(static_cast<std::int64_t>(b))
+    Rational(Integer _a, Integer _b)
+        : a(static_cast<std::int64_t>(_a)), b(static_cast<std::int64_t>(_b))
     {
     }
     /**
@@ -104,11 +104,17 @@ struct PBAT_API Rational
      */
     bool Rebase(std::int64_t denominator);
     /**
-     * @brief Cast to Scalar
+     * @brief Cast to double
      *
      * @return 
      */
-    explicit operator Scalar() const;
+    explicit operator double() const;
+    /**
+     * @brief Cast to float
+     *
+     * @return 
+     */
+    explicit operator float() const;
     /**
      * @brief Attempts to reduce magnitude of \f$ a,b \f$ by eliminating common divisor
      */

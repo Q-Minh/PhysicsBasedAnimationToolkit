@@ -3,7 +3,11 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "Adjacency.h"
+    "BreadthFirstSearch.h"
     "Color.h"
+    "ConnectedComponents.h"
+    "DepthFirstSearch.h"
+    "DisjointSetUnionFind.h"
     "Enums.h"
     "Graph.h"
     "Mesh.h"
@@ -12,7 +16,11 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Adjacency.cpp"
+    "BreadthFirstSearch.cpp"
     "Color.cpp"
+    "ConnectedComponents.cpp"
+    "DepthFirstSearch.cpp"
+    "DisjointSetUnionFind.cpp"
     "Mesh.cpp"
     "Partition.cpp"
 )

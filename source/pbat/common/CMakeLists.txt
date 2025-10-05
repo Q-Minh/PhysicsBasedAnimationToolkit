@@ -3,20 +3,36 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES 
         "ArgSort.h"
+        "BinaryRadixTree.h"
+        "BruteSet.h"
         "Common.h"
         "Concepts.h"
         "ConstexprFor.h"
+        "CountingSort.h"
         "Eigen.h"
         "Hash.h"
+        "Heap.h"
         "Indexing.h"
+        "Modulo.h"
+        "NAryTreeTraversal.h"
+        "Overloaded.h"
+        "Permute.h"
         "Queue.h"
         "Stack.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 PRIVATE
     "ArgSort.cpp"
+    "BinaryRadixTree.cpp"
+    "BruteSet.cpp"
+    "CountingSort.cpp"
     "Eigen.cpp"
+    "Heap.cpp"
     "Indexing.cpp"
     "Queue.cpp"
+    "Modulo.cpp"
+    "Overloaded.cpp"
+    "Permute.cpp"
+    "NAryTreeTraversal.cpp"
     "Stack.cpp"
 )

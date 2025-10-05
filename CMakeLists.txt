@@ -26,9 +26,6 @@ option(PBAT_BUILD_DOC "Build documentation" OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-# Platform specific settings
-include(platform)
-
 # Build as static or shared
 if(PBAT_BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)

@@ -14,15 +14,19 @@
         },
         {
             "name": "fmt",
-            "version>=": "10.2.1"
+            "version>=": "11.0.2"
         },
         {
             "name": "tbb",
-            "version>=": "2021.11.0"
+            "version>=": "2022.0.0"
         },
         {
-            "name": "doctest",
-            "version>=": "2.4.11"
+            "name": "hdf5",
+            "version>=": "1.14.0",
+            "features": [
+                "cpp",
+                "zlib"
+            ]
         }
     ],
     "features": {
@@ -30,8 +34,15 @@
             "description": "Use SuiteSparse for sparse decompositions",
             "dependencies": [
                 {
-                    "name": "suitesparse",
-                    "version>=": "5.8.0#2"
+                    "name": "suitesparse-cholmod",
+                    "version>=": "5.3.0",
+                    "features": [
+                        "matrixops",
+                        "modify",
+                        "openmp",
+                        "partition",
+                        "supernodal"
+                    ]
                 }
             ]
         },
@@ -49,28 +60,10 @@
             "dependencies": [
                 {
                     "name": "metis",
-                    "version>=": "2022-07-27#0"
-                }
-            ]
-        },
-        "python": {
-            "description": "Enable building Python bindings",
-            "dependencies": [
-                {
-                    "name": "pybind11",
-                    "version>=": "2.11.1"
-                }
-            ]
-        },
-        "cuda": {
-            "description": "Use CUDA for GPU accelerated modules",
-            "dependencies": [
-                {
-                    "name": "cuda-api-wrappers",
-                    "version>=": "0.6.7"
+                    "version>=": "2022-07-27"
                 }
             ]
         }
     },
-    "builtin-baseline": "055721089e8037d4d617250814d11f881e557549"
+    "builtin-baseline": "b02e341c927f16d991edbd915d8ea43eac52096c"
 }

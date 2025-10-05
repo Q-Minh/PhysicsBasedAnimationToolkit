@@ -1,13 +1,13 @@
 #ifndef PYPBAT_GEOMETRY_AXIS_ALIGNED_BOUNDING_BOX_H
 #define PYPBAT_GEOMETRY_AXIS_ALIGNED_BOUNDING_BOX_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace geometry {
 
-void BindAxisAlignedBoundingBox(pybind11::module& m);
+void BindAxisAlignedBoundingBox(nanobind::module_& m);
 
 } // namespace geometry
 } // namespace py

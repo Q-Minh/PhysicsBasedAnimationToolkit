@@ -26,7 +26,7 @@ class ConstSubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE ConstSubMatrix(NestedType const& A, int ib, int jb) : A(A), ib(ib), jb(jb)
+    PBAT_HOST_DEVICE ConstSubMatrix(NestedType const& _A, int _ib, int _jb) : A(_A), ib(_ib), jb(_jb)
     {
         static_assert(
             NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,
@@ -77,7 +77,7 @@ class SubMatrix
     static auto constexpr kCols     = N;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE SubMatrix(NestedType& A, int ib, int jb) : A(A), ib(ib), jb(jb)
+    PBAT_HOST_DEVICE SubMatrix(NestedType& _A, int _ib, int _jb) : A(_A), ib(_ib), jb(_jb)
     {
         static_assert(
             NestedType::kRows >= M and NestedType::kCols >= N and M > 0 and N > 0,

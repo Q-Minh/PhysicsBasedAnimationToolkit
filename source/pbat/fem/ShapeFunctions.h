@@ -8,43 +8,46 @@
  *
  */
 
-#ifndef PBAT_FEM_SHAPE_FUNCTIONS_H
-#define PBAT_FEM_SHAPE_FUNCTIONS_H
+#ifndef PBAT_FEM_SHAPEFUNCTIONS_H
+#define PBAT_FEM_SHAPEFUNCTIONS_H
 
 #include "Concepts.h"
 #include "Jacobian.h"
+#include "pbat/Aliases.h"
+#include "pbat/common/Concepts.h"
+#include "pbat/common/Eigen.h"
+#include "pbat/profiling/Profiling.h"
 
-#include <Eigen/Cholesky>
 #include <Eigen/LU>
+#include <Eigen/SVD>
 #include <exception>
 #include <fmt/core.h>
-#include <optional>
-#include <pbat/Aliases.h>
-#include <pbat/profiling/Profiling.h>
 #include <string>
 #include <tbb/parallel_for.h>
 
-namespace pbat {
-namespace fem {
+namespace pbat::fem {
 
 /**
  * @brief Computes shape functions at element quadrature points for a polynomial quadrature rule of
  * order QuadratureOrder
  * @tparam TElement Element type
  * @tparam QuadratureOrder Quadrature order
- * @return The shape function values of each node at quadrature points, stored in a matrix
- * of dimensions `|# element nodes| x |# quad.pts.|`
+ * @tparam TScalar Floating point type, defaults to Scalar
+ * @return `|# element nodes| x |# elem. quad.pts.|` matrix of nodal shape function values at
+ * quadrature points
  */
-template <CElement TElement, int QuadratureOrder>
-auto ShapeFunctions()
-    -> Matrix<TElement::kNodes, TElement::template QuadratureType<QuadratureOrder>::kPoints>
+template <CElement TElement, int QuadratureOrder, common::CFloatingPoint TScalar = Scalar>
+auto ElementShapeFunctions() -> Eigen::Matrix<
+    TScalar,
+    TElement::kNodes,
+    TElement::template QuadratureType<QuadratureOrder, TScalar>::kPoints>
 {
-    using QuadratureRuleType = typename TElement::template QuadratureType<QuadratureOrder>;
+    using QuadratureRuleType = typename TElement::template QuadratureType<QuadratureOrder, TScalar>;
     using ElementType        = TElement;
     auto const Xg            = common::ToEigen(QuadratureRuleType::points)
                         .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
                         .template bottomRows<QuadratureRuleType::kDims>();
-    Matrix<ElementType::kNodes, QuadratureRuleType::kPoints> Ng{};
+    Eigen::Matrix<TScalar, ElementType::kNodes, QuadratureRuleType::kPoints> Ng{};
     for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
     {
         Ng.col(g) = ElementType::N(Xg.col(g));
@@ -55,31 +58,37 @@ auto ShapeFunctions()
 /**
  * @brief Constructs a shape function matrix \f$ \mathbf{N} \f$ for a given mesh, i.e. at the
  * element quadrature points.
+ * @tparam TElement Element type
  * @tparam QuadratureOrder Quadrature order
- * @tparam TMesh Mesh type
- * @param mesh FEM mesh
+ * @tparam TScalar Floating point type
+ * @tparam TIndex Index type, defaults to Index
+ * @param E `|# nodes|x|# elements|` array of element node indices
+ * @param nNodes Number of nodes in the mesh
  * @return `|# elements * # quad.pts.| x |# nodes|` shape function matrix
  */
-template <int QuadratureOrder, CMesh TMesh>
-CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
+template <CElement TElement, int QuadratureOrder, common::CFloatingPoint TScalar, class TDerivedE>
+auto ShapeFunctionMatrix(Eigen::DenseBase<TDerivedE> const& E, Eigen::Index nNodes)
+    -> Eigen::SparseMatrix<TScalar, Eigen::RowMajor, typename TDerivedE::Scalar>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
-    using ElementType               = typename TMesh::ElementType;
-    auto const Ng                   = ShapeFunctions<ElementType, QuadratureOrder>();
-    auto const numberOfNodes        = mesh.X.cols();
-    auto const numberOfElements     = mesh.E.cols();
-    auto const numberOfQuadPoints   = Ng.cols();
-    auto const m                    = numberOfQuadPoints * numberOfElements;
-    auto const n                    = numberOfNodes;
-    auto constexpr kNodesPerElement = ElementType::kNodes;
-    CSRMatrix N(m, n);
-    N.reserve(IndexVectorX::Constant(m, kNodesPerElement));
-    for (auto e = 0; e < numberOfElements; ++e)
+    using ElementType     = TElement;
+    using ScalarType      = TScalar;
+    using IndexType       = typename TDerivedE::Scalar;
+    using IndexVectorType = Eigen::Vector<IndexType, Eigen::Dynamic>;
+    auto const Ng         = ElementShapeFunctions<ElementType, QuadratureOrder, ScalarType>();
+    auto const nElements  = E.cols();
+    auto const nQuadPointsPerElement = Ng.cols();
+    auto const m                     = nQuadPointsPerElement * nElements;
+    auto const n                     = nNodes;
+    auto constexpr kNodesPerElement  = ElementType::kNodes;
+    Eigen::SparseMatrix<ScalarType, Eigen::RowMajor, IndexType> N(m, n);
+    N.reserve(IndexVectorType::Constant(m, kNodesPerElement));
+    for (auto e = 0; e < nElements; ++e)
     {
-        auto const nodes = mesh.E.col(e);
-        for (auto g = 0; g < numberOfQuadPoints; ++g)
+        auto const nodes = E.col(e);
+        for (auto g = 0; g < nQuadPointsPerElement; ++g)
         {
-            auto const row = e * numberOfQuadPoints + g;
+            auto const row = e * nQuadPointsPerElement + g;
             for (auto i = 0; i < Ng.rows(); ++i)
             {
                 auto const col     = nodes(i);
@@ -92,50 +101,94 @@ CSRMatrix ShapeFunctionMatrix(TMesh const& mesh)
 
 /**
  * @brief Constructs a shape function matrix \f$ \mathbf{N} \f$ for a given mesh, i.e. at the
- * given evaluation points.
+ * element quadrature points.
+ * @tparam QuadratureOrder Quadrature order
  * @tparam TMesh Mesh type
- * @tparam TDerivedE Eigen type
- * @tparam TDerivedX Eigen type
  * @param mesh FEM mesh
- * @param eg `|# quad.pts.|` array of elements associated with quadrature points
- * @param Xg `|# dims|x|# quad.pts.|` array of quadrature points in reference space
- * @param bXgInReferenceSpace Consider evaluation points Xg have coordinates in reference space
+ * @return `|# elements * # quad.pts.| x |# nodes|` shape function matrix
+ */
+template <int QuadratureOrder, CMesh TMesh>
+auto ShapeFunctionMatrix(TMesh const& mesh)
+    -> Eigen::SparseMatrix<typename TMesh::ScalarType, Eigen::RowMajor, typename TMesh::IndexType>
+{
+    return ShapeFunctionMatrix<
+        typename TMesh::ElementType,
+        QuadratureOrder,
+        typename TMesh::ScalarType>(mesh.E, mesh.X.cols());
+}
+
+/**
+ * @brief Constructs a shape function matrix \f$ \mathbf{N} \f$ for a given mesh, i.e. at the
+ * element quadrature points.
+ * @tparam TElement Element type
+ * @tparam TDerivedE Eigen dense expression type for element indices
+ * @tparam TDerivedXi Eigen dense expression type for quadrature points
+ * @tparam TIndex Index type, defaults to coefficient type of `TDerivedE`
+ * @param E `|# nodes| x |# quad.pts.|` array of element node indices
+ * @param nNodes Number of nodes in the mesh
+ * @param Xi `|# dims| x |# quad.pts.|` array of quadrature points in reference space
  * @return `|# quad.pts.| x |# nodes|` shape function matrix
  */
-template <CMesh TMesh, class TDerivedE, class TDerivedX>
-CSRMatrix ShapeFunctionMatrix(
-    TMesh const& mesh,
-    Eigen::DenseBase<TDerivedE> const& eg,
-    Eigen::MatrixBase<TDerivedX> const& Xg,
-    bool bXgInReferenceSpace = false)
+template <
+    CElement TElement,
+    class TDerivedE,
+    class TDerivedXi,
+    common::CIndex TIndex = typename TDerivedE::Scalar>
+auto ShapeFunctionMatrixAt(
+    Eigen::DenseBase<TDerivedE> const& E,
+    TIndex nNodes,
+    Eigen::MatrixBase<TDerivedXi> const& Xi)
+    -> Eigen::SparseMatrix<typename TDerivedXi::Scalar, Eigen::RowMajor, TIndex>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionMatrix");
-    using ElementType = typename TMesh::ElementType;
-
-    MatrixX Xi{};
-    if (not bXgInReferenceSpace)
-    {
-        // NOTE: Should expose the "iterations" parameter to parent function
-        Xi = ReferencePositions(mesh, eg, Xg);
-    }
-    auto const numberOfNodes        = mesh.X.cols();
-    auto const numberOfQuadPoints   = Xg.cols();
-    auto const m                    = numberOfQuadPoints;
-    auto const n                    = numberOfNodes;
+    using ElementType               = TElement;
+    using ScalarType                = typename TDerivedXi::Scalar;
+    using IndexType                 = TIndex;
+    using IndexVectorType           = Eigen::Vector<IndexType, Eigen::Dynamic>;
+    using SparseMatrixType          = Eigen::SparseMatrix<ScalarType, Eigen::RowMajor, IndexType>;
+    auto const numberOfQuadPoints   = Xi.cols();
     auto constexpr kNodesPerElement = ElementType::kNodes;
-    CSRMatrix N(m, n);
-    N.reserve(IndexVectorX::Constant(m, kNodesPerElement));
+    SparseMatrixType N(numberOfQuadPoints, nNodes);
+    N.reserve(IndexVectorType::Constant(numberOfQuadPoints, kNodesPerElement));
     for (auto g = 0; g < numberOfQuadPoints; ++g)
     {
-        auto const e     = eg(g);
-        auto const nodes = mesh.E.col(e);
-        auto Ng = bXgInReferenceSpace ? ElementType::N(Xg.col(g)) : ElementType::N(Xi.col(g));
+        auto const nodes = E.col(g);
+        auto Ng          = ElementType::N(Xi.col(g));
         for (auto i = 0; i < kNodesPerElement; ++i)
         {
             N.insert(g, nodes(i)) = Ng(i);
         }
     }
     return N;
+}
+
+/**
+ * @brief Constructs a shape function matrix \f$ \mathbf{N} \f$ for a given mesh, i.e. at the
+ * given evaluation points.
+ * @tparam TMesh Mesh type
+ * @tparam TDerivedEg Eigen type
+ * @tparam TDerivedXi Eigen type
+ * @param mesh FEM mesh
+ * @param eg `|# quad.pts.|` array of elements associated with quadrature points
+ * @param Xi `|# dims|x|# quad.pts.|` array of quadrature points in reference space
+ * @return `|# quad.pts.| x |# nodes|` shape function matrix
+ */
+template <CMesh TMesh, class TDerivedEg, class TDerivedXi>
+auto ShapeFunctionMatrixAt(
+    TMesh const& mesh,
+    Eigen::DenseBase<TDerivedEg> const& eg,
+    Eigen::MatrixBase<TDerivedXi> const& Xi)
+    -> Eigen::SparseMatrix<typename TMesh::ScalarType, Eigen::RowMajor, typename TMesh::IndexType>
+{
+    using ScalarType = typename TMesh::ScalarType;
+    using IndexType  = typename TMesh::IndexType;
+    static_assert(
+        std::is_same_v<ScalarType, typename TDerivedXi::Scalar>,
+        "Scalar type of Xi must match mesh scalar type");
+    return ShapeFunctionMatrixAt<typename TMesh::ElementType>(
+        mesh.E(Eigen::placeholders::all, eg.derived()),
+        static_cast<IndexType>(mesh.X.cols()),
+        Xi.derived());
 }
 
 /**
@@ -147,10 +200,13 @@ CSRMatrix ShapeFunctionMatrix(
  * points Xi
  */
 template <CElement TElement, class TDerivedXi>
-MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
+auto ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
+    -> Eigen::Matrix<typename TDerivedXi::Scalar, TElement::kNodes, Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionsAt");
     using ElementType = TElement;
+    using ScalarType  = typename TDerivedXi::Scalar;
+    using MatrixType  = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
     if (Xi.rows() != ElementType::kDims)
     {
         std::string const what = fmt::format(
@@ -159,7 +215,7 @@ MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
             Xi.rows());
         throw std::invalid_argument(what);
     }
-    MatrixX N(ElementType::kNodes, Xi.cols());
+    MatrixType N(ElementType::kNodes, Xi.cols());
     tbb::parallel_for(Index{0}, Index{Xi.cols()}, [&](Index i) {
         N.col(i) = ElementType::N(Xi.col(i));
     });
@@ -167,170 +223,131 @@ MatrixX ShapeFunctionsAt(Eigen::DenseBase<TDerivedXi> const& Xi)
 }
 
 /**
- * @brief Compute shape functions at the given reference or domain space positions
- * @tparam TMesh Mesh type
- * @tparam TDerivedE Eigen dense expression type for element indices
- * @tparam TDerivedXg Eigen dense expression type for evaluation points
- * @param mesh FEM mesh
- * @param eg `|# quad.pts.|` array of elements associated with quadrature points
- * @param Xg `|# dims|x|# quad.pts.|` evaluation points
- * @param bXgInReferenceSpace Consider evaluation points Xg as having coordinates in reference space
- * @return `|# element nodes| x |Xg.cols()|` matrix of nodal shape functions at reference
- * points Xg
- */
-template <CMesh TMesh, class TDerivedE, class TDerivedXg>
-MatrixX ShapeFunctionsAt(
-    TMesh const& mesh,
-    Eigen::DenseBase<TDerivedE> const& eg,
-    Eigen::MatrixBase<TDerivedXg> const& Xg,
-    bool bXgInReferenceSpace = false)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionsAt");
-    using ElementType = typename TMesh::ElementType;
-    if (bXgInReferenceSpace)
-        return ShapeFunctionsAt<ElementType>(Xg);
-    // NOTE: Should expose the "iterations" parameter to parent function
-    return ShapeFunctionsAt<ElementType>(ReferencePositions(mesh, eg, Xg));
-}
-
-/**
- * @brief Integrate shape functions on each element
- * @tparam TDerived Eigen dense expression type for element jacobian determinants
- * @tparam TMesh Mesh type
- * @tparam QuadratureOrder Quadrature order
- * @param mesh FEM mesh
- * @param detJe `|# quad.pts.| x |# elements|` matrix of element jacobian determinants
- * @return `|# element nodes|x|# elements|`
- */
-template <int QuadratureOrder, CMesh TMesh, class TDerived>
-MatrixX IntegratedShapeFunctions(TMesh const& mesh, Eigen::DenseBase<TDerived> const& detJe)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.IntegratedShapeFunctions");
-    using MeshType           = TMesh;
-    using ElementType        = typename MeshType::ElementType;
-    using QuadratureRuleType = typename ElementType::template QuadratureType<QuadratureOrder>;
-    auto constexpr kQuadPts  = QuadratureRuleType::kPoints;
-    auto constexpr kQuadratureOrder = QuadratureOrder;
-    auto const numberOfElements     = mesh.E.cols();
-    bool const bHasDeterminants = (detJe.rows() == kQuadPts) and (detJe.cols() == numberOfElements);
-    if (not bHasDeterminants)
-    {
-        std::string const what = fmt::format(
-            "Expected element jacobian determinants of dimensions {}x{} for element quadrature of "
-            "order={}, but got {}x{}",
-            kQuadPts,
-            numberOfElements,
-            kQuadratureOrder,
-            detJe.rows(),
-            detJe.cols());
-        throw std::invalid_argument(what);
-    }
-    // Precompute element shape functions
-    auto constexpr kNodesPerElement             = ElementType::kNodes;
-    Matrix<kNodesPerElement, kQuadPts> const Ng = ShapeFunctions<ElementType, kQuadratureOrder>();
-    // Integrate shape functions
-    MatrixX N     = MatrixX::Zero(kNodesPerElement, numberOfElements);
-    auto const wg = common::ToEigen(QuadratureRuleType::weights);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
-        {
-            N.col(e) += (wg(g) * detJe(g, e)) * Ng.col(g);
-        }
-    });
-    return N;
-}
-
-/**
- * @brief Computes gradients of FEM basis functions in reference element.
- *
- * Only works for linear maps, but we do not emit an error when `TElement::bHasConstantJacobian` is
- * `false`, since the element's function space might be non-linear, while its current configuration
- * induces a linear map. I.e., a \f$ k^\text{th} \f$ order element that is purely a rigid
- transformation on the
- * reference element still induces a linear map, even if the element's function space is \f$
- k^\text{th} \f$ order.
- * It is up to the user to give the right inputs, and we cannot/won't check those.
- *
- * @note
- * Since \f$ \phi(X) = N(\xi(X)) \f$, to be mathematically precise, what we should compute is:
- * \f{eqnarray*}{
- * \nabla \phi(X) &= \nabla \xi N(\xi(X)) J_X \xi(X) \\
- *                &= \nabla N * J_X \xi(X)
- * \f}
- * This requires the Jacobian of the inverse map taking domain element to reference element.
- * Because this map is potentially non-linear, we compute it via Gauss-Newton iterations in
- * Jacobian.h. Hence, to get the jacobian of that map, we also need to compute derivatives of
- * the Gauss-Newton iterations in Jacobian.h.
- * @note
- * However, we assume that domain elements are linear transformations of reference elements,
- * so that the inverse map is linear, i.e. the Jacobian is constant. Hence,
- * \f{eqnarray*}{
- * X(\xi) &= X * N(\xi) \\
- * J &= X * \nabla_\xi N \\
- * X(\xi) &= X_0 + J*\xi \\
- * J \xi &= X - X_0
- * \f}
- * @note
- * If J is square, then
- * \f{eqnarray*}{
- * \xi &= J^{-1} (X - X_0) \\
- * \nabla_X N(\xi(X)) &= \nabla_\xi N * J^{-1} \\
- * \nabla_X \phi^T  &= J^{-T} \left[ \nabla_\xi N \right]^T
- * \f}
- * @note
- * If J is rectangular, then
- * \f{eqnarray*}{
- * (J^T J) \xi      &= J^T (X - X_0) \\
- * \xi              &= (J^T J)^{-1} J^T (X - X_0) \\
- * \nabla_X N(\xi(X)) &= \nabla_\xi N * (J^T J)^{-1} J^T \\
- * \left[ \nabla_X \phi \right]^T  &= J (J^T J)^{-1} \left[ \nabla_\xi N \right]^T
- * \f}
- * @note
- * For non-linear elements, like hexahedra or quadrilaterals, the accuracy of the gradients
- * might be unacceptable, but will be exact, if domain hex or quad elements are linear
- * transformations on reference hex/quad elements. This is the case for axis-aligned elements,
- * for example, which would arise when constructing a mesh from an octree or quadtree.
+ * @brief Computes gradients \f$ \mathbf{G}(X) = \nabla_X \mathbf{N}_e(X) \f$ of FEM basis
+ * functions. Given some FEM function
+ * \f[
+ * \begin{align*}
+ * f(X) &=
+ * \begin{bmatrix} \dots & \mathbf{f}_i & \dots \end{bmatrix}
+ * \begin{bmatrix} \vdots \\ \phi_i(X) \\ \vdots \end{bmatrix} \\
+ * &= \mathbf{F}_e \mathbf{N}_e(X)
+ * \end{align*}
+ * \f]
+ * where \f$ \phi_i(X) = N_i(\xi(X)) \f$ are the nodal basis functions, we have that
+ * \f[
+ * \begin{align*}
+ * \nabla_X f(X) &= \mathbf{F}_e \nabla_X \mathbf{N}_e(X) \\
+ * &= \mathbf{F}_e \nabla_\xi \mathbf{N}_e(\xi(X)) \frac{\partial \xi}{\partial X}
+ * \end{align*}
+ * \f]
+ * Recall that
+ * \f[
+ * \begin{align*}
+ * \frac{\partial \xi}{\partial X} &= (\frac{\partial X}{\partial \xi})^{-1} \\
+ * &= \left( \mathbf{X}_e \nabla_\xi \mathbf{N}_e \right)^{-1}
+ * \end{align*}
+ * \f]
+ * where \f$ \mathbf{X}_e = \begin{bmatrix} \dots & \mathbf{X}_i & \dots \end{bmatrix} \f$ are the
+ * element nodal positions. We thus have that
+ * \f[
+ * \mathbf{G}(X)^T = \nabla_X \mathbf{N}_e(X)^T = ( \mathbf{X}_e \nabla_\xi \mathbf{N}_e )^{-T}
+ * \nabla_\xi \mathbf{N}_e^T
+ * \f]
+ * where the left-multiplication by \f$ ( \mathbf{X}_e \nabla_\xi \mathbf{N}_e )^{-T} \f$ is carried
+ * out via LU/SVD decomposition for a square/rectangular Jacobian.
  *
  * @tparam TDerivedXi Eigen dense expression type for reference position
  * @tparam TDerivedX Eigen dense expression type for element nodal positions
  * @tparam TElement Element type
- * @param Xi Point in reference element at which to evaluate the gradients
- * @param X Element vertices, i.e. nodes of affine element
- * @return `|# nodes|x|Dims|` matrix of basis function gradients in rows
+ * @param Xi `|# elem dims| x 1` point in reference element at which to evaluate the gradients
+ * @param X `|# dims| x |# nodes|` element vertices, i.e. nodes of affine element
+ * @return `|# nodes| x |# dims|` matrix of basis function gradients in rows
  */
 template <CElement TElement, class TDerivedXi, class TDerivedX>
-auto ShapeFunctionGradients(
+auto ElementShapeFunctionGradients(
     Eigen::MatrixBase<TDerivedXi> const& Xi,
-    Eigen::MatrixBase<TDerivedX> const& X) -> Matrix<TElement::kNodes, TDerivedX::RowsAtCompileTime>
+    Eigen::MatrixBase<TDerivedX> const& X)
+    -> Eigen::Matrix<typename TDerivedX::Scalar, TElement::kNodes, TDerivedX::RowsAtCompileTime>
 {
-    auto constexpr kInputDims           = TElement::kDims;
-    auto constexpr kOutputDims          = TDerivedX::RowsAtCompileTime;
-    auto constexpr kNodes               = TElement::kNodes;
-    using AffineElementType             = typename TElement::AffineBaseType;
-    Matrix<kNodes, kInputDims> const GN = TElement::GradN(Xi);
-    Matrix<kOutputDims, kInputDims> J;
-    Matrix<kNodes, kOutputDims> GP;
+    auto constexpr kInputDims  = TElement::kDims;
+    auto constexpr kOutputDims = TDerivedX::RowsAtCompileTime;
+    auto constexpr kNodes      = TElement::kNodes;
+    using ScalarType           = typename TDerivedX::Scalar;
+    static_assert(
+        std::is_same_v<ScalarType, typename TDerivedXi::Scalar>,
+        "Scalar type of Xi must match X's scalar type");
+    static_assert(kOutputDims != Eigen::Dynamic, "Rows of X must be fixed at compile time");
 
-    bool constexpr bIsElementLinear = std::is_same_v<TElement, AffineElementType>;
-    if constexpr (bIsElementLinear)
-    {
-        J = X * GN;
-    }
-    else
-    {
-        J = X * AffineElementType::GradN(Xi);
-    }
+    Eigen::Matrix<ScalarType, kNodes, kInputDims> const GN = TElement::GradN(Xi);
+    Eigen::Matrix<ScalarType, kNodes, kOutputDims> GP;
+    Eigen::Matrix<ScalarType, kOutputDims, kInputDims> J = X * GN;
+    // Compute \nabla_\xi N (X \nabla_\xi N)^{-1}
     bool constexpr bIsJacobianSquare = kInputDims == kOutputDims;
-    if (bIsJacobianSquare)
+    if constexpr (bIsJacobianSquare)
     {
         GP.transpose() = J.transpose().fullPivLu().solve(GN.transpose());
     }
     else
     {
-        Matrix<kInputDims, kInputDims> const JTJ = J.transpose() * J;
-        GP.transpose()                           = J * JTJ.ldlt().solve(GN.transpose());
+        GP.transpose() =
+            J.transpose().template jacobiSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(
+                GN.transpose());
     }
     return GP;
+}
+
+/**
+ * @brief Computes nodal shape function gradients at each element quadrature points
+ * @tparam TElement Element type
+ * @tparam Dims Number of dimensions of the element
+ * @tparam QuadratureOrder Quadrature order
+ * @tparam TDerivedE Eigen dense expression type for element indices
+ * @tparam TDerivedX Eigen dense expression type for element nodal positions
+ * @tparam TScalar Floating point type, defaults to Scalar
+ * @tparam TIndex Index type, defaults to coefficient type of `TDerivedE`
+ * @param E `|# elem nodes| x |# elements|` array of element node indices
+ * @param X `|# dims| x |# nodes|` array of mesh nodal positions
+ * @return `|# elem nodes| x |# dims * # elem quad.pts. * # elems|` matrix of nodal shape function
+ * gradients
+ */
+template <
+    CElement TElement,
+    int Dims,
+    int QuadratureOrder,
+    class TDerivedE,
+    class TDerivedX,
+    common::CFloatingPoint TScalar = typename TDerivedX::Scalar,
+    common::CIndex TIndex          = typename TDerivedE::Scalar>
+auto ShapeFunctionGradients(
+    Eigen::MatrixBase<TDerivedE> const& E,
+    Eigen::MatrixBase<TDerivedX> const& X)
+    -> Eigen::Matrix<TScalar, TElement::kNodes, Eigen::Dynamic>
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradients");
+    using ScalarType = TScalar;
+    using QuadratureRuleType =
+        typename TElement::template QuadratureType<QuadratureOrder, ScalarType>;
+    using ElementType = TElement;
+    using MatrixType  = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
+    auto const Xg     = common::ToEigen(QuadratureRuleType::points)
+                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
+                        .template bottomRows<QuadratureRuleType::kDims>();
+    auto const numberOfElements     = E.cols();
+    auto constexpr kNodesPerElement = ElementType::kNodes;
+    MatrixType GNe(kNodesPerElement, numberOfElements * Dims * QuadratureRuleType::kPoints);
+    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
+        auto const nodes = E.col(e);
+        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
+        {
+            auto const GP = ElementShapeFunctionGradients<ElementType>(
+                Xg.col(g),
+                X(Eigen::placeholders::all, nodes)
+                    .template topLeftCorner<Dims, kNodesPerElement>());
+            auto constexpr kStride = Dims * QuadratureRuleType::kPoints;
+            GNe.template block<kNodesPerElement, Dims>(0, e * kStride + g * Dims) = GP;
+        }
+    });
+    return GNe;
 }
 
 /**
@@ -342,83 +359,88 @@ auto ShapeFunctionGradients(
  * gradients
  */
 template <int QuadratureOrder, CMesh TMesh>
-MatrixX ShapeFunctionGradients(TMesh const& mesh)
+auto ShapeFunctionGradients(TMesh const& mesh)
+    -> Eigen::Matrix<typename TMesh::ScalarType, TMesh::ElementType::kNodes, Eigen::Dynamic>
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradients");
-    using MeshType              = TMesh;
-    using ElementType           = typename MeshType::ElementType;
-    using QuadratureRuleType    = typename ElementType::template QuadratureType<QuadratureOrder>;
-    using AffineElementType     = typename ElementType::AffineBaseType;
-    auto const numberOfElements = mesh.E.cols();
-    auto constexpr kNodesPerElement = ElementType::kNodes;
-    auto const Xg                   = common::ToEigen(QuadratureRuleType::points)
-                        .reshaped(QuadratureRuleType::kDims + 1, QuadratureRuleType::kPoints)
-                        .template bottomRows<ElementType::kDims>();
-    MatrixX GNe(kNodesPerElement, numberOfElements * MeshType::kDims * QuadratureRuleType::kPoints);
-    tbb::parallel_for(Index{0}, Index{numberOfElements}, [&](Index e) {
-        auto const nodes                = mesh.E.col(e);
-        auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = MeshType::kDims;
-        auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
-        for (auto g = 0; g < QuadratureRuleType::kPoints; ++g)
-        {
-            auto const GP          = ShapeFunctionGradients<ElementType>(Xg.col(g), Ve);
-            auto constexpr kStride = MeshType::kDims * QuadratureRuleType::kPoints;
-            GNe.block<kNodesPerElement, MeshType::kDims>(0, e * kStride + g * MeshType::kDims) = GP;
-        }
+    using MeshType    = TMesh;
+    using ElementType = typename MeshType::ElementType;
+    return ShapeFunctionGradients<ElementType, MeshType::kDims, QuadratureOrder>(mesh.E, mesh.X);
+}
+
+/**
+ * @brief Computes nodal shape function gradients at evaluation points Xi.
+ * @tparam TElement Element type
+ * @tparam Dims Number of dimensions of the element
+ * @tparam TDerivedE Eigen dense expression type for element indices
+ * @tparam TDerivedX Eigen dense expression type for element nodal positions
+ * @tparam TDerivedXi Eigen dense expression type for evaluation points
+ * @param Eg `|# elem nodes| x |# eval.pts.|` array of element node indices at evaluation points
+ * @param X `|# dims| x |# elem nodes|` array of element nodal positions
+ * @param Xi `|# dims| x |# eval.pts.|` evaluation points in reference space
+ * @return `|# elem nodes| x |# dims * # eval.pts.|` matrix of nodal shape function gradients
+ */
+template <CElement TElement, int Dims, class TDerivedEg, class TDerivedX, class TDerivedXi>
+auto ShapeFunctionGradientsAt(
+    Eigen::DenseBase<TDerivedEg> const& Eg,
+    Eigen::MatrixBase<TDerivedX> const& X,
+    Eigen::MatrixBase<TDerivedXi> const& Xi)
+    -> Eigen::Matrix<typename TDerivedXi::Scalar, TElement::kNodes, Eigen::Dynamic>
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradientsAt");
+    using ElementType = TElement;
+    using ScalarType  = typename TDerivedXi::Scalar;
+    using MatrixType  = Eigen::Matrix<ScalarType, ElementType::kNodes, Eigen::Dynamic>;
+    if (Eg.cols() != Xi.cols())
+    {
+        std::string const what = fmt::format(
+            "Expected Eg.cols() == Xi.cols(), but got Eg.cols()={} and Xi.cols()={}",
+            Eg.cols(),
+            Xi.cols());
+        throw std::invalid_argument(what);
+    }
+    auto const numberOfEvaluationPoints = Xi.cols();
+    MatrixType GNe(ElementType::kNodes, numberOfEvaluationPoints * Dims);
+    tbb::parallel_for(Index{0}, Index{numberOfEvaluationPoints}, [&](Index g) {
+        auto const nodes = Eg.col(g);
+        auto GP          = ElementShapeFunctionGradients<ElementType>(
+            Xi.col(g),
+            X(Eigen::placeholders::all, nodes).template topLeftCorner<Dims, ElementType::kNodes>());
+        GNe.template block<ElementType::kNodes, Dims>(0, g * Dims) = GP;
     });
     return GNe;
 }
 
 /**
  * @brief Computes nodal shape function gradients at evaluation points Xg.
- * @tparam TDerivedE Eigen dense expression type for element indices
- * @tparam TDerivedXg Eigen dense expression type for evaluation points
  * @tparam TMesh Mesh type
+ * @tparam TDerivedEg Eigen dense expression type for element indices
+ * @tparam TDerivedXi Eigen dense expression type for evaluation points
  * @param mesh FEM mesh
  * @param E `|# eval.pts.|` array of elements associated with evaluation points
- * @param Xg `|# dims|x|# eval.pts.|` evaluation points
- * @param bXgInReferenceSpace Consider evaluation points Xg as having coordinates in reference space
- * @return `|# element nodes| x |E.size() * mesh.dims|` nodal shape function gradients at evaluation
- * points Xg
+ * @param Xi `|# dims|x|# eval.pts.|` evaluation points
+ * @return `|# element nodes| x |eg.size() * mesh.dims|` nodal shape function gradients at
+ * evaluation points Xi
  */
-template <CMesh TMesh, class TDerivedE, class TDerivedXg>
-MatrixX ShapeFunctionGradientsAt(
+template <CMesh TMesh, class TDerivedEg, class TDerivedXi>
+auto ShapeFunctionGradientsAt(
     TMesh const& mesh,
-    Eigen::DenseBase<TDerivedE> const& E,
-    Eigen::MatrixBase<TDerivedXg> const& Xg,
-    bool bXgInReferenceSpace = false)
+    Eigen::DenseBase<TDerivedEg> const& eg,
+    Eigen::MatrixBase<TDerivedXi> const& Xi)
+    -> Eigen::Matrix<typename TMesh::ScalarType, TMesh::ElementType::kNodes, Eigen::Dynamic>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ShapeFunctionGradientsAt");
-    using MeshType          = TMesh;
-    using ElementType       = typename MeshType::ElementType;
-    using AffineElementType = typename ElementType::AffineBaseType;
-
-    MatrixX Xi{};
-    if (not bXgInReferenceSpace)
-    {
-        // NOTE: Should expose the "iterations" parameter to parent function
-        Xi = ReferencePositions(mesh, E, Xg);
-    }
-    auto const numberOfEvaluationPoints = Xg.cols();
-    auto constexpr kNodesPerElement     = ElementType::kNodes;
-    MatrixX GNe(kNodesPerElement, numberOfEvaluationPoints * MeshType::kDims);
-    tbb::parallel_for(Index{0}, Index{numberOfEvaluationPoints}, [&](Index g) {
-        auto const e                    = E(g);
-        auto const nodes                = mesh.E.col(e);
-        auto const vertices             = nodes(ElementType::Vertices);
-        auto constexpr kRowsJ           = MeshType::kDims;
-        auto constexpr kColsJ           = AffineElementType::kNodes;
-        Matrix<kRowsJ, kColsJ> const Ve = mesh.X(Eigen::placeholders::all, vertices);
-        auto const GP = bXgInReferenceSpace ? ShapeFunctionGradients<ElementType>(Xg.col(g), Ve) :
-                                              ShapeFunctionGradients<ElementType>(Xi.col(g), Ve);
-        GNe.block<kNodesPerElement, MeshType::kDims>(0, g * MeshType::kDims) = GP;
-    });
-    return GNe;
+    using ScalarType  = typename TMesh::ScalarType;
+    using MeshType    = TMesh;
+    using ElementType = typename MeshType::ElementType;
+    static_assert(
+        std::is_same_v<ScalarType, typename TDerivedXi::Scalar>,
+        "Scalar type of Xi must match mesh scalar type");
+    return ShapeFunctionGradientsAt<ElementType, MeshType::kDims>(
+        mesh.E(Eigen::placeholders::all, eg.derived()),
+        mesh.X,
+        Xi.derived());
 }
 
-} // namespace fem
-} // namespace pbat
+} // namespace pbat::fem
 
-#endif // PBAT_FEM_SHAPE_FUNCTIONS_H
+#endif // PBAT_FEM_SHAPEFUNCTIONS_H

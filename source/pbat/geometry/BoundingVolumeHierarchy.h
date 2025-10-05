@@ -51,7 +51,7 @@ class BoundingVolumeHierarchy
      * @param nPrimitives Number of primitives
      * @param maxPointsInLeaf Maximum number of primitives in a leaf node
      */
-    void Construct(std::size_t nPrimitives, std::size_t maxPointsInLeaf = 10u);
+    void Construct(Index nPrimitives, Index maxPointsInLeaf = 10);
     /**
      * @brief Returns the bounding volumes of this BVH
      * @return Bounding volumes
@@ -182,8 +182,8 @@ class BoundingVolumeHierarchy
 
 template <class TDerived, class TBoundingVolume, class TPrimitive, int Dims>
 inline void BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Construct(
-    std::size_t nPrimitives,
-    std::size_t maxPointsInLeaf)
+    Index nPrimitives,
+    Index maxPointsInLeaf)
 {
     Matrix<Dims, Eigen::Dynamic> P(Dims, nPrimitives);
     for (auto p = 0; p < P.cols(); ++p)
@@ -229,7 +229,7 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Primitives
     intersectingPrimitives.reserve(reserve);
 
     mKdTree.DepthFirstSearch([&](Index bvIdx, KdTreeNode const& node) -> bool {
-        if (node.IsLeafNode())
+        if (node.IsLeaf())
         {
             for (auto const idx : mKdTree.PointsInNode(node))
             {
@@ -304,7 +304,7 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
         {
             auto const qIdxStl     = static_cast<std::size_t>(q.idx);
             KdTreeNode const& node = nodes[qIdxStl];
-            if (node.IsLeafNode())
+            if (node.IsLeaf())
             {
                 for (auto const pIdx : mKdTree.PointsInNode(node))
                 {
@@ -313,10 +313,8 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::NearestPri
             }
             else
             {
-                if (node.HasLeftChild())
-                    queue.push(MakeVolumeQueueItem(node.lc));
-                if (node.HasRightChild())
-                    queue.push(MakeVolumeQueueItem(node.rc));
+                queue.push(MakeVolumeQueueItem(node.Left()));
+                queue.push(MakeVolumeQueueItem(node.Right()));
             }
         }
         else
@@ -352,7 +350,6 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
     std::size_t reserve) const
 {
     using BoundingVolumeType2 = TBoundingVolume2;
-    using PrimitiveType2      = TPrimitive2;
     std::vector<Index> overlaps{};
     overlaps.reserve(reserve * 2);
     auto const& nodes1 = mKdTree.Nodes();
@@ -374,8 +371,8 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
 
         KdTreeNode const& node1 = nodes1[n1Stl];
         KdTreeNode const& node2 = nodes2[n2Stl];
-        bool const bIsNode1Leaf = node1.IsLeafNode();
-        bool const bIsNode2Leaf = node2.IsLeafNode();
+        bool const bIsNode1Leaf = node1.IsLeaf();
+        bool const bIsNode2Leaf = node2.IsLeaf();
         if (bIsNode1Leaf and bIsNode2Leaf)
         {
             for (auto const p1 : mKdTree.PointsInNode(node1))
@@ -397,33 +394,27 @@ BoundingVolumeHierarchy<TDerived, TBoundingVolume, TPrimitive, Dims>::Overlappin
         }
         else if (bIsNode1Leaf and not bIsNode2Leaf)
         {
-            if (node2.HasLeftChild())
-                stack.push({n1, node2.lc});
-            if (node2.HasRightChild())
-                stack.push({n1, node2.rc});
+            stack.push({n1, node2.Left()});
+            stack.push({n1, node2.Right()});
         }
         else if (not bIsNode1Leaf and bIsNode2Leaf)
         {
-            if (node1.HasLeftChild())
-                stack.push({node1.lc, n2});
-            if (node1.HasRightChild())
-                stack.push({node1.rc, n2});
+            stack.push({node1.Left(), n2});
+            stack.push({node1.Right(), n2});
         }
         else
         {
-            if (node1.depth < node2.depth)
+            auto const n1n = node1.n;
+            auto const n2n = node2.n;
+            if (n1n > n2n)
             {
-                if (node1.HasLeftChild())
-                    stack.push({node1.lc, n2});
-                if (node1.HasRightChild())
-                    stack.push({node1.rc, n2});
+                stack.push({node1.Left(), n2});
+                stack.push({node1.Right(), n2});
             }
             else
             {
-                if (node2.HasLeftChild())
-                    stack.push({n1, node2.lc});
-                if (node2.HasRightChild())
-                    stack.push({n1, node2.rc});
+                stack.push({n1, node2.Left()});
+                stack.push({n1, node2.Right()});
             }
         }
     }

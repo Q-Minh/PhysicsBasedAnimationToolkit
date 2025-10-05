@@ -13,6 +13,15 @@ set_target_properties(
 
 # Most of our implementation code is templated, so we expose transitive dependencies (i.e. PUBLIC)
 target_compile_features(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/bigobj /utf-8>
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler "/bigobj /utf-8" >
+    )
+endif()
+
 target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     $<$<BOOL:${PBAT_BUILD_TESTS}>:PBAT_HAS_DOCTEST>
@@ -41,18 +50,62 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
 )
 
-# Define sources+targets for our library and link to every dependency
+# Define sources+targets for our library
 add_subdirectory(pbat)
+
+# Make source tree appear as on file system in IDEs
+get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
+get_target_property(_pbat_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_api)
+get_target_property(_pbat_private_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_implementation)
+list(APPEND _pbat_headers ${_pbat_private_headers})
+source_group(
+    TREE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX "source"
+    FILES ${_pbat_sources}
+)
+source_group(
+    TREE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX "headers"
+    FILES ${_pbat_headers}
+)
+
+# Link to every dependency
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
+    cpp-sort::cpp-sort
     doctest::doctest
     Eigen3::Eigen
     fmt::fmt
+    HighFive::Include
+    OpenMP::OpenMP_CXX
     range-v3::concepts
     range-v3::meta
     range-v3::range-v3
     TBB::tbb
 )
+
+if (TARGET hdf5::hdf5-static AND TARGET hdf5::hdf5_cpp-static)
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+        hdf5::hdf5-static
+        hdf5::hdf5_cpp-static
+    )
+else()
+    target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+        hdf5::hdf5-shared
+        hdf5::hdf5_cpp-shared
+    )
+endif()
+
+# Convert space-separated PBAT_CMAKE_CXX_FLAGS to list (i.e. semi-colon separated string)
+if(PBAT_CMAKE_CXX_FLAGS)
+    string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
+    target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
+    )
+endif()
 
 if(PBAT_ENABLE_PROFILER)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -71,15 +124,8 @@ endif()
 if(PBAT_USE_SUITESPARSE)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PUBLIC
-        SuiteSparse::suitesparseconfig
-        SuiteSparse::amd
-        SuiteSparse::cholmod
-        SuiteSparse::colamd
-        SuiteSparse::ccolamd
-        SuiteSparse::camd
-        SuiteSparse::ldl
-        SuiteSparse::umfpack
-        SuiteSparse::spqr
+        OpenMP::OpenMP_C
+        SuiteSparse::CHOLMOD
     )
 endif()
 
@@ -93,8 +139,9 @@ endif()
 if(PBAT_USE_CUDA)
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PRIVATE
-        CUDA::toolkit
         CUDA::cudart
+        CUDA::cublas
+        CUDA::cusolver
         cuda-api-wrappers::runtime-and-driver
     )
     set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -102,39 +149,26 @@ if(PBAT_USE_CUDA)
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
     )
+    target_compile_options(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:
+        --expt-relaxed-constexpr;
+        --extended-lambda;
+        >
+    )
+    target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:
+        _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS
 
-    get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
-
-    foreach(_source IN ITEMS ${_pbat_sources})
-        get_filename_component(_extension ${_source} LAST_EXT)
-
-        if(_extension STREQUAL ".cu")
-            set_source_files_properties(${_source}
-                PROPERTIES
-                COMPILE_OPTIONS
-                "--expt-relaxed-constexpr;--extended-lambda"
-                COMPILE_DEFINITIONS
-                "_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS"
-            )
-        endif()
-    endforeach()
+        # WARNING:
+        # Disable unicode support in fmt for CUDA sources.
+        # I don't know how to fix this!!
+        # See https://forums.developer.nvidia.com/t/utf-8-option-for-the-host-function-in-cuda-msvc/312739/11
+        -DFMT_UNICODE=0
+        >
+    )
 endif()
-
-# Make source tree appear as on file system in IDEs
-get_target_property(_pbat_sources PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit SOURCES)
-get_target_property(_pbat_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_api)
-get_target_property(_pbat_private_headers PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit HEADER_SET_implementation)
-list(APPEND _pbat_headers ${_pbat_private_headers})
-source_group(
-    TREE ${CMAKE_CURRENT_SOURCE_DIR}
-    PREFIX "source"
-    FILES ${_pbat_sources}
-)
-source_group(
-    TREE ${CMAKE_CURRENT_SOURCE_DIR}
-    PREFIX "headers"
-    FILES ${_pbat_headers}
-)
 
 # Generate shared library export macros
 # Note that the following code must come after the previous call to source_group,

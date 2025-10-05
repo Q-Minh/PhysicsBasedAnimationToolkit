@@ -1,14 +1,14 @@
 #include "Gradient.h"
 
-#include "Jacobian.h"
-#include "LaplacianMatrix.h"
+#include "Laplacian.h"
 #include "Mesh.h"
+#include "MeshQuadrature.h"
 #include "ShapeFunctions.h"
 #include "Tetrahedron.h"
+#include "pbat/common/ConstexprFor.h"
+#include "pbat/math/LinearOperator.h"
 
 #include <doctest/doctest.h>
-#include <pbat/common/ConstexprFor.h>
-#include <pbat/math/LinearOperator.h>
 #include <unsupported/Eigen/KroneckerProduct>
 
 TEST_CASE("[fem] Gradient")
@@ -36,32 +36,25 @@ TEST_CASE("[fem] Gradient")
         using Mesh                      = fem::Mesh<Element, kDims>;
         Mesh mesh(V, C);
 
-        MatrixX const GNe                = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
-        auto const nQuadPointsPerElement = GNe.cols() / (kDims * mesh.E.cols());
-        IndexVectorX const eg = IndexVectorX::LinSpaced(mesh.E.cols(), Index(0), mesh.E.cols() - 1)
-                                    .replicate(1, nQuadPointsPerElement)
-                                    .transpose()
-                                    .reshaped();
-        using GradientType = fem::Gradient<Mesh>;
-        CHECK(math::CLinearOperator<GradientType>);
-        GradientType G{mesh, eg, GNe};
-
-        auto const n                = G.InputDimensions();
-        auto const m                = G.OutputDimensions();
+        auto const GNe             = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
+        auto const nQuadPtsPerElem = GNe.cols() / (kDims * mesh.E.cols());
+        auto const eg              = fem::MeshQuadratureElements(mesh.E.cols(), nQuadPtsPerElem);
+        auto const G               = fem::GradientMatrix<Eigen::ColMajor>(mesh, eg.reshaped(), GNe);
+        auto const n               = G.cols();
+        auto const m               = G.rows();
         auto const numberOfElements = mesh.E.cols();
-        CHECK_EQ(m, kDims * nQuadPointsPerElement * numberOfElements);
+        auto const mExpected        = kDims * nQuadPtsPerElem * numberOfElements;
+        auto const nExpected        = mesh.X.cols();
+        CHECK_EQ(m, mExpected);
+        CHECK_EQ(n, nExpected);
 
         VectorX const ones = VectorX::Ones(n);
         VectorX gradOnes   = VectorX::Zero(m);
-        G.Apply(ones, gradOnes);
+        fem::GemmGradient(mesh, eg.reshaped(), GNe, ones, gradOnes);
 
         bool const bConstantFunctionHasZeroGradient = gradOnes.isZero(zero);
         CHECK(bConstantFunctionHasZeroGradient);
-
-        CSCMatrix const GM = G.ToMatrix();
-        CHECK_EQ(GM.rows(), m);
-        CHECK_EQ(GM.cols(), n);
-        VectorX const gradOnesMat                      = GM * ones;
+        VectorX const gradOnesMat                      = G * ones;
         bool const bConstantFunctionHasZeroGradientMat = gradOnesMat.isZero();
         CHECK(bConstantFunctionHasZeroGradientMat);
 
@@ -71,10 +64,10 @@ TEST_CASE("[fem] Gradient")
         CSCMatrix Ik(kDims, kDims);
         Ik.setIdentity();
         CSCMatrix const NThat = Eigen::kroneckerProduct(NT, Ik);
-        VectorX const Ihat    = fem::InnerProductWeights<kQuadratureOrder>(mesh)
+        VectorX const Ihat    = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh)
                                  .reshaped()
                                  .template replicate<kDims, 1>();
-        CSCMatrix const GG = NThat * Ihat.asDiagonal() * GM;
+        CSCMatrix const GG = NThat * Ihat.asDiagonal() * G;
         CHECK_EQ(GG.rows(), kDims * n);
         CHECK_EQ(GG.cols(), n);
         VectorX const galerkinGradOnes                      = GG * ones;
@@ -82,13 +75,17 @@ TEST_CASE("[fem] Gradient")
         CHECK(bConstantFunctionHasZeroGalerkinGradient);
 
         // Check that we can compute Laplacian via divergence of gradient
-        CSCMatrix const GMT      = GM.transpose();
-        CSCMatrix Lhat           = -GMT * Ihat.asDiagonal() * GM;
+        CSCMatrix const GT       = G.transpose();
+        CSCMatrix Lhat           = -GT * Ihat.asDiagonal() * G;
         VectorX const LhatValues = Lhat.coeffs();
         Lhat.coeffs().setOnes();
-        using LaplacianType   = fem::SymmetricLaplacianMatrix<Mesh>;
-        VectorX const wg      = fem::InnerProductWeights<kQuadratureOrder>(mesh).reshaped();
-        CSCMatrix L           = LaplacianType(mesh, eg, wg, GNe).ToMatrix();
+        VectorX const wg = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh).reshaped();
+        CSCMatrix L      = fem::LaplacianMatrix<Element, kDims, Eigen::ColMajor>(
+            mesh.E,
+            mesh.X.cols(),
+            eg.reshaped(),
+            wg,
+            GNe);
         VectorX const Lvalues = L.coeffs();
         L.coeffs().setOnes();
         Scalar const LsparsityError = (L - Lhat).squaredNorm();

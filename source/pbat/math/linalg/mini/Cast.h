@@ -24,7 +24,7 @@ class CastView
     static auto constexpr kCols     = NestedType::kCols;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE CastView(NestedType const& A) : A(A) {}
+    PBAT_HOST_DEVICE CastView(NestedType const& _A) : A(_A) {}
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
     {

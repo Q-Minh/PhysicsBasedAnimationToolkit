@@ -12,7 +12,7 @@
 #define PBAT_PBAT_H
 
 /**
- * @namespace pbat 
+ * @namespace pbat
  * @brief The main namespace of the library.
  */
 namespace pbat {
@@ -23,6 +23,10 @@ namespace pbat {
 #include "fem/Fem.h"
 #include "geometry/Geometry.h"
 #include "graph/Graph.h"
+#if defined(PBAT_USE_CUDA)
+    #include "gpu/Gpu.h"
+#endif // PBAT_USE_CUDA
+#include "io/Io.h"
 #include "math/Math.h"
 #include "physics/Physics.h"
 #include "profiling/Profiling.h"

@@ -4,8 +4,8 @@
 
 #include "Integrator.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
+#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Mini.h"
-#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/xpbd/Kernels.h"
 
 #include <thrust/async/for_each.h>
@@ -87,7 +87,7 @@ Integrator::Integrator(Data const& data)
 
 void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(ctx, "pbat.gpu.impl.xpbd.Integrator.Step");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.xpbd.Integrator.Step");
 
     GpuScalar const sdt       = dt / static_cast<GpuScalar>(substeps);
     GpuScalar const sdt2      = sdt * sdt;
@@ -120,7 +120,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     // Use substepping for accelerated convergence
     for (auto s = 0; s < substeps; ++s)
     {
-        PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
             subStepCtx,
             "pbat.gpu.impl.xpbd.Integrator.Step.SubStep");
 
@@ -154,7 +154,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
         if (s % mActiveSetUpdateFrequency == 0)
             cd.UpdateActiveSet(x);
         // Solve constraints
-        PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+        PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
             constraintSolveCtx,
             "pbat.gpu.impl.xpbd.Integrator.Step.ConstraintSolve");
         for (auto k = 0; k < iterations; ++k)
@@ -188,8 +188,6 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
         PBAT_PROFILE_CUDA_HOST_SCOPE_END(subStepCtx);
     }
     cd.FinalizeActiveSet(x);
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::SetCompliance(Eigen::Ref<GpuMatrixX const> const& alphaIn, EConstraint eConstraint)
@@ -253,7 +251,7 @@ PBAT_DEVICE static void ProjectBlockNeoHookeanConstraint(
 
 void Integrator::ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
         ctx,
         "pbat.gpu.impl.xpbd.Integrator.ProjectBlockNeoHookeanConstraints");
 
@@ -301,7 +299,7 @@ void Integrator::ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 
 void Integrator::ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
         ctx,
         "pbat.gpu.impl.xpbd.Integrator.ProjectClusteredBlockNeoHookeanConstraints");
 
@@ -357,7 +355,7 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuSca
 
 void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
         ctx,
         "pbat.gpu.impl.xpbd.Integrator.ProjectCollisionConstraints");
 

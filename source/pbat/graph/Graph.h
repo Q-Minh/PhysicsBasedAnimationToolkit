@@ -17,7 +17,10 @@ namespace pbat::graph {
 };
 
 #include "Adjacency.h"
+#include "BreadthFirstSearch.h"
 #include "Color.h"
+#include "DepthFirstSearch.h"
+#include "DisjointSetUnionFind.h"
 #include "Enums.h"
 #include "Mesh.h"
 #include "Partition.h"

@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import igl
 import meshio
 import polyscope as ps
@@ -6,29 +6,34 @@ import numpy as np
 import argparse
 
 
-def harmonic_field(V: np.ndarray, C: np.ndarray, order: int, eps: float = 0.1):
+def harmonic_field(
+    V: np.ndarray,
+    C: np.ndarray,
+    element: pbat.fem.Element,
+    order: int,
+    eps: float = 0.1,
+):
     # Construct order order mesh and its Laplacian
-    mesh = pbat.fem.Mesh(
-        V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=order)
-    quadrature_order = max(int(2*(order-1)), 1)
-    L, egL, wgL, GNegL = pbat.fem.laplacian(
-        mesh, quadrature_order=quadrature_order)
+    X, E = pbat.fem.mesh(V.T, C.T, element=element, order=order)
+    L = pbat.fem.laplacian_matrix(E, X, element=element, order=order)
     # Set Dirichlet boundary conditions at bottom and top of the model
-    Xmin = mesh.X.min(axis=1)
-    Xmax = mesh.X.max(axis=1)
+    Xmin = X.min(axis=1)
+    Xmax = X.max(axis=1)
     extents = Xmax - Xmin
     extents[:-1] = 0
-    aabblo = pbat.geometry.aabb(
-        np.vstack((Xmin - eps*extents, Xmax - (1-eps)*extents)).T)
-    gammalo = aabblo.contained(mesh.X)
-    aabbhi = pbat.geometry.aabb(
-        np.vstack((Xmin + (1-eps)*extents, Xmax + eps*extents)).T)
-    gammahi = aabbhi.contained(mesh.X)
+    aabblo = pypbat.geometry.aabb(
+        np.vstack((Xmin - eps * extents, Xmax - (1 - eps) * extents)).T
+    )
+    gammalo = aabblo.contained(X)
+    aabbhi = pypbat.geometry.aabb(
+        np.vstack((Xmin + (1 - eps) * extents, Xmax + eps * extents)).T
+    )
+    gammahi = aabbhi.contained(X)
     gamma = np.concatenate((gammalo, gammahi))
     uk = np.concatenate((np.ones(len(gammalo)), np.zeros(len(gammahi))))
 
     # Solve boundary value problem
-    n = mesh.X.shape[1]
+    n = X.shape[1]
     dofs = np.setdiff1d(list(range(n)), gamma)
     Lu = L.tocsr()[dofs, :]
     Luu = Lu.tocsc()[:, dofs]
@@ -40,56 +45,80 @@ def harmonic_field(V: np.ndarray, C: np.ndarray, order: int, eps: float = 0.1):
     u = np.zeros(n)
     u[gamma] = uk
     u[dofs] = uu
-    return u, mesh
+    return u, X, E
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Higher order FEM demo",
     )
-    parser.add_argument("-i", "--input", help="Path to input tetrahedral mesh", type=str,
-                        dest="input", required=True)
-    parser.add_argument("-r", "--refined-input", help="Path to refined input tetrahedral mesh", type=str,
-                        dest="rinput", required=True)
+    parser.add_argument(
+        "-i",
+        "--input",
+        help="Path to input tetrahedral mesh",
+        type=str,
+        dest="input",
+        required=True,
+    )
+    parser.add_argument(
+        "-r",
+        "--refined-input",
+        help="Path to refined input tetrahedral mesh",
+        type=str,
+        dest="rinput",
+        required=True,
+    )
     args = parser.parse_args()
 
     imesh = meshio.read(args.input)
-    V, C, = imesh.points, imesh.cells_dict["tetra"]
-    V = np.copy(V, order='c')
-    C = C.astype(np.int64, order='c')
-    u1, mesh1 = harmonic_field(V, C, order=1)
-    u2, mesh2 = harmonic_field(V, C, order=2)
+    (
+        V,
+        C,
+    ) = (
+        imesh.points,
+        imesh.cells_dict["tetra"],
+    )
+    V = V.astype(np.float64, order="c")
+    C = C.astype(np.int64, order="c")
+    element = pbat.fem.Element.Tetrahedron
+    u1, X1, E1 = harmonic_field(V, C, element, order=1)
+    u2, X2, E2 = harmonic_field(V, C, element, order=2)
     bvh = pbat.geometry.bvh(V.T, C.T, cell=pbat.geometry.Cell.Tetrahedron)
     rmesh = meshio.read(args.rinput)
-    Vrefined, Crefined = rmesh.points.astype(
-        np.float64, order='c'), rmesh.cells_dict["tetra"].astype(np.int64, order='c')
+    Vrefined, Crefined = rmesh.points.astype(np.float64, order="c"), rmesh.cells_dict[
+        "tetra"
+    ].astype(np.int64, order="c")
     Frefined = igl.boundary_facets(Crefined)
     Frefined[:, :2] = np.roll(Frefined[:, :2], shift=1, axis=1)
 
     e, d = bvh.nearest_primitives_to_points(Vrefined.T)
-    phi1 = pbat.fem.shape_functions_at(mesh1, e, Vrefined.T)
-    phi2 = pbat.fem.shape_functions_at(mesh2, e, Vrefined.T)
-    u1ref = (u1[mesh1.E[:, e]] * phi1).sum(axis=0)
-    u2ref = (u2[mesh2.E[:, e]] * phi2).sum(axis=0)
+    Xi1 = pbat.fem.reference_positions(E1, X1, e, Vrefined.T, element=element, order=1)
+    Xi2 = pbat.fem.reference_positions(E2, X2, e, Vrefined.T, element=element, order=2)
+    phi1 = pbat.fem.shape_functions_at(Xi1, element, order=1)
+    phi2 = pbat.fem.shape_functions_at(Xi2, element, order=2)
+    u1ref = (u1[E1[:, e]] * phi1).sum(axis=0)
+    u2ref = (u2[E2[:, e]] * phi2).sum(axis=0)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
     vm = ps.register_volume_mesh("domain refined", Vrefined, Crefined)
-    vm.add_scalar_quantity("Order 1 harmonic solution",
-                           u1ref, enabled=True, cmap="turbo")
+    vm.add_scalar_quantity(
+        "Order 1 harmonic solution", u1ref, enabled=True, cmap="turbo"
+    )
     vm.add_scalar_quantity("Order 2 harmonic solution", u2ref, cmap="turbo")
     niso = 15
 
     def isolines(V, F, u, niso):
         # Code for libigl 2.5.1
-        diso = (u.max() - u.min()) / (niso+2)
-        isovalues = np.array([(i+1)*diso for i in range(niso)])
+        diso = (u.max() - u.min()) / (niso + 2)
+        isovalues = np.array([(i + 1) * diso for i in range(niso)])
         Viso, Eiso, Iiso = igl.isolines(V, F, u, isovalues)
         # Uncomment for libigl 2.4.1
         # Viso1, Eiso1 = igl.isolines(V, F, u, niso)
         return Viso, Eiso
+
     Viso1, Eiso1 = isolines(Vrefined, Frefined, u1ref, niso)
     Viso2, Eiso2 = isolines(Vrefined, Frefined, u2ref, niso)
     cn1 = ps.register_curve_network("Order 1 contours", Viso1, Eiso1)

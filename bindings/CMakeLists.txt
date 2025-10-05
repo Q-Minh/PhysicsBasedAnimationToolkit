@@ -1,5 +1,14 @@
 Python_add_library(PhysicsBasedAnimationToolkit_Python MODULE WITH_SOABI)
 
+# Convert space-separated PBAT_CMAKE_CXX_FLAGS to list (i.e. semi-colon separated string)
+if(PBAT_CMAKE_CXX_FLAGS)
+    string(REPLACE " " ";" _pbat_cxx_flags ${PBAT_CMAKE_CXX_FLAGS})
+    target_compile_options(PhysicsBasedAnimationToolkit_Python
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:${_pbat_cxx_flags}>
+    )
+endif()
+
 set_target_properties(PhysicsBasedAnimationToolkit_Python
     PROPERTIES
     OUTPUT_NAME "_pbat"
@@ -14,16 +23,43 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
 )
 
-target_link_libraries(PhysicsBasedAnimationToolkit_Python
-    PRIVATE
+# Build the core parts of nanobind once
+nanobind_build_library(nanobind)
+set_target_properties(nanobind PROPERTIES SYSTEM ON)
+
+# .. and link it against the nanobind parts
+target_link_libraries(PhysicsBasedAnimationToolkit_Python PRIVATE
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    pybind11::headers
+    nanobind
+    Python::Module
 )
 
-if(NOT MSVC AND NOT ${CMAKE_BUILD_TYPE} MATCHES Debug|RelWithDebInfo)
-    # Strip unnecessary sections of the binary on Linux/macOS
-    pybind11_strip(PhysicsBasedAnimationToolkit_Python)
-endif()
+# .. enable size optimizations
+nanobind_opt_size(PhysicsBasedAnimationToolkit_Python)
+
+# .. enable link time optimization
+nanobind_lto(PhysicsBasedAnimationToolkit_Python)
+
+# .. set the default symbol visibility to 'hidden'
+nanobind_set_visibility(PhysicsBasedAnimationToolkit_Python)
+
+# .. strip unneeded symbols and debug info from the binary (only active in release builds)
+nanobind_strip(PhysicsBasedAnimationToolkit_Python)
+
+# .. disable the stack protector
+nanobind_disable_stack_protector(PhysicsBasedAnimationToolkit_Python)
+
+# .. set the Python extension suffix
+nanobind_extension(PhysicsBasedAnimationToolkit_Python)
+
+# .. set important compilation flags
+nanobind_compile_options(PhysicsBasedAnimationToolkit_Python)
+
+# .. set important linker flags
+nanobind_link_options(PhysicsBasedAnimationToolkit_Python)
+
+# Statically link against libstdc++/libgcc when targeting musllinux
+nanobind_musl_static_libcpp(PhysicsBasedAnimationToolkit_Python)
 
 add_subdirectory(pypbat)
 
@@ -57,30 +93,101 @@ set_target_properties(PhysicsBasedAnimationToolkit_Python
 
 # Install rules for scikit-build-core.
 
-# Because our build tree puts all binaries in CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CONFIG>,
-# we can install our Python bindings by directly copying the binaries.
-install(
-    DIRECTORY "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>/"
-    DESTINATION "pbatoolkit"
-    PATTERN "*.exp" EXCLUDE
-    PATTERN "*.lib" EXCLUDE
+# Stub generation
+nanobind_add_stub(
+    PhysicsBasedAnimationToolkit_PythonStub
+    MODULE "_pbat"
+    PYTHON_PATH "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>"
+    DEPENDS PhysicsBasedAnimationToolkit_Python
+    MARKER_FILE "py.typed"
+    RECURSIVE
+    OUTPUT_PATH "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>"
+    OUTPUT
+    "__init__.pyi"
+    "fem.pyi"
+    "geometry/__init__.pyi"
+    "geometry/sdf.pyi"
+    "gpu/__init__.pyi"
+    "gpu/common.pyi"
+    "gpu/contact.pyi"
+    "gpu/geometry.pyi"
+    "gpu/vbd.pyi"
+    "gpu/xpbd.pyi"
+    "graph.pyi"
+    "io.pyi"
+    "math/__init__.pyi"
+    "math/linalg.pyi"
+    "profiling.pyi"
+    "sim/__init__.pyi"
+    "sim/algorithm/__init__.pyi"
+    "sim/algorithm/newton.pyi"
+    "sim/algorithm/pd.pyi"
+    "sim/contact.pyi"
+    "sim/dynamics.pyi"
+    "sim/integration.pyi"
+    "sim/vbd.pyi"
+    "sim/xpbd.pyi"
 )
 
-# Bundle external (i.e. not built by this project) shared library dependencies.
-get_target_property(_pbat_link_libraries PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit LINK_LIBRARIES)
+if(WIN32)
+    # On Windows, we need to copy the nanobind DLL to the same directory
+    # as the Python module, so that the module can be loaded correctly,
+    # because stub generation requires loading the module. Since module
+    # artifacts are always placed in LIBRARY_OUTPUT_DIRECTORY, while DLLs
+    # are placed in RUNTIME_OUTPUT_DIRECTORY, we need to copy the DLL.
+    # nanobind is always built as a SHARED library unless specified otherwise.
+    # See https://nanobind.readthedocs.io/en/latest/api_cmake.html#command:nanobind_build_library.
+    get_target_property(_nanobind_type nanobind TYPE)
 
-foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
-    if(TARGET ${_pbat_link_library})
-        get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
-        get_target_property(_type ${_pbat_link_library} TYPE)
-        message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
-
-        if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
-            message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
-            install(IMPORTED_RUNTIME_ARTIFACTS ${_pbat_link_library} RUNTIME DESTINATION "pbatoolkit")
-        endif()
+    if(_nanobind_type STREQUAL "SHARED_LIBRARY")
+        add_custom_command(
+            TARGET PhysicsBasedAnimationToolkit_Python
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:nanobind>
+            $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
+            COMMENT "Copying nanobind runtime to Python module directory"
+        )
     endif()
-endforeach()
+endif()
+
+if(SKBUILD EQUAL "2")
+    if(PBAT_BUILD_SHARED_LIBS)
+        message(WARNING
+            "We currently do not support installing the Python bindings when building PBAT shared libraries. It is currently difficult to handle Windows DLL dependencies correctly together with stub generation. The stub generation requires ability to load the _pbat Python module in the build tree, which requires moving DLLs to the same directory as the _pbat module."
+        )
+    else()
+        # Because our build tree puts all binaries in CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CONFIG>,
+        # we can install our Python bindings by directly copying the binaries.
+        install(
+            DIRECTORY "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>/"
+            DESTINATION "pbatoolkit"
+            PATTERN "*.exp" EXCLUDE
+            PATTERN "*.lib" EXCLUDE
+        )
+
+        # Bundle external (i.e. not built by this project) shared library dependencies.
+        get_target_property(_pbat_link_libraries PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit LINK_LIBRARIES)
+        
+        foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
+            if(TARGET ${_pbat_link_library})
+                get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
+                get_target_property(_type ${_pbat_link_library} TYPE)
+                message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
+            
+                if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
+                    message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
+                    install(IMPORTED_RUNTIME_ARTIFACTS ${_pbat_link_library} RUNTIME DESTINATION "pbatoolkit")
+                endif()
+            else()
+                message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} is not a target")
+            endif()
+        endforeach()
+    endif()
+
+else()
+    message(WARNING "PBAT[python] -- Python bindings are only installable under scikit-build-core, i.e. via pip install")
+endif()
 
 # Bundling MKL and CUDA dependencies is pretty expensive,
 # so we should expect users to have installed those locally

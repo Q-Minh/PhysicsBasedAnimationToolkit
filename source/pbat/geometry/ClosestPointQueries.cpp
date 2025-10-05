@@ -81,3 +81,119 @@ TEST_CASE("[geometry] Can obtain closest point on tetrahedron ABCD to point P")
         CHECK(ToEigen(P).isApprox(ToEigen(Pexpected), eps));
     }
 }
+
+TEST_CASE("[geometry] ClosestPointQueries::Lines")
+{
+    using ScalarType = pbat::Scalar;
+    using namespace pbat::math::linalg::mini;
+    SVector<ScalarType, 3> P1;
+    SVector<ScalarType, 3> Q1;
+    SVector<ScalarType, 3> P2;
+    SVector<ScalarType, 3> Q2;
+    ScalarType constexpr eps = 1e-15;
+    SUBCASE("Lines intersect in middle")
+    {
+        P1 = SVector<ScalarType, 3>{0., 0., 0.};
+        Q1 = SVector<ScalarType, 3>{1., 1., 1.};
+        P2 = SVector<ScalarType, 3>{1., 0., 0.};
+        Q2 = SVector<ScalarType, 3>{0., 1., 1.};
+        SVector<ScalarType, 2> const beta =
+            pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+        CHECK_EQ(beta(0), doctest::Approx(0.5));
+        CHECK_EQ(beta(1), doctest::Approx(0.5));
+    }
+    SUBCASE("Lines intersect at start points")
+    {
+        P1 = SVector<ScalarType, 3>{0., 0., 0.};
+        Q1 = SVector<ScalarType, 3>{1., 0., 0.};
+        P2 = SVector<ScalarType, 3>{0., 0., 0.};
+        Q2 = SVector<ScalarType, 3>{0., 1., 1.};
+        SVector<ScalarType, 2> const beta =
+            pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+        CHECK_EQ(beta(0), doctest::Approx(0.));
+        CHECK_EQ(beta(1), doctest::Approx(0.));
+    }
+    SUBCASE("Lines intersect at end points")
+    {
+        P1 = SVector<ScalarType, 3>{0., 0., 0.};
+        Q1 = SVector<ScalarType, 3>{1., 0., 0.};
+        P2 = SVector<ScalarType, 3>{1., 1., 1.};
+        Q2 = SVector<ScalarType, 3>{1., 0., 0.};
+        SVector<ScalarType, 2> const beta =
+            pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+        CHECK_EQ(beta(0), doctest::Approx(1.));
+        CHECK_EQ(beta(1), doctest::Approx(1.));
+    }
+    SUBCASE("Lines do not intersect")
+    {
+        P1 = SVector<ScalarType, 3>{0., 0., 0.};
+        Q1 = SVector<ScalarType, 3>{1., 0., 1.};
+        P2 = SVector<ScalarType, 3>{1., 1., 0.};
+        Q2 = SVector<ScalarType, 3>{0., 1., 1.};
+        SVector<ScalarType, 2> const beta =
+            pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+        CHECK_EQ(beta(0), doctest::Approx(0.5));
+        CHECK_EQ(beta(1), doctest::Approx(0.5));
+    }
+    SUBCASE("Lines are parallel")
+    {
+        SUBCASE("Lines are shifted")
+        {
+            P1 = SVector<ScalarType, 3>{1., 0., 0.};
+            Q1 = SVector<ScalarType, 3>{2., 0., 0.};
+            P2 = SVector<ScalarType, 3>{0., 1., 0.};
+            Q2 = SVector<ScalarType, 3>{1., 1., 0.};
+            SVector<ScalarType, 2> const beta =
+                pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+            CHECK_EQ(beta(0), doctest::Approx(0.));
+            CHECK_EQ(beta(1), doctest::Approx(1.));
+        }
+        SUBCASE("Lines are not shifted")
+        {
+            P1 = SVector<ScalarType, 3>{0., 0., 0.};
+            Q1 = SVector<ScalarType, 3>{1., 0., 0.};
+            P2 = SVector<ScalarType, 3>{0., 1., 0.};
+            Q2 = SVector<ScalarType, 3>{1., 1., 0.};
+            SVector<ScalarType, 2> const beta =
+                pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+            CHECK_EQ(beta(0), doctest::Approx(0.));
+            CHECK_EQ(beta(1), doctest::Approx(0.));
+        }
+    }
+    SUBCASE("Lines are degenerate")
+    {
+        SUBCASE("Only line 1 is degenerate")
+        {
+            P1 = SVector<ScalarType, 3>{0., 0., 0.};
+            Q1 = SVector<ScalarType, 3>{0., 0., 0.};
+            P2 = SVector<ScalarType, 3>{1., 1., 1.};
+            Q2 = SVector<ScalarType, 3>{0., 1., 1.};
+            SVector<ScalarType, 2> const beta =
+                pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+            CHECK_EQ(beta(0), doctest::Approx(0.));
+            CHECK_EQ(beta(1), doctest::Approx(1.));
+        }
+        SUBCASE("Only line 2 is degenerate")
+        {
+            P1 = SVector<ScalarType, 3>{1., 1., 1.};
+            Q1 = SVector<ScalarType, 3>{0., 1., 1.};
+            P2 = SVector<ScalarType, 3>{0., 0., 0.};
+            Q2 = SVector<ScalarType, 3>{0., 0., 0.};
+            SVector<ScalarType, 2> const beta =
+                pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+            CHECK_EQ(beta(0), doctest::Approx(1.));
+            CHECK_EQ(beta(1), doctest::Approx(0.));
+        }
+        SUBCASE("Both lines are degenerate")
+        {
+            P1 = SVector<ScalarType, 3>{0., 0., 0.};
+            Q1 = SVector<ScalarType, 3>{0., 0., 0.};
+            P2 = SVector<ScalarType, 3>{0., 0., 0.};
+            Q2 = SVector<ScalarType, 3>{0., 0., 0.};
+            SVector<ScalarType, 2> const beta =
+                pbat::geometry::ClosestPointQueries::Lines(P1, Q1, P2, Q2, eps);
+            CHECK_EQ(beta(0), doctest::Approx(0.));
+            CHECK_EQ(beta(1), doctest::Approx(0.));
+        }
+    }
+}

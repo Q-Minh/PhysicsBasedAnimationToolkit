@@ -1,11 +1,11 @@
 #include "Integrator.h"
 
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
 #include <pbat/gpu/Aliases.h>
 #include <pbat/gpu/xpbd/Integrator.h>
 #include <pbat/sim/xpbd/Data.h>
 #include <pbat/sim/xpbd/Enums.h>
-#include <pybind11/eigen.h>
-#include <pybind11/stl.h>
 #include <utility>
 
 namespace pbat {
@@ -13,9 +13,9 @@ namespace py {
 namespace gpu {
 namespace xpbd {
 
-void BindIntegrator([[maybe_unused]] pybind11::module& m)
+void BindIntegrator([[maybe_unused]] nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 #ifdef PBAT_USE_CUDA
 
     using namespace pbat;
@@ -23,10 +23,10 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
     using pbat::sim::xpbd::Data;
     using pbat::sim::xpbd::EConstraint;
 
-    pyb::class_<Integrator>(m, "Integrator")
+    nb::class_<Integrator>(m, "Integrator")
         .def(
-            pyb::init<Data const&>(),
-            pyb::arg("data"),
+            nb::init<Data const&>(),
+            nb::arg("data"),
             "Constructs an XPBD algorithm with the given data, where "
             "max_vertex_tetrahedron_overlaps specifies the size of memory preallocated for "
             "vertex-tetrahedron overlaps detected in the broad phase. max_vertex_triangle_contacts "
@@ -34,16 +34,16 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
         .def(
             "step",
             &Integrator::Step,
-            pyb::arg("dt")         = 0.01f,
-            pyb::arg("iterations") = 10,
-            pyb::arg("substeps")   = 5,
+            nb::arg("dt")         = 0.01f,
+            nb::arg("iterations") = 10,
+            nb::arg("substeps")   = 5,
             "Integrate 1 time step in time")
-        .def_property(
+        .def_prop_rw(
             "x",
             &Integrator::Positions,
             &Integrator::SetPositions,
             "|#dims|x|#particles| particle positions")
-        .def_property(
+        .def_prop_rw(
             "v",
             nullptr,
             &Integrator::SetVelocities,
@@ -51,18 +51,18 @@ void BindIntegrator([[maybe_unused]] pybind11::module& m)
         .def(
             "set_compliance",
             &Integrator::SetCompliance,
-            pyb::arg("alpha"),
-            pyb::arg("constraint_type"),
+            nb::arg("alpha"),
+            nb::arg("constraint_type"),
             "Set the |#lagrange multiplier per constraint|x|#constraint of type eConstraint| "
             "constraint compliances for the given constraint type")
-        .def_property(
+        .def_prop_rw(
             "mu",
             nullptr,
             [](Integrator& xpbd, std::pair<GpuScalar, GpuScalar> mu) {
                 xpbd.SetFrictionCoefficients(mu.first, mu.second);
             },
             "Tuple of static and dynamic friction coefficients (muS, muK).")
-        .def_property(
+        .def_prop_rw(
             "scene_bounding_box",
             nullptr,
             [](Integrator& xpbd,

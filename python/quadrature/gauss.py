@@ -25,7 +25,9 @@ if __name__ == "__main__":
 #ifndef PBAT_MATH_GAUSS_QUADRATURE_H
 #define PBAT_MATH_GAUSS_QUADRATURE_H
 
-#include <pbat/Aliases.h>
+#include "pbat/Aliases.h"
+#include "pbat/math/Concepts.h"
+
 #include <array>
 #include <cstdint>
 
@@ -42,7 +44,7 @@ namespace math {
  * @tparam Dims 
  * @tparam Order 
  */
-template <int Dims, int Order>
+template <int Dims, int Order, common::CFloatingPoint TScalar = Scalar>
 struct GaussLegendreQuadrature;
     """
 
@@ -64,14 +66,14 @@ struct GaussLegendreQuadrature;
                     [str(xi[j]) for j in range(d+1) for xi in x])
                 weights = ",".join([str(wi) for wi in w])
                 impl = f"""
-template <>
-struct GaussLegendreQuadrature<{d},{order}>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<{d},{order}, TScalar>
 {{
     inline static std::uint8_t constexpr kDims = {d};
     inline static std::uint8_t constexpr kOrder = {order};
     inline static int constexpr kPoints = {len(x)};
-    inline static std::array<Scalar, (kDims+1)*kPoints> constexpr points = {{{points}}};
-    inline static std::array<Scalar, kPoints> constexpr weights = {{{weights}}};
+    inline static std::array<TScalar, (kDims+1)*kPoints> constexpr points = {{{points}}};
+    inline static std::array<TScalar, kPoints> constexpr weights = {{{weights}}};
 }};
     """
                 file.write(impl)

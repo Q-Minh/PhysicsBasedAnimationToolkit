@@ -30,7 +30,7 @@ class Sum
     static auto constexpr kCols     = RhsNestedType::kCols;
     static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Sum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
+    PBAT_HOST_DEVICE Sum(LhsNestedType const& _A, RhsNestedType const& _B) : A(_A), B(_B)
     {
         static_assert(
             LhsNestedType::kRows == RhsNestedType::kRows and
@@ -93,7 +93,7 @@ class Subtraction
     static auto constexpr kCols     = RhsNestedType::kCols;
     static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Subtraction(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
+    PBAT_HOST_DEVICE Subtraction(LhsNestedType const& _A, RhsNestedType const& _B) : A(_A), B(_B)
     {
         static_assert(
             LhsNestedType::kRows == RhsNestedType::kRows and
@@ -155,7 +155,7 @@ class Minimum
     static auto constexpr kCols     = RhsNestedType::kCols;
     static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Minimum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
+    PBAT_HOST_DEVICE Minimum(LhsNestedType const& _A, RhsNestedType const& _B) : A(_A), B(_B)
     {
         static_assert(
             LhsNestedType::kRows == RhsNestedType::kRows and
@@ -194,7 +194,7 @@ class Maximum
     static auto constexpr kCols     = RhsNestedType::kCols;
     static bool constexpr bRowMajor = LhsNestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Maximum(LhsNestedType const& A, RhsNestedType const& B) : A(A), B(B)
+    PBAT_HOST_DEVICE Maximum(LhsNestedType const& _A, RhsNestedType const& _B) : A(_A), B(_B)
     {
         static_assert(
             LhsNestedType::kRows == RhsNestedType::kRows and

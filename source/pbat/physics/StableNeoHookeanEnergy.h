@@ -266,7 +266,6 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<1>::gradAndHessian(
     static_assert(
         TMatrixHF::kRows == 1 and TMatrixHF::kCols == 1,
         "Hessian w.r.t. F must have dimensions 1x1");
-    using ScalarType = typename TMatrix::ScalarType;
     gF[0]            = (1.0 / 2.0) * lambda * (2 * F[0] - 2 - 2 * mu / lambda) + mu * F[0];
     HF[0]            = lambda + mu;
 }

@@ -2,12 +2,18 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     FILE_SET implementation
     FILES
+    "AndersonIntegrator.cuh"
+    "ChebyshevIntegrator.cuh"
     "Integrator.cuh"
     "Kernels.cuh"
+    "TrustRegionIntegrator.cuh"
     "Vbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "AndersonIntegrator.cu"
+    "ChebyshevIntegrator.cu"
     "Integrator.cu"
     "Kernels.cu"
+    "TrustRegionIntegrator.cu"
 )

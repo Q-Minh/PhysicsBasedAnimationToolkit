@@ -8,17 +8,17 @@
  *
  */
 
-#ifndef PBAT_GEOMETRY_KD_TREE_H
-#define PBAT_GEOMETRY_KD_TREE_H
+#ifndef PBAT_GEOMETRY_KDTREE_H
+#define PBAT_GEOMETRY_KDTREE_H
 
 #include "AxisAlignedBoundingBox.h"
+#include "pbat/common/NAryTreeTraversal.h"
+#include "pbat/common/Stack.h"
 
 #include <algorithm>
 #include <pbat/Aliases.h>
 #include <pbat/profiling/Profiling.h>
-#include <queue>
 #include <ranges>
-#include <stack>
 #include <vector>
 
 namespace pbat {
@@ -29,38 +29,32 @@ namespace geometry {
  */
 struct KdTreeNode
 {
-    Index lc{-1}; ///< Index of left child of this node in the KDTree. -1 if no left child.
-    Index rc{-1}; ///< Index of right child of this node in the KDTree. -1 if no right child.
-
-    Index begin{
-        -1}; ///< Index to first point encapsulated in this node's AABB in the permutation list.
-    std::size_t n{0}; ///< Number of points encapsulated in this node's AABB starting from begin and
-                      ///< continuing in contiguous memory in the permutation list until begin + n.
-
-    Index depth{0}; ///< Depth of this node in the KDTree.
-    /**
-     * @brief Returns true if this node has a left child, false otherwise
-     * @return true if this node has a left child, false otherwise
-     */
-    bool HasLeftChild() const { return lc > -1; }
-    /**
-     * @brief Returns true if this node has a right child, false otherwise
-     * @return true if this node has a right child, false otherwise
-     */
-    bool HasRightChild() const { return rc > -1; }
+    enum { kLeafNodeLeftChild = -2 };
+    Index begin; ///< Index to first point encapsulated in this node's AABB in the permutation list.
+    Index n;     ///< Number of points encapsulated in this node's AABB starting from begin and
+                 ///< continuing in contiguous memory in the permutation list until begin + n.
+    Index c{kLeafNodeLeftChild}; ///< Index of first (i.e. left) child. < 0 if no child. We set to
+                                 ///< -2 so that Left() < 0 and Right() < 0 if leaf node.
     /**
      * @brief Returns true if this node is a leaf node, false otherwise
      * @return true if this node is a leaf node, false otherwise
      */
-    [[maybe_unused]] bool IsLeafNode() const
-    {
-        return (not HasLeftChild()) and (not HasRightChild());
-    }
+    [[maybe_unused]] bool IsLeaf() const { return c == -2; }
     /**
      * @brief Returns true if this node is an internal node, false otherwise
      * @return true if this node is an internal node, false otherwise
      */
-    [[maybe_unused]] bool IsInternalNode() const { return HasLeftChild() or HasRightChild(); }
+    [[maybe_unused]] bool IsInternal() const { return not IsLeaf(); }
+    /**
+     * @brief Returns left child node
+     * @return Index of left child node
+     */
+    [[maybe_unused]] auto Left() const { return c; }
+    /**
+     * @brief Returns right child node
+     * @return Index of right child node
+     */
+    [[maybe_unused]] auto Right() const { return c + 1; }
 };
 
 /**
@@ -80,46 +74,44 @@ class KdTree
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerivedP>
-    KdTree(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf = 10);
-
-  private:
-    inline static auto const fStopDefault = [](auto, auto) {
-        return false;
-    };
-
-  public:
-    /**
-     * @brief Breadth-first search over the k-D tree
-     * @tparam FVisit Callable with signature `bool(Index, KdTreeNode const&)`
-     * @tparam FStop Callable with signature `bool(Index, KdTreeNode const&)`
-     * @param visit Callback invoked when visiting a node. Returns true if the node's children
-     * should be visited, false otherwise
-     * @param stop Callback invoked when visiting a node. Returns true if the search should stop,
-     * false otherwise
-     * @param root Index of the root node to start the search from
-     */
-    template <class FVisit, class FStop = decltype(fStopDefault)>
-    void BreadthFirstSearch(FVisit visit, FStop stop = fStopDefault, Index root = 0) const;
-
-    /**
-     * @brief Depth-first search over the k-D tree
-     * @tparam FVisit Callable with signature `bool(Index, KdTreeNode const&)`
-     * @tparam FStop Callable with signature `bool(Index, KdTreeNode const&)`
-     * @param visit Callback invoked when visiting a node. Returns true if the node's children
-     * @param stop Callback invoked when visiting a node. Returns true if the search should stop,
-     * @param root Index of the root node to start the search from
-     */
-    template <class FVisit, class FStop = decltype(fStopDefault)>
-    void DepthFirstSearch(FVisit visit, FStop stop = fStopDefault, Index root = 0) const;
-
+    KdTree(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf = 8);
     /**
      * @brief Construct a k-D tree from a set of points
+     *
+     * Implements a top-down median splitting strategy to construct the k-D tree.
+     * The median is chosen along the largest axis at each node of the tree, where the left child
+     * will inherit the parent node's points less than the median and the right child will inherit
+     * the rest. At each node, we use std::nth_element, i.e. introselect, which has
+     * \f$ O(n) \f$ average complexity (and \f$ O(n) \f$ worst-case complexity in recent
+     * compiler versions, i.e. [Microsoft STL](https://github.com/microsoft/STL/pull/5100)), to
+     * partition the points in-place. The largest k-D tree occurs when `maxPointsInLeaf == 1`, and
+     * the tree is always a full binary tree with \f$ 2n - 1 \f$ nodes.
+     *
+     * Thus, tree construction has \f$ O(n log(n)) \f$ average, and \f$ O(n log^2 n) \f$
+     * worst-case time complexity.
+     *
+     * @note For fast construction, radix tree is potentially a better choice. However, our radix
+     * tree does not support multiple points per leaf.
+     *
+     * @note We could parallelize construction quite easily in the future, since the node ranges are
+     * non-overlapping.
+     *
      * @tparam TDerivedP Eigen dense expression type
      * @param P Points to construct the k-D tree from
      * @param maxPointsInLeaf Maximum number of points in a leaf node
      */
     template <class TDerivedP>
-    void Construct(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf);
+    void Construct(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf);
+    /**
+     * @brief Depth-first search over the k-D tree
+     * @tparam FVisit Callable with signature `bool(Index, KdTreeNode const&)`
+     * @tparam FStop Callable with signature `bool(Index, KdTreeNode const&)`
+     * @param visit Callback invoked when visiting a node. Returns true if the node's sub-tree
+     * should be visited, false otherwise.
+     * @param root Index of the root node to start the search from
+     */
+    template <class FVisit>
+    void DepthFirstSearch(FVisit visit, Index root = 0) const;
 
     /**
      * @brief Returns the nodes of the k-D tree
@@ -134,7 +126,7 @@ class KdTree
      *
      * @return Permutation of the points in the k-D tree
      */
-    std::vector<Index> const& Permutation() const { return mPermutation; }
+    IndexVectorX const& Permutation() const { return mPermutation; }
     /**
      * @brief Returns the points in a node
      * @param nodeIdx Index of the node
@@ -147,167 +139,117 @@ class KdTree
      * @return Range of points in the node
      */
     auto PointsInNode(KdTreeNode const& node) const;
-
-  protected:
     /**
-     * @brief Recursive construct call that constructs a sub-tree of the full k-D tree
-     * @tparam TDerivedP Eigen dense expression type
-     * @param nodeIdx Index of the sub-tree root node
-     * @param P Points to construct the k-D tree from
-     * @param aabb Axis-aligned bounding box of the points contained in the sub-tree
-     * @param begin Index of the first point in the permutation list contained in the sub-tree
-     * @param n Number of points in the permutation list starting from begin contained in the
-     * sub-tree
-     * @param maxPointsInLeaf Maximum number of points in a leaf node
+     * @brief Returns the root node index
+     * @return Root node index
      */
-    template <class TDerivedP>
-    void DoConstruct(
-        Index const nodeIdx,
-        Eigen::DenseBase<TDerivedP> const& P,
-        AxisAlignedBoundingBox<Dims> const& aabb,
-        Index const begin,
-        std::size_t const n,
-        std::size_t maxPointsInLeaf);
-    /**
-     * @brief Adds a node to the k-D tree's node list
-     *
-     * @param begin Index of the first point in the permutation list contained in the sub-tree
-     * rooted in the added node
-     * @param n Number of points in the permutation list starting from begin contained in the
-     * sub-tree rooted in the added node
-     * @param depth Depth of the added node in the k-D tree
-     * @return Index of the added node in the k-D tree's node list
-     */
-    Index AddNode(Index begin, std::size_t n, Index depth);
+    Index constexpr Root() const { return 0; }
 
   private:
-    std::vector<Index> mPermutation; ///< mPermutation[i] gives the index of point i in
-                                     ///< the original points list given to
-                                     ///< construct(std::vector<Vector3> const& points).
-    std::vector<KdTreeNode> mNodes;  ///< KDTree nodes.
+    IndexVectorX mPermutation;      ///< mPermutation[i] gives the index of point i in
+                                    ///< the original points list given to
+                                    ///< construct(std::vector<Vector3> const& points).
+    std::vector<KdTreeNode> mNodes; ///< KDTree nodes.
 };
 
 template <int Dims>
 template <class TDerivedP>
-inline KdTree<Dims>::KdTree(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf)
+inline KdTree<Dims>::KdTree(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf)
 {
     Construct(P, maxPointsInLeaf);
 }
 
 template <int Dims>
-template <class FVisit, class FStop>
-inline void KdTree<Dims>::BreadthFirstSearch(FVisit visit, FStop stop, Index root) const
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.BreadthFirstSearch");
-    std::queue<Index> bfs{};
-    bfs.push(root);
-    while (!bfs.empty())
-    {
-        auto const nodeIdx     = bfs.front();
-        auto const nodeIdxStl  = static_cast<std::size_t>(nodeIdx);
-        KdTreeNode const& node = mNodes[nodeIdxStl];
-        bfs.pop();
-        if (stop(nodeIdx, node))
-            break;
-
-        if (!visit(nodeIdx, node))
-            continue;
-
-        if (node.HasLeftChild())
-            bfs.push(node.lc);
-
-        if (node.HasRightChild())
-            bfs.push(node.rc);
-    }
-}
-
-template <int Dims>
-template <class FVisit, class FStop>
-inline void KdTree<Dims>::DepthFirstSearch(FVisit visit, FStop stop, Index root) const
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.DepthFirstSearch");
-    std::stack<Index> dfs{};
-    dfs.push(root);
-    while (!dfs.empty())
-    {
-        auto const nodeIdx    = dfs.top();
-        auto const nodeIdxStl = static_cast<std::size_t>(nodeIdx);
-        dfs.pop();
-        KdTreeNode const& node = mNodes[nodeIdxStl];
-
-        if (stop(nodeIdx, node))
-            break;
-
-        if (!visit(nodeIdx, node))
-            continue;
-
-        if (node.HasLeftChild())
-            dfs.push(node.lc);
-
-        if (node.HasRightChild())
-            dfs.push(node.rc);
-    }
-}
-
-template <int Dims>
 template <class TDerivedP>
-inline void
-KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, std::size_t maxPointsInLeaf)
+inline void KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, Index maxPointsInLeaf)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.Construct");
-    std::size_t const n = static_cast<std::size_t>(P.cols());
+    // Our k-D tree is a full binary tree (i.e. # nodes = 2*leaves - 1). We try to estimate
+    // the number of leaf nodes to reserve memory up-front and prevent any reallocation, but without
+    // excessively using up memory. We estimate the number of nodes per leaf to be 80% of the
+    // maximum number of points in a leaf node.
+    Index const nPoints                      = P.cols();
+    Scalar constexpr kEstimatedLeafOccupancy = 0.8;
+    auto const nEstimatedNodesPerLeaf =
+        (maxPointsInLeaf > 1) ?
+            static_cast<Index>(
+                std::ceil(kEstimatedLeafOccupancy * static_cast<Scalar>(maxPointsInLeaf))) :
+            1;
+    auto const nEstimatedLeafNodes =
+        (nPoints / nEstimatedNodesPerLeaf) + (nPoints % nEstimatedNodesPerLeaf != 0);
     mNodes.clear();
-    mNodes.reserve(n);
-    auto iota = std::views::iota(Index{0}, static_cast<Index>(n));
-    mPermutation.assign(iota.begin(), iota.end());
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+    mNodes.reserve(2 * nEstimatedLeafNodes - 1);
+    auto iota = std::views::iota(Index{0}, nPoints);
+    mPermutation.resize(nPoints);
+    std::copy(iota.begin(), iota.end(), mPermutation.data());
 
-    geometry::AxisAlignedBoundingBox<Dims> const aabb{P};
-    auto const depth   = 0;
-    auto const begin   = 0;
-    auto const rootIdx = AddNode(begin, n, depth);
-    DoConstruct(rootIdx, P, aabb, begin, n, maxPointsInLeaf);
+    // Top-down construction of the k-D tree
+    struct StackFrame
+    {
+        geometry::AxisAlignedBoundingBox<Dims> aabb;
+        Index nodeIdx;
+        Index begin;
+        Index n;
+    };
+    common::Stack<StackFrame, 128> stack{};
+    Index constexpr root = 0;
+    stack.Push({geometry::AxisAlignedBoundingBox<Dims>{P}, root, 0, nPoints});
+    mNodes.emplace_back(0, nPoints, KdTreeNode::kLeafNodeLeftChild);
+    while (not stack.IsEmpty())
+    {
+        auto const [aabb, nodeIdx, begin, n] = stack.Pop();
+        if (n <= maxPointsInLeaf)
+            continue;
+
+        // Find the dimension with the largest extent
+        Eigen::Index dimension{};
+        (aabb.max() - aabb.min()).maxCoeff(&dimension);
+        // Partition the points along the dimension on left/right sides of median
+        Index const halfn = n / 2;
+        std::nth_element(
+            mPermutation.data() + begin,
+            mPermutation.data() + begin + halfn,
+            mPermutation.data() + begin + n,
+            [&](Index const lhs, Index const rhs) {
+                return P(dimension, lhs) < P(dimension, rhs);
+            });
+        // Set the left (and implicitly right) child index of the current node
+        mNodes[nodeIdx].c = static_cast<Index>(mNodes.size());
+        // Split bounding box into child boxes
+        Scalar const split           = P(dimension, mPermutation[begin + halfn]);
+        AxisAlignedBoundingBox laabb = aabb;
+        laabb.max()(dimension)       = split;
+        AxisAlignedBoundingBox raabb = aabb;
+        raabb.min()(dimension)       = split;
+        // Store left/right node contiguously in memory
+        mNodes.emplace_back(begin, halfn, KdTreeNode::kLeafNodeLeftChild);
+        mNodes.emplace_back(begin + halfn, n - halfn, KdTreeNode::kLeafNodeLeftChild);
+        // Schedule left and right sub-tree constructions
+        stack.Push({laabb, mNodes[nodeIdx].Left(), begin, halfn});
+        stack.Push({raabb, mNodes[nodeIdx].Right(), begin + halfn, n - halfn});
+    }
+#include "pbat/warning/Pop.h"
 }
 
 template <int Dims>
-template <class TDerivedP>
-inline void KdTree<Dims>::DoConstruct(
-    Index const nodeIdx,
-    Eigen::DenseBase<TDerivedP> const& P,
-    AxisAlignedBoundingBox<Dims> const& aabb,
-    Index const begin,
-    std::size_t const n,
-    std::size_t maxPointsInLeaf)
+template <class FVisit>
+inline void KdTree<Dims>::DepthFirstSearch(FVisit fVisit, Index root) const
 {
-    if (n <= maxPointsInLeaf)
-        return;
-
-    Eigen::Index dimension{};
-    (aabb.max() - aabb.min()).maxCoeff(&dimension);
-
-    std::size_t const halfnStl   = n / 2;
-    Index const halfn            = static_cast<Index>(halfnStl);
-    std::size_t const nodeIdxStl = static_cast<std::size_t>(nodeIdx);
-
-    std::nth_element(
-        mPermutation.begin() + begin,
-        mPermutation.begin() + begin + halfn,
-        mPermutation.begin() + begin + static_cast<Index>(n),
-        [&](Index const lhs, Index const rhs) { return P(dimension, lhs) < P(dimension, rhs); });
-
-    auto const depth      = mNodes[nodeIdxStl].depth;
-    auto lnode            = AddNode(begin, halfnStl, depth + 1u);
-    auto rnode            = AddNode(begin + halfn, n - halfnStl, depth + 1u);
-    mNodes[nodeIdxStl].lc = lnode;
-    mNodes[nodeIdxStl].rc = rnode;
-
-    Scalar const split           = P(dimension, mPermutation[begin + halfnStl]);
-    AxisAlignedBoundingBox laabb = aabb;
-    laabb.max()(dimension)       = split;
-    AxisAlignedBoundingBox raabb = aabb;
-    raabb.min()(dimension)       = split;
-
-    DoConstruct(mNodes[nodeIdxStl].lc, P, laabb, begin, halfnStl, maxPointsInLeaf);
-    DoConstruct(mNodes[nodeIdxStl].rc, P, raabb, begin + halfn, n - halfnStl, maxPointsInLeaf);
+    PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.KdTree.DepthFirstSearch");
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+    common::TraverseNAryTreePseudoPreOrder(
+        [&](Index node) { return fVisit(node, mNodes[node]); },
+        [&]<auto c>(Index node) {
+            if constexpr (c == 0)
+                return mNodes[node].Left();
+            else
+                return mNodes[node].Right();
+        },
+        root);
+#include "pbat/warning/Pop.h"
 }
 
 template <int Dims>
@@ -325,19 +267,7 @@ inline auto KdTree<Dims>::PointsInNode(KdTreeNode const& node) const
     return indrng;
 }
 
-template <int Dims>
-inline Index KdTree<Dims>::AddNode(Index begin, std::size_t n, Index depth)
-{
-    Index const nodeIdx = static_cast<Index>(mNodes.size());
-    KdTreeNode node{};
-    node.begin = begin;
-    node.n     = n;
-    node.depth = depth;
-    mNodes.push_back(node);
-    return nodeIdx;
-}
-
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_KD_TREE_H
+#endif // PBAT_GEOMETRY_KDTREE_H

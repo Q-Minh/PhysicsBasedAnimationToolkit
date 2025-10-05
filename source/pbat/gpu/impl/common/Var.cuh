@@ -31,6 +31,9 @@ class Var
     T* Raw();
     T const* Raw() const;
 
+    void SetStream(std::shared_ptr<cuda::stream_t> stream) { mStream = stream; }
+    std::shared_ptr<cuda::stream_t> Stream() const { return mStream; }
+
     ~Var();
 
   private:
@@ -43,21 +46,15 @@ Var<T>::Var(T const& value, std::shared_ptr<cuda::stream_t> stream)
     : mDeviceMemory(), mStream(stream)
 {
     mStream->device().make_current();
-    mDeviceMemory = cuda::memory::device::async::allocate(*mStream, sizeof(T));
-    cuda::memory::async::copy(
-        mDeviceMemory,
-        reinterpret_cast<void*>(const_cast<T*>(&value)),
-        *mStream);
+    mDeviceMemory = cuda::memory::device::allocate(sizeof(T), *mStream);
+    cuda::memory::copy(mDeviceMemory, reinterpret_cast<void*>(const_cast<T*>(&value)), *mStream);
 }
 
 template <class T>
 Var<T>& Var<T>::operator=(T const& value)
 {
     mStream->device().make_current();
-    cuda::memory::async::copy(
-        mDeviceMemory,
-        reinterpret_cast<void*>(const_cast<T*>(&value)),
-        *mStream);
+    cuda::memory::copy(mDeviceMemory, reinterpret_cast<void*>(const_cast<T*>(&value)), *mStream);
     return *this;
 }
 
@@ -66,7 +63,7 @@ T Var<T>::Get() const
 {
     std::byte memory[sizeof(T)];
     mStream->device().make_current();
-    cuda::memory::async::copy(reinterpret_cast<void*>(&memory), mDeviceMemory, *mStream);
+    cuda::memory::copy(reinterpret_cast<void*>(&memory), mDeviceMemory, *mStream);
     mStream->synchronize();
     return *reinterpret_cast<T*>(&memory);
 }

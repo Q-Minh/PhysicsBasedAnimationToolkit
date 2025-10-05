@@ -3,24 +3,25 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief Gauss-Legendre quadrature schemes over the unit box in dimensions 1, 2, 3
  * @date 2025-02-11
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
-
 
 #ifndef PBAT_MATH_GAUSSQUADRATURE_H
 #define PBAT_MATH_GAUSSQUADRATURE_H
 
+#include "pbat/Aliases.h"
+#include "pbat/common/Concepts.h"
+
 #include <array>
 #include <cstdint>
-#include <pbat/Aliases.h>
 
 namespace pbat {
 namespace math {
 
 namespace detail {
-template <int Dims, int Order>
+template <int Dims, int Order, common::CFloatingPoint TScalar = Scalar>
 struct GaussLegendreQuadrature;
 } // namespace detail
 
@@ -39,8 +40,8 @@ struct GaussLegendreQuadrature;
  *     inline static std::uint8_t constexpr kDims;
  *     inline static std::uint8_t constexpr kOrder;
  *     inline static int constexpr kPoints;
- *     inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points;
- *     inline static std::array<Scalar, kPoints> constexpr weights;
+ *     inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points;
+ *     inline static std::array<TScalar, kPoints> constexpr weights;
  * };
  * ```
  *
@@ -58,64 +59,68 @@ struct GaussLegendreQuadrature;
  *
  * @tparam Dims Spatial dimensions
  * @tparam Order Polynomial quadrature order
+ * @tparam TScalar Floating point type, defaults to Scalar
  *
  */
-template <int Dims, int Order>
-using GaussLegendreQuadrature = typename detail::GaussLegendreQuadrature<Dims, Order>;
+template <int Dims, int Order, common::CFloatingPoint TScalar = Scalar>
+using GaussLegendreQuadrature = typename detail::GaussLegendreQuadrature<Dims, Order, TScalar>;
 
 namespace detail {
 
-template <>
-struct GaussLegendreQuadrature<1, 1>
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
+
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 1, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 1;
-    inline static int constexpr kPoints                                      = 1;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 1;
+    inline static int constexpr kPoints                                       = 1;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.500000000000000,
         0.500000000000000};
-    inline static std::array<Scalar, kPoints> constexpr weights = {1.00000000000000};
+    inline static std::array<TScalar, kPoints> constexpr weights = {1.00000000000000};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 2>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 2, TScalar>
 {
     inline static std::uint8_t constexpr kDims  = 1;
     inline static std::uint8_t constexpr kOrder = 2;
     inline static int constexpr kPoints         = 2;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points =
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points =
         {0.788675134594087, 0.211324865405913, 0.211324865405913, 0.788675134594087};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.500000000000000,
         0.500000000000000};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 3>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 3, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 3;
-    inline static int constexpr kPoints                                      = 3;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 3;
+    inline static int constexpr kPoints                                       = 3;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.887298334619118,
         0.500000000000000,
         0.112701665380882,
         0.112701665380882,
         0.500000000000000,
         0.887298334619118};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.277777777777374,
         0.444444444445253,
         0.277777777777374};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 4>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 4, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 4;
-    inline static int constexpr kPoints                                      = 4;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 4;
+    inline static int constexpr kPoints                                       = 4;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.930568155796209,
         0.669990521791988,
         0.330009478208012,
@@ -124,17 +129,17 @@ struct GaussLegendreQuadrature<1, 4>
         0.330009478208012,
         0.669990521791988,
         0.930568155796209};
-    inline static std::array<Scalar, kPoints> constexpr weights =
+    inline static std::array<TScalar, kPoints> constexpr weights =
         {0.173927422569250, 0.326072577430750, 0.326072577430750, 0.173927422569250};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 5>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 5, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 5;
-    inline static int constexpr kPoints                                      = 5;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 5;
+    inline static int constexpr kPoints                                       = 5;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.953089922968502,
         0.769234655053879,
         0.500000000000000,
@@ -145,7 +150,7 @@ struct GaussLegendreQuadrature<1, 5>
         0.500000000000000,
         0.769234655053879,
         0.953089922968502};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.118463442528082,
         0.239314335249219,
         0.284444444445398,
@@ -153,13 +158,13 @@ struct GaussLegendreQuadrature<1, 5>
         0.118463442528082};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 6>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 6, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 6;
-    inline static int constexpr kPoints                                      = 6;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 6;
+    inline static int constexpr kPoints                                       = 6;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.966234757102939,
         0.830604693233909,
         0.619309593041180,
@@ -172,7 +177,7 @@ struct GaussLegendreQuadrature<1, 6>
         0.619309593041180,
         0.830604693233909,
         0.966234757102939};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0856622461897132,
         0.180380786523529,
         0.233956967285849,
@@ -181,13 +186,13 @@ struct GaussLegendreQuadrature<1, 6>
         0.0856622461897132};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 7>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 7, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 7;
-    inline static int constexpr kPoints                                      = 7;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 7;
+    inline static int constexpr kPoints                                       = 7;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.974553956169984,
         0.870765592801035,
         0.702922575688717,
@@ -202,7 +207,7 @@ struct GaussLegendreQuadrature<1, 7>
         0.702922575688717,
         0.870765592801035,
         0.974553956169984};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0647424830849559,
         0.139852695743684,
         0.190915025252252,
@@ -212,13 +217,13 @@ struct GaussLegendreQuadrature<1, 7>
         0.0647424830849559};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 8>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 8, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 8;
-    inline static int constexpr kPoints                                      = 8;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 8;
+    inline static int constexpr kPoints                                       = 8;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.980144928249501,
         0.898333238706982,
         0.762766204956279,
@@ -235,7 +240,7 @@ struct GaussLegendreQuadrature<1, 8>
         0.762766204956279,
         0.898333238706982,
         0.980144928249501};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0506142681447272,
         0.111190517226532,
         0.156853322938332,
@@ -246,13 +251,13 @@ struct GaussLegendreQuadrature<1, 8>
         0.0506142681447272};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 9>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 9, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 9;
-    inline static int constexpr kPoints                                      = 9;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 9;
+    inline static int constexpr kPoints                                       = 9;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.984080119753344,
         0.918015553663281,
         0.806685716350330,
@@ -271,7 +276,7 @@ struct GaussLegendreQuadrature<1, 9>
         0.806685716350330,
         0.918015553663281,
         0.984080119753344};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0406371941808175,
         0.0903240803472727,
         0.130305348200636,
@@ -283,19 +288,19 @@ struct GaussLegendreQuadrature<1, 9>
         0.0406371941808175};
 };
 
-template <>
-struct GaussLegendreQuadrature<1, 10>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<1, 10, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 1;
-    inline static std::uint8_t constexpr kOrder                              = 10;
-    inline static int constexpr kPoints                                      = 10;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 1;
+    inline static std::uint8_t constexpr kOrder                               = 10;
+    inline static int constexpr kPoints                                       = 10;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.986953264258773,  0.932531683345587,  0.839704784149944,  0.716697697063864,
         0.574437169490920,  0.425562830509080,  0.283302302936136,  0.160295215850056,
         0.0674683166544128, 0.0130467357412272, 0.0130467357412272, 0.0674683166544128,
         0.160295215850056,  0.283302302936136,  0.425562830509080,  0.574437169490920,
         0.716697697063864,  0.839704784149944,  0.932531683345587,  0.986953264258773};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0333356721544078,
         0.0747256745753475,
         0.109543181258232,
@@ -308,26 +313,26 @@ struct GaussLegendreQuadrature<1, 10>
         0.0333356721544078};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 1>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 1, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 1;
-    inline static int constexpr kPoints                                      = 1;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 1;
+    inline static int constexpr kPoints                                       = 1;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0,
         0.500000000000000,
         0.500000000000000};
-    inline static std::array<Scalar, kPoints> constexpr weights = {1.00000000000000};
+    inline static std::array<TScalar, kPoints> constexpr weights = {1.00000000000000};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 2>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 2, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 2;
-    inline static int constexpr kPoints                                      = 4;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 2;
+    inline static int constexpr kPoints                                       = 4;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.577350269188173,
         0,
         0,
@@ -340,17 +345,17 @@ struct GaussLegendreQuadrature<2, 2>
         0.788675134594087,
         0.211324865405913,
         0.788675134594087};
-    inline static std::array<Scalar, kPoints> constexpr weights =
+    inline static std::array<TScalar, kPoints> constexpr weights =
         {0.250000000000000, 0.250000000000000, 0.250000000000000, 0.250000000000000};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 3>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 3, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 3;
-    inline static int constexpr kPoints                                      = 9;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 3;
+    inline static int constexpr kPoints                                       = 9;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.774596669238235,
         0.387298334619118,
         0,
@@ -378,7 +383,7 @@ struct GaussLegendreQuadrature<2, 3>
         0.112701665380882,
         0.500000000000000,
         0.887298334619118};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0771604938269359,
         0.123456790123502,
         0.0771604938269359,
@@ -390,13 +395,13 @@ struct GaussLegendreQuadrature<2, 3>
         0.0771604938269359};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 4>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 4, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 4;
-    inline static int constexpr kPoints                                      = 16;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 4;
+    inline static int constexpr kPoints                                       = 16;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.861136311592418,
         0.600558677588197,
         0.260577634004221,
@@ -445,7 +450,7 @@ struct GaussLegendreQuadrature<2, 4>
         0.330009478208012,
         0.669990521791988,
         0.930568155796209};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0302507483215824,
         0.0567129629630425,
         0.0567129629630425,
@@ -464,13 +469,13 @@ struct GaussLegendreQuadrature<2, 4>
         0.0302507483215824};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 5>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 5, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 5;
-    inline static int constexpr kPoints                                      = 25;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 5;
+    inline static int constexpr kPoints                                       = 25;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.906179845937004,
         0.722324578022381,
         0.453089922968502,
@@ -546,7 +551,7 @@ struct GaussLegendreQuadrature<2, 5>
         0.500000000000000,
         0.769234655053879,
         0.953089922968502};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0140335872156042, 0.0283499999999420, 0.0336962680969896, 0.0283499999999420,
         0.0140335872156042, 0.0283499999999420, 0.0572713510557755, 0.0680716331377839,
         0.0572713510557755, 0.0283499999999420, 0.0336962680969896, 0.0680716331377839,
@@ -556,13 +561,13 @@ struct GaussLegendreQuadrature<2, 5>
         0.0140335872156042};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 6>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 6, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 6;
-    inline static int constexpr kPoints                                      = 36;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 6;
+    inline static int constexpr kPoints                                       = 36;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.932469514205877,
         0.796839450336847,
         0.585544350144119,
@@ -671,7 +676,7 @@ struct GaussLegendreQuadrature<2, 6>
         0.619309593041180,
         0.830604693233909,
         0.966234757102939};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.00733802042226703, 0.0154518233430726,  0.0200412793294391,  0.0200412793294391,
         0.0154518233430726,  0.00733802042226703, 0.0154518233430726,  0.0325372281468468,
         0.0422013417716808,  0.0422013417716808,  0.0325372281468468,  0.0154518233430726,
@@ -683,13 +688,13 @@ struct GaussLegendreQuadrature<2, 6>
         0.0200412793294391,  0.0200412793294391,  0.0154518233430726,  0.00733802042226703};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 7>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 7, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 7;
-    inline static int constexpr kPoints                                      = 49;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 7;
+    inline static int constexpr kPoints                                       = 49;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.949107912339969,
         0.845319548971020,
         0.677476531858701,
@@ -837,7 +842,7 @@ struct GaussLegendreQuadrature<2, 7>
         0.702922575688717,
         0.870765592801035,
         0.974553956169984};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.00419158911600580, 0.00905441078857096, 0.0123603127930579,  0.0135298576895689,
         0.0123603127930579,  0.00905441078857096, 0.00419158911600580, 0.00905441078857096,
         0.0195587765067755,  0.0266999809395010,  0.0292263592737348,  0.0266999809395010,
@@ -853,13 +858,13 @@ struct GaussLegendreQuadrature<2, 7>
         0.00419158911600580};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 8>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 8, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 8;
-    inline static int constexpr kPoints                                      = 64;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 8;
+    inline static int constexpr kPoints                                       = 64;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.960289856499003,
         0.878478166956484,
         0.742911133205780,
@@ -1052,7 +1057,7 @@ struct GaussLegendreQuadrature<2, 8>
         0.762766204956279,
         0.898333238706982,
         0.980144928249501};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.00256180413982635, 0.00562782665405462, 0.00793901614659223, 0.00917848713186740,
         0.00917848713186740, 0.00793901614659223, 0.00562782665405462, 0.00256180413982635,
         0.00562782665405462, 0.0123633311211038,  0.0174406021062135,  0.0201634987318438,
@@ -1071,13 +1076,13 @@ struct GaussLegendreQuadrature<2, 8>
         0.00917848713186740, 0.00793901614659223, 0.00562782665405462, 0.00256180413982635};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 9>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 9, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 9;
-    inline static int constexpr kPoints                                      = 81;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 9;
+    inline static int constexpr kPoints                                       = 81;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.968160239506688,
         0.902095673416625,
         0.790765836103674,
@@ -1321,7 +1326,7 @@ struct GaussLegendreQuadrature<2, 9>
         0.806685716350330,
         0.918015553663281,
         0.984080119753344};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.00165138155088946, 0.00367051719227588, 0.00529524373762829, 0.00634645441075507,
         0.00671000039764614, 0.00634645441075507, 0.00529524373762829, 0.00367051719227588,
         0.00165138155088946, 0.00367051719227588, 0.00815843949058057, 0.0117697107405536,
@@ -1345,13 +1350,13 @@ struct GaussLegendreQuadrature<2, 9>
         0.00165138155088946};
 };
 
-template <>
-struct GaussLegendreQuadrature<2, 10>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<2, 10, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 2;
-    inline static std::uint8_t constexpr kOrder                              = 10;
-    inline static int constexpr kPoints                                      = 100;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 2;
+    inline static std::uint8_t constexpr kOrder                               = 10;
+    inline static int constexpr kPoints                                       = 100;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.973906528517546,
         0.919484947604360,
         0.826658048408717,
@@ -1652,7 +1657,7 @@ struct GaussLegendreQuadrature<2, 10>
         0.839704784149944,
         0.932531683345587,
         0.986953264258773};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.00111126703798616, 0.00249103058916075, 0.00365169557717529, 0.00448809353852918,
         0.00492574933439800, 0.00492574933439800, 0.00448809353852918, 0.00365169557717529,
         0.00249103058916075, 0.00111126703798616, 0.00249103058916075, 0.00558392644074074,
@@ -1680,24 +1685,24 @@ struct GaussLegendreQuadrature<2, 10>
         0.00448809353852918, 0.00365169557717529, 0.00249103058916075, 0.00111126703798616};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 1>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 1, TScalar>
 {
     inline static std::uint8_t constexpr kDims  = 3;
     inline static std::uint8_t constexpr kOrder = 1;
     inline static int constexpr kPoints         = 1;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points =
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points =
         {-0.500000000000000, 0.500000000000000, 0.500000000000000, 0.500000000000000};
-    inline static std::array<Scalar, kPoints> constexpr weights = {1.00000000000000};
+    inline static std::array<TScalar, kPoints> constexpr weights = {1.00000000000000};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 2>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 2, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 2;
-    inline static int constexpr kPoints                                      = 8;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 2;
+    inline static int constexpr kPoints                                       = 8;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.366025403782260,  -0.211324865405913, -0.211324865405913, -0.788675134594087,
         -0.211324865405913, -0.788675134594087, -0.788675134594087, -1.36602540378226,
         0.211324865405913,  0.211324865405913,  0.211324865405913,  0.211324865405913,
@@ -1706,7 +1711,7 @@ struct GaussLegendreQuadrature<3, 2>
         0.211324865405913,  0.211324865405913,  0.788675134594087,  0.788675134594087,
         0.211324865405913,  0.788675134594087,  0.211324865405913,  0.788675134594087,
         0.211324865405913,  0.788675134594087,  0.211324865405913,  0.788675134594087};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.125000000000000,
         0.125000000000000,
         0.125000000000000,
@@ -1717,13 +1722,13 @@ struct GaussLegendreQuadrature<3, 2>
         0.125000000000000};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 3>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 3, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 3;
-    inline static int constexpr kPoints                                      = 27;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 3;
+    inline static int constexpr kPoints                                       = 27;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.661895003857353,  0.274596669238235,  -0.112701665380882, 0.274596669238235,
         -0.112701665380882, -0.500000000000000, -0.112701665380882, -0.500000000000000,
         -0.887298334619118, 0.274596669238235,  -0.112701665380882, -0.500000000000000,
@@ -1751,7 +1756,7 @@ struct GaussLegendreQuadrature<3, 3>
         0.112701665380882,  0.500000000000000,  0.887298334619118,  0.112701665380882,
         0.500000000000000,  0.887298334619118,  0.112701665380882,  0.500000000000000,
         0.887298334619118,  0.112701665380882,  0.500000000000000,  0.887298334619118};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.0214334705074510, 0.0342935528120339, 0.0214334705074510, 0.0342935528120339,
         0.0548696844994339, 0.0342935528120339, 0.0214334705074510, 0.0342935528120339,
         0.0214334705074510, 0.0342935528120339, 0.0548696844994339, 0.0342935528120339,
@@ -1761,13 +1766,13 @@ struct GaussLegendreQuadrature<3, 3>
         0.0214334705074510, 0.0342935528120339, 0.0214334705074510};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 4>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 4, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 4;
-    inline static int constexpr kPoints                                      = 64;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 4;
+    inline static int constexpr kPoints                                       = 64;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.791704467388627,   0.531126833384405,   0.191145789800430,   -0.0694318442037911,
         0.531126833384405,   0.270549199380184,   -0.0694318442037911, -0.330009478208012,
         0.191145789800430,   -0.0694318442037911, -0.409412887787767,  -0.669990521791988,
@@ -1832,7 +1837,7 @@ struct GaussLegendreQuadrature<3, 4>
         0.0694318442037911,  0.330009478208012,   0.669990521791988,   0.930568155796209,
         0.0694318442037911,  0.330009478208012,   0.669990521791988,   0.930568155796209,
         0.0694318442037911,  0.330009478208012,   0.669990521791988,   0.930568155796209};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.00526143468636388, 0.00986393947442731, 0.00986393947442731, 0.00526143468636388,
         0.00986393947442731, 0.0184925420070939,  0.0184925420070939,  0.00986393947442731,
         0.00986393947442731, 0.0184925420070939,  0.0184925420070939,  0.00986393947442731,
@@ -1851,13 +1856,13 @@ struct GaussLegendreQuadrature<3, 4>
         0.00526143468636388, 0.00986393947442731, 0.00986393947442731, 0.00526143468636388};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 5>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 5, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 5;
-    inline static int constexpr kPoints                                      = 125;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 5;
+    inline static int constexpr kPoints                                       = 125;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.859269768905506,   0.675414500990883,  0.406179845937004,  0.136945190883125,
         -0.0469100770314981, 0.675414500990883,  0.491559233076259,  0.222324578022381,
         -0.0469100770314981, -0.230765344946121, 0.406179845937004,  0.222324578022381,
@@ -1983,7 +1988,7 @@ struct GaussLegendreQuadrature<3, 5>
         0.769234655053879,   0.953089922968502,  0.0469100770314981, 0.230765344946121,
         0.500000000000000,   0.769234655053879,  0.953089922968502,  0.0469100770314981,
         0.230765344946121,   0.500000000000000,  0.769234655053879,  0.953089922968502};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.00166246705257855, 0.00335843859566425, 0.00399177591911858, 0.00335843859566425,
         0.00166246705257855, 0.00335843859566425, 0.00678456140430147, 0.00806400000001054,
         0.00678456140430147, 0.00335843859566425, 0.00399177591911857, 0.00806400000001054,
@@ -2018,13 +2023,13 @@ struct GaussLegendreQuadrature<3, 5>
         0.00166246705257855};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 6>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 6, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 6;
-    inline static int constexpr kPoints                                      = 216;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 6;
+    inline static int constexpr kPoints                                       = 216;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.898704271308816,   0.763074207439786,   0.551779107247057,   0.313159921164697,
         0.101864820971969,   -0.0337652428970614, 0.763074207439786,   0.627444143570756,
         0.416149043378027,   0.177529857295667,   -0.0337652428970614, -0.169395306766091,
@@ -2241,7 +2246,7 @@ struct GaussLegendreQuadrature<3, 6>
         0.0337652428970614,  0.169395306766091,   0.380690406958820,   0.619309593041180,
         0.830604693233909,   0.966234757102939,   0.0337652428970614,  0.169395306766091,
         0.380690406958820,   0.619309593041180,   0.830604693233909,   0.966234757102939};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.000628591311957382, 0.00132363789529424,  0.00171678100387522,  0.00171678100387522,
         0.00132363789529424,  0.000628591311957382, 0.00132363789529424,  0.00278721204784605,
         0.00361506172838195,  0.00361506172838195,  0.00278721204784605,  0.00132363789529424,
@@ -2298,13 +2303,13 @@ struct GaussLegendreQuadrature<3, 6>
         0.00171678100387522,  0.00171678100387522,  0.00132363789529424,  0.000628591311957382};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 7>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 7, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 7;
-    inline static int constexpr kPoints                                      = 343;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 7;
+    inline static int constexpr kPoints                                       = 343;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.923661868509953,   0.819873505141004,   0.652030488028686,   0.449107912339969,
         0.246185336651251,   0.0783423195389332,  -0.0254460438300157, 0.819873505141004,
         0.716085141772055,   0.548242124659737,   0.345319548971020,   0.142396973282302,
@@ -2648,7 +2653,7 @@ struct GaussLegendreQuadrature<3, 7>
         0.297077424311283,   0.500000000000000,   0.702922575688717,   0.870765592801035,
         0.974553956169984,   0.0254460438300157,  0.129234407198965,   0.297077424311283,
         0.500000000000000,   0.702922575688717,   0.870765592801035,   0.974553956169984};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.000271373887442091, 0.000586205037323298, 0.000800237341929313, 0.000875956582608773,
         0.000800237341929313, 0.000586205037323298, 0.000271373887442091, 0.000586205037323298,
         0.00126628375715235,  0.00172862306434429,  0.00189218707091462,  0.00172862306434429,
@@ -2737,13 +2742,13 @@ struct GaussLegendreQuadrature<3, 7>
         0.000800237341929313, 0.000586205037323298, 0.000271373887442091};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 8>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 8, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 8;
-    inline static int constexpr kPoints                                      = 512;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 8;
+    inline static int constexpr kPoints                                       = 512;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.940434784748504,   0.858623095205985,   0.723056061455281,   0.552007177746418,
         0.368572535251587,   0.197523651542724,   0.0619566177920206,  -0.0198550717504986,
         0.858623095205985,   0.776811405663466,   0.641244371912762,   0.470195488203899,
@@ -3256,7 +3261,7 @@ struct GaussLegendreQuadrature<3, 8>
         0.591717321247415,   0.762766204956279,   0.898333238706982,   0.980144928249501,
         0.0198550717504986,  0.101666761293018,   0.237233795043721,   0.408282678752585,
         0.591717321247415,   0.762766204956279,   0.898333238706982,   0.980144928249501};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         0.000129663841667443, 0.000284848327340364, 0.000401827492048938, 0.000464562408855265,
         0.000464562408855265, 0.000401827492048938, 0.000284848327340364, 0.000129663841667443,
         0.000284848327340364, 0.000625760956525599, 0.000882743311609382, 0.00102056073154941,
@@ -3387,13 +3392,13 @@ struct GaussLegendreQuadrature<3, 8>
         0.000464562408855265, 0.000401827492048938, 0.000284848327340364, 0.000129663841667443};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 9>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 9, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 9;
-    inline static int constexpr kPoints                                      = 729;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 9;
+    inline static int constexpr kPoints                                       = 729;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.952240359260031,   0.886175793169969,   0.774845955857018,  0.630286951209200,
         0.468160239506688,   0.306033527804175,   0.161474523156357,  0.0501446858434065,
         -0.0159198802466562, 0.886175793169969,   0.820111227079906,  0.708781389766955,
@@ -4123,7 +4128,7 @@ struct GaussLegendreQuadrature<3, 9>
         0.806685716350330,   0.918015553663281,   0.984080119753344,  0.0159198802466562,
         0.0819844463367190,  0.193314283649670,   0.337873288297487,  0.500000000000000,
         0.662126711702513,   0.806685716350330,   0.918015553663281,  0.984080119753344};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         6.71075127501147e-5,  0.000149159519886544, 0.000215183848000758, 0.000257902100249559,
         0.000272675589112509, 0.000257902100249559, 0.000215183848000758, 0.000149159519886544,
         6.71075127501147e-5,  0.000149159519886544, 0.000331536089791172, 0.000478288020815930,
@@ -4309,13 +4314,13 @@ struct GaussLegendreQuadrature<3, 9>
         6.71075127501147e-5};
 };
 
-template <>
-struct GaussLegendreQuadrature<3, 10>
+template <common::CFloatingPoint TScalar>
+struct GaussLegendreQuadrature<3, 10, TScalar>
 {
-    inline static std::uint8_t constexpr kDims                               = 3;
-    inline static std::uint8_t constexpr kOrder                              = 10;
-    inline static int constexpr kPoints                                      = 1000;
-    inline static std::array<Scalar, (kDims + 1) * kPoints> constexpr points = {
+    inline static std::uint8_t constexpr kDims                                = 3;
+    inline static std::uint8_t constexpr kOrder                               = 10;
+    inline static int constexpr kPoints                                       = 1000;
+    inline static std::array<TScalar, (kDims + 1) * kPoints> constexpr points = {
         0.960859792776318,   0.906438211863133,   0.813611312667490,   0.690604225581410,
         0.548343698008466,   0.399469359026625,   0.257208831453681,   0.134201744367601,
         0.0413748451719584,  -0.0130467357412272, 0.906438211863133,   0.852016630949947,
@@ -5316,7 +5321,7 @@ struct GaussLegendreQuadrature<3, 10>
         0.932531683345587,   0.986953264258773,   0.0130467357412272,  0.0674683166544128,
         0.160295215850056,   0.283302302936136,   0.425562830509080,   0.574437169490920,
         0.716697697063864,   0.839704784149944,   0.932531683345587,   0.986953264258773};
-    inline static std::array<Scalar, kPoints> constexpr weights = {
+    inline static std::array<TScalar, kPoints> constexpr weights = {
         3.70448336543065e-5,  8.30401790468641e-5,  0.000121731726568416, 0.000149613614798725,
         0.000164203164926284, 0.000164203164926284, 0.000149613614798725, 0.000121731726568416,
         8.30401790468641e-5,  3.70448336543065e-5,  8.30401790468641e-5,  0.000186143941162862,
@@ -5568,6 +5573,8 @@ struct GaussLegendreQuadrature<3, 10>
         0.000121731726568416, 0.000149613614798725, 0.000164203164926284, 0.000164203164926284,
         0.000149613614798725, 0.000121731726568416, 8.30401790468641e-5,  3.70448336543065e-5};
 };
+
+#include "pbat/warning/Pop.h"
 
 } // namespace detail
 } // namespace math

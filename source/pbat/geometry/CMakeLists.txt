@@ -2,32 +2,47 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
+    "AabbKdTreeHierarchy.h"
+    "AabbRadixTreeHierarchy.h"
     "AxisAlignedBoundingBox.h"
     "BoundingVolumeHierarchy.h"
     "ClosestPointQueries.h"
     "DistanceQueries.h"
+    "EdgeEdgeCcd.h"
     "Geometry.h"
+    "HashGrid.h"
+    "HierarchicalHashGrid.h"
     "IntersectionQueries.h"
     "KdTree.h"
     "MeshBoundary.h"
     "Morton.h"
     "OverlapQueries.h"
+    "PointTriangleCcd.h"
+    "SpatialSearch.h"
     "TetrahedralAabbHierarchy.h"
     "TriangleAabbHierarchy.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
+    "AabbKdTreeHierarchy.cpp"
+    "AabbRadixTreeHierarchy.cpp"
     "AxisAlignedBoundingBox.cpp"
     "BoundingVolumeHierarchy.cpp"
     "ClosestPointQueries.cpp"
     "DistanceQueries.cpp"
+    "EdgeEdgeCcd.cpp"
+    "HashGrid.cpp"
+    "HierarchicalHashGrid.cpp"
     "IntersectionQueries.cpp"
     "KdTree.cpp"
     "MeshBoundary.cpp"
     "Morton.cpp"
     "OverlapQueries.cpp"
+    "PointTriangleCcd.cpp"
+    "SpatialSearch.cpp"
     "TetrahedralAabbHierarchy.cpp"
     "TriangleAabbHierarchy.cpp"
 )
 
 add_subdirectory(model)
+add_subdirectory(sdf)

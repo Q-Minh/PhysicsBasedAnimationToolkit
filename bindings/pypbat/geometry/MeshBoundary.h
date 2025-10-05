@@ -1,13 +1,13 @@
 #ifndef PYPBAT_GEOMETRY_MESH_BOUNDARY_H
 #define PYPBAT_GEOMETRY_MESH_BOUNDARY_H
 
-#include <pybind11/pybind11.h>
+#include <nanobind/nanobind.h>
 
 namespace pbat {
 namespace py {
 namespace geometry {
 
-void BindMeshBoundary(pybind11::module& m);
+void BindMeshBoundary(nanobind::module_& m);
 
 } // namespace geometry
 } // namespace py

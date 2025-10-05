@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core", "pybind11"]
+requires = ["scikit-build-core", "nanobind"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -30,10 +30,17 @@ wheel.packages = ["python/pbatoolkit"]
 wheel.exclude = ["include", "lib", "share"]
 cmake.version = ">=3.26"
 cmake.build-type = "Release"
-cmake.targets = ["PhysicsBasedAnimationToolkit_Python"]
+cmake.targets = [
+    "PhysicsBasedAnimationToolkit_Python",
+    "PhysicsBasedAnimationToolkit_PythonStub"
+]
 cmake.verbose = true
 logging.level = "INFO"
 build-dir = "build/{wheel_tag}"
 
 [project.urls]
 Homepage = "https://github.com/Q-Minh/PhysicsBasedAnimationToolkit"
+
+[tool.pyright]
+reportMissingTypeStubs = false
+reportAttributeAccessIssue = false

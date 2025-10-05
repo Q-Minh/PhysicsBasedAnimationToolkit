@@ -30,7 +30,7 @@ class Square
     static auto constexpr kCols     = NestedType::kCols;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Square(NestedType const& A) : A(A) {}
+    PBAT_HOST_DEVICE Square(NestedType const& _A) : A(_A) {}
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const { return A(i, j) * A(i, j); }
 
@@ -85,7 +85,7 @@ class Absolute
     static auto constexpr kCols     = NestedType::kCols;
     static bool constexpr bRowMajor = NestedType::bRowMajor;
 
-    PBAT_HOST_DEVICE Absolute(NestedType const& A) : A(A) {}
+    PBAT_HOST_DEVICE Absolute(NestedType const& _A) : A(_A) {}
 
     PBAT_HOST_DEVICE ScalarType operator()(auto i, auto j) const
     {
@@ -150,8 +150,8 @@ template <CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE auto Max(TMatrix const& A)
 {
     using IntegerType = std::remove_const_t<decltype(TMatrix::kRows)>;
-    using ScalarType  = typename TMatrix::ScalarType;
 #ifdef __CUDACC__
+    using ScalarType  = typename TMatrix::ScalarType;
     auto maximum = [&]<IntegerType... K>(std::integer_sequence<IntegerType, K...>) {
         auto m = std::numeric_limits<ScalarType>::lowest();
         ((m = max(m, A(K))), ...);

@@ -33,7 +33,7 @@ Rational Rational::operator-(Rational const& rhs) const
 Rational Rational::operator-() const
 {
     using IntegerType = std::remove_cvref_t<decltype(a)>;
-    auto const na = -OverflowChecked<IntegerType>{a};
+    auto const na     = -OverflowChecked<IntegerType>{a};
     return Rational(*na, b);
 }
 
@@ -104,9 +104,14 @@ bool Rational::Rebase(std::int64_t denominator)
     return true;
 }
 
-Rational::operator Scalar() const
+Rational::operator double() const
 {
-    return static_cast<Scalar>(a) / static_cast<Scalar>(b);
+    return static_cast<double>(a) / static_cast<double>(b);
+}
+
+Rational::operator float() const
+{
+    return static_cast<float>(a) / static_cast<float>(b);
 }
 
 void Rational::simplify()
@@ -114,8 +119,8 @@ void Rational::simplify()
     if (a >= 0 && b < 0)
     {
         using IntegerType = std::remove_cvref_t<decltype(a)>;
-        a = -OverflowChecked<IntegerType>{a};
-        b = -OverflowChecked<IntegerType>{b};
+        a                 = -OverflowChecked<IntegerType>{a};
+        b                 = -OverflowChecked<IntegerType>{b};
     }
     auto const gcd = std::gcd(a, b);
     a /= gcd;

@@ -1,10 +1,11 @@
 #ifndef PBAT_SIM_VBD_ENUMS_H
 #define PBAT_SIM_VBD_ENUMS_H
 
-namespace pbat {
-namespace sim {
-namespace vbd {
+namespace pbat::sim::vbd {
 
+/**
+ * @brief Initialization strategies for the VBD time step minimization
+ */
 enum class EInitializationStrategy {
     Position,
     Inertia,
@@ -13,8 +14,20 @@ enum class EInitializationStrategy {
     AdaptivePbat
 };
 
-} // namespace vbd
-} // namespace sim
-} // namespace pbat
+/**
+ * @brief Acceleration strategies for the VBD time step minimization
+ */
+// clang-format off
+enum class EAccelerationStrategy {
+    None,
+    Chebyshev,
+    Anderson,
+    Nesterov,
+    Broyden,
+    TrustRegion
+};
+// clang-format on
+
+} // namespace pbat::sim::vbd
 
 #endif // PBAT_SIM_VBD_ENUMS_H

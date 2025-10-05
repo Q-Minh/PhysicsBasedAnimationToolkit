@@ -131,9 +131,9 @@ TEST_CASE("[geometry] Line segments intersecting triangles are detected")
 
     SUBCASE("Line segment PQ passes through the triangle T")
     {
-        auto const do_assert = [&](std::optional<SVector<ScalarType, 3>> const& uvwIntersection) {
+        auto const do_assert = [&](std::optional<SVector<ScalarType, 4>> const& uvwIntersection) {
             CHECK(uvwIntersection.has_value());
-            SVector<ScalarType, 3> const& uvw         = uvwIntersection.value();
+            SVector<ScalarType, 3> const& uvw         = uvwIntersection->Slice<3, 1>(1, 0);
             SVector<ScalarType, 3> const intersection = uvw(0) * A + uvw(1) * B + uvw(2) * C;
             SVector<ScalarType, 3> const expected_intersection{0.25, 0.25, 0.};
             auto constexpr eps = 1e-15;
@@ -154,7 +154,7 @@ TEST_CASE("[geometry] Line segments intersecting triangles are detected")
     }
     SUBCASE("Line segment PQ does not pass through the triangle T")
     {
-        auto const do_assert = [](std::optional<SVector<ScalarType, 3>> const& intersection) {
+        auto const do_assert = [](std::optional<SVector<ScalarType, 4>> const& intersection) {
             CHECK_FALSE(intersection.has_value());
         };
         SVector<ScalarType, 3> const t{0., 0., 1.01};

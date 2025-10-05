@@ -1,25 +1,23 @@
 #include "LinAlg.h"
 
 #include "Cholmod.h"
+#include "FilterEigenvalues.h"
 #include "Pardiso.h"
 #include "SimplicialLDLT.h"
+#include "SparsityPattern.h"
 
 #include <string>
 
-namespace pbat {
-namespace py {
-namespace math {
-namespace linalg {
+namespace pbat::py::math::linalg {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
     BindCholmod(m);
     BindPardiso(m);
+    BindFilterEigenvalues(m);
     BindSimplicialLDLT(m);
+    BindSparsityPattern(m);
 }
 
-} // namespace linalg
-} // namespace math
-} // namespace py
-} // namespace pbat
+} // namespace pbat::py::math::linalg

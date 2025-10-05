@@ -37,8 +37,9 @@ TEST_CASE("[fem] DeformationGradient")
             MeshType const M(V, C);
             Matrix<kDims, ElementType::kNodes> const x =
                 M.X.colwise() + Vector<kDims>::Constant(3.);
+            Matrix<kDims, ElementType::kNodes> const Xe = M.X(Eigen::placeholders::all, M.E.col(0));
             Matrix<ElementType::kNodes, ElementType::kDims> const GP =
-                fem::ShapeFunctionGradients<ElementType>(Xi, V);
+                fem::ElementShapeFunctionGradients<ElementType>(Xi, Xe);
             Matrix<kDims, kDims> const F         = x * GP;
             Matrix<kDims, kDims> const Fexpected = Matrix<kDims, kDims>::Identity();
             Scalar const FError                  = (F - Fexpected).norm() / Fexpected.norm();
@@ -68,10 +69,11 @@ TEST_CASE("[fem] DeformationGradient")
             MeshType const M(V, C);
             Matrix<kOutDims, ElementType::kNodes> const x =
                 M.X.colwise() + Vector<kOutDims>::Constant(3.);
+            Matrix<kOutDims, ElementType::kNodes> const Xe =
+                M.X(Eigen::placeholders::all, M.E.col(0));
             Matrix<ElementType::kNodes, kOutDims> const GP =
-                fem::ShapeFunctionGradients<ElementType>(Xi, V);
+                fem::ElementShapeFunctionGradients<ElementType>(Xi, Xe);
             Matrix<kOutDims, kOutDims> const F = x * GP;
-
             Matrix<kOutDims, kOutDims> Fexpected;
             // NOTE: Why is this the expected deformation gradient for 2D triangle embedded in 3D?
             // It is translated in all 3 dimensions, but the deformation map still ignores the 3rd

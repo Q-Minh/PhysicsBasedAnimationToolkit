@@ -17,7 +17,7 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <class TScalar, int M, int N=1>
+template <class TScalar, int M, int N = 1>
 class Ones
 {
   public:
@@ -122,8 +122,15 @@ class SMatrix
   public:
     using ScalarType  = TScalar;
     using SelfType    = SMatrix<ScalarType, M, N>;
+#include "pbat/warning/Push.h"
+#include "pbat/warning/SignConversion.h"
     using StorageType = std::array<ScalarType, M * N>;
+#include "pbat/warning/Pop.h"
     using IndexType   = typename StorageType::size_type;
+
+    static auto constexpr kRows     = M;
+    static auto constexpr kCols     = N;
+    static bool constexpr bRowMajor = false;
 
     PBAT_HOST_DEVICE SMatrix() : a() {}
 
@@ -131,10 +138,6 @@ class SMatrix
     PBAT_HOST_DEVICE SMatrix(T... values) : a{values...}
     {
     }
-
-    static int constexpr kRows      = M;
-    static int constexpr kCols      = N;
-    static bool constexpr bRowMajor = false;
 
     template <class /*CMatrix*/ TMatrix>
     PBAT_HOST_DEVICE SMatrix(TMatrix&& B) : a()
@@ -338,7 +341,6 @@ PBAT_HOST_DEVICE void ToBuffers(
     static_assert(MA % MI == 0, "Rows of A must be multiple of rows of inds");
     static_assert(NA == NI, "A and inds must have same number of columns");
     static_assert(MA / MI == K, "A must have number of rows == #buffers*#rows of inds");
-    using ScalarType = typename TMatrix::ScalarType;
     using pbat::common::ForRange;
     ForRange<0, K>(
         [&]<auto k>() { ToFlatBuffer(A.template Slice<MI, NI>(k * MI, 0), inds, buf[k]); });

@@ -1,22 +1,25 @@
 #include "Geometry.h"
 
 #include "AxisAlignedBoundingBox.h"
+#include "HashGrid.h"
+#include "HierarchicalHashGrid.h"
 #include "MeshBoundary.h"
 #include "TetrahedralAabbHierarchy.h"
 #include "TriangleAabbHierarchy.h"
+#include "sdf/Sdf.h"
 
-namespace pbat {
-namespace py {
-namespace geometry {
+namespace pbat::py::geometry {
 
-void Bind(pybind11::module& m)
+void Bind(nanobind::module_& m)
 {
     BindAxisAlignedBoundingBox(m);
+    BindHashGrid(m);
+    BindHierarchicalHashGrid(m);
     BindTetrahedralAabbHierarchy(m);
     BindTriangleAabbHierarchy(m);
     BindMeshBoundary(m);
+    auto msdf = m.def_submodule("sdf", "Signed Distance Functions");
+    sdf::Bind(msdf);
 }
 
-} // namespace geometry
-} // namespace py
-} // namespace pbat
+} // namespace pbat::py::geometry

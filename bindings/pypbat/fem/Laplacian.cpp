@@ -2,172 +2,121 @@
 
 #include "Mesh.h"
 
-#include <pbat/fem/LaplacianMatrix.h>
-#include <pybind11/eigen.h>
-#include <tuple>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
+#include <pbat/fem/Laplacian.h>
+#include <pbat/fem/MeshQuadrature.h>
+#include <pbat/fem/ShapeFunctions.h>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-class Laplacian
+void BindLaplacian([[maybe_unused]] nanobind::module_& m)
 {
-  public:
-    Laplacian(
-        Mesh const& M,
-        Eigen::Ref<IndexVectorX const> const& eg,
-        Eigen::Ref<MatrixX const> const& wg,
-        Eigen::Ref<MatrixX const> const& GNeg,
-        int dims);
+    namespace nb = nanobind;
 
-    Laplacian(Laplacian const&)            = delete;
-    Laplacian& operator=(Laplacian const&) = delete;
+    using TScalar = pbat::Scalar;
+    using TIndex  = pbat::Index;
 
-    template <class Func>
-    void Apply(Func&& f) const;
+    m.def(
+        "laplacian_matrix",
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           TIndex nNodes,
+           nb::DRef<Eigen::Vector<TIndex, Eigen::Dynamic> const> eg,
+           nb::DRef<Eigen::Vector<TScalar, Eigen::Dynamic> const> wg,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> GNeg,
+           int dims,
+           EElement eElement,
+           int order,
+           int spatialDims) {
+            Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> L;
+            ApplyToElementInDims(eElement, order, spatialDims, [&]<class ElementType, int Dims>() {
+                L = pbat::fem::LaplacianMatrix<ElementType, Dims, Eigen::RowMajor>(
+                    E.template topRows<ElementType::kNodes>(),
+                    nNodes,
+                    eg,
+                    wg,
+                    GNeg.template topRows<ElementType::kNodes>(),
+                    dims);
+            });
+            return L;
+        },
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("eg"),
+        nb::arg("wg"),
+        nb::arg("GNeg"),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order")        = 1,
+        nb::arg("spatial_dims") = 3,
+        "Construct the Laplacian operator's sparse matrix representation.\n\n"
+        "Args:\n"
+        "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
+        "elements.\n"
+        "    n_nodes (int): Number of mesh nodes.\n"
+        "    eg (numpy.ndarray): `|# quad.pts.| x 1` vector of element indices at "
+        "quadrature "
+        "points.\n"
+        "    wg (numpy.ndarray): `|# quad.pts.| x 1` vector of quadrature weights.\n"
+        "    GNeg (numpy.ndarray): `|# nodes per element| x |# dims * # quad.pts.|` shape "
+        "function gradients at quadrature points.\n"
+        "    dims (int): Dimensionality of the image of the FEM function space (default: "
+        "1).\n"
+        "    element (EElement): Type of the finite element.\n"
+        "    order (int): Order of the finite element.\n"
+        "    spatial_dims (int): Number of spatial dimensions.\n"
+        "Returns:\n"
+        "    scipy.sparse matrix: `|# nodes * dims| x |# nodes * dims|` Laplacian operator "
+        "matrix.");
 
-    CSCMatrix ToMatrix() const;
-    std::tuple<Index, Index> Shape() const;
-
-    MatrixX const& ElementLaplacians() const;
-    MatrixX& ElementLaplacians();
-    int const& dims() const;
-    int& dims();
-
-    ~Laplacian();
-
-    EElement eMeshElement;
-    int mMeshDims;
-    int mMeshOrder;
-    int mOrder;
-
-  private:
-    void* mLaplacian;
-};
-
-void BindLaplacian(pybind11::module& m)
-{
-    namespace pyb = pybind11;
-
-    pyb::class_<Laplacian>(m, "Laplacian")
-        .def(
-            pyb::init<
-                Mesh const&,
-                Eigen::Ref<IndexVectorX const> const&,
-                Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<MatrixX const> const&,
-                int>(),
-            pyb::arg("mesh"),
-            pyb::arg("eg").noconvert(),
-            pyb::arg("wg").noconvert(),
-            pyb::arg("GNe").noconvert(),
-            pyb::arg("dims") = 1,
-            "Construct the symmetric part of the Laplacian operator on mesh mesh, using "
-            "precomputed shape function gradients GNeg evaluated at quadrature points g at "
-            "elements eg with weights wg. The discretization is based on Galerkin projection. The "
-            "dimensions dims can be set to accommodate vector-valued functions.")
-        .def_property(
-            "dims",
-            [](Laplacian const& L) { return L.dims(); },
-            [](Laplacian& L, int dims) { L.dims() = dims; })
-        .def_readonly("order", &Laplacian::mOrder)
-        .def_property(
-            "deltag",
-            [](Laplacian const& L) { return L.ElementLaplacians(); },
-            [](Laplacian& L, Eigen::Ref<MatrixX const> const& deltag) {
-                L.ElementLaplacians() = deltag;
-            },
-            "|#element nodes|x|#element nodes * #quad.pts.| matrix of element Laplacians")
-        .def_property_readonly("shape", &Laplacian::Shape)
-        .def("to_matrix", &Laplacian::ToMatrix);
-}
-
-Laplacian::Laplacian(
-    Mesh const& M,
-    Eigen::Ref<IndexVectorX const> const& eg,
-    Eigen::Ref<MatrixX const> const& wg,
-    Eigen::Ref<MatrixX const> const& GNe,
-    int dims)
-    : eMeshElement(M.eElement),
-      mMeshDims(M.mDims),
-      mMeshOrder(M.mOrder),
-      mOrder(),
-      mLaplacian(nullptr)
-{
-    M.Apply([&]<pbat::fem::CMesh MeshType>(MeshType* mesh) {
-        using LaplacianType = pbat::fem::SymmetricLaplacianMatrix<MeshType>;
-        mLaplacian          = new LaplacianType(*mesh, eg, wg, GNe, dims);
-        mOrder              = LaplacianType::kOrder;
-    });
-}
-
-CSCMatrix Laplacian::ToMatrix() const
-{
-    CSCMatrix L;
-    Apply([&]<class LaplacianType>(LaplacianType* laplacian) { L = laplacian->ToMatrix(); });
-    return L;
-}
-
-std::tuple<Index, Index> Laplacian::Shape() const
-{
-    Index rows{0}, cols{0};
-    Apply([&]<class LaplacianType>(LaplacianType* laplacian) {
-        rows = laplacian->OutputDimensions();
-        cols = laplacian->InputDimensions();
-    });
-    return std::make_tuple(rows, cols);
-}
-
-MatrixX const& Laplacian::ElementLaplacians() const
-{
-    MatrixX* deltagPtr;
-    Apply([&]<class LaplacianType>(LaplacianType* laplacian) {
-        deltagPtr = std::addressof(laplacian->deltag);
-    });
-    return *deltagPtr;
-}
-
-MatrixX& Laplacian::ElementLaplacians()
-{
-    MatrixX* deltagPtr;
-    Apply([&]<class LaplacianType>(LaplacianType* laplacian) {
-        deltagPtr = std::addressof(laplacian->deltag);
-    });
-    return *deltagPtr;
-}
-
-int const& Laplacian::dims() const
-{
-    int* dimsPtr;
-    Apply([&]<class LaplacianType>(LaplacianType* laplacian) {
-        dimsPtr = std::addressof(laplacian->dims);
-    });
-    return *dimsPtr;
-}
-
-int& Laplacian::dims()
-{
-    int* dimsPtr;
-    Apply([&]<class LaplacianType>(LaplacianType* laplacian) {
-        dimsPtr = std::addressof(laplacian->dims);
-    });
-    return *dimsPtr;
-}
-
-Laplacian::~Laplacian()
-{
-    if (mLaplacian != nullptr)
-        Apply([&]<class LaplacianType>(LaplacianType* laplacian) { delete laplacian; });
-}
-
-template <class Func>
-void Laplacian::Apply(Func&& f) const
-{
-    ApplyToMesh(mMeshDims, mMeshOrder, eMeshElement, [&]<pbat::fem::CMesh MeshType>() {
-        using LaplacianType      = pbat::fem::SymmetricLaplacianMatrix<MeshType>;
-        LaplacianType* laplacian = reinterpret_cast<LaplacianType*>(mLaplacian);
-        f.template operator()<LaplacianType>(laplacian);
-    });
+    m.def(
+        "laplacian_matrix",
+        [](nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> E,
+           nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> X,
+           int dims,
+           EElement eElement,
+           int order) {
+            Eigen::SparseMatrix<TScalar, Eigen::RowMajor, TIndex> L;
+            auto const spatialDims = static_cast<int>(X.rows());
+            ApplyToElementInDims(eElement, order, spatialDims, [&]<class ElementType, int Dims>() {
+                auto constexpr kQuadOrder = std::max(1, 2 * (ElementType::kOrder - 1));
+                auto const wg = pbat::fem::MeshQuadratureWeights<ElementType, kQuadOrder>(E, X);
+                auto const eg = pbat::fem::MeshQuadratureElements(
+                    E.template topRows<ElementType::kNodes>(),
+                    wg);
+                auto const GNeg = pbat::fem::ShapeFunctionGradients<ElementType, Dims, kQuadOrder>(
+                    E.template topRows<ElementType::kNodes>(),
+                    X.template topRows<Dims>());
+                L = pbat::fem::LaplacianMatrix<ElementType, Dims, Eigen::RowMajor>(
+                    E.template topRows<ElementType::kNodes>(),
+                    X.cols(),
+                    eg.reshaped(),
+                    wg.reshaped(),
+                    GNeg.template topRows<ElementType::kNodes>(),
+                    dims);
+            });
+            return L;
+        },
+        nb::arg("E"),
+        nb::arg("X"),
+        nb::arg("dims") = 1,
+        nb::arg("element"),
+        nb::arg("order") = 1,
+        "Construct the Laplacian operator's sparse matrix representation.\n\n"
+        "Args:\n"
+        "    E (numpy.ndarray): `|# nodes per element| x |# elements|` matrix of mesh "
+        "elements.\n"
+        "    X (numpy.ndarray): `|# dims * # nodes| x |# nodes|` matrix of node "
+        "positions.\n"
+        "    dims (int): Dimensionality of the image of the FEM function space (default: "
+        "1).\n"
+        "    element (EElement): Type of the finite element.\n"
+        "    order (int): Order of the finite element.\n"
+        "Returns:\n"
+        "    scipy.sparse matrix: `|# nodes * dims| x |# nodes * dims|` Laplacian operator "
+        "matrix.");
 }
 
 } // namespace fem

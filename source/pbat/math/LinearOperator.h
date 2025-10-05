@@ -104,6 +104,8 @@ class LinearOperator : public Eigen::EigenBase<LinearOperator<TLinearOperators..
     enum {
         ColsAtCompileTime    = Eigen::Dynamic,
         MaxColsAtCompileTime = Eigen::Dynamic,
+        RowsAtCompileTime    = Eigen::Dynamic,
+        MaxRowsAtCompileTime = Eigen::Dynamic,
         IsRowMajor           = false
     };
 

@@ -12,75 +12,21 @@
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 
-#if defined(PBAT_HAS_TRACY_PROFILER)
-    #if not defined(__CUDACC__)
-        #define PBAT_CAN_USE_TRACY_CPP
-        #include <tracy/Tracy.hpp>
-        #define PBAT_PROFILE_SCOPE             ZoneScoped
-        #define PBAT_PROFILE_NAMED_SCOPE(name) ZoneScopedN(name)
-    #else
-        #define PBAT_CAN_USE_TRACY_C
-        #include <tracy/TracyC.h>
-        #define PBAT_PROFILE_SCOPE
-        #define PBAT_PROFILE_NAMED_SCOPE(name)
-        #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)             TracyCZone(var, true)
-        #define PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(var, name) TracyCZoneN(var, name, true)
-        #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)               TracyCZoneEnd(var)
-    #endif // __CUDACC__
+#if defined(PBAT_HAS_TRACY_PROFILER) and not defined(__CUDACC__)
+    #define PBAT_CAN_USE_TRACY_CPP
+    #include <tracy/Tracy.hpp>
+    #define PBAT_PROFILE_SCOPE                 ZoneScoped
+    #define PBAT_PROFILE_NAMED_SCOPE(name)     ZoneScopedN(name)
+    #define PBAT_PROFILE_SCOPED_LOG(txt, size) ZoneText(txt, size)
+    #define PBAT_PROFILE_LOG(txt, size)        TracyMessage(txt, size)
+    #define PBAT_PROFILE_PLOT(name, value)     TracyPlot(name, value)
 #else
     #define PBAT_PROFILE_SCOPE
     #define PBAT_PROFILE_NAMED_SCOPE(name)
-    #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
-    #define PBAT_PROFILE_CUDA_HOST_SCOPE_START(var, name)
-    #define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
-#endif // PBAT_CAN_USE_TRACY
-
-/**
- * @def PBAT_HAS_TRACY_PROFILER
- * This macro is set if the Tracy profiler is enabled
- */
-
-/**
- * @def PBAT_CAN_USE_TRACY_CPP
- * This macro is set if the Tracy profiler is enabled and the Tracy C++ API is available.
- * In general, in CUDA source files, the Tracy C API is used instead so that PBAT_CAN_USE_TRACY_CPP
- * will not be set.
- */
-
-/**
- * @def PBAT_PROFILE_SCOPE
- * This macro is used to profile a scope with the Tracy profiler.
- */
-
-/**
- * @def PBAT_PROFILE_NAMED_SCOPE(name)
- * This macro is used to profile a named scope with name \a name with the Tracy profiler.
- */
-
-/**
- * @def PBAT_CAN_USE_TRACY_C
- * This macro is set if the Tracy profiler is enabled and the Tracy C API is available.
- * In general, in CUDA source files, the Tracy C API is used instead so that PBAT_CAN_USE_TRACY_C
- * will be set.
- */
-
-/**
- * @def PBAT_PROFILE_CUDA_HOST_SCOPE_START(var)
- * This macro is used to profile a scope with the Tracy profiler in a CUDA host function.
- * The variable \a var is used to store the scope context.
- */
-
-/**
- * @def PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(var, name)
- * This macro is used to profile a named scope with name \a name with the Tracy profiler in a CUDA
- * host function. The variable \a var is used to store the scope context.
- */
-
-/**
- * @def PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)
- * This macro is used to end a scope with the Tracy profiler in a CUDA host function.
- * The variable \a var refers to the stored scope context.
- */
+    #define PBAT_PROFILE_LOG(txt, size)
+    #define PBAT_PROFILE_SCOPED_LOG(txt, size)
+    #define PBAT_PROFILE_PLOT(name, value)
+#endif // defined(PBAT_HAS_TRACY_PROFILER) and not defined(__CUDACC__)
 
 #include <map>
 #include <string>

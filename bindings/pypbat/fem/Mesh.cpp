@@ -1,17 +1,18 @@
 #include "Mesh.h"
 
-#include <pybind11/eigen.h>
-#include <string>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
+#include <utility>
 
 namespace pbat {
 namespace py {
 namespace fem {
 
-void BindMesh(pybind11::module& m)
+void BindMesh(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
-    pyb::enum_<EElement>(m, "Element")
+    nb::enum_<EElement>(m, "Element")
         .value("Line", EElement::Line)
         .value("Triangle", EElement::Triangle)
         .value("Quadrilateral", EElement::Quadrilateral)
@@ -19,105 +20,61 @@ void BindMesh(pybind11::module& m)
         .value("Hexahedron", EElement::Hexahedron)
         .export_values();
 
-    pyb::class_<Mesh>(m, "Mesh")
-        .def(
-            pyb::init<
-                Eigen::Ref<MatrixX const> const&,
-                Eigen::Ref<IndexMatrixX const> const&,
-                EElement,
-                int,
-                int>(),
-            pyb::arg("V"),
-            pyb::arg("C"),
-            pyb::arg("element"),
-            pyb::arg("order") = 1,
-            pyb::arg("dims")  = 3,
-            "Construct FEM mesh of the given shape function order and dimensions given some input "
-            "geometric mesh V,C.")
-        .def("quadrature_points", &Mesh::QuadraturePoints)
-        .def("quadrature_weights", &Mesh::QuadratureWeights)
-        .def_property(
-            "X",
-            [](Mesh const& M) { return M.X(); },
-            [](Mesh& M, Eigen::Ref<MatrixX const> const& X) { M.X() = X; },
-            "|#dims|x|#nodes| array of nodal positions")
-        .def_property(
-            "E",
-            [](Mesh const& M) { return M.E(); },
-            [](Mesh& M, Eigen::Ref<IndexMatrixX const> const& E) { M.E() = E; },
-            "|#element nodes|x|#elements| array of element nodal indices")
-        .def_readonly("element", &Mesh::eElement)
-        .def_readonly("order", &Mesh::mOrder, "Shape function order")
-        .def_readonly("dims", &Mesh::mDims, "Domain dimensions");
-}
-
-Mesh::Mesh(
-    Eigen::Ref<MatrixX const> const& V,
-    Eigen::Ref<IndexMatrixX const> const& C,
-    EElement element,
-    int order,
-    int dims)
-    : eElement(element), mOrder(order), mDims(dims), mMesh(nullptr)
-{
-    Apply([&]<class MeshType>([[maybe_unused]] MeshType* mesh) { mMesh = new MeshType(V, C); });
-}
-
-MatrixX Mesh::QuadraturePoints(int qOrder) const
-{
-    static auto constexpr kMaxQuadratureOrder = 8;
-    MatrixX XG{};
-    ApplyWithQuadrature<kMaxQuadratureOrder>(
-        [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
-            XG = mesh->template QuadraturePoints<QuadratureOrder>();
+    m.def(
+        "dims",
+        [](EElement eElement) {
+            int dims = 0;
+            ApplyToElement(eElement, 1, [&]<class ElementType>() { dims = ElementType::kDims; });
+            if (dims == 0)
+            {
+                throw std::invalid_argument(
+                    fmt::format("Invalid finite element type: {}", static_cast<int>(eElement)));
+            }
+            return dims;
         },
-        qOrder);
-    return XG;
-}
+        nb::arg("element"),
+        "Return the reference dimensionality of the given finite element type.\n\n"
+        "Args:\n"
+        "    element (EElement): Type of the finite element.\n\n"
+        "Returns:\n"
+        "    int: Number of dimensions of the finite element type.");
 
-VectorX Mesh::QuadratureWeights(int qOrder) const
-{
-    static auto constexpr kMaxQuadratureOrder = 8;
-    VectorX WG{};
-    ApplyWithQuadrature<kMaxQuadratureOrder>(
-        [&]<class MeshType, auto QuadratureOrder>(MeshType* mesh) {
-            WG = mesh->template QuadratureWeights<QuadratureOrder>();
+    using TScalar = pbat::Scalar;
+    using TIndex  = pbat::Index;
+
+    m.def(
+        "mesh",
+        [](nb::DRef<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> const> V,
+           nb::DRef<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> C,
+           EElement element,
+           int order,
+           int dims) {
+            Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> X;
+            Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> E;
+            ApplyToMesh<TScalar, TIndex>(element, order, dims, [&]<pbat::fem::CMesh TMesh>() {
+                using MeshType = TMesh;
+                MeshType mesh(V, C);
+                X = std::move(mesh.X);
+                E = std::move(mesh.E);
+            });
+            return std::make_pair(X, E);
         },
-        qOrder);
-    return WG;
-}
-
-MatrixX const& Mesh::X() const
-{
-    MatrixX* XN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { XN = std::addressof(mesh->X); });
-    return *XN;
-}
-
-IndexMatrixX const& Mesh::E() const
-{
-    IndexMatrixX* EN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { EN = std::addressof(mesh->E); });
-    return *EN;
-}
-
-MatrixX& Mesh::X()
-{
-    MatrixX* XN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { XN = std::addressof(mesh->X); });
-    return *XN;
-}
-
-IndexMatrixX& Mesh::E()
-{
-    IndexMatrixX* EN = nullptr;
-    Apply([&]<class MeshType>(MeshType* mesh) { EN = std::addressof(mesh->E); });
-    return *EN;
-}
-
-Mesh::~Mesh()
-{
-    if (mMesh != nullptr)
-        Apply([]<class MeshType>(MeshType* mesh) { delete mesh; });
+        nb::arg("V"),
+        nb::arg("C"),
+        nb::arg("element"),
+        nb::arg("order") = 1,
+        nb::arg("dims")  = 3,
+        "Compute an FEM mesh from the input geometric mesh.\n\n"
+        "Args:\n"
+        "    V (numpy.ndarray): Vertex coordinates of the geometric mesh.\n"
+        "    C (numpy.ndarray): Connectivity of the geometric mesh.\n"
+        "    element (EElement): Type of the finite element.\n"
+        "    order (int): Order of the finite element.\n"
+        "    dims (int): Number of dimensions of the mesh.\n\n"
+        "Returns:\n"
+        "    Tuple[numpy.ndarray, numpy.ndarray]: (X, E) where X are the `|# dims| x |# "
+        "nodes|` nodal coordinates and E are the `|# elem. nodes.| x |# elements|` element "
+        "connectivity.\n");
 }
 
 } // namespace fem

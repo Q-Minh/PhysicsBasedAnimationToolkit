@@ -4,7 +4,7 @@
 #include "Aabb.cuh"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
-#include "pbat/profiling/Profiling.h"
+#include "pbat/gpu/profiling/Profiling.h"
 
 #include <cuda/functional>
 #include <thrust/execution_policy.h>
@@ -19,6 +19,12 @@ namespace gpu {
 namespace impl {
 namespace geometry {
 
+/**
+ * @brief Single-axis parallel sweep and prune algorithm for detecting overlapping bounding boxes.
+ *
+ * Implements @cite david1992dynamic
+ *
+ */
 class SweepAndPrune
 {
   public:
@@ -50,9 +56,7 @@ class SweepAndPrune
 template <class FOnOverlapDetected>
 inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
 {
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.geometry.SweepAndPrune.SortAndSweep");
+    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.SweepAndPrune.SortAndSweep");
 
     // 1. Preprocess internal data
     auto const nBoxes = static_cast<GpuIndex>(aabbs.Size());
@@ -64,7 +68,7 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&&
     // NOTE:
     // We could use the streams API here to parallelize the computation of mu and sigma along each
     // dimension.
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
         muSigmaCtx,
         "pbat.gpu.impl.geometry.SweepAndPrune.MeanVariance");
     auto& b = aabbs.b;
@@ -105,7 +109,7 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&&
         (sigma[0] > sigma[1]) ? (sigma[0] > sigma[2] ? 0 : 2) : (sigma[1] > sigma[2] ? 1 : 2);
     std::array<GpuIndex, kDims - 1> axis{};
     pbat::common::ForRange<1, kDims>([&]<auto d>() { axis[d - 1] = (saxis + d) % kDims; });
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(sortCtx, "pbat.gpu.impl.geometry.SweepAndPrune.Sort");
+    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(sortCtx, "pbat.gpu.impl.geometry.SweepAndPrune.Sort");
     auto zip = thrust::make_zip_iterator(
         b[axis[0]].begin(),
         b[axis[1]].begin(),
@@ -117,7 +121,7 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&&
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(sortCtx);
 
     // 4. Sweep to find overlaps
-    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(
+    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
         sweepCtx,
         "pbat.gpu.impl.geometry.SweepAndPrune.Sweep");
     thrust::for_each(
@@ -147,8 +151,6 @@ inline void SweepAndPrune::SortAndSweep(Aabb<kDims>& aabbs, FOnOverlapDetected&&
             }
         });
     PBAT_PROFILE_CUDA_HOST_SCOPE_END(sweepCtx);
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace geometry

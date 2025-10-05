@@ -1,4 +1,4 @@
-import pbatoolkit as pbat
+from pbatoolkit import pbat, pypbat
 import meshio
 import numpy as np
 import scipy as sp
@@ -148,29 +148,31 @@ if __name__ == "__main__":
         offset = V[i][:, -1].max() - V[i + 1][:, -1].min()
         V[i + 1][:, -1] += offset + extent * args.translation
     V, C, BV = combine(V, C)
-    mesh = pbat.fem.Mesh(V.T, C.T, element=pbat.fem.Element.Tetrahedron, order=1)
+    element = pbat.fem.Element.Tetrahedron
+    order = 1
+    X, E = pbat.fem.mesh(V.T, C.T, element=element, order=order)
+    dims = X.shape[0]
     F = igl.boundary_facets(C)
     F[:, :2] = np.roll(F[:, :2], shift=1, axis=1)
 
     # Compute mass
-    M, detJeM = pbat.fem.mass_matrix(mesh, rho=args.rho, dims=1, lump=True)
-    m = np.array(M.diagonal()).squeeze()
+    rho = args.rho
+    m = pbat.fem.lumped_mass_matrix(E, X, rho=rho, dims=1, element=element, order=order)
 
     # Compute material (Lame) constants
-    Y = np.full(mesh.E.shape[1], args.Y)
-    nu = np.full(mesh.E.shape[1], args.nu)
-    mue = Y / (2 * (1 + nu))
-    lambdae = (Y * nu) / ((1 + nu) * (1 - 2 * nu))
+    Y = np.full(E.shape[1], args.Y)
+    nu = np.full(E.shape[1], args.nu)
+    mue, lambdae = pypbat.fem.lame_coefficients(Y, nu)
 
     # Set Dirichlet boundary conditions
-    Xmin = mesh.X.min(axis=1)
-    Xmax = mesh.X.max(axis=1)
+    Xmin = X.min(axis=1)
+    Xmax = X.max(axis=1)
     extent = Xmax - Xmin
     Xmax[args.fixed_axis] = (
         Xmin[args.fixed_axis] + args.percent_fixed * extent[args.fixed_axis]
     )
-    aabb = pbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
-    vdbc = aabb.contained(mesh.X)
+    aabb = pypbat.geometry.aabb(np.vstack((Xmin, Xmax)).T)
+    vdbc = np.array(aabb.contained(X))
     minv = 1 / m
 
     # Setup XPBD
@@ -182,18 +184,18 @@ if __name__ == "__main__":
     # muC = args.muC * muC[VC]
     gc_ordering = pbat.graph.GreedyColorOrderingStrategy.LargestDegree
     gc_selection = pbat.graph.GreedyColorSelectionStrategy.LeastUsed
-    Pptr, Padj, GC = pbat.sim.xpbd.partition_mesh_constraints(
-        mesh.X, mesh.E, ordering=gc_ordering, selection=gc_selection
+    Pptr, Padj, GC = pypbat.sim.xpbd.partition_mesh_constraints(
+        X, E, ordering=gc_ordering, selection=gc_selection
     )
     data = (
         pbat.sim.xpbd.Data()
-        .with_volume_mesh(mesh.X, mesh.E)
+        .with_volume_mesh(X, E)
         .with_surface_mesh(VC, F.T)
         .with_bodies(BV)
         .with_mass_inverse(minv)
         .with_elastic_material(np.vstack((mue, lambdae)))
         .with_damping(
-            np.full(mesh.E.shape[1] * 2, args.betaSNH),
+            np.full(E.shape[1] * 2, args.betaSNH),
             pbat.sim.xpbd.Constraint.StableNeoHookean,
         )
         .with_compliance(
@@ -216,9 +218,9 @@ if __name__ == "__main__":
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("eXtended Position Based Dynamics")
     ps.init()
-    vm = ps.register_volume_mesh("Simulation mesh", mesh.X.T, mesh.E.T)
+    vm = ps.register_volume_mesh("Simulation mesh", X.T, E.T)
     vm.add_scalar_quantity("Coloring", GC, defined_on="cells", cmap="jet")
-    pc = ps.register_point_cloud("Dirichlet", mesh.X[:, vdbc].T)
+    pc = ps.register_point_cloud("Dirichlet", X[:, vdbc].T)
     dt = 0.01
     iterations = 1
     substeps = 50
@@ -229,8 +231,8 @@ if __name__ == "__main__":
     has_partitioning = getattr(pbat.graph, "partition") is not None
     if has_partitioning and args.cluster:
         SGptr, SGadj, Cptr, Cadj, clustering, SGC = (
-            pbat.sim.xpbd.partition_clustered_mesh_constraint_graph(
-                mesh.X, mesh.E, ordering=vc_ordering, selection=vc_selection
+            pypbat.sim.xpbd.partition_clustered_mesh_constraint_graph(
+                X, E, ordering=gc_ordering, selection=gc_selection
             )
         )
         data.with_cluster_partitions(SGptr, SGadj, Cptr, Cadj)
@@ -248,7 +250,7 @@ if __name__ == "__main__":
     integrator_type = pbat.gpu.xpbd.Integrator if args.gpu else pbat.sim.xpbd.Integrator
     xpbd = integrator_type(data)
 
-    profiler = pbat.profiling.Profiler()
+    profiler = pypbat.profiling.Profiler()
 
     def callback():
         global dt, iterations, substeps, alphac
@@ -264,9 +266,9 @@ if __name__ == "__main__":
         reset = imgui.Button("Reset")
 
         if reset:
-            xpbd.x = mesh.X
-            xpbd.v = np.zeros(mesh.X.shape)
-            vm.update_vertex_positions(mesh.X.T)
+            xpbd.x = X
+            xpbd.v = np.zeros(X.shape)
+            vm.update_vertex_positions(X.T)
             t = 0
 
         if animate or step:

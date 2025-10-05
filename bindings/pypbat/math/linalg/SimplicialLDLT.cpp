@@ -1,10 +1,12 @@
 #include "SimplicialLDLT.h"
 
 #include <Eigen/SparseCholesky>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/tuple.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/profiling/Profiling.h>
-#include <pybind11/eigen.h>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -14,9 +16,9 @@ namespace py {
 namespace math {
 namespace linalg {
 
-void BindSimplicialLDLT(pybind11::module& m)
+void BindSimplicialLDLT(nanobind::module_& m)
 {
-    namespace pyb = pybind11;
+    namespace nb = nanobind;
 
     using LdltCscNat = Eigen::SimplicialLDLT<
         CSCMatrix,
@@ -62,49 +64,56 @@ void BindSimplicialLDLT(pybind11::module& m)
                     return "SimplicialLdlt_Csr_COLAMD";
             }();
 
-            pyb::class_<SimplicialLdltType>(m, className.data())
-                .def(pyb::init<>())
+            nb::class_<SimplicialLdltType>(m, className.data())
+                .def(nb::init<>())
                 .def(
                     "analyze",
-                    [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("pbat.math.linalg." + className + ".analyze", [&]() {
-                            ldlt.analyzePattern(A);
-                        });
+                    [=](SimplicialLdltType& ldlt,
+                        SparseMatrixType const& A) -> SimplicialLdltType& {
+                        pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".analyze",
+                            [&]() { ldlt.analyzePattern(A); });
+                        return ldlt;
                     },
-                    pyb::arg("A"))
+                    nb::arg("A"),
+                    nb::rv_policy::reference_internal)
                 .def(
                     "compute",
                     [=](SimplicialLdltType& ldlt,
                         SparseMatrixType const& A) -> SimplicialLdltType& {
-                        pbat::profiling::Profile("pbat.math.linalg." + className + ".compute", [&]() {
-                            ldlt.compute(A);
-                        });
+                        pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".compute",
+                            [&]() { ldlt.compute(A); });
                         return ldlt;
                     },
-                    pyb::arg("A"))
-                .def_property_readonly("d", &SimplicialLdltType::vectorD)
-                .def_property_readonly("determinant", &SimplicialLdltType::determinant)
+                    nb::arg("A"),
+                    nb::rv_policy::reference_internal)
+                .def_prop_ro("d", &SimplicialLdltType::vectorD)
+                .def_prop_ro("determinant", &SimplicialLdltType::determinant)
                 .def(
                     "factorize",
-                    [=](SimplicialLdltType& ldlt, SparseMatrixType const& A) {
-                        pbat::profiling::Profile("pbat.math.linalg." + className + ".factorize", [&]() {
-                            ldlt.factorize(A);
-                        });
+                    [=](SimplicialLdltType& ldlt,
+                        SparseMatrixType const& A) -> SimplicialLdltType& {
+                        pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".factorize",
+                            [&]() { ldlt.factorize(A); });
+                        return ldlt;
                     },
-                    pyb::arg("A"))
-                .def_property_readonly(
+                    nb::arg("A"),
+                    nb::rv_policy::reference_internal)
+                .def_prop_ro(
                     "L",
                     [](SimplicialLdltType const& ldlt) -> SparseMatrixType {
                         SparseMatrixType L = ldlt.matrixL();
                         return L;
                     })
-                .def_property_readonly(
+                .def_prop_ro(
                     "p",
                     [](SimplicialLdltType const& ldlt) { return ldlt.permutationP().indices(); })
-                .def_property_readonly(
+                .def_prop_ro(
                     "pinv",
                     [](SimplicialLdltType const& ldlt) { return ldlt.permutationPinv().indices(); })
-                .def_property_readonly(
+                .def_prop_ro(
                     "shape",
                     [](SimplicialLdltType const& ldlt) {
                         return std::make_tuple(ldlt.rows(), ldlt.cols());
@@ -114,8 +123,8 @@ void BindSimplicialLDLT(pybind11::module& m)
                     [](SimplicialLdltType& ldlt, Scalar offset, Scalar scale) {
                         ldlt.setShift(offset, scale);
                     },
-                    pyb::arg("offset"),
-                    pyb::arg("scale"))
+                    nb::arg("offset"),
+                    nb::arg("scale"))
                 .def(
                     "solve",
                     [=](SimplicialLdltType const& ldlt,
@@ -127,8 +136,20 @@ void BindSimplicialLDLT(pybind11::module& m)
                                 return X;
                             });
                     },
-                    pyb::arg("B"))
-                .def_property_readonly("status", [](SimplicialLdltType const& ldlt) -> std::string {
+                    nb::arg("B"))
+                .def(
+                    "solve",
+                    [=](SimplicialLdltType const& ldlt,
+                        Eigen::Ref<VectorX const> const& B) -> VectorX {
+                        return pbat::profiling::Profile(
+                            "pbat.math.linalg." + className + ".solve",
+                            [&]() {
+                                VectorX X = ldlt.solve(B);
+                                return X;
+                            });
+                    },
+                    nb::arg("B"))
+                .def_prop_ro("status", [](SimplicialLdltType const& ldlt) -> std::string {
                     Eigen::ComputationInfo const info = ldlt.info();
                     switch (info)
                     {

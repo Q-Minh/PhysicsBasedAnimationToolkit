@@ -7,8 +7,10 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "HyperElasticPotential.h"
     "Jacobian.h"
     "Laplacian.h"
-    "MassMatrix.h"
+    "LoadVector.h"
+    "Mass.h"
     "Mesh.h"
+    "MeshQuadrature.h"
     "ShapeFunctions.h"
 )
 
@@ -19,7 +21,9 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Jacobian.cpp"
     "HyperElasticPotential.cpp"
     "Laplacian.cpp"
-    "MassMatrix.cpp"
+    "LoadVector.cpp"
+    "Mass.cpp"
     "Mesh.cpp"
+    "MeshQuadrature.cpp"
     "ShapeFunctions.cpp"
 )

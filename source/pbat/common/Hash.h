@@ -40,7 +40,7 @@ void HashCombineAccumulate(std::size_t& seed, T const& val)
  * @return Hash value
  */
 template <typename... Types>
-std::size_t HashCombine(const Types&... args)
+std::size_t HashCombine(Types const&... args)
 {
     std::size_t seed = 0;
     (HashCombineAccumulate(seed, args), ...); // create hash value with seed over all args
