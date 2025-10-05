@@ -27,11 +27,11 @@ jobs:
             build_tool_args: /p:CL_MPCount=4
             cibw_archs: AMD64
             cibw_build: cp311-win_amd64 cp312-win_amd64 cp313-win_amd64
-          - os: macos-13
-            build_tool_args: -j4
-            cibw_archs: x86_64 universal2
-            cibw_build: cp312-macosx_x86_64 cp312_macosx_universal2
-            macosx_deployment_target: "13.0"
+          # - os: macos-13
+          #   build_tool_args: -j4
+          #   cibw_archs: x86_64 universal2
+          #   cibw_build: cp312-macosx_x86_64 cp312_macosx_universal2
+          #   macosx_deployment_target: "13.0"
           - os: macos-14
             build_tool_args: -j4
             cibw_archs: arm64 universal2

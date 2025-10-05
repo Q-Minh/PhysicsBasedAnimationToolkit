@@ -28,9 +28,9 @@ jobs:
             preset: ci-pip-cuda
             sub_packages: '["nvcc", "cudart", "thrust", "visual_studio_integration"]'
             non-cuda-sub-packages: '["libcublas"]'
-          - os: macos-13
-            preset: pip
-            build_tool_args: -j4
+          # - os: macos-13
+          #   preset: pip
+          #   build_tool_args: -j4
           - os: macos-14
             preset: pip
             build_tool_args: -j4
