@@ -77,7 +77,6 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     Eigen3::Eigen
     fmt::fmt
     HighFive::Include
-    OpenMP::OpenMP_CXX
     range-v3::concepts
     range-v3::meta
     range-v3::range-v3
