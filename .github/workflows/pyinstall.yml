@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build:
-    name: Wheels on ${{ matrix.os }}
+    name: Local pip installation on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
