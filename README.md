@@ -408,7 +408,7 @@ If you use PBAT in your research, please cite:
 ```bibtex
 @software{pbat2024,
   title={Physics Based Animation Toolkit},
-  author={Minh, Quoc and contributors},
+  author={Ton-That, Quoc-Minh},
   url={https://github.com/Q-Minh/PhysicsBasedAnimationToolkit},
   version={0.0.1},
   year={2024}
