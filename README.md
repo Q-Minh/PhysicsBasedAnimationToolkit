@@ -183,6 +183,8 @@ Refer to [scikit-build-core](https://scikit-build-core.readthedocs.io/en/stable/
 
 ## 📚 Documentation
 
+Full online documentation hosted at [q-minh.com/PhysicsBasedAnimationToolkit](https://www.q-minh.com/PhysicsBasedAnimationToolkit/).
+
 - 📁 **[Python Demos](python/examples/)**: Ready-to-run scripts with detailed documentation
 - 📖 **[Tutorials](./doc/tutorial/)**: Step-by-step guides for physics-based animation
 - 🧪 **[Unit Tests](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/source)**: Check out unit tests in source files for C++ usage patterns
@@ -238,7 +240,7 @@ Our [`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit/) prebuilt binaries i
 
 #### Local
 
-> � **Pro Tip**: Familiarize yourself with the [CMake documentation](https://cmake.org/cmake/help/latest/) before building from source, especially if you're new to CMake!
+> 💡 **Pro Tip**: Familiarize yourself with the [CMake documentation](https://cmake.org/cmake/help/latest/) before building from source, especially if you're new to CMake!
 
 Consider [locally building and installing](#build--install) `pbatoolkit` against your native GPU for the following reasons.
 - Achieve optimal GPU performance for your platform.
