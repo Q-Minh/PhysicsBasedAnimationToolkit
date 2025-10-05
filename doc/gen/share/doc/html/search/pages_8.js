@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['profiling_0',['Profiling',['../d9/d68/profiling.html',1,'userguide']]]
+  ['quick_20start_0',['Quick start',['../d2/dcd/quickstart.html',1,'index']]]
 ];

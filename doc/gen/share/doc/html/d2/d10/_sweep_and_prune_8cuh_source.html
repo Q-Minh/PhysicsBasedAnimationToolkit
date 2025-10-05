@@ -142,154 +142,153 @@ $(function(){initNavTree('d2/d10/_sweep_and_prune_8cuh_source.html','../../'); i
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;Aabb.cuh&quot;</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &quot;<a class="code" href="../../d8/d0a/gpu_2_aliases_8h.html">pbat/gpu/Aliases.h</a>&quot;</span></div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &quot;pbat/gpu/impl/common/Buffer.cuh&quot;</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &quot;<a class="code" href="../../da/d04/_profiling_8h.html">pbat/profiling/Profiling.h</a>&quot;</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &quot;<a class="code" href="../../de/d8a/gpu_2profiling_2_profiling_8h.html">pbat/gpu/profiling/Profiling.h</a>&quot;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;thrust/execution_policy.h&gt;</span></div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;thrust/for_each.h&gt;</span></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &lt;thrust/iterator/counting_iterator.h&gt;</span></div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;thrust/reduce.h&gt;</span></div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &lt;thrust/sequence.h&gt;</span></div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;thrust/sort.h&gt;</span></div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d0/d7c/namespacepbat.html">pbat</a> {</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../de/d07/namespacepbat_1_1gpu.html">gpu</a> {</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">namespace </span>impl {</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">namespace </span>geometry {</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="foldopen" id="foldopen00021" data-start="{" data-end="};">
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html">   21</a></span><span class="keyword">class </span><a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a1fcbe2270df1b9f7ad4db1246e6d0561">SweepAndPrune</a></div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>{</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>  <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kDims = 3;</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span></div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a1fcbe2270df1b9f7ad4db1246e6d0561">SweepAndPrune</a>(std::size_t nPrimitives = 0ULL);</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a48a92b313cda242bfa0a1e254d30dc06">Reserve</a>(std::size_t nPrimitives);</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keyword">template</span> &lt;<span class="keyword">class</span> FOnOverlapDetected&gt;</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">SortAndSweep</a>(<a class="code hl_struct" href="../../df/da3/structpbat_1_1gpu_1_1impl_1_1geometry_1_1_aabb.html">Aabb&lt;kDims&gt;</a>&amp; aabbs, FOnOverlapDetected&amp;&amp; fOnOverlapDetected);</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>  <span class="keyword">private</span>:</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <a class="code hl_class" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">common::Buffer&lt;GpuIndex&gt;</a> inds; </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>};</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;cuda/functional&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;thrust/execution_policy.h&gt;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#include &lt;thrust/for_each.h&gt;</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;thrust/iterator/counting_iterator.h&gt;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &lt;thrust/reduce.h&gt;</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;thrust/sequence.h&gt;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &lt;thrust/sort.h&gt;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d0/d7c/namespacepbat.html">pbat</a> {</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../de/d07/namespacepbat_1_1gpu.html">gpu</a> {</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d7/d50/namespacepbat_1_1gpu_1_1impl.html">impl</a> {</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">namespace </span>geometry {</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span></div>
+<div class="foldopen" id="foldopen00028" data-start="{" data-end="};">
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno"><a class="line" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html">   28</a></span><span class="keyword">class </span><a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a1fcbe2270df1b9f7ad4db1246e6d0561">SweepAndPrune</a></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>{</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>  <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kDims = 3;</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a1fcbe2270df1b9f7ad4db1246e6d0561">SweepAndPrune</a>(std::size_t nPrimitives = 0ULL);</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a48a92b313cda242bfa0a1e254d30dc06">Reserve</a>(std::size_t nPrimitives);</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keyword">template</span> &lt;<span class="keyword">class</span> FOnOverlapDetected&gt;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">SortAndSweep</a>(<a class="code hl_struct" href="../../df/da3/structpbat_1_1gpu_1_1impl_1_1geometry_1_1_aabb.html">Aabb&lt;kDims&gt;</a>&amp; aabbs, FOnOverlapDetected&amp;&amp; fOnOverlapDetected);</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <a class="code hl_class" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">common::Buffer&lt;GpuIndex&gt;</a> inds; </div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>};</div>
 </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="keyword">template</span> &lt;<span class="keyword">class</span> FOnOverlapDetected&gt;</div>
-<div class="foldopen" id="foldopen00050" data-start="{" data-end="}">
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno"><a class="line" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">   50</a></span><span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">SweepAndPrune::SortAndSweep</a>(<a class="code hl_struct" href="../../df/da3/structpbat_1_1gpu_1_1impl_1_1geometry_1_1_aabb.html">Aabb&lt;kDims&gt;</a>&amp; aabbs, FOnOverlapDetected&amp;&amp; fOnOverlapDetected)</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>{</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        ctx,</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        <span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.SortAndSweep&quot;</span>);</div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="comment">// 1. Preprocess internal data</span></div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keyword">auto</span> <span class="keyword">const</span> nBoxes = <span class="keyword">static_cast&lt;</span><a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a><span class="keyword">&gt;</span>(aabbs.Size());</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keywordflow">if</span> (inds.Size() &lt; nBoxes)</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        inds.Resize(nBoxes);</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    thrust::sequence(thrust::device, inds.Data(), inds.Data() + nBoxes);</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span> </div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="comment">// 2. Compute mean and variance of bounding box centers</span></div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="comment">// NOTE:</span></div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="comment">// We could use the streams API here to parallelize the computation of mu and sigma along each</span></div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="comment">// dimension.</span></div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>        muSigmaCtx,</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>        <span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.MeanVariance&quot;</span>);</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keyword">auto</span>&amp; b = aabbs.b;</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keyword">auto</span>&amp; e = aabbs.e;</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    std::array&lt;GpuScalar, kDims&gt; mu{}, sigma{};</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> d = 0; d &lt; kDims; ++d)</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    {</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>        mu[d] = thrust::transform_reduce(</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>            thrust::device,</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>            thrust::make_counting_iterator(0),</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>            thrust::make_counting_iterator(nBoxes),</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>            [b = b.Raw()[d], e = e.Raw()[d], div = <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>(2) * nBoxes] PBAT_DEVICE(</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>                <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> i) -&gt; <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> { <span class="keywordflow">return</span> (b[i] + e[i]) / div; },</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>            <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>(0),</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>            thrust::plus&lt;GpuScalar&gt;());</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    }</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> d = 0; d &lt; kDims; ++d)</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    {</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        sigma[d] = thrust::transform_reduce(</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>            thrust::device,</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>            thrust::make_counting_iterator(0),</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>            thrust::make_counting_iterator(nBoxes),</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>            [b = b.Raw()[d], e = e.Raw()[d], mu = mu[d], nBoxes] PBAT_DEVICE(</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>                <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> i) -&gt; <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> {</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>                <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> cd       = (b[i] + e[i]) / <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>(2);</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>                <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> <span class="keyword">const</span> dx = cd - mu;</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>                <span class="keywordflow">return</span> dx * dx / <span class="keyword">static_cast&lt;</span><a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a><span class="keyword">&gt;</span>(nBoxes);</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>            },</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>            <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>(0),</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>            thrust::plus&lt;GpuScalar&gt;());</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    }</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <a class="code hl_define" href="../../da/d04/_profiling_8h.html#aeaf21152a4b06f1e6c2ddb88a4e5c57e">PBAT_PROFILE_CUDA_HOST_SCOPE_END</a>(muSigmaCtx);</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span> </div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <span class="comment">// 3. Sort bounding boxes along largest variance axis</span></div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> <span class="keyword">const</span> saxis =</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        (sigma[0] &gt; sigma[1]) ? (sigma[0] &gt; sigma[2] ? 0 : 2) : (sigma[1] &gt; sigma[2] ? 1 : 2);</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    std::array&lt;<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>, kDims - 1&gt; axis{};</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <a class="code hl_function" href="../../dd/d4e/namespacepbat_1_1common.html#ad51e60890ee897ee1a9932b6899f81a7">pbat::common::ForRange&lt;1, kDims&gt;</a>([&amp;]&lt;<span class="keyword">auto</span> d&gt;() { axis[d - 1] = (saxis + d) % kDims; });</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(sortCtx, <span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.Sort&quot;</span>);</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    <span class="keyword">auto</span> zip = thrust::make_zip_iterator(</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>        b[axis[0]].begin(),</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>        b[axis[1]].begin(),</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>        e[saxis].begin(),</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        e[axis[0]].begin(),</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>        e[axis[1]].begin(),</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>        inds.Data());</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    thrust::sort_by_key(thrust::device, b[saxis].begin(), b[saxis].end(), zip);</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    <a class="code hl_define" href="../../da/d04/_profiling_8h.html#aeaf21152a4b06f1e6c2ddb88a4e5c57e">PBAT_PROFILE_CUDA_HOST_SCOPE_END</a>(sortCtx);</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span> </div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <span class="comment">// 4. Sweep to find overlaps</span></div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    PBAT_PROFILE_NAMED_CUDA_HOST_SCOPE_START(</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        sweepCtx,</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        <span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.Sweep&quot;</span>);</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    thrust::for_each(</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        thrust::device,</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        thrust::make_counting_iterator(0),</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        thrust::make_counting_iterator(nBoxes),</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        [nBoxes,</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>         saxis,</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>         axis,</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>         b    = b.Raw(),</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>         e    = e.Raw(),</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>         inds = inds.Raw(),</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>         fOnOverlapDetected =</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>             std::forward&lt;FOnOverlapDetected&gt;(fOnOverlapDetected)] PBAT_DEVICE(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> i) <span class="keyword">mutable</span> {</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> j = i + 1; (j &lt; nBoxes) and (e[saxis][i] &gt;= b[saxis][j]); ++j)</div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>            {</div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>                <span class="comment">// NOTE:</span></div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>                <span class="comment">// We only need to compare along non-major axis&#39;. Thus, we&#39;re not using the box-box</span></div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>                <span class="comment">// overlap test from OverlapQueries, which naturally compares all axis&#39;.</span></div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>                <span class="keywordtype">bool</span> <span class="keyword">const</span> bBoxesOverlap =</div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>                    (e[axis[0]][i] &gt;= b[axis[0]][j]) and (b[axis[0]][i] &lt;= e[axis[0]][j]) and</div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>                    (e[axis[1]][i] &gt;= b[axis[1]][j]) and (b[axis[1]][i] &lt;= e[axis[1]][j]);</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>                <span class="keywordflow">if</span> (bBoxesOverlap)</div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>                {</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>                    fOnOverlapDetected(inds[i], inds[j]);</div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>                }</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>            }</div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>        });</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>    <a class="code hl_define" href="../../da/d04/_profiling_8h.html#aeaf21152a4b06f1e6c2ddb88a4e5c57e">PBAT_PROFILE_CUDA_HOST_SCOPE_END</a>(sweepCtx);</div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span> </div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    <a class="code hl_define" href="../../da/d04/_profiling_8h.html#aeaf21152a4b06f1e6c2ddb88a4e5c57e">PBAT_PROFILE_CUDA_HOST_SCOPE_END</a>(ctx);</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>}</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="keyword">template</span> &lt;<span class="keyword">class</span> FOnOverlapDetected&gt;</div>
+<div class="foldopen" id="foldopen00057" data-start="{" data-end="}">
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno"><a class="line" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">   57</a></span><span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">SweepAndPrune::SortAndSweep</a>(<a class="code hl_struct" href="../../df/da3/structpbat_1_1gpu_1_1impl_1_1geometry_1_1_aabb.html">Aabb&lt;kDims&gt;</a>&amp; aabbs, FOnOverlapDetected&amp;&amp; fOnOverlapDetected)</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>{</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    PBAT_PROFILE_CUDA_NAMED_SCOPE(<span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.SortAndSweep&quot;</span>);</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="comment">// 1. Preprocess internal data</span></div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keyword">auto</span> <span class="keyword">const</span> nBoxes = <span class="keyword">static_cast&lt;</span><a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a><span class="keyword">&gt;</span>(aabbs.Size());</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordflow">if</span> (inds.Size() &lt; nBoxes)</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        inds.Resize(nBoxes);</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    thrust::sequence(thrust::device, inds.Data(), inds.Data() + nBoxes);</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="comment">// 2. Compute mean and variance of bounding box centers</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="comment">// NOTE:</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="comment">// We could use the streams API here to parallelize the computation of mu and sigma along each</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="comment">// dimension.</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>        muSigmaCtx,</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>        <span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.MeanVariance&quot;</span>);</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keyword">auto</span>&amp; b = aabbs.b;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keyword">auto</span>&amp; e = aabbs.e;</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    std::array&lt;GpuScalar, kDims&gt; mu{}, sigma{};</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> d = 0; d &lt; kDims; ++d)</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    {</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>        mu[d] = thrust::transform_reduce(</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>            thrust::device,</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>            thrust::make_counting_iterator(0),</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>            thrust::make_counting_iterator(nBoxes),</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>            cuda::proclaim_return_type&lt;GpuScalar&gt;(</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>                [b = b.Raw()[d], e = e.Raw()[d], div = 2 * nBoxes] PBAT_DEVICE(</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>                    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> i) -&gt; <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> { <span class="keywordflow">return</span> (b[i] + e[i]) / div; }),</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>            <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>(0),</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>            thrust::plus&lt;GpuScalar&gt;());</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    }</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> d = 0; d &lt; kDims; ++d)</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    {</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        sigma[d] = thrust::transform_reduce(</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>            thrust::device,</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>            thrust::make_counting_iterator(0),</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>            thrust::make_counting_iterator(nBoxes),</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>            cuda::proclaim_return_type&lt;GpuScalar&gt;(</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>                [b = b.Raw()[d], e = e.Raw()[d], mu = mu[d], nBoxes] PBAT_DEVICE(</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>                    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> i) -&gt; <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> {</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>                    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> cd       = (b[i] + e[i]) / <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>(2);</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> <span class="keyword">const</span> dx = cd - mu;</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>                    <span class="keywordflow">return</span> dx * dx / nBoxes;</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>                }),</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>            <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>(0),</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>            thrust::plus&lt;GpuScalar&gt;());</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    }</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    PBAT_PROFILE_CUDA_HOST_SCOPE_END(muSigmaCtx);</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="comment">// 3. Sort bounding boxes along largest variance axis</span></div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> <span class="keyword">const</span> saxis =</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>        (sigma[0] &gt; sigma[1]) ? (sigma[0] &gt; sigma[2] ? 0 : 2) : (sigma[1] &gt; sigma[2] ? 1 : 2);</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    std::array&lt;<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>, kDims - 1&gt; axis{};</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    <a class="code hl_function" href="../../dd/d4e/namespacepbat_1_1common.html#ad51e60890ee897ee1a9932b6899f81a7">pbat::common::ForRange&lt;1, kDims&gt;</a>([&amp;]&lt;<span class="keyword">auto</span> d&gt;() { axis[d - 1] = (saxis + d) % kDims; });</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(sortCtx, <span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.Sort&quot;</span>);</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="keyword">auto</span> zip = thrust::make_zip_iterator(</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        b[axis[0]].begin(),</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        b[axis[1]].begin(),</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        e[saxis].begin(),</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        e[axis[0]].begin(),</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        e[axis[1]].begin(),</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        inds.Data());</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    thrust::sort_by_key(thrust::device, b[saxis].begin(), b[saxis].end(), zip);</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    PBAT_PROFILE_CUDA_HOST_SCOPE_END(sortCtx);</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span> </div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="comment">// 4. Sweep to find overlaps</span></div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        sweepCtx,</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        <span class="stringliteral">&quot;pbat.gpu.impl.geometry.SweepAndPrune.Sweep&quot;</span>);</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    thrust::for_each(</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        thrust::device,</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>        thrust::make_counting_iterator(0),</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>        thrust::make_counting_iterator(nBoxes),</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>        [nBoxes,</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>         saxis,</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>         axis,</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>         b    = b.Raw(),</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>         e    = e.Raw(),</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>         inds = inds.Raw(),</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>         fOnOverlapDetected =</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>             std::forward&lt;FOnOverlapDetected&gt;(fOnOverlapDetected)] PBAT_DEVICE(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> i) <span class="keyword">mutable</span> {</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> j = i + 1; (j &lt; nBoxes) and (e[saxis][i] &gt;= b[saxis][j]); ++j)</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>            {</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>                <span class="comment">// NOTE:</span></div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>                <span class="comment">// We only need to compare along non-major axis&#39;. Thus, we&#39;re not using the box-box</span></div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>                <span class="comment">// overlap test from OverlapQueries, which naturally compares all axis&#39;.</span></div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>                <span class="keywordtype">bool</span> <span class="keyword">const</span> bBoxesOverlap =</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>                    (e[axis[0]][i] &gt;= b[axis[0]][j]) and (b[axis[0]][i] &lt;= e[axis[0]][j]) and</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>                    (e[axis[1]][i] &gt;= b[axis[1]][j]) and (b[axis[1]][i] &lt;= e[axis[1]][j]);</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>                <span class="keywordflow">if</span> (bBoxesOverlap)</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>                {</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>                    fOnOverlapDetected(inds[i], inds[j]);</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>                }</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>            }</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        });</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    PBAT_PROFILE_CUDA_HOST_SCOPE_END(sweepCtx);</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>}</div>
 </div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span> </div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>} <span class="comment">// namespace geometry</span></div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>} <span class="comment">// namespace impl</span></div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>} <span class="comment">// namespace gpu</span></div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>} <span class="comment">// namespace pbat</span></div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span> </div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_GPU_IMPL_GEOMETRY_SWEEPANDPRUNE_H</span></div>
-<div class="ttc" id="a_profiling_8h_html"><div class="ttname"><a href="../../da/d04/_profiling_8h.html">Profiling.h</a></div><div class="ttdoc">Profiling utilities for the Physics-Based Animation Toolkit (PBAT)</div></div>
-<div class="ttc" id="a_profiling_8h_html_aeaf21152a4b06f1e6c2ddb88a4e5c57e"><div class="ttname"><a href="../../da/d04/_profiling_8h.html#aeaf21152a4b06f1e6c2ddb88a4e5c57e">PBAT_PROFILE_CUDA_HOST_SCOPE_END</a></div><div class="ttdeci">#define PBAT_PROFILE_CUDA_HOST_SCOPE_END(var)</div><div class="ttdef"><b>Definition</b> Profiling.h:35</div></div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>} <span class="comment">// namespace geometry</span></div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>} <span class="comment">// namespace impl</span></div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>} <span class="comment">// namespace gpu</span></div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>} <span class="comment">// namespace pbat</span></div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span> </div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_GPU_IMPL_GEOMETRY_SWEEPANDPRUNE_H</span></div>
 <div class="ttc" id="aclasspbat_1_1gpu_1_1impl_1_1common_1_1_buffer_html"><div class="ttname"><a href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">pbat::gpu::impl::common::Buffer</a></div><div class="ttdef"><b>Definition</b> Buffer.cuh:21</div></div>
 <div class="ttc" id="aclasspbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune_html_a1fcbe2270df1b9f7ad4db1246e6d0561"><div class="ttname"><a href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a1fcbe2270df1b9f7ad4db1246e6d0561">pbat::gpu::impl::geometry::SweepAndPrune::SweepAndPrune</a></div><div class="ttdeci">SweepAndPrune(std::size_t nPrimitives=0ULL)</div><div class="ttdoc">Construct a new Sweep And Prune object.</div><div class="ttdef"><b>Definition</b> SweepAndPrune.cu:12</div></div>
 <div class="ttc" id="aclasspbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune_html_a48a92b313cda242bfa0a1e254d30dc06"><div class="ttname"><a href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#a48a92b313cda242bfa0a1e254d30dc06">pbat::gpu::impl::geometry::SweepAndPrune::Reserve</a></div><div class="ttdeci">void Reserve(std::size_t nPrimitives)</div><div class="ttdef"><b>Definition</b> SweepAndPrune.cu:14</div></div>
-<div class="ttc" id="aclasspbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune_html_aa1a7936a9a3ba6438647090e76702034"><div class="ttname"><a href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">pbat::gpu::impl::geometry::SweepAndPrune::SortAndSweep</a></div><div class="ttdeci">void SortAndSweep(Aabb&lt; kDims &gt; &amp;aabbs, FOnOverlapDetected &amp;&amp;fOnOverlapDetected)</div><div class="ttdoc">Compute overlapping boxes in aabbs.</div><div class="ttdef"><b>Definition</b> SweepAndPrune.cuh:50</div></div>
+<div class="ttc" id="aclasspbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune_html_aa1a7936a9a3ba6438647090e76702034"><div class="ttname"><a href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html#aa1a7936a9a3ba6438647090e76702034">pbat::gpu::impl::geometry::SweepAndPrune::SortAndSweep</a></div><div class="ttdeci">void SortAndSweep(Aabb&lt; kDims &gt; &amp;aabbs, FOnOverlapDetected &amp;&amp;fOnOverlapDetected)</div><div class="ttdoc">Compute overlapping boxes in aabbs.</div><div class="ttdef"><b>Definition</b> SweepAndPrune.cuh:57</div></div>
 <div class="ttc" id="agpu_2_aliases_8h_html"><div class="ttname"><a href="../../d8/d0a/gpu_2_aliases_8h.html">Aliases.h</a></div><div class="ttdoc">Type aliases for GPU code.</div></div>
+<div class="ttc" id="agpu_2profiling_2_profiling_8h_html"><div class="ttname"><a href="../../de/d8a/gpu_2profiling_2_profiling_8h.html">Profiling.h</a></div><div class="ttdoc">Profiling utilities for host-side GPU code.</div></div>
 <div class="ttc" id="anamespacepbat_1_1common_html_ad51e60890ee897ee1a9932b6899f81a7"><div class="ttname"><a href="../../dd/d4e/namespacepbat_1_1common.html#ad51e60890ee897ee1a9932b6899f81a7">pbat::common::ForRange</a></div><div class="ttdeci">constexpr void ForRange(F &amp;&amp;f)</div><div class="ttdoc">Compile-time for loop over a range of values.</div><div class="ttdef"><b>Definition</b> ConstexprFor.h:55</div></div>
+<div class="ttc" id="anamespacepbat_1_1gpu_1_1impl_html"><div class="ttname"><a href="../../d7/d50/namespacepbat_1_1gpu_1_1impl.html">pbat::gpu::impl</a></div><div class="ttdoc">GPU algorithm implementations.</div><div class="ttdef"><b>Definition</b> VertexTriangleMixedCcdDcd.h:21</div></div>
 <div class="ttc" id="anamespacepbat_1_1gpu_html"><div class="ttname"><a href="../../de/d07/namespacepbat_1_1gpu.html">pbat::gpu</a></div><div class="ttdoc">GPU related public functionality.</div><div class="ttdef"><b>Definition</b> Buffer.cu:16</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 <div class="ttc" id="anamespacepbat_html_a5e3419e9d07eefcef1eba8ecebf33124"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">pbat::GpuScalar</a></div><div class="ttdeci">float GpuScalar</div><div class="ttdoc">Scalar type for GPU code.</div><div class="ttdef"><b>Definition</b> Aliases.h:19</div></div>

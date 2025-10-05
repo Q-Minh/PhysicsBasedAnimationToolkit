@@ -169,7 +169,7 @@ $(function(){initNavTree('d3/dc7/_unary_operations_8h_source.html','../../'); in
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = NestedType::kCols;</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = NestedType::bRowMajor;</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    PBAT_HOST_DEVICE Square(NestedType <span class="keyword">const</span>&amp; A) : A(A) {}</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    PBAT_HOST_DEVICE Square(NestedType <span class="keyword">const</span>&amp; _A) : A(_A) {}</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    PBAT_HOST_DEVICE ScalarType operator()(<span class="keyword">auto</span> i, <span class="keyword">auto</span> j)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> A(i, j) * A(i, j); }</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
@@ -228,7 +228,7 @@ $(function(){initNavTree('d3/dc7/_unary_operations_8h_source.html','../../'); in
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = NestedType::kCols;</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = NestedType::bRowMajor;</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    PBAT_HOST_DEVICE Absolute(NestedType <span class="keyword">const</span>&amp; A) : A(A) {}</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    PBAT_HOST_DEVICE Absolute(NestedType <span class="keyword">const</span>&amp; _A) : A(_A) {}</div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    PBAT_HOST_DEVICE ScalarType operator()(<span class="keyword">auto</span> i, <span class="keyword">auto</span> j)<span class="keyword"> const</span></div>
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span><span class="keyword">    </span>{</div>
@@ -294,8 +294,8 @@ $(function(){initNavTree('d3/dc7/_unary_operations_8h_source.html','../../'); in
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>PBAT_HOST_DEVICE <span class="keyword">auto</span> Max(TMatrix <span class="keyword">const</span>&amp; A)</div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>{</div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    <span class="keyword">using </span>IntegerType = std::remove_const_t&lt;<span class="keyword">decltype</span>(TMatrix::kRows)&gt;;</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    <span class="keyword">using </span>ScalarType  = <span class="keyword">typename</span> TMatrix::ScalarType;</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span><span class="preprocessor">#ifdef __CUDACC__</span></div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span><span class="preprocessor">#ifdef __CUDACC__</span></div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <span class="keyword">using </span>ScalarType  = <span class="keyword">typename</span> TMatrix::ScalarType;</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    <span class="keyword">auto</span> maximum = [&amp;]&lt;IntegerType... K&gt;(std::integer_sequence&lt;IntegerType, K...&gt;) {</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        <span class="keyword">auto</span> m = std::numeric_limits&lt;ScalarType&gt;::lowest();</div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        ((m = max(m, A(K))), ...);</div>
@@ -326,7 +326,7 @@ $(function(){initNavTree('d3/dc7/_unary_operations_8h_source.html','../../'); in
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_reciprocal_html"><div class="ttname"><a href="../../dc/dff/classpbat_1_1math_1_1linalg_1_1mini_1_1_reciprocal.html">pbat::math::linalg::mini::Reciprocal</a></div><div class="ttdef"><b>Definition</b> UnaryOperations.h:49</div></div>
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_square_html"><div class="ttname"><a href="../../db/d23/classpbat_1_1math_1_1linalg_1_1mini_1_1_square.html">pbat::math::linalg::mini::Square</a></div><div class="ttdef"><b>Definition</b> UnaryOperations.h:23</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_1_1linalg_1_1mini_html"><div class="ttname"><a href="../../df/d43/namespacepbat_1_1math_1_1linalg_1_1mini.html">pbat::math::linalg::mini</a></div><div class="ttdoc">Mini linear algebra related functionality.</div><div class="ttdef"><b>Definition</b> Assign.h:12</div></div>
-<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div><div class="ttdef"><b>Definition</b> FilterEigenvalues.h:7</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_html"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html">pbat::math</a></div><div class="ttdoc">Math related functionality.</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 </div><!-- fragment --></div><!-- contents -->

@@ -2,7 +2,7 @@ var classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d =
 [
     [ "BaseType", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html#a15c8c4e8b2aa370b7edf3e89b5551902", null ],
     [ "SelfType", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html#a7331d3209503a73e9bfcdc9ca8d9f77b", null ],
-    [ "TriangleAabbHierarchy2D", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html#a36418db0d740420c4e95043a18a6e86a", null ],
+    [ "TriangleAabbHierarchy2D", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html#a91bd230715710fee2aef1a37efb81543", null ],
     [ "BoundingVolumeOf", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html#a8b000aa9c2471d65e0f944e9b6b3222d", null ],
     [ "GetBoundingVolumes", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html#a96f5a11347717cf381aa0dc7a4dedc32", null ],
     [ "GetV", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html#a06335645627cc3a79aaaa80c40f2d301", null ],

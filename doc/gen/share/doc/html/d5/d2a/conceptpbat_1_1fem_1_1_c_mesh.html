@@ -146,21 +146,19 @@ $(function(){initNavTree('d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html','../../'); 
 <div class="line"><span class="keyword">concept </span><a class="code hl_concept" href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">pbat::fem::CMesh</a> =  <span class="keyword">requires</span>(M m)</div>
 <div class="line">{</div>
 <div class="line">    <span class="keyword">requires</span> <a class="code hl_concept" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">CElement&lt;typename M::ElementType&gt;</a>;</div>
-<div class="line">    {</div>
-<div class="line">        M::kDims</div>
-<div class="line">    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        M::kOrder</div>
-<div class="line">    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        m.X</div>
-<div class="line">    } -&gt; std::convertible_to&lt;MatrixX&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        m.E</div>
-<div class="line">    } -&gt; std::convertible_to&lt;IndexMatrixX&gt;;</div>
+<div class="line">    <span class="keyword">requires</span> <a class="code hl_concept" href="../../d2/dba/conceptpbat_1_1common_1_1_c_floating_point.html">common::CFloatingPoint&lt;typename M::ScalarType&gt;</a>;</div>
+<div class="line">    <span class="keyword">requires</span> <a class="code hl_concept" href="../../d7/dc2/conceptpbat_1_1common_1_1_c_index.html">common::CIndex&lt;typename M::IndexType&gt;</a>;</div>
+<div class="line">    {M::kDims}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line">    {M::kOrder}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line">    {m.X} </div>
+<div class="line">    ;</div>
+<div class="line">    {m.E} </div>
+<div class="line">    ;</div>
 <div class="line">}</div>
-<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_element_html"><div class="ttname"><a href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">pbat::fem::CElement</a></div><div class="ttdoc">Reference finite element.</div><div class="ttdef"><b>Definition</b> Concepts.h:62</div></div>
-<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_mesh_html"><div class="ttname"><a href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">pbat::fem::CMesh</a></div><div class="ttdoc">Finite element mesh.</div><div class="ttdef"><b>Definition</b> Concepts.h:95</div></div>
+<div class="ttc" id="aconceptpbat_1_1common_1_1_c_floating_point_html"><div class="ttname"><a href="../../d2/dba/conceptpbat_1_1common_1_1_c_floating_point.html">pbat::common::CFloatingPoint</a></div><div class="ttdoc">Concept for floating-point types.</div><div class="ttdef"><b>Definition</b> Concepts.h:56</div></div>
+<div class="ttc" id="aconceptpbat_1_1common_1_1_c_index_html"><div class="ttname"><a href="../../d7/dc2/conceptpbat_1_1common_1_1_c_index.html">pbat::common::CIndex</a></div><div class="ttdoc">Concept for integral types.</div><div class="ttdef"><b>Definition</b> Concepts.h:45</div></div>
+<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_element_html"><div class="ttname"><a href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">pbat::fem::CElement</a></div><div class="ttdoc">Reference finite element.</div><div class="ttdef"><b>Definition</b> Concepts.h:63</div></div>
+<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_mesh_html"><div class="ttname"><a href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">pbat::fem::CMesh</a></div><div class="ttdoc">Finite element mesh.</div><div class="ttdef"><b>Definition</b> Concepts.h:84</div></div>
 </div><!-- fragment --><a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Finite element mesh. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>

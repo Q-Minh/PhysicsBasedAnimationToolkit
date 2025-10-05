@@ -136,26 +136,136 @@ $(function(){initNavTree('da/d7d/classpbat_1_1sim_1_1vbd_1_1_integrator.html','.
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="../../db/d20/classpbat_1_1sim_1_1vbd_1_1_integrator-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">pbat::sim::vbd::Integrator Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+<div class="dynheader">
+Inheritance diagram for pbat::sim::vbd::Integrator:</div>
+<div class="dyncontent">
+ <div class="center">
+  <img src="../../da/d7d/classpbat_1_1sim_1_1vbd_1_1_integrator.png" usemap="#pbat::sim::vbd::Integrator_map" alt=""/>
+  <map id="pbat::sim::vbd::Integrator_map" name="pbat::sim::vbd::Integrator_map">
+<area href="../../dd/d5d/classpbat_1_1sim_1_1vbd_1_1_anderson_integrator.html" title="Anderson accelerated VBD integrator." alt="pbat::sim::vbd::AndersonIntegrator" shape="rect" coords="0,56,211,80"/>
+<area href="../../de/d9d/classpbat_1_1sim_1_1vbd_1_1_broyden_integrator.html" title="Accelerated Anderson accelerated VBD integrator." alt="pbat::sim::vbd::BroydenIntegrator" shape="rect" coords="221,56,432,80"/>
+<area href="../../d6/dd2/classpbat_1_1sim_1_1vbd_1_1_chebyshev_integrator.html" alt="pbat::sim::vbd::ChebyshevIntegrator" shape="rect" coords="442,56,653,80"/>
+<area href="../../d0/de5/classpbat_1_1sim_1_1vbd_1_1_nesterov_integrator.html" alt="pbat::sim::vbd::NesterovIntegrator" shape="rect" coords="663,56,874,80"/>
+  </map>
+</div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:afae51353351e1e9e0dfa5ec7456b25f6" id="r_afae51353351e1e9e0dfa5ec7456b25f6"><td class="memItemLeft" align="right" valign="top"><a id="afae51353351e1e9e0dfa5ec7456b25f6" name="afae51353351e1e9e0dfa5ec7456b25f6"></a>
 PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Integrator</b> (<a class="el" href="../../d1/d0b/structpbat_1_1sim_1_1vbd_1_1_data.html">Data</a> data)</td></tr>
 <tr class="separator:afae51353351e1e9e0dfa5ec7456b25f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af958418471fef87cf820128d195f0325" id="r_af958418471fef87cf820128d195f0325"><td class="memItemLeft" align="right" valign="top"><a id="af958418471fef87cf820128d195f0325" name="af958418471fef87cf820128d195f0325"></a>
-PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>Step</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> dt, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> iterations, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> substeps=<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>{1}, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> rho=<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a>{1})</td></tr>
-<tr class="separator:af958418471fef87cf820128d195f0325"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae1d76a0367fb3a81380f0ad02b329d94" id="r_ae1d76a0367fb3a81380f0ad02b329d94"><td class="memItemLeft" align="right" valign="top"><a id="ae1d76a0367fb3a81380f0ad02b329d94" name="ae1d76a0367fb3a81380f0ad02b329d94"></a>
+PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>Step</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> dt, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> iterations, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> substeps=<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>{1})</td></tr>
+<tr class="separator:ae1d76a0367fb3a81380f0ad02b329d94"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b25f73e8183a5c4806f21c33dee11d6" id="r_a9b25f73e8183a5c4806f21c33dee11d6"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9b25f73e8183a5c4806f21c33dee11d6">TraceNextStep</a> (std::string const &amp;path=&quot;.&quot;, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> t=-1)</td></tr>
+<tr class="memdesc:a9b25f73e8183a5c4806f21c33dee11d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark next time step for optimization tracing.  <br /></td></tr>
+<tr class="separator:a9b25f73e8183a5c4806f21c33dee11d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a93588204aeda1545c4811c9ab89f7969" id="r_a93588204aeda1545c4811c9ab89f7969"><td class="memItemLeft" align="right" valign="top"><a id="a93588204aeda1545c4811c9ab89f7969" name="a93588204aeda1545c4811c9ab89f7969"></a>
+PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a>&#160;</td><td class="memItemRight" valign="bottom"><b>ObjectiveFunction</b> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a> const &gt; const &amp;xk, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a> const &gt; const &amp;xtilde, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> dt)</td></tr>
+<tr class="memdesc:a93588204aeda1545c4811c9ab89f7969"><td class="mdescLeft">&#160;</td><td class="mdescRight">The following methods are made public for debugging purposes (generally). <br /></td></tr>
+<tr class="separator:a93588204aeda1545c4811c9ab89f7969"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af412a01a99d0bbbfbdecc7e84cfb80c2" id="r_af412a01a99d0bbbfbdecc7e84cfb80c2"><td class="memItemLeft" align="right" valign="top"><a id="af412a01a99d0bbbfbdecc7e84cfb80c2" name="af412a01a99d0bbbfbdecc7e84cfb80c2"></a>
+PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a9d4a0e47dc7b1bf59c8f49b03d131595">VectorX</a>&#160;</td><td class="memItemRight" valign="bottom"><b>ObjectiveFunctionGradient</b> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a> const &gt; const &amp;xk, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a> const &gt; const &amp;xtilde, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> dt)</td></tr>
+<tr class="separator:af412a01a99d0bbbfbdecc7e84cfb80c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a4e29afc75d81b6e5cb2de68129326b3f" id="r_a4e29afc75d81b6e5cb2de68129326b3f"><td class="memItemLeft" align="right" valign="top"><a id="a4e29afc75d81b6e5cb2de68129326b3f" name="a4e29afc75d81b6e5cb2de68129326b3f"></a>
-PBAT_API <a class="el" href="../../d1/d0b/structpbat_1_1sim_1_1vbd_1_1_data.html">Data</a>&#160;</td><td class="memItemRight" valign="bottom"><b>data</b></td></tr>
-<tr class="separator:a4e29afc75d81b6e5cb2de68129326b3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa58f7d8582b0950af439cc3018b48b1b" id="r_aa58f7d8582b0950af439cc3018b48b1b"><td class="memItemLeft" align="right" valign="top"><a id="aa58f7d8582b0950af439cc3018b48b1b" name="aa58f7d8582b0950af439cc3018b48b1b"></a>
+<a class="el" href="../../d1/d0b/structpbat_1_1sim_1_1vbd_1_1_data.html">Data</a>&#160;</td><td class="memItemRight" valign="bottom"><b>data</b></td></tr>
+<tr class="separator:aa58f7d8582b0950af439cc3018b48b1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a129ce49c0e5d03ef4520f28a39449ff2" id="r_a129ce49c0e5d03ef4520f28a39449ff2"><td class="memItemLeft" align="right" valign="top"><a id="a129ce49c0e5d03ef4520f28a39449ff2" name="a129ce49c0e5d03ef4520f28a39449ff2"></a>
+PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>InitializeSolve</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt2)</td></tr>
+<tr class="separator:a129ce49c0e5d03ef4520f28a39449ff2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a13fb2ecd01f4dbcf5d1e764967075915" id="r_a13fb2ecd01f4dbcf5d1e764967075915"><td class="memItemLeft" align="right" valign="top"><a id="a13fb2ecd01f4dbcf5d1e764967075915" name="a13fb2ecd01f4dbcf5d1e764967075915"></a>
+PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>RunVbdIteration</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt2)</td></tr>
+<tr class="separator:a13fb2ecd01f4dbcf5d1e764967075915"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29dd65f000e5971fd79ab8ceb3ca5a2c" id="r_a29dd65f000e5971fd79ab8ceb3ca5a2c"><td class="memItemLeft" align="right" valign="top">virtual PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29dd65f000e5971fd79ab8ceb3ca5a2c">Solve</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt2, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> iterations)</td></tr>
+<tr class="separator:a29dd65f000e5971fd79ab8ceb3ca5a2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95642f891fff51d9917a22086bdd855c" id="r_a95642f891fff51d9917a22086bdd855c"><td class="memItemLeft" align="right" valign="top"><a id="a95642f891fff51d9917a22086bdd855c" name="a95642f891fff51d9917a22086bdd855c"></a>
+PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>SolveVertex</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> i, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt, <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt2)</td></tr>
+<tr class="separator:a95642f891fff51d9917a22086bdd855c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9dd807345d14a2f747be1a9b34678d0c" id="r_a9dd807345d14a2f747be1a9b34678d0c"><td class="memItemLeft" align="right" valign="top"><a id="a9dd807345d14a2f747be1a9b34678d0c" name="a9dd807345d14a2f747be1a9b34678d0c"></a>
+PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>ExportTrace</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> substep)</td></tr>
+<tr class="separator:a9dd807345d14a2f747be1a9b34678d0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac871798431c2a12b6d6af8020e835d98" id="r_ac871798431c2a12b6d6af8020e835d98"><td class="memItemLeft" align="right" valign="top"><a id="ac871798431c2a12b6d6af8020e835d98" name="ac871798431c2a12b6d6af8020e835d98"></a>
+PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>TryTraceIteration</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> sdt)</td></tr>
+<tr class="separator:ac871798431c2a12b6d6af8020e835d98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="a29dd65f000e5971fd79ab8ceb3ca5a2c" name="a29dd65f000e5971fd79ab8ceb3ca5a2c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29dd65f000e5971fd79ab8ceb3ca5a2c">&#9670;&#160;</a></span>Solve()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pbat::sim::vbd::Integrator::Solve </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a></td>          <td class="paramname"><span class="paramname"><em>sdt</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a></td>          <td class="paramname"><span class="paramname"><em>sdt2</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a></td>          <td class="paramname"><span class="paramname"><em>iterations</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel protected">protected</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented in <a class="el" href="../../dd/d5d/classpbat_1_1sim_1_1vbd_1_1_anderson_integrator.html#a7cb5d8439e4935a60871bf8019a38c8b">pbat::sim::vbd::AndersonIntegrator</a>, and <a class="el" href="../../de/d9d/classpbat_1_1sim_1_1vbd_1_1_broyden_integrator.html#a24a5f0180620d9ff65d7e2a1ac301f86">pbat::sim::vbd::BroydenIntegrator</a>.</p>
+
+</div>
+</div>
+<a id="a9b25f73e8183a5c4806f21c33dee11d6" name="a9b25f73e8183a5c4806f21c33dee11d6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9b25f73e8183a5c4806f21c33dee11d6">&#9670;&#160;</a></span>TraceNextStep()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API void pbat::sim::vbd::Integrator::TraceNextStep </td>
+          <td>(</td>
+          <td class="paramtype">std::string const &amp;</td>          <td class="paramname"><span class="paramname"><em>path</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;.&quot;</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a></td>          <td class="paramname"><span class="paramname"><em>t</em></span><span class="paramdefsep"> = </span><span class="paramdefval">-1</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Mark next time step for optimization tracing. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">path</td><td>Directory in which to save optimization traces. </td></tr>
+    <tr><td class="paramname">t</td><td>Time step index. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/<a class="el" href="../../d0/d79/sim_2vbd_2_integrator_8h_source.html">Integrator.h</a></li>
 <li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/sim/vbd/<b>Integrator.cpp</b></li>

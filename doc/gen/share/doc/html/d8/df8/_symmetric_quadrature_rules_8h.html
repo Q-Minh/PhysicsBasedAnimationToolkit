@@ -136,6 +136,7 @@ $(function(){initNavTree('d8/df8/_symmetric_quadrature_rules_8h.html','../../');
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#namespaces">Namespaces</a> &#124;
+<a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a>  </div>
   <div class="headertitle"><div class="title">SymmetricQuadratureRules.h File Reference</div></div>
 </div><!--header-->
@@ -143,9 +144,14 @@ $(function(){initNavTree('d8/df8/_symmetric_quadrature_rules_8h.html','../../');
 
 <p>Symmetric quadrature rules for reference simplices in dimensions \( d=1,2,3 \).  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;array&gt;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d5/d56/common_2_concepts_8h_source.html">pbat/common/Concepts.h</a>&quot;</code><br />
+<code>#include &lt;array&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&gt;</code><br />
+<code>#include &quot;pbat/warning/Push.h&quot;</code><br />
+<code>#include &quot;pbat/warning/FloatConversion.h&quot;</code><br />
+<code>#include &quot;pbat/warning/SignConversion.h&quot;</code><br />
+<code>#include &quot;pbat/warning/Pop.h&quot;</code><br />
 </div>
 <p><a href="../../d8/df8/_symmetric_quadrature_rules_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -166,10 +172,10 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a54dc9b4a658650b0553e83e2531f00b2" id="r_a54dc9b4a658650b0553e83e2531f00b2"><td class="memTemplParams" colspan="2">template&lt;int Dims, int Order&gt; </td></tr>
-<tr class="memitem:a54dc9b4a658650b0553e83e2531f00b2"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d5/d6a/namespacepbat_1_1math.html#a54dc9b4a658650b0553e83e2531f00b2">pbat::math::SymmetricSimplexPolynomialQuadratureRule</a></td></tr>
-<tr class="memdesc:a54dc9b4a658650b0553e83e2531f00b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Symmetric quadrature rule for reference simplices in dimensions \( d=1,2,3 \).  <br /></td></tr>
-<tr class="separator:a54dc9b4a658650b0553e83e2531f00b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a04eec2791019a03ad6382a35ad0bc9b8" id="r_a04eec2791019a03ad6382a35ad0bc9b8"><td class="memTemplParams" colspan="2">template&lt;int Dims, int Order, common::CFloatingPoint TScalar = Scalar&gt; </td></tr>
+<tr class="memitem:a04eec2791019a03ad6382a35ad0bc9b8"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d5/d6a/namespacepbat_1_1math.html#a04eec2791019a03ad6382a35ad0bc9b8">pbat::math::SymmetricSimplexPolynomialQuadratureRule</a></td></tr>
+<tr class="memdesc:a04eec2791019a03ad6382a35ad0bc9b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Symmetric quadrature rule for reference simplices in dimensions \( d=1,2,3 \).  <br /></td></tr>
+<tr class="separator:a04eec2791019a03ad6382a35ad0bc9b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Symmetric quadrature rules for reference simplices in dimensions \( d=1,2,3 \). </p>

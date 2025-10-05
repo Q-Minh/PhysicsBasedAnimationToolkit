@@ -192,19 +192,19 @@ $(function(){initNavTree('d5/dd7/xpbd_2_kernels_8h_source.html','../../'); initR
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span><span class="preprocessor">    #pragma nv_diag_suppress 174</span></div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span><span class="preprocessor">#endif</span></div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="comment">// Compute deviatoric+hydrostatic elasticity</span></div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    SMatrix&lt;ScalarType, 3, 3&gt; F = (xc.Slice&lt;3, 3&gt;(0, 1) - Repeat&lt;1, 3&gt;(xc.Col(0))) * DmInv;</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    SMatrix&lt;ScalarType, 3, 3&gt; F = (xc.template Slice&lt;3, 3&gt;(0, 1) - Repeat&lt;1, 3&gt;(xc.Col(0))) * DmInv;</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    ScalarType CD               = Norm(F);</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    SMatrix&lt;ScalarType, 3, 4&gt; gradCD{};</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    gradCD.Slice&lt;3, 3&gt;(0, 1) = (F * DmInv.Transpose()) / (CD <span class="comment">/*+ 1e-8*/</span>);</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    gradCD.Col(0)            = -(gradCD.Col(1) + gradCD.Col(2) + gradCD.Col(3));</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    ScalarType CH            = Determinant(F) - gammaSNHc;</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    gradCD.template Slice&lt;3, 3&gt;(0, 1) = (F * DmInv.Transpose()) / (CD <span class="comment">/*+ 1e-8*/</span>);</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    gradCD.Col(0)                     = -(gradCD.Col(1) + gradCD.Col(2) + gradCD.Col(3));</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    ScalarType CH                     = Determinant(F) - gammaSNHc;</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    SMatrix&lt;ScalarType, 3, 3&gt; PH{};</div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    PH.Col(0) = Cross(F.Col(1), F.Col(2));</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    PH.Col(1) = Cross(F.Col(2), F.Col(0));</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    PH.Col(2) = Cross(F.Col(0), F.Col(1));</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    SMatrix&lt;ScalarType, 3, 4&gt; gradCH{};</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    gradCH.Slice&lt;3, 3&gt;(0, 1) = PH * DmInv.Transpose();</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    gradCH.Col(0)            = -(gradCH.Col(1) + gradCH.Col(2) + gradCH.Col(3));</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    gradCH.template Slice&lt;3, 3&gt;(0, 1) = PH * DmInv.Transpose();</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    gradCH.Col(0)                     = -(gradCH.Col(1) + gradCH.Col(2) + gradCH.Col(3));</div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span><span class="preprocessor">#if defined(CUDART_VERSION)</span></div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span><span class="preprocessor">    #pragma nv_diag_default 174</span></div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span><span class="preprocessor">#endif</span></div>

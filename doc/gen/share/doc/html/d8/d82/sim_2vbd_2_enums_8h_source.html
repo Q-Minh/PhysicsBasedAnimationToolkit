@@ -139,26 +139,37 @@ $(function(){initNavTree('d8/d82/sim_2vbd_2_enums_8h_source.html','../../'); ini
 <div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#ifndef PBAT_SIM_VBD_ENUMS_H</span></div>
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#define PBAT_SIM_VBD_ENUMS_H</span></div>
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d0/d7c/namespacepbat.html">pbat</a> {</div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d3/dcb/namespacepbat_1_1sim.html">sim</a> {</div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html">vbd</a> {</div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="keyword">enum class</span> EInitializationStrategy {</div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>    Position,</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    Inertia,</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    KineticEnergyMinimum,</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    AdaptiveVbd,</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    AdaptivePbat</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>};</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>} <span class="comment">// namespace vbd</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>} <span class="comment">// namespace sim</span></div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>} <span class="comment">// namespace pbat</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_SIM_VBD_ENUMS_H</span></div>
-<div class="ttc" id="anamespacepbat_1_1sim_1_1vbd_html"><div class="ttname"><a href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html">pbat::sim::vbd</a></div><div class="ttdoc">PBAT&#39;s Vertex Block Descent (VBD) anka2024vbd API.</div><div class="ttdef"><b>Definition</b> Data.cpp:21</div></div>
-<div class="ttc" id="anamespacepbat_1_1sim_html"><div class="ttname"><a href="../../d3/dcb/namespacepbat_1_1sim.html">pbat::sim</a></div><div class="ttdoc">PBAT simulation algorithms.</div></div>
-<div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html">pbat::sim::vbd</a> {</div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span></div>
+<div class="foldopen" id="foldopen00009" data-start="{" data-end="};">
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno"><a class="line" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">    9</a></span><span class="keyword">enum class</span> <a class="code hl_enumeration" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">EInitializationStrategy</a> {</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    Position,</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    Inertia,</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    KineticEnergyMinimum,</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    AdaptiveVbd,</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    AdaptivePbat</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>};</div>
+</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="comment">// clang-format off</span></div>
+<div class="foldopen" id="foldopen00021" data-start="{" data-end="};">
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a343d6cffd2e4266593d3acb1883c0eb4">   21</a></span><span class="keyword">enum class</span> <a class="code hl_enumeration" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a343d6cffd2e4266593d3acb1883c0eb4">EAccelerationStrategy</a> {</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    None,</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    Chebyshev,</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    Anderson,</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    Nesterov,</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    Broyden,</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    TrustRegion</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>};</div>
+</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="comment">// clang-format on</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>} <span class="comment">// namespace pbat::sim::vbd</span></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_SIM_VBD_ENUMS_H</span></div>
+<div class="ttc" id="anamespacepbat_1_1sim_1_1vbd_html"><div class="ttname"><a href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html">pbat::sim::vbd</a></div><div class="ttdoc">PBAT&#39;s Vertex Block Descent (VBD) anka2024vbd API.</div><div class="ttdef"><b>Definition</b> AndersonIntegrator.cpp:10</div></div>
+<div class="ttc" id="anamespacepbat_1_1sim_1_1vbd_html_a343d6cffd2e4266593d3acb1883c0eb4"><div class="ttname"><a href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a343d6cffd2e4266593d3acb1883c0eb4">pbat::sim::vbd::EAccelerationStrategy</a></div><div class="ttdeci">EAccelerationStrategy</div><div class="ttdoc">Acceleration strategies for the VBD time step minimization.</div><div class="ttdef"><b>Definition</b> Enums.h:21</div></div>
+<div class="ttc" id="anamespacepbat_1_1sim_1_1vbd_html_a49a48c4da7aa2382463a659191f38aa3"><div class="ttname"><a href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">pbat::sim::vbd::EInitializationStrategy</a></div><div class="ttdeci">EInitializationStrategy</div><div class="ttdoc">Initialization strategies for the VBD time step minimization.</div><div class="ttdef"><b>Definition</b> Enums.h:9</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

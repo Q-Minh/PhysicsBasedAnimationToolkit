@@ -140,20 +140,26 @@ $(function(){initNavTree('de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html','.
   <div class="headertitle"><div class="title">pbat::gpu::vbd::Integrator Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>The VBD public API wrapper around the VBD integrator implementation. <a class="el" href="../../d0/de3/citelist.html#CITEREF_anka2024vbd">[2]</a>.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../dc/d7f/gpu_2vbd_2_integrator_8h_source.html">Integrator.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:aca4a05056578e4b5661345ed0832289a" id="r_aca4a05056578e4b5661345ed0832289a"><td class="memItemLeft" align="right" valign="top"><a id="aca4a05056578e4b5661345ed0832289a" name="aca4a05056578e4b5661345ed0832289a"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>EInitializationStrategy</b> = pbat::sim::vbd::EInitializationStrategy</td></tr>
-<tr class="separator:aca4a05056578e4b5661345ed0832289a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9bc1f022e4b6b613845e9f606156a93f" id="r_a9bc1f022e4b6b613845e9f606156a93f"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9bc1f022e4b6b613845e9f606156a93f">EInitializationStrategy</a></td></tr>
+<tr class="memdesc:a9bc1f022e4b6b613845e9f606156a93f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialization strategy.  <br /></td></tr>
+<tr class="separator:a9bc1f022e4b6b613845e9f606156a93f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae6850b3c6d00ad4d8f21a82076bef172" id="r_ae6850b3c6d00ad4d8f21a82076bef172"><td class="memItemLeft" align="right" valign="top"><a id="ae6850b3c6d00ad4d8f21a82076bef172" name="ae6850b3c6d00ad4d8f21a82076bef172"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>Data</b> = <a class="el" href="../../d1/d0b/structpbat_1_1sim_1_1vbd_1_1_data.html">pbat::sim::vbd::Data</a></td></tr>
+<tr class="memdesc:ae6850b3c6d00ad4d8f21a82076bef172"><td class="mdescLeft">&#160;</td><td class="mdescRight">VBD data. <br /></td></tr>
 <tr class="separator:ae6850b3c6d00ad4d8f21a82076bef172"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a023eb8a79affcc7743712b5389956671" id="r_a023eb8a79affcc7743712b5389956671"><td class="memItemLeft" align="right" valign="top"><a id="a023eb8a79affcc7743712b5389956671" name="a023eb8a79affcc7743712b5389956671"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Integrator</b> (<a class="el" href="../../d1/d0b/structpbat_1_1sim_1_1vbd_1_1_data.html">Data</a> const &amp;data)</td></tr>
+<tr class="memitem:a023eb8a79affcc7743712b5389956671" id="r_a023eb8a79affcc7743712b5389956671"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a023eb8a79affcc7743712b5389956671">Integrator</a> (<a class="el" href="#ae6850b3c6d00ad4d8f21a82076bef172">Data</a> const &amp;data)</td></tr>
+<tr class="memdesc:a023eb8a79affcc7743712b5389956671"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html" title="The VBD public API wrapper around the VBD integrator implementation. anka2024vbd.">Integrator</a> object.  <br /></td></tr>
 <tr class="separator:a023eb8a79affcc7743712b5389956671"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3c7b902ea7c775320d48e69491997634" id="r_a3c7b902ea7c775320d48e69491997634"><td class="memItemLeft" align="right" valign="top"><a id="a3c7b902ea7c775320d48e69491997634" name="a3c7b902ea7c775320d48e69491997634"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Integrator</b> (<a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> const &amp;)=delete</td></tr>
@@ -161,51 +167,134 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Integrator</b> (<
 <tr class="memitem:af9acecd856145aee210ff5d24c7af22d" id="r_af9acecd856145aee210ff5d24c7af22d"><td class="memItemLeft" align="right" valign="top"><a id="af9acecd856145aee210ff5d24c7af22d" name="af9acecd856145aee210ff5d24c7af22d"></a>
 <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> const &amp;)=delete</td></tr>
 <tr class="separator:af9acecd856145aee210ff5d24c7af22d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0fc61606545279b54bed901d666d4d5e" id="r_a0fc61606545279b54bed901d666d4d5e"><td class="memItemLeft" align="right" valign="top"><a id="a0fc61606545279b54bed901d666d4d5e" name="a0fc61606545279b54bed901d666d4d5e"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Integrator</b> (<a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a0fc61606545279b54bed901d666d4d5e" id="r_a0fc61606545279b54bed901d666d4d5e"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0fc61606545279b54bed901d666d4d5e">Integrator</a> (<a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a0fc61606545279b54bed901d666d4d5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <br /></td></tr>
 <tr class="separator:a0fc61606545279b54bed901d666d4d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3840de91607840c073ab91212f741b8c" id="r_a3840de91607840c073ab91212f741b8c"><td class="memItemLeft" align="right" valign="top"><a id="a3840de91607840c073ab91212f741b8c" name="a3840de91607840c073ab91212f741b8c"></a>
-PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a3840de91607840c073ab91212f741b8c" id="r_a3840de91607840c073ab91212f741b8c"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3840de91607840c073ab91212f741b8c">operator=</a> (<a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a3840de91607840c073ab91212f741b8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move assignment operator.  <br /></td></tr>
 <tr class="separator:a3840de91607840c073ab91212f741b8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1d80f01fb5296889c2b35b4e978cbc08" id="r_a1d80f01fb5296889c2b35b4e978cbc08"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1d80f01fb5296889c2b35b4e978cbc08">Step</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> dt, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> iterations, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> substeps=<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>{1}, <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> rho=<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>{1})</td></tr>
-<tr class="separator:a1d80f01fb5296889c2b35b4e978cbc08"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b951ece476cc793c2283b101348b021" id="r_a0b951ece476cc793c2283b101348b021"><td class="memItemLeft" align="right" valign="top"><a id="a0b951ece476cc793c2283b101348b021" name="a0b951ece476cc793c2283b101348b021"></a>
+PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Integrator</b> ()</td></tr>
+<tr class="memdesc:a0b951ece476cc793c2283b101348b021"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destructor. <br /></td></tr>
+<tr class="separator:a0b951ece476cc793c2283b101348b021"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af65484099545fe9b8ceb23e93a2027d6" id="r_af65484099545fe9b8ceb23e93a2027d6"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af65484099545fe9b8ceb23e93a2027d6">Step</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> dt, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> iterations, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> substeps=<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>{1})</td></tr>
+<tr class="memdesc:af65484099545fe9b8ceb23e93a2027d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute one simulation step.  <br /></td></tr>
+<tr class="separator:af65484099545fe9b8ceb23e93a2027d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad761ff1bb3b0cefc64b1db419128500c" id="r_ad761ff1bb3b0cefc64b1db419128500c"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad761ff1bb3b0cefc64b1db419128500c">TracedStep</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> dt, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> iterations, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> substeps, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> t, std::string_view dir=&quot;.&quot;)</td></tr>
+<tr class="memdesc:ad761ff1bb3b0cefc64b1db419128500c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute one simulation step and trace the result.  <br /></td></tr>
+<tr class="separator:ad761ff1bb3b0cefc64b1db419128500c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a677287d7a0e27d2764e3d5e4c8765034" id="r_a677287d7a0e27d2764e3d5e4c8765034"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a677287d7a0e27d2764e3d5e4c8765034">SetPositions</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;X)</td></tr>
+<tr class="memdesc:a677287d7a0e27d2764e3d5e4c8765034"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the vertex positions.  <br /></td></tr>
 <tr class="separator:a677287d7a0e27d2764e3d5e4c8765034"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa66e91e3b199649985fb2f8d8ce910c0" id="r_aa66e91e3b199649985fb2f8d8ce910c0"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa66e91e3b199649985fb2f8d8ce910c0">SetVelocities</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;v)</td></tr>
+<tr class="memdesc:aa66e91e3b199649985fb2f8d8ce910c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the vertex velocities.  <br /></td></tr>
 <tr class="separator:aa66e91e3b199649985fb2f8d8ce910c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a446a1ac1dbff48c26c0f9fe99cdc284c" id="r_a446a1ac1dbff48c26c0f9fe99cdc284c"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a446a1ac1dbff48c26c0f9fe99cdc284c">SetExternalAcceleration</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;aext)</td></tr>
+<tr class="memdesc:a446a1ac1dbff48c26c0f9fe99cdc284c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the external accelerations.  <br /></td></tr>
 <tr class="separator:a446a1ac1dbff48c26c0f9fe99cdc284c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51f3755fd759dc9266e27272778b461b" id="r_a51f3755fd759dc9266e27272778b461b"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a51f3755fd759dc9266e27272778b461b">SetMass</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a883c870fad575f5f4e4957f61a4041a3">GpuVectorX</a> const &gt; const &amp;m)</td></tr>
-<tr class="separator:a51f3755fd759dc9266e27272778b461b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3f43f2e18eb5064b90d88c9f440878db" id="r_a3f43f2e18eb5064b90d88c9f440878db"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3f43f2e18eb5064b90d88c9f440878db">SetQuadratureWeights</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a883c870fad575f5f4e4957f61a4041a3">GpuVectorX</a> const &gt; const &amp;wg)</td></tr>
-<tr class="separator:a3f43f2e18eb5064b90d88c9f440878db"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab386eb5be54f47e925753c3198fd71d7" id="r_ab386eb5be54f47e925753c3198fd71d7"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab386eb5be54f47e925753c3198fd71d7">SetShapeFunctionGradients</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;GP)</td></tr>
-<tr class="separator:ab386eb5be54f47e925753c3198fd71d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ade9c4f938b90a742ba062a9b795239f8" id="r_ade9c4f938b90a742ba062a9b795239f8"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ade9c4f938b90a742ba062a9b795239f8">SetLameCoefficients</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;l)</td></tr>
-<tr class="separator:ade9c4f938b90a742ba062a9b795239f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac29ddf81313039f8a589a7cfc924af66" id="r_ac29ddf81313039f8a589a7cfc924af66"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac29ddf81313039f8a589a7cfc924af66">SetNumericalZeroForHessianDeterminant</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> zero)</td></tr>
+<tr class="memdesc:ac29ddf81313039f8a589a7cfc924af66"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set threshold for zero determinant check.  <br /></td></tr>
 <tr class="separator:ac29ddf81313039f8a589a7cfc924af66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf6915c2eeb15396df1f827c7f4e4e9d" id="r_aaf6915c2eeb15396df1f827c7f4e4e9d"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf6915c2eeb15396df1f827c7f4e4e9d">SetVertexTetrahedronAdjacencyList</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;GVTp, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;GVTn, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;GVTilocal)</td></tr>
-<tr class="memdesc:aaf6915c2eeb15396df1f827c7f4e4e9d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the adjacency graph of vertices to incident tetrahedra in compressed column format.  <br /></td></tr>
-<tr class="separator:aaf6915c2eeb15396df1f827c7f4e4e9d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4f1327070946318c5e1a53503bf61eda" id="r_a4f1327070946318c5e1a53503bf61eda"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4f1327070946318c5e1a53503bf61eda">SetRayleighDampingCoefficient</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> kD)</td></tr>
+<tr class="memdesc:a4f1327070946318c5e1a53503bf61eda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the damping coefficient for Rayleigh damping.  <br /></td></tr>
 <tr class="separator:a4f1327070946318c5e1a53503bf61eda"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a48e05b1a9a7662786023df05aa2c719e" id="r_a48e05b1a9a7662786023df05aa2c719e"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a48e05b1a9a7662786023df05aa2c719e">SetVertexPartitions</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;Pptr, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;Padj)</td></tr>
-<tr class="memdesc:a48e05b1a9a7662786023df05aa2c719e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the groups/partitions of vertices that can be minimized independently, i.e. in parallel.  <br /></td></tr>
-<tr class="separator:a48e05b1a9a7662786023df05aa2c719e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5e4fa455fa84e77c7722956e81f8d537" id="r_a5e4fa455fa84e77c7722956e81f8d537"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e4fa455fa84e77c7722956e81f8d537">SetInitializationStrategy</a> (EInitializationStrategy strategy)</td></tr>
+<tr class="memitem:a5e4fa455fa84e77c7722956e81f8d537" id="r_a5e4fa455fa84e77c7722956e81f8d537"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e4fa455fa84e77c7722956e81f8d537">SetInitializationStrategy</a> (<a class="el" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">EInitializationStrategy</a> strategy)</td></tr>
 <tr class="memdesc:a5e4fa455fa84e77c7722956e81f8d537"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the initialization strategy to kick-start the time step minimization.  <br /></td></tr>
 <tr class="separator:a5e4fa455fa84e77c7722956e81f8d537"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae28520d13bc0c8fa4db37283547fb48f" id="r_ae28520d13bc0c8fa4db37283547fb48f"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae28520d13bc0c8fa4db37283547fb48f">SetBlockSize</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> blockSize)</td></tr>
 <tr class="memdesc:ae28520d13bc0c8fa4db37283547fb48f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the GPU thread block size, for the BDF1 minimization.  <br /></td></tr>
 <tr class="separator:ae28520d13bc0c8fa4db37283547fb48f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2b253b0641b0e4cf2b96306586bfc908" id="r_a2b253b0641b0e4cf2b96306586bfc908"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2b253b0641b0e4cf2b96306586bfc908">SetSceneBoundingBox</a> (Eigen::Vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>, 3 &gt; const &amp;min, Eigen::Vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>, 3 &gt; const &amp;max)</td></tr>
+<tr class="memdesc:a2b253b0641b0e4cf2b96306586bfc908"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the scene bounding box.  <br /></td></tr>
 <tr class="separator:a2b253b0641b0e4cf2b96306586bfc908"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7273e0154f4531548b15b3050f631717" id="r_a7273e0154f4531548b15b3050f631717"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7273e0154f4531548b15b3050f631717">GetPositions</a> () const</td></tr>
+<tr class="memdesc:a7273e0154f4531548b15b3050f631717"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the vertex positions.  <br /></td></tr>
 <tr class="separator:a7273e0154f4531548b15b3050f631717"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0cc74fa09b88792829eefd31d3bd8429" id="r_a0cc74fa09b88792829eefd31d3bd8429"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0cc74fa09b88792829eefd31d3bd8429">GetVelocities</a> () const</td></tr>
+<tr class="memdesc:a0cc74fa09b88792829eefd31d3bd8429"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the vertex velocities.  <br /></td></tr>
 <tr class="separator:a0cc74fa09b88792829eefd31d3bd8429"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>The VBD public API wrapper around the VBD integrator implementation. <a class="el" href="../../d0/de3/citelist.html#CITEREF_anka2024vbd">[2]</a>. </p>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="a9bc1f022e4b6b613845e9f606156a93f" name="a9bc1f022e4b6b613845e9f606156a93f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9bc1f022e4b6b613845e9f606156a93f">&#9670;&#160;</a></span>EInitializationStrategy</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">pbat::gpu::vbd::Integrator::EInitializationStrategy</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> </div>
+<div class="line">        <a class="code hl_enumeration" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">pbat::sim::vbd::EInitializationStrategy</a></div>
+<div class="ttc" id="anamespacepbat_1_1sim_1_1vbd_html_a49a48c4da7aa2382463a659191f38aa3"><div class="ttname"><a href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">pbat::sim::vbd::EInitializationStrategy</a></div><div class="ttdeci">EInitializationStrategy</div><div class="ttdoc">Initialization strategies for the VBD time step minimization.</div><div class="ttdef"><b>Definition</b> Enums.h:9</div></div>
+</div><!-- fragment -->
+<p>Initialization strategy. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a023eb8a79affcc7743712b5389956671" name="a023eb8a79affcc7743712b5389956671"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a023eb8a79affcc7743712b5389956671">&#9670;&#160;</a></span>Integrator() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::vbd::Integrator::Integrator </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae6850b3c6d00ad4d8f21a82076bef172">Data</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html" title="The VBD public API wrapper around the VBD integrator implementation. anka2024vbd.">Integrator</a> object. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>VBD data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a0fc61606545279b54bed901d666d4d5e" name="a0fc61606545279b54bed901d666d4d5e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0fc61606545279b54bed901d666d4d5e">&#9670;&#160;</a></span>Integrator() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::vbd::Integrator::Integrator </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move constructor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td>Other object </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <h2 class="groupheader">Member Function Documentation</h2>
 <a id="a7273e0154f4531548b15b3050f631717" name="a7273e0154f4531548b15b3050f631717"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7273e0154f4531548b15b3050f631717">&#9670;&#160;</a></span>GetPositions()</h2>
@@ -221,7 +310,9 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd>|#dims|x|#vertices| array of vertex positions </dd></dl>
+
+<p>Get the vertex positions. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>|# dims|x|# vertices|</code> array of vertex positions </dd></dl>
 
 </div>
 </div>
@@ -239,7 +330,43 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd>|#dims|x|#vertices| array of vertex velocities </dd></dl>
+
+<p>Get the vertex velocities. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>|# dims|x|# vertices|</code> array of vertex velocities </dd></dl>
+
+</div>
+</div>
+<a id="a3840de91607840c073ab91212f741b8c" name="a3840de91607840c073ab91212f741b8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3840de91607840c073ab91212f741b8c">&#9670;&#160;</a></span>operator=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp; pbat::gpu::vbd::Integrator::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator.html">Integrator</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td>Other object </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this object </dd></dl>
 
 </div>
 </div>
@@ -261,7 +388,7 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
 <p>Sets the GPU thread block size, for the BDF1 minimization. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">blockSize</td><td>#threads per block, should be a multiple of 32 </td></tr>
+    <tr><td class="paramname">blockSize</td><td># threads per block, should be a multiple of 32 </td></tr>
   </table>
   </dd>
 </dl>
@@ -282,9 +409,11 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the external accelerations. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">aext</td><td>3x|#vertices| array of external accelerations </td></tr>
+    <tr><td class="paramname">aext</td><td><code>3x|# vertices|</code> array of external accelerations </td></tr>
   </table>
   </dd>
 </dl>
@@ -300,7 +429,7 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         <tr>
           <td class="memname">void pbat::gpu::vbd::Integrator::SetInitializationStrategy </td>
           <td>(</td>
-          <td class="paramtype">EInitializationStrategy</td>          <td class="paramname"><span class="paramname"><em>strategy</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="../../d5/d3b/namespacepbat_1_1sim_1_1vbd.html#a49a48c4da7aa2382463a659191f38aa3">EInitializationStrategy</a></td>          <td class="paramname"><span class="paramname"><em>strategy</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -309,53 +438,7 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
 <p>Sets the initialization strategy to kick-start the time step minimization. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">strategy</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="ade9c4f938b90a742ba062a9b795239f8" name="ade9c4f938b90a742ba062a9b795239f8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ade9c4f938b90a742ba062a9b795239f8">&#9670;&#160;</a></span>SetLameCoefficients()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void pbat::gpu::vbd::Integrator::SetLameCoefficients </td>
-          <td>(</td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>l</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">l</td><td>2x|#elements| array of lame coefficients l, where l[0,:] = mu and l[1,:] = lambda </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a51f3755fd759dc9266e27272778b461b" name="a51f3755fd759dc9266e27272778b461b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a51f3755fd759dc9266e27272778b461b">&#9670;&#160;</a></span>SetMass()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void pbat::gpu::vbd::Integrator::SetMass </td>
-          <td>(</td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a883c870fad575f5f4e4957f61a4041a3">GpuVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>m</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">m</td><td>|#vertices| array of lumped masses </td></tr>
+    <tr><td class="paramname">strategy</td><td>Initialization strategy </td></tr>
   </table>
   </dd>
 </dl>
@@ -376,6 +459,8 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set threshold for zero determinant check. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">zero</td><td>Numerical zero used in Hessian determinant check for approximate singularity detection </td></tr>
@@ -399,32 +484,11 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the vertex positions. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">X</td><td>3x|#vertices| array of vertex positions </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a3f43f2e18eb5064b90d88c9f440878db" name="a3f43f2e18eb5064b90d88c9f440878db"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3f43f2e18eb5064b90d88c9f440878db">&#9670;&#160;</a></span>SetQuadratureWeights()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void pbat::gpu::vbd::Integrator::SetQuadratureWeights </td>
-          <td>(</td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a883c870fad575f5f4e4957f61a4041a3">GpuVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>wg</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">wg</td><td>|#elements| array of quadrature weights </td></tr>
+    <tr><td class="paramname">X</td><td><code>3x|# vertices|</code> array of vertex positions </td></tr>
   </table>
   </dd>
 </dl>
@@ -445,9 +509,11 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the damping coefficient for Rayleigh damping. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">kD</td><td></td></tr>
+    <tr><td class="paramname">kD</td><td>Damping coefficient </td></tr>
   </table>
   </dd>
 </dl>
@@ -472,33 +538,12 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Sets the scene bounding box. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">min</td><td></td></tr>
-    <tr><td class="paramname">max</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="ab386eb5be54f47e925753c3198fd71d7" name="ab386eb5be54f47e925753c3198fd71d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab386eb5be54f47e925753c3198fd71d7">&#9670;&#160;</a></span>SetShapeFunctionGradients()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void pbat::gpu::vbd::Integrator::SetShapeFunctionGradients </td>
-          <td>(</td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>GP</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">GP</td><td>|4x3|x|#elements| array of shape function gradients </td></tr>
+    <tr><td class="paramname">min</td><td>Minimum corner of the bounding box </td></tr>
+    <tr><td class="paramname">max</td><td>Maximum corner of the bounding box </td></tr>
   </table>
   </dd>
 </dl>
@@ -519,83 +564,19 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the vertex velocities. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">v</td><td>3x|#vertices| array of vertex velocities </td></tr>
+    <tr><td class="paramname">v</td><td><code>3x|# vertices|</code> array of vertex velocities </td></tr>
   </table>
   </dd>
 </dl>
 
 </div>
 </div>
-<a id="a48e05b1a9a7662786023df05aa2c719e" name="a48e05b1a9a7662786023df05aa2c719e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a48e05b1a9a7662786023df05aa2c719e">&#9670;&#160;</a></span>SetVertexPartitions()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void pbat::gpu::vbd::Integrator::SetVertexPartitions </td>
-          <td>(</td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>Pptr</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>Padj</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Sets the groups/partitions of vertices that can be minimized independently, i.e. in parallel. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">Pptr</td><td></td></tr>
-    <tr><td class="paramname">Padj</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="aaf6915c2eeb15396df1f827c7f4e4e9d" name="aaf6915c2eeb15396df1f827c7f4e4e9d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaf6915c2eeb15396df1f827c7f4e4e9d">&#9670;&#160;</a></span>SetVertexTetrahedronAdjacencyList()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void pbat::gpu::vbd::Integrator::SetVertexTetrahedronAdjacencyList </td>
-          <td>(</td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>GVTp</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>GVTn</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>GVTilocal</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Sets the adjacency graph of vertices to incident tetrahedra in compressed column format. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">GVTp</td><td></td></tr>
-    <tr><td class="paramname">GVTn</td><td></td></tr>
-    <tr><td class="paramname">GVTilocal</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a1d80f01fb5296889c2b35b4e978cbc08" name="a1d80f01fb5296889c2b35b4e978cbc08"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1d80f01fb5296889c2b35b4e978cbc08">&#9670;&#160;</a></span>Step()</h2>
+<a id="af65484099545fe9b8ceb23e93a2027d6" name="af65484099545fe9b8ceb23e93a2027d6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af65484099545fe9b8ceb23e93a2027d6">&#9670;&#160;</a></span>Step()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -613,21 +594,68 @@ PBAT_API <a class="el" href="../../de/da9/classpbat_1_1gpu_1_1vbd_1_1_integrator
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>substeps</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>{1}</span>, </td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>substeps</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>{1}</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Execute one simulation step. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">dt</td><td>Time step </td></tr>
+    <tr><td class="paramname">iterations</td><td>Number of optimization iterations per substep </td></tr>
+    <tr><td class="paramname">substeps</td><td>Number of substeps </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad761ff1bb3b0cefc64b1db419128500c" name="ad761ff1bb3b0cefc64b1db419128500c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad761ff1bb3b0cefc64b1db419128500c">&#9670;&#160;</a></span>TracedStep()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pbat::gpu::vbd::Integrator::TracedStep </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a></td>          <td class="paramname"><span class="paramname"><em>dt</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a></td>          <td class="paramname"><span class="paramname"><em>rho</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>{1}</span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>iterations</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>substeps</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>t</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string_view</td>          <td class="paramname"><span class="paramname"><em>dir</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;.&quot;</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Execute one simulation step and trace the result. </p>
+<ul>
+<li>Saves matrix market files which follow the pattern <code>{variable}.t.{timestep}.s.{substep}[.k.{iteration}].mtx</code></li>
+</ul>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">dt</td><td></td></tr>
-    <tr><td class="paramname">iterations</td><td></td></tr>
-    <tr><td class="paramname">substeps</td><td></td></tr>
-    <tr><td class="paramname">rho</td><td>Chebyshev semi-iterative method's estimated spectral radius. If rho &gt;= 1, Chebyshev acceleration is not used. </td></tr>
+    <tr><td class="paramname">dt</td><td>Time step </td></tr>
+    <tr><td class="paramname">iterations</td><td>Number of optimization iterations per substep </td></tr>
+    <tr><td class="paramname">substeps</td><td>Number of substeps </td></tr>
+    <tr><td class="paramname">t</td><td>Current time step </td></tr>
+    <tr><td class="paramname">dir</td><td>Directory to save the matrix market files </td></tr>
   </table>
   </dd>
 </dl>

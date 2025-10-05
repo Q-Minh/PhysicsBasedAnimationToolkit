@@ -136,6 +136,7 @@ $(function(){initNavTree('d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.h
   <div class="summary">
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="../../d6/d9a/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">pbat::gpu::impl::common::Buffer&lt; T, D &gt; Class Template Reference</div></div>
 </div><!--header-->
@@ -158,6 +159,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af6cb5228e1f2489a090ea131aa67961c" id="r_af6cb5228e1f2489a090ea131aa67961c"><td class="memItemLeft" align="right" valign="top"><a id="af6cb5228e1f2489a090ea131aa67961c" name="af6cb5228e1f2489a090ea131aa67961c"></a>
 <a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">SelfType</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">SelfType</a> const &amp;other)</td></tr>
 <tr class="separator:af6cb5228e1f2489a090ea131aa67961c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d7cf393afb9f5f2c4c1df327d9c3e8b" id="r_a8d7cf393afb9f5f2c4c1df327d9c3e8b"><td class="memTemplParams" colspan="2"><a id="a8d7cf393afb9f5f2c4c1df327d9c3e8b" name="a8d7cf393afb9f5f2c4c1df327d9c3e8b"></a>
+template&lt;int D2&gt; </td></tr>
+<tr class="memitem:a8d7cf393afb9f5f2c4c1df327d9c3e8b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">SelfType</a> &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">Buffer</a>&lt; T, D2 &gt; const &amp;other)</td></tr>
+<tr class="separator:a8d7cf393afb9f5f2c4c1df327d9c3e8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a750e2058790dd4d26e2e70f37f8d646d" id="r_a750e2058790dd4d26e2e70f37f8d646d"><td class="memItemLeft" align="right" valign="top"><a id="a750e2058790dd4d26e2e70f37f8d646d" name="a750e2058790dd4d26e2e70f37f8d646d"></a>
 thrust::device_vector&lt; T &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator[]</b> (auto d)</td></tr>
 <tr class="separator:a750e2058790dd4d26e2e70f37f8d646d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -194,9 +199,19 @@ std::conditional_t&lt;(D &gt; 1), std::array&lt; T *, D &gt;, T * &gt;&#160;</td
 <tr class="memitem:a1559f5700a738557c1316c677cc92440" id="r_a1559f5700a738557c1316c677cc92440"><td class="memItemLeft" align="right" valign="top"><a id="a1559f5700a738557c1316c677cc92440" name="a1559f5700a738557c1316c677cc92440"></a>
 std::conditional_t&lt;(D &gt; 1), std::array&lt; T const *, D &gt;, T const * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Raw</b> () const</td></tr>
 <tr class="separator:a1559f5700a738557c1316c677cc92440"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9cff3064ea6e0c76278a3a236a57413b" id="r_a9cff3064ea6e0c76278a3a236a57413b"><td class="memItemLeft" align="right" valign="top"><a id="a9cff3064ea6e0c76278a3a236a57413b" name="a9cff3064ea6e0c76278a3a236a57413b"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>Dimensions</b> () const</td></tr>
-<tr class="separator:a9cff3064ea6e0c76278a3a236a57413b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3b51fb48e13b4ab5af5f18c1f26fd85a" id="r_a3b51fb48e13b4ab5af5f18c1f26fd85a"><td class="memItemLeft" align="right" valign="top"><a id="a3b51fb48e13b4ab5af5f18c1f26fd85a" name="a3b51fb48e13b4ab5af5f18c1f26fd85a"></a>
+constexpr auto&#160;</td><td class="memItemRight" valign="bottom"><b>Dimensions</b> () const</td></tr>
+<tr class="separator:a3b51fb48e13b4ab5af5f18c1f26fd85a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d2d2c530504fe0a5c54bf406e6d3c60" id="r_a2d2d2c530504fe0a5c54bf406e6d3c60"><td class="memTemplParams" colspan="2"><a id="a2d2d2c530504fe0a5c54bf406e6d3c60" name="a2d2d2c530504fe0a5c54bf406e6d3c60"></a>
+template&lt;int D2&gt; </td></tr>
+<tr class="memitem:a2d2d2c530504fe0a5c54bf406e6d3c60"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">Buffer</a>&lt; T, D &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">Buffer</a>&lt; T, D2 &gt; const &amp;other)</td></tr>
+<tr class="separator:a2d2d2c530504fe0a5c54bf406e6d3c60"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:aec7a0039ee3a926d4af4f7759e532dbe" id="r_aec7a0039ee3a926d4af4f7759e532dbe"><td class="memItemLeft" align="right" valign="top"><a id="aec7a0039ee3a926d4af4f7759e532dbe" name="aec7a0039ee3a926d4af4f7759e532dbe"></a>
+static auto constexpr&#160;</td><td class="memItemRight" valign="bottom"><b>kDims</b> = D</td></tr>
+<tr class="separator:aec7a0039ee3a926d4af4f7759e532dbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/gpu/impl/common/<a class="el" href="../../d7/d0b/_buffer_8cuh_source.html">Buffer.cuh</a></li>
@@ -206,7 +221,7 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>Dimensions</
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="../../d0/d7c/namespacepbat.html">pbat</a></li><li class="navelem"><a class="el" href="../../de/d07/namespacepbat_1_1gpu.html">gpu</a></li><li class="navelem"><b>impl</b></li><li class="navelem"><b>common</b></li><li class="navelem"><a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">Buffer</a></li>
+    <li class="navelem"><a class="el" href="../../d0/d7c/namespacepbat.html">pbat</a></li><li class="navelem"><a class="el" href="../../de/d07/namespacepbat_1_1gpu.html">gpu</a></li><li class="navelem"><a class="el" href="../../d7/d50/namespacepbat_1_1gpu_1_1impl.html">impl</a></li><li class="navelem"><b>common</b></li><li class="navelem"><a class="el" href="../../d0/d50/classpbat_1_1gpu_1_1impl_1_1common_1_1_buffer.html">Buffer</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="../../doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
   </ul>
 </div>

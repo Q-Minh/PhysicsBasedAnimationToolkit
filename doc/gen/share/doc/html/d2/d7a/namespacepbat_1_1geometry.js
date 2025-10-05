@@ -1,6 +1,7 @@
 var namespacepbat_1_1geometry =
 [
     [ "ClosestPointQueries", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html", [
+      [ "Lines", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#aaeea6e8a7f850285e39ec56410e1a9f4", null ],
       [ "PointInTetrahedron", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#ac9377f88e20b763e1be19f7dd03de81c", null ],
       [ "PointInTriangle", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#affa91aae1977b26342000f4f72dc924b", null ],
       [ "PointOnAxisAlignedBoundingBox", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#a6db9446b378bf60a48b502a284e03e17", null ],
@@ -24,7 +25,7 @@ var namespacepbat_1_1geometry =
       [ "LineSegmentSphere", "db/da1/namespacepbat_1_1geometry_1_1_intersection_queries.html#a7321047b96306b7632ec0b09891f510c", null ],
       [ "TriangleBarycentricCoordinates", "db/da1/namespacepbat_1_1geometry_1_1_intersection_queries.html#ad3a5218441ba91c139c671f48e0fb189", null ],
       [ "TriangleBarycentricCoordinates", "db/da1/namespacepbat_1_1geometry_1_1_intersection_queries.html#ac9ac56f8c83f831b9386a6306b0d6ffb", null ],
-      [ "UvwLineSegmentTriangle3D", "db/da1/namespacepbat_1_1geometry_1_1_intersection_queries.html#ac3876df0528e32568be63753af485fa0", null ],
+      [ "UvwLineSegmentTriangle3D", "db/da1/namespacepbat_1_1geometry_1_1_intersection_queries.html#a659797a96b1ed5fc8a1e14b2361dd236", null ],
       [ "UvwLineTriangle3D", "db/da1/namespacepbat_1_1geometry_1_1_intersection_queries.html#a8a6f5c0a31c71a6f077b069b404d8068", null ],
       [ "UvwTriangles3D", "db/da1/namespacepbat_1_1geometry_1_1_intersection_queries.html#a9c0a65287893f227d8399cac0e272082", null ]
     ] ],
@@ -49,15 +50,38 @@ var namespacepbat_1_1geometry =
       [ "TriangleSphere", "df/de7/namespacepbat_1_1geometry_1_1_overlap_queries.html#a36880f72567658a09af412e3c9eb3e78", null ],
       [ "TriangleTetrahedron", "df/de7/namespacepbat_1_1geometry_1_1_overlap_queries.html#ad6a18feb6eb74d38d3befd578e202211", null ]
     ] ],
+    [ "sdf", "d2/d9d/namespacepbat_1_1geometry_1_1sdf.html", "d2/d9d/namespacepbat_1_1geometry_1_1sdf" ],
+    [ "AabbKdTreeHierarchy", "d5/dd2/classpbat_1_1geometry_1_1_aabb_kd_tree_hierarchy.html", "d5/dd2/classpbat_1_1geometry_1_1_aabb_kd_tree_hierarchy" ],
+    [ "AabbRadixTreeHierarchy", "d5/d92/classpbat_1_1geometry_1_1_aabb_radix_tree_hierarchy.html", "d5/d92/classpbat_1_1geometry_1_1_aabb_radix_tree_hierarchy" ],
     [ "AxisAlignedBoundingBox", "d5/d2e/classpbat_1_1geometry_1_1_axis_aligned_bounding_box.html", "d5/d2e/classpbat_1_1geometry_1_1_axis_aligned_bounding_box" ],
     [ "BoundingVolumeHierarchy", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy" ],
+    [ "HashGrid", "de/d29/classpbat_1_1geometry_1_1_hash_grid.html", "de/d29/classpbat_1_1geometry_1_1_hash_grid" ],
+    [ "HierarchicalHashGrid", "d2/d8b/classpbat_1_1geometry_1_1_hierarchical_hash_grid.html", "d2/d8b/classpbat_1_1geometry_1_1_hierarchical_hash_grid" ],
     [ "KdTree", "da/dd5/classpbat_1_1geometry_1_1_kd_tree.html", "da/dd5/classpbat_1_1geometry_1_1_kd_tree" ],
     [ "KdTreeNode", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node" ],
     [ "TetrahedralAabbHierarchy", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy" ],
     [ "TriangleAabbHierarchy2D", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d.html", "de/d76/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy2_d" ],
     [ "TriangleAabbHierarchy3D", "dc/d0c/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy3_d.html", "dc/d0c/classpbat_1_1geometry_1_1_triangle_aabb_hierarchy3_d" ],
     [ "MortonCodeType", "d2/d7a/namespacepbat_1_1geometry.html#a930a1551ac51c87aae9dcd75f0163ee4", null ],
+    [ "AllNearestNeighbours", "d2/d7a/namespacepbat_1_1geometry.html#acf9a37efd1d0dbaca17409dfea8fd2ca", null ],
+    [ "ClustersToAabbs", "d2/d7a/namespacepbat_1_1geometry.html#a256e078a7a2b4196b8a334682d47ef1e", null ],
+    [ "ClustersToAabbs", "d2/d7a/namespacepbat_1_1geometry.html#a103f60b89bb2f63e700913abafdda8b1", null ],
+    [ "DfsAllNearestNeighbours", "d2/d7a/namespacepbat_1_1geometry.html#a1b8bea434c41111fa827e7ddb4ec4b21", null ],
+    [ "DfsAllNearestNeighbours", "d2/d7a/namespacepbat_1_1geometry.html#a430221b7d21dd0e358c69c0dc6f7a176", null ],
+    [ "EdgeEdgeCcd", "d2/d7a/namespacepbat_1_1geometry.html#a661a99346d0d12bef33bed68330b9c51", null ],
     [ "ExpandBits", "d2/d7a/namespacepbat_1_1geometry.html#a4901d411d4efdcab87a01633da21026f", null ],
+    [ "HashByXorOfPrimeMultiples", "d2/d7a/namespacepbat_1_1geometry.html#aebf105b6fa763e5397604209886043f1", null ],
+    [ "KNearestNeighbours", "d2/d7a/namespacepbat_1_1geometry.html#a5e669110bf2be65b77669262845b8ca4", null ],
+    [ "KNearestNeighbours", "d2/d7a/namespacepbat_1_1geometry.html#a367821018a940f7d4312b7473fde7516", null ],
+    [ "MeshToAabbs", "d2/d7a/namespacepbat_1_1geometry.html#a3d5d222ddd9e4d2eb311482206330e8d", null ],
+    [ "MeshToAabbs", "d2/d7a/namespacepbat_1_1geometry.html#a42669e95233f6352ec38496fbc1d9256", null ],
     [ "Morton3D", "d2/d7a/namespacepbat_1_1geometry.html#aad92bd1773247e0798ac5a5a6df79517", null ],
-    [ "SimplexMeshBoundary", "d2/d7a/namespacepbat_1_1geometry.html#a15bec2c455ae1f2ae30af95b00651716", null ]
+    [ "NearestToFurthestNeighbours", "d2/d7a/namespacepbat_1_1geometry.html#a084206e1ce2988808849137dcb2e4a82", null ],
+    [ "NearestToFurthestNeighbours", "d2/d7a/namespacepbat_1_1geometry.html#acde3e58b48638f69073cb5d0e200eb22", null ],
+    [ "Overlaps", "d2/d7a/namespacepbat_1_1geometry.html#a655d0e68b688c36b5798f0eb6ddc59e5", null ],
+    [ "Overlaps", "d2/d7a/namespacepbat_1_1geometry.html#adcf85fc0664ca1101efadc446fa8fc24", null ],
+    [ "Overlaps", "d2/d7a/namespacepbat_1_1geometry.html#adc2eb6a69fb127bcd88f6f0b348a7e79", null ],
+    [ "PointTriangleCcd", "d2/d7a/namespacepbat_1_1geometry.html#a5d60fff88ac0003c731dc470d0ab27d4", null ],
+    [ "SelfOverlaps", "d2/d7a/namespacepbat_1_1geometry.html#ad318504f4d24918e58f8f4780f384eaf", null ],
+    [ "SimplexMeshBoundary", "d2/d7a/namespacepbat_1_1geometry.html#a2139bf2b76ae61c75231843b82cc0dc8", null ]
 ];

@@ -142,9 +142,13 @@ $(function(){initNavTree('db/de1/_gauss_quadrature_8h.html','../../'); initResiz
 
 <p>Gauss-Legendre quadrature schemes over the unit box in dimensions 1, 2, 3.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;array&gt;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d5/d56/common_2_concepts_8h_source.html">pbat/common/Concepts.h</a>&quot;</code><br />
+<code>#include &lt;array&gt;</code><br />
 <code>#include &lt;cstdint&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&gt;</code><br />
+<code>#include &quot;pbat/warning/Push.h&quot;</code><br />
+<code>#include &quot;pbat/warning/SignConversion.h&quot;</code><br />
+<code>#include &quot;pbat/warning/Pop.h&quot;</code><br />
 </div>
 <p><a href="../../db/de1/_gauss_quadrature_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -159,11 +163,11 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a504e0fbe44925303c857bfd4495832b8" id="r_a504e0fbe44925303c857bfd4495832b8"><td class="memTemplParams" colspan="2">template&lt;int Dims, int Order&gt; </td></tr>
-<tr class="memitem:a504e0fbe44925303c857bfd4495832b8"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d5/d6a/namespacepbat_1_1math.html#a504e0fbe44925303c857bfd4495832b8">pbat::math::GaussLegendreQuadrature</a> = typename detail::GaussLegendreQuadrature&lt;Dims, Order&gt;</td></tr>
-<tr class="memdesc:a504e0fbe44925303c857bfd4495832b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shifted Gauss-Legendre quadrature scheme over the unit box  \( 0 \leq X \leq 1 \;
+<tr class="memitem:afc82065ce76184608ecbef4547e0290e" id="r_afc82065ce76184608ecbef4547e0290e"><td class="memTemplParams" colspan="2">template&lt;int Dims, int Order, common::CFloatingPoint TScalar = Scalar&gt; </td></tr>
+<tr class="memitem:afc82065ce76184608ecbef4547e0290e"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d5/d6a/namespacepbat_1_1math.html#afc82065ce76184608ecbef4547e0290e">pbat::math::GaussLegendreQuadrature</a> = typename detail::GaussLegendreQuadrature&lt;Dims, Order, TScalar&gt;</td></tr>
+<tr class="memdesc:afc82065ce76184608ecbef4547e0290e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shifted Gauss-Legendre quadrature scheme over the unit box  \( 0 \leq X \leq 1 \;
    \text{s.t.} \; X \in \mathbb{R}^d \) in dimensions \( d=1,2,3 \).  <br /></td></tr>
-<tr class="separator:a504e0fbe44925303c857bfd4495832b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:afc82065ce76184608ecbef4547e0290e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Gauss-Legendre quadrature schemes over the unit box in dimensions 1, 2, 3. </p>

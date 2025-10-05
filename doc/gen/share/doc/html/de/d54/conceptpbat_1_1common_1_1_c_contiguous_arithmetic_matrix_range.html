@@ -148,16 +148,12 @@ $(function(){initNavTree('de/d54/conceptpbat_1_1common_1_1_c_contiguous_arithmet
 <div class="line">    <span class="keyword">requires</span> std::ranges::range&lt;R&gt;;</div>
 <div class="line">    <span class="keyword">requires</span> std::ranges::sized_range&lt;R&gt;;</div>
 <div class="line">    <span class="keyword">requires</span> std::ranges::contiguous_range&lt;R&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        std::ranges::range_value_t&lt;R&gt;::RowsAtCompileTime</div>
-<div class="line">    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        std::ranges::range_value_t&lt;R&gt;::ColsAtCompileTime</div>
-<div class="line">    } -&gt; std::convertible_to&lt;int&gt;;</div>
+<div class="line">    {std::ranges::range_value_t&lt;R&gt;::RowsAtCompileTime}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line">    {std::ranges::range_value_t&lt;R&gt;::ColsAtCompileTime}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
 <div class="line">    <span class="keyword">requires</span> std::is_arithmetic_v&lt;typename std::ranges::range_value_t&lt;R&gt;::Scalar&gt;;</div>
 <div class="line">    {std::ranges::range_value_t&lt;R&gt;::Flags};</div>
 <div class="line">}</div>
-<div class="ttc" id="aconceptpbat_1_1common_1_1_c_contiguous_arithmetic_matrix_range_html"><div class="ttname"><a href="../../de/d54/conceptpbat_1_1common_1_1_c_contiguous_arithmetic_matrix_range.html">pbat::common::CContiguousArithmeticMatrixRange</a></div><div class="ttdoc">Range of Eigen fixed-size matrix types.</div><div class="ttdef"><b>Definition</b> Concepts.h:64</div></div>
+<div class="ttc" id="aconceptpbat_1_1common_1_1_c_contiguous_arithmetic_matrix_range_html"><div class="ttname"><a href="../../de/d54/conceptpbat_1_1common_1_1_c_contiguous_arithmetic_matrix_range.html">pbat::common::CContiguousArithmeticMatrixRange</a></div><div class="ttdoc">Range of Eigen fixed-size matrix types.</div><div class="ttdef"><b>Definition</b> Concepts.h:100</div></div>
 </div><!-- fragment --><a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Range of Eigen fixed-size matrix types. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>

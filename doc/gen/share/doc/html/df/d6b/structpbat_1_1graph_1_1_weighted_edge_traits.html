@@ -139,16 +139,69 @@ $(function(){initNavTree('df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.ht
   <div class="headertitle"><div class="title">pbat::graph::WeightedEdgeTraits&lt; TWeightedEdge &gt; Struct Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Traits for <a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#a353fbeda472647a2e3af2031e2170fcc" title="Weighted edge (wrapper around Eigen triplet type)">WeightedEdge</a>.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../d6/db6/_adjacency_8h_source.html">Adjacency.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a38c791cfe266ee52d9493d49a2af05ea" id="r_a38c791cfe266ee52d9493d49a2af05ea"><td class="memItemLeft" align="right" valign="top"><a id="a38c791cfe266ee52d9493d49a2af05ea" name="a38c791cfe266ee52d9493d49a2af05ea"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>ScalarType</b> = std::remove_cvref_t&lt;decltype(std::declval&lt;TWeightedEdge&gt;().value())&gt;</td></tr>
-<tr class="separator:a38c791cfe266ee52d9493d49a2af05ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeb560ea7d209c3f10cb8fb2553c4fab7" id="r_aeb560ea7d209c3f10cb8fb2553c4fab7"><td class="memItemLeft" align="right" valign="top"><a id="aeb560ea7d209c3f10cb8fb2553c4fab7" name="aeb560ea7d209c3f10cb8fb2553c4fab7"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>IndexType</b> = std::remove_cvref_t&lt;decltype(std::declval&lt;TWeightedEdge&gt;().row())&gt;</td></tr>
-<tr class="separator:aeb560ea7d209c3f10cb8fb2553c4fab7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a176ab870d6be46fcf3b702269f9c97b1" id="r_a176ab870d6be46fcf3b702269f9c97b1"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a176ab870d6be46fcf3b702269f9c97b1">ScalarType</a></td></tr>
+<tr class="memdesc:a176ab870d6be46fcf3b702269f9c97b1"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2" title="Scalar type.">Scalar</a> type of the graph edge weights.  <br /></td></tr>
+<tr class="separator:a176ab870d6be46fcf3b702269f9c97b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab7813da59de59d31771fa25e42217671" id="r_ab7813da59de59d31771fa25e42217671"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab7813da59de59d31771fa25e42217671">IndexType</a></td></tr>
+<tr class="separator:ab7813da59de59d31771fa25e42217671"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><div class="compoundTemplParams">template&lt;class TWeightedEdge&gt;<br />
+struct pbat::graph::WeightedEdgeTraits&lt; TWeightedEdge &gt;</div><p>Traits for <a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#a353fbeda472647a2e3af2031e2170fcc" title="Weighted edge (wrapper around Eigen triplet type)">WeightedEdge</a>. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TWeightedEdge</td><td><a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#a353fbeda472647a2e3af2031e2170fcc" title="Weighted edge (wrapper around Eigen triplet type)">WeightedEdge</a> type instance </td></tr>
+  </table>
+  </dd>
+</dl>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="ab7813da59de59d31771fa25e42217671" name="ab7813da59de59d31771fa25e42217671"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab7813da59de59d31771fa25e42217671">&#9670;&#160;</a></span>IndexType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class TWeightedEdge&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html">pbat::graph::WeightedEdgeTraits</a>&lt; TWeightedEdge &gt;::IndexType</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> </div>
+<div class="line">        std::remove_cvref_t&lt;decltype(std::declval&lt;TWeightedEdge&gt;().row())&gt;</div>
+</div><!-- fragment --><p><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> type of the graph vertices </p>
+
+</div>
+</div>
+<a id="a176ab870d6be46fcf3b702269f9c97b1" name="a176ab870d6be46fcf3b702269f9c97b1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a176ab870d6be46fcf3b702269f9c97b1">&#9670;&#160;</a></span>ScalarType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class TWeightedEdge&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html">pbat::graph::WeightedEdgeTraits</a>&lt; TWeightedEdge &gt;::ScalarType</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> std::remove_cvref_t&lt;</div>
+<div class="line">        <span class="keyword">decltype</span>(std::declval&lt;TWeightedEdge&gt;().value())&gt;</div>
+</div><!-- fragment -->
+<p><a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2" title="Scalar type.">Scalar</a> type of the graph edge weights. </p>
+
+</div>
+</div>
 <hr/>The documentation for this struct was generated from the following file:<ul>
 <li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/graph/<a class="el" href="../../d6/db6/_adjacency_8h_source.html">Adjacency.h</a></li>
 </ul>

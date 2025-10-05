@@ -1,12 +1,21 @@
 var searchData=
 [
-  ['n_0',['N',['../d4/d3d/structpbat_1_1fem_1_1_load_vector.html#a2d55b07517432bcbadaab68b10d9253d',1,'pbat::fem::LoadVector']]],
-  ['n_1',['n',['../df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#ad074d9a7ca0946a3aae25ccee362799a',1,'pbat::geometry::KdTreeNode']]],
-  ['nactive_2',['nActive',['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#ac57945c3c1ace6950eaf2d0cb10daea1',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd']]],
-  ['neck_3',['NecK',['../d5/dbb/structpbat_1_1sim_1_1vbd_1_1multigrid_1_1_level.html#aa1cf1126c61010f6cc1b3ed2be9a469f',1,'pbat::sim::vbd::multigrid::Level']]],
-  ['necve_4',['NecVE',['../d5/dbb/structpbat_1_1sim_1_1vbd_1_1multigrid_1_1_level.html#a15ada99e6a2788cd0875074ec11241cd',1,'pbat::sim::vbd::multigrid::Level']]],
-  ['nn_5',['nn',['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#af24dd39f72944a953ea914d82deb6921',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd']]],
-  ['npartitioningtrials_6',['nPartitioningTrials',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#a7eafc433d5349b361e9273e887a40c80',1,'pbat::graph::PartitioningOptions']]],
-  ['nrefinementiters_7',['nRefinementIters',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#a95b84c223ffe842ced017d166a538136',1,'pbat::graph::PartitioningOptions']]],
-  ['nseparators_8',['nSeparators',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#a41936e048d29ecc80062aa3fc246684f',1,'pbat::graph::PartitioningOptions']]]
+  ['n_0',['n',['../df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a694809ac063ef206506809b10caf51fc',1,'pbat::geometry::KdTreeNode::n'],['../df/d30/structpbat_1_1geometry_1_1sdf_1_1_rotational_repeat.html#a0e85f12f1b71c2fe2addf719698e6340',1,'pbat::geometry::sdf::RotationalRepeat::n'],['../da/dc9/structpbat_1_1gpu_1_1impl_1_1math_1_1_vector_view.html#adaf21eabf9a8fc7d42d2f52a7b9e87ac',1,'pbat::gpu::impl::math::VectorView::n'],['../de/d6b/structpbat_1_1gpu_1_1impl_1_1math_1_1_matrix_view.html#a6b412bd965e52440ed6df0eed4814e57',1,'pbat::gpu::impl::math::MatrixView::n'],['../da/d5d/structpbat_1_1gpu_1_1impl_1_1math_1_1_vector.html#a2667862a3a508356168ab85454c2001f',1,'pbat::gpu::impl::math::Vector::n']]],
+  ['nactive_1',['nActive',['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#ac57945c3c1ace6950eaf2d0cb10daea1',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd']]],
+  ['ncandidates_2',['nCandidates',['../d1/d64/classpbat_1_1sim_1_1contact_1_1_environment.html#a7f0508ef54d62c7e2db10cf9c5ad6c3a',1,'pbat::sim::contact::Environment']]],
+  ['ncontacts_3',['nContacts',['../d7/d17/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_contact_penalty.html#a93baa7022a903a4c0655fd1b85614442',1,'pbat::gpu::impl::vbd::kernels::ContactPenalty']]],
+  ['ndbc_4',['ndbc',['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#a2c3ca61ffa0a8b293dece492d1669d3e',1,'pbat::sim::dynamics::FemElastoDynamics']]],
+  ['neck_5',['NecK',['../d5/dbb/structpbat_1_1sim_1_1vbd_1_1multigrid_1_1_level.html#aa1cf1126c61010f6cc1b3ed2be9a469f',1,'pbat::sim::vbd::multigrid::Level']]],
+  ['necve_6',['NecVE',['../d5/dbb/structpbat_1_1sim_1_1vbd_1_1multigrid_1_1_level.html#a15ada99e6a2788cd0875074ec11241cd',1,'pbat::sim::vbd::multigrid::Level']]],
+  ['nmaxaugmentedlagrangianiterations_7',['nMaxAugmentedLagrangianIterations',['../d4/d4c/structpbat_1_1sim_1_1algorithm_1_1newton_1_1_config.html#a91351de513387170417e4a82815f849f',1,'pbat::sim::algorithm::newton::Config']]],
+  ['nmaxiters_8',['nMaxIters',['../db/dc1/structpbat_1_1math_1_1optimization_1_1_back_tracking_line_search.html#af3eb559d5f4c6ed0d8ac9076168860d0',1,'pbat::math::optimization::BackTrackingLineSearch::nMaxIters'],['../d8/dc5/structpbat_1_1math_1_1optimization_1_1_newton.html#a94815e129ffec4990c53e998cdfd7d4e',1,'pbat::math::optimization::Newton::nMaxIters']]],
+  ['nmaxlinearsolveriterations_9',['nMaxLinearSolverIterations',['../d4/d4c/structpbat_1_1sim_1_1algorithm_1_1newton_1_1_config.html#ab2cbd23846ef9f5c7b6eea74c59ee014',1,'pbat::sim::algorithm::newton::Config']]],
+  ['nmaxlinesearchiterations_10',['nMaxLineSearchIterations',['../d4/d4c/structpbat_1_1sim_1_1algorithm_1_1newton_1_1_config.html#a460ea5fbcdf197dba96418f54dcebc91',1,'pbat::sim::algorithm::newton::Config']]],
+  ['nmaxnewtoniterations_11',['nMaxNewtonIterations',['../d4/d4c/structpbat_1_1sim_1_1algorithm_1_1newton_1_1_config.html#a1c093e3a24dad866f8182bfd587790d0',1,'pbat::sim::algorithm::newton::Config']]],
+  ['nn_12',['nn',['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#af24dd39f72944a953ea914d82deb6921',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd']]],
+  ['nodes_13',['nodes',['../df/da6/structpbat_1_1geometry_1_1sdf_1_1_forest.html#aee7e8a27c89aa8755c76393cf8a2eb6a',1,'pbat::geometry::sdf::Forest']]],
+  ['npartitioningtrials_14',['nPartitioningTrials',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#a7eafc433d5349b361e9273e887a40c80',1,'pbat::graph::PartitioningOptions']]],
+  ['nrefinementiters_15',['nRefinementIters',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#a95b84c223ffe842ced017d166a538136',1,'pbat::graph::PartitioningOptions']]],
+  ['nseparators_16',['nSeparators',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#a41936e048d29ecc80062aa3fc246684f',1,'pbat::graph::PartitioningOptions']]],
+  ['nsubsteps_17',['nSubsteps',['../d4/d4c/structpbat_1_1sim_1_1algorithm_1_1newton_1_1_config.html#a42542f7570e0fce12a978083712889e1',1,'pbat::sim::algorithm::newton::Config']]]
 ];

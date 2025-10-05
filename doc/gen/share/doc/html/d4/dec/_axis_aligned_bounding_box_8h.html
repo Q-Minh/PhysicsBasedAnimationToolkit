@@ -135,7 +135,8 @@ $(function(){initNavTree('d4/dec/_axis_aligned_bounding_box_8h.html','../../'); 
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">AxisAlignedBoundingBox.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -144,10 +145,7 @@ $(function(){initNavTree('d4/dec/_axis_aligned_bounding_box_8h.html','../../'); 
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;Eigen/Geometry&gt;</code><br />
 <code>#include &lt;array&gt;</code><br />
-<code>#include &lt;exception&gt;</code><br />
-<code>#include &lt;fmt/format.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&gt;</code><br />
-<code>#include &lt;string&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
 </div>
 <p><a href="../../d4/dec/_axis_aligned_bounding_box_8h_source.html">Go to the source code of this file.</a></p>
@@ -166,6 +164,25 @@ Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html">pbat::geometry</a></td></tr>
 <tr class="memdesc:d2/d7a/namespacepbat_1_1geometry"><td class="mdescLeft">&#160;</td><td class="mdescRight">Geometric queries, quantities and data structures. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a103f60b89bb2f63e700913abafdda8b1" id="r_a103f60b89bb2f63e700913abafdda8b1"><td class="memTemplParams" colspan="2">template&lt;auto kDims, auto kClusterNodes, class FCluster, class TDerivedL, class TDerivedU&gt; </td></tr>
+<tr class="memitem:a103f60b89bb2f63e700913abafdda8b1"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html#a103f60b89bb2f63e700913abafdda8b1">pbat::geometry::ClustersToAabbs</a> (FCluster fCluster, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nClusters, Eigen::DenseBase&lt; TDerivedL &gt; &amp;L, Eigen::DenseBase&lt; TDerivedU &gt; &amp;U)</td></tr>
+<tr class="memdesc:a103f60b89bb2f63e700913abafdda8b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes AABBs of nClusters kDims-dimensional point clusters.  <br /></td></tr>
+<tr class="separator:a103f60b89bb2f63e700913abafdda8b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a256e078a7a2b4196b8a334682d47ef1e" id="r_a256e078a7a2b4196b8a334682d47ef1e"><td class="memTemplParams" colspan="2">template&lt;auto kDims, auto kClusterNodes, class FCluster, class TDerivedB&gt; </td></tr>
+<tr class="memitem:a256e078a7a2b4196b8a334682d47ef1e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html#a256e078a7a2b4196b8a334682d47ef1e">pbat::geometry::ClustersToAabbs</a> (FCluster fCluster, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nClusters, Eigen::DenseBase&lt; TDerivedB &gt; &amp;B)</td></tr>
+<tr class="memdesc:a256e078a7a2b4196b8a334682d47ef1e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes AABBs of nClusters kDims-dimensional point clusters.  <br /></td></tr>
+<tr class="separator:a256e078a7a2b4196b8a334682d47ef1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42669e95233f6352ec38496fbc1d9256" id="r_a42669e95233f6352ec38496fbc1d9256"><td class="memTemplParams" colspan="2">template&lt;auto kDims, auto kElemNodes, class TDerivedX, class TDerivedE, class TDerivedL, class TDerivedU&gt; </td></tr>
+<tr class="memitem:a42669e95233f6352ec38496fbc1d9256"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html#a42669e95233f6352ec38496fbc1d9256">pbat::geometry::MeshToAabbs</a> (Eigen::DenseBase&lt; TDerivedX &gt; const &amp;X, Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::DenseBase&lt; TDerivedL &gt; &amp;L, Eigen::DenseBase&lt; TDerivedU &gt; &amp;U)</td></tr>
+<tr class="memdesc:a42669e95233f6352ec38496fbc1d9256"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes AABBs of nElemNodes simplex mesh elements in kDims dimensions.  <br /></td></tr>
+<tr class="separator:a42669e95233f6352ec38496fbc1d9256"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3d5d222ddd9e4d2eb311482206330e8d" id="r_a3d5d222ddd9e4d2eb311482206330e8d"><td class="memTemplParams" colspan="2">template&lt;auto kDims, auto kElemNodes, class TDerivedX, class TDerivedE, class TDerivedB&gt; </td></tr>
+<tr class="memitem:a3d5d222ddd9e4d2eb311482206330e8d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html#a3d5d222ddd9e4d2eb311482206330e8d">pbat::geometry::MeshToAabbs</a> (Eigen::DenseBase&lt; TDerivedX &gt; const &amp;X, Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::DenseBase&lt; TDerivedB &gt; &amp;B)</td></tr>
+<tr class="memdesc:a3d5d222ddd9e4d2eb311482206330e8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes AABBs of nElemNodes simplex mesh elements in kDims dimensions.  <br /></td></tr>
+<tr class="separator:a3d5d222ddd9e4d2eb311482206330e8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Axis-aligned bounding box class. </p>

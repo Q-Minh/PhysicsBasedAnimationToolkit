@@ -167,18 +167,18 @@ $(function(){initNavTree('d2/d76/common_2_eigen_8h_source.html','../../'); initR
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    Eigen::Dynamic,</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    Eigen::Dynamic&gt; <span class="keyword">const</span>&gt;</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>{</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keyword">namespace </span>rng   = std::ranges;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="keyword">using </span>ValueType = rng::range_value_t&lt;R&gt;;</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keyword">auto</span> rows       = ValueType::RowsAtCompileTime;</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keyword">auto</span> cols       = ValueType::ColsAtCompileTime;</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keywordflow">if</span> <span class="keyword">constexpr</span> (ValueType::Flags &amp; Eigen::RowMajorBit)</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        std::swap(rows, cols);</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="keywordflow">return</span> Eigen::Map&lt;</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        Eigen::Matrix&lt;typename ValueType::Scalar, Eigen::Dynamic, Eigen::Dynamic&gt; <span class="keyword">const</span>&gt;(</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        <span class="keyword">static_cast&lt;</span><a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a> const*<span class="keyword">&gt;</span>(std::addressof(rng::data(r)[0][0])),</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keyword">namespace </span>rng    = std::ranges;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="keyword">using </span>ValueType  = rng::range_value_t&lt;R&gt;;</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keyword">using </span>ScalarType = <span class="keyword">typename</span> ValueType::Scalar;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keyword">auto</span> rows        = ValueType::RowsAtCompileTime;</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keyword">auto</span> cols        = ValueType::ColsAtCompileTime;</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordflow">if</span> <span class="keyword">constexpr</span> (ValueType::Flags &amp; Eigen::RowMajorBit)</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        std::swap(rows, cols);</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keywordflow">return</span> Eigen::Map&lt;Eigen::Matrix&lt;ScalarType, Eigen::Dynamic, Eigen::Dynamic&gt; <span class="keyword">const</span>&gt;(</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        <span class="keyword">static_cast&lt;</span>ScalarType const*<span class="keyword">&gt;</span>(std::addressof(rng::data(r)[0][0])),</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        rows,</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <span class="keyword">static_cast&lt;</span>Eigen::Index<span class="keyword">&gt;</span>(rng::size(r) * cols));</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <span class="keyword">static_cast&lt;</span>Eigen::Index<span class="keyword">&gt;</span>(rng::size(r)) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(cols));</div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>}</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span><span class="keyword">namespace </span>detail {</div>
@@ -186,7 +186,7 @@ $(function(){initNavTree('d2/d76/common_2_eigen_8h_source.html','../../'); initR
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span><span class="keyword">template</span> &lt;std::ranges::random_access_range R&gt;</div>
 <div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="keyword">struct </span><a class="code hl_function" href="../../dd/d4e/namespacepbat_1_1common.html#abd49b77d32cd35798788ce543e960484">Slice</a></div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>{</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    Slice(R&amp;&amp; r) : r(std::forward&lt;R&gt;(r)) {}</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    Slice(R&amp;&amp; _r) : r(std::forward&lt;R&gt;(_r)) {}</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> size()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a><span class="keyword">&gt;</span>(std::ranges::size(r)); }</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> operator[](<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> i)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a><span class="keyword">&gt;</span>(r[i]); }</div>
@@ -215,7 +215,6 @@ $(function(){initNavTree('d2/d76/common_2_eigen_8h_source.html','../../'); initR
 <div class="ttc" id="anamespacepbat_1_1common_html_adbed005ac4d92e56497095bc23c46ac0"><div class="ttname"><a href="../../dd/d4e/namespacepbat_1_1common.html#adbed005ac4d92e56497095bc23c46ac0">pbat::common::ToEigen</a></div><div class="ttdeci">auto ToEigen(R &amp;&amp;r) -&gt; Eigen::Map&lt; Eigen::Vector&lt; std::ranges::range_value_t&lt; R &gt;, Eigen::Dynamic &gt; const &gt;</div><div class="ttdoc">Map a range of scalars to an eigen vector of such scalars.</div><div class="ttdef"><b>Definition</b> Eigen.h:28</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 <div class="ttc" id="anamespacepbat_html_ad1e4cb87f58d2ca5b10e5eb342c315e6"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">pbat::Index</a></div><div class="ttdeci">std::ptrdiff_t Index</div><div class="ttdoc">Index type.</div><div class="ttdef"><b>Definition</b> Aliases.h:17</div></div>
-<div class="ttc" id="anamespacepbat_html_adb88e81cb91ca31d044300522f800fd2"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">pbat::Scalar</a></div><div class="ttdeci">double Scalar</div><div class="ttdoc">Scalar type.</div><div class="ttdef"><b>Definition</b> Aliases.h:18</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

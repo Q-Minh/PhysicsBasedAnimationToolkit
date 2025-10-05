@@ -134,8 +134,8 @@ $(function(){initNavTree('dd/d2c/_gradient_8h.html','../../'); initResizable(tru
 
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">Gradient.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -144,21 +144,15 @@ $(function(){initNavTree('dd/d2c/_gradient_8h.html','../../'); initResizable(tru
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d1/ddf/fem_2_concepts_8h_source.html">Concepts.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d0/d66/_shape_functions_8h_source.html">ShapeFunctions.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d2/d76/common_2_eigen_8h_source.html">pbat/common/Eigen.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d1/dba/profiling_2_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&quot;</code><br />
 <code>#include &lt;exception&gt;</code><br />
 <code>#include &lt;fmt/core.h&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d2/d76/common_2_eigen_8h_source.html">pbat/common/Eigen.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../da/d04/_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&gt;</code><br />
 <code>#include &lt;tbb/parallel_for.h&gt;</code><br />
 </div>
 <p><a href="../../dd/d2c/_gradient_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
-Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d16/structpbat_1_1fem_1_1_gradient.html">pbat::fem::Gradient&lt; TMesh &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents an FEM gradient operator \( \mathbf{G} \in \mathbb{R}^{dg \times n} \).  <a href="../../d0/d16/structpbat_1_1fem_1_1_gradient.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d7c/namespacepbat.html">pbat</a></td></tr>
@@ -167,11 +161,36 @@ Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html">pbat::fem</a></td></tr>
 <tr class="memdesc:d0/d07/namespacepbat_1_1fem"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finite Element Method (FEM) <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:aef237cb9105a9129629ddf853789e2af" id="r_aef237cb9105a9129629ddf853789e2af"><td class="memTemplParams" colspan="2">template&lt;CElement TElement, int Dims, class TDerivedE, class TDerivedeg, class TDerivedGNeg, class TDerivedIn, class TDerivedOut&gt; </td></tr>
+<tr class="memitem:aef237cb9105a9129629ddf853789e2af"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html#aef237cb9105a9129629ddf853789e2af">pbat::fem::GemmGradient</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::Index nNodes, Eigen::DenseBase&lt; TDerivedeg &gt; const &amp;eg, Eigen::MatrixBase&lt; TDerivedGNeg &gt; const &amp;GNeg, Eigen::MatrixBase&lt; TDerivedIn &gt; const &amp;X, Eigen::DenseBase&lt; TDerivedOut &gt; &amp;Y)</td></tr>
+<tr class="memdesc:aef237cb9105a9129629ddf853789e2af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute gradient matrix-vector multiply \( Y += \mathbf{G} X \).  <br /></td></tr>
+<tr class="separator:aef237cb9105a9129629ddf853789e2af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add3e207ed8efb4c57f6f54654d2d8c4f" id="r_add3e207ed8efb4c57f6f54654d2d8c4f"><td class="memTemplParams" colspan="2">template&lt;CMesh TMesh, class TDerivedeg, class TDerivedGNeg, class TDerivedIn, class TDerivedOut&gt; </td></tr>
+<tr class="memitem:add3e207ed8efb4c57f6f54654d2d8c4f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html#add3e207ed8efb4c57f6f54654d2d8c4f">pbat::fem::GemmGradient</a> (TMesh const &amp;mesh, Eigen::DenseBase&lt; TDerivedeg &gt; const &amp;eg, Eigen::MatrixBase&lt; TDerivedGNeg &gt; const &amp;GNeg, Eigen::MatrixBase&lt; TDerivedIn &gt; const &amp;X, Eigen::DenseBase&lt; TDerivedOut &gt; &amp;Y)</td></tr>
+<tr class="memdesc:add3e207ed8efb4c57f6f54654d2d8c4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute gradient matrix-vector multiply \( Y += \mathbf{G} X \) using mesh.  <br /></td></tr>
+<tr class="separator:add3e207ed8efb4c57f6f54654d2d8c4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:affcbe99e282a23c2acc4de45fa556715" id="r_affcbe99e282a23c2acc4de45fa556715"><td class="memTemplParams" colspan="2">template&lt;CElement TElement, int Dims, Eigen::StorageOptions Options, class TDerivedE, class TDerivedeg, class TDerivedGNeg&gt; </td></tr>
+<tr class="memitem:affcbe99e282a23c2acc4de45fa556715"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html#affcbe99e282a23c2acc4de45fa556715">pbat::fem::GradientMatrix</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::Index nNodes, Eigen::DenseBase&lt; TDerivedeg &gt; const &amp;eg, Eigen::MatrixBase&lt; TDerivedGNeg &gt; const &amp;GNeg) -&gt; Eigen::SparseMatrix&lt; typename TDerivedGNeg::Scalar, Options, typename TDerivedE::Scalar &gt;</td></tr>
+<tr class="memdesc:affcbe99e282a23c2acc4de45fa556715"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct the gradient operator's sparse matrix representation.  <br /></td></tr>
+<tr class="separator:affcbe99e282a23c2acc4de45fa556715"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a39e559ebafc91633ed9c40c93944bd0f" id="r_a39e559ebafc91633ed9c40c93944bd0f"><td class="memTemplParams" colspan="2">template&lt;Eigen::StorageOptions Options, CMesh TMesh, class TDerivedeg, class TDerivedGNeg&gt; </td></tr>
+<tr class="memitem:a39e559ebafc91633ed9c40c93944bd0f"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html#a39e559ebafc91633ed9c40c93944bd0f">pbat::fem::GradientMatrix</a> (TMesh const &amp;mesh, Eigen::DenseBase&lt; TDerivedeg &gt; const &amp;eg, Eigen::MatrixBase&lt; TDerivedGNeg &gt; const &amp;GNeg) -&gt; Eigen::SparseMatrix&lt; typename TDerivedGNeg::Scalar, Options, typename TMesh::IndexType &gt;</td></tr>
+<tr class="memdesc:a39e559ebafc91633ed9c40c93944bd0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct the gradient operator's sparse matrix representation using mesh.  <br /></td></tr>
+<tr class="separator:a39e559ebafc91633ed9c40c93944bd0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>FEM gradient operator. </p>
 <dl class="section author"><dt>Author</dt><dd>Quoc-Minh Ton-That (<a href="#" onclick="location.href='mai'+'lto:'+'ton'+'th'+'at.'+'qu'+'ocm'+'in'+'h@g'+'ma'+'il.'+'co'+'m'; return false;">tonth<span class="obfuscator">.nosp@m.</span>at.q<span class="obfuscator">.nosp@m.</span>uocmi<span class="obfuscator">.nosp@m.</span>nh@g<span class="obfuscator">.nosp@m.</span>mail.<span class="obfuscator">.nosp@m.</span>com</a>) </dd></dl>
 <dl class="section date"><dt>Date</dt><dd>2025-02-11</dd></dl>
+<p>Given a function \( u(X) \) discretized at mesh nodes \( X_i \),   </p><p class="formulaDsp">
+\[\nabla u(X) = \sum_j u_j \nabla \phi_j(X) \; \forall \; e \in E
+\]
+</p>
+<p> where \( \nabla \phi_j(X) \) is the gradient of the shape function \( \phi_j(X) \) at element \( e \). The gradient operator \( \mathbf{G} \in \mathbb{R}^{d|Q| \times n} \) maps the nodal values to the gradient at quadrature points \( Q \) in dimensions \( d \).</p>
+<p>This file provides functions to compute gradient operator related quantities.</p>
 <dl class="section copyright"><dt>Copyright</dt><dd>Copyright (c) 2025 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- doc-content -->

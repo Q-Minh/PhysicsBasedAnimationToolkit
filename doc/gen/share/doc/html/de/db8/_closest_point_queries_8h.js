@@ -1,5 +1,6 @@
 var _closest_point_queries_8h =
 [
+    [ "pbat::geometry::ClosestPointQueries::Lines", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#aaeea6e8a7f850285e39ec56410e1a9f4", null ],
     [ "pbat::geometry::ClosestPointQueries::PointInTetrahedron", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#ac9377f88e20b763e1be19f7dd03de81c", null ],
     [ "pbat::geometry::ClosestPointQueries::PointInTriangle", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#affa91aae1977b26342000f4f72dc924b", null ],
     [ "pbat::geometry::ClosestPointQueries::PointOnAxisAlignedBoundingBox", "dd/d8a/namespacepbat_1_1geometry_1_1_closest_point_queries.html#a6db9446b378bf60a48b502a284e03e17", null ],

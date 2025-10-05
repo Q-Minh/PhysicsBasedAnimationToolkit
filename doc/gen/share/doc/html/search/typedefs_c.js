@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['realscalar_0',['RealScalar',['../d6/d99/classpbat_1_1math_1_1_linear_operator.html#a4b11f40c697aa37c2651aa7d6cec998a',1,'pbat::math::LinearOperator']]]
+  ['quadrilateral_0',['Quadrilateral',['../d0/d07/namespacepbat_1_1fem.html#a67ce4e8b37937f573f52de3bfaecee37',1,'pbat::fem']]],
+  ['queuetype_1',['QueueType',['../de/db5/structpbat_1_1graph_1_1_breadth_first_search.html#a090bb7e9367f7ddd9f2932ca6b6fb53c',1,'pbat::graph::BreadthFirstSearch']]]
 ];

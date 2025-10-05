@@ -177,8 +177,8 @@ $(function(){initNavTree('de/d36/_transpose_8h_source.html','../../'); initResiz
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = N;</div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = NestedType::bRowMajor;</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    PBAT_HOST_DEVICE ConstTransposeSubMatrix(NestedType <span class="keyword">const</span>&amp; A, <span class="keywordtype">int</span> ib = 0, <span class="keywordtype">int</span> jb = 0)</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>        : A(A), ib(ib), jb(jb)</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    PBAT_HOST_DEVICE ConstTransposeSubMatrix(NestedType <span class="keyword">const</span>&amp; _A, <span class="keywordtype">int</span> _ib = 0, <span class="keywordtype">int</span> _jb = 0)</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>        : A(_A), ib(_ib), jb(_jb)</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    {</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>            NestedType::kRows &gt;= M and NestedType::kCols &gt;= N and M &gt; 0 and N &gt; 0,</div>
@@ -222,8 +222,8 @@ $(function(){initNavTree('de/d36/_transpose_8h_source.html','../../'); initResiz
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = N;</div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = NestedType::bRowMajor;</div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    PBAT_HOST_DEVICE TransposeSubMatrix(NestedType&amp; A, <span class="keywordtype">int</span> ib = 0, <span class="keywordtype">int</span> jb = 0)</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        : A(A), ib(ib), jb(jb)</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    PBAT_HOST_DEVICE TransposeSubMatrix(NestedType&amp; _A, <span class="keywordtype">int</span> _ib = 0, <span class="keywordtype">int</span> _jb = 0)</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        : A(_A), ib(_ib), jb(_jb)</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    {</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>            NestedType::kRows &gt;= M and NestedType::kCols &gt;= N and M &gt; 0 and N &gt; 0,</div>
@@ -289,7 +289,7 @@ $(function(){initNavTree('de/d36/_transpose_8h_source.html','../../'); initResiz
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = NestedType::kRows;</div>
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = not NestedType::bRowMajor;</div>
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span> </div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    PBAT_HOST_DEVICE TransposeView(NestedType&amp; A) : A(A) {}</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    PBAT_HOST_DEVICE TransposeView(NestedType&amp; _A) : A(_A) {}</div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span> </div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    <span class="keyword">template</span> &lt;<span class="keyword">class</span> TOtherMatrix&gt;</div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    PBAT_HOST_DEVICE SelfType&amp; operator=(TOtherMatrix&amp;&amp; B)</div>
@@ -362,7 +362,7 @@ $(function(){initNavTree('de/d36/_transpose_8h_source.html','../../'); initResiz
 <div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = NestedType::kRows;</div>
 <div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = not NestedType::bRowMajor;</div>
 <div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span> </div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    PBAT_HOST_DEVICE ConstTransposeView(NestedType <span class="keyword">const</span>&amp; A) : A(A) {}</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    PBAT_HOST_DEVICE ConstTransposeView(NestedType <span class="keyword">const</span>&amp; _A) : A(_A) {}</div>
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span> </div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    PBAT_HOST_DEVICE <span class="keyword">constexpr</span> <span class="keyword">auto</span> Rows()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> A.Cols(); }</div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    PBAT_HOST_DEVICE <span class="keyword">constexpr</span> <span class="keyword">auto</span> Cols()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> A.Rows(); }</div>
@@ -410,7 +410,7 @@ $(function(){initNavTree('de/d36/_transpose_8h_source.html','../../'); initResiz
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_transpose_sub_matrix_html"><div class="ttname"><a href="../../df/dd5/classpbat_1_1math_1_1linalg_1_1mini_1_1_transpose_sub_matrix.html">pbat::math::linalg::mini::TransposeSubMatrix</a></div><div class="ttdef"><b>Definition</b> Transpose.h:74</div></div>
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_transpose_view_html"><div class="ttname"><a href="../../da/de4/classpbat_1_1math_1_1linalg_1_1mini_1_1_transpose_view.html">pbat::math::linalg::mini::TransposeView</a></div><div class="ttdef"><b>Definition</b> Transpose.h:139</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_1_1linalg_1_1mini_html"><div class="ttname"><a href="../../df/d43/namespacepbat_1_1math_1_1linalg_1_1mini.html">pbat::math::linalg::mini</a></div><div class="ttdoc">Mini linear algebra related functionality.</div><div class="ttdef"><b>Definition</b> Assign.h:12</div></div>
-<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div><div class="ttdef"><b>Definition</b> FilterEigenvalues.h:7</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_html"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html">pbat::math</a></div><div class="ttdoc">Math related functionality.</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 </div><!-- fragment --></div><!-- contents -->

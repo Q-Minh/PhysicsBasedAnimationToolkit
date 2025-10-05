@@ -1,6 +1,9 @@
 var classpbat_1_1gpu_1_1xpbd_1_1_integrator =
 [
+    [ "Data", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#ac989aca6ba25634ef07dc4072afd7ff9", null ],
+    [ "EConstraint", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#aaa13fe7c555e8fee121bc7371c5b3822", null ],
     [ "Integrator", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#a349af035d0c98fc6db358e91907167b9", null ],
+    [ "Integrator", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#a525ca8fd2f92b500ca06c8418d6f26c3", null ],
     [ "GetCompliance", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#af3e0957ad6501b633435fd1362444cd5", null ],
     [ "GetExternalAcceleration", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#a6f788b83f2361af71d711bef85185cad", null ],
     [ "GetLagrangeMultiplier", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#aa57b6744a055bc963e3e0b305394ee3f", null ],
@@ -9,8 +12,7 @@ var classpbat_1_1gpu_1_1xpbd_1_1_integrator =
     [ "GetRestStableGamma", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#aaf09f17d1f8c19c942e4adabc0a08f01", null ],
     [ "GetShapeMatrixInverse", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#a74d5326bc788814c501cffc7de36d2e3", null ],
     [ "GetVelocity", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#a903c2a811507373e0f1a4c47009563ab", null ],
-    [ "GetVertexTetrahedronCollisionCandidates", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#afdf658e420da9ab0867653ec4eb89cf5", null ],
-    [ "GetVertexTriangleContactPairs", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#aa74733cae74b4c4c00d96d5a3d9390f2", null ],
+    [ "operator=", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#a53c4428e41f23eed05b477f07b1fb100", null ],
     [ "Positions", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#a9d32efcb2bd11afc1ebedc4ccf9dd7c1", null ],
     [ "SetCompliance", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#aa8acfe2743d15af99105729667741aef", null ],
     [ "SetExternalAcceleration", "df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html#ad7904e15ba27b9a56e543128754a98c9", null ],

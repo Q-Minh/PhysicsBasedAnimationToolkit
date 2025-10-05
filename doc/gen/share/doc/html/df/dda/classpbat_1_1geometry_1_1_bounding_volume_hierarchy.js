@@ -5,7 +5,7 @@ var classpbat_1_1geometry_1_1_bounding_volume_hierarchy =
     [ "PrimitiveType", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#a1cc2d500243dbb646ea19f05b4fcae3e", null ],
     [ "BoundingVolumeOf", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#a2411b24b598154d4f4f63f6c1baefe53", null ],
     [ "BoundingVolumes", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#a1ddcf07e2aa553b7cfbdad675200ae10", null ],
-    [ "Construct", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#aa33e2a85b380bebb16dace6fe17ab5ac", null ],
+    [ "Construct", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#a1b0bf14d543fa1b5d81842d8b0ebdfe1", null ],
     [ "NearestPrimitivesTo", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#a610e958ee6875ebd52b41070d4991bd0", null ],
     [ "OverlappingPrimitivesImpl", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#aabf91e306d8b51aa514eb82348cbf624", null ],
     [ "Primitive", "df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#a8bb7dd78c9d6bff777a8f28f4277488b", null ],

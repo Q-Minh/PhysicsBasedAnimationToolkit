@@ -7,7 +7,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=11" />
   <meta name="generator" content="Doxygen 1.13.2" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PhysicsBasedAnimationToolkit: pbat::math::linalg::SparsityPattern Class Reference</title>
+  <title>PhysicsBasedAnimationToolkit: pbat::math::linalg::SparsityPattern&lt; TIndex, Options &gt; Class Template Reference</title>
   <link rel="icon" href="../../entei.icon.png" type="image/x-icon" />
   <link href="../../tabs.css" rel="stylesheet" type="text/css" />
   <script type="text/javascript" src="../../jquery.js"></script>
@@ -134,33 +134,92 @@ $(function(){initNavTree('d8/d3b/classpbat_1_1math_1_1linalg_1_1_sparsity_patter
 
 <div class="header">
   <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../dc/d91/classpbat_1_1math_1_1linalg_1_1_sparsity_pattern-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">pbat::math::linalg::SparsityPattern Class Reference</div></div>
+  <div class="headertitle"><div class="title">pbat::math::linalg::SparsityPattern&lt; TIndex, Options &gt; Class Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Sparsity pattern precomputer to accelerate sparse matrix assembly.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../df/de6/_sparsity_pattern_8h_source.html">SparsityPattern.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:a70dd555d01d713cbf3cc7bed57e3b197" id="r_a70dd555d01d713cbf3cc7bed57e3b197"><td class="memItemLeft" align="right" valign="top"><a id="a70dd555d01d713cbf3cc7bed57e3b197" name="a70dd555d01d713cbf3cc7bed57e3b197"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>IndexType</b> = TIndex</td></tr>
+<tr class="memdesc:a70dd555d01d713cbf3cc7bed57e3b197"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> type for the matrix indices. <br /></td></tr>
+<tr class="separator:a70dd555d01d713cbf3cc7bed57e3b197"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbcd8e2942c1b199051f7517cf89ab90" id="r_afbcd8e2942c1b199051f7517cf89ab90"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afbcd8e2942c1b199051f7517cf89ab90">InnerPatternType</a></td></tr>
+<tr class="memdesc:afbcd8e2942c1b199051f7517cf89ab90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of the inner pattern.  <br /></td></tr>
+<tr class="separator:afbcd8e2942c1b199051f7517cf89ab90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a2715d3c62f45b8ad4cb25c78b5f7b784" id="r_a2715d3c62f45b8ad4cb25c78b5f7b784"><td class="memTemplParams" colspan="2"><a id="a2715d3c62f45b8ad4cb25c78b5f7b784" name="a2715d3c62f45b8ad4cb25c78b5f7b784"></a>
+<tr class="memitem:ad188d3d4dc52a68ad9b3c2254eb448f3" id="r_ad188d3d4dc52a68ad9b3c2254eb448f3"><td class="memTemplParams" colspan="2"><a id="ad188d3d4dc52a68ad9b3c2254eb448f3" name="ad188d3d4dc52a68ad9b3c2254eb448f3"></a>
 template&lt;common::CContiguousIndexRange TRowIndexRange, common::CContiguousIndexRange TColIndexRange&gt; </td></tr>
-<tr class="memitem:a2715d3c62f45b8ad4cb25c78b5f7b784"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><b>SparsityPattern</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nRows, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nCols, TRowIndexRange &amp;&amp;rowIndices, TColIndexRange &amp;&amp;colIndices)</td></tr>
-<tr class="separator:a2715d3c62f45b8ad4cb25c78b5f7b784"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af95f0502076bab89cc477587d9e095f2" id="r_af95f0502076bab89cc477587d9e095f2"><td class="memTemplParams" colspan="2"><a id="af95f0502076bab89cc477587d9e095f2" name="af95f0502076bab89cc477587d9e095f2"></a>
+<tr class="memitem:ad188d3d4dc52a68ad9b3c2254eb448f3"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><b>SparsityPattern</b> (<a class="el" href="#a70dd555d01d713cbf3cc7bed57e3b197">IndexType</a> nRows, <a class="el" href="#a70dd555d01d713cbf3cc7bed57e3b197">IndexType</a> nCols, TRowIndexRange &amp;&amp;rowIndices, TColIndexRange &amp;&amp;colIndices)</td></tr>
+<tr class="separator:ad188d3d4dc52a68ad9b3c2254eb448f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad37f053b34de41c95cc93afbbaca32a8" id="r_ad37f053b34de41c95cc93afbbaca32a8"><td class="memTemplParams" colspan="2"><a id="ad37f053b34de41c95cc93afbbaca32a8" name="ad37f053b34de41c95cc93afbbaca32a8"></a>
 template&lt;common::CContiguousIndexRange TRowIndexRange, common::CContiguousIndexRange TColIndexRange&gt; </td></tr>
-<tr class="memitem:af95f0502076bab89cc477587d9e095f2"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Compute</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nRows, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nCols, TRowIndexRange &amp;&amp;rowIndices, TColIndexRange &amp;&amp;colIndices)</td></tr>
-<tr class="separator:af95f0502076bab89cc477587d9e095f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad3bcc8d86973f10012af61aeb9693cb8" id="r_ad3bcc8d86973f10012af61aeb9693cb8"><td class="memTemplParams" colspan="2"><a id="ad3bcc8d86973f10012af61aeb9693cb8" name="ad3bcc8d86973f10012af61aeb9693cb8"></a>
+<tr class="memitem:ad37f053b34de41c95cc93afbbaca32a8"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Compute</b> (<a class="el" href="#a70dd555d01d713cbf3cc7bed57e3b197">IndexType</a> nRows, <a class="el" href="#a70dd555d01d713cbf3cc7bed57e3b197">IndexType</a> nCols, TRowIndexRange &amp;&amp;rowIndices, TColIndexRange &amp;&amp;colIndices)</td></tr>
+<tr class="separator:ad37f053b34de41c95cc93afbbaca32a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5725a1ffdc12ef060a9dde0bb08a9cec" id="r_a5725a1ffdc12ef060a9dde0bb08a9cec"><td class="memTemplParams" colspan="2"><a id="a5725a1ffdc12ef060a9dde0bb08a9cec" name="a5725a1ffdc12ef060a9dde0bb08a9cec"></a>
 template&lt;common::CArithmeticRange TNonZeroRange&gt; </td></tr>
-<tr class="memitem:ad3bcc8d86973f10012af61aeb9693cb8"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a586a2c62c5620091e8310c801123582b">CSCMatrix</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>ToMatrix</b> (TNonZeroRange &amp;&amp;nonZeros) const</td></tr>
-<tr class="separator:ad3bcc8d86973f10012af61aeb9693cb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2e4eb918e1a01f80dccf6938821b43a5" id="r_a2e4eb918e1a01f80dccf6938821b43a5"><td class="memItemLeft" align="right" valign="top"><a id="a2e4eb918e1a01f80dccf6938821b43a5" name="a2e4eb918e1a01f80dccf6938821b43a5"></a>
+<tr class="memitem:a5725a1ffdc12ef060a9dde0bb08a9cec"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>ToMatrix</b> (TNonZeroRange &amp;&amp;nonZeros) const -&gt; Eigen::SparseMatrix&lt; std::ranges::range_value_t&lt; TNonZeroRange &gt;, Options, TIndex &gt;</td></tr>
+<tr class="separator:a5725a1ffdc12ef060a9dde0bb08a9cec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f4d7e650a71c00636456f563699a28d" id="r_a8f4d7e650a71c00636456f563699a28d"><td class="memTemplParams" colspan="2"><a id="a8f4d7e650a71c00636456f563699a28d" name="a8f4d7e650a71c00636456f563699a28d"></a>
+template&lt;common::CArithmeticRange TNonZeroRange, class TDerived&gt; </td></tr>
+<tr class="memitem:a8f4d7e650a71c00636456f563699a28d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>To</b> (TNonZeroRange &amp;&amp;nonZeros, Eigen::SparseCompressedBase&lt; TDerived &gt; &amp;Ain) const</td></tr>
+<tr class="separator:a8f4d7e650a71c00636456f563699a28d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a82b1e2b852948debb8a88a546a0bea21" id="r_a82b1e2b852948debb8a88a546a0bea21"><td class="memTemplParams" colspan="2"><a id="a82b1e2b852948debb8a88a546a0bea21" name="a82b1e2b852948debb8a88a546a0bea21"></a>
+template&lt;common::CArithmeticRange TNonZeroRange, class TDerived&gt; </td></tr>
+<tr class="memitem:a82b1e2b852948debb8a88a546a0bea21"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>AddTo</b> (TNonZeroRange &amp;&amp;nonZeros, Eigen::SparseCompressedBase&lt; TDerived &gt; &amp;Ain) const</td></tr>
+<tr class="separator:a82b1e2b852948debb8a88a546a0bea21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9446a89c2d1a7cbcb060ba6199aca99b" id="r_a9446a89c2d1a7cbcb060ba6199aca99b"><td class="memItemLeft" align="right" valign="top"><a id="a9446a89c2d1a7cbcb060ba6199aca99b" name="a9446a89c2d1a7cbcb060ba6199aca99b"></a>
 PBAT_API bool&#160;</td><td class="memItemRight" valign="bottom"><b>IsEmpty</b> () const</td></tr>
-<tr class="separator:a2e4eb918e1a01f80dccf6938821b43a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a9446a89c2d1a7cbcb060ba6199aca99b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4fb87c3b6a415a244bdcaccdce2a22f5" id="r_a4fb87c3b6a415a244bdcaccdce2a22f5"><td class="memTemplParams" colspan="2"><a id="a4fb87c3b6a415a244bdcaccdce2a22f5" name="a4fb87c3b6a415a244bdcaccdce2a22f5"></a>
+template&lt;common::CFloatingPoint TScalar&gt; </td></tr>
+<tr class="memitem:a4fb87c3b6a415a244bdcaccdce2a22f5"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Pattern</b> () const -&gt; Eigen::SparseMatrix&lt; TScalar, Options, TIndex &gt;</td></tr>
+<tr class="separator:a4fb87c3b6a415a244bdcaccdce2a22f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following files:<ul>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><div class="compoundTemplParams">template&lt;typename TIndex = Index, Eigen::StorageOptions Options = Eigen::ColMajor&gt;<br />
+class pbat::math::linalg::SparsityPattern&lt; TIndex, Options &gt;</div><p>Sparsity pattern precomputer to accelerate sparse matrix assembly. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TScalar</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2" title="Scalar type.">Scalar</a> type for the matrix values </td></tr>
+    <tr><td class="paramname">TIndex</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> type for the matrix indices </td></tr>
+    <tr><td class="paramname">StorageOptions</td><td>Storage options for the Eigen sparse matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="afbcd8e2942c1b199051f7517cf89ab90" name="afbcd8e2942c1b199051f7517cf89ab90"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbcd8e2942c1b199051f7517cf89ab90">&#9670;&#160;</a></span>InnerPatternType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TIndex = Index, Eigen::StorageOptions Options = Eigen::ColMajor&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../d8/d3b/classpbat_1_1math_1_1linalg_1_1_sparsity_pattern.html">pbat::math::linalg::SparsityPattern</a>&lt; TIndex, Options &gt;::InnerPatternType</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> </div>
+<div class="line">        Eigen::SparseMatrix&lt;std::uint8_t, Options, TIndex&gt;</div>
+</div><!-- fragment -->
+<p>Type of the inner pattern. </p>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following file:<ul>
 <li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/<a class="el" href="../../df/de6/_sparsity_pattern_8h_source.html">SparsityPattern.h</a></li>
-<li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/math/linalg/<b>SparsityPattern.cpp</b></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['smallestdegree_0',['SmallestDegree',['../d9/dc9/namespacepbat_1_1graph.html#ac26166ca4b423603403a335c47224b45af833dddbfc0d8a5887bd441ff83f6db8',1,'pbat::graph']]],
-  ['sortedheavyedgematching_1',['SortedHeavyEdgeMatching',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#ae8baa26ec99ba27ebe889eb01bf13867abe88c36f0ece5837cefe7f461787a44b',1,'pbat::graph::PartitioningOptions']]]
+  ['randombisectionandrefinement_0',['RandomBisectionAndRefinement',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#a5b7a7d18643d7c678468daf889e3bca5ad00a549b0e092f8035fc67eed9689b62',1,'pbat::graph::PartitioningOptions']]],
+  ['randommatching_1',['RandomMatching',['../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#ae8baa26ec99ba27ebe889eb01bf13867a43f0360f3d6dd072a905e7bf6343b565',1,'pbat::graph::PartitioningOptions']]]
 ];

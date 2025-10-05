@@ -135,7 +135,6 @@ $(function(){initNavTree('da/dd5/classpbat_1_1geometry_1_1_kd_tree.html','../../
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="../../df/d0f/classpbat_1_1geometry_1_1_kd_tree-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">pbat::geometry::KdTree&lt; Dims &gt; Class Template Reference</div></div>
 </div><!--header-->
@@ -148,44 +147,33 @@ $(function(){initNavTree('da/dd5/classpbat_1_1geometry_1_1_kd_tree.html','../../
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a902b117076a8ace364ad46dc5079f38c" id="r_a902b117076a8ace364ad46dc5079f38c"><td class="memTemplParams" colspan="2">template&lt;class TDerivedP&gt; </td></tr>
-<tr class="memitem:a902b117076a8ace364ad46dc5079f38c"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a902b117076a8ace364ad46dc5079f38c">KdTree</a> (Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, std::size_t maxPointsInLeaf=10)</td></tr>
-<tr class="memdesc:a902b117076a8ace364ad46dc5079f38c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a k-D tree from a set of points.  <br /></td></tr>
-<tr class="separator:a902b117076a8ace364ad46dc5079f38c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8c9ffac50181d0bd12ae924320f66913" id="r_a8c9ffac50181d0bd12ae924320f66913"><td class="memTemplParams" colspan="2">template&lt;class FVisit, class FStop = decltype(fStopDefault)&gt; </td></tr>
-<tr class="memitem:a8c9ffac50181d0bd12ae924320f66913"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8c9ffac50181d0bd12ae924320f66913">BreadthFirstSearch</a> (FVisit visit, FStop stop=fStopDefault, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> root=0) const</td></tr>
-<tr class="memdesc:a8c9ffac50181d0bd12ae924320f66913"><td class="mdescLeft">&#160;</td><td class="mdescRight">Breadth-first search over the k-D tree.  <br /></td></tr>
-<tr class="separator:a8c9ffac50181d0bd12ae924320f66913"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ace9c3069d77ea93618ede0b0b7faf2dd" id="r_ace9c3069d77ea93618ede0b0b7faf2dd"><td class="memTemplParams" colspan="2">template&lt;class FVisit, class FStop = decltype(fStopDefault)&gt; </td></tr>
-<tr class="memitem:ace9c3069d77ea93618ede0b0b7faf2dd"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ace9c3069d77ea93618ede0b0b7faf2dd">DepthFirstSearch</a> (FVisit visit, FStop stop=fStopDefault, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> root=0) const</td></tr>
-<tr class="memdesc:ace9c3069d77ea93618ede0b0b7faf2dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Depth-first search over the k-D tree.  <br /></td></tr>
-<tr class="separator:ace9c3069d77ea93618ede0b0b7faf2dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa730e5bdeca6a00a9892568beb11cadb" id="r_aa730e5bdeca6a00a9892568beb11cadb"><td class="memTemplParams" colspan="2">template&lt;class TDerivedP&gt; </td></tr>
-<tr class="memitem:aa730e5bdeca6a00a9892568beb11cadb"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aa730e5bdeca6a00a9892568beb11cadb">Construct</a> (Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, std::size_t maxPointsInLeaf)</td></tr>
-<tr class="memdesc:aa730e5bdeca6a00a9892568beb11cadb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a k-D tree from a set of points.  <br /></td></tr>
-<tr class="separator:aa730e5bdeca6a00a9892568beb11cadb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a928e1ed1fbbdda527c04926b6a4af19c" id="r_a928e1ed1fbbdda527c04926b6a4af19c"><td class="memTemplParams" colspan="2">template&lt;class TDerivedP&gt; </td></tr>
+<tr class="memitem:a928e1ed1fbbdda527c04926b6a4af19c"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a928e1ed1fbbdda527c04926b6a4af19c">KdTree</a> (Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> maxPointsInLeaf=8)</td></tr>
+<tr class="memdesc:a928e1ed1fbbdda527c04926b6a4af19c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a k-D tree from a set of points.  <br /></td></tr>
+<tr class="separator:a928e1ed1fbbdda527c04926b6a4af19c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5eacbca84d3e82e21f179815383f76ac" id="r_a5eacbca84d3e82e21f179815383f76ac"><td class="memTemplParams" colspan="2">template&lt;class TDerivedP&gt; </td></tr>
+<tr class="memitem:a5eacbca84d3e82e21f179815383f76ac"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a5eacbca84d3e82e21f179815383f76ac">Construct</a> (Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> maxPointsInLeaf)</td></tr>
+<tr class="memdesc:a5eacbca84d3e82e21f179815383f76ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a k-D tree from a set of points.  <br /></td></tr>
+<tr class="separator:a5eacbca84d3e82e21f179815383f76ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0261e592a4509f71d36642e45ffa5517" id="r_a0261e592a4509f71d36642e45ffa5517"><td class="memTemplParams" colspan="2">template&lt;class FVisit&gt; </td></tr>
+<tr class="memitem:a0261e592a4509f71d36642e45ffa5517"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0261e592a4509f71d36642e45ffa5517">DepthFirstSearch</a> (FVisit visit, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> root=0) const</td></tr>
+<tr class="memdesc:a0261e592a4509f71d36642e45ffa5517"><td class="mdescLeft">&#160;</td><td class="mdescRight">Depth-first search over the k-D tree.  <br /></td></tr>
+<tr class="separator:a0261e592a4509f71d36642e45ffa5517"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00f1fb53a4b2de087cc1733dfa12a2ab" id="r_a00f1fb53a4b2de087cc1733dfa12a2ab"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html">KdTreeNode</a> &gt; const &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a00f1fb53a4b2de087cc1733dfa12a2ab">Nodes</a> () const</td></tr>
 <tr class="memdesc:a00f1fb53a4b2de087cc1733dfa12a2ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the nodes of the k-D tree.  <br /></td></tr>
 <tr class="separator:a00f1fb53a4b2de087cc1733dfa12a2ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2013785ae7b3bb58ca9f43fec2e1bc05" id="r_a2013785ae7b3bb58ca9f43fec2e1bc05"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> &gt; const &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2013785ae7b3bb58ca9f43fec2e1bc05">Permutation</a> () const</td></tr>
-<tr class="memdesc:a2013785ae7b3bb58ca9f43fec2e1bc05"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the permutation of the points in the k-D tree.  <br /></td></tr>
-<tr class="separator:a2013785ae7b3bb58ca9f43fec2e1bc05"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18317c3494ae539f366dac100360f9f8" id="r_a18317c3494ae539f366dac100360f9f8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a18317c3494ae539f366dac100360f9f8">Permutation</a> () const</td></tr>
+<tr class="memdesc:a18317c3494ae539f366dac100360f9f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the permutation of the points in the k-D tree.  <br /></td></tr>
+<tr class="separator:a18317c3494ae539f366dac100360f9f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19287131e3bd5d8f9b6d64977d9f363d" id="r_a19287131e3bd5d8f9b6d64977d9f363d"><td class="memItemLeft" align="right" valign="top">auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a19287131e3bd5d8f9b6d64977d9f363d">PointsInNode</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> const nodeIdx) const</td></tr>
 <tr class="memdesc:a19287131e3bd5d8f9b6d64977d9f363d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the points in a node.  <br /></td></tr>
 <tr class="separator:a19287131e3bd5d8f9b6d64977d9f363d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0ec7959d6d57c3c5cd3176bec71dacd4" id="r_a0ec7959d6d57c3c5cd3176bec71dacd4"><td class="memItemLeft" align="right" valign="top">auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0ec7959d6d57c3c5cd3176bec71dacd4">PointsInNode</a> (<a class="el" href="../../df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html">KdTreeNode</a> const &amp;node) const</td></tr>
 <tr class="memdesc:a0ec7959d6d57c3c5cd3176bec71dacd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the points in a node.  <br /></td></tr>
 <tr class="separator:a0ec7959d6d57c3c5cd3176bec71dacd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
-Protected Member Functions</h2></td></tr>
-<tr class="memitem:a0e0237ab432230109f85db88bcfacc93" id="r_a0e0237ab432230109f85db88bcfacc93"><td class="memTemplParams" colspan="2">template&lt;class TDerivedP&gt; </td></tr>
-<tr class="memitem:a0e0237ab432230109f85db88bcfacc93"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0e0237ab432230109f85db88bcfacc93">DoConstruct</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> const nodeIdx, Eigen::DenseBase&lt; TDerivedP &gt; const &amp;P, <a class="el" href="../../d5/d2e/classpbat_1_1geometry_1_1_axis_aligned_bounding_box.html">AxisAlignedBoundingBox</a>&lt; Dims &gt; const &amp;aabb, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> const begin, std::size_t const n, std::size_t maxPointsInLeaf)</td></tr>
-<tr class="memdesc:a0e0237ab432230109f85db88bcfacc93"><td class="mdescLeft">&#160;</td><td class="mdescRight">Recursive construct call that constructs a sub-tree of the full k-D tree.  <br /></td></tr>
-<tr class="separator:a0e0237ab432230109f85db88bcfacc93"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9afbb1955aef32445dfe0d3930685890" id="r_a9afbb1955aef32445dfe0d3930685890"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9afbb1955aef32445dfe0d3930685890">AddNode</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> begin, std::size_t n, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> depth)</td></tr>
-<tr class="memdesc:a9afbb1955aef32445dfe0d3930685890"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a node to the k-D tree's node list.  <br /></td></tr>
-<tr class="separator:a9afbb1955aef32445dfe0d3930685890"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa00c9a4257d48ba1c4a77078f6f1bd5e" id="r_aa00c9a4257d48ba1c4a77078f6f1bd5e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> constexpr&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa00c9a4257d48ba1c4a77078f6f1bd5e">Root</a> () const</td></tr>
+<tr class="memdesc:aa00c9a4257d48ba1c4a77078f6f1bd5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the root node index.  <br /></td></tr>
+<tr class="separator:aa00c9a4257d48ba1c4a77078f6f1bd5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;int Dims&gt;<br />
@@ -197,8 +185,8 @@ class pbat::geometry::KdTree&lt; Dims &gt;</div><p>KDTree class. </p>
   </dd>
 </dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a902b117076a8ace364ad46dc5079f38c" name="a902b117076a8ace364ad46dc5079f38c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a902b117076a8ace364ad46dc5079f38c">&#9670;&#160;</a></span>KdTree()</h2>
+<a id="a928e1ed1fbbdda527c04926b6a4af19c" name="a928e1ed1fbbdda527c04926b6a4af19c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a928e1ed1fbbdda527c04926b6a4af19c">&#9670;&#160;</a></span>KdTree()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -218,7 +206,7 @@ template&lt;class TDerivedP&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>maxPointsInLeaf</em></span><span class="paramdefsep"> = </span><span class="paramdefval">10</span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a></td>          <td class="paramname"><span class="paramname"><em>maxPointsInLeaf</em></span><span class="paramdefsep"> = </span><span class="paramdefval">8</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -246,110 +234,8 @@ template&lt;class TDerivedP&gt; </div>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a9afbb1955aef32445dfe0d3930685890" name="a9afbb1955aef32445dfe0d3930685890"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9afbb1955aef32445dfe0d3930685890">&#9670;&#160;</a></span>AddNode()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;int Dims&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> <a class="el" href="../../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html">pbat::geometry::KdTree</a>&lt; Dims &gt;::AddNode </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a></td>          <td class="paramname"><span class="paramname"><em>begin</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>n</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a></td>          <td class="paramname"><span class="paramname"><em>depth</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel protected">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Adds a node to the k-D tree's node list. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">begin</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of the first point in the permutation list contained in the sub-tree rooted in the added node </td></tr>
-    <tr><td class="paramname">n</td><td>Number of points in the permutation list starting from begin contained in the sub-tree rooted in the added node </td></tr>
-    <tr><td class="paramname">depth</td><td>Depth of the added node in the k-D tree </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of the added node in the k-D tree's node list </dd></dl>
-
-</div>
-</div>
-<a id="a8c9ffac50181d0bd12ae924320f66913" name="a8c9ffac50181d0bd12ae924320f66913"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8c9ffac50181d0bd12ae924320f66913">&#9670;&#160;</a></span>BreadthFirstSearch()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;int Dims&gt; </div>
-<div class="memtemplate">
-template&lt;class FVisit, class FStop&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void <a class="el" href="../../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html">pbat::geometry::KdTree</a>&lt; Dims &gt;::BreadthFirstSearch </td>
-          <td>(</td>
-          <td class="paramtype">FVisit</td>          <td class="paramname"><span class="paramname"><em>visit</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">FStop</td>          <td class="paramname"><span class="paramname"><em>stop</em></span><span class="paramdefsep"> = </span><span class="paramdefval">fStopDefault</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a></td>          <td class="paramname"><span class="paramname"><em>root</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>&#160;) const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Breadth-first search over the k-D tree. </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">FVisit</td><td>Callable with signature <code>bool(<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a>, <a class="el" href="../../df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html" title="Node of a KDTree.">KdTreeNode</a> const&amp;)</code> </td></tr>
-    <tr><td class="paramname">FStop</td><td>Callable with signature <code>bool(<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a>, <a class="el" href="../../df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html" title="Node of a KDTree.">KdTreeNode</a> const&amp;)</code> </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">visit</td><td>Callback invoked when visiting a node. Returns true if the node's children should be visited, false otherwise </td></tr>
-    <tr><td class="paramname">stop</td><td>Callback invoked when visiting a node. Returns true if the search should stop, false otherwise </td></tr>
-    <tr><td class="paramname">root</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of the root node to start the search from </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="aa730e5bdeca6a00a9892568beb11cadb" name="aa730e5bdeca6a00a9892568beb11cadb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa730e5bdeca6a00a9892568beb11cadb">&#9670;&#160;</a></span>Construct()</h2>
+<a id="a5eacbca84d3e82e21f179815383f76ac" name="a5eacbca84d3e82e21f179815383f76ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5eacbca84d3e82e21f179815383f76ac">&#9670;&#160;</a></span>Construct()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -369,7 +255,7 @@ template&lt;class TDerivedP&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>maxPointsInLeaf</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a></td>          <td class="paramname"><span class="paramname"><em>maxPointsInLeaf</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -380,6 +266,11 @@ template&lt;class TDerivedP&gt; </div>
 </div><div class="memdoc">
 
 <p>Construct a k-D tree from a set of points. </p>
+<p>Implements a top-down median splitting strategy to construct the k-D tree. The median is chosen along the largest axis at each node of the tree, where the left child will inherit the parent node's points less than the median and the right child will inherit the rest. At each node, we use std::nth_element, i.e. introselect, which has \( O(n) \) average complexity (and \( O(n) \) worst-case complexity in recent compiler versions, i.e. <a href="https://github.com/microsoft/STL/pull/5100">Microsoft STL</a>), to partition the points in-place. The largest k-D tree occurs when <code>maxPointsInLeaf == 1</code>, and the tree is always a full binary tree with \( 2n - 1 \) nodes.</p>
+<p>Thus, tree construction has \( O(n log(n)) \) average, and \( O(n log^2 n) \) worst-case time complexity.</p>
+<dl class="section note"><dt>Note</dt><dd>For fast construction, radix tree is potentially a better choice. However, our radix tree does not support multiple points per leaf.</dd>
+<dd>
+We could parallelize construction quite easily in the future, since the node ranges are non-overlapping.</dd></dl>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">TDerivedP</td><td>Eigen dense expression type </td></tr>
@@ -396,15 +287,15 @@ template&lt;class TDerivedP&gt; </div>
 
 </div>
 </div>
-<a id="ace9c3069d77ea93618ede0b0b7faf2dd" name="ace9c3069d77ea93618ede0b0b7faf2dd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ace9c3069d77ea93618ede0b0b7faf2dd">&#9670;&#160;</a></span>DepthFirstSearch()</h2>
+<a id="a0261e592a4509f71d36642e45ffa5517" name="a0261e592a4509f71d36642e45ffa5517"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0261e592a4509f71d36642e45ffa5517">&#9670;&#160;</a></span>DepthFirstSearch()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
 template&lt;int Dims&gt; </div>
 <div class="memtemplate">
-template&lt;class FVisit, class FStop&gt; </div>
+template&lt;class FVisit&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -413,11 +304,6 @@ template&lt;class FVisit, class FStop&gt; </div>
           <td class="memname">void <a class="el" href="../../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html">pbat::geometry::KdTree</a>&lt; Dims &gt;::DepthFirstSearch </td>
           <td>(</td>
           <td class="paramtype">FVisit</td>          <td class="paramname"><span class="paramname"><em>visit</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">FStop</td>          <td class="paramname"><span class="paramname"><em>stop</em></span><span class="paramdefsep"> = </span><span class="paramdefval">fStopDefault</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -442,81 +328,8 @@ template&lt;class FVisit, class FStop&gt; </div>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">visit</td><td>Callback invoked when visiting a node. Returns true if the node's children </td></tr>
-    <tr><td class="paramname">stop</td><td>Callback invoked when visiting a node. Returns true if the search should stop, </td></tr>
+    <tr><td class="paramname">visit</td><td>Callback invoked when visiting a node. Returns true if the node's sub-tree should be visited, false otherwise. </td></tr>
     <tr><td class="paramname">root</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of the root node to start the search from </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a0e0237ab432230109f85db88bcfacc93" name="a0e0237ab432230109f85db88bcfacc93"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e0237ab432230109f85db88bcfacc93">&#9670;&#160;</a></span>DoConstruct()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;int Dims&gt; </div>
-<div class="memtemplate">
-template&lt;class TDerivedP&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void <a class="el" href="../../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html">pbat::geometry::KdTree</a>&lt; Dims &gt;::DoConstruct </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> const</td>          <td class="paramname"><span class="paramname"><em>nodeIdx</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>P</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../d5/d2e/classpbat_1_1geometry_1_1_axis_aligned_bounding_box.html">AxisAlignedBoundingBox</a>&lt; Dims &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>aabb</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> const</td>          <td class="paramname"><span class="paramname"><em>begin</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::size_t const</td>          <td class="paramname"><span class="paramname"><em>n</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>maxPointsInLeaf</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel protected">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Recursive construct call that constructs a sub-tree of the full k-D tree. </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">TDerivedP</td><td>Eigen dense expression type </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">nodeIdx</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of the sub-tree root node </td></tr>
-    <tr><td class="paramname">P</td><td>Points to construct the k-D tree from </td></tr>
-    <tr><td class="paramname">aabb</td><td>Axis-aligned bounding box of the points contained in the sub-tree </td></tr>
-    <tr><td class="paramname">begin</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of the first point in the permutation list contained in the sub-tree </td></tr>
-    <tr><td class="paramname">n</td><td>Number of points in the permutation list starting from begin contained in the sub-tree </td></tr>
-    <tr><td class="paramname">maxPointsInLeaf</td><td>Maximum number of points in a leaf node </td></tr>
   </table>
   </dd>
 </dl>
@@ -553,8 +366,8 @@ template&lt;int Dims&gt; </div>
 
 </div>
 </div>
-<a id="a2013785ae7b3bb58ca9f43fec2e1bc05" name="a2013785ae7b3bb58ca9f43fec2e1bc05"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2013785ae7b3bb58ca9f43fec2e1bc05">&#9670;&#160;</a></span>Permutation()</h2>
+<a id="a18317c3494ae539f366dac100360f9f8" name="a18317c3494ae539f366dac100360f9f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a18317c3494ae539f366dac100360f9f8">&#9670;&#160;</a></span>Permutation()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -565,7 +378,7 @@ template&lt;int Dims&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> &gt; const  &amp; <a class="el" href="../../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html">pbat::geometry::KdTree</a>&lt; Dims &gt;::Permutation </td>
+          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const  &amp; <a class="el" href="../../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html">pbat::geometry::KdTree</a>&lt; Dims &gt;::Permutation </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
@@ -579,7 +392,7 @@ template&lt;int Dims&gt; </div>
 </div><div class="memdoc">
 
 <p>Returns the permutation of the points in the k-D tree. </p>
-<p>The permutation is such that mPermutation[i] gives the index of point i in the original point set given to <a class="el" href="#aa730e5bdeca6a00a9892568beb11cadb" title="Construct a k-D tree from a set of points.">Construct()</a>.</p>
+<p>The permutation is such that mPermutation[i] gives the index of point i in the original point set given to <a class="el" href="#a5eacbca84d3e82e21f179815383f76ac" title="Construct a k-D tree from a set of points.">Construct()</a>.</p>
 <dl class="section return"><dt>Returns</dt><dd>Permutation of the points in the k-D tree </dd></dl>
 
 </div>
@@ -653,6 +466,36 @@ template&lt;int Dims&gt; </div>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Range of points in the node </dd></dl>
+
+</div>
+</div>
+<a id="aa00c9a4257d48ba1c4a77078f6f1bd5e" name="aa00c9a4257d48ba1c4a77078f6f1bd5e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa00c9a4257d48ba1c4a77078f6f1bd5e">&#9670;&#160;</a></span>Root()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;int Dims&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> constexpr <a class="el" href="../../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html">pbat::geometry::KdTree</a>&lt; Dims &gt;::Root </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the root node index. </p>
+<dl class="section return"><dt>Returns</dt><dd>Root node index </dd></dl>
 
 </div>
 </div>

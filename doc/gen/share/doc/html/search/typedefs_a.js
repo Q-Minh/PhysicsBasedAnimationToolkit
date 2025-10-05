@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['primitivetype_0',['PrimitiveType',['../df/dda/classpbat_1_1geometry_1_1_bounding_volume_hierarchy.html#a1cc2d500243dbb646ea19f05b4fcae3e',1,'pbat::geometry::BoundingVolumeHierarchy']]]
+  ['object_0',['Object',['../d0/de5/classpbat_1_1io_1_1_archive.html#a53c36711e74742e53b979d1d573f7790',1,'pbat::io::Archive']]]
 ];

@@ -136,6 +136,7 @@ $(function(){initNavTree('dd/da9/namespacepbat_1_1math_1_1linalg.html','../../')
   <div class="summary">
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">pbat::math::linalg Namespace Reference</div></div>
 </div><!--header-->
@@ -153,18 +154,80 @@ Namespaces</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classpbat_1_1math_1_1linalg_1_1_sparsity_pattern.html">SparsityPattern</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sparsity pattern precomputer to accelerate sparse matrix assembly.  <a href="../../d8/d3b/classpbat_1_1math_1_1linalg_1_1_sparsity_pattern.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a43131897e77a407759e1f03586ec6138" id="r_a43131897e77a407759e1f03586ec6138"><td class="memItemLeft" align="right" valign="top"><a id="a43131897e77a407759e1f03586ec6138" name="a43131897e77a407759e1f03586ec6138"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a43131897e77a407759e1f03586ec6138">EEigenvalueFilter</a> { <b>None</b>
+, <b>SpdProjection</b>
+, <b>FlipNegative</b>
+ }</td></tr>
+<tr class="memdesc:a43131897e77a407759e1f03586ec6138"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bit-flag enum for SPD projection type. <br /></td></tr>
+<tr class="separator:a43131897e77a407759e1f03586ec6138"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:af09d4a32a9509c8fa32a9fedb7fe7554" id="r_af09d4a32a9509c8fa32a9fedb7fe7554"><td class="memTemplParams" colspan="2">template&lt;class TDerivedA, class TDerivedB&gt; </td></tr>
+<tr class="memitem:af09d4a32a9509c8fa32a9fedb7fe7554"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af09d4a32a9509c8fa32a9fedb7fe7554">FilterEigenvalues</a> (Eigen::MatrixBase&lt; TDerivedA &gt; const &amp;A, <a class="el" href="#a43131897e77a407759e1f03586ec6138">EEigenvalueFilter</a> mode, Eigen::MatrixBase&lt; TDerivedB &gt; &amp;B)</td></tr>
+<tr class="memdesc:af09d4a32a9509c8fa32a9fedb7fe7554"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter eigenvalues of a symmetric matrix A and store the result in B.  <br /></td></tr>
+<tr class="separator:af09d4a32a9509c8fa32a9fedb7fe7554"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a18de6b48bf1677ec4a419bd5a3b1d99c" id="r_a18de6b48bf1677ec4a419bd5a3b1d99c"><td class="memTemplParams" colspan="2">template&lt;class TDerivedC&gt; </td></tr>
 <tr class="memitem:a18de6b48bf1677ec4a419bd5a3b1d99c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a586a2c62c5620091e8310c801123582b">CSCMatrix</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a18de6b48bf1677ec4a419bd5a3b1d99c">SelectionMatrix</a> (Eigen::DenseBase&lt; TDerivedC &gt; const &amp;C, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> n=<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>(-1))</td></tr>
-<tr class="memdesc:a18de6b48bf1677ec4a419bd5a3b1d99c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct the selection matrix S s.t. X*S selects all columns E of X.  <br /></td></tr>
+<tr class="memdesc:a18de6b48bf1677ec4a419bd5a3b1d99c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct the selection matrix S s.t. X*S selects all columns C of X.  <br /></td></tr>
 <tr class="separator:a18de6b48bf1677ec4a419bd5a3b1d99c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Linear Algebra related functionality. </p>
 </div><h2 class="groupheader">Function Documentation</h2>
+<a id="af09d4a32a9509c8fa32a9fedb7fe7554" name="af09d4a32a9509c8fa32a9fedb7fe7554"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af09d4a32a9509c8fa32a9fedb7fe7554">&#9670;&#160;</a></span>FilterEigenvalues()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class TDerivedA, class TDerivedB&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">bool pbat::math::linalg::FilterEigenvalues </td>
+          <td>(</td>
+          <td class="paramtype">Eigen::MatrixBase&lt; TDerivedA &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>A</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#a43131897e77a407759e1f03586ec6138">EEigenvalueFilter</a></td>          <td class="paramname"><span class="paramname"><em>mode</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Eigen::MatrixBase&lt; TDerivedB &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>B</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Filter eigenvalues of a symmetric matrix A and store the result in B. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TDerivedA</td><td>Type of the input matrix A </td></tr>
+    <tr><td class="paramname">TDerivedB</td><td>Type of the output matrix B </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">A</td><td>Input matrix </td></tr>
+    <tr><td class="paramname">mode</td><td>Eigenvalue filtering mode </td></tr>
+    <tr><td class="paramname">B</td><td>Output matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if filtering occured successfully </dd>
+<dd>
+false if failed (e.g. eigen decomposition failed) </dd></dl>
+
+</div>
+</div>
 <a id="a18de6b48bf1677ec4a419bd5a3b1d99c" name="a18de6b48bf1677ec4a419bd5a3b1d99c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a18de6b48bf1677ec4a419bd5a3b1d99c">&#9670;&#160;</a></span>SelectionMatrix()</h2>
 
@@ -186,21 +249,21 @@ template&lt;class TDerivedC&gt; </div>
       </table>
 </div><div class="memdoc">
 
-<p>Construct the selection matrix S s.t. X*S selects all columns E of X. </p>
+<p>Construct the selection matrix S s.t. X*S selects all columns C of X. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">TDerivedC</td><td></td></tr>
+    <tr><td class="paramname">TDerivedC</td><td>Type of the index vector </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">C</td><td></td></tr>
-    <tr><td class="paramname">n</td><td></td></tr>
+    <tr><td class="paramname">C</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8" title="Fixed-size vector type.">Vector</a> of indices </td></tr>
+    <tr><td class="paramname">n</td><td>Number of rows in the selection matrix </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>n x |C|</code> selection matrix </dd></dl>
 
 </div>
 </div>

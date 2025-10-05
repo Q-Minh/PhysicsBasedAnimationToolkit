@@ -163,7 +163,7 @@ $(function(){initNavTree('d9/da7/_cast_8h_source.html','../../'); initResizable(
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = NestedType::kCols;</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = NestedType::bRowMajor;</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    PBAT_HOST_DEVICE CastView(NestedType <span class="keyword">const</span>&amp; A) : A(A) {}</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    PBAT_HOST_DEVICE CastView(NestedType <span class="keyword">const</span>&amp; _A) : A(_A) {}</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    PBAT_HOST_DEVICE ScalarType operator()(<span class="keyword">auto</span> i, <span class="keyword">auto</span> j)<span class="keyword"> const</span></div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keyword">    </span>{</div>
@@ -196,7 +196,7 @@ $(function(){initNavTree('d9/da7/_cast_8h_source.html','../../'); initResizable(
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_MATH_LINALG_MINI_CAST_H</span></div>
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_cast_view_html"><div class="ttname"><a href="../../de/d1e/classpbat_1_1math_1_1linalg_1_1mini_1_1_cast_view.html">pbat::math::linalg::mini::CastView</a></div><div class="ttdef"><b>Definition</b> Cast.h:17</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_1_1linalg_1_1mini_html"><div class="ttname"><a href="../../df/d43/namespacepbat_1_1math_1_1linalg_1_1mini.html">pbat::math::linalg::mini</a></div><div class="ttdoc">Mini linear algebra related functionality.</div><div class="ttdef"><b>Definition</b> Assign.h:12</div></div>
-<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div><div class="ttdef"><b>Definition</b> FilterEigenvalues.h:7</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_html"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html">pbat::math</a></div><div class="ttdoc">Math related functionality.</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 </div><!-- fragment --></div><!-- contents -->

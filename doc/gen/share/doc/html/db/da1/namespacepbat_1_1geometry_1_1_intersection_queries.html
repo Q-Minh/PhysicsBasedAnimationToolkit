@@ -172,10 +172,10 @@ Functions</h2></td></tr>
 <tr class="memitem:a8a6f5c0a31c71a6f077b069b404d8068"><td class="memTemplItemLeft" align="right" valign="top">PBAT_HOST_DEVICE auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8a6f5c0a31c71a6f077b069b404d8068">UvwLineTriangle3D</a> (TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C) -&gt; std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, 3 &gt; &gt;</td></tr>
 <tr class="memdesc:a8a6f5c0a31c71a6f077b069b404d8068"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the intersection point, if any, between a line including points P,Q and a triangle ABC, in 3D.  <br /></td></tr>
 <tr class="separator:a8a6f5c0a31c71a6f077b069b404d8068"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac3876df0528e32568be63753af485fa0" id="r_ac3876df0528e32568be63753af485fa0"><td class="memTemplParams" colspan="2">template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixA, mini::CMatrix TMatrixB, mini::CMatrix TMatrixC&gt; </td></tr>
-<tr class="memitem:ac3876df0528e32568be63753af485fa0"><td class="memTemplItemLeft" align="right" valign="top">PBAT_HOST_DEVICE auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac3876df0528e32568be63753af485fa0">UvwLineSegmentTriangle3D</a> (TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C) -&gt; std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, 3 &gt; &gt;</td></tr>
-<tr class="memdesc:ac3876df0528e32568be63753af485fa0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the intersection point, if any, between a line segment delimited by points P,Q and a triangle ABC, in 3D.  <br /></td></tr>
-<tr class="separator:ac3876df0528e32568be63753af485fa0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a659797a96b1ed5fc8a1e14b2361dd236" id="r_a659797a96b1ed5fc8a1e14b2361dd236"><td class="memTemplParams" colspan="2">template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatrixA, mini::CMatrix TMatrixB, mini::CMatrix TMatrixC&gt; </td></tr>
+<tr class="memitem:a659797a96b1ed5fc8a1e14b2361dd236"><td class="memTemplItemLeft" align="right" valign="top">PBAT_HOST_DEVICE auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a659797a96b1ed5fc8a1e14b2361dd236">UvwLineSegmentTriangle3D</a> (TMatrixP const &amp;P, TMatrixQ const &amp;Q, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C) -&gt; std::optional&lt; mini::SVector&lt; typename TMatrixP::ScalarType, 4 &gt; &gt;</td></tr>
+<tr class="memdesc:a659797a96b1ed5fc8a1e14b2361dd236"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the intersection point, if any, between a line segment delimited by points P,Q and a triangle ABC, in 3D.  <br /></td></tr>
+<tr class="separator:a659797a96b1ed5fc8a1e14b2361dd236"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9c0a65287893f227d8399cac0e272082" id="r_a9c0a65287893f227d8399cac0e272082"><td class="memTemplParams" colspan="2">template&lt;mini::CMatrix TMatrixA1, mini::CMatrix TMatrixB1, mini::CMatrix TMatrixC1, mini::CMatrix TMatrixA2, mini::CMatrix TMatrixB2, mini::CMatrix TMatrixC2&gt; </td></tr>
 <tr class="memitem:a9c0a65287893f227d8399cac0e272082"><td class="memTemplItemLeft" align="right" valign="top">PBAT_HOST_DEVICE auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9c0a65287893f227d8399cac0e272082">UvwTriangles3D</a> (TMatrixA1 const &amp;A1, TMatrixB1 const &amp;B1, TMatrixC1 const &amp;C1, TMatrixA2 const &amp;A2, TMatrixB2 const &amp;B2, TMatrixC2 const &amp;C2) -&gt; std::array&lt; std::optional&lt; mini::SVector&lt; typename TMatrixA1::ScalarType, 3 &gt; &gt;, 6u &gt;</td></tr>
 <tr class="memdesc:a9c0a65287893f227d8399cac0e272082"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes intersection points between 3 edges (as line segments) of triangle A1B1C1 and triangle A2B2C2, and intersection points between 3 edges (as line segments) of triangle A2B2C2 and triangle A1B1C1, in 3D.  <br /></td></tr>
@@ -503,8 +503,8 @@ template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixA, mini::CMatrix TMatri
 
 </div>
 </div>
-<a id="ac3876df0528e32568be63753af485fa0" name="ac3876df0528e32568be63753af485fa0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac3876df0528e32568be63753af485fa0">&#9670;&#160;</a></span>UvwLineSegmentTriangle3D()</h2>
+<a id="a659797a96b1ed5fc8a1e14b2361dd236" name="a659797a96b1ed5fc8a1e14b2361dd236"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a659797a96b1ed5fc8a1e14b2361dd236">&#9670;&#160;</a></span>UvwLineSegmentTriangle3D()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -534,7 +534,7 @@ template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatri
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">TMatrixC const &amp;</td>          <td class="paramname"><span class="paramname"><em>C</em></span>&#160;) -&gt; std::optional&lt;mini::SVector&lt;typename TMatrixP::ScalarType, 3&gt;&gt;</td>
+          <td class="paramtype">TMatrixC const &amp;</td>          <td class="paramname"><span class="paramname"><em>C</em></span>&#160;) -&gt; std::optional&lt;mini::SVector&lt;typename TMatrixP::ScalarType, 4&gt;&gt;</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -560,7 +560,7 @@ template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatri
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>The intersection point, if any </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The intersection point as a 4-vector, if any, where the last 3 elements are the barycentric coordinates of the intersection point with respect to the triangle ABC, and the first element is the barycentric coordinate of the intersection point with respect to line segment PQ </dd></dl>
 
 </div>
 </div>
@@ -622,7 +622,7 @@ template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ, mini::CMatrix TMatri
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The intersection point, if any </dd></dl>
-<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[3]</a> section 5.3.4</p>
+<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[5]</a> section 5.3.4</p>
 
 </div>
 </div>

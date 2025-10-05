@@ -168,10 +168,134 @@ Functions</h2></td></tr>
 <tr class="memitem:ac9377f88e20b763e1be19f7dd03de81c"><td class="memTemplItemLeft" align="right" valign="top">PBAT_HOST_DEVICE auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac9377f88e20b763e1be19f7dd03de81c">PointInTetrahedron</a> (TMatrixP const &amp;P, TMatrixA const &amp;A, TMatrixB const &amp;B, TMatrixC const &amp;C, TMatrixD const &amp;D) -&gt; mini::SVector&lt; typename TMatrixP::ScalarType, TMatrixP::kRows &gt;</td></tr>
 <tr class="memdesc:ac9377f88e20b763e1be19f7dd03de81c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the point in the tetrahedron ABCD closest to the point P. The order of ABCD must be such that all faces ABC, ACD, ADB and BDC are oriented with outwards pointing normals when viewed from outside the tetrahedron.  <br /></td></tr>
 <tr class="separator:ac9377f88e20b763e1be19f7dd03de81c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaeea6e8a7f850285e39ec56410e1a9f4" id="r_aaeea6e8a7f850285e39ec56410e1a9f4"><td class="memTemplParams" colspan="2">template&lt;mini::CMatrix TMatrixP1, mini::CMatrix TMatrixQ1, mini::CMatrix TMatrixP2, mini::CMatrix TMatrixQ2, class TScalar = typename TMatrixP1::ScalarType&gt; </td></tr>
+<tr class="memitem:aaeea6e8a7f850285e39ec56410e1a9f4"><td class="memTemplItemLeft" align="right" valign="top">PBAT_HOST_DEVICE auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aaeea6e8a7f850285e39ec56410e1a9f4">Lines</a> (TMatrixP1 const &amp;P1, TMatrixQ1 const &amp;Q1, TMatrixP2 const &amp;P2, TMatrixQ2 const &amp;Q2, TScalar eps=std::numeric_limits&lt; TScalar &gt;::min()) -&gt; mini::SVector&lt; TScalar, 2 &gt;</td></tr>
+<tr class="memdesc:aaeea6e8a7f850285e39ec56410e1a9f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find closest points on two lines defined by points P1, Q1 and P2, Q2.  <br /></td></tr>
+<tr class="separator:aaeea6e8a7f850285e39ec56410e1a9f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This namespace contains functions to answer closest point queries. </p>
 </div><h2 class="groupheader">Function Documentation</h2>
+<a id="aaeea6e8a7f850285e39ec56410e1a9f4" name="aaeea6e8a7f850285e39ec56410e1a9f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaeea6e8a7f850285e39ec56410e1a9f4">&#9670;&#160;</a></span>Lines()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;mini::CMatrix TMatrixP1, mini::CMatrix TMatrixQ1, mini::CMatrix TMatrixP2, mini::CMatrix TMatrixQ2, class TScalar = typename TMatrixP1::ScalarType&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_HOST_DEVICE auto pbat::geometry::ClosestPointQueries::Lines </td>
+          <td>(</td>
+          <td class="paramtype">TMatrixP1 const &amp;</td>          <td class="paramname"><span class="paramname"><em>P1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">TMatrixQ1 const &amp;</td>          <td class="paramname"><span class="paramname"><em>Q1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">TMatrixP2 const &amp;</td>          <td class="paramname"><span class="paramname"><em>P2</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">TMatrixQ2 const &amp;</td>          <td class="paramname"><span class="paramname"><em>Q2</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">TScalar</td>          <td class="paramname"><span class="paramname"><em>eps</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::numeric_limits&lt;TScalar&gt;::min()</span>&#160;) -&gt; mini::SVector&lt;TScalar, 2&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Find closest points on two lines defined by points P1, Q1 and P2, Q2. </p>
+<p>We find closest points by minimizing      </p><p class="formulaDsp">
+\[\begin{align*}
+f(\alpha, \beta) &amp;= | (P1 + \alpha d_1) - (P2 + \beta d_2) |^2 \\
+&amp;= | (P1 - P2) + (\alpha d_1 - \beta d_2) |^2 ,
+\end{align*}
+\]
+</p>
+<p> where \( d_1 = Q1 - P1 \) and \( d_2 = Q2 - P2 \).</p>
+<p>We can expand \( f \) to obtain        </p><p class="formulaDsp">
+\[\begin{align*}
+f(\alpha,\beta) &amp;= |P1-P2|^2 + 2 (P1-P2)^T (\alpha d_1 - \beta d_2) + | (\alpha d_1 - \beta d_2)
+|^2 \\
+&amp;= |P1-P2|^2 + 2 (P1-P2)^T (\alpha d_1 - \beta d_2) + \alpha^2 |d_1|^2 - 2 \alpha \beta d_1^T d_2
++ \beta^2 |d_2|^2 .
+\end{align*}
+\]
+</p>
+<p>The gradients are thus      </p><p class="formulaDsp">
+\[\begin{align*}
+\frac{\partial f}{\partial \alpha} &amp;= 2 (P1-P2)^T d_1 + 2 \alpha |d_1|^2 - 2 \beta d_1^T d_2 \\
+\frac{\partial f}{\partial \beta} &amp;= -2 (P1-P2)^T d_2 - 2 \alpha d_1^T d_2 + 2 \beta |d_2|^2
+\end{align*}
+\]
+</p>
+<p>Setting the gradients to zero, we obtain the following equations       </p><p class="formulaDsp">
+\[\begin{align*}
+\beta &amp;= \frac{(P1-P2)^T d_2 + \alpha d_1^T d_2}{|d_2|^2} \\
+&amp;= \frac{(P1-P2+\alpha d_1)^T d_2}{|d_2|^2} \\
+\alpha &amp;= \frac{\beta d_1^T d_2 - (P1-P2)^T d_1}{|d_1|^2} .
+\end{align*}
+\]
+</p>
+<p>Injecting the first equation into the second, we obtain             </p><p class="formulaDsp">
+\[\begin{align*}
+\alpha &amp;= \frac{-(P1-P2)^T d_1}{|d_1|^2} + \frac{(P1-P2)^T d_2 + \alpha d_1^T d_2}{|d_1|^2
+|d_2|^2} d_1^T d_2 \\
+\alpha &amp;= \frac{-(P1-P2)^T d_1}{|d_1|^2} + \frac{(P1-P2)^T d_2}{|d_1|^2 |d_2|^2} d_1^T d_2 +
+\alpha \frac{(d_1^T d_2)^2}{|d_1|^2 |d_2|^2} \\
+(1 - \frac{(d_1^T d_2)^2}{|d_1|^2 |d_2|^2}) \alpha &amp;= \frac{-(P1-P2)^T d_1}{|d_1|^2} +
+\frac{(P1-P2)^T d_2}{|d_1|^2 |d_2|^2} d_1^T d_2 \\
+(1 - \frac{(d_1^T d_2)^2}{|d_1|^2 |d_2|^2}) \alpha &amp;= \frac{(P1-P2)^T (d_2 d_1^T d_2 - |d_2|^2
+d_1)}{|d_1|^2 |d_2|^2} \\
+(|d_1|^2 |d_2|^2 - (d_1^T d_2)^2) \alpha &amp;= (P1-P2)^T (d_2 d_1^T d_2 - |d_2|^2 d_1) .
+\end{align*}
+\]
+</p>
+<p> which allows solving for \( \alpha \) first, then \( \beta \).</p>
+<p>Note that if the lines are parallel, then by definition,        </p><p class="formulaDsp">
+\[\begin{align*}
+d_1^T d_2 &amp;= |d_1| |d_2| \cos(\theta) \\
+&amp;= |d_1| |d_2| \\
+(d_1^T d_2)^2 &amp;= |d_1|^2 |d_2|^2 \\
+|d_1|^2 |d_2|^2 - (d_1^T d_2)^2 &amp;= 0 .
+\end{align*}
+\]
+</p>
+<p>In that case, we choose \( \alpha = 0 \) and return the corresponding \( \beta \). If any line \( d_i = 0 \), it is degenerated into a point. In that case, we choose the closest point on the other line. If both lines are degenerated into points, the solution is \( \alpha, \beta = 0 \).</p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TMatrixP1</td><td>Type of the input matrix P1 </td></tr>
+    <tr><td class="paramname">TMatrixQ1</td><td>Type of the input matrix Q1 </td></tr>
+    <tr><td class="paramname">TMatrixP2</td><td>Type of the input matrix P2 </td></tr>
+    <tr><td class="paramname">TMatrixQ2</td><td>Type of the input matrix Q2 </td></tr>
+    <tr><td class="paramname">TScalar</td><td>Type of the scalar </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">P1</td><td>Point 1 on line 1 </td></tr>
+    <tr><td class="paramname">Q1</td><td>Point 2 on line 1 </td></tr>
+    <tr><td class="paramname">P2</td><td>Point 1 on line 2 </td></tr>
+    <tr><td class="paramname">Q2</td><td>Point 2 on line 2 </td></tr>
+    <tr><td class="paramname">eps</td><td>Numerical error tolerance for zero checks </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>2-vector \( (\alpha, \beta) \) such that the closest points are  \( P1 + \alpha * (Q1 -
+P1) \) and \( P2 + \beta * (Q2 - P2) \) </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>eps &gt;= 0</code> </dd></dl>
+
+</div>
+</div>
 <a id="ac9377f88e20b763e1be19f7dd03de81c" name="ac9377f88e20b763e1be19f7dd03de81c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac9377f88e20b763e1be19f7dd03de81c">&#9670;&#160;</a></span>PointInTetrahedron()</h2>
 
@@ -230,7 +354,7 @@ template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixA, mini::CMatrix TMatri
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Point in the tetrahedron closest to P </dd></dl>
-<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[3]</a> section 5.16</p>
+<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[5]</a> section 5.16</p>
 
 </div>
 </div>
@@ -332,7 +456,7 @@ template&lt;mini::CMatrix TMatrixX, mini::CMatrix TMatrixL, mini::CMatrix TMatri
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Point on the AABB closest to X </dd></dl>
-<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[3]</a> section 5.13</p>
+<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[5]</a> section 5.13</p>
 
 </div>
 </div>
@@ -380,7 +504,7 @@ template&lt;mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatri
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Point on the line segment closest to X </dd></dl>
-<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[3]</a> section 5.12</p>
+<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[5]</a> section 5.12</p>
 
 </div>
 </div>
@@ -428,7 +552,7 @@ template&lt;mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatri
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Point on the plane closest to X </dd></dl>
-<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[3]</a> section 5.11</p>
+<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[5]</a> section 5.11</p>
 
 </div>
 </div>
@@ -483,7 +607,7 @@ template&lt;mini::CMatrix TMatrixP, mini::CMatrix TMatrixA, mini::CMatrix TMatri
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Barycentric coordinates of the point in the triangle closest to P </dd></dl>
-<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[3]</a> section 5.15</p>
+<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[5]</a> section 5.15</p>
 
 </div>
 </div>

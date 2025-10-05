@@ -141,77 +141,64 @@ $(function(){initNavTree('d1/ddf/fem_2_concepts_8h_source.html','../../'); initR
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#ifndef PBAT_FEM_CONCEPTS_H</span></div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#define PBAT_FEM_CONCEPTS_H</span></div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;concepts&gt;</span></div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &lt;<a class="code" href="../../d8/dc4/_aliases_8h.html">pbat/Aliases.h</a>&gt;</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#include &lt;<a class="code" href="../../d5/d56/common_2_concepts_8h.html">pbat/common/Concepts.h</a>&gt;</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d0/d7c/namespacepbat.html">pbat</a> {</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &quot;<a class="code" href="../../d8/dc4/_aliases_8h.html">pbat/Aliases.h</a>&quot;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &quot;<a class="code" href="../../d5/d56/common_2_concepts_8h.html">pbat/common/Concepts.h</a>&quot;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &lt;concepts&gt;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
 <div class="foldopen" id="foldopen00019" data-start="{" data-end="}">
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno"><a class="line" href="../../d0/d07/namespacepbat_1_1fem.html">   19</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d0/d07/namespacepbat_1_1fem.html">fem</a> {</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno"><a class="line" href="../../d0/d07/namespacepbat_1_1fem.html">   19</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d0/d07/namespacepbat_1_1fem.html">pbat::fem</a> {</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span></div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span><span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="foldopen" id="foldopen00062" data-start="{" data-end="}">
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno"><a class="line" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">   62</a></span><span class="keyword">concept </span><a class="code hl_concept" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">CElement</a> = <span class="keyword">requires</span>(T t)</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>{</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="keyword">typename</span> T::AffineBaseType;</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    {</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>        T::bHasConstantJacobian</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    } -&gt; std::convertible_to&lt;bool&gt;;</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="comment">// Should be valid for argument &gt; 1 as well, but we don&#39;t check that.</span></div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keyword">typename</span> T::template QuadratureType&lt;1&gt;;</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    {</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>        T::kOrder</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    {</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>        T::kDims</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    {</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>        T::kNodes</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../da/d2e/conceptpbat_1_1common_1_1_c_contiguous_index_range.html">common::CContiguousIndexRange</a>&lt;<span class="keyword">decltype</span>(T::Coordinates)&gt;;</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../da/d2e/conceptpbat_1_1common_1_1_c_contiguous_index_range.html">common::CContiguousIndexRange</a>&lt;<span class="keyword">decltype</span>(T::Vertices)&gt;;</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    {</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>        t.N(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    } -&gt; std::convertible_to&lt;Vector&lt;T::kNodes&gt;&gt;;</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    {</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        t.GradN(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    } -&gt; std::convertible_to&lt;Matrix&lt;T::kNodes, T::kDims&gt;&gt;;</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>};</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span><span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="foldopen" id="foldopen00063" data-start="{" data-end="}">
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno"><a class="line" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">   63</a></span><span class="keyword">concept </span><a class="code hl_concept" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">CElement</a> = <span class="keyword">requires</span>(T t)</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>{</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="keyword">typename</span> T::AffineBaseType;</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    {T::bHasConstantJacobian}-&gt;std::convertible_to&lt;<span class="keywordtype">bool</span>&gt;;</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="comment">// Should be valid for argument &gt; 1 as well, but we don&#39;t check that.</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keyword">typename</span> T::template QuadratureType&lt;1, Scalar&gt;;</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    {T::kOrder}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    {T::kDims}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    {T::kNodes}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../da/d2e/conceptpbat_1_1common_1_1_c_contiguous_index_range.html">common::CContiguousIndexRange</a>&lt;<span class="keyword">decltype</span>(T::Coordinates)&gt;;</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../da/d2e/conceptpbat_1_1common_1_1_c_contiguous_index_range.html">common::CContiguousIndexRange</a>&lt;<span class="keyword">decltype</span>(T::Vertices)&gt;;</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    {t.N(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})}-&gt;std::convertible_to&lt;<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kNodes&gt;</a>&gt;;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    {t.GradN(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})}-&gt;std::convertible_to&lt;<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af27842f3602e4a1729856deb55012fe7">Matrix&lt;T::kNodes, T::kDims&gt;</a>&gt;;</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>};</div>
 </div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span></div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span><span class="keyword">template</span> &lt;<span class="keyword">class</span> M&gt;</div>
-<div class="foldopen" id="foldopen00095" data-start="{" data-end="}">
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno"><a class="line" href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">   95</a></span><span class="keyword">concept </span><a class="code hl_concept" href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">CMesh</a> = <span class="keyword">requires</span>(M m)</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>{</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">CElement&lt;typename M::ElementType&gt;</a>;</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    {</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        M::kDims</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    {</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        M::kOrder</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    {</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>        m.X</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    } -&gt; std::convertible_to&lt;MatrixX&gt;;</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    {</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>        m.E</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    } -&gt; std::convertible_to&lt;IndexMatrixX&gt;;</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>};</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="keyword">template</span> &lt;<span class="keyword">class</span> M&gt;</div>
+<div class="foldopen" id="foldopen00084" data-start="{" data-end="}">
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno"><a class="line" href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">   84</a></span><span class="keyword">concept </span><a class="code hl_concept" href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">CMesh</a> = <span class="keyword">requires</span>(M m)</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>{</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">CElement&lt;typename M::ElementType&gt;</a>;</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../d2/dba/conceptpbat_1_1common_1_1_c_floating_point.html">common::CFloatingPoint&lt;typename M::ScalarType&gt;</a>;</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keyword">requires</span> <a class="code hl_concept" href="../../d7/dc2/conceptpbat_1_1common_1_1_c_index.html">common::CIndex&lt;typename M::IndexType&gt;</a>;</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    {M::kDims}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    {M::kOrder}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    {m.X} <span class="comment">/*-&gt;std::</span></div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span><span class="comment">         convertible_to&lt;Eigen::Matrix&lt;typename M::ScalarType, Eigen::Dynamic, Eigen::Dynamic&gt;&gt;*/</span></div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    ;</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    {m.E} <span class="comment">/*-&gt;std::convertible_to&lt;Eigen::Matrix&lt;typename M::IndexType, Eigen::Dynamic,</span></div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="comment">             Eigen::Dynamic&gt;&gt;*/</span></div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    ;</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>};</div>
 </div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>} <span class="comment">// namespace fem</span></div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>} <span class="comment">// namespace pbat::fem</span></div>
 </div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>} <span class="comment">// namespace pbat</span></div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_FEM_CONCEPTS_H</span></div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_FEM_CONCEPTS_H</span></div>
 <div class="ttc" id="a_aliases_8h_html"><div class="ttname"><a href="../../d8/dc4/_aliases_8h.html">Aliases.h</a></div></div>
 <div class="ttc" id="acommon_2_concepts_8h_html"><div class="ttname"><a href="../../d5/d56/common_2_concepts_8h.html">Concepts.h</a></div><div class="ttdoc">Concepts for common types.</div></div>
-<div class="ttc" id="aconceptpbat_1_1common_1_1_c_contiguous_index_range_html"><div class="ttname"><a href="../../da/d2e/conceptpbat_1_1common_1_1_c_contiguous_index_range.html">pbat::common::CContiguousIndexRange</a></div><div class="ttdoc">Contiguous range of integer types.</div><div class="ttdef"><b>Definition</b> Concepts.h:37</div></div>
-<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_element_html"><div class="ttname"><a href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">pbat::fem::CElement</a></div><div class="ttdoc">Reference finite element.</div><div class="ttdef"><b>Definition</b> Concepts.h:62</div></div>
-<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_mesh_html"><div class="ttname"><a href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">pbat::fem::CMesh</a></div><div class="ttdoc">Finite element mesh.</div><div class="ttdef"><b>Definition</b> Concepts.h:95</div></div>
+<div class="ttc" id="aconceptpbat_1_1common_1_1_c_contiguous_index_range_html"><div class="ttname"><a href="../../da/d2e/conceptpbat_1_1common_1_1_c_contiguous_index_range.html">pbat::common::CContiguousIndexRange</a></div><div class="ttdoc">Contiguous range of integer types.</div><div class="ttdef"><b>Definition</b> Concepts.h:73</div></div>
+<div class="ttc" id="aconceptpbat_1_1common_1_1_c_floating_point_html"><div class="ttname"><a href="../../d2/dba/conceptpbat_1_1common_1_1_c_floating_point.html">pbat::common::CFloatingPoint</a></div><div class="ttdoc">Concept for floating-point types.</div><div class="ttdef"><b>Definition</b> Concepts.h:56</div></div>
+<div class="ttc" id="aconceptpbat_1_1common_1_1_c_index_html"><div class="ttname"><a href="../../d7/dc2/conceptpbat_1_1common_1_1_c_index.html">pbat::common::CIndex</a></div><div class="ttdoc">Concept for integral types.</div><div class="ttdef"><b>Definition</b> Concepts.h:45</div></div>
+<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_element_html"><div class="ttname"><a href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">pbat::fem::CElement</a></div><div class="ttdoc">Reference finite element.</div><div class="ttdef"><b>Definition</b> Concepts.h:63</div></div>
+<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_mesh_html"><div class="ttname"><a href="../../d5/d2a/conceptpbat_1_1fem_1_1_c_mesh.html">pbat::fem::CMesh</a></div><div class="ttdoc">Finite element mesh.</div><div class="ttdef"><b>Definition</b> Concepts.h:84</div></div>
 <div class="ttc" id="anamespacepbat_1_1fem_html"><div class="ttname"><a href="../../d0/d07/namespacepbat_1_1fem.html">pbat::fem</a></div><div class="ttdoc">Finite Element Method (FEM)</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
-<div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 <div class="ttc" id="anamespacepbat_html_a682b4fdd1bb92ef64f406a2a356ee8e8"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">pbat::Vector</a></div><div class="ttdeci">Eigen::Vector&lt; Scalar, N &gt; Vector</div><div class="ttdoc">Fixed-size vector type.</div><div class="ttdef"><b>Definition</b> Aliases.h:24</div></div>
+<div class="ttc" id="anamespacepbat_html_af27842f3602e4a1729856deb55012fe7"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#af27842f3602e4a1729856deb55012fe7">pbat::Matrix</a></div><div class="ttdeci">Eigen::Matrix&lt; Scalar, Rows, Cols &gt; Matrix</div><div class="ttdoc">Fixed-size matrix type.</div><div class="ttdef"><b>Definition</b> Aliases.h:31</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

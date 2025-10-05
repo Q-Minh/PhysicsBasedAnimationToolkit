@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['kdtree_0',['KdTree',['../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html#a902b117076a8ace364ad46dc5079f38c',1,'pbat::geometry::KdTree']]]
+  ['kdtree_0',['KdTree',['../da/dd5/classpbat_1_1geometry_1_1_kd_tree.html#a928e1ed1fbbdda527c04926b6a4af19c',1,'pbat::geometry::KdTree']]],
+  ['kernel_1',['Kernel',['../de/d29/structpbat_1_1gpu_1_1impl_1_1vbd_1_1kernels_1_1_vbd_iteration_traits.html#a6d3be13ac67416bcac8548f93b631a58',1,'pbat::gpu::impl::vbd::kernels::VbdIterationTraits']]],
+  ['knearestneighbours_2',['KNearestNeighbours',['../d5/dd2/classpbat_1_1geometry_1_1_aabb_kd_tree_hierarchy.html#abc409772840e331c5133fc9741e7a3b9',1,'pbat::geometry::AabbKdTreeHierarchy::KNearestNeighbours()'],['../d5/d92/classpbat_1_1geometry_1_1_aabb_radix_tree_hierarchy.html#a946a326199802bea7edeca9094ee9ec0',1,'pbat::geometry::AabbRadixTreeHierarchy::KNearestNeighbours()'],['../d2/d7a/namespacepbat_1_1geometry.html#a367821018a940f7d4312b7473fde7516',1,'pbat::geometry::KNearestNeighbours(FChild fChild, FIsLeaf fIsLeaf, FLeafSize fLeafSize, FLeafObject fLeafObject, FDistanceLowerBound fLower, FDistance fDistance, FOnFound fOnFound, TIndex K, TScalar fUpper=std::numeric_limits&lt; TScalar &gt;::max(), TIndex root=0)'],['../d2/d7a/namespacepbat_1_1geometry.html#a5e669110bf2be65b77669262845b8ca4',1,'pbat::geometry::KNearestNeighbours(FChild fChild, FIsLeaf fIsLeaf, FLeafSize fLeafSize, FLeafObject fLeafObject, FDistanceLowerBound fLower, FDistance fDistance, FOnFound fOnFound, TIndex K, TScalar fUpper, TIndex root)']]]
 ];

@@ -169,7 +169,7 @@ $(function(){initNavTree('d3/d8c/_binary_operations_8h_source.html','../../'); i
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = RhsNestedType::kCols;</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = LhsNestedType::bRowMajor;</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    PBAT_HOST_DEVICE Sum(LhsNestedType <span class="keyword">const</span>&amp; A, RhsNestedType <span class="keyword">const</span>&amp; B) : A(A), B(B)</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    PBAT_HOST_DEVICE Sum(LhsNestedType <span class="keyword">const</span>&amp; _A, RhsNestedType <span class="keyword">const</span>&amp; _B) : A(_A), B(_B)</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    {</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>            LhsNestedType::kRows == RhsNestedType::kRows and</div>
@@ -236,7 +236,7 @@ $(function(){initNavTree('d3/d8c/_binary_operations_8h_source.html','../../'); i
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = RhsNestedType::kCols;</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = LhsNestedType::bRowMajor;</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span> </div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    PBAT_HOST_DEVICE Subtraction(LhsNestedType <span class="keyword">const</span>&amp; A, RhsNestedType <span class="keyword">const</span>&amp; B) : A(A), B(B)</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    PBAT_HOST_DEVICE Subtraction(LhsNestedType <span class="keyword">const</span>&amp; _A, RhsNestedType <span class="keyword">const</span>&amp; _B) : A(_A), B(_B)</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    {</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>            LhsNestedType::kRows == RhsNestedType::kRows and</div>
@@ -302,7 +302,7 @@ $(function(){initNavTree('d3/d8c/_binary_operations_8h_source.html','../../'); i
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = RhsNestedType::kCols;</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = LhsNestedType::bRowMajor;</div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    PBAT_HOST_DEVICE Minimum(LhsNestedType <span class="keyword">const</span>&amp; A, RhsNestedType <span class="keyword">const</span>&amp; B) : A(A), B(B)</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    PBAT_HOST_DEVICE Minimum(LhsNestedType <span class="keyword">const</span>&amp; _A, RhsNestedType <span class="keyword">const</span>&amp; _B) : A(_A), B(_B)</div>
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    {</div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>            LhsNestedType::kRows == RhsNestedType::kRows and</div>
@@ -343,7 +343,7 @@ $(function(){initNavTree('d3/d8c/_binary_operations_8h_source.html','../../'); i
 <div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = RhsNestedType::kCols;</div>
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = LhsNestedType::bRowMajor;</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span> </div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    PBAT_HOST_DEVICE Maximum(LhsNestedType <span class="keyword">const</span>&amp; A, RhsNestedType <span class="keyword">const</span>&amp; B) : A(A), B(B)</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    PBAT_HOST_DEVICE Maximum(LhsNestedType <span class="keyword">const</span>&amp; _A, RhsNestedType <span class="keyword">const</span>&amp; _B) : A(_A), B(_B)</div>
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    {</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>            LhsNestedType::kRows == RhsNestedType::kRows and</div>
@@ -583,7 +583,7 @@ $(function(){initNavTree('d3/d8c/_binary_operations_8h_source.html','../../'); i
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_subtraction_scalar_html"><div class="ttname"><a href="../../d9/d93/classpbat_1_1math_1_1linalg_1_1mini_1_1_subtraction_scalar.html">pbat::math::linalg::mini::SubtractionScalar</a></div><div class="ttdef"><b>Definition</b> BinaryOperations.h:119</div></div>
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_sum_scalar_html"><div class="ttname"><a href="../../dc/d80/classpbat_1_1math_1_1linalg_1_1mini_1_1_sum_scalar.html">pbat::math::linalg::mini::SumScalar</a></div><div class="ttdef"><b>Definition</b> BinaryOperations.h:56</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_1_1linalg_1_1mini_html"><div class="ttname"><a href="../../df/d43/namespacepbat_1_1math_1_1linalg_1_1mini.html">pbat::math::linalg::mini</a></div><div class="ttdoc">Mini linear algebra related functionality.</div><div class="ttdef"><b>Definition</b> Assign.h:12</div></div>
-<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div><div class="ttdef"><b>Definition</b> FilterEigenvalues.h:7</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_html"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html">pbat::math</a></div><div class="ttdoc">Math related functionality.</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 </div><!-- fragment --></div><!-- contents -->

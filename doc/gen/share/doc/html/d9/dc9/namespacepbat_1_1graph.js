@@ -1,7 +1,10 @@
 var namespacepbat_1_1graph =
 [
+    [ "BreadthFirstSearch", "de/db5/structpbat_1_1graph_1_1_breadth_first_search.html", "de/db5/structpbat_1_1graph_1_1_breadth_first_search" ],
+    [ "DepthFirstSearch", "d4/d07/structpbat_1_1graph_1_1_depth_first_search.html", "d4/d07/structpbat_1_1graph_1_1_depth_first_search" ],
+    [ "DisjointSetUnionFind", "d9/d77/classpbat_1_1graph_1_1_disjoint_set_union_find.html", "d9/d77/classpbat_1_1graph_1_1_disjoint_set_union_find" ],
     [ "PartitioningOptions", "d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html", "d9/d2e/structpbat_1_1graph_1_1_partitioning_options" ],
-    [ "WeightedEdgeTraits", "df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html", null ],
+    [ "WeightedEdgeTraits", "df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html", "df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits" ],
     [ "WeightedEdge", "d9/dc9/namespacepbat_1_1graph.html#a353fbeda472647a2e3af2031e2170fcc", null ],
     [ "EGreedyColorOrderingStrategy", "d9/dc9/namespacepbat_1_1graph.html#ac26166ca4b423603403a335c47224b45", [
       [ "Natural", "d9/dc9/namespacepbat_1_1graph.html#ac26166ca4b423603403a335c47224b45a2bd8ab451a35759c5737128e35c8011a", null ],
@@ -22,6 +25,8 @@ var namespacepbat_1_1graph =
     [ "AdjacencyMatrixIndices", "d9/dc9/namespacepbat_1_1graph.html#a54c29573233e8e81614d48855793c943", null ],
     [ "AdjacencyMatrixPrefix", "d9/dc9/namespacepbat_1_1graph.html#af4416e18f2df874097fd12399ed6d549", null ],
     [ "AdjacencyMatrixWeights", "d9/dc9/namespacepbat_1_1graph.html#ae94d34837d4b43952f774e6832bb3128", null ],
+    [ "ConnectedComponents", "d9/dc9/namespacepbat_1_1graph.html#ab48e6296ebb78444e9e6440d5fe7cfbd", null ],
+    [ "ConnectedComponents", "d9/dc9/namespacepbat_1_1graph.html#aabfa69754d880587ebd67c7776a12f95", null ],
     [ "ForEachEdge", "d9/dc9/namespacepbat_1_1graph.html#a3b44563432fa5affdc87403cbfdcaff6", null ],
     [ "GreedyColor", "d9/dc9/namespacepbat_1_1graph.html#a1853b76a08732c08e8dcd42169ce8f0e", null ],
     [ "ListOfListsToAdjacency", "d9/dc9/namespacepbat_1_1graph.html#a4bf3f0177c97f73f1ff4de2f336e7b6a", null ],
@@ -32,6 +37,6 @@ var namespacepbat_1_1graph =
     [ "MeshAdjacencyMatrix", "d9/dc9/namespacepbat_1_1graph.html#a2ef0f0cc7fa6bd2ba1b423e21c40e5f4", null ],
     [ "MeshDualGraph", "d9/dc9/namespacepbat_1_1graph.html#aa27c11cf51026074641f54fc63afc13a", null ],
     [ "MeshPrimalGraph", "d9/dc9/namespacepbat_1_1graph.html#a9bfc67838583486d2d0d3b939242007a", null ],
-    [ "Partition", "d9/dc9/namespacepbat_1_1graph.html#a447909cb9a9a71a5ee60f0e963485792", null ],
+    [ "Partition", "d9/dc9/namespacepbat_1_1graph.html#a354a43676f2a845657e69033d1a7cbee", null ],
     [ "RemoveEdges", "d9/dc9/namespacepbat_1_1graph.html#a7c2c0accc9a57ed6650ef2bb957f7113", null ]
 ];

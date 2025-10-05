@@ -134,6 +134,7 @@ $(function(){initNavTree('df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html','
 
 <div class="header">
   <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="../../d6/dc1/structpbat_1_1geometry_1_1_kd_tree_node-members.html">List of all members</a>  </div>
@@ -146,46 +147,43 @@ $(function(){initNavTree('df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html','
 
 <p><code>#include &lt;<a class="el" href="../../d2/d39/_kd_tree_8h_source.html">KdTree.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:ae1efaf99fc5bf26c5c41763d33e22596" id="r_ae1efaf99fc5bf26c5c41763d33e22596"><td class="memItemLeft" align="right" valign="top"><a id="ae1efaf99fc5bf26c5c41763d33e22596" name="ae1efaf99fc5bf26c5c41763d33e22596"></a>enum &#160;</td><td class="memItemRight" valign="bottom">{ <b>kLeafNodeLeftChild</b> = -2
+ }</td></tr>
+<tr class="separator:ae1efaf99fc5bf26c5c41763d33e22596"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a18d8210351959ce592a401cc1732b6f5" id="r_a18d8210351959ce592a401cc1732b6f5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a18d8210351959ce592a401cc1732b6f5">HasLeftChild</a> () const</td></tr>
-<tr class="memdesc:a18d8210351959ce592a401cc1732b6f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if this node has a left child, false otherwise.  <br /></td></tr>
-<tr class="separator:a18d8210351959ce592a401cc1732b6f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9688d0b730480969e642a895130f695d" id="r_a9688d0b730480969e642a895130f695d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9688d0b730480969e642a895130f695d">HasRightChild</a> () const</td></tr>
-<tr class="memdesc:a9688d0b730480969e642a895130f695d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if this node has a right child, false otherwise.  <br /></td></tr>
-<tr class="separator:a9688d0b730480969e642a895130f695d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af5a07ec49479ba638b3988297f64230c" id="r_af5a07ec49479ba638b3988297f64230c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af5a07ec49479ba638b3988297f64230c">IsLeafNode</a> () const</td></tr>
-<tr class="memdesc:af5a07ec49479ba638b3988297f64230c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if this node is a leaf node, false otherwise.  <br /></td></tr>
-<tr class="separator:af5a07ec49479ba638b3988297f64230c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3dee6da97f3032773d7280620facef37" id="r_a3dee6da97f3032773d7280620facef37"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3dee6da97f3032773d7280620facef37">IsInternalNode</a> () const</td></tr>
-<tr class="memdesc:a3dee6da97f3032773d7280620facef37"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if this node is an internal node, false otherwise.  <br /></td></tr>
-<tr class="separator:a3dee6da97f3032773d7280620facef37"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4591ff88f7fc59a100848ce8afb88e87" id="r_a4591ff88f7fc59a100848ce8afb88e87"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4591ff88f7fc59a100848ce8afb88e87">IsLeaf</a> () const</td></tr>
+<tr class="memdesc:a4591ff88f7fc59a100848ce8afb88e87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if this node is a leaf node, false otherwise.  <br /></td></tr>
+<tr class="separator:a4591ff88f7fc59a100848ce8afb88e87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b3ee1755762936f6fe34b539784f436" id="r_a0b3ee1755762936f6fe34b539784f436"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b3ee1755762936f6fe34b539784f436">IsInternal</a> () const</td></tr>
+<tr class="memdesc:a0b3ee1755762936f6fe34b539784f436"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if this node is an internal node, false otherwise.  <br /></td></tr>
+<tr class="separator:a0b3ee1755762936f6fe34b539784f436"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abbda1aba281f27554d4a084f42a76b24" id="r_abbda1aba281f27554d4a084f42a76b24"><td class="memItemLeft" align="right" valign="top">auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abbda1aba281f27554d4a084f42a76b24">Left</a> () const</td></tr>
+<tr class="memdesc:abbda1aba281f27554d4a084f42a76b24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns left child node.  <br /></td></tr>
+<tr class="separator:abbda1aba281f27554d4a084f42a76b24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a98be4241e40752ec2c789725cf3adce2" id="r_a98be4241e40752ec2c789725cf3adce2"><td class="memItemLeft" align="right" valign="top">auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a98be4241e40752ec2c789725cf3adce2">Right</a> () const</td></tr>
+<tr class="memdesc:a98be4241e40752ec2c789725cf3adce2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns right child node.  <br /></td></tr>
+<tr class="separator:a98be4241e40752ec2c789725cf3adce2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:ab2d053edb503d175d05c86db2f417376" id="r_ab2d053edb503d175d05c86db2f417376"><td class="memItemLeft" align="right" valign="top"><a id="ab2d053edb503d175d05c86db2f417376" name="ab2d053edb503d175d05c86db2f417376"></a>
-<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><b>lc</b> {-1}</td></tr>
-<tr class="memdesc:ab2d053edb503d175d05c86db2f417376"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of left child of this node in the KDTree. -1 if no left child. <br /></td></tr>
-<tr class="separator:ab2d053edb503d175d05c86db2f417376"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9faba967c51fc3da10fb5f704f4f6c9f" id="r_a9faba967c51fc3da10fb5f704f4f6c9f"><td class="memItemLeft" align="right" valign="top"><a id="a9faba967c51fc3da10fb5f704f4f6c9f" name="a9faba967c51fc3da10fb5f704f4f6c9f"></a>
-<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rc</b> {-1}</td></tr>
-<tr class="memdesc:a9faba967c51fc3da10fb5f704f4f6c9f"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of right child of this node in the KDTree. -1 if no right child. <br /></td></tr>
-<tr class="separator:a9faba967c51fc3da10fb5f704f4f6c9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a21538a85adf8f53bf3066c886951c8b0" id="r_a21538a85adf8f53bf3066c886951c8b0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a21538a85adf8f53bf3066c886951c8b0">begin</a></td></tr>
-<tr class="memdesc:a21538a85adf8f53bf3066c886951c8b0"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> to first point encapsulated in this node's AABB in the permutation list.  <br /></td></tr>
+<tr class="memitem:a21538a85adf8f53bf3066c886951c8b0" id="r_a21538a85adf8f53bf3066c886951c8b0"><td class="memItemLeft" align="right" valign="top"><a id="a21538a85adf8f53bf3066c886951c8b0" name="a21538a85adf8f53bf3066c886951c8b0"></a>
+<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><b>begin</b></td></tr>
+<tr class="memdesc:a21538a85adf8f53bf3066c886951c8b0"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> to first point encapsulated in this node's AABB in the permutation list. <br /></td></tr>
 <tr class="separator:a21538a85adf8f53bf3066c886951c8b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad074d9a7ca0946a3aae25ccee362799a" id="r_ad074d9a7ca0946a3aae25ccee362799a"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad074d9a7ca0946a3aae25ccee362799a">n</a> {0}</td></tr>
-<tr class="separator:ad074d9a7ca0946a3aae25ccee362799a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a838e0f6cbbb6bdf214a051d07427d87f" id="r_a838e0f6cbbb6bdf214a051d07427d87f"><td class="memItemLeft" align="right" valign="top"><a id="a838e0f6cbbb6bdf214a051d07427d87f" name="a838e0f6cbbb6bdf214a051d07427d87f"></a>
-<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><b>depth</b> {0}</td></tr>
-<tr class="memdesc:a838e0f6cbbb6bdf214a051d07427d87f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Depth of this node in the KDTree. <br /></td></tr>
-<tr class="separator:a838e0f6cbbb6bdf214a051d07427d87f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a694809ac063ef206506809b10caf51fc" id="r_a694809ac063ef206506809b10caf51fc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a694809ac063ef206506809b10caf51fc">n</a></td></tr>
+<tr class="separator:a694809ac063ef206506809b10caf51fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf43cf26a8931544192cb53a2c79b9c1" id="r_aaf43cf26a8931544192cb53a2c79b9c1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf43cf26a8931544192cb53a2c79b9c1">c</a> {kLeafNodeLeftChild}</td></tr>
+<tr class="separator:aaf43cf26a8931544192cb53a2c79b9c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Node of a KDTree. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a18d8210351959ce592a401cc1732b6f5" name="a18d8210351959ce592a401cc1732b6f5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a18d8210351959ce592a401cc1732b6f5">&#9670;&#160;</a></span>HasLeftChild()</h2>
+<a id="a0b3ee1755762936f6fe34b539784f436" name="a0b3ee1755762936f6fe34b539784f436"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b3ee1755762936f6fe34b539784f436">&#9670;&#160;</a></span>IsInternal()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -194,63 +192,7 @@ Public Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool pbat::geometry::KdTreeNode::HasLeftChild </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Returns true if this node has a left child, false otherwise. </p>
-<dl class="section return"><dt>Returns</dt><dd>true if this node has a left child, false otherwise </dd></dl>
-
-</div>
-</div>
-<a id="a9688d0b730480969e642a895130f695d" name="a9688d0b730480969e642a895130f695d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9688d0b730480969e642a895130f695d">&#9670;&#160;</a></span>HasRightChild()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool pbat::geometry::KdTreeNode::HasRightChild </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Returns true if this node has a right child, false otherwise. </p>
-<dl class="section return"><dt>Returns</dt><dd>true if this node has a right child, false otherwise </dd></dl>
-
-</div>
-</div>
-<a id="a3dee6da97f3032773d7280620facef37" name="a3dee6da97f3032773d7280620facef37"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3dee6da97f3032773d7280620facef37">&#9670;&#160;</a></span>IsInternalNode()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool pbat::geometry::KdTreeNode::IsInternalNode </td>
+          <td class="memname">bool pbat::geometry::KdTreeNode::IsInternal </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
@@ -268,8 +210,8 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="af5a07ec49479ba638b3988297f64230c" name="af5a07ec49479ba638b3988297f64230c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af5a07ec49479ba638b3988297f64230c">&#9670;&#160;</a></span>IsLeafNode()</h2>
+<a id="a4591ff88f7fc59a100848ce8afb88e87" name="a4591ff88f7fc59a100848ce8afb88e87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4591ff88f7fc59a100848ce8afb88e87">&#9670;&#160;</a></span>IsLeaf()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -278,7 +220,7 @@ Public Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool pbat::geometry::KdTreeNode::IsLeafNode </td>
+          <td class="memname">bool pbat::geometry::KdTreeNode::IsLeaf </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
@@ -296,33 +238,86 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="abbda1aba281f27554d4a084f42a76b24" name="abbda1aba281f27554d4a084f42a76b24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abbda1aba281f27554d4a084f42a76b24">&#9670;&#160;</a></span>Left()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto pbat::geometry::KdTreeNode::Left </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns left child node. </p>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of left child node </dd></dl>
+
+</div>
+</div>
+<a id="a98be4241e40752ec2c789725cf3adce2" name="a98be4241e40752ec2c789725cf3adce2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a98be4241e40752ec2c789725cf3adce2">&#9670;&#160;</a></span>Right()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto pbat::geometry::KdTreeNode::Right </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns right child node. </p>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of right child node </dd></dl>
+
+</div>
+</div>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="a21538a85adf8f53bf3066c886951c8b0" name="a21538a85adf8f53bf3066c886951c8b0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a21538a85adf8f53bf3066c886951c8b0">&#9670;&#160;</a></span>begin</h2>
+<a id="aaf43cf26a8931544192cb53a2c79b9c1" name="aaf43cf26a8931544192cb53a2c79b9c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf43cf26a8931544192cb53a2c79b9c1">&#9670;&#160;</a></span>c</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> pbat::geometry::KdTreeNode::begin</td>
+          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> pbat::geometry::KdTreeNode::c {kLeafNodeLeftChild}</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Initial value:</b><div class="fragment"><div class="line">{</div>
-<div class="line">        -1}</div>
-</div><!-- fragment -->
-<p><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> to first point encapsulated in this node's AABB in the permutation list. </p>
+<p><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> of first (i.e. left) child. &lt; 0 if no child. We set to -2 so that <a class="el" href="#abbda1aba281f27554d4a084f42a76b24" title="Returns left child node.">Left()</a> &lt; 0 and <a class="el" href="#a98be4241e40752ec2c789725cf3adce2" title="Returns right child node.">Right()</a> &lt; 0 if leaf node. </p>
 
 </div>
 </div>
-<a id="ad074d9a7ca0946a3aae25ccee362799a" name="ad074d9a7ca0946a3aae25ccee362799a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad074d9a7ca0946a3aae25ccee362799a">&#9670;&#160;</a></span>n</h2>
+<a id="a694809ac063ef206506809b10caf51fc" name="a694809ac063ef206506809b10caf51fc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a694809ac063ef206506809b10caf51fc">&#9670;&#160;</a></span>n</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::size_t pbat::geometry::KdTreeNode::n {0}</td>
+          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> pbat::geometry::KdTreeNode::n</td>
         </tr>
       </table>
 </div><div class="memdoc">

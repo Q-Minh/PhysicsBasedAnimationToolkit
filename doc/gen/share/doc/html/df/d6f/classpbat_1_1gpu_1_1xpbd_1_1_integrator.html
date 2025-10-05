@@ -140,19 +140,27 @@ $(function(){initNavTree('df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html','
   <div class="headertitle"><div class="title">pbat::gpu::xpbd::Integrator Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Public API of the GPU XPBD integrator.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../db/da8/gpu_2xpbd_2_integrator_8h_source.html">Integrator.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
 <tr class="memitem:ac989aca6ba25634ef07dc4072afd7ff9" id="r_ac989aca6ba25634ef07dc4072afd7ff9"><td class="memItemLeft" align="right" valign="top"><a id="ac989aca6ba25634ef07dc4072afd7ff9" name="ac989aca6ba25634ef07dc4072afd7ff9"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>Data</b> = <a class="el" href="../../d9/df0/structpbat_1_1sim_1_1xpbd_1_1_data.html">pbat::sim::xpbd::Data</a></td></tr>
+<tr class="memdesc:ac989aca6ba25634ef07dc4072afd7ff9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Input XPBD data constructor parameter object short name. <br /></td></tr>
 <tr class="separator:ac989aca6ba25634ef07dc4072afd7ff9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaa13fe7c555e8fee121bc7371c5b3822" id="r_aaa13fe7c555e8fee121bc7371c5b3822"><td class="memItemLeft" align="right" valign="top"><a id="aaa13fe7c555e8fee121bc7371c5b3822" name="aaa13fe7c555e8fee121bc7371c5b3822"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>EConstraint</b> = pbat::sim::xpbd::EConstraint</td></tr>
+<tr class="memdesc:aaa13fe7c555e8fee121bc7371c5b3822"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constraint type enumeration short name. <br /></td></tr>
 <tr class="separator:aaa13fe7c555e8fee121bc7371c5b3822"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a349af035d0c98fc6db358e91907167b9" id="r_a349af035d0c98fc6db358e91907167b9"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a349af035d0c98fc6db358e91907167b9">Integrator</a> (<a class="el" href="../../d9/df0/structpbat_1_1sim_1_1xpbd_1_1_data.html">Data</a> const &amp;data)</td></tr>
+<tr class="memitem:a349af035d0c98fc6db358e91907167b9" id="r_a349af035d0c98fc6db358e91907167b9"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a349af035d0c98fc6db358e91907167b9">Integrator</a> (<a class="el" href="#ac989aca6ba25634ef07dc4072afd7ff9">Data</a> const &amp;data)</td></tr>
+<tr class="memdesc:a349af035d0c98fc6db358e91907167b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html" title="Public API of the GPU XPBD integrator.">Integrator</a> object from the input XPBD data.  <br /></td></tr>
 <tr class="separator:a349af035d0c98fc6db358e91907167b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a434d1af71e6ae6059f758b6d723e047e" id="r_a434d1af71e6ae6059f758b6d723e047e"><td class="memItemLeft" align="right" valign="top"><a id="a434d1af71e6ae6059f758b6d723e047e" name="a434d1af71e6ae6059f758b6d723e047e"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Integrator</b> (<a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> const &amp;)=delete</td></tr>
@@ -160,57 +168,72 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a78a4216ac8ccf527d6c99b08019d7a3a" id="r_a78a4216ac8ccf527d6c99b08019d7a3a"><td class="memItemLeft" align="right" valign="top"><a id="a78a4216ac8ccf527d6c99b08019d7a3a" name="a78a4216ac8ccf527d6c99b08019d7a3a"></a>
 <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> const &amp;)=delete</td></tr>
 <tr class="separator:a78a4216ac8ccf527d6c99b08019d7a3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a525ca8fd2f92b500ca06c8418d6f26c3" id="r_a525ca8fd2f92b500ca06c8418d6f26c3"><td class="memItemLeft" align="right" valign="top"><a id="a525ca8fd2f92b500ca06c8418d6f26c3" name="a525ca8fd2f92b500ca06c8418d6f26c3"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Integrator</b> (<a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memitem:a525ca8fd2f92b500ca06c8418d6f26c3" id="r_a525ca8fd2f92b500ca06c8418d6f26c3"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a525ca8fd2f92b500ca06c8418d6f26c3">Integrator</a> (<a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memdesc:a525ca8fd2f92b500ca06c8418d6f26c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <br /></td></tr>
 <tr class="separator:a525ca8fd2f92b500ca06c8418d6f26c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a53c4428e41f23eed05b477f07b1fb100" id="r_a53c4428e41f23eed05b477f07b1fb100"><td class="memItemLeft" align="right" valign="top"><a id="a53c4428e41f23eed05b477f07b1fb100" name="a53c4428e41f23eed05b477f07b1fb100"></a>
-PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memitem:a53c4428e41f23eed05b477f07b1fb100" id="r_a53c4428e41f23eed05b477f07b1fb100"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a53c4428e41f23eed05b477f07b1fb100">operator=</a> (<a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memdesc:a53c4428e41f23eed05b477f07b1fb100"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move assignment operator.  <br /></td></tr>
 <tr class="separator:a53c4428e41f23eed05b477f07b1fb100"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae7713f8172396cca69ba28ec109a244f" id="r_ae7713f8172396cca69ba28ec109a244f"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae7713f8172396cca69ba28ec109a244f">Step</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> dt, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> iterations, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> substeps)</td></tr>
+<tr class="memdesc:ae7713f8172396cca69ba28ec109a244f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Step once in time.  <br /></td></tr>
 <tr class="separator:ae7713f8172396cca69ba28ec109a244f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d32efcb2bd11afc1ebedc4ccf9dd7c1" id="r_a9d32efcb2bd11afc1ebedc4ccf9dd7c1"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d32efcb2bd11afc1ebedc4ccf9dd7c1">Positions</a> () const</td></tr>
+<tr class="memdesc:a9d32efcb2bd11afc1ebedc4ccf9dd7c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the current positions from the GPU.  <br /></td></tr>
 <tr class="separator:a9d32efcb2bd11afc1ebedc4ccf9dd7c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a988671a6ba288c47ce79be2b949690aa" id="r_a988671a6ba288c47ce79be2b949690aa"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a988671a6ba288c47ce79be2b949690aa">SetPositions</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;X)</td></tr>
+<tr class="memdesc:a988671a6ba288c47ce79be2b949690aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the GPU vertex positions from the input CPU vertex positions.  <br /></td></tr>
 <tr class="separator:a988671a6ba288c47ce79be2b949690aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac8c6a592529ae2b38ef607acc147bc9e" id="r_ac8c6a592529ae2b38ef607acc147bc9e"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac8c6a592529ae2b38ef607acc147bc9e">SetVelocities</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;v)</td></tr>
+<tr class="memdesc:ac8c6a592529ae2b38ef607acc147bc9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the GPU vertex velocities from the input CPU vertex velocities.  <br /></td></tr>
 <tr class="separator:ac8c6a592529ae2b38ef607acc147bc9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad7904e15ba27b9a56e543128754a98c9" id="r_ad7904e15ba27b9a56e543128754a98c9"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad7904e15ba27b9a56e543128754a98c9">SetExternalAcceleration</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;aext)</td></tr>
+<tr class="memdesc:ad7904e15ba27b9a56e543128754a98c9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the GPU external acceleration from the input CPU external acceleration.  <br /></td></tr>
 <tr class="separator:ad7904e15ba27b9a56e543128754a98c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7310c073bfc6f517d9372b1ccafb6fac" id="r_a7310c073bfc6f517d9372b1ccafb6fac"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7310c073bfc6f517d9372b1ccafb6fac">SetMassInverse</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;minv)</td></tr>
+<tr class="memdesc:a7310c073bfc6f517d9372b1ccafb6fac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the GPU mass inverse from the input CPU mass inverse.  <br /></td></tr>
 <tr class="separator:a7310c073bfc6f517d9372b1ccafb6fac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a725e7fabc07aad47a8a6246c6b6e064f" id="r_a725e7fabc07aad47a8a6246c6b6e064f"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a725e7fabc07aad47a8a6246c6b6e064f">SetLameCoefficients</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;l)</td></tr>
+<tr class="memdesc:a725e7fabc07aad47a8a6246c6b6e064f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the GPU Lame coefficients from the input CPU Lame coefficients.  <br /></td></tr>
 <tr class="separator:a725e7fabc07aad47a8a6246c6b6e064f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8acfe2743d15af99105729667741aef" id="r_aa8acfe2743d15af99105729667741aef"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8acfe2743d15af99105729667741aef">SetCompliance</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;alpha, EConstraint eConstraint)</td></tr>
+<tr class="memitem:aa8acfe2743d15af99105729667741aef" id="r_aa8acfe2743d15af99105729667741aef"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8acfe2743d15af99105729667741aef">SetCompliance</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;alpha, <a class="el" href="#aaa13fe7c555e8fee121bc7371c5b3822">EConstraint</a> eConstraint)</td></tr>
+<tr class="memdesc:aa8acfe2743d15af99105729667741aef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the GPU constraint compliances from the input CPU constraint compliances.  <br /></td></tr>
 <tr class="separator:aa8acfe2743d15af99105729667741aef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8e1117cedad48af3fb6c11996b207b63" id="r_a8e1117cedad48af3fb6c11996b207b63"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8e1117cedad48af3fb6c11996b207b63">SetFrictionCoefficients</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> muS, <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a> muK)</td></tr>
+<tr class="memdesc:a8e1117cedad48af3fb6c11996b207b63"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the friction coefficients to use for contact handling.  <br /></td></tr>
 <tr class="separator:a8e1117cedad48af3fb6c11996b207b63"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a83520bf2913b73b80e179ec2eb64f53e" id="r_a83520bf2913b73b80e179ec2eb64f53e"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83520bf2913b73b80e179ec2eb64f53e">SetSceneBoundingBox</a> (Eigen::Vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>, 3 &gt; const &amp;min, Eigen::Vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>, 3 &gt; const &amp;max)</td></tr>
+<tr class="memdesc:a83520bf2913b73b80e179ec2eb64f53e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the world bounding box for the current time step.  <br /></td></tr>
 <tr class="separator:a83520bf2913b73b80e179ec2eb64f53e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a903c2a811507373e0f1a4c47009563ab" id="r_a903c2a811507373e0f1a4c47009563ab"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a903c2a811507373e0f1a4c47009563ab">GetVelocity</a> () const</td></tr>
+<tr class="memdesc:a903c2a811507373e0f1a4c47009563ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the vertex velocities from the GPU.  <br /></td></tr>
 <tr class="separator:a903c2a811507373e0f1a4c47009563ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6f788b83f2361af71d711bef85185cad" id="r_a6f788b83f2361af71d711bef85185cad"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6f788b83f2361af71d711bef85185cad">GetExternalAcceleration</a> () const</td></tr>
+<tr class="memdesc:a6f788b83f2361af71d711bef85185cad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the external acceleration from the GPU.  <br /></td></tr>
 <tr class="separator:a6f788b83f2361af71d711bef85185cad"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a86a16576903febf0e5c2dd69aa7a10ef" id="r_a86a16576903febf0e5c2dd69aa7a10ef"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a883c870fad575f5f4e4957f61a4041a3">GpuVectorX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a86a16576903febf0e5c2dd69aa7a10ef">GetMassInverse</a> () const</td></tr>
+<tr class="memdesc:a86a16576903febf0e5c2dd69aa7a10ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the mass inverse from the GPU.  <br /></td></tr>
 <tr class="separator:a86a16576903febf0e5c2dd69aa7a10ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a614848123e33aeded6bbeeaaccb1f546" id="r_a614848123e33aeded6bbeeaaccb1f546"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a614848123e33aeded6bbeeaaccb1f546">GetLameCoefficients</a> () const</td></tr>
+<tr class="memdesc:a614848123e33aeded6bbeeaaccb1f546"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the Lame coefficients from the GPU.  <br /></td></tr>
 <tr class="separator:a614848123e33aeded6bbeeaaccb1f546"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a74d5326bc788814c501cffc7de36d2e3" id="r_a74d5326bc788814c501cffc7de36d2e3"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a74d5326bc788814c501cffc7de36d2e3">GetShapeMatrixInverse</a> () const</td></tr>
+<tr class="memdesc:a74d5326bc788814c501cffc7de36d2e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the shape matrix inverses from the GPU.  <br /></td></tr>
 <tr class="separator:a74d5326bc788814c501cffc7de36d2e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaf09f17d1f8c19c942e4adabc0a08f01" id="r_aaf09f17d1f8c19c942e4adabc0a08f01"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf09f17d1f8c19c942e4adabc0a08f01">GetRestStableGamma</a> () const</td></tr>
+<tr class="memdesc:aaf09f17d1f8c19c942e4adabc0a08f01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the Stable Neo-Hookean rest-stable gamma from the GPU <a class="el" href="../../d0/de3/citelist.html#CITEREF_smith2018snh">[12]</a>.  <br /></td></tr>
 <tr class="separator:aaf09f17d1f8c19c942e4adabc0a08f01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa57b6744a055bc963e3e0b305394ee3f" id="r_aa57b6744a055bc963e3e0b305394ee3f"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa57b6744a055bc963e3e0b305394ee3f">GetLagrangeMultiplier</a> (EConstraint eConstraint) const</td></tr>
+<tr class="memitem:aa57b6744a055bc963e3e0b305394ee3f" id="r_aa57b6744a055bc963e3e0b305394ee3f"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa57b6744a055bc963e3e0b305394ee3f">GetLagrangeMultiplier</a> (<a class="el" href="#aaa13fe7c555e8fee121bc7371c5b3822">EConstraint</a> eConstraint) const</td></tr>
+<tr class="memdesc:aa57b6744a055bc963e3e0b305394ee3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the Lagrange multipliers from the GPU.  <br /></td></tr>
 <tr class="separator:aa57b6744a055bc963e3e0b305394ee3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3e0957ad6501b633435fd1362444cd5" id="r_af3e0957ad6501b633435fd1362444cd5"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3e0957ad6501b633435fd1362444cd5">GetCompliance</a> (EConstraint eConstraint) const</td></tr>
+<tr class="memitem:af3e0957ad6501b633435fd1362444cd5" id="r_af3e0957ad6501b633435fd1362444cd5"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3e0957ad6501b633435fd1362444cd5">GetCompliance</a> (<a class="el" href="#aaa13fe7c555e8fee121bc7371c5b3822">EConstraint</a> eConstraint) const</td></tr>
+<tr class="memdesc:af3e0957ad6501b633435fd1362444cd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the compliance from the GPU.  <br /></td></tr>
 <tr class="separator:af3e0957ad6501b633435fd1362444cd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afdf658e420da9ab0867653ec4eb89cf5" id="r_afdf658e420da9ab0867653ec4eb89cf5"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afdf658e420da9ab0867653ec4eb89cf5">GetVertexTetrahedronCollisionCandidates</a> () const</td></tr>
-<tr class="memdesc:afdf658e420da9ab0867653ec4eb89cf5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the vertex-tetrahedron collision candidates list.  <br /></td></tr>
-<tr class="separator:afdf658e420da9ab0867653ec4eb89cf5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa74733cae74b4c4c00d96d5a3d9390f2" id="r_aa74733cae74b4c4c00d96d5a3d9390f2"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa74733cae74b4c4c00d96d5a3d9390f2">GetVertexTriangleContactPairs</a> () const</td></tr>
-<tr class="separator:aa74733cae74b4c4c00d96d5a3d9390f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Public API of the GPU XPBD integrator. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a349af035d0c98fc6db358e91907167b9" name="a349af035d0c98fc6db358e91907167b9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a349af035d0c98fc6db358e91907167b9">&#9670;&#160;</a></span>Integrator()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a349af035d0c98fc6db358e91907167b9">&#9670;&#160;</a></span>Integrator() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -218,15 +241,49 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         <tr>
           <td class="memname">pbat::gpu::xpbd::Integrator::Integrator </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d9/df0/structpbat_1_1sim_1_1xpbd_1_1_data.html">Data</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="#ac989aca6ba25634ef07dc4072afd7ff9">Data</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html" title="Public API of the GPU XPBD integrator.">Integrator</a> object from the input XPBD data. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">V</td><td></td></tr>
-    <tr><td class="paramname">T</td><td></td></tr>
+    <tr><td class="paramname">data</td><td>Input XPBD data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a525ca8fd2f92b500ca06c8418d6f26c3" name="a525ca8fd2f92b500ca06c8418d6f26c3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a525ca8fd2f92b500ca06c8418d6f26c3">&#9670;&#160;</a></span>Integrator() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::xpbd::Integrator::Integrator </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move constructor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html" title="Public API of the GPU XPBD integrator.">Integrator</a> to move from </td></tr>
   </table>
   </dd>
 </dl>
@@ -243,18 +300,20 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         <tr>
           <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> pbat::gpu::xpbd::Integrator::GetCompliance </td>
           <td>(</td>
-          <td class="paramtype">EConstraint</td>          <td class="paramname"><span class="paramname"><em>eConstraint</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="#aaa13fe7c555e8fee121bc7371c5b3822">EConstraint</a></td>          <td class="paramname"><span class="paramname"><em>eConstraint</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Fetch the compliance from the GPU. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eConstraint</td><td></td></tr>
+    <tr><td class="paramname">eConstraint</td><td>Type of constraint </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>|# constraints|</code> vector of compliance for the given constraint type </dd></dl>
 
 </div>
 </div>
@@ -272,7 +331,9 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the external acceleration from the GPU. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>3x|# vertices|</code> matrix of external accelerations </dd></dl>
 
 </div>
 </div>
@@ -285,18 +346,20 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         <tr>
           <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> pbat::gpu::xpbd::Integrator::GetLagrangeMultiplier </td>
           <td>(</td>
-          <td class="paramtype">EConstraint</td>          <td class="paramname"><span class="paramname"><em>eConstraint</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="#aaa13fe7c555e8fee121bc7371c5b3822">EConstraint</a></td>          <td class="paramname"><span class="paramname"><em>eConstraint</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Fetch the Lagrange multipliers from the GPU. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eConstraint</td><td></td></tr>
+    <tr><td class="paramname">eConstraint</td><td>Type of constraint </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>|# constraints|</code> vector of Lagrange multipliers for the given constraint type </dd></dl>
 
 </div>
 </div>
@@ -314,7 +377,9 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the Lame coefficients from the GPU. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>2x|# elements|</code> vector of Lame coefficients </dd></dl>
 
 </div>
 </div>
@@ -332,7 +397,9 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the mass inverse from the GPU. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>|# vertices|</code> vector of mass inverses </dd></dl>
 
 </div>
 </div>
@@ -350,7 +417,9 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the Stable Neo-Hookean rest-stable gamma from the GPU <a class="el" href="../../d0/de3/citelist.html#CITEREF_smith2018snh">[12]</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>|# elements|</code> vector of rest-stable gamma </dd></dl>
 
 </div>
 </div>
@@ -368,7 +437,9 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the shape matrix inverses from the GPU. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>3x3x|# elements|</code> matrix of shape matrix inverses </dd></dl>
 
 </div>
 </div>
@@ -386,45 +457,43 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the vertex velocities from the GPU. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>3x|# vertices|</code> matrix of vertex velocities </dd></dl>
 
 </div>
 </div>
-<a id="afdf658e420da9ab0867653ec4eb89cf5" name="afdf658e420da9ab0867653ec4eb89cf5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afdf658e420da9ab0867653ec4eb89cf5">&#9670;&#160;</a></span>GetVertexTetrahedronCollisionCandidates()</h2>
+<a id="a53c4428e41f23eed05b477f07b1fb100" name="a53c4428e41f23eed05b477f07b1fb100"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53c4428e41f23eed05b477f07b1fb100">&#9670;&#160;</a></span>operator=()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a> pbat::gpu::xpbd::Integrator::GetVertexTetrahedronCollisionCandidates </td>
+          <td class="memname"><a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp; pbat::gpu::xpbd::Integrator::operator= </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
+          <td class="paramtype"><a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html">Integrator</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Get the vertex-tetrahedron collision candidates list. </p>
-<dl class="section return"><dt>Returns</dt><dd>2x|#collision candidates| </dd></dl>
-
-</div>
-</div>
-<a id="aa74733cae74b4c4c00d96d5a3d9390f2" name="aa74733cae74b4c4c00d96d5a3d9390f2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa74733cae74b4c4c00d96d5a3d9390f2">&#9670;&#160;</a></span>GetVertexTriangleContactPairs()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a> pbat::gpu::xpbd::Integrator::GetVertexTriangleContactPairs </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+<p>Move assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html" title="Public API of the GPU XPBD integrator.">Integrator</a> to move from </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrator.html" title="Public API of the GPU XPBD integrator.">Integrator</a> </dd></dl>
 
 </div>
 </div>
@@ -442,7 +511,9 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the current positions from the GPU. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>3x|# vertices|</code> matrix of vertex positions </dd></dl>
 
 </div>
 </div>
@@ -460,14 +531,16 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">EConstraint</td>          <td class="paramname"><span class="paramname"><em>eConstraint</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="#aaa13fe7c555e8fee121bc7371c5b3822">EConstraint</a></td>          <td class="paramname"><span class="paramname"><em>eConstraint</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the GPU constraint compliances from the input CPU constraint compliances. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">alpha</td><td></td></tr>
-    <tr><td class="paramname">eConstraint</td><td></td></tr>
+    <tr><td class="paramname">alpha</td><td><code>|# constraints|</code> matrix of constraint compliances of type eConstraint </td></tr>
+    <tr><td class="paramname">eConstraint</td><td>Type of constraint </td></tr>
   </table>
   </dd>
 </dl>
@@ -488,9 +561,11 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the GPU external acceleration from the input CPU external acceleration. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">aext</td><td></td></tr>
+    <tr><td class="paramname">aext</td><td><code>3x|# vertices|</code> matrix of external accelerations </td></tr>
   </table>
   </dd>
 </dl>
@@ -515,10 +590,12 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the friction coefficients to use for contact handling. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">muS</td><td></td></tr>
-    <tr><td class="paramname">muK</td><td></td></tr>
+    <tr><td class="paramname">muS</td><td>Static friction coefficient </td></tr>
+    <tr><td class="paramname">muK</td><td>Kinetic friction coefficient </td></tr>
   </table>
   </dd>
 </dl>
@@ -539,9 +616,11 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the GPU Lame coefficients from the input CPU Lame coefficients. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">l</td><td></td></tr>
+    <tr><td class="paramname">l</td><td><code>2x|# elements|</code> vector of Lame coefficients </td></tr>
   </table>
   </dd>
 </dl>
@@ -562,9 +641,11 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the GPU mass inverse from the input CPU mass inverse. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">minv</td><td></td></tr>
+    <tr><td class="paramname">minv</td><td><code>|# vertices|</code> vector of mass inverses </td></tr>
   </table>
   </dd>
 </dl>
@@ -585,9 +666,11 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the GPU vertex positions from the input CPU vertex positions. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">X</td><td></td></tr>
+    <tr><td class="paramname">X</td><td><code>3x|# vertices|</code> matrix of vertex positions </td></tr>
   </table>
   </dd>
 </dl>
@@ -612,10 +695,12 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the world bounding box for the current time step. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">min</td><td></td></tr>
-    <tr><td class="paramname">max</td><td></td></tr>
+    <tr><td class="paramname">min</td><td>World bounding box minimum </td></tr>
+    <tr><td class="paramname">max</td><td>World bounding box maximum </td></tr>
   </table>
   </dd>
 </dl>
@@ -636,9 +721,11 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Set the GPU vertex velocities from the input CPU vertex velocities. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">v</td><td></td></tr>
+    <tr><td class="paramname">v</td><td><code>3x|# vertices|</code> matrix of vertex velocities </td></tr>
   </table>
   </dd>
 </dl>
@@ -668,10 +755,12 @@ PBAT_API <a class="el" href="../../df/d6f/classpbat_1_1gpu_1_1xpbd_1_1_integrato
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Step once in time. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">dt</td><td></td></tr>
-    <tr><td class="paramname">iterations</td><td>@params substeps </td></tr>
+    <tr><td class="paramname">dt</td><td>Time step </td></tr>
+    <tr><td class="paramname">iterations</td><td>Number of solver loop iterations @params substeps Number of substeps </td></tr>
   </table>
   </dd>
 </dl>

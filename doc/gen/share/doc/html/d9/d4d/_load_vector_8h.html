@@ -134,32 +134,21 @@ $(function(){initNavTree('d9/d4d/_load_vector_8h.html','../../'); initResizable(
 
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a>  </div>
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">LoadVector.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>LoadVector API and implementation.  
+<p>Functions to compute load vectors for FEM elements.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d1/ddf/fem_2_concepts_8h_source.html">Concepts.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d0/d66/_shape_functions_8h_source.html">ShapeFunctions.h</a>&quot;</code><br />
-<code>#include &lt;exception&gt;</code><br />
-<code>#include &lt;fmt/core.h&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d2/d76/common_2_eigen_8h_source.html">pbat/common/Eigen.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../da/d04/_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&gt;</code><br />
-<code>#include &lt;tbb/parallel_for.h&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../d1/dba/profiling_2_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&quot;</code><br />
+<code>#include &lt;Eigen/Core&gt;</code><br />
 </div>
 <p><a href="../../d9/d4d/_load_vector_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
-Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d3d/structpbat_1_1fem_1_1_load_vector.html">pbat::fem::LoadVector&lt; TMesh, QuadratureOrder &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A matrix-free representation of a finite element load vector  \( \mathbf{f}_i =
-\int_\Omega \mathbf{f}(X) \phi_i(X) \) under Galerkin projection.  <a href="../../d4/d3d/structpbat_1_1fem_1_1_load_vector.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d7c/namespacepbat.html">pbat</a></td></tr>
@@ -168,9 +157,16 @@ Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html">pbat::fem</a></td></tr>
 <tr class="memdesc:d0/d07/namespacepbat_1_1fem"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finite Element Method (FEM) <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a627e15831ce3e453c0afd59b96849f42" id="r_a627e15831ce3e453c0afd59b96849f42"><td class="memTemplParams" colspan="2">template&lt;CElement TElement, class TDerivedE, class TDerivedeg, class TDerivedwg, class TDerivedNeg, class TDerivedFeg&gt; </td></tr>
+<tr class="memitem:a627e15831ce3e453c0afd59b96849f42"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html#a627e15831ce3e453c0afd59b96849f42">pbat::fem::LoadVectors</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::Index nNodes, Eigen::DenseBase&lt; TDerivedeg &gt; const &amp;eg, Eigen::DenseBase&lt; TDerivedwg &gt; const &amp;wg, Eigen::MatrixBase&lt; TDerivedNeg &gt; const &amp;Neg, Eigen::MatrixBase&lt; TDerivedFeg &gt; const &amp;Feg) -&gt; Eigen::Matrix&lt; typename TDerivedFeg::Scalar, TDerivedFeg::RowsAtCompileTime, Eigen::Dynamic &gt;</td></tr>
+<tr class="memdesc:a627e15831ce3e453c0afd59b96849f42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the load vector for a given FEM mesh.  <br /></td></tr>
+<tr class="separator:a627e15831ce3e453c0afd59b96849f42"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>LoadVector API and implementation. </p>
+<div class="textblock"><p>Functions to compute load vectors for FEM elements. </p>
 <dl class="section author"><dt>Author</dt><dd>Quoc-Minh Ton-That (<a href="#" onclick="location.href='mai'+'lto:'+'ton'+'th'+'at.'+'qu'+'ocm'+'in'+'h@g'+'ma'+'il.'+'co'+'m'; return false;">tonth<span class="obfuscator">.nosp@m.</span>at.q<span class="obfuscator">.nosp@m.</span>uocmi<span class="obfuscator">.nosp@m.</span>nh@g<span class="obfuscator">.nosp@m.</span>mail.<span class="obfuscator">.nosp@m.</span>com</a>) </dd></dl>
 <dl class="section date"><dt>Date</dt><dd>2025-02-11</dd></dl>
 <dl class="section copyright"><dt>Copyright</dt><dd>Copyright (c) 2025 </dd></dl>

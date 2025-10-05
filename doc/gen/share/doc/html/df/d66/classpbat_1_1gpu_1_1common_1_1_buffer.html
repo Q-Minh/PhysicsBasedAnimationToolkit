@@ -141,10 +141,15 @@ $(function(){initNavTree('df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html','..
   <div class="headertitle"><div class="title">pbat::gpu::common::Buffer Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>1- or 2-dimensional GPU buffer of numeric types  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../d7/d1b/_buffer_8h_source.html">Buffer.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:aaeb267c820fbdb5076d9dbb5427ec82e" id="r_aaeb267c820fbdb5076d9dbb5427ec82e"><td class="memItemLeft" align="right" valign="top"><a id="aaeb267c820fbdb5076d9dbb5427ec82e" name="aaeb267c820fbdb5076d9dbb5427ec82e"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><b>EType</b> { <br />
+<tr class="memitem:aaeb267c820fbdb5076d9dbb5427ec82e" id="r_aaeb267c820fbdb5076d9dbb5427ec82e"><td class="memItemLeft" align="right" valign="top"><a id="aaeb267c820fbdb5076d9dbb5427ec82e" name="aaeb267c820fbdb5076d9dbb5427ec82e"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaeb267c820fbdb5076d9dbb5427ec82e">EType</a> { <br />
 &#160;&#160;<b>uint8</b>
 , <b>uint16</b>
 , <b>uint32</b>
@@ -159,16 +164,17 @@ Public Types</h2></td></tr>
 , <b>float64</b>
 <br />
  }</td></tr>
+<tr class="memdesc:aaeb267c820fbdb5076d9dbb5427ec82e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of the buffer elements. <br /></td></tr>
 <tr class="separator:aaeb267c820fbdb5076d9dbb5427ec82e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9607717ca262ec1406b5d1647fe9ed42" id="r_a9607717ca262ec1406b5d1647fe9ed42"><td class="memTemplParams" colspan="2"><a id="a9607717ca262ec1406b5d1647fe9ed42" name="a9607717ca262ec1406b5d1647fe9ed42"></a>
-template&lt;class T&gt; </td></tr>
-<tr class="memitem:a9607717ca262ec1406b5d1647fe9ed42"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Data</b> = Eigen::Ref&lt;Eigen::Matrix&lt;T, Eigen::Dynamic, Eigen::Dynamic&gt; const&gt;</td></tr>
-<tr class="separator:a9607717ca262ec1406b5d1647fe9ed42"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae999acb8fed3775baca5a5b4934b9a2a" id="r_ae999acb8fed3775baca5a5b4934b9a2a"><td class="memTemplParams" colspan="2">template&lt;class T&gt; </td></tr>
+<tr class="memitem:ae999acb8fed3775baca5a5b4934b9a2a"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a></td></tr>
+<tr class="memdesc:ae999acb8fed3775baca5a5b4934b9a2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Input data type.  <br /></td></tr>
+<tr class="separator:ae999acb8fed3775baca5a5b4934b9a2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a8fea256195bfa7e29d96c0a923154ace" id="r_a8fea256195bfa7e29d96c0a923154ace"><td class="memItemLeft" align="right" valign="top"><a id="a8fea256195bfa7e29d96c0a923154ace" name="a8fea256195bfa7e29d96c0a923154ace"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> dims, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> n, EType type)</td></tr>
+<tr class="memitem:a8fea256195bfa7e29d96c0a923154ace" id="r_a8fea256195bfa7e29d96c0a923154ace"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8fea256195bfa7e29d96c0a923154ace">Buffer</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> dims, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> n, <a class="el" href="#aaeb267c820fbdb5076d9dbb5427ec82e">EType</a> type)</td></tr>
+<tr class="memdesc:a8fea256195bfa7e29d96c0a923154ace"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object of dims rows, n columns, and element type type.  <br /></td></tr>
 <tr class="separator:a8fea256195bfa7e29d96c0a923154ace"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af9ae9d52806196dc29064abaab076bb6" id="r_af9ae9d52806196dc29064abaab076bb6"><td class="memItemLeft" align="right" valign="top"><a id="af9ae9d52806196dc29064abaab076bb6" name="af9ae9d52806196dc29064abaab076bb6"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (const <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;other)=delete</td></tr>
@@ -176,100 +182,902 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (<a cl
 <tr class="memitem:afeff1c48a09d77adf95b6ade1967f173" id="r_afeff1c48a09d77adf95b6ade1967f173"><td class="memItemLeft" align="right" valign="top"><a id="afeff1c48a09d77adf95b6ade1967f173" name="afeff1c48a09d77adf95b6ade1967f173"></a>
 <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;other)=delete</td></tr>
 <tr class="separator:afeff1c48a09d77adf95b6ade1967f173"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a974f81a8e9b277b752993462fe211549" id="r_a974f81a8e9b277b752993462fe211549"><td class="memItemLeft" align="right" valign="top"><a id="a974f81a8e9b277b752993462fe211549" name="a974f81a8e9b277b752993462fe211549"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (<a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a974f81a8e9b277b752993462fe211549" id="r_a974f81a8e9b277b752993462fe211549"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a974f81a8e9b277b752993462fe211549">Buffer</a> (<a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a974f81a8e9b277b752993462fe211549"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <br /></td></tr>
 <tr class="separator:a974f81a8e9b277b752993462fe211549"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9199e2b0e31cbe1fbf2ebecce17e891a" id="r_a9199e2b0e31cbe1fbf2ebecce17e891a"><td class="memItemLeft" align="right" valign="top"><a id="a9199e2b0e31cbe1fbf2ebecce17e891a" name="a9199e2b0e31cbe1fbf2ebecce17e891a"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a9199e2b0e31cbe1fbf2ebecce17e891a" id="r_a9199e2b0e31cbe1fbf2ebecce17e891a"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9199e2b0e31cbe1fbf2ebecce17e891a">operator=</a> (<a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a9199e2b0e31cbe1fbf2ebecce17e891a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move assignment operator.  <br /></td></tr>
 <tr class="separator:a9199e2b0e31cbe1fbf2ebecce17e891a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9eba5427a0a3ef603e932b45f6b92bfb" id="r_a9eba5427a0a3ef603e932b45f6b92bfb"><td class="memItemLeft" align="right" valign="top"><a id="a9eba5427a0a3ef603e932b45f6b92bfb" name="a9eba5427a0a3ef603e932b45f6b92bfb"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::uint8_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a9eba5427a0a3ef603e932b45f6b92bfb" id="r_a9eba5427a0a3ef603e932b45f6b92bfb"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9eba5427a0a3ef603e932b45f6b92bfb">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint8_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a9eba5427a0a3ef603e932b45f6b92bfb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:a9eba5427a0a3ef603e932b45f6b92bfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a16819ccd42a746974cfb80e93bb1f467" id="r_a16819ccd42a746974cfb80e93bb1f467"><td class="memItemLeft" align="right" valign="top"><a id="a16819ccd42a746974cfb80e93bb1f467" name="a16819ccd42a746974cfb80e93bb1f467"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::uint16_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a16819ccd42a746974cfb80e93bb1f467" id="r_a16819ccd42a746974cfb80e93bb1f467"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a16819ccd42a746974cfb80e93bb1f467">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint16_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a16819ccd42a746974cfb80e93bb1f467"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:a16819ccd42a746974cfb80e93bb1f467"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aab184deab79bfff79e1be4123a2ac523" id="r_aab184deab79bfff79e1be4123a2ac523"><td class="memItemLeft" align="right" valign="top"><a id="aab184deab79bfff79e1be4123a2ac523" name="aab184deab79bfff79e1be4123a2ac523"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::uint32_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:aab184deab79bfff79e1be4123a2ac523" id="r_aab184deab79bfff79e1be4123a2ac523"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aab184deab79bfff79e1be4123a2ac523">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint32_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:aab184deab79bfff79e1be4123a2ac523"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:aab184deab79bfff79e1be4123a2ac523"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a24cd9a785897acc6e51cbe1b396a365d" id="r_a24cd9a785897acc6e51cbe1b396a365d"><td class="memItemLeft" align="right" valign="top"><a id="a24cd9a785897acc6e51cbe1b396a365d" name="a24cd9a785897acc6e51cbe1b396a365d"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::uint64_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a24cd9a785897acc6e51cbe1b396a365d" id="r_a24cd9a785897acc6e51cbe1b396a365d"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a24cd9a785897acc6e51cbe1b396a365d">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint64_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a24cd9a785897acc6e51cbe1b396a365d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:a24cd9a785897acc6e51cbe1b396a365d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d3736a3e87870fe20523b7ee4a27d2a" id="r_a0d3736a3e87870fe20523b7ee4a27d2a"><td class="memItemLeft" align="right" valign="top"><a id="a0d3736a3e87870fe20523b7ee4a27d2a" name="a0d3736a3e87870fe20523b7ee4a27d2a"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::int8_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a0d3736a3e87870fe20523b7ee4a27d2a" id="r_a0d3736a3e87870fe20523b7ee4a27d2a"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0d3736a3e87870fe20523b7ee4a27d2a">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int8_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a0d3736a3e87870fe20523b7ee4a27d2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:a0d3736a3e87870fe20523b7ee4a27d2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2751cc465db7d666ff5f888c65a51479" id="r_a2751cc465db7d666ff5f888c65a51479"><td class="memItemLeft" align="right" valign="top"><a id="a2751cc465db7d666ff5f888c65a51479" name="a2751cc465db7d666ff5f888c65a51479"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::int16_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a2751cc465db7d666ff5f888c65a51479" id="r_a2751cc465db7d666ff5f888c65a51479"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2751cc465db7d666ff5f888c65a51479">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int16_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a2751cc465db7d666ff5f888c65a51479"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:a2751cc465db7d666ff5f888c65a51479"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a25640f620278d37c7638889330e76318" id="r_a25640f620278d37c7638889330e76318"><td class="memItemLeft" align="right" valign="top"><a id="a25640f620278d37c7638889330e76318" name="a25640f620278d37c7638889330e76318"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::int32_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a25640f620278d37c7638889330e76318" id="r_a25640f620278d37c7638889330e76318"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25640f620278d37c7638889330e76318">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int32_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a25640f620278d37c7638889330e76318"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:a25640f620278d37c7638889330e76318"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab0d9f2c6a97a07b01347448468d56b9f" id="r_ab0d9f2c6a97a07b01347448468d56b9f"><td class="memItemLeft" align="right" valign="top"><a id="ab0d9f2c6a97a07b01347448468d56b9f" name="ab0d9f2c6a97a07b01347448468d56b9f"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; std::int64_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:ab0d9f2c6a97a07b01347448468d56b9f" id="r_ab0d9f2c6a97a07b01347448468d56b9f"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0d9f2c6a97a07b01347448468d56b9f">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int64_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:ab0d9f2c6a97a07b01347448468d56b9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:ab0d9f2c6a97a07b01347448468d56b9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad104d96e743b1c4464c56b3ad67937ca" id="r_ad104d96e743b1c4464c56b3ad67937ca"><td class="memItemLeft" align="right" valign="top"><a id="ad104d96e743b1c4464c56b3ad67937ca" name="ad104d96e743b1c4464c56b3ad67937ca"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; float &gt; const &amp;data)</td></tr>
+<tr class="memitem:ad104d96e743b1c4464c56b3ad67937ca" id="r_ad104d96e743b1c4464c56b3ad67937ca"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad104d96e743b1c4464c56b3ad67937ca">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; float &gt; const &amp;data)</td></tr>
+<tr class="memdesc:ad104d96e743b1c4464c56b3ad67937ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:ad104d96e743b1c4464c56b3ad67937ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a20e1d06f213f8b7b4d73fe961b80a98e" id="r_a20e1d06f213f8b7b4d73fe961b80a98e"><td class="memItemLeft" align="right" valign="top"><a id="a20e1d06f213f8b7b4d73fe961b80a98e" name="a20e1d06f213f8b7b4d73fe961b80a98e"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Buffer</b> (Data&lt; double &gt; const &amp;data)</td></tr>
+<tr class="memitem:a20e1d06f213f8b7b4d73fe961b80a98e" id="r_a20e1d06f213f8b7b4d73fe961b80a98e"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a20e1d06f213f8b7b4d73fe961b80a98e">Buffer</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; double &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a20e1d06f213f8b7b4d73fe961b80a98e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data.  <br /></td></tr>
 <tr class="separator:a20e1d06f213f8b7b4d73fe961b80a98e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aba93ef3da34d3b98885769fd2daeb7aa" id="r_aba93ef3da34d3b98885769fd2daeb7aa"><td class="memItemLeft" align="right" valign="top"><a id="aba93ef3da34d3b98885769fd2daeb7aa" name="aba93ef3da34d3b98885769fd2daeb7aa"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::uint8_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:aba93ef3da34d3b98885769fd2daeb7aa" id="r_aba93ef3da34d3b98885769fd2daeb7aa"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aba93ef3da34d3b98885769fd2daeb7aa">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint8_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:aba93ef3da34d3b98885769fd2daeb7aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:aba93ef3da34d3b98885769fd2daeb7aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa746078a6390f09ec7f0a97a95586618" id="r_aa746078a6390f09ec7f0a97a95586618"><td class="memItemLeft" align="right" valign="top"><a id="aa746078a6390f09ec7f0a97a95586618" name="aa746078a6390f09ec7f0a97a95586618"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::uint16_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:aa746078a6390f09ec7f0a97a95586618" id="r_aa746078a6390f09ec7f0a97a95586618"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa746078a6390f09ec7f0a97a95586618">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint16_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:aa746078a6390f09ec7f0a97a95586618"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:aa746078a6390f09ec7f0a97a95586618"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ada7b113658e124e3a8cdf3fc70f64b28" id="r_ada7b113658e124e3a8cdf3fc70f64b28"><td class="memItemLeft" align="right" valign="top"><a id="ada7b113658e124e3a8cdf3fc70f64b28" name="ada7b113658e124e3a8cdf3fc70f64b28"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::uint32_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:ada7b113658e124e3a8cdf3fc70f64b28" id="r_ada7b113658e124e3a8cdf3fc70f64b28"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ada7b113658e124e3a8cdf3fc70f64b28">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint32_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:ada7b113658e124e3a8cdf3fc70f64b28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:ada7b113658e124e3a8cdf3fc70f64b28"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4e92af3c2925bfe4cecb83fa98d6acdf" id="r_a4e92af3c2925bfe4cecb83fa98d6acdf"><td class="memItemLeft" align="right" valign="top"><a id="a4e92af3c2925bfe4cecb83fa98d6acdf" name="a4e92af3c2925bfe4cecb83fa98d6acdf"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::uint64_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a4e92af3c2925bfe4cecb83fa98d6acdf" id="r_a4e92af3c2925bfe4cecb83fa98d6acdf"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4e92af3c2925bfe4cecb83fa98d6acdf">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint64_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a4e92af3c2925bfe4cecb83fa98d6acdf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:a4e92af3c2925bfe4cecb83fa98d6acdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad75fa4a867112eea30df295efd12c14c" id="r_ad75fa4a867112eea30df295efd12c14c"><td class="memItemLeft" align="right" valign="top"><a id="ad75fa4a867112eea30df295efd12c14c" name="ad75fa4a867112eea30df295efd12c14c"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::int8_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:ad75fa4a867112eea30df295efd12c14c" id="r_ad75fa4a867112eea30df295efd12c14c"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad75fa4a867112eea30df295efd12c14c">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int8_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:ad75fa4a867112eea30df295efd12c14c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:ad75fa4a867112eea30df295efd12c14c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aff570edc55976542e3e1ca7ba9855408" id="r_aff570edc55976542e3e1ca7ba9855408"><td class="memItemLeft" align="right" valign="top"><a id="aff570edc55976542e3e1ca7ba9855408" name="aff570edc55976542e3e1ca7ba9855408"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::int16_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:aff570edc55976542e3e1ca7ba9855408" id="r_aff570edc55976542e3e1ca7ba9855408"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aff570edc55976542e3e1ca7ba9855408">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int16_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:aff570edc55976542e3e1ca7ba9855408"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:aff570edc55976542e3e1ca7ba9855408"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a723b4408cfe8d44d8bfc2828e6885b24" id="r_a723b4408cfe8d44d8bfc2828e6885b24"><td class="memItemLeft" align="right" valign="top"><a id="a723b4408cfe8d44d8bfc2828e6885b24" name="a723b4408cfe8d44d8bfc2828e6885b24"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::int32_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a723b4408cfe8d44d8bfc2828e6885b24" id="r_a723b4408cfe8d44d8bfc2828e6885b24"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a723b4408cfe8d44d8bfc2828e6885b24">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int32_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a723b4408cfe8d44d8bfc2828e6885b24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:a723b4408cfe8d44d8bfc2828e6885b24"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2b0abee9a583afe38c15838721497b4e" id="r_a2b0abee9a583afe38c15838721497b4e"><td class="memItemLeft" align="right" valign="top"><a id="a2b0abee9a583afe38c15838721497b4e" name="a2b0abee9a583afe38c15838721497b4e"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; std::int64_t &gt; const &amp;data)</td></tr>
+<tr class="memitem:a2b0abee9a583afe38c15838721497b4e" id="r_a2b0abee9a583afe38c15838721497b4e"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2b0abee9a583afe38c15838721497b4e">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int64_t &gt; const &amp;data)</td></tr>
+<tr class="memdesc:a2b0abee9a583afe38c15838721497b4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:a2b0abee9a583afe38c15838721497b4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad1ffe7005c5ee959691171aea3ecc19e" id="r_ad1ffe7005c5ee959691171aea3ecc19e"><td class="memItemLeft" align="right" valign="top"><a id="ad1ffe7005c5ee959691171aea3ecc19e" name="ad1ffe7005c5ee959691171aea3ecc19e"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; float &gt; const &amp;data)</td></tr>
+<tr class="memitem:ad1ffe7005c5ee959691171aea3ecc19e" id="r_ad1ffe7005c5ee959691171aea3ecc19e"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1ffe7005c5ee959691171aea3ecc19e">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; float &gt; const &amp;data)</td></tr>
+<tr class="memdesc:ad1ffe7005c5ee959691171aea3ecc19e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:ad1ffe7005c5ee959691171aea3ecc19e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aefca6a9ce7f49955b6dac2541deaa234" id="r_aefca6a9ce7f49955b6dac2541deaa234"><td class="memItemLeft" align="right" valign="top"><a id="aefca6a9ce7f49955b6dac2541deaa234" name="aefca6a9ce7f49955b6dac2541deaa234"></a>
-PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (Data&lt; double &gt; const &amp;data)</td></tr>
+<tr class="memitem:aefca6a9ce7f49955b6dac2541deaa234" id="r_aefca6a9ce7f49955b6dac2541deaa234"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aefca6a9ce7f49955b6dac2541deaa234">operator=</a> (<a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; double &gt; const &amp;data)</td></tr>
+<tr class="memdesc:aefca6a9ce7f49955b6dac2541deaa234"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator.  <br /></td></tr>
 <tr class="separator:aefca6a9ce7f49955b6dac2541deaa234"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acc24ec258c1b0d5b3752e15059f8aeed" id="r_acc24ec258c1b0d5b3752e15059f8aeed"><td class="memItemLeft" align="right" valign="top"><a id="acc24ec258c1b0d5b3752e15059f8aeed" name="acc24ec258c1b0d5b3752e15059f8aeed"></a>
-<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>Dims</b> () const</td></tr>
+<tr class="memitem:acc24ec258c1b0d5b3752e15059f8aeed" id="r_acc24ec258c1b0d5b3752e15059f8aeed"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acc24ec258c1b0d5b3752e15059f8aeed">Dims</a> () const</td></tr>
+<tr class="memdesc:acc24ec258c1b0d5b3752e15059f8aeed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of dimensions (i.e. rows) of the buffer.  <br /></td></tr>
 <tr class="separator:acc24ec258c1b0d5b3752e15059f8aeed"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2c69d5a42b1846724531f2a41360d4d4" id="r_a2c69d5a42b1846724531f2a41360d4d4"><td class="memItemLeft" align="right" valign="top"><a id="a2c69d5a42b1846724531f2a41360d4d4" name="a2c69d5a42b1846724531f2a41360d4d4"></a>
-PBAT_API EType&#160;</td><td class="memItemRight" valign="bottom"><b>Type</b> () const</td></tr>
+<tr class="memitem:a2c69d5a42b1846724531f2a41360d4d4" id="r_a2c69d5a42b1846724531f2a41360d4d4"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="#aaeb267c820fbdb5076d9dbb5427ec82e">EType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c69d5a42b1846724531f2a41360d4d4">Type</a> () const</td></tr>
+<tr class="memdesc:a2c69d5a42b1846724531f2a41360d4d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the type of the buffer elements.  <br /></td></tr>
 <tr class="separator:a2c69d5a42b1846724531f2a41360d4d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a10b0d4a9495de2a8282a4b99b833b73c" id="r_a10b0d4a9495de2a8282a4b99b833b73c"><td class="memItemLeft" align="right" valign="top"><a id="a10b0d4a9495de2a8282a4b99b833b73c" name="a10b0d4a9495de2a8282a4b99b833b73c"></a>
-PBAT_API std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>Size</b> () const</td></tr>
+<tr class="memitem:a10b0d4a9495de2a8282a4b99b833b73c" id="r_a10b0d4a9495de2a8282a4b99b833b73c"><td class="memItemLeft" align="right" valign="top">PBAT_API std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a10b0d4a9495de2a8282a4b99b833b73c">Size</a> () const</td></tr>
+<tr class="memdesc:a10b0d4a9495de2a8282a4b99b833b73c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of elements per dimension in the buffer (i.e. columns)  <br /></td></tr>
 <tr class="separator:a10b0d4a9495de2a8282a4b99b833b73c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7ae2dd8c6c4a968ba02e43ad553de1ae" id="r_a7ae2dd8c6c4a968ba02e43ad553de1ae"><td class="memItemLeft" align="right" valign="top"><a id="a7ae2dd8c6c4a968ba02e43ad553de1ae" name="a7ae2dd8c6c4a968ba02e43ad553de1ae"></a>
-PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>Resize</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> n)</td></tr>
+<tr class="memitem:a7ae2dd8c6c4a968ba02e43ad553de1ae" id="r_a7ae2dd8c6c4a968ba02e43ad553de1ae"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ae2dd8c6c4a968ba02e43ad553de1ae">Resize</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> n)</td></tr>
+<tr class="memdesc:a7ae2dd8c6c4a968ba02e43ad553de1ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize the buffer to n elements per dimension.  <br /></td></tr>
 <tr class="separator:a7ae2dd8c6c4a968ba02e43ad553de1ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a03fbbebb20f62c7a53cd6033e4945bc4" id="r_a03fbbebb20f62c7a53cd6033e4945bc4"><td class="memItemLeft" align="right" valign="top"><a id="a03fbbebb20f62c7a53cd6033e4945bc4" name="a03fbbebb20f62c7a53cd6033e4945bc4"></a>
-PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><b>Resize</b> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> dims, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> n)</td></tr>
+<tr class="memitem:a03fbbebb20f62c7a53cd6033e4945bc4" id="r_a03fbbebb20f62c7a53cd6033e4945bc4"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a03fbbebb20f62c7a53cd6033e4945bc4">Resize</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> dims, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> n)</td></tr>
+<tr class="memdesc:a03fbbebb20f62c7a53cd6033e4945bc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize the buffer to dims rows and n columns.  <br /></td></tr>
 <tr class="separator:a03fbbebb20f62c7a53cd6033e4945bc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a340b7ea445154ac869f77b9a6f4daef8" id="r_a340b7ea445154ac869f77b9a6f4daef8"><td class="memItemLeft" align="right" valign="top"><a id="a340b7ea445154ac869f77b9a6f4daef8" name="a340b7ea445154ac869f77b9a6f4daef8"></a>
-PBAT_API void *&#160;</td><td class="memItemRight" valign="bottom"><b>Impl</b> ()</td></tr>
+<tr class="memitem:a340b7ea445154ac869f77b9a6f4daef8" id="r_a340b7ea445154ac869f77b9a6f4daef8"><td class="memItemLeft" align="right" valign="top">PBAT_API void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a340b7ea445154ac869f77b9a6f4daef8">Impl</a> ()</td></tr>
+<tr class="memdesc:a340b7ea445154ac869f77b9a6f4daef8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get handle to the buffer implementation.  <br /></td></tr>
 <tr class="separator:a340b7ea445154ac869f77b9a6f4daef8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa7da07b4d09aef3231a824e8f57e8a00" id="r_aa7da07b4d09aef3231a824e8f57e8a00"><td class="memItemLeft" align="right" valign="top"><a id="aa7da07b4d09aef3231a824e8f57e8a00" name="aa7da07b4d09aef3231a824e8f57e8a00"></a>
-PBAT_API void const *&#160;</td><td class="memItemRight" valign="bottom"><b>Impl</b> () const</td></tr>
+<tr class="memitem:aa7da07b4d09aef3231a824e8f57e8a00" id="r_aa7da07b4d09aef3231a824e8f57e8a00"><td class="memItemLeft" align="right" valign="top">PBAT_API void const *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa7da07b4d09aef3231a824e8f57e8a00">Impl</a> () const</td></tr>
+<tr class="memdesc:aa7da07b4d09aef3231a824e8f57e8a00"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get handle to the buffer implementation.  <br /></td></tr>
 <tr class="separator:aa7da07b4d09aef3231a824e8f57e8a00"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
 <tr class="memitem:a0098d62040dc5cf9a3b42ead885319f3" id="r_a0098d62040dc5cf9a3b42ead885319f3"><td class="memItemLeft" align="right" valign="top"><a id="a0098d62040dc5cf9a3b42ead885319f3" name="a0098d62040dc5cf9a3b42ead885319f3"></a>
 static auto constexpr&#160;</td><td class="memItemRight" valign="bottom"><b>kMaxDims</b> = 4</td></tr>
+<tr class="memdesc:a0098d62040dc5cf9a3b42ead885319f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Maximum number of dimensions. <br /></td></tr>
 <tr class="separator:a0098d62040dc5cf9a3b42ead885319f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>1- or 2-dimensional GPU buffer of numeric types </p>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="ae999acb8fed3775baca5a5b4934b9a2a" name="ae999acb8fed3775baca5a5b4934b9a2a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae999acb8fed3775baca5a5b4934b9a2a">&#9670;&#160;</a></span>Data</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">pbat::gpu::common::Buffer::Data</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> </div>
+<div class="line">        Eigen::Ref&lt;Eigen::Matrix&lt;T, Eigen::Dynamic, Eigen::Dynamic&gt; <span class="keyword">const</span>&gt;</div>
+</div><!-- fragment -->
+<p>Input data type. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a8fea256195bfa7e29d96c0a923154ace" name="a8fea256195bfa7e29d96c0a923154ace"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8fea256195bfa7e29d96c0a923154ace">&#9670;&#160;</a></span>Buffer() <span class="overload">[1/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>dims</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>n</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#aaeb267c820fbdb5076d9dbb5427ec82e">EType</a></td>          <td class="paramname"><span class="paramname"><em>type</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object of dims rows, n columns, and element type type. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">dims</td><td>Number of rows </td></tr>
+    <tr><td class="paramname">n</td><td>Number of columns </td></tr>
+    <tr><td class="paramname">type</td><td>Type of the elements </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a974f81a8e9b277b752993462fe211549" name="a974f81a8e9b277b752993462fe211549"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a974f81a8e9b277b752993462fe211549">&#9670;&#160;</a></span>Buffer() <span class="overload">[2/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move constructor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> to move </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a9eba5427a0a3ef603e932b45f6b92bfb" name="a9eba5427a0a3ef603e932b45f6b92bfb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9eba5427a0a3ef603e932b45f6b92bfb">&#9670;&#160;</a></span>Buffer() <span class="overload">[3/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint8_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a16819ccd42a746974cfb80e93bb1f467" name="a16819ccd42a746974cfb80e93bb1f467"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a16819ccd42a746974cfb80e93bb1f467">&#9670;&#160;</a></span>Buffer() <span class="overload">[4/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint16_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aab184deab79bfff79e1be4123a2ac523" name="aab184deab79bfff79e1be4123a2ac523"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab184deab79bfff79e1be4123a2ac523">&#9670;&#160;</a></span>Buffer() <span class="overload">[5/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint32_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a24cd9a785897acc6e51cbe1b396a365d" name="a24cd9a785897acc6e51cbe1b396a365d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24cd9a785897acc6e51cbe1b396a365d">&#9670;&#160;</a></span>Buffer() <span class="overload">[6/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint64_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a0d3736a3e87870fe20523b7ee4a27d2a" name="a0d3736a3e87870fe20523b7ee4a27d2a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d3736a3e87870fe20523b7ee4a27d2a">&#9670;&#160;</a></span>Buffer() <span class="overload">[7/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int8_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a2751cc465db7d666ff5f888c65a51479" name="a2751cc465db7d666ff5f888c65a51479"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2751cc465db7d666ff5f888c65a51479">&#9670;&#160;</a></span>Buffer() <span class="overload">[8/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int16_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a25640f620278d37c7638889330e76318" name="a25640f620278d37c7638889330e76318"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25640f620278d37c7638889330e76318">&#9670;&#160;</a></span>Buffer() <span class="overload">[9/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int32_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ab0d9f2c6a97a07b01347448468d56b9f" name="ab0d9f2c6a97a07b01347448468d56b9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0d9f2c6a97a07b01347448468d56b9f">&#9670;&#160;</a></span>Buffer() <span class="overload">[10/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int64_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad104d96e743b1c4464c56b3ad67937ca" name="ad104d96e743b1c4464c56b3ad67937ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad104d96e743b1c4464c56b3ad67937ca">&#9670;&#160;</a></span>Buffer() <span class="overload">[11/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; float &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a20e1d06f213f8b7b4d73fe961b80a98e" name="a20e1d06f213f8b7b4d73fe961b80a98e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20e1d06f213f8b7b4d73fe961b80a98e">&#9670;&#160;</a></span>Buffer() <span class="overload">[12/12]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API pbat::gpu::common::Buffer::Buffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; double &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> object from input data. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="acc24ec258c1b0d5b3752e15059f8aeed" name="acc24ec258c1b0d5b3752e15059f8aeed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acc24ec258c1b0d5b3752e15059f8aeed">&#9670;&#160;</a></span>Dims()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> pbat::gpu::common::Buffer::Dims </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the number of dimensions (i.e. rows) of the buffer. </p>
+<dl class="section return"><dt>Returns</dt><dd>Number of dimensions </dd></dl>
+
+</div>
+</div>
+<a id="a340b7ea445154ac869f77b9a6f4daef8" name="a340b7ea445154ac869f77b9a6f4daef8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a340b7ea445154ac869f77b9a6f4daef8">&#9670;&#160;</a></span>Impl() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void * pbat::gpu::common::Buffer::Impl </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get handle to the buffer implementation. </p>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> implementation </dd></dl>
+
+</div>
+</div>
+<a id="aa7da07b4d09aef3231a824e8f57e8a00" name="aa7da07b4d09aef3231a824e8f57e8a00"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7da07b4d09aef3231a824e8f57e8a00">&#9670;&#160;</a></span>Impl() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void const  * pbat::gpu::common::Buffer::Impl </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get handle to the buffer implementation. </p>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> implementation </dd></dl>
+
+</div>
+</div>
+<a id="a9199e2b0e31cbe1fbf2ebecce17e891a" name="a9199e2b0e31cbe1fbf2ebecce17e891a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9199e2b0e31cbe1fbf2ebecce17e891a">&#9670;&#160;</a></span>operator=() <span class="overload">[1/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html" title="1- or 2-dimensional GPU buffer of numeric types">Buffer</a> to move </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="aefca6a9ce7f49955b6dac2541deaa234" name="aefca6a9ce7f49955b6dac2541deaa234"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefca6a9ce7f49955b6dac2541deaa234">&#9670;&#160;</a></span>operator=() <span class="overload">[2/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; double &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="ad1ffe7005c5ee959691171aea3ecc19e" name="ad1ffe7005c5ee959691171aea3ecc19e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad1ffe7005c5ee959691171aea3ecc19e">&#9670;&#160;</a></span>operator=() <span class="overload">[3/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; float &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="aff570edc55976542e3e1ca7ba9855408" name="aff570edc55976542e3e1ca7ba9855408"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff570edc55976542e3e1ca7ba9855408">&#9670;&#160;</a></span>operator=() <span class="overload">[4/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int16_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="a723b4408cfe8d44d8bfc2828e6885b24" name="a723b4408cfe8d44d8bfc2828e6885b24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a723b4408cfe8d44d8bfc2828e6885b24">&#9670;&#160;</a></span>operator=() <span class="overload">[5/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int32_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="a2b0abee9a583afe38c15838721497b4e" name="a2b0abee9a583afe38c15838721497b4e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b0abee9a583afe38c15838721497b4e">&#9670;&#160;</a></span>operator=() <span class="overload">[6/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int64_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="ad75fa4a867112eea30df295efd12c14c" name="ad75fa4a867112eea30df295efd12c14c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad75fa4a867112eea30df295efd12c14c">&#9670;&#160;</a></span>operator=() <span class="overload">[7/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::int8_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="aa746078a6390f09ec7f0a97a95586618" name="aa746078a6390f09ec7f0a97a95586618"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa746078a6390f09ec7f0a97a95586618">&#9670;&#160;</a></span>operator=() <span class="overload">[8/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint16_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="ada7b113658e124e3a8cdf3fc70f64b28" name="ada7b113658e124e3a8cdf3fc70f64b28"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ada7b113658e124e3a8cdf3fc70f64b28">&#9670;&#160;</a></span>operator=() <span class="overload">[9/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint32_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="a4e92af3c2925bfe4cecb83fa98d6acdf" name="a4e92af3c2925bfe4cecb83fa98d6acdf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e92af3c2925bfe4cecb83fa98d6acdf">&#9670;&#160;</a></span>operator=() <span class="overload">[10/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint64_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="aba93ef3da34d3b98885769fd2daeb7aa" name="aba93ef3da34d3b98885769fd2daeb7aa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba93ef3da34d3b98885769fd2daeb7aa">&#9670;&#160;</a></span>operator=() <span class="overload">[11/11]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">Buffer</a> &amp; pbat::gpu::common::Buffer::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae999acb8fed3775baca5a5b4934b9a2a">Data</a>&lt; std::uint8_t &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Copy assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>Input data to copy </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this buffer </dd></dl>
+
+</div>
+</div>
+<a id="a03fbbebb20f62c7a53cd6033e4945bc4" name="a03fbbebb20f62c7a53cd6033e4945bc4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a03fbbebb20f62c7a53cd6033e4945bc4">&#9670;&#160;</a></span>Resize() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pbat::gpu::common::Buffer::Resize </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>dims</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>n</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Resize the buffer to dims rows and n columns. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">dims</td><td>Number of rows </td></tr>
+    <tr><td class="paramname">n</td><td>Number of columns </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a7ae2dd8c6c4a968ba02e43ad553de1ae" name="a7ae2dd8c6c4a968ba02e43ad553de1ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7ae2dd8c6c4a968ba02e43ad553de1ae">&#9670;&#160;</a></span>Resize() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pbat::gpu::common::Buffer::Resize </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a></td>          <td class="paramname"><span class="paramname"><em>n</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Resize the buffer to n elements per dimension. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">n</td><td>Number of elements per dimension </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a10b0d4a9495de2a8282a4b99b833b73c" name="a10b0d4a9495de2a8282a4b99b833b73c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10b0d4a9495de2a8282a4b99b833b73c">&#9670;&#160;</a></span>Size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::size_t pbat::gpu::common::Buffer::Size </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the number of elements per dimension in the buffer (i.e. columns) </p>
+<dl class="section return"><dt>Returns</dt><dd>Number of elements per dimension </dd></dl>
+
+</div>
+</div>
+<a id="a2c69d5a42b1846724531f2a41360d4d4" name="a2c69d5a42b1846724531f2a41360d4d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c69d5a42b1846724531f2a41360d4d4">&#9670;&#160;</a></span>Type()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="#aaeb267c820fbdb5076d9dbb5427ec82e">Buffer::EType</a> pbat::gpu::common::Buffer::Type </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the type of the buffer elements. </p>
+<dl class="section return"><dt>Returns</dt><dd>Type of the buffer elements </dd></dl>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/gpu/common/<a class="el" href="../../d7/d1b/_buffer_8h_source.html">Buffer.h</a></li>
 <li>C:/git/PhysicsBasedAnimationToolkit/source/pbat/gpu/common/<b>Buffer.cu</b></li>

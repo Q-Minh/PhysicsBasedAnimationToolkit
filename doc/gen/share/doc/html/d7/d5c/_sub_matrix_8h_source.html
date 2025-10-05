@@ -165,7 +165,7 @@ $(function(){initNavTree('d7/d5c/_sub_matrix_8h_source.html','../../'); initResi
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = N;</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = NestedType::bRowMajor;</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    PBAT_HOST_DEVICE ConstSubMatrix(NestedType <span class="keyword">const</span>&amp; A, <span class="keywordtype">int</span> ib, <span class="keywordtype">int</span> jb) : A(A), ib(ib), jb(jb)</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    PBAT_HOST_DEVICE ConstSubMatrix(NestedType <span class="keyword">const</span>&amp; _A, <span class="keywordtype">int</span> _ib, <span class="keywordtype">int</span> _jb) : A(_A), ib(_ib), jb(_jb)</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    {</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>            NestedType::kRows &gt;= M and NestedType::kCols &gt;= N and M &gt; 0 and N &gt; 0,</div>
@@ -218,7 +218,7 @@ $(function(){initNavTree('d7/d5c/_sub_matrix_8h_source.html','../../'); initResi
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="keyword">static</span> <span class="keyword">auto</span> <span class="keyword">constexpr</span> kCols     = N;</div>
 <div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bRowMajor = NestedType::bRowMajor;</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    PBAT_HOST_DEVICE SubMatrix(NestedType&amp; A, <span class="keywordtype">int</span> ib, <span class="keywordtype">int</span> jb) : A(A), ib(ib), jb(jb)</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    PBAT_HOST_DEVICE SubMatrix(NestedType&amp; _A, <span class="keywordtype">int</span> _ib, <span class="keywordtype">int</span> _jb) : A(_A), ib(_ib), jb(_jb)</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    {</div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>        <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>            NestedType::kRows &gt;= M and NestedType::kCols &gt;= N and M &gt; 0 and N &gt; 0,</div>
@@ -311,7 +311,7 @@ $(function(){initNavTree('d7/d5c/_sub_matrix_8h_source.html','../../'); initResi
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_const_transpose_view_html"><div class="ttname"><a href="../../df/d69/classpbat_1_1math_1_1linalg_1_1mini_1_1_const_transpose_view.html">pbat::math::linalg::mini::ConstTransposeView</a></div><div class="ttdef"><b>Definition</b> Transpose.h:210</div></div>
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_transpose_view_html"><div class="ttname"><a href="../../da/de4/classpbat_1_1math_1_1linalg_1_1mini_1_1_transpose_view.html">pbat::math::linalg::mini::TransposeView</a></div><div class="ttdef"><b>Definition</b> Transpose.h:139</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_1_1linalg_1_1mini_html"><div class="ttname"><a href="../../df/d43/namespacepbat_1_1math_1_1linalg_1_1mini.html">pbat::math::linalg::mini</a></div><div class="ttdoc">Mini linear algebra related functionality.</div><div class="ttdef"><b>Definition</b> Assign.h:12</div></div>
-<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div><div class="ttdef"><b>Definition</b> FilterEigenvalues.h:7</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_html"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html">pbat::math</a></div><div class="ttdoc">Math related functionality.</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 </div><!-- fragment --></div><!-- contents -->

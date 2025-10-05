@@ -5,6 +5,7 @@ var namespacepbat =
     [ "geometry", "d2/d7a/namespacepbat_1_1geometry.html", "d2/d7a/namespacepbat_1_1geometry" ],
     [ "gpu", "de/d07/namespacepbat_1_1gpu.html", "de/d07/namespacepbat_1_1gpu" ],
     [ "graph", "d9/dc9/namespacepbat_1_1graph.html", "d9/dc9/namespacepbat_1_1graph" ],
+    [ "io", "d8/ded/namespacepbat_1_1io.html", "d8/ded/namespacepbat_1_1io" ],
     [ "math", "d5/d6a/namespacepbat_1_1math.html", "d5/d6a/namespacepbat_1_1math" ],
     [ "sim", "d3/dcb/namespacepbat_1_1sim.html", "d3/dcb/namespacepbat_1_1sim" ],
     [ "CSCMatrix", "d0/d7c/namespacepbat.html#a586a2c62c5620091e8310c801123582b", null ],

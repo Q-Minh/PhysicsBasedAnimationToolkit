@@ -1,11 +1,24 @@
 var searchData=
 [
-  ['filter_0',['Filter',['../dd/d4e/namespacepbat_1_1common.html#a2205778d4efe327d2dd564ce005fb944',1,'pbat::common']]],
-  ['finalizeactiveset_1',['FinalizeActiveSet',['../d9/d47/classpbat_1_1gpu_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#a2405ad9f0d44b546fad9f01d9d914741',1,'pbat::gpu::contact::VertexTriangleMixedCcdDcd::FinalizeActiveSet()'],['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#a853e84e20355c12fe7417f0655661dc9',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd::FinalizeActiveSet()']]],
-  ['forceloaddll_2',['ForceLoadDLL',['../d0/d7c/namespacepbat.html#acf21d6a477ea6252a257d6d7a9216baa',1,'pbat']]],
-  ['foreachedge_3',['ForEachEdge',['../d9/dc9/namespacepbat_1_1graph.html#a3b44563432fa5affdc87403cbfdcaff6',1,'pbat::graph']]],
-  ['foreachnearestneighbour_4',['ForEachNearestNeighbour',['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#a80ce5845a75584a923829b0f378fb9b0',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd']]],
-  ['forrange_5',['ForRange',['../dd/d4e/namespacepbat_1_1common.html#ad51e60890ee897ee1a9932b6899f81a7',1,'pbat::common']]],
-  ['fortypes_6',['ForTypes',['../dd/d4e/namespacepbat_1_1common.html#a480d692365ed05e9ec79bc3f95e5d36d',1,'pbat::common']]],
-  ['forvalues_7',['ForValues',['../dd/d4e/namespacepbat_1_1common.html#ac5d280ddd3b75d1e8391a5c4c30f72ac',1,'pbat::common']]]
+  ['factorize_0',['factorize',['../dd/d53/structpbat_1_1sim_1_1algorithm_1_1newton_1_1_preconditioner_operator.html#ab89b73513a91b73ae53b208fbe5e1ce0',1,'pbat::sim::algorithm::newton::PreconditionerOperator']]],
+  ['femelastodynamics_1',['FemElastoDynamics',['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#a7090ae68d511d144fb03915eb55fa284',1,'pbat::sim::dynamics::FemElastoDynamics::FemElastoDynamics()=default'],['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#ab4d6c5961ab0a511e92bb1a0dbc8d6a3',1,'pbat::sim::dynamics::FemElastoDynamics::FemElastoDynamics(Eigen::Ref&lt; Eigen::Matrix&lt; ScalarType, Eigen::Dynamic, Eigen::Dynamic &gt; const &gt; const &amp;V, Eigen::Ref&lt; Eigen::Matrix&lt; IndexType, Eigen::Dynamic, Eigen::Dynamic &gt; const &gt; const &amp;C)']]],
+  ['filter_2',['Filter',['../dd/d4e/namespacepbat_1_1common.html#a2205778d4efe327d2dd564ce005fb944',1,'pbat::common']]],
+  ['filtereigenvalues_3',['FilterEigenvalues',['../dd/da9/namespacepbat_1_1math_1_1linalg.html#af09d4a32a9509c8fa32a9fedb7fe7554',1,'pbat::math::linalg']]],
+  ['finalizeactiveset_4',['FinalizeActiveSet',['../d9/d47/classpbat_1_1gpu_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#a2405ad9f0d44b546fad9f01d9d914741',1,'pbat::gpu::contact::VertexTriangleMixedCcdDcd::FinalizeActiveSet()'],['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#a853e84e20355c12fe7417f0655661dc9',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd::FinalizeActiveSet()']]],
+  ['find_5',['Find',['../d9/d77/classpbat_1_1graph_1_1_disjoint_set_union_find.html#ad67e9a5c1b883741f6fbf470263dc743',1,'pbat::graph::DisjointSetUnionFind']]],
+  ['findnearesttrianglestopenetratingvertices_6',['FindNearestTrianglesToPenetratingVertices',['../dc/dde/classpbat_1_1sim_1_1contact_1_1_mesh_vertex_tetrahedron_dcd.html#a521fc1769035b75b55f813dc93b8ff9c',1,'pbat::sim::contact::MeshVertexTetrahedronDcd']]],
+  ['findrootsandparents_7',['FindRootsAndParents',['../d2/d9d/namespacepbat_1_1geometry_1_1sdf.html#ae91c35b28ab2bfb870d1c3e2e45e628a',1,'pbat::geometry::sdf']]],
+  ['forceloaddll_8',['ForceLoadDLL',['../d0/d7c/namespacepbat.html#acf21d6a477ea6252a257d6d7a9216baa',1,'pbat']]],
+  ['foreachactivevertextrianglecontact_9',['ForEachActiveVertexTriangleContact',['../dc/dde/classpbat_1_1sim_1_1contact_1_1_mesh_vertex_tetrahedron_dcd.html#a1b5a64159375613df483e4605dc4c30e',1,'pbat::sim::contact::MeshVertexTetrahedronDcd']]],
+  ['foreachbodypair_10',['ForEachBodyPair',['../dc/dde/classpbat_1_1sim_1_1contact_1_1_mesh_vertex_tetrahedron_dcd.html#a70c90045c27cfcbf1757ad83c8c2312b',1,'pbat::sim::contact::MeshVertexTetrahedronDcd::ForEachBodyPair()'],['../db/df1/classpbat_1_1sim_1_1contact_1_1_multibody_mesh_mixed_ccd_dcd.html#a93ec06880245674d425a5bcf1075849f',1,'pbat::sim::contact::MultibodyMeshMixedCcdDcd::ForEachBodyPair()']]],
+  ['foreachedge_11',['ForEachEdge',['../d9/dc9/namespacepbat_1_1graph.html#a3b44563432fa5affdc87403cbfdcaff6',1,'pbat::graph']]],
+  ['foreachnearestneighbour_12',['ForEachNearestNeighbour',['../d4/d4c/classpbat_1_1gpu_1_1impl_1_1contact_1_1_vertex_triangle_mixed_ccd_dcd.html#a80ce5845a75584a923829b0f378fb9b0',1,'pbat::gpu::impl::contact::VertexTriangleMixedCcdDcd']]],
+  ['foreachpenetratingvertex_13',['ForEachPenetratingVertex',['../db/df1/classpbat_1_1sim_1_1contact_1_1_multibody_mesh_mixed_ccd_dcd.html#aebae04427c478a0a665e19b9f1ac5a33',1,'pbat::sim::contact::MultibodyMeshMixedCcdDcd']]],
+  ['foreachroot_14',['ForEachRoot',['../d6/d8e/namespacepbat_1_1math_1_1polynomial.html#a70f711b6350eb7d69a8712b4d60eb43f',1,'pbat::math::polynomial']]],
+  ['forrange_15',['ForRange',['../dd/d4e/namespacepbat_1_1common.html#ad51e60890ee897ee1a9932b6899f81a7',1,'pbat::common']]],
+  ['fortypes_16',['ForTypes',['../dd/d4e/namespacepbat_1_1common.html#a480d692365ed05e9ec79bc3f95e5d36d',1,'pbat::common']]],
+  ['forvalues_17',['ForValues',['../dd/d4e/namespacepbat_1_1common.html#ac5d280ddd3b75d1e8391a5c4c30f72ac',1,'pbat::common']]],
+  ['freecoordinates_18',['FreeCoordinates',['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#a2124cd971f8876f8c80453b6c6ba3c30',1,'pbat::sim::dynamics::FemElastoDynamics::FreeCoordinates() const'],['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#a81c7608963ad012f4ae424c99fc0a129',1,'pbat::sim::dynamics::FemElastoDynamics::FreeCoordinates()']]],
+  ['freenodes_19',['FreeNodes',['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#ab3ef17bf59349bc596db7afcc42b6d8e',1,'pbat::sim::dynamics::FemElastoDynamics']]],
+  ['freevelocities_20',['FreeVelocities',['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#a2f511775d2fdc63f3dbed26f6a63586e',1,'pbat::sim::dynamics::FemElastoDynamics::FreeVelocities() const'],['../d5/d58/structpbat_1_1sim_1_1dynamics_1_1_fem_elasto_dynamics.html#a03d96783b44cfd3f4734d0a8add5fb75',1,'pbat::sim::dynamics::FemElastoDynamics::FreeVelocities()']]]
 ];

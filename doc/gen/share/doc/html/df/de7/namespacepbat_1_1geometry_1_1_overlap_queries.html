@@ -1126,7 +1126,7 @@ template&lt;mini::CMatrix TMatrixA, mini::CMatrix TMatrixB, mini::CMatrix TMatri
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the triangle and box overlap, false otherwise </dd></dl>
-<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[3]</a> section 5.2.9</p>
+<p>See <a class="el" href="../../d0/de3/citelist.html#CITEREF_ericson2004real">[5]</a> section 5.2.9</p>
 <p>Our implementation is super inefficient for AABBs, because of all the known zeros that we are not exploiting. Because AABBs are axis aligned, their edges have many zeros, and cross product and dot product operations with these edges could save many floating point operations, but we don't do it... Fortunately, this implementation is valid for OBBs.</p>
 
 </div>

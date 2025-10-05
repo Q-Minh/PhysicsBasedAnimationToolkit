@@ -2,7 +2,7 @@ var classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy =
 [
     [ "BaseType", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html#a673eb763150d87c87155b2d076fd9ac1", null ],
     [ "SelfType", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html#a397a3d1a50d8a6bf49b5b578b3612179", null ],
-    [ "TetrahedralAabbHierarchy", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html#a23f6061ccdd92aca09aead5f14b1646d", null ],
+    [ "TetrahedralAabbHierarchy", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html#ab30c1668cf871c8b363615c11cfc8a46", null ],
     [ "BoundingVolumeOf", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html#adfec13d5982daf03818993e8f7a7395e", null ],
     [ "GetBoundingVolumes", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html#ae0ef5a6d0d63edf44f8b534d23adf953", null ],
     [ "GetC", "d9/dca/classpbat_1_1geometry_1_1_tetrahedral_aabb_hierarchy.html#a0f4ab2577ea1a860b5bf6fb52a51fd49", null ],

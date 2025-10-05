@@ -135,8 +135,7 @@ $(function(){initNavTree('d8/dcb/fem_2_mesh_8h.html','../../'); initResizable(tr
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#namespaces">Namespaces</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#namespaces">Namespaces</a>  </div>
   <div class="headertitle"><div class="title">Mesh.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -145,25 +144,24 @@ $(function(){initNavTree('d8/dcb/fem_2_mesh_8h.html','../../'); initResizable(tr
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d1/ddf/fem_2_concepts_8h_source.html">Concepts.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../df/d1f/_jacobian_8h_source.html">Jacobian.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d5/d56/common_2_concepts_8h_source.html">pbat/common/Concepts.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d2/d76/common_2_eigen_8h_source.html">pbat/common/Eigen.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d0/d08/_archive_8h_source.html">pbat/io/Archive.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../dd/d79/_rational_8h_source.html">pbat/math/Rational.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d1/dba/profiling_2_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&quot;</code><br />
 <code>#include &lt;algorithm&gt;</code><br />
 <code>#include &lt;exception&gt;</code><br />
 <code>#include &lt;map&gt;</code><br />
 <code>#include &lt;numeric&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../d2/d76/common_2_eigen_8h_source.html">pbat/common/Eigen.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../dd/d79/_rational_8h_source.html">pbat/math/Rational.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="../../da/d04/_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&gt;</code><br />
 <code>#include &lt;ranges&gt;</code><br />
 </div>
 <p><a href="../../d8/dcb/fem_2_mesh_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh&lt; TElement, Dims &gt;</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh&lt; TElement, Dims, TScalar, TIndex &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A generic stateful finite element mesh representation.  <a href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d65/structpbat_1_1fem_1_1_linear_mesh_view.html">pbat::fem::LinearMeshView&lt; TElement, Dims &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A non-owning view over a linear finite element mesh.  <a href="../../de/d65/structpbat_1_1fem_1_1_linear_mesh_view.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
@@ -174,17 +172,6 @@ Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d07/namespacepbat_1_1fem.html">pbat::fem</a></td></tr>
 <tr class="memdesc:d0/d07/namespacepbat_1_1fem"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finite Element Method (FEM) <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
-Functions</h2></td></tr>
-<tr class="memitem:ac8b362813e00a0fe35f3e4a4e854f11d" id="r_ac8b362813e00a0fe35f3e4a4e854f11d"><td class="memTemplParams" colspan="2"><a id="ac8b362813e00a0fe35f3e4a4e854f11d" name="ac8b362813e00a0fe35f3e4a4e854f11d"></a>
-template&lt;CElement TElement, int Dims, int QuadratureOrder, class TDerivedX, class TDerivedE&gt; </td></tr>
-<tr class="memitem:ac8b362813e00a0fe35f3e4a4e854f11d"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>pbat::fem::detail::MeshQuadraturePoints</b> (Eigen::MatrixBase&lt; TDerivedX &gt; const &amp;X, Eigen::MatrixBase&lt; TDerivedE &gt; const &amp;E)</td></tr>
-<tr class="separator:ac8b362813e00a0fe35f3e4a4e854f11d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a42db82c7acf1d5bd482937a000bf297e" id="r_a42db82c7acf1d5bd482937a000bf297e"><td class="memTemplParams" colspan="2"><a id="a42db82c7acf1d5bd482937a000bf297e" name="a42db82c7acf1d5bd482937a000bf297e"></a>
-template&lt;CElement TElement, int Dims, int QuadratureOrder&gt; </td></tr>
-<tr class="memitem:a42db82c7acf1d5bd482937a000bf297e"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>pbat::fem::detail::MeshQuadratureWeights</b> ()</td></tr>
-<tr class="separator:a42db82c7acf1d5bd482937a000bf297e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Finite element mesh API and implementation. </p>

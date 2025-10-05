@@ -146,31 +146,20 @@ $(function(){initNavTree('d1/db1/conceptpbat_1_1fem_1_1_c_element.html','../../'
 <div class="line"><span class="keyword">concept </span><a class="code hl_concept" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">pbat::fem::CElement</a> =  <span class="keyword">requires</span>(T t)</div>
 <div class="line">{</div>
 <div class="line">    <span class="keyword">typename</span> T::AffineBaseType;</div>
-<div class="line">    {</div>
-<div class="line">        T::bHasConstantJacobian</div>
-<div class="line">    } -&gt; std::convertible_to&lt;bool&gt;;</div>
+<div class="line">    {T::bHasConstantJacobian}-&gt;std::convertible_to&lt;<span class="keywordtype">bool</span>&gt;;</div>
 <div class="line">    </div>
-<div class="line">    <span class="keyword">typename</span> T::template QuadratureType&lt;1&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        T::kOrder</div>
-<div class="line">    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        T::kDims</div>
-<div class="line">    } -&gt; std::convertible_to&lt;int&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        T::kNodes</div>
-<div class="line">    } -&gt; std::convertible_to&lt;int&gt;;</div>
+<div class="line">    <span class="keyword">typename</span> T::template QuadratureType&lt;1, Scalar&gt;;</div>
+<div class="line">    {T::kOrder}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line">    {T::kDims}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
+<div class="line">    {T::kNodes}-&gt;std::convertible_to&lt;<span class="keywordtype">int</span>&gt;;</div>
 <div class="line">    <span class="keyword">requires</span> common::CContiguousIndexRange&lt;<span class="keyword">decltype</span>(T::Coordinates)&gt;;</div>
 <div class="line">    <span class="keyword">requires</span> common::CContiguousIndexRange&lt;<span class="keyword">decltype</span>(T::Vertices)&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        t.N(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})</div>
-<div class="line">    } -&gt; std::convertible_to&lt;Vector&lt;T::kNodes&gt;&gt;;</div>
-<div class="line">    {</div>
-<div class="line">        t.GradN(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})</div>
-<div class="line">    } -&gt; std::convertible_to&lt;Matrix&lt;T::kNodes, T::kDims&gt;&gt;;</div>
+<div class="line">    {t.N(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})}-&gt;std::convertible_to&lt;<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kNodes&gt;</a>&gt;;</div>
+<div class="line">    {t.GradN(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;T::kDims&gt;</a>{})}-&gt;std::convertible_to&lt;<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af27842f3602e4a1729856deb55012fe7">Matrix&lt;T::kNodes, T::kDims&gt;</a>&gt;;</div>
 <div class="line">}</div>
-<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_element_html"><div class="ttname"><a href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">pbat::fem::CElement</a></div><div class="ttdoc">Reference finite element.</div><div class="ttdef"><b>Definition</b> Concepts.h:62</div></div>
+<div class="ttc" id="aconceptpbat_1_1fem_1_1_c_element_html"><div class="ttname"><a href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html">pbat::fem::CElement</a></div><div class="ttdoc">Reference finite element.</div><div class="ttdef"><b>Definition</b> Concepts.h:63</div></div>
 <div class="ttc" id="anamespacepbat_html_a682b4fdd1bb92ef64f406a2a356ee8e8"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">pbat::Vector</a></div><div class="ttdeci">Eigen::Vector&lt; Scalar, N &gt; Vector</div><div class="ttdoc">Fixed-size vector type.</div><div class="ttdef"><b>Definition</b> Aliases.h:24</div></div>
+<div class="ttc" id="anamespacepbat_html_af27842f3602e4a1729856deb55012fe7"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#af27842f3602e4a1729856deb55012fe7">pbat::Matrix</a></div><div class="ttdeci">Eigen::Matrix&lt; Scalar, Rows, Cols &gt; Matrix</div><div class="ttdoc">Fixed-size matrix type.</div><div class="ttdef"><b>Definition</b> Aliases.h:31</div></div>
 </div><!-- fragment --><a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Reference finite element. </p>
 <p>Example type <code>TElement</code> satisfying concept CElement </p><div class="fragment"><div class="line"><span class="keyword">template</span> &lt;<span class="keywordtype">int</span> Order&gt;</div>
@@ -187,7 +176,8 @@ $(function(){initNavTree('d1/db1/conceptpbat_1_1fem_1_1_c_element.html','../../'
 <div class="line">    <span class="keyword">static</span> <span class="keywordtype">bool</span> <span class="keyword">constexpr</span> bHasConstantJacobian;</div>
 <div class="line"> </div>
 <div class="line">    <span class="keyword">template</span> &lt;<span class="keywordtype">int</span> PolynomialOrder&gt;</div>
-<div class="line">    <span class="keyword">using </span>QuadratureType = <a class="code hl_typedef" href="../../d5/d6a/namespacepbat_1_1math.html#a54dc9b4a658650b0553e83e2531f00b2">math::SymmetricSimplexPolynomialQuadratureRule&lt;kDims, PolynomialOrder&gt;</a>;</div>
+<div class="line">    <span class="keyword">using </span>QuadratureType = <a class="code hl_typedef" href="../../d5/d6a/namespacepbat_1_1math.html#a04eec2791019a03ad6382a35ad0bc9b8">math::SymmetricSimplexPolynomialQuadratureRule</a>&lt;kDims,</div>
+<div class="line">PolynomialOrder&gt;;</div>
 <div class="line"> </div>
 <div class="line">    <span class="keyword">template</span> &lt;<span class="keyword">class</span> TDerived, <span class="keyword">class</span> TScalar = <span class="keyword">typename</span> TDerived::Scalar&gt;</div>
 <div class="line">    <span class="keyword">static</span> Eigen::Vector&lt;TScalar, kNodes&gt;</div>
@@ -195,8 +185,7 @@ $(function(){initNavTree('d1/db1/conceptpbat_1_1fem_1_1_c_element.html','../../'
 <div class="line"> </div>
 <div class="line">    <span class="keyword">static</span> <a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#af27842f3602e4a1729856deb55012fe7">Matrix&lt;kNodes, kDims&gt;</a> GradN(<a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector&lt;kDims&gt;</a> <span class="keyword">const</span>&amp; X);</div>
 <div class="line">};</div>
-<div class="ttc" id="anamespacepbat_1_1math_html_a54dc9b4a658650b0553e83e2531f00b2"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html#a54dc9b4a658650b0553e83e2531f00b2">pbat::math::SymmetricSimplexPolynomialQuadratureRule</a></div><div class="ttdeci">typename detail::SymmetricSimplexPolynomialQuadratureRule&lt; Dims, Order &gt; SymmetricSimplexPolynomialQuadratureRule</div><div class="ttdoc">Symmetric quadrature rule for reference simplices in dimensions .</div><div class="ttdef"><b>Definition</b> SymmetricQuadratureRules.h:93</div></div>
-<div class="ttc" id="anamespacepbat_html_af27842f3602e4a1729856deb55012fe7"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#af27842f3602e4a1729856deb55012fe7">pbat::Matrix</a></div><div class="ttdeci">Eigen::Matrix&lt; Scalar, Rows, Cols &gt; Matrix</div><div class="ttdoc">Fixed-size matrix type.</div><div class="ttdef"><b>Definition</b> Aliases.h:31</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_html_a04eec2791019a03ad6382a35ad0bc9b8"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html#a04eec2791019a03ad6382a35ad0bc9b8">pbat::math::SymmetricSimplexPolynomialQuadratureRule</a></div><div class="ttdeci">typename detail::SymmetricSimplexPolynomialQuadratureRule&lt; Dims, Order, TScalar &gt; SymmetricSimplexPolynomialQuadratureRule</div><div class="ttdoc">Symmetric quadrature rule for reference simplices in dimensions .</div><div class="ttdef"><b>Definition</b> SymmetricQuadratureRules.h:96</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd><ul>
 <li>Divide <code>Coordinates</code> by <code>kOrder</code> to obtain actual coordinates in the reference element</li>
 <li><code>Vertices</code> are indices into nodes <code>[0,kNodes-1]</code> revealing vertices of the element</li>

@@ -1,6 +1,6 @@
 var _adjacency_8h =
 [
-    [ "pbat::graph::WeightedEdgeTraits< TWeightedEdge >", "df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html", null ],
+    [ "pbat::graph::WeightedEdgeTraits< TWeightedEdge >", "df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html", "df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits" ],
     [ "pbat::graph::WeightedEdge", "d9/dc9/namespacepbat_1_1graph.html#a353fbeda472647a2e3af2031e2170fcc", null ],
     [ "pbat::graph::AdjacencyMatrixFromEdges", "d9/dc9/namespacepbat_1_1graph.html#a45a34060adf31a752bdf78e10fd1fe38", null ],
     [ "pbat::graph::AdjacencyMatrixIndices", "d9/dc9/namespacepbat_1_1graph.html#a54c29573233e8e81614d48855793c943", null ],

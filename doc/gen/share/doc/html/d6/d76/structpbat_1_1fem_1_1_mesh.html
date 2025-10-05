@@ -7,7 +7,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=11" />
   <meta name="generator" content="Doxygen 1.13.2" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PhysicsBasedAnimationToolkit: pbat::fem::Mesh&lt; TElement, Dims &gt; Struct Template Reference</title>
+  <title>PhysicsBasedAnimationToolkit: pbat::fem::Mesh&lt; TElement, Dims, TScalar, TIndex &gt; Struct Template Reference</title>
   <link rel="icon" href="../../entei.icon.png" type="image/x-icon" />
   <link href="../../tabs.css" rel="stylesheet" type="text/css" />
   <script type="text/javascript" src="../../jquery.js"></script>
@@ -139,7 +139,7 @@ $(function(){initNavTree('d6/d76/structpbat_1_1fem_1_1_mesh.html','../../'); ini
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="../../d3/df9/structpbat_1_1fem_1_1_mesh-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">pbat::fem::Mesh&lt; TElement, Dims &gt; Struct Template Reference</div></div>
+  <div class="headertitle"><div class="title">pbat::fem::Mesh&lt; TElement, Dims, TScalar, TIndex &gt; Struct Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
@@ -150,81 +150,178 @@ $(function(){initNavTree('d6/d76/structpbat_1_1fem_1_1_mesh.html','../../'); ini
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a3afbadab6418782fb913d93feb209586" id="r_a3afbadab6418782fb913d93feb209586"><td class="memItemLeft" align="right" valign="top"><a id="a3afbadab6418782fb913d93feb209586" name="a3afbadab6418782fb913d93feb209586"></a>
+<tr class="memitem:af0f6b4bd4f674b105fd4f21b1922f3af" id="r_af0f6b4bd4f674b105fd4f21b1922f3af"><td class="memItemLeft" align="right" valign="top"><a id="af0f6b4bd4f674b105fd4f21b1922f3af" name="af0f6b4bd4f674b105fd4f21b1922f3af"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>ElementType</b> = TElement</td></tr>
-<tr class="memdesc:a3afbadab6418782fb913d93feb209586"><td class="mdescLeft">&#160;</td><td class="mdescRight">Underlying finite element type. <br /></td></tr>
-<tr class="separator:a3afbadab6418782fb913d93feb209586"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memdesc:af0f6b4bd4f674b105fd4f21b1922f3af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Underlying finite element type. <br /></td></tr>
+<tr class="separator:af0f6b4bd4f674b105fd4f21b1922f3af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8742c27e37f585d9ec0aa55624a59064" id="r_a8742c27e37f585d9ec0aa55624a59064"><td class="memItemLeft" align="right" valign="top"><a id="a8742c27e37f585d9ec0aa55624a59064" name="a8742c27e37f585d9ec0aa55624a59064"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>ScalarType</b> = TScalar</td></tr>
+<tr class="memdesc:a8742c27e37f585d9ec0aa55624a59064"><td class="mdescLeft">&#160;</td><td class="mdescRight">Floating point type. <br /></td></tr>
+<tr class="separator:a8742c27e37f585d9ec0aa55624a59064"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac51989e9f8fa065ecbe2355f713ce0ef" id="r_ac51989e9f8fa065ecbe2355f713ce0ef"><td class="memItemLeft" align="right" valign="top"><a id="ac51989e9f8fa065ecbe2355f713ce0ef" name="ac51989e9f8fa065ecbe2355f713ce0ef"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>IndexType</b> = TIndex</td></tr>
+<tr class="memdesc:ac51989e9f8fa065ecbe2355f713ce0ef"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> type. <br /></td></tr>
+<tr class="separator:ac51989e9f8fa065ecbe2355f713ce0ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a50647c5e47859939d22dc1e47537063e" id="r_a50647c5e47859939d22dc1e47537063e"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a50647c5e47859939d22dc1e47537063e">NodeMatrix</a></td></tr>
+<tr class="memdesc:a50647c5e47859939d22dc1e47537063e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Node positions matrix type.  <br /></td></tr>
+<tr class="separator:a50647c5e47859939d22dc1e47537063e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad413fb2a0e3b3c5a55416a054f6c13f0" id="r_ad413fb2a0e3b3c5a55416a054f6c13f0"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad413fb2a0e3b3c5a55416a054f6c13f0">ElementMatrix</a></td></tr>
+<tr class="memdesc:ad413fb2a0e3b3c5a55416a054f6c13f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Element indices matrix type.  <br /></td></tr>
+<tr class="separator:ad413fb2a0e3b3c5a55416a054f6c13f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab63c20bfe5421ba36915ff9bf92c2523" id="r_ab63c20bfe5421ba36915ff9bf92c2523"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab63c20bfe5421ba36915ff9bf92c2523">Mesh</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a> const &gt; const &amp;V, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ad8a293b20436b4976257bf5fbc081d9b">IndexMatrixX</a> const &gt; const &amp;C)</td></tr>
-<tr class="memdesc:ab63c20bfe5421ba36915ff9bf92c2523"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a finite element mesh given some input geometric mesh.  <br /></td></tr>
-<tr class="separator:ab63c20bfe5421ba36915ff9bf92c2523"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a810ae14a3d6596c587f83793132e643e" id="r_a810ae14a3d6596c587f83793132e643e"><td class="memTemplParams" colspan="2">template&lt;int QuadratureOrder&gt; </td></tr>
-<tr class="memitem:a810ae14a3d6596c587f83793132e643e"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a810ae14a3d6596c587f83793132e643e">QuadraturePoints</a> () const</td></tr>
-<tr class="memdesc:a810ae14a3d6596c587f83793132e643e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute quadrature points in domain space on this mesh.  <br /></td></tr>
-<tr class="separator:a810ae14a3d6596c587f83793132e643e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ada0b0e026ebcafe3bf40d9a122aaa9ca" id="r_ada0b0e026ebcafe3bf40d9a122aaa9ca"><td class="memTemplParams" colspan="2">template&lt;int QuadratureOrder&gt; </td></tr>
-<tr class="memitem:ada0b0e026ebcafe3bf40d9a122aaa9ca"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector</a>&lt; TElement::template QuadratureType&lt; QuadratureOrder &gt;::kPoints &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ada0b0e026ebcafe3bf40d9a122aaa9ca">QuadratureWeights</a> () const</td></tr>
-<tr class="memdesc:ada0b0e026ebcafe3bf40d9a122aaa9ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain quadrature weights on the reference element of this mesh.  <br /></td></tr>
-<tr class="separator:ada0b0e026ebcafe3bf40d9a122aaa9ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af016bd26c3f6aa057147cc9b38df4e5a" id="r_af016bd26c3f6aa057147cc9b38df4e5a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedV, class TDerivedC&gt; </td></tr>
+<tr class="memitem:af016bd26c3f6aa057147cc9b38df4e5a"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af016bd26c3f6aa057147cc9b38df4e5a">Mesh</a> (Eigen::MatrixBase&lt; TDerivedV &gt; const &amp;V, Eigen::DenseBase&lt; TDerivedC &gt; const &amp;C)</td></tr>
+<tr class="memdesc:af016bd26c3f6aa057147cc9b38df4e5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a finite element mesh given some input geometric mesh.  <br /></td></tr>
+<tr class="separator:af016bd26c3f6aa057147cc9b38df4e5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ba8ab6cdc41b1afbed2a6f3672e19b7" id="r_a1ba8ab6cdc41b1afbed2a6f3672e19b7"><td class="memTemplParams" colspan="2">template&lt;class TDerivedV, class TDerivedC&gt; </td></tr>
+<tr class="memitem:a1ba8ab6cdc41b1afbed2a6f3672e19b7"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1ba8ab6cdc41b1afbed2a6f3672e19b7">Construct</a> (Eigen::MatrixBase&lt; TDerivedV &gt; const &amp;V, Eigen::DenseBase&lt; TDerivedC &gt; const &amp;C)</td></tr>
+<tr class="memdesc:a1ba8ab6cdc41b1afbed2a6f3672e19b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a finite element mesh given some input geometric mesh.  <br /></td></tr>
+<tr class="separator:a1ba8ab6cdc41b1afbed2a6f3672e19b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac73615d74a8caad9bb368f76f9c669fb" id="r_ac73615d74a8caad9bb368f76f9c669fb"><td class="memTemplParams" colspan="2">template&lt;int QuadratureOrder&gt; </td></tr>
+<tr class="memitem:ac73615d74a8caad9bb368f76f9c669fb"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac73615d74a8caad9bb368f76f9c669fb">QuadraturePoints</a> () const -&gt; Eigen::Matrix&lt; <a class="el" href="#a8742c27e37f585d9ec0aa55624a59064">ScalarType</a>, Eigen::Dynamic, Eigen::Dynamic &gt;</td></tr>
+<tr class="memdesc:ac73615d74a8caad9bb368f76f9c669fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute quadrature points in domain space on this mesh.  <br /></td></tr>
+<tr class="separator:ac73615d74a8caad9bb368f76f9c669fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5575abf8a5e4c6d52bcc6ab800d84f0c" id="r_a5575abf8a5e4c6d52bcc6ab800d84f0c"><td class="memTemplParams" colspan="2">template&lt;int QuadratureOrder, int kPoints = TElement::template QuadratureType&lt;QuadratureOrder, ScalarType&gt;::kPoints&gt; </td></tr>
+<tr class="memitem:a5575abf8a5e4c6d52bcc6ab800d84f0c"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a5575abf8a5e4c6d52bcc6ab800d84f0c">QuadratureWeights</a> () const -&gt; Eigen::Vector&lt; <a class="el" href="#a8742c27e37f585d9ec0aa55624a59064">ScalarType</a>, kPoints &gt;</td></tr>
+<tr class="memdesc:a5575abf8a5e4c6d52bcc6ab800d84f0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain quadrature weights on the reference element of this mesh.  <br /></td></tr>
+<tr class="separator:a5575abf8a5e4c6d52bcc6ab800d84f0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f2c8d350e04012ad602d8abcd8431e9" id="r_a8f2c8d350e04012ad602d8abcd8431e9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f2c8d350e04012ad602d8abcd8431e9">Serialize</a> (<a class="el" href="../../d0/de5/classpbat_1_1io_1_1_archive.html">io::Archive</a> &amp;archive) const</td></tr>
+<tr class="memdesc:a8f2c8d350e04012ad602d8abcd8431e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Serialize to HDF5 group.  <br /></td></tr>
+<tr class="separator:a8f2c8d350e04012ad602d8abcd8431e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a614506f3ec9c54c8eb19b3b8f92ab509" id="r_a614506f3ec9c54c8eb19b3b8f92ab509"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a614506f3ec9c54c8eb19b3b8f92ab509">Deserialize</a> (<a class="el" href="../../d0/de5/classpbat_1_1io_1_1_archive.html">io::Archive</a> const &amp;archive)</td></tr>
+<tr class="memdesc:a614506f3ec9c54c8eb19b3b8f92ab509"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deserialize from HDF5 group.  <br /></td></tr>
+<tr class="separator:a614506f3ec9c54c8eb19b3b8f92ab509"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a032987a09ab37c44cf2ce57d0c1af5a1" id="r_a032987a09ab37c44cf2ce57d0c1af5a1"><td class="memTemplParams" colspan="2"><a id="a032987a09ab37c44cf2ce57d0c1af5a1" name="a032987a09ab37c44cf2ce57d0c1af5a1"></a>
+template&lt;int QuadratureOrder&gt; </td></tr>
+<tr class="memitem:a032987a09ab37c44cf2ce57d0c1af5a1"><td class="memTemplItemLeft" align="right" valign="top">Eigen::Matrix&lt; TScalar, Eigen::Dynamic, Eigen::Dynamic &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>QuadraturePoints</b> () const</td></tr>
+<tr class="separator:a032987a09ab37c44cf2ce57d0c1af5a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad558c06d170fb174b43f1938cc857aa" id="r_aad558c06d170fb174b43f1938cc857aa"><td class="memTemplParams" colspan="2"><a id="aad558c06d170fb174b43f1938cc857aa" name="aad558c06d170fb174b43f1938cc857aa"></a>
+template&lt;int QuadratureOrder, int kPoints&gt; </td></tr>
+<tr class="memitem:aad558c06d170fb174b43f1938cc857aa"><td class="memTemplItemLeft" align="right" valign="top">Eigen::Vector&lt; TScalar, kPoints &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>QuadratureWeights</b> () const</td></tr>
+<tr class="separator:aad558c06d170fb174b43f1938cc857aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:abc65a193ee960705ddf64227afb18809" id="r_abc65a193ee960705ddf64227afb18809"><td class="memItemLeft" align="right" valign="top"><a id="abc65a193ee960705ddf64227afb18809" name="abc65a193ee960705ddf64227afb18809"></a>
-<a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><b>X</b></td></tr>
-<tr class="memdesc:abc65a193ee960705ddf64227afb18809"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>kDims x |# nodes|</code> nodal positions <br /></td></tr>
-<tr class="separator:abc65a193ee960705ddf64227afb18809"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a384afdf16df5efa27e09f17520402b5b" id="r_a384afdf16df5efa27e09f17520402b5b"><td class="memItemLeft" align="right" valign="top"><a id="a384afdf16df5efa27e09f17520402b5b" name="a384afdf16df5efa27e09f17520402b5b"></a>
-<a class="el" href="../../d0/d7c/namespacepbat.html#ad8a293b20436b4976257bf5fbc081d9b">IndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><b>E</b></td></tr>
-<tr class="memdesc:a384afdf16df5efa27e09f17520402b5b"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>|Element::Nodes| x |# elements|</code> element nodal indices <br /></td></tr>
-<tr class="separator:a384afdf16df5efa27e09f17520402b5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7f9d6cb308fe21b8c8d8126c90281ef" id="r_aa7f9d6cb308fe21b8c8d8126c90281ef"><td class="memItemLeft" align="right" valign="top"><a id="aa7f9d6cb308fe21b8c8d8126c90281ef" name="aa7f9d6cb308fe21b8c8d8126c90281ef"></a>
+<a class="el" href="#a50647c5e47859939d22dc1e47537063e">NodeMatrix</a>&#160;</td><td class="memItemRight" valign="bottom"><b>X</b></td></tr>
+<tr class="memdesc:aa7f9d6cb308fe21b8c8d8126c90281ef"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>kDims x |# nodes|</code> nodal positions <br /></td></tr>
+<tr class="separator:aa7f9d6cb308fe21b8c8d8126c90281ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae53f66f577b7627cd10b68f80fc5d267" id="r_ae53f66f577b7627cd10b68f80fc5d267"><td class="memItemLeft" align="right" valign="top"><a id="ae53f66f577b7627cd10b68f80fc5d267" name="ae53f66f577b7627cd10b68f80fc5d267"></a>
+<a class="el" href="#ad413fb2a0e3b3c5a55416a054f6c13f0">ElementMatrix</a>&#160;</td><td class="memItemRight" valign="bottom"><b>E</b></td></tr>
+<tr class="memdesc:ae53f66f577b7627cd10b68f80fc5d267"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>|Element::Nodes| x |# elements|</code> element nodal indices <br /></td></tr>
+<tr class="separator:ae53f66f577b7627cd10b68f80fc5d267"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
-<tr class="memitem:a80161d32e31620cb723822605964e667" id="r_a80161d32e31620cb723822605964e667"><td class="memItemLeft" align="right" valign="top"><a id="a80161d32e31620cb723822605964e667" name="a80161d32e31620cb723822605964e667"></a>
+<tr class="memitem:afc94f27a915bf4d35d734d2290783ee7" id="r_afc94f27a915bf4d35d734d2290783ee7"><td class="memItemLeft" align="right" valign="top"><a id="afc94f27a915bf4d35d734d2290783ee7" name="afc94f27a915bf4d35d734d2290783ee7"></a>
 static int constexpr&#160;</td><td class="memItemRight" valign="bottom"><b>kDims</b> = Dims</td></tr>
-<tr class="memdesc:a80161d32e31620cb723822605964e667"><td class="mdescLeft">&#160;</td><td class="mdescRight">Embedding dimensions of the mesh. <br /></td></tr>
-<tr class="separator:a80161d32e31620cb723822605964e667"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa57658c162a49263e8a1c73cd38bcf7b" id="r_aa57658c162a49263e8a1c73cd38bcf7b"><td class="memItemLeft" align="right" valign="top"><a id="aa57658c162a49263e8a1c73cd38bcf7b" name="aa57658c162a49263e8a1c73cd38bcf7b"></a>
+<tr class="memdesc:afc94f27a915bf4d35d734d2290783ee7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Embedding dimensions of the mesh. <br /></td></tr>
+<tr class="separator:afc94f27a915bf4d35d734d2290783ee7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2da8bdaec53cdcc6624db5bd580615f5" id="r_a2da8bdaec53cdcc6624db5bd580615f5"><td class="memItemLeft" align="right" valign="top"><a id="a2da8bdaec53cdcc6624db5bd580615f5" name="a2da8bdaec53cdcc6624db5bd580615f5"></a>
 static int constexpr&#160;</td><td class="memItemRight" valign="bottom"><b>kOrder</b> = ElementType::kOrder</td></tr>
-<tr class="memdesc:aa57658c162a49263e8a1c73cd38bcf7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shape function order. <br /></td></tr>
-<tr class="separator:aa57658c162a49263e8a1c73cd38bcf7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memdesc:a2da8bdaec53cdcc6624db5bd580615f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shape function order. <br /></td></tr>
+<tr class="separator:a2da8bdaec53cdcc6624db5bd580615f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97712d01d1c807150df77bac1871b464" id="r_a97712d01d1c807150df77bac1871b464"><td class="memItemLeft" align="right" valign="top"><a id="a97712d01d1c807150df77bac1871b464" name="a97712d01d1c807150df77bac1871b464"></a>
+static int constexpr&#160;</td><td class="memItemRight" valign="bottom"><b>kNodesPerElement</b> = ElementType::kNodes</td></tr>
+<tr class="memdesc:a97712d01d1c807150df77bac1871b464"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of nodes per element. <br /></td></tr>
+<tr class="separator:a97712d01d1c807150df77bac1871b464"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><div class="compoundTemplParams">template&lt;CElement TElement, int Dims&gt;<br />
-struct pbat::fem::Mesh&lt; TElement, Dims &gt;</div><p>A generic stateful finite element mesh representation. </p>
+<div class="textblock"><div class="compoundTemplParams">template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index&gt;<br />
+struct pbat::fem::Mesh&lt; TElement, Dims, TScalar, TIndex &gt;</div><p>A generic stateful finite element mesh representation. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">TElement</td><td>Type satisfying concept <a class="el" href="../../d1/db1/conceptpbat_1_1fem_1_1_c_element.html" title="Reference finite element.">CElement</a> </td></tr>
     <tr><td class="paramname">Dims</td><td>Embedding dimensions of the mesh </td></tr>
+    <tr><td class="paramname">TScalar</td><td>Floating point type, defaults to <a class="el" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2" title="Scalar type.">Scalar</a> </td></tr>
+    <tr><td class="paramname">TIndex</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> type, defaults to <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> </td></tr>
   </table>
   </dd>
 </dl>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ab63c20bfe5421ba36915ff9bf92c2523" name="ab63c20bfe5421ba36915ff9bf92c2523"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab63c20bfe5421ba36915ff9bf92c2523">&#9670;&#160;</a></span>Mesh()</h2>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="ad413fb2a0e3b3c5a55416a054f6c13f0" name="ad413fb2a0e3b3c5a55416a054f6c13f0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad413fb2a0e3b3c5a55416a054f6c13f0">&#9670;&#160;</a></span>ElementMatrix</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;CElement TElement, int Dims&gt; </div>
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims &gt;::Mesh </td>
+          <td class="memname">using <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::ElementMatrix</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> </div>
+<div class="line">        Eigen::Matrix&lt;IndexType, kNodesPerElement, Eigen::Dynamic&gt;</div>
+</div><!-- fragment -->
+<p>Element indices matrix type. </p>
+
+</div>
+</div>
+<a id="a50647c5e47859939d22dc1e47537063e" name="a50647c5e47859939d22dc1e47537063e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a50647c5e47859939d22dc1e47537063e">&#9670;&#160;</a></span>NodeMatrix</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::NodeMatrix</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"> </div>
+<div class="line">        Eigen::Matrix&lt;ScalarType, kDims, Eigen::Dynamic&gt;</div>
+</div><!-- fragment -->
+<p>Node positions matrix type. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="af016bd26c3f6aa057147cc9b38df4e5a" name="af016bd26c3f6aa057147cc9b38df4e5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af016bd26c3f6aa057147cc9b38df4e5a">&#9670;&#160;</a></span>Mesh()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex&gt; </div>
+<div class="memtemplate">
+template&lt;class TDerivedV, class TDerivedC&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::Mesh </td>
           <td>(</td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>V</em></span>, </td>
+          <td class="paramtype">Eigen::MatrixBase&lt; TDerivedV &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>V</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ad8a293b20436b4976257bf5fbc081d9b">IndexMatrixX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>C</em></span>&#160;)</td>
+          <td class="paramtype">Eigen::DenseBase&lt; TDerivedC &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>C</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Constructs a finite element mesh given some input geometric mesh. </p>
 <dl class="section warning"><dt>Warning</dt><dd>The cells of the input mesh should list its vertices in Lagrange order. </dd></dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TDerivedV</td><td>Type of the vertex positions matrix </td></tr>
+    <tr><td class="paramname">TDerivedC</td><td>Type of the cell vertex indices matrix </td></tr>
+  </table>
+  </dd>
+</dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">V</td><td><code>Dims x |# vertices|</code> matrix of vertex positions </td></tr>
@@ -236,24 +333,28 @@ template&lt;CElement TElement, int Dims&gt; </div>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a810ae14a3d6596c587f83793132e643e" name="a810ae14a3d6596c587f83793132e643e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a810ae14a3d6596c587f83793132e643e">&#9670;&#160;</a></span>QuadraturePoints()</h2>
+<a id="a1ba8ab6cdc41b1afbed2a6f3672e19b7" name="a1ba8ab6cdc41b1afbed2a6f3672e19b7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ba8ab6cdc41b1afbed2a6f3672e19b7">&#9670;&#160;</a></span>Construct()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;CElement TElement, int Dims&gt; </div>
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex&gt; </div>
 <div class="memtemplate">
-template&lt;int QuadratureOrder&gt; </div>
+template&lt;class TDerivedV, class TDerivedC&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">MatrixX</a> <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims &gt;::QuadraturePoints </td>
+          <td class="memname">void <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::Construct </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
+          <td class="paramtype">Eigen::MatrixBase&lt; TDerivedV &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>V</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Eigen::DenseBase&lt; TDerivedC &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>C</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -261,6 +362,71 @@ template&lt;int QuadratureOrder&gt; </div>
 <span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
   </tr>
 </table>
+</div><div class="memdoc">
+
+<p>Constructs a finite element mesh given some input geometric mesh. </p>
+<dl class="section warning"><dt>Warning</dt><dd>The cells of the input mesh should list its vertices in Lagrange order. </dd></dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TDerivedV</td><td>Type of the vertex positions matrix </td></tr>
+    <tr><td class="paramname">TDerivedC</td><td>Type of the cell vertex indices matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">V</td><td><code>Dims x |# vertices|</code> matrix of vertex positions </td></tr>
+    <tr><td class="paramname">C</td><td><code>|Element::AffineBase::Vertices| x |# cells|</code> matrix of cell vertex indices into V </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a614506f3ec9c54c8eb19b3b8f92ab509" name="a614506f3ec9c54c8eb19b3b8f92ab509"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a614506f3ec9c54c8eb19b3b8f92ab509">&#9670;&#160;</a></span>Deserialize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::Deserialize </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/de5/classpbat_1_1io_1_1_archive.html">io::Archive</a> const &amp;</td>          <td class="paramname"><span class="paramname"><em>archive</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Deserialize from HDF5 group. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">archive</td><td>Archive to deserialize from </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ac73615d74a8caad9bb368f76f9c669fb" name="ac73615d74a8caad9bb368f76f9c669fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac73615d74a8caad9bb368f76f9c669fb">&#9670;&#160;</a></span>QuadraturePoints()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index&gt; </div>
+<div class="memtemplate">
+template&lt;int QuadratureOrder&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::QuadraturePoints </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const -&gt;  Eigen::Matrix&lt; <a class="el" href="#a8742c27e37f585d9ec0aa55624a59064">ScalarType</a>, Eigen::Dynamic, Eigen::Dynamic &gt;</td>
+        </tr>
+      </table>
 </div><div class="memdoc">
 
 <p>Compute quadrature points in domain space on this mesh. </p>
@@ -274,31 +440,23 @@ template&lt;int QuadratureOrder&gt; </div>
 
 </div>
 </div>
-<a id="ada0b0e026ebcafe3bf40d9a122aaa9ca" name="ada0b0e026ebcafe3bf40d9a122aaa9ca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ada0b0e026ebcafe3bf40d9a122aaa9ca">&#9670;&#160;</a></span>QuadratureWeights()</h2>
+<a id="a5575abf8a5e4c6d52bcc6ab800d84f0c" name="a5575abf8a5e4c6d52bcc6ab800d84f0c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5575abf8a5e4c6d52bcc6ab800d84f0c">&#9670;&#160;</a></span>QuadratureWeights()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;CElement TElement, int Dims&gt; </div>
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar = Scalar, common::CIndex TIndex = Index&gt; </div>
 <div class="memtemplate">
-template&lt;int QuadratureOrder&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
+template&lt;int QuadratureOrder, int kPoints = TElement::template QuadratureType&lt;QuadratureOrder, ScalarType&gt;::kPoints&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#a682b4fdd1bb92ef64f406a2a356ee8e8">Vector</a>&lt; TElement::template QuadratureType&lt; QuadratureOrder &gt;::kPoints &gt; <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims &gt;::QuadratureWeights </td>
+          <td class="memname">auto <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::QuadratureWeights </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
+          <td> const -&gt;  Eigen::Vector&lt; <a class="el" href="#a8742c27e37f585d9ec0aa55624a59064">ScalarType</a>, kPoints &gt;</td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p>Obtain quadrature weights on the reference element of this mesh. </p>
@@ -308,7 +466,40 @@ template&lt;int QuadratureOrder&gt; </div>
   </table>
   </dd>
 </dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">kPoints</td><td>Number of quadrature points, defaults to <code>Element::template QuadratureType&lt;QuadratureOrder&gt;::kPoints</code>. This template parameter should not be specified, it is there to enhance readability. </td></tr>
+  </table>
+  </dd>
+</dl>
 <dl class="section return"><dt>Returns</dt><dd><code>|# element quad.pts.|</code> vector of quadrature weights </dd></dl>
+
+</div>
+</div>
+<a id="a8f2c8d350e04012ad602d8abcd8431e9" name="a8f2c8d350e04012ad602d8abcd8431e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8f2c8d350e04012ad602d8abcd8431e9">&#9670;&#160;</a></span>Serialize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;CElement TElement, int Dims, common::CFloatingPoint TScalar, common::CIndex TIndex&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="../../d6/d76/structpbat_1_1fem_1_1_mesh.html">pbat::fem::Mesh</a>&lt; TElement, Dims, TScalar, TIndex &gt;::Serialize </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/de5/classpbat_1_1io_1_1_archive.html">io::Archive</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>archive</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Serialize to HDF5 group. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">archive</td><td>Archive to serialize to </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['gausslegendrequadrature_0',['GaussLegendreQuadrature',['../d5/d6a/namespacepbat_1_1math.html#a504e0fbe44925303c857bfd4495832b8',1,'pbat::math']]],
+  ['gausslegendrequadrature_0',['GaussLegendreQuadrature',['../d5/d6a/namespacepbat_1_1math.html#afc82065ce76184608ecbef4547e0290e',1,'pbat::math']]],
   ['gpuindex_1',['GpuIndex',['../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5',1,'pbat']]],
   ['gpuindexmatrixx_2',['GpuIndexMatrixX',['../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369',1,'pbat']]],
   ['gpuindexvectorx_3',['GpuIndexVectorX',['../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f',1,'pbat']]],

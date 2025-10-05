@@ -166,50 +166,49 @@ $(function(){initNavTree('da/dd0/_inverse_8h_source.html','../../'); initResizab
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keyword">static_assert</span>(</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>        InputMatrixType::kRows == InputMatrixType::kCols,</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>        <span class="stringliteral">&quot;Cannot compute inverse of non-square matrix&quot;</span>);</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">using </span>MatrixType = <a class="code hl_class" href="../../d6/d9a/classpbat_1_1math_1_1linalg_1_1mini_1_1_s_matrix.html">SMatrix</a>&lt;</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>        <span class="keyword">typename</span> InputMatrixType::ScalarType,</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        InputMatrixType::kRows,</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>        InputMatrixType::kCols&gt;;</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    MatrixType Ainv{};</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordflow">if</span> <span class="keyword">constexpr</span> (MatrixType::kRows == 2)</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    {</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a0 = 1.0 / (A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1));</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        Ainv(0, 0)    = a0 * A(1, 1);</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        Ainv(1, 0)    = -a0 * A(1, 0);</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>        Ainv(0, 1)    = -a0 * A(0, 1);</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>        Ainv(1, 1)    = a0 * A(0, 0);</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    }</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordflow">if</span> <span class="keyword">constexpr</span> (MatrixType::kRows == 3)</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    {</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a0 = A(1, 1) * A(2, 2);</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a1 = A(2, 1) * A(1, 2);</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a2 = A(1, 0) * A(2, 1);</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a3 = A(1, 0) * A(2, 2);</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a4 = A(2, 0) * A(1, 1);</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a5 = 1.0 / (a0 * A(0, 0) - a1 * A(0, 0) + a2 * A(0, 2) - a3 * A(0, 1) -</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>                               a4 * A(0, 2) + A(2, 0) * A(0, 1) * A(1, 2));</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        Ainv(0, 0)    = a5 * (a0 - a1);</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        Ainv(1, 0)    = a5 * (-a3 + A(2, 0) * A(1, 2));</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        Ainv(2, 0)    = a5 * (a2 - a4);</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>        Ainv(0, 1)    = a5 * (-A(0, 1) * A(2, 2) + A(2, 1) * A(0, 2));</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        Ainv(1, 1)    = a5 * (A(0, 0) * A(2, 2) - A(2, 0) * A(0, 2));</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        Ainv(2, 1)    = a5 * (-A(0, 0) * A(2, 1) + A(2, 0) * A(0, 1));</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        Ainv(0, 2)    = a5 * (A(0, 1) * A(1, 2) - A(1, 1) * A(0, 2));</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        Ainv(1, 2)    = a5 * (-A(0, 0) * A(1, 2) + A(1, 0) * A(0, 2));</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>        Ainv(2, 2)    = a5 * (A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1));</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    }</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordflow">return</span> Ainv;</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>}</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>} <span class="comment">// namespace mini</span></div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>} <span class="comment">// namespace linalg</span></div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>} <span class="comment">// namespace math</span></div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>} <span class="comment">// namespace pbat</span></div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_MATH_LINALG_MINI_INVERSE_H</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keyword">using </span>ScalarType = <span class="keyword">typename</span> InputMatrixType::ScalarType;</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keyword">using </span>MatrixType = <a class="code hl_class" href="../../d6/d9a/classpbat_1_1math_1_1linalg_1_1mini_1_1_s_matrix.html">SMatrix&lt;ScalarType, InputMatrixType::kRows, InputMatrixType::kCols&gt;</a>;</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    MatrixType Ainv{};</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordflow">if</span> <span class="keyword">constexpr</span> (MatrixType::kRows == 2)</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    {</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a0 = ScalarType(1.0) / (A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1));</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        Ainv(0, 0)    = a0 * A(1, 1);</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        Ainv(1, 0)    = -a0 * A(1, 0);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        Ainv(0, 1)    = -a0 * A(0, 1);</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        Ainv(1, 1)    = a0 * A(0, 0);</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    }</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordflow">if</span> <span class="keyword">constexpr</span> (MatrixType::kRows == 3)</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    {</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a0 = A(1, 1) * A(2, 2);</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a1 = A(2, 1) * A(1, 2);</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a2 = A(1, 0) * A(2, 1);</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a3 = A(1, 0) * A(2, 2);</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a4 = A(2, 0) * A(1, 1);</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <span class="keyword">auto</span> <span class="keyword">const</span> a5 =</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>            ScalarType(1.0) / (a0 * A(0, 0) - a1 * A(0, 0) + a2 * A(0, 2) - a3 * A(0, 1) -</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>                               a4 * A(0, 2) + A(2, 0) * A(0, 1) * A(1, 2));</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        Ainv(0, 0) = a5 * (a0 - a1);</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        Ainv(1, 0) = a5 * (-a3 + A(2, 0) * A(1, 2));</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        Ainv(2, 0) = a5 * (a2 - a4);</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        Ainv(0, 1) = a5 * (-A(0, 1) * A(2, 2) + A(2, 1) * A(0, 2));</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>        Ainv(1, 1) = a5 * (A(0, 0) * A(2, 2) - A(2, 0) * A(0, 2));</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        Ainv(2, 1) = a5 * (-A(0, 0) * A(2, 1) + A(2, 0) * A(0, 1));</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        Ainv(0, 2) = a5 * (A(0, 1) * A(1, 2) - A(1, 1) * A(0, 2));</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        Ainv(1, 2) = a5 * (-A(0, 0) * A(1, 2) + A(1, 0) * A(0, 2));</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        Ainv(2, 2) = a5 * (A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1));</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    }</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordflow">return</span> Ainv;</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>}</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>} <span class="comment">// namespace mini</span></div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>} <span class="comment">// namespace linalg</span></div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>} <span class="comment">// namespace math</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>} <span class="comment">// namespace pbat</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_MATH_LINALG_MINI_INVERSE_H</span></div>
 <div class="ttc" id="aclasspbat_1_1math_1_1linalg_1_1mini_1_1_s_matrix_html"><div class="ttname"><a href="../../d6/d9a/classpbat_1_1math_1_1linalg_1_1mini_1_1_s_matrix.html">pbat::math::linalg::mini::SMatrix</a></div><div class="ttdef"><b>Definition</b> Matrix.h:121</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_1_1linalg_1_1mini_html"><div class="ttname"><a href="../../df/d43/namespacepbat_1_1math_1_1linalg_1_1mini.html">pbat::math::linalg::mini</a></div><div class="ttdoc">Mini linear algebra related functionality.</div><div class="ttdef"><b>Definition</b> Assign.h:12</div></div>
-<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div><div class="ttdef"><b>Definition</b> FilterEigenvalues.h:7</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_html"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html">pbat::math</a></div><div class="ttdoc">Math related functionality.</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 </div><!-- fragment --></div><!-- contents -->

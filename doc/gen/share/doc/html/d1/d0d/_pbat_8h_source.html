@@ -149,22 +149,28 @@ $(function(){initNavTree('d1/d0d/_pbat_8h_source.html','../../'); initResizable(
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="preprocessor">#include &quot;<a class="code" href="../../d3/d98/_fem_8h.html">fem/Fem.h</a>&quot;</span></div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#include &quot;<a class="code" href="../../de/d30/geometry_2_geometry_8h.html">geometry/Geometry.h</a>&quot;</span></div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#include &quot;<a class="code" href="../../da/db6/_graph_8h.html">graph/Graph.h</a>&quot;</span></div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="preprocessor">#include &quot;<a class="code" href="../../da/db8/_math_8h.html">math/Math.h</a>&quot;</span></div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="preprocessor">#include &quot;<a class="code" href="../../d8/d65/_physics_8h.html">physics/Physics.h</a>&quot;</span></div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#include &quot;<a class="code" href="../../da/d04/_profiling_8h.html">profiling/Profiling.h</a>&quot;</span></div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="preprocessor">#include &quot;<a class="code" href="../../dc/d29/_sim_8h.html">sim/Sim.h</a>&quot;</span></div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_PBAT_H</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="preprocessor">#if defined(PBAT_USE_CUDA)</span></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="preprocessor">    #include &quot;<a class="code" href="../../df/dd9/_gpu_8h.html">gpu/Gpu.h</a>&quot;</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_USE_CUDA</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="preprocessor">#include &quot;<a class="code" href="../../d2/d07/_io_8h.html">io/Io.h</a>&quot;</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="preprocessor">#include &quot;<a class="code" href="../../d4/dd7/math_2_math_8h.html">math/Math.h</a>&quot;</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="preprocessor">#include &quot;<a class="code" href="../../d8/d65/_physics_8h.html">physics/Physics.h</a>&quot;</span></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="preprocessor">#include &quot;<a class="code" href="../../d1/dba/profiling_2_profiling_8h.html">profiling/Profiling.h</a>&quot;</span></div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="preprocessor">#include &quot;<a class="code" href="../../dc/d29/_sim_8h.html">sim/Sim.h</a>&quot;</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_PBAT_H</span></div>
 <div class="ttc" id="a_aliases_8h_html"><div class="ttname"><a href="../../d8/dc4/_aliases_8h.html">Aliases.h</a></div></div>
 <div class="ttc" id="a_fem_8h_html"><div class="ttname"><a href="../../d3/d98/_fem_8h.html">Fem.h</a></div><div class="ttdoc">This file includes all the FEM related headers.</div></div>
+<div class="ttc" id="a_gpu_8h_html"><div class="ttname"><a href="../../df/dd9/_gpu_8h.html">Gpu.h</a></div><div class="ttdoc">This file includes all the public GPU related headers.</div></div>
 <div class="ttc" id="a_graph_8h_html"><div class="ttname"><a href="../../da/db6/_graph_8h.html">Graph.h</a></div><div class="ttdoc">Includes all the headers of the graph module.</div></div>
-<div class="ttc" id="a_math_8h_html"><div class="ttname"><a href="../../da/db8/_math_8h.html">Math.h</a></div><div class="ttdoc">This file includes all the Math related headers.</div></div>
+<div class="ttc" id="a_io_8h_html"><div class="ttname"><a href="../../d2/d07/_io_8h.html">Io.h</a></div><div class="ttdoc">Header file for the IO module.</div></div>
 <div class="ttc" id="a_physics_8h_html"><div class="ttname"><a href="../../d8/d65/_physics_8h.html">Physics.h</a></div><div class="ttdoc">This file includes all the physics related headers.</div></div>
-<div class="ttc" id="a_profiling_8h_html"><div class="ttname"><a href="../../da/d04/_profiling_8h.html">Profiling.h</a></div><div class="ttdoc">Profiling utilities for the Physics-Based Animation Toolkit (PBAT)</div></div>
 <div class="ttc" id="a_sim_8h_html"><div class="ttname"><a href="../../dc/d29/_sim_8h.html">Sim.h</a></div><div class="ttdoc">This file includes all of PBAT&#39;S simulation algorithm implementations.</div></div>
 <div class="ttc" id="acommon_2_common_8h_html"><div class="ttname"><a href="../../de/d43/common_2_common_8h.html">Common.h</a></div><div class="ttdoc">This file includes all the common headers.</div></div>
 <div class="ttc" id="ageometry_2_geometry_8h_html"><div class="ttname"><a href="../../de/d30/geometry_2_geometry_8h.html">Geometry.h</a></div><div class="ttdoc">This file includes all the geometry related headers.</div></div>
+<div class="ttc" id="amath_2_math_8h_html"><div class="ttname"><a href="../../d4/dd7/math_2_math_8h.html">Math.h</a></div><div class="ttdoc">This file includes all the Math related headers.</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
+<div class="ttc" id="aprofiling_2_profiling_8h_html"><div class="ttname"><a href="../../d1/dba/profiling_2_profiling_8h.html">Profiling.h</a></div><div class="ttdoc">Profiling utilities for the Physics-Based Animation Toolkit (PBAT)</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

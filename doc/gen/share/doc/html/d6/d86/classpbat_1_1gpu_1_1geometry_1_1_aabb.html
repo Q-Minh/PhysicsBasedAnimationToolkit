@@ -139,11 +139,16 @@ $(function(){initNavTree('d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html','..
   <div class="headertitle"><div class="title">pbat::gpu::geometry::Aabb Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>GPU axis-aligned bounding box (AABB) buffer public API.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../d8/d88/_aabb_8h_source.html">Aabb.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aabb96eb9b7a9b6fc841b19702eefb062" id="r_aabb96eb9b7a9b6fc841b19702eefb062"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aabb96eb9b7a9b6fc841b19702eefb062">Aabb</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> dims=3, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> nBoxes=0)</td></tr>
-<tr class="memdesc:aabb96eb9b7a9b6fc841b19702eefb062"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> object.  <br /></td></tr>
+<tr class="memdesc:aabb96eb9b7a9b6fc841b19702eefb062"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> object.  <br /></td></tr>
 <tr class="separator:aabb96eb9b7a9b6fc841b19702eefb062"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7b55a9cf1d7555bdeb957fcb2e8e673e" id="r_a7b55a9cf1d7555bdeb957fcb2e8e673e"><td class="memItemLeft" align="right" valign="top"><a id="a7b55a9cf1d7555bdeb957fcb2e8e673e" name="a7b55a9cf1d7555bdeb957fcb2e8e673e"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Aabb</b> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> const &amp;)=delete</td></tr>
@@ -151,38 +156,49 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a40cac2da7f23b4b7a51056c523bac729" id="r_a40cac2da7f23b4b7a51056c523bac729"><td class="memItemLeft" align="right" valign="top"><a id="a40cac2da7f23b4b7a51056c523bac729" name="a40cac2da7f23b4b7a51056c523bac729"></a>
 <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> const &amp;)=delete</td></tr>
 <tr class="separator:a40cac2da7f23b4b7a51056c523bac729"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a37d936bafe913203ecb269bbf4e9b3a8" id="r_a37d936bafe913203ecb269bbf4e9b3a8"><td class="memItemLeft" align="right" valign="top"><a id="a37d936bafe913203ecb269bbf4e9b3a8" name="a37d936bafe913203ecb269bbf4e9b3a8"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Aabb</b> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a37d936bafe913203ecb269bbf4e9b3a8" id="r_a37d936bafe913203ecb269bbf4e9b3a8"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37d936bafe913203ecb269bbf4e9b3a8">Aabb</a> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a37d936bafe913203ecb269bbf4e9b3a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <br /></td></tr>
 <tr class="separator:a37d936bafe913203ecb269bbf4e9b3a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5306dfa911e91d382f0761fd44758acb" id="r_a5306dfa911e91d382f0761fd44758acb"><td class="memItemLeft" align="right" valign="top"><a id="a5306dfa911e91d382f0761fd44758acb" name="a5306dfa911e91d382f0761fd44758acb"></a>
-PBAT_API <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a5306dfa911e91d382f0761fd44758acb" id="r_a5306dfa911e91d382f0761fd44758acb"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5306dfa911e91d382f0761fd44758acb">operator=</a> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a5306dfa911e91d382f0761fd44758acb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move assignment operator.  <br /></td></tr>
 <tr class="separator:a5306dfa911e91d382f0761fd44758acb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad9df383d447473d03ca2d3b57d23918e" id="r_ad9df383d447473d03ca2d3b57d23918e"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad9df383d447473d03ca2d3b57d23918e">Construct</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;L, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;U)</td></tr>
+<tr class="memdesc:ad9df383d447473d03ca2d3b57d23918e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> object from the lower and upper bounds matrices.  <br /></td></tr>
 <tr class="separator:ad9df383d447473d03ca2d3b57d23918e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a416821f1e5ac7bbbaca148fe617ca93a" id="r_a416821f1e5ac7bbbaca148fe617ca93a"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a416821f1e5ac7bbbaca148fe617ca93a">Construct</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a> const &gt; const &amp;P, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a> const &gt; const &amp;S)</td></tr>
+<tr class="memdesc:a416821f1e5ac7bbbaca148fe617ca93a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> object from shared vertex simplex mes (P,S)  <br /></td></tr>
 <tr class="separator:a416821f1e5ac7bbbaca148fe617ca93a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a30da5a1b2924a06ba22b3514593a1f14" id="r_a30da5a1b2924a06ba22b3514593a1f14"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30da5a1b2924a06ba22b3514593a1f14">Resize</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> dims, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> nBoxes)</td></tr>
+<tr class="memdesc:a30da5a1b2924a06ba22b3514593a1f14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize the AABB buffer.  <br /></td></tr>
 <tr class="separator:a30da5a1b2924a06ba22b3514593a1f14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0102f397e871239b9dcf7ec73e0ddbe0" id="r_a0102f397e871239b9dcf7ec73e0ddbe0"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0102f397e871239b9dcf7ec73e0ddbe0">Size</a> () const</td></tr>
+<tr class="memdesc:a0102f397e871239b9dcf7ec73e0ddbe0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of boxes.  <br /></td></tr>
 <tr class="separator:a0102f397e871239b9dcf7ec73e0ddbe0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9150144bbd7d7e6ed52cf4312e870233" id="r_a9150144bbd7d7e6ed52cf4312e870233"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9150144bbd7d7e6ed52cf4312e870233">Dimensions</a> () const</td></tr>
+<tr class="memdesc:a9150144bbd7d7e6ed52cf4312e870233"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the embedding dimensionality.  <br /></td></tr>
 <tr class="separator:a9150144bbd7d7e6ed52cf4312e870233"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a74c928d8b9ead772fbc0f56301b4f090" id="r_a74c928d8b9ead772fbc0f56301b4f090"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a74c928d8b9ead772fbc0f56301b4f090">Impl</a> ()</td></tr>
+<tr class="memdesc:a74c928d8b9ead772fbc0f56301b4f090"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handle to the implementation.  <br /></td></tr>
 <tr class="separator:a74c928d8b9ead772fbc0f56301b4f090"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acfe0201294560e0a6a14eea788361252" id="r_acfe0201294560e0a6a14eea788361252"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acfe0201294560e0a6a14eea788361252">Impl</a> () const</td></tr>
+<tr class="memdesc:acfe0201294560e0a6a14eea788361252"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handle to the implementation.  <br /></td></tr>
 <tr class="separator:acfe0201294560e0a6a14eea788361252"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aceb7dac46e7ebe311768d7a97b5cc681" id="r_aceb7dac46e7ebe311768d7a97b5cc681"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aceb7dac46e7ebe311768d7a97b5cc681">Lower</a> () const</td></tr>
+<tr class="memdesc:aceb7dac46e7ebe311768d7a97b5cc681"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the lower bounds from GPU and return as CPU matrix.  <br /></td></tr>
 <tr class="separator:aceb7dac46e7ebe311768d7a97b5cc681"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0059612d6bb183236abc0bbffe3af879" id="r_a0059612d6bb183236abc0bbffe3af879"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0059612d6bb183236abc0bbffe3af879">Upper</a> () const</td></tr>
+<tr class="memdesc:a0059612d6bb183236abc0bbffe3af879"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetch the upper bounds from GPU and return as CPU matrix.  <br /></td></tr>
 <tr class="separator:a0059612d6bb183236abc0bbffe3af879"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae80800c244f30f8c11b75f2cde9e9d6c" id="r_ae80800c244f30f8c11b75f2cde9e9d6c"><td class="memItemLeft" align="right" valign="top"><a id="ae80800c244f30f8c11b75f2cde9e9d6c" name="ae80800c244f30f8c11b75f2cde9e9d6c"></a>
 PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td></tr>
-<tr class="memdesc:ae80800c244f30f8c11b75f2cde9e9d6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy the <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> 3 D object. <br /></td></tr>
+<tr class="memdesc:ae80800c244f30f8c11b75f2cde9e9d6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy the <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> 3 D object. <br /></td></tr>
 <tr class="separator:ae80800c244f30f8c11b75f2cde9e9d6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>GPU axis-aligned bounding box (AABB) buffer public API. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aabb96eb9b7a9b6fc841b19702eefb062" name="aabb96eb9b7a9b6fc841b19702eefb062"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aabb96eb9b7a9b6fc841b19702eefb062">&#9670;&#160;</a></span>Aabb()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aabb96eb9b7a9b6fc841b19702eefb062">&#9670;&#160;</a></span>Aabb() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -200,11 +216,44 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
       </table>
 </div><div class="memdoc">
 
-<p>Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> object. </p>
+<p>Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> object. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">dims</td><td>Embedding dimensionality &gt; 0 </td></tr>
     <tr><td class="paramname">nBoxes</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a37d936bafe913203ecb269bbf4e9b3a8" name="a37d936bafe913203ecb269bbf4e9b3a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37d936bafe913203ecb269bbf4e9b3a8">&#9670;&#160;</a></span>Aabb() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::geometry::Aabb::Aabb </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move constructor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> to move from </td></tr>
   </table>
   </dd>
 </dl>
@@ -230,10 +279,12 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> object from the lower and upper bounds matrices. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">L</td><td></td></tr>
-    <tr><td class="paramname">U</td><td></td></tr>
+    <tr><td class="paramname">L</td><td><code>dims x |# pts|</code> array of lower bounds </td></tr>
+    <tr><td class="paramname">U</td><td><code>dims x |# pts|</code> array of upper bounds </td></tr>
   </table>
   </dd>
 </dl>
@@ -258,10 +309,12 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> object from shared vertex simplex mes (P,S) </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">P</td><td>3x|#pts| array of points </td></tr>
-    <tr><td class="paramname">S</td><td>Kx|#simplices| array of simplices where K&gt;1 is the number of vertices per simplex </td></tr>
+    <tr><td class="paramname">P</td><td><code>dims x |# pts|</code> array of points </td></tr>
+    <tr><td class="paramname">S</td><td><code>K x |# simplices|</code> array of simplices where <code>K&gt;1</code> is the number of vertices per simplex </td></tr>
   </table>
   </dd>
 </dl>
@@ -290,7 +343,9 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
   </tr>
 </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Get the embedding dimensionality. </p>
+<dl class="section return"><dt>Returns</dt><dd>Embedding dimensionality </dd></dl>
 
 </div>
 </div>
@@ -316,7 +371,9 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
   </tr>
 </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Handle to the implementation. </p>
+<dl class="section return"><dt>Returns</dt><dd>Handle to the implementation </dd></dl>
 
 </div>
 </div>
@@ -342,7 +399,9 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
   </tr>
 </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Handle to the implementation. </p>
+<dl class="section return"><dt>Returns</dt><dd>Handle to the implementation </dd></dl>
 
 </div>
 </div>
@@ -360,7 +419,43 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the lower bounds from GPU and return as CPU matrix. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>dims x |# boxes|</code> array of lower bounds </dd></dl>
+
+</div>
+</div>
+<a id="a5306dfa911e91d382f0761fd44758acb" name="a5306dfa911e91d382f0761fd44758acb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5306dfa911e91d382f0761fd44758acb">&#9670;&#160;</a></span>operator=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">PBAT_API <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp; pbat::gpu::geometry::Aabb::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move assignment operator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html" title="GPU axis-aligned bounding box (AABB) buffer public API.">Aabb</a> to move from </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this </dd></dl>
 
 </div>
 </div>
@@ -382,10 +477,12 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Resize the AABB buffer. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">dims</td><td></td></tr>
-    <tr><td class="paramname">nBoxes</td><td></td></tr>
+    <tr><td class="paramname">dims</td><td>New embedding dimensionality &gt; 0 </td></tr>
+    <tr><td class="paramname">nBoxes</td><td>New number of boxes </td></tr>
   </table>
   </dd>
 </dl>
@@ -406,7 +503,9 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Get the number of boxes. </p>
+<dl class="section return"><dt>Returns</dt><dd>Number of boxes </dd></dl>
 
 </div>
 </div>
@@ -424,7 +523,9 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Aabb</b> ()</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Fetch the upper bounds from GPU and return as CPU matrix. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>dims x |# boxes|</code> array of upper bounds </dd></dl>
 
 </div>
 </div>

@@ -140,17 +140,23 @@ $(function(){initNavTree('d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prun
   <div class="headertitle"><div class="title">pbat::gpu::geometry::SweepAndPrune Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>GPU Sweep and Prune public API.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../d2/d34/_sweep_and_prune_8h_source.html">SweepAndPrune.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
 <tr class="memitem:a266803232f2307533b75d90269b81b71" id="r_a266803232f2307533b75d90269b81b71"><td class="memItemLeft" align="right" valign="top"><a id="a266803232f2307533b75d90269b81b71" name="a266803232f2307533b75d90269b81b71"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>Impl</b> = <a class="el" href="../../d0/d58/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_sweep_and_prune.html">impl::geometry::SweepAndPrune</a></td></tr>
+<tr class="memdesc:a266803232f2307533b75d90269b81b71"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implementation type. <br /></td></tr>
 <tr class="separator:a266803232f2307533b75d90269b81b71"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a22636cda5c6d42cb6c90034dedb077cf" id="r_a22636cda5c6d42cb6c90034dedb077cf"><td class="memItemLeft" align="right" valign="top"><a id="a22636cda5c6d42cb6c90034dedb077cf" name="a22636cda5c6d42cb6c90034dedb077cf"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>SweepAndPrune</b> (std::size_t nPrimitives, std::size_t nOverlaps)</td></tr>
+<tr class="memitem:a22636cda5c6d42cb6c90034dedb077cf" id="r_a22636cda5c6d42cb6c90034dedb077cf"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a22636cda5c6d42cb6c90034dedb077cf">SweepAndPrune</a> (std::size_t nPrimitives, std::size_t nOverlaps)</td></tr>
+<tr class="memdesc:a22636cda5c6d42cb6c90034dedb077cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new Sweep And Prune object with space allocated for nPrimitives and at most nOverlaps.  <br /></td></tr>
 <tr class="separator:a22636cda5c6d42cb6c90034dedb077cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad51f92b6755611c5e5fe735c0de1c89b" id="r_ad51f92b6755611c5e5fe735c0de1c89b"><td class="memItemLeft" align="right" valign="top"><a id="ad51f92b6755611c5e5fe735c0de1c89b" name="ad51f92b6755611c5e5fe735c0de1c89b"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>SweepAndPrune</b> (<a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> const &amp;)=delete</td></tr>
@@ -158,18 +164,120 @@ PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>SweepAndPrune</b>
 <tr class="memitem:a1859b199d900b7a19d5a195f9ed32a31" id="r_a1859b199d900b7a19d5a195f9ed32a31"><td class="memItemLeft" align="right" valign="top"><a id="a1859b199d900b7a19d5a195f9ed32a31" name="a1859b199d900b7a19d5a195f9ed32a31"></a>
 <a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> const &amp;)=delete</td></tr>
 <tr class="separator:a1859b199d900b7a19d5a195f9ed32a31"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aecaefefe041e5ad1d594ee79002dfe91" id="r_aecaefefe041e5ad1d594ee79002dfe91"><td class="memItemLeft" align="right" valign="top"><a id="aecaefefe041e5ad1d594ee79002dfe91" name="aecaefefe041e5ad1d594ee79002dfe91"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>SweepAndPrune</b> (<a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memitem:aecaefefe041e5ad1d594ee79002dfe91" id="r_aecaefefe041e5ad1d594ee79002dfe91"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aecaefefe041e5ad1d594ee79002dfe91">SweepAndPrune</a> (<a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memdesc:aecaefefe041e5ad1d594ee79002dfe91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <br /></td></tr>
 <tr class="separator:aecaefefe041e5ad1d594ee79002dfe91"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ba2971f9dbcf9021ce74ef36565a92f" id="r_a1ba2971f9dbcf9021ce74ef36565a92f"><td class="memItemLeft" align="right" valign="top"><a id="a1ba2971f9dbcf9021ce74ef36565a92f" name="a1ba2971f9dbcf9021ce74ef36565a92f"></a>
-PBAT_API <a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memitem:a1ba2971f9dbcf9021ce74ef36565a92f" id="r_a1ba2971f9dbcf9021ce74ef36565a92f"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ba2971f9dbcf9021ce74ef36565a92f">operator=</a> (<a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&amp;) noexcept</td></tr>
+<tr class="memdesc:a1ba2971f9dbcf9021ce74ef36565a92f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move assignment.  <br /></td></tr>
 <tr class="separator:a1ba2971f9dbcf9021ce74ef36565a92f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad8b57ef6f7416a99e8fa37177ed28b85" id="r_ad8b57ef6f7416a99e8fa37177ed28b85"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad8b57ef6f7416a99e8fa37177ed28b85">SortAndSweep</a> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;aabbs)</td></tr>
+<tr class="memdesc:ad8b57ef6f7416a99e8fa37177ed28b85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Detect overlaps between the AABBs.  <br /></td></tr>
 <tr class="separator:ad8b57ef6f7416a99e8fa37177ed28b85"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac085082d88fb95850cfd4296bf2aae56" id="r_ac085082d88fb95850cfd4296bf2aae56"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac085082d88fb95850cfd4296bf2aae56">SortAndSweep</a> (<a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;set, <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;aabbs)</td></tr>
+<tr class="memdesc:ac085082d88fb95850cfd4296bf2aae56"><td class="mdescLeft">&#160;</td><td class="mdescRight">Detect overlaps between the AABBs of different sets.  <br /></td></tr>
 <tr class="separator:ac085082d88fb95850cfd4296bf2aae56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>GPU Sweep and Prune public API. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a22636cda5c6d42cb6c90034dedb077cf" name="a22636cda5c6d42cb6c90034dedb077cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22636cda5c6d42cb6c90034dedb077cf">&#9670;&#160;</a></span>SweepAndPrune() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::geometry::SweepAndPrune::SweepAndPrune </td>
+          <td>(</td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>nPrimitives</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t</td>          <td class="paramname"><span class="paramname"><em>nOverlaps</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new Sweep And Prune object with space allocated for nPrimitives and at most nOverlaps. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">nPrimitives</td><td>Number of primitives </td></tr>
+    <tr><td class="paramname">nOverlaps</td><td>Maximum number of overlaps </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aecaefefe041e5ad1d594ee79002dfe91" name="aecaefefe041e5ad1d594ee79002dfe91"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aecaefefe041e5ad1d594ee79002dfe91">&#9670;&#160;</a></span>SweepAndPrune() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pbat::gpu::geometry::SweepAndPrune::SweepAndPrune </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move constructor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html" title="GPU Sweep and Prune public API.">SweepAndPrune</a> to move from </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a1ba2971f9dbcf9021ce74ef36565a92f" name="a1ba2971f9dbcf9021ce74ef36565a92f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ba2971f9dbcf9021ce74ef36565a92f">&#9670;&#160;</a></span>operator=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp; pbat::gpu::geometry::SweepAndPrune::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html">SweepAndPrune</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move assignment. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep_and_prune.html" title="GPU Sweep and Prune public API.">SweepAndPrune</a> to move from </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this </dd></dl>
+
+</div>
+</div>
 <a id="ad8b57ef6f7416a99e8fa37177ed28b85" name="ad8b57ef6f7416a99e8fa37177ed28b85"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad8b57ef6f7416a99e8fa37177ed28b85">&#9670;&#160;</a></span>SortAndSweep() <span class="overload">[1/2]</span></h2>
 
@@ -184,13 +292,15 @@ PBAT_API <a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Detect overlaps between the AABBs. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">aabbs</td><td></td></tr>
+    <tr><td class="paramname">aabbs</td><td>Handle to the AABBs </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>2x|#overlaps| matrix of overlap pairs in aabbs </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>2 x |# overlaps|</code> matrix of overlap pairs in aabbs </dd></dl>
 
 </div>
 </div>
@@ -212,14 +322,16 @@ PBAT_API <a class="el" href="../../d2/dea/classpbat_1_1gpu_1_1geometry_1_1_sweep
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Detect overlaps between the AABBs of different sets. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">set</td><td>|#aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means that aabb i belongs to set j. Must be a 1D Buffer of type <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5" title="Index type for GPU code.">GpuIndex</a> of the same size as aabbs. </td></tr>
-    <tr><td class="paramname">aabbs</td><td></td></tr>
+    <tr><td class="paramname">set</td><td><code>|# aabbs|</code> map of indices of aabbs to their corresponding set, i.e. <code>set[i] = j</code> means that aabb <code>i</code> belongs to set <code>j</code>. Must be a 1D <code>Buffer</code> of type <code><a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5" title="Index type for GPU code.">GpuIndex</a></code> of the same size as aabbs. </td></tr>
+    <tr><td class="paramname">aabbs</td><td>The AABBs over objects </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>2x|#overlaps| matrix of overlap pairs between boxes of different sets </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>2x|# overlaps|</code> matrix of overlap pairs between boxes of different sets </dd></dl>
 
 </div>
 </div>

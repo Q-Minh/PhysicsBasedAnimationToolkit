@@ -144,10 +144,18 @@ $(function(){initNavTree('d9/dc9/namespacepbat_1_1graph.html','../../'); initRes
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/db5/structpbat_1_1graph_1_1_breadth_first_search.html">BreadthFirstSearch</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d07/structpbat_1_1graph_1_1_depth_first_search.html">DepthFirstSearch</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d77/classpbat_1_1graph_1_1_disjoint_set_union_find.html">DisjointSetUnionFind</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disjoint Set Union-Find data structure.  <a href="../../d9/d77/classpbat_1_1graph_1_1_disjoint_set_union_find.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html">PartitioningOptions</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Options for graph partitioning.  <a href="../../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html">WeightedEdgeTraits</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Traits for <a class="el" href="#a353fbeda472647a2e3af2031e2170fcc" title="Weighted edge (wrapper around Eigen triplet type)">WeightedEdge</a>.  <a href="../../df/d6b/structpbat_1_1graph_1_1_weighted_edge_traits.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
@@ -224,25 +232,33 @@ Functions</h2></td></tr>
 <tr class="memitem:a1853b76a08732c08e8dcd42169ce8f0e"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1853b76a08732c08e8dcd42169ce8f0e">GreedyColor</a> (Eigen::DenseBase&lt; TDerivedPtr &gt; const &amp;ptr, Eigen::DenseBase&lt; TDerivedAdj &gt; const &amp;adj, <a class="el" href="#ac26166ca4b423603403a335c47224b45">EGreedyColorOrderingStrategy</a> eOrderingStrategy=<a class="el" href="#ac26166ca4b423603403a335c47224b45a2ddb2b46f6e9567f5a44c430f996f536">EGreedyColorOrderingStrategy::LargestDegree</a>, <a class="el" href="#aae94ec1f32cf36a23c873b18b0400645">EGreedyColorSelectionStrategy</a> eSelectionStrategy=<a class="el" href="#aae94ec1f32cf36a23c873b18b0400645a98f052a90774dc8335e422b6076b9da3">EGreedyColorSelectionStrategy::LeastUsed</a>) -&gt; Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;</td></tr>
 <tr class="memdesc:a1853b76a08732c08e8dcd42169ce8f0e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Greedy graph coloring algorithm.  <br /></td></tr>
 <tr class="separator:a1853b76a08732c08e8dcd42169ce8f0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a92708086f95b45eca0c636ee7e4a9864" id="r_a92708086f95b45eca0c636ee7e4a9864"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, class TDerivedW, std::integral TIndex = typename TDerivedE::Scalar, class TScalar = typename TDerivedW::Scalar&gt; </td></tr>
+<tr class="memitem:aabfa69754d880587ebd67c7776a12f95" id="r_aabfa69754d880587ebd67c7776a12f95"><td class="memTemplParams" colspan="2">template&lt;common::CIndex TIndex, class TDerivedP, class TDerivedAdj&gt; </td></tr>
+<tr class="memitem:aabfa69754d880587ebd67c7776a12f95"><td class="memTemplItemLeft" align="right" valign="top">TIndex&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aabfa69754d880587ebd67c7776a12f95">ConnectedComponents</a> (Eigen::DenseBase&lt; TDerivedP &gt; const &amp;ptr, Eigen::DenseBase&lt; TDerivedAdj &gt; const &amp;adj, Eigen::Ref&lt; Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt; &gt; components, <a class="el" href="../../d4/d07/structpbat_1_1graph_1_1_depth_first_search.html">DepthFirstSearch</a>&lt; TIndex &gt; &amp;dfs)</td></tr>
+<tr class="memdesc:aabfa69754d880587ebd67c7776a12f95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute connected components of a graph using depth-first search.  <br /></td></tr>
+<tr class="separator:aabfa69754d880587ebd67c7776a12f95"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab48e6296ebb78444e9e6440d5fe7cfbd" id="r_ab48e6296ebb78444e9e6440d5fe7cfbd"><td class="memTemplParams" colspan="2">template&lt;common::CIndex TIndex, class TDerivedP, class TDerivedAdj&gt; </td></tr>
+<tr class="memitem:ab48e6296ebb78444e9e6440d5fe7cfbd"><td class="memTemplItemLeft" align="right" valign="top">TIndex&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ab48e6296ebb78444e9e6440d5fe7cfbd">ConnectedComponents</a> (Eigen::DenseBase&lt; TDerivedP &gt; const &amp;ptr, Eigen::DenseBase&lt; TDerivedAdj &gt; const &amp;adj, Eigen::Ref&lt; Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt; &gt; components, <a class="el" href="../../de/db5/structpbat_1_1graph_1_1_breadth_first_search.html">BreadthFirstSearch</a>&lt; TIndex &gt; &amp;bfs)</td></tr>
+<tr class="memdesc:ab48e6296ebb78444e9e6440d5fe7cfbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute connected components of a graph using breadth-first search.  <br /></td></tr>
+<tr class="separator:ab48e6296ebb78444e9e6440d5fe7cfbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a92708086f95b45eca0c636ee7e4a9864" id="r_a92708086f95b45eca0c636ee7e4a9864"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, class TDerivedW, common::CIndex TIndex = typename TDerivedE::Scalar, common::CArithmetic TScalar = typename TDerivedW::Scalar&gt; </td></tr>
 <tr class="memitem:a92708086f95b45eca0c636ee7e4a9864"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a92708086f95b45eca0c636ee7e4a9864">MeshAdjacencyMatrix</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::DenseBase&lt; TDerivedW &gt; const &amp;w, TIndex nNodes=TIndex(-1), bool bVertexToElement=false, bool bHasDuplicates=false) -&gt; Eigen::SparseMatrix&lt; TScalar, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:a92708086f95b45eca0c636ee7e4a9864"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct adjacency matrix from mesh.  <br /></td></tr>
 <tr class="separator:a92708086f95b45eca0c636ee7e4a9864"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4" id="r_a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </td></tr>
+<tr class="memitem:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4" id="r_a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </td></tr>
 <tr class="memitem:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2ef0f0cc7fa6bd2ba1b423e21c40e5f4">MeshAdjacencyMatrix</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1), bool bVertexToElement=false, bool bHasDuplicates=false) -&gt; Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct adjacency matrix from mesh.  <br /></td></tr>
 <tr class="separator:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9bfc67838583486d2d0d3b939242007a" id="r_a9bfc67838583486d2d0d3b939242007a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </td></tr>
+<tr class="memitem:a9bfc67838583486d2d0d3b939242007a" id="r_a9bfc67838583486d2d0d3b939242007a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </td></tr>
 <tr class="memitem:a9bfc67838583486d2d0d3b939242007a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9bfc67838583486d2d0d3b939242007a">MeshPrimalGraph</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1)) -&gt; Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:a9bfc67838583486d2d0d3b939242007a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct primal graph of input mesh, i.e. the graph of adjacent vertices.  <br /></td></tr>
 <tr class="separator:a9bfc67838583486d2d0d3b939242007a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa27c11cf51026074641f54fc63afc13a" id="r_aa27c11cf51026074641f54fc63afc13a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </td></tr>
+<tr class="memitem:aa27c11cf51026074641f54fc63afc13a" id="r_aa27c11cf51026074641f54fc63afc13a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </td></tr>
 <tr class="memitem:aa27c11cf51026074641f54fc63afc13a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aa27c11cf51026074641f54fc63afc13a">MeshDualGraph</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1), <a class="el" href="#a7cb7c7df4fe22b56ba7f39c144f8aac9">EMeshDualGraphOptions</a> opts=EMeshDualGraphOptions::All) -&gt; Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:aa27c11cf51026074641f54fc63afc13a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct dual graph of input mesh, i.e. the graph of adjacent elements.  <br /></td></tr>
 <tr class="separator:aa27c11cf51026074641f54fc63afc13a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a447909cb9a9a71a5ee60f0e963485792" id="r_a447909cb9a9a71a5ee60f0e963485792"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a447909cb9a9a71a5ee60f0e963485792">Partition</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const  &gt; const  &amp;ptr, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const  &gt; const  &amp;adj, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const  &gt; const  &amp;wadj, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nPartitions, <a class="el" href="../../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html">PartitioningOptions</a> opts=<a class="el" href="../../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html">PartitioningOptions</a>{})</td></tr>
-<tr class="memdesc:a447909cb9a9a71a5ee60f0e963485792"><td class="mdescLeft">&#160;</td><td class="mdescRight">Partition input graph.  <br /></td></tr>
-<tr class="separator:a447909cb9a9a71a5ee60f0e963485792"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a354a43676f2a845657e69033d1a7cbee" id="r_a354a43676f2a845657e69033d1a7cbee"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a354a43676f2a845657e69033d1a7cbee">Partition</a> (Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const  &gt; const  &amp;ptr, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const  &gt; const  &amp;adj, Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const  &gt; const  &amp;wadj, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> nPartitions, <a class="el" href="../../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html">PartitioningOptions</a> opts=<a class="el" href="../../d9/d2e/structpbat_1_1graph_1_1_partitioning_options.html">PartitioningOptions</a>{})</td></tr>
+<tr class="memdesc:a354a43676f2a845657e69033d1a7cbee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Partition input graph.  <br /></td></tr>
+<tr class="separator:a354a43676f2a845657e69033d1a7cbee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Graph algorithms and data structures </p>
@@ -496,6 +512,114 @@ template&lt;class TDerivedA, class TScalar = typename TDerivedA::Scalar, std::in
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Non-owning wrapper around the weights of the adjacency matrix </dd></dl>
+
+</div>
+</div>
+<a id="ab48e6296ebb78444e9e6440d5fe7cfbd" name="ab48e6296ebb78444e9e6440d5fe7cfbd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab48e6296ebb78444e9e6440d5fe7cfbd">&#9670;&#160;</a></span>ConnectedComponents() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;common::CIndex TIndex, class TDerivedP, class TDerivedAdj&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">TIndex pbat::graph::ConnectedComponents </td>
+          <td>(</td>
+          <td class="paramtype">Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Eigen::DenseBase&lt; TDerivedAdj &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>adj</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Eigen::Ref&lt; Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>components</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../de/db5/structpbat_1_1graph_1_1_breadth_first_search.html">BreadthFirstSearch</a>&lt; TIndex &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>bfs</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Compute connected components of a graph using breadth-first search. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TIndex</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> type used in the graph </td></tr>
+    <tr><td class="paramname">TDerivedP</td><td>Type of the pointer vector (adjacency list start indices for each vertex) </td></tr>
+    <tr><td class="paramname">TDerivedAdj</td><td>Type of the adjacency list (vector of vertex indices) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ptr</td><td>Pointer to the start of each vertex's adjacency list </td></tr>
+    <tr><td class="paramname">adj</td><td>Adjacency list of the graph </td></tr>
+    <tr><td class="paramname">components</td><td>Output vector to store component labels for each vertex </td></tr>
+    <tr><td class="paramname">bfs</td><td>Breadth-first search object </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Number of connected components found in the graph </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>components[u] &lt; 0</code> for all vertices <code>u</code> in the graph </dd></dl>
+
+</div>
+</div>
+<a id="aabfa69754d880587ebd67c7776a12f95" name="aabfa69754d880587ebd67c7776a12f95"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aabfa69754d880587ebd67c7776a12f95">&#9670;&#160;</a></span>ConnectedComponents() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;common::CIndex TIndex, class TDerivedP, class TDerivedAdj&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">TIndex pbat::graph::ConnectedComponents </td>
+          <td>(</td>
+          <td class="paramtype">Eigen::DenseBase&lt; TDerivedP &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Eigen::DenseBase&lt; TDerivedAdj &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>adj</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Eigen::Ref&lt; Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>components</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d4/d07/structpbat_1_1graph_1_1_depth_first_search.html">DepthFirstSearch</a>&lt; TIndex &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>dfs</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Compute connected components of a graph using depth-first search. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TIndex</td><td><a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6" title="Index type.">Index</a> type used in the graph </td></tr>
+    <tr><td class="paramname">TDerivedP</td><td>Type of the pointer vector (adjacency list start indices for each vertex) </td></tr>
+    <tr><td class="paramname">TDerivedAdj</td><td>Type of the adjacency list (vector of vertex indices) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ptr</td><td>Pointer to the start of each vertex's adjacency list </td></tr>
+    <tr><td class="paramname">adj</td><td>Adjacency list of the graph </td></tr>
+    <tr><td class="paramname">components</td><td>Output vector to store component labels for each vertex </td></tr>
+    <tr><td class="paramname">dfs</td><td>Depth-first search object </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Number of connected components found in the graph </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>components[u] &lt; 0</code> for all vertices <code>u</code> in the graph </dd></dl>
 
 </div>
 </div>
@@ -755,7 +879,7 @@ template&lt;class TDerivedA, class TScalar = typename TDerivedA::Scalar, std::in
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class TDerivedE, class TDerivedW, std::integral TIndex = typename TDerivedE::Scalar, class TScalar = typename TDerivedW::Scalar&gt; </div>
+template&lt;class TDerivedE, class TDerivedW, common::CIndex TIndex = typename TDerivedE::Scalar, common::CArithmetic TScalar = typename TDerivedW::Scalar&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">auto pbat::graph::MeshAdjacencyMatrix </td>
@@ -817,7 +941,7 @@ template&lt;class TDerivedE, class TDerivedW, std::integral TIndex = typename TD
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </div>
+template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">auto pbat::graph::MeshAdjacencyMatrix </td>
@@ -870,7 +994,7 @@ template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&g
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </div>
+template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">auto pbat::graph::MeshDualGraph </td>
@@ -917,7 +1041,7 @@ template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&g
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </div>
+template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">auto pbat::graph::MeshPrimalGraph </td>
@@ -952,14 +1076,14 @@ template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&g
 
 </div>
 </div>
-<a id="a447909cb9a9a71a5ee60f0e963485792" name="a447909cb9a9a71a5ee60f0e963485792"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a447909cb9a9a71a5ee60f0e963485792">&#9670;&#160;</a></span>Partition()</h2>
+<a id="a354a43676f2a845657e69033d1a7cbee" name="a354a43676f2a845657e69033d1a7cbee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a354a43676f2a845657e69033d1a7cbee">&#9670;&#160;</a></span>Partition()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> pbat::graph::Partition </td>
+          <td class="memname">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> pbat::graph::Partition </td>
           <td>(</td>
           <td class="paramtype">Eigen::Ref&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a> const &gt; const &amp;</td>          <td class="paramname"><span class="paramname"><em>ptr</em></span>, </td>
         </tr>
@@ -987,7 +1111,7 @@ template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&g
 </div><div class="memdoc">
 
 <p>Partition input graph. </p>
-<p>Internally delegates to METIS <a class="el" href="../../d0/de3/citelist.html#CITEREF_karypis1997metis">[4]</a></p>
+<p>Internally delegates to METIS <a class="el" href="../../d0/de3/citelist.html#CITEREF_karypis1997metis">[7]</a></p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">ptr</td><td>Offset pointers of adjacency list </td></tr>

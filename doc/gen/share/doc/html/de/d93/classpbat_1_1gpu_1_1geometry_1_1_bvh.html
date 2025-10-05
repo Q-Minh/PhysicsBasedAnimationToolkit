@@ -141,7 +141,7 @@ $(function(){initNavTree('de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html','../
 </div><!--header-->
 <div class="contents">
 
-<p>Linear BVH GPU implementation.  
+<p>GPU linear BVH <a class="el" href="../../d0/de3/citelist.html#CITEREF_karras2012maxpartree">[6]</a> public API.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="../../df/de1/_bvh_8h_source.html">Bvh.h</a>&gt;</code></p>
@@ -150,11 +150,13 @@ $(function(){initNavTree('de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html','../
 Public Types</h2></td></tr>
 <tr class="memitem:a6e388e4e9c2690a6d4c0f68d126b3d0f" id="r_a6e388e4e9c2690a6d4c0f68d126b3d0f"><td class="memItemLeft" align="right" valign="top"><a id="a6e388e4e9c2690a6d4c0f68d126b3d0f" name="a6e388e4e9c2690a6d4c0f68d126b3d0f"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>MortonCodeType</b> = <a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html#a930a1551ac51c87aae9dcd75f0163ee4">pbat::geometry::MortonCodeType</a></td></tr>
+<tr class="memdesc:a6e388e4e9c2690a6d4c0f68d126b3d0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of the Morton codes. <br /></td></tr>
 <tr class="separator:a6e388e4e9c2690a6d4c0f68d126b3d0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a8b6fabf2a8b32a05611a3259cf2ebe4a" id="r_a8b6fabf2a8b32a05611a3259cf2ebe4a"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8b6fabf2a8b32a05611a3259cf2ebe4a">Bvh</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> nBoxes, <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5">GpuIndex</a> nOverlaps)</td></tr>
+<tr class="memdesc:a8b6fabf2a8b32a05611a3259cf2ebe4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html" title="GPU linear BVH karras2012maxpartree public API.">Bvh</a> object with space allocated for nBoxes and at most nOverlaps.  <br /></td></tr>
 <tr class="separator:a8b6fabf2a8b32a05611a3259cf2ebe4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae9af4f33e1fe34236ef69aaa8d29a7f2" id="r_ae9af4f33e1fe34236ef69aaa8d29a7f2"><td class="memItemLeft" align="right" valign="top"><a id="ae9af4f33e1fe34236ef69aaa8d29a7f2" name="ae9af4f33e1fe34236ef69aaa8d29a7f2"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Bvh</b> (<a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> const &amp;)=delete</td></tr>
@@ -162,21 +164,26 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a0f12ecaede125030b083a10c94783841" id="r_a0f12ecaede125030b083a10c94783841"><td class="memItemLeft" align="right" valign="top"><a id="a0f12ecaede125030b083a10c94783841" name="a0f12ecaede125030b083a10c94783841"></a>
 <a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> const &amp;)=delete</td></tr>
 <tr class="separator:a0f12ecaede125030b083a10c94783841"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a044ff96f96348827d64673790c44f1c7" id="r_a044ff96f96348827d64673790c44f1c7"><td class="memItemLeft" align="right" valign="top"><a id="a044ff96f96348827d64673790c44f1c7" name="a044ff96f96348827d64673790c44f1c7"></a>
-PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>Bvh</b> (<a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a044ff96f96348827d64673790c44f1c7" id="r_a044ff96f96348827d64673790c44f1c7"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a044ff96f96348827d64673790c44f1c7">Bvh</a> (<a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a044ff96f96348827d64673790c44f1c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <br /></td></tr>
 <tr class="separator:a044ff96f96348827d64673790c44f1c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3cd0262fc5dc4b528d76781d667358c0" id="r_a3cd0262fc5dc4b528d76781d667358c0"><td class="memItemLeft" align="right" valign="top"><a id="a3cd0262fc5dc4b528d76781d667358c0" name="a3cd0262fc5dc4b528d76781d667358c0"></a>
-PBAT_API <a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memitem:a3cd0262fc5dc4b528d76781d667358c0" id="r_a3cd0262fc5dc4b528d76781d667358c0"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3cd0262fc5dc4b528d76781d667358c0">operator=</a> (<a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&amp;other) noexcept</td></tr>
+<tr class="memdesc:a3cd0262fc5dc4b528d76781d667358c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move assignment.  <br /></td></tr>
 <tr class="separator:a3cd0262fc5dc4b528d76781d667358c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad528e39e47a4c8df594bd695ba132ff8" id="r_ad528e39e47a4c8df594bd695ba132ff8"><td class="memItemLeft" align="right" valign="top">PBAT_API void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad528e39e47a4c8df594bd695ba132ff8">Build</a> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> &amp;aabbs, Eigen::Vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>, 3 &gt; const &amp;min, Eigen::Vector&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a5e3419e9d07eefcef1eba8ecebf33124">GpuScalar</a>, 3 &gt; const &amp;max)</td></tr>
+<tr class="memdesc:ad528e39e47a4c8df594bd695ba132ff8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build the BVH from the given AABBs.  <br /></td></tr>
 <tr class="separator:ad528e39e47a4c8df594bd695ba132ff8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afff29d257894c3a01d25537cbfd90983" id="r_afff29d257894c3a01d25537cbfd90983"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afff29d257894c3a01d25537cbfd90983">DetectOverlaps</a> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> const &amp;aabbs)</td></tr>
+<tr class="memdesc:afff29d257894c3a01d25537cbfd90983"><td class="mdescLeft">&#160;</td><td class="mdescRight">Detect overlaps between the AABBs.  <br /></td></tr>
 <tr class="separator:afff29d257894c3a01d25537cbfd90983"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4d6c2acb832577d20838eeaa5ca1952e" id="r_a4d6c2acb832577d20838eeaa5ca1952e"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d6c2acb832577d20838eeaa5ca1952e">DetectOverlaps</a> (<a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;set, <a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> const &amp;aabbs)</td></tr>
+<tr class="memdesc:a4d6c2acb832577d20838eeaa5ca1952e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Detect overlaps between the AABBs of different sets.  <br /></td></tr>
 <tr class="separator:a4d6c2acb832577d20838eeaa5ca1952e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a76698fafcbe68bf07d8932b62f1dd542" id="r_a76698fafcbe68bf07d8932b62f1dd542"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a76698fafcbe68bf07d8932b62f1dd542">PointTriangleNearestNeighbors</a> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> const &amp;aabbs, <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;X, <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;V, <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;F)</td></tr>
+<tr class="memdesc:a76698fafcbe68bf07d8932b62f1dd542"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute nearest triangles (V,F) to points X, given the triangle AABBs.  <br /></td></tr>
 <tr class="separator:a76698fafcbe68bf07d8932b62f1dd542"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a270ecc794090fa6f1cd4ef002419f02c" id="r_a270ecc794090fa6f1cd4ef002419f02c"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a270ecc794090fa6f1cd4ef002419f02c">PointTetrahedronNearestNeighbors</a> (<a class="el" href="../../d6/d86/classpbat_1_1gpu_1_1geometry_1_1_aabb.html">Aabb</a> const &amp;aabbs, <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;X, <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;V, <a class="el" href="../../df/d66/classpbat_1_1gpu_1_1common_1_1_buffer.html">common::Buffer</a> const &amp;T)</td></tr>
+<tr class="memdesc:a270ecc794090fa6f1cd4ef002419f02c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute nearest tets (V,T) to points X, given the tetrahedron AABBs.  <br /></td></tr>
 <tr class="separator:a270ecc794090fa6f1cd4ef002419f02c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab58e6cdca9eb764d0f11267f97171920" id="r_ab58e6cdca9eb764d0f11267f97171920"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#ae7a8148dfcae4097ec2076eb1a8ab17b">GpuMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab58e6cdca9eb764d0f11267f97171920">Min</a> () const</td></tr>
 <tr class="memdesc:ab58e6cdca9eb764d0f11267f97171920"><td class="mdescLeft">&#160;</td><td class="mdescRight">BVH nodes' box minimums.  <br /></td></tr>
@@ -186,7 +193,7 @@ PBAT_API <a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.h
 <tr class="separator:ad97c7378b6e8a5dffb55477c994b992b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a879f59821a5c21e581ac4cd883ba5e65" id="r_a879f59821a5c21e581ac4cd883ba5e65"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a879f59821a5c21e581ac4cd883ba5e65">LeafOrdering</a> () const</td></tr>
 <tr class="separator:a879f59821a5c21e581ac4cd883ba5e65"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5425b8933a21d64dd6bb63fab70ba6b8" id="r_a5425b8933a21d64dd6bb63fab70ba6b8"><td class="memItemLeft" align="right" valign="top">PBAT_API Eigen::Vector&lt; MortonCodeType, Eigen::Dynamic &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5425b8933a21d64dd6bb63fab70ba6b8">MortonCodes</a> () const</td></tr>
+<tr class="memitem:a5425b8933a21d64dd6bb63fab70ba6b8" id="r_a5425b8933a21d64dd6bb63fab70ba6b8"><td class="memItemLeft" align="right" valign="top">PBAT_API Eigen::Vector&lt; <a class="el" href="#a6e388e4e9c2690a6d4c0f68d126b3d0f">MortonCodeType</a>, Eigen::Dynamic &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5425b8933a21d64dd6bb63fab70ba6b8">MortonCodes</a> () const</td></tr>
 <tr class="separator:a5425b8933a21d64dd6bb63fab70ba6b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad72b6b1bfd2faffe1122398a1e02f693" id="r_ad72b6b1bfd2faffe1122398a1e02f693"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a6af5cadacbdccd75d4c8039ec37ae369">GpuIndexMatrixX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad72b6b1bfd2faffe1122398a1e02f693">Child</a> () const</td></tr>
 <tr class="separator:ad72b6b1bfd2faffe1122398a1e02f693"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -196,20 +203,22 @@ PBAT_API <a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.h
 <tr class="separator:a6b8cb9fd5e23a1346479d51c8816414c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1ff6c7b8c1a14d6e1a8188f5dc637edb" id="r_a1ff6c7b8c1a14d6e1a8188f5dc637edb"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d7c/namespacepbat.html#a62d8fc1bbb6602ed9a3746828ff9121f">GpuIndexVectorX</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ff6c7b8c1a14d6e1a8188f5dc637edb">Visits</a> () const</td></tr>
 <tr class="separator:a1ff6c7b8c1a14d6e1a8188f5dc637edb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8cdb02e8bb722770c363bd954350cd76" id="r_a8cdb02e8bb722770c363bd954350cd76"><td class="memItemLeft" align="right" valign="top"><a id="a8cdb02e8bb722770c363bd954350cd76" name="a8cdb02e8bb722770c363bd954350cd76"></a>
-PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_bvh.html">impl::geometry::Bvh</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>Impl</b> ()</td></tr>
+<tr class="memitem:a8cdb02e8bb722770c363bd954350cd76" id="r_a8cdb02e8bb722770c363bd954350cd76"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_bvh.html">impl::geometry::Bvh</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8cdb02e8bb722770c363bd954350cd76">Impl</a> ()</td></tr>
+<tr class="memdesc:a8cdb02e8bb722770c363bd954350cd76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handle to the implementation.  <br /></td></tr>
 <tr class="separator:a8cdb02e8bb722770c363bd954350cd76"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aebb6ba22b57f27210d49f46392f4aeb8" id="r_aebb6ba22b57f27210d49f46392f4aeb8"><td class="memItemLeft" align="right" valign="top"><a id="aebb6ba22b57f27210d49f46392f4aeb8" name="aebb6ba22b57f27210d49f46392f4aeb8"></a>
-PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_bvh.html">impl::geometry::Bvh</a> const *&#160;</td><td class="memItemRight" valign="bottom"><b>Impl</b> () const</td></tr>
+<tr class="memitem:aebb6ba22b57f27210d49f46392f4aeb8" id="r_aebb6ba22b57f27210d49f46392f4aeb8"><td class="memItemLeft" align="right" valign="top">PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_bvh.html">impl::geometry::Bvh</a> const *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aebb6ba22b57f27210d49f46392f4aeb8">Impl</a> () const</td></tr>
+<tr class="memdesc:aebb6ba22b57f27210d49f46392f4aeb8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handle to the implementation.  <br /></td></tr>
 <tr class="separator:aebb6ba22b57f27210d49f46392f4aeb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9906717bd3336b1dbba81c8b59205904" id="r_a9906717bd3336b1dbba81c8b59205904"><td class="memItemLeft" align="right" valign="top">PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9906717bd3336b1dbba81c8b59205904">~Bvh</a> ()</td></tr>
+<tr class="memitem:a9906717bd3336b1dbba81c8b59205904" id="r_a9906717bd3336b1dbba81c8b59205904"><td class="memItemLeft" align="right" valign="top"><a id="a9906717bd3336b1dbba81c8b59205904" name="a9906717bd3336b1dbba81c8b59205904"></a>
+PBAT_API&#160;</td><td class="memItemRight" valign="bottom"><b>~Bvh</b> ()</td></tr>
+<tr class="memdesc:a9906717bd3336b1dbba81c8b59205904"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destructor. <br /></td></tr>
 <tr class="separator:a9906717bd3336b1dbba81c8b59205904"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Linear BVH GPU implementation. </p>
+<div class="textblock"><p>GPU linear BVH <a class="el" href="../../d0/de3/citelist.html#CITEREF_karras2012maxpartree">[6]</a> public API. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a8b6fabf2a8b32a05611a3259cf2ebe4a" name="a8b6fabf2a8b32a05611a3259cf2ebe4a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8b6fabf2a8b32a05611a3259cf2ebe4a">&#9670;&#160;</a></span>Bvh()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b6fabf2a8b32a05611a3259cf2ebe4a">&#9670;&#160;</a></span>Bvh() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -226,31 +235,48 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html" title="GPU linear BVH karras2012maxpartree public API.">Bvh</a> object with space allocated for nBoxes and at most nOverlaps. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">nBoxes</td><td></td></tr>
-    <tr><td class="paramname">nOverlaps</td><td></td></tr>
+    <tr><td class="paramname">nBoxes</td><td>Number of boxes </td></tr>
+    <tr><td class="paramname">nOverlaps</td><td>Maximum number of overlaps </td></tr>
   </table>
   </dd>
 </dl>
 
 </div>
 </div>
-<a id="a9906717bd3336b1dbba81c8b59205904" name="a9906717bd3336b1dbba81c8b59205904"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9906717bd3336b1dbba81c8b59205904">&#9670;&#160;</a></span>~Bvh()</h2>
+<a id="a044ff96f96348827d64673790c44f1c7" name="a044ff96f96348827d64673790c44f1c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a044ff96f96348827d64673790c44f1c7">&#9670;&#160;</a></span>Bvh() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">pbat::gpu::geometry::Bvh::~Bvh </td>
+          <td class="memname">pbat::gpu::geometry::Bvh::Bvh </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+<p>Move constructor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html" title="GPU linear BVH karras2012maxpartree public API.">Bvh</a> to move from </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -278,11 +304,13 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Build the BVH from the given AABBs. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">P</td><td></td></tr>
-    <tr><td class="paramname">S</td><td></td></tr>
-    <tr><td class="paramname">expansion</td><td></td></tr>
+    <tr><td class="paramname">aabbs</td><td>Handle to the AABBs </td></tr>
+    <tr><td class="paramname">min</td><td>Minimum of the world's bounding box </td></tr>
+    <tr><td class="paramname">max</td><td>Maximum of the world's bounding box </td></tr>
   </table>
   </dd>
 </dl>
@@ -321,9 +349,11 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Detect overlaps between the AABBs. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">S</td><td>The simplices which were used to build this BVH </td></tr>
+    <tr><td class="paramname">aabbs</td><td>The AABBs which were used to build this BVH </td></tr>
   </table>
   </dd>
 </dl>
@@ -348,14 +378,56 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Detect overlaps between the AABBs of different sets. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">set</td><td>|#aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means that aabb i belongs to set j. Must be a 1D Buffer of type <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5" title="Index type for GPU code.">GpuIndex</a> of the same size as aabbs. </td></tr>
-    <tr><td class="paramname">aabbs</td><td></td></tr>
+    <tr><td class="paramname">set</td><td>|# aabbs| map of indices of aabbs to their corresponding set, i.e. set[i] = j means that aabb i belongs to set j. Must be a 1D Buffer of type <a class="el" href="../../d0/d7c/namespacepbat.html#af3bd9f308393eddf737ecd496f5d9ff5" title="Index type for GPU code.">GpuIndex</a> of the same size as aabbs. </td></tr>
+    <tr><td class="paramname">aabbs</td><td>The AABBs which were used to build this BVH </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>2x|#overlaps| matrix of overlap pairs between boxes of different sets </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>2x|# Foverlaps| matrix of overlap pairs between boxes of different sets </dd></dl>
+
+</div>
+</div>
+<a id="a8cdb02e8bb722770c363bd954350cd76" name="a8cdb02e8bb722770c363bd954350cd76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8cdb02e8bb722770c363bd954350cd76">&#9670;&#160;</a></span>Impl() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_bvh.html">impl::geometry::Bvh</a> * pbat::gpu::geometry::Bvh::Impl </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Handle to the implementation. </p>
+<dl class="section return"><dt>Returns</dt><dd>Handle to the implementation </dd></dl>
+
+</div>
+</div>
+<a id="aebb6ba22b57f27210d49f46392f4aeb8" name="aebb6ba22b57f27210d49f46392f4aeb8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aebb6ba22b57f27210d49f46392f4aeb8">&#9670;&#160;</a></span>Impl() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1_1_bvh.html">impl::geometry::Bvh</a> const  * pbat::gpu::geometry::Bvh::Impl </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Handle to the implementation. </p>
+<dl class="section return"><dt>Returns</dt><dd>Handle to the implementation </dd></dl>
 
 </div>
 </div>
@@ -393,7 +465,7 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
 </div><div class="memdoc">
 
 <p>BVH nodes' box maximums. </p>
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>dims x |# aabbs|</code> array of box upper bounds </dd></dl>
 
 </div>
 </div>
@@ -413,7 +485,7 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
 </div><div class="memdoc">
 
 <p>BVH nodes' box minimums. </p>
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>dims x |# aabbs|</code> array of box lower bounds </dd></dl>
 
 </div>
 </div>
@@ -424,7 +496,7 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">Eigen::Vector&lt; typename Bvh::MortonCodeType, Eigen::Dynamic &gt; pbat::gpu::geometry::Bvh::MortonCodes </td>
+          <td class="memname">Eigen::Vector&lt; typename <a class="el" href="#a6e388e4e9c2690a6d4c0f68d126b3d0f">Bvh::MortonCodeType</a>, Eigen::Dynamic &gt; pbat::gpu::geometry::Bvh::MortonCodes </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
@@ -432,6 +504,40 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
       </table>
 </div><div class="memdoc">
 <dl class="section return"><dt>Returns</dt><dd></dd></dl>
+
+</div>
+</div>
+<a id="a3cd0262fc5dc4b528d76781d667358c0" name="a3cd0262fc5dc4b528d76781d667358c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3cd0262fc5dc4b528d76781d667358c0">&#9670;&#160;</a></span>operator=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp; pbat::gpu::geometry::Bvh::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html">Bvh</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Move assignment. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td><a class="el" href="../../de/d93/classpbat_1_1gpu_1_1geometry_1_1_bvh.html" title="GPU linear BVH karras2012maxpartree public API.">Bvh</a> to move from </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Reference to this </dd></dl>
 
 </div>
 </div>
@@ -481,16 +587,18 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Compute nearest tets (V,T) to points X, given the tetrahedron AABBs. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">aabbs</td><td></td></tr>
-    <tr><td class="paramname">X</td><td>3x|#pts| matrix of NN query points </td></tr>
-    <tr><td class="paramname">V</td><td>3x|#verts| matrix of vertices </td></tr>
-    <tr><td class="paramname">t</td><td>4x|#tets| matrix of tet vertex indices </td></tr>
+    <tr><td class="paramname">aabbs</td><td>The AABBs of the tets </td></tr>
+    <tr><td class="paramname">X</td><td><code>3x|# pts|</code> matrix of NN query points </td></tr>
+    <tr><td class="paramname">V</td><td><code>3x|# verts|</code> matrix of vertices </td></tr>
+    <tr><td class="paramname">T</td><td><code>4x|# tets|</code> matrix of tet vertex indices </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>|#X| matrix of nearest tets to corresponding columns in X </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>|# X|</code> matrix of nearest tets to corresponding columns in <code>X</code> </dd></dl>
 
 </div>
 </div>
@@ -522,16 +630,18 @@ PBAT_API <a class="el" href="../../d0/d77/classpbat_1_1gpu_1_1impl_1_1geometry_1
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p>Compute nearest triangles (V,F) to points X, given the triangle AABBs. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">aabbs</td><td></td></tr>
-    <tr><td class="paramname">X</td><td>3x|#pts| matrix of NN query points </td></tr>
-    <tr><td class="paramname">V</td><td>3x|#verts| matrix of vertices </td></tr>
-    <tr><td class="paramname">F</td><td>3x|#triangles| matrix of triangle vertex indices </td></tr>
+    <tr><td class="paramname">aabbs</td><td>The AABBs of the triangles </td></tr>
+    <tr><td class="paramname">X</td><td><code>3x|# pts|</code> matrix of NN query points </td></tr>
+    <tr><td class="paramname">V</td><td><code>3x|# verts|</code> matrix of vertices </td></tr>
+    <tr><td class="paramname">F</td><td><code>3x|# triangles|</code> matrix of triangle vertex indices </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>|#X| matrix of nearest triangles to corresponding columns in X </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>|# X|</code> matrix of nearest triangles to corresponding columns in <code>X</code> </dd></dl>
 
 </div>
 </div>

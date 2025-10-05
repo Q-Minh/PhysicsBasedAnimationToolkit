@@ -143,7 +143,15 @@ $(function(){initNavTree('dc/db1/_mesh_boundary_8h.html','../../'); initResizabl
 <p>This file contains functions to compute the boundary of a mesh.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d5/d56/common_2_concepts_8h_source.html">pbat/common/Concepts.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d2/dad/_hash_8h_source.html">pbat/common/Hash.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d1/dba/profiling_2_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&quot;</code><br />
+<code>#include &lt;algorithm&gt;</code><br />
+<code>#include &lt;exception&gt;</code><br />
+<code>#include &lt;fmt/format.h&gt;</code><br />
+<code>#include &lt;string&gt;</code><br />
 <code>#include &lt;tuple&gt;</code><br />
+<code>#include &lt;unordered_map&gt;</code><br />
 </div>
 <p><a href="../../dc/db1/_mesh_boundary_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -158,9 +166,10 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a15bec2c455ae1f2ae30af95b00651716" id="r_a15bec2c455ae1f2ae30af95b00651716"><td class="memItemLeft" align="right" valign="top">auto&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html#a15bec2c455ae1f2ae30af95b00651716">pbat::geometry::SimplexMeshBoundary</a> (<a class="el" href="../../d0/d7c/namespacepbat.html#ad8a293b20436b4976257bf5fbc081d9b">IndexMatrixX</a> const  &amp;C, <a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a> n=<a class="el" href="../../d0/d7c/namespacepbat.html#ad1e4cb87f58d2ca5b10e5eb342c315e6">Index</a>(-1)) -&gt; std::tuple&lt; <a class="el" href="../../d0/d7c/namespacepbat.html#a41114f74a5108dd666ed3daa33497f30">IndexVectorX</a>, <a class="el" href="../../d0/d7c/namespacepbat.html#ad8a293b20436b4976257bf5fbc081d9b">IndexMatrixX</a> &gt;</td></tr>
-<tr class="memdesc:a15bec2c455ae1f2ae30af95b00651716"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the boundary mesh of a simplex mesh.  <br /></td></tr>
-<tr class="separator:a15bec2c455ae1f2ae30af95b00651716"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2139bf2b76ae61c75231843b82cc0dc8" id="r_a2139bf2b76ae61c75231843b82cc0dc8"><td class="memTemplParams" colspan="2">template&lt;common::CIndex TIndex = Index&gt; </td></tr>
+<tr class="memitem:a2139bf2b76ae61c75231843b82cc0dc8"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d2/d7a/namespacepbat_1_1geometry.html#a2139bf2b76ae61c75231843b82cc0dc8">pbat::geometry::SimplexMeshBoundary</a> (Eigen::Ref&lt; Eigen::Matrix&lt; TIndex, Eigen::Dynamic, Eigen::Dynamic &gt; const &gt; const &amp;C, TIndex n) -&gt; std::tuple&lt; Eigen::Vector&lt; TIndex, Eigen::Dynamic &gt;, Eigen::Matrix&lt; TIndex, Eigen::Dynamic, Eigen::Dynamic &gt; &gt;</td></tr>
+<tr class="memdesc:a2139bf2b76ae61c75231843b82cc0dc8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the boundary mesh of a simplex mesh.  <br /></td></tr>
+<tr class="separator:a2139bf2b76ae61c75231843b82cc0dc8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This file contains functions to compute the boundary of a mesh. </p>

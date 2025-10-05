@@ -1,12 +1,10 @@
 var structpbat_1_1geometry_1_1_kd_tree_node =
 [
-    [ "HasLeftChild", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a18d8210351959ce592a401cc1732b6f5", null ],
-    [ "HasRightChild", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a9688d0b730480969e642a895130f695d", null ],
-    [ "IsInternalNode", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a3dee6da97f3032773d7280620facef37", null ],
-    [ "IsLeafNode", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#af5a07ec49479ba638b3988297f64230c", null ],
+    [ "IsInternal", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a0b3ee1755762936f6fe34b539784f436", null ],
+    [ "IsLeaf", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a4591ff88f7fc59a100848ce8afb88e87", null ],
+    [ "Left", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#abbda1aba281f27554d4a084f42a76b24", null ],
+    [ "Right", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a98be4241e40752ec2c789725cf3adce2", null ],
     [ "begin", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a21538a85adf8f53bf3066c886951c8b0", null ],
-    [ "depth", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a838e0f6cbbb6bdf214a051d07427d87f", null ],
-    [ "lc", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#ab2d053edb503d175d05c86db2f417376", null ],
-    [ "n", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#ad074d9a7ca0946a3aae25ccee362799a", null ],
-    [ "rc", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a9faba967c51fc3da10fb5f704f4f6c9f", null ]
+    [ "c", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#aaf43cf26a8931544192cb53a2c79b9c1", null ],
+    [ "n", "df/d3f/structpbat_1_1geometry_1_1_kd_tree_node.html#a694809ac063ef206506809b10caf51fc", null ]
 ];

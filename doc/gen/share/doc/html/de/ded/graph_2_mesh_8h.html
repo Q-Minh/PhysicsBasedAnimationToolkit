@@ -144,7 +144,8 @@ $(function(){initNavTree('de/ded/graph_2_mesh_8h.html','../../'); initResizable(
 <p>Mesh graph utilities.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="../../d8/dc4/_aliases_8h_source.html">pbat/Aliases.h</a>&quot;</code><br />
-<code>#include &lt;concepts&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../d5/d56/common_2_concepts_8h_source.html">pbat/common/Concepts.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d1/dba/profiling_2_profiling_8h_source.html">pbat/profiling/Profiling.h</a>&quot;</code><br />
 </div>
 <p><a href="../../de/ded/graph_2_mesh_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -168,19 +169,19 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a92708086f95b45eca0c636ee7e4a9864" id="r_a92708086f95b45eca0c636ee7e4a9864"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, class TDerivedW, std::integral TIndex = typename TDerivedE::Scalar, class TScalar = typename TDerivedW::Scalar&gt; </td></tr>
+<tr class="memitem:a92708086f95b45eca0c636ee7e4a9864" id="r_a92708086f95b45eca0c636ee7e4a9864"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, class TDerivedW, common::CIndex TIndex = typename TDerivedE::Scalar, common::CArithmetic TScalar = typename TDerivedW::Scalar&gt; </td></tr>
 <tr class="memitem:a92708086f95b45eca0c636ee7e4a9864"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#a92708086f95b45eca0c636ee7e4a9864">pbat::graph::MeshAdjacencyMatrix</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, Eigen::DenseBase&lt; TDerivedW &gt; const &amp;w, TIndex nNodes=TIndex(-1), bool bVertexToElement=false, bool bHasDuplicates=false) -&gt; Eigen::SparseMatrix&lt; TScalar, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:a92708086f95b45eca0c636ee7e4a9864"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct adjacency matrix from mesh.  <br /></td></tr>
 <tr class="separator:a92708086f95b45eca0c636ee7e4a9864"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4" id="r_a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </td></tr>
+<tr class="memitem:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4" id="r_a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </td></tr>
 <tr class="memitem:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#a2ef0f0cc7fa6bd2ba1b423e21c40e5f4">pbat::graph::MeshAdjacencyMatrix</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1), bool bVertexToElement=false, bool bHasDuplicates=false) -&gt; Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct adjacency matrix from mesh.  <br /></td></tr>
 <tr class="separator:a2ef0f0cc7fa6bd2ba1b423e21c40e5f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9bfc67838583486d2d0d3b939242007a" id="r_a9bfc67838583486d2d0d3b939242007a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </td></tr>
+<tr class="memitem:a9bfc67838583486d2d0d3b939242007a" id="r_a9bfc67838583486d2d0d3b939242007a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </td></tr>
 <tr class="memitem:a9bfc67838583486d2d0d3b939242007a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#a9bfc67838583486d2d0d3b939242007a">pbat::graph::MeshPrimalGraph</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1)) -&gt; Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:a9bfc67838583486d2d0d3b939242007a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct primal graph of input mesh, i.e. the graph of adjacent vertices.  <br /></td></tr>
 <tr class="separator:a9bfc67838583486d2d0d3b939242007a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa27c11cf51026074641f54fc63afc13a" id="r_aa27c11cf51026074641f54fc63afc13a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, std::integral TIndex = typename TDerivedE::Scalar&gt; </td></tr>
+<tr class="memitem:aa27c11cf51026074641f54fc63afc13a" id="r_aa27c11cf51026074641f54fc63afc13a"><td class="memTemplParams" colspan="2">template&lt;class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar&gt; </td></tr>
 <tr class="memitem:aa27c11cf51026074641f54fc63afc13a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#aa27c11cf51026074641f54fc63afc13a">pbat::graph::MeshDualGraph</a> (Eigen::DenseBase&lt; TDerivedE &gt; const &amp;E, TIndex nNodes=TIndex(-1), <a class="el" href="../../d9/dc9/namespacepbat_1_1graph.html#a7cb7c7df4fe22b56ba7f39c144f8aac9">EMeshDualGraphOptions</a> opts=EMeshDualGraphOptions::All) -&gt; Eigen::SparseMatrix&lt; TIndex, Eigen::ColMajor, TIndex &gt;</td></tr>
 <tr class="memdesc:aa27c11cf51026074641f54fc63afc13a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct dual graph of input mesh, i.e. the graph of adjacent elements.  <br /></td></tr>
 <tr class="separator:aa27c11cf51026074641f54fc63afc13a"><td class="memSeparator" colspan="2">&#160;</td></tr>

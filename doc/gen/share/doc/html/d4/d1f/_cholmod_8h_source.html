@@ -285,36 +285,44 @@ $(function(){initNavTree('d4/d1f/_cholmod_8h_source.html','../../'); initResizab
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    ESparseStorage storage,</div>
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    cholmod_sparse&amp; cholmod_A)<span class="keyword"> const</span></div>
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span><span class="keyword"></span>{</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    <span class="comment">// Store only the lower triangular part of A</span></div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    cholmod_A.nrow   = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(A.innerSize());</div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    cholmod_A.ncol   = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(A.outerSize());</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    cholmod_A.nzmax  = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(A.nonZeros());</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    cholmod_A.p      = <span class="keyword">const_cast&lt;</span>std::int32_t*<span class="keyword">&gt;</span>(A.outerIndexPtr());</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    cholmod_A.i      = <span class="keyword">const_cast&lt;</span>std::int32_t*<span class="keyword">&gt;</span>(A.innerIndexPtr());</div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    cholmod_A.nz     = NULL;</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    cholmod_A.x      = <span class="keyword">const_cast&lt;</span><a class="code hl_typedef" href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">Scalar</a>*<span class="keyword">&gt;</span>(A.valuePtr());</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    cholmod_A.z      = NULL;</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    cholmod_A.stype  = <span class="keyword">static_cast&lt;</span>std::int32_t<span class="keyword">&gt;</span>(storage);</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    cholmod_A.itype  = CHOLMOD_INT;</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    cholmod_A.xtype  = CHOLMOD_REAL;</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    cholmod_A.sorted = 1 <span class="comment">/*TRUE*/</span>;</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    cholmod_A.packed = 1 <span class="comment">/*TRUE*/</span>;</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>}</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span> </div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>} <span class="comment">// namespace linalg</span></div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>} <span class="comment">// namespace math</span></div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>} <span class="comment">// namespace pbat</span></div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span> </div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="comment">// clang-format off</span></div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_MATH_LINALG_CHOLMOD_H</span></div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_USE_SUITESPARSE</span></div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span><span class="comment">// clang-format on</span></div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    <span class="keyword">using </span>ScalarType = <span class="keyword">typename</span> Derived::Scalar;</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    <span class="keyword">using </span>IndexType  = <span class="keyword">typename</span> Derived::StorageIndex;</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    <span class="keyword">static_assert</span>(</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        std::is_same_v&lt;ScalarType, double&gt; || std::is_same_v&lt;ScalarType, float&gt;,</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>        <span class="stringliteral">&quot;Cholmod implementation uses double or float floating point coefficients&quot;</span>);</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    <span class="keyword">static_assert</span>(</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        std::is_same_v&lt;IndexType, std::int32_t&gt; or std::is_same_v&lt;IndexType, std::int64_t&gt;,</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        <span class="stringliteral">&quot;Cholmod implementation uses 32-bit or 64-bit integer indices&quot;</span>);</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    <span class="comment">// Store only the lower triangular part of A</span></div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    cholmod_A.nrow   = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(A.innerSize());</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    cholmod_A.ncol   = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(A.outerSize());</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    cholmod_A.nzmax  = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(A.nonZeros());</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    cholmod_A.p      = <span class="keyword">const_cast&lt;</span>IndexType*<span class="keyword">&gt;</span>(A.outerIndexPtr());</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    cholmod_A.i      = <span class="keyword">const_cast&lt;</span>IndexType*<span class="keyword">&gt;</span>(A.innerIndexPtr());</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    cholmod_A.nz     = NULL;</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>    cholmod_A.x      = <span class="keyword">const_cast&lt;</span>ScalarType*<span class="keyword">&gt;</span>(A.valuePtr());</div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    cholmod_A.z      = NULL;</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    cholmod_A.stype  = <span class="keyword">static_cast&lt;</span>std::int32_t<span class="keyword">&gt;</span>(storage);</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    cholmod_A.itype  = std::is_same_v&lt;IndexType, std::int64_t&gt; ? CHOLMOD_LONG : CHOLMOD_INT;</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    cholmod_A.xtype  = CHOLMOD_REAL;</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    cholmod_A.dtype  = std::is_same_v&lt;ScalarType, double&gt; ? CHOLMOD_DOUBLE : CHOLMOD_SINGLE;</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    cholmod_A.sorted = 1 <span class="comment">/*TRUE*/</span>;</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    cholmod_A.packed = 1 <span class="comment">/*TRUE*/</span>;</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>}</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span> </div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>} <span class="comment">// namespace linalg</span></div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>} <span class="comment">// namespace math</span></div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>} <span class="comment">// namespace pbat</span></div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span> </div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    <span class="comment">// clang-format off</span></div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_MATH_LINALG_CHOLMOD_H</span></div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span><span class="preprocessor">#endif </span><span class="comment">// PBAT_USE_SUITESPARSE</span></div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span><span class="comment">// clang-format on</span></div>
 <div class="ttc" id="a_aliases_8h_html"><div class="ttname"><a href="../../d8/dc4/_aliases_8h.html">Aliases.h</a></div></div>
-<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div></div>
+<div class="ttc" id="anamespacepbat_1_1math_1_1linalg_html"><div class="ttname"><a href="../../dd/da9/namespacepbat_1_1math_1_1linalg.html">pbat::math::linalg</a></div><div class="ttdoc">Linear Algebra related functionality.</div><div class="ttdef"><b>Definition</b> FilterEigenvalues.h:7</div></div>
 <div class="ttc" id="anamespacepbat_1_1math_html"><div class="ttname"><a href="../../d5/d6a/namespacepbat_1_1math.html">pbat::math</a></div><div class="ttdoc">Math related functionality.</div><div class="ttdef"><b>Definition</b> Concepts.h:19</div></div>
 <div class="ttc" id="anamespacepbat_html"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html">pbat</a></div><div class="ttdoc">The main namespace of the library.</div><div class="ttdef"><b>Definition</b> Aliases.h:15</div></div>
 <div class="ttc" id="anamespacepbat_html_a65f0c909affe08d264d63f048823cefc"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#a65f0c909affe08d264d63f048823cefc">pbat::MatrixX</a></div><div class="ttdeci">Eigen::Matrix&lt; Scalar, Eigen::Dynamic, Eigen::Dynamic &gt; MatrixX</div><div class="ttdoc">Dynamic-size matrix type.</div><div class="ttdef"><b>Definition</b> Aliases.h:34</div></div>
-<div class="ttc" id="anamespacepbat_html_adb88e81cb91ca31d044300522f800fd2"><div class="ttname"><a href="../../d0/d7c/namespacepbat.html#adb88e81cb91ca31d044300522f800fd2">pbat::Scalar</a></div><div class="ttdeci">double Scalar</div><div class="ttdoc">Scalar type.</div><div class="ttdef"><b>Definition</b> Aliases.h:18</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
