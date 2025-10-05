@@ -394,7 +394,7 @@ cd PhysicsBasedAnimationToolkit
 export VCPKG_ROOT=/path/to/vcpkg
 
 # Build with tests enabled
-cmake --preset=default -DPBAT_BUILD_TESTS=ON
+cmake --preset=dev --log-level=verbose
 cmake --build build --target PhysicsBasedAnimationToolkit_Tests
 ```
 
