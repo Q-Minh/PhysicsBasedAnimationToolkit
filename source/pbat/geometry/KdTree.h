@@ -196,7 +196,7 @@ inline void KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, Index 
     common::Stack<StackFrame, 128> stack{};
     Index constexpr root = 0;
     stack.Push({geometry::AxisAlignedBoundingBox<Dims>{P}, root, 0, nPoints});
-    mNodes.emplace_back(0, nPoints, KdTreeNode::kLeafNodeLeftChild);
+    mNodes.push_back({0, nPoints, KdTreeNode::kLeafNodeLeftChild});
     while (not stack.IsEmpty())
     {
         auto const [aabb, nodeIdx, begin, n] = stack.Pop();
@@ -224,8 +224,8 @@ inline void KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, Index 
         AxisAlignedBoundingBox raabb = aabb;
         raabb.min()(dimension)       = split;
         // Store left/right node contiguously in memory
-        mNodes.emplace_back(begin, halfn, KdTreeNode::kLeafNodeLeftChild);
-        mNodes.emplace_back(begin + halfn, n - halfn, KdTreeNode::kLeafNodeLeftChild);
+        mNodes.push_back({begin, halfn, KdTreeNode::kLeafNodeLeftChild});
+        mNodes.push_back({begin + halfn, n - halfn, KdTreeNode::kLeafNodeLeftChild});
         // Schedule left and right sub-tree constructions
         stack.Push({laabb, mNodes[nodeIdx].Left(), begin, halfn});
         stack.Push({raabb, mNodes[nodeIdx].Right(), begin + halfn, n - halfn});
