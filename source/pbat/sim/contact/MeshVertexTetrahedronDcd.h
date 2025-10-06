@@ -11,6 +11,7 @@
 #include "pbat/geometry/OverlapQueries.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 
+#include <cassert>
 #include <exception>
 #include <unordered_map>
 #include <vector>

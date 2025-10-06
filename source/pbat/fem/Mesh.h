@@ -21,6 +21,7 @@
 #include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
+#include <cassert>
 #include <exception>
 #include <map>
 #include <numeric>

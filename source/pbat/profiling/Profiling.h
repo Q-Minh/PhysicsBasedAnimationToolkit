@@ -28,6 +28,7 @@
     #define PBAT_PROFILE_PLOT(name, value)
 #endif // defined(PBAT_HAS_TRACY_PROFILER) and not defined(__CUDACC__)
 
+#include <cassert>
 #include <map>
 #include <string>
 #include <string_view>

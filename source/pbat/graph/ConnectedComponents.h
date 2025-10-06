@@ -8,6 +8,7 @@
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
+#include <cassert>
 
 namespace pbat::graph {
 
