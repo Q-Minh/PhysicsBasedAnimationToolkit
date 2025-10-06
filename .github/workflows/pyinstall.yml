@@ -21,13 +21,17 @@ jobs:
           - os: ubuntu-24.04
             build_tool_args: -j4
             preset: ci-pip-cuda
-            sub_packages: '["nvcc", "cudart", "thrust"]'
-            non-cuda-sub-packages: '["cublas"]'
+            sub_packages: '[]'
+            non_cuda_sub_packages: '[]'
+            # sub_packages: '["nvcc", "cudart", "thrust"]'
+            # non-cuda-sub-packages: '["cublas"]'
           - os: windows-2022
             build_tool_args: /p:CL_MPCount=4
             preset: ci-pip-cuda
-            sub_packages: '["nvcc", "cudart", "thrust", "visual_studio_integration"]'
-            non-cuda-sub-packages: '["cublas"]'
+            sub_packages: '[]'
+            non_cuda_sub_packages: '[]'
+            # sub_packages: '["nvcc", "cudart", "thrust", "visual_studio_integration"]'
+            # non-cuda-sub-packages: '["cublas"]'
           # - os: macos-13
           #   preset: pip
           #   build_tool_args: -j4
@@ -45,7 +49,7 @@ jobs:
           cuda: '12.6.0'
           method: 'network'
           sub-packages: ${{ matrix.sub_packages }}
-          non-cuda-sub-packages: ${{ matrix.non-cuda-sub-packages }}
+          non-cuda-sub-packages: ${{ matrix.non_cuda_sub_packages }}
 
       - uses: lukka/get-cmake@latest
         with:
