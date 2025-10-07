@@ -66,7 +66,7 @@ if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
     FetchContent_Declare(
         tracy
         GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-        GIT_TAG v0.10
+        GIT_TAG v0.12.2
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
         SYSTEM
@@ -127,7 +127,7 @@ if(PBAT_USE_CUDA)
 
     if(DEFINED CMAKE_CUDA_COMPILER)
         enable_language(CUDA)
-        find_package(CUDAToolkit REQUIRED)
+        find_package(CUDAToolkit 12.8.0...<13.0.0 REQUIRED)
         FetchContent_Declare(
             _caw
             GIT_REPOSITORY https://github.com/eyalroz/cuda-api-wrappers.git

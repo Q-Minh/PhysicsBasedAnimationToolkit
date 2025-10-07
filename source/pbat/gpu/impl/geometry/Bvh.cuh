@@ -9,8 +9,8 @@
 #include "pbat/geometry/OverlapQueries.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
-#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <exception>
 #include <string>
@@ -26,7 +26,7 @@ namespace geometry {
 
 /**
  * @brief Radix-tree linear BVH
- * 
+ *
  * Implements of @cite karras2012maxpartree
  *
  */
@@ -205,7 +205,7 @@ class Bvh
 template <class FOnOverlapDetected>
 inline void Bvh::DetectOverlaps(Aabb<kDims> const& aabbs, FOnOverlapDetected&& fOnOverlapDetected)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.DetectOverlaps");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.DetectOverlaps");
     auto const nLeafBoxes = aabbs.Size();
     thrust::for_each(
         thrust::device,
@@ -285,7 +285,7 @@ inline void Bvh::DetectOverlaps(
     Aabb<kDims> const& queryAabbs,
     FOnOverlapDetected fOnOverlapDetected)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.DetectOverlaps");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.DetectOverlaps");
 
     static_assert(
         std::is_invocable_v<FOnOverlapDetected, GpuIndex, GpuIndex>,
@@ -362,7 +362,7 @@ inline void Bvh::NearestNeighbours(
     FOnNearestNeighbourFound fOnNearestNeighbourFound,
     GpuScalar eps)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.NearestNeighbours");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.NearestNeighbours");
 
     using TQuery = std::invoke_result_t<FGetQueryObject, GpuIndex>;
     using Point  = pbat::math::linalg::mini::SVector<GpuScalar, kDims>;
@@ -489,7 +489,7 @@ inline void Bvh::RangeSearch(
     FDistanceUpperBound fDistanceUpperBound,
     FOnFound fOnFound)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.RangeSearch");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.RangeSearch");
 
     using TQuery = std::invoke_result_t<FGetQueryObject, GpuIndex>;
     using Point  = pbat::math::linalg::mini::SVector<GpuScalar, kDims>;

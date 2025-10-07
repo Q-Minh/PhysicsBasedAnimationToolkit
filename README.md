@@ -185,7 +185,7 @@ Refer to [scikit-build-core](https://scikit-build-core.readthedocs.io/en/stable/
 Full online documentation hosted at [q-minh.com/PhysicsBasedAnimationToolkit](https://www.q-minh.com/PhysicsBasedAnimationToolkit/).
 
 - 📁 **[Python Demos](python/examples/)**: Ready-to-run scripts with detailed documentation
-- 📖 **[Tutorials](./doc/tutorial/)**: Step-by-step guides for physics-based animation
+- 📖 **[Tutorials](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/blob/master/doc/tutorial/)**: Step-by-step guides for physics-based animation
 - 🧪 **[Unit Tests](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/source)**: Check out unit tests in source files for C++ usage patterns
 
 ### Running Examples
@@ -217,25 +217,27 @@ Convert surface meshes to volumes using:
 
 ### Dependencies
 
-See [`vcpkg.json`](./vcpkg.json) for a complete list of external dependencies. We recommend using [vcpkg](https://github.com/microsoft/vcpkg) for dependency management, though any dependency discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) will work.
+See [`vcpkg.json`](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/blob/master/vcpkg.json) for a complete list of external dependencies. We recommend using [vcpkg](https://github.com/microsoft/vcpkg) for dependency management, though any dependency discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) will work.
+
+Refer to [`dependencies.cmake`](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/blob/master/cmake/dependencies.cmake) for version requirements on Tracy, and for GPU-enabled code, CUDA toolkit, runtime and driver.
 
 ### CUDA Setup
 
 #### For PyPI Installation
 
-[`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit-gpu/) (downloaded from PyPI) requires dynamically linking to an instance of the
-- [CUDA 12 Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime), and your
+[`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit-gpu/) (downloaded from PyPI) requires dynamically linking to the
+- [CUDA Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime), and your
 - [CUDA Driver](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#driver-api). 
 
-> Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.5.1/cuda-driver-api/version-mixing-rules.html) up to major version.
+> Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.8.0/cuda-driver-api/version-mixing-rules.html) up to major version.
 
-On 64-bit Windows, these are `cudart64_12.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
+On 64-bit Windows, these are `cudart64_<major>.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v<major>.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
 
-On Linux, they are `libcudart.so.12` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend simply updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`.
+On Linux, they are `libcudart.so.<major>` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend simply updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`. Refer to the [documentation](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/#environment-setup) for reference.
 
 > MacOS does not support CUDA GPUs.
 
-Our [`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation on first use. [Verify](https://developer.nvidia.com/cuda-gpus) that your NVIDIA GPU supports [compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) at least 7.0. For example, only RTX 2060 up to 4090 chips are supported in the GeForce series. Runtime GPU performance may be constrained by the targeted compute capability.
+Our [`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit/) prebuilt binaries include [PTX](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#virtual-architectures), such that program load times will be delayed by [JIT](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation) compilation on first use. [Verify](https://developer.nvidia.com/cuda-gpus) that your NVIDIA GPU supports [compute capability](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) at least 7.0. For example, only RTX 2060 and over are supported in the GeForce series. Runtime GPU performance may be constrained by the targeted compute capability.
 
 #### Local
 
@@ -258,7 +260,7 @@ Consider [locally building and installing](#build--install) `pbatoolkit` against
 | `PBAT_USE_CUDA`     | `ON,OFF` | `OFF`   | Link to CUDA Toolkit for GPU API. |
 | `PBAT_BUILD_DOC`     | `ON,OFF` | `OFF`   | Build project's doxygen documentation. |
 
-Our project provides [configuration presets](./CMakePresets.json) that capture typical use configurations. For the best experience, install [`vcpkg`](https://github.com/microsoft/vcpkg) and set `VCPKG_ROOT=path/to/vcpkg` as an environment variable. Then, you can select one of our available presets, for example `cmake --preset=default`. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
+Our project provides [configuration presets](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/blob/master/CMakePresets.json) that capture typical use configurations. For the best experience, install [`vcpkg`](https://github.com/microsoft/vcpkg) and set `VCPKG_ROOT=path/to/vcpkg` as an environment variable. Then, you can select one of our available presets, for example `cmake --preset=default`. Refer to the [CMake presets documentation](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for more information.
 
 ## Build & Install
 
@@ -289,7 +291,7 @@ on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/
 
 ## 🎨 Gallery
 
-See PBAT in action! These examples showcase what's possible with just a few lines of code. Full source code available in [`python/examples/`](./python/examples/).
+See PBAT in action! These examples showcase what's possible with just a few lines of code. Full source code available in [`python/examples/`](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/blob/master/python/examples/).
 
 ##### Real-time hyper elasticity dynamics
 

@@ -6,15 +6,15 @@
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/gpu/impl/common/Cuda.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
-#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
 
 #include <cuda/api.hpp>
 #include <cuda/functional>
-// #include <thrust/async/copy.h>
-#include <thrust/async/for_each.h>
+// #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
 #include <unsupported/Eigen/SparseExtra>
 
 namespace pbat::gpu::impl::vbd {
@@ -51,8 +51,9 @@ Integrator::Integrator(Data const& data)
       mPadj(data.Padj.size()),
       mInitializationStrategy(data.strategy),
       mGpuThreadBlockSize(64),
-      mStream(common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
-                  .create_stream(/*synchronize_with_default_stream=*/false))
+      mStream(
+          common::Device(common::EDeviceSelectionPreference::HighestComputeCapability)
+              .create_stream(/*synchronize_with_default_stream=*/false))
 {
     common::ToBuffer(data.x, x);
     mPositionsAtT = x;
@@ -81,7 +82,7 @@ Integrator::Integrator(Data const& data)
 
 void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.Step");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.Step");
 
     GpuScalar sdt  = dt / static_cast<GpuScalar>(substeps);
     GpuScalar sdt2 = sdt * sdt;
@@ -90,14 +91,13 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     auto bdf = BdfDeviceParameters(sdt, sdt2);
     for (auto s = 0; s < substeps; ++s)
     {
-        PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(subCtx, "pbat.gpu.impl.vbd.Integrator.SubStep");
+        PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.SubStep");
         ComputeInertialTargets(sdt, sdt2);
         InitializeBcdSolution(sdt, sdt2);
         if (s % mActiveSetUpdateFrequency == 0)
             UpdateActiveSet();
         this->Solve(bdf, iterations); // Template method solve
         UpdateBdfState(sdt);
-        PBAT_PROFILE_CUDA_HOST_SCOPE_END(subCtx);
     }
     cd.FinalizeActiveSet(x);
 }
@@ -109,7 +109,7 @@ void Integrator::TracedStep(
     GpuIndex t,
     std::string_view dir)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.TracedStep");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.TracedStep");
 
     bool const bIsFirstFrame = t == 0;
     if (bIsFirstFrame)
@@ -162,7 +162,7 @@ void Integrator::SetBlockSize(GpuIndex blockSize)
 
 void Integrator::InitializeActiveSet(GpuScalar dt)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.InitializeActiveSet");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.InitializeActiveSet");
 
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
@@ -189,7 +189,7 @@ void Integrator::InitializeActiveSet(GpuScalar dt)
 
 void Integrator::ComputeInertialTargets(GpuScalar sdt, GpuScalar sdt2)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.ComputeInertialTargets");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.ComputeInertialTargets");
 
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
@@ -217,7 +217,7 @@ void Integrator::ComputeInertialTargets(GpuScalar sdt, GpuScalar sdt2)
 
 void Integrator::InitializeBcdSolution(GpuScalar sdt, GpuScalar sdt2)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.InitializeBcdSolution");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.InitializeBcdSolution");
 
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
@@ -249,7 +249,7 @@ void Integrator::InitializeBcdSolution(GpuScalar sdt, GpuScalar sdt2)
 
 void Integrator::UpdateActiveSet()
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.UpdateActiveSet");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.UpdateActiveSet");
 
     cd.UpdateActiveSet(x);
     static auto constexpr kMaxContacts =
@@ -274,7 +274,7 @@ void Integrator::UpdateActiveSet()
 
 void Integrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.Solve");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.Solve");
     for (auto k = 0; k < iterations; ++k)
     {
         RunVbdIteration(bdf);
@@ -302,7 +302,7 @@ void Integrator::TracedSolve(
 
 void Integrator::RunVbdIteration(kernels::BackwardEulerMinimization& bdf)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.RunVbdIteration");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.RunVbdIteration");
     auto const nPartitions = mPptr.size() - 1;
     for (auto p = 0; p < nPartitions; ++p)
     {
@@ -328,7 +328,7 @@ void Integrator::RunVbdIteration(kernels::BackwardEulerMinimization& bdf)
 
 void Integrator::UpdateBdfState(GpuScalar sdt)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.UpdateBdfState");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.UpdateBdfState");
     GpuIndex const nVertices = static_cast<GpuIndex>(x.Size());
     mVelocitiesAtT           = mVelocities;
     thrust::for_each(

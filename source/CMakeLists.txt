@@ -148,6 +148,7 @@ if(PBAT_USE_CUDA)
         CUDA::cudart
         CUDA::cublas
         CUDA::cusolver
+        CUDA::cupti
         cuda-api-wrappers::runtime-and-driver
     )
     set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit

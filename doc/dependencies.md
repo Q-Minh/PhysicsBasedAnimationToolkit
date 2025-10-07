@@ -4,19 +4,21 @@ See [`vcpkg.json`](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/blob/m
 
 \note Use of [vcpkg](https://github.com/microsoft/vcpkg) is not mandatory, as long as external dependencies have compatible versions and are discoverable by CMake's [`find_package`](https://cmake.org/cmake/help/latest/command/find_package.html) mechanism.
 
+Refer to [`dependencies.cmake`](https://github.com/Q-Minh/PhysicsBasedAnimationToolkit/blob/master/cmake/dependencies.cmake) for version requirements on Tracy, and for GPU-enabled code, CUDA toolkit, runtime and driver.
+
 ### CUDA
 
 #### PyPI
 
 [`pbatoolkit-gpu`](https://pypi.org/project/pbatoolkit-gpu/) (downloaded from PyPI) requires dynamically linking to an instance of the
-- [CUDA 12 Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime), and your
+- [CUDA Runtime library](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-runtime), and your
 - [CUDA Driver](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#driver-api). 
 
-\note Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.5.1/cuda-driver-api/version-mixing-rules.html) up to major version.
+\note Recall that the CUDA Runtime is [ABI compatible](https://docs.nvidia.com/cuda/archive/12.8.0/cuda-driver-api/version-mixing-rules.html) up to major version.
 
-On 64-bit Windows, these are `cudart64_12.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
+On 64-bit Windows, these are `cudart64_<major>.dll` and `nvcuda.dll`. Ensure that they are discoverable via Windows' [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order). We recommend adding `<drive>:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v<major>.<minor>\bin` (i.e. the binary folder of your CUDA Toolkit installation) to the `PATH` environment variable. The driver should already be on the search path by default after installation.
 
-On Linux, they are `libcudart.so.12` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend simply updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`.
+On Linux, they are `libcudart.so.<major>` and `libcuda.so.1`. Ensure that they are discoverable via Linux's [dynamic linker/loader](https://man7.org/linux/man-pages/man8/ld.so.8.html). If they are not already in a default search path, we recommend updating the library search path, i.e. `export LD_LIBRARY_PATH="path/to/driver/folder;path/to/runtime/folder;$LD_LIBRARY_PATH"`. Refer to the [documentation](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/#environment-setup) for reference.
 
 \note MacOS does not support CUDA GPUs.
 

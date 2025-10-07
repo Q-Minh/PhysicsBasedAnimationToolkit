@@ -129,7 +129,7 @@ Bvh::Bvh(GpuIndex nBoxes)
 
 void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.Build");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.Build");
     GpuIndex const n = aabbs.Size();
     SortByMortonCode(aabbs, WL, WU);
     BuildTree(n);
@@ -138,7 +138,7 @@ void Bvh::Build(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const
 
 void Bvh::SortByMortonCode(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::Bound const& WU)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.SortByMortonCode");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.SortByMortonCode");
 
     auto const n = aabbs.Size();
     morton.Encode(aabbs, WL, WU);
@@ -158,7 +158,7 @@ void Bvh::SortByMortonCode(Aabb<kDims>& aabbs, Morton::Bound const& WL, Morton::
 
 void Bvh::BuildTree(GpuIndex n)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.BuildTree");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.BuildTree");
     thrust::for_each(
         thrust::device,
         thrust::make_counting_iterator(0),
@@ -174,7 +174,7 @@ void Bvh::BuildTree(GpuIndex n)
 
 void Bvh::ConstructBoxes(Aabb<kDims>& aabbs)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.Build.InternalAabbs");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Bvh.Build.InternalAabbs");
     visits.SetConstant(GpuIndex(0));
     auto const n = aabbs.Size();
     auto& b      = aabbs.b;

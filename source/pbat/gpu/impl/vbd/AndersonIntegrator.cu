@@ -5,7 +5,7 @@
 #include "AndersonIntegrator.cuh"
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/common/Modulo.h"
-#include "pbat/gpu/profiling/Profiling.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <limits>
@@ -35,7 +35,7 @@ AndersonIntegrator::AndersonIntegrator(Data const& data)
 
 void AndersonIntegrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.AndersonIntegrator.Solve");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.AndersonIntegrator.Solve");
     // Start Anderson acceleration
     xkm1.data = x;
     RunVbdIteration(bdf);
@@ -53,7 +53,7 @@ void AndersonIntegrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex
 
 void AndersonIntegrator::UpdateAndersonWindow(GpuIndex k)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.AndersonIntegrator.UpdateAndersonWindow");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.AndersonIntegrator.UpdateAndersonWindow");
     auto m   = mDFK.Cols();
     auto dkl = pbat::common::Modulo(k - 1, m);
     Gk.data  = x;
@@ -71,8 +71,7 @@ void AndersonIntegrator::UpdateAndersonWindow(GpuIndex k)
 
 void AndersonIntegrator::TakeAndersonAcceleratedStep(GpuIndex k)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE(
-        "pbat.gpu.impl.vbd.AndersonIntegrator.TakeAndersonAcceleratedStep");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.AndersonIntegrator.TakeAndersonAcceleratedStep");
     auto m = mDFK.Cols();
     // Anderson update, i.e. solve \min_\alpha | DFK \alpha - Fk |
     auto mk  = std::min(k, m);

@@ -3,8 +3,8 @@
 // clang-format on
 
 #include "ChebyshevIntegrator.cuh"
-#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/vbd/Kernels.h"
 
 #include <thrust/execution_policy.h>
@@ -23,7 +23,7 @@ ChebyshevIntegrator::ChebyshevIntegrator(Data const& data)
 
 void ChebyshevIntegrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.ChebyshevIntegrator.Solve");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.ChebyshevIntegrator.Solve");
     GpuScalar rho2 = rho * rho;
     GpuScalar omega{};
     for (auto k = 0; k < iterations; ++k)
@@ -37,7 +37,7 @@ void ChebyshevIntegrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuInde
 
 void ChebyshevIntegrator::UpdateIterates(GpuIndex k, GpuScalar omega)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.vbd.ChebyshevIntegrator.UpdateIterates");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.ChebyshevIntegrator.UpdateIterates");
     auto const nVertices = static_cast<GpuIndex>(x.Size());
     thrust::for_each(
         thrust::device,
