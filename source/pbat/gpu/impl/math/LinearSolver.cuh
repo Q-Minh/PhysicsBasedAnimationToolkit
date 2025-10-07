@@ -3,9 +3,9 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief Linear solver abstractions over cuSolver
  * @date 2025-04-24
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #ifndef PBAT_GPU_IMPL_MATH_LINEARSOLVER_CUH
@@ -18,8 +18,7 @@
 
 #include <algorithm>
 #include <cstdio>
-#include <cuda/api/device.hpp>
-#include <cuda/api/stream.hpp>
+#include <cuda/api.hpp>
 #include <cusolverDn.h>
 #include <memory>
 #include <type_traits>

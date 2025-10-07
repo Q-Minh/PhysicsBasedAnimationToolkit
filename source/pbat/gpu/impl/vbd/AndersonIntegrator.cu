@@ -8,6 +8,7 @@
 #include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
+#include <cuda/api.hpp>
 #include <limits>
 
 namespace pbat::gpu::impl::vbd {

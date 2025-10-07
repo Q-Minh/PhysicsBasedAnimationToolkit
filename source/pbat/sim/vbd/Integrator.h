@@ -18,13 +18,6 @@ class Integrator
     PBAT_API Integrator(Data data);
 
     PBAT_API void Step(Scalar dt, Index iterations, Index substeps = Index{1});
-    /**
-     * @brief Mark next time step for optimization tracing.
-     *
-     * @param path Directory in which to save optimization traces.
-     * @param t Time step index.
-     */
-    PBAT_API void TraceNextStep(std::string const& path = ".", Index t = -1);
 
     Data data;
 
@@ -48,18 +41,6 @@ class Integrator
         Eigen::Ref<MatrixX const> const& xk,
         Eigen::Ref<MatrixX const> const& xtilde,
         Scalar dt);
-
-  protected:
-    PBAT_API void ExportTrace(Scalar sdt, Index substep);
-    PBAT_API void TryTraceIteration(Scalar sdt);
-
-  private:
-    bool mTraceIterates{false};
-    std::string mTracePath{"."};
-    Index mTimeStep{-1};
-    std::vector<Scalar> mTracedObjectives;
-    std::vector<VectorX> mTracedGradients;
-    std::vector<MatrixX> mTracedPositions;
 };
 
 } // namespace vbd

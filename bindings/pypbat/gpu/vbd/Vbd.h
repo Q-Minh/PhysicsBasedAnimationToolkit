@@ -3,16 +3,10 @@
 
 #include <nanobind/nanobind.h>
 
-namespace pbat {
-namespace py {
-namespace gpu {
-namespace vbd {
+namespace pbat::py::gpu::vbd {
 
 void Bind(nanobind::module_& m);
 
-} // namespace vbd
-} // namespace gpu
-} // namespace py
-} // namespace pbat
+} // namespace pbat::py::gpu::vbd
 
 #endif // PYPBAT_GPU_VBD_VBD_H

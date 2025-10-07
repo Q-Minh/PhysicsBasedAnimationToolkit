@@ -13,5 +13,6 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 add_subdirectory(common)
 add_subdirectory(contact)
 add_subdirectory(geometry)
+add_subdirectory(profiling)
 add_subdirectory(xpbd)
 add_subdirectory(vbd)

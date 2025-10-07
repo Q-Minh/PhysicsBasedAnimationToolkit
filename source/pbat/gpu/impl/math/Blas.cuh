@@ -3,9 +3,9 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief BLAS API wrapper over cuBLAS
  * @date 2025-04-24
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #ifndef PBAT_GPU_IMPL_MATH_BLAS_H
@@ -16,7 +16,7 @@
 
 #include <cstdio>
 #include <cublas_v2.h>
-#include <cuda/api/stream.hpp>
+#include <cuda/api.hpp>
 #include <exception>
 #include <memory>
 #include <type_traits>

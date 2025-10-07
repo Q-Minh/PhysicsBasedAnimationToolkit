@@ -20,8 +20,7 @@
 #include <array>
 #include <cstddef>
 #include <cub/block/block_reduce.cuh>
-#include <cuda/api/device.hpp>
-#include <cuda/api/launch_config_builder.hpp>
+#include <cuda/api.hpp>
 #include <cuda/std/tuple>
 #include <limits>
 

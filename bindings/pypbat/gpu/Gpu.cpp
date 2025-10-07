@@ -3,6 +3,7 @@
 #include "common/Common.h"
 #include "contact/Contact.h"
 #include "geometry/Geometry.h"
+#include "profiling/Profiling.h"
 #include "vbd/Vbd.h"
 #include "xpbd/Xpbd.h"
 
@@ -13,8 +14,10 @@ namespace gpu {
 void Bind(nanobind::module_& m)
 {
     namespace nb = nanobind;
-    auto mcommon  = m.def_submodule("common");
+    auto mcommon = m.def_submodule("common");
     common::Bind(mcommon);
+    auto mprofiling = m.def_submodule("profiling");
+    profiling::Bind(mprofiling);
     auto mgeometry = m.def_submodule("geometry");
     geometry::Bind(mgeometry);
     auto mcontact = m.def_submodule("contact");

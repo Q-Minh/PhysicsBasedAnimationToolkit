@@ -37,18 +37,7 @@ void Integrator::Step(Scalar dt, Index iterations, Index substeps)
         Solve(sdt, sdt2, iterations);
         // Update velocity
         data.v = (data.x - data.xt) / sdt;
-        // Save descent path to disk if requested
-        if (mTraceIterates)
-            ExportTrace(sdt, s);
     }
-    mTraceIterates = false;
-}
-
-PBAT_API void Integrator::TraceNextStep(std::string const& path, Index t)
-{
-    mTraceIterates = true;
-    mTracePath     = path;
-    mTimeStep      = t;
 }
 
 void Integrator::InitializeSolve(Scalar sdt, Scalar sdt2)
@@ -72,7 +61,6 @@ void Integrator::InitializeSolve(Scalar sdt, Scalar sdt2)
 
 void Integrator::RunVbdIteration(Scalar sdt, Scalar sdt2)
 {
-    TryTraceIteration(sdt);
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.Integrator.RunVbdIteration");
     auto const nPartitions = data.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
@@ -197,41 +185,6 @@ VectorX Integrator::ObjectiveFunctionGradient(
     }
     // Total energy
     return gEk + (dt * dt) * gEp.reshaped();
-}
-
-PBAT_API void Integrator::ExportTrace(Scalar sdt, Index substep)
-{
-    mTracedObjectives.push_back(ObjectiveFunction(data.x, data.xtilde, sdt));
-    mTracedGradients.push_back(ObjectiveFunctionGradient(data.x, data.xtilde, sdt));
-    mTracedPositions.push_back(data.x);
-    auto const fPath    = fmt::format("{}/{}.{}.f.mtx", mTracePath, mTimeStep, substep);
-    auto const gradPath = fmt::format("{}/{}.{}.grad.mtx", mTracePath, mTimeStep, substep);
-    auto const xPath    = fmt::format("{}/{}.{}.x.mtx", mTracePath, mTimeStep, substep);
-    Eigen::saveMarketDense(common::ToEigen(mTracedObjectives), fPath);
-#include "pbat/warning/Push.h"
-#include "pbat/warning/SignConversion.h"
-    MatrixX G(mTracedGradients.front().size(), mTracedGradients.size());
-    for (std::size_t i = 0; i < mTracedGradients.size(); ++i)
-        G.col(i) = mTracedGradients[i];
-    Eigen::saveMarketDense(G, gradPath);
-    MatrixX XTR(mTracedPositions.front().size(), mTracedPositions.size());
-    for (std::size_t i = 0; i < mTracedPositions.size(); ++i)
-        XTR.col(i) = mTracedPositions[i].reshaped();
-    Eigen::saveMarketDense(XTR, xPath);
-#include "pbat/warning/Pop.h"
-    mTracedObjectives.clear();
-    mTracedGradients.clear();
-    mTracedPositions.clear();
-}
-
-PBAT_API void Integrator::TryTraceIteration(Scalar sdt)
-{
-    if (mTraceIterates)
-    {
-        mTracedObjectives.push_back(ObjectiveFunction(data.x, data.xtilde, sdt));
-        mTracedGradients.push_back(ObjectiveFunctionGradient(data.x, data.xtilde, sdt));
-        mTracedPositions.push_back(data.x);
-    }
 }
 
 } // namespace vbd

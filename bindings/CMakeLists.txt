@@ -164,6 +164,7 @@ if(SKBUILD EQUAL "2")
             DESTINATION "pbatoolkit"
             PATTERN "*.exp" EXCLUDE
             PATTERN "*.lib" EXCLUDE
+            PATTERN "*.a" EXCLUDE
         )
 
         # Bundle external (i.e. not built by this project) shared library dependencies.
@@ -184,7 +185,6 @@ if(SKBUILD EQUAL "2")
             endif()
         endforeach()
     endif()
-
 else()
     message(WARNING "PBAT[python] -- Python bindings are only installable under scikit-build-core, i.e. via pip install")
 endif()

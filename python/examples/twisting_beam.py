@@ -169,13 +169,6 @@ if __name__ == "__main__":
         default=2.0,
     )
     parser.add_argument(
-        "--trace",
-        help="Enable trace output",
-        action="store_true",
-        dest="trace",
-        default=False,
-    )
-    parser.add_argument(
         "--heterogeneous",
         help="Use heterogeneous material properties",
         action="store_true",
@@ -305,8 +298,6 @@ if __name__ == "__main__":
             args.tr_eta, args.tr_tau, args.use_curved_tr
         )
     data = data.construct(validate=True)
-    if args.trace:
-        export_data(args, V, C, F, B, data.aext, rhoe, mue, lambdae, vdbc)
 
     thread_block_size = 64
     vbd = None
@@ -406,10 +397,6 @@ if __name__ == "__main__":
             vbd.gpu_block_size = thread_block_size
 
         if animate or step:
-            if args.trace:
-                sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
-                sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)
-
             # Rotate Dirichlet vertices
             xrotl = rotate(mesh.X, t * dt * np.pi / 2)
             xrotr = rotate(mesh.X, -t * dt * np.pi / 2)
@@ -447,7 +434,3 @@ if __name__ == "__main__":
 
     ps.set_user_callback(callback)
     ps.show()
-
-    if args.trace:
-        sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
-        sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)

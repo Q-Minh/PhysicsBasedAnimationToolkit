@@ -102,51 +102,6 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     cd.FinalizeActiveSet(x);
 }
 
-void Integrator::TracedStep(
-    GpuScalar dt,
-    GpuIndex iterations,
-    GpuIndex substeps,
-    GpuIndex t,
-    std::string_view dir)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.vbd.Integrator.TracedStep");
-
-    bool const bIsFirstFrame = t == 0;
-    if (bIsFirstFrame)
-    {
-        Eigen::saveMarketDense(common::ToEigen(T).transpose(), fmt::format("{}/T.mtx", dir));
-        Eigen::saveMarketDense(common::ToEigen(mMass), fmt::format("{}/M.mtx", dir));
-        Eigen::saveMarketDense(common::ToEigen(mQuadratureWeights), fmt::format("{}/wg.mtx", dir));
-        Eigen::saveMarketDense(
-            common::ToEigen(mShapeFunctionGradients).reshaped(4, 3 * T.Size()),
-            fmt::format("{}/GP.mtx", dir));
-        Eigen::saveMarketDense(
-            common::ToEigen(mLameCoefficients).reshaped(2, T.Size()).transpose(),
-            fmt::format("{}/lame.mtx", dir));
-    }
-
-    GpuScalar sdt  = dt / static_cast<GpuScalar>(substeps);
-    GpuScalar sdt2 = sdt * sdt;
-
-    InitializeActiveSet(dt);
-    auto bdf = BdfDeviceParameters(sdt, sdt2);
-    for (auto s = 0; s < substeps; ++s)
-    {
-        ComputeInertialTargets(sdt, sdt2);
-        Eigen::saveMarketDense(
-            common::ToEigen(mInertialTargetPositions).transpose(),
-            fmt::format("{}/xtilde.t.{}.s.{}.mtx", dir, t, s));
-        InitializeBcdSolution(sdt, sdt2);
-        // TODO:
-        // Should trace information about the contact energies too.
-        if (s % mActiveSetUpdateFrequency == 0)
-            UpdateActiveSet();
-        TracedSolve(bdf, iterations, t, s, dir); // Template method solve
-        UpdateBdfState(sdt);
-    }
-    cd.FinalizeActiveSet(x);
-}
-
 void Integrator::SetSceneBoundingBox(
     Eigen::Vector<GpuScalar, 3> const& min,
     Eigen::Vector<GpuScalar, 3> const& max)
@@ -279,25 +234,6 @@ void Integrator::Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterati
     {
         RunVbdIteration(bdf);
     }
-}
-
-void Integrator::TracedSolve(
-    kernels::BackwardEulerMinimization& bdf,
-    GpuIndex iterations,
-    GpuIndex t,
-    GpuIndex s,
-    std::string_view dir)
-{
-    for (auto k = 0; k < iterations; ++k)
-    {
-        Eigen::saveMarketDense(
-            common::ToEigen(x).transpose(),
-            fmt::format("{}/x.t.{}.s.{}.k.{}.mtx", dir, t, s, k));
-        RunVbdIteration(bdf);
-    }
-    Eigen::saveMarketDense(
-        common::ToEigen(x).transpose(),
-        fmt::format("{}/x.t.{}.s.{}.k.{}.mtx", dir, t, s, iterations));
 }
 
 void Integrator::RunVbdIteration(kernels::BackwardEulerMinimization& bdf)
