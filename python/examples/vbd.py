@@ -6,9 +6,6 @@ import polyscope as ps
 import polyscope.imgui as imgui
 import argparse
 import itertools
-import scipy as sp
-import os
-import pathlib
 
 
 def combine(V: list, C: list):
@@ -19,19 +16,6 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     B = np.hstack([np.full(NV[i], i) for i in range(len(NV))])
     return V, C, B
-
-
-def export_data(args, V, C, F, B, aext, rhoe, mue, lambdae, vdbc):
-    pathlib.Path(args.output).mkdir(parents=True, exist_ok=True)
-    sp.io.mmwrite(os.path.join(args.output, "V.mtx"), V)
-    sp.io.mmwrite(os.path.join(args.output, "C.mtx"), C)
-    sp.io.mmwrite(os.path.join(args.output, "F.mtx"), F)
-    sp.io.mmwrite(os.path.join(args.output, "B.mtx"), B[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "aext.mtx"), aext)
-    sp.io.mmwrite(os.path.join(args.output, "rhoe.mtx"), rhoe[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "mue.mtx"), mue[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "lambdae.mtx"), lambdae[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "vdbc.mtx"), np.array(vdbc)[:, np.newaxis])
 
 
 if __name__ == "__main__":
@@ -246,10 +230,7 @@ if __name__ == "__main__":
         Xmin = X.min(axis=1)
         Xmax = X.max(axis=1)
         barycenters = 0.25 * (
-            X[:, E[0, :]]
-            + X[:, E[1, :]]
-            + X[:, E[2, :]]
-            + X[:, E[3, :]]
+            X[:, E[0, :]] + X[:, E[1, :]] + X[:, E[2, :]] + X[:, E[3, :]]
         )
         nslices = max(2, args.heterogeneous_slices)
         axis = args.heterogeneous_slice_axis
@@ -430,5 +411,5 @@ if __name__ == "__main__":
         else:
             imgui.Text("Using CPU VBD integrator")
 
-    ps.set_user_callback(callback)
+    ps.set_user_callback(callback)iler.start()
     ps.show()
