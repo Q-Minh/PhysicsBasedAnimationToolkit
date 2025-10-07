@@ -6,7 +6,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "ChebyshevIntegrator.cuh"
     "Integrator.cuh"
     "Kernels.cuh"
-    "TrustRegionIntegrator.cuh"
     "Vbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -15,5 +14,4 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "ChebyshevIntegrator.cu"
     "Integrator.cu"
     "Kernels.cu"
-    "TrustRegionIntegrator.cu"
 )

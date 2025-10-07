@@ -8,7 +8,6 @@
 #include "pbat/gpu/impl/vbd/AndersonIntegrator.cuh"
 #include "pbat/gpu/impl/vbd/ChebyshevIntegrator.cuh"
 #include "pbat/gpu/impl/vbd/Integrator.cuh"
-#include "pbat/gpu/impl/vbd/TrustRegionIntegrator.cuh"
 
 namespace pbat::gpu::vbd {
 
@@ -18,16 +17,13 @@ Integrator::Integrator(Data const& data) : mImpl(nullptr)
     switch (data.eAcceleration)
     {
         case EAccelerationStrategy::None: mImpl = new impl::vbd::Integrator(data); break;
-        case EAccelerationStrategy::AcceleratedAnderson: [[fallthrough]];
-        case EAccelerationStrategy::Anderson:
-            mImpl = new impl::vbd::AndersonIntegrator(data);
-            break;
         case EAccelerationStrategy::Chebyshev:
             mImpl = new impl::vbd::ChebyshevIntegrator(data);
             break;
-        case EAccelerationStrategy::TrustRegion:
-            mImpl = new impl::vbd::TrustRegionIntegrator(data);
+        case EAccelerationStrategy::Anderson:
+            mImpl = new impl::vbd::AndersonIntegrator(data);
             break;
+        case EAccelerationStrategy::Broyden: break; // Not implemented yet
         default: mImpl = new impl::vbd::Integrator(data); break;
     }
 }
