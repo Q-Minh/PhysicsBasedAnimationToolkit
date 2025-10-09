@@ -186,7 +186,6 @@
                 "python"
             ],
             "cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "cuda",
                 "PBAT_USE_CUDA": {
                     "type": "BOOL",
                     "value": "ON"
@@ -208,7 +207,7 @@
                 "pip-cuda"
             ],
             "cacheVariables": {
-                "CMAKE_CUDA_ARCHITECTURES": "70-virtual"
+                "CMAKE_CUDA_ARCHITECTURES": "75-virtual"
             }
         }
     ]
