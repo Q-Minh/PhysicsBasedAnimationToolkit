@@ -33,10 +33,17 @@
 
 namespace pbat::gpu::impl::math {
 
+/**
+ * @brief BLAS API wrapper over cuBLAS
+ */
 class Blas
 {
   public:
-    Blas(
+    /**
+     * @brief Construct a new Blas object
+     * @param device Device to use (default: highest compute capability)
+     */
+    explicit Blas(
         cuda::device_t device =
             common::Device(common::EDeviceSelectionPreference::HighestComputeCapability));
     Blas(Blas const&)            = delete;
@@ -44,19 +51,52 @@ class Blas
     Blas& operator=(Blas const&) = delete;
     Blas& operator=(Blas&&)      = delete;
 
+    /**
+     * @brief Get the underlying cuBLAS handle
+     * @return cublasHandle_t cuBLAS handle
+     */
     cublasHandle_t Handle() const { return mHandle; }
-
+    /**
+     * @brief Copy vector x to vector y
+     * @tparam TVectorX Type of vector x
+     * @tparam TVectorY Type of vector y
+     * @tparam TScalar Scalar type (default: TVectorX::ValueType)
+     * @param x Input vector
+     * @param y Output vector
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <CVector TVectorX, CVector TVectorY, class TScalar = TVectorX::ValueType>
     void
     Copy(TVectorX const& x, TVectorY& y, std::shared_ptr<cuda::stream_t> stream = nullptr) const;
-
+    /**
+     * @brief Compute y = alpha * x + y
+     * @tparam TVectorX Type of vector x
+     * @tparam TVectorY Type of vector y
+     * @tparam TScalar Scalar type (default: TVectorX::ValueType)
+     * @param x Input vector
+     * @param y Input/output vector
+     * @param alpha Scalar multiplier (default: 1)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <CVector TVectorX, CVector TVectorY, class TScalar = TVectorX::ValueType>
     void Axpy(
         TVectorX const& x,
         TVectorY& y,
         TScalar alpha                          = TScalar(1),
         std::shared_ptr<cuda::stream_t> stream = nullptr);
-
+    /**
+     * @brief Compute y = alpha * A * x + beta * y
+     * @tparam TMatrixA Type of matrix A
+     * @tparam TVectorX Type of vector x
+     * @tparam TVectorY Type of vector y
+     * @tparam TScalar Scalar type (default: TMatrixA::ValueType)
+     * @param A Input matrix
+     * @param x Input vector
+     * @param y Input/output vector
+     * @param alpha Scalar multiplier for A * x (default: 1)
+     * @param beta Scalar multiplier for y (default: 0)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <
         CMatrix TMatrixA,
         CVector TVectorX,
@@ -69,7 +109,17 @@ class Blas
         TScalar alpha                          = TScalar(1),
         TScalar beta                           = TScalar(0),
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
-
+    /**
+     * @brief Solve the upper triangular system A * X = alpha * B or A^T * X = alpha * B
+     * @tparam TMatrixA Type of matrix A
+     * @tparam TMatrixB Type of matrix B
+     * @tparam TScalar Scalar type (default: TMatrixA::ValueType)
+     * @param A Upper triangular matrix
+     * @param B Input/output matrix
+     * @param alpha Scalar multiplier (default: 1)
+     * @param bHasUnitDiagonal Whether A has unit diagonal (default: false)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <CMatrix TMatrixA, CMatrix TMatrixB, class TScalar = TMatrixA::ValueType>
     void UpperTriangularSolve(
         TMatrixA const& A,
@@ -77,7 +127,17 @@ class Blas
         TScalar alpha                          = TScalar(1),
         bool bHasUnitDiagonal                  = false,
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
-
+    /**
+     * @brief Solve the lower triangular system A * X = alpha * B or A^T * X = alpha * B
+     * @tparam TMatrixA Type of matrix A
+     * @tparam TMatrixB Type of matrix B
+     * @tparam TScalar Scalar type (default: TMatrixA::ValueType)
+     * @param A Lower triangular matrix
+     * @param B Input/output matrix
+     * @param alpha Scalar multiplier (default: 1)
+     * @param bHasUnitDiagonal Whether A has unit diagonal (default: false)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <CMatrix TMatrixA, CMatrix TMatrixB, class TScalar = TMatrixA::ValueType>
     void LowerTriangularSolve(
         TMatrixA const& A,
@@ -85,7 +145,17 @@ class Blas
         TScalar alpha                          = TScalar(1),
         bool bHasUnitDiagonal                  = false,
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
-
+    /**
+     * @brief Solve the upper triangular system A * x = alpha * b or A^T * x = alpha * b
+     * @tparam TMatrixA Type of matrix A
+     * @tparam TVectorB Type of vector B
+     * @tparam TScalar Scalar type (default: TMatrixA::ValueType)
+     * @param A Upper triangular matrix
+     * @param B Input/output vector
+     * @param alpha Scalar multiplier (default: 1)
+     * @param bHasUnitDiagonal Whether A has unit diagonal (default: false)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <CMatrix TMatrixA, CVector TVectorB, class TScalar = TMatrixA::ValueType>
     void UpperTriangularSolve(
         TMatrixA const& A,
@@ -93,7 +163,17 @@ class Blas
         TScalar alpha                          = TScalar(1),
         bool bHasUnitDiagonal                  = false,
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
-
+    /**
+     * @brief Solve the lower triangular system A * x = alpha * b or A^T * x = alpha * b
+     * @tparam TMatrixA Type of matrix A
+     * @tparam TVectorB Type of vector B
+     * @tparam TScalar Scalar type (default: TMatrixA::ValueType)
+     * @param A Lower triangular matrix
+     * @param B Input/output vector
+     * @param alpha Scalar multiplier (default: 1)
+     * @param bHasUnitDiagonal Whether A has unit diagonal (default: false)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <CMatrix TMatrixA, CVector TVectorB, class TScalar = TMatrixA::ValueType>
     void LowerTriangularSolve(
         TMatrixA const& A,
@@ -101,7 +181,19 @@ class Blas
         TScalar alpha                          = TScalar(1),
         bool bHasUnitDiagonal                  = false,
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
-
+    /**
+     * @brief Solve the triangular system op(A) * X = alpha * B or op(A) * X = alpha * B
+     * @tparam TMatrixA Type of matrix A
+     * @tparam TMatrixB Type of matrix B
+     * @tparam TScalar Scalar type (default: TMatrixA::ValueType)
+     * @param side Side of the matrix A (left or right)
+     * @param uplo Which part of the matrix A is stored (upper or lower)
+     * @param diag Whether the matrix A is unit diagonal
+     * @param A Matrix A
+     * @param B Matrix B
+     * @param alpha Scalar multiplier (default: 1)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
     template <CMatrix TMatrixA, CMatrix TMatrixB, class TScalar = TMatrixA::ValueType>
     void Trsm(
         cublasSideMode_t side,
@@ -111,10 +203,16 @@ class Blas
         TMatrixB& B,
         TScalar alpha                          = TScalar(1),
         std::shared_ptr<cuda::stream_t> stream = nullptr) const;
-
+    /**
+     * @brief Destroy the Blas object
+     */
     ~Blas();
 
   protected:
+    /**
+     * @brief Try to set the cuBLAS stream
+     * @param stream CUDA stream to set (nullptr to use default stream)
+     */
     void TrySetStream(std::shared_ptr<cuda::stream_t> stream) const;
 
   private:
