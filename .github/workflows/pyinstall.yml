@@ -46,7 +46,7 @@ jobs:
       - uses: Jimver/cuda-toolkit@v0.2.24
         if: ${{ !startsWith(matrix.os, 'macos') }}
         with:
-          cuda: '12.6.0'
+          cuda: '12.8.0'
           method: 'network'
           sub-packages: ${{ matrix.sub_packages }}
           non-cuda-sub-packages: ${{ matrix.non_cuda_sub_packages }}
