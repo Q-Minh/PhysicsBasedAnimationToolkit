@@ -54,13 +54,20 @@ jobs:
 
       # Display CUDA installation layout
       - if: ${{ !startsWith(matrix.os, 'macos') }}
-        run: echo "Cuda install location ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}"
+        run: |
+          echo "Cuda install location ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}"
+
       - if: ${{ !startsWith(matrix.os, 'macos') }}
-        run: ls -la ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
+        run: | 
+          ls -la "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
+
       - if: ${{ startsWith(matrix.os, 'ubuntu') }}
-        run: ls -la ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/lib64"
+        run: |
+          ls -la "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/lib64"
+
       - if: ${{ startsWith(matrix.os, 'windows') }}
-        run: ls -la ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI"      
+        run: |
+          ls -la "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI"
 
       - uses: lukka/get-cmake@latest
         with:
