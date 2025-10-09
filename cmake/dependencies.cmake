@@ -3,6 +3,7 @@ include(FetchContent)
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     find_package(OpenMP REQUIRED COMPONENTS CXX)
 endif()
+
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
@@ -33,6 +34,7 @@ if(NOT TARGET Eigen3::Eigen)
 endif()
 
 find_package(HDF5 CONFIG REQUIRED)
+
 if(NOT TARGET HighFive::HighFive)
     set(HIGHFIVE_FIND_HDF5 OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(
@@ -47,14 +49,16 @@ endif()
 
 if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
     find_package(
-        Python 
-        COMPONENTS Interpreter Development.Module 
+        Python
+        COMPONENTS Interpreter Development.Module
         REQUIRED
     )
+
+    # TODO: Change back to the official nanobind repository once PR for stubgen lib_path is merged.
     FetchContent_Declare(
         _nanobind
-        GIT_REPOSITORY https://github.com/wjakob/nanobind.git
-        GIT_TAG v2.9.2
+        GIT_REPOSITORY https://github.com/Doekin/nanobind.git
+        GIT_TAG stubgen_win_dll
         GIT_PROGRESS TRUE
         SYSTEM
     )
@@ -63,10 +67,12 @@ endif()
 
 if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
     set(TRACY_ON_DEMAND ${PBAT_PROFILE_ON_DEMAND} CACHE BOOL "" FORCE)
+
+    # TODO: Change back to the official tracy repository once PR for nvcc compilation fix is merged.
     FetchContent_Declare(
         tracy
-        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-        GIT_TAG v0.12.2
+        GIT_REPOSITORY https://github.com/Q-Minh/tracy
+        GIT_TAG master
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
         SYSTEM
@@ -108,11 +114,13 @@ endif()
 if(PBAT_USE_SUITESPARSE)
     include(CheckLanguage)
     check_language(C)
+
     if(DEFINED CMAKE_C_COMPILER)
         enable_language(C)
     else()
         message(FATAL_ERROR "PBAT -- Could not find CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
     endif()
+
     find_package(OpenMP REQUIRED COMPONENTS C)
     find_package(CHOLMOD CONFIG REQUIRED)
 endif()
@@ -144,8 +152,8 @@ endif()
 
 if(PBAT_BUILD_DOC)
     find_package(
-        Doxygen 
-        REQUIRED 
+        Doxygen
+        REQUIRED
         OPTIONAL_COMPONENTS dot mscgen dia
     )
 endif()

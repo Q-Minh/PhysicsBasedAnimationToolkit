@@ -24,13 +24,14 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 )
 
 # Build the core parts of nanobind once
-nanobind_build_library(nanobind)
-set_target_properties(nanobind PROPERTIES SYSTEM ON)
+set(_nanobind_target nanobind)
+nanobind_build_library(${_nanobind_target})
+set_target_properties(${_nanobind_target} PROPERTIES SYSTEM ON)
 
 # .. and link it against the nanobind parts
 target_link_libraries(PhysicsBasedAnimationToolkit_Python PRIVATE
     PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-    nanobind
+    ${_nanobind_target}
     Python::Module
 )
 
@@ -94,6 +95,18 @@ set_target_properties(PhysicsBasedAnimationToolkit_Python
 # Install rules for scikit-build-core.
 
 # Stub generation
+list(APPEND _stubgen_lib_path "$<TARGET_FILE_DIR:nanobind>")
+
+if(PBAT_USE_CUDA)
+    list(APPEND _stubgen_lib_path "$<TARGET_FILE_DIR:CUDA::cupti>")
+
+    if(WIN32)
+        list(APPEND _stubgen_lib_path "${CUDAToolkit_BIN_DIR}")
+    else()
+        list(APPEND _stubgen_lib_path "${CUDAToolkit_LIBRARY_DIR}")
+    endif()
+endif()
+
 nanobind_add_stub(
     PhysicsBasedAnimationToolkit_PythonStub
     MODULE "_pbat"
@@ -101,6 +114,7 @@ nanobind_add_stub(
     DEPENDS PhysicsBasedAnimationToolkit_Python
     MARKER_FILE "py.typed"
     RECURSIVE
+    LIB_PATH ${_stubgen_lib_path}
     OUTPUT_PATH "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>"
     OUTPUT
     "__init__.pyi"
@@ -129,28 +143,6 @@ nanobind_add_stub(
     "sim/xpbd.pyi"
 )
 
-if(WIN32)
-    # On Windows, we need to copy the nanobind DLL to the same directory
-    # as the Python module, so that the module can be loaded correctly,
-    # because stub generation requires loading the module. Since module
-    # artifacts are always placed in LIBRARY_OUTPUT_DIRECTORY, while DLLs
-    # are placed in RUNTIME_OUTPUT_DIRECTORY, we need to copy the DLL.
-    # nanobind is always built as a SHARED library unless specified otherwise.
-    # See https://nanobind.readthedocs.io/en/latest/api_cmake.html#command:nanobind_build_library.
-    get_target_property(_nanobind_type nanobind TYPE)
-
-    if(_nanobind_type STREQUAL "SHARED_LIBRARY")
-        add_custom_command(
-            TARGET PhysicsBasedAnimationToolkit_Python
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_FILE:nanobind>
-            $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
-            COMMENT "Copying nanobind runtime to Python module directory"
-        )
-    endif()
-endif()
-
 if(SKBUILD EQUAL "2")
     if(PBAT_BUILD_SHARED_LIBS)
         message(WARNING
@@ -159,6 +151,16 @@ if(SKBUILD EQUAL "2")
     else()
         # Because our build tree puts all binaries in CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CONFIG>,
         # we can install our Python bindings by directly copying the binaries.
+        get_target_property(_nanobind_type ${_nanobind_target} TYPE)
+
+        if(WIN32 AND(_nanobind_type STREQUAL "SHARED_LIBRARY"))
+            install(
+                DIRECTORY "$<TARGET_FILE_DIR:${_nanobind_target}>/"
+                DESTINATION "pbatoolkit"
+                PATTERN "*.exe" EXCLUDE
+            )
+        endif()
+
         install(
             DIRECTORY "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>/"
             DESTINATION "pbatoolkit"
@@ -169,13 +171,13 @@ if(SKBUILD EQUAL "2")
 
         # Bundle external (i.e. not built by this project) shared library dependencies.
         get_target_property(_pbat_link_libraries PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit LINK_LIBRARIES)
-        
+
         foreach(_pbat_link_library IN ITEMS ${_pbat_link_libraries})
             if(TARGET ${_pbat_link_library})
                 get_target_property(_is_imported ${_pbat_link_library} IMPORTED)
                 get_target_property(_type ${_pbat_link_library} TYPE)
                 message(DEBUG "PBAT[python] -- LINK_LIBRARY=${_pbat_link_library} has TYPE=${_type}")
-            
+
                 if(${_is_imported} AND(_type STREQUAL "SHARED_LIBRARY"))
                     message(VERBOSE "PBAT[python] -- SHARED_LIBRARY=${_pbat_link_library} is IMPORTED, bundling imported artifacts")
                     install(IMPORTED_RUNTIME_ARTIFACTS ${_pbat_link_library} RUNTIME DESTINATION "pbatoolkit")
@@ -193,18 +195,3 @@ endif()
 # so we should expect users to have installed those locally
 # and have the DLLs in system search paths. Normally, the
 # installers for MKL and CUDA should do that automatically.
-
-# if(PBAT_USE_INTEL_MKL)
-# message(VERBOSE "PBAT[python] -- Generating install rule for MKL DLLs ${PBAT_INTERNAL_MKL_DLLS}")
-# install(FILES ${PBAT_INTERNAL_MKL_DLLS} DESTINATION "pbatoolkit")
-# endif()
-
-# if(PBAT_USE_CUDA)
-# message(VERBOSE "PBAT[python] -- Generating install rule for CUDA DLLs located at ${CUDAToolkit_BIN_DIR}")
-# install(
-# DIRECTORY "${CUDAToolkit_BIN_DIR}/"
-# DESTINATION "pbatoolkit"
-# FILES_MATCHING
-# PATTERN "*.dll"
-# PATTERN "*.so")
-# endif()
