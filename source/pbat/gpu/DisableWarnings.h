@@ -43,6 +43,7 @@
     #pragma nv_diag_suppress 27  // Character out of range warning when using fmt::format
     #pragma nv_diag_suppress 821 // extern inline function was referenced but not defined
     #pragma nv_diag_suppress 186 // pointless comparison of unsigned integer with zero
+    #pragma nv_diag_suppress 550 // variable was set but never used
 #endif
 
 #endif // PBAT_GPU_DISABLEWARNINGS_H

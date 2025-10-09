@@ -43,11 +43,11 @@ class CudaProfiler
     /**
      * @brief Defaulted move constructor
      */
-    PBAT_API CudaProfiler(CudaProfiler&&) noexcept = default;
+    [[maybe_unused]] PBAT_API CudaProfiler(CudaProfiler&&) noexcept = default;
     /**
      * @brief Defaulted move assignment operator
      */
-    PBAT_API CudaProfiler& operator=(CudaProfiler&&) noexcept = default;
+    [[maybe_unused]] PBAT_API CudaProfiler& operator=(CudaProfiler&&) noexcept = default;
     /**
      * @brief Start profiling CUDA calls
      */

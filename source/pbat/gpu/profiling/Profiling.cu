@@ -19,7 +19,10 @@ CudaProfiler::CudaProfiler(std::string_view context)
 #endif // defined(PBAT_HAS_TRACY_PROFILER)
 {
 #if defined(PBAT_HAS_TRACY_PROFILER)
-    TracyCUDAContextName(static_cast<tracy::CUDACtx*>(mContext), context.data(), context.size());
+    TracyCUDAContextName(
+        static_cast<tracy::CUDACtx*>(mContext),
+        context.data(),
+        static_cast<uint16_t>(context.size()));
 #endif // defined(PBAT_HAS_TRACY_PROFILER)
 }
 
