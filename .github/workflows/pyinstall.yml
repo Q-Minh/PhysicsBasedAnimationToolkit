@@ -53,11 +53,13 @@ jobs:
           non-cuda-sub-packages: ${{ matrix.non_cuda_sub_packages }}
 
       # Display CUDA installation layout
-      - run: echo "Cuda install location ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}"
-      - run: ls -la ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
-      - if: ${{ !startsWith(matrix.os, 'ubuntu') }}
+      - if: ${{ !startsWith(matrix.os, 'macos') }}
+        run: echo "Cuda install location ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}"
+      - if: ${{ !startsWith(matrix.os, 'macos') }}
+        run: ls -la ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
+      - if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: ls -la ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/lib64"
-      - if: ${{ !startsWith(matrix.os, 'windows') }}
+      - if: ${{ startsWith(matrix.os, 'windows') }}
         run: ls -la ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI"      
 
       - uses: lukka/get-cmake@latest
