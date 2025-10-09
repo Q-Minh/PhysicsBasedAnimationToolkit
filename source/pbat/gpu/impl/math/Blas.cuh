@@ -69,6 +69,30 @@ class Blas
     void
     Copy(TVectorX const& x, TVectorY& y, std::shared_ptr<cuda::stream_t> stream = nullptr) const;
     /**
+     * @brief Compute the dot product of vectors x and y
+     * @tparam TVectorX Type of vector x
+     * @tparam TVectorY Type of vector y
+     * @tparam TScalar Scalar type (default: TVectorX::ValueType)
+     * @param x Input vector
+     * @param y Input vector
+     * @param result Pointer to store the result
+     * @param stream CUDA stream to use (default: nullptr)
+     */
+    template <CVector TVectorX, CVector TVectorY, class TScalar = TVectorX::ValueType>
+    void
+    Dot(TVectorX const& x,
+        TVectorY const& y,
+        TScalar* result,
+        std::shared_ptr<cuda::stream_t> stream = nullptr);
+    /**
+     * @brief Scale vector x by alpha
+     * @param x Input vector
+     * @param alpha Scalar multiplier (default: 1)
+     * @param stream CUDA stream to use (default: nullptr)
+     */
+    template <CVector TVectorX, class TScalar = TVectorX::ValueType>
+    void Scal(TVectorX& x, TScalar const* alpha, std::shared_ptr<cuda::stream_t> stream = nullptr);
+    /**
      * @brief Compute y = alpha * x + y
      * @tparam TVectorX Type of vector x
      * @tparam TVectorY Type of vector y
@@ -233,6 +257,40 @@ inline void Blas::Copy(TVectorX const& x, TVectorY& y, std::shared_ptr<cuda::str
     {
         CUBLAS_CHECK(
             cublasDcopy(mHandle, x.Rows(), x.Raw(), x.Increment(), y.Raw(), y.Increment()));
+    }
+}
+
+template <CVector TVectorX, CVector TVectorY, class TScalar>
+inline void Blas::Dot(
+    TVectorX const& x,
+    TVectorY const& y,
+    TScalar* result,
+    std::shared_ptr<cuda::stream_t> stream)
+{
+    TrySetStream(stream);
+    if constexpr (std::is_same_v<TScalar, float>)
+    {
+        CUBLAS_CHECK(
+            cublasSdot(mHandle, x.Rows(), x.Raw(), x.Increment(), y.Raw(), y.Increment(), result));
+    }
+    if constexpr (std::is_same_v<TScalar, double>)
+    {
+        CUBLAS_CHECK(
+            cublasDdot(mHandle, x.Rows(), x.Raw(), x.Increment(), y.Raw(), y.Increment(), result));
+    }
+}
+
+template <CVector TVectorX, class TScalar>
+inline void Blas::Scal(TVectorX& x, TScalar const* alpha, std::shared_ptr<cuda::stream_t> stream)
+{
+    TrySetStream(stream);
+    if constexpr (std::is_same_v<TScalar, float>)
+    {
+        CUBLAS_CHECK(cublasSscal(mHandle, x.Rows(), alpha, x.Raw(), x.Increment()));
+    }
+    if constexpr (std::is_same_v<TScalar, double>)
+    {
+        CUBLAS_CHECK(cublasDscal(mHandle, x.Rows(), alpha, x.Raw(), x.Increment()));
     }
 }
 
