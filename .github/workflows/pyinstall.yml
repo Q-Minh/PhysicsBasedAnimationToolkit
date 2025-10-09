@@ -63,7 +63,7 @@ jobs:
 
       - if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
-          ls "${{ steps.cuda-toolkit.outputs.LD_LIBRARY_PATH }}"
+          ls "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/lib64"
 
       - if: ${{ startsWith(matrix.os, 'windows') }}
         run: |
