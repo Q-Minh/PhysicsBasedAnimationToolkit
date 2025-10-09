@@ -57,7 +57,8 @@ if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
     # TODO: Change back to the official nanobind repository once PR for stubgen lib_path is merged.
     FetchContent_Declare(
         _nanobind
-        GIT_REPOSITORY https://github.com/Doekin/nanobind.git
+        # GIT_REPOSITORY https://github.com/Doekin/nanobind.git
+        GIT_REPOSITORY https://github.com/Q-Minh/nanobind
         GIT_TAG stubgen_win_dll
         GIT_PROGRESS TRUE
         SYSTEM

@@ -27,7 +27,7 @@ jobs:
             # non-cuda-sub-packages: '["cublas"]'
           - os: windows-2022
             build_tool_args: /p:CL_MPCount=4
-            preset: pip
+            preset: ci-pip-cuda
             sub_packages: '[]'
             non_cuda_sub_packages: '[]'
             # sub_packages: '["nvcc", "cudart", "thrust", "visual_studio_integration"]'
