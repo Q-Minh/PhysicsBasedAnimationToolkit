@@ -13,8 +13,6 @@
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 
-#include <string_view>
-
 /**
  * @namespace pbat::gpu::profiling
  * @brief Namespace for host-side GPU profiling utilities
