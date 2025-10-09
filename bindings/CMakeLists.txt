@@ -107,6 +107,14 @@ if(PBAT_USE_CUDA)
     endif()
 endif()
 
+add_custom_command(
+    TARGET PhysicsBasedAnimationToolkit_Python
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "${_stubgen_lib_path}"
+    VERBATIM
+    COMMENT "PBAT[python] -- Listing stubgen LIB_PATH entries"
+)
+
 nanobind_add_stub(
     PhysicsBasedAnimationToolkit_PythonStub
     MODULE "_pbat"
