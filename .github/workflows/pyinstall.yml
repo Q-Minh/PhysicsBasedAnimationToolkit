@@ -59,15 +59,15 @@ jobs:
 
       - if: ${{ !startsWith(matrix.os, 'macos') }}
         run: | 
-          ls -la "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
+          ls "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
 
       - if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
-          ls -la "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/lib64"
+          ls "${{ steps.cuda-toolkit.outputs.LD_LIBRARY_PATH }}"
 
       - if: ${{ startsWith(matrix.os, 'windows') }}
         run: |
-          ls -la "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI"
+          ls "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
 
       - uses: lukka/get-cmake@latest
         with:
