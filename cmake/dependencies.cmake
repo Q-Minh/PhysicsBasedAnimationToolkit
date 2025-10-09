@@ -72,7 +72,7 @@ if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
     FetchContent_Declare(
         tracy
         GIT_REPOSITORY https://github.com/Q-Minh/tracy
-        GIT_TAG master
+        GIT_TAG nvcc-fix
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
         SYSTEM

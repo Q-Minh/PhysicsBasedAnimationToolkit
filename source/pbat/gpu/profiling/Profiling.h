@@ -29,9 +29,8 @@ class CudaProfiler
   public:
     /**
      * @brief Construct a new CUDA Profiler object
-     * @param context Name of the CUDA context
      */
-    PBAT_API CudaProfiler(std::string_view context);
+    PBAT_API CudaProfiler();
     /**
      * @brief Deleted copy constructor
      */

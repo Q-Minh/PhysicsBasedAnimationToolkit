@@ -34,6 +34,13 @@ if __name__ == "__main__":
         "-o", "--output", help="Path to output", dest="output", default="."
     )
     parser.add_argument(
+        "--profile",
+        help="Enable profiling",
+        action="store_true",
+        dest="profile",
+        default=False,
+    )
+    parser.add_argument(
         "-m",
         "--mass-density",
         help="Mass density",
@@ -340,6 +347,15 @@ if __name__ == "__main__":
     t = 0
 
     profiler = pypbat.profiling.Profiler()
+    cuda_profiler = None
+    if args.gpu and args.profile:
+        timeout = 10
+        print(
+            "Waiting for profiler server connection for {} seconds...".format(timeout)
+        )
+        profiler.wait_for_server_connection(timeout=timeout)
+        if profiler.is_connected_to_server:
+            cuda_profiler = pbat.gpu.profiling.CudaProfiler()
 
     def callback():
         global dt, iterations, substeps
@@ -387,7 +403,11 @@ if __name__ == "__main__":
 
         if animate or step:
             profiler.begin_frame("Physics")
+            if cuda_profiler:
+                cuda_profiler.start()
             vbd.step(dt, iterations, substeps)
+            if cuda_profiler:
+                cuda_profiler.stop()
             profiler.end_frame("Physics")
 
             # Update visuals
@@ -411,5 +431,5 @@ if __name__ == "__main__":
         else:
             imgui.Text("Using CPU VBD integrator")
 
-    ps.set_user_callback(callback)iler.start()
+    ps.set_user_callback(callback)
     ps.show()
