@@ -107,10 +107,11 @@ if(PBAT_USE_CUDA)
     endif()
 endif()
 
+message(STATUS "PBAT[python] -- stubgen LIB_PATH at configuration=${_stubgen_lib_path}")
 add_custom_command(
     TARGET PhysicsBasedAnimationToolkit_Python
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "${_stubgen_lib_path}"
+    COMMAND ${CMAKE_COMMAND} -E echo "stuben LIB_PATH=${_stubgen_lib_path}"
     VERBATIM
     COMMENT "PBAT[python] -- Listing stubgen LIB_PATH entries"
 )
