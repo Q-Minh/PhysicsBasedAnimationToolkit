@@ -165,7 +165,6 @@
             "name": "pip",
             "inherits": [
                 "default",
-                "profile",
                 "python",
                 "pic"
             ]
@@ -174,7 +173,6 @@
             "name": "pip-shared",
             "inherits": [
                 "default",
-                "profile",
                 "python",
                 "shared",
                 "pic"
@@ -184,7 +182,6 @@
             "name": "pip-cuda",
             "inherits": [
                 "default",
-                "profile",
                 "pic",
                 "python"
             ],
