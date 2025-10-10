@@ -150,6 +150,7 @@ nanobind_add_stub(
     "sim/integration.pyi"
     "sim/vbd.pyi"
     "sim/xpbd.pyi"
+    VERBOSE
 )
 
 if(SKBUILD EQUAL "2")
