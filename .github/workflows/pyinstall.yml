@@ -90,7 +90,7 @@ jobs:
       - name: Verify DLL resolution
         if: ${{ startsWith(matrix.os, 'windows') }}
         run: |
-          cd ${{ github.workspace }}/PhysicsBasedAnimationToolkit/build/cp312-cp312-win_amd64/lib/Release
+          cd ${{ github.workspace }}/build/cp312-cp312-win_amd64/lib/Release
           $env:PATH += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/17.14.36518.9/bin/Hostx64/x64"
           $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
           $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
