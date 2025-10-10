@@ -94,5 +94,7 @@ jobs:
           $env:PATH += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/17.14.36518.9/bin/Hostx64/x64"
           $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
           $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
-          dumpbin.exe /IMPORTS:_pbat.cp312-win_amd64.pyd
+          echo $env:PATH
+          ls "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/17.14.36518.9/bin/Hostx64/x64"
+          "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/17.14.36518.9/bin/Hostx64/x64/dumpbin.exe" /IMPORTS:_pbat.cp312-win_amd64.pyd
 
