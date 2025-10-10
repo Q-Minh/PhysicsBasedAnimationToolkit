@@ -175,7 +175,7 @@ cd PhysicsBasedAnimationToolkit
 # TODO: Install dependencies ...
 
 # Build and install
-pip install . --config-settings=cmake.args="--preset=pip" --config-settings=build.tool-args="-j 4" --config-settings=cmake.build-type="Release" -v
+pip install . --config-settings cmake.args="--preset=pip" --config-settings build.tool-args="-j 4" --config-settings cmake.build-type="Release" -v
 ```
 
 Refer to [scikit-build-core](https://scikit-build-core.readthedocs.io/en/stable/) and [CMake](https://cmake.org/documentation/) for more fine-grained build customization.
@@ -284,7 +284,7 @@ For a local installation, which builds from source, our Python bindings build re
 As an example, assuming use of [`vcpkg`](https://github.com/microsoft/vcpkg) for external dependency management with `VCPKG_ROOT=path/to/vcpkg` set as an environment variable, run
 
 ```bash
-pip install . --config-settings=cmake.args="--preset=pip-cuda" -v
+pip install . --config-settings cmake.args="--preset=pip-cuda" -v
 ```
 
 on the command line to build [`pbatoolkit`](https://pypi.org/project/pbatoolkit/) from source with GPU algorithms included. Additional environment variables (i.e. [`CUDA_PATH`](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html)) and/or CMake variables (i.e. [`CMAKE_CUDA_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html#variable:CMAKE_%3CLANG%3E_COMPILER)) may be required to be set in order for CMake to correctly discover and compile against your targeted local CUDA installation. Refer to [the CMake documentation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html) for more details.

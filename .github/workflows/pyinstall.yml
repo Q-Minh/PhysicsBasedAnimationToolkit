@@ -85,4 +85,14 @@ jobs:
       
       - name: Build and install PBAT Python bindings
         run: |
-          pip install . --config-settings=cmake.args="--preset=${{ matrix.preset }}" --config-settings=build.tool-args="${{ matrix.build_tool_args }}" -v
+          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_Python" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
+
+      - name: Verify DLL resolution
+        if: ${{ startsWith(matrix.os, 'windows') }}
+        run: |
+          cd ${{ github.workspace }}/PhysicsBasedAnimationToolkit/build/cp312-cp312-win_amd64/lib/Release
+          $env:PATH += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/17.14.36518.9/bin/Hostx64/x64"
+          $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
+          $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
+          ./dumpbin.exe /IMPORTS:_pbat.cp312-win_amd64.pyd
+
