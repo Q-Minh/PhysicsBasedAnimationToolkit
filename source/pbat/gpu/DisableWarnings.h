@@ -44,6 +44,7 @@
     #pragma nv_diag_suppress 821 // extern inline function was referenced but not defined
     #pragma nv_diag_suppress 186 // pointless comparison of unsigned integer with zero
     #pragma nv_diag_suppress 550 // variable was set but never used
+    #pragma nv_diag_suppress 221 // floating-point value does not fit in required floating-point type
 #endif
 
 #endif // PBAT_GPU_DISABLEWARNINGS_H

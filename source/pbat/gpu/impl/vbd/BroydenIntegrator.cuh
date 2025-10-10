@@ -14,6 +14,7 @@ namespace pbat::gpu::impl::vbd {
 class BroydenIntegrator : public Integrator
 {
   public:
+    using BaseType = Integrator; ///< Base class type
     /**
      * @brief Construct a new BroydenIntegrator object
      *
@@ -30,16 +31,6 @@ class BroydenIntegrator : public Integrator
      * @brief Destroy the BroydenIntegrator object
      */
     virtual ~BroydenIntegrator() = default;
-    /**
-     * @brief Update the Broyden window with the current residual and iterate
-     * @param k Current iteration index
-     */
-    void UpdateBroydenWindow(GpuIndex k);
-    /**
-     * @brief Take a Broyden accelerated step
-     * @param k Current iteration index
-     */
-    void TakeBroydenAcceleratedStep(GpuIndex k);
 
   private:
     math::Vector<GpuScalar> Fk;   ///< `3|# verts| x 1` vector of current residual
