@@ -98,7 +98,9 @@ set_target_properties(PhysicsBasedAnimationToolkit_Python
 list(APPEND _stubgen_lib_path "$<TARGET_FILE_DIR:nanobind>")
 
 if(PBAT_USE_CUDA)
-    list(APPEND _stubgen_lib_path "$<TARGET_FILE_DIR:CUDA::cupti>")
+    if(PBAT_ENABLE_PROFILER)
+        list(APPEND _stubgen_lib_path "$<TARGET_FILE_DIR:CUDA::cupti>")
+    endif()
 
     if(WIN32)
         list(APPEND _stubgen_lib_path "${CUDAToolkit_BIN_DIR}")
