@@ -6,6 +6,7 @@
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
 #include "pbat/gpu/impl/vbd/AndersonIntegrator.cuh"
+#include "pbat/gpu/impl/vbd/BroydenIntegrator.cuh"
 #include "pbat/gpu/impl/vbd/ChebyshevIntegrator.cuh"
 #include "pbat/gpu/impl/vbd/Integrator.cuh"
 
@@ -23,7 +24,7 @@ Integrator::Integrator(Data const& data) : mImpl(nullptr)
         case EAccelerationStrategy::Anderson:
             mImpl = new impl::vbd::AndersonIntegrator(data);
             break;
-        case EAccelerationStrategy::Broyden: break; // Not implemented yet
+        case EAccelerationStrategy::Broyden: mImpl = new impl::vbd::BroydenIntegrator(data); break;
         default: mImpl = new impl::vbd::Integrator(data); break;
     }
 }

@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET implementation
     FILES
     "AndersonIntegrator.cuh"
+    "BroydenIntegrator.cuh"
     "ChebyshevIntegrator.cuh"
     "Integrator.cuh"
     "Kernels.cuh"
@@ -11,6 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "AndersonIntegrator.cu"
+    "BroydenIntegrator.cu"
     "ChebyshevIntegrator.cu"
     "Integrator.cu"
     "Kernels.cu"
