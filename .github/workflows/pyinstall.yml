@@ -89,9 +89,9 @@ jobs:
 
       - name: Verify DLL resolution
         if: ${{ startsWith(matrix.os, 'windows') }}
+        working-directory: ${{ github.workspace }}/build/cp312-cp312-win_amd64/lib/Release
         run: |
           ls "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64"
-          cd ${{ github.workspace }}/build/cp312-cp312-win_amd64/lib/Release
           $env:PATH += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64"
           $env:Path += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64"          
           $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
@@ -103,5 +103,6 @@ jobs:
           dumpbin.exe /IMPORTS _pbat.cp312-win_amd64.pyd | Select-String -Pattern "^[ ]+[A-Za-z0-9_.-]+\.dll" | Sort-Object -Unique
 
       - name: Build and install PBAT Python bindings stubs
+        working-directory: ${{ github.workspace }}
         run: |
           pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_PythonStub" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
