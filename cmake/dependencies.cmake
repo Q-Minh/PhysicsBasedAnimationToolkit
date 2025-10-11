@@ -54,9 +54,19 @@ if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
         REQUIRED
     )
 
+    message(VERBOSE "PBAT[python] -- Python_EXECUTABLE=${Python_EXECUTABLE}")
+    message(VERBOSE "PBAT[python] -- Python_INTERPRETER_ID=${Python_INTERPRETER_ID}")
+    message(VERBOSE "PBAT[python] -- Python_STDLIB=${Python_STDLIB}")
+    message(VERBOSE "PBAT[python] -- Python_STDARCH=${Python_STDARCH}")
+    message(VERBOSE "PBAT[python] -- Python_LIBRARIES=${Python_LIBRARIES}")
+    message(VERBOSE "PBAT[python] -- Python_LIBRARY_DIRS=${Python_LIBRARY_DIRS}")
+    message(VERBOSE "PBAT[python] -- Python_RUNTIME_LIBRARY_DIRS=${Python_RUNTIME_LIBRARY_DIRS}")
+    message(VERBOSE "PBAT[python] -- Python_VERSION=${Python_VERSION}")
+
     # TODO: Change back to the official nanobind repository once PR for stubgen lib_path is merged.
     FetchContent_Declare(
         _nanobind
+
         # GIT_REPOSITORY https://github.com/Doekin/nanobind.git
         GIT_REPOSITORY https://github.com/Q-Minh/nanobind
         GIT_TAG stubgen_win_dll

@@ -96,6 +96,9 @@ set_target_properties(PhysicsBasedAnimationToolkit_Python
 
 # Stub generation
 list(APPEND _stubgen_lib_path "$<TARGET_FILE_DIR:nanobind>")
+if(WIN32)
+    list(APPEND _stubgen_lib_path "${Python_RUNTIME_LIBRARY_DIRS}")
+endif()
 
 if(PBAT_USE_CUDA)
     if(PBAT_ENABLE_PROFILER)

@@ -85,7 +85,7 @@ jobs:
       
       - name: Build and install PBAT Python bindings
         run: |
-          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_Python" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
+          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings cmake.args="--log-level=verbose" --config-settings build.targets="PhysicsBasedAnimationToolkit_Python" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
 
       - name: Verify DLL resolution
         if: ${{ startsWith(matrix.os, 'windows') }}
@@ -105,4 +105,4 @@ jobs:
       - name: Build and install PBAT Python bindings stubs
         working-directory: ${{ github.workspace }}
         run: |
-          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_PythonStub" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
+          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings cmake.args="--log-level=verbose" --config-settings build.targets="PhysicsBasedAnimationToolkit_PythonStub" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
