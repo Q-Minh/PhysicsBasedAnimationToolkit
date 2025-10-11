@@ -152,11 +152,15 @@ Data& Data::WithAndersonAcceleration(Index window)
     return *this;
 }
 
-Data& Data::WithBroydenMethod(Index window, EBroydenJacobianEstimate _eJacobianEstimate)
+Data& Data::WithBroydenMethod(
+    Index window,
+    EBroydenJacobianEstimate _eBroydenJacobianEstimate,
+    Scalar _broydenBeta)
 {
-    this->mWindowSize       = window;
-    this->eAcceleration     = EAccelerationStrategy::Broyden;
-    this->eJacobianEstimate = _eJacobianEstimate;
+    this->mWindowSize              = window;
+    this->eAcceleration            = EAccelerationStrategy::Broyden;
+    this->eBroydenJacobianEstimate = _eBroydenJacobianEstimate;
+    this->broydenBeta              = _broydenBeta;
     return *this;
 }
 

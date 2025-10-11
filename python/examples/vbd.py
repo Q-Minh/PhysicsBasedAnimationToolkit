@@ -140,30 +140,18 @@ if __name__ == "__main__":
         dest="broyden_acceleration",
     )
     parser.add_argument(
-        "--use-trust-region",
-        help="Use trust region acceleration",
-        action="store_true",
-        dest="use_trust_region",
-        default=False,
+        "--broyden-jacobian-estimate",
+        help="Broyden Jacobian estimate strategy. Options: 0 (Identity) | 1 (DiagonalCauchySchwarz). Default 0 (Identity)",
+        type=int,
+        dest="broyden_jacobian_estimate",
+        default=0,
     )
     parser.add_argument(
-        "--use-curved-tr",
-        help="Use curved trust region path",
-        action="store_true",
-        dest="use_curved_tr",
-        default=False,
-    )
-    parser.add_argument(
-        "--tr-eta",
-        help="Trust region energy reduction ratio threshold",
+        "--broyden-beta",
+        help="Broyden Cauchy-Schwarz diagonal scaling factor. Only used if broyden-jacobian-estimate is set to 1 (DiagonalCauchySchwarz). Default 1.0",
         type=float,
-        default=0.1,
-    )
-    parser.add_argument(
-        "--tr-tau",
-        help="Trust region radius scaling factor",
-        type=float,
-        default=2.0,
+        dest="broyden_beta",
+        default=1.0,
     )
     parser.add_argument(
         "--heterogeneous",
@@ -291,13 +279,14 @@ if __name__ == "__main__":
         data = data.with_chebyshev_acceleration(args.rho_chebyshev)
     elif args.window > 0:
         if args.broyden_acceleration:
-            data = data.with_broyden_acceleration(args.window)
+            jacobian_estimate = pbat.sim.vbd.BroydenJacobianEstimate.Identity
+            if args.broyden_jacobian_estimate == 1:
+                jacobian_estimate = (
+                    pbat.sim.vbd.BroydenJacobianEstimate.DiagonalCauchySchwarz
+                )
+            data = data.with_broyden_acceleration(args.window, jacobian_estimate, args.broyden_beta)
         elif args.anderson_acceleration:
             data = data.with_anderson_acceleration(args.window)
-    elif args.use_trust_region:
-        data = data.with_trust_region_acceleration(
-            args.tr_eta, args.tr_tau, args.use_curved_tr
-        )
     data = data.construct(validate=True)
 
     thread_block_size = 64

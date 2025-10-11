@@ -31,13 +31,14 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
     auto m = Xk.cols();
     gammak.setZero();
-    if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+    if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
     {
         CSXFk.setZero();
         CSFk.setZero();
         Gkm.setOnes();
     }
     Scalar Fknorm2{0};
+    Scalar beta = data.broydenBeta;
 
     // If x_{k+1} = x_k - VBD(f_k), then
     // VBD(f_k) = x_k - x_{k+1}
@@ -57,7 +58,7 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         // G_{k-m} VBD(\Delta f_k) = VBD(f_k) - VBD(f_{k-1})
         vbdFk.col(dkl) = vbdfk - vbdfkm1;
         vbdfkm1        = vbdfk;
-        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
             Fknorm2 += vbdFk.col(dkl).squaredNorm();
         // Compute Broyden update
         auto mk         = std::min(m, k);
@@ -67,14 +68,14 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         auto alpha      = gradL2.squaredNorm() / (FkgradL2).squaredNorm();
         gammak.head(mk) = alpha * gradL2;
         // Estimate diag(G_{k-m})
-        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
         {
             if (k > m)
                 Gkm.col(dkl).array() +=
-                    (1 / Fknorm2) * CSXFk.col(dkl).array() * CSFk.col(dkl).array();
+                    (beta / Fknorm2) * CSXFk.col(dkl).array() * CSFk.col(dkl).array();
         }
         // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
-        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
         {
             data.x.reshaped() = xkm1 - Gkm.col(dkl).asDiagonal() * vbdfk;
             data.x.reshaped() -= Xk.leftCols(mk) * gammak.head(mk);
@@ -86,12 +87,11 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
                 Xk.leftCols(mk) * gammak.head(mk) - vbdFk.leftCols(mk) * gammak.head(mk);
         }
         // Cauchy-Schwarz squared norms
-        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
         {
             auto ddkl = common::Modulo(dkl - 1, m);
             CSXFk.col(dkl) =
-                CSXFk.col(ddkl).array() +
-                (Xk.col(dkl).array() - Gkm.col(dkl).array() * vbdFk.col(dkl).array()).square();
+                CSXFk.col(ddkl).array() + (Xk.col(dkl).array() - vbdFk.col(dkl).array()).square();
             CSFk.col(dkl) = CSFk.col(ddkl).array() + vbdFk.col(dkl).array().square();
         }
     }

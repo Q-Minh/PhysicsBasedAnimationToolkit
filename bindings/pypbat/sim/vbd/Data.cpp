@@ -214,12 +214,14 @@ void BindData(nanobind::module_& m)
             &Data::WithBroydenMethod,
             nb::arg("window_size"),
             nb::arg("jacobian_estimate") = EBroydenJacobianEstimate::Identity,
+            nb::arg("broyden_beta")      = Scalar{1},
             nb::rv_policy::reference_internal,
             "Use Broyden acceleration\n\n"
             "Args:\n"
             "    window (int): Number of past iterates to use in Broyden acceleration.\n\n"
             "    jacobian_estimate (BroydenJacobianEstimate): Broyden Jacobian estimate "
             "strategy.\n\n"
+            "    broyden_beta (float): Broyden Cauchy-Schwarz scaling factor.\n\n"
             "Returns:\n"
             "    Data: self")
         .def(
@@ -277,7 +279,7 @@ void BindData(nanobind::module_& m)
         .def_rw("window_size", &Data::mWindowSize, "Anderson acceleration window size")
         .def_rw(
             "jacobian_estimate",
-            &Data::eJacobianEstimate,
+            &Data::eBroydenJacobianEstimate,
             "Broyden Jacobian estimate strategy");
 }
 
