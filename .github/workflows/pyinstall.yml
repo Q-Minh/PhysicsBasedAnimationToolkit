@@ -85,7 +85,7 @@ jobs:
       
       - name: Build and install PBAT Python bindings
         run: |
-          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_PythonStub" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
+          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_Python" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
 
       - name: Verify DLL resolution
         if: ${{ startsWith(matrix.os, 'windows') }}
@@ -102,3 +102,6 @@ jobs:
           echo $env:Path
           dumpbin.exe /IMPORTS _pbat.cp312-win_amd64.pyd | Select-String -Pattern "^[ ]+[A-Za-z0-9_.-]+\.dll" | Sort-Object -Unique
 
+      - name: Build and install PBAT Python bindings stubs
+        run: |
+          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_PythonStub" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
