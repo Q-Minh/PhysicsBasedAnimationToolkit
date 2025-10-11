@@ -40,12 +40,17 @@ class BroydenIntegrator : public Integrator
     virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations) override;
 
   private:
-    MatrixX GvbdFk;  ///< `|# dofs| x m` vbd-preconditioned gradient differences
-    MatrixX Xk;      ///< `|# dofs| x m` past steps
-    VectorX gammak;  ///< `m x 1` subspace residual
-    VectorX xkm1;    ///< `|# dofs| x 1` previous step
-    VectorX vbdfk;   ///< `|# dofs| x 1` vbd step
-    VectorX vbdfkm1; ///< `|# dofs| x 1` past vbd step
+    MatrixX vbdFk;    ///< `|# dofs| x m` vbd-preconditioned gradient differences
+    MatrixX Xk;       ///< `|# dofs| x m` past steps
+    VectorX gammak;   ///< `m x 1` subspace residual
+    VectorX xkm1;     ///< `|# dofs| x 1` previous step
+    VectorX vbdfk;    ///< `|# dofs| x 1` vbd step
+    VectorX vbdfkm1;  ///< `|# dofs| x 1` past vbd step
+    VectorX gradL2;   ///< `m x 1` least-squares gradient
+    VectorX FkgradL2; ///< `|# dofs| x 1` Fk * gradL2
+    MatrixX CSXFk;    ///< `|# dofs| x m` Cauchy-Schwarz squared norms on (Xk - G_{k-m} Fk)
+    MatrixX CSFk;     ///< `|# dofs| x m` Cauchy-Schwarz squared norms on Fk
+    MatrixX Gkm;      ///< `|# dofs| x m` diag(G_{k-m})
 };
 
 } // namespace pbat::sim::vbd

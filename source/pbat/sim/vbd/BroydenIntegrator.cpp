@@ -13,12 +13,17 @@ namespace pbat::sim::vbd {
 
 BroydenIntegrator::BroydenIntegrator(Data dataIn)
     : Integrator(std::move(dataIn)),
-      GvbdFk(data.x.size(), data.mWindowSize),
+      vbdFk(data.x.size(), data.mWindowSize),
       Xk(data.x.size(), data.mWindowSize),
       gammak(data.mWindowSize),
       xkm1(data.x.size()),
       vbdfk(data.x.size()),
-      vbdfkm1(data.x.size())
+      vbdfkm1(data.x.size()),
+      gradL2(data.x.size()),
+      FkgradL2(data.x.size()),
+      CSXFk(data.x.size(), data.mWindowSize),
+      CSFk(data.x.size(), data.mWindowSize),
+      Gkm(data.x.size(), data.mWindowSize)
 {
 }
 
@@ -26,13 +31,19 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
     auto m = Xk.cols();
     gammak.setZero();
+    if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+    {
+        CSXFk.setZero();
+        CSFk.setZero();
+        Gkm.setOnes();
+    }
+    Scalar Fknorm2{0};
 
     // If x_{k+1} = x_k - VBD(f_k), then
     // VBD(f_k) = x_k - x_{k+1}
     xkm1 = data.x.reshaped();
     RunVbdIteration(sdt, sdt2);
     vbdfkm1 = xkm1 - data.x.reshaped();
-    // Scalar tau = 1e-8;
     for (Index k = 1; k < iterations; ++k)
     {
         // \Delta x_{k-1} \leftarrow x_k - x_{k-1}
@@ -44,17 +55,45 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         // If x_{k+1} = x_k - VBD(f_k), then VBD(f_k) = x_k - x_{k+1}
         vbdfk = xkm1 - data.x.reshaped();
         // G_{k-m} VBD(\Delta f_k) = VBD(f_k) - VBD(f_{k-1})
-        GvbdFk.col(dkl) = vbdfk - vbdfkm1;
-        vbdfkm1         = vbdfk;
+        vbdFk.col(dkl) = vbdfk - vbdfkm1;
+        vbdfkm1        = vbdfk;
+        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+            Fknorm2 += vbdFk.col(dkl).squaredNorm();
         // Compute Broyden update
-        auto mk = std::min(m, k);
-        auto Fk = GvbdFk.leftCols(mk);
-        auto gradL2     = Fk.transpose() * vbdfk;
-        auto alpha      = gradL2.squaredNorm() / (Fk * gradL2).squaredNorm();
+        auto mk         = std::min(m, k);
+        auto Fk         = vbdFk.leftCols(mk);
+        gradL2          = Fk.transpose() * vbdfk;
+        FkgradL2        = Fk * gradL2;
+        auto alpha      = gradL2.squaredNorm() / (FkgradL2).squaredNorm();
         gammak.head(mk) = alpha * gradL2;
+        // Estimate diag(G_{k-m})
+        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        {
+            if (k > m)
+                Gkm.col(dkl).array() +=
+                    (1 / Fknorm2) * CSXFk.col(dkl).array() * CSFk.col(dkl).array();
+        }
         // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
-        data.x.reshaped() -=
-            Xk.leftCols(mk) * gammak.head(mk) - GvbdFk.leftCols(mk) * gammak.head(mk);
+        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        {
+            data.x.reshaped() = xkm1 - Gkm.col(dkl).asDiagonal() * vbdfk;
+            data.x.reshaped() -= Xk.leftCols(mk) * gammak.head(mk);
+            data.x.reshaped() += Gkm.col(dkl).asDiagonal() * (vbdFk.leftCols(mk) * gammak.head(mk));
+        }
+        else
+        {
+            data.x.reshaped() -=
+                Xk.leftCols(mk) * gammak.head(mk) - vbdFk.leftCols(mk) * gammak.head(mk);
+        }
+        // Cauchy-Schwarz squared norms
+        if (data.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        {
+            auto ddkl = common::Modulo(dkl - 1, m);
+            CSXFk.col(dkl) =
+                CSXFk.col(ddkl).array() +
+                (Xk.col(dkl).array() - Gkm.col(dkl).array() * vbdFk.col(dkl).array()).square();
+            CSFk.col(dkl) = CSFk.col(ddkl).array() + vbdFk.col(dkl).array().square();
+        }
     }
 }
 

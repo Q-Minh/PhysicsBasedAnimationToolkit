@@ -23,8 +23,16 @@ enum class EAccelerationStrategy {
     Chebyshev,
     Anderson,
     Nesterov,
-    Broyden,
-    TrustRegion
+    Broyden
+};
+// clang-format on
+/**
+ * @brief Broyden Jacobian estimate strategies
+ */
+// clang-format off
+enum class EBroydenJacobianEstimate {
+    Identity,
+    DiagonalCauchySchwarz
 };
 // clang-format on
 

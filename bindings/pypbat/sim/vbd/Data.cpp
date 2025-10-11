@@ -11,6 +11,7 @@ void BindData(nanobind::module_& m)
     namespace nb = nanobind;
     using pbat::sim::vbd::Data;
     using pbat::sim::vbd::EAccelerationStrategy;
+    using pbat::sim::vbd::EBroydenJacobianEstimate;
     using pbat::sim::vbd::EInitializationStrategy;
 
     nb::enum_<EInitializationStrategy>(m, "InitializationStrategy")
@@ -26,7 +27,11 @@ void BindData(nanobind::module_& m)
         .value("Chebyshev", EAccelerationStrategy::Chebyshev)
         .value("Anderson", EAccelerationStrategy::Anderson)
         .value("Nesterov", EAccelerationStrategy::Nesterov)
-        .value("TrustRegion", EAccelerationStrategy::TrustRegion)
+        .export_values();
+
+    nb::enum_<EBroydenJacobianEstimate>(m, "BroydenJacobianEstimate")
+        .value("Identity", EBroydenJacobianEstimate::Identity)
+        .value("DiagonalCauchySchwarz", EBroydenJacobianEstimate::DiagonalCauchySchwarz)
         .export_values();
 
     nb::class_<Data>(m, "Data")
@@ -208,10 +213,13 @@ void BindData(nanobind::module_& m)
             "with_broyden_acceleration",
             &Data::WithBroydenMethod,
             nb::arg("window_size"),
+            nb::arg("jacobian_estimate") = EBroydenJacobianEstimate::Identity,
             nb::rv_policy::reference_internal,
             "Use Broyden acceleration\n\n"
             "Args:\n"
             "    window (int): Number of past iterates to use in Broyden acceleration.\n\n"
+            "    jacobian_estimate (BroydenJacobianEstimate): Broyden Jacobian estimate "
+            "strategy.\n\n"
             "Returns:\n"
             "    Data: self")
         .def(
@@ -224,20 +232,6 @@ void BindData(nanobind::module_& m)
             "Args:\n"
             "    L (float): Estimated gradient Lipschitz constant\n"
             "    start (int): Iteration to start Nesterov acceleration\n\n"
-            "Returns:\n"
-            "    Data: self")
-        .def(
-            "with_trust_region_acceleration",
-            &Data::WithTrustRegionAcceleration,
-            nb::arg("eta"),
-            nb::arg("tau"),
-            nb::arg("curved"),
-            nb::rv_policy::reference_internal,
-            "Use Trust Region acceleration\n\n"
-            "Args:\n"
-            "    eta (float): Energy reduction accuracy threshold\n"
-            "    tau (float): Trust Region radius increase factor\n"
-            "    curved (bool): Use curved accelerated path, otherwise use linear path.\n\n"
             "Returns:\n"
             "    Data: self")
         .def(
@@ -280,13 +274,11 @@ void BindData(nanobind::module_& m)
         .def_rw("detH_zero", &Data::detHZero, "Numerical zero for hessian pseudo-singularity check")
         .def_rw("accelerator", &Data::eAcceleration, "Acceleration strategy")
         .def_rw("rho", &Data::rho, "Chebyshev acceleration estimated spectral radius")
-        .def_rw("manderson", &Data::mWindowSize, "Anderson acceleration window size")
-        .def_rw("eta", &Data::eta, "Trust Region energy reduction accuracy threshold")
-        .def_rw("tau", &Data::tau, "Trust Region radius increase factor")
+        .def_rw("window_size", &Data::mWindowSize, "Anderson acceleration window size")
         .def_rw(
-            "curved",
-            &Data::bCurved,
-            "Use curved accelerated path for Trust Region acceleration");
+            "jacobian_estimate",
+            &Data::eJacobianEstimate,
+            "Broyden Jacobian estimate strategy");
 }
 
 } // namespace pbat::py::sim::vbd

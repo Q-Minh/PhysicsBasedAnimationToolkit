@@ -152,10 +152,11 @@ Data& Data::WithAndersonAcceleration(Index window)
     return *this;
 }
 
-Data& Data::WithBroydenMethod(Index window)
+Data& Data::WithBroydenMethod(Index window, EBroydenJacobianEstimate _eJacobianEstimate)
 {
-    this->mWindowSize   = window;
-    this->eAcceleration = EAccelerationStrategy::Broyden;
+    this->mWindowSize       = window;
+    this->eAcceleration     = EAccelerationStrategy::Broyden;
+    this->eJacobianEstimate = _eJacobianEstimate;
     return *this;
 }
 
@@ -164,15 +165,6 @@ Data& Data::WithNesterovAcceleration(Scalar L, Index start)
     this->mNesterovLipschitzConstant = L;
     this->mNesterovAccelerationStart = start;
     this->eAcceleration              = EAccelerationStrategy::Nesterov;
-    return *this;
-}
-
-Data& Data::WithTrustRegionAcceleration(Scalar etaIn, Scalar tauIn, bool bCurvedIn)
-{
-    this->eta           = etaIn;
-    this->tau           = tauIn;
-    this->bCurved       = bCurvedIn;
-    this->eAcceleration = EAccelerationStrategy::TrustRegion;
     return *this;
 }
 
@@ -289,16 +281,6 @@ Data& Data::Construct(bool bValidate)
                 if (mNesterovAccelerationStart < 0)
                 {
                     throw std::invalid_argument("Expected start >= 0");
-                }
-                break;
-            case EAccelerationStrategy::TrustRegion:
-                if (eta < 0)
-                {
-                    throw std::invalid_argument("Expected eta >= 0");
-                }
-                if (tau <= 1)
-                {
-                    throw std::invalid_argument("Expected tau > 1");
                 }
                 break;
             default: break;
