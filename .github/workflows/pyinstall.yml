@@ -43,14 +43,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # - uses: Jimver/cuda-toolkit@v0.2.24
-      #   id: cuda-toolkit
-      #   if: ${{ !startsWith(matrix.os, 'macos') }}
-      #   with:
-      #     cuda: '12.8.0'
-      #     method: 'network'
-      #     sub-packages: ${{ matrix.sub_packages }}
-      #     non-cuda-sub-packages: ${{ matrix.non_cuda_sub_packages }}
+      - uses: Jimver/cuda-toolkit@v0.2.24
+        id: cuda-toolkit
+        if: ${{ !startsWith(matrix.os, 'macos') }}
+        with:
+          cuda: '12.8.0'
+          method: 'network'
+          sub-packages: ${{ matrix.sub_packages }}
+          non-cuda-sub-packages: ${{ matrix.non_cuda_sub_packages }}
 
       # Display CUDA installation layout
       # - if: ${{ !startsWith(matrix.os, 'macos') }}
@@ -69,32 +69,36 @@ jobs:
       #   run: |
       #     ls "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
 
-      # - uses: lukka/get-cmake@latest
-      #   with:
-      #     cmakeVersion: "4.0.1"
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "4.0.1"
 
-      # - name: Setup vcpkg
-      #   uses: lukka/run-vcpkg@v11
-      #   with:
-      #     vcpkgDirectory: ${{ github.workspace }}/vcpkg
-      #     vcpkgGitCommitId: b02e341c927f16d991edbd915d8ea43eac52096c
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          vcpkgGitCommitId: b02e341c927f16d991edbd915d8ea43eac52096c
 
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.12'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       
-      # - name: Build and install PBAT Python bindings
-      #   run: |
-      #     pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_Python" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
+      - name: Build and install PBAT Python bindings
+        run: |
+          pip install . --config-settings cmake.args="--preset=${{ matrix.preset }}" --config-settings build.targets="PhysicsBasedAnimationToolkit_Python" --config-settings build.tool-args="${{ matrix.build_tool_args }}" -v
 
       - name: Verify DLL resolution
         if: ${{ startsWith(matrix.os, 'windows') }}
         run: |
-          echo $env:PATH
           ls "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64"
-#          $env:PATH += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/17.14.36518.9/bin/Hostx64/x64"
-#          cd ${{ github.workspace }}/build/cp312-cp312-win_amd64/lib/Release
-#          $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
-#          $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
-#          & "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/17.14.36518.9/bin/Hostx64/x64/dumpbin.exe" /IMPORTS:_pbat.cp312-win_amd64.pyd
+          cd ${{ github.workspace }}/build/cp312-cp312-win_amd64/lib/Release
+          $env:PATH += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64"
+          $env:Path += ";C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64"          
+          $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
+          $env:PATH += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
+          $env:Path += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin"
+          $env:Path += ";${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/extras/CUPTI/lib64"
+          echo $env:PATH
+          echo $env:Path
+          dumpbin.exe /IMPORTS _pbat.cp312-win_amd64.pyd | Select-String -Pattern "^[ ]+[A-Za-z0-9_.-]+\.dll" | Sort-Object -Unique
 
