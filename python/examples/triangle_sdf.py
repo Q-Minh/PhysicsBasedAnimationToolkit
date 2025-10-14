@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import filedialog
 from collections.abc import Callable
 from typing import Tuple
+import json
 
 
 def step_proj_gradient_decent(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray,eta: float) -> np.ndarray:
@@ -247,7 +248,7 @@ if __name__ == "__main__":
 
         # Load
         if imgui.TreeNode("I/O"):
-            if imgui.Button("Load", [imgui.GetWindowWidth() / 2.1, 0]):
+            if imgui.Button("Load SDF", [imgui.GetWindowWidth() / 2.1, 0]):
                 root = tk.Tk()
                 root.withdraw()
                 file_path = filedialog.askopenfilename(
@@ -271,6 +272,54 @@ if __name__ == "__main__":
                         enable_isosurface_viz=enable_isosurface_viz,
                         enabled=True,
                     )
+                root.destroy()
+            if imgui.Button("Load Parameters", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.askopenfilename(
+                    title="Select parameter",
+                    defaultextension=".json",
+                    filetypes=[("JSON", "*.json"), ("All files", "*.*")],
+                )
+                if file_path:
+                    with open(file_path) as f:
+                        params = json.load(f)
+                        sigmaR = params.get("sigmaR",sigmaR)
+                        sigmaB = params.get("sigmaB",sigmaB)
+                        eta = params.get("eta",eta)
+                        r = params.get("r",r)
+                        trlo = params.get("trlo",trlo)
+                        trhi = params.get("trhi",trhi)
+                        trbound = params.get("trbound",trbound)
+                        trgrow = params.get("trgrow",trgrow)
+                        trshrink = params.get("trshrink",trshrink)
+                        gd_eta = params.get("gd_eta",gd_eta)
+                    
+                root.destroy()
+            if imgui.Button("Save Parameters", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.asksaveasfilename(
+                    title="parameters",
+                    defaultextension=".json",
+                    filetypes=[("JSON", "*.json"), ("All files", "*.*")],
+                )
+                if file_path:
+                    with open(file_path,'w') as f:
+                        params = {
+                            "sigmaR": sigmaR,
+                            "sigmaB": sigmaB,
+                            "eta": eta,
+                            "r": r,
+                            "trlo": trlo,
+                            "trhi": trhi,
+                            "trbound": trbound,
+                            "trgrow": trgrow,
+                            "trshrink": trshrink,
+                            "gd_eta": gd_eta,
+                        }
+                        json.dump(params,f)
+                    
                 root.destroy()
             imgui.TreePop()
 
@@ -312,7 +361,6 @@ if __name__ == "__main__":
 
             # Controls
             if imgui.Button("Step"):
-                print(gd_xk)
                 xkp1, fkp1, gkp1, Bkp1, Rkp1 = step_minimize_triangle(
                     f,
                     g,
@@ -344,7 +392,7 @@ if __name__ == "__main__":
                 gd_xk = gd_xkp1
                 
             changed, randomize_sample = imgui.Checkbox("Randomize sample", randomize_sample)
-            if imgui.Button("Reset"):
+            if imgui.Button("Reset" if len(xpath) > 0 else "Start"):
                 if randomize_sample:
                     xk = sample_in_reference_triangle_2d()
                 else:
