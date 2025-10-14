@@ -18,7 +18,7 @@ TEST_CASE("[geometry][sdf] Transform")
         SVector<ScalarType, 3> const t = FromEigen(Eigen::Vector<ScalarType, 3>::Random());
         Eigen::AngleAxis<ScalarType> v(
             std::numbers::pi_v<ScalarType> / 2,
-            Eigen::Vector3d::UnitZ());
+            Eigen::Vector<ScalarType, 3>::UnitZ());
         SMatrix<ScalarType, 3, 3> const R = FromEigen(v.toRotationMatrix());
         Transform<ScalarType> const T{R, t};
         // Act

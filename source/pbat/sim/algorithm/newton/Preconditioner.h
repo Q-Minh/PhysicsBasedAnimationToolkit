@@ -5,7 +5,7 @@
 #include "pbat/Aliases.h"
 
 #ifdef PBAT_USE_SUITESPARSE
-    #include <Eigen/CholmodSupport>
+    #include "pbat/math/linalg/CholmodSupport.h"
 #else
     #include <Eigen/SparseCholesky>
 #endif

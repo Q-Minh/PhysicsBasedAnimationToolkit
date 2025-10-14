@@ -13,7 +13,7 @@
 
 // Forward declarations
 namespace pbat::io {
-    class Archive;
+class Archive;
 } // namespace pbat::io
 
 namespace pbat::sim::algorithm::newton {
@@ -23,6 +23,8 @@ namespace pbat::sim::algorithm::newton {
  */
 struct Config
 {
+#include "pbat/warning/FloatConversion.h"
+#include "pbat/warning/Push.h"
     int nSubsteps{1}; ///< Number of substeps for the Newton integrator
 
     int nMaxAugmentedLagrangianIterations{
@@ -38,6 +40,7 @@ struct Config
     Scalar cArmijo{1e-4};             ///< Armijo slope scale
 
     Scalar muC{1e6}; ///< Uniform collision penalty
+#include "pbat/warning/Pop.h"
 
     /**
      * @brief Set the number of substeps for the Newton integrator

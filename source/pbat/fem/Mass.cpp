@@ -35,10 +35,10 @@ TEST_CASE("[fem] Mass")
             auto constexpr kDims = 3;
             using Mesh           = fem::Mesh<Element, kDims>;
             Mesh mesh(V, C);
-            auto const N          = mesh.X.cols();
-            Scalar constexpr zero = 1e-10;
-            auto const n          = N * outDims;
-            auto const nElements  = mesh.E.cols();
+            auto const N         = mesh.X.cols();
+            auto constexpr zero  = Scalar(1e-10);
+            auto const n         = N * outDims;
+            auto const nElements = mesh.E.cols();
 
             auto constexpr kQuadratureOrder = 2 * kOrder;
             auto const wg                   = fem::MeshQuadratureWeights<kQuadratureOrder>(mesh);

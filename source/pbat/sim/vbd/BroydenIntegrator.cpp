@@ -65,7 +65,7 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         auto Fk         = vbdFk.leftCols(mk);
         gradL2          = Fk.transpose() * vbdfk;
         FkgradL2        = Fk * gradL2;
-        auto alpha      = gradL2.squaredNorm() / (FkgradL2).squaredNorm();
+        auto alpha      = gradL2.squaredNorm() / FkgradL2.squaredNorm();
         gammak.head(mk) = alpha * gradL2;
         // Estimate diag(G_{k-m})
         if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)

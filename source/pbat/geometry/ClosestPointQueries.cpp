@@ -12,7 +12,7 @@ TEST_CASE("[geometry] Can obtain closest point on triangle ABC to point P")
     SVector<ScalarType, 3> const B{1., 0., 0.};
     SVector<ScalarType, 3> const C{0., 1., 1.};
     SVector<ScalarType, 3> const n = Normalized(Cross(B - A, C - A));
-    ScalarType constexpr eps       = 1e-15;
+    auto constexpr eps             = ScalarType(1e-15);
 
     SUBCASE("Point is in triangle")
     {
@@ -60,7 +60,7 @@ TEST_CASE("[geometry] Can obtain closest point on tetrahedron ABCD to point P")
     SVector<ScalarType, 3> const B{1., 0., 0.};
     SVector<ScalarType, 3> const C{0., 1., 0.};
     SVector<ScalarType, 3> const D{0., 0., 1.};
-    ScalarType constexpr eps = 1e-15;
+    ScalarType constexpr eps = ScalarType(1e-15);
 
     SUBCASE("Point is in tetrahedron")
     {
@@ -90,7 +90,7 @@ TEST_CASE("[geometry] ClosestPointQueries::Lines")
     SVector<ScalarType, 3> Q1;
     SVector<ScalarType, 3> P2;
     SVector<ScalarType, 3> Q2;
-    ScalarType constexpr eps = 1e-15;
+    ScalarType constexpr eps = ScalarType(1e-15);
     SUBCASE("Lines intersect in middle")
     {
         P1 = SVector<ScalarType, 3>{0., 0., 0.};

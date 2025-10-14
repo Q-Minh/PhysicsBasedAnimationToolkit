@@ -42,10 +42,7 @@ namespace mini = math::linalg::mini;
  */
 template <mini::CMatrix TMatrixAP, mini::CMatrix TMatrixAB, mini::CMatrix TMatrixAC>
 PBAT_HOST_DEVICE auto
-TriangleBarycentricCoordinates(
-    TMatrixAP const& AP,
-    TMatrixAB const& AB,
-    TMatrixAC const& AC)
+TriangleBarycentricCoordinates(TMatrixAP const& AP, TMatrixAB const& AB, TMatrixAC const& AC)
     -> mini::SMatrix<typename TMatrixAP::ScalarType, 3, 1>
 {
     using ScalarType = typename TMatrixAP::ScalarType;
@@ -436,7 +433,7 @@ PBAT_HOST_DEVICE auto UvwLineTriangle3D(
     if (not SameSign(u, w))
         return {};
 
-    ScalarType constexpr eps            = 1e-15;
+    ScalarType constexpr eps            = ScalarType(1e-15);
     ScalarType const uvwSum             = u + v + w;
     bool const bIsLineInPlaneOfTriangle = abs(uvwSum) < eps;
     if (bIsLineInPlaneOfTriangle)
@@ -528,7 +525,7 @@ PBAT_HOST_DEVICE auto UvwTriangles3D(
     using namespace std;
     mini::SVector<ScalarType, kDims> const n1 = Normalized(Cross(B1 - A1, C1 - A1));
     mini::SVector<ScalarType, kDims> const n2 = Normalized(Cross(B2 - A2, C2 - A2));
-    ScalarType constexpr eps                  = 1e-15;
+    auto constexpr eps                        = ScalarType(1e-15);
     bool const bAreTrianglesCoplanar          = (ScalarType(1) - abs(Dot(n1, n2))) < eps;
     if (bAreTrianglesCoplanar)
     {
@@ -546,9 +543,9 @@ PBAT_HOST_DEVICE auto UvwTriangles3D(
     // Test 3 edges of each triangle against the other triangle
     std::array<std::optional<mini::SVector<ScalarType, 3>>, 6u> intersections;
     auto uvwt = UvwLineSegmentTriangle3D(A1, B1, A2, B2, C2);
-    #if defined(CUDART_VERSION)
+#if defined(CUDART_VERSION)
     #pragma nv_diag_suppress 174
-    #endif
+#endif
     if (uvwt)
         intersections[0] = uvwt->template Slice<3, 1>(1, 0);
     uvwt = UvwLineSegmentTriangle3D(B1, C1, A2, B2, C2);
@@ -566,9 +563,9 @@ PBAT_HOST_DEVICE auto UvwTriangles3D(
     uvwt = UvwLineSegmentTriangle3D(C2, A2, A1, B1, C1);
     if (uvwt)
         intersections[5] = uvwt->template Slice<3, 1>(1, 0);
-    #if defined(CUDART_VERSION)
+#if defined(CUDART_VERSION)
     #pragma nv_diag_default 174
-    #endif
+#endif
     return intersections;
 }
 } // namespace IntersectionQueries

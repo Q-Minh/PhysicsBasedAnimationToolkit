@@ -5,8 +5,8 @@ namespace physics {
 
 std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu)
 {
-    Scalar const mu     = Y / (2. * (1. + nu));
-    Scalar const lambda = (Y * nu) / ((1. + nu) * (1. - 2. * nu));
+    Scalar const mu     = Y / (Scalar(2) * (Scalar(1) + nu));
+    Scalar const lambda = (Y * nu) / ((Scalar(1) + nu) * (Scalar(1) - Scalar(2) * nu));
     return {mu, lambda};
 }
 
@@ -18,8 +18,8 @@ std::pair<Scalar, Scalar> LameCoefficients(Scalar Y, Scalar nu)
 TEST_CASE("[physics] HyperElasticity")
 {
     using namespace pbat;
-    Scalar constexpr Y                   = 1e6;
-    Scalar constexpr nu                  = 0.45;
+    Scalar constexpr Y                   = Scalar(1e6);
+    Scalar constexpr nu                  = Scalar(0.45);
     auto const [mu, lambda]              = physics::LameCoefficients(Y, nu);
     auto constexpr kNumberOfCoefficients = 5;
     auto const [mus, lambdas]            = physics::LameCoefficients(

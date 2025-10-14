@@ -16,6 +16,11 @@
 
 #include <cmath>
 
+// clang-format off
+#include "pbat/warning/Push.h"
+#include "pbat/warning/FloatConversion.h"
+// clang-format on
+
 namespace pbat {
 namespace physics {
 
@@ -164,7 +169,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::eval(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<1>::SVector<typename TMatrix::ScalarType, 1>
@@ -186,7 +191,7 @@ StableNeoHookeanEnergy<1>::grad(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<1>::SMatrix<typename TMatrix::ScalarType, 1, 1>
@@ -266,8 +271,8 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<1>::gradAndHessian(
     static_assert(
         TMatrixHF::kRows == 1 and TMatrixHF::kCols == 1,
         "Hessian w.r.t. F must have dimensions 1x1");
-    gF[0]            = (1.0 / 2.0) * lambda * (2 * F[0] - 2 - 2 * mu / lambda) + mu * F[0];
-    HF[0]            = lambda + mu;
+    gF[0] = (1.0 / 2.0) * lambda * (2 * F[0] - 2 - 2 * mu / lambda) + mu * F[0];
+    HF[0] = lambda + mu;
 }
 
 /**
@@ -415,7 +420,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::eval(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<2>::SVector<typename TMatrix::ScalarType, 4>
@@ -441,7 +446,7 @@ StableNeoHookeanEnergy<2>::grad(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<2>::SMatrix<typename TMatrix::ScalarType, 4, 4>
@@ -761,7 +766,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::eval(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<3>::SVector<typename TMatrix::ScalarType, 9>
@@ -801,7 +806,7 @@ StableNeoHookeanEnergy<3>::grad(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<3>::SMatrix<typename TMatrix::ScalarType, 9, 9>
@@ -1327,5 +1332,7 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<3>::gradAndHessian(
 
 } // namespace physics
 } // namespace pbat
+
+#include "pbat/warning/Pop.h"
 
 #endif // PBAT_PHYSICS_STABLENEOHOOKEANENERGY_H

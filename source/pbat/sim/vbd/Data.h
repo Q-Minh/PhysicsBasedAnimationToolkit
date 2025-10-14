@@ -214,6 +214,9 @@ struct Data
                        ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj; ///< `|# verts|` partition vertices
 
+#include "pbat/warning/FloatConversion.h"
+#include "pbat/warning/Push.h"
+
     // Time integration optimization parameters
     EInitializationStrategy strategy{
         EInitializationStrategy::AdaptivePbat}; ///< BCD optimization initialization strategy
@@ -240,6 +243,7 @@ struct Data
     // Nesterov
     Scalar mNesterovLipschitzConstant{1}; ///< Nesterov acceleration Lipschitz constant
     Index mNesterovAccelerationStart{3};  ///< Nesterov acceleration start iteration
+#include "pbat/warning/Pop.h"
 };
 
 } // namespace pbat::sim::vbd

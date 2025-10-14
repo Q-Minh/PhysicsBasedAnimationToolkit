@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILE_SET api
     FILES
     "Cholmod.h"
+    "Enums.h"
     "LinAlg.h"
     "Pardiso.h"
     "FilterEigenvalues.h"
@@ -13,6 +14,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "Cholmod.cpp"
+    "Enums.cpp"
     "LinAlg.cpp"
     "Pardiso.cpp"
     "FilterEigenvalues.cpp"

@@ -65,7 +65,7 @@ TEST_CASE("[fem] ShapeFunctions")
         MatrixX const N = fem::ShapeFunctionsAt<Element>(Xi);
 
         // Assert
-        Scalar constexpr zero = 1e-15;
+        auto constexpr zero = Scalar(1e-15);
         CHECK_EQ(N.rows(), Element::kNodes);
         CHECK_EQ(N.cols(), Xi.cols());
         for (auto e = 0; e < numberOfElements; ++e)
@@ -102,7 +102,7 @@ TEST_CASE("[fem] ShapeFunctionGradients")
     // We will test the gradients at barycenter
     Vector<kDims> const Xi{0.25, 0.25, 0.25};
     Vector<kDims + 1> BXi{};
-    BXi(0)                = 1. - Xi.sum();
+    BXi(0)                = 1 - Xi.sum();
     BXi.segment(1, kDims) = Xi;
 
     Matrix<kNodes, kDims> const GP = fem::ElementShapeFunctionGradients<ElementType>(Xi, X);
@@ -169,7 +169,7 @@ TEST_CASE("[fem] ShapeFunctionGradientsAt")
         MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi);
         MatrixX const GNeExpected = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
         Scalar const GNeError     = (GNe - GNeExpected).squaredNorm();
-        Scalar constexpr zero     = 1e-15;
+        auto constexpr zero       = Scalar(1e-15);
         CHECK_LE(GNeError, zero);
     });
 }

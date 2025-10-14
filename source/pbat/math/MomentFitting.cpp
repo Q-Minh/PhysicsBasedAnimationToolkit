@@ -33,7 +33,7 @@ TEST_CASE("[math] MomentFitting")
     using namespace pbat;
     SUBCASE("Moment fitting reproduces fixed quadrature rule")
     {
-        Scalar constexpr precision(1e-10);
+        auto constexpr precision = Scalar(1e-10);
         math::test::TestFixedQuadrature<1, 1>(precision);
         math::test::TestFixedQuadrature<1, 3>(precision);
 

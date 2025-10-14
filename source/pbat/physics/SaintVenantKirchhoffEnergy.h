@@ -16,6 +16,11 @@
 
 #include <cmath>
 
+// clang-format off
+#include "pbat/warning/Push.h"
+#include "pbat/warning/FloatConversion.h"
+// clang-format on
+
 namespace pbat {
 namespace physics {
 
@@ -166,7 +171,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::eva
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<1>::SVector<typename TMatrix::ScalarType, 1>
@@ -189,7 +194,7 @@ SaintVenantKirchhoffEnergy<1>::grad(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<1>::SMatrix<typename TMatrix::ScalarType, 1, 1>
@@ -433,7 +438,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::eva
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<2>::SVector<typename TMatrix::ScalarType, 4>
@@ -464,7 +469,7 @@ SaintVenantKirchhoffEnergy<2>::grad(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<2>::SMatrix<typename TMatrix::ScalarType, 4, 4>
@@ -841,7 +846,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::eva
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<3>::SVector<typename TMatrix::ScalarType, 9>
@@ -887,7 +892,7 @@ SaintVenantKirchhoffEnergy<3>::grad(
  * @param F
  * @param mu
  * @param lambda
- * @return 
+ * @return
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<3>::SMatrix<typename TMatrix::ScalarType, 9, 9>
@@ -1539,5 +1544,7 @@ PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<3>::gradAndHessian(
 
 } // namespace physics
 } // namespace pbat
+
+#include "pbat/warning/Pop.h"
 
 #endif // PBAT_PHYSICS_SAINTVENANTKIRCHHOFFENERGY_H

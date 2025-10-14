@@ -873,7 +873,7 @@ PBAT_HOST_DEVICE bool TriangleAxisAlignedBoundingBox(
 
     // ScalarType(1) Test edge pairs
     auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
-        ScalarType constexpr eps = 1e-15;
+        ScalarType constexpr eps = ScalarType(1e-15);
         auto const ab            = b - a;
         // Construct natural unit vector in axis dim
         auto const u                          = mini::Unit<ScalarType, kDims>(dim);
@@ -981,7 +981,7 @@ PBAT_HOST_DEVICE bool TetrahedronAxisAlignedBoundingBox(
 
     // ScalarType(1) Test edge pairs
     auto const IsEdgePairIntersecting = [&TestAxis](auto const& a, auto const& b, auto dim) {
-        ScalarType constexpr eps = 1e-15;
+        ScalarType constexpr eps = ScalarType(1e-15);
         auto const ab            = b - a;
         // Construct natural unit vector in axis dim
         auto const u                          = mini::Unit<ScalarType, kDims>(dim);
@@ -1183,7 +1183,7 @@ PBAT_HOST_DEVICE bool TriangleTetrahedron(
     };
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            ScalarType constexpr eps              = 1e-15;
+            ScalarType constexpr eps              = ScalarType(1e-15);
             auto const ab                         = b - a;
             mini::SVector<ScalarType, kDims> axis = Normalized(Cross(ab, d - c));
             bool bAxisIsZero                      = All(Abs(axis) <= eps);
@@ -1328,7 +1328,7 @@ PBAT_HOST_DEVICE bool Tetrahedra(
     // ScalarType(1) Test edge pairs
     auto const IsEdgePairSeparating =
         [&TestAxis](auto const& a, auto const& b, auto const& c, auto const& d) {
-            ScalarType constexpr eps              = 1e-15;
+            ScalarType constexpr eps              = ScalarType(1e-15);
             auto const ab                         = b - a;
             mini::SVector<ScalarType, kDims> axis = Normalized(Cross(ab, d - c));
             bool bAxisIsZero                      = All(Abs(axis) <= eps);

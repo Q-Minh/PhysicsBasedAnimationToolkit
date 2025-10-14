@@ -1,5 +1,8 @@
 #include "Cube.h"
 
+#include "pbat/warning/FloatConversion.h"
+#include "pbat/warning/Push.h"
+
 namespace pbat {
 namespace geometry {
 namespace model {
@@ -1637,3 +1640,5 @@ std::pair<MatrixX, IndexMatrixX> Cube(EMesh mesh, int layer)
 } // namespace model
 } // namespace geometry
 } // namespace pbat
+
+#include "pbat/warning/Pop.h"
