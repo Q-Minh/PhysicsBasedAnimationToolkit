@@ -61,12 +61,14 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
             Fknorm2 += vbdFk.col(dkl).squaredNorm();
         // Compute Broyden update
-        auto mk         = std::min(m, k);
-        auto Fk         = vbdFk.leftCols(mk);
-        gradL2          = Fk.transpose() * vbdfk;
-        FkgradL2        = Fk * gradL2;
-        auto alpha      = gradL2.squaredNorm() / FkgradL2.squaredNorm();
-        gammak.head(mk) = alpha * gradL2;
+        auto mk              = std::min(m, k);
+        auto Fk              = vbdFk.leftCols(mk);
+        gradL2               = Fk.transpose() * vbdfk;
+        FkgradL2             = Fk * gradL2;
+        Scalar gradL2norm2   = gradL2.squaredNorm();
+        Scalar FkgradL2norm2 = FkgradL2.squaredNorm();
+        Scalar alpha         = FkgradL2norm2 > Scalar(0) ? gradL2norm2 / FkgradL2norm2 : Scalar(0);
+        gammak.head(mk)      = alpha * gradL2;
         // Estimate diag(G_{k-m})
         if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
         {
