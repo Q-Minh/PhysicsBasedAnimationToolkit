@@ -6,8 +6,10 @@
 #elif defined(__GNUC__) || defined(__GNUG__)
     #pragma GCC diagnostic ignored "-Wfloat-conversion"
 #elif defined(_MSC_VER)
-    // I think MSVC is less granular on this and has C4244 which is generally about converting
-    // between small and large types
+    // C4244 is generally possible loss of data, i.e. also considers float to int
+    #pragma warning(disable : 4244)
+    // C4305 'conversion': truncation from 'type1' to 'type2'
+    #pragma warning(disable : 4305)
 #endif
 
 #endif // PBAT_WARNING_FLOATCONVERSION_H

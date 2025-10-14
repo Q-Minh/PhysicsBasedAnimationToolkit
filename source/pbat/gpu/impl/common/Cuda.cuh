@@ -1,8 +1,7 @@
 #ifndef PBAT_GPU_IMPL_COMMON_CUDA_H
 #define PBAT_GPU_IMPL_COMMON_CUDA_H
 
-#include <cuda/api/device.hpp>
-#include <cuda/api/devices.hpp>
+#include <cuda/api.hpp>
 
 namespace pbat {
 namespace gpu {

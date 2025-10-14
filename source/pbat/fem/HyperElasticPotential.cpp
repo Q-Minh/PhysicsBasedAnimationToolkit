@@ -44,9 +44,9 @@ TEST_CASE("[fem] HyperElasticPotential")
             3, 0, 6, 5, 3,
             5, 6, 0, 3, 6;
     // clang-format on
-    Scalar constexpr zero = 1e-8;
-    Scalar constexpr Y    = 1e6;
-    Scalar constexpr nu   = 0.45;
+    auto constexpr zero = Scalar(1e-8);
+    auto constexpr Y    = Scalar(1e6);
+    auto constexpr nu   = Scalar(0.45);
     common::ForValues<1, 2, 3>([&]<auto kOrder>() {
         auto constexpr kDims            = 3;
         auto constexpr kQuadratureOrder = [&]() {

@@ -20,7 +20,7 @@
 #include "pbat/sim/dynamics/FemElastoDynamics.h"
 
 #ifdef PBAT_USE_SUITESPARSE
-    #include <Eigen/CholmodSupport>
+    #include "pbat/math/linalg/CholmodSupport.h"
 #else
     #include <Eigen/SparseCholesky>
 #endif // PBAT_USE_SUITESPARSE

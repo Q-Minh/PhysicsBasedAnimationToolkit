@@ -365,8 +365,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     ScalarType constexpr rho{1e3};
     SetMassMatrix(rho);
     // Elasticity
-    ScalarType constexpr Y  = 1e6;
-    ScalarType constexpr nu = 0.45;
+    ScalarType constexpr Y  = ScalarType(1e6);
+    ScalarType constexpr nu = ScalarType(0.45);
     auto const [mu, lambda] = physics::LameCoefficients(Y, nu);
     SetElasticEnergy(mu, lambda);
     // External load
@@ -374,8 +374,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     load(load.rows() - 1)                 = rho * ScalarType(-9.81);
     SetExternalLoad(load);
     // Time integration scheme
-    ScalarType constexpr dt{1e-2};
-    int constexpr bdfstep = 1;
+    ScalarType constexpr dt = ScalarType(1e-2);
+    int constexpr bdfstep   = 1;
     SetTimeIntegrationScheme(dt, bdfstep);
     // Unconstrained
     Constrain(Eigen::Vector<bool, Eigen::Dynamic>::Constant(nNodes, false));

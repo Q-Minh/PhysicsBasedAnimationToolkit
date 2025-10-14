@@ -24,7 +24,7 @@ AndersonIntegrator::AndersonIntegrator(Data dataIn)
 void AndersonIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
     Eigen::CompleteOrthogonalDecomposition<MatrixX> QR{};
-    QR.setThreshold(1e-10);
+    QR.setThreshold(Scalar(1e-10));
     auto m = DGK.cols();
 
     xkm1 = data.x.reshaped();

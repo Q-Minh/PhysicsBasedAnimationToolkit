@@ -168,8 +168,8 @@ inline void KdTree<Dims>::Construct(Eigen::DenseBase<TDerivedP> const& P, Index 
     // the number of leaf nodes to reserve memory up-front and prevent any reallocation, but without
     // excessively using up memory. We estimate the number of nodes per leaf to be 80% of the
     // maximum number of points in a leaf node.
-    Index const nPoints                      = P.cols();
-    Scalar constexpr kEstimatedLeafOccupancy = 0.8;
+    Index const nPoints                    = P.cols();
+    auto constexpr kEstimatedLeafOccupancy = Scalar(0.8);
     auto const nEstimatedNodesPerLeaf =
         (maxPointsInLeaf > 1) ?
             static_cast<Index>(

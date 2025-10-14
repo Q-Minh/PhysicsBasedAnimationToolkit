@@ -19,12 +19,12 @@ void NesterovIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.vbd.NesterovIntegrator.Solve");
     xkm1                  = data.x;
-    Scalar alpha          = 1. / L;
-    Scalar lambda         = 0.;
-    Scalar beta           = 0.;
-    Scalar constexpr one  = 1.0;
-    Scalar constexpr two  = 2.0;
-    Scalar constexpr four = 4.0;
+    Scalar alpha          = Scalar(1) / L;
+    Scalar lambda         = 0;
+    Scalar beta           = 0;
+    Scalar constexpr one  = 1;
+    Scalar constexpr two  = 2;
+    Scalar constexpr four = 4;
     for (auto k = 0; k < iterations; ++k)
     {
         if (start < k)

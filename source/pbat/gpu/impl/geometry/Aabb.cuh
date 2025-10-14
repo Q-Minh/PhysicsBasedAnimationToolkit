@@ -4,9 +4,9 @@
 #include "pbat/common/ConstexprFor.h"
 #include "pbat/gpu/Aliases.h"
 #include "pbat/gpu/impl/common/Buffer.cuh"
-#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 #include "pbat/math/linalg/mini/UnaryOperations.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -59,7 +59,7 @@ template <auto kDims>
 template <class FLowerUpper>
 inline void Aabb<kDims>::Construct(FLowerUpper&& fLowerUpper, GpuIndex begin, GpuIndex end)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Aabb.Construct");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Aabb.Construct");
     using namespace pbat::math::linalg;
     auto const nBoxes = static_cast<GpuIndex>(b.Size());
     end               = end < 0 ? nBoxes : end;
@@ -84,7 +84,7 @@ inline void Aabb<kDims>::Construct(
     common::Buffer<GpuIndex, kSimplexVerts> const& S,
     GpuIndex begin)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Aabb.Construct");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Aabb.Construct");
     using namespace pbat::math::linalg;
     auto const nSimplices = static_cast<GpuIndex>(S.Size());
     if (Size() < nSimplices)
@@ -108,7 +108,7 @@ inline void Aabb<kDims>::Construct(
 template <auto kDims>
 inline void Aabb<kDims>::Resize(GpuIndex nBoxes)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.geometry.Aabb.Resize");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.geometry.Aabb.Resize");
     b.Resize(nBoxes);
     e.Resize(nBoxes);
 }

@@ -1,7 +1,7 @@
 #ifndef PBAT_GPU_IMPL_COMMON_BUFFER_CUH
 #define PBAT_GPU_IMPL_COMMON_BUFFER_CUH
 
-#include "pbat/gpu/profiling/Profiling.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <cstddef>
 #include <exception>
@@ -61,7 +61,7 @@ class Buffer
 template <class T, int D>
 Buffer<T, D>::Buffer(std::size_t count) : mBuffers()
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.Construct")
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.Construct");
     for (auto d = 0; d < D; ++d)
         mBuffers[d].resize(count);
 }
@@ -69,7 +69,7 @@ Buffer<T, D>::Buffer(std::size_t count) : mBuffers()
 template <class T, int D>
 inline Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D> const& other)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToGpu");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToGpu");
     for (auto d = 0; d < D; ++d)
     {
         if (this->Size() != other.Size())
@@ -83,7 +83,7 @@ template <class T, int D>
 template <int D2>
 Buffer<T, D>& Buffer<T, D>::operator=(Buffer<T, D2> const& other)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToGpu");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToGpu");
     static_assert(
         D == 1 or D2 == 1,
         "Buffer<T, D>::operator=(Buffer<T, D2>) only works for D == 1 or D2 == 1");
@@ -141,7 +141,7 @@ std::vector<T> Buffer<T, D>::Get() const
 template <class T, int D>
 inline std::vector<T> Buffer<T, D>::Get(std::size_t count) const
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToCpu");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.CopyToCpu");
     if (count > Size())
     {
         std::string const what = "Requested " + std::to_string(count) +
@@ -193,7 +193,7 @@ Buffer<T, D>::Data() const
 template <class T, int D>
 void Buffer<T, D>::Resize(std::size_t count)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.Resize");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.Resize");
     for (auto d = 0; d < D; ++d)
     {
         mBuffers[d].resize(count);
@@ -203,7 +203,7 @@ void Buffer<T, D>::Resize(std::size_t count)
 template <class T, int D>
 void Buffer<T, D>::SetConstant(T value)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.SetConstant");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.common.Buffer.SetConstant");
     for (auto d = 0; d < Dimensions(); ++d)
     {
         thrust::fill(mBuffers[d].begin(), mBuffers[d].end(), value);

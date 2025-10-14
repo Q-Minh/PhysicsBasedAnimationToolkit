@@ -14,8 +14,8 @@ TEST_CASE("[physics] SaintVenantKirchhoffEnergy")
         using mini::FromEigen;
         physics::SaintVenantKirchhoffEnergy<Dims> psi{};
         Matrix<Dims, Dims> const F = Matrix<Dims, Dims>::Identity();
-        Scalar constexpr Y         = 1e6;
-        Scalar constexpr nu        = 0.45;
+        Scalar constexpr Y         = Scalar(1e6);
+        Scalar constexpr nu        = Scalar(0.45);
         auto const [mu, lambda]    = physics::LameCoefficients(Y, nu);
         auto vecF                  = FromEigen(F.reshaped());
         Scalar const ePsi          = psi.eval(vecF, mu, lambda);
@@ -30,11 +30,12 @@ TEST_CASE("[physics] SaintVenantKirchhoffEnergy")
 
         Matrix<Dims, Dims> const E = 0.5 * (F.transpose() * F - Matrix<Dims, Dims>::Identity());
         Scalar const trE           = E.trace();
-        Scalar const ePsiExpected  = mu * (E.array() * E.array()).sum() + 0.5 * lambda * trE * trE;
-        Scalar const ePsiError     = std::abs(ePsi - ePsiExpected) +
+        Scalar const ePsiExpected =
+            mu * (E.array() * E.array()).sum() + Scalar(0.5) * lambda * trE * trE;
+        Scalar const ePsiError = std::abs(ePsi - ePsiExpected) +
                                  std::abs(ePsiFromGrad - ePsiExpected) +
                                  std::abs(ePsiFromHess - ePsiExpected);
-        Scalar constexpr zero = 1e-15;
+        auto constexpr zero = Scalar(1e-15);
         CHECK_LE(ePsiError, zero);
     });
 }

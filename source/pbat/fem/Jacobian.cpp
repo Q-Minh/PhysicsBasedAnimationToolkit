@@ -56,7 +56,7 @@ TEST_CASE("[fem] Jacobian")
 
             // Compute reference positions
             auto constexpr maxIterations = 2;
-            Scalar constexpr eps         = 1e-10;
+            auto constexpr eps         = Scalar(1e-10);
             auto eg = IndexVectorX::LinSpaced(mesh.E.cols(), 0, mesh.E.cols() - 1)
                           .replicate(1, Element::kNodes)
                           .transpose()

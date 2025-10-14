@@ -136,9 +136,14 @@ struct Data
     /**
      * @brief Use Broyden method
      * @param window Broyden method window size
+     * @param _eBroydenJacobianEstimate Broyden Jacobian estimate strategy
+     * @param _broydenBeta Broyden Cauchy-Schwarz scaling factor
      * @return Reference to this
      */
-    PBAT_API Data& WithBroydenMethod(Index window);
+    PBAT_API Data& WithBroydenMethod(
+        Index window,
+        EBroydenJacobianEstimate _eBroydenJacobianEstimate = EBroydenJacobianEstimate::Identity,
+        Scalar _broydenBeta                                = Scalar{1});
     /**
      * @brief Use Nesterov acceleration
      * @param L Lipschitz constant estimation for the gradient
@@ -146,15 +151,6 @@ struct Data
      * @return Reference to this
      */
     PBAT_API Data& WithNesterovAcceleration(Scalar L, Index start = 3);
-    /**
-     * @brief Use Trust Region acceleration
-     * @param eta Trust Region energy reduction accuracy threshold
-     * @param tau Trust Region radius increase factor
-     * @param bCurved Use curved accelerated path, otherwise use linear path. Default is true.
-     * @return Reference to this
-     * @pre `tau > 1` and `eta > 0`
-     */
-    PBAT_API Data& WithTrustRegionAcceleration(Scalar eta, Scalar tau, bool bCurved = true);
     /**
      * @brief Construct the simulation data
      * @param bValidate Throw on detected ill-formed inputs
@@ -218,6 +214,9 @@ struct Data
                        ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj; ///< `|# verts|` partition vertices
 
+#include "pbat/warning/FloatConversion.h"
+#include "pbat/warning/Push.h"
+
     // Time integration optimization parameters
     EInitializationStrategy strategy{
         EInitializationStrategy::AdaptivePbat}; ///< BCD optimization initialization strategy
@@ -233,17 +232,18 @@ struct Data
     // Chebyshev acceleration
     Scalar rho{1}; ///< Chebyshev acceleration estimated spectral radius
 
-    // Anderson acceleration
-    Index mWindowSize{5}; ///< Anderson acceleration window size
+    // Anderson/Broyden window size
+    Index mWindowSize{5}; ///< Anderson/Broyden acceleration window size
+
+    // Broyden
+    EBroydenJacobianEstimate eBroydenJacobianEstimate{
+        EBroydenJacobianEstimate::DiagonalCauchySchwarz}; ///< Broyden Jacobian estimate strategy
+    Scalar broydenBeta{1};                                ///< Broyden Cauchy-Schwarz scaling factor
 
     // Nesterov
     Scalar mNesterovLipschitzConstant{1}; ///< Nesterov acceleration Lipschitz constant
     Index mNesterovAccelerationStart{3};  ///< Nesterov acceleration start iteration
-
-    // Trust Region acceleration
-    Scalar eta{0.2};    ///< Trust Region energy reduction accuracy threshold
-    Scalar tau{2};      ///< Trust Region radius increase factor
-    bool bCurved{true}; ///< Use curved accelerated path, otherwise use linear path
+#include "pbat/warning/Pop.h"
 };
 
 } // namespace pbat::sim::vbd

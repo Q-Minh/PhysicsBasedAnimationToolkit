@@ -12,7 +12,7 @@
 
 #include "PhysicsBasedAnimationToolkitExport.h"
 
-#if defined(PBAT_HAS_TRACY_PROFILER) and not defined(__CUDACC__)
+#if defined(PBAT_HAS_TRACY_PROFILER)
     #define PBAT_CAN_USE_TRACY_CPP
     #include <tracy/Tracy.hpp>
     #define PBAT_PROFILE_SCOPE                 ZoneScoped

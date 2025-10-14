@@ -55,11 +55,6 @@ void BindIntegrator(nanobind::module_& m)
             "    iterations (int): Number of iterations to solve the non-linear optimization "
             "problem.\n"
             "    substeps (int): Number of substeps to take per time step.")
-        .def(
-            "trace_next_step",
-            &Integrator::TraceNextStep,
-            nb::arg("path") = ".",
-            nb::arg("t")    = -1)
         .def_prop_rw(
             "x",
             [](Integrator const& self) { return self.data.x; },

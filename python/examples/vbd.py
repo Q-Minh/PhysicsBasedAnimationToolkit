@@ -6,9 +6,6 @@ import polyscope as ps
 import polyscope.imgui as imgui
 import argparse
 import itertools
-import scipy as sp
-import os
-import pathlib
 
 
 def combine(V: list, C: list):
@@ -19,19 +16,6 @@ def combine(V: list, C: list):
     V = np.vstack(V)
     B = np.hstack([np.full(NV[i], i) for i in range(len(NV))])
     return V, C, B
-
-
-def export_data(args, V, C, F, B, aext, rhoe, mue, lambdae, vdbc):
-    pathlib.Path(args.output).mkdir(parents=True, exist_ok=True)
-    sp.io.mmwrite(os.path.join(args.output, "V.mtx"), V)
-    sp.io.mmwrite(os.path.join(args.output, "C.mtx"), C)
-    sp.io.mmwrite(os.path.join(args.output, "F.mtx"), F)
-    sp.io.mmwrite(os.path.join(args.output, "B.mtx"), B[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "aext.mtx"), aext)
-    sp.io.mmwrite(os.path.join(args.output, "rhoe.mtx"), rhoe[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "mue.mtx"), mue[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "lambdae.mtx"), lambdae[:, np.newaxis])
-    sp.io.mmwrite(os.path.join(args.output, "vdbc.mtx"), np.array(vdbc)[:, np.newaxis])
 
 
 if __name__ == "__main__":
@@ -48,6 +32,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o", "--output", help="Path to output", dest="output", default="."
+    )
+    parser.add_argument(
+        "--profile",
+        help="Enable profiling",
+        action="store_true",
+        dest="profile",
+        default=False,
     )
     parser.add_argument(
         "-m",
@@ -149,37 +140,18 @@ if __name__ == "__main__":
         dest="broyden_acceleration",
     )
     parser.add_argument(
-        "--use-trust-region",
-        help="Use trust region acceleration",
-        action="store_true",
-        dest="use_trust_region",
-        default=False,
+        "--broyden-jacobian-estimate",
+        help="Broyden Jacobian estimate strategy. Options: 0 (Identity) | 1 (DiagonalCauchySchwarz). Default 0 (Identity)",
+        type=int,
+        dest="broyden_jacobian_estimate",
+        default=0,
     )
     parser.add_argument(
-        "--use-curved-tr",
-        help="Use curved trust region path",
-        action="store_true",
-        dest="use_curved_tr",
-        default=False,
-    )
-    parser.add_argument(
-        "--tr-eta",
-        help="Trust region energy reduction ratio threshold",
+        "--broyden-beta",
+        help="Broyden Cauchy-Schwarz diagonal scaling factor. Only used if broyden-jacobian-estimate is set to 1 (DiagonalCauchySchwarz). Default 1.0",
         type=float,
-        default=0.1,
-    )
-    parser.add_argument(
-        "--tr-tau",
-        help="Trust region radius scaling factor",
-        type=float,
-        default=2.0,
-    )
-    parser.add_argument(
-        "--trace",
-        help="Enable trace output",
-        action="store_true",
-        dest="trace",
-        default=False,
+        dest="broyden_beta",
+        default=1.0,
     )
     parser.add_argument(
         "--heterogeneous",
@@ -253,10 +225,7 @@ if __name__ == "__main__":
         Xmin = X.min(axis=1)
         Xmax = X.max(axis=1)
         barycenters = 0.25 * (
-            X[:, E[0, :]]
-            + X[:, E[1, :]]
-            + X[:, E[2, :]]
-            + X[:, E[3, :]]
+            X[:, E[0, :]] + X[:, E[1, :]] + X[:, E[2, :]] + X[:, E[3, :]]
         )
         nslices = max(2, args.heterogeneous_slices)
         axis = args.heterogeneous_slice_axis
@@ -310,16 +279,15 @@ if __name__ == "__main__":
         data = data.with_chebyshev_acceleration(args.rho_chebyshev)
     elif args.window > 0:
         if args.broyden_acceleration:
-            data = data.with_broyden_acceleration(args.window)
+            jacobian_estimate = pbat.sim.vbd.BroydenJacobianEstimate.Identity
+            if args.broyden_jacobian_estimate == 1:
+                jacobian_estimate = (
+                    pbat.sim.vbd.BroydenJacobianEstimate.DiagonalCauchySchwarz
+                )
+            data = data.with_broyden_acceleration(args.window, jacobian_estimate, args.broyden_beta)
         elif args.anderson_acceleration:
             data = data.with_anderson_acceleration(args.window)
-    elif args.use_trust_region:
-        data = data.with_trust_region_acceleration(
-            args.tr_eta, args.tr_tau, args.use_curved_tr
-        )
     data = data.construct(validate=True)
-    if args.trace:
-        export_data(args, V, C, F, B, data.aext, rhoe, mue, lambdae, vdbc)
 
     thread_block_size = 64
     vbd = None
@@ -368,6 +336,15 @@ if __name__ == "__main__":
     t = 0
 
     profiler = pypbat.profiling.Profiler()
+    cuda_profiler = None
+    if args.gpu and args.profile:
+        timeout = 10
+        print(
+            "Waiting for profiler server connection for {} seconds...".format(timeout)
+        )
+        profiler.wait_for_server_connection(timeout=timeout)
+        if profiler.is_connected_to_server:
+            cuda_profiler = pbat.gpu.profiling.CudaProfiler()
 
     def callback():
         global dt, iterations, substeps
@@ -414,12 +391,12 @@ if __name__ == "__main__":
             vbd.gpu_block_size = thread_block_size
 
         if animate or step:
-            if args.trace:
-                sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
-                sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)
-
             profiler.begin_frame("Physics")
+            if cuda_profiler:
+                cuda_profiler.start()
             vbd.step(dt, iterations, substeps)
+            if cuda_profiler:
+                cuda_profiler.stop()
             profiler.end_frame("Physics")
 
             # Update visuals
@@ -445,7 +422,3 @@ if __name__ == "__main__":
 
     ps.set_user_callback(callback)
     ps.show()
-
-    if args.trace:
-        sp.io.mmwrite(f"{args.output}/{t}.x.mtx", vbd.x)
-        sp.io.mmwrite(f"{args.output}/{t}.v.mtx", vbd.v)

@@ -66,7 +66,6 @@ def load_data(args):
 def simulate(args, vbd, name):
     outdir = os.path.join(args.output, name)
     pathlib.Path(outdir).mkdir(parents=True, exist_ok=True)
-    vbd.trace_next_step(outdir, args.frame)
     vbd.step(args.dt, args.iters, args.substeps)
 
 

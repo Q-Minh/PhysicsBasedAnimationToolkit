@@ -1,3 +1,14 @@
+/**
+ * @file SelectionMatrix.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Selection matrix to select columns of a matrix
+ * @version 0.1
+ * @date 2025-10-14
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_MATH_LINALG_SELECTION_MATRIX_H
 #define PBAT_MATH_LINALG_SELECTION_MATRIX_H
 

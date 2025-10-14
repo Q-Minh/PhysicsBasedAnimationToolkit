@@ -64,6 +64,11 @@ def codegen(fpsi, energy_name: str):
 
 #include <cmath>
 
+// clang-format off
+#include "pbat/warning/Push.h"
+#include "pbat/warning/FloatConversion.h"
+// clang-format on
+
 namespace pbat {{
 namespace physics {{
 
@@ -369,6 +374,8 @@ void
     footer = f"""
 }} // namespace physics
 }} // namespace pbat
+
+#include "pbat/warning/Pop.h"
 
 #endif // PBAT_PHYSICS_{energy_name.upper()}_H
 """

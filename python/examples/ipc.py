@@ -334,8 +334,7 @@ class LinearSolver:
         # NOTE: If built from source with SuiteSparse, use faster chol
         # Addinv = pbat.math.linalg.chol(
         #     Add, solver=pbat.math.linalg.SolverBackend.SuiteSparse)
-        # Addinv.compute(sp.sparse.tril(
-        #     Add), pbat.math.linalg.Cholmod.SparseStorage.SymmetricLowerTriangular)
+        # Addinv.compute(sp.sparse.tril(Add))
         x = np.zeros_like(b)
         x[dofs] = Addinv.solve(bd).squeeze()
         return x

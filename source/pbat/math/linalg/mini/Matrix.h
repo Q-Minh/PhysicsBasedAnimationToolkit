@@ -120,13 +120,13 @@ template <class TScalar, int M, int N = 1>
 class SMatrix
 {
   public:
-    using ScalarType  = TScalar;
-    using SelfType    = SMatrix<ScalarType, M, N>;
+    using ScalarType = TScalar;
+    using SelfType   = SMatrix<ScalarType, M, N>;
 #include "pbat/warning/Push.h"
 #include "pbat/warning/SignConversion.h"
     using StorageType = std::array<ScalarType, M * N>;
 #include "pbat/warning/Pop.h"
-    using IndexType   = typename StorageType::size_type;
+    using IndexType = typename StorageType::size_type;
 
     static auto constexpr kRows     = M;
     static auto constexpr kCols     = N;
@@ -135,7 +135,7 @@ class SMatrix
     PBAT_HOST_DEVICE SMatrix() : a() {}
 
     template <class... T>
-    PBAT_HOST_DEVICE SMatrix(T... values) : a{values...}
+    PBAT_HOST_DEVICE SMatrix(T... values) : a{(static_cast<ScalarType>(values), ...)}
     {
     }
 

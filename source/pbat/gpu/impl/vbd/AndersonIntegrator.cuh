@@ -38,7 +38,7 @@ class AndersonIntegrator : public Integrator
      */
     virtual void Solve(kernels::BackwardEulerMinimization& bdf, GpuIndex iterations) override;
     /**
-     * @brief Destroy the Chebyshev Integrator object
+     * @brief Destroy the AndersonIntegrator object
      */
     virtual ~AndersonIntegrator() = default;
     /**

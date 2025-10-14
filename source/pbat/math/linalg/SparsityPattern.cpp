@@ -1,9 +1,9 @@
 #include "SparsityPattern.h"
 
 #include <doctest/doctest.h>
+#include <iostream>
 #include <ranges>
 #include <vector>
-#include <iostream>
 
 TEST_CASE("[math][linalg] SparsityPattern")
 {
@@ -37,6 +37,6 @@ TEST_CASE("[math][linalg] SparsityPattern")
 
     MatrixX const Adense  = A.toDense();
     Scalar const error    = (Adense - Aexpected).norm() / Aexpected.norm();
-    Scalar constexpr zero = 1e-15;
+    Scalar constexpr zero = Scalar(1e-15);
     CHECK_LE(error, zero);
 }

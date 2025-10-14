@@ -17,7 +17,7 @@ std::array<char, 256>& buffer()
 
 void BeginFrame(std::string_view name)
 {
-#ifdef PBAT_HAS_TRACY_PROFILER
+#if defined(PBAT_HAS_TRACY_PROFILER)
     auto& buf       = detail::buffer();
     auto const size = std::min(buf.size() - 1, name.size());
     std::memcpy(buf.data(), name.data(), size);
@@ -43,7 +43,7 @@ bool IsConnectedToServer()
     return TracyIsConnected;
 #else
     return false;
-#endif
+#endif // defined(PBAT_CAN_USE_TRACY_CPP)
 }
 
 } // namespace profiling

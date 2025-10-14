@@ -6,9 +6,9 @@
 #include "pbat/gpu/impl/common/Buffer.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
 #include "pbat/gpu/impl/vbd/AndersonIntegrator.cuh"
+#include "pbat/gpu/impl/vbd/BroydenIntegrator.cuh"
 #include "pbat/gpu/impl/vbd/ChebyshevIntegrator.cuh"
 #include "pbat/gpu/impl/vbd/Integrator.cuh"
-#include "pbat/gpu/impl/vbd/TrustRegionIntegrator.cuh"
 
 namespace pbat::gpu::vbd {
 
@@ -18,16 +18,13 @@ Integrator::Integrator(Data const& data) : mImpl(nullptr)
     switch (data.eAcceleration)
     {
         case EAccelerationStrategy::None: mImpl = new impl::vbd::Integrator(data); break;
-        case EAccelerationStrategy::AcceleratedAnderson: [[fallthrough]];
-        case EAccelerationStrategy::Anderson:
-            mImpl = new impl::vbd::AndersonIntegrator(data);
-            break;
         case EAccelerationStrategy::Chebyshev:
             mImpl = new impl::vbd::ChebyshevIntegrator(data);
             break;
-        case EAccelerationStrategy::TrustRegion:
-            mImpl = new impl::vbd::TrustRegionIntegrator(data);
+        case EAccelerationStrategy::Anderson:
+            mImpl = new impl::vbd::AndersonIntegrator(data);
             break;
+        case EAccelerationStrategy::Broyden: mImpl = new impl::vbd::BroydenIntegrator(data); break;
         default: mImpl = new impl::vbd::Integrator(data); break;
     }
 }
@@ -58,16 +55,6 @@ Integrator::~Integrator()
 void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
     mImpl->Step(dt, iterations, substeps);
-}
-
-void Integrator::TracedStep(
-    GpuScalar dt,
-    GpuIndex iterations,
-    GpuIndex substeps,
-    GpuIndex t,
-    std::string_view dir)
-{
-    mImpl->TracedStep(dt, iterations, substeps, t, dir);
 }
 
 void Integrator::SetPositions(Eigen::Ref<GpuMatrixX const> const& X)

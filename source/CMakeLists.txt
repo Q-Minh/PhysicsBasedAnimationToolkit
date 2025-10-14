@@ -150,6 +150,14 @@ if(PBAT_USE_CUDA)
         CUDA::cusolver
         cuda-api-wrappers::runtime-and-driver
     )
+
+    if(PBAT_ENABLE_PROFILER)
+        target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+            PRIVATE
+            CUDA::cupti
+        )
+    endif()
+
     set_target_properties(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON

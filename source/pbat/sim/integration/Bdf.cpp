@@ -21,7 +21,7 @@ TEST_CASE("[sim][integration] Bdf")
         auto constexpr order  = 2;
         auto constexpr step   = 1;
         auto constexpr nsteps = 5;
-        Scalar constexpr h    = 0.01;
+        auto constexpr h      = Scalar(0.01);
         MatrixX x0(n, order);
         x0.setRandom();
 
@@ -59,7 +59,7 @@ TEST_CASE("[sim][integration] Bdf")
         auto constexpr order  = 2;
         auto constexpr step   = 2;
         auto constexpr nsteps = 4;
-        Scalar constexpr h    = 0.01;
+        Scalar constexpr h    = Scalar(0.01);
         MatrixX x0(n, order);
         x0.setRandom();
 

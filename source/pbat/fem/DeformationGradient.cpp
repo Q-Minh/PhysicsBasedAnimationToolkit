@@ -13,7 +13,7 @@
 TEST_CASE("[fem] DeformationGradient")
 {
     using namespace pbat;
-    Scalar constexpr zero = 1e-15;
+    auto constexpr zero = Scalar(1e-15);
 
     SUBCASE("Tetrahedron")
     {

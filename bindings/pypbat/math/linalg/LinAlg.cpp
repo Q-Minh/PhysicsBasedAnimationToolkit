@@ -1,6 +1,7 @@
 #include "LinAlg.h"
 
 #include "Cholmod.h"
+#include "Enums.h"
 #include "FilterEigenvalues.h"
 #include "Pardiso.h"
 #include "SimplicialLDLT.h"
@@ -13,6 +14,7 @@ namespace pbat::py::math::linalg {
 void Bind(nanobind::module_& m)
 {
     namespace nb = nanobind;
+    BindEnums(m);
     BindCholmod(m);
     BindPardiso(m);
     BindFilterEigenvalues(m);

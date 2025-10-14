@@ -1,3 +1,14 @@
+/**
+ * @file FilterEigenvalues.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Filter eigenvalues of a symmetric matrix
+ * @version 0.1
+ * @date 2025-10-14
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #ifndef PBAT_MATH_LINALG_FILTEREIGENVALUES_H
 #define PBAT_MATH_LINALG_FILTEREIGENVALUES_H
 

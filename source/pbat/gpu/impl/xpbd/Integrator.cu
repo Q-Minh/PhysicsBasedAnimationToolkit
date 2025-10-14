@@ -4,13 +4,13 @@
 
 #include "Integrator.cuh"
 #include "pbat/gpu/impl/common/Eigen.cuh"
-#include "pbat/gpu/profiling/Profiling.h"
 #include "pbat/math/linalg/mini/Mini.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/xpbd/Kernels.h"
 
-#include <thrust/async/for_each.h>
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
 #include <thrust/iterator/counting_iterator.h>
 
 namespace pbat {
@@ -87,7 +87,7 @@ Integrator::Integrator(Data const& data)
 
 void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
 {
-    PBAT_PROFILE_CUDA_NAMED_SCOPE("pbat.gpu.impl.xpbd.Integrator.Step");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.xpbd.Integrator.Step");
 
     GpuScalar const sdt       = dt / static_cast<GpuScalar>(substeps);
     GpuScalar const sdt2      = sdt * sdt;
@@ -120,10 +120,7 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
     // Use substepping for accelerated convergence
     for (auto s = 0; s < substeps; ++s)
     {
-        PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
-            subStepCtx,
-            "pbat.gpu.impl.xpbd.Integrator.Step.SubStep");
-
+        PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.xpbd.Integrator.Step.SubStep");
         // Reset "Lagrange" multipliers
         for (auto d = 0; d < kConstraintTypes; ++d)
         {
@@ -154,24 +151,23 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
         if (s % mActiveSetUpdateFrequency == 0)
             cd.UpdateActiveSet(x);
         // Solve constraints
-        PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
-            constraintSolveCtx,
-            "pbat.gpu.impl.xpbd.Integrator.Step.ConstraintSolve");
-        for (auto k = 0; k < iterations; ++k)
         {
-            // Elastic constraints
-            bool const bHasClusterPartitions = not SGptr.empty();
-            if (bHasClusterPartitions)
+            PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.xpbd.Integrator.Step.ConstraintSolve");
+            for (auto k = 0; k < iterations; ++k)
             {
-                ProjectClusteredBlockNeoHookeanConstraints(sdt, sdt2);
+                // Elastic constraints
+                bool const bHasClusterPartitions = not SGptr.empty();
+                if (bHasClusterPartitions)
+                {
+                    ProjectClusteredBlockNeoHookeanConstraints(sdt, sdt2);
+                }
+                else
+                {
+                    ProjectBlockNeoHookeanConstraints(sdt, sdt2);
+                }
+                ProjectCollisionConstraints(sdt, sdt2);
             }
-            else
-            {
-                ProjectBlockNeoHookeanConstraints(sdt, sdt2);
-            }
-            ProjectCollisionConstraints(sdt, sdt2);
         }
-        PBAT_PROFILE_CUDA_HOST_SCOPE_END(constraintSolveCtx);
         // Update simulation state
         thrust::for_each(
             thrust::device,
@@ -184,8 +180,6 @@ void Integrator::Step(GpuScalar dt, GpuIndex iterations, GpuIndex substeps)
                 ToBuffers(vi, v, i);
                 ToBuffers(FromBuffers<3, 1>(x, i), xt, i);
             });
-
-        PBAT_PROFILE_CUDA_HOST_SCOPE_END(subStepCtx);
     }
     cd.FinalizeActiveSet(x);
 }
@@ -251,10 +245,7 @@ PBAT_DEVICE static void ProjectBlockNeoHookeanConstraint(
 
 void Integrator::ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
-    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.xpbd.Integrator.ProjectBlockNeoHookeanConstraints");
-
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.xpbd.Integrator.ProjectBlockNeoHookeanConstraints");
     auto const snhConstraintId = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nPartitions     = static_cast<Index>(Pptr.size()) - 1;
     for (auto p = 0; p < nPartitions; ++p)
@@ -293,16 +284,12 @@ void Integrator::ProjectBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
                     c);
             });
     }
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuScalar dt2)
 {
-    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
-        ctx,
+    PBAT_PROFILE_NAMED_SCOPE(
         "pbat.gpu.impl.xpbd.Integrator.ProjectClusteredBlockNeoHookeanConstraints");
-
     auto const snhConstraintId    = static_cast<int>(EConstraint::StableNeoHookean);
     auto const nClusterPartitions = static_cast<Index>(SGptr.size()) - 1;
     for (Index cp = 0; cp < nClusterPartitions; ++cp)
@@ -349,16 +336,11 @@ void Integrator::ProjectClusteredBlockNeoHookeanConstraints(GpuScalar dt, GpuSca
                 }
             });
     }
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
 {
-    PBAT_PROFILE_CUDA_NAMED_HOST_SCOPE_START(
-        ctx,
-        "pbat.gpu.impl.xpbd.Integrator.ProjectCollisionConstraints");
-
+    PBAT_PROFILE_NAMED_SCOPE("pbat.gpu.impl.xpbd.Integrator.ProjectCollisionConstraints");
     auto const collisionConstraintId = static_cast<int>(EConstraint::Collision);
     thrust::for_each(
         thrust::device,
@@ -430,8 +412,6 @@ void Integrator::ProjectCollisionConstraints(GpuScalar dt, GpuScalar dt2)
             SVector<GpuScalar, 3> xv = FromBuffers<3, 1>(xb, c);
             ToBuffers(xv, x, i);
         });
-
-    PBAT_PROFILE_CUDA_HOST_SCOPE_END(ctx);
 }
 
 } // namespace xpbd

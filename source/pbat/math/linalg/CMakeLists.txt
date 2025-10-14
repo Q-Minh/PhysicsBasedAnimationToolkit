@@ -4,7 +4,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "Cholmod.h"
+    "CholmodSupport.h"
     "LinAlg.h"
     "FilterEigenvalues.h"
     "SelectionMatrix.h"
@@ -12,7 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "Cholmod.cpp"
+    "CholmodSupport.cpp"
     "FilterEigenvalues.cpp"
     "SelectionMatrix.cpp"
     "SparsityPattern.cpp"

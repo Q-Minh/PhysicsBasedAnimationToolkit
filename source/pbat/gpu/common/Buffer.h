@@ -3,9 +3,9 @@
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief This file contains the Buffer class for 1- or 2-dimensional GPU buffers of numeric types
  * @date 2025-03-25
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #ifndef PBAT_GPU_COMMON_BUFFER_H

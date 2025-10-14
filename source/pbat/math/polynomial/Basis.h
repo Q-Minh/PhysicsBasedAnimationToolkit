@@ -206,6 +206,9 @@ struct DivergenceFreeBasis : detail::DivergenceFreeBasis<Dims, Order>
     }
 };
 
+#include "pbat/warning/Push.h"
+#include "pbat/warning/FloatConversion.h"
+
 namespace detail {
 
 /**
@@ -5658,6 +5661,9 @@ class DivergenceFreeBasis<3, 4>
 };
 
 } // namespace detail
+
+#include "pbat/warning/Pop.h"
+
 } // namespace polynomial
 } // namespace math
 } // namespace pbat
