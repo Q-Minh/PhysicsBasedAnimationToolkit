@@ -9,6 +9,21 @@ from collections.abc import Callable
 from typing import Tuple
 
 
+def step_proj_gradient_decent(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray,eta: float) -> np.ndarray:
+    xkp1 = xk - eta * g(xk)
+    xkp1[0] = 0. if xkp1[0] < 0. else xkp1[0]
+    xkp1[1] = 0. if xkp1[1] < 0. else xkp1[1]
+
+    # projection might  be wrong
+    if xkp1[0] + xkp1[1] > 1:
+        # xkp1 /= xkp1[0] + xkp1[1]
+        v = np.array([1.,-1.])/np.linalg.norm(np.array([1.,-1.]))
+        t  = np.clip(np.dot(v,xkp1),0.,1.)
+        xkp1 = np.array([0.,1.]) + t * v
+
+    return xkp1
+
+
 def sample_in_reference_triangle_2d() -> np.ndarray:
     u = np.random.rand()
     v = np.random.rand()
@@ -146,7 +161,7 @@ if __name__ == "__main__":
     extent = 1
     bmin = -extent * np.ones(3)
     bmax = extent * np.ones(3)
-    dims = (100, 100, 100)
+    dims = (25, 25, 25)
     # polyscope's volume grid expects x to vary fastest, then y, then z
     x, y, z = np.meshgrid(
         np.linspace(bmin[0], bmax[0], dims[0]),
@@ -171,6 +186,7 @@ if __name__ == "__main__":
 
     # Optimization
     xk = np.zeros(2)
+    gd_xk = np.zeros(2)
     fk = 0.0
     gk = np.zeros(2)
     Bk = np.eye(2)
@@ -178,6 +194,7 @@ if __name__ == "__main__":
     sigmaR = 1e-1
     sigmaB = 1e-1
     eta = 1e-3
+    gd_eta = 1e-3
     r = 1e-8
     trlo = 0.1
     trhi = 0.75
@@ -188,6 +205,9 @@ if __name__ == "__main__":
     xpath = []
     fpath = []
     Rpath = []
+    gd_xpath = []
+    gd_fpath = []
+    gd_Rpath = []
 
     # For reproducibility
     np.random.seed(0)
@@ -221,6 +241,9 @@ if __name__ == "__main__":
         global eta, r, trlo, trhi, trbound, trgrow, trshrink
         global xpath, fpath, Rpath
         global randomize_sample
+        global gd_xk
+        global gd_eta
+        global gd_xpath, gd_fpath, gd_Rpath
 
         # Load
         if imgui.TreeNode("I/O"):
@@ -263,6 +286,7 @@ if __name__ == "__main__":
             changed, trbound = imgui.SliderFloat("trbound", trbound, 0.1, 1.0)
             changed, trgrow = imgui.SliderFloat("trgrow", trgrow, 1.1, 10.0)
             changed, trshrink = imgui.SliderFloat("trshrink", trshrink, 1e-2, 0.99)
+            changed, gd_eta = imgui.SliderFloat("gd_eta", gd_eta, 1e-2, 0.99)
 
             # Triangle
             VH = np.vstack([V.T, np.ones((1, V.shape[0]))])
@@ -288,6 +312,7 @@ if __name__ == "__main__":
 
             # Controls
             if imgui.Button("Step"):
+                print(gd_xk)
                 xkp1, fkp1, gkp1, Bkp1, Rkp1 = step_minimize_triangle(
                     f,
                     g,
@@ -304,11 +329,19 @@ if __name__ == "__main__":
                     trgrow,
                     trshrink,
                 )
+
+                gd_xkp1 = step_proj_gradient_decent(g,gd_xk, gd_eta)
                 if np.linalg.norm(xk - xkp1) > 0.0:
                     xpath = xpath + [DX @ xkp1 + A]
                     fpath = fpath + [fkp1]
                     Rpath = Rpath + [Rkp1]
                 xk, fk, gk, Bk, Rk = xkp1, fkp1, gkp1, Bkp1, Rkp1
+         
+                if np.linalg.norm(gd_xk - gd_xkp1) > 0.0:
+                    gd_xpath = gd_xpath + [DX @ gd_xkp1 + A]
+                    gd_fpath = gd_fpath + [f(gd_xkp1)]
+                    # Rpath = Rpath + [Rkp1]
+                gd_xk = gd_xkp1
                 
             changed, randomize_sample = imgui.Checkbox("Randomize sample", randomize_sample)
             if imgui.Button("Reset"):
@@ -316,6 +349,7 @@ if __name__ == "__main__":
                     xk = sample_in_reference_triangle_2d()
                 else:
                     xk = np.array([0.25, 0.25])
+                gd_xk = xk.copy()
                 fk = f(xk)
                 gk = g(xk)
 
@@ -324,6 +358,11 @@ if __name__ == "__main__":
                 xpath = [DX @ xk + A]
                 fpath = [fk]
                 Rpath = [Rk]
+
+                gd_fk = f(gd_xk)
+                gd_xpath = [DX @ gd_xk + A]
+                gd_fpath = [gd_fk]
+                # Rpath = [Rk]
 
             if len(xpath) > 0:
                 VE = np.array(xpath)
@@ -338,10 +377,26 @@ if __name__ == "__main__":
                 pc.set_ignore_slice_plane(slice_plane, True)
                 pc.set_radius(1.1 * cn.get_radius(), relative=False)
 
+            if len(gd_xpath) > 0:
+                VE = np.array(gd_xpath)
+                EE = np.vstack([np.arange(len(gd_xpath) - 1), np.arange(1, len(gd_xpath))]).T
+                cn = ps.register_curve_network(
+                    "Optimization Path GD",
+                    VE,
+                    EE,
+                )
+                pc = ps.register_point_cloud("Current Point", VE[-1:, :])
+                cn.set_ignore_slice_plane(slice_plane, True)
+                pc.set_ignore_slice_plane(slice_plane, True)
+                pc.set_radius(1.1 * cn.get_radius(), relative=False)
+
             if len(fpath) > 0:
                 if implot.BeginPlot("Signed distance"):
                     implot.PlotLine(
                         "sdf", np.array(fpath), 1 / len(fpath), 0.0  # xscale  # xstart
+                    )
+                    implot.PlotLine(
+                        "GD sdf", np.array(gd_fpath), 1 / len(gd_fpath), 0.0
                     )
                     implot.EndPlot()
             if len(Rpath) > 0:
