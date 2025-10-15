@@ -25,7 +25,8 @@ def step_frank_wolfe(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, verti
     
 
 def step_proj_gradient_decent(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray,eta: float) -> np.ndarray:
-    xkp1 = xk - eta * g(xk)
+    gk = g(xk)
+    xkp1 = xk - eta * gk
     xkp1[0] = 0. if xkp1[0] < 0. else xkp1[0]
     xkp1[1] = 0. if xkp1[1] < 0. else xkp1[1]
 
@@ -278,6 +279,7 @@ if __name__ == "__main__":
     ps.init()
 
     slice_plane = ps.add_scene_slice_plane()
+    slice_plane.set_pose([0.0, 0.0, 0.5], [0.0, 0.0, -1.0])
     slice_plane.set_draw_plane(False)
     slice_plane.set_draw_widget(True)
     isolines = True
@@ -501,7 +503,7 @@ if __name__ == "__main__":
                     VE,
                     EE,
                 )
-                pc = ps.register_point_cloud("Current Point", VE[-1:, :])
+                pc = ps.register_point_cloud("SR1 xk", VE[-1:, :])
                 cn.set_ignore_slice_plane(slice_plane, True)
                 pc.set_ignore_slice_plane(slice_plane, True)
                 pc.set_radius(1.1 * cn.get_radius(), relative=False)
@@ -514,7 +516,7 @@ if __name__ == "__main__":
                     VE,
                     EE,
                 )
-                pc = ps.register_point_cloud("Current Point", VE[-1:, :])
+                pc = ps.register_point_cloud("GD xk", VE[-1:, :])
                 cn.set_ignore_slice_plane(slice_plane, True)
                 pc.set_ignore_slice_plane(slice_plane, True)
                 pc.set_radius(1.1 * cn.get_radius(), relative=False)
@@ -527,7 +529,7 @@ if __name__ == "__main__":
                     VE,
                     EE,
                 )
-                pc = ps.register_point_cloud("Current Point", VE[-1:, :])
+                pc = ps.register_point_cloud("FW xk", VE[-1:, :])
                 cn.set_ignore_slice_plane(slice_plane, True)
                 pc.set_ignore_slice_plane(slice_plane, True)
                 pc.set_radius(1.1 * cn.get_radius(), relative=False)
