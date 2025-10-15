@@ -537,13 +537,6 @@ if __name__ == "__main__":
         dest="e",
         default=(1.0, 1.0, 1.0)
     )
-    parser.add_argument(
-        "--reach-for-the-spheres",
-        action="store_true",
-        help="Enable reach for the spheres refinement",
-        dest="rfts",
-        default=False,
-    )
     args = parser.parse_args()
 
     # Domain
