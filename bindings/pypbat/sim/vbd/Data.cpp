@@ -214,14 +214,16 @@ void BindData(nanobind::module_& m)
             &Data::WithBroydenMethod,
             nb::arg("window_size"),
             nb::arg("jacobian_estimate") = EBroydenJacobianEstimate::Identity,
-            nb::arg("broyden_beta")      = Scalar{1},
+            nb::arg("broyden_beta_F")    = Scalar{1},
+            nb::arg("broyden_beta_B")    = Scalar{1},
             nb::rv_policy::reference_internal,
             "Use Broyden acceleration\n\n"
             "Args:\n"
             "    window (int): Number of past iterates to use in Broyden acceleration.\n\n"
             "    jacobian_estimate (BroydenJacobianEstimate): Broyden Jacobian estimate "
             "strategy.\n\n"
-            "    broyden_beta (float): Broyden Cauchy-Schwarz scaling factor.\n\n"
+            "    broyden_beta_F (float): Broyden Fk rank estimate.\n\n"
+            "    broyden_beta_B (float): Broyden Bk rank estimate.\n\n"
             "Returns:\n"
             "    Data: self")
         .def(
@@ -280,7 +282,9 @@ void BindData(nanobind::module_& m)
         .def_rw(
             "jacobian_estimate",
             &Data::eBroydenJacobianEstimate,
-            "Broyden Jacobian estimate strategy");
+            "Broyden Jacobian estimate strategy")
+        .def_rw("broyden_beta_F", &Data::broydenBetaF, "Broyden Fk rank estimate")
+        .def_rw("broyden_beta_B", &Data::broydenBetaB, "Broyden Bk rank estimate");
 }
 
 } // namespace pbat::py::sim::vbd

@@ -137,13 +137,15 @@ struct Data
      * @brief Use Broyden method
      * @param window Broyden method window size
      * @param _eBroydenJacobianEstimate Broyden Jacobian estimate strategy
-     * @param _broydenBeta Broyden Cauchy-Schwarz scaling factor
+     * @param _broydenBetaF Broyden Fk rank estimate
+     * @param _broydenBetaB Broyden Bk rank estimate
      * @return Reference to this
      */
     PBAT_API Data& WithBroydenMethod(
         Index window,
         EBroydenJacobianEstimate _eBroydenJacobianEstimate = EBroydenJacobianEstimate::Identity,
-        Scalar _broydenBeta                                = Scalar{1});
+        Scalar _broydenBetaF                               = Scalar{1},
+        Scalar _broydenBetaB                               = Scalar{1});
     /**
      * @brief Use Nesterov acceleration
      * @param L Lipschitz constant estimation for the gradient
@@ -238,7 +240,8 @@ struct Data
     // Broyden
     EBroydenJacobianEstimate eBroydenJacobianEstimate{
         EBroydenJacobianEstimate::DiagonalCauchySchwarz}; ///< Broyden Jacobian estimate strategy
-    Scalar broydenBeta{1};                                ///< Broyden Cauchy-Schwarz scaling factor
+    Scalar broydenBetaF{1};                               ///< Broyden Fk rank estimate
+    Scalar broydenBetaB{1};                               ///< Broyden Bk rank estimate
 
     // Nesterov
     Scalar mNesterovLipschitzConstant{1}; ///< Nesterov acceleration Lipschitz constant
