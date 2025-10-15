@@ -308,7 +308,7 @@ def node_ui(
             is_unary_node = True
         elif isinstance(node, pbat.geometry.sdf.Elongate):
             h_updated, h = imgui.SliderFloat3(
-                "Length", node.h, domain_extent / 100, domain_extent
+                "Length", node.h, 0, domain_extent / 10
             )
             if h_updated:
                 node.h = np.array(h)
