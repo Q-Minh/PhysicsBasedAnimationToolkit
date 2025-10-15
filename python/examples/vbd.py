@@ -147,10 +147,17 @@ if __name__ == "__main__":
         default=0,
     )
     parser.add_argument(
-        "--broyden-beta",
-        help="Broyden Cauchy-Schwarz diagonal scaling factor. Only used if broyden-jacobian-estimate is set to 1 (DiagonalCauchySchwarz). Default 1.0",
+        "--broyden-beta-F",
+        help="Broyden Fk rank estimate. Only used if broyden-jacobian-estimate is set to 1 (DiagonalCauchySchwarz). Default 1.0",
         type=float,
-        dest="broyden_beta",
+        dest="broyden_beta_F",
+        default=1.0,
+    )
+    parser.add_argument(
+        "--broyden-beta-B",
+        help="Broyden Bk rank estimate. Only used if broyden-jacobian-estimate is set to 1 (DiagonalCauchySchwarz). Default 1.0",
+        type=float,
+        dest="broyden_beta_B",
         default=1.0,
     )
     parser.add_argument(
@@ -284,7 +291,9 @@ if __name__ == "__main__":
                 jacobian_estimate = (
                     pbat.sim.vbd.BroydenJacobianEstimate.DiagonalCauchySchwarz
                 )
-            data = data.with_broyden_acceleration(args.window, jacobian_estimate, args.broyden_beta)
+            data = data.with_broyden_acceleration(
+                args.window, jacobian_estimate, args.broyden_beta_F, args.broyden_beta_B
+            )
         elif args.anderson_acceleration:
             data = data.with_anderson_acceleration(args.window)
     data = data.construct(validate=True)
