@@ -8,6 +8,7 @@ from tkinter import filedialog
 from collections.abc import Callable
 from typing import Tuple
 import json
+import argparse
 
 def step_frank_wolfe(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, vertices: np.ndarray, t: int) -> np.ndarray:
     ''' use space coordinates'''
@@ -173,11 +174,43 @@ def step_minimize_triangle(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="SDF editor",
+    )
+    parser.add_argument(
+        "--grid-dims",
+        type=int,
+        nargs=3,
+        metavar=("nx", "ny", "nz"),
+        help="Grid dimensions as three integers",
+        dest="dims",
+        default=(100, 100, 100),
+    )
+    parser.add_argument(
+        "--b",
+        type=float,
+        nargs=3,
+        metavar=("bx", "by", "bz"),
+        help="Axis-aligned grid's lower bound",
+        dest="b",
+        default=(-1.0, -1.0, -1.0)
+    )
+    parser.add_argument(
+        "--e",
+        type=float,
+        nargs=3,
+        metavar=("ex", "ey", "ez"),
+        help="Axis-aligned grid's upper bound",
+        dest="e",
+        default=(1.0, 1.0, 1.0)
+    )
+    args = parser.parse_args()
+
     # Domain
-    extent = 1
-    bmin = -extent * np.ones(3)
-    bmax = extent * np.ones(3)
-    dims = (25, 25, 25)
+    bmin = np.array(args.b)
+    bmax = np.array(args.e)
+    dims = args.dims
+    extent = np.max(bmax - bmin)
     # polyscope's volume grid expects x to vary fastest, then y, then z
     x, y, z = np.meshgrid(
         np.linspace(bmin[0], bmax[0], dims[0]),
