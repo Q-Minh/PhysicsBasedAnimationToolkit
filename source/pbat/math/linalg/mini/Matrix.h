@@ -135,7 +135,7 @@ class SMatrix
     PBAT_HOST_DEVICE SMatrix() : a() {}
 
     template <class... T>
-    PBAT_HOST_DEVICE SMatrix(T... values) : a{(static_cast<ScalarType>(values), ...)}
+    PBAT_HOST_DEVICE SMatrix(T... values) : a{static_cast<ScalarType>(values)...}
     {
     }
 
