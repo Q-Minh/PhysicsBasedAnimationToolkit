@@ -143,6 +143,11 @@ if(PBAT_USE_METIS)
 endif()
 
 if(PBAT_USE_CUDA)
+    target_compile_features(
+        PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+        PRIVATE
+        cuda_std_20
+    )
     target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
         PRIVATE
         CUDA::cudart
