@@ -9,18 +9,15 @@ from collections.abc import Callable
 from typing import Tuple
 import json
 
-def step_frank_wolfe(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, t: int) -> np.ndarray:
-
+def step_frank_wolfe(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, vertices: np.ndarray, t: int) -> np.ndarray:
+    ''' use space coordinates'''
 
     grad = g(xk)
 
-    v = np.array([[0.,0.],[1.,0.],[0.,1.]])
-    d = np.array([np.dot(grad,v[0]),np.dot(grad,v[1]),np.dot(grad,v[2])])
-    min_v = sorted(zip(v,d),key=lambda el: el[1])[0][0]
-    print(t)
-    print(d)
-    print(min_v)
-    alpha = 2./(t +2)
+    d = vertices.T @ grad
+    # min_v = sorted(zip(vertices,d),key=lambda el: el[1])[0][0]
+    min_v = vertices[:,np.argmin(d)]
+    alpha = 2./(t + 2)
     xkp1 = xk + alpha * (min_v - xk)
 
     return xkp1
@@ -229,7 +226,7 @@ if __name__ == "__main__":
     gd_fpath = []
     gd_Rpath = []
 
-    fw_xk = np.zeros(2)
+    fw_xk = np.zeros(3)
     fw_xpath = []
     fw_fpath = []
     fw_Rpath = []
@@ -309,8 +306,8 @@ if __name__ == "__main__":
                     filetypes=[("JSON", "*.json"), ("All files", "*.*")],
                 )
                 if file_path:
-                    with open(file_path) as f:
-                        params = json.load(f)
+                    with open(file_path) as f_bar:
+                        params = json.load(f_bar)
                         sigmaR = params.get("sigmaR",sigmaR)
                         sigmaB = params.get("sigmaB",sigmaB)
                         eta = params.get("eta",eta)
@@ -332,7 +329,7 @@ if __name__ == "__main__":
                     filetypes=[("JSON", "*.json"), ("All files", "*.*")],
                 )
                 if file_path:
-                    with open(file_path,'w') as f:
+                    with open(file_path,'w') as f_bar:
                         params = {
                             "sigmaR": sigmaR,
                             "sigmaB": sigmaB,
@@ -345,7 +342,7 @@ if __name__ == "__main__":
                             "trshrink": trshrink,
                             "gd_eta": gd_eta,
                         }
-                        json.dump(params,f)
+                        json.dump(params,f_bar)
                     
                 root.destroy()
             imgui.TreePop()
@@ -380,19 +377,27 @@ if __name__ == "__main__":
             # Objective
             sdf = pbat.geometry.sdf.Composite(forest)
 
-            def f(x: np.ndarray) -> float:
+            def f_bar(x: np.ndarray) -> float:
                 return sdf.eval(DX @ x + A)
 
-            def g(x: np.ndarray) -> np.ndarray:
+            def g_bar(x: np.ndarray) -> np.ndarray:
                 h = 1e-4
                 gx = sdf.grad(DX @ x + A, h)
                 return DX.T @ gx
+            
+            def f(x: np.ndarray) -> float:
+                return sdf.eval(x)
+
+            def g(x: np.ndarray) -> np.ndarray:
+                h = 1e-4
+                gx = sdf.grad(x, h)
+                return gx
 
             # Controls
             if imgui.Button("Step"):
                 xkp1, fkp1, gkp1, Bkp1, Rkp1 = step_minimize_triangle(
-                    f,
-                    g,
+                    f_bar,
+                    g_bar,
                     xk,
                     fk,
                     gk,
@@ -407,8 +412,8 @@ if __name__ == "__main__":
                     trshrink,
                 )
 
-                gd_xkp1 = step_proj_gradient_decent(g,gd_xk, gd_eta)
-                fw_xkp1 = step_frank_wolfe(g,fw_xk,len(fw_xpath))
+                gd_xkp1 = step_proj_gradient_decent(g_bar,gd_xk, gd_eta)
+                fw_xkp1 = step_frank_wolfe(g,fw_xk, ABC,len(fw_xpath))
 
                 if np.linalg.norm(xk - xkp1) > 0.0:
                     xpath = xpath + [DX @ xkp1 + A]
@@ -418,12 +423,12 @@ if __name__ == "__main__":
          
                 if np.linalg.norm(gd_xk - gd_xkp1) > 0.0:
                     gd_xpath = gd_xpath + [DX @ gd_xkp1 + A]
-                    gd_fpath = gd_fpath + [f(gd_xkp1)]
+                    gd_fpath = gd_fpath + [f_bar(gd_xkp1)]
                     # Rpath = Rpath + [Rkp1]
                 gd_xk = gd_xkp1
 
                 if np.linalg.norm(fw_xk - fw_xkp1) > 0.0:
-                    fw_xpath = fw_xpath + [DX @ fw_xkp1 + A]
+                    fw_xpath = fw_xpath + [fw_xkp1]
                     fw_fpath = fw_fpath + [f(fw_xkp1)]
                     # Rpath = Rpath + [Rkp1]
                 fw_xk = fw_xkp1
@@ -435,9 +440,9 @@ if __name__ == "__main__":
                 else:
                     xk = np.array([0.25, 0.25])
                 gd_xk = xk.copy()
-                fw_xk = xk.copy()
-                fk = f(xk)
-                gk = g(xk)
+                fw_xk = DX @ xk.copy() + A
+                fk = f_bar(xk)
+                gk = g_bar(xk)
 
                 Bk = np.eye(2) * sigmaB * max(elen)
                 Rk = sigmaR * max(elen)
@@ -445,13 +450,13 @@ if __name__ == "__main__":
                 fpath = [fk]
                 Rpath = [Rk]
 
-                gd_fk = f(gd_xk)
+                gd_fk = f_bar(gd_xk)
                 gd_xpath = [DX @ gd_xk + A]
                 gd_fpath = [gd_fk]
                 # Rpath = [Rk]
 
                 fw_fk = f(fw_xk)
-                fw_xpath = [DX @ fw_xk + A]
+                fw_xpath = [fw_xk]
                 fw_fpath = [fw_fk]
                 # Rpath = [Rk]
 
