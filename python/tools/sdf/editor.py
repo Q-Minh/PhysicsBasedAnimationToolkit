@@ -9,6 +9,7 @@ from tkinter import filedialog
 import os
 import meshio
 import gpytoolbox as gpyt
+import argparse
 
 
 def node_ui(
@@ -506,11 +507,50 @@ def node_ui(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="SDF editor",
+    )
+    parser.add_argument(
+        "--grid-dims",
+        type=int,
+        nargs=3,
+        metavar=("nx", "ny", "nz"),
+        help="Grid dimensions as three integers",
+        dest="dims",
+        default=(100, 100, 100),
+    )
+    parser.add_argument(
+        "--b",
+        type=float,
+        nargs=3,
+        metavar=("bx", "by", "bz"),
+        help="Axis-aligned grid's lower bound",
+        dest="b",
+        default=(-1.0, -1.0, -1.0)
+    )
+    parser.add_argument(
+        "--e",
+        type=float,
+        nargs=3,
+        metavar=("ex", "ey", "ez"),
+        help="Axis-aligned grid's upper bound",
+        dest="e",
+        default=(1.0, 1.0, 1.0)
+    )
+    parser.add_argument(
+        "--reach-for-the-spheres",
+        action="store_true",
+        help="Enable reach for the spheres refinement",
+        dest="rfts",
+        default=False,
+    )
+    args = parser.parse_args()
+
     # Domain
-    extent = 1
-    bmin = -extent * np.ones(3)
-    bmax = extent * np.ones(3)
-    dims = (100, 100, 100)
+    bmin = np.array(args.b)
+    bmax = np.array(args.e)
+    dims = args.dims
+    extent = np.linalg.norm(bmax - bmin)
     # polyscope's volume grid expects x to vary fastest, then y, then z
     x, y, z = np.meshgrid(
         np.linspace(bmin[0], bmax[0], dims[0]),
