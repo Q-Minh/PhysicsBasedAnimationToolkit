@@ -7,6 +7,38 @@ import tkinter as tk
 from tkinter import filedialog
 from collections.abc import Callable
 from typing import Tuple
+import json
+import argparse
+
+def step_frank_wolfe(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, vertices: np.ndarray, t: int) -> np.ndarray:
+    ''' use space coordinates'''
+
+    grad = g(xk)
+
+    d = vertices.T @ grad
+    # min_v = sorted(zip(vertices,d),key=lambda el: el[1])[0][0]
+    min_v = vertices[:,np.argmin(d)]
+    alpha = 2./(t + 2)
+    xkp1 = xk + alpha * (min_v - xk)
+
+    return xkp1
+    
+
+def step_proj_gradient_decent(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray,eta: float) -> np.ndarray:
+    xkp1 = xk - eta * g(xk)
+    xkp1[0] = 0. if xkp1[0] < 0. else xkp1[0]
+    xkp1[1] = 0. if xkp1[1] < 0. else xkp1[1]
+
+    # projection might be wrong
+    if xkp1[0] + xkp1[1] > 1:
+        # xkp1 /= xkp1[0] + xkp1[1]
+        alpha = np.array([1.,0.])
+        v = np.array([-1.,1.])
+        x = xkp1 - alpha
+        t  = np.clip(np.dot(v,x)/np.dot(v,v),0.,1.)
+        xkp1 = np.array(alpha) + t * v
+
+    return xkp1
 
 
 def sample_in_reference_triangle_2d() -> np.ndarray:
@@ -142,11 +174,43 @@ def step_minimize_triangle(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="SDF editor",
+    )
+    parser.add_argument(
+        "--grid-dims",
+        type=int,
+        nargs=3,
+        metavar=("nx", "ny", "nz"),
+        help="Grid dimensions as three integers",
+        dest="dims",
+        default=(100, 100, 100),
+    )
+    parser.add_argument(
+        "--b",
+        type=float,
+        nargs=3,
+        metavar=("bx", "by", "bz"),
+        help="Axis-aligned grid's lower bound",
+        dest="b",
+        default=(-1.0, -1.0, -1.0)
+    )
+    parser.add_argument(
+        "--e",
+        type=float,
+        nargs=3,
+        metavar=("ex", "ey", "ez"),
+        help="Axis-aligned grid's upper bound",
+        dest="e",
+        default=(1.0, 1.0, 1.0)
+    )
+    args = parser.parse_args()
+
     # Domain
-    extent = 1
-    bmin = -extent * np.ones(3)
-    bmax = extent * np.ones(3)
-    dims = (100, 100, 100)
+    bmin = np.array(args.b)
+    bmax = np.array(args.e)
+    dims = args.dims
+    extent = np.max(bmax - bmin)
     # polyscope's volume grid expects x to vary fastest, then y, then z
     x, y, z = np.meshgrid(
         np.linspace(bmin[0], bmax[0], dims[0]),
@@ -178,6 +242,7 @@ if __name__ == "__main__":
     sigmaR = 1e-1
     sigmaB = 1e-1
     eta = 1e-3
+    gd_eta = 1e-3
     r = 1e-8
     trlo = 0.1
     trhi = 0.75
@@ -188,6 +253,16 @@ if __name__ == "__main__":
     xpath = []
     fpath = []
     Rpath = []
+
+    gd_xk = np.zeros(2)
+    gd_xpath = []
+    gd_fpath = []
+    gd_Rpath = []
+
+    fw_xk = np.zeros(3)
+    fw_xpath = []
+    fw_fpath = []
+    fw_Rpath = []
 
     # For reproducibility
     np.random.seed(0)
@@ -212,6 +287,7 @@ if __name__ == "__main__":
     cmap = "coolwarm"
     grid = ps.register_volume_grid("Domain", dims, bmin, bmax)
     grid.set_transparency(0.75)
+    
     sm = ps.register_surface_mesh("Triangle", V, F)
     sm.set_ignore_slice_plane(slice_plane, True)
 
@@ -221,10 +297,15 @@ if __name__ == "__main__":
         global eta, r, trlo, trhi, trbound, trgrow, trshrink
         global xpath, fpath, Rpath
         global randomize_sample
+        global gd_xk
+        global gd_eta
+        global gd_xpath, gd_fpath, gd_Rpath
+        global fw_xk
+        global fw_xpath, fw_fpath, fw_Rpath
 
         # Load
         if imgui.TreeNode("I/O"):
-            if imgui.Button("Load", [imgui.GetWindowWidth() / 2.1, 0]):
+            if imgui.Button("Load SDF", [imgui.GetWindowWidth() / 2.1, 0]):
                 root = tk.Tk()
                 root.withdraw()
                 file_path = filedialog.askopenfilename(
@@ -249,11 +330,60 @@ if __name__ == "__main__":
                         enabled=True,
                     )
                 root.destroy()
+            if imgui.Button("Load Parameters", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.askopenfilename(
+                    title="Select parameter",
+                    defaultextension=".json",
+                    filetypes=[("JSON", "*.json"), ("All files", "*.*")],
+                )
+                if file_path:
+                    with open(file_path) as f_bar:
+                        params = json.load(f_bar)
+                        sigmaR = params.get("sigmaR",sigmaR)
+                        sigmaB = params.get("sigmaB",sigmaB)
+                        eta = params.get("eta",eta)
+                        r = params.get("r",r)
+                        trlo = params.get("trlo",trlo)
+                        trhi = params.get("trhi",trhi)
+                        trbound = params.get("trbound",trbound)
+                        trgrow = params.get("trgrow",trgrow)
+                        trshrink = params.get("trshrink",trshrink)
+                        gd_eta = params.get("gd_eta",gd_eta)
+                    
+                root.destroy()
+            if imgui.Button("Save Parameters", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.asksaveasfilename(
+                    title="parameters",
+                    defaultextension=".json",
+                    filetypes=[("JSON", "*.json"), ("All files", "*.*")],
+                )
+                if file_path:
+                    with open(file_path,'w') as f_bar:
+                        params = {
+                            "sigmaR": sigmaR,
+                            "sigmaB": sigmaB,
+                            "eta": eta,
+                            "r": r,
+                            "trlo": trlo,
+                            "trhi": trhi,
+                            "trbound": trbound,
+                            "trgrow": trgrow,
+                            "trshrink": trshrink,
+                            "gd_eta": gd_eta,
+                        }
+                        json.dump(params,f_bar)
+                    
+                root.destroy()
             imgui.TreePop()
 
         # Optimize
         if imgui.TreeNode("Optimize"):
             # Parameters
+            imgui.TextUnformatted("New method")
             changed, sigmaR = imgui.SliderFloat("sigmaR", sigmaR, 1e-2, 1e2)
             changed, sigmaB = imgui.SliderFloat("sigmaB", sigmaB, 1e-6, 1e2)
             changed, eta = imgui.SliderFloat("eta", eta, 1e-6, 0.5)
@@ -263,6 +393,8 @@ if __name__ == "__main__":
             changed, trbound = imgui.SliderFloat("trbound", trbound, 0.1, 1.0)
             changed, trgrow = imgui.SliderFloat("trgrow", trgrow, 1.1, 10.0)
             changed, trshrink = imgui.SliderFloat("trshrink", trshrink, 1e-2, 0.99)
+            imgui.TextUnformatted("Gradient Descent")
+            changed, gd_eta = imgui.SliderFloat("gd_eta", gd_eta, 1e-2, 0.99)
 
             # Triangle
             VH = np.vstack([V.T, np.ones((1, V.shape[0]))])
@@ -278,19 +410,27 @@ if __name__ == "__main__":
             # Objective
             sdf = pbat.geometry.sdf.Composite(forest)
 
-            def f(x: np.ndarray) -> float:
+            def f_bar(x: np.ndarray) -> float:
                 return sdf.eval(DX @ x + A)
 
-            def g(x: np.ndarray) -> np.ndarray:
+            def g_bar(x: np.ndarray) -> np.ndarray:
                 h = 1e-4
                 gx = sdf.grad(DX @ x + A, h)
                 return DX.T @ gx
+            
+            def f(x: np.ndarray) -> float:
+                return sdf.eval(x)
+
+            def g(x: np.ndarray) -> np.ndarray:
+                h = 1e-4
+                gx = sdf.grad(x, h)
+                return gx
 
             # Controls
             if imgui.Button("Step"):
                 xkp1, fkp1, gkp1, Bkp1, Rkp1 = step_minimize_triangle(
-                    f,
-                    g,
+                    f_bar,
+                    g_bar,
                     xk,
                     fk,
                     gk,
@@ -304,26 +444,54 @@ if __name__ == "__main__":
                     trgrow,
                     trshrink,
                 )
+
+                gd_xkp1 = step_proj_gradient_decent(g_bar,gd_xk, gd_eta)
+                fw_xkp1 = step_frank_wolfe(g,fw_xk, ABC,len(fw_xpath))
+
                 if np.linalg.norm(xk - xkp1) > 0.0:
                     xpath = xpath + [DX @ xkp1 + A]
                     fpath = fpath + [fkp1]
                     Rpath = Rpath + [Rkp1]
                 xk, fk, gk, Bk, Rk = xkp1, fkp1, gkp1, Bkp1, Rkp1
+         
+                if np.linalg.norm(gd_xk - gd_xkp1) > 0.0:
+                    gd_xpath = gd_xpath + [DX @ gd_xkp1 + A]
+                    gd_fpath = gd_fpath + [f_bar(gd_xkp1)]
+                    # Rpath = Rpath + [Rkp1]
+                gd_xk = gd_xkp1
+
+                if np.linalg.norm(fw_xk - fw_xkp1) > 0.0:
+                    fw_xpath = fw_xpath + [fw_xkp1]
+                    fw_fpath = fw_fpath + [f(fw_xkp1)]
+                    # Rpath = Rpath + [Rkp1]
+                fw_xk = fw_xkp1
                 
             changed, randomize_sample = imgui.Checkbox("Randomize sample", randomize_sample)
-            if imgui.Button("Reset"):
+            if imgui.Button("Reset" if len(xpath) > 0 else "Start"):
                 if randomize_sample:
                     xk = sample_in_reference_triangle_2d()
                 else:
                     xk = np.array([0.25, 0.25])
-                fk = f(xk)
-                gk = g(xk)
+                gd_xk = xk.copy()
+                fw_xk = DX @ xk.copy() + A
+                fk = f_bar(xk)
+                gk = g_bar(xk)
 
                 Bk = np.eye(2) * sigmaB * max(elen)
                 Rk = sigmaR * max(elen)
                 xpath = [DX @ xk + A]
                 fpath = [fk]
                 Rpath = [Rk]
+
+                gd_fk = f_bar(gd_xk)
+                gd_xpath = [DX @ gd_xk + A]
+                gd_fpath = [gd_fk]
+                # Rpath = [Rk]
+
+                fw_fk = f(fw_xk)
+                fw_xpath = [fw_xk]
+                fw_fpath = [fw_fk]
+                # Rpath = [Rk]
 
             if len(xpath) > 0:
                 VE = np.array(xpath)
@@ -338,10 +506,42 @@ if __name__ == "__main__":
                 pc.set_ignore_slice_plane(slice_plane, True)
                 pc.set_radius(1.1 * cn.get_radius(), relative=False)
 
+            if len(gd_xpath) > 0:
+                VE = np.array(gd_xpath)
+                EE = np.vstack([np.arange(len(gd_xpath) - 1), np.arange(1, len(gd_xpath))]).T
+                cn = ps.register_curve_network(
+                    "Optimization Path GD",
+                    VE,
+                    EE,
+                )
+                pc = ps.register_point_cloud("Current Point", VE[-1:, :])
+                cn.set_ignore_slice_plane(slice_plane, True)
+                pc.set_ignore_slice_plane(slice_plane, True)
+                pc.set_radius(1.1 * cn.get_radius(), relative=False)
+
+            if len(fw_xpath) > 0:
+                VE = np.array(fw_xpath)
+                EE = np.vstack([np.arange(len(fw_xpath) - 1), np.arange(1, len(fw_xpath))]).T
+                cn = ps.register_curve_network(
+                    "Optimization Path FW",
+                    VE,
+                    EE,
+                )
+                pc = ps.register_point_cloud("Current Point", VE[-1:, :])
+                cn.set_ignore_slice_plane(slice_plane, True)
+                pc.set_ignore_slice_plane(slice_plane, True)
+                pc.set_radius(1.1 * cn.get_radius(), relative=False)
+
             if len(fpath) > 0:
                 if implot.BeginPlot("Signed distance"):
                     implot.PlotLine(
                         "sdf", np.array(fpath), 1 / len(fpath), 0.0  # xscale  # xstart
+                    )
+                    implot.PlotLine(
+                        "GD sdf", np.array(gd_fpath), 1 / len(gd_fpath), 0.0
+                    )
+                    implot.PlotLine(
+                        "FW sdf", np.array(fw_fpath), 1 / len(fw_fpath), 0.0
                     )
                     implot.EndPlot()
             if len(Rpath) > 0:
