@@ -141,7 +141,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--broyden-jacobian-estimate",
-        help="Broyden Jacobian estimate strategy. Options: 0 (Identity) | 1 (DiagonalCauchySchwarz). Default 0 (Identity)",
+        help="Broyden Jacobian estimate strategy. Options: 0 (Identity) | 1 (ScaledIdentity) | 2 (QuasiCauchyRelationDiagonalUpdating) | 3 (UsdDiagonal) | 4 (DiagonalCauchySchwarz). Default 0 (Identity)",
         type=int,
         dest="broyden_jacobian_estimate",
         default=0,
@@ -286,13 +286,13 @@ if __name__ == "__main__":
         data = data.with_chebyshev_acceleration(args.rho_chebyshev)
     elif args.window > 0:
         if args.broyden_acceleration:
-            jacobian_estimate = pbat.sim.vbd.BroydenJacobianEstimate.Identity
-            if args.broyden_jacobian_estimate == 1:
-                jacobian_estimate = (
-                    pbat.sim.vbd.BroydenJacobianEstimate.DiagonalCauchySchwarz
-                )
+            # jacobian_estimate = pbat.sim.vbd.BroydenJacobianEstimate.Identity
+            # if args.broyden_jacobian_estimate == 1:
+            #     jacobian_estimate = (
+            #         pbat.sim.vbd.BroydenJacobianEstimate.DiagonalCauchySchwarz
+            #     )
             data = data.with_broyden_acceleration(
-                args.window, jacobian_estimate, args.broyden_beta_F, args.broyden_beta_B
+                args.window, args.broyden_jacobian_estimate, args.broyden_beta_F, args.broyden_beta_B
             )
         elif args.anderson_acceleration:
             data = data.with_anderson_acceleration(args.window)

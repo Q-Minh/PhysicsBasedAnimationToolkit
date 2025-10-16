@@ -50,6 +50,7 @@ class BroydenIntegrator : public Integrator
     VectorX FkgradL2;   ///< `|# dofs| x 1` Fk * gradL2
     MatrixX FkRowNorm2; ///< `|# dofs| x m` Cauchy-Schwarz squared norms on rows of Fk
     MatrixX Gkm;        ///< `|# dofs| x m` diag(G_{k-m})
+    VectorX Sigma;      ///< `m x 1` scaled identity coefficients window
 };
 
 } // namespace pbat::sim::vbd

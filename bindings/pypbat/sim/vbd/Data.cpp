@@ -31,6 +31,11 @@ void BindData(nanobind::module_& m)
 
     nb::enum_<EBroydenJacobianEstimate>(m, "BroydenJacobianEstimate")
         .value("Identity", EBroydenJacobianEstimate::Identity)
+        .value("ScaledIdentity", EBroydenJacobianEstimate::ScaledIdentity)
+        .value(
+            "QuasiCauchyRelationDiagonalUpdating",
+            EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating)
+        .value("UsdDiagonal", EBroydenJacobianEstimate::UsdDiagonal)
         .value("DiagonalCauchySchwarz", EBroydenJacobianEstimate::DiagonalCauchySchwarz)
         .export_values();
 

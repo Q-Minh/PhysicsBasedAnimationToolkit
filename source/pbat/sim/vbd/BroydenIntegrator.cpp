@@ -22,7 +22,8 @@ BroydenIntegrator::BroydenIntegrator(Data dataIn)
       gradL2(data.x.size()),
       FkgradL2(data.x.size()),
       FkRowNorm2(data.x.size(), data.mWindowSize),
-      Gkm(data.x.size(), data.mWindowSize)
+      Gkm(data.x.size(), data.mWindowSize),
+      Sigma(data.mWindowSize)
 {
 }
 
@@ -30,15 +31,27 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 {
     auto m = Xk.cols();
     gammak.setZero();
-    if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+    switch (data.eBroydenJacobianEstimate)
     {
-        FkRowNorm2.setZero();
-        Gkm.setOnes();
+        case EBroydenJacobianEstimate::Identity: break;
+        case EBroydenJacobianEstimate::ScaledIdentity: Sigma.setOnes(); break;
+        case EBroydenJacobianEstimate::DiagonalCauchySchwarz: FkRowNorm2.setZero(); [[fallthrough]];
+        case EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating: [[fallthrough]];
+        case EBroydenJacobianEstimate::UsdDiagonal: Gkm.setOnes(); break;
+        default: break;
     }
+    bool const bHasUpdatingDiagonalJacobian =
+        data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz or
+        data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::UsdDiagonal or
+        data.eBroydenJacobianEstimate ==
+            EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating;
+    bool const bHasScaledIdentityJacobian =
+        data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::ScaledIdentity;
     Scalar Fknorm2{0};
     Scalar Bknorm2{0};
     Scalar betaF     = data.broydenBetaF;
     Scalar sqrtBetaB = std::sqrt(data.broydenBetaB);
+    Scalar sigma{1};
 
     // If x_{k+1} = x_k - VBD(f_k), then
     // VBD(f_k) = x_k - x_{k+1}
@@ -67,27 +80,85 @@ void BroydenIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
         Scalar FkgradL2norm2 = FkgradL2.squaredNorm();
         Scalar alpha         = FkgradL2norm2 > Scalar(0) ? gradL2norm2 / FkgradL2norm2 : Scalar(0);
         gammak.head(mk)      = alpha * gradL2;
-        // Estimate diag(G_{k-m})
-        if (data.eBroydenJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz)
+        // Broyden step
+        if (bHasUpdatingDiagonalJacobian)
         {
             // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
             data.x.reshaped() = xkm1 - Gkm.col(dkl).asDiagonal() * vbdfk;
             data.x.reshaped() -= Xk.leftCols(mk) * gammak.head(mk);
             data.x.reshaped() += Gkm.col(dkl).asDiagonal() * (vbdFk.leftCols(mk) * gammak.head(mk));
-            // Accumulate lumped diagonal inverse Jacobian
-            Fknorm2 += vbdFk.col(dkl).squaredNorm();
-            Bknorm2 += (Xk.col(dkl).array() - Gkm.col(dkl).array() * vbdFk.col(dkl).array())
-                           .square()
-                           .sum();
-            auto ddkl           = common::Modulo(dkl - 1, m);
-            FkRowNorm2.col(dkl) = FkRowNorm2.col(ddkl) + vbdFk.col(dkl).cwiseSquare();
-            Scalar sigma        = (betaF / sqrtBetaB) * (std::sqrt(Bknorm2) / Fknorm2);
-            Gkm.col(dkl) += sigma * FkRowNorm2.col(dkl).cwiseSqrt();
+        }
+        else if (bHasScaledIdentityJacobian)
+        {
+            sigma             = Sigma(dkl);
+            data.x.reshaped() = xkm1 - sigma * vbdfk - Xk.leftCols(mk) * gammak.head(mk) +
+                                sigma * (vbdFk.leftCols(mk) * gammak.head(mk));
         }
         else
         {
             data.x.reshaped() -=
                 Xk.leftCols(mk) * gammak.head(mk) - vbdFk.leftCols(mk) * gammak.head(mk);
+        }
+        // Update Jacobian (inverse) estimate
+        switch (data.eBroydenJacobianEstimate)
+        {
+            case EBroydenJacobianEstimate::ScaledIdentity: {
+                auto sk      = Xk.col(dkl);
+                auto yk      = vbdFk.col(dkl);
+                Scalar ykTyk = yk.squaredNorm();
+                Scalar skTyk = sk.dot(yk);
+                Sigma(dkl)   = ykTyk > Scalar(0) ? skTyk / ykTyk : Scalar(1) /* fall back to VBD */;
+            }
+            break;
+            case EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating: {
+                auto ddkl        = common::Modulo(dkl - 1, m);
+                auto Hkm1        = Gkm.col(ddkl);
+                auto sk          = Xk.col(dkl);
+                auto yk          = vbdFk.col(dkl);
+                Scalar skTyk     = sk.dot(yk);
+                auto Dkm1        = Hkm1.cwiseInverse();
+                Scalar skTDkm1sk = sk.dot(Dkm1.asDiagonal() * sk);
+                auto Ek          = sk.array().square();
+                Scalar trEk2     = (Ek * Ek).sum();
+                if (trEk2 > Scalar(0) and skTyk > skTDkm1sk)
+                {
+                    Gkm.col(dkl) =
+                        (Dkm1.array() + ((skTyk - skTDkm1sk) / trEk2) * Ek).cwiseInverse();
+                }
+            }
+            break;
+            case EBroydenJacobianEstimate::UsdDiagonal: {
+                // Compute Delta 1 and store it in Gkm.col(dkl)
+                auto yk        = vbdFk.col(dkl);
+                auto sk        = Xk.col(dkl);
+                Scalar skTyk   = sk.dot(yk);
+                Scalar ykTyk   = yk.squaredNorm();
+                Scalar ykTsk2  = skTyk * skTyk;
+                Scalar deltaki = skTyk / ykTyk;
+                Scalar ykTDkyk = deltaki * ykTyk;
+                Gkm.col(dkl).array() =
+                    deltaki + (Scalar(1) / skTyk + ykTDkyk / ykTsk2) * sk.array().square() -
+                    (Scalar(2) * deltaki / skTyk) * sk.array() * yk.array();
+                // Compute Hkm and store it in Gkm.col(dkl)
+                auto Yk        = yk.array().square();
+                Scalar trYk2   = (Yk * Yk).sum();
+                Scalar ykTD1yk = yk.dot(Gkm.col(dkl).asDiagonal() * yk);
+                Gkm.col(dkl).array() += Scalar(1) + ((skTyk - ykTD1yk - ykTyk) / trYk2) * Yk;
+            }
+            break;
+            case EBroydenJacobianEstimate::DiagonalCauchySchwarz: {
+                // Accumulate lumped diagonal inverse Jacobian
+                Fknorm2 += vbdFk.col(dkl).squaredNorm();
+                Bknorm2 += (Xk.col(dkl).array() - Gkm.col(dkl).array() * vbdFk.col(dkl).array())
+                               .square()
+                               .sum();
+                auto ddkl           = common::Modulo(dkl - 1, m);
+                FkRowNorm2.col(dkl) = FkRowNorm2.col(ddkl) + vbdFk.col(dkl).cwiseSquare();
+                sigma               = (betaF / sqrtBetaB) * (std::sqrt(Bknorm2) / Fknorm2);
+                Gkm.col(dkl) += sigma * FkRowNorm2.col(dkl).cwiseSqrt();
+            }
+            break;
+            default: break;
         }
     }
 }
