@@ -26,6 +26,7 @@ enum class EAccelerationStrategy {
     Broyden
 };
 // clang-format on
+
 /**
  * @brief Broyden Jacobian estimate strategies
  */
