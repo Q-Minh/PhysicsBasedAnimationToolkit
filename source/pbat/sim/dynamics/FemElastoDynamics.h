@@ -658,7 +658,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     femElastoDynamicsArchive.WriteData("HgU", HgU);
     femElastoDynamicsArchive.WriteMetaData("ndbc", ndbc);
     femElastoDynamicsArchive.WriteData("dbc", dbc);
-    femElastoDynamicsArchive.WriteData("dmask", dmask);
+    femElastoDynamicsArchive.WriteData("dmask", dmask.cast<int>());
 }
 
 template <
@@ -697,9 +697,10 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
               .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("GgU");
     HgU = femElastoDynamicsArchive
               .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("HgU");
-    ndbc  = femElastoDynamicsArchive.ReadMetaData<IndexType>("ndbc");
-    dbc   = femElastoDynamicsArchive.ReadData<Eigen::Vector<IndexType, Eigen::Dynamic>>("dbc");
-    dmask = femElastoDynamicsArchive.ReadData<Eigen::Vector<bool, Eigen::Dynamic>>("dmask");
+    ndbc = femElastoDynamicsArchive.ReadMetaData<IndexType>("ndbc");
+    dbc  = femElastoDynamicsArchive.ReadData<Eigen::Vector<IndexType, Eigen::Dynamic>>("dbc");
+    dmask =
+        femElastoDynamicsArchive.ReadData<Eigen::Vector<int, Eigen::Dynamic>>("dmask").cast<bool>();
 }
 
 } // namespace pbat::sim::dynamics
