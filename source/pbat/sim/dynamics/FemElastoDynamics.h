@@ -658,7 +658,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     femElastoDynamicsArchive.WriteData("HgU", HgU);
     femElastoDynamicsArchive.WriteMetaData("ndbc", ndbc);
     femElastoDynamicsArchive.WriteData("dbc", dbc);
-    femElastoDynamicsArchive.WriteData("dmask", dmask.cast<int>());
+    femElastoDynamicsArchive.WriteData("dmask", dmask.cast<int>().eval());
 }
 
 template <
