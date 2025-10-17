@@ -4,7 +4,9 @@
 #include <nanobind/eigen/sparse.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>
+#ifdef PBAT_USE_SUITESPARSE
 #include <pbat/math/linalg/CholmodSupport.h>
+#endif // PBAT_USE_SUITESPARSE
 #include <pbat/profiling/Profiling.h>
 #include <string>
 #include <type_traits>
@@ -105,6 +107,7 @@ GetIntDTypeOrDefault(nanobind::object const& dtype, EIntDType const defaultDType
     }
 };
 
+#ifdef PBAT_USE_SUITESPARSE
 /**
  * @brief Type-erased Cholmod wrapper
  */
@@ -296,6 +299,7 @@ struct Cholmod
     EIntDType mInt;     ///< Whether to use long indices (true) or int indices (false)
     void* mImpl;        ///< Pointer to the actual implementation
 };
+#endif // PBAT_USE_SUITESPARSE
 
 void BindCholmod([[maybe_unused]] nanobind::module_& m)
 {
