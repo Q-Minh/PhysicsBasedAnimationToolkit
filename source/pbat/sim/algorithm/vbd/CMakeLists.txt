@@ -2,13 +2,17 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "Algorithm.h"
+    "Anderson.h"
+    "Broyden.h"
+    "Chebyshev.h"
+    "Core.h"
+    "Vbd.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "Algorithm.cpp"
+    "Anderson.cpp"
+    "Broyden.cpp"
+    "Chebyshev.cpp"
+    "Core.cpp"
+    "Vbd.cpp"
 )
-
-add_subdirectory(newton)
-add_subdirectory(pd)
-add_subdirectory(vbd)
