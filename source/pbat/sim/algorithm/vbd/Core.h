@@ -12,23 +12,17 @@
 #ifndef PBAT_SIM_ALGORITHM_VBD_CORE_H
 #define PBAT_SIM_ALGORITHM_VBD_CORE_H
 
+#include "Enums.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
+#include "pbat/fem/Tetrahedron.h"
+#include "pbat/physics/HyperElasticity.h"
+#include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/sim/dynamics/FemElastoDynamics.h"
 
 #include <Eigen/Core>
 
 namespace pbat::sim::algorithm::vbd {
-
-/**
- * @brief Initialization strategies for the VBD time step minimization
- */
-enum class EInitializationStrategy {
-    Position,             ///< \f$ x_0 = x(t) \f$
-    Inertia,              ///< \f$ x_0 = x(t) + h v(t) \f$
-    KineticEnergyMinimum, ///< \f$ x_0 = x(t) + h v(t) + h^2 M^{-1} f_\text{ext} \f$
-    AdaptiveVbd,          ///< Adaptive VBD initialization strategy
-    AdaptivePbat          ///< Adaptive PBAT initialization strategy
-};
 
 /**
  * @brief VBD simulation configuration
@@ -91,6 +85,26 @@ struct Params
         EInitializationStrategy::Inertia}; ///< BCD optimization initialization strategy
     Scalar detHZero{1e-7};                 ///< Numerical zero for hessian pseudo-singularity check
 };
+
+/**
+ * @brief Finite element elasto dynamics problem for VBD
+ */
+using FemElastoDynamics = dynamics::
+    FemElastoDynamics<fem::Tetrahedron<1>, 3, physics::StableNeoHookeanEnergy<3>, Scalar, Index>;
+
+/**
+ * @brief Initialize VBD minimization solve
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ */
+PBAT_API void InitializeSolve(FemElastoDynamics& fem, Params const& params);
+
+/**
+ * @brief One VBD minimization step
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ */
+PBAT_API void Step(FemElastoDynamics& fem, Params const& params);
 
 } // namespace pbat::sim::algorithm::vbd
 
