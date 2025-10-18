@@ -192,7 +192,7 @@ void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
                 mini::SMatrix<Scalar, 3, 4> xe =
                     FromEigen(fem.x(Eigen::placeholders::all, ti).block<3, 4>(0, 0));
                 mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
-                physics::StableNeoHookeanEnergy<3> Psi{};
+                TElasticEnergy Psi{};
                 mini::SVector<Scalar, 9> gF;
                 mini::SMatrix<Scalar, 9, 9> HF;
                 Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);

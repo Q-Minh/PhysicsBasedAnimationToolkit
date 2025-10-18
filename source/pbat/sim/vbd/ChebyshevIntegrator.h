@@ -15,8 +15,8 @@ class ChebyshevIntegrator : public Integrator
     virtual void Solve(Scalar sdt, Scalar sdt2, Index iterations) override;
 
   private:
-    MatrixX xkm1; ///< `3x|# verts|` \f$ x^{k-1} \f$ used in Chebyshev semi-iterative method
-    MatrixX xkm2; ///< `3x|# verts|` \f$ x^{k-2} \f$ used in Chebyshev semi-iterative method
+    MatrixX xkm1; ///< `3 x |# verts|` \f$ x^{k-1} \f$ used in Chebyshev semi-iterative method
+    MatrixX xkm2; ///< `3 x |# verts|` \f$ x^{k-2} \f$ used in Chebyshev semi-iterative method
 };
 
 } // namespace pbat::sim::vbd
