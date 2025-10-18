@@ -111,13 +111,12 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
 /**
  * @brief One VBD minimization step
  * @tparam TElasticEnergy Hyper-elastic energy model
- * @param k Iteration
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step(Index k, FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
@@ -154,7 +153,7 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step([[maybe_unused]] Index k, FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Step");
     auto h  = fem.bdf.TimeStep();
