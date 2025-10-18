@@ -18,7 +18,6 @@
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/physics/HyperElasticity.h"
-#include "pbat/physics/StableNeoHookeanEnergy.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/algorithm/vbd/Kernels.h"
 #include "pbat/sim/dynamics/FemElastoDynamics.h"
@@ -92,8 +91,10 @@ struct Params
 
 /**
  * @brief Finite element elasto dynamics problem for VBD
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @pre `TElasticEnergy::kDims == 3`
  */
-template <physics::CHyperElasticEnergy TElasticEnergy = physics::StableNeoHookeanEnergy<3>>
+template <physics::CHyperElasticEnergy TElasticEnergy>
 using FemElastoDynamics =
     dynamics::FemElastoDynamics<fem::Tetrahedron<1>, 3, TElasticEnergy, Scalar, Index>;
 
@@ -102,8 +103,9 @@ using FemElastoDynamics =
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
+ * @pre `TElasticEnergy::kDims == 3`
  */
-template <physics::CHyperElasticEnergy TElasticEnergy = physics::StableNeoHookeanEnergy<3>>
+template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 /**
@@ -111,8 +113,9 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
+ * @pre `TElasticEnergy::kDims == 3`
  */
-template <physics::CHyperElasticEnergy TElasticEnergy = physics::StableNeoHookeanEnergy<3>>
+template <physics::CHyperElasticEnergy TElasticEnergy>
 void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
