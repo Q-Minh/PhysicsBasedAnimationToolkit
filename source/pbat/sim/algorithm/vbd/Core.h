@@ -29,6 +29,7 @@ namespace pbat::sim::algorithm::vbd {
 
 /**
  * @brief VBD simulation configuration
+ * @details See @cite anka2024vbd
  */
 struct Params
 {

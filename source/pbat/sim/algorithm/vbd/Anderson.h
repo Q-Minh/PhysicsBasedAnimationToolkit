@@ -24,6 +24,8 @@ namespace pbat::sim::algorithm::vbd {
 
 /**
  * @brief Anderson accelerated VBD solver parameters
+ * 
+ * @details See @cite anderson_iterative_1965, @cite fang_two_2009
  */
 struct AndersonParams
 {
