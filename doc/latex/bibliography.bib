@@ -301,3 +301,73 @@ year = {2005}
 	note = {\_eprint: https://onlinelibrary.wiley.com/doi/pdf/10.1155/2013/523476},
 	pages = {523476}
 }
+
+
+@article{fang_two_2009,
+	title = {Two classes of multisecant methods for nonlinear acceleration},
+	volume = {16},
+	copyright = {Copyright © 2008 John Wiley \& Sons, Ltd.},
+	issn = {1099-1506},
+	url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/nla.617},
+	doi = {10.1002/nla.617},
+	abstract = {Many applications in science and engineering lead to models that require solving large-scale fixed point problems, or equivalently, systems of nonlinear equations. Several successful techniques for handling such problems are based on quasi-Newton methods that implicitly update the approximate Jacobian or inverse Jacobian to satisfy a certain secant condition. We present two classes of multisecant methods which allow to take into account a variable number of secant equations at each iteration. The first is the Broyden-like class, of which Broyden's family is a subclass, and Anderson mixing is a particular member. The second class is that of the nonlinear Eirola–Nevanlinna-type methods. This work was motivated by a problem in electronic structure calculations, whereby a fixed point iteration, known as the self-consistent field (SCF) iteration, is accelerated by various strategies termed ‘mixing’. Copyright © 2008 John Wiley \& Sons, Ltd.},
+	language = {en},
+	number = {3},
+	urldate = {2025-10-18},
+	journal = {Numerical Linear Algebra with Applications},
+	author = {Fang, Haw-ren and Saad, Yousef},
+	year = {2009},
+	note = {\_eprint: https://onlinelibrary.wiley.com/doi/pdf/10.1002/nla.617},
+	keywords = {Anderson mixing, Broyden's methods, fixed point problems, quasi-Newton methods, self-consistent field (SCF) iteration},
+	pages = {197--221}
+}
+
+
+@article{peng_anderson_2018,
+	title = {Anderson acceleration for geometry optimization and physics simulation},
+	volume = {37},
+	issn = {0730-0301},
+	url = {https://dl.acm.org/doi/10.1145/3197517.3201290},
+	doi = {10.1145/3197517.3201290},
+	abstract = {Many computer graphics problems require computing geometric shapes subject to certain constraints. This often results in non-linear and non-convex optimization problems with globally coupled variables, which pose great challenge for interactive applications. Local-global solvers developed in recent years can quickly compute an approximate solution to such problems, making them an attractive choice for applications that prioritize efficiency over accuracy. However, these solvers suffer from lower convergence rate, and may take a long time to compute an accurate result. In this paper, we propose a simple and effective technique to accelerate the convergence of such solvers. By treating each local-global step as a fixed-point iteration, we apply Anderson acceleration, a well-established technique for fixed-point solvers, to speed up the convergence of a local-global solver. To address the stability issue of classical Anderson acceleration, we propose a simple strategy to guarantee the decrease of target energy and ensure its global convergence. In addition, we analyze the connection between Anderson acceleration and quasi-Newton methods, and show that the canonical choice of its mixing parameter is suitable for accelerating local-global solvers. Moreover, our technique is effective beyond classical local-global solvers, and can be applied to iterative methods with a common structure. We evaluate the performance of our technique on a variety of geometry optimization and physics simulation problems. Our approach significantly reduces the number of iterations required to compute an accurate result, with only a slight increase of computational cost per iteration. Its simplicity and effectiveness makes it a promising tool for accelerating existing algorithms as well as designing efficient new algorithms.},
+	number = {4},
+	urldate = {2025-10-18},
+	journal = {ACM Trans. Graph.},
+	author = {Peng, Yue and Deng, Bailin and Zhang, Juyong and Geng, Fanyu and Qin, Wenjie and Liu, Ligang},
+	month = jul,
+	year = {2018},
+	pages = {42:1--42:14}
+}
+
+
+@article{anderson_iterative_1965,
+	title = {Iterative {Procedures} for {Nonlinear} {Integral} {Equations}},
+	volume = {12},
+	issn = {0004-5411},
+	url = {https://dl.acm.org/doi/10.1145/321296.321305},
+	doi = {10.1145/321296.321305},
+	number = {4},
+	urldate = {2025-10-20},
+	journal = {J. ACM},
+	author = {Anderson, Donald G.},
+	month = oct,
+	year = {1965},
+	pages = {547--560}
+}
+
+
+@article{wang_chebyshev_2015,
+	title = {A chebyshev semi-iterative approach for accelerating projective and position-based dynamics},
+	volume = {34},
+	issn = {0730-0301},
+	url = {https://dl.acm.org/doi/10.1145/2816795.2818063},
+	doi = {10.1145/2816795.2818063},
+	abstract = {In this paper, we study the use of the Chebyshev semi-iterative approach in projective and position-based dynamics. Although projective dynamics is fundamentally nonlinear, its convergence behavior is similar to that of an iterative method solving a linear system. Because of that, we can estimate the "spectral radius" and use it in the Chebyshev approach to accelerate the convergence by at least one order of magnitude, when the global step is handled by the direct solver, the Jacobi solver, or even the Gauss-Seidel solver. Our experiment shows that the combination of the Chebyshev approach and the direct solver runs fastest on CPU, while the combination of the Chebyshev approach and the Jacobi solver outperforms any other combination on GPU, as it is highly compatible with parallel computing. Our experiment further shows position-based dynamics can be accelerated by the Chebyshev approach as well, although the effect is less obvious for tetrahedral meshes. The whole approach is simple, fast, effective, GPU-friendly, and has a small memory cost.},
+	number = {6},
+	urldate = {2025-10-20},
+	journal = {ACM Trans. Graph.},
+	author = {Wang, Huamin},
+	month = nov,
+	year = {2015},
+	pages = {246:1--246:9},
+}
