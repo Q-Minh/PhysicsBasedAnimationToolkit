@@ -48,6 +48,7 @@ TEST_CASE("[sim][algorithm][vbd] Broyden")
     vbdParams.WithInitializationStrategy(eInitializationStrategy)
         .WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
+        .WithMaximumIterations(10)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();
     // Broyden params
@@ -55,13 +56,10 @@ TEST_CASE("[sim][algorithm][vbd] Broyden")
     broydenParams.m          = 5;
     broydenParams.epsL2Solve = Scalar(1e-10);
     // Act
-    auto constexpr iterations = 10;
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
-    sim::algorithm::vbd::InitializeSolve(dynamics, vbdParams, broydenParams);
-    for (; broydenParams.k < iterations;)
-        sim::algorithm::vbd::SolveStep(dynamics, vbdParams, broydenParams);
+    sim::algorithm::vbd::Solve(dynamics, vbdParams, broydenParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
     auto xt    = dynamics.bdf.CurrentState(0).reshaped(dynamics.x.rows(), dynamics.x.cols());

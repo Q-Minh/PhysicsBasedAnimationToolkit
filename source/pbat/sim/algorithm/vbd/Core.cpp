@@ -31,6 +31,12 @@ Params& Params::WithInitializationStrategy(EInitializationStrategy _strategy)
     return *this;
 }
 
+Params& Params::WithMaximumIterations(Index nIters)
+{
+    nMaxIters = nIters;
+    return *this;
+}
+
 Params& Params::WithHessianDeterminantZeroUnder(Scalar zero)
 {
     detHZero = zero;
@@ -126,16 +132,14 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     vbdParams.WithInitializationStrategy(eInitializationStrategy)
         .WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
+        .WithMaximumIterations(10)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();
     // Act
-    auto constexpr iterations = 10;
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
-    sim::algorithm::vbd::InitializeSolve(dynamics, vbdParams);
-    for (auto k = 0; k < iterations; ++k)
-        sim::algorithm::vbd::SolveStep(dynamics, vbdParams);
+    sim::algorithm::vbd::Solve(dynamics, vbdParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
     auto xt    = dynamics.bdf.CurrentState(0).reshaped(dynamics.x.rows(), dynamics.x.cols());

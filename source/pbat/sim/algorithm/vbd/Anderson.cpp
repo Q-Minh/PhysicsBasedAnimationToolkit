@@ -48,6 +48,7 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     vbdParams.WithInitializationStrategy(eInitializationStrategy)
         .WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
+        .WithMaximumIterations(10)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();
     // Anderson params
@@ -56,13 +57,10 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     andersonParams.beta             = Scalar(1);
     andersonParams.codNumericalZero = Scalar(1e-10);
     // Act
-    auto constexpr iterations = 10;
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
-    sim::algorithm::vbd::InitializeSolve(dynamics, vbdParams, andersonParams);
-    for (; andersonParams.k < iterations;)
-        sim::algorithm::vbd::SolveStep(dynamics, vbdParams, andersonParams);
+    sim::algorithm::vbd::Solve(dynamics, vbdParams, andersonParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
     auto xt    = dynamics.bdf.CurrentState(0).reshaped(dynamics.x.rows(), dynamics.x.cols());

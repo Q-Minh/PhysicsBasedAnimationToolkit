@@ -143,6 +143,34 @@ void SolveStep(
     Params const& params,
     BroydenParams& broyden);
 
+/**
+ * @brief Solve FEM elasto dynamics time integration minimization problem using Broyden-accelerated VBD
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ * @param broyden Broyden parameters
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    BroydenParams& broyden);
+
+/**
+ * @brief Integrate FEM elasto dynamics one step using Broyden-accelerated VBD as the non-linear solver
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ * @param broyden Broyden parameters
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Integrate(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    BroydenParams& broyden);
+
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     FemElastoDynamics<TElasticEnergy>& fem,
@@ -338,6 +366,33 @@ void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Bro
         default: break;
     }
     ++broyden.k;
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    BroydenParams& broyden)
+{
+    InitializeSolve<TElasticEnergy>(fem, params, broyden);
+    for (; broyden.k < params.nMaxIters;)
+        SolveStep<TElasticEnergy>(fem, params, broyden);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Integrate(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    BroydenParams& broyden)
+{
+    fem.SetupTimeIntegrationOptimization();
+    Solve<TElasticEnergy>(fem, params, broyden);
+    auto x  = fem.x.reshaped();
+    auto xt = fem.bdf.CurrentState(0).reshaped();
+    auto dt = fem.bdf.TimeStep();
+    auto v  = (x - xt) / dt;
+    fem.v   = v.reshaped(fem.v.rows(), fem.v.cols());
+    fem.Step();
 }
 
 } // namespace pbat::sim::algorithm::vbd

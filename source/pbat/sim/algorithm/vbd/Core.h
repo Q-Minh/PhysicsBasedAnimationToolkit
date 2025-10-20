@@ -58,6 +58,12 @@ struct Params
      */
     PBAT_API Params& WithInitializationStrategy(EInitializationStrategy _strategy);
     /**
+     * @brief Maximum number of VBD iterations
+     * @param nIters Maximum number of iterations
+     * @return Reference to this
+     */
+    PBAT_API Params& WithMaximumIterations(Index nIters);
+    /**
      * @brief Numerical zero for hessian pseudo-singularity check
      * @param zero Numerical zero
      * @return Reference to this
@@ -88,6 +94,7 @@ struct Params
     EInitializationStrategy strategy{
         EInitializationStrategy::Inertia}; ///< BCD optimization initialization strategy
     Scalar detHZero{1e-7};                 ///< Numerical zero for hessian pseudo-singularity check
+    Index nMaxIters{25};                   ///< Maximum number of VBD iterations
 };
 
 /**
@@ -118,6 +125,26 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+
+/**
+ * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+
+/**
+ * @brief Integrate FEM elasto dynamics one step using VBD as the non-linear solver
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
@@ -212,6 +239,27 @@ void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
             fem.x.col(i) = ToEigen(xi);
         });
     }
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+{
+    InitializeSolve<TElasticEnergy>(fem, params);
+    for (auto k = 0; k < params.nMaxIters; ++k)
+        SolveStep<TElasticEnergy>(fem, params);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+{
+    fem.SetupTimeIntegrationOptimization();
+    Solve<TElasticEnergy>(fem, params);
+    auto x  = fem.x.reshaped();
+    auto xt = fem.bdf.CurrentState(0).reshaped();
+    auto dt = fem.bdf.TimeStep();
+    auto v  = (x - xt) / dt;
+    fem.v   = v.reshaped(fem.v.rows(), fem.v.cols());
+    fem.Step();
 }
 
 } // namespace pbat::sim::algorithm::vbd

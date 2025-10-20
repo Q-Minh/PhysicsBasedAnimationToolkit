@@ -48,19 +48,17 @@ TEST_CASE("[sim][algorithm][vbd] Chebyshev")
     vbdParams.WithInitializationStrategy(eInitializationStrategy)
         .WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
+        .WithMaximumIterations(20)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();
     // Chebyshev params
     sim::algorithm::vbd::ChebyshevParams chebyshevParams{};
     chebyshevParams.rho = Scalar(0.9);
     // Act
-    auto constexpr iterations = 20;
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
-    sim::algorithm::vbd::InitializeSolve(dynamics, vbdParams, chebyshevParams);
-    for (; chebyshevParams.k < iterations;)
-        sim::algorithm::vbd::SolveStep(dynamics, vbdParams, chebyshevParams);
+    sim::algorithm::vbd::Solve(dynamics, vbdParams, chebyshevParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
     auto xt    = dynamics.bdf.CurrentState(0).reshaped(dynamics.x.rows(), dynamics.x.cols());
