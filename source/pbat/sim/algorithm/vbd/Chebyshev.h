@@ -33,6 +33,15 @@ struct ChebyshevParams
         xkm1; ///< `3 x |# verts|` \f$ x^{k-1} \f$ used in Chebyshev semi-iterative method
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
         xkm2; ///< `3 x |# verts|` \f$ x^{k-2} \f$ used in Chebyshev semi-iterative method
+    /**
+     * @brief Allocate memory for Chebyshev parameters if necessary
+     * @param n Number of vertices
+     */
+    void AllocateIfNeeded(Index n)
+    {
+        xkm1.resize(3, n);
+        xkm2.resize(3, n);
+    }
 };
 
 /**
@@ -67,9 +76,12 @@ void InitializeSolve(
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.InitializeSolve");
+    cheb.AllocateIfNeeded(fem.x.cols());
     InitializeSolve<TElasticEnergy>(fem, params);
     cheb.k    = 0;
     cheb.rho2 = cheb.rho * cheb.rho;
+    cheb.xkm1 = fem.x;
+    cheb.xkm2 = fem.x;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

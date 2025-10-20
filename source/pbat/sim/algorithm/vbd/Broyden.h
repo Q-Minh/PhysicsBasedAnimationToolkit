@@ -147,8 +147,8 @@ void InitializeSolve(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.InitializeSolve");
-    InitializeSolve<TElasticEnergy>(fem, params);
     broyden.AllocateIfNeeded(fem.x.size());
+    InitializeSolve<TElasticEnergy>(fem, params);
 
     switch (broyden.eJacobianEstimate)
     {

@@ -239,6 +239,10 @@ struct FemElastoDynamics
      */
     void SetupTimeIntegrationOptimization();
     /**
+     * @brief Perform a single time integration step using `x`, `v`
+     */
+    void Step();
+    /**
      * @brief Compute the quadrature point elastic energies of the current configuration into Ug,
      * Gg, Hg
      * @param eElasticComputationFlags Flags for computing elastic potential, gradient, and/or
@@ -248,6 +252,18 @@ struct FemElastoDynamics
     void ComputeElasticEnergy(
         int eElasticComputationFlags,
         fem::EHyperElasticSpdCorrection eSpdCorrectionFlags);
+    /**
+     * @brief Compute the time integration optimization's objective function value
+     * @return Objective function value
+     * @post `Ug` is populated with quadrature point elastic energies
+     */
+    ScalarType Objective();
+    /**
+     * @brief Compute the time integration optimization's gradient
+     * @return `kDims*|# nodes| x 1` objective function gradient
+     * @post `GgU` is populated with element elastic gradient vectors at quadrature points
+     */
+    Eigen::Vector<ScalarType, Eigen::Dynamic> Gradient();
     /**
      * @brief k-dimensional mass matrix
      * @return `kDims * |#nodes| x 1` vector of the `kDims`-dimensional lumped mass matrix diagonal
@@ -598,12 +614,24 @@ template <
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::
     SetupTimeIntegrationOptimization()
 {
+    bdf.ConstructEquations();
     auto xtildeBdf = bdf.Inertia(0);
     auto vtildeBdf = bdf.Inertia(1);
     auto betaTilde = bdf.BetaTilde();
     xtilde.resize(kDims, xtildeBdf.size() / kDims);
     xtilde.reshaped() =
         -(xtildeBdf + betaTilde * vtildeBdf) + (betaTilde * betaTilde) * (aext().reshaped());
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Step()
+{
+    bdf.Step(x.reshaped(), v.reshaped());
 }
 
 template <
@@ -630,6 +658,44 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Compute
         HgU,
         eElasticComputationFlags,
         eSpdCorrectionFlags);
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+inline TScalar FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Objective()
+{
+    ComputeElasticEnergy(
+        fem::EElementElasticityComputationFlags::Potential,
+        fem::EHyperElasticSpdCorrection::None);
+    ScalarType U = fem::HyperElasticPotential(UgU);
+    Scalar dt    = bdf.TimeStep();
+    auto dx      = (x - xtilde).reshaped();
+    Scalar K     = Scalar(0.5) * dx.dot(M().asDiagonal() * dx);
+    return K + (dt * dt) * U;
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+inline Eigen::Vector<TScalar, Eigen::Dynamic>
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Gradient()
+{
+    ComputeElasticEnergy(
+        fem::EElementElasticityComputationFlags::Gradient,
+        fem::EHyperElasticSpdCorrection::None);
+    Eigen::Vector<ScalarType, Eigen::Dynamic> gU(x.size());
+    fem::ToHyperElasticGradient(mesh, egU, GgU, gU);
+    Eigen::Vector<ScalarType, Eigen::Dynamic> gK = M().asDiagonal() * (x - xtilde).reshaped();
+    ScalarType dt                                = bdf.TimeStep();
+    Eigen::Vector<ScalarType, Eigen::Dynamic> g  = gK + (dt * dt) * gU;
+    return g;
 }
 
 template <
