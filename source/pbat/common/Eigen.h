@@ -11,8 +11,8 @@
 #define PBAT_COMMON_EIGEN_H
 
 #include "Concepts.h"
+#include "pbat/Aliases.h"
 
-#include <pbat/Aliases.h>
 #include <ranges>
 
 namespace pbat {
