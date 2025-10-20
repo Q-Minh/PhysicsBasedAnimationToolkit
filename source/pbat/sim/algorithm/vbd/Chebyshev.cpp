@@ -59,7 +59,7 @@ TEST_CASE("[sim][algorithm][vbd] Chebyshev")
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
     sim::algorithm::vbd::InitializeSolve(dynamics, vbdParams, chebyshevParams);
-    for (; chebyshevParams.k < iterations; ++chebyshevParams.k)
+    for (; chebyshevParams.k < iterations;)
         sim::algorithm::vbd::Step(dynamics, vbdParams, chebyshevParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};

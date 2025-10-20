@@ -178,7 +178,7 @@ void InitializeSolve(
 
     broyden.xkm1 = fem.x.reshaped();
     Step(fem, params);
-    broyden.fkm1 = fem.x.reshaped() - broyden.xkm1;
+    broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
     broyden.k    = 1;
 }
 
@@ -267,7 +267,7 @@ void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenP
     else
     {
         fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
-        fem.x.reshaped() -= broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
+        fem.x.reshaped() += broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
     }
     // Update Jacobian (inverse) estimate
     switch (broyden.eJacobianEstimate)
