@@ -117,7 +117,7 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
@@ -154,9 +154,9 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Step");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.SolveStep");
     auto h  = fem.bdf.TimeStep();
     auto h2 = h * h;
     // NOTE:

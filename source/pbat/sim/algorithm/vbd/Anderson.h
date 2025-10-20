@@ -24,7 +24,7 @@ namespace pbat::sim::algorithm::vbd {
 
 /**
  * @brief Anderson accelerated VBD solver parameters
- * 
+ *
  * @details See @cite anderson_iterative_1965, @cite fang_two_2009
  */
 struct AndersonParams
@@ -84,7 +84,10 @@ void InitializeSolve(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, AndersonParams& anderson);
+void SolveStep(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    AndersonParams& anderson);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
@@ -96,20 +99,23 @@ void InitializeSolve(
     InitializeSolve<TElasticEnergy>(fem, params);
     anderson.AllocateIfNeeded(fem.x.size());
     anderson.xkm1 = fem.x.reshaped();
-    Step(fem, params);
+    SolveStep(fem, params);
     anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     anderson.cod.setThreshold(anderson.codNumericalZero);
     anderson.k = 1;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, AndersonParams& anderson)
+void SolveStep(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    AndersonParams& anderson)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Step");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.SolveStep");
     auto dkl             = common::Modulo(anderson.k - 1, anderson.m);
     anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
     anderson.xkm1        = fem.x.reshaped();
-    Step(fem, params);
+    SolveStep(fem, params);
     anderson.fk          = fem.x.reshaped() - anderson.xkm1;
     anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
     anderson.fkm1        = anderson.fk;

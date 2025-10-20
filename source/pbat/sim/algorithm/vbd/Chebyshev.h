@@ -67,7 +67,7 @@ void InitializeSolve(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb);
+void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
@@ -85,10 +85,10 @@ void InitializeSolve(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb)
+void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Step");
-    Step(fem, params);
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.SolveStep");
+    SolveStep(fem, params);
     // Chebyshev Update
     cheb.omega = kernels::ChebyshevOmega(cheb.k, cheb.rho2, cheb.omega);
     auto& xk   = fem.x;

@@ -135,7 +135,7 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     VectorX g0 = dynamics.Gradient();
     sim::algorithm::vbd::InitializeSolve(dynamics, vbdParams);
     for (auto k = 0; k < iterations; ++k)
-        sim::algorithm::vbd::Step(dynamics, vbdParams);
+        sim::algorithm::vbd::SolveStep(dynamics, vbdParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
     auto xt    = dynamics.bdf.CurrentState(0).reshaped(dynamics.x.rows(), dynamics.x.cols());

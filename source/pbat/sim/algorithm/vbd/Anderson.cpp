@@ -62,7 +62,7 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     VectorX g0 = dynamics.Gradient();
     sim::algorithm::vbd::InitializeSolve(dynamics, vbdParams, andersonParams);
     for (; andersonParams.k < iterations;)
-        sim::algorithm::vbd::Step(dynamics, vbdParams, andersonParams);
+        sim::algorithm::vbd::SolveStep(dynamics, vbdParams, andersonParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
     auto xt    = dynamics.bdf.CurrentState(0).reshaped(dynamics.x.rows(), dynamics.x.cols());
