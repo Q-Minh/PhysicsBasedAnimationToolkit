@@ -36,9 +36,12 @@ struct Params
   public:
     /**
      * @brief Vertex-element adjacency graph
-     * @param _GVGp Vertex graph pointer
-     * @param _GVGe Vertex graph element indices
-     * @param _GVGilocal Vertex graph local vertex indices
+     * @param _GVGp `|# verts+1|` prefixes into GVGe
+     * @param _GVGe `|# of vertex-elems adjacencies|` element indices s.t. `GVGe[k] for GVGp[i] <= k
+     * < GVGp[i+1]` gives the element `e` adjacent to vertex `i`
+     * @param _GVGilocal `|# of vertex-elems adjacencies|` local vertex indices s.t. `GVGilocal[k]
+     * for GVGp[i] <= k < GVGp[i+1]` gives the local vertex index of vertex `i` in element
+     * `e=GVGe[k]`
      * @return Reference to this
      */
     PBAT_API Params& WithVertexElementAdjacencyGraph(
@@ -78,7 +81,7 @@ struct Params
 
   public:
     // Vertex-element adjacency graph
-    IndexVectorX GVGp;      ///< `|# verts+1|` prefixes into GVGg
+    IndexVectorX GVGp;      ///< `|# verts+1|` prefixes into GVGe
     IndexVectorX GVGe;      ///< `|# of vertex-elems adjacencies|` element indices s.t.
                             ///< `GVGe[k] for GVGp[i] <= k < GVGp[i+1]` gives the element `e`
                             ///< adjacent to vertex `i`
@@ -124,7 +127,7 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 /**
  * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
@@ -181,9 +184,9 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.SolveStep");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
     auto h  = fem.bdf.TimeStep();
     auto h2 = h * h;
     // NOTE:
@@ -246,7 +249,7 @@ void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     InitializeSolve<TElasticEnergy>(fem, params);
     for (auto k = 0; k < params.nMaxIters; ++k)
-        SolveStep<TElasticEnergy>(fem, params);
+        Iterate<TElasticEnergy>(fem, params);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

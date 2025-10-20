@@ -67,7 +67,7 @@ void InitializeSolve(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb);
+void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb);
 
 /**
  * @brief Solve FEM elasto dynamics time integration minimization problem using Chebyshev-accelerated VBD
@@ -113,10 +113,10 @@ void InitializeSolve(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb)
+void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.SolveStep");
-    SolveStep(fem, params);
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Iterate");
+    Iterate(fem, params);
     // Chebyshev Update
     cheb.omega = kernels::ChebyshevOmega(cheb.k, cheb.rho2, cheb.omega);
     auto& xk   = fem.x;
@@ -135,7 +135,7 @@ void Solve(
 {
     InitializeSolve<TElasticEnergy>(fem, params, cheb);
     for (; cheb.k < params.nMaxIters;)
-        SolveStep<TElasticEnergy>(fem, params, cheb);
+        Iterate<TElasticEnergy>(fem, params, cheb);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

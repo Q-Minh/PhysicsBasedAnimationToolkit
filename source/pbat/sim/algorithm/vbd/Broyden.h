@@ -138,7 +138,7 @@ void InitializeSolve(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void SolveStep(
+void Iterate(
     FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
     BroydenParams& broyden);
@@ -208,20 +208,20 @@ void InitializeSolve(
     }
 
     broyden.xkm1 = fem.x.reshaped();
-    SolveStep(fem, params);
+    Iterate(fem, params);
     broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
     broyden.k    = 1;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void SolveStep(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden)
+void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.SolveStep");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Iterate");
     auto dkl = common::Modulo(broyden.k - 1, broyden.m);
     // Update (preconditioned) history
     broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
     broyden.xkm1        = fem.x.reshaped();
-    SolveStep(fem, params);
+    Iterate(fem, params);
     broyden.fk          = broyden.xkm1 - fem.x.reshaped();
     broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
     broyden.fkm1        = broyden.fk;
@@ -376,7 +376,7 @@ void Solve(
 {
     InitializeSolve<TElasticEnergy>(fem, params, broyden);
     for (; broyden.k < params.nMaxIters;)
-        SolveStep<TElasticEnergy>(fem, params, broyden);
+        Iterate<TElasticEnergy>(fem, params, broyden);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

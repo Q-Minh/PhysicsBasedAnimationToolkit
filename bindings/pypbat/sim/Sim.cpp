@@ -1,5 +1,6 @@
 #include "Sim.h"
 
+#include "algorithm/Algorithm.h"
 #include "contact/Contact.h"
 #include "dynamics/Dynamics.h"
 #include "integration/Integration.h"
@@ -24,6 +25,8 @@ void Bind(nanobind::module_& m)
     xpbd::Bind(mxpbd);
     auto mvbd = m.def_submodule("vbd");
     vbd::Bind(mvbd);
+    auto malgorithm = m.def_submodule("algorithm");
+    algorithm::Bind(malgorithm);
 }
 
 } // namespace sim

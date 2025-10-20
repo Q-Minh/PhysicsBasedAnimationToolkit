@@ -11,3 +11,4 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 
 add_subdirectory(newton)
 add_subdirectory(pd)
+add_subdirectory(vbd)
