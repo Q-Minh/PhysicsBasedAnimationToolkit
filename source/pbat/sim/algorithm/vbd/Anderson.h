@@ -113,6 +113,9 @@ void Step(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Anderson
     anderson.fkm1        = anderson.fk;
     auto mk              = std::min(anderson.m, anderson.k);
     auto Fk              = anderson.Fk.leftCols(mk);
+    // NOTE: I would like to use a COD or QR updating scheme here instead of recomputing from
+    // scratch every time (Eigen does not seem to support it), but the updating scheme needs to
+    // account for pivoting as well.
     anderson.cod.compute(Fk);
     if (anderson.cod.info() != Eigen::ComputationInfo::Success)
     {
