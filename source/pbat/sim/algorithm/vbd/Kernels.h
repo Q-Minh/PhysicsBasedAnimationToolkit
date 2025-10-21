@@ -106,7 +106,7 @@ PBAT_HOST [[maybe_unused]] ScalarType ChebyshevOmega(IndexType k, ScalarType rho
 {
     return (k == IndexType(0)) ? ScalarType{1} :
            (k == IndexType(1)) ? ScalarType{2} / (ScalarType{2} - rho2) :
-                                 ScalarType{4} / ScalarType{4} - rho2 * omega;
+                                 ScalarType{4} / (ScalarType{4} - rho2 * omega);
 }
 
 template <

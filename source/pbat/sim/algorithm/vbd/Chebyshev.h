@@ -22,7 +22,7 @@ namespace pbat::sim::algorithm::vbd {
  */
 struct ChebyshevParams
 {
-    Scalar rho{1}; ///< Spectral radius estimate
+    Scalar rho{0.9}; ///< Spectral radius estimate `0 < \rho < 1`
     /**
      * @brief Read/Write parameters
      */
@@ -104,8 +104,6 @@ void InitializeSolve(
     InitializeSolve<TElasticEnergy>(fem, params);
     cheb.k    = 0;
     cheb.rho2 = cheb.rho * cheb.rho;
-    cheb.xkm1 = fem.x;
-    cheb.xkm2 = fem.x;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
