@@ -299,7 +299,7 @@ struct FemElastoDynamics
      */
     auto DirichletDofs() const
     {
-        return ((DirichletNodes() * kDims).replicate<1, kDims>().transpose().colwise() +
+        return ((DirichletNodes() * kDims).template replicate<1, kDims>().transpose().colwise() +
                 Eigen::Vector<IndexType, kDims>::LinSpaced(kDims, 0, kDims - 1))
             .reshaped();
     }
@@ -334,7 +334,7 @@ struct FemElastoDynamics
      */
     auto FreeDofs() const
     {
-        return ((FreeNodes() * kDims).replicate<1, kDims>().transpose().colwise() +
+        return ((FreeNodes() * kDims).template replicate<1, kDims>().transpose().colwise() +
                 Eigen::Vector<IndexType, kDims>::LinSpaced(kDims, 0, kDims - 1))
             .reshaped();
     }

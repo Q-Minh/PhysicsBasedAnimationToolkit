@@ -221,10 +221,10 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
     tbb::parallel_for(Index(0), nFreeVerts, [&](Index fi) {
         auto i = free(fi);
         auto x = kernels::InitialPositionsForSolve(
-            FromEigen(xt.col(i).head<3>()),
-            FromEigen(vt.col(i).head<3>()),
-            FromEigen(fem.v.col(i).head<3>()),
-            FromEigen(aext.col(i).head<3>()),
+            FromEigen(xt.col(i).template head<3>()),
+            FromEigen(vt.col(i).template head<3>()),
+            FromEigen(fem.v.col(i).template head<3>()),
+            FromEigen(aext.col(i).template head<3>()),
             h,
             h2,
             params.strategy);
@@ -263,14 +263,15 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
             mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
             for (auto n = begin; n < end; ++n)
             {
-                auto ilocal                     = params.GVGilocal(n);
-                auto e                          = params.GVGe(n);
-                auto lamee                      = fem.lamegU.col(e);
-                auto wg                         = fem.wgU(e);
-                auto ti                         = fem.mesh.E.col(e);
-                mini::SMatrix<Scalar, 4, 3> GPe = FromEigen(fem.GNegU.block<4, 3>(0, e * 3));
+                auto ilocal = params.GVGilocal(n);
+                auto e      = params.GVGe(n);
+                auto lamee  = fem.lamegU.col(e);
+                auto wg     = fem.wgU(e);
+                auto ti     = fem.mesh.E.col(e);
+                mini::SMatrix<Scalar, 4, 3> GPe =
+                    FromEigen(fem.GNegU.template block<4, 3>(0, e * 3));
                 mini::SMatrix<Scalar, 3, 4> xe =
-                    FromEigen(fem.x(Eigen::placeholders::all, ti).block<3, 4>(0, 0));
+                    FromEigen(fem.x(Eigen::placeholders::all, ti).template block<3, 4>(0, 0));
                 mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
                 TElasticEnergy Psi{};
                 mini::SVector<Scalar, 9> gF;
@@ -281,9 +282,9 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
             }
             // "Kinetic" energy
             Scalar m = fem.m(i);
-            // mini::SVector<Scalar, 3> xti     = FromEigen(xt.col(i).head<3>());
-            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).head<3>());
-            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).head<3>());
+            // mini::SVector<Scalar, 3> xti     = FromEigen(xt.col(i).template head<3>());
+            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
+            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).template head<3>());
             // kernels::AddDamping(h, xti, xi, Scalar(0) /*Rayleigh damping*/, gi, Hi);
             kernels::AddInertiaDerivatives(h2, m, xtildei, xi, gi, Hi);
             // Update vertex position
