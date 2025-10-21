@@ -20,7 +20,7 @@ void BindCore(nanobind::module_& m)
     using pbat::sim::algorithm::vbd::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::Params;
 
-    nb::enum_<EInitializationStrategy>(m, "InitializationStrategy")
+    nb::enum_<EInitializationStrategy>(m, "EInitializationStrategy")
         .value("Position", EInitializationStrategy::Position)
         .value("Inertia", EInitializationStrategy::Inertia)
         .value("KineticEnergyMinimum", EInitializationStrategy::KineticEnergyMinimum)
@@ -56,7 +56,7 @@ void BindCore(nanobind::module_& m)
             "Args:\n"
             "    colors (numpy.ndarray): `|# verts|` vertex colors\n"
             "Returns:\n"
-            "    self (Params): Reference to this")
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
             "with_initialization_strategy",
             &Params::WithInitializationStrategy,
@@ -64,9 +64,10 @@ void BindCore(nanobind::module_& m)
             nb::rv_policy::reference_internal,
             "Initialization strategy for the VBD solver.\n\n"
             "Args:\n"
-            "    strategy (InitializationStrategy): Initialization strategy\n"
+            "    strategy (pbat.sim.algorithm.vbd.EInitializationStrategy): Initialization "
+            "strategy\n"
             "Returns:\n"
-            "    self (Params): Reference to this")
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
             "with_maximum_iterations",
             &Params::WithMaximumIterations,
@@ -76,7 +77,7 @@ void BindCore(nanobind::module_& m)
             "Args:\n"
             "    n_iters (int): Maximum number of iterations\n"
             "Returns:\n"
-            "    self (Params): Reference to this")
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
             "with_hessian_determinant_zero",
             &Params::WithHessianDeterminantZeroUnder,
@@ -86,7 +87,7 @@ void BindCore(nanobind::module_& m)
             "Args:\n"
             "    zero (float): Numerical zero\n"
             "Returns:\n"
-            "    self (Params): Reference to this")
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
             "construct",
             &Params::Construct,
@@ -96,7 +97,7 @@ void BindCore(nanobind::module_& m)
             "Args:\n"
             "    validate (bool): Throw on detected ill-formed inputs\n"
             "Returns:\n"
-            "    self (Params): Reference to this")
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def_rw("GVGp", &Params::GVGp, "`|# verts+1|` prefixes into GVGe")
         .def_rw("GVGe", &Params::GVGe, "`|# of vertex-elems adjacencies|` element indices")
         .def_rw(
@@ -126,8 +127,8 @@ void BindCore(nanobind::module_& m)
             nb::arg("params"),
             "Initialize the VBD minimization solve.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
         m.def(
             "iterate",
             [](FemElastoDynamics<TElasticEnergy>& fem, Params const& params) {
@@ -137,8 +138,8 @@ void BindCore(nanobind::module_& m)
             nb::arg("params"),
             "Perform one VBD minimization iteration.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
         m.def(
             "solve",
             [](FemElastoDynamics<TElasticEnergy>& fem, Params const& params) {
@@ -148,8 +149,8 @@ void BindCore(nanobind::module_& m)
             nb::arg("params"),
             "Solve the VBD minimization up to maximum iterations.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
         m.def(
             "integrate",
             [](FemElastoDynamics<TElasticEnergy>& fem, Params const& params) {
@@ -159,8 +160,8 @@ void BindCore(nanobind::module_& m)
             nb::arg("params"),
             "Integrate one time step using VBD as non-linear solver.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     });
 }
 

@@ -103,9 +103,9 @@ void BindBroyden(nanobind::module_& m)
             nb::arg("broyden"),
             "Initialize the Broyden solver for VBD.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elastodynamics simulator\n"
-            "    params (Params): The VBD parameters\n"
-            "    broyden (BroydenParams): The Broyden parameters\n");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
         m.def(
             "iterate",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -118,9 +118,9 @@ void BindBroyden(nanobind::module_& m)
             nb::arg("broyden"),
             "Perform one Broyden-accelerated VBD minimization iteration.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elastodynamics simulator\n"
-            "    params (Params): The VBD parameters\n"
-            "    broyden (BroydenParams): The Broyden parameters\n");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
         m.def(
             "solve",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -133,9 +133,9 @@ void BindBroyden(nanobind::module_& m)
             nb::arg("broyden"),
             "Solve the Broyden accelerated VBD minimization problem.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elastodynamics simulator\n"
-            "    params (Params): The VBD parameters\n"
-            "    broyden (BroydenParams): The Broyden parameters\n");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
         m.def(
             "integrate",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -148,9 +148,9 @@ void BindBroyden(nanobind::module_& m)
             nb::arg("broyden"),
             "Integrate one time step using VBD as non-linear solver.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elastodynamics simulator\n"
-            "    params (Params): The VBD parameters\n"
-            "    broyden (BroydenParams): The Broyden parameters\n");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
     });
 }
 

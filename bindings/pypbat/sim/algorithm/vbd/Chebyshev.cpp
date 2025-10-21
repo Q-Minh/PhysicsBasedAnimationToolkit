@@ -44,9 +44,9 @@ void BindChebyshev(nanobind::module_& m)
             nb::arg("cheb"),
             "Initialize Chebyshev accelerated VBD minimization solve.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    cheb (ChebyshevParams): The Chebyshev parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
         m.def(
             "iterate",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -59,9 +59,9 @@ void BindChebyshev(nanobind::module_& m)
             nb::arg("cheb"),
             "Perform a single Chebyshev accelerated VBD minimization iteration.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    cheb (ChebyshevParams): The Chebyshev parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
         m.def(
             "solve",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -74,9 +74,9 @@ void BindChebyshev(nanobind::module_& m)
             nb::arg("cheb"),
             "Solve the VBD minimization up to maximum iterations.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    cheb (ChebyshevParams): The Chebyshev parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
         m.def(
             "integrate",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -89,9 +89,9 @@ void BindChebyshev(nanobind::module_& m)
             nb::arg("cheb"),
             "Integrate one time step using Chebyshev accelerated VBD minimization.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    cheb (ChebyshevParams): The Chebyshev parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
     });
 }
 

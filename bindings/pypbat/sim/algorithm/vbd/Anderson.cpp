@@ -47,9 +47,10 @@ void BindAnderson(nanobind::module_& m)
             nb::arg("anderson"),
             "Initialize Anderson accelerated VBD minimization solve.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    anderson (AndersonParams): The Anderson acceleration parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+            "parameters");
         m.def(
             "iterate",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -62,9 +63,10 @@ void BindAnderson(nanobind::module_& m)
             nb::arg("anderson"),
             "Perform a single Anderson accelerated VBD minimization iteration.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    anderson (AndersonParams): The Anderson acceleration parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+            "parameters");
         m.def(
             "solve",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -77,9 +79,10 @@ void BindAnderson(nanobind::module_& m)
             nb::arg("anderson"),
             "Solve the Anderson accelerated VBD minimization problem.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    anderson (AndersonParams): The Anderson acceleration parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+            "parameters");
         m.def(
             "integrate",
             [](FemElastoDynamics<TElasticEnergy>& fem,
@@ -92,9 +95,10 @@ void BindAnderson(nanobind::module_& m)
             nb::arg("anderson"),
             "Integrate one time step using Anderson accelerated VBD minimization.\n\n"
             "Args:\n"
-            "    fem (FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (Params): The VBD parameters\n"
-            "    anderson (AndersonParams): The Anderson acceleration parameters");
+            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+            "parameters");
     });
 }
 
