@@ -298,7 +298,9 @@ struct FemElastoDynamics
      */
     auto DirichletDofs() const
     {
-        return DirichletNodes().replicate<1, kDims>().transpose().reshaped();
+        return ((DirichletNodes() * kDims).replicate<1, kDims>().transpose().colwise() +
+                Eigen::Vector<IndexType, kDims>::LinSpaced(kDims, 0, kDims - 1))
+            .reshaped();
     }
     /**
      * @brief Dirichlet nodal positions
@@ -329,7 +331,12 @@ struct FemElastoDynamics
      * @brief Array of unconstrained dofs
      * @return `kDims * |# nodes - ndbc| x 1` array of unconstrained dofs
      */
-    auto FreeDofs() const { return FreeNodes().replicate<1, kDims>().transpose().reshaped(); }
+    auto FreeDofs() const
+    {
+        return ((FreeNodes() * kDims).replicate<1, kDims>().transpose().colwise() +
+                Eigen::Vector<IndexType, kDims>::LinSpaced(kDims, 0, kDims - 1))
+            .reshaped();
+    }
     /**
      * @brief Free nodal positions
      * @return `kDims x |# nodes - ndbc|` matrix of unconstrained nodal positions

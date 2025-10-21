@@ -61,6 +61,44 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
         .def_rw("m", &ElastoDynamics::m, "|# nodes| x 1 lumped mass (per node)")
         .def_rw("xtilde", &ElastoDynamics::xtilde, "kDims x |# nodes| BDF inertial targets")
         .def_rw("bdf", &ElastoDynamics::bdf, "Underlying BDF time integrator")
+        .def_rw(
+            "wgU",
+            &ElastoDynamics::wgU,
+            "|# quad.pts.| x 1 quadrature weights for elastic potential")
+        .def_rw(
+            "GNegU",
+            &ElastoDynamics::GNegU,
+            "|ElementType::kNodes| x |kDims * # quad.pts.| shape function gradients at quadrature "
+            "points")
+        .def_rw(
+            "lamegU",
+            &ElastoDynamics::lamegU,
+            "2 x |# quad.pts.| Lame coefficients at quadrature points")
+        .def_rw(
+            "UgU",
+            &ElastoDynamics::UgU,
+            "|# quad.pts.| x 1 elastic energy density at quadrature points")
+        .def_rw(
+            "GgU",
+            &ElastoDynamics::GgU,
+            "|# dims * # elem nodes| x |# quad.pts.| element elastic gradient vectors at "
+            "quadrature points")
+        .def_rw(
+            "HgU",
+            &ElastoDynamics::HgU,
+            "|# dims * # elem nodes| x |# dims * # elem nodes * # quad.pts.| element elastic "
+            "hessian matrices at quadrature points")
+        .def_rw("ndbc", &ElastoDynamics::ndbc, "Number of Dirichlet constrained nodes")
+        .def_rw(
+            "dbc",
+            &ElastoDynamics::dbc,
+            "|# nodes| x 1 concatenated vector of Dirichlet unconstrained and constrained node "
+            "indices, partitioned as (unconstrained |# nodes| x 1, constrained |# nodes| x 1)")
+        .def_rw(
+            "dmask",
+            &ElastoDynamics::dmask,
+            "`|# nodes| x 1` mask of Dirichlet boundary conditions s.t. `dmask(i) == true` if node "
+            "i is constrained")
         .def(
             "M",
             [](ElastoDynamics const& self) { return self.M().eval(); },
@@ -218,6 +256,10 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics& self) { self.SetupTimeIntegrationOptimization(); },
             "Compute BDF inertial target for implicit time stepping (updates xtilde).")
         .def(
+            "step",
+            &ElastoDynamics::Step,
+            "Perform a single time integration step using `x`, `v`.")
+        .def(
             "compute_elastic_energy",
             [](ElastoDynamics& self,
                fem::EElementElasticityComputationFlags compute_flags,
@@ -232,37 +274,49 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    compute_flags (ElementElasticityComputationFlags): Bitmask flags indicating which "
             "quantities to compute.\n"
             "    spd_correction (HyperElasticSpdCorrection): Hessian SPD correction strategy.\n")
+        .def(
+            "objective",
+            &ElastoDynamics::Objective,
+            "Compute the time integration optimization's objective function value.\n\n"
+            "Returns:\n"
+            "    float: Objective function value.")
+        .def(
+            "gradient",
+            &ElastoDynamics::Gradient,
+            "Compute the time integration optimization's gradient.\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: kDims*|# nodes| gradient vector.")
         .def("is_dirichlet_node", &ElastoDynamics::IsDirichletNode, nb::arg("node"))
         .def("is_dirichlet_dof", &ElastoDynamics::IsDirichletDof, nb::arg("i"))
-        .def(
+        .def_prop_ro(
             "dirichlet_nodes",
             [](ElastoDynamics const& self) { return self.DirichletNodes().eval(); },
             "ndbc x 1 array of Dirichlet constrained node indices")
-        .def(
+        .def_prop_ro(
             "dirichlet_dofs",
             [](ElastoDynamics const& self) { return self.DirichletDofs().eval(); },
             "kDims*ndbc x 1 array of Dirichlet constrained dofs")
-        .def(
+        .def_prop_ro(
             "dirichlet_coordinates",
             [](ElastoDynamics const& self) { return self.DirichletCoordinates().eval(); },
             "kDims x ndbc Dirichlet constrained nodal coordinates")
-        .def(
+        .def_prop_ro(
             "dirichlet_velocities",
             [](ElastoDynamics const& self) { return self.DirichletVelocities().eval(); },
             "kDims x ndbc Dirichlet constrained nodal velocities")
-        .def(
+        .def_prop_ro(
             "free_nodes",
             [](ElastoDynamics const& self) { return self.FreeNodes().eval(); },
             "|# nodes|-ndbc array of unconstrained node indices")
-        .def(
+        .def_prop_ro(
             "free_dofs",
             [](ElastoDynamics const& self) { return self.FreeDofs().eval(); },
             "|kDims*# nodes - ndbc| array of unconstrained dofs")
-        .def(
+        .def_prop_ro(
             "free_coordinates",
             [](ElastoDynamics const& self) { return self.FreeCoordinates().eval(); },
             "kDims x (|#nodes|-ndbc) unconstrained nodal coordinates")
-        .def(
+        .def_prop_ro(
             "free_velocities",
             [](ElastoDynamics const& self) { return self.FreeVelocities().eval(); },
             "kDims x (|#nodes|-ndbc) unconstrained nodal velocities")

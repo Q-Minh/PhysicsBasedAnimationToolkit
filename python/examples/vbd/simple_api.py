@@ -200,6 +200,8 @@ if __name__ == "__main__":
             ).construct()
 
         if dirty:
+            # Time integration
+            dynamics.set_time_integration_scheme(dt, s)
             # Material
             mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
             dynamics.set_elastic_energy(mu, llambda)
@@ -221,21 +223,21 @@ if __name__ == "__main__":
                 Xmax[d_axis] += d_percent * extent[d_axis]
             aabb.min, aabb.max = Xmin, Xmax
             d_nodes = aabb.contained(dynamics.X)
-            dirichlet_mask = np.zeros(dynamics.X.shape[1], dtype=bool)
-            dirichlet_mask[d_nodes] = True
-            dynamics.constrain(dirichlet_mask)
+            d_mask = np.zeros(dynamics.X.shape[1], dtype=bool)
+            d_mask[d_nodes] = True
+            dynamics.constrain(d_mask)
             dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
-            # Time integration
-            dynamics.set_time_integration_scheme(dt, s)
 
         _, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
         reset = imgui.Button("Reset")
-        if reset:
+        if reset or is_new_mesh:
             n_nodes = dynamics.X.shape[1]
+            x0 = dynamics.X
+            xdot0 = np.repeat(np.asarray(v0)[:, np.newaxis], n_nodes, axis=1)
             dynamics.set_initial_conditions(
-                dynamics.X,
-                np.repeat(np.asarray(v0)[:, np.newaxis], n_nodes, axis=1),
+                x0,
+                xdot0,
             )
         if animate or step:
             if i_solver == 0:
@@ -246,7 +248,6 @@ if __name__ == "__main__":
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, broyden_params)
             elif i_solver == 3:
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, chebyshev_params)
-
         vis_dirty = animate or step or reset
         if vis_dirty:
             if dpc:

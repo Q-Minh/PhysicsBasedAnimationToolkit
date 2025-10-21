@@ -307,7 +307,7 @@ void BackSubstituteIntegratedPositionsIntoVelocities(
     Params const& params)
 {
     auto x                                = fem.x.reshaped();
-    auto xt                               = fem.bdf.CurrentState(0).reshaped();
+    auto xt                               = fem.bdf.CurrentState(0);
     auto dt                               = fem.bdf.TimeStep();
     auto dofs                             = fem.FreeDofs();
     auto v                                = (x(dofs) - xt(dofs)) / dt;

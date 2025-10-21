@@ -26,7 +26,7 @@ void BindBdf(nanobind::module_& m)
         .def_prop_rw("order", &BdfType::Order, &BdfType::SetOrder, "Order of the ODE")
         .def_prop_rw(
             "s",
-            [](BdfType& self) { return self.Step(); },
+            [](BdfType& self) { return self.GetStep(); },
             &BdfType::SetStep,
             "Step `s` of the `s`-step BDF scheme")
         .def_prop_rw("h", &BdfType::TimeStep, &BdfType::SetTimeStep, "Time step size")

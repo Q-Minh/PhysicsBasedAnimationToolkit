@@ -109,7 +109,7 @@ class Bdf
      * @brief Step `s` of the `s`-step BDF scheme
      * @return Step `s` of the `s`-step BDF scheme
      */
-    [[maybe_unused]] auto Step() const { return mStep; }
+    [[maybe_unused]] auto GetStep() const { return mStep; }
     /**
      * @brief Number of ODEs
      * @return Number of ODEs
