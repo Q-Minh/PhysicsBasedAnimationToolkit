@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
         if imgui.TreeNode("Time Integration"):
             dt_updated, dt = imgui.InputFloat("Time step", dt)
-            s_updated, s = imgui.InputInt("Order", s)
+            s_updated, s = imgui.InputInt("BDF step", s)
             dirty |= dt_updated or s_updated
             imgui.TreePop()
 
@@ -229,6 +229,12 @@ if __name__ == "__main__":
             d_mask[d_nodes] = True
             dynamics.constrain(d_mask)
             dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
+            # NOTE: If the time integration scheme has changed, the BDF integrator 
+            # needs to be re-initialized. However, if we haven't asked to "reset" the 
+            # simulation, then we need to continue simulating from the current state.
+            # Resetting the initial conditions, but to the current state, approximately 
+            # achieves this.
+            dynamics.set_initial_conditions(dynamics.x, dynamics.v)
 
         _, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
@@ -242,6 +248,7 @@ if __name__ == "__main__":
                 x0,
                 xdot0,
             )
+
         # Simulate
         if animate or step:
             if i_solver == 0:
@@ -252,6 +259,7 @@ if __name__ == "__main__":
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, broyden_params)
             elif i_solver == 3:
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, chebyshev_params)
+                
         # Update visuals
         vis_dirty = animate or step or reset
         if vis_dirty:

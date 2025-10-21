@@ -393,10 +393,9 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     Eigen::Ref<Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic> const> const& C)
 {
     mesh.Construct(V, C);
+    x                 = mesh.X;
     auto const nNodes = mesh.X.cols();
-    SetInitialConditions(
-        mesh.X,
-        Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>::Zero(kDims, nNodes));
+    v = Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>::Zero(kDims, nNodes);
     // Mass
     ScalarType constexpr rho{1e3};
     SetMassMatrix(rho);
@@ -433,6 +432,11 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetInit
     v = v0.reshaped(kDims, v0.size() / kDims);
     bdf.SetOrder(2);
     bdf.SetInitialConditions(x0.reshaped(), v0.reshaped());
+    // Adjust IVP based on Dirichlet constraints
+    fext(Eigen::placeholders::all, DirichletNodes()).setZero();
+    v(Eigen::placeholders::all, DirichletNodes()).setZero();
+    for (auto k = 0; k < bdf.GetStep(); ++k)
+        bdf.State(k, 1)(DirichletDofs()).setZero();
 }
 
 template <

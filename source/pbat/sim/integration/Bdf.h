@@ -238,6 +238,13 @@ class Bdf
      */
     void Deserialize(io::Archive const& archive);
 
+  protected:
+    /**
+     * @brief Allocate storage for `n` ODEs
+     * @param n Number of ODEs
+     */
+    void AllocateStorage(IndexType n);
+
   private:
     int mOrder; ///< ODE order \f$ \text{order} >= 1 \f$
     int mStep;  ///< Step \f$ 0 < s < 7 \f$ backward differentiation scheme
@@ -385,8 +392,7 @@ inline void Bdf<TScalar, TIndex>::SetInitialConditions(Eigen::DenseBase<TDerived
 {
     ti     = 0;
     auto n = x0.rows();
-    xt.resize(n, mStep * mOrder);
-    xtilde.resize(n, mOrder);
+    AllocateStorage(n);
     for (auto o = 0; o < mOrder; ++o)
         xt.middleCols(o * mStep, mStep).colwise() = x0.col(o);
 }
@@ -400,8 +406,7 @@ inline void Bdf<TScalar, TIndex>::SetInitialConditions(Eigen::DenseBase<TDerived
     std::tuple<decltype(x0)...> tup{x0...};
     ti     = 0;
     auto n = std::get<0>(tup).rows();
-    xt.resize(n, mStep * mOrder);
-    xtilde.resize(n, mOrder);
+    AllocateStorage(n);
 #include "pbat/warning/Push.h"
 #include "pbat/warning/SignConversion.h"
     common::ForRange<0, nDerivs>(
@@ -447,14 +452,21 @@ template <class TScalar, class TIndex>
 void Bdf<TScalar, TIndex>::Deserialize(io::Archive const& archive)
 {
     io::Archive const group = archive["pbat.sim.integration.Bdf"];
-    xt                      = group.ReadData<MatrixX>("xt");
-    xtilde                  = group.ReadData<MatrixX>("xtilde");
-    h                       = group.ReadMetaData<Scalar>("h");
-    ti                      = group.ReadMetaData<Index>("ti");
-    mOrder                  = group.ReadMetaData<int>("order");
-    mStep                   = group.ReadMetaData<int>("step");
-    mAlpha                  = group.ReadMetaData<Vector<6>>("alpha");
-    mBeta                   = group.ReadMetaData<Scalar>("beta");
+    xt     = group.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("xt");
+    xtilde = group.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("xtilde");
+    h      = group.ReadMetaData<ScalarType>("h");
+    ti     = group.ReadMetaData<IndexType>("ti");
+    mOrder = group.ReadMetaData<int>("order");
+    mStep  = group.ReadMetaData<int>("step");
+    mAlpha = group.ReadMetaData<Eigen::Vector<ScalarType, 6>>("alpha");
+    mBeta  = group.ReadMetaData<ScalarType>("beta");
+}
+
+template <class TScalar, class TIndex>
+inline void Bdf<TScalar, TIndex>::AllocateStorage(IndexType n)
+{
+    xt.resize(n, mStep * mOrder);
+    xtilde.resize(n, mOrder);
 }
 
 } // namespace pbat::sim::integration
