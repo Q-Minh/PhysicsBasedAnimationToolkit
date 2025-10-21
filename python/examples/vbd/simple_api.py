@@ -183,6 +183,7 @@ if __name__ == "__main__":
                 imgui.TreePop()
             imgui.TreePop()
 
+        # Initialize VBD parameters
         if is_new_mesh:
             n_nodes = dynamics.X.shape[1]
             GVGp, GVGe, GVGilocal = (
@@ -199,6 +200,7 @@ if __name__ == "__main__":
                 colors
             ).construct()
 
+        # Update scenario
         if dirty:
             # Time integration
             dynamics.set_time_integration_scheme(dt, s)
@@ -231,6 +233,7 @@ if __name__ == "__main__":
         _, animate = imgui.Checkbox("Animate", animate)
         step = imgui.Button("Step")
         reset = imgui.Button("Reset")
+        # Initial value problem
         if reset or is_new_mesh:
             n_nodes = dynamics.X.shape[1]
             x0 = dynamics.X
@@ -239,6 +242,7 @@ if __name__ == "__main__":
                 x0,
                 xdot0,
             )
+        # Simulate
         if animate or step:
             if i_solver == 0:
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params)
@@ -248,6 +252,7 @@ if __name__ == "__main__":
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, broyden_params)
             elif i_solver == 3:
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, chebyshev_params)
+        # Update visuals
         vis_dirty = animate or step or reset
         if vis_dirty:
             if dpc:
