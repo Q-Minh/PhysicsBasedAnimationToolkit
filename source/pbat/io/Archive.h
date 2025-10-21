@@ -114,6 +114,10 @@ class Archive
      */
     PBAT_API void Unlink(std::string const& path);
     /**
+     * @brief Flush the archive to ensure all data is written to disk.
+     */
+    PBAT_API void Flush();
+    /**
      * @brief Get the path of the current HDF5 object.
      * @return Path of the current HDF5 object.
      */

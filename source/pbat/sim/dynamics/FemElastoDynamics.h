@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cassert>
 #include <exception>
+#include <fmt/core.h>
 #include <type_traits>
 
 namespace pbat::sim::dynamics {
@@ -765,7 +766,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     bdf.Deserialize(femElastoDynamicsArchive);
     if (bdf.Order() != 2)
     {
-        throw std::runtime_error("FemElastoDynamics only supports BDF of order 2");
+        throw std::runtime_error(
+            fmt::format("FemElastoDynamics only supports BDF of order 2, got {}", bdf.Order()));
     }
     fext = femElastoDynamicsArchive
                .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("fext");

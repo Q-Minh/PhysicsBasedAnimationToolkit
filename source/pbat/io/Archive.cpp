@@ -115,6 +115,14 @@ void Archive::Unlink(std::string const& path)
         mHdf5Object);
 }
 
+void Archive::Flush()
+{
+    if (HighFive::File* file = std::get_if<HighFive::File>(&mHdf5Object))
+    {
+        file->flush();
+    }
+}
+
 std::optional<std::string> Archive::GetPath() const
 {
     std::optional<std::string> path;

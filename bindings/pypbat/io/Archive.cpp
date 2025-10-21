@@ -41,10 +41,19 @@ void BindArchive(nanobind::module_& m)
         .def_prop_ro("usable", &pbat::io::Archive::IsUsable, "Whether the archive is usable")
         .def_prop_ro("path", &pbat::io::Archive::GetPath, "Path of the current HDF5 object")
         .def(
+            "has_group",
+            &pbat::io::Archive::HasGroup,
+            nb::arg("path"),
+            "Check if a group exists at the given path")
+        .def(
             "unlink",
             &pbat::io::Archive::Unlink,
             nb::arg("path"),
             "Unlink a dataset or group from the archive")
+        .def(
+            "flush",
+            &pbat::io::Archive::Flush,
+            "Flush the archive to ensure all data is written to disk")
         .def(
             "__getitem__",
             [](pbat::io::Archive& archive, const std::string& path) { return archive[path]; },
