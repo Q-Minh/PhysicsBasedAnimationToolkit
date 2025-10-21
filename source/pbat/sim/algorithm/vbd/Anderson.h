@@ -29,9 +29,9 @@ namespace pbat::sim::algorithm::vbd {
  */
 struct AndersonParams
 {
-    Index m;                 ///< Window size
-    Scalar beta;             ///< Mixing parameter
-    Scalar codNumericalZero; ///< Numerical zero threshold for COD solver
+    Index m{5};                     ///< Window size
+    Scalar beta{1};                 ///< Mixing parameter
+    Scalar codNumericalZero{1e-10}; ///< Numerical zero threshold for COD solver
     /**
      * @brief Read/Write parameters
      */
@@ -178,11 +178,7 @@ void Integrate(
 {
     fem.SetupTimeIntegrationOptimization();
     Solve<TElasticEnergy>(fem, params, anderson);
-    auto x  = fem.x.reshaped();
-    auto xt = fem.bdf.CurrentState(0).reshaped();
-    auto dt = fem.bdf.TimeStep();
-    auto v  = (x - xt) / dt;
-    fem.v   = v.reshaped(fem.v.rows(), fem.v.cols());
+    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
     fem.Step();
 }
 

@@ -3,7 +3,6 @@
 #include <nanobind/eigen/dense.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/physics/Enums.h>
-#include <pbat/physics/SaintVenantKirchhoffEnergy.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/algorithm/vbd/Anderson.h>
 #include <pbat/sim/algorithm/vbd/Enums.h>
@@ -32,74 +31,71 @@ void BindAnderson(nanobind::module_& m)
         .def_ro("fkm1", &AndersonParams::fkm1, "`|# dofs| x 1` past residual")
         .def_ro("gammak", &AndersonParams::gammak, "`m x 1` subspace residual");
 
-    pbat::common::ForTypes<
-        pbat::physics::StableNeoHookeanEnergy<3>,
-        pbat::physics::SaintVenantKirchhoffEnergy<3>>([&]<class TElasticEnergy>() {
-        m.def(
-            "initialize_solve",
-            [](FemElastoDynamics<TElasticEnergy>& fem,
-               Params const& params,
-               AndersonParams& anderson) {
-                pbat::sim::algorithm::vbd::InitializeSolve<TElasticEnergy>(fem, params, anderson);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            nb::arg("anderson"),
-            "Initialize Anderson accelerated VBD minimization solve.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
-            "parameters");
-        m.def(
-            "iterate",
-            [](FemElastoDynamics<TElasticEnergy>& fem,
-               Params const& params,
-               AndersonParams& anderson) {
-                pbat::sim::algorithm::vbd::Iterate<TElasticEnergy>(fem, params, anderson);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            nb::arg("anderson"),
-            "Perform a single Anderson accelerated VBD minimization iteration.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
-            "parameters");
-        m.def(
-            "solve",
-            [](FemElastoDynamics<TElasticEnergy>& fem,
-               Params const& params,
-               AndersonParams& anderson) {
-                pbat::sim::algorithm::vbd::Solve<TElasticEnergy>(fem, params, anderson);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            nb::arg("anderson"),
-            "Solve the Anderson accelerated VBD minimization problem.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
-            "parameters");
-        m.def(
-            "integrate",
-            [](FemElastoDynamics<TElasticEnergy>& fem,
-               Params const& params,
-               AndersonParams& anderson) {
-                pbat::sim::algorithm::vbd::Integrate<TElasticEnergy>(fem, params, anderson);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            nb::arg("anderson"),
-            "Integrate one time step using Anderson accelerated VBD minimization.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-            "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
-            "parameters");
-    });
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    m.def(
+        "initialize_solve",
+        [](FemElastoDynamics<ElasticEnergyType>& fem,
+           Params const& params,
+           AndersonParams& anderson) {
+            pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(fem, params, anderson);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        nb::arg("anderson"),
+        "Initialize Anderson accelerated VBD minimization solve.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+        "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+        "parameters");
+    m.def(
+        "iterate",
+        [](FemElastoDynamics<ElasticEnergyType>& fem,
+           Params const& params,
+           AndersonParams& anderson) {
+            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, params, anderson);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        nb::arg("anderson"),
+        "Perform a single Anderson accelerated VBD minimization iteration.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+        "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+        "parameters");
+    m.def(
+        "solve",
+        [](FemElastoDynamics<ElasticEnergyType>& fem,
+           Params const& params,
+           AndersonParams& anderson) {
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, anderson);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        nb::arg("anderson"),
+        "Solve the Anderson accelerated VBD minimization problem.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+        "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+        "parameters");
+    m.def(
+        "integrate",
+        [](FemElastoDynamics<ElasticEnergyType>& fem,
+           Params const& params,
+           AndersonParams& anderson) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, anderson);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        nb::arg("anderson"),
+        "Integrate one time step using Anderson accelerated VBD minimization.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+        "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
+        "parameters");
 }
 
 } // namespace pbat::py::sim::algorithm::vbd

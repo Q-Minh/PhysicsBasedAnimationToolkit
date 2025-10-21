@@ -1,13 +1,14 @@
 #include "Core.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/tuple.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/physics/Enums.h>
-#include <pbat/physics/SaintVenantKirchhoffEnergy.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/algorithm/vbd/Core.h>
 #include <pbat/sim/algorithm/vbd/Enums.h>
 #include <pbat/sim/dynamics/FemElastoDynamics.h>
+#include <tuple>
 
 namespace pbat::py::sim::algorithm::vbd {
 
@@ -27,6 +28,58 @@ void BindCore(nanobind::module_& m)
         .value("AdaptiveVbd", EInitializationStrategy::AdaptiveVbd)
         .value("AdaptivePbat", EInitializationStrategy::AdaptivePbat)
         .export_values();
+
+    m.def(
+        "vertex_element_adjacency_graph",
+        [](nb::DRef<pbat::IndexMatrixX const> const& E, Index nNodes) {
+            IndexVectorX GVGp(nNodes + 1);
+            IndexVectorX GVGe(E.size());
+            IndexVectorX GVGilocal(E.size());
+            pbat::sim::algorithm::vbd::VertexElementAdjacencyGraph(
+                E,
+                nNodes,
+                GVGp,
+                GVGe,
+                GVGilocal);
+            return std::make_tuple(GVGp, GVGe, GVGilocal);
+        },
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        "Compute the vertex-element adjacency graph.\n\n"
+        "Args:\n"
+        "    elements (numpy.ndarray): `|# elems| x |elem dim|` element connectivity\n"
+        "Returns:\n"
+        "    Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: A 3-tuple containing:\n"
+        "    GVGp (numpy.ndarray): `|# verts + 1|` prefixes into GVGe\n"
+        "    GVGe (numpy.ndarray): `|# of vertex-elems adjacencies|` element indices s.t. "
+        "`GVGe[k] for GVGp[i] <= k < GVGp[i+1]` gives the element `e` adjacent to vertex `i`\n"
+        "    GVGilocal (numpy.ndarray): `|# of vertex-elems adjacencies|` local vertex indices "
+        "s.t. `GVGilocal[k] for GVGp[i] <= k < GVGp[i+1]` gives the local vertex index of "
+        "vertex `i` in element `e=GVGe[k]`");
+
+    m.def(
+        "vertex_colors",
+        [](nb::DRef<pbat::IndexMatrixX const> const& E,
+           Index nNodes,
+           graph::EGreedyColorOrderingStrategy eOrdering,
+           graph::EGreedyColorSelectionStrategy eSelection) {
+            IndexVectorX colors(nNodes);
+            pbat::sim::algorithm::vbd::VertexColors(E, nNodes, eOrdering, eSelection, colors);
+            return colors;
+        },
+        nb::arg("E"),
+        nb::arg("n_nodes"),
+        nb::arg("ordering")  = graph::EGreedyColorOrderingStrategy::LargestDegree,
+        nb::arg("selection") = graph::EGreedyColorSelectionStrategy::LeastUsed,
+        "Compute vertex colors using a greedy algorithm.\n\n"
+        "Args:\n"
+        "    elements (numpy.ndarray): `|# elems| x |elem dim|` element connectivity\n"
+        "    n_nodes (int): Number of nodes in the mesh\n"
+        "    ordering (pbat.graph.EGreedyColorOrderingStrategy): Vertex color ordering strategy\n"
+        "    selection (pbat.graph.EGreedyColorSelectionStrategy): Vertex color selection "
+        "strategy\n"
+        "Returns:\n"
+        "    numpy.ndarray: `|# verts| x 1` Vertex colors");
 
     nb::class_<Params>(m, "Params")
         .def(nb::init<>())
@@ -115,54 +168,52 @@ void BindCore(nanobind::module_& m)
         .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations");
 
-    pbat::common::ForTypes<
-        pbat::physics::StableNeoHookeanEnergy<3>,
-        pbat::physics::SaintVenantKirchhoffEnergy<3>>([&]<class TElasticEnergy>() {
-        m.def(
-            "initialize_solve",
-            [](FemElastoDynamics<TElasticEnergy>& fem, Params const& params) {
-                pbat::sim::algorithm::vbd::InitializeSolve<TElasticEnergy>(fem, params);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            "Initialize the VBD minimization solve.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
-        m.def(
-            "iterate",
-            [](FemElastoDynamics<TElasticEnergy>& fem, Params const& params) {
-                pbat::sim::algorithm::vbd::Iterate<TElasticEnergy>(fem, params);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            "Perform one VBD minimization iteration.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
-        m.def(
-            "solve",
-            [](FemElastoDynamics<TElasticEnergy>& fem, Params const& params) {
-                pbat::sim::algorithm::vbd::Solve<TElasticEnergy>(fem, params);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            "Solve the VBD minimization up to maximum iterations.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
-        m.def(
-            "integrate",
-            [](FemElastoDynamics<TElasticEnergy>& fem, Params const& params) {
-                pbat::sim::algorithm::vbd::Integrate<TElasticEnergy>(fem, params);
-            },
-            nb::arg("fem"),
-            nb::arg("params"),
-            "Integrate one time step using VBD as non-linear solver.\n\n"
-            "Args:\n"
-            "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-            "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
-    });
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+
+    m.def(
+        "initialize_solve",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
+            pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(fem, params);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        "Initialize the VBD minimization solve.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
+    m.def(
+        "iterate",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
+            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, params);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        "Perform one VBD minimization iteration.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
+    m.def(
+        "solve",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        "Solve the VBD minimization up to maximum iterations.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
+    m.def(
+        "integrate",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params);
+        },
+        nb::arg("fem"),
+        nb::arg("params"),
+        "Integrate one time step using VBD as non-linear solver.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
 }
 
 } // namespace pbat::py::sim::algorithm::vbd

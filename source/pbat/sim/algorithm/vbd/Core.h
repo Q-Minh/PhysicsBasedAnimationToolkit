@@ -16,6 +16,8 @@
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 #include "pbat/fem/Tetrahedron.h"
+#include "pbat/graph/Adjacency.h"
+#include "pbat/graph/Enums.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/profiling/Profiling.h"
@@ -26,6 +28,41 @@
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::algorithm::vbd {
+
+/**
+ * @brief Construct vertex-element adjacency graph
+ *
+ * @param E Element connectivity `|# nodes per element| x |# elements|` array
+ * @param nNodes Number of nodes in the mesh
+ * @param GVGp `|# verts+1|` prefixes into GVGe
+ * @param GVGe `|# of vertex-elems adjacencies|` element indices s.t. `GVGe[k] for GVGp[i] <= k <
+ * GVGp[i+1]` gives the element `e` adjacent to vertex `i`
+ * @param GVGilocal `|# of vertex-elems adjacencies|` local vertex indices s.t. `GVGilocal[k] for
+ * GVGp[i] <= k < GVGp[i+1]` gives the element `e` adjacent to vertex `i` GVGp[i+1]` gives the local
+ * vertex index of vertex `i` in element `e=GVGe[k]`
+ */
+PBAT_API void VertexElementAdjacencyGraph(
+    Eigen::Ref<IndexMatrixX const> const& E,
+    Index nNodes,
+    Eigen::Ref<IndexVectorX> GVGp,
+    Eigen::Ref<IndexVectorX> GVGe,
+    Eigen::Ref<IndexVectorX> GVGilocal);
+
+/**
+ * @brief Compute vertex colors using a greedy algorithm
+ *
+ * @param E `|# nodes per element| x |# elements|` element connectivity array
+ * @param nNodes Number of nodes in the mesh
+ * @param eOrdering Vertex color ordering strategy
+ * @param eSelection Vertex color selection strategy
+ * @param colors `|# verts| x 1` Vertex colors
+ */
+PBAT_API void VertexColors(
+    Eigen::Ref<IndexMatrixX const> const& E,
+    Index nNodes,
+    graph::EGreedyColorOrderingStrategy eOrdering,
+    graph::EGreedyColorSelectionStrategy eSelection,
+    Eigen::Ref<IndexVectorX> colors);
 
 /**
  * @brief VBD simulation configuration
@@ -138,6 +175,18 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+
+/**
+ * @brief Back-substitute integrated positions into velocities
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void BackSubstituteIntegratedPositionsIntoVelocities(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using VBD as the non-linear solver
@@ -253,15 +302,25 @@ void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
+void BackSubstituteIntegratedPositionsIntoVelocities(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params)
+{
+    auto x                                = fem.x.reshaped();
+    auto xt                               = fem.bdf.CurrentState(0).reshaped();
+    auto dt                               = fem.bdf.TimeStep();
+    auto dofs                             = fem.FreeDofs();
+    auto v                                = (x(dofs) - xt(dofs)) / dt;
+    auto free                             = fem.FreeNodes();
+    fem.v(Eigen::placeholders::all, free) = v.reshaped(fem.v.rows(), free.size());
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     fem.SetupTimeIntegrationOptimization();
     Solve<TElasticEnergy>(fem, params);
-    auto x  = fem.x.reshaped();
-    auto xt = fem.bdf.CurrentState(0).reshaped();
-    auto dt = fem.bdf.TimeStep();
-    auto v  = (x - xt) / dt;
-    fem.v   = v.reshaped(fem.v.rows(), fem.v.cols());
+    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
     fem.Step();
 }
 

@@ -1,11 +1,39 @@
 #include "Core.h"
 
-#include "pbat/graph/Adjacency.h"
+#include "pbat/graph/Color.h"
+#include "pbat/graph/Mesh.h"
 
 #include <exception>
 #include <fmt/core.h>
 
 namespace pbat::sim::algorithm::vbd {
+
+void VertexElementAdjacencyGraph(
+    Eigen::Ref<IndexMatrixX const> const& E,
+    Index nNodes,
+    Eigen::Ref<IndexVectorX> GVGp,
+    Eigen::Ref<IndexVectorX> GVGe,
+    Eigen::Ref<IndexVectorX> GVGilocal)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.VertexElementAdjacencyGraph");
+    IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, E.cols());
+    auto GVT                        = graph::MeshAdjacencyMatrix(E, ilocal, nNodes);
+    GVT                             = GVT.transpose();
+    std::tie(GVGp, GVGe, GVGilocal) = graph::MatrixToWeightedAdjacency(GVT);
+}
+
+void VertexColors(
+    Eigen::Ref<IndexMatrixX const> const& E,
+    Index nNodes,
+    graph::EGreedyColorOrderingStrategy eOrdering,
+    graph::EGreedyColorSelectionStrategy eSelection,
+    Eigen::Ref<IndexVectorX> colors)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.VertexColors");
+    auto GVV                = graph::MeshPrimalGraph(E, nNodes);
+    auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
+    colors                  = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
+}
 
 Params& Params::WithVertexElementAdjacencyGraph(
     Eigen::Ref<IndexVectorX const> const& _GVGp,
@@ -88,8 +116,6 @@ Params& Params::Construct(bool bValidate)
 
 } // namespace pbat::sim::algorithm::vbd
 
-#include "pbat/graph/Color.h"
-#include "pbat/graph/Mesh.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
 
 #include <doctest/doctest.h>

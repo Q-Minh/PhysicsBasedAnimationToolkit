@@ -293,6 +293,14 @@ struct FemElastoDynamics
      */
     auto DirichletNodes() const { return dbc.tail(ndbc); }
     /**
+     * @brief Array of Dirichlet constrained dofs
+     * @return `kDims * ndbc x 1` array of Dirichlet constrained dofs
+     */
+    auto DirichletDofs() const
+    {
+        return DirichletNodes().replicate<1, kDims>().transpose().reshaped();
+    }
+    /**
      * @brief Dirichlet nodal positions
      * @return `kDims x ndbc` matrix of Dirichlet constrained nodal positions
      */
@@ -317,6 +325,11 @@ struct FemElastoDynamics
      * @return `|# nodes - ndbc| x 1` array of unconstrained nodes
      */
     auto FreeNodes() const { return dbc.head(dbc.size() - ndbc); }
+    /**
+     * @brief Array of unconstrained dofs
+     * @return `kDims * |# nodes - ndbc| x 1` array of unconstrained dofs
+     */
+    auto FreeDofs() const { return FreeNodes().replicate<1, kDims>().transpose().reshaped(); }
     /**
      * @brief Free nodal positions
      * @return `kDims x |# nodes - ndbc|` matrix of unconstrained nodal positions

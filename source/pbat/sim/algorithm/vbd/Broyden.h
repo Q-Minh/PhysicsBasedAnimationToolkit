@@ -138,13 +138,11 @@ void InitializeSolve(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Iterate(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    BroydenParams& broyden);
+void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden);
 
 /**
- * @brief Solve FEM elasto dynamics time integration minimization problem using Broyden-accelerated VBD
+ * @brief Solve FEM elasto dynamics time integration minimization problem using Broyden-accelerated
+ * VBD
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
@@ -152,13 +150,11 @@ void Iterate(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    BroydenParams& broyden);
+void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden);
 
 /**
- * @brief Integrate FEM elasto dynamics one step using Broyden-accelerated VBD as the non-linear solver
+ * @brief Integrate FEM elasto dynamics one step using Broyden-accelerated VBD as the non-linear
+ * solver
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
@@ -369,10 +365,7 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Broyd
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    BroydenParams& broyden)
+void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden)
 {
     InitializeSolve<TElasticEnergy>(fem, params, broyden);
     for (; broyden.k < params.nMaxIters;)
@@ -380,18 +373,11 @@ void Solve(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    BroydenParams& broyden)
+void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden)
 {
     fem.SetupTimeIntegrationOptimization();
     Solve<TElasticEnergy>(fem, params, broyden);
-    auto x  = fem.x.reshaped();
-    auto xt = fem.bdf.CurrentState(0).reshaped();
-    auto dt = fem.bdf.TimeStep();
-    auto v  = (x - xt) / dt;
-    fem.v   = v.reshaped(fem.v.rows(), fem.v.cols());
+    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
     fem.Step();
 }
 

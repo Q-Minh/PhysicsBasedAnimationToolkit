@@ -1,3 +1,4 @@
+# type: ignore
 from typing import Tuple
 from pbatoolkit import pbat
 import polyscope as ps

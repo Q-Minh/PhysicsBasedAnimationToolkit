@@ -1,3 +1,4 @@
+# type: ignore
 from pbatoolkit import pbat, pypbat
 import meshio
 import numpy as np

@@ -1,6 +1,7 @@
 #include "FemElastoDynamics.h"
 
 #include <nanobind/eigen/dense.h>
+#include <pbat/common/ConstexprFor.h>
 #include <pbat/fem/Tetrahedron.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/dynamics/FemElastoDynamics.h>
@@ -238,6 +239,10 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics const& self) { return self.DirichletNodes().eval(); },
             "ndbc x 1 array of Dirichlet constrained node indices")
         .def(
+            "dirichlet_dofs",
+            [](ElastoDynamics const& self) { return self.DirichletDofs().eval(); },
+            "kDims*ndbc x 1 array of Dirichlet constrained dofs")
+        .def(
             "dirichlet_coordinates",
             [](ElastoDynamics const& self) { return self.DirichletCoordinates().eval(); },
             "kDims x ndbc Dirichlet constrained nodal coordinates")
@@ -248,7 +253,11 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
         .def(
             "free_nodes",
             [](ElastoDynamics const& self) { return self.FreeNodes().eval(); },
-            "|#nodes|-ndbc array of unconstrained node indices")
+            "|# nodes|-ndbc array of unconstrained node indices")
+        .def(
+            "free_dofs",
+            [](ElastoDynamics const& self) { return self.FreeDofs().eval(); },
+            "|kDims*# nodes - ndbc| array of unconstrained dofs")
         .def(
             "free_coordinates",
             [](ElastoDynamics const& self) { return self.FreeCoordinates().eval(); },
