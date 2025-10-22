@@ -5,10 +5,10 @@ namespace pbat::sim::algorithm::vbd {
 void ChebyshevParams::Serialize(io::Archive& archive) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.ChebyshevParams"];
-    group.WriteData("rho", rho);
-    group.WriteData("k", k);
-    group.WriteData("rho2", rho2);
-    group.WriteData("omega", omega);
+    group.WriteMetaData("rho", rho);
+    group.WriteMetaData("k", k);
+    group.WriteMetaData("rho2", rho2);
+    group.WriteMetaData("omega", omega);
     group.WriteData("xkm1", xkm1);
     group.WriteData("xkm2", xkm2);
 }
@@ -16,10 +16,10 @@ void ChebyshevParams::Serialize(io::Archive& archive) const
 void ChebyshevParams::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.ChebyshevParams"];
-    rho               = group.ReadData<Scalar>("rho");
-    k                 = group.ReadData<Index>("k");
-    rho2              = group.ReadData<Scalar>("rho2");
-    omega             = group.ReadData<Scalar>("omega");
+    rho               = group.ReadMetaData<Scalar>("rho");
+    k                 = group.ReadMetaData<Index>("k");
+    rho2              = group.ReadMetaData<Scalar>("rho2");
+    omega             = group.ReadMetaData<Scalar>("omega");
     xkm1              = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm1");
     xkm2              = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm2");
 }

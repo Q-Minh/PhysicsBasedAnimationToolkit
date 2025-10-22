@@ -123,9 +123,9 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("colors", colors);
     group.WriteData("Pptr", Pptr);
     group.WriteData("Padj", Padj);
-    group.WriteData("strategy", static_cast<int>(strategy));
-    group.WriteData("detHZero", detHZero);
-    group.WriteData("nMaxIters", nMaxIters);
+    group.WriteMetaData("strategy", static_cast<int>(strategy));
+    group.WriteMetaData("detHZero", detHZero);
+    group.WriteMetaData("nMaxIters", nMaxIters);
 }
 
 void Params::Deserialize(io::Archive const& archive)
@@ -137,9 +137,9 @@ void Params::Deserialize(io::Archive const& archive)
     colors            = group.ReadData<IndexVectorX>("colors");
     Pptr              = group.ReadData<IndexVectorX>("Pptr");
     Padj              = group.ReadData<IndexVectorX>("Padj");
-    strategy          = static_cast<EInitializationStrategy>(group.ReadData<int>("strategy"));
-    detHZero          = group.ReadData<Scalar>("detHZero");
-    nMaxIters         = group.ReadData<Index>("nMaxIters");
+    strategy          = static_cast<EInitializationStrategy>(group.ReadMetaData<int>("strategy"));
+    detHZero          = group.ReadMetaData<Scalar>("detHZero");
+    nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
 }
 
 } // namespace pbat::sim::algorithm::vbd

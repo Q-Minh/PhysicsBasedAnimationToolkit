@@ -5,10 +5,10 @@ namespace pbat::sim::algorithm::vbd {
 void AndersonParams::Serialize(io::Archive& archive) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.AndersonParams"];
-    group.WriteData("m", m);
-    group.WriteData("beta", beta);
-    group.WriteData("codNumericalZero", codNumericalZero);
-    group.WriteData("k", k);
+    group.WriteMetaData("m", m);
+    group.WriteMetaData("beta", beta);
+    group.WriteMetaData("codNumericalZero", codNumericalZero);
+    group.WriteMetaData("k", k);
     group.WriteData("Fk", Fk);
     group.WriteData("Xk", Xk);
     group.WriteData("xkm1", xkm1);
@@ -20,10 +20,10 @@ void AndersonParams::Serialize(io::Archive& archive) const
 void AndersonParams::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.AndersonParams"];
-    m                 = group.ReadData<Index>("m");
-    beta              = group.ReadData<Scalar>("beta");
-    codNumericalZero  = group.ReadData<Scalar>("codNumericalZero");
-    k                 = group.ReadData<Index>("k");
+    m                 = group.ReadMetaData<Index>("m");
+    beta              = group.ReadMetaData<Scalar>("beta");
+    codNumericalZero  = group.ReadMetaData<Scalar>("codNumericalZero");
+    k                 = group.ReadMetaData<Index>("k");
     Fk                = group.ReadData<MatrixX>("Fk");
     Xk                = group.ReadData<MatrixX>("Xk");
     xkm1              = group.ReadData<VectorX>("xkm1");
