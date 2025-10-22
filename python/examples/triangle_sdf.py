@@ -13,8 +13,12 @@ import argparse
 def step_adam(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, mt: np.ndarray, vt: float, beta1: float, beta2: float, eta: float, t: int, eps: float = 1e-4,) -> Tuple[np.ndarray, np.ndarray, float]:
     grad = g(xk)
 
-    mt_next = mt * beta1 + (1- beta1) * grad
-    vt_next = beta2 * vt + (1-beta2) * np.dot(grad,grad)
+    # projected gradient workaround
+    xk_tmp = step_proj_gradient_decent(g,xk,eta)
+    proj_grad = (xk - xk_tmp) / eta
+
+    mt_next = mt * beta1 + (1- beta1) * proj_grad
+    vt_next = beta2 * vt + (1-beta2) * np.dot(proj_grad,proj_grad)
 
     mt_hat = mt_next / (1-beta1**t)
     vt_hat = vt_next / (1-beta2**t)
