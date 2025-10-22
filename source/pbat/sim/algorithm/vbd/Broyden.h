@@ -22,6 +22,7 @@
 #include <Eigen/QR>
 #include <exception>
 #include <fmt/core.h>
+#include <optional>
 
 namespace pbat::sim::algorithm::vbd {
 
@@ -70,7 +71,7 @@ struct BroydenParams
     Eigen::ColPivHouseholderQR<MatrixX> qr;              ///< QR solver for least-squares problem
     Eigen::LeastSquaresConjugateGradient<MatrixX>
         lscg; ///< Iterative LSQR solver for least-squares problem
-    
+
     /**
      * @brief Serialize this to archive
      * @param archive Archive to serialize to
@@ -159,10 +160,15 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Broyd
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
  * @param broyden Broyden parameters
+ * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden);
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    BroydenParams& broyden,
+    std::optional<io::Archive> ac = std::nullopt);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using Broyden-accelerated VBD as the non-linear
@@ -171,13 +177,15 @@ void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Broyden
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
  * @param broyden Broyden parameters
+ * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
-    BroydenParams& broyden);
+    BroydenParams& broyden,
+    std::optional<io::Archive> ac = std::nullopt);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
@@ -377,19 +385,51 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Broyd
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden)
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    BroydenParams& broyden,
+    std::optional<io::Archive> ac)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
+    std::optional<io::Archive> group;
+    if (ac)
+    {
+        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Broyden.Solve");
+        SerializeSolverIteration<TElasticEnergy>(fem, 0, *group);
+    }
     InitializeSolve<TElasticEnergy>(fem, params, broyden);
     for (; broyden.k < params.nMaxIters;)
+    {
+        if (group)
+        {
+            SerializeSolverIteration(fem, broyden.k, *group);
+        }
         Iterate<TElasticEnergy>(fem, params, broyden);
+    }
+    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
+    if (group)
+    {
+        SerializeSolverIteration(fem, broyden.k, *group, true /* bPostSolve */);
+    }
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, BroydenParams& broyden)
+void Integrate(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    BroydenParams& broyden,
+    std::optional<io::Archive> ac)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Integrate");
     fem.SetupTimeIntegrationOptimization();
-    Solve<TElasticEnergy>(fem, params, broyden);
-    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
+    std::optional<io::Archive> group;
+    if (ac)
+    {
+        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Broyden.Integrate");
+        fem.Serialize(*group);
+    }
+    Solve<TElasticEnergy>(fem, params, broyden, group);
     fem.Step();
 }
 

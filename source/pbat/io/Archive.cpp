@@ -99,6 +99,37 @@ bool Archive::HasGroup(std::string const& path) const
     return bExists;
 }
 
+bool Archive::HasData(std::string const& path) const
+{
+    bool bExists{false};
+    std::visit(
+        [&](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, HighFive::File> or std::is_same_v<T, HighFive::Group>)
+            {
+                bExists =
+                    arg.exist(path) and (arg.getObjectType(path) == HighFive::ObjectType::Dataset);
+            }
+        },
+        mHdf5Object);
+    return bExists;
+}
+
+bool Archive::HasMetaData(std::string const& key) const
+{
+    bool bExists{false};
+    std::visit(
+        [&](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (not std::is_same_v<T, std::monostate>)
+            {
+                bExists = arg.hasAttribute(key);
+            }
+        },
+        mHdf5Object);
+    return bExists;
+}
+
 void Archive::Unlink(std::string const& path)
 {
     std::visit(

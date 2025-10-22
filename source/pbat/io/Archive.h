@@ -72,11 +72,24 @@ class Archive
      */
     PBAT_API bool HasGroup(std::string const& path) const;
     /**
+     * @brief Check if a dataset exists at the given path.
+     * @param path Path to the dataset.
+     * @return true if the dataset exists, false otherwise.
+     */
+    PBAT_API bool HasData(std::string const& path) const;
+    /**
+     * @brief Check if metadata (attribute) exists with the given name.
+     * @param key Name of the attribute.
+     * @return true if the attribute exists, false otherwise.
+     */
+    PBAT_API bool HasMetaData(std::string const& key) const;
+    /**
      * @brief Write data to the archive.
      * @tparam T Type of the data to write.
      * @param path Path to the dataset.
      * @param data Data to write.
      * @throw HighFive::DataSetException if the dataset cannot be created or written to.
+     * @post If the dataset already exists, it will be overwritten.
      */
     template <class T>
     void WriteData(std::string const& path, T const& data);
@@ -86,6 +99,7 @@ class Archive
      * @param key Name the attribute.
      * @param value Metadata to write.
      * @throw HighFive::AttributeException if the attribute cannot be created or written to.
+     * @post If the attribute already exists, it will be overwritten.
      */
     template <class T>
     void WriteMetaData(std::string const& key, T const& value);
@@ -140,6 +154,10 @@ class Archive
 template <class T>
 inline void Archive::WriteData(std::string const& path, T const& data)
 {
+    if (HasData(path))
+    {
+        Unlink(path);
+    }
     std::visit(
         [&](auto&& arg) {
             using U = std::decay_t<decltype(arg)>;

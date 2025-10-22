@@ -26,6 +26,7 @@
 #include "pbat/sim/dynamics/FemElastoDynamics.h"
 
 #include <Eigen/Core>
+#include <optional>
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::algorithm::vbd {
@@ -182,10 +183,14 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
+ * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    std::optional<io::Archive> ac = std::nullopt);
 
 /**
  * @brief Back-substitute integrated positions into velocities
@@ -204,10 +209,30 @@ void BackSubstituteIntegratedPositionsIntoVelocities(
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
+ * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Integrate(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    std::optional<io::Archive> ac = std::nullopt);
+
+/**
+ * @brief Serialize solver iteration data
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param k Current solver iteration
+ * @param archive Archive to serialize to
+ * @param bPostSolve Whether this is after the solve. If true, velocities are also serialized.
+ * Default is false.
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void SerializeSolverIteration(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Index k,
+    io::Archive& archive,
+    bool bPostSolve = false);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
@@ -306,11 +331,31 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    std::optional<io::Archive> ac)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
+    std::optional<io::Archive> group;
+    if (ac)
+    {
+        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Solve");
+    }
     InitializeSolve<TElasticEnergy>(fem, params);
-    for (auto k = 0; k < params.nMaxIters; ++k)
+    for (Index k = 0; k < params.nMaxIters; ++k)
+    {
+        if (group)
+        {
+            SerializeSolverIteration(fem, k, *group);
+        }
         Iterate<TElasticEnergy>(fem, params);
+    }
+    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
+    if (group)
+    {
+        SerializeSolverIteration(fem, params.nMaxIters, *group, true /* bPostSolve */);
+    }
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -328,12 +373,37 @@ void BackSubstituteIntegratedPositionsIntoVelocities(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Integrate(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    std::optional<io::Archive> ac)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
     fem.SetupTimeIntegrationOptimization();
-    Solve<TElasticEnergy>(fem, params);
-    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
+    std::optional<io::Archive> group;
+    if (ac)
+    {
+        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Integrate");
+        fem.Serialize(*group);
+    }
+    Solve<TElasticEnergy>(fem, params, group);
     fem.Step();
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void SerializeSolverIteration(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Index k,
+    io::Archive& archive,
+    bool bPostSolve)
+{
+    Scalar f     = fem.Objective();
+    Scalar gnorm = fem.Gradient().norm();
+    archive.WriteData(fmt::format("{}/x", k), fem.x);
+    archive.WriteData(fmt::format("{}/f", k), f);
+    archive.WriteData(fmt::format("{}/gnorm", k), gnorm);
+    if (bPostSolve)
+        archive.WriteData(fmt::format("{}/v", k), fem.v);
 }
 
 } // namespace pbat::sim::algorithm::vbd

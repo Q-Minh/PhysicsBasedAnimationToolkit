@@ -14,6 +14,9 @@
 
 #include "Core.h"
 #include "pbat/io/Archive.h"
+#include "pbat/profiling/Profiling.h"
+
+#include <optional>
 
 namespace pbat::sim::algorithm::vbd {
 
@@ -34,7 +37,7 @@ struct ChebyshevParams
         xkm1; ///< `3 x |# verts|` \f$ x^{k-1} \f$ used in Chebyshev semi-iterative method
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
         xkm2; ///< `3 x |# verts|` \f$ x^{k-2} \f$ used in Chebyshev semi-iterative method
-    
+
     /**
      * @brief Serialize this to archive
      * @param archive Archive to serialize to
@@ -88,10 +91,15 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Cheby
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
  * @param cheb Chebyshev parameters
+ * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb);
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    ChebyshevParams& cheb,
+    std::optional<io::Archive> ac = std::nullopt);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using Chebyshev-accelerated VBD as the non-linear
@@ -100,10 +108,15 @@ void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Chebysh
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
  * @param cheb Chebyshev parameters
+ * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb);
+void Integrate(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    ChebyshevParams& cheb,
+    std::optional<io::Archive> ac = std::nullopt);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
@@ -134,19 +147,50 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Cheby
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb)
+void Solve(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    ChebyshevParams& cheb,
+    std::optional<io::Archive> ac)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Solve");
+    std::optional<io::Archive> group;
+    if (ac)
+    {
+        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Chebyshev.Solve");
+    }
     InitializeSolve<TElasticEnergy>(fem, params, cheb);
     for (; cheb.k < params.nMaxIters;)
+    {
+        if (group)
+        {
+            SerializeSolverIteration(fem, cheb.k, *group);
+        }
         Iterate<TElasticEnergy>(fem, params, cheb);
+    }
+    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
+    if (group)
+    {
+        SerializeSolverIteration(fem, cheb.k, *group, true /* bPostSolve */);
+    }
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, ChebyshevParams& cheb)
+void Integrate(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    ChebyshevParams& cheb,
+    std::optional<io::Archive> ac)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Integrate");
     fem.SetupTimeIntegrationOptimization();
-    Solve<TElasticEnergy>(fem, params, cheb);
-    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
+    std::optional<io::Archive> group;
+    if (ac)
+    {
+        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Chebyshev.Integrate");
+        fem.Serialize(*group);
+    }
+    Solve<TElasticEnergy>(fem, params, cheb, group);
     fem.Step();
 }
 
