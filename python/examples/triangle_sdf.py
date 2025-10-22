@@ -10,6 +10,21 @@ from typing import Tuple
 import json
 import argparse
 
+def step_adam(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, mt: np.ndarray, vt: float, beta1: float, beta2: float, eta: float, t: int, eps: float = 1e-4,) -> Tuple[np.ndarray, np.ndarray, float]:
+    grad = g(xk)
+
+    mt_next = mt * beta1 + (1- beta1) * grad
+    vt_next = beta2 * vt + (1-beta2) * np.dot(grad,grad)
+
+    mt_hat = mt_next / (1-beta1**t)
+    vt_hat = vt_next / (1-beta2**t)
+
+    xkp1 = xk - eta * mt_hat / (np.sqrt(vt_hat) + eps)
+
+    return (xkp1, mt_next, vt_next)
+
+
+
 def step_frank_wolfe(g: Callable[[np.ndarray], np.ndarray],xk: np.ndarray, vertices: np.ndarray, t: int) -> np.ndarray:
     ''' use space coordinates'''
 
@@ -243,7 +258,6 @@ if __name__ == "__main__":
     sigmaR = 1e-1
     sigmaB = 1e-1
     eta = 1e-3
-    gd_eta = 1e-3
     r = 1e-8
     trlo = 0.1
     trhi = 0.75
@@ -256,14 +270,22 @@ if __name__ == "__main__":
     Rpath = []
 
     gd_xk = np.zeros(2)
+    gd_eta = 1e-3
     gd_xpath = []
     gd_fpath = []
-    gd_Rpath = []
 
     fw_xk = np.zeros(3)
     fw_xpath = []
     fw_fpath = []
-    fw_Rpath = []
+
+    ad_xk = np.zeros(2)
+    ad_mt = np.zeros(2)
+    ad_vt = 0.
+    ad_beta1 = 0.9
+    ad_beta2 = 0.999
+    ad_eta = 1e-3
+    ad_xpath = []
+    ad_fpath = []
 
     # For reproducibility
     np.random.seed(0)
@@ -301,9 +323,12 @@ if __name__ == "__main__":
         global randomize_sample
         global gd_xk
         global gd_eta
-        global gd_xpath, gd_fpath, gd_Rpath
+        global gd_xpath, gd_fpath
         global fw_xk
-        global fw_xpath, fw_fpath, fw_Rpath
+        global fw_xpath, fw_fpath
+        global ad_xk, ad_mt, ad_vt
+        global ad_beta1, ad_beta2, ad_eta
+        global ad_xpath, ad_fpath
 
         # Load
         if imgui.TreeNode("I/O"):
@@ -353,6 +378,9 @@ if __name__ == "__main__":
                         trgrow = params.get("trgrow",trgrow)
                         trshrink = params.get("trshrink",trshrink)
                         gd_eta = params.get("gd_eta",gd_eta)
+                        ad_beta1 = params.get("ad_beta1",ad_beta1)
+                        ad_beta2 = params.get("ad_beta2",ad_beta2)
+                        ad_eta = params.get("ad_eta",ad_eta)
                     
                 root.destroy()
             if imgui.Button("Save Parameters", [imgui.GetWindowWidth() / 2.1, 0]):
@@ -376,6 +404,9 @@ if __name__ == "__main__":
                             "trgrow": trgrow,
                             "trshrink": trshrink,
                             "gd_eta": gd_eta,
+                            "ad_beta1": ad_beta1,
+                            "ad_beta2": ad_beta2,
+                            "ad_eta": ad_eta,
                         }
                         json.dump(params,f_bar)
                     
@@ -397,6 +428,10 @@ if __name__ == "__main__":
             changed, trshrink = imgui.SliderFloat("trshrink", trshrink, 1e-2, 0.99)
             imgui.TextUnformatted("Gradient Descent")
             changed, gd_eta = imgui.SliderFloat("gd_eta", gd_eta, 1e-2, 0.99)
+            imgui.TextUnformatted("Adam")
+            changed, ad_beta1 = imgui.SliderFloat("ad_beta1", ad_beta1, 0, 1.)
+            changed, ad_beta2 = imgui.SliderFloat("ad_beta2", ad_beta2, 0, 1.)
+            changed, ad_eta = imgui.SliderFloat("ad_eta", ad_eta, 1e-2, 0.99)
 
             # Triangle
             VH = np.vstack([V.T, np.ones((1, V.shape[0]))])
@@ -450,6 +485,17 @@ if __name__ == "__main__":
                 gd_xkp1 = step_proj_gradient_decent(g_bar,gd_xk, gd_eta)
                 fw_xkp1 = step_frank_wolfe(g,fw_xk, ABC,len(fw_xpath))
 
+                ad_xkp1, ad_mtp1, ad_vtp1 = step_adam(
+                    g_bar,
+                    ad_xk,
+                    ad_mt,
+                    ad_vt,
+                    ad_beta1,
+                    ad_beta2,
+                    ad_eta,
+                    len(ad_xpath)
+                )
+
                 if np.linalg.norm(xk - xkp1) > 0.0:
                     xpath = xpath + [DX @ xkp1 + A]
                     fpath = fpath + [fkp1]
@@ -459,14 +505,17 @@ if __name__ == "__main__":
                 if np.linalg.norm(gd_xk - gd_xkp1) > 0.0:
                     gd_xpath = gd_xpath + [DX @ gd_xkp1 + A]
                     gd_fpath = gd_fpath + [f_bar(gd_xkp1)]
-                    # Rpath = Rpath + [Rkp1]
                 gd_xk = gd_xkp1
 
                 if np.linalg.norm(fw_xk - fw_xkp1) > 0.0:
                     fw_xpath = fw_xpath + [fw_xkp1]
                     fw_fpath = fw_fpath + [f(fw_xkp1)]
-                    # Rpath = Rpath + [Rkp1]
                 fw_xk = fw_xkp1
+
+                if np.linalg.norm(ad_xk - ad_xkp1) > 0.0:
+                    ad_xpath = ad_xpath + [DX @ ad_xkp1 + A]
+                    ad_fpath = ad_fpath + [f_bar(ad_xkp1)]
+                ad_xk, ad_mt, ad_vt = ad_xkp1, ad_mtp1, ad_vtp1
                 
             changed, randomize_sample = imgui.Checkbox("Randomize sample", randomize_sample)
             if imgui.Button("Reset" if len(xpath) > 0 else "Start"):
@@ -476,6 +525,8 @@ if __name__ == "__main__":
                     xk = np.array([0.25, 0.25])
                 gd_xk = xk.copy()
                 fw_xk = DX @ xk.copy() + A
+                ad_xk = xk.copy()
+
                 fk = f_bar(xk)
                 gk = g_bar(xk)
 
@@ -488,12 +539,14 @@ if __name__ == "__main__":
                 gd_fk = f_bar(gd_xk)
                 gd_xpath = [DX @ gd_xk + A]
                 gd_fpath = [gd_fk]
-                # Rpath = [Rk]
 
                 fw_fk = f(fw_xk)
                 fw_xpath = [fw_xk]
                 fw_fpath = [fw_fk]
-                # Rpath = [Rk]
+
+                ad_fk = f_bar(ad_xk)
+                ad_xpath = [DX @ ad_xk + A]
+                ad_fpath = [ad_fk]
 
             if len(xpath) > 0:
                 VE = np.array(xpath)
@@ -534,6 +587,19 @@ if __name__ == "__main__":
                 pc.set_ignore_slice_plane(slice_plane, True)
                 pc.set_radius(1.1 * cn.get_radius(), relative=False)
 
+            if len(ad_xpath) > 0:
+                VE = np.array(ad_xpath)
+                EE = np.vstack([np.arange(len(ad_xpath) - 1), np.arange(1, len(ad_xpath))]).T
+                cn = ps.register_curve_network(
+                    "Optimization Path Adam",
+                    VE,
+                    EE,
+                )
+                pc = ps.register_point_cloud("Ad xk", VE[-1:, :])
+                cn.set_ignore_slice_plane(slice_plane, True)
+                pc.set_ignore_slice_plane(slice_plane, True)
+                pc.set_radius(1.1 * cn.get_radius(), relative=False)
+
             if len(fpath) > 0:
                 if implot.BeginPlot("Signed distance"):
                     implot.PlotLine(
@@ -544,6 +610,9 @@ if __name__ == "__main__":
                     )
                     implot.PlotLine(
                         "FW sdf", np.array(fw_fpath), 1 / len(fw_fpath), 0.0
+                    )
+                    implot.PlotLine(
+                        "AD sdf", np.array(ad_fpath), 1 / len(ad_fpath), 0.0
                     )
                     implot.EndPlot()
             if len(Rpath) > 0:
