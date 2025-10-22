@@ -13,6 +13,7 @@
 #define PBAT_SIM_ALGORITHM_VBD_CHEBYSHEV_H
 
 #include "Core.h"
+#include "pbat/io/Archive.h"
 
 namespace pbat::sim::algorithm::vbd {
 
@@ -33,6 +34,17 @@ struct ChebyshevParams
         xkm1; ///< `3 x |# verts|` \f$ x^{k-1} \f$ used in Chebyshev semi-iterative method
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
         xkm2; ///< `3 x |# verts|` \f$ x^{k-2} \f$ used in Chebyshev semi-iterative method
+    
+    /**
+     * @brief Serialize this to archive
+     * @param archive Archive to serialize to
+     */
+    PBAT_API void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize this from archive
+     * @param archive Archive to deserialize from
+     */
+    PBAT_API void Deserialize(io::Archive const& archive);
     /**
      * @brief Allocate memory for Chebyshev parameters if necessary
      * @param n Number of vertices

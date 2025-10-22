@@ -1,6 +1,29 @@
 #include "Chebyshev.h"
 
 namespace pbat::sim::algorithm::vbd {
+
+void ChebyshevParams::Serialize(io::Archive& archive) const
+{
+    io::Archive group = archive["pbat.sim.algorithm.vbd.ChebyshevParams"];
+    group.WriteData("rho", rho);
+    group.WriteData("k", k);
+    group.WriteData("rho2", rho2);
+    group.WriteData("omega", omega);
+    group.WriteData("xkm1", xkm1);
+    group.WriteData("xkm2", xkm2);
+}
+
+void ChebyshevParams::Deserialize(io::Archive const& archive)
+{
+    io::Archive group = archive["pbat.sim.algorithm.vbd.ChebyshevParams"];
+    rho               = group.ReadData<Scalar>("rho");
+    k                 = group.ReadData<Index>("k");
+    rho2              = group.ReadData<Scalar>("rho2");
+    omega             = group.ReadData<Scalar>("omega");
+    xkm1              = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm1");
+    xkm2              = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm2");
+}
+
 } // namespace pbat::sim::algorithm::vbd
 
 #include "pbat/graph/Adjacency.h"

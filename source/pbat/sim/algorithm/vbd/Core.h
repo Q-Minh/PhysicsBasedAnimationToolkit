@@ -18,6 +18,7 @@
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Enums.h"
+#include "pbat/io/Archive.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/profiling/Profiling.h"
@@ -115,6 +116,16 @@ struct Params
      * @return Reference to this
      */
     PBAT_API Params& Construct(bool bValidate = true);
+    /**
+     * @brief Serialize this to archive
+     * @param archive Archive to serialize to
+     */
+    PBAT_API void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize this from archive
+     * @param archive Archive to deserialize from
+     */
+    PBAT_API void Deserialize(io::Archive const& archive);
 
   public:
     // Vertex-element adjacency graph

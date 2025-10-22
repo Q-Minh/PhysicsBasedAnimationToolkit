@@ -1,6 +1,47 @@
 #include "Anderson.h"
 
 namespace pbat::sim::algorithm::vbd {
+
+void AndersonParams::Serialize(io::Archive& archive) const
+{
+    io::Archive group = archive["pbat.sim.algorithm.vbd.AndersonParams"];
+    group.WriteData("m", m);
+    group.WriteData("beta", beta);
+    group.WriteData("codNumericalZero", codNumericalZero);
+    group.WriteData("k", k);
+    group.WriteData("Fk", Fk);
+    group.WriteData("Xk", Xk);
+    group.WriteData("xkm1", xkm1);
+    group.WriteData("fk", fk);
+    group.WriteData("fkm1", fkm1);
+    group.WriteData("gammak", gammak);
+}
+
+void AndersonParams::Deserialize(io::Archive const& archive)
+{
+    io::Archive group = archive["pbat.sim.algorithm.vbd.AndersonParams"];
+    m                 = group.ReadData<Index>("m");
+    beta              = group.ReadData<Scalar>("beta");
+    codNumericalZero  = group.ReadData<Scalar>("codNumericalZero");
+    k                 = group.ReadData<Index>("k");
+    Fk                = group.ReadData<MatrixX>("Fk");
+    Xk                = group.ReadData<MatrixX>("Xk");
+    xkm1              = group.ReadData<VectorX>("xkm1");
+    fk                = group.ReadData<VectorX>("fk");
+    fkm1              = group.ReadData<VectorX>("fkm1");
+    gammak            = group.ReadData<VectorX>("gammak");
+}
+
+void AndersonParams::AllocateIfNeeded(Index n)
+{
+    Fk.resize(n, m);
+    Xk.resize(n, m);
+    xkm1.resize(n);
+    fk.resize(n);
+    fkm1.resize(n);
+    gammak.resize(m);
+}
+
 } // namespace pbat::sim::algorithm::vbd
 
 #include "pbat/graph/Adjacency.h"

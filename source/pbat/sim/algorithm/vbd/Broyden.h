@@ -15,6 +15,7 @@
 #include "Core.h"
 #include "Enums.h"
 #include "pbat/common/Modulo.h"
+#include "pbat/io/Archive.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/IterativeLinearSolvers>
@@ -69,6 +70,17 @@ struct BroydenParams
     Eigen::ColPivHouseholderQR<MatrixX> qr;              ///< QR solver for least-squares problem
     Eigen::LeastSquaresConjugateGradient<MatrixX>
         lscg; ///< Iterative LSQR solver for least-squares problem
+    
+    /**
+     * @brief Serialize this to archive
+     * @param archive Archive to serialize to
+     */
+    PBAT_API void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize this from archive
+     * @param archive Archive to deserialize from
+     */
+    PBAT_API void Deserialize(io::Archive const& archive);
     /**
      * @brief Allocate memory for Anderson parameters
      * @param n Number of degrees of freedom

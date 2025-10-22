@@ -114,6 +114,34 @@ Params& Params::Construct(bool bValidate)
     return *this;
 }
 
+void Params::Serialize(io::Archive& archive) const
+{
+    io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
+    group.WriteData("GVGp", GVGp);
+    group.WriteData("GVGe", GVGe);
+    group.WriteData("GVGilocal", GVGilocal);
+    group.WriteData("colors", colors);
+    group.WriteData("Pptr", Pptr);
+    group.WriteData("Padj", Padj);
+    group.WriteData("strategy", static_cast<int>(strategy));
+    group.WriteData("detHZero", detHZero);
+    group.WriteData("nMaxIters", nMaxIters);
+}
+
+void Params::Deserialize(io::Archive const& archive)
+{
+    io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
+    GVGp              = group.ReadData<IndexVectorX>("GVGp");
+    GVGe              = group.ReadData<IndexVectorX>("GVGe");
+    GVGilocal         = group.ReadData<IndexVectorX>("GVGilocal");
+    colors            = group.ReadData<IndexVectorX>("colors");
+    Pptr              = group.ReadData<IndexVectorX>("Pptr");
+    Padj              = group.ReadData<IndexVectorX>("Padj");
+    strategy          = static_cast<EInitializationStrategy>(group.ReadData<int>("strategy"));
+    detHZero          = group.ReadData<Scalar>("detHZero");
+    nMaxIters         = group.ReadData<Index>("nMaxIters");
+}
+
 } // namespace pbat::sim::algorithm::vbd
 
 #include "pbat/physics/StableNeoHookeanEnergy.h"

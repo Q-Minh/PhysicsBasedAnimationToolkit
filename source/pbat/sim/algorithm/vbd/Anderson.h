@@ -14,6 +14,7 @@
 
 #include "Core.h"
 #include "pbat/common/Modulo.h"
+#include "pbat/io/Archive.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/QR>
@@ -46,19 +47,23 @@ struct AndersonParams
      * @brief Least-squares solver
      */
     Eigen::CompleteOrthogonalDecomposition<MatrixX> cod; ///< COD solver for least-squares problem
+
+    /**
+     * @brief Serialize this to archive
+     * @param archive Archive to serialize to
+     */
+    PBAT_API void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize this from archive
+     * @param archive Archive to deserialize from
+     */
+    PBAT_API void Deserialize(io::Archive const& archive);
+
     /**
      * @brief Allocate memory for Anderson parameters
      * @param n Number of degrees of freedom
      */
-    void AllocateIfNeeded(Index n)
-    {
-        Fk.resize(n, m);
-        Xk.resize(n, m);
-        xkm1.resize(n);
-        fk.resize(n);
-        fkm1.resize(n);
-        gammak.resize(m);
-    }
+    void AllocateIfNeeded(Index n);
 };
 
 /**
