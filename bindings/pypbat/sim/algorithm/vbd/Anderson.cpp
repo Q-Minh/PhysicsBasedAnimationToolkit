@@ -1,7 +1,10 @@
 #include "Anderson.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/optional.h>
+#include <optional>
 #include <pbat/common/ConstexprFor.h>
+#include <pbat/io/Archive.h>
 #include <pbat/physics/Enums.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/algorithm/vbd/Anderson.h>
@@ -68,34 +71,40 @@ void BindAnderson(nanobind::module_& m)
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            Params const& params,
-           AndersonParams& anderson) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, anderson);
+           AndersonParams& anderson,
+           std::optional<pbat::io::Archive> archive) {
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, anderson, archive);
         },
         nb::arg("fem"),
         nb::arg("params"),
         nb::arg("anderson"),
+        nb::arg("archive") = std::nullopt,
         "Solve the Anderson accelerated VBD minimization problem.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
         "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
-        "parameters");
+        "parameters\n"
+        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
     m.def(
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            Params const& params,
-           AndersonParams& anderson) {
-            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, anderson);
+           AndersonParams& anderson,
+           std::optional<pbat::io::Archive> archive) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, anderson, archive);
         },
         nb::arg("fem"),
         nb::arg("params"),
         nb::arg("anderson"),
+        nb::arg("archive") = std::nullopt,
         "Integrate one time step using Anderson accelerated VBD minimization.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
         "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
-        "parameters");
+        "parameters\n"
+        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
 }
 
 } // namespace pbat::py::sim::algorithm::vbd

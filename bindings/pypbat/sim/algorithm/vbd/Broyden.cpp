@@ -1,7 +1,10 @@
 #include "Broyden.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/optional.h>
+#include <optional>
 #include <pbat/common/ConstexprFor.h>
+#include <pbat/io/Archive.h>
 #include <pbat/physics/Enums.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/algorithm/vbd/Broyden.h>
@@ -122,32 +125,38 @@ void BindBroyden(nanobind::module_& m)
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            Params const& params,
-           BroydenParams& broyden) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, broyden);
+           BroydenParams& broyden,
+           std::optional<pbat::io::Archive> archive) {
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, broyden, archive);
         },
         nb::arg("fem"),
         nb::arg("params"),
         nb::arg("broyden"),
+        nb::arg("archive") = std::nullopt,
         "Solve the Broyden accelerated VBD minimization problem.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
+        "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n"
+        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
     m.def(
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            Params const& params,
-           BroydenParams& broyden) {
-            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, broyden);
+           BroydenParams& broyden,
+           std::optional<pbat::io::Archive> archive) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, broyden, archive);
         },
         nb::arg("fem"),
         nb::arg("params"),
         nb::arg("broyden"),
+        nb::arg("archive") = std::nullopt,
         "Integrate one time step using VBD as non-linear solver.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
+        "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n"
+        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
 }
 
 } // namespace pbat::py::sim::algorithm::vbd

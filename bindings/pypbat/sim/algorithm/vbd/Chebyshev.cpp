@@ -1,7 +1,10 @@
 #include "Chebyshev.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/optional.h>
+#include <optional>
 #include <pbat/common/ConstexprFor.h>
+#include <pbat/io/Archive.h>
 #include <pbat/physics/Enums.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/algorithm/vbd/Chebyshev.h>
@@ -58,30 +61,40 @@ void BindChebyshev(nanobind::module_& m)
         "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
     m.def(
         "solve",
-        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params, ChebyshevParams& cheb) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, cheb);
+        [](FemElastoDynamics<ElasticEnergyType>& fem,
+           Params const& params,
+           ChebyshevParams& cheb,
+           std::optional<pbat::io::Archive> archive) {
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, cheb, archive);
         },
         nb::arg("fem"),
         nb::arg("params"),
         nb::arg("cheb"),
+        nb::arg("archive") = std::nullopt,
         "Solve the VBD minimization up to maximum iterations.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
+        "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters\n"
+        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
     m.def(
         "integrate",
-        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params, ChebyshevParams& cheb) {
-            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, cheb);
+        [](FemElastoDynamics<ElasticEnergyType>& fem,
+           Params const& params,
+           ChebyshevParams& cheb,
+           std::optional<pbat::io::Archive> archive) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, cheb, archive);
         },
         nb::arg("fem"),
         nb::arg("params"),
         nb::arg("cheb"),
+        nb::arg("archive") = std::nullopt,
         "Integrate one time step using Chebyshev accelerated VBD minimization.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
+        "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters\n"
+        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
 }
 
 } // namespace pbat::py::sim::algorithm::vbd
