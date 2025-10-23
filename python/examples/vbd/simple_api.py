@@ -140,6 +140,7 @@ if __name__ == "__main__":
             _, vbd_params.n_max_iters = imgui.InputInt(
                 "Maximum Iterations", vbd_params.n_max_iters
             )
+            _, vbd_params.detH_zero = imgui.InputFloat("detH0", vbd_params.detH_zero, format="%.10f")
             if imgui.TreeNode("Anderson"):
                 _, anderson_params.m = imgui.InputInt("m", anderson_params.m)
                 _, anderson_params.beta = imgui.InputFloat("beta", anderson_params.beta)
@@ -229,10 +230,10 @@ if __name__ == "__main__":
             d_mask[d_nodes] = True
             dynamics.constrain(d_mask)
             dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
-            # NOTE: If the time integration scheme has changed, the BDF integrator 
-            # needs to be re-initialized. However, if we haven't asked to "reset" the 
+            # NOTE: If the time integration scheme has changed, the BDF integrator
+            # needs to be re-initialized. However, if we haven't asked to "reset" the
             # simulation, then we need to continue simulating from the current state.
-            # Resetting the initial conditions, but to the current state, approximately 
+            # Resetting the initial conditions, but to the current state, approximately
             # achieves this.
             dynamics.set_initial_conditions(dynamics.x, dynamics.v)
 
@@ -259,7 +260,7 @@ if __name__ == "__main__":
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, broyden_params)
             elif i_solver == 3:
                 pbat.sim.algorithm.vbd.integrate(dynamics, vbd_params, chebyshev_params)
-                
+
         # Update visuals
         vis_dirty = animate or step or reset
         if vis_dirty:
