@@ -82,7 +82,7 @@ auto MeshQuadratureWeights(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.MeshQuadratureWeights");
     using ElementType = TElement;
-    auto detJeThenWg = DeterminantOfJacobian<ElementType, QuadratureOrder>(E, X);
+    auto detJeThenWg  = DeterminantOfJacobian<ElementType, QuadratureOrder>(E, X);
     ToMeshQuadratureWeights<ElementType, QuadratureOrder>(detJeThenWg);
     return detJeThenWg;
 }
@@ -193,8 +193,9 @@ template <
 auto MeshReferenceQuadraturePoints(TIndex nElements)
 {
     using QuadratureType = typename TElement::template QuadratureType<QuadratureOrder, TScalar>;
-    auto const Xi =
-        common::ToEigen(QuadratureType::points).template bottomRows<QuadratureType::kDims>();
+    auto const Xi        = common::ToEigen(QuadratureType::points)
+                        .reshaped(QuadratureType::kDims + 1, QuadratureType::kPoints)
+                        .template bottomRows<QuadratureType::kDims>();
     return Xi.replicate(1, nElements);
 }
 
