@@ -183,13 +183,13 @@ void Solve(
     std::optional<io::Archive> ac)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
+    InitializeSolve<TElasticEnergy>(fem, params, anderson);
     std::optional<io::Archive> group;
     if (ac)
     {
         group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Anderson.Solve");
         SerializeSolverIteration<TElasticEnergy>(fem, 0, *group);
     }
-    InitializeSolve<TElasticEnergy>(fem, params, anderson);
     for (; anderson.k < params.nMaxIters;)
     {
         if (group)

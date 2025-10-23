@@ -392,13 +392,13 @@ void Solve(
     std::optional<io::Archive> ac)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
+    InitializeSolve<TElasticEnergy>(fem, params, broyden);
     std::optional<io::Archive> group;
     if (ac)
     {
         group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Broyden.Solve");
         SerializeSolverIteration<TElasticEnergy>(fem, 0, *group);
     }
-    InitializeSolve<TElasticEnergy>(fem, params, broyden);
     for (; broyden.k < params.nMaxIters;)
     {
         if (group)
