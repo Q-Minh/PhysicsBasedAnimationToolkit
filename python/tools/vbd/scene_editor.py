@@ -2,6 +2,7 @@
 import math
 import meshio
 import numpy as np
+import os
 import polyscope as ps
 import polyscope.imgui as imgui
 import tkinter as tk
@@ -16,9 +17,7 @@ class SceneMesh:
         self.V = V  # (n,3)
         self.C = C  # (m,4)
         self.handle = ps.register_volume_mesh(name, V, C)
-        self.handle.set_transform(np.eye(4))
         # Per-mesh settings (future extension: heterogeneous materials, loads, constraints)
-        self.visible = True
         self.Y = 1e6
         self.nu = 0.45
         self.rho = 1e3
@@ -52,7 +51,8 @@ class SceneState:
         imesh = meshio.read(file_path)
         if "tetra" in imesh.cells_dict:
             V, C = imesh.points, imesh.cells_dict["tetra"]
-            name = f"Mesh {len(self.meshes)}"
+            filename = os.path.basename(file_path)
+            name = f"{len(self.meshes):<2} - {filename}"
             item = SceneMesh(name, V, C)
             self.meshes.append(item)
         else:
@@ -198,6 +198,41 @@ class SceneState:
         ac.flush()
 
 
+def _load_mesh(state: SceneState):
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(
+        title="Select tetrahedral mesh file",
+        defaultextension=".mesh",
+        filetypes=[
+            ("Tetrahedral mesh files (ASCII)", "*.mesh"),
+            ("Tetrahedral mesh files (binary)", "*.msh"),
+            ("All files", "*.*"),
+        ],
+    )
+    try:
+        if file_path:
+            state.add_mesh_from_file(file_path)
+    finally:
+        root.destroy()
+
+
+def _save_fem(state: SceneState):
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.asksaveasfilename(
+        title="Save FEM scene (HDF5)",
+        defaultextension=".h5",
+        filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+    )
+    try:
+        if file_path:
+            state.build_fem_elastodynamics()
+            state.serialize_fem(file_path)
+    finally:
+        root.destroy()
+
+
 def main():
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -209,48 +244,16 @@ def main():
 
     state = SceneState()
 
-    def _load_mesh():
-        root = tk.Tk()
-        root.withdraw()
-        file_path = filedialog.askopenfilename(
-            title="Select tetrahedral mesh file",
-            defaultextension=".mesh",
-            filetypes=[
-                ("Tetrahedral mesh files (ASCII)", "*.mesh"),
-                ("Tetrahedral mesh files (binary)", "*.msh"),
-                ("All files", "*.*"),
-            ],
-        )
-        try:
-            if file_path:
-                state.add_mesh_from_file(file_path)
-        finally:
-            root.destroy()
-
-    def _save_fem():
-        root = tk.Tk()
-        root.withdraw()
-        file_path = filedialog.asksaveasfilename(
-            title="Save FEM scene (HDF5)",
-            defaultextension=".h5",
-            filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
-        )
-        try:
-            if file_path:
-                state.build_fem_elastodynamics()
-                state.serialize_fem(file_path)
-        finally:
-            root.destroy()
-
     def callback():
         imgui.Text("Scene Editor (FEM)")
+        default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
 
         # Top-level I/O and scene actions
         if imgui.TreeNode("Scene"):
-            if imgui.Button("Add Mesh"):
-                _load_mesh()
-            if imgui.Button("Save FEM"):
-                _save_fem()
+            if imgui.Button("Add Mesh", default_button_size):
+                _load_mesh(state)
+            if imgui.Button("Save FEM", default_button_size):
+                _save_fem(state)
             imgui.Text(f"Meshes: {len(state.meshes)}")
             if state.fem is not None:
                 imgui.Text(
@@ -261,7 +264,6 @@ def main():
         # Dynamics (environment-level)
         if imgui.TreeNode("Dynamics"):
             _, state.aext = imgui.InputFloat3("External acceleration", state.aext)
-            _, state.b = imgui.InputFloat3("Body forces", state.b)
             _, state.dt = imgui.InputFloat("Time step", state.dt)
             _, state.s = imgui.InputInt("BDF step", state.s)
             if imgui.TreeNode("Dirichlet Constraints"):
@@ -276,18 +278,6 @@ def main():
         # Per-mesh controls
         for i, m in enumerate(state.meshes):
             if imgui.TreeNode(f"{m.name}"):
-                if imgui.Button("Delete"):
-                    state.remove_mesh(i)
-                    imgui.TreePop()
-                    break  # indices shifted
-                imgui.SameLine()
-                if imgui.Button("Reset Gizmo"):
-                    m.handle.set_transform(np.eye(4))
-                _, m.visible = imgui.Checkbox("Visible", m.visible)
-                try:
-                    m.handle.set_enabled(m.visible)
-                except Exception:
-                    pass
                 # Material & ICs (not yet heterogeneous in FEM build, but tracked per-mesh)
                 if imgui.TreeNode("Material"):
                     _, m.Y = imgui.InputFloat("Young's Modulus", m.Y)
@@ -304,7 +294,10 @@ def main():
                     if changed:
                         m.v0 = np.array(vec)
                     imgui.TreePop()
-                # Bounding box of transformed mesh
+                if imgui.Button("Delete", default_button_size):
+                    state.remove_mesh(i)
+                    imgui.TreePop()
+                    break  # indices shifted
                 imgui.TreePop()
 
     ps.set_user_callback(callback)
