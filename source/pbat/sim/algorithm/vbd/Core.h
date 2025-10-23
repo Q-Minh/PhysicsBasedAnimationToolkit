@@ -399,11 +399,13 @@ void SerializeSolverIteration(
 {
     Scalar f     = fem.Objective();
     Scalar gnorm = fem.Gradient().norm();
-    archive.WriteData(fmt::format("{}/x", k), fem.x);
-    archive.WriteData(fmt::format("{}/f", k), f);
-    archive.WriteData(fmt::format("{}/gnorm", k), gnorm);
+    // NOTE: Use 6 decimal positions for iteration index (allows up to 999999 iterations)
+    io::Archive iter = archive[fmt::format("{:06d}", k)];
+    iter.WriteData("x", fem.x);
+    iter.WriteMetaData("f", f);
+    iter.WriteMetaData("gnorm", gnorm);
     if (bPostSolve)
-        archive.WriteData(fmt::format("{}/v", k), fem.v);
+        iter.WriteData("v", fem.v);
 }
 
 } // namespace pbat::sim::algorithm::vbd
