@@ -179,32 +179,48 @@ auto MeshDualGraph(
 }
 
 /**
- * @brief Re-index mesh vertices and elements by connected components
+ * @brief Obtain ordering of mesh vertices and elements by sorted connected components
  *
  * @tparam TDerivedX Type of node position matrix
  * @tparam TDerivedE Type of element index matrix
  * @tparam TDerivedXCC Type of node connected component index vector
  * @tparam TDerivedECC Type of element connected component index vector
+ * @tparam TDerivedXordering Type of node re-indexing vector
+ * @tparam TDerivedEordering Type of element re-indexing vector
  * @tparam TIndex Type of indices used in element array
  * @param X `|# dims| x |# nodes|` node position matrix
  * @param E `|# elem. nodes| x |# elements|` element index matrix
  * @param XCC `|# nodes| x 1` node connected component index vector
  * @param ECC `|# elements| x 1` element connected component index vector
+ * @param Xordering `|# nodes| x 1` node re-indexing vector
+ * @param Eordering `|# elements| x 1` element re-indexing vector
  * @return Number of connected components in the mesh
+ * @post `XCC[i]` gives the connected component index of node `i` in the input mesh
+ * @post `ECC[e]` gives the connected component index of element `e` in the input mesh
+ * @post `Xordering[i]` gives the new index of node `i` in the re-indexed mesh
+ * @post `Eordering[e]` gives the new index of element `e` in the re-indexed mesh
+ * @post The ordering is such that all nodes and elements belonging to the same connected component
+ * are grouped together, and such connected component groups are sorted, i.e. all `i1` and `e1` with
+ * the same component index `c` appear before all `i2` and `e2` with connected component index `d >
+ * c`.
  */
 template <
     class TDerivedX,
     class TDerivedE,
     class TDerivedXCC,
     class TDerivedECC,
+    class TDerivedXordering,
+    class TDerivedEordering,
     common::CIndex TIndex = typename TDerivedE::Scalar>
-Eigen::Index ReindexMeshByConnectedComponents(
-    Eigen::DenseBase<TDerivedX>& X,
-    Eigen::DenseBase<TDerivedE>& E,
+Eigen::Index SortedConnectedComponentOrdering(
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedE> const& E,
     Eigen::DenseBase<TDerivedXCC>& XCC,
-    Eigen::DenseBase<TDerivedECC>& ECC)
+    Eigen::DenseBase<TDerivedECC>& ECC,
+    Eigen::DenseBase<TDerivedXordering>& Xordering,
+    Eigen::DenseBase<TDerivedEordering>& Eordering)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.ReindexMeshByConnectedComponents");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.SortedConnectedComponentOrdering");
     using IndexType           = TIndex;
     using XccIndexType        = typename TDerivedXCC::Scalar;
     using EccIndexType        = typename TDerivedECC::Scalar;
@@ -237,27 +253,103 @@ Eigen::Index ReindexMeshByConnectedComponents(
                          // [nElements-1,nElements-1,nElements-1,nElements-1]]`
     XCC(E.reshaped()) = ECC(verticesToElements).cast<XccIndexType>();
     // 4. Sort the elements by connected component
-    Eigen::Vector<IndexType, Eigen::Dynamic> Eordering =
-        common::ArgSort<IndexType>(nElements, [&](IndexType ei, IndexType ej) {
-            return ECC[ei] < ECC[ej];
-        });
+    Eordering = common::ArgSort<IndexType>(nElements, [&](IndexType ei, IndexType ej) {
+        return ECC[ei] < ECC[ej];
+    });
+    // 5. Sort vertices by connected component
+    Xordering = common::ArgSort<IndexType>(nNodes, [&](IndexType i, IndexType j) {
+        return XCC[i] < XCC[j];
+    });
+    return nComponents;
+}
+
+/**
+ * @brief Re-index mesh vertices and elements by connected components
+ *
+ * @tparam TDerivedX Type of node position matrix
+ * @tparam TDerivedE Type of element index matrix
+ * @tparam TDerivedXCC Type of node connected component index vector
+ * @tparam TDerivedECC Type of element connected component index vector
+ * @tparam TDerivedXordering Type of node re-indexing vector
+ * @tparam TDerivedEordering Type of element re-indexing vector
+ * @tparam TIndex Type of indices used in element array
+ * @param X `|# dims| x |# nodes|` node position matrix
+ * @param E `|# elem. nodes| x |# elements|` element index matrix
+ * @param XCC `|# nodes| x 1` node connected component index vector
+ * @param ECC `|# elements| x 1` element connected component index vector
+ * @param Xordering `|# nodes| x 1` node re-indexing vector
+ * @param Eordering `|# elements| x 1` element re-indexing vector
+ * @pre `XCC[i]` gives the connected component index of node `i` in the input mesh
+ * @pre `ECC[e]` gives the connected component index of element `e` in the input mesh
+ * @pre `Xordering[i]` gives the new index of node `i` in the re-indexed mesh
+ * @pre `Eordering[e]` gives the new index of element `e` in the re-indexed mesh
+ * @post The input mesh X and E are re-indexed in-place such that nodes and elements belonging to
+ * the same connected component are grouped together, and such connected component groups are
+ * sorted, i.e. all `i1` and `e1` with the same component index `c` appear before all `i2` and `e2`
+ * with connected component index `d > c`.
+ */
+template <
+    class TDerivedX,
+    class TDerivedE,
+    class TDerivedXCC,
+    class TDerivedECC,
+    class TDerivedXordering,
+    class TDerivedEordering,
+    common::CIndex TIndex = typename TDerivedE::Scalar>
+void ReindexMeshByConnectedComponents(
+    Eigen::DenseBase<TDerivedX>& X,
+    Eigen::DenseBase<TDerivedE>& E,
+    Eigen::DenseBase<TDerivedXCC>& XCC,
+    Eigen::DenseBase<TDerivedECC>& ECC,
+    Eigen::DenseBase<TDerivedXordering>& Xordering,
+    Eigen::DenseBase<TDerivedEordering>& Eordering)
+{
+    // Re-index elements and element connected components
     for (auto r = 0; r < E.rows(); ++r)
         common::Permute(E.row(r).begin(), E.row(r).end(), Eordering.begin());
     common::Permute(ECC.begin(), ECC.end(), Eordering.begin());
-    // 5. Sort vertices by connected component
-    Eigen::Vector<IndexType, Eigen::Dynamic> Xordering =
-        common::ArgSort<IndexType>(nNodes, [&](IndexType i, IndexType j) {
-            return XCC[i] < XCC[j];
-        });
+    // Re-index nodes and node connected components
     for (auto d = 0; d < X.rows(); ++d)
         common::Permute(X.row(d).begin(), X.row(d).end(), Xordering.begin());
     common::Permute(XCC.begin(), XCC.end(), Xordering.begin());
-    // 6. Re-index mesh vertices to match the sorted order
+    // 6. Re-index mesh node indices to match the sorted order
     // If Xordering[i] = j, then all nodes i in E must become j
-    Eigen::Vector<IndexType, Eigen::Dynamic> XorderingInverse(nNodes);
-    XorderingInverse(Xordering) =
-        Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nNodes, 0, nNodes - 1);
+    auto nNodes = X.cols();
+    Eigen::Vector<TIndex, Eigen::Dynamic> XorderingInverse(nNodes);
+    XorderingInverse(Xordering.derived()) =
+        Eigen::Vector<TIndex, Eigen::Dynamic>::LinSpaced(nNodes, 0, nNodes - 1);
     E.reshaped() = XorderingInverse(E.reshaped());
+}
+
+/**
+ * @brief Re-index mesh vertices and elements by connected components
+ *
+ * @tparam TDerivedX Type of node position matrix
+ * @tparam TDerivedE Type of element index matrix
+ * @tparam TIndex Type of indices used in element array
+ * @param X `|# dims| x |# nodes|` node position matrix
+ * @param E `|# elem. nodes| x |# elements|` element index matrix
+ * @return Number of connected components in the mesh
+ * @post The input mesh X and E are re-indexed in-place such that nodes and elements
+ * belonging to the same connected component are grouped together, and such connected component
+ * groups are sorted, i.e. all `i1` and `e1` with the same component index `c` appear before all
+ * `i2` and `e2` with connected component index `d > c`.
+ */
+template <class TDerivedX, class TDerivedE, common::CIndex TIndex = typename TDerivedE::Scalar>
+Eigen::Index
+ReindexMeshByConnectedComponents(Eigen::DenseBase<TDerivedX>& X, Eigen::DenseBase<TDerivedE>& E)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.ReindexMeshByConnectedComponents");
+    using IndexType           = TIndex;
+    IndexType const nNodes    = static_cast<IndexType>(X.cols());
+    IndexType const nElements = static_cast<IndexType>(E.cols());
+    Eigen::Vector<IndexType, Eigen::Dynamic> XCC(nNodes);
+    Eigen::Vector<IndexType, Eigen::Dynamic> ECC(nElements);
+    Eigen::Vector<IndexType, Eigen::Dynamic> Xordering(nNodes);
+    Eigen::Vector<IndexType, Eigen::Dynamic> Eordering(nElements);
+    Eigen::Index nComponents =
+        SortedConnectedComponentOrdering(X, E, XCC, ECC, Xordering, Eordering);
+    ReindexMeshByConnectedComponents(X, E, XCC, ECC, Xordering, Eordering);
     return nComponents;
 }
 

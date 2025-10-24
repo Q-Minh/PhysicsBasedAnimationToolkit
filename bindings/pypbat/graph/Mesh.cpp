@@ -90,19 +90,104 @@ void BindMesh(nanobind::module_& m)
         "flags (int): VertexAdjacency (0b001) | EdgeAdjacency (0b010) | FaceAdjacency (0b100) | "
         "All (0b111)\n");
     m.def(
-        "reindex_mesh_by_connected_components",
+        "sorted_connected_component_ordering",
         [](nb::DRef<MatrixX const> const& X, nb::DRef<IndexMatrixX const> const& E) {
-            MatrixX Xcopy      = X;
-            IndexMatrixX Ecopy = E;
-            IndexVectorX XCC;
-            IndexVectorX ECC;
+            Eigen::Vector<Index, Eigen::Dynamic> XCC(X.cols());
+            Eigen::Vector<Index, Eigen::Dynamic> ECC(E.cols());
+            Eigen::Vector<Index, Eigen::Dynamic> Xordering(X.cols());
+            Eigen::Vector<Index, Eigen::Dynamic> Eordering(E.cols());
             Eigen::Index nComponents =
-                pbat::graph::ReindexMeshByConnectedComponents(Xcopy, Ecopy, XCC, ECC);
-            return std::make_tuple(Xcopy, Ecopy, XCC, ECC, nComponents);
+                pbat::graph::SortedConnectedComponentOrdering(X, E, XCC, ECC, Xordering, Eordering);
+            return std::make_tuple(Xordering, Eordering, XCC, ECC, nComponents);
         },
         nb::arg("X"),
         nb::arg("E"),
-        "Re-index mesh vertices and elements by connected components.\n"
+        "Compute the sorted connected component ordering of the mesh. The ordering is such that "
+        "all nodes and elements belonging to the same connected component are grouped together, "
+        "and such connected component groups are sorted, i.e. all `i1` and `e1` with the same "
+        "component index `c` appear before all `i2` and `e2` with connected component index `d > "
+        "c`.\n"
+        "Args:\n"
+        "    X (np.ndarray): |# dims| x |# nodes| node position matrix\n"
+        "    E (np.ndarray): |# nodes per element| x |# elements| element index matrix\n"
+        "Returns:\n"
+        "    Xordering (np.ndarray): |# nodes| x 1 node ordering vector s.t. `Xordering[i]` gives "
+        "the new index of node `i` in the re-indexed mesh\n"
+        "    Eordering (np.ndarray): |# elements| x 1 element ordering vector s.t. `Eordering[e]` "
+        "gives the new index of element `e` in the re-indexed mesh\n"
+        "    XCC (np.ndarray): |# nodes| x 1 node connected component index vector s.t. `XCC[i]` "
+        "gives the connected component index of node `i` in the input mesh.\n"
+        "    ECC (np.ndarray): |# elements| x 1 element connected component index vector s.t. "
+        "`ECC[e]` gives the connected component index of element `e` in the input mesh\n"
+        "    n_components (int): Number of connected components in the mesh");
+    m.def(
+        "reindex_mesh_by_connected_components",
+        [](nb::DRef<MatrixX const> const& X,
+           nb::DRef<IndexMatrixX const> const& E,
+           nb::DRef<IndexVectorX const> const& XCC,
+           nb::DRef<IndexVectorX const> const& ECC,
+           nb::DRef<IndexVectorX> Xordering,
+           nb::DRef<IndexVectorX> Eordering) {
+            MatrixX Xcopy        = X;
+            IndexMatrixX Ecopy   = E;
+            IndexVectorX XCCcopy = XCC;
+            IndexVectorX ECCcopy = ECC;
+            pbat::graph::ReindexMeshByConnectedComponents(
+                Xcopy,
+                Ecopy,
+                XCCcopy,
+                ECCcopy,
+                Xordering,
+                Eordering);
+            return std::make_tuple(Xcopy, Ecopy, XCCcopy, ECCcopy);
+        },
+        nb::arg("X"),
+        nb::arg("E"),
+        nb::arg("XCC"),
+        nb::arg("ECC"),
+        nb::arg("Xordering"),
+        nb::arg("Eordering"),
+        "Re-index mesh vertices and elements by connected components. The input mesh X and E are "
+        "re-indexed in-place such that nodes and elements belonging to the same connected "
+        "component are grouped together, and such connected component groups are sorted, i.e. all "
+        "`i1` and `e1` with the same component index `c` appear before all `i2` and `e2` with "
+        "connected component index `d > c`.\n"
+        "Args:\n"
+        "    X (np.ndarray): |# dims| x |# nodes| node position matrix\n"
+        "    E (np.ndarray): |# nodes per element| x |# elements| element index matrix\n"
+        "    XCC (np.ndarray): |# nodes| x 1 node connected component index vector s.t. `XCC[i]` "
+        "gives the connected component index of node `i` in the input mesh.\n"
+        "    ECC (np.ndarray): |# elements| x 1 element connected component index vector s.t. "
+        "`ECC[e]` gives the connected component index of element `e` in the input mesh\n"
+        "    Xordering (np.ndarray): |# nodes| x 1 node ordering vector s.t. `Xordering[i]` gives "
+        "the new "
+        "index of node `i` in the re-indexed mesh\n"
+        "    Eordering (np.ndarray): |# elements| x 1 element ordering vector s.t. `Eordering[e]` "
+        "gives the new "
+        "index of element `e` in the re-indexed mesh\n"
+        "Returns:\n"
+        "    X_reindexed (np.ndarray): `|# dims| x |# nodes|` Re-indexed node position matrix\n"
+        "    E_reindexed (np.ndarray): `|# nodes per element| x |# elements|` Re-indexed element "
+        "index matrix\n"
+        "    XCC_reindexed (np.ndarray): `|# nodes| x 1` Re-indexed node connected component "
+        "index vector\n"
+        "    ECC_reindexed (np.ndarray): `|# elements| x 1` Re-indexed element connected component "
+        "index vector\n");
+    m.def(
+        "reindex_mesh_by_connected_components",
+        [](nb::DRef<MatrixX const> const& X, nb::DRef<IndexMatrixX const> const& E) {
+            MatrixX Xcopy            = X;
+            IndexMatrixX Ecopy       = E;
+            Eigen::Index nComponents = pbat::graph::ReindexMeshByConnectedComponents(Xcopy, Ecopy);
+            return std::make_tuple(Xcopy, Ecopy, nComponents);
+        },
+        nb::arg("X"),
+        nb::arg("E"),
+        "Re-index mesh vertices and elements by connected components. The input mesh X and E are "
+        "re-indexed in-place such that nodes and elements belonging to the same connected "
+        "component are grouped together, and such connected component groups are sorted, i.e. all "
+        "`i1` and `e1` with the same component index `c` appear before all `i2` and `e2` with "
+        "connected component index `d > c`.\n"
         "Args:\n"
         "    X (np.ndarray): |# dims| x |# nodes| node position matrix\n"
         "    E (np.ndarray): |# nodes per element| x |# elements| element index matrix\n"
@@ -110,8 +195,6 @@ void BindMesh(nanobind::module_& m)
         "    X_reindexed (np.ndarray): `|# dims| x |# nodes|` Re-indexed node position matrix\n"
         "    E_reindexed (np.ndarray): `|# nodes per element| x |# elements|` Re-indexed element "
         "index matrix\n"
-        "    XCC (np.ndarray): `|# nodes| x 1` node connected component index vector\n"
-        "    ECC (np.ndarray): `|# elements| x 1` element connected component index vector\n"
         "    n_components (int): Number of connected components in the mesh");
 }
 

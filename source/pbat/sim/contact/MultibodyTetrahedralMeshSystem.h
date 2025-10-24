@@ -246,9 +246,13 @@ inline void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Construct(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTetrahedralMeshSystem.Construct");
     IndexType const nNodes    = static_cast<IndexType>(X.cols());
     IndexType const nElements = static_cast<IndexType>(T.cols());
-    IndexVectorX ECC(nElements);
+    Eigen::Vector<IndexType, Eigen::Dynamic> ECC(nElements);
+    Eigen::Vector<IndexType, Eigen::Dynamic> Xordering(nNodes);
+    Eigen::Vector<IndexType, Eigen::Dynamic> Eordering(nElements);
     // 1. Re-index the mesh
-    Eigen::Index nComponents = graph::ReindexMeshByConnectedComponents(X, T, CC, ECC);
+    Eigen::Index nComponents =
+        graph::SortedConnectedComponentOrdering(X, E, CC, ECC, Xordering, Eordering);
+    graph::ReindexMeshByConnectedComponents(X, E, CC, ECC, Xordering, Eordering);
     // 2. Compute boundary mesh, and note that V and F will already be sorted by connected
     // component, because we have re-indexed T and X
     std::tie(V, F) = geometry::SimplexMeshBoundary<IndexType>(T, nNodes);
