@@ -125,10 +125,10 @@ class SceneState:
         XgU = pbat.fem.mesh_reference_quadrature_points(
             n_elems, element=element, order=order, quadrature_order=qorder_U
         )
-        mu, llambda = pypbat.fem.lame_coefficients(m.Y, m.nu)
         mug, lambdag = np.zeros_like(wgU), np.zeros_like(wgU)
         for (start, end), m in zip(element_ranges, self.meshes):
             n_elem_quads = wgU.shape[0]
+            mu, llambda = pypbat.fem.lame_coefficients(m.Y, m.nu)
             mug[:, start:end] = np.full((n_elem_quads, end - start), mu)
             lambdag[:, start:end] = np.full((n_elem_quads, end - start), llambda)
 
