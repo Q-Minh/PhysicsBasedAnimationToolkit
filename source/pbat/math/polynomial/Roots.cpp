@@ -10,7 +10,8 @@ TEST_CASE("[math][polynomial] Roots")
 {
     using namespace pbat;
     using namespace pbat::math;
-
+    // WARNING:
+    // Make tests robust to numerical precision issues.
     common::ForRange<2, 6>([]<auto N>() {
         // Arrange
         Scalar constexpr kMaxCoeff = 1e10;

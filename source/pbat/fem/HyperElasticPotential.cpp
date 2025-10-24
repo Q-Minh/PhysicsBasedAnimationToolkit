@@ -118,6 +118,9 @@ TEST_CASE("[fem] HyperElasticPotential")
                 fem::EElementElasticityComputationFlags::Hessian,
             fem::EHyperElasticSpdCorrection::None);
         Scalar const UTranslated       = fem::HyperElasticPotential(Ug);
+        // WARNING:
+        // These tests are quite sensitive to numerical precision, we should
+        // eventually try to make these more robust.
         Scalar const UTranslationError = std::abs(UTranslated - UMaterial);
         CHECK_LE(UTranslationError, zero);
         VectorX const gradUTranslated      = fem::HyperElasticGradient(M, eg.reshaped(), Gg);

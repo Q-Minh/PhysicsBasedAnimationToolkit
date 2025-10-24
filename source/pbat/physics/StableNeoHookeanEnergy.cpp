@@ -11,6 +11,8 @@ TEST_CASE("[physics] StableNeoHookeanEnergy")
 {
     using namespace pbat;
     namespace mini = pbat::math::linalg::mini;
+    // WARNING:
+    // Make tests robust to numerical precision issues.
     common::ForValues<1, 2, 3>([]<auto Dims>() {
         using mini::FromEigen;
         physics::StableNeoHookeanEnergy<Dims> psi{};
