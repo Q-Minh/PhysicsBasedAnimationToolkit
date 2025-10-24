@@ -251,7 +251,7 @@ Eigen::Index SortedConnectedComponentOrdering(
             .transpose()
             .reshaped(); // `|# elem. nodes| x |# elements|` matrix `[[0,0,0,0], [1,1,1,1], ...,
                          // [nElements-1,nElements-1,nElements-1,nElements-1]]`
-    XCC(E.reshaped()) = ECC(verticesToElements).cast<XccIndexType>();
+    XCC(E.reshaped()) = ECC(verticesToElements).template cast<XccIndexType>();
     // 4. Sort the elements by connected component
     Eordering = common::ArgSort<IndexType>(nElements, [&](IndexType ei, IndexType ej) {
         return ECC[ei] < ECC[ej];

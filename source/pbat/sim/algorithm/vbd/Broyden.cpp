@@ -112,6 +112,7 @@ TEST_CASE("[sim][algorithm][vbd] Broyden")
     broydenParams.m          = 5;
     broydenParams.epsL2Solve = Scalar(1e-10);
     // Act
+    dynamics.SetInitialConditions(dynamics.x, dynamics.v);
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();

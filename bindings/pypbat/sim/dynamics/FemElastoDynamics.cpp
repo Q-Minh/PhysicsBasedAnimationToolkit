@@ -243,13 +243,13 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    s (int, optional): BDF order (1 to 6). Defaults to 1.\n")
         .def(
             "constrain",
-            [](ElastoDynamics& self, nb::DRef<Eigen::Vector<bool, Eigen::Dynamic> const> D) {
+            [](ElastoDynamics& self, nb::DRef<Eigen::Vector<int, Eigen::Dynamic> const> D) {
                 self.Constrain(D);
             },
             nb::arg("D"),
-            "Set Dirichlet boundary conditions as |#nodes| boolean mask.\n\n"
+            "Set Dirichlet boundary conditions as |# nodes| integer mask.\n\n"
             "Args:\n"
-            "    D (numpy.ndarray): `|#nodes|` boolean array where True indicates a constrained "
+            "    D (numpy.ndarray): `|#nodes|` integer array where non-zero values indicate a constrained "
             "node.\n")
         .def(
             "setup_time_integration_optimization",
@@ -348,7 +348,7 @@ Typical workflow:
     fem.set_elastic_energy(mu, lambda)
     fem.set_external_load(b)
     fem.set_time_integration_scheme(dt=1e-2, s=1)
-    fem.constrain(D)  # boolean mask of size |#nodes|
+    fem.constrain(D)  # int mask of size |#nodes|
     fem.setup_time_integration_optimization()  # compute inertial target xtilde
 ```
 You can then assemble equations with compute_elastic_energy(...) and use the returned

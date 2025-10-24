@@ -95,9 +95,9 @@ struct FemElastoDynamics
         dbc; ///< `|# nodes| x 1` concatenated vector of Dirichlet unconstrained and
              ///< constrained nodes, partitioned as
              ///< `[ dbc(0 : |#nodes|-ndbc), dbc(|# nodes|-ndbc : |# nodes|) ]`
-    Eigen::Vector<bool, Eigen::Dynamic> dmask; ///< `|# nodes| x 1` mask of Dirichlet
-                                               ///< boundary conditions s.t. `dmask(i) == true`
-                                               ///< if node `i` is constrained
+    Eigen::Vector<int, Eigen::Dynamic> dmask; ///< `|# nodes| x 1` mask of Dirichlet
+                                              ///< boundary conditions s.t. `dmask(i) != 0`
+                                              ///< if node `i` is constrained
 
     /**
      * @brief Construct an empty FemElastoDynamics problem
@@ -281,13 +281,13 @@ struct FemElastoDynamics
      * @param node Node index
      * @return `true` if the node is Dirichlet constrained, `false` otherwise
      */
-    bool IsDirichletNode(IndexType node) const { return dmask(node); }
+    bool IsDirichletNode(IndexType node) const { return dmask(node) != 0; }
     /**
      * @brief Check if a coordinate is Dirichlet constrained
      * @param i Coordinate index
      * @return `true` if the coordinate is Dirichlet constrained, `false` otherwise
      */
-    bool IsDirichletDof(IndexType i) const { return dmask(i / kDims); }
+    bool IsDirichletDof(IndexType i) const { return dmask(i / kDims) != 0; }
     /**
      * @brief Array of Dirichlet constrained nodes
      * @return `ndbc x 1` array of Dirichlet constrained nodes
@@ -552,10 +552,11 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
         "Dirichlet mask must be of type bool");
     IndexType const nNodes = static_cast<IndexType>(mesh.X.cols());
     assert(D.size() == nNodes);
-    dmask = D.template cast<bool>();
+    dmask = D.template cast<int>();
     dbc.setLinSpaced(nNodes, IndexType(0), nNodes - 1);
-    auto it = std::stable_partition(dbc.begin(), dbc.end(), [&D](IndexType i) { return not D[i]; });
-    ndbc    = nNodes - std::distance(dbc.begin(), it);
+    auto it =
+        std::stable_partition(dbc.begin(), dbc.end(), [&D](IndexType i) { return D[i] == 0; });
+    ndbc = nNodes - std::distance(dbc.begin(), it);
 }
 
 template <

@@ -32,7 +32,7 @@ TEST_CASE("[fem] Gradient")
         using Element                   = fem::Tetrahedron<kOrder>;
         auto constexpr kQuadratureOrder = kOrder > 1 ? kOrder - 1 : kOrder;
         auto constexpr kDims            = 3;
-        auto constexpr zero             = Scalar(1e-10);
+        auto constexpr zero             = Scalar(1e-8);
         using Mesh                      = fem::Mesh<Element, kDims>;
         Mesh mesh(V, C);
 

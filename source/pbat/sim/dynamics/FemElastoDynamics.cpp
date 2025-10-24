@@ -36,6 +36,7 @@ TEST_CASE("[sim][dynamics] FemElastoDynamics")
     D.setConstant(false);
     D(2) = true;
     dynamics.Constrain(D);
+    dynamics.SetInitialConditions(dynamics.x, dynamics.v);
     dynamics.SetupTimeIntegrationOptimization();
 
     // Assert

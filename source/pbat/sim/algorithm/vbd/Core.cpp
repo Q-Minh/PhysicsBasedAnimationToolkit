@@ -190,6 +190,7 @@ TEST_CASE("[sim][algorithm][vbd] Core")
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();
     // Act
+    dynamics.SetInitialConditions(dynamics.x, dynamics.v);
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();

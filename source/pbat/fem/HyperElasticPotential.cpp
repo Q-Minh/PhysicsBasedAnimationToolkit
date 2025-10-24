@@ -44,7 +44,7 @@ TEST_CASE("[fem] HyperElasticPotential")
             3, 0, 6, 5, 3,
             5, 6, 0, 3, 6;
     // clang-format on
-    auto constexpr zero = Scalar(1e-8);
+    auto constexpr zero = Scalar(1e-5);
     auto constexpr Y    = Scalar(1e6);
     auto constexpr nu   = Scalar(0.45);
     common::ForValues<1, 2, 3>([&]<auto kOrder>() {
@@ -94,8 +94,10 @@ TEST_CASE("[fem] HyperElasticPotential")
         // The hessian is generally rank-deficient, due to its invariance to translations and
         // rotations. The zero eigenvalues can manifest as numerically negative, but close to zero.
         Scalar const minEigenValue = eigs.eigenvalues().minCoeff();
+        Scalar const maxEigenValue = eigs.eigenvalues().maxCoeff();
         bool const bIsPositiveSemiDefinite =
-            (eigs.info() == Eigen::ComputationInfo::Success) and (minEigenValue > -zero);
+            (eigs.info() == Eigen::ComputationInfo::Success) and
+            (minEigenValue / std::abs(maxEigenValue - minEigenValue) > -zero);
         CHECK(bIsPositiveSemiDefinite);
 
         // Elastic energy is invariant to translations

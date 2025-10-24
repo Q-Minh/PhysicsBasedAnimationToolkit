@@ -98,6 +98,7 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     andersonParams.beta             = Scalar(1);
     andersonParams.codNumericalZero = Scalar(1e-10);
     // Act
+    dynamics.SetInitialConditions(dynamics.x, dynamics.v);
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();

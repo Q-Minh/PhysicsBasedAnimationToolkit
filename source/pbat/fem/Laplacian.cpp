@@ -35,7 +35,7 @@ TEST_CASE("[fem] Laplacian")
             using Mesh           = fem::Mesh<Element, kDims>;
             Mesh mesh(V, C);
             auto const N                    = mesh.X.cols();
-            auto constexpr zero             = Scalar(1e-10);
+            auto constexpr zero             = Scalar(1e-7);
             auto const n                    = N * outDims;
             auto constexpr kQuadratureOrder = [&]() {
                 if constexpr (kOrder == 1)

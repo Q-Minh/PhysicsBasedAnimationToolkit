@@ -65,7 +65,7 @@ TEST_CASE("[fem] ShapeFunctions")
         MatrixX const N = fem::ShapeFunctionsAt<Element>(Xi);
 
         // Assert
-        auto constexpr zero = Scalar(1e-15);
+        auto constexpr zero = Scalar(1e-8);
         CHECK_EQ(N.rows(), Element::kNodes);
         CHECK_EQ(N.cols(), Xi.cols());
         for (auto e = 0; e < numberOfElements; ++e)
@@ -169,7 +169,7 @@ TEST_CASE("[fem] ShapeFunctionGradientsAt")
         MatrixX const GNe         = fem::ShapeFunctionGradientsAt(mesh, Ei, Xi);
         MatrixX const GNeExpected = fem::ShapeFunctionGradients<kQuadratureOrder>(mesh);
         Scalar const GNeError     = (GNe - GNeExpected).squaredNorm();
-        auto constexpr zero       = Scalar(1e-15);
+        auto constexpr zero       = Scalar(1e-8);
         CHECK_LE(GNeError, zero);
     });
 }

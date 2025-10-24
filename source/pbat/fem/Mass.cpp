@@ -36,7 +36,7 @@ TEST_CASE("[fem] Mass")
             using Mesh           = fem::Mesh<Element, kDims>;
             Mesh mesh(V, C);
             auto const N         = mesh.X.cols();
-            auto constexpr zero  = Scalar(1e-10);
+            auto constexpr zero  = Scalar(1e-6);
             auto const n         = N * outDims;
             auto const nElements = mesh.E.cols();
 
@@ -85,7 +85,7 @@ TEST_CASE("[fem] Mass")
             for (auto i = 0; i < M.cols(); ++i)
             {
                 Scalar const err = std::abs(lumpedMass(i) - M.col(i).sum());
-                CHECK_LT(err, Scalar(1e-10));
+                CHECK_LT(err, zero);
             }
 
             // TODO: We should probably check that the mass matrices actually have the

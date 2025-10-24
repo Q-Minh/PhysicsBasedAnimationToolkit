@@ -4,6 +4,7 @@
 #include <nanobind/stl/filesystem.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
+#include <pbat/common/ConstexprFor.h>
 #include <pbat/io/Archive.h>
 
 namespace pbat::py::io {
@@ -33,11 +34,11 @@ void BindArchive(nanobind::module_& m)
             "Open file in read-write mode, or create if it does not exist")
         .export_values();
 
-    nb::class_<pbat::io::Archive>(m, "Archive")
-        .def(
-            nb::init<std::filesystem::path, HighFive::File::AccessMode>(),
-            nb::arg("filepath"),
-            nb::arg("flags") = HighFive::File::OpenOrCreate)
+    nb::class_<pbat::io::Archive> arc(m, "Archive");
+    arc.def(
+           nb::init<std::filesystem::path, HighFive::File::AccessMode>(),
+           nb::arg("filepath"),
+           nb::arg("flags") = HighFive::File::OpenOrCreate)
         .def_prop_ro("usable", &pbat::io::Archive::IsUsable, "Whether the archive is usable")
         .def_prop_ro("path", &pbat::io::Archive::GetPath, "Path of the current HDF5 object")
         .def(
@@ -63,6 +64,37 @@ void BindArchive(nanobind::module_& m)
             "    path (str): Path to the group\n\n"
             "Returns:\n"
             "    Archive: Archive object representing the group\n\n");
+
+    pbat::common::ForTypes<
+        Eigen::Vector<std::int32_t, Eigen::Dynamic>,
+        Eigen::Vector<std::int64_t, Eigen::Dynamic>,
+        Eigen::Vector<float, Eigen::Dynamic>,
+        Eigen::Vector<double, Eigen::Dynamic>,
+        Eigen::Matrix<std::int32_t, Eigen::Dynamic, Eigen::Dynamic>,
+        Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic>,
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>,
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>>([&]<class T>() {
+        arc.def(
+            "write_data",
+            &pbat::io::Archive::WriteData<T>,
+            nb::arg("path"),
+            nb::arg("data"),
+            "Write data to the archive\n\n"
+            "Args:\n"
+            "    path (str): Path to the dataset\n"
+            "    data (numpy.ndarray): Data to write\n");
+    });
+    pbat::common::ForTypes<std::int32_t, std::int64_t, float, double, std::string>([&]<class T>() {
+        arc.def(
+            "write_metadata",
+            &pbat::io::Archive::WriteMetaData<T>,
+            nb::arg("key"),
+            nb::arg("value"),
+            "Write metadata to the archive\n\n"
+            "Args:\n"
+            "    key (str): Name the attribute\n"
+            "    value (int | float | str): Metadata to write\n");
+    });
 }
 
 } // namespace pbat::py::io

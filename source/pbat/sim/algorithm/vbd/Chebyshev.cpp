@@ -78,6 +78,7 @@ TEST_CASE("[sim][algorithm][vbd] Chebyshev")
     sim::algorithm::vbd::ChebyshevParams chebyshevParams{};
     chebyshevParams.rho = Scalar(0.9);
     // Act
+    dynamics.SetInitialConditions(dynamics.x, dynamics.v);
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
