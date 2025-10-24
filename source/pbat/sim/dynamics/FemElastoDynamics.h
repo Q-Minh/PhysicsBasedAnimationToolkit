@@ -547,9 +547,6 @@ template <typename TDerivedDirichletMask>
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Constrain(
     Eigen::DenseBase<TDerivedDirichletMask> const& D)
 {
-    static_assert(
-        std::is_same_v<typename TDerivedDirichletMask::Scalar, bool>,
-        "Dirichlet mask must be of type bool");
     IndexType const nNodes = static_cast<IndexType>(mesh.X.cols());
     assert(D.size() == nNodes);
     dmask = D.template cast<int>();
@@ -750,7 +747,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     femElastoDynamicsArchive.WriteData("HgU", HgU);
     femElastoDynamicsArchive.WriteMetaData("ndbc", ndbc);
     femElastoDynamicsArchive.WriteData("dbc", dbc);
-    femElastoDynamicsArchive.WriteData("dmask", dmask.cast<int>().eval());
+    femElastoDynamicsArchive.WriteData("dmask", dmask);
 }
 
 template <
@@ -790,10 +787,9 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
               .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("GgU");
     HgU = femElastoDynamicsArchive
               .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("HgU");
-    ndbc = femElastoDynamicsArchive.ReadMetaData<IndexType>("ndbc");
-    dbc  = femElastoDynamicsArchive.ReadData<Eigen::Vector<IndexType, Eigen::Dynamic>>("dbc");
-    dmask =
-        femElastoDynamicsArchive.ReadData<Eigen::Vector<int, Eigen::Dynamic>>("dmask").cast<bool>();
+    ndbc  = femElastoDynamicsArchive.ReadMetaData<IndexType>("ndbc");
+    dbc   = femElastoDynamicsArchive.ReadData<Eigen::Vector<IndexType, Eigen::Dynamic>>("dbc");
+    dmask = femElastoDynamicsArchive.ReadData<Eigen::Vector<int, Eigen::Dynamic>>("dmask");
 }
 
 } // namespace pbat::sim::dynamics
