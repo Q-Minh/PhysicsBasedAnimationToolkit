@@ -6,8 +6,6 @@
 #include "pbat/common/Concepts.h"
 #include "pbat/common/Permute.h"
 #include "pbat/geometry/MeshBoundary.h"
-#include "pbat/graph/BreadthFirstSearch.h"
-#include "pbat/graph/ConnectedComponents.h"
 #include "pbat/graph/Mesh.h"
 #include "pbat/io/Archive.h"
 #include "pbat/profiling/Profiling.h"
@@ -206,28 +204,27 @@ struct MultibodyTetrahedralMeshSystem
     void Deserialize(io::Archive& archive);
 
     Eigen::Vector<TIndex, Eigen::Dynamic>
-    V; ///< `|# contact vertices| x 1` indices into mesh vertices
+        V; ///< `|# contact vertices| x 1` indices into mesh vertices
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
-    E; ///< `2 x |# contact edges|` edges into mesh vertices
+        E; ///< `2 x |# contact edges|` edges into mesh vertices
     Eigen::Matrix<TIndex, 3, Eigen::Dynamic>
-    F; ///< `3 x |# contact triangles|` triangles into mesh vertices
+        F; ///< `3 x |# contact triangles|` triangles into mesh vertices
 
     Eigen::Vector<TIndex, Eigen::Dynamic>
-    VP; ///< `|# bodies + 1| x 1` prefix sum of vertex pointers into `V`
+        VP; ///< `|# bodies + 1| x 1` prefix sum of vertex pointers into `V`
     Eigen::Vector<TIndex, Eigen::Dynamic>
-    EP; ///< `|# bodies + 1| x 1` prefix sum of edge pointers into `E`
+        EP; ///< `|# bodies + 1| x 1` prefix sum of edge pointers into `E`
     Eigen::Vector<TIndex, Eigen::Dynamic>
-    FP; ///< `|# bodies + 1| x 1` prefix sum of triangle pointers into `F`
+        FP; ///< `|# bodies + 1| x 1` prefix sum of triangle pointers into `F`
     Eigen::Vector<TIndex, Eigen::Dynamic> TP;
     ///< `|# bodies + 1| x 1` prefix sum of tetrahedron
-                                                 ///< pointers into input tetrahedral mesh `T`
+    ///< pointers into input tetrahedral mesh `T`
 
     Eigen::Vector<TIndex, Eigen::Dynamic> CC; ///< `|# mesh vertices| x 1` connected component map
 
-    Eigen::Matrix<TScalar, 2, Eigen::Dynamic>
-    muF;
+    Eigen::Matrix<TScalar, 2, Eigen::Dynamic> muF;
     ///< `2 x |# contact faces|` matrix of static (row 0) and dynamic (row 1) friction
-                ///< coefficients at contact faces
+    ///< coefficients at contact faces
 };
 
 template <common::CIndex TIndex, common::CArithmetic TScalar>
@@ -249,57 +246,13 @@ inline void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Construct(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MultibodyTetrahedralMeshSystem.Construct");
     IndexType const nNodes    = static_cast<IndexType>(X.cols());
     IndexType const nElements = static_cast<IndexType>(T.cols());
-    // 1. Compute the mesh's dual graph over tets
-    Eigen::SparseMatrix<IndexType, Eigen::ColMajor, IndexType> const EG =
-        graph::MeshDualGraph(T, nNodes, graph::EMeshDualGraphOptions::All);
-    // 2. Compute the connected components of the mesh
-    graph::BreadthFirstSearch<IndexType> bfs(nElements);
-    Eigen::Vector<IndexType, Eigen::Dynamic> ECC(nElements);
-    ECC.setConstant(IndexType(-1));
-    IndexType const nComponents = graph::ConnectedComponents<IndexType>(
-        Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
-            EG.outerIndexPtr(),
-            EG.outerSize() + 1),
-        Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
-            EG.innerIndexPtr(),
-            EG.nonZeros()),
-        ECC,
-        bfs);
-    // 3. Transfer the element connected components to the mesh vertex connected component map
-    CC.setConstant(nNodes, IndexType(-1));
-    auto verticesToElements =
-        Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, 0, nElements - 1)
-        .template replicate<1, 4>()
-        .transpose()
-        .reshaped(); // `4 x |# elements|` matrix `[[0,0,0,0], [1,1,1,1], ...,
-    // [nElements-1,nElements-1,nElements-1,nElements-1]]`
-    CC(T.reshaped()) = ECC(verticesToElements);
-    // 4. Sort the tets by connected component
-    Eigen::Vector<IndexType, Eigen::Dynamic> Eordering =
-        common::ArgSort<IndexType>(
-            nElements,
-            [&](IndexType ei, IndexType ej) {
-                return ECC[ei] < ECC[ej];
-            });
-    for (auto r = 0; r < T.rows(); ++r)
-        common::Permute(T.row(r).begin(), T.row(r).end(), Eordering.begin());
-    common::Permute(ECC.begin(), ECC.end(), Eordering.begin());
-    // 5. Sort vertices by connected component
-    Eigen::Vector<IndexType, Eigen::Dynamic> Xordering =
-        common::ArgSort<IndexType>(nNodes, [&](IndexType i, IndexType j) { return CC[i] < CC[j]; });
-    for (auto d = 0; d < X.rows(); ++d)
-        common::Permute(X.row(d).begin(), X.row(d).end(), Xordering.begin());
-    common::Permute(CC.begin(), CC.end(), Xordering.begin());
-    // 6. Re-index tet vertices to match the sorted order
-    // If Xordering[i] = j, then all nodes i in T must become j
-    Eigen::Vector<IndexType, Eigen::Dynamic> XorderingInverse(nNodes);
-    XorderingInverse(Xordering) =
-        Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nNodes, 0, nNodes - 1);
-    T.reshaped() = XorderingInverse(T.reshaped());
-    // 7. Compute boundary mesh, and note that V and F will already be sorted by connected
+    IndexVectorX ECC(nElements);
+    // 1. Re-index the mesh
+    Eigen::Index nComponents = graph::ReindexMeshByConnectedComponents(X, T, CC, ECC);
+    // 2. Compute boundary mesh, and note that V and F will already be sorted by connected
     // component, because we have re-indexed T and X
     std::tie(V, F) = geometry::SimplexMeshBoundary<IndexType>(T, nNodes);
-    // 8. Compute edges from triangles (edges are also sorted by connected component, since
+    // 3. Compute edges from triangles (edges are also sorted by connected component, since
     // triangles are)
     auto const nEdges =
         F.size() / 2; // Boundary (triangle) mesh of tetrahedral mesh must be manifold+watertight
@@ -320,7 +273,7 @@ inline void MultibodyTetrahedralMeshSystem<TIndex, TScalar>::Construct(
             }
         }
     }
-    // 9. Compute the prefix sums for vertices, edges, triangles, and tetrahedra
+    // 4. Compute the prefix sums for vertices, edges, triangles, and tetrahedra
     VP.setZero(nComponents + 1);
     EP.setZero(nComponents + 1);
     FP.setZero(nComponents + 1);

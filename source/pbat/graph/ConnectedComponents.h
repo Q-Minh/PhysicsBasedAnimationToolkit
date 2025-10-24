@@ -17,6 +17,7 @@ namespace pbat::graph {
  * @tparam TIndex Index type used in the graph
  * @tparam TDerivedP Type of the pointer vector (adjacency list start indices for each vertex)
  * @tparam TDerivedAdj Type of the adjacency list (vector of vertex indices)
+ * @tparam TDerivedCC Type of the connected component index vector
  * @param ptr Pointer to the start of each vertex's adjacency list
  * @param adj Adjacency list of the graph
  * @param components Output vector to store component labels for each vertex
@@ -24,11 +25,11 @@ namespace pbat::graph {
  * @return Number of connected components found in the graph
  * @pre `components[u] < 0` for all vertices `u` in the graph
  */
-template <common::CIndex TIndex, class TDerivedP, class TDerivedAdj>
+template <common::CIndex TIndex, class TDerivedP, class TDerivedAdj, class TDerivedCC>
 TIndex ConnectedComponents(
     Eigen::DenseBase<TDerivedP> const& ptr,
     Eigen::DenseBase<TDerivedAdj> const& adj,
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic>> components,
+    Eigen::DenseBase<TDerivedCC>& components,
     DepthFirstSearch<TIndex>& dfs)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.ConnectedComponents");
@@ -52,6 +53,7 @@ TIndex ConnectedComponents(
  * @tparam TIndex Index type used in the graph
  * @tparam TDerivedP Type of the pointer vector (adjacency list start indices for each vertex)
  * @tparam TDerivedAdj Type of the adjacency list (vector of vertex indices)
+ * @tparam TDerivedCC Type of the connected component index vector
  * @param ptr Pointer to the start of each vertex's adjacency list
  * @param adj Adjacency list of the graph
  * @param components Output vector to store component labels for each vertex
@@ -59,11 +61,11 @@ TIndex ConnectedComponents(
  * @return Number of connected components found in the graph
  * @pre `components[u] < 0` for all vertices `u` in the graph
  */
-template <common::CIndex TIndex, class TDerivedP, class TDerivedAdj>
+template <common::CIndex TIndex, class TDerivedP, class TDerivedAdj, class TDerivedCC>
 TIndex ConnectedComponents(
     Eigen::DenseBase<TDerivedP> const& ptr,
     Eigen::DenseBase<TDerivedAdj> const& adj,
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic>> components,
+    Eigen::DenseBase<TDerivedCC>& components,
     BreadthFirstSearch<TIndex>& bfs)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.ConnectedComponents");

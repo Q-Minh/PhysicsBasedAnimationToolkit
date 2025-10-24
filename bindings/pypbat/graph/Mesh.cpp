@@ -2,7 +2,9 @@
 
 #include <nanobind/eigen/dense.h>
 #include <nanobind/eigen/sparse.h>
+#include <nanobind/stl/tuple.h>
 #include <pbat/graph/Mesh.h>
+#include <tuple>
 
 namespace pbat {
 namespace py {
@@ -87,6 +89,30 @@ void BindMesh(nanobind::module_& m)
         "n (int): Number of nodes in the mesh\n"
         "flags (int): VertexAdjacency (0b001) | EdgeAdjacency (0b010) | FaceAdjacency (0b100) | "
         "All (0b111)\n");
+    m.def(
+        "reindex_mesh_by_connected_components",
+        [](nb::DRef<MatrixX const> const& X, nb::DRef<IndexMatrixX const> const& E) {
+            MatrixX Xcopy      = X;
+            IndexMatrixX Ecopy = E;
+            IndexVectorX XCC;
+            IndexVectorX ECC;
+            Eigen::Index nComponents =
+                pbat::graph::ReindexMeshByConnectedComponents(Xcopy, Ecopy, XCC, ECC);
+            return std::make_tuple(Xcopy, Ecopy, XCC, ECC, nComponents);
+        },
+        nb::arg("X"),
+        nb::arg("E"),
+        "Re-index mesh vertices and elements by connected components.\n"
+        "Args:\n"
+        "    X (np.ndarray): |# dims| x |# nodes| node position matrix\n"
+        "    E (np.ndarray): |# nodes per element| x |# elements| element index matrix\n"
+        "Returns:\n"
+        "    X_reindexed (np.ndarray): `|# dims| x |# nodes|` Re-indexed node position matrix\n"
+        "    E_reindexed (np.ndarray): `|# nodes per element| x |# elements|` Re-indexed element "
+        "index matrix\n"
+        "    XCC (np.ndarray): `|# nodes| x 1` node connected component index vector\n"
+        "    ECC (np.ndarray): `|# elements| x 1` element connected component index vector\n"
+        "    n_components (int): Number of connected components in the mesh");
 }
 
 } // namespace graph

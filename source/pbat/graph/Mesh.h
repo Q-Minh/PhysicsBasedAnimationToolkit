@@ -10,8 +10,12 @@
 #ifndef PBAT_GRAPH_MESH_H
 #define PBAT_GRAPH_MESH_H
 
+#include "BreadthFirstSearch.h"
+#include "ConnectedComponents.h"
 #include "pbat/Aliases.h"
+#include "pbat/common/ArgSort.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/common/Permute.h"
 #include "pbat/profiling/Profiling.h"
 
 namespace pbat {
@@ -165,13 +169,96 @@ auto MeshDualGraph(
         flags & static_cast<std::int32_t>(EMeshDualGraphOptions::VertexAdjacent);
     auto const fKeepAdjacency =
         [=]([[maybe_unused]] auto row, [[maybe_unused]] auto col, auto degree) {
-            bool const bKeep = (degree == 3 and bKeepFaceAdjacencies) or
+            bool const bKeep = (degree > 3) or (degree == 3 and bKeepFaceAdjacencies) or
                                (degree == 2 and bKeepEdgeAdjacencies) or
                                (degree == 1 and bKeepVertexAdjacencies);
             return bKeep;
         };
     GTG.prune(fKeepAdjacency);
     return GTG;
+}
+
+/**
+ * @brief Re-index mesh vertices and elements by connected components
+ *
+ * @tparam TDerivedX Type of node position matrix
+ * @tparam TDerivedE Type of element index matrix
+ * @tparam TDerivedXCC Type of node connected component index vector
+ * @tparam TDerivedECC Type of element connected component index vector
+ * @tparam TIndex Type of indices used in element array
+ * @param X `|# dims| x |# nodes|` node position matrix
+ * @param E `|# elem. nodes| x |# elements|` element index matrix
+ * @param XCC `|# nodes| x 1` node connected component index vector
+ * @param ECC `|# elements| x 1` element connected component index vector
+ * @return Number of connected components in the mesh
+ */
+template <
+    class TDerivedX,
+    class TDerivedE,
+    class TDerivedXCC,
+    class TDerivedECC,
+    common::CIndex TIndex = typename TDerivedE::Scalar>
+Eigen::Index ReindexMeshByConnectedComponents(
+    Eigen::DenseBase<TDerivedX>& X,
+    Eigen::DenseBase<TDerivedE>& E,
+    Eigen::DenseBase<TDerivedXCC>& XCC,
+    Eigen::DenseBase<TDerivedECC>& ECC)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.ReindexMeshByConnectedComponents");
+    using IndexType           = TIndex;
+    using XccIndexType        = typename TDerivedXCC::Scalar;
+    using EccIndexType        = typename TDerivedECC::Scalar;
+    IndexType const nNodes    = static_cast<IndexType>(X.cols());
+    IndexType const nElements = static_cast<IndexType>(E.cols());
+    // 1. Compute the mesh's dual graph over elements
+    Eigen::SparseMatrix<IndexType, Eigen::ColMajor, IndexType> const EG =
+        graph::MeshDualGraph(E, nNodes, graph::EMeshDualGraphOptions::All);
+    // 2. Compute the connected components of the mesh
+    graph::BreadthFirstSearch<EccIndexType> bfs(nElements);
+    ECC.resize(nElements);
+    ECC.setConstant(EccIndexType(-1));
+    IndexType const nComponents = graph::ConnectedComponents<EccIndexType>(
+        Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
+            EG.outerIndexPtr(),
+            EG.outerSize() + 1),
+        Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
+            EG.innerIndexPtr(),
+            EG.nonZeros()),
+        ECC,
+        bfs);
+    // 3. Transfer the element connected components to the mesh vertex connected component map
+    XCC.resize(nNodes);
+    XCC.setConstant(XccIndexType(-1));
+    auto verticesToElements =
+        Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, 0, nElements - 1)
+            .replicate(1, E.rows())
+            .transpose()
+            .reshaped(); // `|# elem. nodes| x |# elements|` matrix `[[0,0,0,0], [1,1,1,1], ...,
+                         // [nElements-1,nElements-1,nElements-1,nElements-1]]`
+    XCC(E.reshaped()) = ECC(verticesToElements).cast<XccIndexType>();
+    // 4. Sort the elements by connected component
+    Eigen::Vector<IndexType, Eigen::Dynamic> Eordering =
+        common::ArgSort<IndexType>(nElements, [&](IndexType ei, IndexType ej) {
+            return ECC[ei] < ECC[ej];
+        });
+    for (auto r = 0; r < E.rows(); ++r)
+        common::Permute(E.row(r).begin(), E.row(r).end(), Eordering.begin());
+    common::Permute(ECC.begin(), ECC.end(), Eordering.begin());
+    // 5. Sort vertices by connected component
+    Eigen::Vector<IndexType, Eigen::Dynamic> Xordering =
+        common::ArgSort<IndexType>(nNodes, [&](IndexType i, IndexType j) {
+            return XCC[i] < XCC[j];
+        });
+    for (auto d = 0; d < X.rows(); ++d)
+        common::Permute(X.row(d).begin(), X.row(d).end(), Xordering.begin());
+    common::Permute(XCC.begin(), XCC.end(), Xordering.begin());
+    // 6. Re-index mesh vertices to match the sorted order
+    // If Xordering[i] = j, then all nodes i in E must become j
+    Eigen::Vector<IndexType, Eigen::Dynamic> XorderingInverse(nNodes);
+    XorderingInverse(Xordering) =
+        Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nNodes, 0, nNodes - 1);
+    E.reshaped() = XorderingInverse(E.reshaped());
+    return nComponents;
 }
 
 } // namespace graph
