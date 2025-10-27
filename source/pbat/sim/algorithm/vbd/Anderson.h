@@ -14,13 +14,11 @@
 
 #include "Core.h"
 #include "pbat/common/Modulo.h"
-#include "pbat/io/Archive.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/QR>
 #include <exception>
 #include <fmt/core.h>
-#include <optional>
 
 namespace pbat::sim::algorithm::vbd {
 
@@ -102,15 +100,10 @@ void Iterate(
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
  * @param anderson Anderson parameters
- * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    AndersonParams& anderson,
-    std::optional<io::Archive> ac = std::nullopt);
+void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, AndersonParams& anderson);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using Anderson-accelerated VBD as the non-linear
@@ -119,15 +112,13 @@ void Solve(
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
  * @param anderson Anderson parameters
- * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
-    AndersonParams& anderson,
-    std::optional<io::Archive> ac = std::nullopt);
+    AndersonParams& anderson);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
@@ -176,51 +167,26 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Ander
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    AndersonParams& anderson,
-    std::optional<io::Archive> ac)
+void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
     InitializeSolve<TElasticEnergy>(fem, params, anderson);
-    std::optional<io::Archive> group;
-    if (ac)
-    {
-        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Anderson.Solve");
-        SerializeSolverIteration<TElasticEnergy>(fem, 0, *group);
-    }
     for (; anderson.k < params.nMaxIters;)
     {
-        if (group)
-        {
-            SerializeSolverIteration<TElasticEnergy>(fem, anderson.k, *group);
-        }
         Iterate<TElasticEnergy>(fem, params, anderson);
     }
     BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
-    if (group)
-    {
-        SerializeSolverIteration<TElasticEnergy>(fem, anderson.k, *group, true /* bPostSolve */);
-    }
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
-    AndersonParams& anderson,
-    std::optional<io::Archive> ac)
+    AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Integrate");
     fem.SetupTimeIntegrationOptimization();
-    std::optional<io::Archive> group;
-    if (ac)
-    {
-        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Anderson.Integrate");
-        fem.Serialize(*group);
-    }
-    Solve<TElasticEnergy>(fem, params, anderson, group);
+    Solve<TElasticEnergy>(fem, params, anderson);
     fem.Step();
 }
 

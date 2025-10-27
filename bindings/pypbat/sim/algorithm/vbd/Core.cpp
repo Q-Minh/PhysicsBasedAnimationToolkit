@@ -1,11 +1,8 @@
 #include "Core.h"
 
 #include <nanobind/eigen/dense.h>
-#include <nanobind/stl/optional.h>
 #include <nanobind/stl/tuple.h>
-#include <optional>
 #include <pbat/common/ConstexprFor.h>
-#include <pbat/io/Archive.h>
 #include <pbat/physics/Enums.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/algorithm/vbd/Core.h>
@@ -197,19 +194,15 @@ void BindCore(nanobind::module_& m)
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     m.def(
         "solve",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           Params const& params,
-           std::optional<pbat::io::Archive> ac) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, ac);
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params);
         },
         nb::arg("fem"),
         nb::arg("params"),
-        nb::arg("archive") = std::nullopt,
-        "Solve the VBD minimization up to maximum iterations.\n\n"
+        "Solve the VBD minimization.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     m.def(
         "back_substitute_integrated_positions_into_velocities",
         [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
@@ -224,19 +217,15 @@ void BindCore(nanobind::module_& m)
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     m.def(
         "integrate",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           Params const& params,
-           std::optional<pbat::io::Archive> ac) {
-            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, ac);
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params);
         },
         nb::arg("fem"),
         nb::arg("params"),
-        nb::arg("archive") = std::nullopt,
         "Integrate one time step using VBD as non-linear solver.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
 }
 
 } // namespace pbat::py::sim::algorithm::vbd

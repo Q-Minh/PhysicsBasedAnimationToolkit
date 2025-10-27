@@ -8,6 +8,14 @@ import tkinter as tk
 from tkinter import filedialog
 
 
+integrator_names = [
+    "pbat.sim.algorithm.vbd.Integrate",
+    "pbat.sim.algorithm.vbd.Anderson.Integrate",
+    "pbat.sim.algorithm.vbd.Broyden.Integrate",
+    "pbat.sim.algorithm.vbd.Chebyshev.Integrate",
+]
+
+
 def _find_frames_group(h5: h5py.File):
     # Prefer 'frames', fallback to 'frame'
     if "frames" in h5:
@@ -26,14 +34,7 @@ def _sorted_frame_keys(frames_grp: h5py.Group):
 
 
 def _find_integrate_group(frame_grp: h5py.Group):
-    # Check all known integrate group names
-    names = [
-        "pbat.sim.algorithm.vbd.Integrate",
-        "pbat.sim.algorithm.vbd.Anderson.Integrate",
-        "pbat.sim.algorithm.vbd.Broyden.Integrate",
-        "pbat.sim.algorithm.vbd.Chebyshev.Integrate",
-    ]
-    for name in names:
+    for name in integrator_names:
         if name in frame_grp:
             return name, frame_grp[name]
     return None, None
@@ -213,20 +214,39 @@ def main():
 
         # Plots
         if len(state["f_vals"]) > 0:
+            is_anderson_or_broyden = (
+                state["solver_name"] == integrator_names[1]
+                or state["solver_name"] == integrator_names[2]
+            )
+            xoffset = 1 if is_anderson_or_broyden else 0
             if implot.BeginPlot("Objective f per-iteration"):
-                implot.SetupAxes("Iteration", "f", implot.ImPlotAxisFlags_None, implot.ImPlotAxisFlags_AutoFit)
+                implot.SetupAxes(
+                    "Iteration",
+                    "f",
+                    implot.ImPlotAxisFlags_None,
+                    implot.ImPlotAxisFlags_AutoFit,
+                )
+                is_anderson_or_broyden = (
+                    state["solver_name"] == integrator_names[3]
+                    or state["solver_name"] == integrator_names[2]
+                )
                 implot.PlotLine(
                     "f",
-                    np.arange(len(state["f_vals"])),
+                    np.arange(len(state["f_vals"])) + xoffset,
                     np.array(state["f_vals"]),
                 )
                 implot.EndPlot()
         if len(state["gnorm_vals"]) > 0:
             if implot.BeginPlot("Gradient norm per-iteration"):
-                implot.SetupAxes("Iteration", "||g||", implot.ImPlotAxisFlags_None, implot.ImPlotAxisFlags_AutoFit)
+                implot.SetupAxes(
+                    "Iteration",
+                    "||g||",
+                    implot.ImPlotAxisFlags_None,
+                    implot.ImPlotAxisFlags_AutoFit,
+                )
                 implot.PlotLine(
                     "||g||",
-                    np.arange(len(state["gnorm_vals"])),
+                    np.arange(len(state["gnorm_vals"])) + xoffset,
                     np.array(state["gnorm_vals"]),
                 )
                 implot.EndPlot()
