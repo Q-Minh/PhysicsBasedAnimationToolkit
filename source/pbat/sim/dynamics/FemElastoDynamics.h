@@ -718,6 +718,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Gradien
     Eigen::Vector<ScalarType, Eigen::Dynamic> gK = M().asDiagonal() * (x - xtilde).reshaped();
     ScalarType dt                                = bdf.TimeStep();
     Eigen::Vector<ScalarType, Eigen::Dynamic> g  = gK + (dt * dt) * gU;
+    g(DirichletDofs()).setZero();
     return g;
 }
 
