@@ -344,7 +344,8 @@ boundary conditions, using a backward differentiation formula (BDF) time discret
 The dynamics at each step can be expressed as the minimization of a quadratic inertia term
 around a BDF target plus the hyperelastic potential energy of the configuration.
 
-The Python bindings only support 3D linear tetrahedral meshes. Use C++ for other element types, dimensions and orders.
+The Python bindings only support 3D linear tetrahedral meshes with stable neo-Hookean materials. 
+Use C++ for other element types, dimensions and orders.
 
 Typical workflow:
 ```
