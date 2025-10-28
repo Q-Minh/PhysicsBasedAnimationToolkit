@@ -266,6 +266,16 @@ struct FemElastoDynamics
      */
     Eigen::Vector<ScalarType, Eigen::Dynamic> Gradient();
     /**
+     * @brief Compute the time integration optimization's discrete kinetic energy
+     * @return Discrete kinetic energy
+     */
+    ScalarType DiscreteKineticEnergy() const;
+    /**
+     * @brief Compute the time integration optimization's elastic potential energy
+     * @return Elastic potential energy
+     */
+    ScalarType ElasticPotentialEnergy() const;
+    /**
      * @brief k-dimensional mass matrix
      * @return `kDims * |#nodes| x 1` vector of the `kDims`-dimensional lumped mass matrix diagonal
      * coefficients
@@ -691,13 +701,9 @@ template <
     common::CIndex TIndex>
 inline TScalar FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Objective()
 {
-    ComputeElasticEnergy(
-        fem::EElementElasticityComputationFlags::Potential,
-        fem::EHyperElasticSpdCorrection::None);
-    ScalarType U = fem::HyperElasticPotential(UgU);
-    Scalar dt    = bdf.TimeStep();
-    auto dx      = (x - xtilde).reshaped();
-    Scalar K     = Scalar(0.5) * dx.dot(M().asDiagonal() * dx);
+    ScalarType U  = ElasticPotentialEnergy();
+    ScalarType dt = bdf.TimeStep();
+    ScalarType K  = DiscreteKineticEnergy();
     return K + (dt * dt) * U;
 }
 
@@ -720,6 +726,38 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Gradien
     Eigen::Vector<ScalarType, Eigen::Dynamic> g  = gK + (dt * dt) * gU;
     g(DirichletDofs()).setZero();
     return g;
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+inline TScalar
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::DiscreteKineticEnergy()
+    const
+{
+    auto dx   = (x - xtilde).reshaped();
+    TScalar K = TScalar(0.5) * dx.dot(M().asDiagonal() * dx);
+    return K;
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+inline TScalar
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::ElasticPotentialEnergy()
+    const
+{
+    ComputeElasticEnergy(
+        fem::EElementElasticityComputationFlags::Potential,
+        fem::EHyperElasticSpdCorrection::None);
+    ScalarType U = fem::HyperElasticPotential(UgU);
+    return U;
 }
 
 template <

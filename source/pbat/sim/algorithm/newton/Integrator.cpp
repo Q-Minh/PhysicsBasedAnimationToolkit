@@ -37,7 +37,16 @@ Integrator::Integrator(Config config, MeshSystemType meshSystem, ElastoDynamicsT
     : mConfig(std::move(config)),
       mMeshes(std::move(meshSystem)),
       mElastoDynamics(std::move(elastoDynamics)),
-      mNewton(mConfig.nMaxNewtonIterations, mConfig.gtol, mElastoDynamics.x.size()),
+      mNewton(
+          mConfig.nMaxNewtonIterations,
+          mConfig.gtol,
+          mElastoDynamics.x.size(),
+          math::optimization::BackTrackingLineSearch<ScalarType>(
+              mConfig.nMaxLineSearchIterations,
+              mConfig.tauArmijo,
+              mConfig.cArmijo,
+              ScalarType(1),
+              mElastoDynamics.x.size())),
       mLineSearch(mConfig.nMaxLineSearchIterations, mConfig.tauArmijo, mConfig.cArmijo),
       mTriplets(),
       mInverseHessian(std::make_unique<DecompositionType>()),
@@ -66,6 +75,9 @@ void Integrator::Step([[maybe_unused]] std::optional<io::Archive> archive)
                 fem::EElementElasticityComputationFlags::Hessian,
             fem::EHyperElasticSpdCorrection::Absolute);
         // TODO: Compute constraint derivatives
+        auto dt = mElastoDynamics.bdf.TimeStep();
+        return mElastoDynamics.DiscreteKineticEnergy() +
+               (dt * dt) * mElastoDynamics.UgU.sum() /*+ constraint potential*/;
     };
     auto const fObjective =
         [&]<class TDerivedX>([[maybe_unused]] Eigen::MatrixBase<TDerivedX> const& xk) {
@@ -124,7 +136,7 @@ void Integrator::Step([[maybe_unused]] std::optional<io::Archive> archive)
             mElastoDynamics.bdf.ConstructEquations();
             mElastoDynamics.SetupTimeIntegrationOptimization();
             auto xbdf = mElastoDynamics.bdf.Inertia(0);
-            mNewton.Solve(fPrepareDerivatives, fObjective, fGradient, fHessInvProd, x, mLineSearch);
+            mNewton.Solve(fPrepareDerivatives, fObjective, fGradient, fHessInvProd, x);
             v = (x + xbdf) / bt;
             // TODO: Evaluate constraint error and update Lagrangian multiplier estimates
             // ...
