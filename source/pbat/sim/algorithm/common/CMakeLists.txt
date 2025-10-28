@@ -2,14 +2,9 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
     FILES
-    "Algorithm.h"
+    "Common.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
-    "Algorithm.cpp"
+    "Common.cpp"
 )
-
-add_subdirectory(common)
-add_subdirectory(newton)
-add_subdirectory(pd)
-add_subdirectory(vbd)

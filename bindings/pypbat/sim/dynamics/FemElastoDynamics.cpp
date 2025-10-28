@@ -249,7 +249,8 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             nb::arg("D"),
             "Set Dirichlet boundary conditions as |# nodes| integer mask.\n\n"
             "Args:\n"
-            "    D (numpy.ndarray): `|#nodes|` integer array where non-zero values indicate a constrained "
+            "    D (numpy.ndarray): `|#nodes|` integer array where non-zero values indicate a "
+            "constrained "
             "node.\n")
         .def(
             "setup_time_integration_optimization",
@@ -259,6 +260,10 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "step",
             &ElastoDynamics::Step,
             "Perform a single time integration step using `x`, `v`.")
+        .def(
+            "back_substitute_integrated_positions_into_velocities",
+            &ElastoDynamics::BackSubstituteIntegratedPositionsIntoVelocities,
+            "Update velocities after a position-based time integration solve.")
         .def(
             "compute_elastic_energy",
             [](ElastoDynamics& self,

@@ -84,7 +84,7 @@ TEST_CASE("[sim][algorithm][vbd] Broyden")
     // clang-format on
     // Problem parameters
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    using FemElastoDynamics = pbat::sim::algorithm::vbd::FemElastoDynamics<ElasticEnergyType>;
+    using FemElastoDynamics = pbat::sim::algorithm::common::FemElastoDynamics<ElasticEnergyType>;
     FemElastoDynamics dynamics{};
     dynamics.Construct(V, C);
     // Adjacency structures

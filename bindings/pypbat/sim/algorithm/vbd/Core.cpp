@@ -17,8 +17,8 @@ void BindCore(nanobind::module_& m)
     namespace nb     = nanobind;
     using ScalarType = Scalar;
     using IndexType  = Index;
+    using pbat::sim::algorithm::common::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::EInitializationStrategy;
-    using pbat::sim::algorithm::vbd::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::Params;
 
     nb::enum_<EInitializationStrategy>(m, "EInitializationStrategy")
@@ -200,18 +200,6 @@ void BindCore(nanobind::module_& m)
         nb::arg("fem"),
         nb::arg("params"),
         "Solve the VBD minimization.\n\n"
-        "Args:\n"
-        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
-    m.def(
-        "back_substitute_integrated_positions_into_velocities",
-        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
-            pbat::sim::algorithm::vbd::BackSubstituteIntegratedPositionsIntoVelocities<
-                ElasticEnergyType>(fem, params);
-        },
-        nb::arg("fem"),
-        nb::arg("params"),
-        "Back-substitute integrated positions into velocities after VBD solve.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");

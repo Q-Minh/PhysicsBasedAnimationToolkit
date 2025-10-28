@@ -75,7 +75,7 @@ struct AndersonParams
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
-    FemElastoDynamics<TElasticEnergy>& fem,
+    common::FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
     AndersonParams& anderson);
 
@@ -89,7 +89,7 @@ void InitializeSolve(
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
-    FemElastoDynamics<TElasticEnergy>& fem,
+    common::FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
     AndersonParams& anderson);
 
@@ -103,7 +103,10 @@ void Iterate(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, AndersonParams& anderson);
+void Solve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    AndersonParams& anderson);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using Anderson-accelerated VBD as the non-linear
@@ -116,13 +119,13 @@ void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Anderso
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
-    FemElastoDynamics<TElasticEnergy>& fem,
+    common::FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
     AndersonParams& anderson);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
-    FemElastoDynamics<TElasticEnergy>& fem,
+    common::FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
     AndersonParams& anderson)
 {
@@ -137,10 +140,13 @@ void InitializeSolve(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, AndersonParams& anderson)
+void Iterate(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Iterate");
-    auto dkl             = common::Modulo(anderson.k - 1, anderson.m);
+    auto dkl             = pbat::common::Modulo(anderson.k - 1, anderson.m);
     anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
     anderson.xkm1        = fem.x.reshaped();
     Iterate(fem, params);
@@ -167,7 +173,10 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Ander
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, AndersonParams& anderson)
+void Solve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    Params const& params,
+    AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
     InitializeSolve<TElasticEnergy>(fem, params, anderson);
@@ -175,12 +184,12 @@ void Solve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params, Anderso
     {
         Iterate<TElasticEnergy>(fem, params, anderson);
     }
-    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
+    fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
-    FemElastoDynamics<TElasticEnergy>& fem,
+    common::FemElastoDynamics<TElasticEnergy>& fem,
     Params const& params,
     AndersonParams& anderson)
 {

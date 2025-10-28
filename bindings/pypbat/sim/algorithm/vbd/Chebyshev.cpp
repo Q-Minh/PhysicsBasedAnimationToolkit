@@ -15,7 +15,7 @@ void BindChebyshev(nanobind::module_& m)
     namespace nb     = nanobind;
     using ScalarType = Scalar;
     using IndexType  = Index;
-    using pbat::sim::algorithm::vbd::FemElastoDynamics;
+    using pbat::sim::algorithm::common::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::Params;
     using ChebyshevParams = pbat::sim::algorithm::vbd::ChebyshevParams;
 
@@ -58,9 +58,7 @@ void BindChebyshev(nanobind::module_& m)
         "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
     m.def(
         "solve",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           Params const& params,
-           ChebyshevParams& cheb) {
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params, ChebyshevParams& cheb) {
             pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, cheb);
         },
         nb::arg("fem"),
@@ -73,9 +71,7 @@ void BindChebyshev(nanobind::module_& m)
         "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
     m.def(
         "integrate",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           Params const& params,
-           ChebyshevParams& cheb) {
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params, ChebyshevParams& cheb) {
             pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, cheb);
         },
         nb::arg("fem"),

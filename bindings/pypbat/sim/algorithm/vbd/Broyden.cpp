@@ -15,7 +15,7 @@ void BindBroyden(nanobind::module_& m)
     namespace nb     = nanobind;
     using ScalarType = Scalar;
     using IndexType  = Index;
-    using pbat::sim::algorithm::vbd::FemElastoDynamics;
+    using pbat::sim::algorithm::common::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::Params;
     using BroydenParams = pbat::sim::algorithm::vbd::BroydenParams;
     using pbat::sim::algorithm::vbd::EBroydenJacobianEstimate;

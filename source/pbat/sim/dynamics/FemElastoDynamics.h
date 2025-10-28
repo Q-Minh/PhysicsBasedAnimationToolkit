@@ -244,6 +244,11 @@ struct FemElastoDynamics
      */
     void Step();
     /**
+     * @brief Back-substitute the integrated positions into velocities after a position-based time
+     * integration solve
+     */
+    void BackSubstituteIntegratedPositionsIntoVelocities();
+    /**
      * @brief Compute the quadrature point elastic energies of the current configuration into Ug,
      * Gg, Hg
      * @param eElasticComputationFlags Flags for computing elastic potential, gradient, and/or
@@ -666,6 +671,20 @@ template <
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Step()
 {
     bdf.Step(x.reshaped(), v.reshaped());
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::
+    BackSubstituteIntegratedPositionsIntoVelocities()
+{
+    auto freeDofs          = FreeDofs();
+    auto xtildebdf         = bdf.Inertia(0);
+    v.reshaped()(freeDofs) = (x.reshaped()(freeDofs) + xtildebdf(freeDofs)) / bdf.BetaTilde();
 }
 
 template <

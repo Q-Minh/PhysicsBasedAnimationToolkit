@@ -151,8 +151,8 @@ PBAT_HOST_DEVICE void AccumulateElasticHessian(
 {
     auto constexpr kDims = TMatrixGP::kCols;
     // Contract (d^k Psi / dF^k) with (d F / dx)^k. See pbat/fem/DeformationGradient.h.
-    common::ForRange<0, kDims>([&]<auto kj>() {
-        common::ForRange<0, kDims>([&]<auto ki>() {
+    pbat::common::ForRange<0, kDims>([&]<auto kj>() {
+        pbat::common::ForRange<0, kDims>([&]<auto ki>() {
             Hi += wg * GP(ilocal, ki) * GP(ilocal, kj) *
                   HF.template Slice<kDims, kDims>(ki * kDims, kj * kDims);
         });
@@ -174,7 +174,7 @@ PBAT_HOST_DEVICE void AccumulateElasticGradient(
 {
     auto constexpr kDims = TMatrixGP::kCols;
     // Contract (d^k Psi / dF^k) with (d F / dx)^k. See pbat/fem/DeformationGradient.h.
-    common::ForRange<0, kDims>(
+    pbat::common::ForRange<0, kDims>(
         [&]<auto k>() { gi += wg * GP(ilocal, k) * gF.template Slice<kDims, 1>(k * kDims, 0); });
 }
 

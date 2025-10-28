@@ -15,7 +15,7 @@ void BindAnderson(nanobind::module_& m)
     namespace nb     = nanobind;
     using ScalarType = Scalar;
     using IndexType  = Index;
-    using pbat::sim::algorithm::vbd::FemElastoDynamics;
+    using pbat::sim::algorithm::common::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::Params;
     using AndersonParams = pbat::sim::algorithm::vbd::AndersonParams;
     nb::class_<AndersonParams>(m, "AndersonParams")
