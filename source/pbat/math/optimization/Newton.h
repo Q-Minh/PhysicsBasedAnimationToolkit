@@ -73,8 +73,8 @@ struct Newton
      *
      * @tparam FPrepareDerivatives Callable type with signature
      * `fPrepareDerivatives(xk) -> TScalar`
-     * @tparam FGradient Callable type with signature `g(xk) -> Eigen::Vector<TScalar,
-     * Eigen::Dynamic>`
+     * @tparam FGradient Callable type with signature `g(xk, gk) -> void` that computes the gradient
+     * at `xk` and stores it in `gk`
      * @tparam TDerivedX Derived type for the input iterate
      * @param fPrepareDerivatives Callback to compute any quantities necessary prior to evaluating
      * the objective function gradient and hessian. It must also return the objective function value
@@ -86,7 +86,7 @@ struct Newton
     void PrepareNextIteration(
         FPrepareDerivatives const& fPrepareDerivatives,
         FGradient const& g,
-        Eigen::MatrixBase<TDerivedX>& xk);
+        Eigen::MatrixBase<TDerivedX> const& xk);
     /**
      * @brief Perform a single Newton iteration
      *
@@ -95,7 +95,8 @@ struct Newton
      *
      * @tparam FObjective Callable type for the objective function with signature `f(xk) -> TScalar`
      * @tparam FHessianInverseProduct Callable type for the Hessian inverse product with signature
-     * `Hinv(xk, gk) -> dxk`
+     * `Hinv(xk, ngk, dxk) -> void` which computes the product of the inverse Hessian at `xk` with
+     * the negative gradient `ngk` and stores the result in `dxk`.
      * @tparam TDerivedX Derived type for the input iterate
      * @param f Objective function
      * @param Hinv Hessian inverse product function
@@ -113,9 +114,11 @@ struct Newton
      * @tparam FPrepareDerivatives Callable type with signature
      * `fPrepareDerivatives(xk) -> void`
      * @tparam FObjective Callable type for the objective function with signature `f(xk) -> fk`
-     * @tparam FGradient Callable type for the gradient with signature `g(xk) -> gk`
+     * @tparam FGradient Callable type for the gradient with signature `g(xk, gk) -> void` that
+     * computes the gradient at `xk` and stores it in `gk`
      * @tparam FHessianInverseProduct Callable type for the Hessian inverse product with signature
-     * `Hinv(xk, gk) -> dxk`
+     * `Hinv(xk, gk, dxk) -> void` which computes the product of the inverse Hessian at `xk` with
+     * the gradient `gk` and stores the result in `dxk`.
      * @tparam TDerivedX Derived type for the input iterate
      * @param fPrepareDerivatives Derivative (pre)computation function
      * @param f Objective function
@@ -156,10 +159,10 @@ template <class FPrepareDerivatives, class FGradient, class TDerivedX>
 inline void Newton<TScalar>::PrepareNextIteration(
     FPrepareDerivatives const& fPrepareDerivatives,
     FGradient const& g,
-    Eigen::MatrixBase<TDerivedX>& xk)
+    Eigen::MatrixBase<TDerivedX> const& xk)
 {
-    fk      = fPrepareDerivatives(xk);
-    gk      = g(xk);
+    fk = fPrepareDerivatives(xk);
+    g(xk, gk);
     gknorm2 = gk.squaredNorm();
 }
 
@@ -170,7 +173,8 @@ inline bool Newton<TScalar>::Iterate(
     FHessianInverseProduct const& Hinv,
     Eigen::MatrixBase<TDerivedX>& xk)
 {
-    dxk = -Hinv(xk, gk);
+    Hinv(xk, gk, dxk);
+    dxk *= TScalar(-1); // dxk = -Hinv * gk
     return std::visit(
         [&](auto&& lineSearch) {
             bool constexpr bNoLineSearch =

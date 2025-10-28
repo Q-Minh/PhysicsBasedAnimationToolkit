@@ -273,8 +273,9 @@ struct FemElastoDynamics
     /**
      * @brief Compute the time integration optimization's elastic potential energy
      * @return Elastic potential energy
+     * @post `Ug` is populated with quadrature point elastic energies
      */
-    ScalarType ElasticPotentialEnergy() const;
+    ScalarType ElasticPotentialEnergy();
     /**
      * @brief k-dimensional mass matrix
      * @return `kDims * |#nodes| x 1` vector of the `kDims`-dimensional lumped mass matrix diagonal
@@ -751,7 +752,6 @@ template <
     common::CIndex TIndex>
 inline TScalar
 FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::ElasticPotentialEnergy()
-    const
 {
     ComputeElasticEnergy(
         fem::EElementElasticityComputationFlags::Potential,

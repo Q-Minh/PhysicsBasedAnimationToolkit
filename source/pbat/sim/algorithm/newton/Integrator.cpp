@@ -91,33 +91,34 @@ void Integrator::Step([[maybe_unused]] std::optional<io::Archive> archive)
             ScalarType const K = ScalarType(0.5) * (xk - xtilde).cwiseSquare().dot(M);
             return K + bt2 * U /*+ constraint potential*/;
         };
-    auto const fGradient =
-        [&]<class TDerivedX>([[maybe_unused]] Eigen::MatrixBase<TDerivedX> const& xk) {
-            PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Integrator.Step.fGradient");
-            auto M      = mElastoDynamics.M();
-            auto xtilde = mElastoDynamics.xtilde.reshaped();
-            mGrad.setZero();
-            fem::ToHyperElasticGradient(
-                mElastoDynamics.mesh,
-                mElastoDynamics.egU,
-                mElastoDynamics.GgU,
-                mGrad);
-            mGrad *= bt2;
-            mGrad += M.asDiagonal() * (xk - xtilde);
-            // mGrad += constraint gradient;
-            auto nNodes = mElastoDynamics.mesh.X.cols();
-            auto dinds  = mElastoDynamics.DirichletNodes();
-            auto all    = Eigen::placeholders::all;
-            mGrad.reshaped(kDims, nNodes)(all, dinds).setZero();
-            return mGrad;
-        };
+    auto const fGradient = [&]<class TDerivedX>(
+                               [[maybe_unused]] Eigen::MatrixBase<TDerivedX> const& xk,
+                               Eigen::Vector<ScalarType, Eigen::Dynamic>& gk) {
+        PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Integrator.Step.fGradient");
+        auto M      = mElastoDynamics.M();
+        auto xtilde = mElastoDynamics.xtilde.reshaped();
+        gk.setZero();
+        fem::ToHyperElasticGradient(
+            mElastoDynamics.mesh,
+            mElastoDynamics.egU,
+            mElastoDynamics.GgU,
+            gk);
+        gk *= bt2;
+        gk += M.asDiagonal() * (xk - xtilde);
+        // mGrad += constraint gradient;
+        auto nNodes = mElastoDynamics.mesh.X.cols();
+        auto dinds  = mElastoDynamics.DirichletNodes();
+        auto all    = Eigen::placeholders::all;
+        gk.reshaped(kDims, nNodes)(all, dinds).setZero();
+    };
     auto const fHessInvProd = [&]<class TDerivedX, class TDerivedG>(
                                   [[maybe_unused]] Eigen::MatrixBase<TDerivedX> const& xk,
-                                  Eigen::MatrixBase<TDerivedG> const& gk) {
+                                  Eigen::MatrixBase<TDerivedG> const& gk,
+                                  Eigen::MatrixBase<TDerivedG>& dxk) {
         PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Integrator.Step.fHessInvProd");
         AssembleHessian(bt2);
         mInverseHessian->compute(mHessian);
-        return mInverseHessian->solve(gk);
+        dxk = mInverseHessian->solve(gk);
     };
     // Time integration optimization with substepping
     // TODO: Add Augmented Lagrangian loop for constraints

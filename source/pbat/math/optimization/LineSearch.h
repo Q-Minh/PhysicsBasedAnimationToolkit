@@ -57,7 +57,7 @@ struct BackTrackingLineSearch
      * @tparam TDerivedX Derived type for the current iterate
      * @param f Objective function
      * @param fk Objective function value at the current iterate
-     * @param g Gradient at the initial iterate
+     * @param gk Gradient at the initial iterate
      * @param dx Step direction
      * @param xk Current iterate
      * @return true if the line search succeeded, false otherwise
@@ -66,7 +66,7 @@ struct BackTrackingLineSearch
     bool Solve(
         FObjective const& f,
         TScalar fk,
-        Eigen::MatrixBase<TDerivedG> const& g,
+        Eigen::MatrixBase<TDerivedG> const& gk,
         Eigen::MatrixBase<TDerivedDX> const& dx,
         Eigen::MatrixBase<TDerivedX> const& xk);
 };
@@ -94,12 +94,12 @@ template <class FObjective, class TDerivedG, class TDerivedDX, class TDerivedX>
 inline bool BackTrackingLineSearch<TScalar>::Solve(
     FObjective const& f,
     TScalar fk,
-    Eigen::MatrixBase<TDerivedG> const& g,
+    Eigen::MatrixBase<TDerivedG> const& gk,
     Eigen::MatrixBase<TDerivedDX> const& dx,
     Eigen::MatrixBase<TDerivedX> const& xk)
 {
     alphaj            = alpha;
-    TScalar const Dfk = g.dot(dx);
+    TScalar const Dfk = gk.dot(dx);
     fj                = fk;
     TScalar flinear;
     for (niters = 0; niters < nMaxIters; ++niters)
