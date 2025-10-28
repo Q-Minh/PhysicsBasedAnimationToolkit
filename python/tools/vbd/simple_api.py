@@ -54,9 +54,7 @@ def vbd_solve(
         if grp is not None:
             serialize_solver_iteration(fem, k, grp)
         pbat.sim.algorithm.vbd.iterate(fem, params)
-    pbat.sim.algorithm.vbd.back_substitute_integrated_positions_into_velocities(
-        fem, params
-    )
+    fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, params.n_max_iters, grp, post_solve=True)
 
@@ -92,9 +90,7 @@ def anderson_solve(
         if grp is not None:
             serialize_solver_iteration(fem, anderson.k, grp)
         pbat.sim.algorithm.vbd.iterate(fem, params, anderson)
-    pbat.sim.algorithm.vbd.back_substitute_integrated_positions_into_velocities(
-        fem, params
-    )
+    fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, anderson.k, grp, post_solve=True)
 
@@ -131,9 +127,7 @@ def broyden_solve(
         if grp is not None:
             serialize_solver_iteration(fem, broyden.k, grp)
         pbat.sim.algorithm.vbd.iterate(fem, params, broyden)
-    pbat.sim.algorithm.vbd.back_substitute_integrated_positions_into_velocities(
-        fem, params
-    )
+    fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, broyden.k, grp, post_solve=True)
 
@@ -172,9 +166,7 @@ def chebyshev_solve(
         if grp is not None:
             serialize_solver_iteration(fem, cheb.k, grp)
         pbat.sim.algorithm.vbd.iterate(fem, params, cheb)
-    pbat.sim.algorithm.vbd.back_substitute_integrated_positions_into_velocities(
-        fem, params
-    )
+    fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, cheb.k, grp, post_solve=True)
 
