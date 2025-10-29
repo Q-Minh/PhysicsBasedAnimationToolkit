@@ -60,6 +60,12 @@ Params::WithInitializationStrategy(dynamics::EFemElastoDynamicsTimeStepInitializ
     return *this;
 }
 
+PBAT_API Params& Params::WithDamping(Scalar _betaR)
+{
+    this->betaR = _betaR;
+    return *this;
+}
+
 Params& Params::WithMaximumIterations(Index nIters)
 {
     nMaxIters = nIters;
@@ -195,7 +201,6 @@ TEST_CASE("[sim][algorithm][vbd] Core")
         .Construct();
     // Act
     dynamics.SetInitialConditions(dynamics.x, dynamics.v);
-    dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
     sim::algorithm::vbd::Solve(dynamics, vbdParams);

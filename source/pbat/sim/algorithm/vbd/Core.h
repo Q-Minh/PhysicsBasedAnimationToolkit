@@ -98,6 +98,12 @@ struct Params
     PBAT_API Params&
     WithInitializationStrategy(dynamics::EFemElastoDynamicsTimeStepInitialization _strategy);
     /**
+     * @brief Rayleigh damping coefficient
+     * @param _betaR Rayleigh damping coefficient
+     * @return Reference to this
+     */
+    PBAT_API Params& WithDamping(Scalar _betaR);
+    /**
      * @brief Maximum number of VBD iterations
      * @param nIters Maximum number of iterations
      * @return Reference to this
@@ -144,8 +150,9 @@ struct Params
     dynamics::EFemElastoDynamicsTimeStepInitialization eElasticsInitializationStrategy{
         dynamics::EFemElastoDynamicsTimeStepInitialization::
             TrajectoryWithFdLoad}; ///< Elasto-dynamics initialization strategy
-    Scalar detHZero{1e-7};         ///< Numerical zero for hessian pseudo-singularity check
+    Scalar betaR{0};               ///< Rayleigh damping coefficient
     Index nMaxIters{25};           ///< Maximum number of VBD iterations
+    Scalar detHZero{1e-7};         ///< Numerical zero for hessian pseudo-singularity check
 };
 
 /**
@@ -199,13 +206,9 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
-    auto h  = fem.bdf.TimeStep();
-    auto h2 = h * h;
-    // NOTE:
-    // If we want to support damping in the future, it would be nice to make it adapt
-    // to higher-order BDF schemes. We have all the tools necessary in the Bdf class.
-    // auto xt                = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
-    // auto vt                = fem.bdf.CurrentState(1).reshaped(fem.v.rows(), fem.v.cols());
+    auto betaTildeBdf      = fem.bdf.BetaTilde();
+    auto betaTildeBdf2     = betaTildeBdf * betaTildeBdf;
+    auto xtildeBdf         = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
     auto const nPartitions = params.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
     {
@@ -243,14 +246,15 @@ void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& param
                 kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
                 kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
             }
+            Hi *= betaTildeBdf2;
+            gi *= betaTildeBdf2;
             // "Kinetic" energy
-            Scalar m = fem.m(i);
-            // mini::SVector<Scalar, 3> xti     = FromEigen(xt.col(i).template head<3>());
-            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
-            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).template head<3>());
-            // kernels::AddDamping(h, xti, xi, Scalar(0) /*Rayleigh damping*/, gi, Hi);
-            kernels::AddInertiaDerivatives(h2, m, xtildei, xi, gi, Hi);
-            // Update vertex position
+            Scalar m                         = fem.m(i);
+            mini::SVector<Scalar, 3> xti     = -FromEigen(xtildeBdf.col(i).head<3>());
+            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).head<3>());
+            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).head<3>());
+            kernels::AddDamping(betaTildeBdf, xti, xi, params.betaR, gi, Hi);
+            kernels::AddInertiaDerivatives(/*betaTildeBdf2*/ Scalar(1), m, xtildei, xi, gi, Hi);
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
             fem.x.col(i) = ToEigen(xi);
         });
@@ -273,7 +277,6 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
-    fem.SetupTimeIntegrationOptimization();
     Solve<TElasticEnergy>(fem, params);
     fem.Step();
 }

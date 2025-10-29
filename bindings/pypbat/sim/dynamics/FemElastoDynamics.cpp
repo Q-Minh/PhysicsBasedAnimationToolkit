@@ -162,20 +162,20 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> eg,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> wg,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xig,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> rhog) {
-                self.SetMassMatrix(eg, wg, Xg, rhog);
+                self.SetMassMatrix(eg, wg, Xig, rhog);
             },
             nb::arg("eg"),
             nb::arg("wg"),
-            nb::arg("Xg"),
+            nb::arg("Xig"),
             nb::arg("rhog"),
             "Compute and set the mass matrix with variable density rhog at quadrature points.\n\n"
             "Args:\n"
             "    eg (numpy.ndarray): `|# quadrature points| x 1` array of element indices for "
             "quadrature points.\n"
             "    wg (numpy.ndarray): `|# quadrature points| x 1` array of quadrature weights.\n"
-            "    Xg (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
+            "    Xig (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
             "positions.\n"
             "    rhog (numpy.ndarray): `|# quadrature points| x 1` array of densities at "
             "quadrature points.\n")
@@ -195,10 +195,10 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> eg,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> wg,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xig,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> mug,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> lambdag) {
-                self.SetElasticEnergy(eg, wg, Xg, mug, lambdag);
+                self.SetElasticEnergy(eg, wg, Xig, mug, lambdag);
             },
             nb::arg("eg"),
             nb::arg("wg"),
@@ -210,7 +210,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    eg (numpy.ndarray): `|# quadrature points| x 1` array of element indices for "
             "quadrature points.\n"
             "    wg (numpy.ndarray): `|# quadrature points| x 1` array of quadrature weights.\n"
-            "    Xg (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
+            "    Xig (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
             "positions.\n"
             "    mug (numpy.ndarray): `|# quadrature points| x 1` array of first Lame parameters "
             "at quadrature points.\n"
@@ -230,9 +230,9 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> eg,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> wg,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xig,
                nb::DRef<Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> const> bg) {
-                self.SetExternalLoad(eg, wg, Xg, bg);
+                self.SetExternalLoad(eg, wg, Xig, bg);
             },
             nb::arg("eg"),
             nb::arg("wg"),
@@ -243,7 +243,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    eg (numpy.ndarray): `|# quadrature points| x 1` array of element indices for "
             "quadrature points.\n"
             "    wg (numpy.ndarray): `|# quadrature points| x 1` array of quadrature weights.\n"
-            "    Xg (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
+            "    Xig (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
             "positions.\n"
             "    bg (numpy.ndarray): `kDims x |# quadrature points|` matrix of body forces at "
             "quadrature points.\n")

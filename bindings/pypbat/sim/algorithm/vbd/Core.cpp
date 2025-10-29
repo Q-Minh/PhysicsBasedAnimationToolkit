@@ -122,6 +122,16 @@ void BindCore(nanobind::module_& m)
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
+            "with_damping",
+            &Params::WithDamping,
+            nb::arg("betaR"),
+            nb::rv_policy::reference_internal,
+            "Rayleigh damping coefficient.\n\n"
+            "Args:\n"
+            "    betaR (float): Rayleigh damping coefficient\n"
+            "Returns:\n"
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
+        .def(
             "with_maximum_iterations",
             &Params::WithMaximumIterations,
             nb::arg("n_iters"),

@@ -338,7 +338,7 @@ if __name__ == "__main__":
             imgui.TreePop()
 
         if imgui.TreeNode("Time Integration"):
-            dt_updated, dt = imgui.InputFloat("Time step", dt)
+            dt_updated, dt = imgui.InputFloat("Time step", dt, format="%.5f")
             s_updated, s = imgui.InputInt("BDF step", s)
             dirty |= dt_updated or s_updated
             imgui.TreePop()

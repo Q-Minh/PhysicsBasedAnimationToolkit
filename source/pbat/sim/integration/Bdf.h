@@ -370,7 +370,7 @@ void Bdf<TScalar, TIndex>::SetStep(int step)
 template <class TScalar, class TIndex>
 void Bdf<TScalar, TIndex>::SetTimeStep(ScalarType dt)
 {
-    if (dt <= 0)
+    if (dt < 0)
     {
         throw std::invalid_argument("dt > 0");
     }

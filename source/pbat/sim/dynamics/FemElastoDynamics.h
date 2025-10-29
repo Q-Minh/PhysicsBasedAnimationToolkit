@@ -191,18 +191,18 @@ struct FemElastoDynamics
      *
      * @tparam TDerivedEg Eigen dense expression type for element indices
      * @tparam TDerivedWg Eigen dense expression type for quadrature weights
-     * @tparam TDerivedXg Eigen dense expression type for quadrature points
+     * @tparam TDerivedXig Eigen dense expression type for quadrature points
      * @tparam TDerivedRhog Eigen dense expression type for mass density
      * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
      * @param wg `|# quad.pts.| x 1` vector of quadrature weights
-     * @param Xg `|# dims| x |# quad.pts.|` matrix of quadrature points
+     * @param Xig `|# dims| x |# quad.pts.|` matrix of reference quadrature points
      * @param rhog `|# quad.pts.| x 1` vector of mass density at quadrature points
      */
-    template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedRhog>
+    template <class TDerivedEg, class TDerivedWg, class TDerivedXig, class TDerivedRhog>
     void SetMassMatrix(
         Eigen::DenseBase<TDerivedEg> const& eg,
         Eigen::MatrixBase<TDerivedWg> const& wg,
-        Eigen::MatrixBase<TDerivedXg> const& Xg,
+        Eigen::MatrixBase<TDerivedXig> const& Xig,
         Eigen::MatrixBase<TDerivedRhog> const& rhog);
     /**
      * @brief Compute and set the elastic energy quadrature for a heterogeneous material with
@@ -211,25 +211,25 @@ struct FemElastoDynamics
      *
      * @tparam TDerivedEg Eigen dense expression type for element indices
      * @tparam TDerivedWg Eigen dense expression type for quadrature weights
-     * @tparam TDerivedXg Eigen dense expression type for quadrature points
+     * @tparam TDerivedXig Eigen dense expression type for quadrature points
      * @tparam TDerivedMug Eigen dense expression type for 1st Lame coefficients
      * @tparam TDerivedLambdag Eigen dense expression type for 2nd Lame coefficients
      * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
      * @param wg `|# quad.pts.| x 1` vector of quadrature weights
-     * @param Xg `|# dims| x |# quad.pts.|` matrix of quadrature points
+     * @param Xig `|# dims| x |# quad.pts.|` matrix of reference quadrature points
      * @param mug `|# quad.pts.| x 1` vector of 1st Lame coefficients at quadrature points
      * @param lambdag `|# quad.pts.| x 1` vector of 2nd Lame coefficients at quadrature points
      */
     template <
         class TDerivedEg,
         class TDerivedWg,
-        class TDerivedXg,
+        class TDerivedXig,
         class TDerivedMug,
         class TDerivedLambdag>
     void SetElasticEnergy(
         Eigen::DenseBase<TDerivedEg> const& eg,
         Eigen::DenseBase<TDerivedWg> const& wg,
-        Eigen::MatrixBase<TDerivedXg> const& Xg,
+        Eigen::MatrixBase<TDerivedXig> const& Xig,
         Eigen::DenseBase<TDerivedMug> const& mug,
         Eigen::DenseBase<TDerivedLambdag> const& lambdag);
     /**
@@ -238,18 +238,18 @@ struct FemElastoDynamics
      *
      * @tparam TDerivedEg Eigen dense expression type for element indices
      * @tparam TDerivedWg Eigen dense expression type for quadrature weights
-     * @tparam TDerivedXg Eigen dense expression type for quadrature points
+     * @tparam TDerivedXig Eigen dense expression type for quadrature points
      * @tparam TDerivedBg Eigen dense expression type for body forces
      * @param eg `|# quad.pts.| x 1` vector of element indices at quadrature points
      * @param wg `|# quad.pts.| x 1` vector of quadrature weights
-     * @param Xg `|# dims| x |# quad.pts.|` matrix of quadrature points
+     * @param Xig `|# dims| x |# quad.pts.|` matrix of reference quadrature points
      * @param bg `kDims x |# quad.pts.|` matrix of body forces at quadrature points
      */
-    template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedBg>
+    template <class TDerivedEg, class TDerivedWg, class TDerivedXig, class TDerivedBg>
     void SetExternalLoad(
         Eigen::DenseBase<TDerivedEg> const& eg,
         Eigen::MatrixBase<TDerivedWg> const& wg,
-        Eigen::MatrixBase<TDerivedXg> const& Xg,
+        Eigen::MatrixBase<TDerivedXig> const& Xig,
         Eigen::MatrixBase<TDerivedBg> const& bg);
     /**
      * @brief Set up the (position-based) time integration optimization problem.
@@ -473,7 +473,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetInit
     // Adjust IVP based on Dirichlet constraints
     fext(Eigen::placeholders::all, DirichletNodes()).setZero();
     v(Eigen::placeholders::all, DirichletNodes()).setZero();
-    for (auto k = 0; k <= bdf.GetStep(); ++k)
+    for (auto k = 0; k < bdf.GetStep(); ++k)
         bdf.State(k, 1)(DirichletDofs()).setZero();
 }
 
@@ -486,11 +486,10 @@ template <
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetMassMatrix(
     ScalarType rho)
 {
-    auto constexpr kOrder     = 2 * TElement::kOrder;
-    IndexType const nElements = static_cast<IndexType>(mesh.E.cols());
-    Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const XgM =
-        mesh.template QuadraturePoints<kOrder>();
-    auto const nQuadPtsPerElementM = XgM.cols() / nElements;
+    auto constexpr kOrder          = 2 * TElement::kOrder;
+    IndexType const nElements      = static_cast<IndexType>(mesh.E.cols());
+    auto const XigM                = fem::MeshReferenceQuadraturePoints<kOrder>(mesh);
+    auto const nQuadPtsPerElementM = XigM.cols() / nElements;
     // Mass
     SetMassMatrix(
         Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, IndexType(0), nElements - 1)
@@ -498,8 +497,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
             .transpose()
             .reshaped() /*eg*/,
         fem::MeshQuadratureWeights<kOrder>(mesh).reshaped() /*wg*/,
-        XgM /*Xg*/,
-        Eigen::Vector<ScalarType, Eigen::Dynamic>::Constant(XgM.cols(), rho) /*rhog*/
+        XigM /*Xig*/,
+        Eigen::Vector<ScalarType, Eigen::Dynamic>::Constant(XigM.cols(), rho) /*rhog*/
     );
 }
 
@@ -517,9 +516,8 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetElas
     auto constexpr kOrder     = TElement::kOrder;
     IndexType const nElements = static_cast<IndexType>(mesh.E.cols());
     // Compute mesh quadrature points
-    Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const XgU =
-        mesh.template QuadraturePoints<kOrder>();
-    auto const nQuadPtsPerElementU = XgU.cols() / nElements;
+    auto const XigU                = fem::MeshReferenceQuadraturePoints<kOrder>(mesh);
+    auto const nQuadPtsPerElementU = XigU.cols() / nElements;
     // Elasticity
     SetElasticEnergy(
         Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, IndexType(0), nElements - 1)
@@ -527,9 +525,9 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetElas
             .transpose()
             .reshaped() /*eg*/,
         fem::MeshQuadratureWeights<kOrder>(mesh).reshaped() /*wg*/,
-        XgU /*Xg*/,
-        Eigen::Vector<ScalarType, Eigen::Dynamic>::Constant(XgU.cols(), mu) /*mug*/,
-        Eigen::Vector<ScalarType, Eigen::Dynamic>::Constant(XgU.cols(), lambda) /*lambdag*/);
+        XigU /*Xig*/,
+        Eigen::Vector<ScalarType, Eigen::Dynamic>::Constant(XigU.cols(), mu) /*mug*/,
+        Eigen::Vector<ScalarType, Eigen::Dynamic>::Constant(XigU.cols(), lambda) /*lambdag*/);
 }
 
 template <
@@ -542,11 +540,10 @@ inline void
 FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetExternalLoad(
     Eigen::Vector<ScalarType, kDims> const& b)
 {
-    auto constexpr kOrder     = TElement::kOrder;
-    IndexType const nElements = static_cast<IndexType>(mesh.E.cols());
-    Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const XgB =
-        mesh.template QuadraturePoints<kOrder>();
-    auto const nQuadPtsPerElementB = XgB.cols() / nElements;
+    auto constexpr kOrder          = TElement::kOrder;
+    IndexType const nElements      = static_cast<IndexType>(mesh.E.cols());
+    auto const XigB                = fem::MeshReferenceQuadraturePoints<kOrder>(mesh);
+    auto const nQuadPtsPerElementB = XigB.cols() / nElements;
     // External load
     SetExternalLoad(
         Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, IndexType(0), nElements - 1)
@@ -554,8 +551,8 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetExte
             .transpose()
             .reshaped() /*eg*/,
         fem::MeshQuadratureWeights<kOrder>(mesh).reshaped() /*wg*/,
-        XgB /*Xg*/,
-        b.replicate(1, XgB.cols()) /*bg*/
+        XigB /*Xig*/,
+        b.replicate(1, XigB.cols()) /*bg*/
     );
 }
 
@@ -599,14 +596,14 @@ template <
     physics::CHyperElasticEnergy THyperElasticEnergy,
     common::CFloatingPoint TScalar,
     common::CIndex TIndex>
-template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedRhog>
+template <class TDerivedEg, class TDerivedWg, class TDerivedXig, class TDerivedRhog>
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetMassMatrix(
     Eigen::DenseBase<TDerivedEg> const& eg,
     Eigen::MatrixBase<TDerivedWg> const& wg,
-    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    Eigen::MatrixBase<TDerivedXig> const& Xig,
     Eigen::MatrixBase<TDerivedRhog> const& rhog)
 {
-    auto N = fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xg.derived());
+    auto N = fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xig.derived());
     Eigen::SparseMatrix<ScalarType, Eigen::RowMajor, IndexType> rhogwgN =
         rhog.cwiseProduct(wg).asDiagonal() * N;
     Eigen::SparseMatrix<ScalarType, Eigen::ColMajor, IndexType> M = N.transpose() * rhogwgN;
@@ -624,20 +621,20 @@ template <
 template <
     class TDerivedEg,
     class TDerivedWg,
-    class TDerivedXg,
+    class TDerivedXig,
     class TDerivedMug,
     class TDerivedLambdag>
 inline void
 FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetElasticEnergy(
     Eigen::DenseBase<TDerivedEg> const& eg,
     Eigen::DenseBase<TDerivedWg> const& wg,
-    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    Eigen::MatrixBase<TDerivedXig> const& Xig,
     Eigen::DenseBase<TDerivedMug> const& mug,
     Eigen::DenseBase<TDerivedLambdag> const& lambdag)
 {
     egU   = eg;
     wgU   = wg;
-    GNegU = fem::ShapeFunctionGradientsAt(mesh, eg, Xg);
+    GNegU = fem::ShapeFunctionGradientsAt(mesh, eg, Xig);
     lamegU.resize(2, eg.size());
     lamegU.row(0) = mug;
     lamegU.row(1) = lambdag;
@@ -652,16 +649,16 @@ template <
     physics::CHyperElasticEnergy THyperElasticEnergy,
     common::CFloatingPoint TScalar,
     common::CIndex TIndex>
-template <class TDerivedEg, class TDerivedWg, class TDerivedXg, class TDerivedBg>
+template <class TDerivedEg, class TDerivedWg, class TDerivedXig, class TDerivedBg>
 inline void
 FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetExternalLoad(
     Eigen::DenseBase<TDerivedEg> const& eg,
     Eigen::MatrixBase<TDerivedWg> const& wg,
-    Eigen::MatrixBase<TDerivedXg> const& Xg,
+    Eigen::MatrixBase<TDerivedXig> const& Xig,
     Eigen::MatrixBase<TDerivedBg> const& bg)
 {
     Eigen::SparseMatrix<ScalarType, Eigen::RowMajor, IndexType> N =
-        fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xg.derived());
+        fem::ShapeFunctionMatrixAt(mesh, eg.derived(), Xig.derived());
     fext = bg * wg.asDiagonal() * N;
 }
 
@@ -682,6 +679,9 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     auto betaTilde2 = betaTilde * betaTilde;
     xtilde.resize(kDims, xtildeBdf.size() / kDims);
     xtilde.reshaped() = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * (aext().reshaped());
+    auto s            = bdf.GetStep();
+    xtilde(Eigen::placeholders::all, DirichletNodes()).reshaped() =
+        bdf.State(s - 1, 0)(DirichletDofs());
 
     switch (eInitializationStrategy)
     {
@@ -696,17 +696,14 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
             break;
         }
         case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithFdLoad: {
-            auto s                   = bdf.GetStep();
-            auto at                  = (bdf.State(s, 1) - bdf.State(s - 1, 1)) / bdf.h;
+            auto at                  = (v.reshaped() - bdf.State(s - 1, 1)) / bdf.h;
             auto x0                  = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * at;
             x.reshaped()(FreeDofs()) = x0(FreeDofs());
             break;
         }
         case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithProjectedFdLoad: {
-            auto s = bdf.GetStep();
-            auto at =
-                ((bdf.State(s, 1) - bdf.State(s - 1, 1)) / bdf.h).reshaped(kDims, mesh.X.cols());
-            auto aextl               = aext();
+            auto at    = ((v - bdf.State(s - 1, 1).reshaped(kDims, mesh.X.cols())) / bdf.h);
+            auto aextl = aext();
             x.reshaped()(FreeDofs()) = -(xtildeBdf + betaTilde * vtildeBdf)(FreeDofs());
             for (IndexType i : FreeNodes())
             {
