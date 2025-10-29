@@ -178,8 +178,9 @@ void BindCore(nanobind::module_& m)
             "strategy",
             &Params::eElasticsInitializationStrategy,
             "Time integration optimization initialization strategy")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
-        .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations");
+        .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
+        .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
+        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
 
