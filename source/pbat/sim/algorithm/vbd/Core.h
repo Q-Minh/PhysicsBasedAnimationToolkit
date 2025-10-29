@@ -152,7 +152,7 @@ struct Params
             TrajectoryWithFdLoad}; ///< Elasto-dynamics initialization strategy
     Scalar betaR{0};               ///< Rayleigh damping coefficient
     Index nMaxIters{25};           ///< Maximum number of VBD iterations
-    Scalar detHZero{1e-7};         ///< Numerical zero for hessian pseudo-singularity check
+    Scalar detHZero{0};            ///< Numerical zero for hessian pseudo-singularity check
 };
 
 /**
