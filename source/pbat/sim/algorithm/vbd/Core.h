@@ -65,7 +65,7 @@ PBAT_API void VertexColors(
 
 /**
  * @brief VBD simulation configuration
- * @details See @cite anka2024vbd
+ * @details See \cite anka2024vbd
  */
 struct Params
 {
@@ -95,7 +95,8 @@ struct Params
      * @param _strategy Initialization strategy
      * @return Reference to this
      */
-    PBAT_API Params& WithInitializationStrategy(EInitializationStrategy _strategy);
+    PBAT_API Params&
+    WithInitializationStrategy(dynamics::EFemElastoDynamicsTimeStepInitialization _strategy);
     /**
      * @brief Maximum number of VBD iterations
      * @param nIters Maximum number of iterations
@@ -140,10 +141,11 @@ struct Params
                          ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj;   ///< `|# verts|` partition vertices
     // Time integration optimization parameters
-    EInitializationStrategy strategy{
-        EInitializationStrategy::Inertia}; ///< BCD optimization initialization strategy
-    Scalar detHZero{1e-7};                 ///< Numerical zero for hessian pseudo-singularity check
-    Index nMaxIters{25};                   ///< Maximum number of VBD iterations
+    dynamics::EFemElastoDynamicsTimeStepInitialization eElasticsInitializationStrategy{
+        dynamics::EFemElastoDynamicsTimeStepInitialization::
+            TrajectoryWithFdLoad}; ///< Elasto-dynamics initialization strategy
+    Scalar detHZero{1e-7};         ///< Numerical zero for hessian pseudo-singularity check
+    Index nMaxIters{25};           ///< Maximum number of VBD iterations
 };
 
 /**
@@ -190,34 +192,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
-    using math::linalg::mini::FromEigen;
-    using math::linalg::mini::ToEigen;
-    // NOTE:
-    // We should make this initialization adapt to higher-order BDF schemes as well!
-    // In this case, we would have
-    // "xt" = -fem.bdf.Inertia(0), and
-    // "vt" = -fem.bdf.Inertia(1),
-    // and instead of the h, we would have fem.bdf.BetaTilde()
-    // and h^2 would be fem.bdf.BetaTilde()^2.
-    auto aext             = fem.aext();
-    auto xt               = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
-    auto vt               = fem.bdf.CurrentState(1).reshaped(fem.v.rows(), fem.v.cols());
-    auto free             = fem.FreeNodes();
-    auto const nFreeVerts = free.size();
-    auto h                = fem.bdf.TimeStep();
-    auto h2               = h * h;
-    tbb::parallel_for(Index(0), nFreeVerts, [&](Index fi) {
-        auto i = free(fi);
-        auto x = kernels::InitialPositionsForSolve(
-            FromEigen(xt.col(i).template head<3>()),
-            FromEigen(vt.col(i).template head<3>()),
-            FromEigen(fem.v.col(i).template head<3>()),
-            FromEigen(aext.col(i).template head<3>()),
-            h,
-            h2,
-            params.strategy);
-        fem.x.col(i) = ToEigen(x);
-    });
+    fem.SetupTimeIntegrationOptimization(params.eElasticsInitializationStrategy);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

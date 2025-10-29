@@ -2,6 +2,11 @@
 #define PBAT_GPU_IMPL_COMMON_EIGEN_H
 
 #include "Buffer.cuh"
+// Eigen/src/Core/NumTraits.h requires these
+// clang-format off
+#include <bit> 
+#include <limits>
+// clang-format on
 #include "pbat/common/Eigen.h"
 
 #include <Eigen/Core>

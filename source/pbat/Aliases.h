@@ -14,8 +14,8 @@
  */
 namespace pbat {
 
-using Index = std::ptrdiff_t; ///< Index type
-using Scalar = double; ///< Scalar type
+using Index  = std::ptrdiff_t; ///< Index type
+using Scalar = float;          ///< Scalar type
 /**
  * @brief Fixed-size vector type
  * @tparam N
@@ -30,7 +30,7 @@ using Vector = Eigen::Vector<Scalar, N>;
 template <Index Rows, Index Cols>
 using Matrix = Eigen::Matrix<Scalar, Rows, Cols>;
 
-using VectorX = Eigen::Vector<Scalar, Eigen::Dynamic>; ///< Dynamic-size vector type
+using VectorX = Eigen::Vector<Scalar, Eigen::Dynamic>;                 ///< Dynamic-size vector type
 using MatrixX = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>; ///< Dynamic-size matrix type
 /**
  * @brief Fixed-size index vector type
@@ -47,7 +47,8 @@ template <Index Rows, Index Cols>
 using IndexMatrix = Eigen::Matrix<Index, Rows, Cols>;
 
 using IndexVectorX = Eigen::Vector<Index, Eigen::Dynamic>; ///< Dynamic-size index vector type
-using IndexMatrixX = Eigen::Matrix<Index, Eigen::Dynamic, Eigen::Dynamic>; ///< Dynamic-size index matrix type
+using IndexMatrixX =
+    Eigen::Matrix<Index, Eigen::Dynamic, Eigen::Dynamic>; ///< Dynamic-size index matrix type
 
 using CSCMatrix = Eigen::SparseMatrix<Scalar, Eigen::ColMajor>; ///< Column-major sparse matrix type
 using CSRMatrix = Eigen::SparseMatrix<Scalar, Eigen::RowMajor>; ///< Row-major sparse matrix type

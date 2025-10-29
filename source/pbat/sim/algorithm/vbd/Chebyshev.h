@@ -19,7 +19,7 @@ namespace pbat::sim::algorithm::vbd {
 
 /**
  * @brief Chebyshev accelerated VBD solver parameters
- * @details See @cite wang_chebyshev_2015, @cite anka2024vbd
+ * @details See \cite wang_chebyshev_2015, \cite anka2024vbd
  */
 struct ChebyshevParams
 {

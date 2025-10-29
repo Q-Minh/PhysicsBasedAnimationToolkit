@@ -20,7 +20,7 @@ namespace pbat::geometry {
 /**
  * @brief Spatial partitioning data structure that divides 3D space into a set of sparse grids.
  * Allowing for efficient querying of point neighbours within a certain region.
- * Implements @cite eitz2007hierarchical
+ * Implements \cite eitz2007hierarchical
  * @tparam Dims Number of spatial dimensions (2 or 3).
  * @tparam TScalar Type of scalar values (e.g., float or double).
  * @tparam TIndex Type of index values (e.g., int or long).
@@ -170,7 +170,7 @@ public:
         -> Eigen::Vector<IndexType, kDims>;
     /**
      * @brief Hash a point `X` at level `l` in the grid.
-     * See @cite eitz2007hierarchical for details on the hashing scheme.
+     * See \cite eitz2007hierarchical for details on the hashing scheme.
      * @param X `|# dims| x 1` point in space.
      * @param l Level of the grid at which to hash the point.
      * @return Hash value for the point at level `l`.

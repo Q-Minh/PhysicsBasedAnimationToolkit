@@ -67,9 +67,7 @@ TEST_CASE("[sim][algorithm][vbd] Chebyshev")
     auto eSelection         = graph::EGreedyColorSelectionStrategy::LeastUsed;
     auto colors             = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
     // Initialization strategy
-    auto eInitializationStrategy = pbat::sim::algorithm::vbd::EInitializationStrategy::Inertia;
-    vbdParams.WithInitializationStrategy(eInitializationStrategy)
-        .WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
+    vbdParams.WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
         .WithMaximumIterations(20)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})

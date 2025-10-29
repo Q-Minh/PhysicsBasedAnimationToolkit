@@ -218,11 +218,11 @@ if __name__ == "__main__":
     solver_names = ["Base", "Anderson", "Broyden", "Chebyshev"]
     i_solver = 0  # Non-linear solver index
     init_strategies = [
-        pbat.sim.algorithm.vbd.EInitializationStrategy.Position,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.Inertia,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.KineticEnergyMinimum,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.AdaptiveVbd,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.AdaptivePbat,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.FreeTrajectory,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithFdLoad,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithProjectedFdLoad,
     ]
     i_init_strategy = 2  # Initialization strategy index
     n_max_iters = 25  # Maximum iterations

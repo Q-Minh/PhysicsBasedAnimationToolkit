@@ -28,6 +28,22 @@
 namespace pbat::sim::dynamics {
 
 /**
+ * @brief Finite Element Elasto-Dynamics time step initialization strategies
+ */
+enum class EFemElastoDynamicsTimeStepInitialization {
+    Position,                     ///< \f$ x^{t+1}_0 = x^t \f$
+    FreeTrajectory,               ///< \f$ x^{t+1}_0 = x^t + dt v^t \f$
+    TrajectoryWithExternalLoad,   ///< \f$ x^{t+1}_0 = x^t + dt v^t + \frac{dt^2}{2}
+                                  ///< a_\text{ext}^t \f$
+    TrajectoryWithFdLoad,         ///< \f$ x^{t+1}_0 = x^t + dt v^t + \frac{dt^2}{2} a^t \f$,
+                                  ///< where
+                                  ///< \f$ a^t \f$ is the finite-difference estimated
+                                  ///< acceleration, i.e.
+                                  ///< \f$ a^t = \frac{v^t - v^{t-1}}{dt} \f$
+    TrajectoryWithProjectedFdLoad ///< \cite anka2024vbd
+};
+
+/**
  * @brief Finite Element Elasto-Dynamics initial value problem with Dirichlet boundary conditions
  * using BDF (backward differentiation formula) as the time discretization.
  *
@@ -236,9 +252,14 @@ struct FemElastoDynamics
         Eigen::MatrixBase<TDerivedXg> const& Xg,
         Eigen::MatrixBase<TDerivedBg> const& bg);
     /**
-     * @brief Set the BDF inertial target for elasto dynamics
+     * @brief Set up the (position-based) time integration optimization problem.
+     * @param eInitializationStrategy Time step initialization strategy
+     * @post `xtilde` is populated according to the BDF scheme
+     * @post `x` is initialized using the strategy `eInitializationStrategy`
      */
-    void SetupTimeIntegrationOptimization();
+    void SetupTimeIntegrationOptimization(
+        EFemElastoDynamicsTimeStepInitialization eInitializationStrategy =
+            EFemElastoDynamicsTimeStepInitialization::Position);
     /**
      * @brief Perform a single time integration step using `x`, `v`
      */
@@ -452,7 +473,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetInit
     // Adjust IVP based on Dirichlet constraints
     fext(Eigen::placeholders::all, DirichletNodes()).setZero();
     v(Eigen::placeholders::all, DirichletNodes()).setZero();
-    for (auto k = 0; k < bdf.GetStep(); ++k)
+    for (auto k = 0; k <= bdf.GetStep(); ++k)
         bdf.State(k, 1)(DirichletDofs()).setZero();
 }
 
@@ -651,15 +672,54 @@ template <
     common::CFloatingPoint TScalar,
     common::CIndex TIndex>
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::
-    SetupTimeIntegrationOptimization()
+    SetupTimeIntegrationOptimization(
+        EFemElastoDynamicsTimeStepInitialization eInitializationStrategy)
 {
     bdf.ConstructEquations();
-    auto xtildeBdf = bdf.Inertia(0);
-    auto vtildeBdf = bdf.Inertia(1);
-    auto betaTilde = bdf.BetaTilde();
+    auto xtildeBdf  = bdf.Inertia(0);
+    auto vtildeBdf  = bdf.Inertia(1);
+    auto betaTilde  = bdf.BetaTilde();
+    auto betaTilde2 = betaTilde * betaTilde;
     xtilde.resize(kDims, xtildeBdf.size() / kDims);
-    xtilde.reshaped() =
-        -(xtildeBdf + betaTilde * vtildeBdf) + (betaTilde * betaTilde) * (aext().reshaped());
+    xtilde.reshaped() = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * (aext().reshaped());
+
+    switch (eInitializationStrategy)
+    {
+        case EFemElastoDynamicsTimeStepInitialization::Position: break;
+        case EFemElastoDynamicsTimeStepInitialization::FreeTrajectory: {
+            x.reshaped()(FreeDofs()) = -(xtildeBdf + betaTilde * vtildeBdf)(FreeDofs());
+            break;
+        }
+        case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad: {
+            x(Eigen::placeholders::all, FreeNodes()) =
+                xtilde(Eigen::placeholders::all, FreeNodes());
+            break;
+        }
+        case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithFdLoad: {
+            auto s                   = bdf.GetStep();
+            auto at                  = (bdf.State(s, 1) - bdf.State(s - 1, 1)) / bdf.h;
+            auto x0                  = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * at;
+            x.reshaped()(FreeDofs()) = x0(FreeDofs());
+            break;
+        }
+        case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithProjectedFdLoad: {
+            auto s = bdf.GetStep();
+            auto at =
+                ((bdf.State(s, 1) - bdf.State(s - 1, 1)) / bdf.h).reshaped(kDims, mesh.X.cols());
+            auto aextl               = aext();
+            x.reshaped()(FreeDofs()) = -(xtildeBdf + betaTilde * vtildeBdf)(FreeDofs());
+            for (IndexType i : FreeNodes())
+            {
+                Eigen::Vector<ScalarType, kDims> ati   = at.col(i);
+                Eigen::Vector<ScalarType, kDims> aexti = aextl.col(i);
+                ScalarType atilde =
+                    ati.dot(aexti) / (aexti.squaredNorm() + std::numeric_limits<ScalarType>::min());
+                x.col(i) += betaTilde2 * atilde * aexti;
+            }
+        }
+        break;
+        default: break;
+    }
 }
 
 template <

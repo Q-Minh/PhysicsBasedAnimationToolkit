@@ -18,6 +18,23 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
     using ElasticEnergyType = physics::StableNeoHookeanEnergy<kDims>;
     using ElastoDynamics    = pbat::sim::dynamics::
         FemElastoDynamics<ElementType, kDims, ElasticEnergyType, ScalarType, IndexType>;
+    using pbat::sim::dynamics::EFemElastoDynamicsTimeStepInitialization;
+
+    nb::enum_<EFemElastoDynamicsTimeStepInitialization>(
+        m,
+        "EFemElastoDynamicsTimeStepInitialization")
+        .value("Position", EFemElastoDynamicsTimeStepInitialization::Position)
+        .value("FreeTrajectory", EFemElastoDynamicsTimeStepInitialization::FreeTrajectory)
+        .value(
+            "TrajectoryWithExternalLoad",
+            EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad)
+        .value(
+            "TrajectoryWithFdLoad",
+            EFemElastoDynamicsTimeStepInitialization::TrajectoryWithFdLoad)
+        .value(
+            "TrajectoryWithProjectedFdLoad",
+            EFemElastoDynamicsTimeStepInitialization::TrajectoryWithProjectedFdLoad)
+        .export_values();
 
     nb::class_<ElastoDynamics>(m, "FemElastoDynamics")
         .def(nb::init<>(), "Construct an empty elasto-dynamics problem.")
@@ -250,12 +267,19 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "Set Dirichlet boundary conditions as |# nodes| integer mask.\n\n"
             "Args:\n"
             "    D (numpy.ndarray): `|#nodes|` integer array where non-zero values indicate a "
-            "constrained "
-            "node.\n")
+            "constrained node.\n")
         .def(
             "setup_time_integration_optimization",
-            [](ElastoDynamics& self) { self.SetupTimeIntegrationOptimization(); },
-            "Compute BDF inertial target for implicit time stepping (updates xtilde).")
+            [](ElastoDynamics& self,
+               EFemElastoDynamicsTimeStepInitialization eInitializationStrategy) {
+                self.SetupTimeIntegrationOptimization(eInitializationStrategy);
+            },
+            nb::arg("initialization_strategy") = EFemElastoDynamicsTimeStepInitialization::Position,
+            "Compute BDF inertial target for implicit time stepping (updates xtilde).\n\n"
+            "Args:\n"
+            "    initialization_strategy (EFemElastoDynamicsTimeStepInitialization): Strategy for "
+            "initializing the time step (i.e. the time integration optimization problem's initial "
+            "iterate). Defaults to Position.\n")
         .def(
             "step",
             &ElastoDynamics::Step,

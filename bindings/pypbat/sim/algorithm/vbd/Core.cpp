@@ -117,8 +117,8 @@ void BindCore(nanobind::module_& m)
             nb::rv_policy::reference_internal,
             "Initialization strategy for the VBD solver.\n\n"
             "Args:\n"
-            "    strategy (pbat.sim.algorithm.vbd.EInitializationStrategy): Initialization "
-            "strategy\n"
+            "    strategy (pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization): "
+            "Initialization strategy\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
@@ -164,7 +164,10 @@ void BindCore(nanobind::module_& m)
             "`|# partitions+1|` partition pointers, s.t. the range `[Pptr[p], Pptr[p+1])` indexes "
             "into Padj from partition `p`")
         .def_rw("Padj", &Params::Padj, "`|# verts|` partition vertices")
-        .def_rw("strategy", &Params::strategy, "BCD optimization initialization strategy")
+        .def_rw(
+            "strategy",
+            &Params::eElasticsInitializationStrategy,
+            "Time integration optimization initialization strategy")
         .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations");
 

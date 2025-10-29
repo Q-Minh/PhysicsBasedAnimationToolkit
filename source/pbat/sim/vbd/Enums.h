@@ -33,9 +33,9 @@ enum class EAccelerationStrategy {
 // clang-format off
 enum class EBroydenJacobianEstimate {
     Identity, ///< Initial Jacobian is identity matrix
-    ScaledIdentity, ///< @cite oren1974SelfScaling
-    QuasiCauchyRelationDiagonalUpdating, ///< @cite zhu1999quasi
-    UsdDiagonal, ///< @cite marjugi2013diagonal
+    ScaledIdentity, ///< \cite oren1974SelfScaling
+    QuasiCauchyRelationDiagonalUpdating, ///< \cite zhu1999quasi
+    UsdDiagonal, ///< \cite marjugi2013diagonal
     DiagonalCauchySchwarz ///< Ours
 };
 // clang-format on
