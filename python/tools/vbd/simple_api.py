@@ -325,7 +325,12 @@ if __name__ == "__main__":
             a_updated, aext = imgui.InputFloat3("External acceleration", aext)
             b_updated, b = imgui.InputFloat3("Body forces", b)
             v0_updated, v0 = imgui.InputFloat3("Initial velocity", v0)
-            dirty |= a_updated or b_updated or v0_updated
+            betaR_updated, vbd_params.betaR = imgui.InputFloat(
+                "Rayleigh damping", vbd_params.betaR, format="%.8f"
+            )
+            dirty |= (
+                a_updated or b_updated or v0_updated
+            )  # no need to trigger dirty on betaR_updated
             imgui.TreePop()
 
         if imgui.TreeNode("Dirichlet Constraints"):

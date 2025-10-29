@@ -193,7 +193,7 @@ PBAT_HOST_DEVICE void AddDamping(
     TMatrixH& H)
 {
     // Add Rayleigh damping terms
-    ScalarType const D = kD / dt;
+    ScalarType const D = dt * kD;
     g += D * (H * (x - xt));
     H *= ScalarType{1} + D;
 }
