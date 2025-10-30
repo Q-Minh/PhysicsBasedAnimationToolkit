@@ -6,6 +6,32 @@ import polyscope.imgui as imgui
 import numpy as np
 import tkinter as tk
 from tkinter import filedialog
+import h5py
+
+def _read_mesh_and_state(integrate_grp: h5py.Group):
+    # Fem group and datasets
+    fem_path = "pbat.sim.dynamics.FemElastoDynamics"
+    mesh_path = f"{fem_path}/pbat.fem.Mesh"
+    if fem_path not in integrate_grp:
+        return None, None, None
+    fem_grp = integrate_grp[fem_path]
+    # Read mesh connectivity and positions
+    X = None
+    E = None
+    if mesh_path in integrate_grp:
+        mesh_grp = integrate_grp[mesh_path]
+    else:
+        # Fallback: nested under fem_grp
+        mesh_grp = fem_grp.get("pbat.fem.Mesh", None)
+    if mesh_grp is not None:
+        if "X" in mesh_grp and "E" in mesh_grp:
+            X = np.array(mesh_grp["X"])  # shape (3, n)
+            E = np.array(mesh_grp["E"])  # shape (4, m)
+    dmask = np.array(fem_grp["dmask"], dtype=np.int32) if "dmask" in fem_grp else np.zeros(X.shape[1], dtype=bool)
+    # Deformed positions x at this frame
+    x = np.array(fem_grp["x"]) if "x" in fem_grp else None
+    print("DA VALS:", X, E, x, dmask)
+    return X, E, x, dmask
 
 if __name__ == "__main__":
     ps.set_verbosity(0)
@@ -79,8 +105,9 @@ if __name__ == "__main__":
 
         dirty = False
         is_new_mesh = False
+        is_h5_mesh = False
         if imgui.TreeNode("I/O"):
-            if imgui.Button("Load", [imgui.GetWindowWidth() / 2.1, 0]):
+            if imgui.Button("Load mesh file", [imgui.GetWindowWidth() / 2.1, 0]):
                 root = tk.Tk()
                 root.withdraw()
                 file_path = filedialog.askopenfilename(
@@ -99,6 +126,34 @@ if __name__ == "__main__":
                     vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
                     is_new_mesh = True
                 root.destroy()
+
+            if imgui.Button("Load h5", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.askopenfilename(
+                    title="Open HDF5 simulation file",
+                    defaultextension=".h5",
+                    filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+                )
+                if file_path:
+                    h5 = h5py.File(file_path, "r")
+                    X, E, x, d_mask = _read_mesh_and_state(h5)
+                    if (X is None) or (E is None):
+                        print("oops")
+                        return
+                    V = (x if x is not None else X).T  # to shape (n,3)
+                    C = E.T  # to shape (m,4)
+                    dynamics.construct(V.T, C.T)
+                    dynamics.constrain(d_mask.ravel())
+                    vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
+                    is_new_mesh = True
+                    d_axis = 3 # Don't apply default Dirichlet constraints 
+                root.destroy()
+                    # imesh = meshio.read(file_path)
+                    # V, C = imesh.points, imesh.cells_dict["tetra"]
+                    # dynamics.construct(V.T, C.T)
+                    # vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
+                    # is_new_mesh = True
 
             if imgui.Button("Select Export File", [imgui.GetWindowWidth() / 2.1, 0]):
                 root = tk.Tk()
@@ -146,7 +201,7 @@ if __name__ == "__main__":
             imgui.TreePop()
 
         if imgui.TreeNode("Dirichlet Constraints"):
-            d_axis_updated, d_axis = imgui.InputInt("Axis (0=x,1=y,2=z)", d_axis)
+            d_axis_updated, d_axis = imgui.InputInt("Axis (0=x,1=y,2=z,3=None)", d_axis)
             d_percent_updated, d_percent = imgui.InputFloat("Percentage", d_percent)
             d_extremity_updated, d_extremity = imgui.InputInt(
                 "Extremity (0=min,1=max)", d_extremity
@@ -250,22 +305,23 @@ if __name__ == "__main__":
             fext = np.asarray(b) + rho * np.asarray(aext)
             dynamics.set_external_load(fext)
             # Dirichlet
-            aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(
-                dynamics.X
-            )
-            Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
-            extent = Xmax - Xmin
-            if d_extremity == 0:
-                Xmax[d_axis] = Xmin[d_axis] + d_percent * extent[d_axis]
-                Xmin[d_axis] -= d_percent * extent[d_axis]
-            else:
-                Xmin[d_axis] = Xmax[d_axis] - d_percent * extent[d_axis]
-                Xmax[d_axis] += d_percent * extent[d_axis]
-            aabb.min, aabb.max = Xmin, Xmax
-            d_nodes = aabb.contained(dynamics.X)
-            d_mask = np.zeros(dynamics.X.shape[1], dtype=bool)
-            d_mask[d_nodes] = True
-            dynamics.constrain(d_mask)
+            if d_axis in [0, 1, 2]:
+              aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(
+                  dynamics.X
+              )
+              Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
+              extent = Xmax - Xmin
+              if d_extremity == 0:
+                  Xmax[d_axis] = Xmin[d_axis] + d_percent * extent[d_axis]
+                  Xmin[d_axis] -= d_percent * extent[d_axis]
+              else:
+                  Xmin[d_axis] = Xmax[d_axis] - d_percent * extent[d_axis]
+                  Xmax[d_axis] += d_percent * extent[d_axis]
+              aabb.min, aabb.max = Xmin, Xmax
+              d_nodes = aabb.contained(dynamics.X)
+              d_mask = np.zeros(dynamics.X.shape[1], dtype=bool)
+              d_mask[d_nodes] = True
+              dynamics.constrain(d_mask)
             dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
             # NOTE: If the time integration scheme has changed, the BDF integrator
             # needs to be re-initialized. However, if we haven't asked to "reset" the

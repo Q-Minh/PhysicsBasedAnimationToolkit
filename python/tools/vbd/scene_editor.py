@@ -10,6 +10,39 @@ from tkinter import filedialog
 
 from pbatoolkit import pbat, pypbat
 
+"""
+primitive operations
+all primitives require:
+- 1 interval of time (begin-end in seconds)
+- list of target dirichlet groups
+
+available primitives:
+- rotate about x, y, z
+- revolution (ie rotation about com)
+    -> axis, rev per second
+- translation 
+    -> direction, speed
+- implicit: empty (do nothing)
+"""
+
+def update_vdbc(vdbc, i):
+    if vdbc is None:
+        vdbc = np.array([i], dtype=np.int32)
+        return vdbc, vdbc.shape[0]
+    print("looking for index:", i)
+    print("in current vdbc:")
+    print(vdbc)
+    found = np.where(vdbc == i)[0]
+    print("we have found:")
+    print(found)
+    if found.shape[0] > 0:
+        vdbc = np.delete(vdbc, found)
+    else:
+        vdbc = np.hstack([vdbc, i])
+    print("new vdbc:")
+    print(vdbc)
+    return vdbc, vdbc.shape[0]
+
 
 class SceneMesh:
     def __init__(self, name: str, V: np.ndarray, C: np.ndarray):
@@ -25,12 +58,21 @@ class SceneMesh:
         self.b = np.array(
             [0.0, 0.0, 0.0]
         )  # per-mesh body force (e.g. wind, extra load)
+        self.vdbc = np.array([], dtype=np.int32)  # Array of vertex indices with Dirichlet boundary conditions
+        self.vdbc_pc = self.make_group_point_cloud(self.vdbc, name + " - Dirichlet")
 
     def transformed_vertices(self) -> np.ndarray:
         T = self.handle.get_transform()
         VH = np.vstack([self.V.T, np.ones((1, self.V.shape[0]))])
         VT = (T @ VH).T[:, :3]
         return VT
+    
+    def make_group_point_cloud(self, group_indices, name):
+        if len(group_indices) == 0:
+            if ps.has_point_cloud(name):
+                ps.remove_point_cloud(name)
+            return None
+        return ps.register_point_cloud(name, self.V[group_indices])
 
 
 class SceneState:
@@ -172,19 +214,24 @@ class SceneState:
             v0[:, start:end] = np.repeat(m.v0[:, None], end - start, axis=1)
         fem.set_initial_conditions(x0, v0)
         # Dirichlet constraints
-        aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(fem.X)
-        Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
-        extent = Xmax - Xmin
-        if self.d_extremity == 0:
-            Xmax[self.d_axis] = Xmin[self.d_axis] + self.d_percent * extent[self.d_axis]
-            Xmin[self.d_axis] -= self.d_percent * extent[self.d_axis]
-        else:
-            Xmin[self.d_axis] = Xmax[self.d_axis] - self.d_percent * extent[self.d_axis]
-            Xmax[self.d_axis] += self.d_percent * extent[self.d_axis]
-        aabb.min, aabb.max = Xmin, Xmax
-        d_nodes = aabb.contained(fem.X)
+        # Default axis picking disabled for now, but should come back as UI element!
+        # aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(fem.X)
+        # Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
+        # extent = Xmax - Xmin
+        # if self.d_extremity == 0:
+        #     Xmax[self.d_axis] = Xmin[self.d_axis] + self.d_percent * extent[self.d_axis]
+        #     Xmin[self.d_axis] -= self.d_percent * extent[self.d_axis]
+        # else:
+        #     Xmin[self.d_axis] = Xmax[self.d_axis] - self.d_percent * extent[self.d_axis]
+        #     Xmax[self.d_axis] += self.d_percent * extent[self.d_axis]
+        # aabb.min, aabb.max = Xmin, Xmax
+        # d_nodes = aabb.contained(fem.X)
+        # d_mask = np.zeros(fem.X.shape[1], dtype=bool)
+        # d_mask[d_nodes] = True
         d_mask = np.zeros(fem.X.shape[1], dtype=bool)
-        d_mask[d_nodes] = True
+        for (start, end), m in zip(element_ranges, self.meshes):
+            if m.vdbc is not None and len(m.vdbc) > 0:
+              d_mask[m.vdbc + start] = True
         fem.constrain(d_mask)
         # Set as current
         self.fem = fem
@@ -300,6 +347,17 @@ def main():
                     break  # indices shifted
                 imgui.TreePop()
 
+        # Picking IO (Setting heterogeneous constraints, eg Dirichlet)
+        io = imgui.GetIO()
+        if io.MouseClicked[0]:
+          pick_result = ps.pick(screen_coords=io.MousePos)
+          print(pick_result)
+          if pick_result.is_hit and pick_result.structure_type_name == "Volume Mesh" and pick_result.structure_data['element_type'] == "vertex":
+            for m in state.meshes:
+                if pick_result.structure_name == m.name:
+                    i = pick_result.local_index
+                    m.vdbc, _ = update_vdbc(m.vdbc, i)
+                    m.vdbc_pc = m.make_group_point_cloud(m.vdbc, m.name + " - Dirichlet")
     ps.set_user_callback(callback)
     ps.show()
 
