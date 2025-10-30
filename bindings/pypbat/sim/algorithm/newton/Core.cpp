@@ -17,7 +17,7 @@ void BindCore(nanobind::module_& m)
     nb::class_<Params>(m, "Params")
         .def(nb::init<>(), "Newton solver parameters and buffers.")
         .def_rw("newton", &Params::newton, "Underlying Newton optimizer (math.optimization.Newton)")
-        .def_rw(
+        .def_ro(
             "ordering",
             &Params::ordering,
             "Triplet ordering for sparse Hessian assembly (|# triplets| x 1 integer array)")
