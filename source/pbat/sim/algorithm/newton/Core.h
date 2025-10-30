@@ -2,7 +2,7 @@
 #define PBAT_SIM_ALGORITHM_NEWTON_CORE_H
 
 #include "pbat/Aliases.h"
-#include "pbat/math/linalg/SparsityPattern.h"
+#include "pbat/fem/Tetrahedron.h"
 #include "pbat/math/optimization/Newton.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/profiling/Profiling.h"
@@ -14,9 +14,8 @@ namespace pbat::sim::algorithm::newton {
 
 struct Params
 {
-    math::optimization::Newton<Scalar> newton; ///< Newton optimizer
-    math::linalg::SparsityPattern<Index, Eigen::ColMajor>
-        sparsityPattern;                                 ///< Hessian sparsity pattern
+    math::optimization::Newton<Scalar> newton;     ///< Newton optimizer
+    Eigen::Vector<Index, Eigen::Dynamic> ordering; ///< Triplet ordering for sparse hessian assembly
     std::vector<Eigen::Triplet<Scalar, Index>> triplets; ///< Triplets for assembling the Hessian
     Eigen::SparseMatrix<Scalar, Eigen::ColMajor, Index> hessian; ///< Hessian matrix
 };
