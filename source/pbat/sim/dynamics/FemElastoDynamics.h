@@ -784,9 +784,9 @@ template <
 inline TScalar FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Objective()
 {
     ScalarType U  = ElasticPotentialEnergy();
-    ScalarType dt = bdf.TimeStep();
+    ScalarType bt = bdf.BetaTilde();
     ScalarType K  = DiscreteKineticEnergy();
-    return K + (dt * dt) * U;
+    return K + (bt * bt) * U;
 }
 
 template <
@@ -804,8 +804,8 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Gradien
     Eigen::Vector<ScalarType, Eigen::Dynamic> gU(x.size());
     fem::ToHyperElasticGradient(mesh, egU, GgU, gU);
     Eigen::Vector<ScalarType, Eigen::Dynamic> gK = M().asDiagonal() * (x - xtilde).reshaped();
-    ScalarType dt                                = bdf.TimeStep();
-    Eigen::Vector<ScalarType, Eigen::Dynamic> g  = gK + (dt * dt) * gU;
+    ScalarType bt                                = bdf.BetaTilde();
+    Eigen::Vector<ScalarType, Eigen::Dynamic> g  = gK + (bt * bt) * gU;
     g(DirichletDofs()).setZero();
     return g;
 }
