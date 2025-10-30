@@ -87,6 +87,8 @@ struct FemElastoDynamics
         xtilde;                                         ///< `kDims x |# nodes|` inertial targets
     Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> x; ///< `kDims x |# nodes|` positions
     Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> v; ///< `kDims x |# nodes|` velocities
+    Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic>
+        atfd; ///< `kDims x |# nodes|` finite-difference accelerations
 
     Eigen::Vector<IndexType, Eigen::Dynamic> egU; ///< `|# quad.pts.| x 1` vector of element indices
                                                   ///< for quadrature points of elastic potential
@@ -267,6 +269,8 @@ struct FemElastoDynamics
     /**
      * @brief Back-substitute the integrated positions into velocities after a position-based time
      * integration solve
+     * @post `v` is updated according to the BDF scheme
+     * @post `atfd` is updated using finite differences
      */
     void BackSubstituteIntegratedPositionsIntoVelocities();
     /**
@@ -433,7 +437,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     mesh.Construct(V, C);
     x                 = mesh.X;
     auto const nNodes = mesh.X.cols();
-    v = Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>::Zero(kDims, nNodes);
+    v.setZero(kDims, nNodes);
+    atfd.setZero(kDims, nNodes);
     // Mass
     ScalarType constexpr rho{1e3};
     SetMassMatrix(rho);
@@ -696,22 +701,20 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
             break;
         }
         case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithFdLoad: {
-            auto at                  = (v.reshaped() - bdf.State(s - 1, 1)) / bdf.h;
-            auto x0                  = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * at;
+            auto x0                  = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * atfd;
             x.reshaped()(FreeDofs()) = x0(FreeDofs());
             break;
         }
         case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithProjectedFdLoad: {
-            auto at    = ((v - bdf.State(s - 1, 1).reshaped(kDims, mesh.X.cols())) / bdf.h);
-            auto aextl = aext();
+            auto aextl               = aext();
             x.reshaped()(FreeDofs()) = -(xtildeBdf + betaTilde * vtildeBdf)(FreeDofs());
             for (IndexType i : FreeNodes())
             {
-                Eigen::Vector<ScalarType, kDims> ati   = at.col(i);
+                Eigen::Vector<ScalarType, kDims> ati   = atfd.col(i);
                 Eigen::Vector<ScalarType, kDims> aexti = aextl.col(i);
                 ScalarType atilde =
                     ati.dot(aexti) / (aexti.squaredNorm() + std::numeric_limits<ScalarType>::min());
-                x.col(i) += betaTilde2 * atilde * aexti;
+                x.col(i) += betaTilde2 * std::clamp(atilde, ScalarType(0), ScalarType(1)) * aexti;
             }
         }
         break;
@@ -739,9 +742,11 @@ template <
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::
     BackSubstituteIntegratedPositionsIntoVelocities()
 {
-    auto freeDofs          = FreeDofs();
-    auto xtildebdf         = bdf.Inertia(0);
-    v.reshaped()(freeDofs) = (x.reshaped()(freeDofs) + xtildebdf(freeDofs)) / bdf.BetaTilde();
+    auto freeDofs             = FreeDofs();
+    auto xtildebdf            = bdf.Inertia(0);
+    v.reshaped()(freeDofs)    = (x.reshaped()(freeDofs) + xtildebdf(freeDofs)) / bdf.BetaTilde();
+    auto s                    = bdf.GetStep();
+    atfd.reshaped()(freeDofs) = (v.reshaped()(freeDofs) - bdf.State(s - 1, 1)(freeDofs)) / bdf.h;
 }
 
 template <
