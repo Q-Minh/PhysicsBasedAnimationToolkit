@@ -250,9 +250,9 @@ void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& param
             gi *= betaTildeBdf2;
             // "Kinetic" energy
             Scalar m                         = fem.m(i);
-            mini::SVector<Scalar, 3> xti     = -FromEigen(xtildeBdf.col(i).head<3>());
-            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).head<3>());
-            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).head<3>());
+            mini::SVector<Scalar, 3> xti     = -FromEigen(xtildeBdf.col(i).template head<3>());
+            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
+            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).template head<3>());
             kernels::AddInertiaDerivatives(/*betaTildeBdf2*/ Scalar(1), m, xtildei, xi, gi, Hi);
             kernels::AddDamping(betaTildeBdf, xti, xi, params.betaR, gi, Hi);
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
