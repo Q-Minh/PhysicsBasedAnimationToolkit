@@ -11,6 +11,11 @@
 #ifndef PBAT_GPU_ALIASES_H
 #define PBAT_GPU_ALIASES_H
 
+// Eigen/src/Core/NumTraits.h requires these
+// clang-format off
+#include <bit> 
+#include <limits>
+// clang-format on
 #include <Eigen/Core>
 #include <cstdint>
 

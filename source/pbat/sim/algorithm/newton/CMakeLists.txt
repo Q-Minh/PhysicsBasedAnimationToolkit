@@ -3,16 +3,14 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "Config.h"
-    "HessianProduct.h"
+    "Core.h"
     "Integrator.h"
     "Newton.h"
-    "Preconditioner.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Config.cpp"
-    "HessianProduct.cpp"
+    "Core.cpp"
     "Integrator.cpp"
     "Newton.cpp"
-    "Preconditioner.cpp"
 )

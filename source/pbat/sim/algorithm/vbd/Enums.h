@@ -41,9 +41,9 @@ enum class EBroydenLeastSquaresSolver {
 // clang-format off
 enum class EBroydenJacobianEstimate {
     Identity, ///< Initial Jacobian is identity matrix
-    ScaledIdentity, ///< See @cite oren1974SelfScaling
-    QuasiCauchyRelationDiagonalUpdating, ///< See @cite zhu1999quasi
-    UsdDiagonal, ///< See @cite marjugi2013diagonal
+    ScaledIdentity, ///< See \cite oren1974SelfScaling
+    QuasiCauchyRelationDiagonalUpdating, ///< See \cite zhu1999quasi
+    UsdDiagonal, ///< See \cite marjugi2013diagonal
     DiagonalCauchySchwarz ///< Ours
 };
 // clang-format on

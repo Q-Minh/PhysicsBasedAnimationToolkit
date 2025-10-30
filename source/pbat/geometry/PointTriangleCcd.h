@@ -87,9 +87,9 @@ PBAT_HOST_DEVICE std::array<TScalar, 4> PointTriangleCcdUnivariatePolynomial(
  * \f]
  * where \f$ \mathbf{n}(t) = (\mathbf{b}(t) - \mathbf{a}(t)) \times (\mathbf{c}(t) - \mathbf{a}(t))
  * \f$ and \f$ \mathbf{q}(t) = \mathbf{x}(t) - \mathbf{a}(t) \f$ using polynomial root finder from
- * @cite cem2022polyroot.
+ * \cite cem2022polyroot.
  *
- * See @cite provot1997collision and @cite ZachFerg2021CcdBenchmark for more details.
+ * See \cite provot1997collision and \cite ZachFerg2021CcdBenchmark for more details.
  *
  * @tparam TXT Type of the input matrix XT
  * @tparam TAT Type of the input matrix AT

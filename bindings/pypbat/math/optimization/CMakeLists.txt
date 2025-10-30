@@ -2,14 +2,14 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     PUBLIC
     FILE_SET api
     FILES
-    "Algorithm.h"
-)
-target_sources(PhysicsBasedAnimationToolkit_Python
-    PRIVATE
-    "Algorithm.cpp"
+    "Optimization.h"
+    "LineSearch.h"
+    "Newton.h"
 )
 
-add_subdirectory(common)
-add_subdirectory(newton)
-add_subdirectory(pd)
-add_subdirectory(vbd)
+target_sources(PhysicsBasedAnimationToolkit_Python
+    PRIVATE
+    "Optimization.cpp"
+    "LineSearch.cpp"
+    "Newton.cpp"
+)

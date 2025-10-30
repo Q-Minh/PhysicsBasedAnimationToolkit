@@ -1,11 +1,8 @@
 #include "Core.h"
 
 #include <nanobind/eigen/dense.h>
-#include <nanobind/stl/optional.h>
 #include <nanobind/stl/tuple.h>
-#include <optional>
 #include <pbat/common/ConstexprFor.h>
-#include <pbat/io/Archive.h>
 #include <pbat/physics/Enums.h>
 #include <pbat/physics/StableNeoHookeanEnergy.h>
 #include <pbat/sim/algorithm/vbd/Core.h>
@@ -20,8 +17,8 @@ void BindCore(nanobind::module_& m)
     namespace nb     = nanobind;
     using ScalarType = Scalar;
     using IndexType  = Index;
+    using pbat::sim::algorithm::common::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::EInitializationStrategy;
-    using pbat::sim::algorithm::vbd::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::Params;
 
     nb::enum_<EInitializationStrategy>(m, "EInitializationStrategy")
@@ -120,8 +117,18 @@ void BindCore(nanobind::module_& m)
             nb::rv_policy::reference_internal,
             "Initialization strategy for the VBD solver.\n\n"
             "Args:\n"
-            "    strategy (pbat.sim.algorithm.vbd.EInitializationStrategy): Initialization "
-            "strategy\n"
+            "    strategy (pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization): "
+            "Initialization strategy\n"
+            "Returns:\n"
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
+        .def(
+            "with_damping",
+            &Params::WithDamping,
+            nb::arg("betaR"),
+            nb::rv_policy::reference_internal,
+            "Rayleigh damping coefficient.\n\n"
+            "Args:\n"
+            "    betaR (float): Rayleigh damping coefficient\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
@@ -167,9 +174,13 @@ void BindCore(nanobind::module_& m)
             "`|# partitions+1|` partition pointers, s.t. the range `[Pptr[p], Pptr[p+1])` indexes "
             "into Padj from partition `p`")
         .def_rw("Padj", &Params::Padj, "`|# verts|` partition vertices")
-        .def_rw("strategy", &Params::strategy, "BCD optimization initialization strategy")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
-        .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations");
+        .def_rw(
+            "strategy",
+            &Params::eElasticsInitializationStrategy,
+            "Time integration optimization initialization strategy")
+        .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
+        .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
+        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
 
@@ -197,46 +208,26 @@ void BindCore(nanobind::module_& m)
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     m.def(
         "solve",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           Params const& params,
-           std::optional<pbat::io::Archive> ac) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params, ac);
-        },
-        nb::arg("fem"),
-        nb::arg("params"),
-        nb::arg("archive") = std::nullopt,
-        "Solve the VBD minimization up to maximum iterations.\n\n"
-        "Args:\n"
-        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
-    m.def(
-        "back_substitute_integrated_positions_into_velocities",
         [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
-            pbat::sim::algorithm::vbd::BackSubstituteIntegratedPositionsIntoVelocities<
-                ElasticEnergyType>(fem, params);
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, params);
         },
         nb::arg("fem"),
         nb::arg("params"),
-        "Back-substitute integrated positions into velocities after VBD solve.\n\n"
+        "Solve the VBD minimization.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     m.def(
         "integrate",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           Params const& params,
-           std::optional<pbat::io::Archive> ac) {
-            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params, ac);
+        [](FemElastoDynamics<ElasticEnergyType>& fem, Params const& params) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, params);
         },
         nb::arg("fem"),
         nb::arg("params"),
-        nb::arg("archive") = std::nullopt,
         "Integrate one time step using VBD as non-linear solver.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    archive (Optional[pbat.io.Archive]): Optional archive to serialize iterations into");
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
 }
 
 } // namespace pbat::py::sim::algorithm::vbd

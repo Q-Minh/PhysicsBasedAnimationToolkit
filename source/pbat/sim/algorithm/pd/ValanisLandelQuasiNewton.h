@@ -22,7 +22,7 @@ namespace pbat::sim::algorithm::pd {
 
 /**
  * @brief Computes the element constraint stiffness for the quasi-Newton Projective Dynamics hessian
- * approximation @cite liu2017quasiPD .
+ * approximation \cite liu2017quasiPD .
  *
  * @tparam TScalar Scalar type
  * @param mu First Lame coefficient

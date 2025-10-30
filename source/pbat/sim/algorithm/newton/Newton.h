@@ -10,7 +10,6 @@
 #define PBAT_SIM_ALGORITHM_NEWTON_NEWTON_H
 
 #include "Config.h"
-#include "HessianProduct.h"
 #include "Integrator.h"
 
 /**

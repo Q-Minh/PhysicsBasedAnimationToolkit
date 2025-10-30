@@ -27,7 +27,7 @@ namespace geometry {
 /**
  * @brief Radix-tree linear BVH
  *
- * Implements of @cite karras2012maxpartree
+ * Implements of \cite karras2012maxpartree
  *
  */
 class Bvh

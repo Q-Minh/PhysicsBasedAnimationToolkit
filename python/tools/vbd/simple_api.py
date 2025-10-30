@@ -33,6 +33,188 @@ def _read_mesh_and_state(integrate_grp: h5py.Group):
     print("DA VALS:", X, E, x, dmask)
     return X, E, x, dmask
 
+
+def serialize_solver_iteration(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    k: int,
+    arc: pbat.io.Archive,
+    post_solve: bool = False,
+):
+    """Serialize solver iteration data
+
+    Args:
+        fem (pbat.sim.dynamics.FemElastoDynamics): Finite element elasto dynamics
+            problem
+        k (int): Iteration index
+        arc (pbat.io.Archive): Archive to store iteration data
+        post_solve (bool, optional): Whether this is a post-solve iteration, in which case
+            we also serialize velocity. Defaults to False.
+    """
+    iter = arc[f"{k:06d}"]
+    iter.write_data("x", fem.x)
+    # Time integration objective and its gradient
+    f = fem.objective()
+    iter.write_metadata("f", f)
+    g = fem.gradient()
+    iter.write_data("g", g)
+    gnorm = np.linalg.norm(
+        g
+    )  # annoyingly, this returns numpy.float32 which nanobind does not cast automatically to C++ float
+    iter.write_metadata("gnorm", float(gnorm))
+    # Velocities at post-solve
+    if post_solve:
+        iter.write_data("v", fem.v)
+
+
+def vbd_solve(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    archive: pbat.io.Archive | None = None,
+):
+    """Python-side VBD solve with optional serialization per iteration."""
+    grp = None
+    if archive is not None:
+        grp = archive["pbat.sim.algorithm.vbd.Solve"]
+    pbat.sim.algorithm.vbd.initialize_solve(fem, params)
+    for k in range(params.n_max_iters):
+        if grp is not None:
+            serialize_solver_iteration(fem, k, grp)
+        pbat.sim.algorithm.vbd.iterate(fem, params)
+    fem.back_substitute_integrated_positions_into_velocities()
+    if grp is not None:
+        serialize_solver_iteration(fem, params.n_max_iters, grp, post_solve=True)
+
+
+def vbd_integrate(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    archive: pbat.io.Archive | None = None,
+):
+    """Python-side VBD integrate with optional serialization, mirroring C++ Integrate."""
+    fem.setup_time_integration_optimization()
+    grp = None
+    if archive is not None:
+        grp = archive["pbat.sim.algorithm.vbd.Integrate"]
+        fem.serialize(grp)
+    vbd_solve(fem, params, archive=grp)
+    fem.step()
+
+
+def anderson_solve(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    anderson: pbat.sim.algorithm.vbd.AndersonParams,
+    archive: pbat.io.Archive | None = None,
+):
+    grp = (
+        archive["pbat.sim.algorithm.vbd.Anderson.Solve"]
+        if archive is not None
+        else None
+    )
+    pbat.sim.algorithm.vbd.initialize_solve(fem, params, anderson)
+    while anderson.k < params.n_max_iters:
+        if grp is not None:
+            serialize_solver_iteration(fem, anderson.k, grp)
+        pbat.sim.algorithm.vbd.iterate(fem, params, anderson)
+    fem.back_substitute_integrated_positions_into_velocities()
+    if grp is not None:
+        serialize_solver_iteration(fem, anderson.k, grp, post_solve=True)
+
+
+def anderson_integrate(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    anderson: pbat.sim.algorithm.vbd.AndersonParams,
+    archive: pbat.io.Archive | None = None,
+):
+    fem.setup_time_integration_optimization()
+    grp = (
+        archive["pbat.sim.algorithm.vbd.Anderson.Integrate"]
+        if archive is not None
+        else None
+    )
+    if grp is not None:
+        fem.serialize(grp)
+    anderson_solve(fem, params, anderson, archive=grp)
+    fem.step()
+
+
+def broyden_solve(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    broyden: pbat.sim.algorithm.vbd.BroydenParams,
+    archive: pbat.io.Archive | None = None,
+):
+    grp = (
+        archive["pbat.sim.algorithm.vbd.Broyden.Solve"] if archive is not None else None
+    )
+    pbat.sim.algorithm.vbd.initialize_solve(fem, params, broyden)
+    while broyden.k < params.n_max_iters:
+        if grp is not None:
+            serialize_solver_iteration(fem, broyden.k, grp)
+        pbat.sim.algorithm.vbd.iterate(fem, params, broyden)
+    fem.back_substitute_integrated_positions_into_velocities()
+    if grp is not None:
+        serialize_solver_iteration(fem, broyden.k, grp, post_solve=True)
+
+
+def broyden_integrate(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    broyden: pbat.sim.algorithm.vbd.BroydenParams,
+    archive: pbat.io.Archive | None = None,
+):
+    fem.setup_time_integration_optimization()
+    grp = (
+        archive["pbat.sim.algorithm.vbd.Broyden.Integrate"]
+        if archive is not None
+        else None
+    )
+    if grp is not None:
+        fem.serialize(grp)
+    broyden_solve(fem, params, broyden, archive=grp)
+    fem.step()
+
+
+def chebyshev_solve(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    cheb: pbat.sim.algorithm.vbd.ChebyshevParams,
+    archive: pbat.io.Archive | None = None,
+):
+    grp = (
+        archive["pbat.sim.algorithm.vbd.Chebyshev.Solve"]
+        if archive is not None
+        else None
+    )
+    pbat.sim.algorithm.vbd.initialize_solve(fem, params, cheb)
+    while cheb.k < params.n_max_iters:
+        if grp is not None:
+            serialize_solver_iteration(fem, cheb.k, grp)
+        pbat.sim.algorithm.vbd.iterate(fem, params, cheb)
+    fem.back_substitute_integrated_positions_into_velocities()
+    if grp is not None:
+        serialize_solver_iteration(fem, cheb.k, grp, post_solve=True)
+
+
+def chebyshev_integrate(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.vbd.Params,
+    cheb: pbat.sim.algorithm.vbd.ChebyshevParams,
+    archive: pbat.io.Archive | None = None,
+):
+    fem.setup_time_integration_optimization()
+    grp = (
+        archive["pbat.sim.algorithm.vbd.Chebyshev.Integrate"]
+        if archive is not None
+        else None
+    )
+    if grp is not None:
+        fem.serialize(grp)
+    chebyshev_solve(fem, params, cheb, archive=grp)
+    fem.step()
+
+
 if __name__ == "__main__":
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -62,11 +244,11 @@ if __name__ == "__main__":
     solver_names = ["Base", "Anderson", "Broyden", "Chebyshev"]
     i_solver = 0  # Non-linear solver index
     init_strategies = [
-        pbat.sim.algorithm.vbd.EInitializationStrategy.Position,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.Inertia,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.KineticEnergyMinimum,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.AdaptiveVbd,
-        pbat.sim.algorithm.vbd.EInitializationStrategy.AdaptivePbat,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.FreeTrajectory,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithFdLoad,
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithProjectedFdLoad,
     ]
     i_init_strategy = 2  # Initialization strategy index
     n_max_iters = 25  # Maximum iterations
@@ -178,6 +360,7 @@ if __name__ == "__main__":
                         archive_path = ""
                         print(f"Failed to open archive: {e}")
                 root.destroy()
+
             _, archive_flush_period = imgui.InputInt(
                 "Archive Flush Period", archive_flush_period
             )
@@ -197,7 +380,12 @@ if __name__ == "__main__":
             a_updated, aext = imgui.InputFloat3("External acceleration", aext)
             b_updated, b = imgui.InputFloat3("Body forces", b)
             v0_updated, v0 = imgui.InputFloat3("Initial velocity", v0)
-            dirty |= a_updated or b_updated or v0_updated
+            betaR_updated, vbd_params.betaR = imgui.InputFloat(
+                "Rayleigh damping", vbd_params.betaR, format="%.8f"
+            )
+            dirty |= (
+                a_updated or b_updated or v0_updated
+            )  # no need to trigger dirty on betaR_updated
             imgui.TreePop()
 
         if imgui.TreeNode("Dirichlet Constraints"):
@@ -210,7 +398,7 @@ if __name__ == "__main__":
             imgui.TreePop()
 
         if imgui.TreeNode("Time Integration"):
-            dt_updated, dt = imgui.InputFloat("Time step", dt)
+            dt_updated, dt = imgui.InputFloat("Time step", dt, format="%.5f")
             s_updated, s = imgui.InputInt("BDF step", s)
             dirty |= dt_updated or s_updated
             imgui.TreePop()
@@ -357,19 +545,17 @@ if __name__ == "__main__":
                     frame_group = None
                     print(f"Archive group error: {e}")
             if i_solver == 0:
-                pbat.sim.algorithm.vbd.integrate(
-                    dynamics, vbd_params, archive=frame_group
-                )
+                vbd_integrate(dynamics, vbd_params, archive=frame_group)
             elif i_solver == 1:
-                pbat.sim.algorithm.vbd.integrate(
+                anderson_integrate(
                     dynamics, vbd_params, anderson_params, archive=frame_group
                 )
             elif i_solver == 2:
-                pbat.sim.algorithm.vbd.integrate(
+                broyden_integrate(
                     dynamics, vbd_params, broyden_params, archive=frame_group
                 )
             elif i_solver == 3:
-                pbat.sim.algorithm.vbd.integrate(
+                chebyshev_integrate(
                     dynamics, vbd_params, chebyshev_params, archive=frame_group
                 )
             if export:

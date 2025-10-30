@@ -3120,7 +3120,7 @@ inline bool HasRoot(
 /**
  * @brief Computes all real roots of a degree N polynomial in the range [min,max].
  *
- * @note We use the expensive but most accurate method from @cite cem2022polyroot
+ * @note We use the expensive but most accurate method from \cite cem2022polyroot
  * @tparam N Degree of the polynomial.
  * @tparam TScalar Scalar type of the polynomial.
  * @param coeffs Coefficients of the polynomial.
@@ -3151,7 +3151,7 @@ inline std::array<TScalar, N> Roots(
  *
  *
  *
- * @note We use the expensive but most accurate method from @cite cem2022polyroot
+ * @note We use the expensive but most accurate method from \cite cem2022polyroot
  *
  * @tparam N Degree of the polynomial.
  * @tparam FOnRoot Callable type with signature `bool(TScalar root)`.

@@ -84,17 +84,18 @@ void BindArchive(nanobind::module_& m)
             "    path (str): Path to the dataset\n"
             "    data (numpy.ndarray): Data to write\n");
     });
-    pbat::common::ForTypes<std::int32_t, std::int64_t, float, double, std::string>([&]<class T>() {
-        arc.def(
-            "write_metadata",
-            &pbat::io::Archive::WriteMetaData<T>,
-            nb::arg("key"),
-            nb::arg("value"),
-            "Write metadata to the archive\n\n"
-            "Args:\n"
-            "    key (str): Name the attribute\n"
-            "    value (int | float | str): Metadata to write\n");
-    });
+    pbat::common::ForTypes</*std::int32_t, */ std::int64_t, /*float, */ double, std::string>(
+        [&]<class T>() {
+            arc.def(
+                "write_metadata",
+                &pbat::io::Archive::WriteMetaData<T>,
+                nb::arg("key"),
+                nb::arg("value"),
+                "Write metadata to the archive\n\n"
+                "Args:\n"
+                "    key (str): Name the attribute\n"
+                "    value (int | float | str): Metadata to write\n");
+        });
 }
 
 } // namespace pbat::py::io

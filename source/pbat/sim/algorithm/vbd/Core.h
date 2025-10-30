@@ -15,18 +15,15 @@
 #include "Enums.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
-#include "pbat/fem/Tetrahedron.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Enums.h"
-#include "pbat/io/Archive.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/profiling/Profiling.h"
+#include "pbat/sim/algorithm/common/Common.h"
 #include "pbat/sim/algorithm/vbd/Kernels.h"
-#include "pbat/sim/dynamics/FemElastoDynamics.h"
 
 #include <Eigen/Core>
-#include <optional>
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::algorithm::vbd {
@@ -68,7 +65,7 @@ PBAT_API void VertexColors(
 
 /**
  * @brief VBD simulation configuration
- * @details See @cite anka2024vbd
+ * @details See \cite anka2024vbd
  */
 struct Params
 {
@@ -98,7 +95,14 @@ struct Params
      * @param _strategy Initialization strategy
      * @return Reference to this
      */
-    PBAT_API Params& WithInitializationStrategy(EInitializationStrategy _strategy);
+    PBAT_API Params&
+    WithInitializationStrategy(dynamics::EFemElastoDynamicsTimeStepInitialization _strategy);
+    /**
+     * @brief Rayleigh damping coefficient
+     * @param _betaR Rayleigh damping coefficient
+     * @return Reference to this
+     */
+    PBAT_API Params& WithDamping(Scalar _betaR);
     /**
      * @brief Maximum number of VBD iterations
      * @param nIters Maximum number of iterations
@@ -143,20 +147,13 @@ struct Params
                          ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj;   ///< `|# verts|` partition vertices
     // Time integration optimization parameters
-    EInitializationStrategy strategy{
-        EInitializationStrategy::Inertia}; ///< BCD optimization initialization strategy
-    Scalar detHZero{1e-7};                 ///< Numerical zero for hessian pseudo-singularity check
-    Index nMaxIters{25};                   ///< Maximum number of VBD iterations
+    dynamics::EFemElastoDynamicsTimeStepInitialization eElasticsInitializationStrategy{
+        dynamics::EFemElastoDynamicsTimeStepInitialization::
+            TrajectoryWithFdLoad}; ///< Elasto-dynamics initialization strategy
+    Scalar betaR{0};               ///< Rayleigh damping coefficient
+    Index nMaxIters{25};           ///< Maximum number of VBD iterations
+    Scalar detHZero{0};            ///< Numerical zero for hessian pseudo-singularity check
 };
-
-/**
- * @brief Finite element elasto dynamics problem for VBD
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @pre `TElasticEnergy::kDims == 3`
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-using FemElastoDynamics =
-    dynamics::FemElastoDynamics<fem::Tetrahedron<1>, 3, TElasticEnergy, Scalar, Index>;
 
 /**
  * @brief Initialize VBD minimization solve
@@ -166,7 +163,7 @@ using FemElastoDynamics =
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void InitializeSolve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 /**
  * @brief One VBD minimization step
@@ -176,109 +173,42 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& param
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 /**
  * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
- * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    std::optional<io::Archive> ac = std::nullopt);
-
-/**
- * @brief Back-substitute integrated positions into velocities
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param params Solver parameters
- * @pre `TElasticEnergy::kDims == 3`
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void BackSubstituteIntegratedPositionsIntoVelocities(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params);
+void Solve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using VBD as the non-linear solver
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
  * @param params Solver parameters
- * @param ac Optional archive to serialize to
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    std::optional<io::Archive> ac = std::nullopt);
-
-/**
- * @brief Serialize solver iteration data
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem
- * @param k Current solver iteration
- * @param archive Archive to serialize to
- * @param bPostSolve Whether this is after the solve. If true, velocities are also serialized.
- * Default is false.
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void SerializeSolverIteration(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Index k,
-    io::Archive& archive,
-    bool bPostSolve = false);
+void Integrate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void InitializeSolve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
-    using math::linalg::mini::FromEigen;
-    using math::linalg::mini::ToEigen;
-    // NOTE:
-    // We should make this initialization adapt to higher-order BDF schemes as well!
-    // In this case, we would have
-    // "xt" = -fem.bdf.Inertia(0), and
-    // "vt" = -fem.bdf.Inertia(1),
-    // and instead of the h, we would have fem.bdf.BetaTilde()
-    // and h^2 would be fem.bdf.BetaTilde()^2.
-    auto aext             = fem.aext();
-    auto xt               = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
-    auto vt               = fem.bdf.CurrentState(1).reshaped(fem.v.rows(), fem.v.cols());
-    auto free             = fem.FreeNodes();
-    auto const nFreeVerts = free.size();
-    auto h                = fem.bdf.TimeStep();
-    auto h2               = h * h;
-    tbb::parallel_for(Index(0), nFreeVerts, [&](Index fi) {
-        auto i = free(fi);
-        auto x = kernels::InitialPositionsForSolve(
-            FromEigen(xt.col(i).template head<3>()),
-            FromEigen(vt.col(i).template head<3>()),
-            FromEigen(fem.v.col(i).template head<3>()),
-            FromEigen(aext.col(i).template head<3>()),
-            h,
-            h2,
-            params.strategy);
-        fem.x.col(i) = ToEigen(x);
-    });
+    fem.SetupTimeIntegrationOptimization(params.eElasticsInitializationStrategy);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
-    auto h  = fem.bdf.TimeStep();
-    auto h2 = h * h;
-    // NOTE:
-    // If we want to support damping in the future, it would be nice to make it adapt
-    // to higher-order BDF schemes. We have all the tools necessary in the Bdf class.
-    // auto xt                = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
-    // auto vt                = fem.bdf.CurrentState(1).reshaped(fem.v.rows(), fem.v.cols());
+    auto betaTildeBdf      = fem.bdf.BetaTilde();
+    auto betaTildeBdf2     = betaTildeBdf * betaTildeBdf;
+    auto xtildeBdf         = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
     auto const nPartitions = params.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
     {
@@ -316,14 +246,15 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
                 kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
                 kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
             }
+            Hi *= betaTildeBdf2;
+            gi *= betaTildeBdf2;
             // "Kinetic" energy
-            Scalar m = fem.m(i);
-            // mini::SVector<Scalar, 3> xti     = FromEigen(xt.col(i).template head<3>());
-            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
-            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).template head<3>());
-            // kernels::AddDamping(h, xti, xi, Scalar(0) /*Rayleigh damping*/, gi, Hi);
-            kernels::AddInertiaDerivatives(h2, m, xtildei, xi, gi, Hi);
-            // Update vertex position
+            Scalar m                         = fem.m(i);
+            mini::SVector<Scalar, 3> xti     = -FromEigen(xtildeBdf.col(i).head<3>());
+            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).head<3>());
+            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).head<3>());
+            kernels::AddInertiaDerivatives(/*betaTildeBdf2*/ Scalar(1), m, xtildei, xi, gi, Hi);
+            kernels::AddDamping(betaTildeBdf, xti, xi, params.betaR, gi, Hi);
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
             fem.x.col(i) = ToEigen(xi);
         });
@@ -331,81 +262,23 @@ void Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    std::optional<io::Archive> ac)
+void Solve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
-    std::optional<io::Archive> group;
-    if (ac)
-    {
-        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Solve");
-    }
     InitializeSolve<TElasticEnergy>(fem, params);
     for (Index k = 0; k < params.nMaxIters; ++k)
     {
-        if (group)
-        {
-            SerializeSolverIteration(fem, k, *group);
-        }
         Iterate<TElasticEnergy>(fem, params);
     }
-    BackSubstituteIntegratedPositionsIntoVelocities<TElasticEnergy>(fem, params);
-    if (group)
-    {
-        SerializeSolverIteration(fem, params.nMaxIters, *group, true /* bPostSolve */);
-    }
+    fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void BackSubstituteIntegratedPositionsIntoVelocities(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params)
-{
-    auto x                                = fem.x.reshaped();
-    auto xt                               = fem.bdf.CurrentState(0);
-    auto dt                               = fem.bdf.TimeStep();
-    auto dofs                             = fem.FreeDofs();
-    auto v                                = (x(dofs) - xt(dofs)) / dt;
-    auto free                             = fem.FreeNodes();
-    fem.v(Eigen::placeholders::all, free) = v.reshaped(fem.v.rows(), free.size());
-}
-
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Params const& params,
-    std::optional<io::Archive> ac)
+void Integrate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
-    fem.SetupTimeIntegrationOptimization();
-    std::optional<io::Archive> group;
-    if (ac)
-    {
-        group = ac->GetOrCreateGroup("pbat.sim.algorithm.vbd.Integrate");
-        fem.Serialize(*group);
-    }
-    Solve<TElasticEnergy>(fem, params, group);
+    Solve<TElasticEnergy>(fem, params);
     fem.Step();
-}
-
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void SerializeSolverIteration(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    Index k,
-    io::Archive& archive,
-    bool bPostSolve)
-{
-    Scalar f     = fem.Objective();
-    Scalar gnorm = fem.Gradient().norm();
-    // NOTE: Use 6 decimal positions for iteration index (allows up to 999999 iterations)
-    io::Archive iter = archive[fmt::format("{:06d}", k)];
-    iter.WriteData("x", fem.x);
-    iter.WriteMetaData("f", f);
-    iter.WriteMetaData("gnorm", gnorm);
-    if (bPostSolve)
-        iter.WriteData("v", fem.v);
 }
 
 } // namespace pbat::sim::algorithm::vbd

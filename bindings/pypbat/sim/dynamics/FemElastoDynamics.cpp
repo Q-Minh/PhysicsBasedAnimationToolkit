@@ -18,6 +18,23 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
     using ElasticEnergyType = physics::StableNeoHookeanEnergy<kDims>;
     using ElastoDynamics    = pbat::sim::dynamics::
         FemElastoDynamics<ElementType, kDims, ElasticEnergyType, ScalarType, IndexType>;
+    using pbat::sim::dynamics::EFemElastoDynamicsTimeStepInitialization;
+
+    nb::enum_<EFemElastoDynamicsTimeStepInitialization>(
+        m,
+        "EFemElastoDynamicsTimeStepInitialization")
+        .value("Position", EFemElastoDynamicsTimeStepInitialization::Position)
+        .value("FreeTrajectory", EFemElastoDynamicsTimeStepInitialization::FreeTrajectory)
+        .value(
+            "TrajectoryWithExternalLoad",
+            EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad)
+        .value(
+            "TrajectoryWithFdLoad",
+            EFemElastoDynamicsTimeStepInitialization::TrajectoryWithFdLoad)
+        .value(
+            "TrajectoryWithProjectedFdLoad",
+            EFemElastoDynamicsTimeStepInitialization::TrajectoryWithProjectedFdLoad)
+        .export_values();
 
     nb::class_<ElastoDynamics>(m, "FemElastoDynamics")
         .def(nb::init<>(), "Construct an empty elasto-dynamics problem.")
@@ -57,6 +74,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "|# elem nodes| x |# elements| matrix of element connectivity")
         .def_rw("x", &ElastoDynamics::x, "kDims x |# nodes| nodal positions")
         .def_rw("v", &ElastoDynamics::v, "kDims x |# nodes| nodal velocities")
+        .def_rw("atfd", &ElastoDynamics::atfd, "kDims x |# nodes| finite-difference accelerations")
         .def_rw("fext", &ElastoDynamics::fext, "kDims x |# nodes| external forces at nodes")
         .def_rw("m", &ElastoDynamics::m, "|# nodes| x 1 lumped mass (per node)")
         .def_rw("xtilde", &ElastoDynamics::xtilde, "kDims x |# nodes| BDF inertial targets")
@@ -145,20 +163,20 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> eg,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> wg,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xig,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> rhog) {
-                self.SetMassMatrix(eg, wg, Xg, rhog);
+                self.SetMassMatrix(eg, wg, Xig, rhog);
             },
             nb::arg("eg"),
             nb::arg("wg"),
-            nb::arg("Xg"),
+            nb::arg("Xig"),
             nb::arg("rhog"),
             "Compute and set the mass matrix with variable density rhog at quadrature points.\n\n"
             "Args:\n"
             "    eg (numpy.ndarray): `|# quadrature points| x 1` array of element indices for "
             "quadrature points.\n"
             "    wg (numpy.ndarray): `|# quadrature points| x 1` array of quadrature weights.\n"
-            "    Xg (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
+            "    Xig (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
             "positions.\n"
             "    rhog (numpy.ndarray): `|# quadrature points| x 1` array of densities at "
             "quadrature points.\n")
@@ -178,10 +196,10 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> eg,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> wg,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xig,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> mug,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> lambdag) {
-                self.SetElasticEnergy(eg, wg, Xg, mug, lambdag);
+                self.SetElasticEnergy(eg, wg, Xig, mug, lambdag);
             },
             nb::arg("eg"),
             nb::arg("wg"),
@@ -193,7 +211,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    eg (numpy.ndarray): `|# quadrature points| x 1` array of element indices for "
             "quadrature points.\n"
             "    wg (numpy.ndarray): `|# quadrature points| x 1` array of quadrature weights.\n"
-            "    Xg (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
+            "    Xig (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
             "positions.\n"
             "    mug (numpy.ndarray): `|# quadrature points| x 1` array of first Lame parameters "
             "at quadrature points.\n"
@@ -213,9 +231,9 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             [](ElastoDynamics& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> eg,
                nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> wg,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xg,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> Xig,
                nb::DRef<Eigen::Matrix<ScalarType, kDims, Eigen::Dynamic> const> bg) {
-                self.SetExternalLoad(eg, wg, Xg, bg);
+                self.SetExternalLoad(eg, wg, Xig, bg);
             },
             nb::arg("eg"),
             nb::arg("wg"),
@@ -226,7 +244,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    eg (numpy.ndarray): `|# quadrature points| x 1` array of element indices for "
             "quadrature points.\n"
             "    wg (numpy.ndarray): `|# quadrature points| x 1` array of quadrature weights.\n"
-            "    Xg (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
+            "    Xig (numpy.ndarray): `kDims x |# quadrature points|` matrix of quadrature point "
             "positions.\n"
             "    bg (numpy.ndarray): `kDims x |# quadrature points|` matrix of body forces at "
             "quadrature points.\n")
@@ -249,16 +267,28 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             nb::arg("D"),
             "Set Dirichlet boundary conditions as |# nodes| integer mask.\n\n"
             "Args:\n"
-            "    D (numpy.ndarray): `|#nodes|` integer array where non-zero values indicate a constrained "
-            "node.\n")
+            "    D (numpy.ndarray): `|#nodes|` integer array where non-zero values indicate a "
+            "constrained node.\n")
         .def(
             "setup_time_integration_optimization",
-            [](ElastoDynamics& self) { self.SetupTimeIntegrationOptimization(); },
-            "Compute BDF inertial target for implicit time stepping (updates xtilde).")
+            [](ElastoDynamics& self,
+               EFemElastoDynamicsTimeStepInitialization eInitializationStrategy) {
+                self.SetupTimeIntegrationOptimization(eInitializationStrategy);
+            },
+            nb::arg("initialization_strategy") = EFemElastoDynamicsTimeStepInitialization::Position,
+            "Compute BDF inertial target for implicit time stepping (updates xtilde).\n\n"
+            "Args:\n"
+            "    initialization_strategy (EFemElastoDynamicsTimeStepInitialization): Strategy for "
+            "initializing the time step (i.e. the time integration optimization problem's initial "
+            "iterate). Defaults to Position.\n")
         .def(
             "step",
             &ElastoDynamics::Step,
             "Perform a single time integration step using `x`, `v`.")
+        .def(
+            "back_substitute_integrated_positions_into_velocities",
+            &ElastoDynamics::BackSubstituteIntegratedPositionsIntoVelocities,
+            "Update velocities after a position-based time integration solve.")
         .def(
             "compute_elastic_energy",
             [](ElastoDynamics& self,
@@ -339,7 +369,8 @@ boundary conditions, using a backward differentiation formula (BDF) time discret
 The dynamics at each step can be expressed as the minimization of a quadratic inertia term
 around a BDF target plus the hyperelastic potential energy of the configuration.
 
-The Python bindings only support 3D linear tetrahedral meshes. Use C++ for other element types, dimensions and orders.
+The Python bindings only support 3D linear tetrahedral meshes with stable neo-Hookean materials. 
+Use C++ for other element types, dimensions and orders.
 
 Typical workflow:
 ```

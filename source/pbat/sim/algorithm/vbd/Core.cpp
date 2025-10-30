@@ -53,9 +53,16 @@ Params& Params::WithVertexColors(Eigen::Ref<IndexVectorX const> const& _colors)
     return *this;
 }
 
-Params& Params::WithInitializationStrategy(EInitializationStrategy _strategy)
+Params&
+Params::WithInitializationStrategy(dynamics::EFemElastoDynamicsTimeStepInitialization _strategy)
 {
-    strategy = _strategy;
+    eElasticsInitializationStrategy = _strategy;
+    return *this;
+}
+
+PBAT_API Params& Params::WithDamping(Scalar _betaR)
+{
+    this->betaR = _betaR;
     return *this;
 }
 
@@ -123,7 +130,9 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("colors", colors);
     group.WriteData("Pptr", Pptr);
     group.WriteData("Padj", Padj);
-    group.WriteMetaData("strategy", static_cast<int>(strategy));
+    group.WriteMetaData(
+        "eElasticsInitializationStrategy",
+        static_cast<int>(eElasticsInitializationStrategy));
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
 }
@@ -137,9 +146,11 @@ void Params::Deserialize(io::Archive const& archive)
     colors            = group.ReadData<IndexVectorX>("colors");
     Pptr              = group.ReadData<IndexVectorX>("Pptr");
     Padj              = group.ReadData<IndexVectorX>("Padj");
-    strategy          = static_cast<EInitializationStrategy>(group.ReadMetaData<int>("strategy"));
-    detHZero          = group.ReadMetaData<Scalar>("detHZero");
-    nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
+    eElasticsInitializationStrategy =
+        static_cast<dynamics::EFemElastoDynamicsTimeStepInitialization>(
+            group.ReadMetaData<int>("eElasticsInitializationStrategy"));
+    detHZero  = group.ReadMetaData<Scalar>("detHZero");
+    nMaxIters = group.ReadMetaData<Index>("nMaxIters");
 }
 
 } // namespace pbat::sim::algorithm::vbd
@@ -166,7 +177,7 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     // clang-format on
     // Problem parameters
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    using FemElastoDynamics = pbat::sim::algorithm::vbd::FemElastoDynamics<ElasticEnergyType>;
+    using FemElastoDynamics = pbat::sim::algorithm::common::FemElastoDynamics<ElasticEnergyType>;
     FemElastoDynamics dynamics{};
     dynamics.Construct(V, C);
     // Adjacency structures
@@ -183,15 +194,13 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     auto colors             = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
     // Initialization strategy
     auto eInitializationStrategy = pbat::sim::algorithm::vbd::EInitializationStrategy::Inertia;
-    vbdParams.WithInitializationStrategy(eInitializationStrategy)
-        .WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
+    vbdParams.WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
         .WithMaximumIterations(10)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();
     // Act
     dynamics.SetInitialConditions(dynamics.x, dynamics.v);
-    dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective();
     VectorX g0 = dynamics.Gradient();
     sim::algorithm::vbd::Solve(dynamics, vbdParams);

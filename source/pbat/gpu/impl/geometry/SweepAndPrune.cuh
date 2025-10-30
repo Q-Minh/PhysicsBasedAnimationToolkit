@@ -22,7 +22,7 @@ namespace geometry {
 /**
  * @brief Single-axis parallel sweep and prune algorithm for detecting overlapping bounding boxes.
  *
- * Implements @cite david1992dynamic
+ * Implements \cite david1992dynamic
  *
  */
 class SweepAndPrune

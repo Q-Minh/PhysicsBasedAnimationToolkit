@@ -69,7 +69,7 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     // clang-format on
     // Problem parameters
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    using FemElastoDynamics = pbat::sim::algorithm::vbd::FemElastoDynamics<ElasticEnergyType>;
+    using FemElastoDynamics = pbat::sim::algorithm::common::FemElastoDynamics<ElasticEnergyType>;
     FemElastoDynamics dynamics{};
     dynamics.Construct(V, C);
     // Adjacency structures
@@ -85,9 +85,7 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     auto eSelection         = graph::EGreedyColorSelectionStrategy::LeastUsed;
     auto colors             = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
     // Initialization strategy
-    auto eInitializationStrategy = pbat::sim::algorithm::vbd::EInitializationStrategy::Inertia;
-    vbdParams.WithInitializationStrategy(eInitializationStrategy)
-        .WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
+    vbdParams.WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
         .WithMaximumIterations(10)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})

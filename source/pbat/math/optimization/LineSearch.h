@@ -15,6 +15,11 @@
 
 namespace pbat::math::optimization {
 
+/**
+ * @brief Backtracking line search algorithm
+ *
+ * @tparam TScalar Scalar type
+ */
 template <class TScalar = Scalar>
 struct BackTrackingLineSearch
 {
@@ -22,6 +27,12 @@ struct BackTrackingLineSearch
     TScalar tau{0.5};  ///< Step size decrease factor
     TScalar c{1e-4};   ///< Armijo slope scale
     TScalar alpha{1};  ///< Initial step size
+
+    TScalar alphaj;                            ///< Current step size
+    TScalar fj;                                ///< Current objective function value
+    Eigen::Vector<TScalar, Eigen::Dynamic> xj; ///< Current candidate iterate
+    int niters;                                ///< Current iteration
+
     /**
      * @brief Construct a new Back Tracking Line Search object
      *
@@ -29,12 +40,14 @@ struct BackTrackingLineSearch
      * @param tau Step size decrease factor
      * @param c Armijo slope scale
      * @param alpha Initial step size
+     * @param n Number of degrees of freedom
      */
     BackTrackingLineSearch(
-        int nMaxIters = 20,
-        TScalar tau   = TScalar(0.5),
-        TScalar c     = TScalar(1e-4),
-        TScalar alpha = TScalar(1));
+        int nMaxIters  = 20,
+        TScalar tau    = TScalar(0.5),
+        TScalar c      = TScalar(1e-4),
+        TScalar alpha  = TScalar(1),
+        Eigen::Index n = 0);
     /**
      * @brief Perform a backtracking line search
      *
@@ -43,17 +56,19 @@ struct BackTrackingLineSearch
      * @tparam TDerivedDX Derived type for the step direction
      * @tparam TDerivedX Derived type for the current iterate
      * @param f Objective function
-     * @param g Gradient at the initial iterate
+     * @param fk Objective function value at the current iterate
+     * @param gk Gradient at the initial iterate
      * @param dx Step direction
      * @param xk Current iterate
-     * @return Step size
+     * @return true if the line search succeeded, false otherwise
      */
     template <class FObjective, class TDerivedG, class TDerivedDX, class TDerivedX>
-    TScalar Solve(
-        FObjective f,
-        Eigen::MatrixBase<TDerivedG> const& g,
+    bool Solve(
+        FObjective const& f,
+        TScalar fk,
+        Eigen::MatrixBase<TDerivedG> const& gk,
         Eigen::MatrixBase<TDerivedDX> const& dx,
-        Eigen::MatrixBase<TDerivedX>& xk) const;
+        Eigen::MatrixBase<TDerivedX> const& xk);
 };
 
 template <class TScalar>
@@ -61,32 +76,42 @@ inline BackTrackingLineSearch<TScalar>::BackTrackingLineSearch(
     int nMaxItersIn,
     TScalar tauIn,
     TScalar cIn,
-    TScalar alphaIn)
-    : nMaxIters(nMaxItersIn), tau(tauIn), c(cIn), alpha(alphaIn)
+    TScalar alphaIn,
+    Eigen::Index n)
+    : nMaxIters(nMaxItersIn),
+      tau(tauIn),
+      c(cIn),
+      alpha(alphaIn),
+      alphaj(alphaIn),
+      fj(),
+      niters(0),
+      xj(n)
 {
 }
 
 template <class TScalar>
 template <class FObjective, class TDerivedG, class TDerivedDX, class TDerivedX>
-inline TScalar BackTrackingLineSearch<TScalar>::Solve(
-    FObjective f,
-    Eigen::MatrixBase<TDerivedG> const& g,
+inline bool BackTrackingLineSearch<TScalar>::Solve(
+    FObjective const& f,
+    TScalar fk,
+    Eigen::MatrixBase<TDerivedG> const& gk,
     Eigen::MatrixBase<TDerivedDX> const& dx,
-    Eigen::MatrixBase<TDerivedX>& xk) const
+    Eigen::MatrixBase<TDerivedX> const& xk)
 {
-    TScalar alphaj    = alpha;
-    TScalar const Dfk = g.dot(dx);
-    TScalar fk        = f(xk);
-    for (auto j = 0; j < nMaxIters; ++j)
+    alphaj            = alpha;
+    TScalar const Dfk = gk.dot(dx);
+    fj                = fk;
+    TScalar flinear;
+    for (niters = 0; niters < nMaxIters; ++niters)
     {
-        TScalar flinear = fk + (c * alphaj) * Dfk;
-        xk              = xk + alphaj * dx;
-        fk              = f(xk);
-        if (fk <= flinear)
+        flinear = fj + (c * alphaj) * Dfk;
+        xj      = xk + alphaj * dx;
+        fj      = f(xj);
+        if (fj <= flinear)
             break;
         alphaj *= tau;
     }
-    return alphaj;
+    return fj <= flinear;
 }
 
 } // namespace pbat::math::optimization

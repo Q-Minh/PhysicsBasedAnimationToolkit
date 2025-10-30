@@ -88,9 +88,9 @@ PBAT_HOST_DEVICE std::array<TScalar, 4> EdgeEdgeCcdUnivariatePolynomial(
  * \f]
  * where \f$ \mathbf{n}(t) = (\mathbf{q}_1(t) - \mathbf{p}_1(t)) \times (\mathbf{q}_2(t) -
  * \mathbf{p}_2(t)) \f$ and \f$ \mathbf{q}(t) = \mathbf{p}_2(t) - \mathbf{p}_1(t) \f$ using
- * polynomial root finder from @cite cem2022polyroot.
+ * polynomial root finder from \cite cem2022polyroot.
  *
- * See @cite provot1997collision and @cite ZachFerg2021CcdBenchmark for more details.
+ * See \cite provot1997collision and \cite ZachFerg2021CcdBenchmark for more details.
  *
  * @tparam TP1T Type of the input matrix P1T
  * @tparam TQ1T Type of the input matrix Q1T

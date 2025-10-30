@@ -13,3 +13,4 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 )
 
 add_subdirectory(linalg)
+add_subdirectory(optimization)
