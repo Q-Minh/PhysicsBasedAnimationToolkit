@@ -145,6 +145,7 @@ nanobind_add_stub(
     "io.pyi"
     "math/__init__.pyi"
     "math/linalg.pyi"
+    "math/optimization.pyi"
     "profiling.pyi"
     "sim/__init__.pyi"
     "sim/algorithm/__init__.pyi"
