@@ -40,6 +40,20 @@ void BindNewton(nanobind::module_& m)
         .def_ro("gknorm2", &NewtonType::gknorm2, "Squared gradient norm at current iterate")
         .def_ro("k", &NewtonType::k, "Current iteration")
         .def_rw("line_search", &NewtonType::lineSearch, "Line search instance")
+        .def(
+            "serialize",
+            &NewtonType::Serialize,
+            nb::arg("archive"),
+            "Serialize the Newton optimizer.\n\n"
+            "Args:\n"
+            "    archive (pbat.io.Archive): Archive to serialize to.")
+        .def(
+            "deserialize",
+            &NewtonType::Deserialize,
+            nb::arg("archive"),
+            "Deserialize the Newton optimizer.\n\n"
+            "Args:\n"
+            "    archive (pbat.io.Archive): Archive to deserialize from.")
         // Bindings for these methods are a bit complicated, so don't bother for now.
         /*.def(
             "prepare_next_iteration",

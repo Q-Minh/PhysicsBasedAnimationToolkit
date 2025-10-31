@@ -9,8 +9,7 @@
 #ifndef PBAT_SIM_ALGORITHM_NEWTON_NEWTON_H
 #define PBAT_SIM_ALGORITHM_NEWTON_NEWTON_H
 
-#include "Config.h"
-#include "Integrator.h"
+#include "Core.h"
 
 /**
  * @brief Namespace for Newton simulation algorithms.

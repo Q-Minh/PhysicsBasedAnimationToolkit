@@ -35,8 +35,24 @@ void BindLineSearch(nanobind::module_& m)
         .def_rw("alpha", &BackTracking::alpha, "Initial step size")
         .def_ro("alphaj", &BackTracking::alphaj, "Current step size")
         .def_ro("fj", &BackTracking::fj, "Current objective value")
+        .def_ro("flinearj", &BackTracking::flinearj, "Current linearized objective value")
+        .def_ro("Dfk", &BackTracking::Dfk, "Directional derivative at current step")
         .def_ro("xj", &BackTracking::xj, "Current candidate iterate")
         .def_ro("niters", &BackTracking::niters, "Current iteration count")
+        .def(
+            "serialize",
+            &BackTracking::Serialize,
+            nb::arg("archive"),
+            "Serialize the line search.\n\n"
+            "Args:\n"
+            "    archive (pbat.io.Archive): Archive to serialize to.")
+        .def(
+            "deserialize",
+            &BackTracking::Deserialize,
+            nb::arg("archive"),
+            "Deserialize the line search.\n\n"
+            "Args:\n"
+            "    archive (pbat.io.Archive): Archive to deserialize from.")
         // Bindings for this are a bit complicated, so don't bother for now.
         /*.def(
             "solve",

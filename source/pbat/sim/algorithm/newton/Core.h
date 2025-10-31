@@ -185,6 +185,7 @@ Scalar PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, Params& params
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareDerivatives");
     // Precompute elastic energy and its derivatives
     fem.ComputeElasticEnergy(
+        fem.x,
         fem::EElementElasticityComputationFlags::Potential |
             fem::EElementElasticityComputationFlags::Gradient |
             fem::EElementElasticityComputationFlags::Hessian,
@@ -194,7 +195,7 @@ Scalar PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, Params& params
     fem.HgU *= bt2;
     fem.GgU *= bt2;
     Scalar U = fem::HyperElasticPotential(fem.UgU);
-    Scalar K = fem.DiscreteKineticEnergy();
+    Scalar K = fem.DiscreteKineticEnergy(fem.x);
     return K + bt * bt * U /* + C*/;
 }
 
@@ -215,21 +216,6 @@ void ToGradient(
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
     gk(fem.DirichletDofs()).setZero();
-}
-
-/**
- * @brief Compute objective function for the given finite element elasto dynamics problem.
- *
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem
- * @return Objective function value
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-Scalar ObjectiveFunction(FemElastoDynamics<TElasticEnergy>& fem)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ObjectiveFunction");
-    // Objective function 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x)
-    return fem.Objective() /* + C */;
 }
 
 /**
@@ -343,6 +329,7 @@ void PrepareNextIteration(FemElastoDynamics<TElasticEnergy>& fem, Params& params
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
 {
+    params.newton.k = 0;
     PrepareNextIteration(fem, params);
 }
 
@@ -352,8 +339,8 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Iterate");
     auto xk = fem.x.reshaped();
     return params.newton.Iterate(
-        [&]([[maybe_unused]] auto const& xk) {
-            return ObjectiveFunction<TElasticEnergy>(fem);
+        [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
+            return fem.Objective(xk) /* + C*/;
         } /* f */,
         [&]([[maybe_unused]] auto const& xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
@@ -373,8 +360,8 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
         [&]([[maybe_unused]] auto const& xk) {
             return PrepareDerivatives<TElasticEnergy>(fem, params);
         } /* fPrepareDerivatives */,
-        [&]([[maybe_unused]] auto const& xk) {
-            return ObjectiveFunction<TElasticEnergy>(fem);
+        [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
+            return fem.Objective(xk) /* + C*/;
         } /* f */,
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, gk);

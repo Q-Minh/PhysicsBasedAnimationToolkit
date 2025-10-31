@@ -75,13 +75,19 @@ Params& Params::Construct(bool bValidate)
 void Params::Serialize(io::Archive& archive) const
 {
     io::Archive group = archive["pbat.sim.algorithm.newton.Params"];
-    // TODO:
+    newton.Serialize(group);
+    group.WriteMetaData("eSpdCorrection", static_cast<int>(eSpdCorrection));
+    group.WriteMetaData("eLinearSolver", static_cast<int>(eLinearSolver));
 }
 
 void Params::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.newton.Params"];
-    // TODO:
+    newton.Deserialize(group);
+    eSpdCorrection =
+        static_cast<fem::EHyperElasticSpdCorrection>(group.ReadMetaData<int>("eSpdCorrection"));
+    eLinearSolver = static_cast<ELinearSolver>(group.ReadMetaData<int>("eLinearSolver"));
+    this->WithLinearSolver(eLinearSolver);
 }
 
 } // namespace pbat::sim::algorithm::newton
@@ -124,8 +130,8 @@ TEST_CASE("[sim][algorithm][newton] Core")
                 /*lineSearchIn=*/math::optimization::BackTrackingLineSearch<Scalar>{}))
         .Construct();
     dynamics.SetupTimeIntegrationOptimization();
-    Scalar f0  = dynamics.Objective();
-    VectorX g0 = dynamics.Gradient();
+    Scalar f0  = dynamics.Objective(dynamics.x);
+    VectorX g0 = dynamics.Gradient(dynamics.x);
     newton::Solve(dynamics, params);
     // Assert
     auto constexpr zero = Scalar{1e-4};
@@ -136,12 +142,13 @@ TEST_CASE("[sim][algorithm][newton] Core")
     bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();
     CHECK(bVerticesOnlyFall);
     dynamics.ComputeElasticEnergy(
+        dynamics.x,
         fem::EElementElasticityComputationFlags::Potential |
             fem::EElementElasticityComputationFlags::Gradient,
         fem::EHyperElasticSpdCorrection::None);
-    Scalar f = dynamics.Objective();
+    Scalar f = dynamics.Objective(dynamics.x);
     CHECK_LT(f, f0);
-    VectorX g     = dynamics.Gradient();
+    VectorX g     = dynamics.Gradient(dynamics.x);
     Scalar g0norm = g0.norm();
     Scalar gnorm  = g.norm();
     CHECK_LT(gnorm, g0norm);

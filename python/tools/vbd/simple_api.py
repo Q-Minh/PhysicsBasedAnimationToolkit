@@ -220,6 +220,59 @@ def chebyshev_integrate(
     fem.step()
 
 
+def serialize_newton_solver_iteration(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    k: int,
+    newton: pbat.math.optimization.Newton,
+    grp: pbat.io.Archive,
+    post_solve: bool = False,
+):
+    """Serialize Newton solver iteration data
+
+    Args:
+        fem (pbat.sim.dynamics.FemElastoDynamics): Finite element elasto dynamics
+            problem
+        k (int): Iteration index
+        grp (pbat.io.Archive): Archive to store iteration data
+    """
+    iter = grp[f"{k:06d}"]
+    iter.write_data("x", fem.x)
+    # Time integration objective and its gradient
+    f = fem.objective()
+    iter.write_metadata("f", f)
+    g = fem.gradient()
+    iter.write_data("g", g)
+    gnorm = np.linalg.norm(
+        g
+    )  # annoyingly, this returns numpy.float32 which nanobind does not cast automatically to C++ float
+    iter.write_metadata("gnorm", float(gnorm))
+    newton.serialize(iter)
+    if post_solve:
+        iter.write_data("v", fem.v)
+
+
+def newton_solve(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.newton.Params,
+    archive: pbat.io.Archive | None = None,
+):
+    """Python-side Newton solve with optional serialization per iteration."""
+    grp = archive["pbat.sim.algorithm.newton.Solve"] if archive is not None else None
+    pbat.sim.algorithm.newton.initialize_solve(fem, params)
+    newton: pbat.math.optimization.Newton = params.newton
+    while newton.k < newton.n_max_iters:
+        if grp is not None:
+            serialize_newton_solver_iteration(fem, newton.k, newton, grp)
+        if newton.gknorm2 < newton.gtol2:
+            break
+        if not pbat.sim.algorithm.newton.iterate(fem, params):
+            break
+        pbat.sim.algorithm.newton.prepare_next_iteration(fem, params)
+    fem.back_substitute_integrated_positions_into_velocities()
+    if grp is not None:
+        serialize_newton_solver_iteration(fem, newton.k, newton, grp, post_solve=True)
+
+
 def newton_integrate(
     fem: pbat.sim.dynamics.FemElastoDynamics,
     params: pbat.sim.algorithm.newton.Params,
@@ -235,8 +288,7 @@ def newton_integrate(
     )
     if grp is not None:
         fem.serialize(grp)
-    # TODO: Manually write Newton solve loop with per-iteration serialization
-    pbat.sim.algorithm.newton.solve(fem, params)
+    newton_solve(fem, params, archive=grp)
     fem.back_substitute_integrated_positions_into_velocities()
     fem.step()
 
@@ -270,7 +322,13 @@ if __name__ == "__main__":
     # Newton solver params
     newton_params = (
         pbat.sim.algorithm.newton.Params()
-        .with_optimizer(pbat.math.optimization.Newton())
+        .with_optimizer(
+            pbat.math.optimization.Newton(
+                n_max_iters=10,
+                gtol=1e-4,
+                line_search=pbat.math.optimization.BackTrackingLineSearch(),
+            )
+        )
         .with_spd_correction(pbat.fem.HyperElasticSpdCorrection.Absolute)
         .construct()
     )

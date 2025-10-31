@@ -292,28 +292,43 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
         .def(
             "compute_elastic_energy",
             [](ElastoDynamics& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x,
                fem::EElementElasticityComputationFlags compute_flags,
                fem::EHyperElasticSpdCorrection spd_correction) {
-                self.ComputeElasticEnergy(compute_flags, spd_correction);
+                self.ComputeElasticEnergy(x.reshaped(), compute_flags, spd_correction);
             },
+            nb::arg("x"),
             nb::arg("compute_flags"),
             nb::arg("spd_correction"),
             "Compute per-quadrature elastic energy, gradient, and/or Hessian with optional SPD\n"
             "correction.\n\n"
             "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n"
             "    compute_flags (ElementElasticityComputationFlags): Bitmask flags indicating which "
             "quantities to compute.\n"
             "    spd_correction (HyperElasticSpdCorrection): Hessian SPD correction strategy.\n")
         .def(
             "objective",
-            &ElastoDynamics::Objective,
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x) {
+                return self.Objective(x.reshaped());
+            },
+            nb::arg("x"),
             "Compute the time integration optimization's objective function value.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
             "Returns:\n"
             "    float: Objective function value.")
         .def(
             "gradient",
-            &ElastoDynamics::Gradient,
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x) {
+                return self.Gradient(x.reshaped());
+            },
+            nb::arg("x"),
             "Compute the time integration optimization's gradient.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
             "Returns:\n"
             "    numpy.ndarray: kDims*|# nodes| gradient vector.")
         .def("is_dirichlet_node", &ElastoDynamics::IsDirichletNode, nb::arg("node"))

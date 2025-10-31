@@ -11,6 +11,7 @@
 
 #include "LineSearch.h"
 #include "pbat/Aliases.h"
+#include "pbat/io/Archive.h"
 
 #include <Eigen/Core>
 #include <optional>
@@ -69,6 +70,26 @@ struct Newton
         TScalar gtol                = TScalar(1e-4),
         Index n                     = 0,
         LineSearchType lineSearchIn = {});
+    /**
+     * @brief Calls `PrepareNextIteration` but resets the iteration index to 0.
+     *
+     * @tparam FPrepareDerivatives Callable type with signature
+     * `fPrepareDerivatives(xk) -> TScalar`
+     * @tparam FGradient Callable type with signature `g(xk, gk) -> void` that computes the gradient
+     * at `xk` and stores it in `gk`
+     * @tparam TDerivedX Derived type for the input iterate
+     * @param fPrepareDerivatives Callback to compute any quantities necessary prior to evaluating
+     * the objective function gradient and hessian. It must also return the objective function value
+     * at `xk`.
+     * @param g Gradient function
+     * @param xk Current iterate
+     * @post `k == 0`
+     */
+    template <class FPrepareDerivatives, class FGradient, class TDerivedX>
+    void InitializeSolve(
+        FPrepareDerivatives const& fPrepareDerivatives,
+        FGradient const& g,
+        Eigen::MatrixBase<TDerivedX> const& xk);
     /**
      * @brief Calls fPrepareDerivatives and evaluates the objective function and gradient at `xk`
      *
@@ -141,6 +162,16 @@ struct Newton
         FGradient g,
         FHessianInverseProduct Hinv,
         Eigen::MatrixBase<TDerivedX>& xk);
+    /**
+     * @brief Serialize this
+     * @param archive Archive to serialize to
+     */
+    void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize this
+     * @param archive Archive to deserialize from
+     */
+    void Deserialize(io::Archive& archive);
 };
 
 template <class TScalar>
@@ -153,6 +184,17 @@ inline Newton<TScalar>::Newton(int nMaxItersIn, TScalar gtol, Index n, LineSearc
       gknorm2(),
       fk()
 {
+}
+
+template <class TScalar>
+template <class FPrepareDerivatives, class FGradient, class TDerivedX>
+inline void Newton<TScalar>::InitializeSolve(
+    FPrepareDerivatives const& fPrepareDerivatives,
+    FGradient const& g,
+    Eigen::MatrixBase<TDerivedX> const& xk)
+{
+    k = 0;
+    PrepareNextIteration(fPrepareDerivatives, g, xk.derived());
 }
 
 template <class TScalar>
@@ -212,12 +254,12 @@ inline bool Newton<TScalar>::Solve(
     FHessianInverseProduct Hinv,
     Eigen::MatrixBase<TDerivedX>& xk)
 {
-    PrepareNextIteration(fPrepareDerivatives, g, xk);
+    InitializeSolve(fPrepareDerivatives, g, xk.derived());
     auto const fIsConverged = [this]() {
         // Check stationarity condition for convergence (we assume the Hessian is positive definite)
         return gknorm2 < gtol2;
     };
-    for (k = 0; k < nMaxIters; ++k)
+    for (; k < nMaxIters;)
     {
         if (fIsConverged())
             return true;
@@ -229,6 +271,50 @@ inline bool Newton<TScalar>::Solve(
         PrepareNextIteration(fPrepareDerivatives, g, xk);
     }
     return fIsConverged();
+}
+
+template <class TScalar>
+inline void Newton<TScalar>::Serialize(io::Archive& archive) const
+{
+    io::Archive group = archive["pbat.math.optimization.Newton"];
+    group.WriteMetaData("nMaxIters", nMaxIters);
+    group.WriteMetaData("gtol2", gtol2);
+    group.WriteData("dxk", dxk);
+    group.WriteData("gk", gk);
+    std::visit(
+        [&](auto&& lineSearch) {
+            using U = std::decay_t<decltype(lineSearch)>;
+            if constexpr (not std::is_same_v<U, std::monostate>)
+            {
+                lineSearch.Serialize(group);
+            }
+        },
+        lineSearch);
+    group.WriteMetaData("fk", fk);
+    group.WriteMetaData("gknorm2", gknorm2);
+    group.WriteMetaData("k", k);
+}
+
+template <class TScalar>
+inline void Newton<TScalar>::Deserialize(io::Archive& archive)
+{
+    io::Archive group = archive["pbat.math.optimization.Newton"];
+    nMaxIters         = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
+    gtol2             = group.ReadMetaData<std::decay_t<decltype(gtol2)>>("gtol2");
+    dxk               = group.ReadData<std::decay_t<decltype(dxk)>>("dxk");
+    gk                = group.ReadData<std::decay_t<decltype(gk)>>("gk");
+    std::visit(
+        [&](auto&& lineSearch) {
+            using U = std::decay_t<decltype(lineSearch)>;
+            if constexpr (not std::is_same_v<U, std::monostate>)
+            {
+                lineSearch.Deserialize(group);
+            }
+        },
+        lineSearch);
+    fk      = group.ReadMetaData<std::decay_t<decltype(fk)>>("fk");
+    gknorm2 = group.ReadMetaData<std::decay_t<decltype(gknorm2)>>("gknorm2");
+    k       = group.ReadMetaData<std::decay_t<decltype(k)>>("k");
 }
 
 } // namespace pbat::math::optimization

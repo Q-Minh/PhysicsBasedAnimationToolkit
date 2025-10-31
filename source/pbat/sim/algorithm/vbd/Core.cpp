@@ -201,8 +201,8 @@ TEST_CASE("[sim][algorithm][vbd] Core")
         .Construct();
     // Act
     dynamics.SetInitialConditions(dynamics.x, dynamics.v);
-    Scalar f0  = dynamics.Objective();
-    VectorX g0 = dynamics.Gradient();
+    Scalar f0  = dynamics.Objective(dynamics.x);
+    VectorX g0 = dynamics.Gradient(dynamics.x);
     sim::algorithm::vbd::Solve(dynamics, vbdParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
@@ -212,13 +212,9 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     CHECK(bVerticesFallUnderGravity);
     bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();
     CHECK(bVerticesOnlyFall);
-    dynamics.ComputeElasticEnergy(
-        fem::EElementElasticityComputationFlags::Potential |
-            fem::EElementElasticityComputationFlags::Gradient,
-        fem::EHyperElasticSpdCorrection::None);
-    Scalar f = dynamics.Objective();
+    Scalar f = dynamics.Objective(dynamics.x);
     CHECK_LT(f, f0);
-    VectorX g     = dynamics.Gradient();
+    VectorX g     = dynamics.Gradient(dynamics.x);
     Scalar g0norm = g0.norm();
     Scalar gnorm  = g.norm();
     CHECK_LT(gnorm, g0norm);
