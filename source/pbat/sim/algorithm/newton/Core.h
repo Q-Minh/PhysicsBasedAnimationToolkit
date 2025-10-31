@@ -17,6 +17,7 @@
 #endif // PBAT_USE_SUITESPARSE
 
 #include <Eigen/Core>
+#include <algorithm>
 #include <exception>
 #include <fmt/core.h>
 
@@ -65,7 +66,8 @@ struct Params
 
 #ifdef PBAT_USE_SUITESPARSE
     using DecompositionType =
-        Eigen::CholmodDecomposition<decltype(hessian)>; ///< Cholesky decomposition type
+        Eigen::CholmodDecomposition<decltype(hessian), Eigen::Lower>; ///< Cholesky decomposition
+                                                                      ///< type
 #else
     using DecompositionType =
         Eigen::SimplicialLDLT<decltype(hessian)>; ///< Cholesky decomposition type
@@ -90,7 +92,7 @@ using FemElastoDynamics =
  * @param params Solver parameters
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-Scalar PrepareNextIteration(FemElastoDynamics<TElasticEnergy>& fem, Params& params);
+void PrepareNextIteration(FemElastoDynamics<TElasticEnergy>& fem, Params& params);
 
 /**
  * @brief Initialize the solve process for the given finite element elasto dynamics problem.
@@ -166,6 +168,7 @@ void ToGradient(
     // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x)
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
+    gk(fem.DirichletDofs()).setZero();
 }
 
 /**
@@ -225,6 +228,18 @@ void AssembleHessian(FemElastoDynamics<TElasticEnergy> const& fem, Params& param
     }
     // Assemble
     params.hessian.resize(fem.x.size(), fem.x.size());
+    // Remove off-diagonal Dirichlet entries and upper triangular part
+    auto itRemoveBegin = std::remove_if(
+        params.triplets.begin(),
+        params.triplets.end(),
+        [&](Eigen::Triplet<Scalar, Index> const& triplet) {
+            bool bIsUpperTriangular = triplet.row() < triplet.col();
+            bool bIsDiag            = triplet.row() == triplet.col();
+            bool bIsDirichletEntry =
+                fem.IsDirichletDof(triplet.row()) or fem.IsDirichletDof(triplet.col());
+            return bIsUpperTriangular or (not bIsDiag and bIsDirichletEntry);
+        });
+    params.triplets.erase(itRemoveBegin, params.triplets.end());
     params.hessian.setFromTriplets(params.triplets.begin(), params.triplets.end());
 }
 
@@ -257,17 +272,18 @@ void HessianInverseProduct(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-Scalar PrepareNextIteration(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
+void PrepareNextIteration(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareNextIteration");
+    auto xk = fem.x.reshaped();
     params.newton.PrepareNextIteration(
         [&]([[maybe_unused]] auto const& xk) {
-            PrepareDerivatives<TElasticEnergy>(fem, params);
+            return PrepareDerivatives<TElasticEnergy>(fem, params);
         } /* fPrepareDerivatives */,
         [&](auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, gk);
         } /* g */,
-        fem.x.reshaped() /* xk */);
+        xk /* xk */);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -280,6 +296,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Iterate");
+    auto xk = fem.x.reshaped();
     return params.newton.Iterate(
         [&]([[maybe_unused]] auto const& xk) {
             return ObjectiveFunction<TElasticEnergy>(fem);
@@ -290,7 +307,7 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
             AssembleHessian<TElasticEnergy>(fem, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
         } /* Hinv */,
-        fem.x.reshaped() /* xk */);
+        xk /* xk */);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
