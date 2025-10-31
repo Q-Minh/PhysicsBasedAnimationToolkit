@@ -280,7 +280,7 @@ void PrepareNextIteration(FemElastoDynamics<TElasticEnergy>& fem, Params& params
         [&]([[maybe_unused]] auto const& xk) {
             return PrepareDerivatives<TElasticEnergy>(fem, params);
         } /* fPrepareDerivatives */,
-        [&](auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
+        [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, gk);
         } /* g */,
         xk /* xk */);
@@ -322,7 +322,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, Params& params)
         [&]([[maybe_unused]] auto const& xk) {
             return ObjectiveFunction<TElasticEnergy>(fem);
         } /* f */,
-        [&](auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
+        [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, gk);
         } /* g */,
         [&]([[maybe_unused]] auto const& xk,
