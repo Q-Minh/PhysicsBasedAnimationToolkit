@@ -151,6 +151,7 @@ nanobind_add_stub(
     "sim/algorithm/__init__.pyi"
     "sim/algorithm/newton.pyi"
     "sim/algorithm/pd.pyi"
+    "sim/algorithm/vbd.pyi"
     "sim/contact.pyi"
     "sim/dynamics.pyi"
     "sim/integration.pyi"

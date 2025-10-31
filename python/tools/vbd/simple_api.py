@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import filedialog
 import h5py
 
+
 def _read_mesh_and_state(integrate_grp: h5py.Group):
     # Fem group and datasets
     fem_path = "pbat.sim.dynamics.FemElastoDynamics"
@@ -27,7 +28,11 @@ def _read_mesh_and_state(integrate_grp: h5py.Group):
         if "X" in mesh_grp and "E" in mesh_grp:
             X = np.array(mesh_grp["X"])  # shape (3, n)
             E = np.array(mesh_grp["E"])  # shape (4, m)
-    dmask = np.array(fem_grp["dmask"], dtype=np.int32) if "dmask" in fem_grp else np.zeros(X.shape[1], dtype=bool)
+    dmask = (
+        np.array(fem_grp["dmask"], dtype=np.int32)
+        if "dmask" in fem_grp
+        else np.zeros(X.shape[1], dtype=bool)
+    )
     # Deformed positions x at this frame
     x = np.array(fem_grp["x"]) if "x" in fem_grp else None
     print("DA VALS:", X, E, x, dmask)
@@ -215,6 +220,27 @@ def chebyshev_integrate(
     fem.step()
 
 
+def newton_integrate(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    params: pbat.sim.algorithm.newton.Params,
+    initialization_strategy: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
+    archive: pbat.io.Archive | None = None,
+):
+    """Python-side Newton integrate (one time step) with optional archiving."""
+    fem.setup_time_integration_optimization(
+        initialization_strategy=initialization_strategy
+    )
+    grp = (
+        archive["pbat.sim.algorithm.newton.Integrate"] if archive is not None else None
+    )
+    if grp is not None:
+        fem.serialize(grp)
+    # TODO: Manually write Newton solve loop with per-iteration serialization
+    pbat.sim.algorithm.newton.solve(fem, params)
+    fem.back_substitute_integrated_positions_into_velocities()
+    fem.step()
+
+
 if __name__ == "__main__":
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -241,7 +267,14 @@ if __name__ == "__main__":
     anderson_params = pbat.sim.algorithm.vbd.AndersonParams()
     broyden_params = pbat.sim.algorithm.vbd.BroydenParams()
     chebyshev_params = pbat.sim.algorithm.vbd.ChebyshevParams()
-    solver_names = ["Base", "Anderson", "Broyden", "Chebyshev"]
+    # Newton solver params
+    newton_params = (
+        pbat.sim.algorithm.newton.Params()
+        .with_optimizer(pbat.math.optimization.Newton())
+        .with_spd_correction(pbat.fem.HyperElasticSpdCorrection.Absolute)
+        .construct()
+    )
+    solver_names = ["Base", "Anderson", "Broyden", "Chebyshev", "Newton"]
     i_solver = 0  # Non-linear solver index
     init_strategies = [
         pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position,
@@ -279,7 +312,7 @@ if __name__ == "__main__":
     def callback():
         global Y, nu, rho, aext, b, v0, d_axis, d_percent, d_extremity, d_nodes
         global dt, s
-        global vbd_params, anderson_params, broyden_params, chebyshev_params
+        global vbd_params, anderson_params, broyden_params, chebyshev_params, newton_params
         global solver_names, i_solver, i_init_strategy, n_max_iters
         global i_broyden_l2_solver, i_broyden_jacobian_estimate
         global animate, export, t, vm, dpc
@@ -329,13 +362,13 @@ if __name__ == "__main__":
                     dynamics.constrain(d_mask.ravel())
                     vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
                     is_new_mesh = True
-                    d_axis = 3 # Don't apply default Dirichlet constraints 
+                    d_axis = 3  # Don't apply default Dirichlet constraints
                 root.destroy()
-                    # imesh = meshio.read(file_path)
-                    # V, C = imesh.points, imesh.cells_dict["tetra"]
-                    # dynamics.construct(V.T, C.T)
-                    # vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
-                    # is_new_mesh = True
+                # imesh = meshio.read(file_path)
+                # V, C = imesh.points, imesh.cells_dict["tetra"]
+                # dynamics.construct(V.T, C.T)
+                # vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
+                # is_new_mesh = True
 
             if imgui.Button("Select Export File", [imgui.GetWindowWidth() / 2.1, 0]):
                 root = tk.Tk()
@@ -401,9 +434,6 @@ if __name__ == "__main__":
             dt_updated, dt = imgui.InputFloat("Time step", dt, format="%.5f")
             s_updated, s = imgui.InputInt("BDF step", s)
             dirty |= dt_updated or s_updated
-            imgui.TreePop()
-
-        if imgui.TreeNode("VBD"):
             _, i_solver = imgui.Combo(
                 "Non-linear Solver",
                 i_solver,
@@ -414,6 +444,9 @@ if __name__ == "__main__":
                 i_init_strategy,
                 [init_strategy.name for init_strategy in init_strategies],
             )
+            imgui.TreePop()
+
+        if imgui.TreeNode("VBD"):
             vbd_params.strategy = init_strategies[i_init_strategy]
             _, vbd_params.n_max_iters = imgui.InputInt(
                 "Maximum Iterations", vbd_params.n_max_iters
@@ -464,6 +497,40 @@ if __name__ == "__main__":
                 imgui.TreePop()
             imgui.TreePop()
 
+        if imgui.TreeNode("Newton"):
+            # Basic Newton parameters
+            _, newton_params.newton.n_max_iters = imgui.InputInt(
+                "Maximum Iterations", newton_params.newton.n_max_iters
+            )
+            _, gtol = imgui.InputFloat(
+                "Gradient Tol", np.sqrt(newton_params.newton.gtol2), format="%.8f"
+            )
+            if isinstance(
+                newton_params.newton.line_search,
+                pbat.math.optimization.BackTrackingLineSearch,
+            ):
+                _, newton_params.newton.line_search.alpha = imgui.InputFloat(
+                    "Initial step size",
+                    newton_params.newton.line_search.alpha,
+                    format="%.8f",
+                )
+                _, newton_params.newton.line_search.c = imgui.InputFloat(
+                    "Armijo slope scale",
+                    newton_params.newton.line_search.c,
+                    format="%.8f",
+                )
+                _, newton_params.newton.line_search.tau = imgui.InputFloat(
+                    "Step size reduction",
+                    newton_params.newton.line_search.tau,
+                    format="%.8f",
+                )
+                _, newton_params.newton.line_search.n_max_iters = imgui.InputInt(
+                    "Max line search iters",
+                    newton_params.newton.line_search.n_max_iters,
+                )
+            newton_params.newton.gtol2 = gtol * gtol
+            imgui.TreePop()
+
         # Initialize VBD parameters
         if is_new_mesh:
             n_nodes = dynamics.X.shape[1]
@@ -494,22 +561,22 @@ if __name__ == "__main__":
             dynamics.set_external_load(fext)
             # Dirichlet
             if d_axis in [0, 1, 2]:
-              aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(
-                  dynamics.X
-              )
-              Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
-              extent = Xmax - Xmin
-              if d_extremity == 0:
-                  Xmax[d_axis] = Xmin[d_axis] + d_percent * extent[d_axis]
-                  Xmin[d_axis] -= d_percent * extent[d_axis]
-              else:
-                  Xmin[d_axis] = Xmax[d_axis] - d_percent * extent[d_axis]
-                  Xmax[d_axis] += d_percent * extent[d_axis]
-              aabb.min, aabb.max = Xmin, Xmax
-              d_nodes = aabb.contained(dynamics.X)
-              d_mask = np.zeros(dynamics.X.shape[1], dtype=bool)
-              d_mask[d_nodes] = True
-              dynamics.constrain(d_mask)
+                aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(
+                    dynamics.X
+                )
+                Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
+                extent = Xmax - Xmin
+                if d_extremity == 0:
+                    Xmax[d_axis] = Xmin[d_axis] + d_percent * extent[d_axis]
+                    Xmin[d_axis] -= d_percent * extent[d_axis]
+                else:
+                    Xmin[d_axis] = Xmax[d_axis] - d_percent * extent[d_axis]
+                    Xmax[d_axis] += d_percent * extent[d_axis]
+                aabb.min, aabb.max = Xmin, Xmax
+                d_nodes = aabb.contained(dynamics.X)
+                d_mask = np.zeros(dynamics.X.shape[1], dtype=int)
+                d_mask[d_nodes] = 1
+                dynamics.constrain(d_mask)
             dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
             # NOTE: If the time integration scheme has changed, the BDF integrator
             # needs to be re-initialized. However, if we haven't asked to "reset" the
@@ -557,6 +624,13 @@ if __name__ == "__main__":
             elif i_solver == 3:
                 chebyshev_integrate(
                     dynamics, vbd_params, chebyshev_params, archive=frame_group
+                )
+            elif i_solver == 4:
+                newton_integrate(
+                    dynamics,
+                    newton_params,
+                    init_strategies[i_init_strategy],
+                    archive=frame_group,
                 )
             if export:
                 ps.screenshot()

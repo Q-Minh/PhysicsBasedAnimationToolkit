@@ -22,7 +22,7 @@ void BindNewton(nanobind::module_& m)
             nb::arg("n_max_iters") = 10,
             nb::arg("gtol")        = ScalarType(1e-4),
             nb::arg("n")           = 0,
-            nb::arg("line_search"),
+            nb::arg("line_search") = pbat::math::optimization::BackTrackingLineSearch<ScalarType>{},
             "Construct a Newton optimizer with a backtracking line search.\n\n"
             "Args:\n"
             "    n_max_iters (int, optional): Maximum Newton iterations. Defaults to 10.\n"
@@ -35,6 +35,7 @@ void BindNewton(nanobind::module_& m)
         .def_ro("gk", &NewtonType::gk, "Gradient at current iterate (internal work vector)")
         .def_ro("fk", &NewtonType::fk, "Objective value at current iterate")
         .def_ro("gknorm2", &NewtonType::gknorm2, "Squared gradient norm at current iterate")
+        .def_ro("k", &NewtonType::k, "Current iteration")
         .def_rw("line_search", &NewtonType::lineSearch, "Line search object")
         // Bindings for these methods are a bit complicated, so don't bother for now.
         /*.def(

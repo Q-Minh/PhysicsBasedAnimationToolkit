@@ -101,7 +101,7 @@ inline bool BackTrackingLineSearch<TScalar>::Solve(
     alphaj            = alpha;
     TScalar const Dfk = gk.dot(dx);
     fj                = fk;
-    TScalar flinear;
+    TScalar flinear   = fj; // This allows nMaxIters = 0 to disable line search
     for (niters = 0; niters < nMaxIters; ++niters)
     {
         flinear = fj + (c * alphaj) * Dfk;

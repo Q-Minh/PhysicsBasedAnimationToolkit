@@ -55,6 +55,7 @@ struct Newton
 
     TScalar fk;      ///< Objective function value at current iteration
     TScalar gknorm2; ///< Squared norm of the gradient at current iteration
+    int k;           ///< Current iteration
 
     /**
      * @brief Construct a new Newton optimizer
@@ -174,24 +175,27 @@ inline bool Newton<TScalar>::Iterate(
     Eigen::MatrixBase<TDerivedX>& xk)
 {
     Hinv(xk, gk, dxk);
-    dxk *= TScalar(-1); // dxk = -Hinv * gk
-    return std::visit(
+    bool bStepped{false};
+    std::visit(
         [&](auto&& lineSearch) {
             bool constexpr bNoLineSearch =
                 std::is_same_v<std::decay_t<decltype(lineSearch)>, std::monostate>;
             if constexpr (bNoLineSearch)
             {
-                xk += dxk;
-                return true;
+                xk -= dxk;
+                bStepped = true;
             }
-            else if (lineSearch.Solve(f, fk, gk, dxk, xk))
+            else
             {
-                xk += lineSearch.alphaj * dxk;
-                return true;
+                dxk      = -dxk;
+                bStepped = lineSearch.Solve(f, fk, gk, dxk, xk);
+                if (bStepped)
+                    xk += lineSearch.alphaj * dxk;
             }
-            return false;
         },
         lineSearch);
+    ++k;
+    return bStepped;
 }
 
 template <class TScalar>
@@ -213,7 +217,7 @@ inline bool Newton<TScalar>::Solve(
         // Check stationarity condition for convergence (we assume the Hessian is positive definite)
         return gknorm2 < gtol2;
     };
-    for (auto k = 0; k < nMaxIters; ++k)
+    for (k = 0; k < nMaxIters; ++k)
     {
         if (fIsConverged())
             return true;
