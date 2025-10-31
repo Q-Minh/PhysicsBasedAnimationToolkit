@@ -274,6 +274,17 @@ if __name__ == "__main__":
         .with_spd_correction(pbat.fem.HyperElasticSpdCorrection.Absolute)
         .construct()
     )
+    newton_linsolvers = [
+        pbat.sim.algorithm.newton.ELinearSolver.LLT,
+        pbat.sim.algorithm.newton.ELinearSolver.PCGJacobi,
+        pbat.sim.algorithm.newton.ELinearSolver.PCGIC,
+        pbat.sim.algorithm.newton.ELinearSolver.PCGILUT,
+        pbat.sim.algorithm.newton.ELinearSolver.PCGLaplacian,
+    ]
+    i_newton_linsol = 0  # Linear solver index
+    newton_linsol_maxiters = 100
+    newton_linsol_tol = 1e-6
+    # Non-linear solvers
     solver_names = ["Base", "Anderson", "Broyden", "Chebyshev", "Newton"]
     i_solver = 0  # Non-linear solver index
     init_strategies = [
@@ -313,6 +324,7 @@ if __name__ == "__main__":
         global Y, nu, rho, aext, b, v0, d_axis, d_percent, d_extremity, d_nodes
         global dt, s
         global vbd_params, anderson_params, broyden_params, chebyshev_params, newton_params
+        global i_newton_linsol, newton_linsolvers, newton_linsol_maxiters, newton_linsol_tol
         global solver_names, i_solver, i_init_strategy, n_max_iters
         global i_broyden_l2_solver, i_broyden_jacobian_estimate
         global animate, export, t, vm, dpc
@@ -529,6 +541,23 @@ if __name__ == "__main__":
                     newton_params.newton.line_search.n_max_iters,
                 )
             newton_params.newton.gtol2 = gtol * gtol
+            linsol_changed, i_newton_linsol = imgui.Combo(
+                "Linear Solver",
+                i_newton_linsol,
+                [linsol.name for linsol in newton_linsolvers],
+            )
+            _, newton_linsol_maxiters = imgui.InputInt(
+                "Linear Solver Max Iters", newton_linsol_maxiters
+            )
+            _, newton_linsol_tol = imgui.InputFloat(
+                "Linear Solver Tol", newton_linsol_tol, format="%.8f"
+            )
+            if linsol_changed:
+                newton_params.with_linear_solver(
+                    newton_linsolvers[i_newton_linsol],
+                    newton_linsol_maxiters,
+                    newton_linsol_tol,
+                )
             imgui.TreePop()
 
         # Initialize VBD parameters

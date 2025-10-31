@@ -14,6 +14,59 @@ Params& Params::WithSpdCorrection(fem::EHyperElasticSpdCorrection _eSpdCorrectio
     return *this;
 }
 
+Params& Params::WithLinearSolver(ELinearSolver _eLinearSolver, Eigen::Index maxIters, Scalar tol)
+{
+    this->eLinearSolver = _eLinearSolver;
+    switch (eLinearSolver)
+    {
+        case ELinearSolver::LLT: {
+            this->Hinv.emplace<DecompositionType>();
+            break;
+        }
+        case ELinearSolver::PCGJacobi: {
+            this->Hinv.template emplace<Eigen::ConjugateGradient<
+                decltype(hessian),
+                Eigen::Lower | Eigen::Upper,
+                Eigen::DiagonalPreconditioner<Scalar>>>();
+            break;
+        }
+        case ELinearSolver::PCGIC: {
+            this->Hinv.template emplace<Eigen::ConjugateGradient<
+                decltype(hessian),
+                Eigen::Lower | Eigen::Upper,
+                IncompleteCholeskyType>>();
+            break;
+        }
+        case ELinearSolver::PCGILUT: {
+            this->Hinv.template emplace<Eigen::ConjugateGradient<
+                decltype(hessian),
+                Eigen::Lower | Eigen::Upper,
+                IncompleteLUTType>>();
+            break;
+        }
+        case ELinearSolver::PCGLaplacian: {
+            // this->Hinv.template emplace<
+            //     Eigen::ConjugateGradient<
+            //         decltype(hessian),
+            //         Eigen::Lower | Eigen::Upper,
+            //         fem::LaplacianPreconditioner<Scalar>>>();
+            throw std::invalid_argument("PCGLaplacian solver not yet implemented");
+            break;
+        }
+        default: throw std::invalid_argument("Unknown linear solver type");
+    }
+    std::visit(
+        [maxIters, tol](auto& solver) {
+            if constexpr (not std::is_same_v<std::decay_t<decltype(solver)>, DecompositionType>)
+            {
+                solver.setMaxIterations(maxIters);
+                solver.setTolerance(tol);
+            }
+        },
+        this->Hinv);
+    return *this;
+}
+
 Params& Params::Construct(bool bValidate)
 {
     return *this;

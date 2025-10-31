@@ -17,11 +17,25 @@
 #endif // PBAT_USE_SUITESPARSE
 
 #include <Eigen/Core>
+#include <Eigen/IterativeLinearSolvers>
 #include <algorithm>
 #include <exception>
 #include <fmt/core.h>
+#include <variant>
 
 namespace pbat::sim::algorithm::newton {
+
+/**
+ * @brief Linear solver types for the Newton method
+ */
+enum class ELinearSolver {
+    LLT,          ///< Cholesky LLT decomposition
+    PCGJacobi,    ///< Preconditioned Conjugate Gradient with Jacobi (i.e. diagonal) preconditioner
+    PCGIC,        ///< Preconditioned Conjugate Gradient with Incomplete Cholesky preconditioner
+    PCGILUT,      ///< Preconditioned Conjugate Gradient with Incomplete LU with thresholding
+                  ///< preconditioner
+    PCGLaplacian, ///< Preconditioned Conjugate Gradient with Laplacian preconditioner
+};
 
 /**
  * @brief Parameters for the Newton simulation algorithm.
@@ -40,6 +54,15 @@ struct Params
      * @return Reference to this
      */
     PBAT_API Params& WithSpdCorrection(fem::EHyperElasticSpdCorrection _eSpdCorrection);
+    /**
+     * @brief Set the linear solver type for the Newton step.
+     * @param _eLinearSolver Linear solver type
+     * @param maxIters Maximum number of iterations (for iterative solvers)
+     * @param tol Tolerance (for iterative solvers)
+     * @return Reference to this
+     */
+    PBAT_API Params&
+    WithLinearSolver(ELinearSolver _eLinearSolver, Eigen::Index maxIters = 100, Scalar tol = 1e-6);
     /**
      * @brief Construct the parameters
      * @param bValidate Throw on detected ill-formed inputs
@@ -62,7 +85,8 @@ struct Params
     std::vector<Eigen::Triplet<Scalar, Index>> triplets; ///< Triplets for assembling the Hessian
     Eigen::SparseMatrix<Scalar, Eigen::ColMajor, Index> hessian; ///< Hessian matrix
     fem::EHyperElasticSpdCorrection
-        eSpdCorrection; ///< SPD correction method for hyper-elastic Hessians
+        eSpdCorrection;          ///< SPD correction method for hyper-elastic Hessians
+    ELinearSolver eLinearSolver; ///< Linear solver type for Newton step
 
 #ifdef PBAT_USE_SUITESPARSE
     using DecompositionType =
@@ -71,8 +95,30 @@ struct Params
 #else
     using DecompositionType =
         Eigen::SimplicialLDLT<decltype(hessian)>; ///< Cholesky decomposition type
-#endif                     // PBAT_USE_SUITESPARSE
-    DecompositionType llt; ///< Cholesky decomposition of the Hessian
+#endif // PBAT_USE_SUITESPARSE
+    using IncompleteCholeskyType =
+        Eigen::IncompleteCholesky<Scalar, Eigen::Lower, Eigen::AMDOrdering<Index>>;
+    using IncompleteLUTType = Eigen::IncompleteLUT<Scalar, Index>;
+    using SolverType = std::variant<
+        DecompositionType,
+        Eigen::ConjugateGradient<
+            decltype(hessian),
+            Eigen::Lower | Eigen::Upper,
+            Eigen::DiagonalPreconditioner<Scalar>>,
+        Eigen::ConjugateGradient<
+            decltype(hessian),
+            Eigen::Lower | Eigen::Upper,
+            IncompleteCholeskyType>,
+        Eigen::ConjugateGradient<
+            decltype(hessian),
+            Eigen::Lower | Eigen::Upper,
+            IncompleteLUTType>/*,
+        // TODO: Implement the Laplacian preconditioner
+        Eigen::ConjugateGradient<
+            decltype(hessian),
+            Eigen::Lower | Eigen::Upper,
+            fem::LaplacianPreconditioner<Scalar>>*/>;
+    SolverType Hinv; ///< Hessian inverse
 };
 
 /**
@@ -228,7 +274,7 @@ void AssembleHessian(FemElastoDynamics<TElasticEnergy> const& fem, Params& param
     }
     // Assemble
     params.hessian.resize(fem.x.size(), fem.x.size());
-    // Remove off-diagonal Dirichlet entries and upper triangular part
+    // Remove off-diagonal Dirichlet entries (always) and upper triangular part (when LLT is used)
     auto itRemoveBegin = std::remove_if(
         params.triplets.begin(),
         params.triplets.end(),
@@ -237,7 +283,8 @@ void AssembleHessian(FemElastoDynamics<TElasticEnergy> const& fem, Params& param
             bool bIsDiag            = triplet.row() == triplet.col();
             bool bIsDirichletEntry =
                 fem.IsDirichletDof(triplet.row()) or fem.IsDirichletDof(triplet.col());
-            return bIsUpperTriangular or (not bIsDiag and bIsDirichletEntry);
+            return (bIsUpperTriangular and params.eLinearSolver == ELinearSolver::LLT) or
+                   (not bIsDiag and bIsDirichletEntry);
         });
     params.triplets.erase(itRemoveBegin, params.triplets.end());
     params.hessian.setFromTriplets(params.triplets.begin(), params.triplets.end());
@@ -260,15 +307,22 @@ void HessianInverseProduct(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.HessianInverseProduct");
     // Compute inverse hessian product with gradient
-    params.llt.compute(params.hessian);
-    if (params.llt.info() != Eigen::Success)
-    {
-        throw std::runtime_error(
-            fmt::format(
-                "Cholesky decomposition failed with info code {}",
-                static_cast<int>(params.llt.info())));
-    }
-    dxk = params.llt.solve(gk);
+    std::visit(
+        [&](auto& solver) {
+            solver.compute(params.hessian);
+            switch (solver.info())
+            {
+                case Eigen::Success: break;
+                case Eigen::ComputationInfo::NoConvergence:
+                    throw std::runtime_error("No convergence in linear solver");
+                case Eigen::ComputationInfo::NumericalIssue:
+                    throw std::runtime_error("Numerical issue in linear solver");
+                case Eigen::ComputationInfo::InvalidInput:
+                    throw std::runtime_error("Invalid input to linear solver");
+            }
+            dxk = solver.solve(gk);
+        },
+        params.Hinv);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

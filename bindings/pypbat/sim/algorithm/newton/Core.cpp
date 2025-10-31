@@ -14,9 +14,30 @@ namespace pbat::py::sim::algorithm::newton {
 void BindCore(nanobind::module_& m)
 {
     namespace nb = nanobind;
+    using pbat::sim::algorithm::newton::ELinearSolver;
     using pbat::sim::algorithm::newton::Params;
     using ScalarType = pbat::Scalar;
     using IndexType  = pbat::Index;
+
+    nb::enum_<ELinearSolver>(m, "ELinearSolver")
+        .value("LLT", ELinearSolver::LLT, "Cholesky LLT decomposition")
+        .value(
+            "PCGJacobi",
+            ELinearSolver::PCGJacobi,
+            "Preconditioned Conjugate Gradient with Jacobi (i.e. diagonal) preconditioner")
+        .value(
+            "PCGIC",
+            ELinearSolver::PCGIC,
+            "Preconditioned Conjugate Gradient with Incomplete Cholesky preconditioner")
+        .value(
+            "PCGILUT",
+            ELinearSolver::PCGILUT,
+            "Preconditioned Conjugate Gradient with Incomplete LU with thresholding preconditioner")
+        .value(
+            "PCGLaplacian",
+            ELinearSolver::PCGLaplacian,
+            "Preconditioned Conjugate Gradient with Laplacian preconditioner")
+        .export_values();
 
     nb::class_<Params>(m, "Params")
         .def(nb::init<>(), "Newton solver parameters and buffers.")
@@ -45,6 +66,14 @@ void BindCore(nanobind::module_& m)
             nb::arg("spd_correction"),
             nb::rv_policy::reference_internal,
             "Set the SPD correction mode for hyper-elastic Hessians. Returns self.")
+        .def(
+            "with_linear_solver",
+            &Params::WithLinearSolver,
+            nb::arg("linear_solver") = ELinearSolver::LLT,
+            nb::arg("max_iters")     = 100,
+            nb::arg("tol")           = ScalarType(1e-6),
+            nb::rv_policy::reference_internal,
+            "Set the linear solver type for the Newton step. Returns self.")
         .def(
             "construct",
             &Params::Construct,
@@ -75,7 +104,8 @@ void BindCore(nanobind::module_& m)
                 }
                 return std::make_tuple(rows, cols, vals);
             },
-            "Hessian triplets as (rows, cols, vals) arrays.");
+            "Hessian triplets as (rows, cols, vals) arrays.")
+        .def_ro("linear_solver", &Params::eLinearSolver, "Linear solver type used for Newton step");
 
     // Bind algorithm functions for a concrete energy model (3D stable neo-Hookean)
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
