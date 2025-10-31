@@ -546,13 +546,13 @@ if __name__ == "__main__":
                 i_newton_linsol,
                 [linsol.name for linsol in newton_linsolvers],
             )
-            _, newton_linsol_maxiters = imgui.InputInt(
+            linsol_maxiters_changed, newton_linsol_maxiters = imgui.InputInt(
                 "Linear Solver Max Iters", newton_linsol_maxiters
             )
-            _, newton_linsol_tol = imgui.InputFloat(
+            linsol_tol_changed, newton_linsol_tol = imgui.InputFloat(
                 "Linear Solver Tol", newton_linsol_tol, format="%.8f"
             )
-            if linsol_changed:
+            if linsol_changed or linsol_maxiters_changed or linsol_tol_changed:
                 newton_params.with_linear_solver(
                     newton_linsolvers[i_newton_linsol],
                     newton_linsol_maxiters,
