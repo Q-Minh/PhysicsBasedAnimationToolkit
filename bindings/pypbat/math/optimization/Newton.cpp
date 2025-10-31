@@ -17,18 +17,21 @@ void BindNewton(nanobind::module_& m)
     using NewtonType        = pbat::math::optimization::Newton<ScalarType>;
     using LineSearchVariant = typename NewtonType::LineSearchType;
     nb::class_<NewtonType>(m, "Newton")
+        .def(nb::init<>(), "Default constructor.")
         .def(
             nb::init<int, ScalarType, Index, LineSearchVariant>(),
             nb::arg("n_max_iters") = 10,
             nb::arg("gtol")        = ScalarType(1e-4),
             nb::arg("n")           = 0,
-            nb::arg("line_search") = pbat::math::optimization::BackTrackingLineSearch<ScalarType>{},
-            "Construct a Newton optimizer with a backtracking line search.\n\n"
+            nb::arg("line_search") = LineSearchVariant{},
+            "Construct a Newton optimizer.\n\n"
             "Args:\n"
             "    n_max_iters (int, optional): Maximum Newton iterations. Defaults to 10.\n"
             "    gtol (float, optional): Gradient norm tolerance. Defaults to 1e-4.\n"
             "    n (int, optional): Degrees of freedom (allocates buffers). Defaults to 0.\n"
-            "    line_search (None | BackTrackingLineSearch): Line search instance.")
+            "    line_search (Optional[Union[BackTrackingLineSearch, None]], optional): Line "
+            "search "
+            "object. Defaults to None.\n")
         .def_rw("n_max_iters", &NewtonType::nMaxIters, "Maximum Newton iterations")
         .def_rw("gtol2", &NewtonType::gtol2, "Squared gradient norm tolerance")
         .def_ro("dxk", &NewtonType::dxk, "Step direction (internal work vector)")
@@ -36,7 +39,7 @@ void BindNewton(nanobind::module_& m)
         .def_ro("fk", &NewtonType::fk, "Objective value at current iterate")
         .def_ro("gknorm2", &NewtonType::gknorm2, "Squared gradient norm at current iterate")
         .def_ro("k", &NewtonType::k, "Current iteration")
-        .def_rw("line_search", &NewtonType::lineSearch, "Line search object")
+        .def_rw("line_search", &NewtonType::lineSearch, "Line search instance")
         // Bindings for these methods are a bit complicated, so don't bother for now.
         /*.def(
             "prepare_next_iteration",
