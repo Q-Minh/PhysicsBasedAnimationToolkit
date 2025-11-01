@@ -33,6 +33,27 @@ if(NOT TARGET Eigen3::Eigen)
     FetchContent_MakeAvailable(eigen)
 endif()
 
+if(NOT TARGET embree)
+    # WARNING: Embree doesn't build correctly with this custom namespace, apparently.
+    # set(EMBREE_API_NAMESPACE "embree" CACHE STRING "" FORCE)
+    set(EMBREE_TUTORIALS OFF CACHE BOOL "")
+    set(EMBREE_COMPACT_POLYS OFF CACHE BOOL "")
+    set(EMBREE_IGNORE_INVALID_RAYS ON CACHE BOOL "")
+    set(EMBREE_GEOMETRY_QUAD OFF CACHE BOOL "")
+    set(EMBREE_GEOMETRY_CURVE OFF CACHE BOOL "")
+    set(EMBREE_GEOMETRY_SUBDIVISION OFF CACHE BOOL "")
+    set(EMBREE_GEOMETRY_INSTANCE OFF CACHE BOOL "")
+    set(EMBREE_GEOMETRY_INSTANCE_ARRAY OFF CACHE BOOL "")
+    FetchContent_Declare(
+        _embree
+        GIT_REPOSITORY https://github.com/RenderKit/embree
+        GIT_TAG v4.4.0
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(_embree)
+endif()
+
 find_package(HDF5 CONFIG REQUIRED)
 
 if(NOT TARGET HighFive::HighFive)

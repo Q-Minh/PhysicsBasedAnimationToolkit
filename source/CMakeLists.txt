@@ -75,6 +75,7 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     cpp-sort::cpp-sort
     doctest::doctest
     Eigen3::Eigen
+    embree
     fmt::fmt
     HighFive::Include
     range-v3::concepts
