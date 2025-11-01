@@ -255,13 +255,9 @@ inline bool Newton<TScalar>::Solve(
     Eigen::MatrixBase<TDerivedX>& xk)
 {
     InitializeSolve(fPrepareDerivatives, g, xk.derived());
-    auto const fIsConverged = [this]() {
-        // Check stationarity condition for convergence (we assume the Hessian is positive definite)
-        return gknorm2 < gtol2;
-    };
     for (; k < nMaxIters;)
     {
-        if (fIsConverged())
+        if (gknorm2 < gtol2)
             return true;
         // If a step could not be taken, further Newton iterations will similarly not yield any
         // step, since both the gradient and Hessian will remain the same. We can thus terminate
@@ -270,7 +266,7 @@ inline bool Newton<TScalar>::Solve(
             return false;
         PrepareNextIteration(fPrepareDerivatives, g, xk);
     }
-    return fIsConverged();
+    return gknorm2 < gtol2;
 }
 
 template <class TScalar>
