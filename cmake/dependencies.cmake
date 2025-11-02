@@ -52,6 +52,12 @@ if(NOT TARGET embree)
         SYSTEM
     )
     FetchContent_MakeAvailable(_embree)
+    set_target_properties(embree
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}"
+    )
 endif()
 
 find_package(HDF5 CONFIG REQUIRED)
@@ -89,6 +95,7 @@ if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
         _nanobind
 
         GIT_REPOSITORY https://github.com/Doekin/nanobind.git
+
         # GIT_REPOSITORY https://github.com/Q-Minh/nanobind
         GIT_TAG stubgen_win_dll
         GIT_PROGRESS TRUE
