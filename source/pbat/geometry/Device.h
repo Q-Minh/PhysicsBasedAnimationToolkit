@@ -41,6 +41,8 @@ class Device
         int verbose{-1};      ///< Verbosity level (0..N, -1 = unspecified)
         std::string frequencyLevel; ///< Frequency level the application wants to run on (e.g.
                                     ///< "simd128", "simd256", "simd512", "" = default)
+
+        std::string ToString() const;
     };
 
     /**

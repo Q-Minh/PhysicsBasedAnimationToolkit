@@ -22,28 +22,27 @@ inline RTCDevice toRtc(pbat::geometry::Device::NativeHandle h) noexcept
 namespace pbat {
 namespace geometry {
 
-Device::Device(Config const& cfg)
+std::string Device::Config::ToString() const
 {
-    // Build configuration string
     auto constexpr nParts = 8;
     std::vector<std::string> configParts;
     configParts.reserve(nParts);
-    if (cfg.threads >= 0)
-        configParts.push_back(fmt::format("threads={}", cfg.threads));
-    if (cfg.userThreads >= 0)
-        configParts.push_back(fmt::format("user_threads={}", cfg.userThreads));
-    if (cfg.setAffinity >= 0)
-        configParts.push_back(fmt::format("set_affinity={}", cfg.setAffinity));
-    if (cfg.startThreads >= 0)
-        configParts.push_back(fmt::format("start_threads={}", cfg.startThreads));
-    if (!cfg.isa.empty())
-        configParts.push_back(fmt::format("isa={}", cfg.isa));
-    if (!cfg.maxIsa.empty())
-        configParts.push_back(fmt::format("max_isa={}", cfg.maxIsa));
-    if (cfg.verbose >= 0)
-        configParts.push_back(fmt::format("verbose={}", cfg.verbose));
-    if (!cfg.frequencyLevel.empty())
-        configParts.push_back(fmt::format("frequency_level={}", cfg.frequencyLevel));
+    if (this->threads >= 0)
+        configParts.push_back(fmt::format("threads={}", this->threads));
+    if (this->userThreads >= 0)
+        configParts.push_back(fmt::format("user_threads={}", this->userThreads));
+    if (this->setAffinity >= 0)
+        configParts.push_back(fmt::format("set_affinity={}", this->setAffinity));
+    if (this->startThreads >= 0)
+        configParts.push_back(fmt::format("start_threads={}", this->startThreads));
+    if (!this->isa.empty())
+        configParts.push_back(fmt::format("isa={}", this->isa));
+    if (!this->maxIsa.empty())
+        configParts.push_back(fmt::format("max_isa={}", this->maxIsa));
+    if (this->verbose >= 0)
+        configParts.push_back(fmt::format("verbose={}", this->verbose));
+    if (!this->frequencyLevel.empty())
+        configParts.push_back(fmt::format("frequency_level={}", this->frequencyLevel));
     std::size_t nCharacters = std::accumulate(
         configParts.begin(),
         configParts.end(),
@@ -58,8 +57,13 @@ Device::Device(Config const& cfg)
             config.push_back(',');
         config += configParts[i];
     }
-    // Create the device
-    RTCDevice dev = rtcNewDevice(config.c_str());
+    return config;
+}
+
+Device::Device(Config const& cfg)
+{
+    std::string const config = cfg.ToString();
+    RTCDevice dev            = rtcNewDevice(config.c_str());
     if (!dev)
     {
         throw std::runtime_error("Failed to create spatial device");
@@ -87,3 +91,29 @@ Device::~Device()
 
 } // namespace geometry
 } // namespace pbat
+
+#include <doctest/doctest.h>
+
+TEST_CASE("[geometry] Device::Config")
+{
+    pbat::geometry::Device::Config cfg;
+    cfg.threads      = 4;
+    cfg.userThreads  = 2;
+    cfg.setAffinity  = 1;
+    cfg.startThreads = 1;
+    SUBCASE("Sparse config")
+    {
+        CHECK(cfg.ToString() == "threads=4,user_threads=2,set_affinity=1,start_threads=1");
+    }
+    SUBCASE("Full config")
+    {
+        cfg.isa            = "AVX2";
+        cfg.maxIsa         = "AVX512";
+        cfg.verbose        = 1;
+        cfg.frequencyLevel = "high";
+        CHECK(
+            cfg.ToString() ==
+            "threads=4,user_threads=2,set_affinity=1,start_threads=1,isa=AVX2,max_isa=AVX512,"
+            "verbose=1,frequency_level=high");
+    }
+}
