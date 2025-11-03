@@ -14,6 +14,31 @@ namespace pbat {
 namespace geometry {
 
 /**
+ * @brief Configuration parameters for the device.
+ */
+struct DeviceConfig
+{
+    int threads{-1};      ///< Number of build threads (0 = all cores, -1 = default).
+    int userThreads{-1};  ///< Number of user threads used to join and participate in a scene
+                          ///< commit (-1 = unspecified)
+    int setAffinity{-1};  ///< Pin threads to cores (0/1, -1 = unspecified)
+    int startThreads{-1}; ///< Start threads at device creation (0/1, -1 = unspecified)
+    std::string isa;      ///< Instruction set architecture to use (e.g. "sse2", "sse4.2",
+                          ///< "avx", "avx2", "avx512", "" = default)
+    std::string maxIsa;   ///< Maximum instruction set architecture to use (e.g. "sse2",
+                          ///< "sse4.2", "avx", "avx2", "avx512", "" = default)
+    int verbose{-1};      ///< Verbosity level (0..N, -1 = unspecified)
+    std::string frequencyLevel; ///< Frequency level the application wants to run on (e.g.
+                                ///< "simd128", "simd256", "simd512", "" = default)
+
+    /**
+     * @brief Convert the configuration to a string representation.
+     * @return The configuration string.
+     */
+    std::string ToString() const;
+};
+
+/**
  * @brief Lightweight value-type handle that manages the lifetime of a native device.
  *
  * This class is implemented against Embree's RTCDevice in the .cpp, but the header
@@ -25,31 +50,10 @@ class Device
     using NativeHandle = void*; ///< Opaque pointer to the underlying native device
 
     /**
-     * @brief Configuration parameters for the device.
-     */
-    struct Config
-    {
-        int threads{-1};      ///< Number of build threads (0 = all cores, -1 = default).
-        int userThreads{-1};  ///< Number of user threads used to join and participate in a scene
-                              ///< commit (-1 = unspecified)
-        int setAffinity{-1};  ///< Pin threads to cores (0/1, -1 = unspecified)
-        int startThreads{-1}; ///< Start threads at device creation (0/1, -1 = unspecified)
-        std::string isa;      ///< Instruction set architecture to use (e.g. "sse2", "sse4.2",
-                              ///< "avx", "avx2", "avx512", "" = default)
-        std::string maxIsa;   ///< Maximum instruction set architecture to use (e.g. "sse2",
-                              ///< "sse4.2", "avx", "avx2", "avx512", "" = default)
-        int verbose{-1};      ///< Verbosity level (0..N, -1 = unspecified)
-        std::string frequencyLevel; ///< Frequency level the application wants to run on (e.g.
-                                    ///< "simd128", "simd256", "simd512", "" = default)
-
-        std::string ToString() const;
-    };
-
-    /**
      * @brief Construct a new native device with explicit configuration parameters.
      * @throws std::runtime_error if device creation fails.
      */
-    PBAT_API explicit Device(Config const& cfg = {});
+    PBAT_API explicit Device(DeviceConfig const& cfg = DeviceConfig{});
     /**
      * @brief Construct a new Device from an existing native handle.
      * @param handle The native device handle to manage.

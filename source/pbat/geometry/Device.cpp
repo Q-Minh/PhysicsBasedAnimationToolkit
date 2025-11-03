@@ -20,7 +20,7 @@ static void EmbreeDeviceErrorFunction(void* userPtr, enum RTCError code, const c
         fmt::format("Embree Device Error (code {}): {}\n", static_cast<int>(code), str));
 }
 
-std::string Device::Config::ToString() const
+std::string DeviceConfig::ToString() const
 {
     auto constexpr nParts = 8;
     std::vector<std::string> configParts;
@@ -58,7 +58,7 @@ std::string Device::Config::ToString() const
     return config;
 }
 
-Device::Device(Config const& cfg)
+Device::Device(DeviceConfig const& cfg)
 {
     std::string const config = cfg.ToString();
     RTCDevice dev            = rtcNewDevice(config.c_str());
@@ -102,7 +102,7 @@ Device::~Device()
 
 TEST_CASE("[geometry] Device::Config")
 {
-    pbat::geometry::Device::Config cfg;
+    pbat::geometry::DeviceConfig cfg;
     cfg.threads      = 4;
     cfg.userThreads  = 2;
     cfg.setAffinity  = 1;
