@@ -2,111 +2,17 @@
  * @file MultiTriangleMeshBvh.cpp
  */
 
-#include "pbat/geometry/MultiTriangleMeshBvh.h"
-
 #include "MultiTriangleMeshBvh.h"
-#include "pbat/common/Concepts.h"
 
 #include <algorithm>
-#include <embree4/rtcore.h>
 #include <stdexcept>
 
 namespace pbat::geometry {
 
-namespace detail {
-
-static RTCSceneFlags toRtc(pbat::geometry::MultiTriangleMeshBvh::ESceneFeatures flags) noexcept
-{
-    using ESceneFeatures   = pbat::geometry::MultiTriangleMeshBvh::ESceneFeatures;
-    RTCSceneFlags rtcFlags = RTC_SCENE_FLAG_NONE;
-    if (flags == ESceneFeatures::Dynamic)
-    {
-        rtcFlags = static_cast<RTCSceneFlags>(rtcFlags | RTC_SCENE_FLAG_DYNAMIC);
-    }
-    if (flags == ESceneFeatures::Compact)
-    {
-        rtcFlags = static_cast<RTCSceneFlags>(rtcFlags | RTC_SCENE_FLAG_COMPACT);
-    }
-    if (flags == ESceneFeatures::Robust)
-    {
-        rtcFlags = static_cast<RTCSceneFlags>(rtcFlags | RTC_SCENE_FLAG_ROBUST);
-    }
-    return rtcFlags;
-}
-
-static RTCBuildQuality toRtc(pbat::geometry::MultiTriangleMeshBvh::EBuildQuality q) noexcept
-{
-    using Q = pbat::geometry::MultiTriangleMeshBvh::EBuildQuality;
-    switch (q)
-    {
-        case Q::Low: return RTC_BUILD_QUALITY_LOW;
-        case Q::Medium: return RTC_BUILD_QUALITY_MEDIUM;
-        case Q::High: [[fallthrough]];
-        default: return RTC_BUILD_QUALITY_HIGH;
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-struct UserData
-{
-    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& V;
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F;
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& E;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& VP;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& FP;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& EP;
-};
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-void TriangleRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
-{
-    UserData<TScalar, TIndex>* userData =
-        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    Eigen::Index f                  = static_cast<Eigen::Index>(args->primID);
-    Eigen::Matrix<TScalar, 3, 3> xf = userData->V(Eigen::placeholders::all, userData->F.col(f));
-    args->bounds_o->lower_x         = std::min({xf(0, 0), xf(0, 1), xf(0, 2)});
-    args->bounds_o->lower_y         = std::min({xf(1, 0), xf(1, 1), xf(1, 2)});
-    args->bounds_o->lower_z         = std::min({xf(2, 0), xf(2, 1), xf(2, 2)});
-    args->bounds_o->upper_x         = std::max({xf(0, 0), xf(0, 1), xf(0, 2)});
-    args->bounds_o->upper_y         = std::max({xf(1, 0), xf(1, 1), xf(1, 2)});
-    args->bounds_o->upper_z         = std::max({xf(2, 0), xf(2, 1), xf(2, 2)});
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-void EdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
-{
-    UserData<TScalar, TIndex>* userData =
-        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    Eigen::Index e                  = static_cast<Eigen::Index>(args->primID);
-    Eigen::Matrix<TScalar, 3, 2> xe = userData->V(Eigen::placeholders::all, userData->E.col(e));
-    args->bounds_o->lower_x         = std::min(xe(0, 0), xe(0, 1));
-    args->bounds_o->lower_y         = std::min(xe(1, 0), xe(1, 1));
-    args->bounds_o->lower_z         = std::min(xe(2, 0), xe(2, 1));
-    args->bounds_o->upper_x         = std::max(xe(0, 0), xe(0, 1));
-    args->bounds_o->upper_y         = std::max(xe(1, 0), xe(1, 1));
-    args->bounds_o->upper_z         = std::max(xe(2, 0), xe(2, 1));
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-void PointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
-{
-    UserData<TScalar, TIndex>* userData =
-        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    Eigen::Index v          = static_cast<Eigen::Index>(args->primID);
-    auto xv                 = userData->V(Eigen::placeholders::all, v);
-    args->bounds_o->lower_x = xv(0);
-    args->bounds_o->lower_y = xv(1);
-    args->bounds_o->lower_z = xv(2);
-    args->bounds_o->upper_x = xv(0);
-    args->bounds_o->upper_y = xv(1);
-    args->bounds_o->upper_z = xv(2);
-}
-
-} // namespace detail
-
 MultiTriangleMeshBvh::MultiTriangleMeshBvh(
     Device device,
-    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
@@ -119,7 +25,7 @@ MultiTriangleMeshBvh::MultiTriangleMeshBvh(
       mEdgeScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mFaceScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))}
 {
-    Construct(device, V, F, E, VP, FP, EP, eSceneFeatures, eSceneBvhQuality, eMeshBvhQuality);
+    Construct(device, X, V, F, E, VP, FP, EP, eSceneFeatures, eSceneBvhQuality, eMeshBvhQuality);
 }
 
 MultiTriangleMeshBvh::MultiTriangleMeshBvh(MultiTriangleMeshBvh const& other)
@@ -184,7 +90,8 @@ MultiTriangleMeshBvh& MultiTriangleMeshBvh::operator=(MultiTriangleMeshBvh&& oth
 
 void MultiTriangleMeshBvh::Construct(
     Device device,
-    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
@@ -200,7 +107,7 @@ void MultiTriangleMeshBvh::Construct(
     rtcSetSceneBuildQuality(static_cast<RTCScene>(mVertexScene), detail::toRtc(eSceneBvhQuality));
     rtcSetSceneBuildQuality(static_cast<RTCScene>(mFaceScene), detail::toRtc(eSceneBvhQuality));
     rtcSetSceneBuildQuality(static_cast<RTCScene>(mEdgeScene), detail::toRtc(eSceneBvhQuality));
-    detail::UserData userData{V, F, E, VP, FP, EP};
+    detail::UserData<ScalarType, IndexType> userData{X, V, F, E, VP, FP, EP};
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = 0; c < nComponents; ++c)
     {
@@ -266,14 +173,15 @@ void MultiTriangleMeshBvh::Construct(
 
 void MultiTriangleMeshBvh::UpdateGeometry(
     Device device,
-    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP)
 {
-    detail::UserData userData{V, F, E, VP, FP, EP};
+    detail::UserData userData{X, V, F, E, VP, FP, EP};
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = 0; c < nComponents; ++c)
     {
