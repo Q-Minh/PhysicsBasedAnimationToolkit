@@ -181,7 +181,8 @@ class MultiTriangleMeshBvh
     /**
      * @brief Scene axis-aligned bounding box.
      */
-    PBAT_API AxisAlignedBoundingBox<3> Bounds() const;
+    PBAT_API auto Bounds() const
+        -> std::pair<Eigen::Vector<ScalarType, 3>, Eigen::Vector<ScalarType, 3>>;
     /**
      * @brief Get the Device object associated with this BVH
      * @return Device

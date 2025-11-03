@@ -210,13 +210,16 @@ void MultiTriangleMeshBvh::UpdateGeometry(
     rtcCommitScene(static_cast<RTCScene>(mEdgeScene));
 }
 
-AxisAlignedBoundingBox<3> MultiTriangleMeshBvh::Bounds() const
+std::pair<
+    Eigen::Vector<MultiTriangleMeshBvh::ScalarType, 3>,
+    Eigen::Vector<MultiTriangleMeshBvh::ScalarType, 3>>
+MultiTriangleMeshBvh::Bounds() const
 {
     RTCBounds bounds;
     rtcGetSceneBounds(static_cast<RTCScene>(mVertexScene), &bounds);
-    return AxisAlignedBoundingBox<3>(
-        Eigen::Vector3f(bounds.lower_x, bounds.lower_y, bounds.lower_z),
-        Eigen::Vector3f(bounds.upper_x, bounds.upper_y, bounds.upper_z));
+    return {
+        Eigen::Vector<ScalarType, 3>(bounds.lower_x, bounds.lower_y, bounds.lower_z),
+        Eigen::Vector<ScalarType, 3>(bounds.upper_x, bounds.upper_y, bounds.upper_z)};
 }
 
 Device MultiTriangleMeshBvh::GetDevice() const
