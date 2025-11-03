@@ -5,13 +5,14 @@
 #include "pbat/geometry/MultiTriangleMeshBvh.h"
 
 #include "MultiTriangleMeshBvh.h"
+#include "pbat/common/Concepts.h"
 
 #include <algorithm>
 #include <embree4/rtcore.h>
 #include <stdexcept>
 
 namespace pbat::geometry {
-    
+
 namespace detail {
 
 static RTCSceneFlags toRtc(pbat::geometry::MultiTriangleMeshBvh::ESceneFeatures flags) noexcept
@@ -45,46 +46,52 @@ static RTCBuildQuality toRtc(pbat::geometry::MultiTriangleMeshBvh::EBuildQuality
     }
 }
 
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 struct UserData
 {
-    Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V;
-    Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F;
-    Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E;
-    Eigen::Ref<IndexVectorX const> const& VP;
-    Eigen::Ref<IndexVectorX const> const& FP;
-    Eigen::Ref<IndexVectorX const> const& EP;
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& V;
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F;
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& E;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& VP;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& FP;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& EP;
 };
 
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void TriangleRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
-    UserData* userData            = static_cast<UserData*>(args->geometryUserPtr);
-    Eigen::Index f                = static_cast<Eigen::Index>(args->primID);
-    Eigen::Matrix<float, 3, 3> xf = userData->V(Eigen::placeholders::all, userData->F.col(f));
-    xf.minCoeff();
-    args->bounds_o->lower_x = std::min({xf(0, 0), xf(0, 1), xf(0, 2)});
-    args->bounds_o->lower_y = std::min({xf(1, 0), xf(1, 1), xf(1, 2)});
-    args->bounds_o->lower_z = std::min({xf(2, 0), xf(2, 1), xf(2, 2)});
-    args->bounds_o->upper_x = std::max({xf(0, 0), xf(0, 1), xf(0, 2)});
-    args->bounds_o->upper_y = std::max({xf(1, 0), xf(1, 1), xf(1, 2)});
-    args->bounds_o->upper_z = std::max({xf(2, 0), xf(2, 1), xf(2, 2)});
+    UserData<TScalar, TIndex>* userData =
+        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
+    Eigen::Index f                  = static_cast<Eigen::Index>(args->primID);
+    Eigen::Matrix<TScalar, 3, 3> xf = userData->V(Eigen::placeholders::all, userData->F.col(f));
+    args->bounds_o->lower_x         = std::min({xf(0, 0), xf(0, 1), xf(0, 2)});
+    args->bounds_o->lower_y         = std::min({xf(1, 0), xf(1, 1), xf(1, 2)});
+    args->bounds_o->lower_z         = std::min({xf(2, 0), xf(2, 1), xf(2, 2)});
+    args->bounds_o->upper_x         = std::max({xf(0, 0), xf(0, 1), xf(0, 2)});
+    args->bounds_o->upper_y         = std::max({xf(1, 0), xf(1, 1), xf(1, 2)});
+    args->bounds_o->upper_z         = std::max({xf(2, 0), xf(2, 1), xf(2, 2)});
 }
 
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void EdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
-    UserData* userData            = static_cast<UserData*>(args->geometryUserPtr);
-    Eigen::Index e                = static_cast<Eigen::Index>(args->primID);
-    Eigen::Matrix<float, 3, 2> xe = userData->V(Eigen::placeholders::all, userData->E.col(e));
-    args->bounds_o->lower_x       = std::min(xe(0, 0), xe(0, 1));
-    args->bounds_o->lower_y       = std::min(xe(1, 0), xe(1, 1));
-    args->bounds_o->lower_z       = std::min(xe(2, 0), xe(2, 1));
-    args->bounds_o->upper_x       = std::max(xe(0, 0), xe(0, 1));
-    args->bounds_o->upper_y       = std::max(xe(1, 0), xe(1, 1));
-    args->bounds_o->upper_z       = std::max(xe(2, 0), xe(2, 1));
+    UserData<TScalar, TIndex>* userData =
+        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
+    Eigen::Index e                  = static_cast<Eigen::Index>(args->primID);
+    Eigen::Matrix<TScalar, 3, 2> xe = userData->V(Eigen::placeholders::all, userData->E.col(e));
+    args->bounds_o->lower_x         = std::min(xe(0, 0), xe(0, 1));
+    args->bounds_o->lower_y         = std::min(xe(1, 0), xe(1, 1));
+    args->bounds_o->lower_z         = std::min(xe(2, 0), xe(2, 1));
+    args->bounds_o->upper_x         = std::max(xe(0, 0), xe(0, 1));
+    args->bounds_o->upper_y         = std::max(xe(1, 0), xe(1, 1));
+    args->bounds_o->upper_z         = std::max(xe(2, 0), xe(2, 1));
 }
 
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void PointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
-    UserData* userData      = static_cast<UserData*>(args->geometryUserPtr);
+    UserData<TScalar, TIndex>* userData =
+        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
     Eigen::Index v          = static_cast<Eigen::Index>(args->primID);
     auto xv                 = userData->V(Eigen::placeholders::all, v);
     args->bounds_o->lower_x = xv(0);
@@ -99,12 +106,12 @@ void PointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 
 MultiTriangleMeshBvh::MultiTriangleMeshBvh(
     Device device,
-    Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
-    Eigen::Ref<IndexVectorX const> const& VP,
-    Eigen::Ref<IndexVectorX const> const& FP,
-    Eigen::Ref<IndexVectorX const> const& EP,
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     ESceneFeatures eSceneFeatures,
     EBuildQuality eSceneBvhQuality,
     EBuildQuality eMeshBvhQuality)
@@ -177,12 +184,12 @@ MultiTriangleMeshBvh& MultiTriangleMeshBvh::operator=(MultiTriangleMeshBvh&& oth
 
 void MultiTriangleMeshBvh::Construct(
     Device device,
-    Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
-    Eigen::Ref<IndexVectorX const> const& VP,
-    Eigen::Ref<IndexVectorX const> const& FP,
-    Eigen::Ref<IndexVectorX const> const& EP,
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     ESceneFeatures eSceneFeatures,
     EBuildQuality eSceneBvhQuality,
     EBuildQuality eMeshBvhQuality)
@@ -197,12 +204,12 @@ void MultiTriangleMeshBvh::Construct(
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = 0; c < nComponents; ++c)
     {
-        Index const vertexOffset = VP[c];
-        Index const nVertices    = VP[c + 1] - vertexOffset;
-        Index const faceOffset   = FP[c];
-        Index const nFaces       = FP[c + 1] - faceOffset;
-        Index const edgeOffset   = EP[c];
-        Index const nEdges       = EP[c + 1] - edgeOffset;
+        IndexType const vertexOffset = VP[c];
+        IndexType const nVertices    = VP[c + 1] - vertexOffset;
+        IndexType const faceOffset   = FP[c];
+        IndexType const nFaces       = FP[c + 1] - faceOffset;
+        IndexType const edgeOffset   = EP[c];
+        IndexType const nEdges       = EP[c + 1] - edgeOffset;
         // Vertex geometry
         RTCGeometry vertexGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
@@ -212,7 +219,10 @@ void MultiTriangleMeshBvh::Construct(
             static_cast<unsigned int>(c));
         rtcSetGeometryUserPrimitiveCount(vertexGeometry, static_cast<unsigned int>(nVertices));
         rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&userData));
-        rtcSetGeometryBoundsFunction(vertexGeometry, &detail::PointRTCBoundsFunction, nullptr);
+        rtcSetGeometryBoundsFunction(
+            vertexGeometry,
+            &detail::PointRTCBoundsFunction<ScalarType, IndexType>,
+            nullptr);
         rtcSetGeometryBuildQuality(vertexGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(vertexGeometry);
         rtcReleaseGeometry(vertexGeometry);
@@ -225,7 +235,10 @@ void MultiTriangleMeshBvh::Construct(
             static_cast<unsigned int>(c));
         rtcSetGeometryUserPrimitiveCount(triangleGeometry, static_cast<unsigned int>(nFaces));
         rtcSetGeometryUserData(triangleGeometry, static_cast<void*>(&userData));
-        rtcSetGeometryBoundsFunction(triangleGeometry, &detail::TriangleRTCBoundsFunction, nullptr);
+        rtcSetGeometryBoundsFunction(
+            triangleGeometry,
+            &detail::TriangleRTCBoundsFunction<ScalarType, IndexType>,
+            nullptr);
         rtcSetGeometryBuildQuality(triangleGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(triangleGeometry);
         rtcReleaseGeometry(triangleGeometry);
@@ -238,7 +251,10 @@ void MultiTriangleMeshBvh::Construct(
             static_cast<unsigned int>(c));
         rtcSetGeometryUserPrimitiveCount(edgeGeometry, static_cast<unsigned int>(nEdges));
         rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&userData));
-        rtcSetGeometryBoundsFunction(edgeGeometry, &detail::EdgeRTCBoundsFunction, nullptr);
+        rtcSetGeometryBoundsFunction(
+            edgeGeometry,
+            &detail::EdgeRTCBoundsFunction<ScalarType, IndexType>,
+            nullptr);
         rtcSetGeometryBuildQuality(edgeGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(edgeGeometry);
         rtcReleaseGeometry(edgeGeometry);
@@ -250,12 +266,12 @@ void MultiTriangleMeshBvh::Construct(
 
 void MultiTriangleMeshBvh::UpdateGeometry(
     Device device,
-    Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
-    Eigen::Ref<IndexVectorX const> const& VP,
-    Eigen::Ref<IndexVectorX const> const& FP,
-    Eigen::Ref<IndexVectorX const> const& EP)
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP)
 {
     detail::UserData userData{V, F, E, VP, FP, EP};
     Eigen::Index nComponents = VP.size() - 1;

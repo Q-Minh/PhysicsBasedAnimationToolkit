@@ -23,6 +23,9 @@ namespace pbat::geometry {
 class MultiTriangleMeshBvh
 {
   public:
+    using ScalarType = Scalar; ///< Type for vertex coordinates
+    using IndexType  = Index;  ///< Type for indices into vertex arrays
+
     /**
      * @brief BVH build quality options.
      */
@@ -60,12 +63,12 @@ class MultiTriangleMeshBvh
      */
     PBAT_API MultiTriangleMeshBvh(
         Device device,
-        Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
-        Eigen::Ref<IndexVectorX const> const& VP,
-        Eigen::Ref<IndexVectorX const> const& FP,
-        Eigen::Ref<IndexVectorX const> const& EP,
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         ESceneFeatures eSceneFeatures  = ESceneFeatures::None,
         EBuildQuality eSceneBvhQuality = EBuildQuality::Low,
         EBuildQuality eMeshBvhQuality  = EBuildQuality::Low);
@@ -107,12 +110,12 @@ class MultiTriangleMeshBvh
      */
     PBAT_API void Construct(
         Device device,
-        Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
-        Eigen::Ref<IndexVectorX const> const& VP,
-        Eigen::Ref<IndexVectorX const> const& FP,
-        Eigen::Ref<IndexVectorX const> const& EP,
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         ESceneFeatures eSceneFeatures  = ESceneFeatures::None,
         EBuildQuality eSceneBvhQuality = EBuildQuality::Low,
         EBuildQuality eMeshBvhQuality  = EBuildQuality::Low);
@@ -129,12 +132,35 @@ class MultiTriangleMeshBvh
      */
     PBAT_API void UpdateGeometry(
         Device device,
-        Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
-        Eigen::Ref<IndexVectorX const> const& VP,
-        Eigen::Ref<IndexVectorX const> const& FP,
-        Eigen::Ref<IndexVectorX const> const& EP);
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP);
+    /**
+     * @brief Find nearest faces to each vertex.
+     *
+     * @param device Spatial acceleration device
+     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param E `2 x |# edges|` edge vertex indices (global indices into V)
+     * @param VP `|# connected components| x 1` vertex prefix
+     * @param FP `|# connected components| x 1` face prefix
+     * @param EP `|# connected components| x 1` edge prefix
+     * @param QR `|# vertices| x 1` query radii
+     * @param NF `|# vertices| x 1` output nearest face indices, NF(i) < 0 indicates no face found
+     */
+    PBAT_API void NearestFacesToVertices(
+        Device device,
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& QR,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic>> NF) const;
     /**
      * @brief Scene axis-aligned bounding box.
      */
