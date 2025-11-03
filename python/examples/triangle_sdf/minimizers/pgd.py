@@ -15,10 +15,10 @@ class PGD(Minimizer):
     def setup(self, f, g, **kwargs):
         self.f = f
         self.g = g
-        self.eta = kwargs["eta"]
+        self.eta = kwargs.get("eta",1e-3)
     
     def updateParams(self, **kwargs):
-        self.eta = kwargs["eta"]
+        self.eta = kwargs.get("eta", self.eta)
         
     def step(self, x):
         gk = self.g(x)

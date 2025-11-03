@@ -12,6 +12,7 @@ from .plot import plot
 from .minimizer import Minimizer
 from .minimizers.fw import FW
 from .minimizers.pgd import PGD
+from .minimizers.sr1 import SR1
 from .args_processor import process_args
 
 if __name__ == "__main__":
@@ -63,7 +64,9 @@ if __name__ == "__main__":
     pgd.setup(f_bar,g_bar, eta=0.1)
     fw = FW()
     fw.setup(f,g,vertices=triangle.T)
-    minimizers: list[Minimizer] = [pgd, fw]
+    sr1= SR1()
+    sr1.setup(f_bar,g_bar,triangle = triangle.T)
+    minimizers: list[Minimizer] = [pgd, fw, sr1]
 
     if not params["interactive"]:
         positions: dict[str,list] = {}
@@ -81,6 +84,6 @@ if __name__ == "__main__":
                 else:
                     evaluations[minimizer.label].append(f(new_x))
 
-    
+    print(pd.DataFrame(positions))
     if params["plot"]:
-        plot(triangle,minimizers,positions,f)
+        plot(triangle,minimizers,positions,evaluations,f)

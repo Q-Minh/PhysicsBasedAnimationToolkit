@@ -34,5 +34,4 @@ class FW(Minimizer):
         xkp1 = x + alpha * (min_v - x)
 
         self.t =self.t + 1
-        print(x,xkp1)
         return xkp1
