@@ -96,7 +96,7 @@ class MultiTriangleMeshBvh
      *
      * @param device Spatial acceleration device
      * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
-     * @param T `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
      * @param E `2 x |# edges|` edge vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
@@ -108,7 +108,7 @@ class MultiTriangleMeshBvh
     PBAT_API void Construct(
         Device device,
         Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& T,
+        Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<IndexVectorX const> const& VP,
         Eigen::Ref<IndexVectorX const> const& FP,
@@ -116,6 +116,25 @@ class MultiTriangleMeshBvh
         ESceneFeatures eSceneFeatures  = ESceneFeatures::None,
         EBuildQuality eSceneBvhQuality = EBuildQuality::Low,
         EBuildQuality eMeshBvhQuality  = EBuildQuality::Low);
+    /**
+     * @brief Update the BVH geometry (but not its topology).
+     *
+     * @param device Spatial acceleration device
+     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param E `2 x |# edges|` edge vertex indices (global indices into V)
+     * @param VP `|# connected components| x 1` vertex prefix
+     * @param FP `|# connected components| x 1` face prefix
+     * @param EP `|# connected components| x 1` edge prefix
+     */
+    PBAT_API void UpdateGeometry(
+        Device device,
+        Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
+        Eigen::Ref<IndexVectorX const> const& VP,
+        Eigen::Ref<IndexVectorX const> const& FP,
+        Eigen::Ref<IndexVectorX const> const& EP);
     /**
      * @brief Scene axis-aligned bounding box.
      */

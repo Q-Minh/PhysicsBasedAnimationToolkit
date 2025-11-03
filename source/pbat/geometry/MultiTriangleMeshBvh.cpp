@@ -11,6 +11,7 @@
 #include <stdexcept>
 
 namespace pbat::geometry {
+    
 namespace detail {
 
 static RTCSceneFlags toRtc(pbat::geometry::MultiTriangleMeshBvh::ESceneFeatures flags) noexcept
@@ -211,7 +212,7 @@ void MultiTriangleMeshBvh::Construct(
             static_cast<unsigned int>(c));
         rtcSetGeometryUserPrimitiveCount(vertexGeometry, static_cast<unsigned int>(nVertices));
         rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&userData));
-        rtcSetGeometryBoundsFunction(vertexGeometry, &detail::PointRTCBoundsFunction, &userData);
+        rtcSetGeometryBoundsFunction(vertexGeometry, &detail::PointRTCBoundsFunction, nullptr);
         rtcSetGeometryBuildQuality(vertexGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(vertexGeometry);
         rtcReleaseGeometry(vertexGeometry);
@@ -224,10 +225,7 @@ void MultiTriangleMeshBvh::Construct(
             static_cast<unsigned int>(c));
         rtcSetGeometryUserPrimitiveCount(triangleGeometry, static_cast<unsigned int>(nFaces));
         rtcSetGeometryUserData(triangleGeometry, static_cast<void*>(&userData));
-        rtcSetGeometryBoundsFunction(
-            triangleGeometry,
-            &detail::TriangleRTCBoundsFunction,
-            &userData);
+        rtcSetGeometryBoundsFunction(triangleGeometry, &detail::TriangleRTCBoundsFunction, nullptr);
         rtcSetGeometryBuildQuality(triangleGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(triangleGeometry);
         rtcReleaseGeometry(triangleGeometry);
@@ -240,10 +238,48 @@ void MultiTriangleMeshBvh::Construct(
             static_cast<unsigned int>(c));
         rtcSetGeometryUserPrimitiveCount(edgeGeometry, static_cast<unsigned int>(nEdges));
         rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&userData));
-        rtcSetGeometryBoundsFunction(edgeGeometry, &detail::EdgeRTCBoundsFunction, &userData);
+        rtcSetGeometryBoundsFunction(edgeGeometry, &detail::EdgeRTCBoundsFunction, nullptr);
         rtcSetGeometryBuildQuality(edgeGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(edgeGeometry);
         rtcReleaseGeometry(edgeGeometry);
+    }
+    rtcCommitScene(static_cast<RTCScene>(mVertexScene));
+    rtcCommitScene(static_cast<RTCScene>(mFaceScene));
+    rtcCommitScene(static_cast<RTCScene>(mEdgeScene));
+}
+
+void MultiTriangleMeshBvh::UpdateGeometry(
+    Device device,
+    Eigen::Ref<Eigen::Matrix<float, 3, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<Index, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<Index, 2, Eigen::Dynamic> const> const& E,
+    Eigen::Ref<IndexVectorX const> const& VP,
+    Eigen::Ref<IndexVectorX const> const& FP,
+    Eigen::Ref<IndexVectorX const> const& EP)
+{
+    detail::UserData userData{V, F, E, VP, FP, EP};
+    Eigen::Index nComponents = VP.size() - 1;
+    for (Eigen::Index c = 0; c < nComponents; ++c)
+    {
+        // See https://github.com/RenderKit/embree/blob/v4.4.0/tutorials/collide/collide_device.cpp
+        rtcUpdateGeometryBuffer(
+            rtcGetGeometry(static_cast<RTCScene>(mVertexScene), static_cast<unsigned int>(c)),
+            RTC_BUFFER_TYPE_VERTEX,
+            0);
+        rtcUpdateGeometryBuffer(
+            rtcGetGeometry(static_cast<RTCScene>(mFaceScene), static_cast<unsigned int>(c)),
+            RTC_BUFFER_TYPE_VERTEX,
+            0);
+        rtcUpdateGeometryBuffer(
+            rtcGetGeometry(static_cast<RTCScene>(mEdgeScene), static_cast<unsigned int>(c)),
+            RTC_BUFFER_TYPE_VERTEX,
+            0);
+        rtcCommitGeometry(
+            rtcGetGeometry(static_cast<RTCScene>(mVertexScene), static_cast<unsigned int>(c)));
+        rtcCommitGeometry(
+            rtcGetGeometry(static_cast<RTCScene>(mFaceScene), static_cast<unsigned int>(c)));
+        rtcCommitGeometry(
+            rtcGetGeometry(static_cast<RTCScene>(mEdgeScene), static_cast<unsigned int>(c)));
     }
     rtcCommitScene(static_cast<RTCScene>(mVertexScene));
     rtcCommitScene(static_cast<RTCScene>(mFaceScene));
