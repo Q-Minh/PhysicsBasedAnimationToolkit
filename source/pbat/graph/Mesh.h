@@ -227,13 +227,21 @@ Eigen::Index SortedConnectedComponentOrdering(
     IndexType const nNodes    = static_cast<IndexType>(X.cols());
     IndexType const nElements = static_cast<IndexType>(E.cols());
     // 1. Compute the mesh's dual graph over elements
+    EMeshDualGraphOptions eMeshDualGraphOpts;
+    switch (E.rows())
+    {
+        case 2: eMeshDualGraphOpts = EMeshDualGraphOptions::VertexAdjacent; break;
+        case 3: eMeshDualGraphOpts = EMeshDualGraphOptions::EdgeAdjacent; break;
+        case 4: eMeshDualGraphOpts = EMeshDualGraphOptions::FaceAdjacent; break;
+        default: eMeshDualGraphOpts = EMeshDualGraphOptions::All; break;
+    }
     Eigen::SparseMatrix<IndexType, Eigen::ColMajor, IndexType> const EG =
-        graph::MeshDualGraph(E, nNodes, graph::EMeshDualGraphOptions::All);
+        MeshDualGraph(E, nNodes, eMeshDualGraphOpts);
     // 2. Compute the connected components of the mesh
-    graph::BreadthFirstSearch<EccIndexType> bfs(nElements);
+    BreadthFirstSearch<EccIndexType> bfs(nElements);
     ECC.resize(nElements);
     ECC.setConstant(EccIndexType(-1));
-    IndexType const nComponents = graph::ConnectedComponents<EccIndexType>(
+    IndexType const nComponents = ConnectedComponents<EccIndexType>(
         Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
             EG.outerIndexPtr(),
             EG.outerSize() + 1),

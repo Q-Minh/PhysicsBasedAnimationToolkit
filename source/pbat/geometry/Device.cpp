@@ -11,16 +11,14 @@
 #include <utility>
 #include <vector>
 
-namespace {
-// Helper to convert opaque handle to Embree RTCDevice
-inline RTCDevice toRtc(pbat::geometry::Device::NativeHandle h) noexcept
-{
-    return static_cast<RTCDevice>(h);
-}
-} // namespace
-
 namespace pbat {
 namespace geometry {
+
+static void EmbreeDeviceErrorFunction(void* userPtr, enum RTCError code, const char* str)
+{
+    throw std::runtime_error(
+        fmt::format("Embree Device Error (code {}): {}\n", static_cast<int>(code), str));
+}
 
 std::string Device::Config::ToString() const
 {
@@ -69,13 +67,19 @@ Device::Device(Config const& cfg)
         throw std::runtime_error("Failed to create spatial device");
     }
     mHandle = dev;
+    rtcSetDeviceErrorFunction(static_cast<RTCDevice>(mHandle), &EmbreeDeviceErrorFunction, nullptr);
+}
+
+Device::Device(NativeHandle handle) noexcept
+{
+    mHandle = handle;
 }
 
 Device::Device(Device const& other) noexcept : mHandle(other.mHandle)
 {
     if (mHandle)
     {
-        rtcRetainDevice(toRtc(mHandle));
+        rtcRetainDevice(static_cast<RTCDevice>(mHandle));
     }
 }
 
@@ -85,12 +89,14 @@ Device::~Device()
 {
     if (mHandle)
     {
-        rtcReleaseDevice(toRtc(mHandle));
+        rtcReleaseDevice(static_cast<RTCDevice>(mHandle));
     }
 }
 
 } // namespace geometry
 } // namespace pbat
+
+#include "Device.h"
 
 #include <doctest/doctest.h>
 

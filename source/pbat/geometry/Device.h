@@ -50,7 +50,11 @@ class Device
      * @throws std::runtime_error if device creation fails.
      */
     PBAT_API explicit Device(Config const& cfg = {});
-
+    /**
+     * @brief Construct a new Device from an existing native handle.
+     * @param handle The native device handle to manage.
+     */
+    PBAT_API explicit Device(NativeHandle handle) noexcept;
     /**
      * @brief Construct a new device by copying an existing one.
      * @param other The device to copy from.
@@ -76,6 +80,11 @@ class Device
      * @return false if not.
      */
     explicit operator bool() const noexcept { return mHandle != nullptr; }
+    /**
+     * @brief Get the raw native device handle.
+     * @return NativeHandle
+     */
+    NativeHandle Raw() const noexcept { return mHandle; }
 
   private:
     NativeHandle mHandle{nullptr}; ///< Opaque handle to the native device
