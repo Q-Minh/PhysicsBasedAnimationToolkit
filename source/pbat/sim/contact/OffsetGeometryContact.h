@@ -1,32 +1,38 @@
 /**
- * @file MultiTriangleMeshBvh.h
- * @brief Multi-mesh BVH for triangle meshes.
+ * @file OffsetGeometryContact.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Header file for offset geometric contact model.
+ * @version 0.1
+ * @date 2025-11-03
+ *
+ * @copyright Copyright (c) 2025
+ *
  */
 
-#ifndef PBAT_GEOMETRY_MULTITRIANGLEMESHBVH_H
-#define PBAT_GEOMETRY_MULTITRIANGLEMESHBVH_H
+#ifndef PBAT_SIM_CONTACT_OFFSETGEOMETRYCONTACT_H
+#define PBAT_SIM_CONTACT_OFFSETGEOMETRYCONTACT_H
 
-#include "AxisAlignedBoundingBox.h"
-#include "Device.h"
-#include "DistanceQueries.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/geometry/Device.h"
+#include "pbat/geometry/DistanceQueries.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 
 #include <embree4/rtcore.h>
 #include <utility>
 
-namespace pbat::geometry {
+namespace pbat::sim::contact {
 
 /**
- * @brief RAII wrapper over an Embree RTCScene representing a multi-body triangle-mesh scene.
+ * @brief API of Offset Geometric Contact (OGC) algorithm \cite chen_offset_2025 for multi-body
+ * triangle mesh scene.
  *
  * This class does not own mesh topology or vertex positions. It only owns the acceleration
  * structures created within Embree. All API functions accept topology (triangles, edges) and
  * connected-component labels as parameters. Vertex positions must be supplied where needed.
  */
-class MultiTriangleMeshBvh
+class OffsetGeometryContact
 {
   public:
     using ScalarType = Scalar; ///< Type for vertex coordinates
@@ -52,7 +58,7 @@ class MultiTriangleMeshBvh
     /**
      * @brief Default constructor
      */
-    MultiTriangleMeshBvh() = default;
+    OffsetGeometryContact() = default;
     /**
      * @brief Construct and build the BVH scene from shared buffers.
      *
@@ -68,8 +74,8 @@ class MultiTriangleMeshBvh
      * @param eSceneBvhQuality Scene build quality
      * @param eMeshBvhQuality Geometry build quality
      */
-    PBAT_API MultiTriangleMeshBvh(
-        Device device,
+    PBAT_API OffsetGeometryContact(
+        geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
@@ -82,28 +88,28 @@ class MultiTriangleMeshBvh
         EBuildQuality eMeshBvhQuality  = EBuildQuality::Low);
     /**
      * @brief Copy constructor
-     * @param other The other MultiTriangleMeshBvh to copy from
+     * @param other The other OffsetGeometryContact to copy from
      */
-    MultiTriangleMeshBvh(MultiTriangleMeshBvh const& other);
+    PBAT_API OffsetGeometryContact(OffsetGeometryContact const& other);
     /**
      * @brief Copy assignment operator
-     * @param other The other MultiTriangleMeshBvh to copy from
-     * @return MultiTriangleMeshBvh& Reference to this MultiTriangleMeshBvh
+     * @param other The other OffsetGeometryContact to copy from
+     * @return OffsetGeometryContact& Reference to this OffsetGeometryContact
      */
-    MultiTriangleMeshBvh& operator=(MultiTriangleMeshBvh const& other);
+    PBAT_API OffsetGeometryContact& operator=(OffsetGeometryContact const& other);
     /**
      * @brief Move constructor
-     * @param other The other MultiTriangleMeshBvh to move from
+     * @param other The other OffsetGeometryContact to move from
      */
-    PBAT_API MultiTriangleMeshBvh(MultiTriangleMeshBvh&& other) noexcept;
+    PBAT_API OffsetGeometryContact(OffsetGeometryContact&& other) noexcept;
     /**
      * @brief Move assignment operator
-     * @param other The other MultiTriangleMeshBvh to move from
-     * @return Reference to this MultiTriangleMeshBvh
+     * @param other The other OffsetGeometryContact to move from
+     * @return Reference to this OffsetGeometryContact
      */
-    PBAT_API MultiTriangleMeshBvh& operator=(MultiTriangleMeshBvh&& other) noexcept;
+    PBAT_API OffsetGeometryContact& operator=(OffsetGeometryContact&& other) noexcept;
     /**
-     * @brief Construct the BVH scene from shared buffers.
+     * @brief Initialize OGC, i.e. build its spatial acceleration data structures.
      *
      * @param device Spatial acceleration device
      * @param X `3 x |# points|` point positions (column-major: one point per column)
@@ -117,8 +123,8 @@ class MultiTriangleMeshBvh
      * @param eSceneBvhQuality Scene build quality
      * @param eMeshBvhQuality Geometry build quality
      */
-    PBAT_API void Construct(
-        Device device,
+    PBAT_API void Initialize(
+        geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
@@ -142,7 +148,7 @@ class MultiTriangleMeshBvh
      * @param EP `|# connected components| x 1` edge prefix
      */
     PBAT_API void UpdateGeometry(
-        Device device,
+        geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
@@ -169,7 +175,7 @@ class MultiTriangleMeshBvh
      */
     template <class FOnVertexFacePairFound>
     void VertexFacePairsWithinDistance(
-        Device device,
+        geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
@@ -184,14 +190,9 @@ class MultiTriangleMeshBvh
     PBAT_API auto Bounds() const
         -> std::pair<Eigen::Vector<ScalarType, 3>, Eigen::Vector<ScalarType, 3>>;
     /**
-     * @brief Get the Device object associated with this BVH
-     * @return Device
-     */
-    PBAT_API Device GetDevice() const;
-    /**
      * @brief Destructor
      */
-    PBAT_API ~MultiTriangleMeshBvh();
+    PBAT_API ~OffsetGeometryContact();
 
   private:
     /**
@@ -199,16 +200,32 @@ class MultiTriangleMeshBvh
      */
     void Destroy() noexcept;
 
-    void* mVertexScene{nullptr}; ///< Opaque RTCScene*
-    void* mEdgeScene{nullptr};   ///< Opaque RTCScene*
-    void* mFaceScene{nullptr};   ///< Opaque RTCScene*
+    RTCScene mVertexScene{nullptr}; ///< Opaque RTCScene
+    RTCScene mEdgeScene{nullptr};   ///< Opaque RTCScene
+    RTCScene mFaceScene{nullptr};   ///< Opaque RTCScene
+
+    Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
+        VOGC; ///< `|# max vertex-facet contacts| x 3*|# vertices|` array of per-vertex contact
+              ///< facet sets, where `VOGC.col(3*v + 0)`, `VOGC.col(3*v + 1)`, `VOGC.col(3*v + 2)`
+              ///< are respectively the vertex, edge and triangle indices of the contact facets for
+              ///< vertex `v`.
+    Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
+        FOGC; ///< `|# max face-facet contacts| x 3*|# triangles|` array of per-triangle contact
+              ///< facet sets, where `FOGC.col(3*f + 0)`, `FOGC.col(3*f + 1)`, `FOGC.col(3*f + 2)`
+              ///< are respectively the vertex, edge and triangle indices of the contact facets for
+              ///< triangle `f`.
+    Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
+        EOGC; ///< `|# max edge-facet contacts| x 3*|# edges|` array of per-edge contact facet
+              ///< sets, where `EOGC.col(3*e + 0)`, `EOGC.col(3*e + 1)`, `EOGC.col(3*e + 2)` are
+              ///< respectively the vertex, edge and triangle indices of the contact facets for
+              ///< edge `e`.
 };
 
 namespace detail {
 
-static RTCSceneFlags toRtc(pbat::geometry::MultiTriangleMeshBvh::ESceneFeatures flags) noexcept
+static RTCSceneFlags toRtc(OffsetGeometryContact::ESceneFeatures flags) noexcept
 {
-    using ESceneFeatures   = pbat::geometry::MultiTriangleMeshBvh::ESceneFeatures;
+    using ESceneFeatures   = OffsetGeometryContact::ESceneFeatures;
     RTCSceneFlags rtcFlags = RTC_SCENE_FLAG_NONE;
     if (flags == ESceneFeatures::Dynamic)
     {
@@ -225,9 +242,9 @@ static RTCSceneFlags toRtc(pbat::geometry::MultiTriangleMeshBvh::ESceneFeatures 
     return rtcFlags;
 }
 
-static RTCBuildQuality toRtc(pbat::geometry::MultiTriangleMeshBvh::EBuildQuality q) noexcept
+static RTCBuildQuality toRtc(OffsetGeometryContact::EBuildQuality q) noexcept
 {
-    using Q = pbat::geometry::MultiTriangleMeshBvh::EBuildQuality;
+    using Q = OffsetGeometryContact::EBuildQuality;
     switch (q)
     {
         case Q::Low: return RTC_BUILD_QUALITY_LOW;
@@ -319,7 +336,7 @@ void VertexFacePairsWithinDistanceRTCCollideFunc(
     TIndex cf                       = static_cast<TIndex>(collision->geomID1);
     Eigen::Vector<TScalar, 3> xv    = userData->V.col(v);
     Eigen::Matrix<TScalar, 3, 3> xf = userData->V(Eigen::placeholders::all, userData->F.col(f));
-    TScalar d2                      = DistanceQueries::PointTriangle(
+    TScalar d2                      = geometry::DistanceQueries::PointTriangle(
         math::linalg::mini::FromEigen(xv),
         math::linalg::mini::FromEigen(xf.col(0)),
         math::linalg::mini::FromEigen(xf.col(1)),
@@ -333,8 +350,8 @@ void VertexFacePairsWithinDistanceRTCCollideFunc(
 } // namespace detail
 
 template <class FOnVertexFacePairFound>
-inline void MultiTriangleMeshBvh::VertexFacePairsWithinDistance(
-    Device device,
+inline void OffsetGeometryContact::VertexFacePairsWithinDistance(
+    geometry::Device device,
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
@@ -357,6 +374,6 @@ inline void MultiTriangleMeshBvh::VertexFacePairsWithinDistance(
         &userData);
 }
 
-} // namespace pbat::geometry
+} // namespace pbat::sim::contact
 
-#endif // PBAT_GEOMETRY_MULTITRIANGLEMESHBVH_H
+#endif // PBAT_SIM_CONTACT_OFFSETGEOMETRYCONTACT_H
