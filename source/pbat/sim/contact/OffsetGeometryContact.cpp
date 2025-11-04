@@ -174,28 +174,55 @@ std::pair<int, int> ClosestFaceFacetToVertex(math::linalg::mini::SVector<TScalar
     int const nZeros     = (uvw(0) == TScalar(0)) + (uvw(1) == TScalar(0)) + (uvw(2) == TScalar(0));
     bool const bIsVertex = (nZeros == 2);
     bool const bIsEdge   = (nZeros == 1);
+    int eFace;
+    if (bIsVertex)
+        eFace = 2;
+    else if (bIsEdge)
+        eFace = 1;
+    else // is triangle
+        eFace = 0;
+    int a;
+    if (bIsVertex)
+    {
+        if (uvw(1) == float(1))
+            a = 1;
+        else if (uvw(2) == float(1))
+            a = 2;
+        else // uvw(0) == float(1) must be true
+            a = 0;
+    }
+    else if (bIsEdge)
+    {
+        if (uvw(0) == float(0))
+            a = 1;
+        else if (uvw(1) == float(0))
+            a = 2;
+        else // uvw(2) == float(0) must be true
+            a = 0;
+    }
+    else // is triangle
+    {
+        a = 0;
+    }
+    return {a, eFace};
+}
+
+/**
+ * @brief Computes the triangle face (vertex, edge or triangle) nearest to the point xv.
+ * @param uvw Barycentric coordinates of the closest point on triangle to xv.
+ * @return The pair (a, eFace), where a is either a local vertex index or edge index, and eFace
+ * indicates the type of face, i.e. (0 | 1 | 2) -> (triangle | edge | vertex)
+ */
+template <common::CFloatingPoint TScalar>
+std::pair<int, int>
+ClosestFaceFacetToVertexVectorized(math::linalg::mini::SVector<TScalar, 3> const& uvw)
+{
+    int const nZeros     = (uvw(0) == TScalar(0)) + (uvw(1) == TScalar(0)) + (uvw(2) == TScalar(0));
+    bool const bIsVertex = (nZeros == 2);
+    bool const bIsEdge   = (nZeros == 1);
     int eFace            = (bIsVertex * 2) + (bIsEdge * 1);
-    // NOTE: We vectorize the equivalent of
-    // int a = 0;
-    // if (bIsVertex)
-    // {
-    //     if (uvw(1) == float(1))
-    //         a = 1;
-    //     else if (uvw(2) == float(1))
-    //         a = 2;
-    //     // a is 0 but has already been initialized to 0
-    // }
-    // if (bIsEdge)
-    // {
-    //     if (uvw(0) == float(0))
-    //         a = 1;
-    //     else if (uvw(1) == float(0))
-    //         a = 2;
-    //     // a is 0 but has already been initialized to 0
-    // }
-    // Vectorized selection of face index a
-    int a = bIsVertex * ((uvw(1) == TScalar(1)) * 1 + (uvw(2) == TScalar(1)) * 2) +
-            bIsEdge * ((uvw(0) == TScalar(0)) * 1 + (uvw(2) == TScalar(0)) * 2);
+    int a                = bIsVertex * ((uvw(1) == TScalar(1)) * 1 + (uvw(2) == TScalar(1)) * 2) +
+            bIsEdge * ((uvw(0) == TScalar(0)) * 1 + (uvw(1) == TScalar(0)) * 2);
     return {a, eFace};
 }
 
@@ -244,7 +271,7 @@ void VertexFacetRTCCollideFunc(
         // Update contact sets if facets within contact radius
         if (d2 < r * r)
         {
-            auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw);
+            auto const [alocal, eFace] = ClosestFaceFacetToVertexVectorized(uvw);
             Eigen::Index j             = 3 * v + eFace;
             TIndex a =
                 (eFace == 0) * f + (eFace == 1) * (3 * f + alocal) + (eFace == 2) * finds(alocal);
@@ -573,3 +600,35 @@ void OffsetGeometryContact::Destroy() noexcept
 }
 
 } // namespace pbat::sim::contact
+
+#include <doctest/doctest.h>
+
+TEST_CASE("[sim][contact][detail] ClosestFaceFacetToVertex")
+{
+    using pbat::math::linalg::mini::SVector;
+    using pbat::sim::contact::detail::ClosestFaceFacetToVertex;
+    using pbat::sim::contact::detail::ClosestFaceFacetToVertexVectorized;
+    auto fCheck = [&](double u, double v, double w, int aExpected, int eFaceExpected) {
+        SVector<double, 3> uvw{u, v, w};
+        auto got = ClosestFaceFacetToVertexVectorized<double>(uvw);
+        auto exp = ClosestFaceFacetToVertex(uvw);
+        CHECK_EQ(got.first, aExpected);
+        CHECK_EQ(got.second, eFaceExpected);
+        CHECK_EQ(got.first, exp.first);
+        CHECK_EQ(got.second, exp.second);
+    };
+    // Vertices
+    fCheck(1.0, 0.0, 0.0, 0, 2); // vertex 0 -> a=0, eFace=2
+    fCheck(0.0, 1.0, 0.0, 1, 2); // vertex 1 -> a=1, eFace=2
+    fCheck(0.0, 0.0, 1.0, 2, 2); // vertex 2 -> a=2, eFace=2
+
+    // Edge interiors (midpoints)
+    fCheck(0.0, 0.5, 0.5, 1, 1); // edge opposite vertex 0 -> a=1, eFace=1
+    fCheck(0.5, 0.0, 0.5, 2, 1); // edge opposite vertex 1 -> a=2, eFace=1
+    fCheck(0.5, 0.5, 0.0, 0, 1); // edge opposite vertex 2 -> a=0, eFace=1
+
+    // Triangle interior (no zeros)
+    fCheck(0.2, 0.3, 0.5, 0, 0);    // face -> a=0, eFace=0
+    fCheck(0.1, 0.1, 0.8, 0, 0);    // face -> a=0, eFace=0
+    fCheck(0.34, 0.33, 0.33, 0, 0); // face -> a=0, eFace=0
+}
