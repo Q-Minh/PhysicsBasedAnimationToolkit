@@ -66,6 +66,20 @@ PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const
     typename TMatrixP::ScalarType;
 
 /**
+ * @brief Obtain squared distance between point X and line segment PQ
+ * @tparam TMatrixX Point matrix type
+ * @tparam TMatrixP Vertex P matrix type
+ * @tparam TMatrixQ Vertex Q matrix type
+ * @param X Point
+ * @param P Vertex P of the line segment
+ * @param Q Vertex Q of the line segment
+ * @return Squared distance between point and triangle
+ */
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
+PBAT_HOST_DEVICE auto PointLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q) ->
+    typename TMatrixX::ScalarType;
+
+/**
  * @brief Obtain squared distance between point P and triangle ABC
  * @tparam TMatrixP Point matrix type
  * @tparam TMatrixA Vertex A matrix type
@@ -206,6 +220,14 @@ PointAxisAlignedBoundingBox(TMatrixP const& P, TMatrixL const& L, TMatrixU const
     // Otherwise compute distance to boundary
     auto const CP = ClosestPointQueries::PointOnAxisAlignedBoundingBox(P, L, U);
     return SquaredNorm(P - CP);
+}
+
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
+PBAT_HOST_DEVICE auto PointLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q) ->
+    typename TMatrixX::ScalarType
+{
+    auto const CP = ClosestPointQueries::PointOnLineSegment(X, P, Q);
+    return SquaredNorm(X - CP);
 }
 
 template <

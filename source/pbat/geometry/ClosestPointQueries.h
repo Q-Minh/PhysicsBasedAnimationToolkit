@@ -41,6 +41,21 @@ PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrix
     -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>;
 
 /**
+ * @brief Obtain the barycentric uv point on the line segment `PQ` closest to the point `X`, s.t.
+ * `Xclosest = uP+vQ`
+ * @tparam TMatrixX Query point matrix type
+ * @tparam TMatrixP Start point of the line segment matrix type
+ * @tparam TMatrixQ End point of the line segment matrix type
+ * @param X Query point
+ * @param P Start point of the line segment
+ * @param Q End point of the line segment
+ * @return `uv` point on the line segment closest to X in barycentric coordinates
+ */
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
+PBAT_HOST_DEVICE auto UvPointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, 2>;
+
+/**
  * @brief Obtain the point on the line segment PQ closest to the point X.
  * @tparam TMatrixX Query point matrix type
  * @tparam TMatrixP Start point of the line segment matrix type
@@ -257,8 +272,8 @@ PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrix
 }
 
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
-PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
-    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
+PBAT_HOST_DEVICE auto UvPointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, 2>
 {
     using ScalarType = typename TMatrixX::ScalarType;
     using namespace std;
@@ -270,8 +285,16 @@ PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, T
     ScalarType t = Dot(X - P, PQ) / SquaredNorm(PQ);
     // If outside segment, clamp t (and therefore d) to the closest endpoint
     t = min(max(t, ScalarType(0)), ScalarType(1));
-    // Compute projected position from the clamped t
-    auto const Xpq = P + t * PQ;
+    return mini::SVector<ScalarType, 2>{ScalarType(1) - t, t};
+}
+
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
+PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
+{
+    using ScalarType                      = typename TMatrixX::ScalarType;
+    mini::SVector<ScalarType, 2> const uv = UvPointOnLineSegment(X, P, Q);
+    auto const Xpq                        = uv(0) * P + uv(1) * Q;
     return Xpq;
 }
 

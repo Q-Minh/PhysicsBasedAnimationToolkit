@@ -3,6 +3,7 @@
 #include "pbat/Aliases.h"
 
 #include <doctest/doctest.h>
+#include <limits>
 
 TEST_CASE("[geometry] Can obtain closest point on triangle ABC to point P")
 {
@@ -12,7 +13,7 @@ TEST_CASE("[geometry] Can obtain closest point on triangle ABC to point P")
     SVector<ScalarType, 3> const B{1., 0., 0.};
     SVector<ScalarType, 3> const C{0., 1., 1.};
     SVector<ScalarType, 3> const n = Normalized(Cross(B - A, C - A));
-    auto constexpr eps             = ScalarType(1e-15);
+    auto constexpr eps             = std::numeric_limits<ScalarType>::epsilon();
 
     SUBCASE("Point is in triangle")
     {
