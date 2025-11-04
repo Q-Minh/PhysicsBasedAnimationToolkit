@@ -72,12 +72,10 @@ class OffsetGeometryContact
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `|# vertices| x 1` vertex indices (global indices into X)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
-     * @param E `2 x |# edges|` edge vertex indices (global indices into X)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
-     * @param EP `|# connected components| x 1` edge prefix
      * @param nMaxVertexFacetContacts Maximum number of vertex-facet contacts per vertex
-     * @param nMaxFaceFacetContacts Maximum number of face-facet contacts per triangle
+     * @param nMaxFacetVertexContacts Maximum number of facet-vertex contacts per triangle
      * @param nMaxEdgeFacetContacts Maximum number of edge-facet contacts per edge
      * @param eSceneFeatures Scene features
      * @param eSceneBvhQuality Scene build quality
@@ -88,12 +86,10 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         int nMaxVertexFacetContacts    = 16,
-        int nMaxFaceFacetContacts      = 16,
+        int nMaxFacetVertexContacts    = 16,
         int nMaxEdgeFacetContacts      = 16,
         ESceneFeatures eSceneFeatures  = ESceneFeatures::Dynamic,
         EBuildQuality eSceneBvhQuality = EBuildQuality::Low,
@@ -105,12 +101,10 @@ class OffsetGeometryContact
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `|# vertices| x 1` vertex indices (global indices into X)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
-     * @param E `2 x |# edges|` edge vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
-     * @param EP `|# connected components| x 1` edge prefix
      * @param nMaxVertexFacetContacts Maximum number of vertex-facet contacts per vertex
-     * @param nMaxFaceFacetContacts Maximum number of face-facet contacts per triangle
+     * @param nMaxFacetVertexContacts Maximum number of facet-vertex contacts per triangle
      * @param nMaxEdgeFacetContacts Maximum number of edge-facet contacts per edge
      * @param eSceneFeatures Scene features
      * @param eSceneBvhQuality Scene build quality
@@ -121,37 +115,18 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         int nMaxVertexFacetContacts    = 16,
-        int nMaxFaceFacetContacts      = 16,
+        int nMaxFacetVertexContacts    = 16,
         int nMaxEdgeFacetContacts      = 16,
         ESceneFeatures eSceneFeatures  = ESceneFeatures::None,
         EBuildQuality eSceneBvhQuality = EBuildQuality::Low,
         EBuildQuality eMeshBvhQuality  = EBuildQuality::Low);
     /**
-     * @brief Update the BVH geometry (but not its topology).
-     *
-     * @param device Spatial acceleration device
-     * @param X `3 x |# points|` point positions (column-major: one point per column)
-     * @param V `|# vertices| x 1` vertex indices (global indices into X)
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
-     * @param E `2 x |# edges|` edge vertex indices (global indices into V)
-     * @param VP `|# connected components| x 1` vertex prefix
-     * @param FP `|# connected components| x 1` face prefix
-     * @param EP `|# connected components| x 1` edge prefix
+     * @brief Prepare for contact iteration.
      */
-    PBAT_API void UpdateGeometry(
-        geometry::Device device,
-        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP);
+    PBAT_API void PrepareIteration();
     /**
      * @brief Compute vertex-facet and face-facet contact sets.
      * @param device Spatial acceleration device
@@ -163,7 +138,7 @@ class OffsetGeometryContact
      * @param r Contact radius
      * @param rq Query radius
      */
-    void VertexFacetContactDetection(
+    PBAT_API void VertexFacetContactDetection(
         geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
@@ -177,19 +152,19 @@ class OffsetGeometryContact
      * @param device Spatial acceleration device
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
-     * @param E `2 x |# edges|` edge vertex indices (global indices into V)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
-     * @param EP `|# connected components| x 1` edge prefix
+     * @param FP `|# connected components| x 1` face prefix
      * @param r Contact radius
      * @param rq Query radius
      */
-    void EdgeEdgeContactDetection(
+    PBAT_API void EdgeEdgeContactDetection(
         geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& E,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
         ScalarType r,
         ScalarType rq);
     /**
@@ -226,18 +201,21 @@ class OffsetGeometryContact
 
   public:
     Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
-        FOGC; ///< `|# max vertex-facet contacts| x 3*|# vertices|` array of per-vertex contact
-              ///< facet sets, where `VOGC.col(3*v + 0)`, `VOGC.col(3*v + 1)`, `VOGC.col(3*v + 2)`
-              ///< are respectively the vertex, edge and triangle indices of the contact facets for
-              ///< vertex `v`.
+        FOGC; ///< `|# max vertex-facet contacts + 1| x 3*|# vertices|` array of per-vertex contact
+              ///< facet sets, where `FOGC.col(3*v + 0)`, `FOGC.col(3*v + 1)`, `FOGC.col(3*v + 2)`
+              ///< are respectively the triangle, edge and vertex indices of the contact facets for
+              ///< vertex `v`, except for the first coefficient, which indicates the number of
+              ///< contact facets in that column.
     Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
-        VOGC; ///< `|# max face-facet contacts| x |# triangles|` array of per-triangle contact
+        VOGC; ///< `|# max facet-vertex contacts + 1| x |# triangles|` array of per-triangle contact
               ///< facet sets, where `FOGC.col(f)` are vertex indices of the contact vertices for
-              ///< triangle `f`.
+              ///< triangle `f`, except for the first coefficient, which indicates the number of
+              ///< contact vertices in that column.
     Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
-        EOGC; ///< `|# max edge-facet contacts| x 2*|# edges|` array of per-edge contact facet
+        EOGC; ///< `|# max edge-facet contacts + 1| x 2*|# edges|` array of per-edge contact facet
               ///< sets, where `EOGC.col(2*e + 0)`, `EOGC.col(2*e + 1)` are respectively the vertex
-              ///< and edge indices of the contact facets for edge `e`.
+              ///< and edge indices of the contact facets for edge `e`, except for the first
+              ///< coefficient, which indicates the number of contact facets in that column.
 
   private:
     RTCScene mVertexScene{nullptr}; ///< Opaque RTCScene
@@ -245,11 +223,17 @@ class OffsetGeometryContact
     RTCScene mFaceScene{nullptr};   ///< Opaque RTCScene
 
     Eigen::Vector<bool, Eigen::Dynamic>
-        mLocks; ///< `|max(3 # verts, # faces, 2 # edges)|` array of locks for synchronized access
-                ///< to per-facet contact facet sets.
-    Eigen::Vector<ScalarType, Eigen::Dynamic> dminv; ///< `|# vertices|` array of vertex displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic> dminf; ///< `|# faces|` array of face displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic> dmine; ///< `|# edges|` array of edge displacement bounds
+        mVertexLocks; ///< `|3 # verts)|` array of locks for synchronized access
+                      ///< to per-vertex contact facet sets.
+    Eigen::Vector<bool, Eigen::Dynamic>
+        mEdgeLocks; ///< `|2 # edges|` array of locks for synchronized access
+                    ///< to per-edge contact facet sets.
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        dminv; ///< `|# vertices|` array of vertex displacement bounds
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        dminf; ///< `|# faces|` array of face displacement bounds
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        dmine; ///< `|# edges|` array of edge displacement bounds
 };
 
 } // namespace pbat::sim::contact

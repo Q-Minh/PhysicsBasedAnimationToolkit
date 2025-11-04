@@ -1,11 +1,13 @@
 #include "OffsetGeometryContact.h"
 
+#include "pbat/common/Atomic.h"
+#include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/DistanceQueries.h"
 #include "pbat/math/linalg/mini/Eigen.h"
+#include "pbat/math/linalg/mini/Norm.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
-#include <atomic>
 #include <stdexcept>
 
 namespace pbat::sim::contact {
@@ -49,20 +51,36 @@ struct UserData
     Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const* X;
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* V;
     Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const* F;
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* E;
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* VP;
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* FP;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* EP;
     Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* FOGC;
     Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* VOGC;
     Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* EOGC;
-    Eigen::Vector<bool, Eigen::Dynamic>* mLocks;
+    Eigen::Vector<bool, Eigen::Dynamic>* mVertexLocks;
+    Eigen::Vector<bool, Eigen::Dynamic>* mEdgeLocks;
     Eigen::Vector<TScalar, Eigen::Dynamic>* dminv;
     Eigen::Vector<TScalar, Eigen::Dynamic>* dminf;
     Eigen::Vector<TScalar, Eigen::Dynamic>* dmine;
     TScalar r;
     TScalar rq;
 };
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void PointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
+{
+    UserData<TScalar, TIndex>* userData =
+        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
+    auto& X                 = *(userData->X);
+    auto& V                 = *(userData->V);
+    Eigen::Index v          = static_cast<Eigen::Index>(args->primID);
+    auto xv                 = X.col(V(v));
+    args->bounds_o->lower_x = xv(0);
+    args->bounds_o->lower_y = xv(1);
+    args->bounds_o->lower_z = xv(2);
+    args->bounds_o->upper_x = xv(0);
+    args->bounds_o->upper_y = xv(1);
+    args->bounds_o->upper_z = xv(2);
+}
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void TriangleRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
@@ -86,20 +104,24 @@ void EdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
     UserData<TScalar, TIndex>* userData =
         static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    auto& X                         = *(userData->X);
-    auto& E                         = *(userData->E);
-    Eigen::Index e                  = static_cast<Eigen::Index>(args->primID);
-    Eigen::Matrix<TScalar, 3, 2> xe = X(Eigen::placeholders::all, E.col(e));
-    args->bounds_o->lower_x         = std::min(xe(0, 0), xe(0, 1));
-    args->bounds_o->lower_y         = std::min(xe(1, 0), xe(1, 1));
-    args->bounds_o->lower_z         = std::min(xe(2, 0), xe(2, 1));
-    args->bounds_o->upper_x         = std::max(xe(0, 0), xe(0, 1));
-    args->bounds_o->upper_y         = std::max(xe(1, 0), xe(1, 1));
-    args->bounds_o->upper_z         = std::max(xe(2, 0), xe(2, 1));
+    auto& X   = *(userData->X);
+    auto& F   = *(userData->F);
+    TIndex he = static_cast<TIndex>(args->primID);
+    TIndex f  = he / 3;
+    TIndex ei = he % 3;
+    TIndex ej = (ei + 1) % 3;
+    Eigen::Matrix<TScalar, 3, 2> xe =
+        X(Eigen::placeholders::all, Eigen::Vector<TIndex, 2>{F(ei, f), F(ej, f)});
+    args->bounds_o->lower_x = std::min(xe(0, 0), xe(0, 1));
+    args->bounds_o->lower_y = std::min(xe(1, 0), xe(1, 1));
+    args->bounds_o->lower_z = std::min(xe(2, 0), xe(2, 1));
+    args->bounds_o->upper_x = std::max(xe(0, 0), xe(0, 1));
+    args->bounds_o->upper_y = std::max(xe(1, 0), xe(1, 1));
+    args->bounds_o->upper_z = std::max(xe(2, 0), xe(2, 1));
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-void PointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
+void VertexFacetRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
     UserData<TScalar, TIndex>* userData =
         static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
@@ -107,12 +129,168 @@ void PointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
     auto& V                 = *(userData->V);
     Eigen::Index v          = static_cast<Eigen::Index>(args->primID);
     auto xv                 = X.col(V(v));
-    args->bounds_o->lower_x = xv(0);
-    args->bounds_o->lower_y = xv(1);
-    args->bounds_o->lower_z = xv(2);
-    args->bounds_o->upper_x = xv(0);
-    args->bounds_o->upper_y = xv(1);
-    args->bounds_o->upper_z = xv(2);
+    args->bounds_o->lower_x = xv(0) - userData->rq;
+    args->bounds_o->lower_y = xv(1) - userData->rq;
+    args->bounds_o->lower_z = xv(2) - userData->rq;
+    args->bounds_o->upper_x = xv(0) + userData->rq;
+    args->bounds_o->upper_y = xv(1) + userData->rq;
+    args->bounds_o->upper_z = xv(2) + userData->rq;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void EdgeEdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
+{
+    UserData<TScalar, TIndex>* userData =
+        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
+    auto& X   = *(userData->X);
+    auto& F   = *(userData->F);
+    TIndex he = static_cast<TIndex>(args->primID);
+    TIndex he = static_cast<TIndex>(args->primID);
+    TIndex f  = he / 3;
+    TIndex ei = he % 3;
+    TIndex ej = (ei + 1) % 3;
+    Eigen::Matrix<TScalar, 3, 2> xe =
+        X(Eigen::placeholders::all, Eigen::Vector<TIndex, 2>{F(ei, f), F(ej, f)});
+    Eigen::Vector<TScalar, 3> xmid = TScalar(0.5) * (xe.col(0) + xe.col(1));
+    TScalar halfLength             = TScalar(0.5) * (xe.col(1) - xe.col(0)).norm();
+    TScalar queryRadius            = halfLength + userData->rq;
+    args->bounds_o->lower_x        = xmid(0) - queryRadius;
+    args->bounds_o->lower_y        = xmid(1) - queryRadius;
+    args->bounds_o->lower_z        = xmid(2) - queryRadius;
+    args->bounds_o->upper_x        = xmid(0) + queryRadius;
+    args->bounds_o->upper_y        = xmid(1) + queryRadius;
+    args->bounds_o->upper_z        = xmid(2) + queryRadius;
+}
+
+/**
+ * @brief Computes the triangle face (vertex, edge or triangle) nearest to the point xv.
+ * @param uvw Barycentric coordinates of the closest point on triangle to xv.
+ * @return The pair (a, eFace), where a is either a local vertex index or edge index, and eFace
+ * indicates the type of face, i.e. (0 | 1 | 2) -> (triangle | edge | vertex)
+ */
+template <common::CFloatingPoint TScalar>
+std::pair<int, int> ClosestFaceFacetToVertex(math::linalg::mini::SVector<TScalar, 3> const& uvw)
+{
+    int const nZeros     = (uvw(0) == TScalar(0)) + (uvw(1) == TScalar(0)) + (uvw(2) == TScalar(0));
+    bool const bIsVertex = (nZeros == 2);
+    bool const bIsEdge   = (nZeros == 1);
+    int eFace            = (bIsVertex * 2) + (bIsEdge * 1);
+    // NOTE: We vectorize the equivalent of
+    // int a = 0;
+    // if (bIsVertex)
+    // {
+    //     if (uvw(1) == float(1))
+    //         a = 1;
+    //     else if (uvw(2) == float(1))
+    //         a = 2;
+    //     // a is 0 but has already been initialized to 0
+    // }
+    // if (bIsEdge)
+    // {
+    //     if (uvw(0) == float(0))
+    //         a = 1;
+    //     else if (uvw(1) == float(0))
+    //         a = 2;
+    //     // a is 0 but has already been initialized to 0
+    // }
+    // Vectorized selection of face index a
+    int a = bIsVertex * ((uvw(1) == TScalar(1)) * 1 + (uvw(2) == TScalar(1)) * 2) +
+            bIsEdge * ((uvw(0) == TScalar(0)) * 1 + (uvw(2) == TScalar(0)) * 2);
+    return {a, eFace};
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void VertexFacetRTCCollideFunc(
+    void* userPtr,
+    struct RTCCollision* collisions,
+    unsigned int nCollisions)
+{
+    UserData<TScalar, TIndex>* userData = static_cast<UserData<TScalar, TIndex>*>(userPtr);
+    auto& X                             = *(userData->X);
+    auto& V                             = *(userData->V);
+    auto& F                             = *(userData->F);
+    auto& FOGC                          = *(userData->FOGC);
+    auto& VOGC                          = *(userData->VOGC);
+    auto& mVertexLocks                  = *(userData->mVertexLocks);
+    auto& dminv                         = *(userData->dminv);
+    auto& dminf                         = *(userData->dminf);
+    TScalar const r                     = userData->r;
+    // For each potential contact pair (v,f)
+    for (unsigned int i = 0; i < nCollisions; ++i)
+    {
+        RTCCollision const& collision        = collisions[i];
+        TIndex const v                       = static_cast<TIndex>(collision.primID0);
+        TIndex const f                       = static_cast<TIndex>(collision.primID1);
+        Eigen::Vector<TIndex, 3> const finds = F.col(f);
+        // Avoid contact with adjacent triangle
+        if ((finds.array() == v).any())
+            continue;
+        // Compute distance from vertex v to triangle f via closest point projection
+        Eigen::Vector<TScalar, 3> const xv    = X.col(V(v));
+        Eigen::Matrix<TScalar, 3, 3> const xf = X(Eigen::placeholders::all, finds);
+        using math::linalg::mini::FromEigen;
+        using math::linalg::mini::SVector;
+        SVector<TScalar, 3> uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
+            FromEigen(xv),
+            FromEigen(xf.col(0)),
+            FromEigen(xf.col(1)),
+            FromEigen(xf.col(2)));
+        Eigen::Vector<TScalar, 3> dx2f =
+            (xv - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
+        TScalar d2 = dx2f.squaredNorm();
+        // Update triangle and vertex displacement bounds
+        common::AtomicMin(dminv(v), d2);
+        common::AtomicMin(dminf(f), d2);
+        // Update contact sets if facets within contact radius
+        if (d2 < r * r)
+        {
+            auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw);
+            Eigen::Index j             = 3 * v + eFace;
+            TIndex a =
+                (eFace == 0) * f + (eFace == 1) * (3 * f + alocal) + (eFace == 2) * finds(alocal);
+            // Synchronize reads/writes to vertex v's contact sets
+            common::AtomicExecute(mVertexLocks(v), [&]() {
+                int nContactFacets = FOGC(0, j);
+                // Avoid duplicated contact with `a` detected from a neighbour facet
+                bool bExcessContact = (nContactFacets == FOGC.rows() - 1);
+                int k;
+                for (k = 0; not bExcessContact and k < nContactFacets; ++k)
+                    if (FOGC(k, j) == a)
+                        break;
+                bool bDuplicateContact = (k < nContactFacets);
+                if (bDuplicateContact or bExcessContact)
+                    return;
+                // Update contact facet sets
+                auto const fUpdateContactFacetSets = [&]() {
+                    FOGC(FOGC(0, j)++, j) = a;
+                    TIndex& counter       = VOGC(0, f);
+                    TIndex fk             = common::AtomicAdd<TIndex>(counter, 1);
+                    VOGC(fk, f)           = v;
+                };
+                switch (eFace)
+                {
+                    case 2: {
+                        // TODO: Implement vertex feasibility check
+                        bool bInVertexFeasibleRegion{false};
+                        if (bInVertexFeasibleRegion)
+                            fUpdateContactFacetSets();
+                        break;
+                    }
+                    case 1: {
+                        // TODO: Implement edge feasibility check
+                        bool bInEdgeFeasibleRegion{false};
+                        if (bInEdgeFeasibleRegion)
+                            fUpdateContactFacetSets();
+                        break;
+                    }
+                    default: {
+                        fUpdateContactFacetSets();
+                        break;
+                    }
+                }
+            });
+        }
+    }
 }
 
 } // namespace detail
@@ -124,7 +302,8 @@ OffsetGeometryContact::OffsetGeometryContact(geometry::Device device)
       mVertexScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mEdgeScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mFaceScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
-      mLocks(),
+      mVertexLocks(),
+      mEdgeLocks(),
       dminv(),
       dminf(),
       dmine()
@@ -136,12 +315,10 @@ OffsetGeometryContact::OffsetGeometryContact(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     int nMaxVertexFacetContacts,
-    int nMaxFaceFacetContacts,
+    int nMaxFacetVertexContacts,
     int nMaxEdgeFacetContacts,
     ESceneFeatures eSceneFeatures,
     EBuildQuality eSceneBvhQuality,
@@ -153,12 +330,10 @@ OffsetGeometryContact::OffsetGeometryContact(
         X,
         V,
         F,
-        E,
         VP,
         FP,
-        EP,
         nMaxVertexFacetContacts,
-        nMaxFaceFacetContacts,
+        nMaxFacetVertexContacts,
         nMaxEdgeFacetContacts,
         eSceneFeatures,
         eSceneBvhQuality,
@@ -170,12 +345,10 @@ void OffsetGeometryContact::Initialize(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     int nMaxVertexFacetContacts,
-    int nMaxFaceFacetContacts,
+    int nMaxFacetVertexContacts,
     int nMaxEdgeFacetContacts,
     ESceneFeatures eSceneFeatures,
     EBuildQuality eSceneBvhQuality,
@@ -183,9 +356,12 @@ void OffsetGeometryContact::Initialize(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.Initialize");
     // 1. Allocate contact sets
-    FOGC.setConstant(nMaxVertexFacetContacts, 3 * V.size(), IndexType(-1));
-    VOGC.setConstant(nMaxFaceFacetContacts, F.cols(), IndexType(-1));
-    EOGC.setConstant(nMaxEdgeFacetContacts, 2 * E.cols(), IndexType(-1));
+    auto const nVertices  = V.size();
+    auto const nFacets    = F.cols();
+    auto const nHalfEdges = 3 * nFacets;
+    FOGC.setConstant(nMaxVertexFacetContacts + 1, 3 * nVertices, IndexType(-1));
+    VOGC.setConstant(nMaxFacetVertexContacts + 1, nFacets, IndexType(-1));
+    EOGC.setConstant(nMaxEdgeFacetContacts + 1, 2 * nHalfEdges, IndexType(-1));
     // 2. Compute BVHs
     rtcSetSceneFlags(mVertexScene, detail::toRtc(eSceneFeatures));
     rtcSetSceneFlags(mFaceScene, detail::toRtc(eSceneFeatures));
@@ -198,14 +374,13 @@ void OffsetGeometryContact::Initialize(
         std::addressof(X),
         std::addressof(V),
         std::addressof(F),
-        std::addressof(E),
         std::addressof(VP),
         std::addressof(FP),
-        std::addressof(EP),
-        std::addressof(VOGC),
         std::addressof(FOGC),
+        std::addressof(VOGC),
         std::addressof(EOGC),
-        std::addressof(mLocks),
+        std::addressof(mVertexLocks),
+        std::addressof(mEdgeLocks),
         std::addressof(dminv),
         std::addressof(dminf),
         std::addressof(dmine),
@@ -214,17 +389,17 @@ void OffsetGeometryContact::Initialize(
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = nComponents - 1; c >= 0; --c)
     {
-        IndexType const vertexOffset = VP[c];
-        IndexType const nVertices    = VP[c + 1] - vertexOffset;
-        IndexType const faceOffset   = FP[c];
-        IndexType const nFaces       = FP[c + 1] - faceOffset;
-        IndexType const edgeOffset   = EP[c];
-        IndexType const nEdges       = EP[c + 1] - edgeOffset;
+        IndexType const vertexOffset        = VP[c];
+        IndexType const nComponentVertices  = VP[c + 1] - vertexOffset;
+        IndexType const faceOffset          = FP[c];
+        IndexType const nComponentFaces     = FP[c + 1] - faceOffset;
+        IndexType const nComponentHalfEdges = 3 * nComponentFaces;
         // Vertex geometry
         RTCGeometry vertexGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
-        rtcAttachGeometryByID(mVertexScene, vertexGeometry, static_cast<unsigned int>(c));
-        rtcSetGeometryUserPrimitiveCount(vertexGeometry, static_cast<unsigned int>(nVertices));
+        rtcSetGeometryUserPrimitiveCount(
+            vertexGeometry,
+            static_cast<unsigned int>(nComponentVertices));
         rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&userData));
         rtcSetGeometryBoundsFunction(
             vertexGeometry,
@@ -232,12 +407,14 @@ void OffsetGeometryContact::Initialize(
             nullptr);
         rtcSetGeometryBuildQuality(vertexGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(vertexGeometry);
+        rtcAttachGeometryByID(mVertexScene, vertexGeometry, static_cast<unsigned int>(c));
         rtcReleaseGeometry(vertexGeometry);
         // Triangle geometry
         RTCGeometry triangleGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
-        rtcAttachGeometryByID(mFaceScene, triangleGeometry, static_cast<unsigned int>(c));
-        rtcSetGeometryUserPrimitiveCount(triangleGeometry, static_cast<unsigned int>(nFaces));
+        rtcSetGeometryUserPrimitiveCount(
+            triangleGeometry,
+            static_cast<unsigned int>(nComponentFaces));
         rtcSetGeometryUserData(triangleGeometry, static_cast<void*>(&userData));
         rtcSetGeometryBoundsFunction(
             triangleGeometry,
@@ -245,12 +422,14 @@ void OffsetGeometryContact::Initialize(
             nullptr);
         rtcSetGeometryBuildQuality(triangleGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(triangleGeometry);
+        rtcAttachGeometryByID(mFaceScene, triangleGeometry, static_cast<unsigned int>(c));
         rtcReleaseGeometry(triangleGeometry);
         // Edge geometry
         RTCGeometry edgeGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
-        rtcAttachGeometryByID(mEdgeScene, edgeGeometry, static_cast<unsigned int>(c));
-        rtcSetGeometryUserPrimitiveCount(edgeGeometry, static_cast<unsigned int>(nEdges));
+        rtcSetGeometryUserPrimitiveCount(
+            edgeGeometry,
+            static_cast<unsigned int>(nComponentHalfEdges));
         rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&userData));
         rtcSetGeometryBoundsFunction(
             edgeGeometry,
@@ -258,16 +437,27 @@ void OffsetGeometryContact::Initialize(
             nullptr);
         rtcSetGeometryBuildQuality(edgeGeometry, detail::toRtc(eMeshBvhQuality));
         rtcCommitGeometry(edgeGeometry);
+        rtcAttachGeometryByID(mEdgeScene, edgeGeometry, static_cast<unsigned int>(c));
         rtcReleaseGeometry(edgeGeometry);
     }
     rtcCommitScene(mVertexScene);
     rtcCommitScene(mFaceScene);
     rtcCommitScene(mEdgeScene);
     // 3. Initialize locks and bounds
-    mLocks.resize(std::max({3 * V.size(), F.cols(), 2 * E.cols()}));
-    dminv.resize(3 * V.size());
-    dminf.resize(F.cols());
-    dmine.resize(2 * E.cols());
+    mVertexLocks.resize(3 * nVertices);
+    mEdgeLocks.resize(2 * nHalfEdges);
+    dminv.resize(nVertices);
+    dminf.resize(nFacets);
+    dmine.resize(nHalfEdges);
+}
+
+void OffsetGeometryContact::PrepareIteration()
+{
+    mVertexLocks.setConstant(false);
+    mEdgeLocks.setConstant(false);
+    VOGC.row(0).setZero();
+    FOGC.row(0).setZero();
+    EOGC.row(0).setZero();
 }
 
 void OffsetGeometryContact::VertexFacetContactDetection(
@@ -281,23 +471,21 @@ void OffsetGeometryContact::VertexFacetContactDetection(
     ScalarType rq)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.VertexFacetContactDetection");
-    // 0. Reset locks and dmin
-    mLocks.setConstant(false);
-    dminv.setConstant(rq);
-    dminf.setConstant(rq);
+    // 0. Reset dmin
+    dminv.setConstant(rq * rq);
+    dminf.setConstant(rq * rq);
     // 1. Recompute BVHs
     detail::UserData<ScalarType, IndexType> userData{
         std::addressof(X),
         std::addressof(V),
         std::addressof(F),
-        nullptr,
         std::addressof(VP),
         std::addressof(FP),
-        nullptr,
-        std::addressof(VOGC),
         std::addressof(FOGC),
+        std::addressof(VOGC),
         std::addressof(EOGC),
-        std::addressof(mLocks),
+        std::addressof(mVertexLocks),
+        std::addressof(mEdgeLocks),
         std::addressof(dminv),
         std::addressof(dminf),
         std::addressof(dmine),
@@ -306,22 +494,42 @@ void OffsetGeometryContact::VertexFacetContactDetection(
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = nComponents - 1; c >= 0; --c)
     {
-        IndexType const vertexOffset = VP[c];
-        IndexType const nVertices    = VP[c + 1] - vertexOffset;
-        IndexType const faceOffset   = FP[c];
-        IndexType const nFaces       = FP[c + 1] - faceOffset;
+        IndexType const vertexOffset       = VP[c];
+        IndexType const nComponentVertices = VP[c + 1] - vertexOffset;
+        IndexType const faceOffset         = FP[c];
+        IndexType const nComponentFaces    = FP[c + 1] - faceOffset;
         // Vertex geometry
+        RTCGeometry vertexGeometry = rtcGetGeometry(mVertexScene, static_cast<unsigned int>(c));
+        rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&userData));
+        rtcSetGeometryBoundsFunction(
+            vertexGeometry,
+            &detail::VertexFacetRTCBoundsFunction<ScalarType, IndexType>,
+            nullptr);
+        rtcCommitGeometry(vertexGeometry);
+        rtcAttachGeometryByID(mVertexScene, vertexGeometry, static_cast<unsigned int>(c));
+        // Face geometry
+        RTCGeometry faceGeometry = rtcGetGeometry(mFaceScene, static_cast<unsigned int>(c));
+        rtcSetGeometryUserData(faceGeometry, static_cast<void*>(&userData));
+        rtcCommitGeometry(faceGeometry);
+        rtcAttachGeometryByID(mFaceScene, faceGeometry, static_cast<unsigned int>(c));
     }
+    rtcCommitScene(mVertexScene);
+    rtcCommitScene(mFaceScene);
     // 2. Detect contacts
+    rtcCollide(
+        mVertexScene,
+        mFaceScene,
+        detail::VertexFacetRTCCollideFunc<ScalarType, IndexType>,
+        static_cast<void*>(&userData));
 }
 
 void OffsetGeometryContact::EdgeEdgeContactDetection(
     geometry::Device device,
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& E,
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
     ScalarType r,
     ScalarType rq)
 {

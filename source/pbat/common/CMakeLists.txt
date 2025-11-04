@@ -1,28 +1,30 @@
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     FILE_SET api
-    FILES 
-        "ArgSort.h"
-        "BinaryRadixTree.h"
-        "BruteSet.h"
-        "Common.h"
-        "Concepts.h"
-        "ConstexprFor.h"
-        "CountingSort.h"
-        "Eigen.h"
-        "Hash.h"
-        "Heap.h"
-        "Indexing.h"
-        "Modulo.h"
-        "NAryTreeTraversal.h"
-        "Overloaded.h"
-        "Permute.h"
-        "Queue.h"
-        "Stack.h"
+    FILES
+    "ArgSort.h"
+    "Atomic.h"
+    "BinaryRadixTree.h"
+    "BruteSet.h"
+    "Common.h"
+    "Concepts.h"
+    "ConstexprFor.h"
+    "CountingSort.h"
+    "Eigen.h"
+    "Hash.h"
+    "Heap.h"
+    "Indexing.h"
+    "Modulo.h"
+    "NAryTreeTraversal.h"
+    "Overloaded.h"
+    "Permute.h"
+    "Queue.h"
+    "Stack.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
-PRIVATE
+    PRIVATE
     "ArgSort.cpp"
+    "Atomic.cpp"
     "BinaryRadixTree.cpp"
     "BruteSet.cpp"
     "CountingSort.cpp"

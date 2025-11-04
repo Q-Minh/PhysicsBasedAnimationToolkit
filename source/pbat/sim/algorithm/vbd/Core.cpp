@@ -193,7 +193,6 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     auto eSelection         = graph::EGreedyColorSelectionStrategy::LeastUsed;
     auto colors             = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
     // Initialization strategy
-    auto eInitializationStrategy = pbat::sim::algorithm::vbd::EInitializationStrategy::Inertia;
     vbdParams.WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
         .WithVertexColors(colors)
         .WithMaximumIterations(10)
@@ -201,6 +200,7 @@ TEST_CASE("[sim][algorithm][vbd] Core")
         .Construct();
     // Act
     dynamics.SetInitialConditions(dynamics.x, dynamics.v);
+    dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective(dynamics.x);
     VectorX g0 = dynamics.Gradient(dynamics.x);
     sim::algorithm::vbd::Solve(dynamics, vbdParams);
