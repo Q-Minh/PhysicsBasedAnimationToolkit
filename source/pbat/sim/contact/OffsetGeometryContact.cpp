@@ -13,30 +13,107 @@
 
 namespace pbat::sim::contact {
 
+OgcParams& OgcParams::WithRadii(Scalar _r, Scalar _rq)
+{
+    r  = _r;
+    rq = _rq;
+    return *this;
+}
+
+OgcParams& OgcParams::WithSceneFeatures(ESceneFeatures features)
+{
+    eSceneFeatures = features;
+    return *this;
+}
+
+OgcParams& OgcParams::WithBuildQuality(EBuildQuality scene, EBuildQuality mesh)
+{
+    eSceneBvhQuality = scene;
+    eMeshBvhQuality  = mesh;
+    return *this;
+}
+
+OgcParams& OgcParams::WithMaxContacts(int nvf, int nfv, int nef)
+{
+    nMaxVertexFacetContacts = nvf;
+    nMaxFacetVertexContacts = nfv;
+    nMaxEdgeFacetContacts   = nef;
+    return *this;
+}
+
+OgcParams& OgcParams::Construct(bool bValidate)
+{
+    if (bValidate)
+    {
+        if (r < Scalar(0) or rq < Scalar(0) or rq < r)
+        {
+            throw std::invalid_argument("OgcParams: rq >= r >= 0 required");
+        }
+        if (nMaxVertexFacetContacts < 0 or nMaxFacetVertexContacts < 0 or nMaxEdgeFacetContacts < 0)
+        {
+            throw std::invalid_argument("OgcParams: contact capacities must be non-negative");
+        }
+    }
+    return *this;
+}
+
+void OgcParams::Serialize(io::Archive& archive) const
+{
+    archive.WriteMetaData("r", r);
+    archive.WriteMetaData("rq", rq);
+    archive.WriteMetaData("eSceneFeatures", static_cast<int>(eSceneFeatures));
+    archive.WriteMetaData("eSceneBvhQuality", static_cast<int>(eSceneBvhQuality));
+    archive.WriteMetaData("eMeshBvhQuality", static_cast<int>(eMeshBvhQuality));
+    archive.WriteMetaData("nMaxVertexFacetContacts", nMaxVertexFacetContacts);
+    archive.WriteMetaData("nMaxFacetVertexContacts", nMaxFacetVertexContacts);
+    archive.WriteMetaData("nMaxEdgeFacetContacts", nMaxEdgeFacetContacts);
+}
+
+void OgcParams::Deserialize(io::Archive const& archive)
+{
+    if (archive.HasMetaData("r"))
+        r = archive.ReadMetaData<Scalar>("r");
+    if (archive.HasMetaData("rq"))
+        rq = archive.ReadMetaData<Scalar>("rq");
+    if (archive.HasMetaData("eSceneFeatures"))
+        eSceneFeatures = static_cast<ESceneFeatures>(archive.ReadMetaData<int>("eSceneFeatures"));
+    if (archive.HasMetaData("eSceneBvhQuality"))
+        eSceneBvhQuality =
+            static_cast<EBuildQuality>(archive.ReadMetaData<int>("eSceneBvhQuality"));
+    if (archive.HasMetaData("eMeshBvhQuality"))
+        eMeshBvhQuality = static_cast<EBuildQuality>(archive.ReadMetaData<int>("eMeshBvhQuality"));
+    if (archive.HasMetaData("nMaxVertexFacetContacts"))
+        nMaxVertexFacetContacts = archive.ReadMetaData<int>("nMaxVertexFacetContacts");
+    if (archive.HasMetaData("nMaxFacetVertexContacts"))
+        nMaxFacetVertexContacts = archive.ReadMetaData<int>("nMaxFacetVertexContacts");
+    if (archive.HasMetaData("nMaxEdgeFacetContacts"))
+        nMaxEdgeFacetContacts = archive.ReadMetaData<int>("nMaxEdgeFacetContacts");
+}
+
 namespace detail {
 
-static RTCSceneFlags toRtc(OffsetGeometryContact::ESceneFeatures flags) noexcept
+static RTCSceneFlags toRtc(OgcParams::ESceneFeatures flags) noexcept
 {
-    using ESceneFeatures   = OffsetGeometryContact::ESceneFeatures;
+    using ESceneFeatures   = OgcParams::ESceneFeatures;
     RTCSceneFlags rtcFlags = RTC_SCENE_FLAG_NONE;
-    if (flags == ESceneFeatures::Dynamic)
+    if (flags == OgcParams::ESceneFeatures::Dynamic)
     {
         rtcFlags = static_cast<RTCSceneFlags>(rtcFlags | RTC_SCENE_FLAG_DYNAMIC);
     }
-    if (flags == ESceneFeatures::Compact)
+    if (flags == OgcParams::ESceneFeatures::Compact)
     {
         rtcFlags = static_cast<RTCSceneFlags>(rtcFlags | RTC_SCENE_FLAG_COMPACT);
     }
-    if (flags == ESceneFeatures::Robust)
+    if (flags == OgcParams::ESceneFeatures::Robust)
     {
         rtcFlags = static_cast<RTCSceneFlags>(rtcFlags | RTC_SCENE_FLAG_ROBUST);
     }
     return rtcFlags;
 }
 
-static RTCBuildQuality toRtc(OffsetGeometryContact::EBuildQuality q) noexcept
+static RTCBuildQuality toRtc(OgcParams::EBuildQuality q) noexcept
 {
-    using Q = OffsetGeometryContact::EBuildQuality;
+    using Q = OgcParams::EBuildQuality;
     switch (q)
     {
         case Q::Low: return RTC_BUILD_QUALITY_LOW;
@@ -62,9 +139,9 @@ struct UserData
     Eigen::Vector<TScalar, Eigen::Dynamic>* dminv;
     Eigen::Vector<TScalar, Eigen::Dynamic>* dminf;
     Eigen::Vector<TScalar, Eigen::Dynamic>* dmine;
-    Eigen::Vector<TIndex, Eigen::Dynamic>* GVHEp;
-    Eigen::Vector<TIndex, Eigen::Dynamic>* GVHEadj;
-    Eigen::Matrix<TIndex, 2, Eigen::Dynamic>* GHEF;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEp;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEadj;
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* GHEF;
     TScalar r;
     TScalar rq;
 };
@@ -378,17 +455,14 @@ OffsetGeometryContact::OffsetGeometryContact(geometry::Device device)
     : FOGC(),
       VOGC(),
       EOGC(),
+      dminv(),
+      dminf(),
+      dmine(),
       mVertexScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mEdgeScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mFaceScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mVertexLocks(),
-      mEdgeLocks(),
-      dminv(),
-      dminf(),
-      dmine(),
-      GVHEp(),
-      GVHEadj(),
-      GHEF()
+      mEdgeLocks()
 {
 }
 
@@ -399,27 +473,10 @@ OffsetGeometryContact::OffsetGeometryContact(
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    int nMaxVertexFacetContacts,
-    int nMaxFacetVertexContacts,
-    int nMaxEdgeFacetContacts,
-    ESceneFeatures eSceneFeatures,
-    EBuildQuality eSceneBvhQuality,
-    EBuildQuality eMeshBvhQuality)
+    OgcParams const& params)
     : OffsetGeometryContact()
 {
-    Initialize(
-        device,
-        X,
-        V,
-        F,
-        VP,
-        FP,
-        nMaxVertexFacetContacts,
-        nMaxFacetVertexContacts,
-        nMaxEdgeFacetContacts,
-        eSceneFeatures,
-        eSceneBvhQuality,
-        eMeshBvhQuality);
+    Initialize(device, X, V, F, VP, FP, params);
 }
 
 void OffsetGeometryContact::Initialize(
@@ -429,28 +486,26 @@ void OffsetGeometryContact::Initialize(
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    int nMaxVertexFacetContacts,
-    int nMaxFacetVertexContacts,
-    int nMaxEdgeFacetContacts,
-    ESceneFeatures eSceneFeatures,
-    EBuildQuality eSceneBvhQuality,
-    EBuildQuality eMeshBvhQuality)
+    OgcParams const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.Initialize");
-    // 1. Allocate contact sets
+    // 1. Allocate contact sets and bounds
     auto const nVertices  = V.size();
     auto const nFacets    = F.cols();
     auto const nHalfEdges = 3 * nFacets;
-    FOGC.setConstant(nMaxVertexFacetContacts + 1, 3 * nVertices, IndexType(-1));
-    VOGC.setConstant(nMaxFacetVertexContacts + 1, nFacets, IndexType(-1));
-    EOGC.setConstant(nMaxEdgeFacetContacts + 1, 2 * nHalfEdges, IndexType(-1));
+    FOGC.setConstant(params.nMaxVertexFacetContacts + 1, 3 * nVertices, IndexType(-1));
+    VOGC.setConstant(params.nMaxFacetVertexContacts + 1, nFacets, IndexType(-1));
+    EOGC.setConstant(params.nMaxEdgeFacetContacts + 1, 2 * nHalfEdges, IndexType(-1));
+    dminv.resize(nVertices);
+    dminf.resize(nFacets);
+    dmine.resize(nHalfEdges);
     // 2. Compute BVHs
-    rtcSetSceneFlags(mVertexScene, detail::toRtc(eSceneFeatures));
-    rtcSetSceneFlags(mFaceScene, detail::toRtc(eSceneFeatures));
-    rtcSetSceneFlags(mEdgeScene, detail::toRtc(eSceneFeatures));
-    rtcSetSceneBuildQuality(mVertexScene, detail::toRtc(eSceneBvhQuality));
-    rtcSetSceneBuildQuality(mFaceScene, detail::toRtc(eSceneBvhQuality));
-    rtcSetSceneBuildQuality(mEdgeScene, detail::toRtc(eSceneBvhQuality));
+    rtcSetSceneFlags(mVertexScene, detail::toRtc(params.eSceneFeatures));
+    rtcSetSceneFlags(mFaceScene, detail::toRtc(params.eSceneFeatures));
+    rtcSetSceneFlags(mEdgeScene, detail::toRtc(params.eSceneFeatures));
+    rtcSetSceneBuildQuality(mVertexScene, detail::toRtc(params.eSceneBvhQuality));
+    rtcSetSceneBuildQuality(mFaceScene, detail::toRtc(params.eSceneBvhQuality));
+    rtcSetSceneBuildQuality(mEdgeScene, detail::toRtc(params.eSceneBvhQuality));
     // Iterate from last to first so that Embree doesn't need to continuously resize its ID storage.
     detail::UserData<ScalarType, IndexType> userData{
         std::addressof(X),
@@ -466,9 +521,9 @@ void OffsetGeometryContact::Initialize(
         std::addressof(dminv),
         std::addressof(dminf),
         std::addressof(dmine),
-        std::addressof(GVHEp),
-        std::addressof(GVHEadj),
-        std::addressof(GHEF),
+        nullptr,
+        nullptr,
+        nullptr,
         ScalarType(0),
         ScalarType(0)};
     Eigen::Index nComponents = VP.size() - 1;
@@ -490,7 +545,7 @@ void OffsetGeometryContact::Initialize(
             vertexGeometry,
             &detail::PointRTCBoundsFunction<ScalarType, IndexType>,
             nullptr);
-        rtcSetGeometryBuildQuality(vertexGeometry, detail::toRtc(eMeshBvhQuality));
+        rtcSetGeometryBuildQuality(vertexGeometry, detail::toRtc(params.eMeshBvhQuality));
         rtcCommitGeometry(vertexGeometry);
         rtcAttachGeometryByID(mVertexScene, vertexGeometry, static_cast<unsigned int>(c));
         rtcReleaseGeometry(vertexGeometry);
@@ -505,7 +560,7 @@ void OffsetGeometryContact::Initialize(
             triangleGeometry,
             &detail::TriangleRTCBoundsFunction<ScalarType, IndexType>,
             nullptr);
-        rtcSetGeometryBuildQuality(triangleGeometry, detail::toRtc(eMeshBvhQuality));
+        rtcSetGeometryBuildQuality(triangleGeometry, detail::toRtc(params.eMeshBvhQuality));
         rtcCommitGeometry(triangleGeometry);
         rtcAttachGeometryByID(mFaceScene, triangleGeometry, static_cast<unsigned int>(c));
         rtcReleaseGeometry(triangleGeometry);
@@ -520,7 +575,7 @@ void OffsetGeometryContact::Initialize(
             edgeGeometry,
             &detail::EdgeRTCBoundsFunction<ScalarType, IndexType>,
             nullptr);
-        rtcSetGeometryBuildQuality(edgeGeometry, detail::toRtc(eMeshBvhQuality));
+        rtcSetGeometryBuildQuality(edgeGeometry, detail::toRtc(params.eMeshBvhQuality));
         rtcCommitGeometry(edgeGeometry);
         rtcAttachGeometryByID(mEdgeScene, edgeGeometry, static_cast<unsigned int>(c));
         rtcReleaseGeometry(edgeGeometry);
@@ -528,16 +583,9 @@ void OffsetGeometryContact::Initialize(
     rtcCommitScene(mVertexScene);
     rtcCommitScene(mFaceScene);
     rtcCommitScene(mEdgeScene);
-    // 3. Initialize locks and bounds
+    // 3. Allocate locks
     mVertexLocks.resize(nVertices);
     mEdgeLocks.resize(nHalfEdges);
-    dminv.resize(nVertices);
-    dminf.resize(nFacets);
-    dmine.resize(nHalfEdges);
-    // 4. Compute adjacency information
-    auto nNodes              = X.cols();
-    std::tie(GVHEp, GVHEadj) = geometry::VertexHalfEdgeAdjacency<IndexType>(F, nNodes);
-    GHEF                     = geometry::HalfEdgeFaceAdjacency<IndexType>(F);
 }
 
 void OffsetGeometryContact::PrepareIteration()
@@ -550,19 +598,20 @@ void OffsetGeometryContact::PrepareIteration()
 }
 
 void OffsetGeometryContact::VertexFacetContactDetection(
-    geometry::Device device,
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    ScalarType r,
-    ScalarType rq)
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
+    OgcParams const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.VertexFacetContactDetection");
     // 0. Reset dmin
-    dminv.setConstant(rq * rq);
-    dminf.setConstant(rq * rq);
+    dminv.setConstant(params.rq * params.rq);
+    dminf.setConstant(params.rq * params.rq);
     // 1. Recompute BVHs
     detail::UserData<ScalarType, IndexType> userData{
         std::addressof(X),
@@ -581,8 +630,8 @@ void OffsetGeometryContact::VertexFacetContactDetection(
         std::addressof(GVHEp),
         std::addressof(GVHEadj),
         std::addressof(GHEF),
-        r,
-        rq};
+        params.r,
+        params.rq};
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = nComponents - 1; c >= 0; --c)
     {
@@ -616,14 +665,14 @@ void OffsetGeometryContact::VertexFacetContactDetection(
 }
 
 void OffsetGeometryContact::EdgeEdgeContactDetection(
-    geometry::Device device,
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    ScalarType r,
-    ScalarType rq)
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
+    OgcParams const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.EdgeEdgeContactDetection");
 }

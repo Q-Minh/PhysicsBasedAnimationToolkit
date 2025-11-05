@@ -25,20 +25,13 @@
 namespace pbat::sim::contact {
 
 /**
- * @brief API of Offset Geometric Contact (OGC) algorithm \cite chen_offset_2025 for multi-body
- * triangle mesh scene.
+ * @brief Parameters for Offset Geometry Contact (OGC).
  *
- * This class does not own mesh topology or vertex positions. It only owns the acceleration
- * structures created within Embree. All API functions accept topology (triangles, edges) and
- * connected-component labels as parameters. Vertex positions must be supplied where needed.
+ * This bundles algorithm configuration knobs and capacities. Mesh data and device are
+ * intentionally not stored here per design; this type is for configurable parameters only.
  */
-class OffsetGeometryContact
+struct OgcParams
 {
-  public:
-    using ScalarType = Scalar; ///< Type for vertex coordinates
-    using IndexType  = Index;  ///< Type for indices into vertex arrays
-    static_assert(std::is_signed_v<IndexType>, "IndexType must be a signed integer type");
-
     /**
      * @brief BVH build quality options.
      */
@@ -56,6 +49,80 @@ class OffsetGeometryContact
         Compact, ///< Compact representation
         Robust   ///< Robust representation
     };
+
+    Scalar r{Scalar(0)};  ///< Contact radius
+    Scalar rq{Scalar(0)}; ///< Query inflation radius
+
+    ESceneFeatures eSceneFeatures{ESceneFeatures::None}; ///< Scene features
+    EBuildQuality eSceneBvhQuality{EBuildQuality::Low};  ///< Scene BVH build quality
+    EBuildQuality eMeshBvhQuality{EBuildQuality::Low};   ///< Mesh BVH build quality
+
+    int nMaxVertexFacetContacts{16}; ///< Max vertex-facet contacts
+    int nMaxFacetVertexContacts{16}; ///< Max facet-vertex contacts
+    int nMaxEdgeFacetContacts{16};   ///< Max edge-facet contacts
+
+  public:
+    /**
+     * @brief Set contact and query radii.
+     * @param _r Contact radius
+     * @param _rq Query radius
+     * @return Reference to this
+     */
+    PBAT_API OgcParams& WithRadii(Scalar _r, Scalar _rq);
+    /**
+     * @brief Set scene features.
+     * @param features Scene features
+     * @return Reference to this
+     */
+    PBAT_API OgcParams& WithSceneFeatures(ESceneFeatures features);
+    /**
+     * @brief Set both scene and mesh BVH build quality.
+     * @param scene Build quality for scene
+     * @param mesh Build quality for mesh
+     * @return Reference to this
+     */
+    PBAT_API OgcParams& WithBuildQuality(EBuildQuality scene, EBuildQuality mesh);
+    /**
+     * @brief Set maximum number of contacts.
+     * @param nvf Max vertex-facet contacts
+     * @param nfv Max facet-vertex contacts
+     * @param nef Max edge-facet contacts
+     * @return Reference to this
+     */
+    PBAT_API OgcParams& WithMaxContacts(int nvf, int nfv, int nef);
+    /**
+     * @brief Validate and construct the parameters.
+     * @param bValidate Whether to validate parameters
+     * @return Reference to this
+     */
+    PBAT_API OgcParams& Construct(bool bValidate = true);
+    /**
+     * @brief Serialize the parameters to an archive.
+     * @param archive Archive to serialize to
+     */
+    PBAT_API void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize the parameters from an archive.
+     * @param archive Archive to deserialize from
+     */
+    PBAT_API void Deserialize(io::Archive const& archive);
+};
+
+/**
+ * @brief API of Offset Geometric Contact (OGC) algorithm \cite chen_offset_2025 for multi-body
+ * triangle mesh scene.
+ *
+ * This class does not own mesh topology or vertex positions. It only owns the acceleration
+ * structures created within Embree. All API functions accept topology (triangles, edges) and
+ * connected-component labels as parameters. Vertex positions must be supplied where needed.
+ */
+class OffsetGeometryContact
+{
+  public:
+    using ScalarType = Scalar; ///< Type for vertex coordinates
+    using IndexType  = Index;  ///< Type for indices into vertex arrays
+    static_assert(std::is_signed_v<IndexType>, "IndexType must be a signed integer type");
+
     /**
      * @brief Default constructor
      */
@@ -84,12 +151,7 @@ class OffsetGeometryContact
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
-     * @param nMaxVertexFacetContacts Maximum number of vertex-facet contacts per vertex
-     * @param nMaxFacetVertexContacts Maximum number of facet-vertex contacts per triangle
-     * @param nMaxEdgeFacetContacts Maximum number of edge-facet contacts per edge
-     * @param eSceneFeatures Scene features
-     * @param eSceneBvhQuality Scene build quality
-     * @param eMeshBvhQuality Geometry build quality
+     * @param params OGC parameters
      */
     PBAT_API OffsetGeometryContact(
         geometry::Device device,
@@ -98,12 +160,7 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        int nMaxVertexFacetContacts    = 16,
-        int nMaxFacetVertexContacts    = 16,
-        int nMaxEdgeFacetContacts      = 16,
-        ESceneFeatures eSceneFeatures  = ESceneFeatures::Dynamic,
-        EBuildQuality eSceneBvhQuality = EBuildQuality::Low,
-        EBuildQuality eMeshBvhQuality  = EBuildQuality::Low);
+        OgcParams const& params);
     /**
      * @brief Initialize OGC, i.e. build its spatial acceleration data structures.
      *
@@ -113,12 +170,7 @@ class OffsetGeometryContact
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
-     * @param nMaxVertexFacetContacts Maximum number of vertex-facet contacts per vertex
-     * @param nMaxFacetVertexContacts Maximum number of facet-vertex contacts per triangle
-     * @param nMaxEdgeFacetContacts Maximum number of edge-facet contacts per edge
-     * @param eSceneFeatures Scene features
-     * @param eSceneBvhQuality Scene build quality
-     * @param eMeshBvhQuality Geometry build quality
+     * @param params OGC parameters
      */
     PBAT_API void Initialize(
         geometry::Device device,
@@ -127,36 +179,33 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        int nMaxVertexFacetContacts    = 16,
-        int nMaxFacetVertexContacts    = 16,
-        int nMaxEdgeFacetContacts      = 16,
-        ESceneFeatures eSceneFeatures  = ESceneFeatures::None,
-        EBuildQuality eSceneBvhQuality = EBuildQuality::Low,
-        EBuildQuality eMeshBvhQuality  = EBuildQuality::Low);
+        OgcParams const& params);
     /**
      * @brief Prepare for contact iteration.
      */
     PBAT_API void PrepareIteration();
     /**
      * @brief Compute vertex-facet and face-facet contact sets.
-     * @param device Spatial acceleration device
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
-     * @param r Contact radius
-     * @param rq Query radius
+     * @param GVHEp `|# points + 1|` point to half-edge prefix
+     * @param GVHEadj `|# half edges|` half-edge adjacency
+     * @param GHEF `2 x |# half edges|` half-edge to face adjacency
+     * @param params OGC parameters
      */
     PBAT_API void VertexFacetContactDetection(
-        geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        ScalarType r,
-        ScalarType rq);
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
+        OgcParams const& params);
     /**
      * @brief Compute edge-facet contact sets.
      * @param device Spatial acceleration device
@@ -165,18 +214,19 @@ class OffsetGeometryContact
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
-     * @param r Contact radius
-     * @param rq Query radius
+     * @param GVHEp `|# points + 1|` point to half-edge prefix
+     * @param GVHEadj `|# half edges|` half-edge adjacency
+     * @param params OGC parameters
      */
     PBAT_API void EdgeEdgeContactDetection(
-        geometry::Device device,
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        ScalarType r,
-        ScalarType rq);
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
+        OgcParams const& params);
     /**
      * @brief Scene axis-aligned bounding box.
      */
@@ -226,6 +276,12 @@ class OffsetGeometryContact
               ///< sets, where `EOGC.col(2*e + 0)`, `EOGC.col(2*e + 1)` are respectively the edge
               ///< and vertex indices of the contact facets for edge `e`, except for the first
               ///< coefficient, which indicates the number of contact facets in that column.
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        dminv; ///< `|# vertices|` array of vertex displacement bounds
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        dminf; ///< `|# faces|` array of face displacement bounds
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        dmine; ///< `|# edges|` array of edge displacement bounds
 
   private:
     RTCScene mVertexScene{nullptr}; ///< Opaque RTCScene
@@ -237,17 +293,6 @@ class OffsetGeometryContact
                       ///< to per-vertex contact facet sets.
     Eigen::Vector<bool, Eigen::Dynamic> mEdgeLocks; ///< `|# edges|` array of locks for synchronized
                                                     ///< access to per-edge contact facet sets.
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dminv; ///< `|# vertices|` array of vertex displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dminf; ///< `|# faces|` array of face displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dmine; ///< `|# edges|` array of edge displacement bounds
-    Eigen::Vector<IndexType, Eigen::Dynamic> GVHEp; ///< `|# points + 1|` point to half-edge prefix
-    Eigen::Vector<IndexType, Eigen::Dynamic>
-        GVHEadj; ///< `|# half edges|` point to half-edge adjacency
-    Eigen::Matrix<IndexType, 2, Eigen::Dynamic>
-        GHEF; ///< `2 x |# half edges|` half-edge to face adjacency
 };
 
 } // namespace pbat::sim::contact
