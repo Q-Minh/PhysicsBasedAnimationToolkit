@@ -120,7 +120,7 @@ inline bool AreOppositeHalfEdges(
     TIndex const vib = F((hei + 1) % 3, fi);
     TIndex const vja = F(hej % 3, fj);
     TIndex const vjb = F((hej + 1) % 3, fj);
-    return (via == vjb) && (vib == vja);
+    return (via == vjb) and (vib == vja);
 }
 
 /**
@@ -150,14 +150,15 @@ inline auto VertexHalfEdgeAdjacency(
         n = F.maxCoeff() + 1;
     Eigen::Vector<TIndex, Eigen::Dynamic> GVHEp(n + 1);
     GVHEp.setZero();
-    // Count incoming half-edges per vertex (F stores incoming vertex of each half-edge)
-    GVHEp(F.reshaped().array() + 1).array() += TIndex(1);
+    // Count incoming half-edges per vertex (F stores incoming vertex of each half-edge) and store
+    // in GVHEp starting from index 1
+    GVHEp(F.reshaped().array() /* vertex indices */ + 1).array() += TIndex(1);
     // Prefix sum to get offsets
     std::inclusive_scan(GVHEp.data() + 1, GVHEp.data() + GVHEp.size(), GVHEp.data() + 1);
-    // Adjacency: permutation sorting half-edges by incoming vertex
+    // Compute adjacency by essentially grouping (i.e. sorting) half-edges by incoming vertex
     Eigen::Vector<TIndex, Eigen::Dynamic> GVHEadj =
         common::ArgSort<TIndex>(static_cast<TIndex>(nHalfEdges), [&F](TIndex hei, TIndex hej) {
-            return F(hei % 3, hei / 3) < F(hej % 3, hej / 3);
+            return IncomingVertex(F, hei) < IncomingVertex(F, hej);
         });
     return {GVHEp, GVHEadj};
 }
@@ -187,22 +188,22 @@ HalfEdgeFaceAdjacency(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const>
     // Sort half-edges by undirected edge key (min(i,j), max(i,j))
     auto order =
         common::ArgSort<TIndex>(static_cast<TIndex>(nHalfEdges), [&F](TIndex hei, TIndex hej) {
-            TIndex fi  = hei / 3;
-            TIndex fj  = hej / 3;
-            TIndex via = F(hei % 3, fi);
-            TIndex vib = F((hei + 1) % 3, fi);
-            TIndex vja = F(hej % 3, fj);
-            TIndex vjb = F((hej + 1) % 3, fj);
+            TIndex fi  = FaceOfHalfEdge(hei);
+            TIndex fj  = FaceOfHalfEdge(hej);
+            TIndex via = IncomingVertex(F, hei);
+            TIndex vib = OutgoingVertex(F, hei);
+            TIndex vja = IncomingVertex(F, hej);
+            TIndex vjb = OutgoingVertex(F, hej);
             return std::make_pair(std::min(via, vib), std::max(via, vib)) <
                    std::make_pair(std::min(vja, vjb), std::max(vja, vjb));
         });
     // Pair consecutive entries (assumes manifold edges => pairs of twins)
-    for (TIndex k = 0; k < static_cast<TIndex>(nHalfEdges); k += 2)
+    for (TIndex k = 0; k < nHalfEdges; k += 2)
     {
         TIndex const hei = order(k);
         TIndex const hej = order(k + 1);
-        TIndex const fi  = hei / 3;
-        TIndex const fj  = hej / 3;
+        TIndex const fi  = FaceOfHalfEdge(hei);
+        TIndex const fj  = FaceOfHalfEdge(hej);
         GFHE(0, hei)     = fi;
         GFHE(1, hei)     = fj;
         GFHE(0, hej)     = fj;
