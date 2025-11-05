@@ -234,6 +234,12 @@ class OffsetGeometryContact
         dminf; ///< `|# faces|` array of face displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dmine; ///< `|# edges|` array of edge displacement bounds
+    Eigen::Vector<IndexType, Eigen::Dynamic>
+        GVHEp; ///< `|# vertices + 1|` vertex to half-edge prefix
+    Eigen::Vector<IndexType, Eigen::Dynamic>
+        GVHEadj; ///< `|# half edges|` vertex to half-edge adjacency
+    Eigen::Matrix<IndexType, 2, Eigen::Dynamic>
+        GHEF; ///< `2 x |# half edges|` half-edge to face adjacency
 };
 
 } // namespace pbat::sim::contact

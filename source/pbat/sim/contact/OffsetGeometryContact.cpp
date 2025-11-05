@@ -3,6 +3,7 @@
 #include "pbat/common/Atomic.h"
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/DistanceQueries.h"
+#include "pbat/geometry/HalfEdges.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/math/linalg/mini/Norm.h"
 #include "pbat/profiling/Profiling.h"
@@ -61,6 +62,9 @@ struct UserData
     Eigen::Vector<TScalar, Eigen::Dynamic>* dminv;
     Eigen::Vector<TScalar, Eigen::Dynamic>* dminf;
     Eigen::Vector<TScalar, Eigen::Dynamic>* dmine;
+    Eigen::Vector<TIndex, Eigen::Dynamic>* GVHEp;
+    Eigen::Vector<TIndex, Eigen::Dynamic>* GVHEadj;
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic>* GHEF;
     TScalar r;
     TScalar rq;
 };
@@ -281,9 +285,10 @@ void VertexFacetRTCCollideFunc(
                 // Avoid duplicated contact with `a` detected from a neighbour facet
                 bool bExcessContact = (nContactFacets == FOGC.rows() - 1);
                 int k;
-                for (k = 0; not bExcessContact and k < nContactFacets; ++k)
-                    if (FOGC(k, j) == a)
-                        break;
+                if (not bExcessContact)
+                    for (k = 0; k < nContactFacets; ++k)
+                        if (FOGC(k, j) == a)
+                            break;
                 bool bDuplicateContact = (k < nContactFacets);
                 if (bDuplicateContact or bExcessContact)
                     return;
@@ -296,21 +301,21 @@ void VertexFacetRTCCollideFunc(
                 };
                 switch (eFace)
                 {
-                    case 2: {
+                    case 2 /* vertex */: {
                         // TODO: Implement vertex feasibility check
                         bool bInVertexFeasibleRegion{false};
                         if (bInVertexFeasibleRegion)
                             fUpdateContactFacetSets();
                         break;
                     }
-                    case 1: {
+                    case 1 /* edge */: {
                         // TODO: Implement edge feasibility check
                         bool bInEdgeFeasibleRegion{false};
                         if (bInEdgeFeasibleRegion)
                             fUpdateContactFacetSets();
                         break;
                     }
-                    default: {
+                    default /* triangle */: {
                         fUpdateContactFacetSets();
                         break;
                     }
@@ -333,7 +338,10 @@ OffsetGeometryContact::OffsetGeometryContact(geometry::Device device)
       mEdgeLocks(),
       dminv(),
       dminf(),
-      dmine()
+      dmine(),
+      GVHEp(),
+      GVHEadj(),
+      GHEF()
 {
 }
 
@@ -411,6 +419,9 @@ void OffsetGeometryContact::Initialize(
         std::addressof(dminv),
         std::addressof(dminf),
         std::addressof(dmine),
+        std::addressof(GVHEp),
+        std::addressof(GVHEadj),
+        std::addressof(GHEF),
         ScalarType(0),
         ScalarType(0)};
     Eigen::Index nComponents = VP.size() - 1;
@@ -471,11 +482,14 @@ void OffsetGeometryContact::Initialize(
     rtcCommitScene(mFaceScene);
     rtcCommitScene(mEdgeScene);
     // 3. Initialize locks and bounds
-    mVertexLocks.resize(3 * nVertices);
-    mEdgeLocks.resize(2 * nHalfEdges);
+    mVertexLocks.resize(nVertices);
+    mEdgeLocks.resize(nHalfEdges);
     dminv.resize(nVertices);
     dminf.resize(nFacets);
     dmine.resize(nHalfEdges);
+    // 4. Compute adjacency information
+    std::tie(GVHEp, GVHEadj) = geometry::VertexHalfEdgeAdjacency<IndexType>(F, nVertices);
+    GHEF                     = geometry::HalfEdgeFaceAdjacency<IndexType>(F);
 }
 
 void OffsetGeometryContact::PrepareIteration()
@@ -516,6 +530,9 @@ void OffsetGeometryContact::VertexFacetContactDetection(
         std::addressof(dminv),
         std::addressof(dminf),
         std::addressof(dmine),
+        std::addressof(GVHEp),
+        std::addressof(GVHEadj),
+        std::addressof(GHEF),
         r,
         rq};
     Eigen::Index nComponents = VP.size() - 1;
