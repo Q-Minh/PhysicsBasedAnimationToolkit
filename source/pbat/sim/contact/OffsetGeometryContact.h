@@ -16,6 +16,7 @@
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
 #include "pbat/geometry/Device.h"
+#include "pbat/geometry/HalfEdges.h"
 #include "pbat/io/Archive.h"
 
 #include <embree4/rtcore.h>
@@ -182,8 +183,20 @@ class OffsetGeometryContact
         OgcParams const& params);
     /**
      * @brief Prepare for contact iteration.
+     * @param X `3 x |# points|` point positions (column-major: one point per column)
+     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param VP `|# connected components| x 1` vertex prefix
+     * @param FP `|# connected components| x 1` face prefix
+     * @param params OGC parameters
      */
-    PBAT_API void PrepareIteration();
+    PBAT_API void PrepareIteration(
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        OgcParams const& params);
     /**
      * @brief Compute vertex-facet and face-facet contact sets.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
@@ -294,6 +307,129 @@ class OffsetGeometryContact
     Eigen::Vector<bool, Eigen::Dynamic> mEdgeLocks; ///< `|# edges|` array of locks for synchronized
                                                     ///< access to per-edge contact facet sets.
 };
+
+/**
+ * @brief Computes the triangle face (vertex, edge or triangle) nearest to a point's projection on
+ * a triangle.
+ * @param u First barycentric coordinate of the closest point on the triangle
+ * @param v Second barycentric coordinate of the closest point on the triangle
+ * @param w Third barycentric coordinate of the closest point on the triangle
+ * @return The pair (a, eFace), where a is either a local vertex index or edge index, and eFace
+ * indicates the type of face, i.e. (0 | 1 | 2) -> (triangle | edge | vertex)
+ */
+template <common::CFloatingPoint TScalar>
+std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w);
+
+/**
+ * @brief Determines if point x is in the vertex feasible region of vertex i.
+ * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @param X `3 x |# points|` point positions
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param GVHEp `|# vertices + 1|` vertex to half-edge prefix
+ * @param GVHEadj `|# half edges|` vertex to half-edge adjacency
+ * @param x `3 x 1` query point
+ * @param i Point (global) index corresponding to vertex
+ * @return true if in vertex feasible region; false otherwise
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+bool IsVertexFeasible(
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEp,
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEadj,
+    Eigen::Vector<TScalar, 3> const& x,
+    TIndex i);
+
+/**
+ * @brief Determines if point x is in the edge feasible region of half-edge he of face fi.
+ * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @param X `3 x |# points|` point positions
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param GHEF `2 x |# half edges|` half-edge to (adjacent face, opposite face)
+ * @param x `3 x 1` query point
+ * @param fi Face index of half-edge he
+ * @param he Half-edge index
+ * @return true if in edge feasible region; false otherwise
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+bool IsEdgeFeasible(
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF,
+    Eigen::Vector<TScalar, 3> const& x,
+    TIndex fi,
+    TIndex he);
+
+template <common::CFloatingPoint TScalar>
+std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
+{
+    int const nZeros     = (u == TScalar(0)) + (v == TScalar(0)) + (w == TScalar(0));
+    bool const bIsVertex = (nZeros == 2);
+    bool const bIsEdge   = (nZeros == 1);
+    int eFace            = (bIsVertex * 2) + (bIsEdge * 1);
+    int a                = bIsVertex * ((v == TScalar(1)) * 1 + (w == TScalar(1)) * 2) +
+            bIsEdge * ((u == TScalar(0)) * 1 + (v == TScalar(0)) * 2);
+    return {a, eFace};
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+bool IsVertexFeasible(
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEp,
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEadj,
+    Eigen::Vector<TScalar, 3> const& x,
+    TIndex i)
+{
+    bool bInVertexFeasibleRegion{true};
+    TIndex const hebegin               = GVHEp(i);
+    TIndex const heend                 = GVHEp(i + 1);
+    Eigen::Vector<TScalar, 3> const xv = X.col(i);
+    for (TIndex he : GVHEadj(Eigen::seq(hebegin, heend - 1)))
+    {
+        TIndex const vp = geometry::OutgoingVertex<TIndex>(F, he);
+        auto const xvp  = X.col(vp);
+        bInVertexFeasibleRegion &= ((x - xv).dot(xv - xvp) >= TScalar(0));
+    }
+    return bInVertexFeasibleRegion;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+bool IsEdgeFeasible(
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF,
+    Eigen::Vector<TScalar, 3> const& x,
+    TIndex fi,
+    TIndex he)
+{
+    TIndex fj = GHEF(1, he);
+    TIndex i  = geometry::IncomingVertex(F, he);
+    TIndex j  = geometry::OutgoingVertex(F, he);
+    TIndex k  = geometry::OutgoingVertex(F, he, 1 /* step */);
+    // Get the third vertex l of triangle fj that is not part of undirected edge (i,j)
+    TIndex l = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
+               (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
+               (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
+    Eigen::Vector<TScalar, 3> xi  = X.col(i);
+    Eigen::Vector<TScalar, 3> xj  = X.col(j);
+    Eigen::Vector<TScalar, 3> xk  = X.col(k);
+    Eigen::Vector<TScalar, 3> xl  = X.col(l);
+    Eigen::Vector<TScalar, 3> xij = xj - xi;
+    TScalar xijn2                 = xij.squaredNorm();
+    // Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
+    Eigen::Vector<TScalar, 3> pin = (xi - xk) + (xk - xi).dot(xij) / xijn2 * xij;
+    // Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
+    Eigen::Vector<TScalar, 3> pjn = (xi - xl) + (xl - xi).dot(xij) / xijn2 * xij;
+    bool bInEdgeFeasibleRegion =
+        ((x - xi).dot(xj - xi) >= TScalar(0)) and // within half-plane of vertex i
+        ((x - xj).dot(xi - xj) >= TScalar(0)) and // within half-plane of vertex j
+        ((x - xi).dot(pin) >= TScalar(0)) and     // within half-plane perpendicular to fi
+        ((x - xi).dot(pjn) >= TScalar(0));        // within half-plane perpendicular to fj
+    return bInEdgeFeasibleRegion;
+}
 
 } // namespace pbat::sim::contact
 
