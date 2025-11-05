@@ -294,6 +294,7 @@ void VertexFacetRTCCollideFunc(
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
+        // Get vertex-facet pair (iv, f) where ix is the point index of vertex iv
         RTCCollision const& collision        = collisions[ci];
         TIndex const iv                      = static_cast<TIndex>(collision.primID0);
         TIndex const ix                      = V(iv);
@@ -318,52 +319,56 @@ void VertexFacetRTCCollideFunc(
         // Update triangle and vertex displacement bounds
         common::AtomicMin(dminv(iv), d2);
         common::AtomicMin(dminf(f), d2);
-        // Update contact sets if facets within contact radius
-        if (d2 < r * r)
-        {
-            auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw);
-            TIndex sj                  = 3 * iv + eFace;
-            TIndex a = (eFace == 0) * f + (eFace == 1) * (3 * f + alocal /* he */) +
-                       (eFace == 2) * finds(alocal) /* v */;
-            // Synchronize reads/writes to vertex iv's contact sets
-            common::AtomicExecute(mVertexLocks(iv), [&]() {
-                int const nContactFacets = FOGC(0, sj);
-                // Avoid duplicated contact with `a` detected from a neighbour facet
-                bool const bExcessContact = (nContactFacets == FOGC.rows() - 1);
-                int k;
-                if (not bExcessContact)
-                    for (k = 0; k < nContactFacets; ++k)
-                        if (FOGC(k, sj) == a)
-                            break;
-                bool const bDuplicateContact = (k < nContactFacets);
-                if (bDuplicateContact or bExcessContact)
-                    return;
-                // Update contact facet sets
-                auto const fUpdateContactFacetSets = [&]() {
-                    FOGC(FOGC(0, sj)++, sj) = a;
-                    TIndex& counter         = VOGC(0, f);
-                    TIndex fk               = common::AtomicAdd<TIndex>(counter, 1);
-                    VOGC(fk, f)             = iv;
-                };
-                switch (eFace)
-                {
-                    case 2 /* vertex */: {
-                        if (IsVertexFeasible<TScalar, TIndex>(X, F, GVHEp, GVHEadj, xi, a))
-                            fUpdateContactFacetSets();
+        // No contact if outside contact radius
+        bool const bInContactRadius = (d2 < r * r);
+        if (not bInContactRadius)
+            continue;
+        // Determine face (vertex, edge, triangle) closest to vertex iv
+        auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw);
+        // Get contact face set column index for vertex iv and face type eFace
+        TIndex sj = 3 * iv + eFace;
+        // Vectorize contact face index a based on its type (triangle | edge | vertex)
+        TIndex a = (eFace == 0) * f + (eFace == 1) * (3 * f + alocal /* he */) +
+                   (eFace == 2) * finds(alocal) /* v */;
+        // Synchronize reads/writes to vertex iv's contact sets
+        common::AtomicExecute(mVertexLocks(iv), [&]() {
+            int const nContactFacets = FOGC(0, sj);
+            // Avoid duplicated contact with `a` detected from a neighbour facet. Brute force search
+            // the list of contact faces for `a`. Is there a better way?
+            bool const bExcessContact = (nContactFacets == FOGC.rows() - 1);
+            int k;
+            if (not bExcessContact)
+                for (k = 0; k < nContactFacets; ++k)
+                    if (FOGC(k, sj) == a)
                         break;
-                    }
-                    case 1 /* edge */: {
-                        if (IsEdgeFeasible<TScalar, TIndex>(X, F, GHEF, xi, f, a))
-                            fUpdateContactFacetSets();
-                        break;
-                    }
-                    default /* triangle */: {
-                        fUpdateContactFacetSets();
-                        break;
-                    }
+            bool const bDuplicateContact = (k < nContactFacets);
+            if (bDuplicateContact or bExcessContact)
+                return;
+            // Update contact face sets
+            auto const fUpdateContactFaceSets = [&]() {
+                FOGC(FOGC(0, sj)++, sj) = a;
+                TIndex& counter         = VOGC(0, f);
+                TIndex fk               = common::AtomicAdd<TIndex>(counter, 1);
+                VOGC(fk, f)             = iv;
+            };
+            switch (eFace)
+            {
+                case 2 /* vertex */: {
+                    if (IsVertexFeasible<TScalar, TIndex>(X, F, GVHEp, GVHEadj, xi, a))
+                        fUpdateContactFaceSets();
+                    break;
                 }
-            });
-        }
+                case 1 /* edge */: {
+                    if (IsEdgeFeasible<TScalar, TIndex>(X, F, GHEF, xi, f, a))
+                        fUpdateContactFaceSets();
+                    break;
+                }
+                default /* triangle */: {
+                    fUpdateContactFaceSets();
+                    break;
+                }
+            }
+        });
     }
 }
 
