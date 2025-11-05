@@ -24,7 +24,107 @@ namespace pbat {
 namespace geometry {
 
 /**
- * @brief Build the vertex-to-half-edge adjacency for a triangle mesh.
+ * @brief Get the incoming vertex of a half-edge in a triangle mesh.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param he Half-edge index
+ * @return The incoming vertex index `v` of half-edge `he`
+ */
+template <common::CIndex TIndex = Index>
+inline TIndex
+IncomingVertex(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F, TIndex he)
+{
+    return F(he % 3, he / 3);
+}
+
+/**
+ * @brief Get the outgoing vertex of a half-edge in a triangle mesh.
+ *
+ * @note Particularly useful for iterating over adjacent vertices of a given vertex, using the
+ * `VertexHalfEdgeAdjacency` structure.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param he Half-edge index
+ * @param step Number of steps to advance around the face before getting the outgoing vertex
+ * @return The outgoing vertex index `v` of half-edge `he`
+ */
+template <common::CIndex TIndex = Index>
+inline TIndex OutgoingVertex(
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    TIndex he,
+    int step = 0)
+{
+    return F((he + step + 1) % 3, he / 3);
+}
+
+/**
+ * @brief Get the next half-edge in the same triangle.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param he Half-edge index
+ * @return The next half-edge index in the same triangle
+ */
+template <common::CIndex TIndex = Index>
+inline TIndex NextHalfEdge(TIndex he)
+{
+    return (he / 3) * 3 + (he + 1) % 3;
+}
+
+/**
+ * @brief Get the first half-edge of a face.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param f Face index
+ * @return First half-edge index of face `f`
+ */
+template <common::CIndex TIndex = Index>
+inline TIndex FirstHalfEdgeOfFace(TIndex f)
+{
+    return f * 3;
+}
+
+/**
+ * @brief Get the face index of a half-edge.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param he Half-edge index
+ * @return Face index of half-edge `he`
+ */
+template <common::CIndex TIndex = Index>
+inline TIndex FaceOfHalfEdge(TIndex he)
+{
+    return he / 3;
+}
+
+/**
+ * @brief Tests if two half-edges are oppositely oriented edges of the same undirected edge.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param hei Half-edge index i
+ * @param hej Half-edge index j
+ * @return true if half-edges `hei` and `hej` are opposite half-edges
+ * @return false otherwise
+ */
+template <common::CIndex TIndex = Index>
+inline bool AreOppositeHalfEdges(
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    TIndex hei,
+    TIndex hej)
+{
+    TIndex const fi  = hei / 3;
+    TIndex const fj  = hej / 3;
+    TIndex const via = F(hei % 3, fi);
+    TIndex const vib = F((hei + 1) % 3, fi);
+    TIndex const vja = F(hej % 3, fj);
+    TIndex const vjb = F((hej + 1) % 3, fj);
+    return (via == vjb) && (vib == vja);
+}
+
+/**
+ * @brief Build the (incoming-)vertex-to-half-edge adjacency for a triangle mesh.
  *
  * A half-edge is represented implicitly by the pair `(F(ei,f), F((ei+1)%3, f))` for `ei` in
  * `{0,1,2}` and a triangle `f`. This constructs a CSR-like representation (prefix, adjacency) that
@@ -41,11 +141,13 @@ namespace geometry {
 template <common::CIndex TIndex = Index>
 inline auto VertexHalfEdgeAdjacency(
     Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    TIndex n)
+    TIndex n = TIndex(-1))
     -> std::pair<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
 {
     Eigen::Index const nFacets    = F.cols();
     Eigen::Index const nHalfEdges = 3 * nFacets;
+    if (n < 0)
+        n = F.maxCoeff() + 1;
     Eigen::Vector<TIndex, Eigen::Dynamic> GVHEp(n + 1);
     GVHEp.setZero();
     // Count incoming half-edges per vertex (F stores incoming vertex of each half-edge)

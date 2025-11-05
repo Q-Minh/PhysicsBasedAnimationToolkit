@@ -111,9 +111,9 @@ void EdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
     auto& X   = *(userData->X);
     auto& F   = *(userData->F);
     TIndex he = static_cast<TIndex>(args->primID);
-    TIndex f  = he / 3;
-    TIndex ei = he % 3;
-    TIndex ej = (ei + 1) % 3;
+    TIndex f  = geometry::FaceOfHalfEdge(he);
+    TIndex ei = geometry::IncomingVertex(F, he);
+    TIndex ej = geometry::OutgoingVertex(F, he);
     Eigen::Matrix<TScalar, 3, 2> xe =
         X(Eigen::placeholders::all, Eigen::Vector<TIndex, 2>{F(ei, f), F(ej, f)});
     args->bounds_o->lower_x = std::min(xe(0, 0), xe(0, 1));
@@ -150,9 +150,9 @@ void EdgeEdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
     auto& F   = *(userData->F);
     TIndex he = static_cast<TIndex>(args->primID);
     TIndex he = static_cast<TIndex>(args->primID);
-    TIndex f  = he / 3;
-    TIndex ei = he % 3;
-    TIndex ej = (ei + 1) % 3;
+    TIndex f  = geometry::FaceOfHalfEdge(he);
+    TIndex ei = geometry::IncomingVertex(F, he);
+    TIndex ej = geometry::OutgoingVertex(F, he);
     Eigen::Matrix<TScalar, 3, 2> xe =
         X(Eigen::placeholders::all, Eigen::Vector<TIndex, 2>{F(ei, f), F(ej, f)});
     Eigen::Vector<TScalar, 3> xmid = TScalar(0.5) * (xe.col(0) + xe.col(1));
@@ -178,56 +178,98 @@ std::pair<int, int> ClosestFaceFacetToVertex(math::linalg::mini::SVector<TScalar
     int const nZeros     = (uvw(0) == TScalar(0)) + (uvw(1) == TScalar(0)) + (uvw(2) == TScalar(0));
     bool const bIsVertex = (nZeros == 2);
     bool const bIsEdge   = (nZeros == 1);
-    int eFace;
-    if (bIsVertex)
-        eFace = 2;
-    else if (bIsEdge)
-        eFace = 1;
-    else // is triangle
-        eFace = 0;
-    int a;
-    if (bIsVertex)
-    {
-        if (uvw(1) == float(1))
-            a = 1;
-        else if (uvw(2) == float(1))
-            a = 2;
-        else // uvw(0) == float(1) must be true
-            a = 0;
-    }
-    else if (bIsEdge)
-    {
-        if (uvw(0) == float(0))
-            a = 1;
-        else if (uvw(1) == float(0))
-            a = 2;
-        else // uvw(2) == float(0) must be true
-            a = 0;
-    }
-    else // is triangle
-    {
-        a = 0;
-    }
-    return {a, eFace};
-}
-
-/**
- * @brief Computes the triangle face (vertex, edge or triangle) nearest to the point xv.
- * @param uvw Barycentric coordinates of the closest point on triangle to xv.
- * @return The pair (a, eFace), where a is either a local vertex index or edge index, and eFace
- * indicates the type of face, i.e. (0 | 1 | 2) -> (triangle | edge | vertex)
- */
-template <common::CFloatingPoint TScalar>
-std::pair<int, int>
-ClosestFaceFacetToVertexVectorized(math::linalg::mini::SVector<TScalar, 3> const& uvw)
-{
-    int const nZeros     = (uvw(0) == TScalar(0)) + (uvw(1) == TScalar(0)) + (uvw(2) == TScalar(0));
-    bool const bIsVertex = (nZeros == 2);
-    bool const bIsEdge   = (nZeros == 1);
     int eFace            = (bIsVertex * 2) + (bIsEdge * 1);
     int a                = bIsVertex * ((uvw(1) == TScalar(1)) * 1 + (uvw(2) == TScalar(1)) * 2) +
             bIsEdge * ((uvw(0) == TScalar(0)) * 1 + (uvw(1) == TScalar(0)) * 2);
     return {a, eFace};
+}
+
+/**
+ * @brief Determines if point x is in the vertex feasible region of vertex v.
+ *
+ * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @param X `3 x |# points|` point positions
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param GVHEp `|# vertices + 1|` vertex to half-edge prefix
+ * @param GVHEadj `|# half edges|` vertex to half-edge adjacency
+ * @param x `3 x 1` query point
+ * @param i Point index corresponding to vertex v
+ * @return true if in vertex feasible region
+ * @return false otherwise
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline bool IsVertexFeasible(
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEp,
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEadj,
+    Eigen::Vector<TScalar, 3> const& x,
+    TIndex i)
+{
+    bool bInVertexFeasibleRegion{true};
+    TIndex const hebegin               = GVHEp(i);
+    TIndex const heend                 = GVHEp(i + 1);
+    Eigen::Vector<TScalar, 3> const xv = X.col(i);
+    for (TIndex he : GVHEadj(Eigen::seq(hebegin, heend - 1)))
+    {
+        TIndex const vp = geometry::OutgoingVertex<TIndex>(F, he);
+        auto const xvp  = X.col(vp);
+        bInVertexFeasibleRegion &= ((x - xv).dot(xv - xvp) >= TScalar(0));
+    }
+    return bInVertexFeasibleRegion;
+}
+
+/**
+ * @brief Determines if point x is in the edge feasible region of half-edge he.
+ *
+ * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @param X `3 x |# points|` point positions
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param GHEF `2 x |# half edges|` half-edge to (adjacent face, opposite face)
+ * @param x `3 x 1` query point
+ * @param fi Face index of half-edge he
+ * @param he Half-edge index
+ * @return true if in edge feasible region
+ * @return false otherwise
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline bool IsEdgeFeasible(
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF,
+    Eigen::Vector<TScalar, 3> const& x,
+    TIndex fi,
+    TIndex he)
+{
+    TIndex fj = GHEF(1, he);
+    TIndex i  = geometry::IncomingVertex(F, he);
+    TIndex j  = geometry::OutgoingVertex(F, he);
+    TIndex k  = geometry::OutgoingVertex(F, he, 1 /* step */);
+    // Get the third vertex l of triangle fj that is not part of undirected edge (i,j)
+    TIndex l = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
+               (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
+               (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
+    Eigen::Vector<TScalar, 3> xi  = X.col(i);
+    Eigen::Vector<TScalar, 3> xj  = X.col(j);
+    Eigen::Vector<TScalar, 3> xk  = X.col(k);
+    Eigen::Vector<TScalar, 3> xl  = X.col(l);
+    Eigen::Vector<TScalar, 3> xij = xj - xi;
+    TScalar xijn2                 = xij.squaredNorm();
+    // Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
+    Eigen::Vector<TScalar, 3> pin = (xi - xk) + (xk - xi).dot(xij) / xijn2 * xij;
+    // Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
+    Eigen::Vector<TScalar, 3> pjn = (xi - xl) + (xl - xi).dot(xij) / xijn2 * xij;
+    // clang-format off
+    bool bInEdgeFeasibleRegion =
+        ((x - xi).dot(xj - xi) >= TScalar(0)) and // within half-plane of vertex i with normal (xj - xi)
+        ((x - xj).dot(xi - xj) >= TScalar(0)) and // within half-plane of vertex j with normal (xi - xj)
+        ((x - xi).dot(pin) >= TScalar(0)) and // within half-plane perpendicular to triangle fi
+        ((x - xi).dot(pjn) >= TScalar(0)) // within half-plane perpendicular to triangle fj
+        ;
+    // clang-format on
+    return bInEdgeFeasibleRegion;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -244,74 +286,74 @@ void VertexFacetRTCCollideFunc(
     auto& VOGC                          = *(userData->VOGC);
     auto& mVertexLocks                  = *(userData->mVertexLocks);
     auto& dminv                         = *(userData->dminv);
+    auto& GVHEp                         = *(userData->GVHEp);
+    auto& GVHEadj                       = *(userData->GVHEadj);
+    auto& GHEF                          = *(userData->GHEF);
     auto& dminf                         = *(userData->dminf);
     TScalar const r                     = userData->r;
     // For each potential contact pair (v,f)
-    for (unsigned int i = 0; i < nCollisions; ++i)
+    for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
-        RTCCollision const& collision        = collisions[i];
-        TIndex const v                       = static_cast<TIndex>(collision.primID0);
+        RTCCollision const& collision        = collisions[ci];
+        TIndex const iv                      = static_cast<TIndex>(collision.primID0);
+        TIndex const ix                      = V(iv);
         TIndex const f                       = static_cast<TIndex>(collision.primID1);
         Eigen::Vector<TIndex, 3> const finds = F.col(f);
         // Avoid contact with adjacent triangle
-        if ((finds.array() == v).any())
+        if ((finds.array() == ix).any())
             continue;
-        // Compute distance from vertex v to triangle f via closest point projection
-        Eigen::Vector<TScalar, 3> const xv    = X.col(V(v));
+        // Compute distance from vertex i to triangle f via closest point projection
+        Eigen::Vector<TScalar, 3> const xi    = X.col(ix);
         Eigen::Matrix<TScalar, 3, 3> const xf = X(Eigen::placeholders::all, finds);
         using math::linalg::mini::FromEigen;
         using math::linalg::mini::SVector;
         SVector<TScalar, 3> uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
-            FromEigen(xv),
+            FromEigen(xi),
             FromEigen(xf.col(0)),
             FromEigen(xf.col(1)),
             FromEigen(xf.col(2)));
         Eigen::Vector<TScalar, 3> dx2f =
-            (xv - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
+            (xi - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
         TScalar d2 = dx2f.squaredNorm();
         // Update triangle and vertex displacement bounds
-        common::AtomicMin(dminv(v), d2);
+        common::AtomicMin(dminv(iv), d2);
         common::AtomicMin(dminf(f), d2);
         // Update contact sets if facets within contact radius
         if (d2 < r * r)
         {
-            auto const [alocal, eFace] = ClosestFaceFacetToVertexVectorized(uvw);
-            Eigen::Index j             = 3 * v + eFace;
-            TIndex a =
-                (eFace == 0) * f + (eFace == 1) * (3 * f + alocal) + (eFace == 2) * finds(alocal);
-            // Synchronize reads/writes to vertex v's contact sets
-            common::AtomicExecute(mVertexLocks(v), [&]() {
-                int nContactFacets = FOGC(0, j);
+            auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw);
+            TIndex sj                  = 3 * iv + eFace;
+            TIndex a = (eFace == 0) * f + (eFace == 1) * (3 * f + alocal /* he */) +
+                       (eFace == 2) * finds(alocal) /* v */;
+            // Synchronize reads/writes to vertex iv's contact sets
+            common::AtomicExecute(mVertexLocks(iv), [&]() {
+                int const nContactFacets = FOGC(0, sj);
                 // Avoid duplicated contact with `a` detected from a neighbour facet
-                bool bExcessContact = (nContactFacets == FOGC.rows() - 1);
+                bool const bExcessContact = (nContactFacets == FOGC.rows() - 1);
                 int k;
                 if (not bExcessContact)
                     for (k = 0; k < nContactFacets; ++k)
-                        if (FOGC(k, j) == a)
+                        if (FOGC(k, sj) == a)
                             break;
-                bool bDuplicateContact = (k < nContactFacets);
+                bool const bDuplicateContact = (k < nContactFacets);
                 if (bDuplicateContact or bExcessContact)
                     return;
                 // Update contact facet sets
                 auto const fUpdateContactFacetSets = [&]() {
-                    FOGC(FOGC(0, j)++, j) = a;
-                    TIndex& counter       = VOGC(0, f);
-                    TIndex fk             = common::AtomicAdd<TIndex>(counter, 1);
-                    VOGC(fk, f)           = v;
+                    FOGC(FOGC(0, sj)++, sj) = a;
+                    TIndex& counter         = VOGC(0, f);
+                    TIndex fk               = common::AtomicAdd<TIndex>(counter, 1);
+                    VOGC(fk, f)             = iv;
                 };
                 switch (eFace)
                 {
                     case 2 /* vertex */: {
-                        // TODO: Implement vertex feasibility check
-                        bool bInVertexFeasibleRegion{false};
-                        if (bInVertexFeasibleRegion)
+                        if (IsVertexFeasible<TScalar, TIndex>(X, F, GVHEp, GVHEadj, xi, a))
                             fUpdateContactFacetSets();
                         break;
                     }
                     case 1 /* edge */: {
-                        // TODO: Implement edge feasibility check
-                        bool bInEdgeFeasibleRegion{false};
-                        if (bInEdgeFeasibleRegion)
+                        if (IsEdgeFeasible<TScalar, TIndex>(X, F, GHEF, xi, f, a))
                             fUpdateContactFacetSets();
                         break;
                     }
@@ -488,7 +530,8 @@ void OffsetGeometryContact::Initialize(
     dminf.resize(nFacets);
     dmine.resize(nHalfEdges);
     // 4. Compute adjacency information
-    std::tie(GVHEp, GVHEadj) = geometry::VertexHalfEdgeAdjacency<IndexType>(F, nVertices);
+    auto nNodes              = X.cols();
+    std::tie(GVHEp, GVHEadj) = geometry::VertexHalfEdgeAdjacency<IndexType>(F, nNodes);
     GHEF                     = geometry::HalfEdgeFaceAdjacency<IndexType>(F);
 }
 
@@ -620,15 +663,63 @@ void OffsetGeometryContact::Destroy() noexcept
 
 #include <doctest/doctest.h>
 
+namespace pbat::sim::contact::detail::test {
+
+/**
+ * @brief Computes the triangle face (vertex, edge or triangle) nearest to the point xv.
+ * @param uvw Barycentric coordinates of the closest point on triangle to xv.
+ * @return The pair (a, eFace), where a is either a local vertex index or edge index, and eFace
+ * indicates the type of face, i.e. (0 | 1 | 2) -> (triangle | edge | vertex)
+ */
+template <common::CFloatingPoint TScalar>
+std::pair<int, int> ClosestFaceFacetToVertex(math::linalg::mini::SVector<TScalar, 3> const& uvw)
+{
+    int const nZeros     = (uvw(0) == TScalar(0)) + (uvw(1) == TScalar(0)) + (uvw(2) == TScalar(0));
+    bool const bIsVertex = (nZeros == 2);
+    bool const bIsEdge   = (nZeros == 1);
+    int eFace;
+    if (bIsVertex)
+        eFace = 2;
+    else if (bIsEdge)
+        eFace = 1;
+    else // is triangle
+        eFace = 0;
+    int a;
+    if (bIsVertex)
+    {
+        if (uvw(1) == float(1))
+            a = 1;
+        else if (uvw(2) == float(1))
+            a = 2;
+        else // uvw(0) == float(1) must be true
+            a = 0;
+    }
+    else if (bIsEdge)
+    {
+        if (uvw(0) == float(0))
+            a = 1;
+        else if (uvw(1) == float(0))
+            a = 2;
+        else // uvw(2) == float(0) must be true
+            a = 0;
+    }
+    else // is triangle
+    {
+        a = 0;
+    }
+    return {a, eFace};
+}
+
+} // namespace pbat::sim::contact::detail::test
+
 TEST_CASE("[sim][contact][detail] ClosestFaceFacetToVertex")
 {
     using pbat::math::linalg::mini::SVector;
-    using pbat::sim::contact::detail::ClosestFaceFacetToVertex;
-    using pbat::sim::contact::detail::ClosestFaceFacetToVertexVectorized;
+    using namespace pbat::sim::contact;
     auto fCheck = [&](double u, double v, double w, int aExpected, int eFaceExpected) {
         SVector<double, 3> uvw{u, v, w};
-        auto got = ClosestFaceFacetToVertexVectorized<double>(uvw);
-        auto exp = ClosestFaceFacetToVertex(uvw);
+        auto got = detail::ClosestFaceFacetToVertex(uvw);
+        auto exp = detail::test::ClosestFaceFacetToVertex(uvw);
         CHECK_EQ(got.first, aExpected);
         CHECK_EQ(got.second, eFaceExpected);
         CHECK_EQ(got.first, exp.first);

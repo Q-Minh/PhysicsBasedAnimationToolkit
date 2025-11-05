@@ -66,6 +66,16 @@ class OffsetGeometryContact
      */
     PBAT_API OffsetGeometryContact(geometry::Device device);
     /**
+     * @brief Deleted copy constructor and copy assignment operator.
+     */
+    OffsetGeometryContact(OffsetGeometryContact const&)            = delete;
+    OffsetGeometryContact& operator=(OffsetGeometryContact const&) = delete;
+    /**
+     * @brief Defaulted move constructor and move assignment operator.
+     */
+    OffsetGeometryContact(OffsetGeometryContact&&)            = default;
+    OffsetGeometryContact& operator=(OffsetGeometryContact&&) = default;
+    /**
      * @brief Construct and build the BVH scene from shared buffers.
      *
      * @param device Embree device wrapper
@@ -213,8 +223,8 @@ class OffsetGeometryContact
               ///< contact vertices in that column.
     Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
         EOGC; ///< `|# max edge-facet contacts + 1| x 2*|# edges|` array of per-edge contact facet
-              ///< sets, where `EOGC.col(2*e + 0)`, `EOGC.col(2*e + 1)` are respectively the vertex
-              ///< and edge indices of the contact facets for edge `e`, except for the first
+              ///< sets, where `EOGC.col(2*e + 0)`, `EOGC.col(2*e + 1)` are respectively the edge
+              ///< and vertex indices of the contact facets for edge `e`, except for the first
               ///< coefficient, which indicates the number of contact facets in that column.
 
   private:
@@ -223,21 +233,19 @@ class OffsetGeometryContact
     RTCScene mFaceScene{nullptr};   ///< Opaque RTCScene
 
     Eigen::Vector<bool, Eigen::Dynamic>
-        mVertexLocks; ///< `|3 # verts)|` array of locks for synchronized access
+        mVertexLocks; ///< `|# verts|` array of locks for synchronized access
                       ///< to per-vertex contact facet sets.
-    Eigen::Vector<bool, Eigen::Dynamic>
-        mEdgeLocks; ///< `|2 # edges|` array of locks for synchronized access
-                    ///< to per-edge contact facet sets.
+    Eigen::Vector<bool, Eigen::Dynamic> mEdgeLocks; ///< `|# edges|` array of locks for synchronized
+                                                    ///< access to per-edge contact facet sets.
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dminv; ///< `|# vertices|` array of vertex displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dminf; ///< `|# faces|` array of face displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dmine; ///< `|# edges|` array of edge displacement bounds
+    Eigen::Vector<IndexType, Eigen::Dynamic> GVHEp; ///< `|# points + 1|` point to half-edge prefix
     Eigen::Vector<IndexType, Eigen::Dynamic>
-        GVHEp; ///< `|# vertices + 1|` vertex to half-edge prefix
-    Eigen::Vector<IndexType, Eigen::Dynamic>
-        GVHEadj; ///< `|# half edges|` vertex to half-edge adjacency
+        GVHEadj; ///< `|# half edges|` point to half-edge adjacency
     Eigen::Matrix<IndexType, 2, Eigen::Dynamic>
         GHEF; ///< `2 x |# half edges|` half-edge to face adjacency
 };
