@@ -150,8 +150,10 @@ class OffsetGeometryContact
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `|# vertices| x 1` vertex indices (global indices into X)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
+     * @param EP `|# connected components| x 1` edge prefix
      * @param params OGC parameters
      */
     PBAT_API OffsetGeometryContact(
@@ -159,8 +161,10 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         OgcParams const& params);
     /**
      * @brief Initialize OGC, i.e. build its spatial acceleration data structures.
@@ -169,8 +173,10 @@ class OffsetGeometryContact
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `|# vertices| x 1` vertex indices (global indices into X)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
+     * @param EP `|# connected components| x 1` edge prefix
      * @param params OGC parameters
      */
     PBAT_API void Initialize(
@@ -178,24 +184,30 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         OgcParams const& params);
     /**
      * @brief Prepare for contact iteration.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
+     * @param EP `|# connected components| x 1` edge prefix
      * @param params OGC parameters
      */
     PBAT_API void PrepareIteration(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         OgcParams const& params);
     /**
      * @brief Compute vertex-facet and face-facet contact sets.
@@ -229,6 +241,7 @@ class OffsetGeometryContact
      * @param FP `|# connected components| x 1` face prefix
      * @param GVHEp `|# points + 1|` point to half-edge prefix
      * @param GVHEadj `|# half edges|` half-edge adjacency
+     * @param EHE `2 x |# edges|` edge to half-edge adjacency
      * @param params OGC parameters
      */
     PBAT_API void EdgeEdgeContactDetection(
@@ -239,6 +252,7 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
         OgcParams const& params);
     /**
      * @brief Scene axis-aligned bounding box.
@@ -276,8 +290,8 @@ class OffsetGeometryContact
     Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
         FOGC; ///< `|# max vertex-facet contacts + 1| x 3*|# vertices|` array of per-vertex contact
               ///< facet sets, where `FOGC.col(3*v + 0)`, `FOGC.col(3*v + 1)`, `FOGC.col(3*v + 2)`
-              ///< are respectively the triangle, edge and vertex indices of the contact facets for
-              ///< vertex `v`, except for the first coefficient, which indicates the number of
+              ///< are respectively the triangle, half-edge and vertex indices of the contact facets
+              ///< for vertex `v`, except for the first coefficient, which indicates the number of
               ///< contact facets in that column.
     Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
         VOGC; ///< `|# max facet-vertex contacts + 1| x |# triangles|` array of per-triangle contact
@@ -285,10 +299,11 @@ class OffsetGeometryContact
               ///< triangle `f`, except for the first coefficient, which indicates the number of
               ///< contact vertices in that column.
     Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
-        EOGC; ///< `|# max edge-facet contacts + 1| x 2*|# edges|` array of per-edge contact facet
-              ///< sets, where `EOGC.col(2*e + 0)`, `EOGC.col(2*e + 1)` are respectively the edge
-              ///< and vertex indices of the contact facets for edge `e`, except for the first
-              ///< coefficient, which indicates the number of contact facets in that column.
+        EOGC; ///< `|# max edge-facet contacts + 1| x 2*|# half-edges|` array of per-half-edge
+              ///< contact facet sets, where `EOGC.col(2*he + 0)`, `EOGC.col(2*he + 1)` are
+              ///< respectively the half-edge and vertex indices of the contact facets for half-edge
+              ///< `he`, except for the first coefficient, which indicates the number of contact
+              ///< facets in that column.
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dminv; ///< `|# vertices|` array of vertex displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>

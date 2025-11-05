@@ -164,16 +164,16 @@ inline auto VertexHalfEdgeAdjacency(
 }
 
 /**
- * @brief Half-edge to adjacent faces mapping for a manifold triangle mesh.
+ * @brief Half-edge to adjacent faces mapping for a triangle mesh.
  *
  * Builds a `2 x |3*# half edges|` array `GFHE` such that for half-edge `he=(i,j)`, `GFHE(0,he)` and
- * `GFHE(1,he)` are the two face indices incident to the directed edge `{i,j}`. The function assumes
- * a manifold mesh (each edge belongs to exactly two faces). If non-manifold or boundary
- * edges exist, the behavior is undefined.
+ * `GFHE(1,he)` are the two face indices incident to the directed edge `{i,j}`. `GFHE(1,he) == -1`
+ * is used to indicate no adjacent face for a boundary edge.
  *
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
- * @return `2 x |3*# triangles|` matrix mapping half-edges to their two adjacent faces
+ * @return `2 x |3*# triangles|` matrix mapping half-edges (columns) to their two adjacent faces
+ * (rows)
  * @pre `F` is edge-manifold
  */
 template <common::CIndex TIndex = Index>
@@ -183,8 +183,8 @@ HalfEdgeFaceAdjacency(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const>
 {
     Eigen::Index const nFacets    = F.cols();
     Eigen::Index const nHalfEdges = 3 * nFacets;
-    Eigen::Matrix<TIndex, 2, Eigen::Dynamic> GFHE(2, nHalfEdges);
-    GFHE.setConstant(static_cast<TIndex>(-1));
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic> GHEF(2, nHalfEdges);
+    GHEF.setConstant(static_cast<TIndex>(-1));
     // Sort half-edges by undirected edge key (min(i,j), max(i,j))
     auto order =
         common::ArgSort<TIndex>(static_cast<TIndex>(nHalfEdges), [&F](TIndex hei, TIndex hej) {
@@ -197,19 +197,137 @@ HalfEdgeFaceAdjacency(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const>
             return std::make_pair(std::min(via, vib), std::max(via, vib)) <
                    std::make_pair(std::min(vja, vjb), std::max(vja, vjb));
         });
-    // Pair consecutive entries (assumes manifold edges => pairs of twins)
-    for (TIndex k = 0; k < nHalfEdges; k += 2)
+    // Pair consecutive entries
+    TIndex k;
+    for (k = 0; k < nHalfEdges - 1;)
     {
         TIndex const hei = order(k);
         TIndex const hej = order(k + 1);
-        TIndex const fi  = FaceOfHalfEdge(hei);
-        TIndex const fj  = FaceOfHalfEdge(hej);
-        GFHE(0, hei)     = fi;
-        GFHE(1, hei)     = fj;
-        GFHE(0, hej)     = fj;
-        GFHE(1, hej)     = fi;
+        if (AreOppositeHalfEdges(F, hei, hej))
+        {
+            // Interior edge
+            TIndex const fi = FaceOfHalfEdge(hei);
+            TIndex const fj = FaceOfHalfEdge(hej);
+            GHEF(0, hei)    = fi;
+            GHEF(1, hei)    = fj;
+            GHEF(0, hej)    = fj;
+            GHEF(1, hej)    = fi;
+            k += 2;
+        }
+        else
+        {
+            // Boundary edge
+            TIndex const fi = FaceOfHalfEdge(hei);
+            GHEF(0, hei)    = fi;
+            GHEF(1, hei)    = -1;
+            ++k;
+        }
     }
-    return GFHE;
+    if (k < nHalfEdges)
+    {
+        // Boundary edge
+        TIndex const hei = order(k);
+        TIndex const fi  = FaceOfHalfEdge(hei);
+        GHEF(0, hei)     = fi;
+        GHEF(1, hei)     = -1;
+    }
+    return GHEF;
+}
+
+/**
+ * @brief Get the opposite half-edge of a given half-edge in a triangle mesh.
+ *
+ * If the half-edge is a boundary edge, returns -1.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param hei Half-edge index
+ * @param GHEF `2 x |3*# half edges|` half-edge to face adjacency matrix
+ * @return Opposite half-edge index of half-edge `hei`, or -1 if none exists
+ */
+template <common::CIndex TIndex = Index>
+inline TIndex OppositeHalfEdge(
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    TIndex hei,
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF)
+{
+    TIndex const fi = GHEF(0, hei);
+    TIndex const fj = GHEF(1, hei);
+    if (fj == -1)
+        return TIndex(-1); // No opposite half-edge (boundary edge)
+    TIndex const via = IncomingVertex(F, hei);
+    TIndex const vib = OutgoingVertex(F, hei);
+    // Find half-edge in face fj that goes from vib to via, i.e. whose incoming vertex is vib
+    TIndex ej  = /*(F(0, fj) == vib)*0 + */ (F(1, fj) == vib) * 1 + (F(2, fj) == vib) * 2;
+    TIndex hej = fj * 3 + ej;
+    return hej;
+}
+
+/**
+ * @brief Build edge to half-edge adjacency for a triangle mesh.
+ * @note This representation is useful for undirected edge processing, e.g. by looping over columns
+ * of the output adjacency matrix.
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param GHEF `2 x |3*# half edges|` half-edge to face adjacency matrix
+ * @return `2 x |# edges|` matrix mapping edges (columns) to their two adjacent half-edges (rows,
+ * where -1 indicates no opposite half-edge)
+ */
+template <common::CIndex TIndex = Index>
+inline auto EdgeHalfEdgeAdjacency(
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF)
+    -> Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
+{
+    Eigen::Index nEdges{0};
+    for (auto he = 0; he < GHEF.cols(); ++he)
+    {
+        bool bIsBoundaryEdge                   = (GHEF(1, he) == -1);
+        bool bIsLexicographicallyFirstHalfEdge = IncomingVertex(F, he) < OutgoingVertex(F, he);
+        nEdges += (bIsBoundaryEdge or bIsLexicographicallyFirstHalfEdge);
+    }
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic> EHE(2, nEdges);
+    for (auto he = 0, e = 0; he < GHEF.cols(); ++he)
+    {
+        bool bIsBoundaryEdge                   = (GHEF(1, he) == -1);
+        bool bIsLexicographicallyFirstHalfEdge = IncomingVertex(F, he) < OutgoingVertex(F, he);
+        if (bIsBoundaryEdge)
+        {
+            EHE(0, e) = he;
+            EHE(1, e) = -1;
+            ++e;
+        }
+        else if (bIsLexicographicallyFirstHalfEdge)
+        {
+            EHE(0, e) = he;
+            EHE(1, e) = OppositeHalfEdge(F, he, GHEF);
+            ++e;
+        }
+    }
+    return EHE;
+}
+
+/**
+ * @brief Build the undirected edge list for a triangle mesh from its half-edge representation.
+ *
+ * @tparam TIndex Index type (defaults to pbat::Index)
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param EHE `2 x |# edges|` edge to half-edge adjacency matrix
+ * @return `2 x |# edges|` matrix of undirected edge vertex indices
+ */
+template <common::CIndex TIndex = Index>
+inline auto Edges(
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& EHE)
+{
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic> E(2, EHE.cols());
+    for (Eigen::Index e = 0; e < EHE.cols(); ++e)
+    {
+        TIndex hei = EHE(0, e);
+        E(0, e)    = IncomingVertex(F, hei);
+        E(1, e)    = OutgoingVertex(F, hei);
+    }
+    return E;
 }
 
 } // namespace geometry

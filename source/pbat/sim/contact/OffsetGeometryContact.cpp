@@ -128,8 +128,10 @@ struct UserData
     Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const* X;
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* V;
     Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const* F;
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* E;
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* VP;
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* FP;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* EP;
     Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* FOGC;
     Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* VOGC;
     Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* EOGC;
@@ -141,6 +143,7 @@ struct UserData
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEp;
     Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEadj;
     Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* GHEF;
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* EHE;
     TScalar r;
     TScalar rq;
 };
@@ -184,23 +187,19 @@ void EdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
     UserData<TScalar, TIndex>* userData =
         static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    auto& X   = *(userData->X);
-    auto& F   = *(userData->F);
-    TIndex he = static_cast<TIndex>(args->primID);
-    TIndex f  = geometry::FaceOfHalfEdge(he);
-    TIndex ei = geometry::IncomingVertex(F, he);
-    TIndex ej = geometry::OutgoingVertex(F, he);
-    Eigen::Matrix<TScalar, 3, 2> xe =
-        X(Eigen::placeholders::all, Eigen::Vector<TIndex, 2>{F(ei, f), F(ej, f)});
-    Eigen::Vector<TScalar, 3> xmid = TScalar(0.5) * (xe.col(0) + xe.col(1));
-    TScalar halfLength             = TScalar(0.5) * (xe.col(1) - xe.col(0)).norm();
-    TScalar queryRadius            = halfLength + userData->rq;
-    args->bounds_o->lower_x        = xmid(0) - queryRadius;
-    args->bounds_o->lower_y        = xmid(1) - queryRadius;
-    args->bounds_o->lower_z        = xmid(2) - queryRadius;
-    args->bounds_o->upper_x        = xmid(0) + queryRadius;
-    args->bounds_o->upper_y        = xmid(1) + queryRadius;
-    args->bounds_o->upper_z        = xmid(2) + queryRadius;
+    auto& X                         = *(userData->X);
+    auto& E                         = *(userData->E);
+    TIndex e                        = static_cast<TIndex>(args->primID);
+    Eigen::Matrix<TScalar, 3, 2> xe = X(Eigen::placeholders::all, E.col(e));
+    Eigen::Vector<TScalar, 3> xmid  = TScalar(0.5) * (xe.col(0) + xe.col(1));
+    TScalar halfLength              = TScalar(0.5) * (xe.col(0) - xe.col(1)).norm();
+    TScalar queryRadius             = halfLength + userData->rq;
+    args->bounds_o->lower_x         = xmid(0) - queryRadius;
+    args->bounds_o->lower_y         = xmid(1) - queryRadius;
+    args->bounds_o->lower_z         = xmid(2) - queryRadius;
+    args->bounds_o->upper_x         = xmid(0) + queryRadius;
+    args->bounds_o->upper_y         = xmid(1) + queryRadius;
+    args->bounds_o->upper_z         = xmid(2) + queryRadius;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -325,12 +324,14 @@ OffsetGeometryContact::OffsetGeometryContact(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     OgcParams const& params)
     : OffsetGeometryContact()
 {
-    Initialize(device, X, V, F, VP, FP, params);
+    Initialize(device, X, V, F, E, VP, FP, EP, params);
 }
 
 void OffsetGeometryContact::Initialize(
@@ -338,21 +339,24 @@ void OffsetGeometryContact::Initialize(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     OgcParams const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.Initialize");
     // 1. Allocate contact sets and bounds
     auto const nVertices  = V.size();
     auto const nFacets    = F.cols();
+    auto const nEdges     = E.cols();
     auto const nHalfEdges = 3 * nFacets;
     FOGC.setConstant(params.nMaxVertexFacetContacts + 1, 3 * nVertices, IndexType(-1));
     VOGC.setConstant(params.nMaxFacetVertexContacts + 1, nFacets, IndexType(-1));
     EOGC.setConstant(params.nMaxEdgeFacetContacts + 1, 2 * nHalfEdges, IndexType(-1));
     dminv.resize(nVertices);
     dminf.resize(nFacets);
-    dmine.resize(nHalfEdges);
+    dmine.resize(nEdges);
     // 2. Compute BVHs
     rtcSetSceneFlags(mVertexScene, detail::toRtc(params.eSceneFeatures));
     rtcSetSceneFlags(mFaceScene, detail::toRtc(params.eSceneFeatures));
@@ -362,32 +366,36 @@ void OffsetGeometryContact::Initialize(
     rtcSetSceneBuildQuality(mEdgeScene, detail::toRtc(params.eSceneBvhQuality));
     // Iterate from last to first so that Embree doesn't need to continuously resize its ID storage.
     detail::UserData<ScalarType, IndexType> userData{
-        std::addressof(X),
-        std::addressof(V),
-        std::addressof(F),
-        std::addressof(VP),
-        std::addressof(FP),
-        std::addressof(FOGC),
-        std::addressof(VOGC),
-        std::addressof(EOGC),
-        std::addressof(mVertexLocks),
-        std::addressof(mEdgeLocks),
-        std::addressof(dminv),
-        std::addressof(dminf),
-        std::addressof(dmine),
-        nullptr,
-        nullptr,
-        nullptr,
-        ScalarType(0),
-        ScalarType(0)};
+        std::addressof(X) /*X*/,
+        std::addressof(V) /*V*/,
+        std::addressof(F) /*F*/,
+        std::addressof(E) /*E*/,
+        std::addressof(VP) /*VP*/,
+        std::addressof(FP) /*FP*/,
+        std::addressof(EP) /*EP*/,
+        std::addressof(FOGC) /*FOGC*/,
+        std::addressof(VOGC) /*VOGC*/,
+        std::addressof(EOGC) /*EOGC*/,
+        std::addressof(mVertexLocks) /*mVertexLocks*/,
+        std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(dminv) /*dminv*/,
+        std::addressof(dminf) /*dminf*/,
+        std::addressof(dmine) /*dmine*/,
+        nullptr /*GVHEp*/,
+        nullptr /*GVHEadj*/,
+        nullptr /*GHEF*/,
+        nullptr /*EHE*/,
+        ScalarType(0) /*r*/,
+        ScalarType(0) /*rq*/};
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = nComponents - 1; c >= 0; --c)
     {
-        IndexType const vertexOffset        = VP[c];
-        IndexType const nComponentVertices  = VP[c + 1] - vertexOffset;
-        IndexType const faceOffset          = FP[c];
-        IndexType const nComponentFaces     = FP[c + 1] - faceOffset;
-        IndexType const nComponentHalfEdges = 3 * nComponentFaces;
+        IndexType const vertexOffset       = VP[c];
+        IndexType const nComponentVertices = VP[c + 1] - vertexOffset;
+        IndexType const faceOffset         = FP[c];
+        IndexType const nComponentFaces    = FP[c + 1] - faceOffset;
+        IndexType const edgeOffset         = EP[c];
+        IndexType const nComponentEdges    = EP[c + 1] - edgeOffset;
         // Vertex geometry
         RTCGeometry vertexGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
@@ -421,9 +429,7 @@ void OffsetGeometryContact::Initialize(
         // Edge geometry
         RTCGeometry edgeGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
-        rtcSetGeometryUserPrimitiveCount(
-            edgeGeometry,
-            static_cast<unsigned int>(nComponentHalfEdges));
+        rtcSetGeometryUserPrimitiveCount(edgeGeometry, static_cast<unsigned int>(nComponentEdges));
         rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&userData));
         rtcSetGeometryBoundsFunction(
             edgeGeometry,
@@ -439,15 +445,17 @@ void OffsetGeometryContact::Initialize(
     rtcCommitScene(mEdgeScene);
     // 3. Allocate locks
     mVertexLocks.resize(nVertices);
-    mEdgeLocks.resize(nHalfEdges);
+    mEdgeLocks.resize(nEdges);
 }
 
 void OffsetGeometryContact::PrepareIteration(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     OgcParams const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.PrepareIteration");
@@ -460,28 +468,29 @@ void OffsetGeometryContact::PrepareIteration(
     dminv.setConstant(params.rq * params.rq);
     dminf.setConstant(params.rq * params.rq);
     dmine.setConstant(params.rq * params.rq);
-    dminv.setConstant(params.rq * params.rq);
-    dminf.setConstant(params.rq * params.rq);
     // 1. Recompute BVHs
     detail::UserData<ScalarType, IndexType> userData{
-        std::addressof(X),
-        std::addressof(V),
-        std::addressof(F),
-        std::addressof(VP),
-        std::addressof(FP),
-        std::addressof(FOGC),
-        std::addressof(VOGC),
-        std::addressof(EOGC),
-        std::addressof(mVertexLocks),
-        std::addressof(mEdgeLocks),
-        std::addressof(dminv),
-        std::addressof(dminf),
-        std::addressof(dmine),
-        nullptr,
-        nullptr,
-        nullptr,
-        params.r,
-        params.rq};
+        std::addressof(X) /*X*/,
+        std::addressof(V) /*V*/,
+        std::addressof(F) /*F*/,
+        std::addressof(E) /*E*/,
+        std::addressof(VP) /*VP*/,
+        std::addressof(FP) /*FP*/,
+        std::addressof(EP) /*EP*/,
+        std::addressof(FOGC) /*FOGC*/,
+        std::addressof(VOGC) /*VOGC*/,
+        std::addressof(EOGC) /*EOGC*/,
+        std::addressof(mVertexLocks) /*mVertexLocks*/,
+        std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(dminv) /*dminv*/,
+        std::addressof(dminf) /*dminf*/,
+        std::addressof(dmine) /*dmine*/,
+        nullptr /*GVHEp*/,
+        nullptr /*GVHEadj*/,
+        nullptr /*GHEF*/,
+        nullptr /*EHE*/,
+        params.r /*r*/,
+        params.rq /*rq*/};
     Eigen::Index nComponents = VP.size() - 1;
     for (Eigen::Index c = 0; c < nComponents; ++c)
     {
@@ -489,6 +498,8 @@ void OffsetGeometryContact::PrepareIteration(
         IndexType const nComponentVertices = VP[c + 1] - vertexOffset;
         IndexType const faceOffset         = FP[c];
         IndexType const nComponentFaces    = FP[c + 1] - faceOffset;
+        IndexType const edgeOffset         = EP[c];
+        IndexType const nComponentEdges    = EP[c + 1] - edgeOffset;
         // Vertex geometry
         RTCGeometry vertexGeometry = rtcGetGeometry(mVertexScene, static_cast<unsigned int>(c));
         rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&userData));
@@ -523,24 +534,27 @@ void OffsetGeometryContact::VertexFacetContactDetection(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.VertexFacetContactDetection");
     detail::UserData<ScalarType, IndexType> userData{
-        std::addressof(X),
-        std::addressof(V),
-        std::addressof(F),
-        std::addressof(VP),
-        std::addressof(FP),
-        std::addressof(FOGC),
-        std::addressof(VOGC),
-        std::addressof(EOGC),
-        std::addressof(mVertexLocks),
-        std::addressof(mEdgeLocks),
-        std::addressof(dminv),
-        std::addressof(dminf),
-        std::addressof(dmine),
-        std::addressof(GVHEp),
-        std::addressof(GVHEadj),
-        std::addressof(GHEF),
-        params.r,
-        params.rq};
+        std::addressof(X) /*X*/,
+        std::addressof(V) /*V*/,
+        std::addressof(F) /*F*/,
+        nullptr /*E*/,
+        std::addressof(VP) /*VP*/,
+        std::addressof(FP) /*FP*/,
+        nullptr /*EP*/,
+        std::addressof(FOGC) /*FOGC*/,
+        std::addressof(VOGC) /*VOGC*/,
+        std::addressof(EOGC) /*EOGC*/,
+        std::addressof(mVertexLocks) /*mVertexLocks*/,
+        std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(dminv) /*dminv*/,
+        std::addressof(dminf) /*dminf*/,
+        std::addressof(dmine) /*dmine*/,
+        std::addressof(GVHEp) /*GVHEp*/,
+        std::addressof(GVHEadj) /*GVHEadj*/,
+        std::addressof(GHEF) /*GHEF*/,
+        nullptr /*EHE*/,
+        params.r /*r*/,
+        params.rq /*rq*/};
     rtcCollide(
         mVertexScene,
         mFaceScene,
@@ -556,28 +570,32 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
     OgcParams const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.EdgeEdgeContactDetection");
     detail::UserData<ScalarType, IndexType> userData{
-        std::addressof(X),
-        std::addressof(V),
-        std::addressof(F),
-        std::addressof(VP),
-        std::addressof(FP),
-        std::addressof(FOGC),
-        std::addressof(VOGC),
-        std::addressof(EOGC),
-        std::addressof(mVertexLocks),
-        std::addressof(mEdgeLocks),
-        std::addressof(dminv),
-        std::addressof(dminf),
-        std::addressof(dmine),
-        std::addressof(GVHEp),
-        std::addressof(GVHEadj),
-        nullptr,
-        params.r,
-        params.rq};
+        std::addressof(X) /*X*/,
+        std::addressof(V) /*V*/,
+        std::addressof(F) /*F*/,
+        nullptr /*E*/,
+        std::addressof(VP) /*VP*/,
+        std::addressof(FP) /*FP*/,
+        nullptr /*EP*/,
+        std::addressof(FOGC) /*FOGC*/,
+        std::addressof(VOGC) /*VOGC*/,
+        std::addressof(EOGC) /*EOGC*/,
+        std::addressof(mVertexLocks) /*mVertexLocks*/,
+        std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(dminv) /*dminv*/,
+        std::addressof(dminf) /*dminf*/,
+        std::addressof(dmine) /*dmine*/,
+        std::addressof(GVHEp) /*GVHEp*/,
+        std::addressof(GVHEadj) /*GVHEadj*/,
+        nullptr /*GHEF*/,
+        nullptr /*EHE*/,
+        params.r /*r*/,
+        params.rq /*rq*/};
 }
 
 std::pair<
