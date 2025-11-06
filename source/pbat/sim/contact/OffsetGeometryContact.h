@@ -306,12 +306,6 @@ class OffsetGeometryContact
     PBAT_API auto Bounds() const
         -> std::pair<Eigen::Vector<ScalarType, 3>, Eigen::Vector<ScalarType, 3>>;
     /**
-     * @brief Get the vertex displacement bound of vertex `v`.
-     * @param v Vertex index
-     * @return Displacement bound guaranteeing penetration-free motion
-     */
-    PBAT_API ScalarType VertexDisplacementBound(IndexType v) const;
-    /**
      * @brief Serialize the OGC to an archive.
      * @param archive Archive to serialize to
      */
