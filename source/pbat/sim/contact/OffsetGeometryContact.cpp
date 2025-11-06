@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <tbb/parallel_for.h>
 
 namespace pbat::sim::contact {
 
@@ -32,11 +33,17 @@ OgcParams& OgcParams::WithBuildQuality(EBuildQuality scene, EBuildQuality mesh)
     return *this;
 }
 
-OgcParams& OgcParams::WithMaxContacts(int nvf, int nfv, int nef)
+OgcParams& OgcParams::WithMaxContactEstimates(int nvf, int nfv, int nef)
 {
-    nMaxVertexFacetContacts = nvf;
-    nMaxFacetVertexContacts = nfv;
-    nMaxEdgeFacetContacts   = nef;
+    nMaxVertexFaceContactsEstimate = nvf;
+    nMaxFaceVertexContactsEstimate = nfv;
+    nMaxEdgeFaceContactsEstimate   = nef;
+    return *this;
+}
+
+OgcParams& OgcParams::WithDisplacementBoundConfig(Scalar _gammap)
+{
+    gammap = _gammap;
     return *this;
 }
 
@@ -48,7 +55,8 @@ OgcParams& OgcParams::Construct(bool bValidate)
         {
             throw std::invalid_argument("OgcParams: rq >= r >= 0 required");
         }
-        if (nMaxVertexFacetContacts < 0 or nMaxFacetVertexContacts < 0 or nMaxEdgeFacetContacts < 0)
+        if (nMaxVertexFaceContactsEstimate < 0 or nMaxFaceVertexContactsEstimate < 0 or
+            nMaxEdgeFaceContactsEstimate < 0)
         {
             throw std::invalid_argument("OgcParams: contact capacities must be non-negative");
         }
@@ -63,9 +71,9 @@ void OgcParams::Serialize(io::Archive& archive) const
     archive.WriteMetaData("eSceneFeatures", static_cast<int>(eSceneFeatures));
     archive.WriteMetaData("eSceneBvhQuality", static_cast<int>(eSceneBvhQuality));
     archive.WriteMetaData("eMeshBvhQuality", static_cast<int>(eMeshBvhQuality));
-    archive.WriteMetaData("nMaxVertexFacetContacts", nMaxVertexFacetContacts);
-    archive.WriteMetaData("nMaxFacetVertexContacts", nMaxFacetVertexContacts);
-    archive.WriteMetaData("nMaxEdgeFacetContacts", nMaxEdgeFacetContacts);
+    archive.WriteMetaData("nMaxVertexFaceContactsEstimate", nMaxVertexFaceContactsEstimate);
+    archive.WriteMetaData("nMaxFaceVertexContactsEstimate", nMaxFaceVertexContactsEstimate);
+    archive.WriteMetaData("nMaxEdgeFaceContactsEstimate", nMaxEdgeFaceContactsEstimate);
 }
 
 void OgcParams::Deserialize(io::Archive const& archive)
@@ -81,12 +89,14 @@ void OgcParams::Deserialize(io::Archive const& archive)
             static_cast<EBuildQuality>(archive.ReadMetaData<int>("eSceneBvhQuality"));
     if (archive.HasMetaData("eMeshBvhQuality"))
         eMeshBvhQuality = static_cast<EBuildQuality>(archive.ReadMetaData<int>("eMeshBvhQuality"));
-    if (archive.HasMetaData("nMaxVertexFacetContacts"))
-        nMaxVertexFacetContacts = archive.ReadMetaData<int>("nMaxVertexFacetContacts");
-    if (archive.HasMetaData("nMaxFacetVertexContacts"))
-        nMaxFacetVertexContacts = archive.ReadMetaData<int>("nMaxFacetVertexContacts");
-    if (archive.HasMetaData("nMaxEdgeFacetContacts"))
-        nMaxEdgeFacetContacts = archive.ReadMetaData<int>("nMaxEdgeFacetContacts");
+    if (archive.HasMetaData("nMaxVertexFaceContactsEstimate"))
+        nMaxVertexFaceContactsEstimate =
+            archive.ReadMetaData<int>("nMaxVertexFaceContactsEstimate");
+    if (archive.HasMetaData("nMaxFaceVertexContactsEstimate"))
+        nMaxFaceVertexContactsEstimate =
+            archive.ReadMetaData<int>("nMaxFaceVertexContactsEstimate");
+    if (archive.HasMetaData("nMaxEdgeFaceContactsEstimate"))
+        nMaxEdgeFaceContactsEstimate = archive.ReadMetaData<int>("nMaxEdgeFaceContactsEstimate");
 }
 
 namespace detail {
@@ -123,83 +133,68 @@ static RTCBuildQuality toRtc(OgcParams::EBuildQuality q) noexcept
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-struct UserData
-{
-    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const* X;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* V;
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const* F;
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* E;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* VP;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* FP;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* EP;
-    Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* FOGC;
-    Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* VOGC;
-    Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>* EOGC;
-    Eigen::Vector<bool, Eigen::Dynamic>* mVertexLocks;
-    Eigen::Vector<bool, Eigen::Dynamic>* mEdgeLocks;
-    Eigen::Vector<TScalar, Eigen::Dynamic>* dminv;
-    Eigen::Vector<TScalar, Eigen::Dynamic>* dminf;
-    Eigen::Vector<TScalar, Eigen::Dynamic>* dmine;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEp;
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEadj;
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* GHEF;
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* EHE;
-    TScalar r;
-    TScalar rq;
-};
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void TriangleRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
-    UserData<TScalar, TIndex>* userData =
-        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    auto& X                         = *(userData->X);
-    auto& F                         = *(userData->F);
-    Eigen::Index f                  = static_cast<Eigen::Index>(args->primID);
-    Eigen::Matrix<TScalar, 3, 3> xf = X(Eigen::placeholders::all, F.col(f));
-    args->bounds_o->lower_x         = std::min({xf(0, 0), xf(0, 1), xf(0, 2)});
-    args->bounds_o->lower_y         = std::min({xf(1, 0), xf(1, 1), xf(1, 2)});
-    args->bounds_o->lower_z         = std::min({xf(2, 0), xf(2, 1), xf(2, 2)});
-    args->bounds_o->upper_x         = std::max({xf(0, 0), xf(0, 1), xf(0, 2)});
-    args->bounds_o->upper_y         = std::max({xf(1, 0), xf(1, 1), xf(1, 2)});
-    args->bounds_o->upper_z         = std::max({xf(2, 0), xf(2, 1), xf(2, 2)});
+    UserDataByComponent<TScalar, TIndex>* userDataByComp =
+        static_cast<UserDataByComponent<TScalar, TIndex>*>(args->geometryUserPtr);
+    UserData<TScalar, TIndex>* userData = userDataByComp->userData;
+    TIndex const component              = userDataByComp->component;
+    auto& X                             = *(userData->X);
+    auto& F                             = *(userData->F);
+    auto& FP                            = *(userData->FP);
+    Eigen::Index f                      = FP(component) + static_cast<Eigen::Index>(args->primID);
+    Eigen::Matrix<TScalar, 3, 3> xf     = X(Eigen::placeholders::all, F.col(f));
+    TScalar constexpr eps               = std::numeric_limits<TScalar>::epsilon();
+    args->bounds_o->lower_x             = std::min({xf(0, 0), xf(0, 1), xf(0, 2)}) - eps;
+    args->bounds_o->lower_y             = std::min({xf(1, 0), xf(1, 1), xf(1, 2)}) - eps;
+    args->bounds_o->lower_z             = std::min({xf(2, 0), xf(2, 1), xf(2, 2)}) - eps;
+    args->bounds_o->upper_x             = std::max({xf(0, 0), xf(0, 1), xf(0, 2)}) + eps;
+    args->bounds_o->upper_y             = std::max({xf(1, 0), xf(1, 1), xf(1, 2)}) + eps;
+    args->bounds_o->upper_z             = std::max({xf(2, 0), xf(2, 1), xf(2, 2)}) + eps;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void PointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
-    UserData<TScalar, TIndex>* userData =
-        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    auto& X                 = *(userData->X);
-    auto& V                 = *(userData->V);
-    Eigen::Index v          = static_cast<Eigen::Index>(args->primID);
-    auto xv                 = X.col(V(v));
-    args->bounds_o->lower_x = xv(0) - userData->rq;
-    args->bounds_o->lower_y = xv(1) - userData->rq;
-    args->bounds_o->lower_z = xv(2) - userData->rq;
-    args->bounds_o->upper_x = xv(0) + userData->rq;
-    args->bounds_o->upper_y = xv(1) + userData->rq;
-    args->bounds_o->upper_z = xv(2) + userData->rq;
+    UserDataByComponent<TScalar, TIndex>* userDataByComp =
+        static_cast<UserDataByComponent<TScalar, TIndex>*>(args->geometryUserPtr);
+    UserData<TScalar, TIndex>* userData = userDataByComp->userData;
+    TIndex const component              = userDataByComp->component;
+    auto& X                             = *(userData->X);
+    auto& V                             = *(userData->V);
+    auto& VP                            = *(userData->VP);
+    Eigen::Index v                      = VP(component) + static_cast<Eigen::Index>(args->primID);
+    auto xv                             = X.col(V(v));
+    TScalar const rq                    = userData->rq + std::numeric_limits<TScalar>::epsilon();
+    args->bounds_o->lower_x             = xv(0) - rq;
+    args->bounds_o->lower_y             = xv(1) - rq;
+    args->bounds_o->lower_z             = xv(2) - rq;
+    args->bounds_o->upper_x             = xv(0) + rq;
+    args->bounds_o->upper_y             = xv(1) + rq;
+    args->bounds_o->upper_z             = xv(2) + rq;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void EdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
-    UserData<TScalar, TIndex>* userData =
-        static_cast<UserData<TScalar, TIndex>*>(args->geometryUserPtr);
-    auto& X                         = *(userData->X);
-    auto& E                         = *(userData->E);
-    TIndex e                        = static_cast<TIndex>(args->primID);
-    Eigen::Matrix<TScalar, 3, 2> xe = X(Eigen::placeholders::all, E.col(e));
-    Eigen::Vector<TScalar, 3> xmid  = TScalar(0.5) * (xe.col(0) + xe.col(1));
-    TScalar halfLength              = TScalar(0.5) * (xe.col(0) - xe.col(1)).norm();
-    TScalar queryRadius             = halfLength + userData->rq;
-    args->bounds_o->lower_x         = xmid(0) - queryRadius;
-    args->bounds_o->lower_y         = xmid(1) - queryRadius;
-    args->bounds_o->lower_z         = xmid(2) - queryRadius;
-    args->bounds_o->upper_x         = xmid(0) + queryRadius;
-    args->bounds_o->upper_y         = xmid(1) + queryRadius;
-    args->bounds_o->upper_z         = xmid(2) + queryRadius;
+    UserDataByComponent<TScalar, TIndex>* userDataByComp =
+        static_cast<UserDataByComponent<TScalar, TIndex>*>(args->geometryUserPtr);
+    UserData<TScalar, TIndex>* userData   = userDataByComp->userData;
+    TIndex const component                = userDataByComp->component;
+    auto& X                               = *(userData->X);
+    auto& E                               = *(userData->E);
+    auto& EP                              = *(userData->EP);
+    TIndex e                              = EP(component) + static_cast<TIndex>(args->primID);
+    Eigen::Matrix<TScalar, 3, 2> const xe = X(Eigen::placeholders::all, E.col(e));
+    Eigen::Vector<TScalar, 3> const xmid  = TScalar(0.5) * (xe.col(0) + xe.col(1));
+    TScalar const halfLength              = TScalar(0.5) * (xe.col(0) - xe.col(1)).norm();
+    TScalar const queryRadius = halfLength + userData->rq + std::numeric_limits<TScalar>::epsilon();
+    args->bounds_o->lower_x   = xmid(0) - queryRadius;
+    args->bounds_o->lower_y   = xmid(1) - queryRadius;
+    args->bounds_o->lower_z   = xmid(2) - queryRadius;
+    args->bounds_o->upper_x   = xmid(0) + queryRadius;
+    args->bounds_o->upper_y   = xmid(1) + queryRadius;
+    args->bounds_o->upper_z   = xmid(2) + queryRadius;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -212,23 +207,28 @@ void VertexFacetRTCCollideFunc(
     auto& X                             = *(userData->X);
     auto& V                             = *(userData->V);
     auto& F                             = *(userData->F);
-    auto& FOGC                          = *(userData->FOGC);
-    auto& VOGC                          = *(userData->VOGC);
+    auto& VP                            = *(userData->VP);
+    auto& FP                            = *(userData->FP);
     auto& mVertexLocks                  = *(userData->mVertexLocks);
+    auto& mFacetLocks                   = *(userData->mFacetLocks);
     auto& dminv                         = *(userData->dminv);
     auto& GVHEp                         = *(userData->GVHEp);
     auto& GVHEadj                       = *(userData->GVHEadj);
     auto& GHEF                          = *(userData->GHEF);
     auto& dminf                         = *(userData->dminf);
     TScalar const r                     = userData->r;
+    std::vector<std::vector<OffsetGeometryContact::ContactFace>>& FOGC = *(userData->FOGC);
+    std::vector<std::vector<TIndex>>& VOGC                             = *(userData->VOGC);
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get vertex-facet pair (iv, f) where ix is the point index of vertex iv
         RTCCollision const& collision        = collisions[ci];
-        TIndex const iv                      = static_cast<TIndex>(collision.primID0);
+        TIndex const bv                      = static_cast<TIndex>(collision.geomID0);
+        TIndex const bf                      = static_cast<TIndex>(collision.geomID1);
+        TIndex const iv                      = VP(bv) + static_cast<TIndex>(collision.primID0);
         TIndex const ix                      = V(iv);
-        TIndex const f                       = static_cast<TIndex>(collision.primID1);
+        TIndex const f                       = FP(bf) + static_cast<TIndex>(collision.primID1);
         Eigen::Vector<TIndex, 3> const finds = F.col(f);
         // Avoid contact with adjacent triangle
         if ((finds.array() == ix).any())
@@ -255,49 +255,38 @@ void VertexFacetRTCCollideFunc(
             continue;
         // Determine face (vertex, edge, triangle) closest to vertex iv
         auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw(0), uvw(1), uvw(2));
-        // Get contact face set column index for vertex iv and face type eFace
-        TIndex sj = 3 * iv + eFace;
         // Vectorize contact face index a based on its type (triangle | edge | vertex)
-        TIndex a = (eFace == 0) * f + (eFace == 1) * (3 * f + alocal /* he */) +
-                   (eFace == 2) * finds(alocal) /* v */;
+        TIndex const a = ContactFaceIndex(F, f, alocal, eFace);
         // Synchronize reads/writes to vertex iv's contact sets
         common::AtomicExecute(mVertexLocks(iv), [&]() {
-            TIndex& FOGCcount = FOGC(0, sj);
-            // Avoid duplicated contact with `a` detected from a neighbour facet. Brute force search
-            // the list of contact faces for `a`. Is there a better way?
-            bool const bExcessContact = (FOGCcount == FOGC.rows() - 1);
-            int k;
-            if (not bExcessContact)
-                for (k = 0; k < FOGCcount; ++k)
-                    if (FOGC(k + 1, sj) == a)
-                        break;
-            bool const bDuplicateContact = (k < FOGCcount);
-            if (bDuplicateContact or bExcessContact)
+            // Brute-force duplicate search
+            bool const bDuplicateContact = std::any_of(
+                FOGC[iv].begin(),
+                FOGC[iv].end(),
+                [&](OffsetGeometryContact::ContactFace const& contactFace) {
+                    return contactFace.a == a and contactFace.eFace == eFace;
+                });
+            if (bDuplicateContact)
                 return;
             // Update contact face sets
-            auto const fUpdateContactFaceSets = [&]() {
-                FOGC(++FOGCcount, sj) = a; // No need to atomic add here due to vertex lock
-                TIndex& VOGCcount     = VOGC(0, f);
-                TIndex fk             = common::AtomicAdd<TIndex>(VOGCcount, 1);
-                // The set capacity is VOGC.rows() - 1 because index 0 is used for counting
-                bool const bVOGCIsFull = (fk >= VOGC.rows() - 1);
-                if (not bVOGCIsFull)
-                    VOGC(fk + 1, f) = iv;
+            auto const fUpdateContactSets = [&]() {
+                FOGC[iv].emplace_back(a, eFace);
+                common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
             };
             switch (eFace)
             {
                 case 2 /* vertex */: {
                     if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                        fUpdateContactFaceSets();
+                        fUpdateContactSets();
                     break;
                 }
                 case 1 /* edge */: {
                     if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                        fUpdateContactFaceSets();
+                        fUpdateContactSets();
                     break;
                 }
                 default /* triangle */: {
-                    fUpdateContactFaceSets();
+                    fUpdateContactSets();
                     break;
                 }
             }
@@ -318,7 +307,9 @@ OffsetGeometryContact::OffsetGeometryContact(geometry::Device device)
       mEdgeScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mFaceScene{rtcNewScene(static_cast<RTCDevice>(device.Raw()))},
       mVertexLocks(),
-      mEdgeLocks()
+      mEdgeLocks(),
+      mFacetLocks(),
+      mUserDataPerComponent()
 {
 }
 
@@ -332,7 +323,7 @@ OffsetGeometryContact::OffsetGeometryContact(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     OgcParams const& params)
-    : OffsetGeometryContact()
+    : OffsetGeometryContact(device)
 {
     Initialize(device, X, V, F, E, VP, FP, EP, params);
 }
@@ -354,12 +345,18 @@ void OffsetGeometryContact::Initialize(
     auto const nFacets    = F.cols();
     auto const nEdges     = E.cols();
     auto const nHalfEdges = 3 * nFacets;
-    FOGC.setConstant(params.nMaxVertexFacetContacts + 1, 3 * nVertices, IndexType(-1));
-    VOGC.setConstant(params.nMaxFacetVertexContacts + 1, nFacets, IndexType(-1));
-    EOGC.setConstant(params.nMaxEdgeFacetContacts + 1, 2 * nHalfEdges, IndexType(-1));
+    FOGC.resize(nVertices);
+    for (auto& vfogc : FOGC)
+        vfogc.reserve(params.nMaxVertexFaceContactsEstimate);
+    VOGC.resize(nFacets);
+    for (auto& fvogc : VOGC)
+        fvogc.reserve(params.nMaxFaceVertexContactsEstimate);
+    EOGC.resize(nEdges);
+    for (auto& eogc : EOGC)
+        eogc.reserve(params.nMaxEdgeFaceContactsEstimate);
     dminv.resize(nVertices);
     dminf.resize(nFacets);
-    dmine.resize(nEdges);
+    dmine.resize(nHalfEdges);
     // 2. Compute BVHs
     rtcSetSceneFlags(mVertexScene, detail::toRtc(params.eSceneFeatures));
     rtcSetSceneFlags(mFaceScene, detail::toRtc(params.eSceneFeatures));
@@ -381,6 +378,7 @@ void OffsetGeometryContact::Initialize(
         std::addressof(EOGC) /*EOGC*/,
         std::addressof(mVertexLocks) /*mVertexLocks*/,
         std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(mFacetLocks) /*mFacetLocks*/,
         std::addressof(dminv) /*dminv*/,
         std::addressof(dminf) /*dminf*/,
         std::addressof(dmine) /*dmine*/,
@@ -391,6 +389,7 @@ void OffsetGeometryContact::Initialize(
         ScalarType(0) /*r*/,
         ScalarType(0) /*rq*/};
     Eigen::Index nComponents = VP.size() - 1;
+    mUserDataPerComponent.resize(nComponents);
     for (Eigen::Index c = nComponents - 1; c >= 0; --c)
     {
         IndexType const vertexOffset       = VP[c];
@@ -399,13 +398,14 @@ void OffsetGeometryContact::Initialize(
         IndexType const nComponentFaces    = FP[c + 1] - faceOffset;
         IndexType const edgeOffset         = EP[c];
         IndexType const nComponentEdges    = EP[c + 1] - edgeOffset;
+        mUserDataPerComponent[c]           = {&userData, static_cast<IndexType>(c)};
         // Vertex geometry
         RTCGeometry vertexGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
         rtcSetGeometryUserPrimitiveCount(
             vertexGeometry,
             static_cast<unsigned int>(nComponentVertices));
-        rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&userData));
+        rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&mUserDataPerComponent[c]));
         rtcSetGeometryBoundsFunction(
             vertexGeometry,
             &detail::PointRTCBoundsFunction<ScalarType, IndexType>,
@@ -420,7 +420,7 @@ void OffsetGeometryContact::Initialize(
         rtcSetGeometryUserPrimitiveCount(
             triangleGeometry,
             static_cast<unsigned int>(nComponentFaces));
-        rtcSetGeometryUserData(triangleGeometry, static_cast<void*>(&userData));
+        rtcSetGeometryUserData(triangleGeometry, static_cast<void*>(&mUserDataPerComponent[c]));
         rtcSetGeometryBoundsFunction(
             triangleGeometry,
             &detail::TriangleRTCBoundsFunction<ScalarType, IndexType>,
@@ -433,7 +433,7 @@ void OffsetGeometryContact::Initialize(
         RTCGeometry edgeGeometry =
             rtcNewGeometry(static_cast<RTCDevice>(device.Raw()), RTC_GEOMETRY_TYPE_USER);
         rtcSetGeometryUserPrimitiveCount(edgeGeometry, static_cast<unsigned int>(nComponentEdges));
-        rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&userData));
+        rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&mUserDataPerComponent[c]));
         rtcSetGeometryBoundsFunction(
             edgeGeometry,
             &detail::EdgeRTCBoundsFunction<ScalarType, IndexType>,
@@ -449,6 +449,7 @@ void OffsetGeometryContact::Initialize(
     // 3. Allocate locks
     mVertexLocks.resize(nVertices);
     mEdgeLocks.resize(nEdges);
+    mFacetLocks.resize(nFacets);
 }
 
 void OffsetGeometryContact::PrepareIteration(
@@ -465,9 +466,13 @@ void OffsetGeometryContact::PrepareIteration(
     // 0. Reset locks, contact sets and displacement bounds
     mVertexLocks.setConstant(false);
     mEdgeLocks.setConstant(false);
-    VOGC.row(0).setZero();
-    FOGC.row(0).setZero();
-    EOGC.row(0).setZero();
+    mFacetLocks.setConstant(false);
+    for (auto& vfogc : FOGC)
+        vfogc.clear();
+    for (auto& fvogc : VOGC)
+        fvogc.clear();
+    for (auto& eogc : EOGC)
+        eogc.clear();
     dminv.setConstant(params.rq * params.rq);
     dminf.setConstant(params.rq * params.rq);
     dmine.setConstant(params.rq * params.rq);
@@ -485,6 +490,7 @@ void OffsetGeometryContact::PrepareIteration(
         std::addressof(EOGC) /*EOGC*/,
         std::addressof(mVertexLocks) /*mVertexLocks*/,
         std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(mFacetLocks) /*mFacetLocks*/,
         std::addressof(dminv) /*dminv*/,
         std::addressof(dminf) /*dminf*/,
         std::addressof(dmine) /*dmine*/,
@@ -503,21 +509,19 @@ void OffsetGeometryContact::PrepareIteration(
         IndexType const nComponentFaces    = FP[c + 1] - faceOffset;
         IndexType const edgeOffset         = EP[c];
         IndexType const nComponentEdges    = EP[c + 1] - edgeOffset;
+        mUserDataPerComponent[c].userData  = &userData;
         // Vertex geometry
         RTCGeometry vertexGeometry = rtcGetGeometry(mVertexScene, static_cast<unsigned int>(c));
-        rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&userData));
+        rtcSetGeometryUserData(vertexGeometry, static_cast<void*>(&mUserDataPerComponent[c]));
         rtcCommitGeometry(vertexGeometry);
-        rtcAttachGeometryByID(mVertexScene, vertexGeometry, static_cast<unsigned int>(c));
         // Face geometry
         RTCGeometry faceGeometry = rtcGetGeometry(mFaceScene, static_cast<unsigned int>(c));
-        rtcSetGeometryUserData(faceGeometry, static_cast<void*>(&userData));
+        rtcSetGeometryUserData(faceGeometry, static_cast<void*>(&mUserDataPerComponent[c]));
         rtcCommitGeometry(faceGeometry);
-        rtcAttachGeometryByID(mFaceScene, faceGeometry, static_cast<unsigned int>(c));
         // Edge geometry
         RTCGeometry edgeGeometry = rtcGetGeometry(mEdgeScene, static_cast<unsigned int>(c));
-        rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&userData));
+        rtcSetGeometryUserData(edgeGeometry, static_cast<void*>(&mUserDataPerComponent[c]));
         rtcCommitGeometry(edgeGeometry);
-        rtcAttachGeometryByID(mEdgeScene, edgeGeometry, static_cast<unsigned int>(c));
     }
     rtcCommitScene(mVertexScene);
     rtcCommitScene(mFaceScene);
@@ -549,6 +553,7 @@ void OffsetGeometryContact::VertexFacetContactDetection(
         std::addressof(EOGC) /*EOGC*/,
         std::addressof(mVertexLocks) /*mVertexLocks*/,
         std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(mFacetLocks) /*mFacetLocks*/,
         std::addressof(dminv) /*dminv*/,
         std::addressof(dminf) /*dminf*/,
         std::addressof(dmine) /*dmine*/,
@@ -558,11 +563,21 @@ void OffsetGeometryContact::VertexFacetContactDetection(
         nullptr /*EHE*/,
         params.r /*r*/,
         params.rq /*rq*/};
+    // Compute FOGC and VOGC (with duplicates)
     rtcCollide(
         mVertexScene,
         mFaceScene,
         detail::VertexFacetRTCCollideFunc<ScalarType, IndexType>,
         static_cast<void*>(&userData));
+    // Remove duplicate entries in VOGC
+    tbb::parallel_for(IndexType(0), IndexType(F.cols()), [this](IndexType f) {
+        std::sort(VOGC[f].begin(), VOGC[f].end());
+        VOGC[f].erase(std::unique(VOGC[f].begin(), VOGC[f].end()), VOGC[f].end());
+    });
+    // Finalize per-vertex displacement bounds
+    dminv.noalias() = dminv.cwiseSqrt();
+    // Finalize per-triangle displacement bounds
+    dminf.noalias() = dminf.cwiseSqrt();
 }
 
 void OffsetGeometryContact::EdgeEdgeContactDetection(
@@ -590,6 +605,7 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
         std::addressof(EOGC) /*EOGC*/,
         std::addressof(mVertexLocks) /*mVertexLocks*/,
         std::addressof(mEdgeLocks) /*mEdgeLocks*/,
+        std::addressof(mFacetLocks) /*mFacetLocks*/,
         std::addressof(dminv) /*dminv*/,
         std::addressof(dminf) /*dminf*/,
         std::addressof(dmine) /*dmine*/,
@@ -599,6 +615,38 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
         nullptr /*EHE*/,
         params.r /*r*/,
         params.rq /*rq*/};
+    // Compute EOGC
+    // rtcCollide(
+    //     mEdgeScene,
+    //     mEdgeScene,
+    //     detail::EdgeEdgeRTCCollideFunc<ScalarType, IndexType>,
+    //     static_cast<void*>(&userData));
+    // Finalize per-edge displacement bounds
+    dmine.noalias() = dmine.cwiseSqrt();
+}
+
+void OffsetGeometryContact::ComputeDisplacementBounds(
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.ComputeDisplacementBounds");
+    // dminv, dminf, dmine already computed during contact detection
+    IndexType const nVertices = static_cast<IndexType>(V.size());
+    for (IndexType v = 0; nVertices; ++v)
+    {
+        IndexType i  = V(v);
+        bv(v)        = dminv(v);
+        auto hebegin = GVHEp(i);
+        auto heend   = GVHEp(i + 1);
+        for (IndexType k = hebegin; k < heend; ++k)
+        {
+            IndexType const he = GVHEadj(k);
+            IndexType const f  = geometry::FaceOfHalfEdge(he);
+            bv(v)              = std::min({bv(v), dmine(he), dminf(f)});
+        }
+    }
 }
 
 std::pair<
@@ -688,7 +736,9 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
 
 } // namespace pbat::sim::contact::detail::test
 
+#include "MultiMesh.h"
 #include "pbat/geometry/MeshBoundary.h"
+#include "pbat/graph/Mesh.h"
 
 #include <doctest/doctest.h>
 
@@ -720,7 +770,7 @@ TEST_CASE("[sim][contact] ClosestFaceFacetToVertex")
     fCheck(0.34, 0.33, 0.33, 0, 0); // face -> a=0, eFace=0
 }
 
-TEST_CASE("[sim][contact] IsVertexFeasible on cube corner")
+TEST_CASE("[sim][contact] IsVertexFeasible")
 {
     using namespace pbat;
     using pbat::sim::contact::IsVertexFeasible;
@@ -757,7 +807,7 @@ TEST_CASE("[sim][contact] IsVertexFeasible on cube corner")
     }
 }
 
-TEST_CASE("[sim][contact] IsEdgeFeasible setup on cube")
+TEST_CASE("[sim][contact] IsEdgeFeasible")
 {
     using namespace pbat;
     using pbat::sim::contact::IsEdgeFeasible;
@@ -819,5 +869,148 @@ TEST_CASE("[sim][contact] IsEdgeFeasible setup on cube")
                 X.col(i) + eps * Eigen::Vector<Scalar, 3>{Scalar(-1), Scalar(0), Scalar(0)};
             CHECK_FALSE(IsEdgeFeasible<Scalar, Index>(X, Fb, GHEF, x, he, i));
         }
+    }
+}
+
+TEST_CASE("[sim][contact] OffsetGeometryContact")
+{
+    using namespace pbat;
+    using namespace pbat::sim::contact;
+
+    // Arrange
+    OgcParams params = OgcParams()
+                           .WithRadii(Scalar(0.01), Scalar(0.02))
+                           .WithMaxContactEstimates(16, 16, 16)
+                           .Construct();
+
+    // single tetrahedral cube
+    MatrixX X(3, 8);
+    IndexMatrixX T(4, 5);
+    // clang-format off
+    X << 0., 1., 0., 1., 0., 1., 0., 1.,
+         0., 0., 1., 1., 0., 0., 1., 1.,
+         0., 0., 0., 0., 1., 1., 1., 1.;
+    T << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    // clang-format on
+    MatrixX X1 = X;
+    // Stack second cube on top in z direction, then shift in (1,1,1) direction, but stay inside
+    // contact radius.
+    MatrixX X2 = X.colwise() + (X.row(2).maxCoeff() - X.row(2).minCoeff()) * Vector<3>::UnitZ();
+    X2.colwise() += Scalar(0.9) * params.r * Vector<3>::Ones().normalized();
+    X.resize(3, X1.cols() + X2.cols());
+    X << X1, X2;
+    IndexMatrixX T1 = T;
+    IndexMatrixX T2 = T.array() + static_cast<Index>(X1.cols());
+    T.resize(4, T1.cols() + T2.cols());
+    T << T1, T2;
+
+    // Sort by connected components and reindex mesh/labels
+    IndexVectorX XCC(X.cols()), TCC(T.cols()), Xord(X.cols()), Tord(T.cols());
+    Eigen::Index const nComponents =
+        graph::SortedConnectedComponentOrdering(X, T, XCC, TCC, Xord, Tord);
+    graph::ReindexMeshByConnectedComponents(X, T, XCC, TCC, Xord, Tord);
+
+    IndexVectorX V;
+    IndexMatrixX F;
+    IndexVectorX VP(nComponents + 1);
+    IndexVectorX FP(nComponents + 1);
+    BoundaryTriangulation(T.bottomRows<4>(), XCC, V, F, VP, FP);
+    IndexMatrixX E;
+    IndexVectorX EP(nComponents + 1);
+    IndexVectorX GVHEp, GVHEadj;
+    IndexMatrixX GHEF, EHE;
+    BoundaryTriangulationEdges(F.bottomRows<3>(), XCC, E, EP, GVHEp, GVHEadj, GHEF, EHE);
+
+    geometry::DeviceConfig config;
+    config.threads     = 1;
+    config.userThreads = 1;
+    config.verbose     = 3;
+    geometry::Device device(config);
+    OffsetGeometryContact ogc(device, X, V, F, E, VP, FP, EP, params);
+    ogc.PrepareIteration(X, V, F, E, VP, FP, EP, params);
+
+    SUBCASE("Vertex-Facet Contact Detection")
+    {
+        // Act: prepare iteration and perform vertex-facet contact detection
+        ogc.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF, params);
+
+        // Assert: expect contacts between top vertices of bottom cube and bottom faces of top cube
+        auto const fContactSetHasTriangles =
+            [](std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return std::any_of(
+                    contactFaces.begin(),
+                    contactFaces.end(),
+                    [](OffsetGeometryContact::ContactFace const& contactFace) {
+                        return contactFace.IsTriangle();
+                    });
+            };
+        auto const fContactSetHasEdges =
+            [](std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return std::any_of(
+                    contactFaces.begin(),
+                    contactFaces.end(),
+                    [](OffsetGeometryContact::ContactFace const& contactFace) {
+                        return contactFace.IsEdge();
+                    });
+            };
+        auto const fContactSetHasVertices =
+            [](std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return std::any_of(
+                    contactFaces.begin(),
+                    contactFaces.end(),
+                    [](OffsetGeometryContact::ContactFace const& contactFace) {
+                        return contactFace.IsVertex();
+                    });
+            };
+        Eigen::Index const nVerticesWithTriangleContacts = std::accumulate(
+            ogc.FOGC.begin(),
+            ogc.FOGC.end(),
+            Eigen::Index(0),
+            [&fContactSetHasTriangles](
+                Eigen::Index acc,
+                std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return acc + fContactSetHasTriangles(contactFaces);
+            });
+        Eigen::Index const nVerticesWithEdgeContacts = std::accumulate(
+            ogc.FOGC.begin(),
+            ogc.FOGC.end(),
+            Eigen::Index(0),
+            [&fContactSetHasEdges](
+                Eigen::Index acc,
+                std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return acc + fContactSetHasEdges(contactFaces);
+            });
+        Eigen::Index const nVerticesWithVertexContacts = std::accumulate(
+            ogc.FOGC.begin(),
+            ogc.FOGC.end(),
+            Eigen::Index(0),
+            [&fContactSetHasVertices](
+                Eigen::Index acc,
+                std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return acc + fContactSetHasVertices(contactFaces);
+            });
+        CHECK_EQ(nVerticesWithTriangleContacts, 1);
+        CHECK_EQ(nVerticesWithEdgeContacts, 5);
+        CHECK_EQ(nVerticesWithVertexContacts, 2);
+
+        Eigen::Index const nTotalVertexFaceContacts = std::accumulate(
+            ogc.FOGC.begin(),
+            ogc.FOGC.end(),
+            Eigen::Index(0),
+            [](Eigen::Index acc,
+               std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return acc + static_cast<Eigen::Index>(contactFaces.size());
+            });
+        Eigen::Index const nTotalFaceVertexContacts = std::accumulate(
+            ogc.VOGC.begin(),
+            ogc.VOGC.end(),
+            Eigen::Index(0),
+            [](Eigen::Index acc, std::vector<Index> const& contactVertices) {
+                return acc + static_cast<Eigen::Index>(contactVertices.size());
+            });
+        CHECK_EQ(nTotalVertexFaceContacts, nTotalFaceVertexContacts);
     }
 }

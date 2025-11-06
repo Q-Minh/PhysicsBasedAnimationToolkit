@@ -22,6 +22,7 @@
 #include <embree4/rtcore.h>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace pbat::sim::contact {
 
@@ -58,9 +59,15 @@ struct OgcParams
     EBuildQuality eSceneBvhQuality{EBuildQuality::Low};  ///< Scene BVH build quality
     EBuildQuality eMeshBvhQuality{EBuildQuality::Low};   ///< Mesh BVH build quality
 
-    int nMaxVertexFacetContacts{16}; ///< Max vertex-facet contacts
-    int nMaxFacetVertexContacts{16}; ///< Max facet-vertex contacts
-    int nMaxEdgeFacetContacts{16};   ///< Max edge-facet contacts
+    int nMaxVertexFaceContactsEstimate{
+        16}; ///< Max vertex-face contacts estimate for memory pre-allocation
+    int nMaxFaceVertexContactsEstimate{
+        16}; ///< Max face-vertex contacts estimate for memory pre-allocation
+    int nMaxEdgeFaceContactsEstimate{
+        16}; ///< Max edge-face contacts estimate for memory pre-allocation
+
+    Scalar gammap{0.45}; ///< Relaxation parameter for vertex displacement bound, must satisfy `0 <
+                         ///< gammap < 0.5`
 
   public:
     /**
@@ -85,12 +92,19 @@ struct OgcParams
     PBAT_API OgcParams& WithBuildQuality(EBuildQuality scene, EBuildQuality mesh);
     /**
      * @brief Set maximum number of contacts.
-     * @param nvf Max vertex-facet contacts
-     * @param nfv Max facet-vertex contacts
-     * @param nef Max edge-facet contacts
+     * @param nvf Max vertex-face contacts estimate
+     * @param nfv Max face-vertex contacts estimate
+     * @param nef Max edge-face contacts estimate
      * @return Reference to this
      */
-    PBAT_API OgcParams& WithMaxContacts(int nvf, int nfv, int nef);
+    PBAT_API OgcParams& WithMaxContactEstimates(int nvf, int nfv, int nef);
+    /**
+     * @brief Set displacement bound parameters.
+     * @param gammap Relaxation parameter for vertex displacement bound, must satisfy `0 < gammap <
+     * 0.5`
+     * @return Reference to this
+     */
+    PBAT_API OgcParams& WithDisplacementBoundConfig(Scalar _gammap);
     /**
      * @brief Validate and construct the parameters.
      * @param bValidate Whether to validate parameters
@@ -108,6 +122,28 @@ struct OgcParams
      */
     PBAT_API void Deserialize(io::Archive const& archive);
 };
+
+namespace detail {
+
+/**
+ * @brief Private user data structure for the OGC internal functions.
+ *
+ * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+struct UserData;
+
+/**
+ * @brief Private user data structure for per-component OGC internal functions.
+ *
+ * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+struct UserDataByComponent;
+
+} // namespace detail
 
 /**
  * @brief API of Offset Geometric Contact (OGC) algorithm \cite chen_offset_2025 for multi-body
@@ -255,6 +291,16 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
         OgcParams const& params);
     /**
+     * @brief Compute total vertex displacement bounds.
+     * @pre `VertexFacetContactDetection` and `EdgeEdgeContactDetection` have been called.
+     * @post `bv` is populated.
+     */
+    PBAT_API void ComputeDisplacementBounds(
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj);
+    /**
      * @brief Scene axis-aligned bounding box.
      */
     PBAT_API auto Bounds() const
@@ -287,29 +333,50 @@ class OffsetGeometryContact
     void Destroy() noexcept;
 
   public:
-    Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
-        FOGC; ///< `|# max vertex-facet contacts + 1| x 3*|# vertices|` array of per-vertex contact
-              ///< facet sets, where `FOGC.col(3*v + 0)`, `FOGC.col(3*v + 1)`, `FOGC.col(3*v + 2)`
-              ///< are respectively the triangle, half-edge and vertex indices of the contact facets
-              ///< for vertex `v`, except for the first coefficient, which indicates the number of
-              ///< contact facets in that column.
-    Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
-        VOGC; ///< `|# max facet-vertex contacts + 1| x |# triangles|` array of per-triangle contact
-              ///< facet sets, where `FOGC.col(f)` are vertex indices of the contact vertices for
-              ///< triangle `f`, except for the first coefficient, which indicates the number of
-              ///< contact vertices in that column.
-    Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>
-        EOGC; ///< `|# max edge-facet contacts + 1| x 2*|# half-edges|` array of per-half-edge
-              ///< contact facet sets, where `EOGC.col(2*he + 0)`, `EOGC.col(2*he + 1)` are
-              ///< respectively the half-edge and vertex indices of the contact facets for half-edge
-              ///< `he`, except for the first coefficient, which indicates the number of contact
-              ///< facets in that column.
+    /**
+     * @brief Contact face structure.
+     */
+    struct ContactFace
+    {
+        /**
+         * @brief Construct a new Contact Face object
+         *
+         * @param _a
+         * @param _eFace
+         */
+        ContactFace(IndexType _a, IndexType _eFace) : a(_a), eFace(_eFace) {}
+        /**
+         * @brief Check if the contact face is a triangle
+         * @return true if triangle, false otherwise
+         */
+        bool IsTriangle() const { return eFace == 0; }
+        /**
+         * @brief Check if the contact face is an edge
+         * @return true if edge, false otherwise
+         */
+        bool IsEdge() const { return eFace == 1; }
+        /**
+         * @brief Check if the contact face is a vertex
+         * @return true if vertex, false otherwise
+         */
+        bool IsVertex() const { return eFace == 2; }
+        IndexType a;     ///< Face (vertex, edge or triangle) index
+        IndexType eFace; ///< Face type indicator: (0 | 1 | 2) -> (triangle | edge | vertex)
+    };
+
+    // NOTE: We should try custom allocators on the contact sets to see if we can boost performance
+    std::vector<std::vector<ContactFace>> FOGC; ///< `|# vertices|` per-vertex contact facet sets
+    std::vector<std::vector<IndexType>> VOGC; ///< `|# triangles|` per-triangle contact vertex sets.
+                                              ///< Stores vertex indices only.
+    std::vector<std::vector<ContactFace>> EOGC; ///< `|# edges|` per-edge contact facet sets
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        bv; ///< `|# vertices|` array of vertex displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dminv; ///< `|# vertices|` array of vertex displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dminf; ///< `|# faces|` array of face displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dmine; ///< `|# edges|` array of edge displacement bounds
+        dmine; ///< `|# half-edges|` array of half-edge displacement bounds
 
   private:
     RTCScene mVertexScene{nullptr}; ///< Opaque RTCScene
@@ -321,6 +388,11 @@ class OffsetGeometryContact
                       ///< to per-vertex contact facet sets.
     Eigen::Vector<bool, Eigen::Dynamic> mEdgeLocks; ///< `|# edges|` array of locks for synchronized
                                                     ///< access to per-edge contact facet sets.
+    Eigen::Vector<bool, Eigen::Dynamic>
+        mFacetLocks; ///< `|# triangles|` array of locks for synchronized
+                     ///< access to per-triangle contact vertex sets.
+    std::vector<detail::UserDataByComponent<ScalarType, IndexType>>
+        mUserDataPerComponent; ///< Per-component user data for RTCBoundsFunction callbacks
 };
 
 /**
@@ -377,6 +449,44 @@ bool IsEdgeFeasible(
     TIndex fi,
     TIndex he);
 
+namespace detail {
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+struct UserData
+{
+    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const* X;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* V;
+    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const* F;
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* E;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* VP;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* FP;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* EP;
+    std::vector<std::vector<OffsetGeometryContact::ContactFace>>* FOGC;
+    std::vector<std::vector<TIndex>>* VOGC;
+    std::vector<std::vector<OffsetGeometryContact::ContactFace>>* EOGC;
+    Eigen::Vector<bool, Eigen::Dynamic>* mVertexLocks;
+    Eigen::Vector<bool, Eigen::Dynamic>* mEdgeLocks;
+    Eigen::Vector<bool, Eigen::Dynamic>* mFacetLocks;
+    Eigen::Vector<TScalar, Eigen::Dynamic>* dminv;
+    Eigen::Vector<TScalar, Eigen::Dynamic>* dminf;
+    Eigen::Vector<TScalar, Eigen::Dynamic>* dmine;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEp;
+    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const* GVHEadj;
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* GHEF;
+    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const* EHE;
+    TScalar r;
+    TScalar rq;
+};
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+struct UserDataByComponent
+{
+    UserData<TScalar, TIndex>* userData;
+    TIndex component;
+};
+
+} // namespace detail
+
 template <common::CFloatingPoint TScalar>
 std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
 {
@@ -387,6 +497,38 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
     int a                = bIsVertex * ((v == TScalar(1)) * 1 + (w == TScalar(1)) * 2) +
             bIsEdge * ((u == TScalar(0)) * 1 + (v == TScalar(0)) * 2);
     return {a, eFace};
+}
+
+/**
+ * @brief Vectorize contact face index based on face type.
+ *
+ * Given a triangle mesh face `f`, a local index `alocal` (local vertex or local half-edge index),
+ * and a face-type tag `eFace` where 0=triangle, 1=edge, 2=vertex, this computes the unified
+ * contact index `a` as used by the OGC contact sets.
+ *
+ * Definition:
+ * - Triangle-face:   a = f
+ * - Edge-face:       a = 3*f + alocal  (half-edge index within face f)
+ * - Vertex-face:     a = F(alocal, f)  (global vertex index)
+ *
+ * @tparam TIndex Index type
+ * @tparam TDerivedF Derived Eigen type for face connectivity (3 x |#faces|)
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @param f Face index
+ * @param alocal Local index within face f (0..2)
+ * @param eFace Face type tag: 0=triangle, 1=edge, 2=vertex
+ * @return Vectorized contact index `a`
+ */
+template <common::CIndex TIndex, class TDerivedF>
+inline TIndex
+ContactFaceIndex(Eigen::DenseBase<TDerivedF> const& F, TIndex f, int alocal, int eFace)
+{
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
+    return (eFace == 0) * f /* face contact, return face index */ +
+           (eFace == 1) * (3 * f + alocal) /* edge contact, return half-edge index */
+           + (eFace == 2) * F(alocal, f) /* vertex contact, return global point index */;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
