@@ -636,8 +636,6 @@ void OffsetGeometryContact::Destroy() noexcept
 
 } // namespace pbat::sim::contact
 
-#include <doctest/doctest.h>
-
 namespace pbat::sim::contact::detail::test {
 
 /**
@@ -687,6 +685,10 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
 
 } // namespace pbat::sim::contact::detail::test
 
+#include "pbat/geometry/MeshBoundary.h"
+
+#include <doctest/doctest.h>
+
 TEST_CASE("[sim][contact] ClosestFaceFacetToVertex")
 {
     using pbat::math::linalg::mini::SVector;
@@ -713,4 +715,106 @@ TEST_CASE("[sim][contact] ClosestFaceFacetToVertex")
     fCheck(0.2, 0.3, 0.5, 0, 0);    // face -> a=0, eFace=0
     fCheck(0.1, 0.1, 0.8, 0, 0);    // face -> a=0, eFace=0
     fCheck(0.34, 0.33, 0.33, 0, 0); // face -> a=0, eFace=0
+}
+
+TEST_CASE("[sim][contact] IsVertexFeasible on cube corner")
+{
+    using namespace pbat;
+    using pbat::sim::contact::IsVertexFeasible;
+
+    // Arrange: single tetrahedral cube and its boundary triangulation and half-edge adjacency
+    MatrixX X(3, 8);
+    IndexMatrixX T(4, 5);
+    // clang-format off
+    X << 0., 1., 0., 1., 0., 1., 0., 1.,
+         0., 0., 1., 1., 0., 0., 1., 1.,
+         0., 0., 0., 0., 1., 1., 1., 1.;
+    T << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    // clang-format on
+    auto [Vb, Fb] = geometry::SimplexMeshBoundary(T, static_cast<Index>(X.cols()));
+    auto [GVHEp, GVHEadj] =
+        geometry::VertexHalfEdgeAdjacency(Fb.bottomRows<3>(), static_cast<Index>(X.cols()));
+    Scalar const eps            = Scalar(1e-3);
+    Index const i               = 7;
+    Eigen::Vector<Scalar, 3> xv = X.col(i);
+
+    SUBCASE("feasible: move along +(1,1,1)")
+    {
+        Eigen::Vector<Scalar, 3> x = xv + eps * Eigen::Vector<Scalar, 3>::Ones();
+        CHECK(IsVertexFeasible<Scalar, Index>(X, Fb, GVHEp, GVHEadj, x, i));
+    }
+    SUBCASE("infeasible: move along +(1,-1,-1) axis")
+    {
+        Eigen::Vector<Scalar, 3> x =
+            xv + eps * Eigen::Vector<Scalar, 3>{Scalar(1), Scalar(-1), Scalar(-1)};
+        CHECK_FALSE(IsVertexFeasible<Scalar, Index>(X, Fb, GVHEp, GVHEadj, x, i));
+    }
+}
+
+TEST_CASE("[sim][contact] IsEdgeFeasible setup on cube")
+{
+    using namespace pbat;
+    using pbat::sim::contact::IsEdgeFeasible;
+
+    // Arrange: single tetrahedral cube and its boundary triangulation and half-edge adjacency
+    MatrixX X(3, 8);
+    IndexMatrixX T(4, 5);
+    // clang-format off
+    X << 0., 1., 0., 1., 0., 1., 0., 1.,
+         0., 0., 1., 1., 0., 0., 1., 1.,
+         0., 0., 0., 0., 1., 1., 1., 1.;
+    T << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    // clang-format on
+    auto [Vb, Fb]                = geometry::SimplexMeshBoundary(T, static_cast<Index>(X.cols()));
+    auto GHEF                    = geometry::HalfEdgeFaceAdjacency(Fb.bottomRows<3>());
+    auto EHE                     = geometry::EdgeHalfEdgeAdjacency(Fb.bottomRows<3>(), GHEF);
+    auto const fGetHalfEdgeIndex = [&](Eigen::Vector<Scalar, 3> xi, Eigen::Vector<Scalar, 3> xj) {
+        for (auto f = 0; f < Fb.cols(); ++f)
+        {
+            Index hei = geometry::FirstHalfEdgeOfFace(f);
+            Index hej = geometry::NextHalfEdge(hei);
+            Index hek = geometry::NextHalfEdge(hej);
+            if (X.col(geometry::IncomingVertex(Fb.bottomRows<3>(), hei)).isApprox(xi) and
+                X.col(geometry::OutgoingVertex(Fb.bottomRows<3>(), hei)).isApprox(xj))
+                return hei;
+            if (X.col(geometry::IncomingVertex(Fb.bottomRows<3>(), hej)).isApprox(xi) and
+                X.col(geometry::OutgoingVertex(Fb.bottomRows<3>(), hej)).isApprox(xj))
+                return hej;
+            if (X.col(geometry::IncomingVertex(Fb.bottomRows<3>(), hek)).isApprox(xi) and
+                X.col(geometry::OutgoingVertex(Fb.bottomRows<3>(), hek)).isApprox(xj))
+                return hek;
+        }
+        return Index(-1);
+    };
+    auto const fGetVertexIndex = [&](Eigen::Vector<Scalar, 3> xv) {
+        for (Index v = 0; v < X.cols(); ++v)
+            if (X.col(v).isApprox(xv))
+                return v;
+        return Index(-1);
+    };
+    Scalar const eps = Scalar(1e-3);
+    SUBCASE("Half-edge (0,0,0) -> (1,0,0)")
+    {
+        Index const he =
+            fGetHalfEdgeIndex(Eigen::Vector<Scalar, 3>{0, 0, 0}, Eigen::Vector<Scalar, 3>{1, 0, 0});
+        Index const i = fGetVertexIndex(Eigen::Vector<Scalar, 3>{0, 0, 0});
+        SUBCASE("feasible: move along +(1,-1,-1) axis")
+        {
+            Eigen::Vector<Scalar, 3> x =
+                X.col(i) + eps * Eigen::Vector<Scalar, 3>{Scalar(1), Scalar(-1), Scalar(-1)};
+            CHECK(IsEdgeFeasible<Scalar, Index>(X, Fb, GHEF, x, he, i));
+        }
+        SUBCASE("infeasible: move along +(-1,0,0) axis")
+        {
+            Eigen::Vector<Scalar, 3> x =
+                X.col(i) + eps * Eigen::Vector<Scalar, 3>{Scalar(-1), Scalar(0), Scalar(0)};
+            CHECK_FALSE(IsEdgeFeasible<Scalar, Index>(X, Fb, GHEF, x, he, i));
+        }
+    }
 }
