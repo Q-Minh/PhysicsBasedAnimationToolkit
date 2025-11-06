@@ -262,24 +262,27 @@ void VertexFacetRTCCollideFunc(
                    (eFace == 2) * finds(alocal) /* v */;
         // Synchronize reads/writes to vertex iv's contact sets
         common::AtomicExecute(mVertexLocks(iv), [&]() {
-            int const nContactFacets = FOGC(0, sj);
+            TIndex& FOGCcount = FOGC(0, sj);
             // Avoid duplicated contact with `a` detected from a neighbour facet. Brute force search
             // the list of contact faces for `a`. Is there a better way?
-            bool const bExcessContact = (nContactFacets == FOGC.rows() - 1);
+            bool const bExcessContact = (FOGCcount == FOGC.rows() - 1);
             int k;
             if (not bExcessContact)
-                for (k = 0; k < nContactFacets; ++k)
-                    if (FOGC(k, sj) == a)
+                for (k = 0; k < FOGCcount; ++k)
+                    if (FOGC(k + 1, sj) == a)
                         break;
-            bool const bDuplicateContact = (k < nContactFacets);
+            bool const bDuplicateContact = (k < FOGCcount);
             if (bDuplicateContact or bExcessContact)
                 return;
             // Update contact face sets
             auto const fUpdateContactFaceSets = [&]() {
-                FOGC(FOGC(0, sj)++, sj) = a;
-                TIndex& counter         = VOGC(0, f);
-                TIndex fk               = common::AtomicAdd<TIndex>(counter, 1);
-                VOGC(fk, f)             = iv;
+                FOGC(++FOGCcount, sj) = a; // No need to atomic add here due to vertex lock
+                TIndex& VOGCcount     = VOGC(0, f);
+                TIndex fk             = common::AtomicAdd<TIndex>(VOGCcount, 1);
+                // The set capacity is VOGC.rows() - 1 because index 0 is used for counting
+                bool const bVOGCIsFull = (fk >= VOGC.rows() - 1);
+                if (not bVOGCIsFull)
+                    VOGC(fk + 1, f) = iv;
             };
             switch (eFace)
             {
