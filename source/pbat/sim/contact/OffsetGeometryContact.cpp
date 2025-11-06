@@ -300,6 +300,7 @@ OffsetGeometryContact::OffsetGeometryContact(geometry::Device device)
     : FOGC(),
       VOGC(),
       EOGC(),
+      bv(),
       dminv(),
       dminf(),
       dmine(),
@@ -357,6 +358,7 @@ void OffsetGeometryContact::Initialize(
     dminv.resize(nVertices);
     dminf.resize(nFacets);
     dmine.resize(nHalfEdges);
+    bv.resize(nVertices);
     // 2. Compute BVHs
     rtcSetSceneFlags(mVertexScene, detail::toRtc(params.eSceneFeatures));
     rtcSetSceneFlags(mFaceScene, detail::toRtc(params.eSceneFeatures));
@@ -629,12 +631,13 @@ void OffsetGeometryContact::ComputeDisplacementBounds(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj)
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
+    OgcParams const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.ComputeDisplacementBounds");
     // dminv, dminf, dmine already computed during contact detection
     IndexType const nVertices = static_cast<IndexType>(V.size());
-    for (IndexType v = 0; nVertices; ++v)
+    for (IndexType v = 0; v < nVertices; ++v)
     {
         IndexType i  = V(v);
         bv(v)        = dminv(v);
@@ -646,6 +649,7 @@ void OffsetGeometryContact::ComputeDisplacementBounds(
             IndexType const f  = geometry::FaceOfHalfEdge(he);
             bv(v)              = std::min({bv(v), dmine(he), dminf(f)});
         }
+        bv(v) *= params.gammap;
     }
 }
 
@@ -1022,5 +1026,20 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
                 return acc + static_cast<Eigen::Index>(contactVertices.size());
             });
         CHECK_EQ(nTotalVertexFaceContacts, nTotalFaceVertexContacts);
+    }
+    SUBCASE("Edge-Edge Contact Detection")
+    {
+        // Act: prepare iteration and perform edge-edge contact detection
+        ogc.EdgeEdgeContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, EHE, params);
+        // TODO: Test
+    }
+    SUBCASE("All contact detection")
+    {
+        // Act
+        ogc.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF, params);
+        ogc.EdgeEdgeContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, EHE, params);
+        ogc.ComputeDisplacementBounds(V, F, GVHEp, GVHEadj, params);
+        Scalar const minDisplacementBound = ogc.bv.minCoeff();
+        CHECK_LT(minDisplacementBound, params.rq);
     }
 }
