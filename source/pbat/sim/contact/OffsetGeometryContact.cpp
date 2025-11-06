@@ -284,12 +284,12 @@ void VertexFacetRTCCollideFunc(
             switch (eFace)
             {
                 case 2 /* vertex */: {
-                    if (IsVertexFeasible<TScalar, TIndex>(X, F, GVHEp, GVHEadj, xi, a))
+                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
                         fUpdateContactFaceSets();
                     break;
                 }
                 case 1 /* edge */: {
-                    if (IsEdgeFeasible<TScalar, TIndex>(X, F, GHEF, xi, f, a))
+                    if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
                         fUpdateContactFaceSets();
                     break;
                 }
@@ -687,7 +687,7 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
 
 } // namespace pbat::sim::contact::detail::test
 
-TEST_CASE("[sim][contact][detail] ClosestFaceFacetToVertex")
+TEST_CASE("[sim][contact] ClosestFaceFacetToVertex")
 {
     using pbat::math::linalg::mini::SVector;
     using namespace pbat::sim::contact;

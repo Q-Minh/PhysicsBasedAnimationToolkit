@@ -26,15 +26,18 @@ namespace geometry {
 /**
  * @brief Get the incoming vertex of a half-edge in a triangle mesh.
  *
+ * @tparam TDerivedF Derived type of F
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param he Half-edge index
  * @return The incoming vertex index `v` of half-edge `he`
  */
-template <common::CIndex TIndex = Index>
-inline TIndex
-IncomingVertex(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F, TIndex he)
+template <class TDerivedF, common::CIndex TIndex = typename TDerivedF::Scalar>
+inline TIndex IncomingVertex(Eigen::DenseBase<TDerivedF> const& F, TIndex he)
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
     return F(he % 3, he / 3);
 }
 
@@ -44,18 +47,19 @@ IncomingVertex(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const&
  * @note Particularly useful for iterating over adjacent vertices of a given vertex, using the
  * `VertexHalfEdgeAdjacency` structure.
  *
+ * @tparam TDerivedF Derived type of F
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param he Half-edge index
  * @param step Number of steps to advance around the face before getting the outgoing vertex
  * @return The outgoing vertex index `v` of half-edge `he`
  */
-template <common::CIndex TIndex = Index>
-inline TIndex OutgoingVertex(
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    TIndex he,
-    int step = 0)
+template <class TDerivedF, common::CIndex TIndex = typename TDerivedF::Scalar>
+inline TIndex OutgoingVertex(Eigen::DenseBase<TDerivedF> const& F, TIndex he, int step = 0)
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
     return F((he + step + 1) % 3, he / 3);
 }
 
@@ -101,6 +105,7 @@ inline TIndex FaceOfHalfEdge(TIndex he)
 /**
  * @brief Tests if two half-edges are oppositely oriented edges of the same undirected edge.
  *
+ * @tparam TDerivedF Derived type of F
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param hei Half-edge index i
@@ -108,12 +113,12 @@ inline TIndex FaceOfHalfEdge(TIndex he)
  * @return true if half-edges `hei` and `hej` are opposite half-edges
  * @return false otherwise
  */
-template <common::CIndex TIndex = Index>
-inline bool AreOppositeHalfEdges(
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    TIndex hei,
-    TIndex hej)
+template <class TDerivedF, common::CIndex TIndex = typename TDerivedF::Scalar>
+inline bool AreOppositeHalfEdges(Eigen::DenseBase<TDerivedF> const& F, TIndex hei, TIndex hej)
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
     TIndex const fi  = hei / 3;
     TIndex const fj  = hej / 3;
     TIndex const via = F(hei % 3, fi);
@@ -130,6 +135,7 @@ inline bool AreOppositeHalfEdges(
  * `{0,1,2}` and a triangle `f`. This constructs a CSR-like representation (prefix, adjacency) that
  * groups half-edges by their incoming vertex (the first endpoint of the directed half-edge).
  *
+ * @tparam TDerivedF Derived type of F
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param n Number of vertices in the mesh
@@ -138,12 +144,13 @@ inline bool AreOppositeHalfEdges(
  *           `GVHEadj[GVHEp[v]..GVHEp[v+1])`
  *  - `GVHEadj`: `|# half edges|` adjacencies
  */
-template <common::CIndex TIndex = Index>
-inline auto VertexHalfEdgeAdjacency(
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    TIndex n = TIndex(-1))
+template <class TDerivedF, common::CIndex TIndex = typename TDerivedF::Scalar>
+inline auto VertexHalfEdgeAdjacency(Eigen::DenseBase<TDerivedF> const& F, TIndex n = TIndex(-1))
     -> std::pair<Eigen::Vector<TIndex, Eigen::Dynamic>, Eigen::Vector<TIndex, Eigen::Dynamic>>
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
     Eigen::Index const nFacets    = F.cols();
     Eigen::Index const nHalfEdges = 3 * nFacets;
     if (n < 0)
@@ -170,17 +177,20 @@ inline auto VertexHalfEdgeAdjacency(
  * `GFHE(1,he)` are the two face indices incident to the directed edge `{i,j}`. `GFHE(1,he) == -1`
  * is used to indicate no adjacent face for a boundary edge.
  *
+ * @tparam TDerivedF Derived type of F
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @return `2 x |3*# triangles|` matrix mapping half-edges (columns) to their two adjacent faces
  * (rows)
  * @pre `F` is edge-manifold
  */
-template <common::CIndex TIndex = Index>
-inline auto
-HalfEdgeFaceAdjacency(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F)
+template <class TDerivedF, common::CIndex TIndex = typename TDerivedF::Scalar>
+inline auto HalfEdgeFaceAdjacency(Eigen::DenseBase<TDerivedF> const& F)
     -> Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
     Eigen::Index const nFacets    = F.cols();
     Eigen::Index const nHalfEdges = 3 * nFacets;
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic> GHEF(2, nHalfEdges);
@@ -239,18 +249,26 @@ HalfEdgeFaceAdjacency(Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const>
  *
  * If the half-edge is a boundary edge, returns -1.
  *
+ * @tparam TDerivedF Derived type of F
+ * @tparam TDerivedGHEF Derived type of GHEF
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param hei Half-edge index
  * @param GHEF `2 x |3*# half edges|` half-edge to face adjacency matrix
  * @return Opposite half-edge index of half-edge `hei`, or -1 if none exists
  */
-template <common::CIndex TIndex = Index>
+template <class TDerivedF, class TDerivedGHEF, common::CIndex TIndex = typename TDerivedF::Scalar>
 inline TIndex OppositeHalfEdge(
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
+    Eigen::DenseBase<TDerivedF> const& F,
     TIndex hei,
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF)
+    Eigen::DenseBase<TDerivedGHEF> const& GHEF)
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
+    static_assert(
+        TDerivedGHEF::RowsAtCompileTime == 2,
+        "GHEF must have 2 rows representing half-edge to face adjacency.");
     TIndex const fi = GHEF(0, hei);
     TIndex const fj = GHEF(1, hei);
     if (fj == -1)
@@ -267,18 +285,25 @@ inline TIndex OppositeHalfEdge(
  * @brief Build edge to half-edge adjacency for a triangle mesh.
  * @note This representation is useful for undirected edge processing, e.g. by looping over columns
  * of the output adjacency matrix.
+ * @tparam TDerivedF Derived type of F
+ * @tparam TDerivedGHEF Derived type of GHEF
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param GHEF `2 x |3*# half edges|` half-edge to face adjacency matrix
  * @return `2 x |# edges|` matrix mapping edges (columns) to their two adjacent half-edges (rows,
  * where -1 indicates no opposite half-edge)
  */
-template <common::CIndex TIndex = Index>
+template <class TDerivedF, class TDerivedGHEF, common::CIndex TIndex = typename TDerivedF::Scalar>
 inline auto EdgeHalfEdgeAdjacency(
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF)
-    -> Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
+    Eigen::DenseBase<TDerivedF> const& F,
+    Eigen::DenseBase<TDerivedGHEF> const& GHEF) -> Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
+    static_assert(
+        TDerivedGHEF::RowsAtCompileTime == 2,
+        "GHEF must have 2 rows representing half-edge to face adjacency.");
     Eigen::Index nEdges{0};
     for (auto he = 0; he < GHEF.cols(); ++he)
     {
@@ -310,16 +335,22 @@ inline auto EdgeHalfEdgeAdjacency(
 /**
  * @brief Build the undirected edge list for a triangle mesh from its half-edge representation.
  *
+ * @tparam TDerivedF Derived type of F
+ * @tparam TDerivedEHE Derived type of EHE
  * @tparam TIndex Index type (defaults to pbat::Index)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param EHE `2 x |# edges|` edge to half-edge adjacency matrix
  * @return `2 x |# edges|` matrix of undirected edge vertex indices
  */
-template <common::CIndex TIndex = Index>
-inline auto Edges(
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& EHE)
+template <class TDerivedF, class TDerivedEHE, common::CIndex TIndex = typename TDerivedF::Scalar>
+inline auto Edges(Eigen::DenseBase<TDerivedF> const& F, Eigen::DenseBase<TDerivedEHE> const& EHE)
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
+    static_assert(
+        TDerivedEHE::RowsAtCompileTime == 2,
+        "EHE must have 2 rows representing edge to half-edge adjacency.");
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic> E(2, EHE.cols());
     for (Eigen::Index e = 0; e < EHE.cols(); ++e)
     {

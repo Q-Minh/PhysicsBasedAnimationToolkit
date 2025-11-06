@@ -6,8 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Contact.h"
     "Environment.h"
     "MultibodyMeshMixedCcdDcd.h"
-    "MultibodyTetrahedralMeshSystem.h"
-    "MeshVertexTetrahedronDcd.h"
+    "MultiMesh.h"
     "OffsetGeometryContact.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -15,7 +14,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Constraints.cpp"
     "Environment.cpp"
     "MultibodyMeshMixedCcdDcd.cpp"
-    "MeshVertexTetrahedronDcd.cpp"
-    "MultibodyTetrahedralMeshSystem.cpp"
+    "MultiMesh.cpp"
     "OffsetGeometryContact.cpp"
 )

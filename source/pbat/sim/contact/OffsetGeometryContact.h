@@ -217,7 +217,7 @@ class OffsetGeometryContact
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param GVHEp `|# points + 1|` point to half-edge prefix
-     * @param GVHEadj `|# half edges|` half-edge adjacency
+     * @param GVHEadj `|# half edges|` point to half-edge adjacency
      * @param GHEF `2 x |# half edges|` half-edge to face adjacency
      * @param params OGC parameters
      */
@@ -240,7 +240,7 @@ class OffsetGeometryContact
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param GVHEp `|# points + 1|` point to half-edge prefix
-     * @param GVHEadj `|# half edges|` half-edge adjacency
+     * @param GVHEadj `|# half edges|` point to half-edge adjacency
      * @param EHE `2 x |# edges|` edge to half-edge adjacency
      * @param params OGC parameters
      */
@@ -404,7 +404,7 @@ bool IsVertexFeasible(
     Eigen::Vector<TScalar, 3> const xv = X.col(i);
     for (TIndex he : GVHEadj(Eigen::seq(hebegin, heend - 1)))
     {
-        TIndex const vp = geometry::OutgoingVertex<TIndex>(F, he);
+        TIndex const vp = geometry::OutgoingVertex(F, he);
         auto const xvp  = X.col(vp);
         bInVertexFeasibleRegion &= ((x - xv).dot(xv - xvp) >= TScalar(0));
     }

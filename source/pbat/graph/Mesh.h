@@ -239,7 +239,6 @@ Eigen::Index SortedConnectedComponentOrdering(
         MeshDualGraph(E, nNodes, eMeshDualGraphOpts);
     // 2. Compute the connected components of the mesh
     BreadthFirstSearch<EccIndexType> bfs(nElements);
-    ECC.resize(nElements);
     ECC.setConstant(EccIndexType(-1));
     IndexType const nComponents = ConnectedComponents<EccIndexType>(
         Eigen::Map<Eigen::Vector<IndexType, Eigen::Dynamic> const>(
@@ -251,7 +250,6 @@ Eigen::Index SortedConnectedComponentOrdering(
         ECC,
         bfs);
     // 3. Transfer the element connected components to the mesh vertex connected component map
-    XCC.resize(nNodes);
     XCC.setConstant(XccIndexType(-1));
     auto verticesToElements =
         Eigen::Vector<IndexType, Eigen::Dynamic>::LinSpaced(nElements, 0, nElements - 1)

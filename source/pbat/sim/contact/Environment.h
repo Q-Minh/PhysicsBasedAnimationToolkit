@@ -12,7 +12,7 @@
 #ifndef PBAT_SIM_CONTACT_ENVIRONMENT_H
 #define PBAT_SIM_CONTACT_ENVIRONMENT_H
 
-#include "MultibodyTetrahedralMeshSystem.h"
+#include "MultiMesh.h"
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
 #include "pbat/geometry/sdf/Forest.h"
@@ -57,8 +57,8 @@ class Environment
      * @brief
      * @return
      */
-    template <common::CIndex TIndex = Index>
-    void DetectContactCandidates(MultibodyTetrahedralMeshSystem<TIndex, ScalarType> const& meshes);
+    // template <common::CIndex TIndex = Index>
+    // void DetectContactCandidates(MultibodyTetrahedralMeshSystem<TIndex, ScalarType> const& meshes);
     /**
      * @brief Get the number of contact candidates
      * @return The number of contact candidates
