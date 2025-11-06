@@ -9,40 +9,8 @@ import tkinter as tk
 from tkinter import filedialog
 
 from pbatoolkit import pbat, pypbat
-
-"""
-primitive operations
-all primitives require:
-- 1 interval of time (begin-end in seconds)
-- list of target dirichlet groups
-
-available primitives:
-- rotate about x, y, z
-- revolution (ie rotation about com)
-    -> axis, rev per second
-- translation 
-    -> direction, speed
-- implicit: empty (do nothing)
-"""
-
-def update_vdbc(vdbc, i):
-    if vdbc is None:
-        vdbc = np.array([i], dtype=np.int32)
-        return vdbc, vdbc.shape[0]
-    print("looking for index:", i)
-    print("in current vdbc:")
-    print(vdbc)
-    found = np.where(vdbc == i)[0]
-    print("we have found:")
-    print(found)
-    if found.shape[0] > 0:
-        vdbc = np.delete(vdbc, found)
-    else:
-        vdbc = np.hstack([vdbc, i])
-    print("new vdbc:")
-    print(vdbc)
-    return vdbc, vdbc.shape[0]
-
+from utils.pick import update_vdbc
+import utils.fixed_transform_library as ftl
 
 class SceneMesh:
     def __init__(self, name: str, V: np.ndarray, C: np.ndarray):
@@ -86,6 +54,14 @@ class SceneState:
         self.d_axis = 0
         self.d_percent = 0.01
         self.d_extremity = 0
+        # Library for fixed transforms for Dirichlet groups
+        self.transform_library = ftl.TransformLibrary()
+        self.selected_ttype = 0
+        self.unsaved_g_rotate = ftl.GlobalRotateTransform()
+        self.unsaved_l_rotate = ftl.LocalRotateTransform()
+        self.unsaved_translate = ftl.TranslateTransform()
+        self.editing_new_transform = False
+        self.editing_old_transform = -1
         # Constructed FEM
         self.fem = None  # pbat.sim.dynamics.FemElastoDynamics
 
@@ -245,6 +221,23 @@ class SceneState:
         ac.flush()
 
 
+def _load_transform_file(state: SceneState):
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(
+        title="Select transform library file",
+        defaultextension=".",
+        filetypes=[
+            ("All files", "*.*"),
+        ],
+    )
+    try:
+        if file_path:
+            state.transform_library.deserialize(file_path)
+    finally:
+        root.destroy()
+
+
 def _load_mesh(state: SceneState):
     root = tk.Tk()
     root.withdraw()
@@ -279,6 +272,28 @@ def _save_fem(state: SceneState):
     finally:
         root.destroy()
 
+def transform_editor(transform: ftl.FixedTransform):
+    _, transform.name = imgui.InputText("Name", transform.name)
+    _, transform.begin = imgui.InputFloat("Begin Time", transform.begin)
+    _, transform.end = imgui.InputFloat("End Time", transform.end)
+
+    if transform.transform_type == ftl.TransformType.G_ROTATE:
+        _, axis = imgui.InputFloat3("Axis", transform.axis)
+        transform.axis = np.array(axis)
+        _, transform.degrees_per_second = imgui.InputFloat("Degrees per Second", transform.degrees_per_second)
+    
+    elif transform.transform_type == ftl.TransformType.L_ROTATE:
+        _, axis = imgui.InputFloat3("Axis", transform.axis)
+        transform.axis = np.array(axis)
+        _, origin = imgui.InputFloat3("Origin", transform.origin)
+        transform.origin = np.array(origin)
+        _, transform.degrees_per_second = imgui.InputFloat("Degrees per Second", transform.degrees_per_second)
+    
+    elif transform.transform_type == ftl.TransformType.TRANSLATE:
+        _, direction = imgui.InputFloat3("Direction", transform.direction)
+        transform.direction = np.array(direction)
+        _, transform.speed = imgui.InputFloat("Speed", transform.speed)
+        
 
 def main():
     ps.set_verbosity(0)
@@ -314,11 +329,62 @@ def main():
             _, state.dt = imgui.InputFloat("Time step", state.dt)
             _, state.s = imgui.InputInt("BDF step", state.s)
             if imgui.TreeNode("Dirichlet Constraints"):
-                _, state.d_axis = imgui.InputInt("Axis (0=x,1=y,2=z)", state.d_axis)
-                _, state.d_percent = imgui.InputFloat("Percentage", state.d_percent)
-                _, state.d_extremity = imgui.InputInt(
-                    "Extremity (0=min,1=max)", state.d_extremity
-                )
+                # _, state.d_axis = imgui.InputInt("Axis (0=x,1=y,2=z)", state.d_axis)
+                # _, state.d_percent = imgui.InputFloat("Percentage", state.d_percent)
+                # _, state.d_extremity = imgui.InputInt(
+                #     "Extremity (0=min,1=max)", state.d_extremity
+                # )
+                if imgui.Button("Load Transform file", default_button_size):
+                    _load_transform_file(state)
+                if imgui.TreeNode("Loaded Transforms"):
+                    # Colorful buttons for each transform
+                    imgui.PushStyleColor(imgui.ImGuiCol_Button, (0.8, 0.2, 0.2, 1.0))
+                    for t in state.transform_library.transforms:
+                        imgui.Text(t.__str__())
+                        if ((imgui.Button(f"Edit Transform {t.id}", default_button_size) and state.editing_old_transform  == -1) or state.editing_old_transform == t.id) and not state.editing_new_transform:
+                            state.editing_old_transform = t.id
+                            transform_editor(t)
+                            if imgui.Button("End edit", default_button_size):
+                                t.adjust()
+                                state.editing_old_transform = -1
+                    imgui.PopStyleColor(1)       
+                    if (imgui.Button("Create new Transform", default_button_size) or state.editing_new_transform) and state.editing_old_transform == -1:
+                        state.editing_new_transform = True
+                        _, state.selected_ttype = imgui.Combo(
+                            "Transform Type", state.selected_ttype,
+                            [ftl.TransformType.G_ROTATE.name,
+                             ftl.TransformType.L_ROTATE.name,
+                             ftl.TransformType.TRANSLATE.name]
+                        )
+                        if state.selected_ttype == ftl.TransformType.G_ROTATE.value:
+                            # Make fields so that user can define transform
+                            # _, state.unsaved_g_rotate.name = imgui.InputText("Name", state.unsaved_g_rotate.name)
+                            # _, state.unsaved_g_rotate.begin = imgui.InputFloat("Begin Time", state.unsaved_g_rotate.begin)
+                            # _, state.unsaved_g_rotate.end = imgui.InputFloat("End Time", state.unsaved_g_rotate.end)
+                            # _, axis = imgui.InputFloat3("Axis", state.unsaved_g_rotate.axis)
+                            # state.unsaved_g_rotate.axis = np.array(axis)
+                            # _, state.unsaved_g_rotate.degrees_per_second = imgui.InputFloat("Degrees per Second", state.unsaved_g_rotate.degrees_per_second)
+                            transform_editor(state.unsaved_g_rotate)
+                            # Add to library
+                            if imgui.Button("Add Global Rotate Transform", default_button_size):
+                                
+                                state.transform_library.add_transform(state.unsaved_g_rotate)
+                                state.unsaved_g_rotate = ftl.GlobalRotateTransform()
+                                state.editing_new_transform = False
+                        elif state.selected_ttype == ftl.TransformType.L_ROTATE.value:
+                            transform_editor(state.unsaved_l_rotate)
+                            if imgui.Button("Add Local Rotate Transform", default_button_size):
+                                state.transform_library.add_transform(state.unsaved_l_rotate)
+                                state.unsaved_l_rotate = ftl.LocalRotateTransform()
+                                state.editing_new_transform = False
+                        elif state.selected_ttype == ftl.TransformType.TRANSLATE.value:
+                            transform_editor(state.unsaved_translate)
+                            if imgui.Button("Add Translate Transform", default_button_size):
+                                state.transform_library.add_transform(state.unsaved_translate)
+                                state.unsaved_translate = ftl.TranslateTransform()
+                                state.editing_new_transform = False
+                        
+                    imgui.TreePop()
                 imgui.TreePop()
             imgui.TreePop()
 
@@ -351,7 +417,7 @@ def main():
         io = imgui.GetIO()
         if io.MouseClicked[0]:
           pick_result = ps.pick(screen_coords=io.MousePos)
-          print(pick_result)
+          # print(pick_result)
           if pick_result.is_hit and pick_result.structure_type_name == "Volume Mesh" and pick_result.structure_data['element_type'] == "vertex":
             for m in state.meshes:
                 if pick_result.structure_name == m.name:
