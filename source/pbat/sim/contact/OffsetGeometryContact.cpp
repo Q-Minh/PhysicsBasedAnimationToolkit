@@ -932,6 +932,16 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     OffsetGeometryContact ogc(device, X, V, F, E, VP, FP, EP, params);
     ogc.PrepareIteration(X, V, F, E, VP, FP, EP, params);
 
+    CHECK(std::all_of(ogc.FOGC.begin(), ogc.FOGC.end(), [](auto const& contacts) {
+        return contacts.empty();
+    }));
+    CHECK(std::all_of(ogc.VOGC.begin(), ogc.VOGC.end(), [](auto const& contacts) {
+        return contacts.empty();
+    }));
+    CHECK(std::all_of(ogc.EOGC.begin(), ogc.EOGC.end(), [](auto const& contacts) {
+        return contacts.empty();
+    }));
+
     SUBCASE("Vertex-Facet Contact Detection")
     {
         // Act: prepare iteration and perform vertex-facet contact detection
