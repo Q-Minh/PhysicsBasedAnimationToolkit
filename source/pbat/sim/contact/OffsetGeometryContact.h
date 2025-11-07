@@ -381,19 +381,19 @@ class OffsetGeometryContact
     };
 
     // NOTE: We should try custom allocators on the contact sets to see if we can boost performance
-    std::vector<std::vector<ContactFace>> FOGC; ///< `|# vertices|` per-vertex contact facet sets
+    std::vector<std::vector<ContactFace>> FOGC; ///< `|# vertices|` per-vertex contact face sets
     std::vector<std::vector<IndexType>> VOGC; ///< `|# triangles|` per-triangle contact vertex sets.
                                               ///< Stores vertex indices only.
     std::vector<std::vector<ContactFace>>
         EOGC; ///< `|# half-edges|` per-half-edge contact facet sets
     Eigen::Vector<ScalarType, Eigen::Dynamic>
-        bv; ///< `|# vertices|` array of vertex displacement bounds
+        bv; ///< `|# vertices|` array of total vertex displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dminv; ///< `|# vertices|` array of vertex displacement bounds
+        dminv; ///< `|# vertices|` array of vertex local displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dminf; ///< `|# faces|` array of face displacement bounds
+        dminf; ///< `|# faces|` array of face local displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dmine; ///< `|# half-edges|` array of half-edge displacement bounds
+        dmine; ///< `|# half-edges|` array of half-edge local displacement bounds
 
   private:
     RTCScene mVertexScene{nullptr}; ///< Opaque RTCScene

@@ -4,11 +4,13 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILES
     "Contact.h"
     "MultibodyMeshMixedCcdDcd.h"
-    "MultibodyTetrahedralMeshSystem.h"
+    "MultiMesh.h"
+    "OffsetGeometryContact.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "Contact.cpp"
     "MultibodyMeshMixedCcdDcd.cpp"
-    "MultibodyTetrahedralMeshSystem.cpp"
+    "MultiMesh.cpp"
+    "OffsetGeometryContact.cpp"
 )
