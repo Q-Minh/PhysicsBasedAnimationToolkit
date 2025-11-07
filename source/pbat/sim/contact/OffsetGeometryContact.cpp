@@ -303,6 +303,7 @@ void EdgeEdgeRTCCollideFunc(
     UserData<TScalar, TIndex>* userData = static_cast<UserData<TScalar, TIndex>*>(userPtr);
     auto& X                             = *(userData->X);
     auto& V                             = *(userData->V);
+    auto& F                             = *(userData->F);
     auto& E                             = *(userData->E);
     auto& VP                            = *(userData->VP);
     auto& EP                            = *(userData->EP);
@@ -333,41 +334,79 @@ void EdgeEdgeRTCCollideFunc(
         Eigen::Matrix<TScalar, 3, 2> const xe2 = X(Eigen::placeholders::all, e2v);
         using math::linalg::mini::FromEigen;
         using math::linalg::mini::SVector;
+        // s,t in [0,1] are the barycentric coordinates of the closest points on edges e1 and e2
         SVector<TScalar, 2> const st = geometry::ClosestPointQueries::LineSegments(
             FromEigen(xe1.col(0)),
             FromEigen(xe1.col(1)),
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
-        Eigen::Vector<TScalar, 3> const dx2f =
-            ((TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1)) -
-            ((TScalar(1) - st(1)) * xe2.col(0) + st(1) * xe2.col(1));
-        TScalar const d2 = dx2f.squaredNorm();
+        // Closest points on edges e1 and e2
+        Eigen::Vector<TScalar, 3> const xc1 =
+            (TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1);
+        Eigen::Vector<TScalar, 3> const xc2 =
+            (TScalar(1) - st(1)) * xe2.col(0) + st(1) * xe2.col(1);
+        TScalar const d2 = (xc1 - xc2).squaredNorm();
         // Update half-edge displacement bounds
-        common::AtomicMin(dmine(EHE(0, e1)), d2);
-        if (EHE(1, e1) >= 0)
-            common::AtomicMin(dmine(EHE(1, e1)), d2);
-        common::AtomicMin(dmine(EHE(0, e2)), d2);
-        if (EHE(1, e2) >= 0)
-            common::AtomicMin(dmine(EHE(1, e2)), d2);
+        Eigen::Vector<TIndex, 2> const ehe1 = EHE.col(e1);
+        Eigen::Vector<TIndex, 2> const ehe2 = EHE.col(e2);
+        common::AtomicMin(dmine(ehe1(0)), d2);
+        if (ehe1(1) >= 0) // Boundary edge has no 2nd half-edge
+            common::AtomicMin(dmine(ehe1(1)), d2);
+        common::AtomicMin(dmine(ehe2(0)), d2);
+        if (ehe2(1) >= 0) // Boundary edge has no 2nd half-edge
+            common::AtomicMin(dmine(ehe2(1)), d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
+        // Determine faces (vertex or edge) closest to edges e1 and e2, i.e. faces of xc1 and xc2
         auto const [a1, eFace1, a2, eFace2] =
             ClosestFaceEdgeToEdge(st(0), st(1), e1, e2, {e1v(0), e1v(1)}, {e2v(0), e2v(1)});
-        // Vectorize contact face index a based on its type (edge | vertex)
-        // Synchronize reads/writes to vertex iv's contact sets
-        // TODO: Implement edge contact set update
+        // Synchronized updates to edges e1 and e2's contact sets
         common::AtomicExecute(mEdgeLocks(e1), [&]() {
-            // Update contact face sets
             auto const fUpdateContactSets = [&]() {
-                
+                // If we're contacting the interior of edge e2, store the contact pairs (ehe1(0),
+                // ehe2(0)) and (ehe1(1), ehe2(0)). Because we only store vertex-to-half-edge
+                // adjacencies, rather than vertex-(undirected-)edge adjacencies, we store 2 contact
+                // pairs for edge e1 corresponding to both of its half-edges. This way, both
+                // vertices/endpoints of edge e1 can reach half-edge ehe2(0). The vertices do not
+                // need to reach ehe2(1), as it is redundant/unnecessary for computing an edge-edge
+                // contact potential (we only need the 2 pairs of 2 vertices in no particular
+                // order).
+                bool const bIsA2Edge = (eFace2 == 0);
+                TIndex const a       = bIsA2Edge * ehe2(0) + (not bIsA2Edge) * a2;
+                EOGC[ehe1(0)].emplace_back(a, eFace2);
+                if (ehe1(1) >= 0)
+                    EOGC[ehe1(1)].emplace_back(a, eFace2);
+            };
+            switch (eFace2)
+            {
+                case 1 /* vertex */: {
+                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc1, a2))
+                        fUpdateContactSets();
+                    break;
+                }
+                default /* edge */: {
+                    fUpdateContactSets();
+                    break;
+                }
+            }
+        });
+        common::AtomicExecute(mEdgeLocks(e2), [&]() {
+            auto const fUpdateContactSets = [&]() {
+                // See comment in edge e1's update above for explanation. We flip the roles of e1
+                // and e2 here.
+                bool const bIsA1Edge = (eFace1 == 0);
+                TIndex const a       = bIsA1Edge * ehe1(0) + (not bIsA1Edge) * a1;
+                EOGC[ehe2(0)].emplace_back(a, eFace1);
+                if (ehe2(1) >= 0)
+                    EOGC[ehe2(1)].emplace_back(a, eFace1);
             };
             switch (eFace1)
             {
                 case 1 /* vertex */: {
-                    // if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                    //     fUpdateContactSets();
+                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc2, a1))
+                        fUpdateContactSets();
                     break;
                 }
                 default /* edge */: {
@@ -437,7 +476,7 @@ void OffsetGeometryContact::Initialize(
     VOGC.resize(nFacets);
     for (auto& fvogc : VOGC)
         fvogc.reserve(params.nMaxFaceVertexContactsEstimate);
-    EOGC.resize(nEdges);
+    EOGC.resize(nHalfEdges);
     for (auto& eogc : EOGC)
         eogc.reserve(params.nMaxEdgeFaceContactsEstimate);
     dminv.resize(nVertices);
@@ -670,6 +709,7 @@ void OffsetGeometryContact::VertexFacetContactDetection(
 void OffsetGeometryContact::EdgeEdgeContactDetection(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
@@ -682,7 +722,7 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
     detail::UserData<ScalarType, IndexType> userData{
         std::addressof(X) /*X*/,
         std::addressof(V) /*V*/,
-        nullptr /*F*/,
+        std::addressof(F) /*F*/,
         std::addressof(E) /*E*/,
         std::addressof(VP) /*VP*/,
         nullptr /*FP*/,
@@ -708,6 +748,12 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
         mEdgeScene,
         detail::EdgeEdgeRTCCollideFunc<ScalarType, IndexType>,
         static_cast<void*>(&userData));
+    // De-duplicate EOGC
+    auto const nHalfEdges = static_cast<IndexType>(3 * F.cols());
+    tbb::parallel_for(IndexType(0), nHalfEdges, [this](IndexType he) {
+        std::sort(EOGC[he].begin(), EOGC[he].end());
+        EOGC[he].erase(std::unique(EOGC[he].begin(), EOGC[he].end()), EOGC[he].end());
+    });
     // Finalize per-edge displacement bounds
     dmine.noalias() = dmine.cwiseSqrt();
 }
@@ -862,7 +908,6 @@ TEST_CASE("[sim][contact] ClosestFaceFacetToVertex")
 TEST_CASE("[sim][contact] IsVertexFeasible")
 {
     using namespace pbat;
-    using pbat::sim::contact::IsVertexFeasible;
 
     // Arrange: single tetrahedral cube and its boundary triangulation and half-edge adjacency
     MatrixX X(3, 8);
@@ -886,20 +931,19 @@ TEST_CASE("[sim][contact] IsVertexFeasible")
     SUBCASE("feasible: move along +(1,1,1)")
     {
         Eigen::Vector<Scalar, 3> x = xv + eps * Eigen::Vector<Scalar, 3>::Ones();
-        CHECK(IsVertexFeasible<Scalar, Index>(X, Fb, GVHEp, GVHEadj, x, i));
+        CHECK(sim::contact::IsVertexFeasible(X, Fb.bottomRows<3>(), GVHEp, GVHEadj, x, i));
     }
     SUBCASE("infeasible: move along +(1,-1,-1) axis")
     {
         Eigen::Vector<Scalar, 3> x =
             xv + eps * Eigen::Vector<Scalar, 3>{Scalar(1), Scalar(-1), Scalar(-1)};
-        CHECK_FALSE(IsVertexFeasible<Scalar, Index>(X, Fb, GVHEp, GVHEadj, x, i));
+        CHECK_FALSE(sim::contact::IsVertexFeasible(X, Fb.bottomRows<3>(), GVHEp, GVHEadj, x, i));
     }
 }
 
 TEST_CASE("[sim][contact] IsEdgeFeasible")
 {
     using namespace pbat;
-    using pbat::sim::contact::IsEdgeFeasible;
 
     // Arrange: single tetrahedral cube and its boundary triangulation and half-edge adjacency
     MatrixX X(3, 8);
@@ -950,13 +994,13 @@ TEST_CASE("[sim][contact] IsEdgeFeasible")
         {
             Eigen::Vector<Scalar, 3> x =
                 X.col(i) + eps * Eigen::Vector<Scalar, 3>{Scalar(1), Scalar(-1), Scalar(-1)};
-            CHECK(IsEdgeFeasible<Scalar, Index>(X, Fb, GHEF, x, he, i));
+            CHECK(sim::contact::IsEdgeFeasible(X, Fb.bottomRows<3>(), GHEF, x, he, i));
         }
         SUBCASE("infeasible: move along +(-1,0,0) axis")
         {
             Eigen::Vector<Scalar, 3> x =
                 X.col(i) + eps * Eigen::Vector<Scalar, 3>{Scalar(-1), Scalar(0), Scalar(0)};
-            CHECK_FALSE(IsEdgeFeasible<Scalar, Index>(X, Fb, GHEF, x, he, i));
+            CHECK_FALSE(sim::contact::IsEdgeFeasible(X, Fb.bottomRows<3>(), GHEF, x, he, i));
         }
     }
 }
@@ -1115,15 +1159,26 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     SUBCASE("Edge-Edge Contact Detection")
     {
         // Act: prepare iteration and perform edge-edge contact detection
-        ogc.EdgeEdgeContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, EHE, params);
-        // TODO: Test
+        ogc.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE, params);
+        // Assert: expect some edge-edge contacts
+        Eigen::Index const nHalfEdgeEdgeContacts = std::accumulate(
+            ogc.EOGC.begin(),
+            ogc.EOGC.end(),
+            Eigen::Index(0),
+            [](Eigen::Index acc,
+               std::vector<OffsetGeometryContact::ContactFace> const& contactFaces) {
+                return acc + static_cast<Eigen::Index>(contactFaces.size());
+            });
+        CHECK_GT(nHalfEdgeEdgeContacts, 0);
     }
     SUBCASE("All contact detection")
     {
         // Act
         ogc.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF, params);
-        ogc.EdgeEdgeContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, EHE, params);
+        ogc.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE, params);
         ogc.ComputeDisplacementBounds(V, F, GVHEp, GVHEadj, params);
+        // Assert: displacement bounds are less than rq
+        // NOTE: This is a weak test, but at least ensures that some plausible computation was done.
         Scalar const minDisplacementBound = ogc.bv.minCoeff();
         CHECK_LT(minDisplacementBound, params.rq);
     }

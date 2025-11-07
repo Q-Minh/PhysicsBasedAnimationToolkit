@@ -274,8 +274,9 @@ class OffsetGeometryContact
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
      * @param VP `|# connected components| x 1` vertex prefix
-     * @param FP `|# connected components| x 1` face prefix
+     * @param EP `|# connected components| x 1` edge prefix
      * @param GVHEp `|# points + 1|` point to half-edge prefix
      * @param GVHEadj `|# half edges|` point to half-edge adjacency
      * @param EHE `2 x |# edges|` edge to half-edge adjacency
@@ -284,6 +285,7 @@ class OffsetGeometryContact
     PBAT_API void EdgeEdgeContactDetection(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
@@ -356,6 +358,24 @@ class OffsetGeometryContact
          * @return true if vertex, false otherwise
          */
         bool IsVertex() const { return eFace == 2; }
+        /**
+         * @brief Less-than operator for ordering contact faces
+         * @param other
+         * @return true if less than other, false otherwise
+         */
+        bool operator<(const ContactFace& other) const
+        {
+            return (a < other.a) or (a == other.a and eFace < other.eFace);
+        }
+        /**
+         * @brief Equality operator for contact faces
+         * @param other
+         * @return true if equal to other, false otherwise
+         */
+        bool operator==(const ContactFace& other) const
+        {
+            return (a == other.a) and (eFace == other.eFace);
+        }
         IndexType a;     ///< Face (vertex, edge or triangle) index
         IndexType eFace; ///< Face type indicator: (0 | 1 | 2) -> (triangle | edge | vertex)
     };
@@ -364,7 +384,8 @@ class OffsetGeometryContact
     std::vector<std::vector<ContactFace>> FOGC; ///< `|# vertices|` per-vertex contact facet sets
     std::vector<std::vector<IndexType>> VOGC; ///< `|# triangles|` per-triangle contact vertex sets.
                                               ///< Stores vertex indices only.
-    std::vector<std::vector<ContactFace>> EOGC; ///< `|# edges|` per-edge contact facet sets
+    std::vector<std::vector<ContactFace>>
+        EOGC; ///< `|# half-edges|` per-half-edge contact facet sets
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         bv; ///< `|# vertices|` array of vertex displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
@@ -430,6 +451,10 @@ std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
  * @brief Determines if point x is in the vertex feasible region of vertex i.
  * @tparam TScalar Scalar type
  * @tparam TIndex Index type
+ * @tparam TDerivedX Derived type for point positions
+ * @tparam TDerivedF Derived type for triangle vertex indices
+ * @tparam TDerivedGVHEp Derived type for vertex to half-edge prefix
+ * @tparam TDerivedGVHEadj Derived type for vertex to half-edge adjacency
  * @param X `3 x |# points|` point positions
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param GVHEp `|# vertices + 1|` vertex to half-edge prefix
@@ -438,12 +463,18 @@ std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
  * @param i Point (global) index corresponding to vertex
  * @return true if in vertex feasible region; false otherwise
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    class TDerivedX,
+    class TDerivedF,
+    class TDerivedGVHEp,
+    class TDerivedGVHEadj>
 bool IsVertexFeasible(
-    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEp,
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEadj,
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedF> const& F,
+    Eigen::DenseBase<TDerivedGVHEp> const& GVHEp,
+    Eigen::DenseBase<TDerivedGVHEadj> const& GVHEadj,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex i);
 
@@ -451,6 +482,9 @@ bool IsVertexFeasible(
  * @brief Determines if point x is in the edge feasible region of half-edge he of face fi.
  * @tparam TScalar Scalar type
  * @tparam TIndex Index type
+ * @tparam TDerivedX Derived type for point positions
+ * @tparam TDerivedF Derived type for triangle vertex indices
+ * @tparam TDerivedGHEF Derived type for half-edge to face adjacency
  * @param X `3 x |# points|` point positions
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param GHEF `2 x |# half edges|` half-edge to (adjacent face, opposite face)
@@ -459,11 +493,16 @@ bool IsVertexFeasible(
  * @param he Half-edge index
  * @return true if in edge feasible region; false otherwise
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    class TDerivedX,
+    class TDerivedF,
+    class TDerivedGHEF>
 bool IsEdgeFeasible(
-    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF,
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedF> const& F,
+    Eigen::DenseBase<TDerivedGHEF> const& GHEF,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex fi,
     TIndex he);
@@ -572,15 +611,24 @@ VertexFacetContactFaceIndex(Eigen::DenseBase<TDerivedF> const& F, TIndex f, int 
            + (eFace == 2) * F(alocal, f) /* vertex contact, return global point index */;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    class TDerivedX,
+    class TDerivedF,
+    class TDerivedGVHEp,
+    class TDerivedGVHEadj>
 bool IsVertexFeasible(
-    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEp,
-    Eigen::Ref<Eigen::Vector<TIndex, Eigen::Dynamic> const> const& GVHEadj,
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedF> const& F,
+    Eigen::DenseBase<TDerivedGVHEp> const& GVHEp,
+    Eigen::DenseBase<TDerivedGVHEadj> const& GVHEadj,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex i)
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
     bool bInVertexFeasibleRegion{true};
     TIndex const hebegin               = GVHEp(i);
     TIndex const heend                 = GVHEp(i + 1);
@@ -594,15 +642,23 @@ bool IsVertexFeasible(
     return bInVertexFeasibleRegion;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    class TDerivedX,
+    class TDerivedF,
+    class TDerivedGHEF>
 bool IsEdgeFeasible(
-    Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& X,
-    Eigen::Ref<Eigen::Matrix<TIndex, 3, Eigen::Dynamic> const> const& F,
-    Eigen::Ref<Eigen::Matrix<TIndex, 2, Eigen::Dynamic> const> const& GHEF,
+    Eigen::DenseBase<TDerivedX> const& X,
+    Eigen::DenseBase<TDerivedF> const& F,
+    Eigen::DenseBase<TDerivedGHEF> const& GHEF,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex fi,
     TIndex he)
 {
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
     TIndex fj = GHEF(1, he);
     TIndex i  = geometry::IncomingVertex(F, he);
     TIndex j  = geometry::OutgoingVertex(F, he);
