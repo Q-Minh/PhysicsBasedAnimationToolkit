@@ -256,7 +256,7 @@ void VertexFacetRTCCollideFunc(
         // Determine face (vertex, edge, triangle) closest to vertex iv
         auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw(0), uvw(1), uvw(2));
         // Vectorize contact face index a based on its type (triangle | edge | vertex)
-        TIndex const a = ContactFaceIndex(F, f, alocal, eFace);
+        TIndex const a = VertexFacetContactFaceIndex(F, f, alocal, eFace);
         // Synchronize reads/writes to vertex iv's contact sets
         common::AtomicExecute(mVertexLocks(iv), [&]() {
             // Brute-force duplicate search
@@ -286,6 +286,91 @@ void VertexFacetRTCCollideFunc(
                     break;
                 }
                 default /* triangle */: {
+                    fUpdateContactSets();
+                    break;
+                }
+            }
+        });
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void EdgeEdgeRTCCollideFunc(
+    void* userPtr,
+    struct RTCCollision* collisions,
+    unsigned int nCollisions)
+{
+    UserData<TScalar, TIndex>* userData = static_cast<UserData<TScalar, TIndex>*>(userPtr);
+    auto& X                             = *(userData->X);
+    auto& V                             = *(userData->V);
+    auto& E                             = *(userData->E);
+    auto& VP                            = *(userData->VP);
+    auto& EP                            = *(userData->EP);
+    auto& mEdgeLocks                    = *(userData->mEdgeLocks);
+    auto& GVHEp                         = *(userData->GVHEp);
+    auto& GVHEadj                       = *(userData->GVHEadj);
+    auto& EHE                           = *(userData->EHE);
+    auto& dmine                         = *(userData->dmine);
+    TScalar const r                     = userData->r;
+    std::vector<std::vector<OffsetGeometryContact::ContactFace>>& EOGC = *(userData->EOGC);
+    for (unsigned int ci = 0; ci < nCollisions; ++ci)
+    {
+        // Get edge-edge pair (e1, e2)
+        RTCCollision const& collision      = collisions[ci];
+        TIndex const be1                   = static_cast<TIndex>(collision.geomID0);
+        TIndex const be2                   = static_cast<TIndex>(collision.geomID1);
+        TIndex const e1                    = EP(be1) + static_cast<TIndex>(collision.primID0);
+        TIndex const e2                    = EP(be2) + static_cast<TIndex>(collision.primID1);
+        Eigen::Vector<TIndex, 2> const e1v = E.col(e1);
+        Eigen::Vector<TIndex, 2> const e2v = E.col(e2);
+        // Avoid contact with same edge or adjacent edge
+        bool const bIsSameEdgeOrAreAdjacent =
+            e1v(0) == e2v(0) or e1v(0) == e2v(1) or e1v(1) == e2v(0) or e1v(1) == e2v(1);
+        if (bIsSameEdgeOrAreAdjacent)
+            continue;
+        // Compute distance between edges e1 and e2 via closest point projection
+        Eigen::Matrix<TScalar, 3, 2> const xe1 = X(Eigen::placeholders::all, e1v);
+        Eigen::Matrix<TScalar, 3, 2> const xe2 = X(Eigen::placeholders::all, e2v);
+        using math::linalg::mini::FromEigen;
+        using math::linalg::mini::SVector;
+        SVector<TScalar, 2> const st = geometry::ClosestPointQueries::LineSegments(
+            FromEigen(xe1.col(0)),
+            FromEigen(xe1.col(1)),
+            FromEigen(xe2.col(0)),
+            FromEigen(xe2.col(1)));
+        Eigen::Vector<TScalar, 3> const dx2f =
+            ((TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1)) -
+            ((TScalar(1) - st(1)) * xe2.col(0) + st(1) * xe2.col(1));
+        TScalar const d2 = dx2f.squaredNorm();
+        // Update half-edge displacement bounds
+        common::AtomicMin(dmine(EHE(0, e1)), d2);
+        if (EHE(1, e1) >= 0)
+            common::AtomicMin(dmine(EHE(1, e1)), d2);
+        common::AtomicMin(dmine(EHE(0, e2)), d2);
+        if (EHE(1, e2) >= 0)
+            common::AtomicMin(dmine(EHE(1, e2)), d2);
+        // No contact if outside contact radius
+        bool const bInContactRadius = (d2 < r * r);
+        if (not bInContactRadius)
+            continue;
+        auto const [a1, eFace1, a2, eFace2] =
+            ClosestFaceEdgeToEdge(st(0), st(1), e1, e2, {e1v(0), e1v(1)}, {e2v(0), e2v(1)});
+        // Vectorize contact face index a based on its type (edge | vertex)
+        // Synchronize reads/writes to vertex iv's contact sets
+        // TODO: Implement edge contact set update
+        common::AtomicExecute(mEdgeLocks(e1), [&]() {
+            // Update contact face sets
+            auto const fUpdateContactSets = [&]() {
+                
+            };
+            switch (eFace1)
+            {
+                case 1 /* vertex */: {
+                    // if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
+                    //     fUpdateContactSets();
+                    break;
+                }
+                default /* edge */: {
                     fUpdateContactSets();
                     break;
                 }
@@ -585,9 +670,9 @@ void OffsetGeometryContact::VertexFacetContactDetection(
 void OffsetGeometryContact::EdgeEdgeContactDetection(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
@@ -597,11 +682,11 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
     detail::UserData<ScalarType, IndexType> userData{
         std::addressof(X) /*X*/,
         std::addressof(V) /*V*/,
-        std::addressof(F) /*F*/,
-        nullptr /*E*/,
+        nullptr /*F*/,
+        std::addressof(E) /*E*/,
         std::addressof(VP) /*VP*/,
-        std::addressof(FP) /*FP*/,
-        nullptr /*EP*/,
+        nullptr /*FP*/,
+        std::addressof(EP) /*EP*/,
         std::addressof(FOGC) /*FOGC*/,
         std::addressof(VOGC) /*VOGC*/,
         std::addressof(EOGC) /*EOGC*/,
@@ -614,15 +699,15 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
         std::addressof(GVHEp) /*GVHEp*/,
         std::addressof(GVHEadj) /*GVHEadj*/,
         nullptr /*GHEF*/,
-        nullptr /*EHE*/,
+        std::addressof(EHE) /*EHE*/,
         params.r /*r*/,
         params.rq /*rq*/};
     // Compute EOGC
-    // rtcCollide(
-    //     mEdgeScene,
-    //     mEdgeScene,
-    //     detail::EdgeEdgeRTCCollideFunc<ScalarType, IndexType>,
-    //     static_cast<void*>(&userData));
+    rtcCollide(
+        mEdgeScene,
+        mEdgeScene,
+        detail::EdgeEdgeRTCCollideFunc<ScalarType, IndexType>,
+        static_cast<void*>(&userData));
     // Finalize per-edge displacement bounds
     dmine.noalias() = dmine.cwiseSqrt();
 }
@@ -931,7 +1016,7 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     geometry::DeviceConfig config;
     config.threads     = 1;
     config.userThreads = 1;
-    config.verbose     = 3;
+    config.verbose     = 0 /* 3 for debugging */;
     geometry::Device device(config);
     OffsetGeometryContact ogc(device, X, V, F, E, VP, FP, EP, params);
     ogc.PrepareIteration(X, V, F, E, VP, FP, EP, params);
@@ -1042,4 +1127,56 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
         Scalar const minDisplacementBound = ogc.bv.minCoeff();
         CHECK_LT(minDisplacementBound, params.rq);
     }
+}
+
+TEST_CASE("[sim][contact] ClosestFaceEdgeToEdge")
+{
+    using namespace pbat;
+
+    // Setup: a single tetrahedral cube; use its boundary triangle mesh to build edges
+    MatrixX X(3, 8);
+    IndexMatrixX T(4, 5);
+    // clang-format off
+    X << 0., 1., 0., 1., 0., 1., 0., 1.,
+         0., 0., 1., 1., 0., 0., 1., 1.,
+         0., 0., 0., 0., 1., 1., 1., 1.;
+    T << 0, 3, 5, 6, 0,
+         1, 2, 4, 7, 5,
+         3, 0, 6, 5, 3,
+         5, 6, 0, 3, 6;
+    // clang-format on
+    auto const [V, F] = geometry::SimplexMeshBoundary(T, static_cast<Index>(X.cols()));
+    auto const GHEF   = geometry::HalfEdgeFaceAdjacency(F.bottomRows<3>());
+    auto const EHE    = geometry::EdgeHalfEdgeAdjacency(F.bottomRows<3>(), GHEF);
+    auto const E = geometry::Edges(F.bottomRows<3>(), EHE); // 2 x |#edges| undirected edge list
+
+    // Pick two concrete edges (by index) and build their endpoint arrays
+    REQUIRE(E.cols() >= 2);
+    Index const e1 = 0;
+    Index const e2 = 1;
+    std::array<Index, 2> const e1v{E(0, e1), E(1, e1)};
+    std::array<Index, 2> const e2v{E(0, e2), E(1, e2)};
+
+    auto const fCheck =
+        [&](Scalar s, Scalar t, int a1Exp, int eFace1Exp, int a2Exp, int eFace2Exp) {
+            auto const [a1, eFace1, a2, eFace2] =
+                sim::contact::ClosestFaceEdgeToEdge(s, t, e1, e2, e1v, e2v);
+            CHECK_EQ(a1, a1Exp);
+            CHECK_EQ(eFace1, eFace1Exp);
+            CHECK_EQ(a2, a2Exp);
+            CHECK_EQ(eFace2, eFace2Exp);
+        };
+
+    // Both interior points on edges -> edge-edge contact
+    fCheck(Scalar(0.3), Scalar(0.7), static_cast<int>(e1), 0, static_cast<int>(e2), 0);
+
+    // One vertex, one edge
+    fCheck(Scalar(0.0), Scalar(0.5), static_cast<int>(e1v[0]), 1, static_cast<int>(e2), 0);
+    fCheck(Scalar(1.0), Scalar(0.5), static_cast<int>(e1v[1]), 1, static_cast<int>(e2), 0);
+    fCheck(Scalar(0.5), Scalar(0.0), static_cast<int>(e1), 0, static_cast<int>(e2v[0]), 1);
+    fCheck(Scalar(0.5), Scalar(1.0), static_cast<int>(e1), 0, static_cast<int>(e2v[1]), 1);
+
+    // Both vertices -> vertex-vertex contact
+    fCheck(Scalar(0.0), Scalar(0.0), static_cast<int>(e1v[0]), 1, static_cast<int>(e2v[0]), 1);
+    fCheck(Scalar(1.0), Scalar(1.0), static_cast<int>(e1v[1]), 1, static_cast<int>(e2v[1]), 1);
 }

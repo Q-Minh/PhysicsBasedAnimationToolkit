@@ -19,6 +19,7 @@
 #include "pbat/geometry/HalfEdges.h"
 #include "pbat/io/Archive.h"
 
+#include <array>
 #include <embree4/rtcore.h>
 #include <type_traits>
 #include <utility>
@@ -283,9 +284,9 @@ class OffsetGeometryContact
     PBAT_API void EdgeEdgeContactDetection(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
@@ -403,6 +404,29 @@ template <common::CFloatingPoint TScalar>
 std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w);
 
 /**
+ * @brief Computes the
+ *
+ * @tparam TScalar
+ * @param s Barycentric coordinate of closest point on edge 1
+ * @param t Barycentric coordinate of closest point on edge 2
+ * @param e1 Edge index of edge 1
+ * @param e2 Edge index of edge 2
+ * @param e1v Vertex indices of edge 1
+ * @param e2v Vertex indices of edge 2
+ * @return The tuple (a1, eFace1, a2, eFace2), where a1 and a2 are either vertex indices or
+ * edge indices, and eFace1 and eFace2 indicate the type of face (vertex or edge), i.e. (0 | 1) ->
+ * (edge | vertex)
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
+    TScalar s,
+    TScalar t,
+    TIndex e1,
+    TIndex e2,
+    std::array<TIndex, 2> e1v,
+    std::array<TIndex, 2> e2v);
+
+/**
  * @brief Determines if point x is in the vertex feasible region of vertex i.
  * @tparam TScalar Scalar type
  * @tparam TIndex Index type
@@ -494,6 +518,28 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
     return {a, eFace};
 }
 
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
+    TScalar s,
+    TScalar t,
+    TIndex e1,
+    TIndex e2,
+    std::array<TIndex, 2> e1v,
+    std::array<TIndex, 2> e2v)
+{
+    // Vertex contact has s,t equal to 0 or 1
+    bool bIsEdgeContact1 = s > TScalar(0) and s < TScalar(1);
+    bool bIsEdgeContact2 = t > TScalar(0) and t < TScalar(1);
+    // 0 -> edge, 1 -> vertex
+    int eFace1 = (not bIsEdgeContact1) * 1;
+    int eFace2 = (not bIsEdgeContact2) * 1;
+    int a1     = bIsEdgeContact1 * e1 +
+             (not bIsEdgeContact1) * ((s == TScalar(0)) * e1v[0] + (s == TScalar(1)) * e1v[1]);
+    int a2 = bIsEdgeContact2 * e2 +
+             (not bIsEdgeContact2) * ((t == TScalar(0)) * e2v[0] + (t == TScalar(1)) * e2v[1]);
+    return {a1, eFace1, a2, eFace2};
+}
+
 /**
  * @brief Vectorize contact face index based on face type.
  *
@@ -516,7 +562,7 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
  */
 template <common::CIndex TIndex, class TDerivedF>
 inline TIndex
-ContactFaceIndex(Eigen::DenseBase<TDerivedF> const& F, TIndex f, int alocal, int eFace)
+VertexFacetContactFaceIndex(Eigen::DenseBase<TDerivedF> const& F, TIndex f, int alocal, int eFace)
 {
     static_assert(
         TDerivedF::RowsAtCompileTime == 3,
