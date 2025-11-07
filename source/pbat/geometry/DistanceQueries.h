@@ -187,6 +187,37 @@ PBAT_HOST_DEVICE auto SphereTriangle(
     TMatrixB const& B,
     TMatrixC const& C) -> typename TMatrixX::ScalarType;
 
+/**
+ * @brief Obtain the squared distance between two line segments defined by points P1, Q1 and P2, Q2.
+ *
+ * @cite ericson2004real section 5.1.9
+ *
+ * @tparam TMatrixP1 Type of the input matrix P1
+ * @tparam TMatrixQ1 Type of the input matrix Q1
+ * @tparam TMatrixP2 Type of the input matrix P2
+ * @tparam TMatrixQ2 Type of the input matrix Q2
+ * @tparam TScalar Type of the scalar
+ * @param P1 Point 1 on line 1
+ * @param Q1 Point 2 on line 1
+ * @param P2 Point 1 on line 2
+ * @param Q2 Point 2 on line 2
+ * @param eps Numerical error tolerance for zero checks
+ * @return Squared distance between the two line segments
+ * @pre `eps >= 0`
+ */
+template <
+    mini::CMatrix TMatrixP1,
+    mini::CMatrix TMatrixQ1,
+    mini::CMatrix TMatrixP2,
+    mini::CMatrix TMatrixQ2,
+    class TScalar>
+PBAT_HOST_DEVICE auto LineSegments(
+    TMatrixP1 const& P1,
+    TMatrixQ1 const& Q1,
+    TMatrixP2 const& P2,
+    TMatrixQ2 const& Q2,
+    TScalar eps = std::numeric_limits<TScalar>::min()) -> TScalar;
+
 template <
     mini::CMatrix TMatrixL1,
     mini::CMatrix TMatrixU1,
@@ -304,6 +335,25 @@ PBAT_HOST_DEVICE auto SphereTriangle(
 {
     auto const sd2c = PointTriangle(X, A, B, C);
     return sd2c - R * R;
+}
+
+template <
+    mini::CMatrix TMatrixP1,
+    mini::CMatrix TMatrixQ1,
+    mini::CMatrix TMatrixP2,
+    mini::CMatrix TMatrixQ2,
+    class TScalar>
+PBAT_HOST_DEVICE auto LineSegments(
+    TMatrixP1 const& P1,
+    TMatrixQ1 const& Q1,
+    TMatrixP2 const& P2,
+    TMatrixQ2 const& Q2,
+    TScalar eps) -> TScalar
+{
+    mini::SVector<TScalar, 2> st = ClosestPointQueries::LineSegments(P1, Q1, P2, Q2, eps);
+    mini::SVector<TScalar, 3> X1 = P1 + st(0) * (Q1 - P1);
+    mini::SVector<TScalar, 3> X2 = P2 + st(1) * (Q2 - P2);
+    return SquaredNorm(X1 - X2);
 }
 
 } // namespace DistanceQueries
