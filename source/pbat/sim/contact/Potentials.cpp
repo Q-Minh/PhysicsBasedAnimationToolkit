@@ -166,4 +166,27 @@ TEST_CASE("[sim][contact][potentials] LinearlyInterpolatedClosestPoints")
     auto HblkMixed =
         HessianBlockWrtLinearlyInterpolatedClosestPoints(a, b, x, y, d, dEdd, d2Edd, 0, 1, 0, 0);
     CHECK_EQ(HblkMixed(0, 0), -d2Edd * a(0) * b(0));
+    
+    // Static-y overloads should match the x-related parts of the full versions
+    auto gu_stat = GradientWrtLinearlyInterpolatedClosestPoints(a, x, y, d, dEdd);
+    CHECK_EQ(gu_stat.Rows(), 4);
+    CHECK_EQ(gu_stat(0), guv(0));
+    CHECK_EQ(gu_stat(1), guv(1));
+    CHECK_EQ(gu_stat(2), guv(2));
+    CHECK_EQ(gu_stat(3), guv(3));
+    
+    auto gv0_0_stat = GradientSegmentWrtLinearlyInterpolatedClosestPoints(a, x, y, d, dEdd, 0);
+    CHECK_EQ(gv0_0_stat(0), gv0_0(0));
+    
+    auto H_stat = HessianWrtLinearlyInterpolatedClosestPoints(a, x, y, d, dEdd, d2Edd);
+    CHECK_EQ(H_stat.Rows(), 4);
+    CHECK_EQ(H_stat.Cols(), 4);
+    // Compare with top-left block of Huv
+    CHECK_EQ(H_stat(0, 0), Huv(0, 0));
+    CHECK_EQ(H_stat(1, 1), Huv(1, 1));
+    CHECK_EQ(H_stat(2, 2), Huv(2, 2));
+    CHECK_EQ(H_stat(3, 3), Huv(3, 3));
+    
+    auto Hblk_stat = HessianBlockWrtLinearlyInterpolatedClosestPoints(a, x, y, d, dEdd, d2Edd, 0, 0);
+    CHECK_EQ(Hblk_stat(0, 0), Hblk(0, 0));
 }

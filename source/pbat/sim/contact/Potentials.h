@@ -497,6 +497,172 @@ PBAT_HOST_DEVICE auto HessianBlockWrtLinearlyInterpolatedClosestPoints(
     return (gammai * gammaj) * HessianBlockWrtClosestPoints(x, y, d, dEdd, d2Edd2, ib, jb);
 }
 
+/**
+ * @brief Compute gradient with respect to linearly interpolated closest point x = U*a when y is
+ * static.
+ *
+ * This overload computes the gradient only with respect to the interpolation weights a of the
+ * first closest point x. The second closest point y is treated as a fixed (static) point, so no
+ * derivatives with respect to y (or any interpolation weights for y) are formed.
+ *
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point (static)
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights for first closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point (static)
+ * @param d Distance (2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @return `|# verts 1 * # dims| x 1` gradient with respect to `a` such that `x = U*a` and `y` is
+ * static
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto GradientWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd) -> mini::SVector<TScalar, TMatrixX::kRows * TMatrixA::kRows>
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same number of rows.");
+    auto constexpr kDims                  = TMatrixX::kRows;
+    auto constexpr kUVerts                = TMatrixA::kRows;
+    auto constexpr kDofsU                 = kDims * kUVerts;
+    mini::SVector<TScalar, 2 * kDims> gxy = GradientWrtClosestPoints(x, y, d, dEdd);
+    auto gx                               = gxy.template Slice<kDims, 1>(0, 0);
+    mini::SVector<TScalar, kDofsU> gu;
+    pbat::common::ForRange<0, kUVerts>(
+        [&]<auto i>() { gu.template Slice<kDims, 1>(i * kDims, 0) = gx * a(i); });
+    return gu;
+}
+
+/**
+ * @brief Compute Hessian with respect to linearly interpolated closest point x = U*a when y is
+ * static.
+ *
+ * This overload computes the Hessian only with respect to the interpolation weights a of the first
+ * closest point x. The second closest point y is treated as static.
+ *
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point (static)
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights for first closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point (static)
+ * @param d Distance (2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param d2Edd2 Second derivative of energy with respect to distance
+ * @return `|# verts 1 * # dims| x |# verts 1 * # dims|` Hessian with respect to `a` such that
+ * `x=U*a` and `y` is static
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto HessianWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    TScalar d2Edd2)
+    -> mini::SMatrix<TScalar, TMatrixX::kRows * TMatrixA::kRows, TMatrixX::kRows * TMatrixA::kRows>
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same number of rows.");
+    auto constexpr kDims   = TMatrixX::kRows;
+    auto constexpr kUVerts = TMatrixA::kRows;
+    auto constexpr kDofsU  = kDims * kUVerts;
+    mini::SMatrix<TScalar, 2 * kDims, 2 * kDims> const Hxy =
+        HessianWrtClosestPoints(x, y, d, dEdd, d2Edd2);
+    auto Hxx = Hxy.template Slice<kDims, kDims>(0, 0);
+    mini::SMatrix<TScalar, kDofsU, kDofsU> H;
+    pbat::common::ForRange<0, kUVerts>([&]<auto i>() {
+        pbat::common::ForRange<0, kUVerts>([&]<auto j>() {
+            H.template Slice<kDims, kDims>(i * kDims, j * kDims) = Hxx * a(i) * a(j);
+        });
+    });
+    return H;
+}
+
+/**
+ * @brief Compute gradient segment for vertex i of the linearly interpolated closest point x = U*a
+ * when y is static.
+ *
+ * This overload computes the gradient contribution associated with the i-th vertex of x only.
+ *
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point (static)
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights for first closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point (static)
+ * @param d Distance (2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param i Vertex index on x to compute the gradient segment for
+ * @return `|# dims| x 1` gradient with respect to vertex `i` of closest point `x`
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto GradientSegmentWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    int i) -> mini::SVector<TScalar, TMatrixX::kRows>
+{
+    return a(i) * GradientSegmentWrtClosestPoints(x, y, d, dEdd, 0);
+}
+
+/**
+ * @brief Compute Hessian block (i,j) for the linearly interpolated closest point x = U*a when y is
+ * static.
+ *
+ * This overload computes the Hessian block corresponding to vertices (i,j) of x only.
+ *
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point (static)
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights for first closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point (static)
+ * @param d Distance (2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param d2Edd2 Second derivative of energy with respect to distance
+ * @param i Vertex index on x for block row
+ * @param j Vertex index on x for block column
+ * @return `|# dims| x |# dims|` Hessian block `(i,j)` with respect to vertices of `x`
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto HessianBlockWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    TScalar d2Edd2,
+    int i,
+    int j) -> mini::SMatrix<TScalar, TMatrixX::kRows, TMatrixX::kRows>
+{
+    return (a(i) * a(j)) * HessianBlockWrtClosestPoints(x, y, d, dEdd, d2Edd2, 0, 0);
+}
+
 } // namespace pbat::sim::contact::potentials
 
 #endif // PBAT_SIM_CONTACT_POTENTIALS_H
