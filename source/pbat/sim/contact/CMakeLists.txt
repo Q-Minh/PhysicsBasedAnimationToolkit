@@ -8,6 +8,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "MultibodyMeshMixedCcdDcd.h"
     "MultiMesh.h"
     "OffsetGeometryContact.h"
+    "Potentials.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
@@ -16,4 +17,5 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "MultibodyMeshMixedCcdDcd.cpp"
     "MultiMesh.cpp"
     "OffsetGeometryContact.cpp"
+    "Potentials.cpp"
 )

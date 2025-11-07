@@ -1,0 +1,502 @@
+/**
+ * @file Potentials.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Header file for contact potential functions and their derivatives.
+ * @version 0.1
+ * @date 2025-11-07
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
+#ifndef PBAT_SIM_CONTACT_POTENTIALS_H
+#define PBAT_SIM_CONTACT_POTENTIALS_H
+
+#include "pbat/HostDevice.h"
+#include "pbat/common/Concepts.h"
+#include "pbat/common/ConstexprFor.h"
+#include "pbat/math/linalg/mini/Mini.h"
+
+#include <cmath>
+#include <type_traits>
+
+namespace pbat::sim::contact::potentials {
+
+namespace mini = math::linalg::mini;
+
+/**
+ * @brief Quadratic penalty contact potential and its derivatives.
+ *
+ * Given a signed distance function \f$ \phi(\mathbf{x}) \f$ where negative distances indicate
+ * penetration, as well as a contact radius \f$ r \f$ and penalty stiffness \f$ k_c \f$, the
+ * quadratic penalty contact potential is defined as
+ * \f[
+ * E_\text{penalty}(\phi(\mathbf{x})) = \frac{1}{2} k_c (\phi(\mathbf{x}) - r)^2
+ * \f]
+ * for \f$ \phi(\mathbf{x}) < r \f$, and zero otherwise.
+ *
+ * @tparam TScalar Scalar type
+ * @tparam nDerivs Number of derivatives to compute (0, 1, or 2)
+ * @param sd Signed distance
+ * @param kc Penalty stiffness
+ * @param r Contact radius
+ * @return `|# derivs + 1| x 1` contact potential and its derivatives up to order `nDerivs`
+ */
+template <int nDerivs, common::CFloatingPoint TScalar>
+PBAT_HOST_DEVICE auto SignedDistanceQuadraticPenalty(TScalar sd, TScalar kc, TScalar r = TScalar(0))
+    -> mini::SVector<TScalar, nDerivs + 1>
+{
+    static_assert(nDerivs >= 0 and nDerivs <= 2, "Number of derivatives must be 0, 1, or 2.");
+    mini::SVector<TScalar, nDerivs + 1> dE;
+    TScalar rd = sd - r;
+    if constexpr (nDerivs >= 0)
+    {
+        dE(0) = TScalar(0.5) * kc * rd * rd;
+    }
+    if constexpr (nDerivs >= 1)
+    {
+        dE(1) = kc * rd;
+    }
+    if constexpr (nDerivs >= 2)
+    {
+        dE(2) = kc;
+    }
+    return dE;
+}
+
+/**
+ * @brief C2 continuous 2-stage activation function from \cite chen_offset_2025
+ *
+ * @note We expose `kcp, b` as parameters for efficiency, since they can be precomputed given `r`
+ * and `kc`. See the preconditions for their definitions.
+ *
+ * @tparam TScalar Scalar type
+ * @param d Distance
+ * @param r Contact radius
+ * @param kc Quadratic penalty stiffness
+ * @param kcp Log barrier stiffness
+ * @param b Log barrier offset
+ * @return The contact potential
+ * @pre `0 <= d <= r`
+ * @pre `kc > 0`
+ * @pre `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
+ * @pre `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+ */
+template <int nDerivs, common::CFloatingPoint TScalar>
+PBAT_HOST_DEVICE auto
+QuadraticToLogBarrierTwoStageActivation(TScalar d, TScalar r, TScalar kc, TScalar kcp, TScalar b)
+    -> mini::SVector<TScalar, nDerivs + 1>
+{
+    static_assert(nDerivs >= 0 and nDerivs <= 2, "Number of derivatives must be 0, 1, or 2.");
+    mini::SVector<TScalar, nDerivs + 1> dE;
+    // d >= tau -> d >= r/2 -> 2d >= r
+    if (2 * d >= r)
+    {
+        TScalar rd   = r - d;
+        TScalar kcrd = kc * rd;
+        if constexpr (nDerivs >= 0)
+        {
+            dE(0) = TScalar(0.5) * kcrd * rd;
+        }
+        if constexpr (nDerivs >= 1)
+        {
+            dE(1) = -kcrd;
+        }
+        if constexpr (nDerivs >= 2)
+        {
+            dE(2) = kc;
+        }
+    }
+    else
+    {
+        using namespace std;
+        if constexpr (nDerivs >= 0)
+        {
+            dE(0) = -kcp * log(d) + b;
+        }
+        if constexpr (nDerivs >= 1)
+        {
+            dE(1) = -kcp / d;
+        }
+        if constexpr (nDerivs >= 2)
+        {
+            dE(2) = kcp / (d * d);
+        }
+    }
+    return dE;
+}
+
+/**
+ * @brief Compute gradient with respect to closest points given distance and first energy
+ * derivative.
+ *
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TScalar Scalar type
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd Derivative of energy with respect to distance
+ * @return `2*|# dims| x 1` gradient with respect to closest points `x` and `y`
+ */
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto
+GradientWrtClosestPoints(TMatrixX const& x, TMatrixY const& y, TScalar d, TScalar dEdd)
+    -> mini::SVector<TScalar, 2 * TMatrixX::kRows>
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
+    auto constexpr kDims = TMatrixX::kRows;
+    mini::SVector<TScalar, 2 * kDims> g;
+    auto gx = g.template Slice<kDims, 1>(0, 0);
+    auto gy = g.template Slice<kDims, 1>(kDims, 0);
+    gx      = dEdd * (x - y) / (d + std::numeric_limits<TScalar>::min());
+    gy      = -gx;
+    return g;
+}
+
+/**
+ * @brief Compute gradient with respect to one of the closest points given distance and first energy
+ * derivative.
+ *
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TScalar Scalar type
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param i Index indicating which closest point to compute gradient for (0 for `x`, 1 for `y`)
+ * @return `|# dims| x 1` gradient with respect to closest point `x` if `i==0`, or `y` if `i==1`
+ * @pre `i` must be either `0` or `1`
+ */
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto GradientSegmentWrtClosestPoints(
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    int i)
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
+    auto constexpr kDims = TMatrixX::kRows;
+    int const sgn        = (i == 0) * 1 + (i == 1) * -1;
+    mini::SVector<TScalar, kDims> gi =
+        (sgn * dEdd) * (x - y) / (d + std::numeric_limits<TScalar>::min());
+    return gi;
+}
+
+/**
+ * @brief Compute Hessian with respect to closest points given distance and energy's first and
+ * second derivatives.
+ *
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TScalar Scalar type
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param d2Edd2 Second derivative of energy with respect to distance
+ * @return `2*|# dims| x 2*|# dims|` Hessian with respect to closest points `x` and `y`
+ */
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto HessianWrtClosestPoints(
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    TScalar d2Edd2) -> mini::SMatrix<TScalar, 2 * TMatrixX::kRows, 2 * TMatrixX::kRows>
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
+    auto constexpr kDims = TMatrixX::kRows;
+    TScalar dinv         = TScalar(1) / (d + std::numeric_limits<TScalar>::min());
+    mini::Identity<TScalar, kDims, kDims> I{};
+    mini::SVector<TScalar, kDims> const gx            = (x - y) * dinv;
+    mini::SMatrix<TScalar, kDims, kDims> const gxgxT  = gx * gx.Transpose();
+    mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
+    mini::SMatrix<TScalar, 2 * kDims, 2 * kDims> H;
+    auto Hxx = H.template Slice<kDims, kDims>(0, 0);
+    auto Hxy = H.template Slice<kDims, kDims>(0, kDims);
+    auto Hyx = H.template Slice<kDims, kDims>(kDims, 0);
+    auto Hyy = H.template Slice<kDims, kDims>(kDims, kDims);
+    Hxx      = d2Edd2 * gxgxT + dEdd * d2ddxx;
+    Hxy      = -Hxx;
+    Hyx      = Hxy;
+    Hyy      = Hxx;
+    return H;
+}
+
+/**
+ * @brief Compute Hessian block (i,j) with respect to the closest points given distance and energy's
+ * first and second derivatives.
+ *
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TMatrixX::ScalarType Scalar type
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param d2Edd2 Second derivative of energy with respect to distance
+ * @param i Block row index (0 for `x`, 1 for `y`)
+ * @param j Block column index (0 for `x`, 1 for `y`)
+ * @return `|# dims| x |# dims|` Hessian block `(i,j)` with respect to closest points `x` and `y`
+ */
+template <
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto HessianBlockWrtClosestPoints(
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    TScalar d2Edd2,
+    int i,
+    int j) -> mini::SMatrix<TScalar, TMatrixX::kRows, TMatrixX::kRows>
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
+    auto constexpr kDims = TMatrixX::kRows;
+    TScalar dinv         = TScalar(1) / (d + std::numeric_limits<TScalar>::min());
+    mini::Identity<TScalar, kDims, kDims> I{};
+    mini::SVector<TScalar, kDims> const gx            = (x - y) * dinv;
+    mini::SMatrix<TScalar, kDims, kDims> const gxgxT  = gx * gx.Transpose();
+    mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
+    int const sgn                                     = (i == j) * 1 + (i != j) * -1;
+    mini::SMatrix<TScalar, kDims, kDims> Hij = (sgn * d2Edd2) * gxgxT + (sgn * dEdd) * d2ddxx;
+    return Hij;
+}
+
+/**
+ * @brief Compute gradient with respect to linearly interpolated closest points `x = U*a` and `y =
+ * V*b`, given distance and first energy derivative.
+ *
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixB Matrix type for interpolation weights of second closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights for first closest point
+ * @param b `|# verts 2| x 1` interpolation weights for second closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd Derivative of energy with respect to distance
+ * @return `|# verts 1 * # dims * # verts 2 * # dims| x 1` gradient with respect to `a,b` s.t.
+ * closest points `x=U*a` and `y=V*b`
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto GradientWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixB const& b,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd)
+    -> mini::SVector<TScalar, TMatrixX::kRows * TMatrixA::kRows + TMatrixY::kRows * TMatrixB::kRows>
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same number of rows.");
+    auto constexpr kDims                  = TMatrixX::kRows;
+    mini::SVector<TScalar, 2 * kDims> gxy = GradientWrtClosestPoints(x, y, d, dEdd);
+    auto constexpr kUVerts                = TMatrixA::kRows;
+    auto constexpr kVVerts                = TMatrixB::kRows;
+    auto constexpr kDofsU                 = kDims * kUVerts;
+    auto constexpr kDofsV                 = kDims * kVVerts;
+    auto constexpr kDofs                  = kDofsU + kDofsV;
+    mini::SVector<TScalar, kDofs> guv;
+    guv.SetZero();
+    auto gu = guv.template Slice<kDofsU, 1>(0, 0);
+    auto gv = guv.template Slice<kDofsV, 1>(gu.Rows(), 0);
+    pbat::common::ForRange<0, kUVerts>([&]<auto i>() {
+        gu.template Slice<kDims, 1>(i * kDims, 0) = gxy.template Slice<kDims, 1>(0, 0) * a(i);
+    });
+    pbat::common::ForRange<0, kVVerts>([&]<auto i>() {
+        gv.template Slice<kDims, 1>(i * kDims, 0) = gxy.template Slice<kDims, 1>(kDims, 0) * b(i);
+    });
+    return guv;
+}
+
+/**
+ * @brief Compute Hessian with respect to linearly interpolated closest points `x = U*a` and `y =
+ * V*b`, given distance and energy's first and second derivatives.
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixB Matrix type for interpolation weights of second closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights for first closest point
+ * @param b `|# verts 2| x 1` interpolation weights for second closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param d2Edd2 Second derivative of energy with respect to distance
+ * @return `|# verts 1 * # dims * # verts 2 * # dims| x |# verts 1 * # dims * # verts 2 * # dims|`
+ * Hessian with respect `a,b` s.t. closest points `x=U*a` and `y=V*b`
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto HessianWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixB const& b,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    TScalar d2Edd2)
+    -> mini::SMatrix<
+        TScalar,
+        TMatrixX::kRows * TMatrixA::kRows + TMatrixY::kRows * TMatrixB::kRows,
+        TMatrixX::kRows * TMatrixA::kRows + TMatrixY::kRows * TMatrixB::kRows>
+{
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same number of rows.");
+    auto constexpr kDims = TMatrixX::kRows;
+    mini::SMatrix<TScalar, 2 * kDims, 2 * kDims> const Hxy =
+        HessianWrtClosestPoints(x, y, d, dEdd, d2Edd2);
+    auto constexpr kUVerts = TMatrixA::kRows;
+    auto constexpr kVVerts = TMatrixB::kRows;
+    auto constexpr kDofsU  = kDims * kUVerts;
+    auto constexpr kDofsV  = kDims * kVVerts;
+    auto constexpr kDofs   = kDofsU + kDofsV;
+    mini::SMatrix<TScalar, kDofs, kDofs> H;
+    H.SetZero();
+    // Compute H block-by-block
+    auto Huu = H.template Slice<kDofsU, kDofsU>(0, 0);
+    pbat::common::ForRange<0, kUVerts>([&]<auto i>() {
+        pbat::common::ForRange<0, kUVerts>([&]<auto j>() {
+            Huu.template Slice<kDims, kDims>(i * kDims, j * kDims) =
+                Hxy.template Slice<kDims, kDims>(0, 0) * a(i) * a(j);
+        });
+    });
+    auto Huv = H.template Slice<kDofsU, kDofsV>(0, kDofsU);
+    pbat::common::ForRange<0, kUVerts>([&]<auto i>() {
+        pbat::common::ForRange<0, kVVerts>([&]<auto j>() {
+            Huv.template Slice<kDims, kDims>(i * kDims, j * kDims) =
+                Hxy.template Slice<kDims, kDims>(0, kDims) * a(i) * b(j);
+        });
+    });
+    auto Hvu = H.template Slice<kDofsV, kDofsU>(kDofsU, 0);
+    Hvu      = Huv.Transpose();
+    auto Hvv = H.template Slice<kDofsV, kDofsV>(kDofsU, kDofsU);
+    pbat::common::ForRange<0, kVVerts>([&]<auto i>() {
+        pbat::common::ForRange<0, kVVerts>([&]<auto j>() {
+            Hvv.template Slice<kDims, kDims>(i * kDims, j * kDims) =
+                Hxy.template Slice<kDims, kDims>(kDims, kDims) * b(i) * b(j);
+        });
+    });
+    return H;
+}
+
+/**
+ * @brief Compute gradient with respect to one of the linearly interpolated closest points `x = U*a`
+ * and `y = V*b`, given distance and first energy derivative.
+ *
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixB Matrix type for interpolation weights of second closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights of first closest point
+ * @param b `|# verts 1| x 1` interpolation weights of second closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param ib Index indicating which closest point to compute gradient for (0 for `x`, 1 for `y`)
+ * @param i Index indicating which vertex of the selected closest point to compute gradient for
+ * @return `|# dims| x 1` gradient with respect to vertex `i` of closest point `x` if `ib==0`, or
+ * `y` if `ib==1`
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto GradientSegmentWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixB const& b,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    int ib,
+    int i) -> mini::SVector<TScalar, TMatrixX::kRows>
+{
+    TScalar gammai = (ib == 0) ? a(i) : b(i);
+    return gammai * GradientSegmentWrtClosestPoints(x, y, d, dEdd, ib);
+}
+
+/**
+ * @brief Compute Hessian block (i,j) with respect to the linearly interpolated closest points `x =
+ * U*a` and `y = V*b`, given distance and energy's first and second derivatives.
+ *
+ * @tparam TMatrixA Matrix type for interpolation weights of first closest point
+ * @tparam TMatrixB Matrix type for interpolation weights of second closest point
+ * @tparam TMatrixX Matrix type for first closest point
+ * @tparam TMatrixY Matrix type for second closest point
+ * @tparam TScalar Scalar type
+ * @param a `|# verts 1| x 1` interpolation weights for first closest point
+ * @param b `|# verts 2| x 1` interpolation weights for second closest point
+ * @param x `|# dims| x 1` first closest point
+ * @param y `|# dims| x 1` second closest point
+ * @param d Distance (in the 2-norm) between closest points
+ * @param dEdd First derivative of energy with respect to distance
+ * @param d2Edd2 Second derivative of energy with respect to distance
+ * @param ib Index indicating which closest point to compute Hessian block row for (0 for `x`, 1 for
+ * `y`)
+ * @param jb Index indicating which closest point to compute Hessian block column for (0 for `x`, 1
+ * for `y`)
+ * @param i Index indicating which vertex of the selected closest point for block row to compute
+ * Hessian block row for
+ * @param j Index indicating which vertex of the selected closest point for block column to compute
+ * Hessian block column for
+ * @return `|# dims| x |# dims|` Hessian block `(i,j)` with respect to vertex `i` of closest point
+ * `x` if `ib==0`, or `y` if `ib==1`, and vertex `j` of closest point `x` if `jb==0`, or `y` if
+ * `jb==1`
+ */
+template <
+    mini::CMatrix TMatrixA,
+    mini::CMatrix TMatrixB,
+    mini::CMatrix TMatrixX,
+    mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto HessianBlockWrtLinearlyInterpolatedClosestPoints(
+    TMatrixA const& a,
+    TMatrixB const& b,
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar d,
+    TScalar dEdd,
+    TScalar d2Edd2,
+    int ib,
+    int jb,
+    int i,
+    int j) -> mini::SMatrix<TScalar, TMatrixX::kRows, TMatrixX::kRows>
+{
+    TScalar gammai = (ib == 0) ? a(i) : b(i);
+    TScalar gammaj = (jb == 0) ? a(j) : b(j);
+    return (gammai * gammaj) * HessianBlockWrtClosestPoints(x, y, d, dEdd, d2Edd2, ib, jb);
+}
+
+} // namespace pbat::sim::contact::potentials
+
+#endif // PBAT_SIM_CONTACT_POTENTIALS_H
