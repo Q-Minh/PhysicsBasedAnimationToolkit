@@ -91,6 +91,47 @@ void BoundaryTriangulationEdges(
     Eigen::DenseBase<TDerivedGHEF>& GHEF,
     Eigen::DenseBase<TDerivedEHE>& EHE);
 
+/**
+ * @brief Storage type for a multi-(triangle-)mesh contact simulation representation.
+ *
+ * @tparam TIndex Type of indices
+ */
+template <common::CIndex TIndex>
+struct MultiMesh
+{
+    Eigen::Vector<TIndex, Eigen::Dynamic> V;    ///< `|# vertices| x 1` (surface) vertex indices
+    Eigen::Matrix<TIndex, 3, Eigen::Dynamic> F; ///< `3 x |# faces|` face indices
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic> E; ///< `2 x |# edges|` edge indices
+    Eigen::Vector<TIndex, Eigen::Dynamic> VP; ///< `|# connected components + 1| x 1` vertex prefix
+    Eigen::Vector<TIndex, Eigen::Dynamic> FP; ///< `|# connected components + 1| x 1` face prefix
+    Eigen::Vector<TIndex, Eigen::Dynamic> EP; ///< `|# connected components + 1| x 1` edge prefix
+    Eigen::Vector<TIndex, Eigen::Dynamic> GVHEp; ///< `|# points + 1| x 1` point to half-edge prefix
+    Eigen::Vector<TIndex, Eigen::Dynamic>
+        GVHEadj; ///< `|# half edges| x 1` point to half-edge adjacency
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
+        GHEF; ///< `2 x |# half edges|` half-edge to face adjacency
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic> EHE; ///< `2 x |# edges|` edge to half-edge adjacency
+    /**
+     * @brief Default construct a new Multi Mesh object
+     */
+    MultiMesh() = default;
+    /**
+     * @brief Construct a new Multi Mesh object from a tetrahedral mesh `T` with node connected
+     * component labels `XCC`.
+     *
+     * @tparam TDerivedT Tetrahedral matrix type
+     * @tparam TDerivedXCC Connected component label vector type
+     * @param T `4 x |# tetrahedra|` array of tetrahedral element indices
+     * @param XCC `|# nodes| x 1` array of node connected component labels
+     * @param nComponents Number of connected components (optional)
+     */
+    template <class TDerivedT, class TDerivedXCC>
+    MultiMesh(
+        Eigen::DenseBase<TDerivedT> const& T,
+        Eigen::DenseBase<TDerivedXCC> const& XCC,
+        Eigen::Index nComponents = -1);
+};
+
 template <
     class TDerivedT,
     class TDerivedXCC,
@@ -155,6 +196,25 @@ void BoundaryTriangulationEdges(
     EP(XCC(E.row(0)).array() + 1).array() += TIndex(1);
     // Compute prefix sums
     std::inclusive_scan(EP.begin() + 1, EP.end(), EP.begin() + 1);
+}
+
+template <common::CIndex TIndex>
+template <class TDerivedT, class TDerivedXCC>
+inline MultiMesh<TIndex>::MultiMesh(
+    Eigen::DenseBase<TDerivedT> const& T,
+    Eigen::DenseBase<TDerivedXCC> const& XCC,
+    Eigen::Index nComponents)
+{
+    static_assert(
+        TDerivedT::RowsAtCompileTime == 4,
+        "Element type must be tetrahedral (4 nodes per element).");
+    if (nComponents < 0)
+        nComponents = XCC.maxCoeff() + 1;
+    VP.resize(nComponents + 1);
+    FP.resize(nComponents + 1);
+    EP.resize(nComponents + 1);
+    BoundaryTriangulation(T, XCC, V, F, VP, FP);
+    BoundaryTriangulationEdges(F, XCC, E, EP, GVHEp, GVHEadj, GHEF, EHE);
 }
 
 } // namespace pbat::sim::contact
