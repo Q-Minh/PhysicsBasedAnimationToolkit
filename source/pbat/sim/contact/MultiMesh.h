@@ -47,6 +47,7 @@ template <
     class TDerivedF,
     class TDerivedVP,
     class TDerivedFP,
+    class TDerivedGXV,
     common::CIndex TIndex = typename TDerivedT::Scalar>
 void BoundaryTriangulation(
     Eigen::DenseBase<TDerivedT> const& T,
@@ -54,7 +55,8 @@ void BoundaryTriangulation(
     Eigen::DenseBase<TDerivedV>& V,
     Eigen::DenseBase<TDerivedF>& F,
     Eigen::DenseBase<TDerivedVP>& VP,
-    Eigen::DenseBase<TDerivedFP>& FP);
+    Eigen::DenseBase<TDerivedFP>& FP,
+    Eigen::DenseBase<TDerivedGXV>& GXV);
 
 /**
  * @brief Compute boundary triangulation edges of multi-(tetrahedral-)mesh with adjacency
@@ -111,6 +113,7 @@ struct MultiMesh
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
         GHEF; ///< `2 x |# half edges|` half-edge to face adjacency
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic> EHE; ///< `2 x |# edges|` edge to half-edge adjacency
+    Eigen::Vector<TIndex, Eigen::Dynamic> GXV;    ///< `|# points| x 1` point to vertex mapping
     /**
      * @brief Default construct a new Multi Mesh object
      */
@@ -139,6 +142,7 @@ template <
     class TDerivedF,
     class TDerivedVP,
     class TDerivedFP,
+    class TDerivedGXV,
     common::CIndex TIndex>
 void BoundaryTriangulation(
     Eigen::DenseBase<TDerivedT> const& T,
@@ -146,7 +150,8 @@ void BoundaryTriangulation(
     Eigen::DenseBase<TDerivedV>& V,
     Eigen::DenseBase<TDerivedF>& F,
     Eigen::DenseBase<TDerivedVP>& VP,
-    Eigen::DenseBase<TDerivedFP>& FP)
+    Eigen::DenseBase<TDerivedFP>& FP,
+    Eigen::DenseBase<TDerivedGXV>& GXV)
 {
     static_assert(
         TDerivedT::RowsAtCompileTime == 4,
@@ -161,6 +166,13 @@ void BoundaryTriangulation(
     // Compute prefix sums
     std::inclusive_scan(VP.begin() + 1, VP.end(), VP.begin() + 1);
     std::inclusive_scan(FP.begin() + 1, FP.end(), FP.begin() + 1);
+    // Compute point to vertex mapping
+    auto const nVertices = static_cast<TIndex>(V.size());
+    GXV                  = Eigen::Vector<TIndex, Eigen::Dynamic>::Constant(nNodes, TIndex(-1));
+    GXV(V.reshaped())    = Eigen::Vector<TIndex, Eigen::Dynamic>::LinSpaced(
+        nVertices,
+        TIndex(0),
+        nVertices - TIndex(1));
 }
 
 template <
@@ -213,7 +225,7 @@ inline MultiMesh<TIndex>::MultiMesh(
     VP.resize(nComponents + 1);
     FP.resize(nComponents + 1);
     EP.resize(nComponents + 1);
-    BoundaryTriangulation(T, XCC, V, F, VP, FP);
+    BoundaryTriangulation(T, XCC, V, F, VP, FP, GXV);
     BoundaryTriangulationEdges(F, XCC, E, EP, GVHEp, GVHEadj, GHEF, EHE);
 }
 

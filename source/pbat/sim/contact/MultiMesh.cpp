@@ -39,9 +39,9 @@ TEST_CASE("[sim][contact] BoundaryTriangulation groups by component and matches 
     // 2. Act
 
     // Compute boundary triangulation via API under test
-    IndexVectorX V, VP(nComponents + 1), FP(nComponents + 1);
+    IndexVectorX V, VP(nComponents + 1), FP(nComponents + 1), GXV;
     IndexMatrixX F;
-    sim::contact::BoundaryTriangulation(E.bottomRows<4>(), XCC, V, F, VP, FP);
+    sim::contact::BoundaryTriangulation(E.bottomRows<4>(), XCC, V, F, VP, FP, GXV);
 
     // 3. Assert
 
@@ -94,9 +94,9 @@ TEST_CASE("[sim][contact] BoundaryTriangulationEdges adjacency and grouping are 
     graph::ReindexMeshByConnectedComponents(X, T, XCC, TCC, Xord, Tord);
 
     // Compute boundary faces first
-    IndexVectorX V, VP(nComponents + 1), FP(nComponents + 1);
+    IndexVectorX V, VP(nComponents + 1), FP(nComponents + 1), GXV;
     IndexMatrixX F;
-    sim::contact::BoundaryTriangulation(T.bottomRows<4>(), XCC, V, F, VP, FP);
+    sim::contact::BoundaryTriangulation(T.bottomRows<4>(), XCC, V, F, VP, FP, GXV);
 
     // 2. Act
 

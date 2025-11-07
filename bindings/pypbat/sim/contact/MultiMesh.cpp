@@ -37,7 +37,8 @@ void BindMultiMesh(nanobind::module_& m)
         .def_ro("GVHEp", &MultiMesh::GVHEp, "`|# points+1|` point-to-half-edge prefix")
         .def_ro("GVHEadj", &MultiMesh::GVHEadj, "`|# half-edges|` point-to-half-edge adjacency")
         .def_ro("GHEF", &MultiMesh::GHEF, "`2 x |# half-edges|` half-edge to face adjacency")
-        .def_ro("EHE", &MultiMesh::EHE, "`2 x |# edges|` edge to half-edge adjacency");
+        .def_ro("EHE", &MultiMesh::EHE, "`2 x |# edges|` edge to half-edge adjacency")
+        .def_ro("GXV", &MultiMesh::GXV, "`|# points| x 1` point to vertex mapping");
 
     m.def(
         "boundary_triangulation",
@@ -50,8 +51,9 @@ void BindMultiMesh(nanobind::module_& m)
             Eigen::Matrix<IndexType, 3, Eigen::Dynamic> F;
             Eigen::Vector<IndexType, Eigen::Dynamic> VP(nComponents + 1);
             Eigen::Vector<IndexType, Eigen::Dynamic> FP(nComponents + 1);
-            pbat::sim::contact::BoundaryTriangulation(T, XCC, V, F, VP, FP);
-            return std::make_tuple(V, F, VP, FP);
+            Eigen::Vector<IndexType, Eigen::Dynamic> GXV;
+            pbat::sim::contact::BoundaryTriangulation(T, XCC, V, F, VP, FP, GXV);
+            return std::make_tuple(V, F, VP, FP, GXV);
         },
         nb::arg("T"),
         nb::arg("XCC"),
@@ -62,7 +64,11 @@ void BindMultiMesh(nanobind::module_& m)
         "    XCC (numpy.ndarray): `|# nodes|` node connected component labels.\n"
         "    n_components (int): Number of connected components.\n"
         "Returns:\n"
-        "    Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]: (V, F, VP, FP).\n");
+        "    Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]: (V, "
+        "F, VP, FP, GXV) where V is a `|# vertices| x 1` (surface) vertex indices array, F is a `3 "
+        "x |# triangles|` triangle indices array, VP is a `|# components + 1| x 1` vertex prefix "
+        "array, FP is a `|# components + 1| x 1` face prefix array, and GXV is a `|# points| x 1` "
+        "point to vertex mapping.\n");
 
     m.def(
         "boundary_triangulation_edges",
@@ -99,7 +105,11 @@ void BindMultiMesh(nanobind::module_& m)
         "Returns:\n"
         "    Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray, "
         "numpy.ndarray]:\n"
-        "    (E, EP, GVHEp, GVHEadj, GHEF, EHE).\n");
+        "    (E, EP, GVHEp, GVHEadj, GHEF, EHE), where E is a `2 x |# edges|` edge indices array, "
+        "EP is a `|# connected components + 1| x 1` edge prefix array, GVHEp is a `|# points + 1| "
+        "x 1` point to half-edge prefix array, GVHEadj is a `|# half edges| x 1` point to "
+        "half-edge adjacency array, GHEF is a `2 x |# half edges|` half-edge to face adjacency "
+        "array, and EHE is a `2 x |# edges|` edge to half-edge adjacency array.\n");
 }
 
 } // namespace pbat::py::sim::contact

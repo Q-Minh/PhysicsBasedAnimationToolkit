@@ -1050,7 +1050,8 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     IndexMatrixX F;
     IndexVectorX VP(nComponents + 1);
     IndexVectorX FP(nComponents + 1);
-    BoundaryTriangulation(T.bottomRows<4>(), XCC, V, F, VP, FP);
+    IndexVectorX GXV;
+    BoundaryTriangulation(T.bottomRows<4>(), XCC, V, F, VP, FP, GXV);
     IndexMatrixX E;
     IndexVectorX EP(nComponents + 1);
     IndexVectorX GVHEp, GVHEadj;
