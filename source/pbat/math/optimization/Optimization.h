@@ -12,6 +12,7 @@
 #include "BranchAndBound.h"
 #include "LineSearch.h"
 #include "Newton.h"
+#include "TriangleConstrainedTrustRegionSr1.h"
 
 /**
  * @brief Namespace for optimization algorithms.

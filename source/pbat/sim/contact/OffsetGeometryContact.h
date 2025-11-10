@@ -189,7 +189,7 @@ class OffsetGeometryContact
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `|# vertices| x 1` vertex indices (global indices into X)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
-     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into X)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param EP `|# connected components| x 1` edge prefix
@@ -211,8 +211,8 @@ class OffsetGeometryContact
      * @param device Spatial acceleration device
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param V `|# vertices| x 1` vertex indices (global indices into X)
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
-     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into X)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param EP `|# connected components| x 1` edge prefix
@@ -231,9 +231,9 @@ class OffsetGeometryContact
     /**
      * @brief Prepare for contact iteration.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
-     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
-     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
+     * @param V `|# vertices| x 1` vertex indices (global indices into X)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into X)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param EP `|# connected components| x 1` edge prefix
@@ -249,8 +249,8 @@ class OffsetGeometryContact
     /**
      * @brief Compute vertex-facet and face-facet contact sets.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
-     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param V `|# vertices| x 1` vertex indices (global indices into X)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param GVHEp `|# points + 1|` point to half-edge prefix
@@ -270,9 +270,9 @@ class OffsetGeometryContact
      * @brief Compute edge-facet contact sets.
      * @param device Spatial acceleration device
      * @param X `3 x |# points|` point positions (column-major: one point per column)
-     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
-     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into V)
+     * @param V `|# vertices| x 1` vertex indices (global indices into X)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
+     * @param E `2 x |# edges|` undirected edge vertex indices (global indices into X)
      * @param VP `|# connected components| x 1` vertex prefix
      * @param EP `|# connected components| x 1` edge prefix
      * @param GVHEp `|# points + 1|` point to half-edge prefix
@@ -291,8 +291,8 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE);
     /**
      * @brief Compute total vertex displacement bounds.
-     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param V `|# vertices| x 1` vertex positions (global indices into X)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
      * @param GVHEp `|# points + 1|` point to half-edge prefix
      * @param GVHEadj `|# half edges|` point to half-edge adjacency
      * @pre `VertexFacetContactDetection` and `EdgeEdgeContactDetection` have been called.
