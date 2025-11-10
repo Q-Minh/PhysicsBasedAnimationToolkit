@@ -127,6 +127,259 @@ QuadraticToLogBarrierTwoStageActivation(TScalar d, TScalar r, TScalar kc, TScala
 }
 
 /**
+ * @brief Lagged (C1) friction potential from IPC \cite li2020ipc
+ * @note We do not include the tangential sliding basis \f$ T_k \f$ here for generality. Obtain the
+ * gradient and hessians w.r.t. degrees of freedom via chain ruling (i.e. pre-multiplying gradient
+ * w.r.t. `uk` by `Tk` and sandwiching the hessian w.r.t. `uk` as `Tk*Hu*Tk.Transpose()`).
+ */
+class LaggedFrictionPotential
+{
+  private:
+    /**
+     * @brief Refer to
+     * https://github.com/ipc-sim/ipc-toolkit/blob/v1.4.0/src/ipc/friction/smooth_friction_mollifier.cpp#L8
+     * @tparam TScalar
+     * @param y
+     * @param epsvh
+     * @return \f$ f_0(y, \epsilon_v h) \f$
+     */
+    template <common::CFloatingPoint TScalar>
+    PBAT_HOST_DEVICE TScalar f0(TScalar y, TScalar epsvh);
+    /**
+     * @brief Refer to
+     * https://github.com/ipc-sim/ipc-toolkit/blob/v1.4.0/src/ipc/friction/smooth_friction_mollifier.cpp#L17
+     *
+     * @tparam TScalar
+     * @param y
+     * @param epsvh
+     * @return \f$ f_1(y, \epsilon_v h) \f$
+     */
+    template <common::CFloatingPoint TScalar>
+    PBAT_HOST_DEVICE TScalar f1(TScalar y, TScalar epsvh);
+    /**
+     * @brief Refer to
+     * https://github.com/ipc-sim/ipc-toolkit/blob/v1.4.0/src/ipc/friction/smooth_friction_mollifier.cpp#L28
+     *
+     * @tparam TScalar
+     * @param y
+     * @param epsvh
+     * @return \f$ \frac{d}{dy} f_1(y, \epsilon_v h) \f$
+     */
+    template <common::CFloatingPoint TScalar>
+    PBAT_HOST_DEVICE TScalar f2(TScalar y, TScalar epsvh);
+    /**
+     * @brief Refer to
+     * https://github.com/ipc-sim/ipc-toolkit/blob/v1.4.0/src/ipc/friction/smooth_friction_mollifier.cpp#L37
+     *
+     * @tparam TScalar
+     * @param y
+     * @param epsvh
+     * @return \f$ f_1(y, \epsilon_v h) / y \f$
+     */
+    template <common::CFloatingPoint TScalar>
+    PBAT_HOST_DEVICE TScalar f1_over_x(const TScalar y, const TScalar epsvh);
+    /**
+     * @brief Refer to
+     * https://github.com/ipc-sim/ipc-toolkit/blob/v1.4.0/src/ipc/friction/smooth_friction_mollifier.cpp#L46
+     *
+     * @tparam TScalar
+     * @param y
+     * @param epsvh
+     * @return \f$ \frac{\left[ \frac{d}{dy} f_1(y, epsvh) - f_1(y, epsvh) \right]}{y^3} \f$
+     */
+    template <common::CFloatingPoint TScalar>
+    PBAT_HOST_DEVICE TScalar f2_x_minus_f1_over_x3(const TScalar y, const TScalar epsvh);
+
+  public:
+    /**
+     * @brief Evaluate the lagged friction potential w.r.t. sliding velocity \f$ u_k \f$.
+     *
+     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TScalar Scalar type
+     * @param uk `2 x 1` tangential relative velocity
+     * @param mu Friction coefficient
+     * @param lambdakn Normal contact force magnitude
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
+     * @return The lagged friction potential
+     */
+    template <
+        mini::CMatrix TMatrixUk,
+        common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
+    PBAT_HOST_DEVICE static TScalar
+    Eval(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh)
+    {
+        TScalar ukn = Norm(uk);
+        return mu * lambdakn * f0(ukn, epsvh);
+    }
+    /**
+     * @brief Evaluate the lagged friction potential w.r.t. sliding velocity \f$ u_k \f$ and its
+     * gradient.
+     *
+     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixGk Gradient matrix type
+     * @tparam TScalar Scalar type
+     * @param uk `2 x 1` tangential relative velocity
+     * @param mu Friction coefficient
+     * @param lambdakn Normal contact force magnitude
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
+     * @param gk `2 x 1` Gradient matrix
+     * @return The lagged friction potential
+     */
+    template <
+        mini::CMatrix TMatrixUk,
+        mini::CMatrix TMatrixGk,
+        common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
+    PBAT_HOST_DEVICE static TScalar
+    EvalWithGrad(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh, TMatrixGk& gk)
+    {
+        TScalar ukn      = Norm(uk);
+        TScalar mulambda = mu * lambdakn;
+        gk               = (mulambda * f1_over_x(ukn, epsvh)) * uk;
+        return mulambda * f0(ukn, epsvh);
+    }
+    /**
+     * @brief Compute the gradient w.r.t. sliding velocity \f$ u_k \f$.
+     *
+     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixGk Gradient matrix type
+     * @tparam TScalar Scalar type
+     * @param uk `2 x 1` tangential relative velocity
+     * @param mu Friction coefficient
+     * @param lambdakn Normal contact force magnitude
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f $ is the time step
+     * @param gk `2 x 1` Gradient matrix
+     */
+    template <
+        mini::CMatrix TMatrixUk,
+        mini::CMatrix TMatrixGk,
+        common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
+    PBAT_HOST_DEVICE void
+    Grad(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh, TMatrixGk& gk)
+    {
+        TScalar ukn = Norm(uk);
+        gk          = (mu * lambdakn * f1_over_x(ukn, epsvh)) * uk;
+    }
+    /**
+     * @brief Compute the gradient and Hessian w.r.t. sliding velocity \f$ u_k \f$.
+     *
+     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixGk Gradient matrix type
+     * @tparam TMatrixHk Hessian matrix type
+     * @tparam TScalar Scalar type
+     * @param uk `2 x 1` tangential relative velocity
+     * @param mu Friction coefficient
+     * @param lambdakn Normal contact force magnitude
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
+     * @param gk `2 x 1` Gradient matrix
+     * @param Hk `2 x 2` Hessian matrix
+     */
+    template <
+        mini::CMatrix TMatrixUk,
+        mini::CMatrix TMatrixGk,
+        mini::CMatrix TMatrixHk,
+        common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
+    PBAT_HOST_DEVICE void GradAndHessian(
+        TMatrixUk const& uk,
+        TScalar mu,
+        TScalar lambdakn,
+        TScalar epsvh,
+        TMatrixGk& gk,
+        TMatrixHk& Hk)
+    {
+        TScalar ukn      = Norm(uk);
+        TScalar mulambda = mu * lambdakn;
+        gk               = ((mulambda * f1_over_x(ukn, epsvh))) * uk;
+        mini::Identity<TScalar, 2, 2> I;
+        Hk = mulambda *
+             (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
+    }
+    /**
+     * @brief Compute the Hessian w.r.t. sliding velocity \f$ u_k \f$.
+     *
+     * @tparam TMatrixTk Matrix type for tangential basis
+     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixHk Hessian matrix type
+     * @tparam TScalar Scalar type
+     * @param Tk `2 x 2` Tangential basis matrix
+     * @param uk `2 x 1` Tangential relative velocity
+     * @param mu Friction coefficient
+     * @param lambdakn Normal contact force magnitude
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
+     * @param Hk `2 x 2` Hessian matrix
+     */
+    template <
+        mini::CMatrix TMatrixTk,
+        mini::CMatrix TMatrixUk,
+        mini::CMatrix TMatrixHk,
+        common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
+    PBAT_HOST_DEVICE void Hessian(
+        TMatrixTk const& Tk,
+        TMatrixUk const& uk,
+        TScalar mu,
+        TScalar lambdakn,
+        TScalar epsvh,
+        TMatrixHk& Hk)
+    {
+        TScalar ukn = Norm(uk);
+        mini::Identity<TScalar, 2, 2> I;
+        Hk = (mu * lambdakn) *
+             (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
+    }
+};
+
+template <common::CFloatingPoint TScalar>
+PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f0(TScalar y, TScalar epsvh)
+{
+    assert(epsvh > 0);
+    assert(y >= 0);
+    bool bSliding = y >= epsvh;
+    return (bSliding)*y + (not bSliding) * (y * y * (1 - y / (3 * epsvh)) / epsvh + epsvh / 3);
+}
+
+template <common::CFloatingPoint TScalar>
+PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f1(TScalar y, TScalar epsvh)
+{
+    assert(epsvh > 0);
+    assert(y >= 0);
+    bool bSliding              = y >= epsvh;
+    const TScalar y_over_eps_v = y / epsvh;
+    return (bSliding) * 1 + (not bSliding) * (y_over_eps_v * (2 - y_over_eps_v));
+}
+
+template <common::CFloatingPoint TScalar>
+PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f2(TScalar y, TScalar epsvh)
+{
+    assert(epsvh > 0);
+    assert(y >= 0);
+    bool bSliding = y >= epsvh;
+    return (bSliding) * 0 + (not bSliding) * (2 - 2 * y / epsvh) / epsvh;
+}
+
+template <common::CFloatingPoint TScalar>
+PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f1_over_x(const TScalar y, const TScalar epsvh)
+{
+    assert(epsvh > 0);
+    assert(y >= 0);
+    bool bSliding = y >= epsvh;
+    return (bSliding) * (1 / y) + (not bSliding) * ((2 - y / epsvh) / epsvh);
+}
+
+template <common::CFloatingPoint TScalar>
+PBAT_HOST_DEVICE TScalar
+LaggedFrictionPotential::f2_x_minus_f1_over_x3(const TScalar y, const TScalar epsvh)
+{
+    assert(epsvh > 0);
+    assert(y >= 0);
+    bool bSliding = y >= epsvh;
+    return (bSliding) * (-1 / (y * y * y)) + (not bSliding) * (-1 / (y * epsvh * epsvh));
+}
+
+/**
  * @brief Compute gradient with respect to closest points given distance and first energy
  * derivative.
  *

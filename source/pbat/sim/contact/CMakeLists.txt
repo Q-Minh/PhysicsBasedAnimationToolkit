@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Constraints.h"
     "Contact.h"
     "Environment.h"
+    "Friction.h"
     "MultibodyMeshMixedCcdDcd.h"
     "MultiMesh.h"
     "OffsetGeometryContact.h"
@@ -14,6 +15,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Constraints.cpp"
     "Environment.cpp"
+    "Friction.cpp"
     "MultibodyMeshMixedCcdDcd.cpp"
     "MultiMesh.cpp"
     "OffsetGeometryContact.cpp"
