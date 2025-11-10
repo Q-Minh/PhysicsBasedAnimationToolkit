@@ -5,6 +5,7 @@
 #include "Concepts.h"
 #include "Product.h"
 #include "pbat/HostDevice.h"
+#include "pbat/common/ConstexprFor.h"
 
 #include <type_traits>
 #include <utility>
@@ -102,6 +103,21 @@ PBAT_HOST_DEVICE auto Trace(TMatrix&& A)
         return (std::forward<TMatrix>(A)(I, I) + ...);
     };
     return sum(std::make_integer_sequence<IntegerType, MatrixType::kRows>{});
+}
+
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto Reduce(TMatrix&& A)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    using IntegerType = std::remove_const_t<decltype(MatrixType::kRows)>;
+    using ScalarType  = typename MatrixType::ScalarType;
+    ScalarType sum{0};
+    pbat::common::ForRange<0, MatrixType::kCols>([&]<IntegerType j>() {
+        pbat::common::ForRange<0, MatrixType::kRows>(
+            [&]<IntegerType i>() { sum += std::forward<TMatrix>(A)(i, j); });
+    });
+    return sum;
 }
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
