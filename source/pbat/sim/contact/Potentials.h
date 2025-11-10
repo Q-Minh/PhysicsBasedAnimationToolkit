@@ -621,27 +621,27 @@ PBAT_HOST_DEVICE auto HessianWrtLinearlyInterpolatedClosestPoints(
         TMatrixX::kRows * TMatrixA::kRows + TMatrixY::kRows * TMatrixB::kRows>
 {
     static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same number of rows.");
-    auto constexpr kDims = TMatrixX::kRows;
-    mini::SMatrix<TScalar, 2 * kDims, 2 * kDims> const Hxy =
+    static int constexpr kDims = TMatrixX::kRows;
+    mini::SMatrix<TScalar, 2 * kDims, 2 * kDims> Hxy =
         HessianWrtClosestPoints(x, y, d, dEdd, d2Edd2);
-    auto constexpr kUVerts = TMatrixA::kRows;
-    auto constexpr kVVerts = TMatrixB::kRows;
-    auto constexpr kDofsU  = kDims * kUVerts;
-    auto constexpr kDofsV  = kDims * kVVerts;
-    auto constexpr kDofs   = kDofsU + kDofsV;
+    static int constexpr kUVerts = TMatrixA::kRows;
+    static int constexpr kVVerts = TMatrixB::kRows;
+    int constexpr kDofsU  = kDims * kUVerts;
+    int constexpr kDofsV  = kDims * kVVerts;
+    int constexpr kDofs   = kDofsU + kDofsV;
     mini::SMatrix<TScalar, kDofs, kDofs> H;
     H.SetZero();
     // Compute H block-by-block
     auto Huu = H.template Slice<kDofsU, kDofsU>(0, 0);
-    pbat::common::ForRange<0, kUVerts>([&]<auto i>() {
-        pbat::common::ForRange<0, kUVerts>([&]<auto j>() {
+    pbat::common::ForRange<0, kUVerts>([&]<int i>() {
+        pbat::common::ForRange<0, kUVerts>([&]<int j>() {
             Huu.template Slice<kDims, kDims>(i * kDims, j * kDims) =
                 Hxy.template Slice<kDims, kDims>(0, 0) * a(i) * a(j);
         });
     });
     auto Huv = H.template Slice<kDofsU, kDofsV>(0, kDofsU);
-    pbat::common::ForRange<0, kUVerts>([&]<auto i>() {
-        pbat::common::ForRange<0, kVVerts>([&]<auto j>() {
+    pbat::common::ForRange<0, kUVerts>([&]<int i>() {
+        pbat::common::ForRange<0, kVVerts>([&]<int j>() {
             Huv.template Slice<kDims, kDims>(i * kDims, j * kDims) =
                 Hxy.template Slice<kDims, kDims>(0, kDims) * a(i) * b(j);
         });
@@ -649,8 +649,8 @@ PBAT_HOST_DEVICE auto HessianWrtLinearlyInterpolatedClosestPoints(
     auto Hvu = H.template Slice<kDofsV, kDofsU>(kDofsU, 0);
     Hvu      = Huv.Transpose();
     auto Hvv = H.template Slice<kDofsV, kDofsV>(kDofsU, kDofsU);
-    pbat::common::ForRange<0, kVVerts>([&]<auto i>() {
-        pbat::common::ForRange<0, kVVerts>([&]<auto j>() {
+    pbat::common::ForRange<0, kVVerts>([&]<int i>() {
+        pbat::common::ForRange<0, kVVerts>([&]<int j>() {
             Hvv.template Slice<kDims, kDims>(i * kDims, j * kDims) =
                 Hxy.template Slice<kDims, kDims>(kDims, kDims) * b(i) * b(j);
         });

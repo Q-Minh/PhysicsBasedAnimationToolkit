@@ -242,7 +242,7 @@ void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& param
                 TElasticEnergy Psi{};
                 mini::SVector<Scalar, 9> gF;
                 mini::SMatrix<Scalar, 9, 9> HF;
-                Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
+                Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
                 kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
                 kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
             }
