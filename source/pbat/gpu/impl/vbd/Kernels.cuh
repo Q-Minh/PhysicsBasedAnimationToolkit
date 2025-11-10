@@ -177,7 +177,7 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
         pbat::physics::StableNeoHookeanEnergy<3> Psi{};
         SVector<GpuScalar, 9> gF;
         SMatrix<GpuScalar, 9, 9> HF;
-        Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
+        Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
         using pbat::sim::vbd::kernels::AccumulateElasticGradient;
         using pbat::sim::vbd::kernels::AccumulateElasticHessian;
         AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);

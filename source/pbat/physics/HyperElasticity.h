@@ -56,24 +56,24 @@ concept CHyperElasticEnergy = requires(T t)
         T::kDims
     } -> std::convertible_to<int>;
     {
-        t.eval(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
+        t.Eval(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
     } -> std::convertible_to<Scalar>;
     {
-        t.grad(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
+        t.Grad(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
     } -> std::convertible_to<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>>;
     {
-        t.hessian(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
+        t.Hessian(math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{}, Scalar{}, Scalar{})
     } -> std::convertible_to<
         math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>>;
     {
-        t.evalWithGrad(
+        t.EvalWithGrad(
             math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
             Scalar{},
             Scalar{},
             std::declval<math::linalg::mini::SVector<Scalar, T::kDims * T::kDims>&>())
     } -> std::convertible_to<Scalar>;
     {
-        t.evalWithGradAndHessian(
+        t.EvalWithGradAndHessian(
             math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
             Scalar{},
             Scalar{},
@@ -81,7 +81,7 @@ concept CHyperElasticEnergy = requires(T t)
             std::declval<
                 math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims, T::kDims * T::kDims>&>())
     } -> std::convertible_to<Scalar>;
-    {t.gradAndHessian(
+    {t.GradAndHessian(
         math::linalg::mini::SMatrix<Scalar, T::kDims * T::kDims>{},
         Scalar{},
         Scalar{},

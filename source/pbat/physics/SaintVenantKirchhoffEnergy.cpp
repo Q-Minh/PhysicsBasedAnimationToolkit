@@ -18,12 +18,12 @@ TEST_CASE("[physics] SaintVenantKirchhoffEnergy")
         Scalar constexpr nu        = Scalar(0.45);
         auto const [mu, lambda]    = physics::LameCoefficients(Y, nu);
         auto vecF                  = FromEigen(F.reshaped());
-        Scalar const ePsi          = psi.eval(vecF, mu, lambda);
+        Scalar const ePsi          = psi.Eval(vecF, mu, lambda);
         mini::SVector<Scalar, Dims * Dims> gF;
-        Scalar const ePsiFromGrad = psi.evalWithGrad(vecF, mu, lambda, gF);
+        Scalar const ePsiFromGrad = psi.EvalWithGrad(vecF, mu, lambda, gF);
         gF.SetZero();
         mini::SMatrix<Scalar, Dims * Dims, Dims * Dims> HF;
-        Scalar const ePsiFromHess = psi.evalWithGradAndHessian(vecF, mu, lambda, gF, HF);
+        Scalar const ePsiFromHess = psi.EvalWithGradAndHessian(vecF, mu, lambda, gF, HF);
         bool const bIsEnergyNonNegative =
             (ePsi >= 0.) && (ePsiFromGrad >= 0.) && (ePsiFromHess >= 0.);
         CHECK(bIsEnergyNonNegative);
