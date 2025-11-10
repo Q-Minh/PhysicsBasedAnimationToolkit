@@ -9,6 +9,7 @@
 #include "pbat/math/linalg/mini/Norm.h"
 
 #include <cassert>
+#include <limits>
 
 namespace pbat::sim::contact {
 
@@ -26,8 +27,10 @@ template <
     math::linalg::mini::CMatrix TMatrixX,
     math::linalg::mini::CMatrix TMatrixY,
     class TScalar = typename TMatrixX::ScalarType>
-PBAT_HOST_DEVICE auto
-PointPointTangentialBasis(TMatrixX const& x, TMatrixY const& y, TScalar eps = TScalar(1e-6))
+PBAT_HOST_DEVICE auto PointPointTangentialBasis(
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar eps = std::numeric_limits<TScalar>::epsilon())
     -> math::linalg::mini::SMatrix<TScalar, TMatrixX::kRows, 2>
 {
     using namespace math::linalg::mini;
