@@ -69,6 +69,7 @@ struct OgcParams
 
     Scalar gammap{0.45}; ///< Relaxation parameter for vertex displacement bound, must satisfy `0 <
                          ///< gammap < 0.5`
+    Scalar gammae{0.1};  ///< Proportion of bounds-violating vertices to trigger collision detection
 
   public:
     /**
@@ -103,9 +104,10 @@ struct OgcParams
      * @brief Set displacement bound parameters.
      * @param gammap Relaxation parameter for vertex displacement bound, must satisfy `0 < gammap <
      * 0.5`
+     * @param gammae Proportion of bounds-violating vertices to trigger collision detection
      * @return Reference to this
      */
-    PBAT_API OgcParams& WithDisplacementBoundConfig(Scalar _gammap);
+    PBAT_API OgcParams& WithDisplacementBoundConfig(Scalar _gammap, Scalar _gammae);
     /**
      * @brief Validate and construct the parameters.
      * @param bValidate Whether to validate parameters

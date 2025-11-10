@@ -41,9 +41,10 @@ OgcParams& OgcParams::WithMaxContactEstimates(int nvf, int nfv, int nef)
     return *this;
 }
 
-OgcParams& OgcParams::WithDisplacementBoundConfig(Scalar _gammap)
+OgcParams& OgcParams::WithDisplacementBoundConfig(Scalar _gammap, Scalar _gammae)
 {
     gammap = _gammap;
+    gammae = _gammae;
     return *this;
 }
 
@@ -59,6 +60,16 @@ OgcParams& OgcParams::Construct(bool bValidate)
             nMaxEdgeFaceContactsEstimate < 0)
         {
             throw std::invalid_argument("OgcParams: contact capacities must be non-negative");
+        }
+        if (gammap <= Scalar(0) or gammap >= Scalar(0.5))
+        {
+            throw std::invalid_argument(
+                "OgcParams: 0 < gammap < 0.5 required for displacement bound config");
+        }
+        if (gammae < Scalar(0) or gammae >= Scalar(1))
+        {
+            throw std::invalid_argument(
+                "OgcParams: 0 <= gammae < 1 required for displacement bound config");
         }
     }
     return *this;
