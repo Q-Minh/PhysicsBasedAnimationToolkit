@@ -86,10 +86,13 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             "with_displacement_bound_config",
             &OgcParams::WithDisplacementBoundConfig,
             nb::arg("gammap"),
+            nb::arg("gammae"),
             nb::rv_policy::reference_internal,
             "Set displacement bound relaxation parameter. Must satisfy 0 < gammap < 0.5.\n\n"
             "Args:\n"
             "    gammap (float): Relaxation parameter for vertex displacement bound.\n"
+            "    gammae (float): Proportion of bounds-violating vertices to trigger collision "
+            "detection.\n"
             "Returns:\n"
             "    self (OgcParams): Reference to this.")
         .def(
@@ -110,7 +113,8 @@ void BindOffsetGeometryContact(nanobind::module_& m)
         .def_rw("max_vertex_face_contacts_estimate", &OgcParams::nMaxVertexFaceContactsEstimate)
         .def_rw("max_face_vertex_contacts_estimate", &OgcParams::nMaxFaceVertexContactsEstimate)
         .def_rw("max_edge_face_contacts_estimate", &OgcParams::nMaxEdgeFaceContactsEstimate)
-        .def_rw("gammap", &OgcParams::gammap);
+        .def_rw("gammap", &OgcParams::gammap)
+        .def_rw("gammae", &OgcParams::gammae);
 
     nb::class_<OffsetGeometryContact::ContactFace>(m, "ContactFace")
         .def(nb::init<IndexType, IndexType>(), nb::arg("a"), nb::arg("eFace"))
@@ -222,8 +226,9 @@ void BindOffsetGeometryContact(nanobind::module_& m)
                nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-               OgcParams const& params) { self.PrepareIteration(X, V, F, E, VP, FP, EP, params); },
+               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP) {
+                self.PrepareIteration(X, V, F, E, VP, FP, EP);
+            },
             nb::arg("X"),
             nb::arg("V"),
             nb::arg("F"),
@@ -231,7 +236,6 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             nb::arg("VP"),
             nb::arg("FP"),
             nb::arg("EP"),
-            nb::arg("params"),
             "Prepare contact detection for this iteration.\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# points|` point positions.\n"
@@ -240,8 +244,7 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             "    E (numpy.ndarray): `2 x |# edges|` undirected edges into V.\n"
             "    VP (numpy.ndarray): `|# components+1|` vertex prefix.\n"
             "    FP (numpy.ndarray): `|# components+1|` face prefix.\n"
-            "    EP (numpy.ndarray): `|# components+1|` edge prefix.\n"
-            "    params (OgcParams): Parameters.\n")
+            "    EP (numpy.ndarray): `|# components+1|` edge prefix.\n")
         .def(
             "vertex_facet_contact_detection",
             [](OffsetGeometryContact& self,
@@ -252,9 +255,8 @@ void BindOffsetGeometryContact(nanobind::module_& m)
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-               nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
-               OgcParams const& params) {
-                self.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF, params);
+               nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF) {
+                self.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF);
             },
             nb::arg("X"),
             nb::arg("V"),
@@ -264,7 +266,6 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             nb::arg("GVHEp"),
             nb::arg("GVHEadj"),
             nb::arg("GHEF"),
-            nb::arg("params"),
             "Compute vertex-facet contact sets.\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# points|` positions.\n"
@@ -274,8 +275,7 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             "    FP (numpy.ndarray): `|# components+1|` face prefix.\n"
             "    GVHEp (numpy.ndarray): `|# points + 1|` point-to-half-edge adjacency prefix.\n"
             "    GVHEadj (numpy.ndarray): `|# half edges|` point-to-half-edge adjacency.\n"
-            "    GHEF (numpy.ndarray): `2 x |# half edges|` half-edge to face adjacency.\n"
-            "    params (OgcParams): Parameters.\n")
+            "    GHEF (numpy.ndarray): `2 x |# half edges|` half-edge to face adjacency.\n")
         .def(
             "edge_edge_contact_detection",
             [](OffsetGeometryContact& self,
@@ -287,9 +287,8 @@ void BindOffsetGeometryContact(nanobind::module_& m)
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-               nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
-               OgcParams const& params) {
-                self.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE, params);
+               nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE) {
+                self.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE);
             },
             nb::arg("X"),
             nb::arg("V"),
@@ -300,7 +299,6 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             nb::arg("GVHEp"),
             nb::arg("GVHEadj"),
             nb::arg("EHE"),
-            nb::arg("params"),
             "Compute edge-edge contact sets.\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# points|` positions.\n"
@@ -311,30 +309,26 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             "    EP (numpy.ndarray): `|# components+1|` edge prefix.\n"
             "    GVHEp (numpy.ndarray): `|# points + 1|` vertex-to-half-edge adjacency prefix.\n"
             "    GVHEadj (numpy.ndarray): `|# half edges|` vertex-to-half-edge adjacency.\n"
-            "    EHE (numpy.ndarray): `2 x |# edges|` edge-to-half-edge adjacency.\n"
-            "    params (OgcParams): Parameters.\n")
+            "    EHE (numpy.ndarray): `2 x |# edges|` edge-to-half-edge adjacency.\n")
         .def(
             "compute_displacement_bounds",
             [](OffsetGeometryContact& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
                nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
-               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-               OgcParams const& params) {
-                self.ComputeDisplacementBounds(V, F, GVHEp, GVHEadj, params);
+               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj) {
+                self.ComputeDisplacementBounds(V, F, GVHEp, GVHEadj);
             },
             nb::arg("V"),
             nb::arg("F"),
             nb::arg("GVHEp"),
             nb::arg("GVHEadj"),
-            nb::arg("params"),
             "Compute per-vertex displacement bounds.\n\n"
             "Args:\n"
             "    V (numpy.ndarray): `|# vertices|` vertex indices into X.\n"
             "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices.\n"
             "    GVHEp (numpy.ndarray): `|# points + 1|` vertex-to-half-edge adjacency prefix.\n"
-            "    GVHEadj (numpy.ndarray): `|# half edges|` vertex-to-half-edge adjacency.\n"
-            "    params (OgcParams): Parameters.\n")
+            "    GVHEadj (numpy.ndarray): `|# half edges|` vertex-to-half-edge adjacency.\n")
         .def_prop_ro(
             "bounds",
             &OffsetGeometryContact::Bounds,
@@ -365,7 +359,11 @@ void BindOffsetGeometryContact(nanobind::module_& m)
         .def_ro(
             "dmine",
             &OffsetGeometryContact::dmine,
-            "`|# half-edges|` per-half-edge local displacement bounds");
+            "`|# half-edges|` per-half-edge local displacement bounds")
+        .def_rw(
+            "params",
+            &OffsetGeometryContact::params,
+            "OgcParams used to configure this OGC engine.");
 }
 
 } // namespace pbat::py::sim::contact

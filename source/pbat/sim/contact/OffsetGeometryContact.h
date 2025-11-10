@@ -237,7 +237,6 @@ class OffsetGeometryContact
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param EP `|# connected components| x 1` edge prefix
-     * @param params OGC parameters
      */
     PBAT_API void PrepareIteration(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
@@ -246,8 +245,7 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-        OgcParams const& params);
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP);
     /**
      * @brief Compute vertex-facet and face-facet contact sets.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
@@ -258,7 +256,6 @@ class OffsetGeometryContact
      * @param GVHEp `|# points + 1|` point to half-edge prefix
      * @param GVHEadj `|# half edges|` point to half-edge adjacency
      * @param GHEF `2 x |# half edges|` half-edge to face adjacency
-     * @param params OGC parameters
      */
     PBAT_API void VertexFacetContactDetection(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
@@ -268,8 +265,7 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
-        OgcParams const& params);
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF);
     /**
      * @brief Compute edge-facet contact sets.
      * @param device Spatial acceleration device
@@ -282,7 +278,6 @@ class OffsetGeometryContact
      * @param GVHEp `|# points + 1|` point to half-edge prefix
      * @param GVHEadj `|# half edges|` point to half-edge adjacency
      * @param EHE `2 x |# edges|` edge to half-edge adjacency
-     * @param params OGC parameters
      */
     PBAT_API void EdgeEdgeContactDetection(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
@@ -293,10 +288,13 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
-        OgcParams const& params);
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE);
     /**
      * @brief Compute total vertex displacement bounds.
+     * @param V `3 x |# vertices|` vertex positions (column-major: one vertex per column)
+     * @param F `3 x |# triangles|` triangle vertex indices (global indices into V)
+     * @param GVHEp `|# points + 1|` point to half-edge prefix
+     * @param GVHEadj `|# half edges|` point to half-edge adjacency
      * @pre `VertexFacetContactDetection` and `EdgeEdgeContactDetection` have been called.
      * @post `bv` is populated.
      */
@@ -304,8 +302,7 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-        OgcParams const& params);
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj);
     /**
      * @brief Scene axis-aligned bounding box.
      */
@@ -396,6 +393,7 @@ class OffsetGeometryContact
         dminf; ///< `|# faces|` array of face local displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dmine; ///< `|# half-edges|` array of half-edge local displacement bounds
+    OgcParams params; ///< OGC parameters
 
   private:
     RTCScene mVertexScene{nullptr}; ///< Opaque RTCScene

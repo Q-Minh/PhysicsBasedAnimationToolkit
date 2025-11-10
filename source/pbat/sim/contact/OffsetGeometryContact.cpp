@@ -473,9 +473,11 @@ void OffsetGeometryContact::Initialize(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-    OgcParams const& params)
+    OgcParams const& _params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.Initialize");
+    // 0. Store config
+    params = _params;
     // 1. Allocate contact sets and bounds
     auto const nVertices  = V.size();
     auto const nFacets    = F.cols();
@@ -596,8 +598,7 @@ void OffsetGeometryContact::PrepareIteration(
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-    OgcParams const& params)
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.PrepareIteration");
     // 0. Reset locks, contact sets and displacement bounds
@@ -673,8 +674,7 @@ void OffsetGeometryContact::VertexFacetContactDetection(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
-    OgcParams const& params)
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.VertexFacetContactDetection");
     detail::UserData<ScalarType, IndexType> userData{
@@ -726,8 +726,7 @@ void OffsetGeometryContact::EdgeEdgeContactDetection(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
-    OgcParams const& params)
+    Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.EdgeEdgeContactDetection");
     detail::UserData<ScalarType, IndexType> userData{
@@ -773,8 +772,7 @@ void OffsetGeometryContact::ComputeDisplacementBounds(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
     Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEp,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj,
-    OgcParams const& params)
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GVHEadj)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.ComputeDisplacementBounds");
     // dminv, dminf, dmine already computed during contact detection
@@ -1075,7 +1073,7 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     config.verbose     = 0 /* 3 for debugging */;
     geometry::Device device(config);
     OffsetGeometryContact ogc(device, X, V, F, E, VP, FP, EP, params);
-    ogc.PrepareIteration(X, V, F, E, VP, FP, EP, params);
+    ogc.PrepareIteration(X, V, F, E, VP, FP, EP);
 
     CHECK(std::all_of(ogc.FOGC.begin(), ogc.FOGC.end(), [](auto const& contacts) {
         return contacts.empty();
@@ -1090,7 +1088,7 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     SUBCASE("Vertex-Facet Contact Detection")
     {
         // Act: prepare iteration and perform vertex-facet contact detection
-        ogc.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF, params);
+        ogc.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF);
 
         // Assert: expect contacts between top vertices of bottom cube and bottom faces of top cube
         auto const fContactSetHasTriangles =
@@ -1171,7 +1169,7 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     SUBCASE("Edge-Edge Contact Detection")
     {
         // Act: prepare iteration and perform edge-edge contact detection
-        ogc.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE, params);
+        ogc.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE);
         // Assert: expect some edge-edge contacts
         Eigen::Index const nHalfEdgeEdgeContacts = std::accumulate(
             ogc.EOGC.begin(),
@@ -1186,9 +1184,9 @@ TEST_CASE("[sim][contact] OffsetGeometryContact")
     SUBCASE("All contact detection")
     {
         // Act
-        ogc.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF, params);
-        ogc.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE, params);
-        ogc.ComputeDisplacementBounds(V, F, GVHEp, GVHEadj, params);
+        ogc.VertexFacetContactDetection(X, V, F, VP, FP, GVHEp, GVHEadj, GHEF);
+        ogc.EdgeEdgeContactDetection(X, V, F, E, VP, EP, GVHEp, GVHEadj, EHE);
+        ogc.ComputeDisplacementBounds(V, F, GVHEp, GVHEadj);
         // Assert: displacement bounds are less than rq
         // NOTE: This is a weak test, but at least ensures that some plausible computation was done.
         Scalar const minDisplacementBound = ogc.bv.minCoeff();
