@@ -2,6 +2,7 @@
 #define PBAT_SIM_CONTACT_FRICTION_H
 
 #include "pbat/HostDevice.h"
+#include "pbat/math/linalg/mini/BinaryOperations.h"
 #include "pbat/math/linalg/mini/Concepts.h"
 #include "pbat/math/linalg/mini/Geometry.h"
 #include "pbat/math/linalg/mini/Matrix.h"
@@ -25,7 +26,8 @@ template <
     math::linalg::mini::CMatrix TMatrixX,
     math::linalg::mini::CMatrix TMatrixY,
     class TScalar = typename TMatrixX::ScalarType>
-PBAT_HOST_DEVICE auto PointPointTangentialBasis(TMatrixX const& x, TMatrixY const& y)
+PBAT_HOST_DEVICE auto
+PointPointTangentialBasis(TMatrixX const& x, TMatrixY const& y, TScalar eps = TScalar(1e-6))
     -> math::linalg::mini::SMatrix<TScalar, TMatrixX::kRows, 2>
 {
     using namespace math::linalg::mini;
@@ -36,7 +38,7 @@ PBAT_HOST_DEVICE auto PointPointTangentialBasis(TMatrixX const& x, TMatrixY cons
     assert(xreln > TScalar(0));
     xrel /= xreln;
     using namespace std;
-    bool bIsColinearWithX = (abs(xrel(1)) < TScalar(1e-8) and abs(xrel(2)) < TScalar(1e-8));
+    bool bIsColinearWithX = abs(xrel(0)) >= TScalar(1) - eps;
     // NOTE: We vectorize the following code for `t = cross(xrel, e)`
     // if (bIsColinearWithX)
     // {
@@ -53,10 +55,11 @@ PBAT_HOST_DEVICE auto PointPointTangentialBasis(TMatrixX const& x, TMatrixY cons
     //     t(2) = xrel(0)*0 - xrel(1)*1;
     // }
     SMatrix<TScalar, kDims, 2> T;
-    auto t   = T.Col(0);
-    t(0)     = (bIsColinearWithX) * (-xrel(2));
-    t(1)     = (not bIsColinearWithX) * (xrel(2));
-    t(2)     = (bIsColinearWithX) * (xrel(0)) + (not bIsColinearWithX) * (-xrel(1));
+    auto t = T.Col(0);
+    t(0)   = (bIsColinearWithX) * (-xrel(2));
+    t(1)   = (not bIsColinearWithX) * (xrel(2));
+    t(2)   = (bIsColinearWithX) * (xrel(0)) + (not bIsColinearWithX) * (-xrel(1));
+    t /= Norm(t);
     T.Col(1) = Cross(xrel, t);
     return T;
 }
