@@ -132,7 +132,7 @@ QuadraticToLogBarrierTwoStageActivation(TScalar d, TScalar r, TScalar kc, TScala
  * gradient and hessians w.r.t. degrees of freedom via chain ruling (i.e. pre-multiplying gradient
  * w.r.t. `uk` by `Tk` and sandwiching the hessian w.r.t. `uk` as `Tk*Hu*Tk.Transpose()`).
  */
-class LaggedFrictionPotential
+class LaggedFriction
 {
   private:
     /**
@@ -333,7 +333,7 @@ class LaggedFrictionPotential
 };
 
 template <common::CFloatingPoint TScalar>
-PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f0(TScalar y, TScalar epsvh)
+PBAT_HOST_DEVICE TScalar LaggedFriction::f0(TScalar y, TScalar epsvh)
 {
     assert(epsvh > 0);
     assert(y >= 0);
@@ -342,7 +342,7 @@ PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f0(TScalar y, TScalar epsvh)
 }
 
 template <common::CFloatingPoint TScalar>
-PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f1(TScalar y, TScalar epsvh)
+PBAT_HOST_DEVICE TScalar LaggedFriction::f1(TScalar y, TScalar epsvh)
 {
     assert(epsvh > 0);
     assert(y >= 0);
@@ -352,7 +352,7 @@ PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f1(TScalar y, TScalar epsvh)
 }
 
 template <common::CFloatingPoint TScalar>
-PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f2(TScalar y, TScalar epsvh)
+PBAT_HOST_DEVICE TScalar LaggedFriction::f2(TScalar y, TScalar epsvh)
 {
     assert(epsvh > 0);
     assert(y >= 0);
@@ -361,7 +361,7 @@ PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f2(TScalar y, TScalar epsvh)
 }
 
 template <common::CFloatingPoint TScalar>
-PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f1_over_x(const TScalar y, const TScalar epsvh)
+PBAT_HOST_DEVICE TScalar LaggedFriction::f1_over_x(const TScalar y, const TScalar epsvh)
 {
     assert(epsvh > 0);
     assert(y >= 0);
@@ -370,8 +370,7 @@ PBAT_HOST_DEVICE TScalar LaggedFrictionPotential::f1_over_x(const TScalar y, con
 }
 
 template <common::CFloatingPoint TScalar>
-PBAT_HOST_DEVICE TScalar
-LaggedFrictionPotential::f2_x_minus_f1_over_x3(const TScalar y, const TScalar epsvh)
+PBAT_HOST_DEVICE TScalar LaggedFriction::f2_x_minus_f1_over_x3(const TScalar y, const TScalar epsvh)
 {
     assert(epsvh > 0);
     assert(y >= 0);
@@ -626,9 +625,9 @@ PBAT_HOST_DEVICE auto HessianWrtLinearlyInterpolatedClosestPoints(
         HessianWrtClosestPoints(x, y, d, dEdd, d2Edd2);
     static int constexpr kUVerts = TMatrixA::kRows;
     static int constexpr kVVerts = TMatrixB::kRows;
-    int constexpr kDofsU  = kDims * kUVerts;
-    int constexpr kDofsV  = kDims * kVVerts;
-    int constexpr kDofs   = kDofsU + kDofsV;
+    int constexpr kDofsU         = kDims * kUVerts;
+    int constexpr kDofsV         = kDims * kVVerts;
+    int constexpr kDofs          = kDofsU + kDofsV;
     mini::SMatrix<TScalar, kDofs, kDofs> H;
     H.SetZero();
     // Compute H block-by-block
