@@ -29,21 +29,26 @@ struct TriangleConstrainedTrustRegionSr1Params
      * @brief Read-only parameters
      */
 
-    TScalar R0;   ///< Initial trust region radius
-    TScalar eta;  ///< Trust region minimal energy reduction ratio
-    TScalar trlo; ///< Largest energy reduction ratio under which to shrink trust region. Must
-                  ///< satisfy `0 < trlo < trhi`
-    TScalar trhi; ///< Smallest energy reduction ratio over which to grow trust region. Must satisfy
-                  ///< `trlo < trhi < 1`
-    TScalar trbound;  ///< Smallest step size multiple of trust region radius over which to grow
-                      ///< trust region. Must satisfy `0 < trbound <= 1`.
-    TScalar trgrow;   ///< Trust region growth factor
-    TScalar trshrink; ///< Trust region shrink factor
-    TScalar sigmaB;   ///< Initial Hessian approximation scaling
-    TScalar delta0;   ///< Numerical offset preventing division by zero when computing the ratio of
-                      ///< actual reduction to predicted reduction.
-    int nMaxIters;    ///< Maximum number of solver iterations
-    TScalar gzero;    ///< Gradient norm convergence tolerance. Must satisfy `gzero > 0`.
+    TScalar R0{1};      ///< Initial trust region radius
+    TScalar eta{1e-3};  ///< Trust region minimal energy reduction ratio
+    TScalar trlo{0.1};  ///< Largest energy reduction ratio under which to shrink trust region. Must
+                        ///< satisfy `0 < trlo < trhi`
+    TScalar trhi{0.75}; ///< Smallest energy reduction ratio over which to grow trust region. Must
+                        ///< satisfy `trlo < trhi < 1`
+    TScalar trbound{0.8}; ///< Smallest step size multiple of trust region radius over which to grow
+                          ///< trust region. Must satisfy `0 < trbound <= 1`.
+    TScalar trgrow{2};    ///< Trust region growth factor
+    TScalar trshrink{0.5}; ///< Trust region shrink factor
+    TScalar sigmaB{1};     ///< Initial Hessian approximation scaling
+    TScalar deltaf{
+        std::numeric_limits<TScalar>::epsilon()}; ///< Numerical offset preventing division by zero
+                                                  ///< when computing the ratio of actual reduction
+                                                  ///< to predicted reduction.
+    TScalar deltas{
+        std::numeric_limits<TScalar>::epsilon()}; ///< Numerical offset preventing division by zero
+                                                  ///< when truncating the step.
+    int nMaxIters{20};                            ///< Maximum number of solver iterations
+    TScalar gzero{1e-4}; ///< Gradient norm convergence tolerance. Must satisfy `gzero > 0`.
 
     /**
      * @brief Read/Write parameters
@@ -280,7 +285,7 @@ bool TriangleConstrainedTrustRegionSr1(
         TScalar lensk                  = MaxReduce(Abs(sk));
         bool bTruncateStep             = lensk > Rk;
         // We vectorize the if (bTruncateStep) branch to avoid thread divergence in GPU code
-        sk    = (not bTruncateStep) * sk + (bTruncateStep) * (sk * Rk / lensk);
+        sk    = (not bTruncateStep) * sk + (bTruncateStep) * (sk * Rk / (lensk + params.deltas));
         xkp1  = xk + sk;
         lensk = MaxReduce(Abs(sk));
         mini::SVector<TScalar, 2> gkp1 = gradf(xkp1);
@@ -291,7 +296,7 @@ bool TriangleConstrainedTrustRegionSr1(
         TScalar skTBksk                = Dot(sk, Bksk);
         TScalar mkp1                   = Dot(gk, sk) + TScalar(0.5) * skTBksk;
         TScalar pred                   = -mkp1;
-        TScalar rho                    = ared / (pred + params.delta0);
+        TScalar rho                    = ared / (pred + params.deltaf);
         // We vectorize trust-region update as well
         bool bGrowTrustRegion   = rho > params.trhi and lensk >= params.trbound * Rk;
         bool bShrinkTrustRegion = rho < params.trlo;

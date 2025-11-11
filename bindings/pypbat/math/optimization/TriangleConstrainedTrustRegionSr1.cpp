@@ -36,9 +36,14 @@ void BindTriangleConstrainedTrustRegionSr1(nanobind::module_& m)
         .def_rw("trshrink", &ParamsType::trshrink, "Trust-region shrink factor")
         .def_rw("sigmaB", &ParamsType::sigmaB, "Initial Hessian approximation scaling")
         .def_rw(
-            "delta0",
-            &ParamsType::delta0,
-            "Numerical offset to avoid division by zero in ratio computation")
+            "deltaf",
+            &ParamsType::deltaf,
+            "Numerical offset to avoid division by zero in objective function reduction ratio "
+            "computation")
+        .def_rw(
+            "deltas",
+            &ParamsType::deltas,
+            "Numerical offset to avoid division by zero in step truncation")
         .def_rw("n_max_iters", &ParamsType::nMaxIters, "Maximum number of iterations")
         .def_rw("gzero", &ParamsType::gzero, "Gradient norm convergence tolerance")
         .def_ro("k", &ParamsType::k, "Iteration")

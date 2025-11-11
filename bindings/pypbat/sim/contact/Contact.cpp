@@ -1,6 +1,7 @@
 #include "Contact.h"
 
 #include "MultiMesh.h"
+#include "MeshSdfContact.h"
 #include "MultibodyMeshMixedCcdDcd.h"
 #include "OffsetGeometryContact.h"
 
@@ -10,6 +11,7 @@ void Bind(nanobind::module_& m)
 {
     BindMultibodyMeshMixedCcdDcd(m);
     BindOffsetGeometryContact(m);
+    BindMeshSdfContact(m);
     BindMultiMesh(m);
 }
 

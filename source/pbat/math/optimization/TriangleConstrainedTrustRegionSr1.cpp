@@ -17,7 +17,8 @@ TEST_CASE("[math][optimization] TriangleConstrainedTrustRegionSr1 scenarios")
     params.trgrow    = Scalar(2.0);
     params.trshrink  = Scalar(0.5);
     params.sigmaB    = Scalar(1.0);
-    params.delta0    = Scalar(1e-12);
+    params.deltaf    = Scalar(1e-12);
+    params.deltas    = Scalar(1e-12);
     params.nMaxIters = 50;
     params.gzero     = Scalar(1e-8);
     SUBCASE("Center inside triangle converges to center")

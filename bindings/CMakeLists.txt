@@ -96,6 +96,7 @@ set_target_properties(PhysicsBasedAnimationToolkit_Python
 
 # Stub generation
 list(APPEND _stubgen_lib_path "$<TARGET_FILE_DIR:nanobind>")
+
 if(WIN32)
     list(APPEND _stubgen_lib_path "${Python_RUNTIME_LIBRARY_DIRS}")
 endif()
@@ -130,33 +131,6 @@ nanobind_add_stub(
     RECURSIVE
     LIB_PATH ${_stubgen_lib_path}
     OUTPUT_PATH "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>"
-    OUTPUT
-    "__init__.pyi"
-    "fem.pyi"
-    "geometry/__init__.pyi"
-    "geometry/sdf.pyi"
-    "gpu/__init__.pyi"
-    "gpu/common.pyi"
-    "gpu/contact.pyi"
-    "gpu/geometry.pyi"
-    "gpu/vbd.pyi"
-    "gpu/xpbd.pyi"
-    "graph.pyi"
-    "io.pyi"
-    "math/__init__.pyi"
-    "math/linalg.pyi"
-    "math/optimization.pyi"
-    "profiling.pyi"
-    "sim/__init__.pyi"
-    "sim/algorithm/__init__.pyi"
-    "sim/algorithm/newton.pyi"
-    "sim/algorithm/pd.pyi"
-    "sim/algorithm/vbd.pyi"
-    "sim/contact.pyi"
-    "sim/dynamics.pyi"
-    "sim/integration.pyi"
-    "sim/vbd.pyi"
-    "sim/xpbd.pyi"
     VERBOSE
 )
 
