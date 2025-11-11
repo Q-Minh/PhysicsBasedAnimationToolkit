@@ -40,19 +40,20 @@ struct TriangleConstrainedTrustRegionSr1Params
     TScalar trgrow;   ///< Trust region growth factor
     TScalar trshrink; ///< Trust region shrink factor
     TScalar sigmaB;   ///< Initial Hessian approximation scaling
-    TScalar
-        delta0; ///< Numerical offset preventing division by zero in cases of zero energy reduction.
-    int nMaxIters; ///< Maximum number of solver iterations
-    TScalar gzero; ///< Gradient norm convergence tolerance. Must satisfy `gzero > 0`.
+    TScalar delta0;   ///< Numerical offset preventing division by zero when computing the ratio of
+                      ///< actual reduction to predicted reduction.
+    int nMaxIters;    ///< Maximum number of solver iterations
+    TScalar gzero;    ///< Gradient norm convergence tolerance. Must satisfy `gzero > 0`.
 
     /**
      * @brief Read/Write parameters
      */
-    int k;                           ///< Number of iterations taken
-    TScalar Rk;                      ///< Trust region radius at current iteration
-    TScalar fk;                      ///< Function value at current iteration
-    mini::SVector<TScalar, 2> gk;    ///< `2 x 1` gradient at current iteration
-    mini::SMatrix<TScalar, 2, 2> Bk; ///< `2 x 2` Hessian approximation at current iteration
+    int k;                                      ///< Number of iterations taken
+    TScalar Rk;                                 ///< Trust region radius at current iteration
+    TScalar fk;                                 ///< Function value at current iteration
+    math::linalg::mini::SVector<TScalar, 2> gk; ///< `2 x 1` gradient at current iteration
+    math::linalg::mini::SMatrix<TScalar, 2, 2>
+        Bk; ///< `2 x 2` Hessian approximation at current iteration
 };
 
 /**
@@ -163,6 +164,7 @@ CheckTriangleMinimizationConvergence(TMatrixXk const& xk, TMatrixGk const& gk, T
 {
     static_assert(TMatrixXk::kRows == 2 and TMatrixXk::kCols == 1, "xk must be 2 x 1.");
     static_assert(TMatrixGk::kRows == 2 and TMatrixGk::kCols == 1, "gk must be 2 x 1.");
+    assert(xk(0) >= TScalar(0) and xk(1) >= TScalar(0) and (xk(0) + xk(1)) <= TScalar(1));
     namespace mini = math::linalg::mini;
     bool bConverged{false};
     // Check convergence via KKT conditions (constraints are linear, so hessian of Lagrangian is
@@ -205,13 +207,12 @@ CheckTriangleMinimizationConvergence(TMatrixXk const& xk, TMatrixGk const& gk, T
             mini::SVector<TScalar, 2> gradci{
                 active(0) * TScalar(1) /* + active(1)*TScalar(0)*/ - active(2) * TScalar(1),
                 /*active(0)*TScalar(0) + */ active(1) * TScalar(1) - active(2) * TScalar(1)};
-            TScalar lambdaki = Dot(gradci, gk) / (gradci.Transpose() * Bk * gradci);
+            TScalar lambdaki = Dot(gradci, gk) / SquaredNorm(gradci);
             bConverged       = lambdaki > TScalar(0);
             break;
         }
         default: {
-            assert(nActive == 0);
-            bConverged = SquaredNorm(gk, gk) < params.gzero * params.gzero;
+            bConverged = SquaredNorm(gk, gk) < gzero * gzero;
             break;
         }
     }
@@ -222,29 +223,38 @@ CheckTriangleMinimizationConvergence(TMatrixXk const& xk, TMatrixGk const& gk, T
  * @brief Minimize a function \f$ f(x) \f$ subject to \f$ x \in \text{Triangle} \f$ using a
  * trust-region approach with modified SR1 update.
  *
- * We direclty optimize in the reference space (i.e. triangle barycentric coordinates `x`), where
+ * We directly optimize in the reference space (i.e. triangle barycentric coordinates `x`), where
  * the triangle constraints are simply \f$ 0 \leq x_i \leq 1, \; \sum_i x_i \leq 1 \f$.
  *
  * @tparam FObjective Callable type with signature `TScalar (TMatrixXk const&)`
  * @tparam FGradient Callable type with signature `TMatrixXk (TMatrixXk const&)`
+ * @tparam FCheckConvergence Callable type with signature `bool (TMatrixXk const& xk, bool
+ * bStepAccepted)`
  * @tparam TMatrixXk Matrix type for optimization variable
  * @tparam TScalar Scalar type
- * @param f Objective function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&` and returning the objective function value
- * @param gradf Gradient function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&` and returning the `2 x 1` gradient vector
+ * @param f Objective function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&`
+ * and returning the objective function value
+ * @param gradf Gradient function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&`
+ * and returning the `2 x 1` gradient vector
+ * @param fCheckConvergence Convergence check function taking in the current iteration number,
+ * current iterate, current function value, current gradient, and gradient norm convergence, and
+ * returning true if converged
  * @param xk `2 x 1` initial iterate (in barycentric coordinates)
- * @param params Optimization parameters
+ * @param params Optimization parameters (read/write)
  * @return true if the optimization converged, false otherwise
  */
 template <
     class FObjective,
     class FGradient,
+    class FCheckConvergence,
     math::linalg::mini::CMatrix TMatrixXk,
     class TScalar = typename TMatrixXk::ScalarType>
 bool TriangleConstrainedTrustRegionSr1(
     FObjective const& f,
     FGradient const& gradf,
+    FCheckConvergence const& fCheckConvergence,
     TMatrixXk& xk,
-    TriangleConstrainedTrustRegionSr1Params<TScalar> const& params)
+    TriangleConstrainedTrustRegionSr1Params<TScalar>& params)
 {
     namespace mini = math::linalg::mini;
     static_assert(TMatrixXk::kRows == 2 and TMatrixXk::kCols == 1, "xk must be 2 x 1.");
@@ -258,6 +268,10 @@ bool TriangleConstrainedTrustRegionSr1(
     fk = f(xk);
     gk = gradf(xk);
     Bk = params.sigmaB * mini::Identity<TScalar, 2, 2>();
+    // NOTE: The KKT convergence check is valid for a smooth objective function `f`,
+    // but not for functions like SDFs which have discontinuous gradients at the medial axis,
+    // and no vanishing gradient. Thus, I want to abstract away the convergence check to the
+    // caller, who can implement a more suitable convergence criterion if needed.
     bool bConverged{false};
     for (params.k = 0; params.k < params.nMaxIters and not bConverged; ++params.k)
     {
@@ -275,7 +289,7 @@ bool TriangleConstrainedTrustRegionSr1(
         TScalar ared                   = fk - fkp1;
         mini::SVector<TScalar, 2> Bksk = Bk * sk;
         TScalar skTBksk                = sk.Transpose() * Bksk;
-        TScalar mkp1                   = gk.Transpose() * sk + half * skTBksk;
+        TScalar mkp1                   = gk.Transpose() * sk + TScalar(0.5) * skTBksk;
         TScalar pred                   = -mkp1;
         TScalar rho                    = ared / (pred + params.delta0);
         // We vectorize trust-region update as well
@@ -300,9 +314,48 @@ bool TriangleConstrainedTrustRegionSr1(
         fk                 = (bStepAccepted)*fkp1 + (not bStepAccepted) * fk;
         gk                 = (bStepAccepted)*gkp1 + (not bStepAccepted) * gk;
         // Check convergence
-        bConverged = CheckTriangleMinimizationConvergence(xk, gk, params.gzero);
+        bConverged = fCheckConvergence(xk, bStepAccepted);
     }
     return bConverged;
+}
+
+/**
+ * @brief Minimize a function \f$ f(x) \f$ subject to \f$ x \in \text{Triangle} \f$ using a
+ * trust-region approach with modified SR1 update.
+ *
+ * This overload uses the default KKT condition check for convergence, suitable for smooth problems.
+ *
+ * @tparam FObjective Callable type with signature `TScalar (TMatrixXk const&)`
+ * @tparam FGradient Callable type with signature `TMatrixXk (TMatrixXk const&)`
+ * @tparam TMatrixXk Matrix type for optimization variable
+ * @tparam TScalar Scalar type
+ * @param f Objective function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&`
+ * and returning the objective function value
+ * @param gradf Gradient function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&`
+ * and returning the `2 x 1` gradient vector
+ * @param xk `2 x 1` initial iterate (in barycentric coordinates)
+ * @param params Optimization parameters (read/write)
+ * @return true if the optimization converged, false otherwise
+ */
+template <
+    class FObjective,
+    class FGradient,
+    math::linalg::mini::CMatrix TMatrixXk,
+    class TScalar = typename TMatrixXk::ScalarType>
+bool TriangleConstrainedTrustRegionSr1(
+    FObjective const& f,
+    FGradient const& gradf,
+    TMatrixXk& xk,
+    TriangleConstrainedTrustRegionSr1Params<TScalar>& params)
+{
+    return TriangleConstrainedTrustRegionSr1(
+        f,
+        gradf,
+        [&](TMatrixXk const& xk, bool bStepAccepted) {
+            return CheckTriangleMinimizationConvergence(xk, params.gk, params.gzero);
+        },
+        xk,
+        params);
 }
 
 } // namespace pbat::math::optimization
