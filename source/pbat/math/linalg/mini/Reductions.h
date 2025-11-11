@@ -115,11 +115,10 @@ PBAT_HOST_DEVICE auto Trace(TMatrix&& A)
     {                                                                                \
         using MatrixType = std::remove_cvref_t<TMatrix>;                             \
         PBAT_MINI_CHECK_CMATRIX(MatrixType);                                         \
-        using IntegerType = std::remove_const_t<decltype(MatrixType::kRows)>;        \
-        using ScalarType  = typename MatrixType::ScalarType;                         \
-        ScalarType acc    = (ScalarInit);                                            \
-        pbat::common::ForRange<0, MatrixType::kCols>([&]<IntegerType j>() {          \
-            pbat::common::ForRange<0, MatrixType::kRows>([&]<IntegerType i>() {      \
+        using ScalarType = typename MatrixType::ScalarType;                          \
+        ScalarType acc   = (ScalarInit);                                             \
+        pbat::common::ForRange<0, MatrixType::kCols>([&]<auto j>() {                 \
+            pbat::common::ForRange<0, MatrixType::kRows>([&]<auto i>() {             \
                 using namespace std;                                                 \
                 ScalarType elem = std::forward<TMatrix>(A)(i, j);                    \
                 Accumulate;                                                          \

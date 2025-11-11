@@ -97,9 +97,9 @@ PBAT_HOST_DEVICE auto SolvePositiveQuadraticInReferenceTriangle(
         // Edge 1: x0 = [0,0], dx = [0,1]
         // Edge 2: x0 = [0,0], dx = [1,0]
         // Edge 3: x0 = [0,1], dx = [1,-1]
-        TScalar gkTxk                  = gk.Transpose() * xk;
+        TScalar gkTxk                  = Dot(gk, xk);
         mini::SVector<TScalar, 2> Bkxk = Bk * xk;
-        TScalar xkTBkxk                = xk.Transpose() * Bkxk;
+        TScalar xkTBkxk                = Dot(xk, Bkxk);
         TScalar a1                     = -gkTxk + half * xkTBkxk;
         TScalar b1                     = gk(1) - Bkxk(1);
         TScalar c1                     = Bk(1, 1);
@@ -107,7 +107,7 @@ PBAT_HOST_DEVICE auto SolvePositiveQuadraticInReferenceTriangle(
         TScalar b2                     = gk(0) - Bkxk(0);
         TScalar c2                     = Bk(0, 0);
         mini::SVector<TScalar, 2> xk0{-xk(0), 1 - xk(1)};
-        TScalar a3 = gk.Transpose() * xk0 + half * xk0.Transpose() * Bk * xk0;
+        TScalar a3 = Dot(gk, xk0) + half * Dot(xk0, Bk * xk0);
         TScalar b3 = (gk(0) - gk(1)) + (Bk(0, 1) - Bk(1, 1)) - (Bkxk(0) - Bkxk(1));
         TScalar c3 = Bk(0, 0) - 2 * Bk(0, 1) + Bk(1, 1);
         // Minimize quadratic a_i + b_i t + 1/2 c_i t^2 assuming c_i > 0
@@ -212,7 +212,7 @@ CheckTriangleMinimizationConvergence(TMatrixXk const& xk, TMatrixGk const& gk, T
             break;
         }
         default: {
-            bConverged = SquaredNorm(gk, gk) < gzero * gzero;
+            bConverged = SquaredNorm(gk) < gzero * gzero;
             break;
         }
     }
@@ -288,8 +288,8 @@ bool TriangleConstrainedTrustRegionSr1(
         TScalar fkp1                   = f(xkp1);
         TScalar ared                   = fk - fkp1;
         mini::SVector<TScalar, 2> Bksk = Bk * sk;
-        TScalar skTBksk                = sk.Transpose() * Bksk;
-        TScalar mkp1                   = gk.Transpose() * sk + TScalar(0.5) * skTBksk;
+        TScalar skTBksk                = Dot(sk, Bksk);
+        TScalar mkp1                   = Dot(gk, sk) + TScalar(0.5) * skTBksk;
         TScalar pred                   = -mkp1;
         TScalar rho                    = ared / (pred + params.delta0);
         // We vectorize trust-region update as well
