@@ -63,7 +63,8 @@ void BindTriangleConstrainedTrustRegionSr1(nanobind::module_& m)
            std::function<Eigen::Vector<ScalarType, 2>(Eigen::Vector<ScalarType, 2> const&)> gradf,
            Eigen::Vector<ScalarType, 2>& xk,
            ParamsType& params,
-           std::optional<std::function<bool(Eigen::Vector<ScalarType, 2> const&, bool)>>
+           std::optional<std::function<
+               bool(Eigen::Vector<ScalarType, 2> const&, ScalarType, ScalarType, bool)>>
                fCheckConvergence) {
             using namespace pbat::math::linalg::mini;
             auto const fwrap = [&](SVector<ScalarType, 2> const& x) {
@@ -72,8 +73,11 @@ void BindTriangleConstrainedTrustRegionSr1(nanobind::module_& m)
             auto const gwrap = [&](SVector<ScalarType, 2> const& x) {
                 return FromEigen(gradf(ToEigen(x)));
             };
-            auto const cwrap = [&](SVector<ScalarType, 2> const& x, bool stepAccepted) {
-                return fCheckConvergence.value()(ToEigen(x), stepAccepted);
+            auto const cwrap = [&](SVector<ScalarType, 2> const& x,
+                                   ScalarType ared,
+                                   ScalarType pred,
+                                   bool stepAccepted) {
+                return fCheckConvergence.value()(ToEigen(x), ared, pred, stepAccepted);
             };
             SVector<ScalarType, 2> xk_wrap = FromEigen(xk);
             bool converged;

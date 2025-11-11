@@ -228,17 +228,17 @@ CheckTriangleMinimizationConvergence(TMatrixXk const& xk, TMatrixGk const& gk, T
  *
  * @tparam FObjective Callable type with signature `TScalar (TMatrixXk const&)`
  * @tparam FGradient Callable type with signature `TMatrixXk (TMatrixXk const&)`
- * @tparam FCheckConvergence Callable type with signature `bool (TMatrixXk const& xk, bool
- * bStepAccepted)`
+ * @tparam FCheckConvergence Callable type with signature `bool (TMatrixXk const& xk, TScalar ared,
+ * TScalar pred, bool bStepAccepted)`
  * @tparam TMatrixXk Matrix type for optimization variable
  * @tparam TScalar Scalar type
  * @param f Objective function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&`
  * and returning the objective function value
  * @param gradf Gradient function taking in a `pbat::math::linalg::mini::SVector<TScalar, 2> const&`
  * and returning the `2 x 1` gradient vector
- * @param fCheckConvergence Convergence check function taking in the current iteration number,
- * current iterate, current function value, current gradient, and gradient norm convergence, and
- * returning true if converged
+ * @param fCheckConvergence Convergence check function taking in the current iterate `xk`,
+ * actual reduction `ared`, predicted reduction `pred`, and whether the step was accepted,
+ * returning true if converged.
  * @param xk `2 x 1` initial iterate (in barycentric coordinates)
  * @param params Optimization parameters (read/write)
  * @return true if the optimization converged, false otherwise
@@ -314,7 +314,7 @@ bool TriangleConstrainedTrustRegionSr1(
         fk                 = (bStepAccepted)*fkp1 + (not bStepAccepted) * fk;
         gk                 = (bStepAccepted)*gkp1 + (not bStepAccepted) * gk;
         // Check convergence
-        bConverged = fCheckConvergence(xk, bStepAccepted);
+        bConverged = fCheckConvergence(xk, ared, pred, bStepAccepted);
     }
     return bConverged;
 }
@@ -351,7 +351,10 @@ bool TriangleConstrainedTrustRegionSr1(
     return TriangleConstrainedTrustRegionSr1(
         f,
         gradf,
-        [&](TMatrixXk const& xk, bool bStepAccepted) {
+        [&](TMatrixXk const& xk,
+            [[maybe_unused]] TScalar ared,
+            [[maybe_unused]] TScalar pred,
+            bool bStepAccepted) {
             return CheckTriangleMinimizationConvergence(xk, params.gk, params.gzero);
         },
         xk,
