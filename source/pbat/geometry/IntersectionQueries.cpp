@@ -3,6 +3,7 @@
 #include "pbat/Aliases.h"
 
 #include <doctest/doctest.h>
+#include <limits>
 
 TEST_CASE("[geometry] Line segment and sphere Intersection")
 {
@@ -29,7 +30,7 @@ TEST_CASE("[geometry] Line segment and sphere Intersection")
         std::optional<SVector<ScalarType, 3>> const intersection =
             pbat::geometry::IntersectionQueries::LineSegmentSphere(P, Q, C, r);
         CHECK(intersection.has_value());
-        auto constexpr eps = ScalarType(1e-15);
+        auto constexpr eps = std::numeric_limits<ScalarType>::epsilon();
         bool bAreEqual     = All(Abs(intersection.value() - expected_intersection) < eps);
         CHECK(bAreEqual);
     }
@@ -52,7 +53,7 @@ TEST_CASE("[geometry] Lines intersecting triangles are detected")
             SVector<ScalarType, 3> const& uvw         = uvwIntersection.value();
             SVector<ScalarType, 3> const intersection = uvw(0) * A + uvw(1) * B + uvw(2) * C;
             SVector<ScalarType, 3> const expected_intersection{0.25, 0.25, 0.};
-            ScalarType constexpr eps = ScalarType(1e-15);
+            ScalarType constexpr eps = std::numeric_limits<ScalarType>::epsilon();
             CHECK(All(Abs(intersection - expected_intersection) < eps));
         };
         auto const uvwIntersection1 =
@@ -75,7 +76,7 @@ TEST_CASE("[geometry] Lines intersecting triangles are detected")
             SVector<ScalarType, 3> const& uvw         = uvwIntersection.value();
             SVector<ScalarType, 3> const intersection = uvw(0) * A + uvw(1) * B + uvw(2) * C;
             SVector<ScalarType, 3> const expected_intersection{0.25, 0.25, 0.};
-            ScalarType constexpr eps = ScalarType(1e-15);
+            ScalarType constexpr eps = std::numeric_limits<ScalarType>::epsilon();
             CHECK(All(Abs(intersection - expected_intersection) < eps));
         };
         SVector<ScalarType, 3> const t{0., 0., 1.01};
@@ -136,7 +137,7 @@ TEST_CASE("[geometry] Line segments intersecting triangles are detected")
             SVector<ScalarType, 3> const& uvw         = uvwIntersection->Slice<3, 1>(1, 0);
             SVector<ScalarType, 3> const intersection = uvw(0) * A + uvw(1) * B + uvw(2) * C;
             SVector<ScalarType, 3> const expected_intersection{0.25, 0.25, 0.};
-            ScalarType constexpr eps = ScalarType(1e-15);
+            ScalarType constexpr eps = std::numeric_limits<ScalarType>::epsilon();
             CHECK(All(Abs(intersection - expected_intersection) < eps));
         };
         auto const uvwIntersection1 =

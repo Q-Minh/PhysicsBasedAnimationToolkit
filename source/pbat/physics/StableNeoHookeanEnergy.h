@@ -55,7 +55,7 @@ struct StableNeoHookeanEnergy<1>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
-    eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -69,7 +69,7 @@ struct StableNeoHookeanEnergy<1>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 1>
-    grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -83,7 +83,7 @@ struct StableNeoHookeanEnergy<1>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 1, 1>
-    hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -99,7 +99,7 @@ struct StableNeoHookeanEnergy<1>
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -120,7 +120,7 @@ struct StableNeoHookeanEnergy<1>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -141,7 +141,7 @@ struct StableNeoHookeanEnergy<1>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE void gradAndHessian(
+    PBAT_HOST_DEVICE void GradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -150,7 +150,7 @@ struct StableNeoHookeanEnergy<1>
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::eval(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::Eval(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -173,7 +173,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::eval(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<1>::SVector<typename TMatrix::ScalarType, 1>
-StableNeoHookeanEnergy<1>::grad(
+StableNeoHookeanEnergy<1>::Grad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -195,7 +195,7 @@ StableNeoHookeanEnergy<1>::grad(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<1>::SMatrix<typename TMatrix::ScalarType, 1, 1>
-StableNeoHookeanEnergy<1>::hessian(
+StableNeoHookeanEnergy<1>::Hessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -209,7 +209,7 @@ StableNeoHookeanEnergy<1>::hessian(
 template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::evalWithGrad(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::EvalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -231,7 +231,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::evalWithGradAndHessian(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<1>::EvalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -258,7 +258,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE void StableNeoHookeanEnergy<1>::gradAndHessian(
+PBAT_HOST_DEVICE void StableNeoHookeanEnergy<1>::GradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -303,7 +303,7 @@ struct StableNeoHookeanEnergy<2>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
-    eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -317,7 +317,7 @@ struct StableNeoHookeanEnergy<2>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 4>
-    grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -331,7 +331,7 @@ struct StableNeoHookeanEnergy<2>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 4, 4>
-    hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -347,7 +347,7 @@ struct StableNeoHookeanEnergy<2>
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -368,7 +368,7 @@ struct StableNeoHookeanEnergy<2>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -389,7 +389,7 @@ struct StableNeoHookeanEnergy<2>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE void gradAndHessian(
+    PBAT_HOST_DEVICE void GradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -398,7 +398,7 @@ struct StableNeoHookeanEnergy<2>
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::eval(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::Eval(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -424,7 +424,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::eval(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<2>::SVector<typename TMatrix::ScalarType, 4>
-StableNeoHookeanEnergy<2>::grad(
+StableNeoHookeanEnergy<2>::Grad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -450,7 +450,7 @@ StableNeoHookeanEnergy<2>::grad(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<2>::SMatrix<typename TMatrix::ScalarType, 4, 4>
-StableNeoHookeanEnergy<2>::hessian(
+StableNeoHookeanEnergy<2>::Hessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -488,7 +488,7 @@ StableNeoHookeanEnergy<2>::hessian(
 template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::evalWithGrad(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::EvalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -515,7 +515,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::evalWithGradAndHessian(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::EvalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -572,7 +572,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE void StableNeoHookeanEnergy<2>::gradAndHessian(
+PBAT_HOST_DEVICE void StableNeoHookeanEnergy<2>::GradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -645,7 +645,7 @@ struct StableNeoHookeanEnergy<3>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
-    eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -659,7 +659,7 @@ struct StableNeoHookeanEnergy<3>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 9>
-    grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -673,7 +673,7 @@ struct StableNeoHookeanEnergy<3>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 9, 9>
-    hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -689,7 +689,7 @@ struct StableNeoHookeanEnergy<3>
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -710,7 +710,7 @@ struct StableNeoHookeanEnergy<3>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -731,7 +731,7 @@ struct StableNeoHookeanEnergy<3>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE void gradAndHessian(
+    PBAT_HOST_DEVICE void GradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -740,7 +740,7 @@ struct StableNeoHookeanEnergy<3>
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::eval(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::Eval(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -770,7 +770,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::eval(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<3>::SVector<typename TMatrix::ScalarType, 9>
-StableNeoHookeanEnergy<3>::grad(
+StableNeoHookeanEnergy<3>::Grad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -810,7 +810,7 @@ StableNeoHookeanEnergy<3>::grad(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE StableNeoHookeanEnergy<3>::SMatrix<typename TMatrix::ScalarType, 9, 9>
-StableNeoHookeanEnergy<3>::hessian(
+StableNeoHookeanEnergy<3>::Hessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -957,7 +957,7 @@ StableNeoHookeanEnergy<3>::hessian(
 template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::evalWithGrad(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::EvalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -999,7 +999,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::evalWithGradAndHessian(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::EvalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -1170,7 +1170,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE void StableNeoHookeanEnergy<3>::gradAndHessian(
+PBAT_HOST_DEVICE void StableNeoHookeanEnergy<3>::GradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,

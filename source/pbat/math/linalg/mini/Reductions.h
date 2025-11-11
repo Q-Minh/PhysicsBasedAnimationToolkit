@@ -5,7 +5,9 @@
 #include "Concepts.h"
 #include "Product.h"
 #include "pbat/HostDevice.h"
+#include "pbat/common/ConstexprFor.h"
 
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -103,6 +105,39 @@ PBAT_HOST_DEVICE auto Trace(TMatrix&& A)
     };
     return sum(std::make_integer_sequence<IntegerType, MatrixType::kRows>{});
 }
+
+/**
+ * @brief Generic element-wise reduction macro over all entries of a CMatrix-like type.
+ */
+#define PBAT_MINI_DEFINE_ELEMENTWISE_REDUCTION(FunctionName, ScalarInit, Accumulate) \
+    template <class /*CMatrix*/ TMatrix>                                             \
+    PBAT_HOST_DEVICE auto FunctionName(TMatrix&& A)                                  \
+    {                                                                                \
+        using MatrixType = std::remove_cvref_t<TMatrix>;                             \
+        PBAT_MINI_CHECK_CMATRIX(MatrixType);                                         \
+        using ScalarType = typename MatrixType::ScalarType;                          \
+        ScalarType acc   = (ScalarInit);                                             \
+        pbat::common::ForRange<0, MatrixType::kCols>([&]<auto j>() {                 \
+            pbat::common::ForRange<0, MatrixType::kRows>([&]<auto i>() {             \
+                using namespace std;                                                 \
+                ScalarType elem = std::forward<TMatrix>(A)(i, j);                    \
+                Accumulate;                                                          \
+            });                                                                      \
+        });                                                                          \
+        return acc;                                                                  \
+    }
+
+PBAT_MINI_DEFINE_ELEMENTWISE_REDUCTION(SumReduce, ScalarType(0), acc += elem)
+PBAT_MINI_DEFINE_ELEMENTWISE_REDUCTION(SubtractReduce, ScalarType(0), acc -= elem)
+PBAT_MINI_DEFINE_ELEMENTWISE_REDUCTION(ProductReduce, ScalarType(1), acc *= elem)
+PBAT_MINI_DEFINE_ELEMENTWISE_REDUCTION(
+    MinReduce,
+    std::numeric_limits<ScalarType>::max(),
+    acc = min(elem, acc))
+PBAT_MINI_DEFINE_ELEMENTWISE_REDUCTION(
+    MaxReduce,
+    std::numeric_limits<ScalarType>::lowest(),
+    acc = max(elem, acc))
 
 template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
 PBAT_HOST_DEVICE auto Dot(TLhsMatrix&& A, TRhsMatrix&& B)

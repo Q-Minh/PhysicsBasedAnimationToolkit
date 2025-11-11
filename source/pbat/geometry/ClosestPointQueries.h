@@ -41,6 +41,21 @@ PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrix
     -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>;
 
 /**
+ * @brief Obtain the barycentric uv point on the line segment `PQ` closest to the point `X`, s.t.
+ * `Xclosest = uP+vQ`
+ * @tparam TMatrixX Query point matrix type
+ * @tparam TMatrixP Start point of the line segment matrix type
+ * @tparam TMatrixQ End point of the line segment matrix type
+ * @param X Query point
+ * @param P Start point of the line segment
+ * @param Q End point of the line segment
+ * @return `uv` point on the line segment closest to X in barycentric coordinates
+ */
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
+PBAT_HOST_DEVICE auto UvPointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, 2>;
+
+/**
  * @brief Obtain the point on the line segment PQ closest to the point X.
  * @tparam TMatrixX Query point matrix type
  * @tparam TMatrixP Start point of the line segment matrix type
@@ -238,6 +253,38 @@ PBAT_HOST_DEVICE auto Lines(
     TMatrixQ2 const& Q2,
     TScalar eps = std::numeric_limits<TScalar>::min()) -> mini::SVector<TScalar, 2>;
 
+/**
+ * @brief Obtain the closest points on two line segments defined by points P1, Q1 and P2, Q2.
+ *
+ * @cite ericson2004real section 5.1.9
+ *
+ * @tparam TMatrixP1 Type of the input matrix P1
+ * @tparam TMatrixQ1 Type of the input matrix Q1
+ * @tparam TMatrixP2 Type of the input matrix P2
+ * @tparam TMatrixQ2 Type of the input matrix Q2
+ * @tparam TScalar Type of the scalar
+ * @param P1 Point 1 on line 1
+ * @param Q1 Point 2 on line 1
+ * @param P2 Point 1 on line 2
+ * @param Q2 Point 2 on line 2
+ * @param eps Numerical error tolerance for zero checks
+ * @return (t1,t2) barycentric coordinates of the closest points on the two line segments w.t. `XC1
+ * = P1 + t1*(Q1-P1)` and `XC2 = P2 + t2*(Q2-P2)`
+ * @pre `eps >= 0`
+ */
+template <
+    mini::CMatrix TMatrixP1,
+    mini::CMatrix TMatrixQ1,
+    mini::CMatrix TMatrixP2,
+    mini::CMatrix TMatrixQ2,
+    class TScalar = typename TMatrixP1::ScalarType>
+PBAT_HOST_DEVICE auto LineSegments(
+    TMatrixP1 const& P1,
+    TMatrixQ1 const& Q1,
+    TMatrixP2 const& P2,
+    TMatrixQ2 const& Q2,
+    TScalar eps = std::numeric_limits<TScalar>::min()) -> mini::SVector<TScalar, 2>;
+
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
 PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
     -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
@@ -257,8 +304,8 @@ PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrix
 }
 
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
-PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
-    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
+PBAT_HOST_DEVICE auto UvPointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, 2>
 {
     using ScalarType = typename TMatrixX::ScalarType;
     using namespace std;
@@ -270,8 +317,16 @@ PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, T
     ScalarType t = Dot(X - P, PQ) / SquaredNorm(PQ);
     // If outside segment, clamp t (and therefore d) to the closest endpoint
     t = min(max(t, ScalarType(0)), ScalarType(1));
-    // Compute projected position from the clamped t
-    auto const Xpq = P + t * PQ;
+    return mini::SVector<ScalarType, 2>{ScalarType(1) - t, t};
+}
+
+template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ>
+PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
+    -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
+{
+    using ScalarType                      = typename TMatrixX::ScalarType;
+    mini::SVector<ScalarType, 2> const uv = UvPointOnLineSegment(X, P, Q);
+    auto const Xpq                        = uv(0) * P + uv(1) * Q;
     return Xpq;
 }
 
@@ -482,6 +537,83 @@ PBAT_HOST_DEVICE auto Lines(
         }
     }
     return mini::SVector<TScalar, 2>{alpha, beta};
+}
+
+template <
+    mini::CMatrix TMatrixP1,
+    mini::CMatrix TMatrixQ1,
+    mini::CMatrix TMatrixP2,
+    mini::CMatrix TMatrixQ2,
+    class TScalar>
+PBAT_HOST_DEVICE auto LineSegments(
+    TMatrixP1 const& P1,
+    TMatrixQ1 const& Q1,
+    TMatrixP2 const& P2,
+    TMatrixQ2 const& Q2,
+    TScalar eps) -> mini::SVector<TScalar, 2>
+{
+    auto constexpr kDims                   = TMatrixP1::kRows;
+    mini::SVector<TScalar, kDims> const d1 = Q1 - P1; // Direction vector of segment S1
+    mini::SVector<TScalar, kDims> const d2 = Q2 - P2; // Direction vector of segment S2
+    mini::SVector<TScalar, kDims> const r  = P1 - P2;
+    TScalar a = Dot(d1, d1); // Squared length of segment S1, always nonnegative
+    TScalar e = Dot(d2, d2); // Squared length of segment S2, always nonnegative
+    TScalar f = Dot(d2, r);  // Check if either or both segments degenerate into points
+    if (a <= eps and e <= eps)
+    {
+        // Both segments degenerate into points
+        return mini::Zeros<TScalar, 2>();
+    }
+    if (a <= eps)
+    {
+        // First segment degenerates into a point
+        return mini::SVector<TScalar, 2>{
+            TScalar(0),
+            f / e}; // s = 0 => t = (b*s + f) / e = f / et = Clamp(t, 0.0f, 1.0f);
+    }
+    else
+    {
+        TScalar c = Dot(d1, r);
+        if (e <= eps)
+        {
+            // Second segment degenerates into a point
+            // t = 0 => s = (b*t - c) / a = -c / a
+            return mini::SVector<TScalar, 2>{
+                std::clamp(-c / a, TScalar(0), TScalar(1)),
+                TScalar(0)};
+        }
+        else
+        {
+            // The general nondegenerate case starts here
+            TScalar b     = Dot(d1, d2);
+            TScalar denom = a * e - b * b; // Always nonnegative
+            // If segments not parallel, compute closest point on L1 to L2 and
+            // clamp to segment S1. Else pick arbitrary s (here 0)
+            mini::SVector<TScalar, 2> st;
+            if (denom != TScalar(0))
+                st(0) = std::clamp((b * f - c * e) / denom, TScalar(0), TScalar(1));
+            else
+                st(0) = TScalar(0);
+            // Compute point on L2 closest to S1(s) using
+            // t = Dot((P1 + D1*s) - P2,D2) / Dot(D2,D2) = (b*s + f) / e
+            st(1) = (b * st(0) + f) / e;
+
+            // If t in
+            // [0,1] done. Else clamp t, recompute s for the new value of t using s = Dot((P2 +
+            // D2*t) - P1,D1) / Dot(D1,D1)= (t*b - c) / a and clamp s to [0, 1]
+            if (st(1) < TScalar(0))
+            {
+                st(1) = TScalar(0);
+                st(0) = std::clamp(-c / a, TScalar(0), TScalar(1));
+            }
+            else if (st(1) > TScalar(1))
+            {
+                st(1) = TScalar(1);
+                st(0) = std::clamp((b - c) / a, TScalar(0), TScalar(1));
+            }
+            return st;
+        }
+    }
 }
 
 } // namespace ClosestPointQueries

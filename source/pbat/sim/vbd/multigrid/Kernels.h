@@ -41,7 +41,7 @@ PBAT_HOST_DEVICE void AccumulateElasticEnergy(
     SMatrix<ScalarType, 3, 3> F = xe * GNe;
     SVector<Scalar, 9> gF       = Zeros<Scalar, 9>();
     SMatrix<Scalar, 9, 9> HF    = Zeros<Scalar, 9, 9>();
-    Psi.gradAndHessian(F, mug, lambdag, gF, HF);
+    Psi.GradAndHessian(F, mug, lambdag, gF, HF);
     using Element             = typename VolumeMesh::ElementType;
     SMatrix<Scalar, 3, 3> dHu = Zeros<Scalar, 3, 3>();
     SVector<Scalar, 3> dgu    = Zeros<Scalar, 3>();

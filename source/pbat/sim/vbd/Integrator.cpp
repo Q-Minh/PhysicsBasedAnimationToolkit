@@ -108,7 +108,7 @@ PBAT_API void Integrator::SolveVertex(Index i, Scalar sdt, Scalar sdt2)
         physics::StableNeoHookeanEnergy<3> Psi{};
         mini::SVector<Scalar, 9> gF;
         mini::SMatrix<Scalar, 9, 9> HF;
-        Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
+        Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
         kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
         kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
     }
@@ -147,7 +147,7 @@ Scalar Integrator::ObjectiveFunction(
         mini::SMatrix<Scalar, 3, 4> xe =
             FromEigen(xk(Eigen::placeholders::all, ti).block<3, 4>(0, 0));
         mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
-        Ep += wg * Psi.eval(Fe, lamee(0), lamee(1));
+        Ep += wg * Psi.Eval(Fe, lamee(0), lamee(1));
     }
     // Total energy
     return Ek + dt * dt * Ep;
@@ -178,7 +178,7 @@ VectorX Integrator::ObjectiveFunctionGradient(
         mini::SMatrix<Scalar, 3, 4> xe =
             FromEigen(xk(Eigen::placeholders::all, ti).block<3, 4>(0, 0));
         mini::SMatrix<Scalar, 3, 3> Fe = xe * GPe;
-        mini::SVector<Scalar, 9> gF    = Psi.grad(Fe, lamee(0), lamee(1));
+        mini::SVector<Scalar, 9> gF    = Psi.Grad(Fe, lamee(0), lamee(1));
         using Element                  = fem::Tetrahedron<1>;
         auto ge                        = fem::GradientWrtDofs<Element, 3>(gF, GPe);
         gEp(Eigen::placeholders::all, ti) += wg * ToEigen(ge).reshaped(3, 4);

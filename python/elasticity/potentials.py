@@ -145,7 +145,7 @@ struct {energy_name}<{d}>
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
         typename TMatrix::ScalarType
-        eval(
+        Eval(
             TMatrix const& F,
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda) const;
@@ -162,7 +162,7 @@ struct {energy_name}<{d}>
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
         SVector<typename TMatrix::ScalarType, {vecF.shape[0]}>
-        grad(
+        Grad(
             TMatrix const& F,
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda) const;
@@ -179,7 +179,7 @@ struct {energy_name}<{d}>
         template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
         PBAT_HOST_DEVICE
         SMatrix<typename TMatrix::ScalarType, {vecF.shape[0]},{vecF.shape[0]}>
-        hessian(
+        Hessian(
             TMatrix const& F,
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda) const;
@@ -200,7 +200,7 @@ struct {energy_name}<{d}>
             >
         PBAT_HOST_DEVICE
         typename TMatrix::ScalarType
-        evalWithGrad(
+        EvalWithGrad(
             TMatrix const& F,
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda,
@@ -224,7 +224,7 @@ struct {energy_name}<{d}>
             >
         PBAT_HOST_DEVICE
         typename TMatrix::ScalarType
-        evalWithGradAndHessian(
+        EvalWithGradAndHessian(
             TMatrix const& F,
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda,
@@ -248,7 +248,7 @@ struct {energy_name}<{d}>
             >
         PBAT_HOST_DEVICE
         void
-        gradAndHessian(
+        GradAndHessian(
             TMatrix const& F,
             typename TMatrix::ScalarType mu,
             typename TMatrix::ScalarType lambda,
@@ -259,7 +259,7 @@ struct {energy_name}<{d}>
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE
 typename TMatrix::ScalarType
-{energy_name}<{d}>::eval(
+{energy_name}<{d}>::Eval(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -273,7 +273,7 @@ typename TMatrix::ScalarType
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE
 {energy_name}<{d}>::SVector<typename TMatrix::ScalarType, {vecF.shape[0]}>
-{energy_name}<{d}>::grad(
+{energy_name}<{d}>::Grad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -287,7 +287,7 @@ PBAT_HOST_DEVICE
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE
 {energy_name}<{d}>::SMatrix<typename TMatrix::ScalarType, {vecF.shape[0]},{vecF.shape[0]}>
-{energy_name}<{d}>::hessian(
+{energy_name}<{d}>::Hessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -304,7 +304,7 @@ template <
     >
 PBAT_HOST_DEVICE
 typename TMatrix::ScalarType
-{energy_name}<{d}>::evalWithGrad(
+{energy_name}<{d}>::EvalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -326,7 +326,7 @@ template <
     >
 PBAT_HOST_DEVICE
 typename TMatrix::ScalarType
-{energy_name}<{d}>::evalWithGradAndHessian(
+{energy_name}<{d}>::EvalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -352,7 +352,7 @@ template <
     >
 PBAT_HOST_DEVICE
 void
-{energy_name}<{d}>::gradAndHessian(
+{energy_name}<{d}>::GradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,

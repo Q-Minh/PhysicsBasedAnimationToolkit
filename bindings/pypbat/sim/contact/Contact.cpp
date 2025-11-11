@@ -1,16 +1,16 @@
 #include "Contact.h"
 
-#include "MeshVertexTetrahedronDcd.h"
+#include "MultiMesh.h"
 #include "MultibodyMeshMixedCcdDcd.h"
-#include "MultibodyTetrahedralMeshSystem.h"
+#include "OffsetGeometryContact.h"
 
 namespace pbat::py::sim::contact {
 
 void Bind(nanobind::module_& m)
 {
-    BindMultibodyTetrahedralMeshSystem(m);
-    BindMeshVertexTetrahedronDcd(m);
     BindMultibodyMeshMixedCcdDcd(m);
+    BindOffsetGeometryContact(m);
+    BindMultiMesh(m);
 }
 
 } // namespace pbat::py::sim::contact

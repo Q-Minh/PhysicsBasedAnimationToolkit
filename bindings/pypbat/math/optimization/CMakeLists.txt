@@ -5,6 +5,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Optimization.h"
     "LineSearch.h"
     "Newton.h"
+    "TriangleConstrainedTrustRegionSr1.h"
 )
 
 target_sources(PhysicsBasedAnimationToolkit_Python
@@ -12,4 +13,5 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "Optimization.cpp"
     "LineSearch.cpp"
     "Newton.cpp"
+    "TriangleConstrainedTrustRegionSr1.cpp"
 )

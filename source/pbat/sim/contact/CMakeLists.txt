@@ -5,15 +5,23 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Constraints.h"
     "Contact.h"
     "Environment.h"
+    "Friction.h"
+    "MeshDynamics.h"
+    "MeshSdfContact.h"
     "MultibodyMeshMixedCcdDcd.h"
-    "MultibodyTetrahedralMeshSystem.h"
-    "MeshVertexTetrahedronDcd.h"
+    "MultiMesh.h"
+    "OffsetGeometryContact.h"
+    "Potentials.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Constraints.cpp"
     "Environment.cpp"
+    "Friction.cpp"
+    "MeshDynamics.cpp"
+    "MeshSdfContact.cpp"
     "MultibodyMeshMixedCcdDcd.cpp"
-    "MeshVertexTetrahedronDcd.cpp"
-    "MultibodyTetrahedralMeshSystem.cpp"
+    "MultiMesh.cpp"
+    "OffsetGeometryContact.cpp"
+    "Potentials.cpp"
 )

@@ -8,14 +8,15 @@
  *
  */
 
-#ifndef PBAT_GEOMETRY_MESH_BOUNDARY_H
-#define PBAT_GEOMETRY_MESH_BOUNDARY_H
+#ifndef PBAT_GEOMETRY_MESHBOUNDARY_H
+#define PBAT_GEOMETRY_MESHBOUNDARY_H
 
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
 #include "pbat/common/Hash.h"
 #include "pbat/profiling/Profiling.h"
 
+#include <Eigen/Core>
 #include <algorithm>
 #include <exception>
 #include <fmt/format.h>
@@ -36,13 +37,10 @@ namespace geometry {
  * @param n The number of vertices in the mesh. If -1, the number of vertices is computed from C.
  * @return A tuple containing the boundary vertices and the boundary facets
  */
-template <common::CIndex TIndex = Index>
-auto SimplexMeshBoundary(
-    Eigen::Ref<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic> const> const& C,
-    TIndex n)
-    -> std::tuple<
-        Eigen::Vector<TIndex, Eigen::Dynamic>,
-        Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>
+template <common::CIndex TIndex, class TDerivedC>
+auto SimplexMeshBoundary(Eigen::DenseBase<TDerivedC> const& C, TIndex n) -> std::tuple<
+    Eigen::Vector<TIndex, Eigen::Dynamic>,
+    Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.geometry.SimplexMeshBoundary");
     if (n < 0)
@@ -135,4 +133,4 @@ auto SimplexMeshBoundary(
 } // namespace geometry
 } // namespace pbat
 
-#endif // PBAT_GEOMETRY_MESH_BOUNDARY_H
+#endif // PBAT_GEOMETRY_MESHBOUNDARY_H

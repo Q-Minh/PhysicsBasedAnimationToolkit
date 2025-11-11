@@ -3,6 +3,8 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILE_SET api
     FILES
     "AxisAlignedBoundingBox.h"
+    "Device.h"
+    "HalfEdges.h"
     "HashGrid.h"
     "HierarchicalHashGrid.h"
     "Geometry.h"
@@ -14,6 +16,8 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "AxisAlignedBoundingBox.cpp"
+    "Device.cpp"
+    "HalfEdges.cpp"
     "HashGrid.cpp"
     "HierarchicalHashGrid.cpp"
     "Geometry.cpp"

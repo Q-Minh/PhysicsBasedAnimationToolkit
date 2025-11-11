@@ -717,7 +717,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
             break;
         }
         case EFemElastoDynamicsTimeStepInitialization::TrajectoryWithFdLoad: {
-            auto x0                  = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * atfd;
+            auto x0 = -(xtildeBdf + betaTilde * vtildeBdf) + betaTilde2 * atfd.reshaped();
             x.reshaped()(FreeDofs()) = x0(FreeDofs());
             break;
         }

@@ -54,7 +54,7 @@ void Smoother::Apply(Index iters, Scalar dt, Data& data) const
                     physics::StableNeoHookeanEnergy<3> Psi{};
                     mini::SVector<Scalar, 9> gF;
                     mini::SMatrix<Scalar, 9, 9> HF;
-                    Psi.gradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
+                    Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
                     AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
                     AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
                 }

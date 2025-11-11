@@ -1017,7 +1017,7 @@ void ToElementElasticity(
             auto const GPeg  = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * GPeg;
             auto vecF                                     = FromEigen(F);
-            auto psiF                                     = Psi.eval(vecF, mug(g), lambdag(g));
+            auto psiF                                     = Psi.Eval(vecF, mug(g), lambdag(g));
             Ug(g) += wg(g) * psiF;
         });
     }
@@ -1033,7 +1033,7 @@ void ToElementElasticity(
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * GPeg;
             auto vecF                                     = FromEigen(F);
             mini::SVector<ScalarType, Dims * Dims> gradPsiF;
-            auto const psiF  = Psi.evalWithGrad(vecF, mug(g), lambdag(g), gradPsiF);
+            auto const psiF  = Psi.EvalWithGrad(vecF, mug(g), lambdag(g), gradPsiF);
             auto const GP    = FromEigen(GPeg);
             auto const GPsix = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
             Ug(g) += wg(g) * psiF;
@@ -1051,8 +1051,8 @@ void ToElementElasticity(
             auto const gradPhi = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * gradPhi;
             auto vecF                                     = FromEigen(F);
-            auto psiF                                     = Psi.eval(vecF, mug(g), lambdag(g));
-            auto const hessPsiF                           = Psi.hessian(vecF, mug(g), lambdag(g));
+            auto psiF                                     = Psi.Eval(vecF, mug(g), lambdag(g));
+            auto const hessPsiF                           = Psi.Hessian(vecF, mug(g), lambdag(g));
             Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
             math::linalg::FilterEigenvalues(
                 ToEigen(hessPsiF),
@@ -1080,7 +1080,7 @@ void ToElementElasticity(
             auto vecF                                     = FromEigen(F);
             mini::SVector<ScalarType, Dims * Dims> gradPsiF;
             mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
-            auto psiF = Psi.evalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
+            auto psiF = Psi.EvalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
             Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
             math::linalg::FilterEigenvalues(
                 ToEigen(hessPsiF),
@@ -1104,7 +1104,7 @@ void ToElementElasticity(
             auto const GPeg  = GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * GPeg;
             auto vecF                                     = FromEigen(F);
-            auto const gradPsiF                           = Psi.grad(vecF, mug(g), lambdag(g));
+            auto const gradPsiF                           = Psi.Grad(vecF, mug(g), lambdag(g));
             auto const GP                                 = FromEigen(GPeg);
             auto const GPsix = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
             Gg.col(g) += wg(g) * ToEigen(GPsix);
@@ -1123,7 +1123,7 @@ void ToElementElasticity(
             auto vecF                                     = FromEigen(F);
             mini::SVector<ScalarType, Dims * Dims> gradPsiF;
             mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
-            Psi.evalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
+            Psi.EvalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
             Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
             math::linalg::FilterEigenvalues(
                 ToEigen(hessPsiF),
@@ -1148,7 +1148,7 @@ void ToElementElasticity(
                 GNeg.template block<kNodesPerElement, Dims>(0, g * Dims);
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * GPeg;
             auto vecF                                     = FromEigen(F);
-            auto hessPsiF                                 = Psi.hessian(vecF, mug(g), lambdag(g));
+            auto hessPsiF                                 = Psi.Hessian(vecF, mug(g), lambdag(g));
             Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
             math::linalg::FilterEigenvalues(
                 ToEigen(hessPsiF),

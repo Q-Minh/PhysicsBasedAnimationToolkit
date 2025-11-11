@@ -11,6 +11,11 @@
 #include <utility>
 #include <vector>
 
+// clang-format off
+#include "xmmintrin.h"
+#include "pmmintrin.h"
+// clang-format on
+
 namespace pbat {
 namespace geometry {
 
@@ -60,6 +65,10 @@ std::string DeviceConfig::ToString() const
 
 Device::Device(DeviceConfig const& cfg)
 {
+    // NOTE: These should be called before the creation of the tbb::task_scheduler_init object.
+    // Hopefully, if it's called after, we only have a slight performance hit.
+    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
     std::string const config = cfg.ToString();
     RTCDevice dev            = rtcNewDevice(config.c_str());
     if (!dev)

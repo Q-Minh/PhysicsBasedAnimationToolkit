@@ -55,7 +55,7 @@ struct SaintVenantKirchhoffEnergy<1>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
-    eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -69,7 +69,7 @@ struct SaintVenantKirchhoffEnergy<1>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 1>
-    grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -83,7 +83,7 @@ struct SaintVenantKirchhoffEnergy<1>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 1, 1>
-    hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -99,7 +99,7 @@ struct SaintVenantKirchhoffEnergy<1>
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -120,7 +120,7 @@ struct SaintVenantKirchhoffEnergy<1>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -141,7 +141,7 @@ struct SaintVenantKirchhoffEnergy<1>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE void gradAndHessian(
+    PBAT_HOST_DEVICE void GradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -150,7 +150,7 @@ struct SaintVenantKirchhoffEnergy<1>
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::eval(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::Eval(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -175,7 +175,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::eva
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<1>::SVector<typename TMatrix::ScalarType, 1>
-SaintVenantKirchhoffEnergy<1>::grad(
+SaintVenantKirchhoffEnergy<1>::Grad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -198,7 +198,7 @@ SaintVenantKirchhoffEnergy<1>::grad(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<1>::SMatrix<typename TMatrix::ScalarType, 1, 1>
-SaintVenantKirchhoffEnergy<1>::hessian(
+SaintVenantKirchhoffEnergy<1>::Hessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -215,7 +215,7 @@ SaintVenantKirchhoffEnergy<1>::hessian(
 template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::evalWithGrad(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::EvalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -238,7 +238,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::evalWithGradAndHessian(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<1>::EvalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -269,7 +269,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<1>::gradAndHessian(
+PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<1>::GradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -320,7 +320,7 @@ struct SaintVenantKirchhoffEnergy<2>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
-    eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -334,7 +334,7 @@ struct SaintVenantKirchhoffEnergy<2>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 4>
-    grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -348,7 +348,7 @@ struct SaintVenantKirchhoffEnergy<2>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 4, 4>
-    hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -364,7 +364,7 @@ struct SaintVenantKirchhoffEnergy<2>
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -385,7 +385,7 @@ struct SaintVenantKirchhoffEnergy<2>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -406,7 +406,7 @@ struct SaintVenantKirchhoffEnergy<2>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE void gradAndHessian(
+    PBAT_HOST_DEVICE void GradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -415,7 +415,7 @@ struct SaintVenantKirchhoffEnergy<2>
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::eval(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::Eval(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -442,7 +442,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::eva
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<2>::SVector<typename TMatrix::ScalarType, 4>
-SaintVenantKirchhoffEnergy<2>::grad(
+SaintVenantKirchhoffEnergy<2>::Grad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -473,7 +473,7 @@ SaintVenantKirchhoffEnergy<2>::grad(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<2>::SMatrix<typename TMatrix::ScalarType, 4, 4>
-SaintVenantKirchhoffEnergy<2>::hessian(
+SaintVenantKirchhoffEnergy<2>::Hessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -522,7 +522,7 @@ SaintVenantKirchhoffEnergy<2>::hessian(
 template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::evalWithGrad(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::EvalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -556,7 +556,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::evalWithGradAndHessian(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<2>::EvalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -628,7 +628,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<2>::gradAndHessian(
+PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<2>::GradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -716,7 +716,7 @@ struct SaintVenantKirchhoffEnergy<3>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE typename TMatrix::ScalarType
-    eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Eval(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -730,7 +730,7 @@ struct SaintVenantKirchhoffEnergy<3>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SVector<typename TMatrix::ScalarType, 9>
-    grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Grad(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -744,7 +744,7 @@ struct SaintVenantKirchhoffEnergy<3>
      */
     template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
     PBAT_HOST_DEVICE SMatrix<typename TMatrix::ScalarType, 9, 9>
-    hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
+    Hessian(TMatrix const& F, typename TMatrix::ScalarType mu, typename TMatrix::ScalarType lambda)
         const;
 
     /**
@@ -760,7 +760,7 @@ struct SaintVenantKirchhoffEnergy<3>
     template <
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGrad(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGrad(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -781,7 +781,7 @@ struct SaintVenantKirchhoffEnergy<3>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE typename TMatrix::ScalarType evalWithGradAndHessian(
+    PBAT_HOST_DEVICE typename TMatrix::ScalarType EvalWithGradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -802,7 +802,7 @@ struct SaintVenantKirchhoffEnergy<3>
         math::linalg::mini::CReadableVectorizedMatrix TMatrix,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
         math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-    PBAT_HOST_DEVICE void gradAndHessian(
+    PBAT_HOST_DEVICE void GradAndHessian(
         TMatrix const& F,
         typename TMatrix::ScalarType mu,
         typename TMatrix::ScalarType lambda,
@@ -811,7 +811,7 @@ struct SaintVenantKirchhoffEnergy<3>
 };
 
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::eval(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::Eval(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -850,7 +850,7 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::eva
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<3>::SVector<typename TMatrix::ScalarType, 9>
-SaintVenantKirchhoffEnergy<3>::grad(
+SaintVenantKirchhoffEnergy<3>::Grad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -896,7 +896,7 @@ SaintVenantKirchhoffEnergy<3>::grad(
  */
 template <math::linalg::mini::CReadableVectorizedMatrix TMatrix>
 PBAT_HOST_DEVICE SaintVenantKirchhoffEnergy<3>::SMatrix<typename TMatrix::ScalarType, 9, 9>
-SaintVenantKirchhoffEnergy<3>::hessian(
+SaintVenantKirchhoffEnergy<3>::Hessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
@@ -1076,7 +1076,7 @@ SaintVenantKirchhoffEnergy<3>::hessian(
 template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::evalWithGrad(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::EvalWithGrad(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -1130,7 +1130,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::evalWithGradAndHessian(
+PBAT_HOST_DEVICE typename TMatrix::ScalarType SaintVenantKirchhoffEnergy<3>::EvalWithGradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
@@ -1344,7 +1344,7 @@ template <
     math::linalg::mini::CReadableVectorizedMatrix TMatrix,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixGF,
     math::linalg::mini::CWriteableVectorizedMatrix TMatrixHF>
-PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<3>::gradAndHessian(
+PBAT_HOST_DEVICE void SaintVenantKirchhoffEnergy<3>::GradAndHessian(
     [[maybe_unused]] TMatrix const& F,
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda,
