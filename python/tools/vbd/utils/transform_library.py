@@ -1,10 +1,11 @@
 import h5py
 import numpy as np
 from enum import Enum
+from copy import deepcopy
 """
 primitive operations
 all primitives require:
-- 1 interval of time (begin-end in seconds)
+- 1 interval of time (begin + duration in seconds)
 - list of target dirichlet groups
 
 available primitives:
@@ -19,32 +20,58 @@ class TransformType(Enum):
     G_ROTATE = 0
     L_ROTATE = 1
     TRANSLATE = 2
+    FIXED = 3
+    COMPOSITE = 4
     
 class PrimitiveTransform:
-    def __init__(self, name: str, begin: float, end: float, transform_type: TransformType):
+    def __init__(self, name: str, begin: float, duration: float, transform_type: TransformType):
         self.name = name
         self.begin = begin
-        self.end = end
+        self.duration = duration
         self.transform_type = transform_type  # e.g., "rotate", "revolve", "translate", "empty"
         self.id = -1  # to be set when added to library
 
-    def apply(self, t: float, V: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def make_default():
+        # Python doesn't support multiple constructors
+        raise NotImplementedError("Implement a default constructor in your subclass!")
+    
+    @staticmethod
+    def make_default(ttype: TransformType):
+        if ttype == TransformType.G_ROTATE:
+            return GlobalRotateTransform.make_default()
+        elif ttype == TransformType.L_ROTATE: 
+            return LocalRotateTransform.make_default()
+        elif ttype == TransformType.TRANSLATE:
+            return TranslateTransform.make_default()
+        elif ttype == TransformType.FIXED:
+            return FixedTransform.make_default()
+        elif ttype == TransformType.COMPOSITE:
+            return CompositeTransform.make_default()
+        else:
+            raise ValueError(f"Unknown TransformType {ttype}")
+
+    def applicable(self, t: float) -> bool:
+        """ Check if the transform is applicable at time t """
+        return self.begin <= t <= self.duration + self.begin
+
+    def apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
         """
-        Apply the transform to the vertices V at time t.
+        Apply the transform to the vertices V at time t * dt.
         V: (n, 3) array of vertex positions
         Returns transformed vertices (n, 3)
         """
-        if t < self.begin or t > self.end:
+        if not self.applicable(t * dt):
             return V  # no transformation outside the interval
         # Implement specific transformations in subclasses
-        return self.specific_apply(t, V)
+        return self.specific_apply(t, dt, V)
     
-    def specific_apply(self, t: float, V: np.ndarray) -> np.ndarray:
+    def specific_apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
         raise NotImplementedError("specific_apply must be implemented in subclasses")
     
     def adjust(self):
         """ Adjust parameters if necessary (e.g., normalize axes)"""
-        raise NotImplementedError("adjust must be implemented in subclasses")
+        pass
     
     def serialize(self, h5group: h5py.Group):
         """
@@ -52,27 +79,26 @@ class PrimitiveTransform:
         """
         h5group.attrs['name'] = self.name
         h5group.attrs['begin'] = self.begin
-        h5group.attrs['end'] = self.end
+        h5group.attrs['duration'] = self.duration
         h5group.attrs['transform_type'] = self.transform_type.value
         h5group.attrs['id'] = self.id
     
     def __str__(self):
-        return f"Name: {self.name}, Type: {self.transform_type.name},\n\t ID: {self.id}, \n\t\t Time: [{self.begin}, {self.end}]"
+        return f"Name: {self.name}, Type: {self.transform_type.name},\n\t ID: {self.id}, \n\t\t Time: [{self.begin}, {self.begin + self.duration}]"
     
 class GlobalRotateTransform(PrimitiveTransform):
-    def __init__(self, name: str, begin: float, end: float, axis: np.ndarray, degrees_per_second: float):
-        super().__init__(name, begin, end, TransformType.G_ROTATE)
+    def __init__(self, name: str, begin: float, duration: float, axis: np.ndarray, degrees_per_second: float):
+        super().__init__(name, begin, duration, TransformType.G_ROTATE)
         self.axis = axis / np.linalg.norm(axis)  # normalize axis
         self.degrees_per_second = degrees_per_second
 
-    def __init__(self):
-        super().__init__("New Global Rotate", 0, 1, TransformType.G_ROTATE)
-        self.axis = np.array([1,0,0])
-        self.degrees_per_second = 10
-
-    def specific_apply(self, t, V):
+    @staticmethod
+    def make_default():
+        return GlobalRotateTransform("New Global Rotate", 0, 1, np.array([1,0,0]), 10)
+    
+    def specific_apply(self, t, dt, V):
         # Compute rotation angle
-        angle_degrees = self.degrees_per_second * (t - self.begin)
+        angle_degrees = self.degrees_per_second * (dt)
         angle_radians = np.deg2rad(angle_degrees)
         # Compute rotation matrix using Rodrigues' rotation formula
         K = np.array([[0, -self.axis[2], self.axis[1]],
@@ -80,7 +106,7 @@ class GlobalRotateTransform(PrimitiveTransform):
                       [-self.axis[1], self.axis[0], 0]])
         R = np.eye(3) + np.sin(angle_radians) * K + (1 - np.cos(angle_radians)) * (K @ K)
         # Apply rotation
-        V_rotated = V @ R.T
+        V_rotated = (V.T @ R.T).T
         return V_rotated
     
     def serialize(self, h5group: h5py.Group):
@@ -96,17 +122,38 @@ class GlobalRotateTransform(PrimitiveTransform):
         self.axis = self.axis / np.linalg.norm(self.axis)
 
 class LocalRotateTransform(PrimitiveTransform):
-    def __init__(self, name: str, begin: float, end: float, axis: np.ndarray, origin: np.ndarray, degrees_per_second: float):
-        super().__init__(name, begin, end, TransformType.L_ROTATE)
+    def __init__(self, name: str, begin: float, duration: float, axis: np.ndarray, origin: np.ndarray, degrees_per_second: float):
+        super().__init__(name, begin, duration, TransformType.L_ROTATE)
         self.axis = axis / np.linalg.norm(axis)  # normalize axis
         self.origin = origin
         self.degrees_per_second = degrees_per_second
 
-    def __init__(self):
-        super().__init__("New Local Rotate", 0, 1, TransformType.L_ROTATE)
-        self.axis = np.array([1,0,0])
-        self.origin = np.array([0,0,0])
-        self.degrees_per_second = 10
+    @staticmethod
+    def make_default():
+        return LocalRotateTransform("New Local Rotate", 0, 1, np.array([1,0,0]), np.array([0,0,0]), 10)
+    
+    def specific_apply(self, t, dt, V):
+        # Compute rotation angle
+        angle_degrees = self.degrees_per_second * (dt)
+        angle_radians = np.deg2rad(angle_degrees)
+        # Compute rotation matrix using Rodrigues' rotation formula
+        K = np.array([[0, -self.axis[2], self.axis[1]],
+                      [self.axis[2], 0, -self.axis[0]],
+                      [-self.axis[1], self.axis[0], 0]])
+        R = np.eye(3) + np.sin(angle_radians) * K + (1 - np.cos(angle_radians)) * (K @ K)
+        # Translate vertices to origin
+        V_translated = V - self.origin
+        # Apply rotation
+        V_rotated = (V_translated.T @ R.T).T
+        # Translate back
+        V_final = V_rotated + self.origin
+        return V_final
+    
+    def serialize(self, h5group: h5py.Group):
+        super().serialize(h5group)
+        h5group.attrs['axis'] = self.axis
+        h5group.attrs['origin'] = self.origin
+        h5group.attrs['degrees_per_second'] = self.degrees_per_second
 
     def adjust(self):
         self.axis = self.axis / np.linalg.norm(self.axis)
@@ -116,15 +163,27 @@ class LocalRotateTransform(PrimitiveTransform):
         return f"{base_str}\n\t\t Axis: {self.axis},\n\t\t Origin: {self.origin},\n\t\t Degrees per second: {self.degrees_per_second}"
 
 class TranslateTransform(PrimitiveTransform):
-    def __init__(self, name: str, begin: float, end: float, direction: np.ndarray, speed: float):
-        super().__init__(name, begin, end, TransformType.TRANSLATE)
+    def __init__(self, name: str, begin: float, duration: float, direction: np.ndarray, speed: float):
+        super().__init__(name, begin, duration, TransformType.TRANSLATE)
         self.direction = direction / np.linalg.norm(direction)  # normalize direction
         self.speed = speed  # units per second
 
-    def __init__(self):
-        super().__init__("New Translation", 0, 1, TransformType.TRANSLATE)
-        self.direction = np.array([1,0,0])
-        self.speed = 10  # units per second
+    @staticmethod
+    def make_default():
+        return TranslateTransform("New Translation", 0, 1, np.array([1,0,0]), 10)
+
+    def specific_apply(self, t, dt, V):
+        # Compute translation distance
+        distance = self.speed * (dt)
+        translation_vector = self.direction * distance
+        # Apply translation
+        V_translated = (V.T + translation_vector.T).T
+        return V_translated
+    
+    def serialize(self, h5group: h5py.Group):
+        super().serialize(h5group)
+        h5group.attrs['direction'] = self.direction
+        h5group.attrs['speed'] = self.speed
 
     def adjust(self):
         self.direction = self.direction / np.linalg.norm(self.direction)
@@ -134,20 +193,60 @@ class TranslateTransform(PrimitiveTransform):
         return f"{base_str}\n\t\t Direction: {self.direction},\n\t\t Speed: {self.speed}"
 
 
+class FixedTransform(PrimitiveTransform):
+    def __init__(self, name, begin, duration):
+        super().__init__(name, begin, duration, TransformType.FIXED)
+
+    @staticmethod
+    def make_default():
+        return FixedTransform("New Fixed", 0, 1)
+    
+    def specific_apply(self, t, V):
+        return V
+    
+    def serialize(self, h5group):
+        return super().serialize(h5group)
+
+class CompositeTransform(PrimitiveTransform):
+    def __init__(self, name: str, begin: float):
+        super().__init__(name, begin, 0, TransformType.COMPOSITE)  # Composite is not a primitive type
+        self.transforms = []  # list of PrimitiveTransform instances
+
+    @staticmethod
+    def make_default():
+        return CompositeTransform("New Composite", 0)
+    
+    def add_transform(self, transform: PrimitiveTransform):
+        stored_transform = deepcopy(transform)
+        stored_transform.begin = self.begin + self.duration
+        self.duration += stored_transform.duration
+        self.transforms.append(stored_transform)
+
+    def specific_apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
+        V_transformed = V
+        for transform in self.transforms:
+            V_transformed = transform.apply(t, dt, V_transformed)
+        return V_transformed
+    
+    
+
 class TransformLibrary:
     def __init__(self):
         self.transforms = []
         # Same as transforms but with transform type as keys
-        self.tranfrorm_map = {TransformType.G_ROTATE: [],
-                              TransformType.L_ROTATE: [],
-                              TransformType.TRANSLATE: []} 
+        self.build_transform_map()
+
+    def build_transform_map(self):
+        self.transform_map = {} 
+        for ttype in TransformType:
+            self.transform_map[ttype] = []
 
     def add_transform(self, transform: PrimitiveTransform):
         transform.adjust()
         if transform.id == -1:
            transform.id = len(self.transforms) + 1
         self.transforms.append(transform)
-        self.tranfrorm_map[transform.transform_type].append(transform)
+        self.transform_map[transform.transform_type].append(transform)
 
     def serialize(self, path: str):
         """
@@ -164,27 +263,28 @@ class TransformLibrary:
         """
         with h5py.File(path, 'r') as h5file:
             self.transforms = []
-            self.tranfrorm_map = {TransformType.G_ROTATE: [],
-                                  TransformType.L_ROTATE: [],
-                                  TransformType.TRANSLATE: []} 
+            self.build_transform_map()
+
             for tname, tgroup in h5file.items():
                 name = tgroup.attrs['name']
                 begin = tgroup.attrs['begin']
-                end = tgroup.attrs['end']
+                duration = tgroup.attrs['duration']
                 transform_type = TransformType(tgroup.attrs['transform_type'])
                 if transform_type == TransformType.G_ROTATE:
                     axis = tgroup.attrs['axis']
                     degrees_per_second = tgroup.attrs['degrees_per_second']
-                    transform = GlobalRotateTransform(name, begin, end, axis, degrees_per_second)
+                    transform = GlobalRotateTransform(name, begin, duration, axis, degrees_per_second)
                 elif transform_type == TransformType.L_ROTATE:
                     axis = tgroup.attrs['axis']
                     origin = tgroup.attrs['origin']
                     degrees_per_second = tgroup.attrs['degrees_per_second']
-                    transform = LocalRotateTransform(name, begin, end, axis, origin, degrees_per_second)
+                    transform = LocalRotateTransform(name, begin, duration, axis, origin, degrees_per_second)
                 elif transform_type == TransformType.TRANSLATE:
                     direction = tgroup.attrs['direction']
                     speed = tgroup.attrs['speed']
-                    transform = TranslateTransform(name, begin, end, direction, speed)
+                    transform = TranslateTransform(name, begin, duration, direction, speed)
+                elif transform_type == TransformType.FIXED:
+                    transform = FixedTransform(name, begin, duration)
                 else:
                     print(f"Unknown transform type {transform_type} for transform {name}")
                     continue

@@ -9,8 +9,8 @@ import tkinter as tk
 from tkinter import filedialog
 
 from pbatoolkit import pbat, pypbat
-from utils.pick import update_vdbc
-import utils.fixed_transform_library as ftl
+from utils.dirichlet_index_library import DirichletIndices, DirichletLibrary
+import utils.transform_library as tlib
 
 class SceneMesh:
     def __init__(self, name: str, V: np.ndarray, C: np.ndarray):
@@ -26,21 +26,14 @@ class SceneMesh:
         self.b = np.array(
             [0.0, 0.0, 0.0]
         )  # per-mesh body force (e.g. wind, extra load)
-        self.vdbc = np.array([], dtype=np.int32)  # Array of vertex indices with Dirichlet boundary conditions
-        self.vdbc_pc = self.make_group_point_cloud(self.vdbc, name + " - Dirichlet")
+        #self.dirichlet_indices = {}  # Array of vertex indices with Dirichlet boundary conditions
+        
 
     def transformed_vertices(self) -> np.ndarray:
         T = self.handle.get_transform()
         VH = np.vstack([self.V.T, np.ones((1, self.V.shape[0]))])
         VT = (T @ VH).T[:, :3]
         return VT
-    
-    def make_group_point_cloud(self, group_indices, name):
-        if len(group_indices) == 0:
-            if ps.has_point_cloud(name):
-                ps.remove_point_cloud(name)
-            return None
-        return ps.register_point_cloud(name, self.V[group_indices])
 
 
 class SceneState:
@@ -55,15 +48,19 @@ class SceneState:
         self.d_percent = 0.01
         self.d_extremity = 0
         # Library for fixed transforms for Dirichlet groups
-        self.transform_library = ftl.TransformLibrary()
+        self.transform_library = tlib.TransformLibrary()
+        self.unsaved_transforms = {}
+        for ttype in tlib.TransformType:
+            self.unsaved_transforms[ttype] = tlib.PrimitiveTransform.make_default(ttype) 
         self.selected_ttype = 0
-        self.unsaved_g_rotate = ftl.GlobalRotateTransform()
-        self.unsaved_l_rotate = ftl.LocalRotateTransform()
-        self.unsaved_translate = ftl.TranslateTransform()
+
         self.editing_new_transform = False
         self.editing_old_transform = -1
         # Constructed FEM
         self.fem = None  # pbat.sim.dynamics.FemElastoDynamics
+
+        self.selected_dirichlet_group = 0
+        self.dirichlet_library = {}
 
     def add_mesh_from_file(self, file_path: str):
         imesh = meshio.read(file_path)
@@ -73,8 +70,13 @@ class SceneState:
             name = f"{len(self.meshes):<2} - {filename}"
             item = SceneMesh(name, V, C)
             self.meshes.append(item)
+                        # add to all Dirichlet libraries
+            for tname in self.dirichlet_library:
+                self.dirichlet_library[tname].add_mesh(item.name, item.V)
+            return item
         else:
             ps.error("Only tetrahedral meshes are supported in the scene editor.")
+            return None
 
     def remove_mesh(self, idx: int):
         if 0 <= idx < len(self.meshes):
@@ -204,10 +206,12 @@ class SceneState:
         # d_nodes = aabb.contained(fem.X)
         # d_mask = np.zeros(fem.X.shape[1], dtype=bool)
         # d_mask[d_nodes] = True
-        d_mask = np.zeros(fem.X.shape[1], dtype=bool)
+        d_mask = np.zeros(fem.X.shape[1], dtype=int)
         for (start, end), m in zip(element_ranges, self.meshes):
-            if m.vdbc is not None and len(m.vdbc) > 0:
-              d_mask[m.vdbc + start] = True
+            for t in self.transform_library.transforms:
+                dgroup = self.dirichlet_library[t.name].get_mesh_indices(m.name)
+                if dgroup.indices is not None and len(dgroup.indices) > 0:
+                    d_mask[dgroup.indices + start] = t.id
         fem.constrain(d_mask)
         # Set as current
         self.fem = fem
@@ -220,22 +224,25 @@ class SceneState:
         self.fem.serialize(ac)
         ac.flush()
 
+    def save_transform_library(self):
+        self.transform_library.serialize("primitive_transforms.h5")
 
-def _load_transform_file(state: SceneState):
-    root = tk.Tk()
-    root.withdraw()
-    file_path = filedialog.askopenfilename(
-        title="Select transform library file",
-        defaultextension=".",
-        filetypes=[
-            ("All files", "*.*"),
-        ],
-    )
-    try:
-        if file_path:
-            state.transform_library.deserialize(file_path)
-    finally:
-        root.destroy()
+
+    def load_transform_file(self):
+        self.transform_library.deserialize("primitive_transforms.h5")
+        # We will have one point cloud per transform. This point cloud is stored in the DirichletLibrary
+        for t in self.transform_library.transforms:
+            self.dirichlet_library[t.name] = DirichletLibrary(t.name)
+            for m in self.meshes:
+                self.dirichlet_library[t.name].add_mesh(m.name, m.V)
+
+    def add_transform(self, transform: tlib.PrimitiveTransform):
+        self.transform_library.add_transform(transform)
+        self.dirichlet_library[transform.name] = DirichletLibrary(transform.name)
+        for m in self.meshes:
+            self.dirichlet_library[transform.name].add_mesh(m.name, m.V)
+        print(self.transform_library.transforms)
+        print(self.dirichlet_library.keys())
 
 
 def _load_mesh(state: SceneState):
@@ -269,30 +276,39 @@ def _save_fem(state: SceneState):
         if file_path:
             state.build_fem_elastodynamics()
             state.serialize_fem(file_path)
+            state.save_transform_library()
     finally:
         root.destroy()
 
-def transform_editor(transform: ftl.FixedTransform):
+def transform_editor(transform: tlib.PrimitiveTransform, idx: int):
+    imgui.PushID(idx)
     _, transform.name = imgui.InputText("Name", transform.name)
     _, transform.begin = imgui.InputFloat("Begin Time", transform.begin)
-    _, transform.end = imgui.InputFloat("End Time", transform.end)
+    _, transform.duration = imgui.InputFloat("Duration", transform.duration)
 
-    if transform.transform_type == ftl.TransformType.G_ROTATE:
+    if transform.transform_type == tlib.TransformType.G_ROTATE:
         _, axis = imgui.InputFloat3("Axis", transform.axis)
         transform.axis = np.array(axis)
+        if imgui.Button("Normalize"):
+            transform.adjust()
         _, transform.degrees_per_second = imgui.InputFloat("Degrees per Second", transform.degrees_per_second)
     
-    elif transform.transform_type == ftl.TransformType.L_ROTATE:
+    elif transform.transform_type == tlib.TransformType.L_ROTATE:
         _, axis = imgui.InputFloat3("Axis", transform.axis)
         transform.axis = np.array(axis)
+        if imgui.Button("Normalize"):
+            transform.adjust()
         _, origin = imgui.InputFloat3("Origin", transform.origin)
         transform.origin = np.array(origin)
         _, transform.degrees_per_second = imgui.InputFloat("Degrees per Second", transform.degrees_per_second)
     
-    elif transform.transform_type == ftl.TransformType.TRANSLATE:
+    elif transform.transform_type == tlib.TransformType.TRANSLATE:
         _, direction = imgui.InputFloat3("Direction", transform.direction)
         transform.direction = np.array(direction)
+        if imgui.Button("Normalize"):
+            transform.adjust()
         _, transform.speed = imgui.InputFloat("Speed", transform.speed)
+    imgui.PopID()
         
 
 def main():
@@ -335,55 +351,40 @@ def main():
                 #     "Extremity (0=min,1=max)", state.d_extremity
                 # )
                 if imgui.Button("Load Transform file", default_button_size):
-                    _load_transform_file(state)
+                    state.load_transform_file()
+                if imgui.Button("Save Transform file", default_button_size):
+                    state.save_transform_library()
+
+
+                if state.transform_library.transforms:
+                    _, state.selected_dirichlet_group = imgui.Combo(
+                                "Picked Group", state.selected_dirichlet_group,
+                                [t.name for t in state.transform_library.transforms]
+                            )
+                  
+                # Read/Edit loaded transforms
                 if imgui.TreeNode("Loaded Transforms"):
-                    # Colorful buttons for each transform
+                    # Red buttons for buttons per transform, to distinguish from other buttons
                     imgui.PushStyleColor(imgui.ImGuiCol_Button, (0.8, 0.2, 0.2, 1.0))
                     for t in state.transform_library.transforms:
-                        imgui.Text(t.__str__())
-                        if ((imgui.Button(f"Edit Transform {t.id}", default_button_size) and state.editing_old_transform  == -1) or state.editing_old_transform == t.id) and not state.editing_new_transform:
-                            state.editing_old_transform = t.id
-                            transform_editor(t)
-                            if imgui.Button("End edit", default_button_size):
-                                t.adjust()
-                                state.editing_old_transform = -1
+                        if imgui.TreeNode(f"{t.id}"):
+                            transform_editor(t, t.id)
+                            imgui.TreePop()
                     imgui.PopStyleColor(1)       
                     if (imgui.Button("Create new Transform", default_button_size) or state.editing_new_transform) and state.editing_old_transform == -1:
                         state.editing_new_transform = True
                         _, state.selected_ttype = imgui.Combo(
                             "Transform Type", state.selected_ttype,
-                            [ftl.TransformType.G_ROTATE.name,
-                             ftl.TransformType.L_ROTATE.name,
-                             ftl.TransformType.TRANSLATE.name]
+                            [ttype.name for ttype in tlib.TransformType]
                         )
-                        if state.selected_ttype == ftl.TransformType.G_ROTATE.value:
-                            # Make fields so that user can define transform
-                            # _, state.unsaved_g_rotate.name = imgui.InputText("Name", state.unsaved_g_rotate.name)
-                            # _, state.unsaved_g_rotate.begin = imgui.InputFloat("Begin Time", state.unsaved_g_rotate.begin)
-                            # _, state.unsaved_g_rotate.end = imgui.InputFloat("End Time", state.unsaved_g_rotate.end)
-                            # _, axis = imgui.InputFloat3("Axis", state.unsaved_g_rotate.axis)
-                            # state.unsaved_g_rotate.axis = np.array(axis)
-                            # _, state.unsaved_g_rotate.degrees_per_second = imgui.InputFloat("Degrees per Second", state.unsaved_g_rotate.degrees_per_second)
-                            transform_editor(state.unsaved_g_rotate)
-                            # Add to library
-                            if imgui.Button("Add Global Rotate Transform", default_button_size):
-                                
-                                state.transform_library.add_transform(state.unsaved_g_rotate)
-                                state.unsaved_g_rotate = ftl.GlobalRotateTransform()
-                                state.editing_new_transform = False
-                        elif state.selected_ttype == ftl.TransformType.L_ROTATE.value:
-                            transform_editor(state.unsaved_l_rotate)
-                            if imgui.Button("Add Local Rotate Transform", default_button_size):
-                                state.transform_library.add_transform(state.unsaved_l_rotate)
-                                state.unsaved_l_rotate = ftl.LocalRotateTransform()
-                                state.editing_new_transform = False
-                        elif state.selected_ttype == ftl.TransformType.TRANSLATE.value:
-                            transform_editor(state.unsaved_translate)
-                            if imgui.Button("Add Translate Transform", default_button_size):
-                                state.transform_library.add_transform(state.unsaved_translate)
-                                state.unsaved_translate = ftl.TranslateTransform()
-                                state.editing_new_transform = False
-                        
+                        for unsaved in state.unsaved_transforms:
+                            if unsaved.value == state.selected_ttype:
+                                transform_editor(state.unsaved_transforms[unsaved], unsaved.value + len(state.transform_library.transforms))
+                                if imgui.Button("Add Transform", default_button_size):
+                                    state.add_transform(state.unsaved_transforms[unsaved])
+                                    state.unsaved_transforms[unsaved] = tlib.PrimitiveTransform.make_default(unsaved)
+                                    #state.dirichlet_library[unsaved.name] = DirichletLibrary(unsaved.name, scene_meshes=state.meshes)
+                                    state.editing_new_transform = False
                     imgui.TreePop()
                 imgui.TreePop()
             imgui.TreePop()
@@ -415,15 +416,22 @@ def main():
 
         # Picking IO (Setting heterogeneous constraints, eg Dirichlet)
         io = imgui.GetIO()
-        if io.MouseClicked[0]:
+        if io.MouseClicked[0] and io.KeyCtrl:
           pick_result = ps.pick(screen_coords=io.MousePos)
           # print(pick_result)
           if pick_result.is_hit and pick_result.structure_type_name == "Volume Mesh" and pick_result.structure_data['element_type'] == "vertex":
             for m in state.meshes:
                 if pick_result.structure_name == m.name:
                     i = pick_result.local_index
-                    m.vdbc, _ = update_vdbc(m.vdbc, i)
-                    m.vdbc_pc = m.make_group_point_cloud(m.vdbc, m.name + " - Dirichlet")
+                    transform = state.transform_library.transforms[state.selected_dirichlet_group]
+                    indices = state.dirichlet_library[transform.name].get_mesh_indices(m.name)
+                    if indices is None:
+                        ps.error(f"Mesh {m.name} not found in Dirichlet library for transform {group.name}.")
+                        return
+                    indices.update_vdbc(i)
+                    state.dirichlet_library[transform.name].build_point_cloud()
+                    # m.vdbc, _ = update_vdbc(m.vdbc, i)
+                    # m.vdbc_pc = m.make_group_point_cloud(m.vdbc, m.name + " - Dirichlet")
     ps.set_user_callback(callback)
     ps.show()
 
