@@ -8,13 +8,12 @@ namespace pbat::py::geometry {
 
 void BindHalfEdges(nanobind::module_& m)
 {
-    namespace nb = nanobind;
+    namespace nb    = nanobind;
     using IndexType = Index;
 
     m.def(
         "vertex_half_edge_adjacency",
-        [](nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-           IndexType n) {
+        [](nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F, IndexType n) {
             auto [GVHEp, GVHEadj] = pbat::geometry::VertexHalfEdgeAdjacency(F, n);
             return std::make_tuple(GVHEp, GVHEadj);
         },
@@ -38,7 +37,8 @@ void BindHalfEdges(nanobind::module_& m)
         "Args:\n"
         "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices\n"
         "Returns:\n"
-        "    numpy.ndarray: `2 x |3*#triangles|` mapping half-edges to adjacent faces (-1 if none).\n");
+        "    numpy.ndarray: `2 x |3*#triangles|` mapping half-edges to adjacent faces (-1 if "
+        "none).\n");
 
     m.def(
         "edge_half_edge_adjacency",
@@ -69,6 +69,18 @@ void BindHalfEdges(nanobind::module_& m)
         "    EHE (numpy.ndarray): `2 x |# edges|` edge-to-half-edge adjacency\n"
         "Returns:\n"
         "    numpy.ndarray: `2 x |# edges|` undirected edges.\n");
+
+    m.def(
+        "half_edges",
+        [](nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F) {
+            return pbat::geometry::HalfEdges(F);
+        },
+        nb::arg("F"),
+        "Build the half-edge list for a triangle mesh.\n\n"
+        "Args:\n"
+        "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices\n"
+        "Returns:\n"
+        "    numpy.ndarray: `2 x |3*#triangles|` half-edges.\n");
 }
 
 } // namespace pbat::py::geometry

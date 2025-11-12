@@ -361,6 +361,29 @@ inline auto Edges(Eigen::DenseBase<TDerivedF> const& F, Eigen::DenseBase<TDerive
     return E;
 }
 
+/**
+ * @brief Build the half-edge list for a triangle mesh.
+ * @tparam TDerivedF Derived type of F
+ * @tparam TIndex Index type
+ * @param F `3 x |# triangles|` triangle vertex indices
+ * @return `2 x |3*# triangles|` matrix of half-edge vertex indices
+ */
+template <class TDerivedF, common::CIndex TIndex = typename TDerivedF::Scalar>
+inline auto HalfEdges(Eigen::DenseBase<TDerivedF> const& F) -> Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
+{
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "F must have 3 rows representing triangle vertex indices.");
+    Eigen::Index const nHalfEdges = 3 * F.cols();
+    Eigen::Matrix<TIndex, 2, Eigen::Dynamic> HE(2, nHalfEdges);
+    for (Eigen::Index he = 0; he < nHalfEdges; ++he)
+    {
+        HE(0, he) = IncomingVertex(F, he);
+        HE(1, he) = OutgoingVertex(F, he);
+    }
+    return HE;
+}
+
 } // namespace geometry
 } // namespace pbat
 

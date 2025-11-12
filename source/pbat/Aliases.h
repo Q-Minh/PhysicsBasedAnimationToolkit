@@ -15,7 +15,7 @@
 namespace pbat {
 
 using Index  = std::ptrdiff_t; ///< Index type
-using Scalar = double;          ///< Scalar type
+using Scalar = float;          ///< Scalar type
 /**
  * @brief Fixed-size vector type
  * @tparam N

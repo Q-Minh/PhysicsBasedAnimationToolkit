@@ -1,5 +1,6 @@
 #include "MeshSdfContact.h"
 
+#include <algorithm>
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/vector.h>
 #include <pbat/geometry/sdf/Composite.h>
@@ -147,31 +148,35 @@ void BindMeshSdfContact(nanobind::module_& m)
         .def(
             "__init__",
             [](MeshSdfContactType* self,
-               nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
+               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
                nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-               MeshSdfContactParams const& params) { new (self) MeshSdfContactType(X, F, params); },
-            nb::arg("X"),
+               MeshSdfContactParams const& params) { new (self) MeshSdfContactType(V, F, params); },
+            nb::arg("V"),
             nb::arg("F"),
             nb::arg("params"),
             "Construct and initialize a mesh-SDF contact detector.\n\n"
             "Args:\n"
-            "    X (numpy.ndarray): 3 x |# points| point positions.\n"
-            "    F (numpy.ndarray): 3 x |# triangles| triangle vertex indices.\n"
+            "    V (numpy.ndarray): `|# vertices| x 1` vertices.\n"
+            "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices.\n"
             "    params (MeshSdfContactParams): Detection parameters.")
         .def(
             "initialize",
             [](MeshSdfContactType& self,
-               nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
+               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
                nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-               MeshSdfContactParams const& params) { self.Initialize(X, F, params); },
-            nb::arg("X"),
+               MeshSdfContactParams const& params) { self.Initialize(V, F, params); },
+            nb::arg("V"),
             nb::arg("F"),
             nb::arg("params"),
             "Initialize internal storage.\n\n"
             "Args:\n"
-            "    X (numpy.ndarray): 3 x |# points| point positions.\n"
-            "    F (numpy.ndarray): 3 x |# triangles| triangle vertex indices.\n"
+            "    V (numpy.ndarray): `|# vertices| x 1` vertices.\n"
+            "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices.\n"
             "    params (MeshSdfContactParams): Detection parameters.")
+        .def(
+            "prepare_iteration",
+            &MeshSdfContactType::PrepareIteration,
+            "Prepare for a new iteration of contact detection.")
         .def(
             "triangle_sdf_contact_detection",
             [](MeshSdfContactType& self,
@@ -187,6 +192,22 @@ void BindMeshSdfContact(nanobind::module_& m)
             "    F (numpy.ndarray): 3 x |# triangles| triangle vertex indices.\n"
             "    sdf (pbat.geometry.sdf.Composite): Environment SDF composite.")
         .def(
+            "deduplicate_contact_set",
+            [&](MeshSdfContactType& self,
+                nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+                nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
+                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GXV) {
+                self.DeduplicateContactSet(F, GHEF, GXV);
+            },
+            nb::arg("F"),
+            nb::arg("GHEF"),
+            nb::arg("GXV"),
+            "De-duplicate all contacts after detection.\n\n"
+            "Args:\n"
+            "    F (numpy.ndarray): 3 x |# triangles| triangle vertex indices.\n"
+            "    GHEF (numpy.ndarray): 2 x |# half edges| half-edge to face adjacency.\n"
+            "    GXV (numpy.ndarray): |# points| point to vertex adjacency.")
+        .def(
             "serialize",
             &MeshSdfContactType::Serialize,
             nb::arg("archive"),
@@ -200,38 +221,81 @@ void BindMeshSdfContact(nanobind::module_& m)
             "Deserialize contact detector state.\n\n"
             "Args:\n"
             "    archive (pbat.io.Archive): Source archive.")
-        .def_rw(
+        .def_prop_ro(
             "triangle_contact_counts",
-            &MeshSdfContactType::mTriangleContactCounts,
-            "(numpy.ndarray) |# triangles| contact counts per triangle.")
-        .def_rw(
-            "triangle_sdf_contacts",
-            &MeshSdfContactType::mTriangleSdfContacts,
-            "(numpy.ndarray) 3 * n_max_contacts_per_triangle x |# triangles| stacked barycentric "
+            [](MeshSdfContactType const& self) {
+                Eigen::Vector<int, Eigen::Dynamic> counts(self.mTriangleContactPoints.size());
+                std::transform(
+                    self.mTriangleContactPoints.begin(),
+                    self.mTriangleContactPoints.end(),
+                    counts.data(),
+                    [](auto const& pts) { return static_cast<int>(pts.size()); });
+                return counts;
+            },
+            "(numpy.ndarray) |# triangles| array of contact counts per triangle.")
+        .def_prop_ro(
+            "triangle_contacts",
+            [](MeshSdfContactType const& self) {
+                std::size_t const nContacts = std::accumulate(
+                    self.mTriangleContactPoints.begin(),
+                    self.mTriangleContactPoints.end(),
+                    std::size_t(0),
+                    [](std::size_t sum, auto const& pts) { return sum + pts.size(); });
+                Eigen::Matrix<ScalarType, 2, Eigen::Dynamic> UV(2, nContacts);
+                std::size_t k = 0;
+                for (auto const& pts : self.mTriangleContactPoints)
+                    for (auto const& uvw : pts)
+                        UV.col(k++) = uvw;
+                return UV;
+            },
+            "(numpy.ndarray) 2 x |# triangle-sdf contacts| stacked UV barycentric "
             "contact coordinates (may contain padding beyond counts).")
+        .def_prop_ro(
+            "half_edge_contact_counts",
+            [](MeshSdfContactType const& self) {
+                Eigen::Vector<int, Eigen::Dynamic> counts(self.mHalfEdgeContactPoints.size());
+                std::transform(
+                    self.mHalfEdgeContactPoints.begin(),
+                    self.mHalfEdgeContactPoints.end(),
+                    counts.data(),
+                    [](auto const& pts) { return static_cast<int>(pts.size()); });
+                return counts;
+            },
+            "(numpy.ndarray) |# half-edges| array of contact counts per half-edge.")
+        .def_prop_ro(
+            "half_edge_contacts",
+            [](MeshSdfContactType const& self) {
+                std::size_t const nContacts = std::accumulate(
+                    self.mHalfEdgeContactPoints.begin(),
+                    self.mHalfEdgeContactPoints.end(),
+                    std::size_t(0),
+                    [](std::size_t sum, auto const& pts) { return sum + pts.size(); });
+                Eigen::Vector<ScalarType, Eigen::Dynamic> U(nContacts);
+                std::size_t k = 0;
+                for (auto const& pts : self.mHalfEdgeContactPoints)
+                    for (typename MeshSdfContactType::ScalarType t : pts)
+                        U(k++) = t;
+                return U;
+            },
+            "(numpy.ndarray) |# half-edge contacts| stacked t barycentric contact "
+            "coordinates.")
+        .def_prop_ro(
+            "vertex_contacts",
+            [](MeshSdfContactType const& self) {
+                Eigen::Vector<IndexType, Eigen::Dynamic> vc;
+                vc.resize(self.mVertexContactPoints.array().count());
+                std::size_t k        = 0;
+                auto const nVertices = static_cast<IndexType>(self.mVertexContactPoints.size());
+                for (IndexType v = 0; v < nVertices; ++v)
+                    if (self.mVertexContactPoints[v])
+                        vc(k++) = v;
+                return vc;
+            },
+            "(numpy.ndarray[int]) `|# vertex contacts|` array of vertex contact vertex indices.")
         .def_ro(
             "params",
             &MeshSdfContactType::mParams,
-            "(MeshSdfContactParams) Parameter set used for detection.")
-        .def_prop_ro(
-            "flat_contacts",
-            [](MeshSdfContactType const& self) {
-                // Build a flat 3 x N matrix of valid contacts across all triangles
-                Eigen::Index total = self.mTriangleContactCounts.sum();
-                Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> C(3, total);
-                Eigen::Index k = 0;
-                for (Eigen::Index f = 0; f < self.mTriangleContactCounts.size(); ++f)
-                {
-                    Eigen::Index nc = self.mTriangleContactCounts(f);
-                    for (Eigen::Index c = 0; c < nc; ++c)
-                    {
-                        C.col(k++) = self.mTriangleSdfContacts.col(f).segment<3>(3 * c);
-                    }
-                }
-                return C;
-            },
-            "(numpy.ndarray) 3 x |# contacts| matrix of barycentric triangle SDF contact points "
-            "(each column stores (b0,b1,b2)).");
+            "(MeshSdfContactParams) Parameter set used for detection.");
 }
 
 } // namespace pbat::py::sim::contact
