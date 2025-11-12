@@ -8,6 +8,8 @@ import tkinter as tk
 from tkinter import filedialog
 import h5py
 
+import utils.transform_library as tlib
+
 
 def _read_mesh_and_state(integrate_grp: h5py.Group):
     # Fem group and datasets
@@ -303,7 +305,7 @@ if __name__ == "__main__":
     ps.init()
 
     dynamics = pbat.sim.dynamics.FemElastoDynamics()
-    Y = 1e6  # Young's modulus
+    Y = 1e7  # Young's modulus
     nu = 0.45  # Poisson's ratio
     rho = 1e3  # Mass density
     aext = np.array([0.0, 0.0, -9.81])  # Acceleration
@@ -377,6 +379,9 @@ if __name__ == "__main__":
     t = 0
     vm: ps.VolumeMesh = None
     dpc: ps.PointCloud = None
+    
+    transform_library = tlib.TransformLibrary()
+    transform_library.deserialize("primitive_transforms.h5")
 
     def callback():
         global Y, nu, rho, aext, b, v0, d_axis, d_percent, d_extremity, d_nodes
@@ -386,7 +391,7 @@ if __name__ == "__main__":
         global solver_names, i_solver, i_init_strategy, n_max_iters
         global i_broyden_l2_solver, i_broyden_jacobian_estimate
         global animate, export, t, vm, dpc
-        global archive, archive_path, archive_flush_period
+        global archive, archive_path, archive_flush_period, transform_library
 
         dirty = False
         is_new_mesh = False
@@ -431,6 +436,7 @@ if __name__ == "__main__":
                     dynamics.construct(V.T, C.T)
                     dynamics.constrain(d_mask.ravel())
                     vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
+                    dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
                     is_new_mesh = True
                     d_axis = 3  # Don't apply default Dirichlet constraints
                 root.destroy()
@@ -698,6 +704,12 @@ if __name__ == "__main__":
                 except Exception as e:
                     frame_group = None
                     print(f"Archive group error: {e}")
+            for transform in transform_library.transforms:
+                transformed_v = transform.apply(t, dt, dynamics.x)
+                for i in range(dynamics.x.shape[1]):
+                    if dynamics.dmask[i] == transform.id:
+                        dynamics.x[:, i] = transformed_v[:, i]
+                
             if i_solver == 0:
                 vbd_integrate(dynamics, vbd_params, archive=frame_group)
             elif i_solver == 1:
