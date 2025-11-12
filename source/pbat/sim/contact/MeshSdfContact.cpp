@@ -82,8 +82,7 @@ void MeshSdfContact::TriangleSdfContactDetection(
         if (signedDistanceLowerBound > mParams.r)
             return;
         // 2. Run SDF minimization using TR-SR1 on randomly sampled points on the triangle to find
-        // penetration points (from which contact points can be computed), then sort and
-        // de-duplicate them.
+        // penetration points (from which contact points can be computed).
         mini::SMatrix<ScalarType, 3, 2> const DX =
             mini::FromEigen(xf.rightCols<2>().colwise() - xf.col(0));
         mini::SVector<ScalarType, 3> const A = mini::FromEigen(xf.col(0));
