@@ -94,6 +94,7 @@ template <common::CArithmetic TScalar>
 struct Composite
 {
     using ScalarType = TScalar; ///< Scalar type
+    Composite() = default;
     /**
      * @brief Construct a composite SDF from nodes, transforms, children, ancestors and roots
      * @param nodes Span of nodes in the composite SDF
