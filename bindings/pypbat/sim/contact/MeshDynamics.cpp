@@ -44,7 +44,7 @@ void BindMeshDynamics(nanobind::module_& m)
             &EnvironmentContactConstraintType::C,
             "(numpy.ndarray) Contact constraint values (normal, tangent, bitangent) (3 x 1).")
         .def_rw(
-            "lambda",
+            "lagrange",
             &EnvironmentContactConstraintType::lambda,
             "(numpy.ndarray) Contact Lagrange multiplier estimates (normal, tangent, bitangent) (3 "
             "x 1).")
