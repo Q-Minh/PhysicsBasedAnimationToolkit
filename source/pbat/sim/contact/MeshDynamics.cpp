@@ -459,3 +459,100 @@ void MeshDynamics::UpdateVertexContactConstraints(
 }
 
 } // namespace pbat::sim::contact
+
+#include <doctest/doctest.h>
+#include "pbat/geometry/model/Cube.h"
+#include "pbat/graph/Mesh.h"
+
+TEST_CASE("[sim][contact] MeshDynamics initialization")
+{
+    using namespace pbat;
+    using namespace pbat::geometry::model;
+
+    // 1. Arrange
+
+    // Build three disjoint tetrahedral cubes stacked along +Z to create a MultiMesh
+    auto [X1, T1] = Cube();
+    auto [X2, T2] = Cube();
+    auto [X3, T3] = Cube();
+    X2.row(2).array() += Scalar(2);
+    X3.row(2).array() += Scalar(4);
+
+    // Concatenate into a single mesh (adjust indices)
+    Index n1 = static_cast<Index>(X1.cols());
+    Index n2 = static_cast<Index>(X2.cols());
+    Index n3 = static_cast<Index>(X3.cols());
+    MatrixX X(3, n1 + n2 + n3);
+    X << X1, X2, X3;
+    IndexMatrixX T(4, T1.cols() + T2.cols() + T3.cols());
+    T << T1, (T2.array() + n1), (T3.array() + n1 + n2);
+
+    // Compute connected components and reindex
+    IndexVectorX XCC(X.cols()), ECC(T.cols()), Xord(X.cols()), Eord(T.cols());
+    Eigen::Index const nComponents =
+        graph::SortedConnectedComponentOrdering(X, T, XCC, ECC, Xord, Eord);
+    graph::ReindexMeshByConnectedComponents(X, T, XCC, ECC, Xord, Eord);
+
+    // Create MultiMesh via BoundaryTriangulation
+    sim::contact::MultiMesh<Index> meshes(T.bottomRows<4>(), XCC, nComponents);
+    // Create an SDF Forest with some primitives
+    geometry::sdf::Forest<Scalar> sdfForest;
+    // Add some primitive nodes
+    sdfForest.nodes.push_back(geometry::sdf::Sphere<Scalar>{1.5}); // radius = 1.5
+    sdfForest.nodes.push_back(
+        geometry::sdf::Box<Scalar>{geometry::sdf::Vec3<Scalar>{0.5, 0.5, 0.5}}); // half extents
+    sdfForest.nodes.push_back(
+        geometry::sdf::Capsule<Scalar>{
+            geometry::sdf::Vec3<Scalar>{0.0, 0.0, 0.0}, // point a
+            geometry::sdf::Vec3<Scalar>{0.0, 1.0, 0.0}, // point b
+            0.3                                         // radius
+        });
+    // Add transforms for each node
+    for (std::size_t i = 0; i < sdfForest.nodes.size(); ++i)
+    {
+        geometry::sdf::Transform<Scalar> transform = geometry::sdf::Transform<Scalar>::Identity();
+        sdfForest.transforms.push_back(transform);
+    }
+    // Set up tree structure (all roots, no hierarchy for simplicity)
+    sdfForest.roots = {0, 1, 2};
+    sdfForest.children.resize(sdfForest.nodes.size());
+    for (std::size_t i = 0; i < sdfForest.children.size(); ++i)
+    {
+        sdfForest.children[i] = {-1, -1}; // All leaf nodes
+    }
+
+    // 2. Act
+
+    // Construct MeshDynamics
+    sim::contact::MeshDynamics meshDynamics;
+    Scalar const nReserveRatio = 2.0;
+    meshDynamics.Construct(X, std::move(meshes), std::move(sdfForest), nReserveRatio);
+
+    // 3. Assert
+
+    // Check that basic structures are initialized
+    CHECK_GT(meshDynamics.mMeshes.V.size(), 0);
+    // Check that SDF forest is set
+    CHECK_EQ(meshDynamics.mSdfForest.nodes.size(), 3);
+    CHECK_EQ(meshDynamics.mSdfForest.transforms.size(), 3);
+    CHECK_EQ(meshDynamics.mSdfForest.roots.size(), 3);
+    CHECK_EQ(meshDynamics.mSdfForest.children.size(), 3);
+
+    // Check that SDF composite is valid
+    CHECK(meshDynamics.mSdf.Status() == geometry::sdf::ECompositeStatus::Valid);
+
+    // Check that geometric arrays are sized correctly
+    CHECK_EQ(meshDynamics.FA.size(), meshDynamics.mMeshes.F.cols());
+    CHECK_EQ(meshDynamics.HEA.size(), 3 * meshDynamics.mMeshes.F.cols());
+    CHECK_EQ(meshDynamics.VA.size(), meshDynamics.mMeshes.V.size());
+
+    // Check that prefix arrays are sized correctly
+    CHECK_EQ(meshDynamics.CFP.size(), meshDynamics.mMeshes.F.cols() + 1);
+    CHECK_EQ(meshDynamics.CHEP.size(), 3 * meshDynamics.mMeshes.F.cols() + 1);
+    CHECK_EQ(meshDynamics.CVinds.size(), 0);
+
+    // Check that contact constraint vectors are initially empty
+    CHECK_EQ(meshDynamics.CF.size(), 0);
+    CHECK_EQ(meshDynamics.CHE.size(), 0);
+    CHECK_EQ(meshDynamics.CV.size(), 0);
+}
