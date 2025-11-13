@@ -20,19 +20,16 @@ namespace pbat::sim::contact {
 
 MeshSdfContact::MeshSdfContact(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-    MeshSdfContactParams const& params)
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F)
     : MeshSdfContact()
 {
-    Initialize(V, F, params);
+    Initialize(V, F);
 }
 
 void MeshSdfContact::Initialize(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-    MeshSdfContactParams const& params)
+    Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F)
 {
-    mParams               = params;
     auto const nTriangles = F.cols();
     auto const nHalfEdges = 3 * F.cols();
     auto const nVertices  = V.size();

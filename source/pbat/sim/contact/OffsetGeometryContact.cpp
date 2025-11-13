@@ -458,10 +458,11 @@ OffsetGeometryContact::OffsetGeometryContact(
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-    OgcParams const& params)
+    OgcParams const& _params)
     : OffsetGeometryContact(device)
 {
-    Initialize(device, X, V, F, E, VP, FP, EP, params);
+    params = _params;
+    Initialize(device, X, V, F, E, VP, FP, EP);
 }
 
 void OffsetGeometryContact::Initialize(
@@ -472,12 +473,9 @@ void OffsetGeometryContact::Initialize(
     Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
     Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-    OgcParams const& _params)
+    Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.OffsetGeometryContact.Initialize");
-    // 0. Store config
-    params = _params;
     // 1. Allocate contact sets and bounds
     auto const nVertices  = V.size();
     auto const nFacets    = F.cols();

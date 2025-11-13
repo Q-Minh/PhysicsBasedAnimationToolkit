@@ -36,9 +36,9 @@ void BindMesh(nanobind::module_& m)
         nb::arg("n") = Index(-1),
         "Compute the mesh element to vertex adjacency graph (c,v) for c in C and v in [0,n).\n"
         "Args:\n"
-        "C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
-        "w: (np.ndarray): |#nodes per element|x|#elements| array of edge weights w(c,v)\n"
-        "n (int): Number of nodes in the mesh");
+        "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
+        "    w: (np.ndarray): |#nodes per element|x|#elements| array of edge weights w(c,v)\n"
+        "    n (int): Number of nodes in the mesh");
     m.def(
         "mesh_adjacency_matrix",
         [](Eigen::Ref<IndexMatrixX const> const& C, Index nNodes) {
@@ -48,8 +48,8 @@ void BindMesh(nanobind::module_& m)
         nb::arg("n") = Index(-1),
         "Compute the mesh element to vertex adjacency graph (c,v) for c in C and v in [0,n).\n"
         "Args:\n"
-        "C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
-        "n (int): Number of nodes in the mesh");
+        "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
+        "    n (int): Number of nodes in the mesh");
     m.def(
         "mesh_adjacency_matrix",
         [](Eigen::Ref<IndexMatrixX const> const& C, Index nNodes) {
@@ -59,8 +59,8 @@ void BindMesh(nanobind::module_& m)
         nb::arg("n") = Index(-1),
         "Compute the mesh element to vertex adjacency graph (c,v) for c in C and v in [0,n).\n"
         "Args:\n"
-        "C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
-        "n (int): Number of nodes in the mesh");
+        "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
+        "    n (int): Number of nodes in the mesh");
     m.def(
         "mesh_primal_graph",
         [](Eigen::Ref<IndexMatrixX const> const& C, Index nNodes) {
@@ -70,8 +70,8 @@ void BindMesh(nanobind::module_& m)
         nb::arg("n") = Index(-1),
         "Compute the mesh primal graph of adjacent vertices (u,v) where u,v are mesh vertices.\n"
         "Args:\n"
-        "C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
-        "n (int): Number of nodes in the mesh");
+        "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
+        "    n (int): Number of nodes in the mesh");
     m.def(
         "mesh_dual_graph",
         [](Eigen::Ref<IndexMatrixX const> const& C, Index nNodes, std::int32_t flags) {
@@ -85,10 +85,10 @@ void BindMesh(nanobind::module_& m)
         nb::arg("flags") = Index(0b111),
         "Compute the mesh dual graph of adjacency elements (ci,cj) where ci,cj are mesh elements.\n"
         "Args:\n"
-        "C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
-        "n (int): Number of nodes in the mesh\n"
-        "flags (int): VertexAdjacency (0b001) | EdgeAdjacency (0b010) | FaceAdjacency (0b100) | "
-        "All (0b111)\n");
+        "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
+        "    n (int): Number of nodes in the mesh\n"
+        "    flags (int): VertexAdjacency (0b001) | EdgeAdjacency (0b010) | FaceAdjacency (0b100) "
+        "| All (0b111)\n");
     m.def(
         "sorted_connected_component_ordering",
         [](nb::DRef<MatrixX const> const& X, nb::DRef<IndexMatrixX const> const& E) {
@@ -111,15 +111,15 @@ void BindMesh(nanobind::module_& m)
         "    X (np.ndarray): |# dims| x |# nodes| node position matrix\n"
         "    E (np.ndarray): |# nodes per element| x |# elements| element index matrix\n"
         "Returns:\n"
-        "    Xordering (np.ndarray): |# nodes| x 1 node ordering vector s.t. `Xordering[i]` gives "
-        "the new index of node `i` in the re-indexed mesh\n"
-        "    Eordering (np.ndarray): |# elements| x 1 element ordering vector s.t. `Eordering[e]` "
-        "gives the new index of element `e` in the re-indexed mesh\n"
-        "    XCC (np.ndarray): |# nodes| x 1 node connected component index vector s.t. `XCC[i]` "
-        "gives the connected component index of node `i` in the input mesh.\n"
-        "    ECC (np.ndarray): |# elements| x 1 element connected component index vector s.t. "
-        "`ECC[e]` gives the connected component index of element `e` in the input mesh\n"
-        "    n_components (int): Number of connected components in the mesh");
+        "    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]: The tuple `(Xordering, "
+        "Eordering, XCC, ECC, n_components)` where `Xordering` is a `|# nodes| x 1` node ordering "
+        "vector s.t. `Xordering[i]` gives the new index of node `i` in the re-indexed mesh, "
+        "`Eordering` is an `|# elements| x 1` element ordering vector s.t. `Eordering[e]` gives "
+        "the new index of element `e` in the re-indexed mesh, `XCC` is an `|# nodes| x 1` node "
+        "connected component index vector s.t. `XCC[i]` gives the connected component index of "
+        "node `i` in the input mesh, `ECC` is an `|# elements| x 1` element connected component "
+        "index vector s.t. `ECC[e]` gives the connected component index of element `e` in the "
+        "input mesh, and `n_components` is the number of connected components in the mesh");
     m.def(
         "reindex_mesh_by_connected_components",
         [](nb::DRef<MatrixX const> const& X,
@@ -166,13 +166,12 @@ void BindMesh(nanobind::module_& m)
         "gives the new "
         "index of element `e` in the re-indexed mesh\n"
         "Returns:\n"
-        "    X_reindexed (np.ndarray): `|# dims| x |# nodes|` Re-indexed node position matrix\n"
-        "    E_reindexed (np.ndarray): `|# nodes per element| x |# elements|` Re-indexed element "
-        "index matrix\n"
-        "    XCC_reindexed (np.ndarray): `|# nodes| x 1` Re-indexed node connected component "
-        "index vector\n"
-        "    ECC_reindexed (np.ndarray): `|# elements| x 1` Re-indexed element connected component "
-        "index vector\n");
+        "    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The tuple `(X_reindexed, "
+        "E_reindexed, XCC_reindexed, ECC_reindexed)` where `X_reindexed` is a `|# dims| x |# "
+        "nodes|` re-indexed node position matrix, `E_reindexed` is a `|# nodes per element| x |# "
+        "elements|` re-indexed element index matrix, `XCC_reindexed` is a `|# nodes| x 1` "
+        "re-indexed node connected component index vector, and `ECC_reindexed` is a `|# elements| "
+        "x 1` re-indexed element connected component index vector\n");
     m.def(
         "reindex_mesh_by_connected_components",
         [](nb::DRef<MatrixX const> const& X, nb::DRef<IndexMatrixX const> const& E) {
@@ -192,10 +191,10 @@ void BindMesh(nanobind::module_& m)
         "    X (np.ndarray): |# dims| x |# nodes| node position matrix\n"
         "    E (np.ndarray): |# nodes per element| x |# elements| element index matrix\n"
         "Returns:\n"
-        "    X_reindexed (np.ndarray): `|# dims| x |# nodes|` Re-indexed node position matrix\n"
-        "    E_reindexed (np.ndarray): `|# nodes per element| x |# elements|` Re-indexed element "
-        "index matrix\n"
-        "    n_components (int): Number of connected components in the mesh");
+        "    Tuple[np.ndarray, np.ndarray, int]: The tuple `(X_reindexed, E_reindexed, "
+        "n_components)` where `X_reindexed` is a `|# dims| x |# nodes|` re-indexed node position "
+        "matrix, `E_reindexed` is a `|# nodes per element| x |# elements|` re-indexed element "
+        "index matrix, and `n_components` (int) is the number of connected components in the mesh");
 }
 
 } // namespace graph

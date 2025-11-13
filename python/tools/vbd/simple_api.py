@@ -7,6 +7,7 @@ import numpy as np
 import tkinter as tk
 from tkinter import filedialog
 import h5py
+import scipy as sp
 
 import utils.transform_library as tlib
 from utils.transform_library import TransformType
@@ -43,7 +44,7 @@ def _read_mesh_and_state(integrate_grp: h5py.Group):
     )
     # Deformed positions x at this frame
     x = np.array(fem_grp["x"]) if "x" in fem_grp else None
-    #print("DA VALS:", X, E, x, dmask)
+    # print("DA VALS:", X, E, x, dmask)
     return X, E, x, dmask, lamegU
 
 
@@ -81,6 +82,7 @@ def serialize_solver_iteration(
 
 def vbd_solve(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     archive: pbat.io.Archive | None = None,
 ):
@@ -88,11 +90,11 @@ def vbd_solve(
     grp = None
     if archive is not None:
         grp = archive["pbat.sim.algorithm.vbd.Solve"]
-    pbat.sim.algorithm.vbd.initialize_solve(fem, params)
+    pbat.sim.algorithm.vbd.initialize_solve(fem, mesh_dynamics, params)
     for k in range(params.n_max_iters):
         if grp is not None:
             serialize_solver_iteration(fem, k, grp)
-        pbat.sim.algorithm.vbd.iterate(fem, params)
+        pbat.sim.algorithm.vbd.iterate(fem, mesh_dynamics, params)
     fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, params.n_max_iters, grp, post_solve=True)
@@ -100,6 +102,7 @@ def vbd_solve(
 
 def vbd_integrate(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     archive: pbat.io.Archive | None = None,
 ):
@@ -109,12 +112,13 @@ def vbd_integrate(
     if archive is not None:
         grp = archive["pbat.sim.algorithm.vbd.Integrate"]
         fem.serialize(grp)
-    vbd_solve(fem, params, archive=grp)
+    vbd_solve(fem, mesh_dynamics, params, archive=grp)
     fem.step()
 
 
 def anderson_solve(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     anderson: pbat.sim.algorithm.vbd.AndersonParams,
     archive: pbat.io.Archive | None = None,
@@ -124,11 +128,11 @@ def anderson_solve(
         if archive is not None
         else None
     )
-    pbat.sim.algorithm.vbd.initialize_solve(fem, params, anderson)
+    pbat.sim.algorithm.vbd.initialize_solve(fem, mesh_dynamics, params, anderson)
     while anderson.k < params.n_max_iters:
         if grp is not None:
             serialize_solver_iteration(fem, anderson.k, grp)
-        pbat.sim.algorithm.vbd.iterate(fem, params, anderson)
+        pbat.sim.algorithm.vbd.iterate(fem, mesh_dynamics, params, anderson)
     fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, anderson.k, grp, post_solve=True)
@@ -136,6 +140,7 @@ def anderson_solve(
 
 def anderson_integrate(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     anderson: pbat.sim.algorithm.vbd.AndersonParams,
     archive: pbat.io.Archive | None = None,
@@ -148,12 +153,13 @@ def anderson_integrate(
     )
     if grp is not None:
         fem.serialize(grp)
-    anderson_solve(fem, params, anderson, archive=grp)
+    anderson_solve(fem, mesh_dynamics, params, anderson, archive=grp)
     fem.step()
 
 
 def broyden_solve(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     broyden: pbat.sim.algorithm.vbd.BroydenParams,
     archive: pbat.io.Archive | None = None,
@@ -161,11 +167,11 @@ def broyden_solve(
     grp = (
         archive["pbat.sim.algorithm.vbd.Broyden.Solve"] if archive is not None else None
     )
-    pbat.sim.algorithm.vbd.initialize_solve(fem, params, broyden)
+    pbat.sim.algorithm.vbd.initialize_solve(fem, mesh_dynamics, params, broyden)
     while broyden.k < params.n_max_iters:
         if grp is not None:
             serialize_solver_iteration(fem, broyden.k, grp)
-        pbat.sim.algorithm.vbd.iterate(fem, params, broyden)
+        pbat.sim.algorithm.vbd.iterate(fem, mesh_dynamics, params, broyden)
     fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, broyden.k, grp, post_solve=True)
@@ -173,6 +179,7 @@ def broyden_solve(
 
 def broyden_integrate(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     broyden: pbat.sim.algorithm.vbd.BroydenParams,
     archive: pbat.io.Archive | None = None,
@@ -185,12 +192,13 @@ def broyden_integrate(
     )
     if grp is not None:
         fem.serialize(grp)
-    broyden_solve(fem, params, broyden, archive=grp)
+    broyden_solve(fem, mesh_dynamics, params, broyden, archive=grp)
     fem.step()
 
 
 def chebyshev_solve(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     cheb: pbat.sim.algorithm.vbd.ChebyshevParams,
     archive: pbat.io.Archive | None = None,
@@ -200,11 +208,11 @@ def chebyshev_solve(
         if archive is not None
         else None
     )
-    pbat.sim.algorithm.vbd.initialize_solve(fem, params, cheb)
+    pbat.sim.algorithm.vbd.initialize_solve(fem, mesh_dynamics, params, cheb)
     while cheb.k < params.n_max_iters:
         if grp is not None:
             serialize_solver_iteration(fem, cheb.k, grp)
-        pbat.sim.algorithm.vbd.iterate(fem, params, cheb)
+        pbat.sim.algorithm.vbd.iterate(fem, mesh_dynamics, params, cheb)
     fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
         serialize_solver_iteration(fem, cheb.k, grp, post_solve=True)
@@ -212,6 +220,7 @@ def chebyshev_solve(
 
 def chebyshev_integrate(
     fem: pbat.sim.dynamics.FemElastoDynamics,
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
     params: pbat.sim.algorithm.vbd.Params,
     cheb: pbat.sim.algorithm.vbd.ChebyshevParams,
     archive: pbat.io.Archive | None = None,
@@ -224,7 +233,7 @@ def chebyshev_integrate(
     )
     if grp is not None:
         fem.serialize(grp)
-    chebyshev_solve(fem, params, cheb, archive=grp)
+    chebyshev_solve(fem, mesh_dynamics, params, cheb, archive=grp)
     fem.step()
 
 
@@ -301,6 +310,92 @@ def newton_integrate(
     fem.step()
 
 
+def register_contact_frames_in_polyscope(mesh_dynamics: pbat.sim.contact.MeshDynamics):
+    pcc = []
+    for f in range(mesh_dynamics.CFP.shape[0] - 1):
+        for c in range(mesh_dynamics.CFP[f], mesh_dynamics.CFP[f + 1]):
+            origins = np.stack(
+                [
+                    mesh_dynamics.CF[c].O,
+                    mesh_dynamics.CF[c].O,
+                    mesh_dynamics.CF[c].O,
+                ]
+            )
+            pcfc = ps.register_point_cloud(
+                f"Contact frame f={f} c={c}",
+                origins,
+            )
+            pcfc.add_vector_quantity("basis", mesh_dynamics.CF[c].B.T, enabled=False)
+            pcfc.add_vector_quantity(
+                "normal",
+                np.stack(
+                    [
+                        mesh_dynamics.CF[c].B[:, 0],
+                        mesh_dynamics.CF[c].B[:, 0],
+                        mesh_dynamics.CF[c].B[:, 0],
+                    ]
+                ),
+                enabled=True,
+            )
+            pcc.append(pcfc)
+
+    for he in range(mesh_dynamics.CHEP.shape[0] - 1):
+        for c in range(mesh_dynamics.CHEP[he], mesh_dynamics.CHEP[he + 1]):
+            origins = np.stack(
+                [
+                    mesh_dynamics.CHE[c].O,
+                    mesh_dynamics.CHE[c].O,
+                    mesh_dynamics.CHE[c].O,
+                ]
+            )
+            pchec = ps.register_point_cloud(
+                f"Contact frame he={he} c={c}",
+                origins,
+            )
+            pchec.add_vector_quantity("basis", mesh_dynamics.CHE[c].B.T, enabled=False)
+            pchec.add_vector_quantity(
+                "normal",
+                np.stack(
+                    [
+                        mesh_dynamics.CHE[c].B[:, 0],
+                        mesh_dynamics.CHE[c].B[:, 0],
+                        mesh_dynamics.CHE[c].B[:, 0],
+                    ]
+                ),
+                enabled=True,
+            )
+            pcc.append(pchec)
+
+    for v in range(mesh_dynamics.V2CV.shape[0]):
+        if mesh_dynamics.V2CV[v] >= 0:
+            c = mesh_dynamics.V2CV[v]
+            origins = np.stack(
+                [
+                    mesh_dynamics.CV[c].O,
+                    mesh_dynamics.CV[c].O,
+                    mesh_dynamics.CV[c].O,
+                ]
+            )
+            pcvc = ps.register_point_cloud(
+                f"Contact frame v={v} c={c}",
+                origins,
+            )
+            pcvc.add_vector_quantity("basis", mesh_dynamics.CV[c].B.T, enabled=False)
+            pcvc.add_vector_quantity(
+                "normal",
+                np.stack(
+                    [
+                        mesh_dynamics.CV[c].B[:, 0],
+                        mesh_dynamics.CV[c].B[:, 0],
+                        mesh_dynamics.CV[c].B[:, 0],
+                    ]
+                ),
+                enabled=True,
+            )
+            pcc.append(pcvc)
+    return pcc
+
+
 if __name__ == "__main__":
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -311,6 +406,7 @@ if __name__ == "__main__":
     ps.init()
 
     dynamics = pbat.sim.dynamics.FemElastoDynamics()
+    mesh_dynamics = pbat.sim.contact.MeshDynamics()
     Y = 1e7  # Young's modulus
     nu = 0.45  # Poisson's ratio
     rho = 1e3  # Mass density
@@ -385,9 +481,21 @@ if __name__ == "__main__":
     t = 0
     vm: ps.VolumeMesh = None
     dpc: ps.PointCloud = None
-    
-    transform_library = tlib.TransformLibrary()
-    transform_library.deserialize("primitive_transforms.h5")
+
+    # SDF visualization grid
+    sdf_grid: ps.VolumeGrid = None
+    sdf_grid_dims = (50, 50, 50)
+    sdf_grid_bmin = -np.ones(3, dtype=np.float64)
+    sdf_grid_bmax = np.ones(3, dtype=np.float64)
+    sdf_transform_R = np.eye(3)
+    sdf_transform_t = np.zeros(3)
+
+    # Contact frame vis
+    pcc = []
+    show_contact_frames = False
+
+    # transform_library = tlib.TransformLibrary()
+    # transform_library.deserialize("primitive_transforms.h5")
     original_mask = None
 
     def callback():
@@ -398,11 +506,15 @@ if __name__ == "__main__":
         global solver_names, i_solver, i_init_strategy, n_max_iters
         global i_broyden_l2_solver, i_broyden_jacobian_estimate
         global animate, export, t, vm, dpc
-        global archive, archive_path, archive_flush_period, transform_library, original_mask
+        global archive, archive_path, archive_flush_period
+        # global transform_library, original_mask
+        global mesh_dynamics
+        global sdf_grid, sdf_grid_dims, sdf_grid_bmin, sdf_grid_bmax
+        global pcc, show_contact_frames
+        global sdf_transform_R, sdf_transform_t
 
         dirty = False
         is_new_mesh = False
-        is_h5_mesh = False
         if imgui.TreeNode("I/O"):
             if imgui.Button("Load mesh file", [imgui.GetWindowWidth() / 2.1, 0]):
                 root = tk.Tk()
@@ -422,6 +534,68 @@ if __name__ == "__main__":
                     dynamics.construct(V.T, C.T)
                     vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
                     is_new_mesh = True
+                root.destroy()
+
+            if imgui.Button("Load SDF", [imgui.GetWindowWidth() / 2.1, 0]):
+                root = tk.Tk()
+                root.withdraw()
+                file_path = filedialog.askopenfilename(
+                    title="Select SDF forest",
+                    defaultextension=".h5",
+                    filetypes=[("SDF forest", "*.h5"), ("All files", "*.*")],
+                )
+                if file_path:
+                    try:
+                        archive_sdf = pbat.io.Archive(
+                            file_path, pbat.io.AccessMode.ReadOnly
+                        )
+                        sdf_forest = pbat.geometry.sdf.Forest()
+                        sdf_forest.deserialize(archive_sdf)
+                        for r in sdf_forest.roots:
+                            sdf_forest.transforms[r].R = sdf_transform_R
+                            sdf_forest.transforms[r].t = sdf_transform_t
+                        mesh_dynamics.set_static_geometry(sdf_forest)
+                        # Create grid if it doesn't exist
+                        if sdf_grid is None:
+                            sdf_grid = ps.register_volume_grid(
+                                "SDF Domain",
+                                sdf_grid_dims,
+                                sdf_grid_bmin,
+                                sdf_grid_bmax,
+                            )
+                            sdf_grid.set_transform(np.eye(4))
+                            sdf_grid.set_transparency(0.75)
+                        # Sample SDF on grid
+                        x, y, z = np.meshgrid(
+                            np.linspace(
+                                sdf_grid_bmin[0], sdf_grid_bmax[0], sdf_grid_dims[0]
+                            ),
+                            np.linspace(
+                                sdf_grid_bmin[1], sdf_grid_bmax[1], sdf_grid_dims[1]
+                            ),
+                            np.linspace(
+                                sdf_grid_bmin[2], sdf_grid_bmax[2], sdf_grid_dims[2]
+                            ),
+                            indexing="ij",
+                        )
+                        Xs = np.vstack([np.ravel(z), np.ravel(y), np.ravel(x)]).astype(
+                            np.float64
+                        )
+                        sd = mesh_dynamics.sdf.eval(Xs).reshape(
+                            sdf_grid_dims, order="F"
+                        )
+                        sdf_grid.add_scalar_quantity(
+                            "SDF",
+                            sd,
+                            defined_on="nodes",
+                            cmap="coolwarm",
+                            isolines_enabled=True,
+                            enable_isosurface_viz=True,
+                            enable_gridcube_viz=False,
+                            enabled=True,
+                        )
+                    except Exception as e:
+                        print(f"Failed to load SDF: {e}")
                 root.destroy()
 
             if imgui.Button("Load h5", [imgui.GetWindowWidth() / 2.1, 0]):
@@ -465,7 +639,9 @@ if __name__ == "__main__":
                     )
 
                     vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
-                    dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
+                    dpc = ps.register_point_cloud(
+                        "Dirichlet Nodes", dynamics.x[:, d_nodes].T
+                    )
                     is_new_mesh = True
                     d_axis = 3  # Don't apply default Dirichlet constraints
                 root.destroy()
@@ -602,6 +778,166 @@ if __name__ == "__main__":
                 imgui.TreePop()
             imgui.TreePop()
 
+        if imgui.TreeNode("Contact"):
+            if imgui.TreeNode("Mesh-SDF Contact"):
+                params = mesh_dynamics.mesh_sdf_contact.params
+                _, params.sigmaR = imgui.SliderFloat(
+                    "sigmaR", params.sigmaR, 1e-6, 1.0, format="%.6f"
+                )
+                _, params.sigmaB = imgui.SliderFloat(
+                    "sigmaB", params.sigmaB, 1e-6, 10.0, format="%.6f"
+                )
+                _, params.tauAred = imgui.SliderFloat(
+                    "tauAred", params.tauAred, 1e-8, 1.0, format="%.8f"
+                )
+                _, params.tauPred = imgui.SliderFloat(
+                    "tauPred", params.tauPred, 1e-8, 1.0, format="%.8f"
+                )
+                _, params.n_max_contacts_per_triangle = imgui.SliderInt(
+                    "n_max_contacts_per_triangle",
+                    params.n_max_contacts_per_triangle,
+                    1,
+                    32,
+                )
+                _, params.n_max_opt_iters_per_triangle = imgui.SliderInt(
+                    "n_max_opt_iters_per_triangle",
+                    params.n_max_opt_iters_per_triangle,
+                    1,
+                    200,
+                )
+                _, params.coord_zero = imgui.SliderFloat(
+                    "coord_zero",
+                    params.coord_zero,
+                    1e-8,
+                    1e-2,
+                    format="%.8f",
+                )
+                _, params.hfd = imgui.SliderFloat(
+                    "hfd", params.hfd, 1e-8, 1e-2, format="%.8f"
+                )
+                _, params.r = imgui.SliderFloat(
+                    "r", params.r, 1e-8, 1e-1, format="%.8f"
+                )
+                imgui.TreePop()
+
+            if imgui.TreeNode("Environment Contact Dynamics"):
+                params = mesh_dynamics.env_contact_dynamics_params
+                _, params.mu = imgui.InputFloat("Friction Coefficient", params.mu)
+                _, params.beta = imgui.InputFloat("beta", params.beta)
+                _, params.Fnmax = imgui.SliderFloat(
+                    "Max Normal Force", params.Fnmax, 1e2, 1e8, format="%.1f"
+                )
+                _, params.gamma = imgui.SliderFloat(
+                    "gamma", params.gamma, 1e-2, 1.0, format="%.6f"
+                )
+                _, params.kstart = imgui.SliderFloat(
+                    "kstart", params.kstart, 1e1, 1e6, format="%.1f"
+                )
+                imgui.TreePop()
+
+            if imgui.TreeNode("SDF Visualization"):
+                # Grid bounds
+                bmin = int(sdf_grid_bmin[0])
+                bmin_changed, bmin = imgui.InputInt("Grid Min", bmin)
+                sdf_grid_bmin[:] = bmin
+                bmax = int(sdf_grid_bmax[0])
+                bmax_changed, bmax = imgui.InputInt("Grid Max", bmax)
+                sdf_grid_bmax[:] = bmax
+                # Grid resolution
+                grid_res = sdf_grid_dims[0]
+                dims_changed, grid_res = imgui.InputInt(
+                    "Grid Resolution", grid_res
+                )
+                sdf_grid_dims = (grid_res, grid_res, grid_res)
+                # Transform
+                euler_angles = sp.spatial.transform.Rotation.from_matrix(
+                    sdf_transform_R
+                ).as_euler("xyz", degrees=True)
+                R_changed, euler_angles = imgui.SliderFloat3(
+                    "Euler angles", euler_angles, -180, 180
+                )
+                if R_changed:
+                    euler_angles = [5 * round(ri / 5) for ri in euler_angles]
+                    sdf_transform_R = sp.spatial.transform.Rotation.from_euler(
+                        "xyz", euler_angles, degrees=True
+                    ).as_matrix()
+                t_changed, sdf_transform_t = imgui.SliderFloat3(
+                    "Translation", sdf_transform_t, -1, 1
+                )
+                sdf_transform_t = np.array(sdf_transform_t)
+                if R_changed or t_changed:
+                    for r in mesh_dynamics.sdf_forest.roots:
+                        mesh_dynamics.sdf_forest.transforms[r].R = sdf_transform_R
+                        mesh_dynamics.sdf_forest.transforms[r].t = sdf_transform_t
+                # Update/refresh grid
+                update_grid = imgui.Button(
+                    "Update SDF Grid", [imgui.GetWindowWidth() / 2.1, 0]
+                )
+                if (
+                    update_grid
+                    or bmin_changed
+                    or bmax_changed
+                    or dims_changed
+                    or R_changed
+                    or t_changed
+                ):
+                    try:
+                        # Create or update grid
+                        if (
+                            sdf_grid is None
+                            or bmin_changed
+                            or bmax_changed
+                            or dims_changed
+                        ):
+                            if sdf_grid is not None:
+                                ps.remove_volume_grid("SDF Domain")
+                            sdf_grid = ps.register_volume_grid(
+                                "SDF Domain",
+                                sdf_grid_dims,
+                                sdf_grid_bmin,
+                                sdf_grid_bmax,
+                            )
+                            sdf_grid.set_transform(np.eye(4))
+                            sdf_grid.set_transparency(0.75)
+                        # Sample SDF on grid
+                        x, y, z = np.meshgrid(
+                            np.linspace(
+                                sdf_grid_bmin[0], sdf_grid_bmax[0], sdf_grid_dims[0]
+                            ),
+                            np.linspace(
+                                sdf_grid_bmin[1], sdf_grid_bmax[1], sdf_grid_dims[1]
+                            ),
+                            np.linspace(
+                                sdf_grid_bmin[2], sdf_grid_bmax[2], sdf_grid_dims[2]
+                            ),
+                            indexing="ij",
+                        )
+                        Xs = np.vstack([np.ravel(z), np.ravel(y), np.ravel(x)]).astype(
+                            np.float64
+                        )
+                        sd = mesh_dynamics.sdf.eval(Xs).reshape(
+                            sdf_grid_dims, order="F"
+                        )
+                        sdf_grid.add_scalar_quantity(
+                            "SDF",
+                            sd,
+                            defined_on="nodes",
+                            cmap="coolwarm",
+                            isolines_enabled=True,
+                            enable_gridcube_viz=False,
+                            enable_isosurface_viz=True,
+                            enabled=True,
+                        )
+                    except Exception as e:
+                        print(f"Failed to visualize SDF: {e}")
+
+                imgui.TreePop()
+
+            _, show_contact_frames = imgui.Checkbox(
+                "Visualize Contact Frames", show_contact_frames
+            )
+            imgui.TreePop()
+
         if imgui.TreeNode("Newton"):
             # Basic Newton parameters
             _, newton_params.newton.n_max_iters = imgui.InputInt(
@@ -655,6 +991,21 @@ if __name__ == "__main__":
 
         # Initialize VBD parameters
         if is_new_mesh:
+            # Compute connected components
+            XCC = np.zeros(dynamics.X.shape[1], dtype=np.int32)
+            ECC = np.zeros(dynamics.E.shape[1], dtype=np.int32)
+            Xord = np.zeros(dynamics.X.shape[1], dtype=np.int32)
+            Eord = np.zeros(dynamics.E.shape[1], dtype=np.int32)
+            Xord, Eord, XCC, ECC, n_components = (
+                pbat.graph.sorted_connected_component_ordering(dynamics.X, dynamics.E)
+            )
+            # Reindex mesh by connected components
+            dynamics.X, dynamics.E, XCC, ECC = (
+                pbat.graph.reindex_mesh_by_connected_components(
+                    dynamics.X, dynamics.E, XCC, ECC, Xord, Eord
+                )
+            )
+            # Setup VBD parameters
             n_nodes = dynamics.X.shape[1]
             GVGp, GVGe, GVGilocal = (
                 pbat.sim.algorithm.vbd.vertex_element_adjacency_graph(
@@ -670,13 +1021,25 @@ if __name__ == "__main__":
                 colors
             ).construct()
 
+            # Create MultiMesh via BoundaryTriangulation
+            multi_mesh = pbat.sim.contact.MultiMesh(dynamics.E, XCC, n_components)
+            # Construct MeshDynamics
+            mesh_dynamics.construct(multi_mesh, mesh_dynamics.sdf_forest)
+            # Initialize mesh-environment contact detection
+            mesh_dynamics.initialize_mesh_environment_contact_detection()
+
+            # Set SDF grid bounds based on mesh bounding box
+            aabb_mesh = pypbat.geometry.aabb(dynamics.X)
+            mesh_extents = aabb_mesh.max - aabb_mesh.min
+            margin = 0.2 * np.max(mesh_extents)  # Add 20% margin
+
         # Update scenario
         if dirty:
             # Time integration
             dynamics.set_time_integration_scheme(dt, s)
             # Material
-            #mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
-            #dynamics.set_elastic_energy(mu, llambda)
+            # mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
+            # dynamics.set_elastic_energy(mu, llambda)
             dynamics.set_mass_matrix(rho)
             # Dynamics
             fext = np.asarray(b) + rho * np.asarray(aext)
@@ -698,6 +1061,10 @@ if __name__ == "__main__":
                 d_nodes = aabb.contained(dynamics.X)
                 d_mask = np.zeros(dynamics.X.shape[1], dtype=int)
                 d_mask[d_nodes] = 1
+                dynamics.constrain(d_mask)
+            elif d_axis == 3:
+                d_nodes = np.array([], dtype=int)
+                d_mask = np.zeros(dynamics.X.shape[1], dtype=int)
                 dynamics.constrain(d_mask)
             dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
             # NOTE: If the time integration scheme has changed, the BDF integrator
@@ -722,6 +1089,9 @@ if __name__ == "__main__":
             )
             dynamics.constrain(original_mask.ravel() if original_mask is not None else np.zeros(n_nodes, dtype=int))
             t = 0
+            for pcci in pcc:
+                pcci.remove()
+            pcc = []
 
         # Simulate
         if animate or step:
@@ -746,18 +1116,30 @@ if __name__ == "__main__":
                 #         dynamics.x[:, i] = transformed_v[:, i]
                 
             if i_solver == 0:
-                vbd_integrate(dynamics, vbd_params, archive=frame_group)
+                vbd_integrate(dynamics, mesh_dynamics, vbd_params, archive=frame_group)
             elif i_solver == 1:
                 anderson_integrate(
-                    dynamics, vbd_params, anderson_params, archive=frame_group
+                    dynamics,
+                    mesh_dynamics,
+                    vbd_params,
+                    anderson_params,
+                    archive=frame_group,
                 )
             elif i_solver == 2:
                 broyden_integrate(
-                    dynamics, vbd_params, broyden_params, archive=frame_group
+                    dynamics,
+                    mesh_dynamics,
+                    vbd_params,
+                    broyden_params,
+                    archive=frame_group,
                 )
             elif i_solver == 3:
                 chebyshev_integrate(
-                    dynamics, vbd_params, chebyshev_params, archive=frame_group
+                    dynamics,
+                    mesh_dynamics,
+                    vbd_params,
+                    chebyshev_params,
+                    archive=frame_group,
                 )
             elif i_solver == 4:
                 newton_integrate(
@@ -774,6 +1156,21 @@ if __name__ == "__main__":
                     archive.flush()
                 except Exception as e:
                     print(f"Archive flush error: {e}")
+
+            # Show contact frames and clear old ones
+            for pcci in pcc:
+                try:
+                    pcci.remove()
+                except Exception as e:
+                    print(f"Point cloud removal error: {e}")
+            pcc = []
+            if show_contact_frames:
+                pcc = register_contact_frames_in_polyscope(mesh_dynamics)
+
+        if not show_contact_frames and len(pcc) > 0:
+            for pcci in pcc:
+                pcci.remove()
+            pcc = []
 
         # Update visuals
         vis_dirty = animate or step or reset
