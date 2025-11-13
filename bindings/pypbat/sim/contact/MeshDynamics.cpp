@@ -51,7 +51,8 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_rw(
             "k",
             &EnvironmentContactConstraintType::k,
-            "(numpy.ndarray) Contact stiffness (normal, tangent, bitangent) (3 x 1).");
+            "(numpy.ndarray) Contact stiffness (normal, tangent, bitangent) (3 x 1).")
+        .def_rw("mu", &EnvironmentContactConstraintType::mu, "(float) Friction coefficient.");
 
     nb::class_<EnvironmentContactDynamicsParamsType>(m, "EnvironmentContactDynamicsParams")
         .def(nb::init<>(), "Create default environment contact dynamics parameters.")
@@ -89,7 +90,7 @@ void BindMeshDynamics(nanobind::module_& m)
             nb::arg("n_reserve_ratio") = ScalarType(0.2),
             "Set the contact geometries and initialize data structures.\n\n"
             "Args:\n"
-            "    X (numpy.ndarray): 3 x |#points| point positions.\n"
+            "    X (numpy.ndarray): 3 x |# points| point positions.\n"
             "    meshes (MultiMesh): Mesh contact geometry representation.\n"
             "    sdf_forest (pbat.geometry.sdf.Forest): SDF static geometry storage.\n"
             "    n_reserve_ratio (float): Ratio of mesh resolution to reserve for contact "
@@ -107,7 +108,7 @@ void BindMeshDynamics(nanobind::module_& m)
             nb::arg("params"),
             "Initialize mesh-mesh contact detection.\n\n"
             "Args:\n"
-            "    X (numpy.ndarray): 3 x |#points| point positions.\n"
+            "    X (numpy.ndarray): 3 x |# points| point positions.\n"
             "    device (pbat.geometry.Device): Spatial acceleration device.\n"
             "    params (OgcParams): Offset geometry contact parameters.")
         .def(
@@ -127,7 +128,7 @@ void BindMeshDynamics(nanobind::module_& m)
             "Reformulate mesh-SDF contact constraints, zeroing out inactive constraints and their "
             "Lagrange multipliers.\n\n"
             "Args:\n"
-            "    X (numpy.ndarray): 3 x |#points| point positions.")
+            "    X (numpy.ndarray): 3 x |# points| point positions.")
         .def(
             "prepare_environment_contacts_for_dual_iteration",
             &MeshDynamicsType::PrepareEnvironmentContactsForDualIteration,
@@ -142,11 +143,11 @@ void BindMeshDynamics(nanobind::module_& m)
             nb::arg("X"),
             "Update Lagrange multiplier estimates and contact stiffnesses for mesh-SDF contact.\n\n"
             "Args:\n"
-            "    X (numpy.ndarray): 3 x |#points| point positions.")
+            "    X (numpy.ndarray): 3 x |# points| point positions.")
         .def_rw(
             "CF",
             &MeshDynamicsType::CF,
-            "(List[EnvironmentContactConstraint]) |#triangle-env contacts| mesh-SDF triangle "
+            "(List[EnvironmentContactConstraint]) |# triangle-env contacts| mesh-SDF triangle "
             "contact constraints, sorted by triangle index.")
         .def_rw(
             "CFP",
@@ -155,29 +156,31 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_rw(
             "CHE",
             &MeshDynamicsType::CHE,
-            "(List[EnvironmentContactConstraint]) |#half-edge-env contacts| mesh-SDF half-edge "
+            "(List[EnvironmentContactConstraint]) |# half-edge-env contacts| mesh-SDF half-edge "
             "contact constraints, sorted by half-edge index.")
         .def_rw(
             "CHEP",
             &MeshDynamicsType::CHEP,
-            "(List[int]) |#half-edges + 1| mesh-SDF half-edge contact constraint prefix.")
+            "(List[int]) |# half-edges + 1| mesh-SDF half-edge contact constraint prefix.")
         .def_rw(
             "CV",
             &MeshDynamicsType::CV,
-            "(List[EnvironmentContactConstraint]) |#vertex-env contacts| mesh-SDF vertex contact "
+            "(List[EnvironmentContactConstraint]) |# vertex-env contacts| mesh-SDF vertex contact "
             "constraints, sorted by vertex index.")
         .def_rw(
             "CVinds",
-            &MeshDynamicsType::CVinds,
-            "(List[int]) |#vertex-env contacts| list of contact-constrained vertices, sorted by "
-            "vertex index.")
+            &MeshDynamicsType::V2CV,
+            "(numpy.ndarray[bool]) |# vertices| map from vertex indices to contact indices.")
         .def_rw(
             "env_contact_dynamics_params",
             &MeshDynamicsType::mEnvContactDynamicsParams,
             "(EnvironmentContactDynamicsParams) Environment contact dynamics parameters.")
-        .def_rw("FA", &MeshDynamicsType::FA, "(numpy.ndarray) |#triangles| x 1 triangle areas.")
-        .def_rw("HEA", &MeshDynamicsType::HEA, "(numpy.ndarray) |#half-edges| x 1 half-edge areas.")
-        .def_rw("VA", &MeshDynamicsType::VA, "(numpy.ndarray) |#vertices| x 1 vertex areas.")
+        .def_rw("FA", &MeshDynamicsType::FA, "(numpy.ndarray) |# triangles| x 1 triangle areas.")
+        .def_rw(
+            "HEA",
+            &MeshDynamicsType::HEA,
+            "(numpy.ndarray) |# half-edges| x 1 half-edge areas.")
+        .def_rw("VA", &MeshDynamicsType::VA, "(numpy.ndarray) |# vertices| x 1 vertex areas.")
         .def_rw("meshes", &MeshDynamicsType::mMeshes, "(MultiMesh) Dynamic geometry.")
         .def_ro(
             "offset_geometry_contact",

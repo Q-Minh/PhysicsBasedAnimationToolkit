@@ -115,7 +115,7 @@ class MeshDynamics
     /**
      * @brief Reformulates mesh-SDF contact constraints, i.e. their bases and origins, correctly
      * zeroing out inactive constraints and their associated Lagrange multipliers.
-     *
+     * @note This does NOT evaluate the constraints, since this is typically during a dynamics solve.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      */
     PBAT_API void UpdateEnvironmentContactConstraints(
@@ -152,6 +152,9 @@ class MeshDynamics
      * \f]
      * where \f$ \mathbf{n}, \mathbf{t}, \mathbf{b} \f$ are the contact basis' normal, tangent, and
      * bitangent, and \f$ o \f$ is the contact basis' origin, while \f$ x \f$ is the contact point.
+     *
+     * TODO: Write documentation/derivation based on my personal "Linear constraint derivatives"
+     * notes
      */
     struct EnvironmentContactConstraint
     {
@@ -160,19 +163,31 @@ class MeshDynamics
         Eigen::Vector<ScalarType, 3> C; ///< Contact constraint values (normal, tangent, bitangent)
         Eigen::Vector<ScalarType, 3> lambda; ///< Contact Lagrange multiplier estimates
         Eigen::Vector<ScalarType, 3> k;      ///< Contact stiffness (normal, tangent, bitangent)
+        ScalarType mu;                       ///< Friction coefficient
+        /**
+         * @brief Evaluates and updates the contact constraint based on the current contact frame
+         * @param xc Current contact point position
+         */
+        void Eval(Eigen::Vector<ScalarType, 3> const& xc);
+        /**
+         * @brief Estimate each contact/constraint force from Lagrange multipliers
+         * @param lambdaNmax Maximum normal Lagrange multiplier magnitude
+         */
+        Eigen::Vector<ScalarType, 3>
+        ForceEstimate(ScalarType lambdaNmax = std::numeric_limits<ScalarType>::max()) const;
     };
     std::vector<EnvironmentContactConstraint> CF; ///< `|# triangle-env contacts|` mesh-SDF triangle
                                                   ///< contact constraints, sorted by triangle index
-    std::vector<IndexType> CFP; ///< `|# triangles + 1|` mesh-SDF triangle contact constraint prefix
+    Eigen::Vector<IndexType, Eigen::Dynamic>
+        CFP; ///< `|# triangles + 1|` mesh-SDF triangle contact constraint prefix
     std::vector<EnvironmentContactConstraint>
         CHE; ///< `|# half-edge-env contacts|` mesh-SDF half-edge contact constraints, sorted by
              ///< half-edge index
-    std::vector<IndexType>
+    Eigen::Vector<IndexType, Eigen::Dynamic>
         CHEP; ///< `|# half-edges + 1|` mesh-SDF half-edge contact constraint prefix
-    std::vector<EnvironmentContactConstraint> CV; ///< `|# vertex-env contacts|` mesh-SDF vertex
-                                                  ///< contact constraints, sorted by vertex index
-    std::vector<IndexType> CVinds; ///< `|# vertex-env contacts|` list of contact-constrained
-                                   ///< vertices, sorted by vertex index
+    std::vector<EnvironmentContactConstraint> CV;  ///< `|# vertex-env contacts|` mesh-SDF vertex
+                                                   ///< contact constraints, sorted by vertex index
+    Eigen::Vector<IndexType, Eigen::Dynamic> V2CV; ///< `|# vertices|` map from vertex index into CV
     /**
      * @brief Environment contact (augmented Lagrangian) dynamics parameters
      */
