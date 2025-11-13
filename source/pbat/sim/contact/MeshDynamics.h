@@ -121,6 +121,11 @@ class MeshDynamics
     PBAT_API void UpdateEnvironmentContactConstraints(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
     /**
+     * @brief Prepares Lagrange multiplier estimates and contact stiffnesses for solver dual
+     * iteration
+     */
+    PBAT_API void PrepareEnvironmentContactsForDualIteration();
+    /**
      * @brief Updates Lagrange multiplier estimates and contact stiffnesses for mesh-SDF contact
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      */
@@ -177,6 +182,9 @@ class MeshDynamics
         ScalarType kstart{1e3}; ///< Initial contact stiffness for new contacts
         ScalarType beta{10};    ///< \cite giles_augmented_2025 multiplier of constraint error for
                                 ///< stiffness update
+        ScalarType gamma{
+            0.99}; ///< \cite giles_augmented_2025 decay factor for
+                   ///< Lagrange multiplier and stiffness initialization at time step begin
         ScalarType Fnmax{std::numeric_limits<ScalarType>::max()}; ///< Maximum normal contact force
                                                                   ///< density magnitude
     };

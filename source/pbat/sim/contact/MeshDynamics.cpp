@@ -105,6 +105,25 @@ void MeshDynamics::UpdateEnvironmentContactConstraints(
     UpdateVertexContactConstraints(X);
 }
 
+void MeshDynamics::PrepareEnvironmentContactsForDualIteration()
+{
+    tbb::parallel_for(std::size_t{0}, CF.size(), [&](std::size_t c) {
+        CF[c].lambda *= mEnvContactDynamicsParams.gamma;
+        CF[c].k =
+            (mEnvContactDynamicsParams.gamma * CF[c].k).cwiseMax(mEnvContactDynamicsParams.kstart);
+    });
+    tbb::parallel_for(std::size_t{0}, CHE.size(), [&](std::size_t c) {
+        CHE[c].lambda *= mEnvContactDynamicsParams.gamma;
+        CHE[c].k =
+            (mEnvContactDynamicsParams.gamma * CHE[c].k).cwiseMax(mEnvContactDynamicsParams.kstart);
+    });
+    tbb::parallel_for(std::size_t{0}, CV.size(), [&](std::size_t c) {
+        CV[c].lambda *= mEnvContactDynamicsParams.gamma;
+        CV[c].k =
+            (mEnvContactDynamicsParams.gamma * CV[c].k).cwiseMax(mEnvContactDynamicsParams.kstart);
+    });
+}
+
 void MeshDynamics::DualUpdateEnvironmentContacts(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
 {
