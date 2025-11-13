@@ -90,7 +90,7 @@ void MeshDynamics::UpdateEnvironmentContactConstraints(
     for (auto f = 0; f < FA.size(); ++f)
         FA(f) = ScalarType(0.5) * (Xb.col(f) - Xa.col(f)).cross((Xc.col(f) - Xa.col(f))).norm();
     for (auto he = 0; he < HEA.size(); ++he)
-        HEA(he) = FA(mMeshes.GHEF(0, he)) + FA(mMeshes.GHEF(1, he));
+        HEA(he) = ScalarType(0.5) * (FA(mMeshes.GHEF(0, he)) + FA(mMeshes.GHEF(1, he)));
     for (auto v = 0; v < VA.size(); ++v)
     {
         VA(v)      = ScalarType(0);
@@ -460,9 +460,10 @@ void MeshDynamics::UpdateVertexContactConstraints(
 
 } // namespace pbat::sim::contact
 
-#include <doctest/doctest.h>
 #include "pbat/geometry/model/Cube.h"
 #include "pbat/graph/Mesh.h"
+
+#include <doctest/doctest.h>
 
 TEST_CASE("[sim][contact] MeshDynamics initialization")
 {
@@ -499,27 +500,12 @@ TEST_CASE("[sim][contact] MeshDynamics initialization")
     geometry::sdf::Forest<Scalar> sdfForest;
     // Add some primitive nodes
     sdfForest.nodes.push_back(geometry::sdf::Sphere<Scalar>{1.5}); // radius = 1.5
-    sdfForest.nodes.push_back(
-        geometry::sdf::Box<Scalar>{geometry::sdf::Vec3<Scalar>{0.5, 0.5, 0.5}}); // half extents
-    sdfForest.nodes.push_back(
-        geometry::sdf::Capsule<Scalar>{
-            geometry::sdf::Vec3<Scalar>{0.0, 0.0, 0.0}, // point a
-            geometry::sdf::Vec3<Scalar>{0.0, 1.0, 0.0}, // point b
-            0.3                                         // radius
-        });
     // Add transforms for each node
-    for (std::size_t i = 0; i < sdfForest.nodes.size(); ++i)
-    {
-        geometry::sdf::Transform<Scalar> transform = geometry::sdf::Transform<Scalar>::Identity();
-        sdfForest.transforms.push_back(transform);
-    }
+    sdfForest.transforms.push_back(geometry::sdf::Transform<Scalar>::Identity());
+    sdfForest.transforms.back().t(2) -= Scalar(1.2);
     // Set up tree structure (all roots, no hierarchy for simplicity)
-    sdfForest.roots = {0, 1, 2};
-    sdfForest.children.resize(sdfForest.nodes.size());
-    for (std::size_t i = 0; i < sdfForest.children.size(); ++i)
-    {
-        sdfForest.children[i] = {-1, -1}; // All leaf nodes
-    }
+    sdfForest.roots.push_back(0);
+    sdfForest.children.push_back({-1, -1}); // Leaf node
 
     // 2. Act
 
@@ -533,10 +519,10 @@ TEST_CASE("[sim][contact] MeshDynamics initialization")
     // Check that basic structures are initialized
     CHECK_GT(meshDynamics.mMeshes.V.size(), 0);
     // Check that SDF forest is set
-    CHECK_EQ(meshDynamics.mSdfForest.nodes.size(), 3);
-    CHECK_EQ(meshDynamics.mSdfForest.transforms.size(), 3);
-    CHECK_EQ(meshDynamics.mSdfForest.roots.size(), 3);
-    CHECK_EQ(meshDynamics.mSdfForest.children.size(), 3);
+    CHECK_EQ(meshDynamics.mSdfForest.nodes.size(), 1);
+    CHECK_EQ(meshDynamics.mSdfForest.transforms.size(), 1);
+    CHECK_EQ(meshDynamics.mSdfForest.roots.size(), 1);
+    CHECK_EQ(meshDynamics.mSdfForest.children.size(), 1);
 
     // Check that SDF composite is valid
     CHECK(meshDynamics.mSdf.Status() == geometry::sdf::ECompositeStatus::Valid);
@@ -555,4 +541,24 @@ TEST_CASE("[sim][contact] MeshDynamics initialization")
     CHECK_EQ(meshDynamics.CF.size(), 0);
     CHECK_EQ(meshDynamics.CHE.size(), 0);
     CHECK_EQ(meshDynamics.CV.size(), 0);
+
+    SUBCASE("Mesh-SDF environment contacts")
+    {
+        // Act
+        meshDynamics.InitializeMeshEnvironmentContactDetection(
+            sim::contact::MeshSdfContactParams{});
+        meshDynamics.UpdateEnvironmentContactConstraints(X);
+        meshDynamics.PrepareEnvironmentContactsForDualIteration();
+
+        // Assert
+        CHECK_EQ(meshDynamics.CV.size(), 1); // One vertex should be in contact
+        Eigen::Vector<Scalar, 3> A = X.col(meshDynamics.mMeshes.F(0, 0));
+        Eigen::Vector<Scalar, 3> B = X.col(meshDynamics.mMeshes.F(1, 0));
+        Eigen::Vector<Scalar, 3> C = X.col(meshDynamics.mMeshes.F(2, 0));
+        Scalar areaf0              = Scalar(0.5) * (B - A).cross(C - A).norm();
+        CHECK_EQ(meshDynamics.FA(0), areaf0);
+        Scalar areahe0 = Scalar(0.5) * (meshDynamics.FA(geometry::FaceOfHalfEdge(0)) +
+                                        meshDynamics.FA(geometry::FaceOfHalfEdge(1)));
+        CHECK_EQ(meshDynamics.HEA(0), areahe0);
+    }
 }
