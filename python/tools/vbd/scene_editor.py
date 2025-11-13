@@ -11,30 +11,8 @@ from tkinter import filedialog
 from pbatoolkit import pbat, pypbat
 from utils.dirichlet_index_library import DirichletIndices, DirichletLibrary
 import utils.transform_library as tlib
-
-class SceneMesh:
-    def __init__(self, name: str, V: np.ndarray, C: np.ndarray):
-        self.name = name
-        self.V = V  # (n,3)
-        self.C = C  # (m,4)
-        self.handle = ps.register_volume_mesh(name, V, C)
-        # Per-mesh settings (future extension: heterogeneous materials, loads, constraints)
-        self.Y = 1e6
-        self.nu = 0.45
-        self.rho = 1e3
-        self.v0 = np.array([0.0, 0.0, 0.0])
-        self.b = np.array(
-            [0.0, 0.0, 0.0]
-        )  # per-mesh body force (e.g. wind, extra load)
-        #self.dirichlet_indices = {}  # Array of vertex indices with Dirichlet boundary conditions
-        
-
-    def transformed_vertices(self) -> np.ndarray:
-        T = self.handle.get_transform()
-        VH = np.vstack([self.V.T, np.ones((1, self.V.shape[0]))])
-        VT = (T @ VH).T[:, :3]
-        return VT
-
+import utils.pick as pick
+from utils.scene_mesh import SceneMesh
 
 class SceneState:
     def __init__(self):
@@ -47,20 +25,26 @@ class SceneState:
         self.d_axis = 0
         self.d_percent = 0.01
         self.d_extremity = 0
-        # Library for fixed transforms for Dirichlet groups
+
+        # Library of fixed transforms for Dirichlet groups
         self.transform_library = tlib.TransformLibrary()
+
+        # Extras when creating new transforms
         self.unsaved_transforms = {}
         for ttype in tlib.TransformType:
             self.unsaved_transforms[ttype] = tlib.PrimitiveTransform.make_default(ttype) 
         self.selected_ttype = 0
-
         self.editing_new_transform = False
-        self.editing_old_transform = -1
-        # Constructed FEM
-        self.fem = None  # pbat.sim.dynamics.FemElastoDynamics
-
+        
+        # Library of Dirichlet indices per transform
         self.selected_dirichlet_group = 0
         self.dirichlet_library = {}
+        
+        # Selection boxes
+        self.selections = []
+
+        # Constructed FEM
+        self.fem = None  # pbat.sim.dynamics.FemElastoDynamics
 
     def add_mesh_from_file(self, file_path: str):
         imesh = meshio.read(file_path)
@@ -72,7 +56,7 @@ class SceneState:
             self.meshes.append(item)
                         # add to all Dirichlet libraries
             for tname in self.dirichlet_library:
-                self.dirichlet_library[tname].add_mesh(item.name, item.V)
+                self.dirichlet_library[tname].add_mesh(item)
             return item
         else:
             ps.error("Only tetrahedral meshes are supported in the scene editor.")
@@ -209,7 +193,7 @@ class SceneState:
         d_mask = np.zeros(fem.X.shape[1], dtype=int)
         for (start, end), m in zip(element_ranges, self.meshes):
             for t in self.transform_library.transforms:
-                dgroup = self.dirichlet_library[t.name].get_mesh_indices(m.name)
+                dgroup = self.dirichlet_library[t.name].get_mesh_indices(m)
                 if dgroup.indices is not None and len(dgroup.indices) > 0:
                     d_mask[dgroup.indices + start] = t.id
         fem.constrain(d_mask)
@@ -234,15 +218,26 @@ class SceneState:
         for t in self.transform_library.transforms:
             self.dirichlet_library[t.name] = DirichletLibrary(t.name)
             for m in self.meshes:
-                self.dirichlet_library[t.name].add_mesh(m.name, m.V)
+                self.dirichlet_library[t.name].add_mesh(m)
 
     def add_transform(self, transform: tlib.PrimitiveTransform):
         self.transform_library.add_transform(transform)
         self.dirichlet_library[transform.name] = DirichletLibrary(transform.name)
         for m in self.meshes:
-            self.dirichlet_library[transform.name].add_mesh(m.name, m.V)
+            self.dirichlet_library[transform.name].add_mesh(m)
         print(self.transform_library.transforms)
         print(self.dirichlet_library.keys())
+
+    def spawn_box_selection(self):
+        name = f"Selection Box {len(self.selections)}"
+        box = pick.BoxSelection(name)
+        self.selections.append(box)
+        return box
+    
+    def get_box_selection(self, idx: int):
+        if 0 <= idx < len(self.selections):
+            return self.selections[idx]
+        return None
 
 
 def _load_mesh(state: SceneState):
@@ -279,6 +274,7 @@ def _save_fem(state: SceneState):
             state.save_transform_library()
     finally:
         root.destroy()
+
 
 def transform_editor(transform: tlib.PrimitiveTransform, idx: int):
     imgui.PushID(idx)
@@ -344,49 +340,94 @@ def main():
             _, state.aext = imgui.InputFloat3("External acceleration", state.aext)
             _, state.dt = imgui.InputFloat("Time step", state.dt)
             _, state.s = imgui.InputInt("BDF step", state.s)
-            if imgui.TreeNode("Dirichlet Constraints"):
-                # _, state.d_axis = imgui.InputInt("Axis (0=x,1=y,2=z)", state.d_axis)
-                # _, state.d_percent = imgui.InputFloat("Percentage", state.d_percent)
-                # _, state.d_extremity = imgui.InputInt(
-                #     "Extremity (0=min,1=max)", state.d_extremity
-                # )
-                if imgui.Button("Load Transform file", default_button_size):
-                    state.load_transform_file()
-                if imgui.Button("Save Transform file", default_button_size):
-                    state.save_transform_library()
+            
+            imgui.TreePop()
+        if imgui.TreeNode("Dirichlet Constraints"):
+            # _, state.d_axis = imgui.InputInt("Axis (0=x,1=y,2=z)", state.d_axis)
+            # _, state.d_percent = imgui.InputFloat("Percentage", state.d_percent)
+            # _, state.d_extremity = imgui.InputInt(
+            #     "Extremity (0=min,1=max)", state.d_extremity
+            # )
+            if imgui.Button("Load Transform file", default_button_size):
+                state.load_transform_file()
+            if imgui.Button("Save Transform file", default_button_size):
+                state.save_transform_library()
 
 
-                if state.transform_library.transforms:
-                    _, state.selected_dirichlet_group = imgui.Combo(
-                                "Picked Group", state.selected_dirichlet_group,
-                                [t.name for t in state.transform_library.transforms]
-                            )
-                  
-                # Read/Edit loaded transforms
-                if imgui.TreeNode("Loaded Transforms"):
-                    # Red buttons for buttons per transform, to distinguish from other buttons
-                    imgui.PushStyleColor(imgui.ImGuiCol_Button, (0.8, 0.2, 0.2, 1.0))
-                    for t in state.transform_library.transforms:
-                        if imgui.TreeNode(f"{t.id}"):
-                            transform_editor(t, t.id)
-                            imgui.TreePop()
-                    imgui.PopStyleColor(1)       
-                    if (imgui.Button("Create new Transform", default_button_size) or state.editing_new_transform) and state.editing_old_transform == -1:
-                        state.editing_new_transform = True
-                        _, state.selected_ttype = imgui.Combo(
-                            "Transform Type", state.selected_ttype,
-                            [ttype.name for ttype in tlib.TransformType]
+            if state.transform_library.transforms:
+                _, state.selected_dirichlet_group = imgui.Combo(
+                            "Picked Group", state.selected_dirichlet_group,
+                            [t.name for t in state.transform_library.transforms]
                         )
-                        for unsaved in state.unsaved_transforms:
-                            if unsaved.value == state.selected_ttype:
-                                transform_editor(state.unsaved_transforms[unsaved], unsaved.value + len(state.transform_library.transforms))
-                                if imgui.Button("Add Transform", default_button_size):
-                                    state.add_transform(state.unsaved_transforms[unsaved])
-                                    state.unsaved_transforms[unsaved] = tlib.PrimitiveTransform.make_default(unsaved)
-                                    #state.dirichlet_library[unsaved.name] = DirichletLibrary(unsaved.name, scene_meshes=state.meshes)
-                                    state.editing_new_transform = False
-                    imgui.TreePop()
+                
+            # Read/Edit loaded transforms
+            if imgui.TreeNode("Loaded Transforms"):
+                # Red buttons for buttons per transform, to distinguish from other buttons
+                imgui.PushStyleColor(imgui.ImGuiCol_Button, (0.8, 0.2, 0.2, 1.0))
+                for t in state.transform_library.transforms:
+                    if imgui.TreeNode(f"{t.id}"):
+                        transform_editor(t, t.id)
+                        imgui.TreePop()
+                imgui.PopStyleColor(1)       
+                if (imgui.Button("Create new Transform", default_button_size) or state.editing_new_transform):
+                    state.editing_new_transform = True
+                    _, state.selected_ttype = imgui.Combo(
+                        "Transform Type", state.selected_ttype,
+                        [ttype.name for ttype in tlib.TransformType]
+                    )
+                    for unsaved in state.unsaved_transforms:
+                        if unsaved.value == state.selected_ttype:
+                            transform_editor(state.unsaved_transforms[unsaved], unsaved.value + len(state.transform_library.transforms))
+                            if imgui.Button("Add Transform", default_button_size):
+                                state.add_transform(state.unsaved_transforms[unsaved])
+                                state.unsaved_transforms[unsaved] = tlib.PrimitiveTransform.make_default(unsaved)
+                                state.editing_new_transform = False
                 imgui.TreePop()
+            imgui.TreePop()
+
+        if imgui.TreeNode("Selection Boxes"):
+            if imgui.Button("Spawn Box Selection", default_button_size):
+                state.spawn_box_selection()
+            for i, box in enumerate(state.selections):
+                if imgui.TreeNode(f"{box.name}"):
+                    _, target = imgui.Combo(
+                        "Target", box.target.value - 1,
+                        [t.name for t in pick.SelectionTargets]
+                    )
+                    box.target = pick.SelectionTargets(target + 1)
+                    _, box.pos = imgui.SliderFloat3("Position", box.pos, -50, 50)
+                    _, box.scale = imgui.SliderFloat3("Size", box.scale, 0, 10)
+                    box.ps_mesh.update_vertex_positions(box.vertices * box.scale + box.pos)
+                    if box.target == pick.SelectionTargets.CELL:
+                        _, box.Y = imgui.InputFloat("Young's Modulus to Apply", box.Y)
+                    if imgui.Button("Apply Box Selection", default_button_size):
+                        for m in state.meshes:
+                            VT = m.transformed_vertices()
+                            C = m.C
+                            # Get indices inside box
+                            indices = box.inside_test(VT, C)
+                            if box.target == pick.SelectionTargets.VERTEX:
+                                # Vertices only affected by Dirichlet
+                                transform = state.transform_library.transforms[state.selected_dirichlet_group]
+                                dgroup = state.dirichlet_library[transform.name].get_mesh_indices(m)
+                                for i in indices:
+                                    dgroup.update_indices(i)
+                                state.dirichlet_library[transform.name].build_point_cloud()
+                            elif box.target == pick.SelectionTargets.CELL:
+                                # Cells affected by Young's modulus change, but will expand to mass density, etc. later
+                                m.Y[indices] = box.Y
+                                m.handle.add_scalar_quantity("Young's modulus", m.Y, defined_on='cells')
+
+                    if imgui.Button("Delete Box", default_button_size):
+                        try:
+                            ps.remove_surface_mesh(box.name)
+                        except Exception:
+                            pass
+                        state.selections.pop(i)
+                        imgui.TreePop()
+                        break  # indices shifted
+                    imgui.TreePop()
+            
             imgui.TreePop()
 
         # Per-mesh controls
@@ -394,7 +435,6 @@ def main():
             if imgui.TreeNode(f"{m.name}"):
                 # Material & ICs (not yet heterogeneous in FEM build, but tracked per-mesh)
                 if imgui.TreeNode("Material"):
-                    _, m.Y = imgui.InputFloat("Young's Modulus", m.Y)
                     _, m.nu = imgui.InputFloat("Poisson's Ratio", m.nu)
                     _, m.rho = imgui.InputFloat("Mass Density", m.rho)
                     imgui.TreePop()
@@ -424,14 +464,12 @@ def main():
                 if pick_result.structure_name == m.name:
                     i = pick_result.local_index
                     transform = state.transform_library.transforms[state.selected_dirichlet_group]
-                    indices = state.dirichlet_library[transform.name].get_mesh_indices(m.name)
+                    indices = state.dirichlet_library[transform.name].get_mesh_indices(m)
                     if indices is None:
                         ps.error(f"Mesh {m.name} not found in Dirichlet library for transform {group.name}.")
                         return
-                    indices.update_vdbc(i)
+                    indices.update_indices(i)
                     state.dirichlet_library[transform.name].build_point_cloud()
-                    # m.vdbc, _ = update_vdbc(m.vdbc, i)
-                    # m.vdbc_pc = m.make_group_point_cloud(m.vdbc, m.name + " - Dirichlet")
     ps.set_user_callback(callback)
     ps.show()
 

@@ -2,7 +2,7 @@
 from pbatoolkit import pbat, pypbat
 import meshio
 import polyscope as ps
-import polyscope.imgui as imgui
+from polyscope import imgui
 import numpy as np
 import tkinter as tk
 from tkinter import filedialog
@@ -35,10 +35,15 @@ def _read_mesh_and_state(integrate_grp: h5py.Group):
         if "dmask" in fem_grp
         else np.zeros(X.shape[1], dtype=bool)
     )
+    lamegU = (
+        np.array(fem_grp["lamegU"], dtype=np.float64)
+        if "lamegU" in fem_grp
+        else np.zeros(E.shape[1], dtype=np.float64)
+    )
     # Deformed positions x at this frame
     x = np.array(fem_grp["x"]) if "x" in fem_grp else None
-    print("DA VALS:", X, E, x, dmask)
-    return X, E, x, dmask
+    #print("DA VALS:", X, E, x, dmask)
+    return X, E, x, dmask, lamegU
 
 
 def serialize_solver_iteration(
@@ -427,7 +432,7 @@ if __name__ == "__main__":
                 )
                 if file_path:
                     h5 = h5py.File(file_path, "r")
-                    X, E, x, d_mask = _read_mesh_and_state(h5)
+                    X, E, x, d_mask, lamegU = _read_mesh_and_state(h5)
                     if (X is None) or (E is None):
                         print("oops")
                         return
@@ -435,6 +440,27 @@ if __name__ == "__main__":
                     C = E.T  # to shape (m,4)
                     dynamics.construct(V.T, C.T)
                     dynamics.constrain(d_mask.ravel())
+                    #dynamics.set_elastic_energy(dynamics.E, dynamics.wgU, dynamics.X, dynamics.lamegU[0], dynamics.lamegU[1])
+                    element = pbat.fem.Element.Tetrahedron
+                    order = 1  # linear shape functions only
+                    qorder_U = order
+                    n_elems = E.shape[1]
+
+                    wgU = pbat.fem.mesh_quadrature_weights(
+                        E, X, element, order=order, quadrature_order=qorder_U
+                    )
+                    egU = pbat.fem.mesh_quadrature_elements(E, wgU)
+                    XgU = pbat.fem.mesh_reference_quadrature_points(
+                        n_elems, element=element, order=order, quadrature_order=qorder_U
+                    )
+                    dynamics.set_elastic_energy(
+                        np.ravel(egU, order="F"),
+                        np.ravel(wgU, order="F"),
+                        XgU,
+                        np.ravel(lamegU[0], order="F"),
+                        np.ravel(lamegU[1], order="F"),
+                    )
+
                     vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
                     dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
                     is_new_mesh = True
@@ -646,8 +672,8 @@ if __name__ == "__main__":
             # Time integration
             dynamics.set_time_integration_scheme(dt, s)
             # Material
-            mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
-            dynamics.set_elastic_energy(mu, llambda)
+            #mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
+            #dynamics.set_elastic_energy(mu, llambda)
             dynamics.set_mass_matrix(rho)
             # Dynamics
             fext = np.asarray(b) + rho * np.asarray(aext)
