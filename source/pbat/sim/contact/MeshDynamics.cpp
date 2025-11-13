@@ -10,6 +10,7 @@
 #include <limits>
 #include <numeric>
 #include <span>
+#include <tbb/parallel_for.h>
 
 namespace pbat::sim::contact {
 
@@ -102,6 +103,57 @@ void MeshDynamics::UpdateEnvironmentContactConstraints(
     UpdateTriangleContactConstraints(X);
     UpdateHalfEdgeContactConstraints(X);
     UpdateVertexContactConstraints(X);
+}
+
+void MeshDynamics::DualUpdateEnvironmentContacts(
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
+{
+    auto const fDualUpdate = [&](Eigen::Vector<ScalarType, 3> const& xc,
+                                 EnvironmentContactConstraint& c) {
+        // Update Lagrange multipliers
+        bool const bViolating = (c.C(0) < ScalarType(0));
+        c.lambda(0)           = std::clamp(
+            c.lambda(0) - bViolating * (c.k(0) * c.C(0)),
+            ScalarType(0),
+            mEnvContactDynamicsParams.Fnmax);
+        ScalarType const muFn = mEnvContactDynamicsParams.mu * c.lambda(0);
+        c.lambda(1)           = std::clamp(c.lambda(1) - c.k(1) * c.C(1), -muFn, muFn);
+        c.lambda(2)           = std::clamp(c.lambda(2) - c.k(2) * c.C(2), -muFn, muFn);
+        // Update stiffnesses
+        c.k.array() += mEnvContactDynamicsParams.beta * c.k.array() * c.C.array().abs();
+    };
+    tbb::parallel_for(Eigen::Index{0}, mMeshes.F.cols(), [&](Eigen::Index f) {
+        Eigen::Matrix<ScalarType, 3, 3> const xf = X(Eigen::placeholders::all, mMeshes.F.col(f));
+        std::vector<Eigen::Vector<ScalarType, 2>> const& contactPoints =
+            mMeshSdfContact.mTriangleContactPoints[f];
+        auto begin = CFP[f];
+        auto n     = CFP[f + 1] - begin;
+        for (IndexType k = 0; k < n; ++k)
+        {
+            IndexType const cidx                   = begin + k;
+            Eigen::Vector<ScalarType, 2> const& uv = contactPoints[k];
+            Eigen::Vector<ScalarType, 3> const xc =
+                (ScalarType(1) - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
+            fDualUpdate(xc, CF[cidx]);
+        }
+    });
+    tbb::parallel_for(Eigen::Index{0}, 3 * mMeshes.F.cols(), [&](Eigen::Index he) {
+        Eigen::Vector<ScalarType, 3> const xi = X.col(geometry::IncomingVertex(mMeshes.F, he));
+        Eigen::Vector<ScalarType, 3> const xj = X.col(geometry::OutgoingVertex(mMeshes.F, he));
+        std::vector<ScalarType> const& contactPoints = mMeshSdfContact.mHalfEdgeContactPoints[he];
+        auto begin                                   = CHEP[he];
+        auto n                                       = CHEP[he + 1] - begin;
+        for (IndexType k = 0; k < n; ++k)
+        {
+            IndexType const cidx                  = begin + k;
+            ScalarType const u                    = contactPoints[k];
+            Eigen::Vector<ScalarType, 3> const xc = (ScalarType(1) - u) * xi + u * xj;
+            fDualUpdate(xc, CHE[cidx]);
+        }
+    });
+    tbb::parallel_for(std::size_t(0), CV.size(), [&](std::size_t v) {
+        fDualUpdate(X.col(mMeshes.V(v)), CV[v]);
+    });
 }
 
 namespace detail {

@@ -120,11 +120,34 @@ class MeshDynamics
      */
     PBAT_API void UpdateEnvironmentContactConstraints(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
+    /**
+     * @brief Updates Lagrange multiplier estimates and contact stiffnesses for mesh-SDF contact
+     * @param X `3 x |# points|` point positions (column-major: one point per column)
+     */
+    PBAT_API void DualUpdateEnvironmentContacts(
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
 
     /**
      * @brief Mesh-SDF contact dynamics
      */
 
+    /**
+     * @brief 3-tuple of environment (normal, tangent, bitangent) contact constraints
+     *
+     * The constraint is defined as
+     * \f[
+     * \begin{bmatrix}
+     * C_n(x) \\ C_t(x) \\ C_b(x)
+     * \end{bmatrix}
+     * =
+     * \begin{bmatrix}
+     * \mathbf{n} & \mathbf{t} & \mathbf{b}
+     * \end{bmatrix}^T
+     * \left( x - o \right)
+     * \f]
+     * where \f$ \mathbf{n}, \mathbf{t}, \mathbf{b} \f$ are the contact basis' normal, tangent, and
+     * bitangent, and \f$ o \f$ is the contact basis' origin, while \f$ x \f$ is the contact point.
+     */
     struct EnvironmentContactConstraint
     {
         Eigen::Vector<ScalarType, 3> O;    ///< Contact basis origin
