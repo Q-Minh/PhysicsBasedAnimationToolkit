@@ -2,6 +2,7 @@
 
 #include "Friction.h"
 #include "pbat/math/linalg/mini/Eigen.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Geometry>
 #include <algorithm>
@@ -80,6 +81,7 @@ void MeshDynamics::InitializeMeshEnvironmentContactDetection(MeshSdfContactParam
 void MeshDynamics::UpdateEnvironmentContactConstraints(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateEnvironmentContactConstraints");
     // 1. Run mesh-SDF contact detection
     mMeshSdfContact.PrepareIteration();
     mMeshSdfContact.TriangleSdfContactDetection(X, mMeshes.F, mSdf);
@@ -108,6 +110,8 @@ void MeshDynamics::UpdateEnvironmentContactConstraints(
 
 void MeshDynamics::PrepareEnvironmentContactsForDualIteration()
 {
+    PBAT_PROFILE_NAMED_SCOPE(
+        "pbat.sim.contact.MeshDynamics.PrepareEnvironmentContactsForDualIteration");
     tbb::parallel_for(std::size_t{0}, CF.size(), [&](std::size_t c) {
         CF[c].lambda *= mEnvContactDynamicsParams.gamma;
         CF[c].k =
@@ -128,6 +132,7 @@ void MeshDynamics::PrepareEnvironmentContactsForDualIteration()
 void MeshDynamics::DualUpdateEnvironmentContacts(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.DualUpdateEnvironmentContacts");
     auto const fDualUpdate = [&](Eigen::Vector<ScalarType, 3> const& xc,
                                  EnvironmentContactConstraint& c) {
         // Update Lagrange multipliers
