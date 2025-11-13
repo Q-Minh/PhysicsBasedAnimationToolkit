@@ -183,7 +183,7 @@ void BindMeshDynamics(nanobind::module_& m)
             "(List[EnvironmentContactConstraint]) |# vertex-env contacts| mesh-SDF vertex contact "
             "constraints, sorted by vertex index.")
         .def_rw(
-            "CVinds",
+            "V2CV",
             &MeshDynamicsType::V2CV,
             "(numpy.ndarray[bool]) |# vertices| map from vertex indices to contact indices.")
         .def_rw(
