@@ -16,12 +16,15 @@
 namespace pbat::sim::contact {
 
 void MeshDynamics::Construct(
-    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     MultiMesh<IndexType> meshes,
-    geometry::sdf::Forest<ScalarType> sdfForest,
-    ScalarType nReserveRatio)
+    geometry::sdf::Forest<ScalarType> sdfForest)
 {
-    mMeshes    = std::move(meshes);
+    SetStaticGeometry(std::move(sdfForest));
+    SetDynamicGeometry(std::move(meshes));
+}
+
+void MeshDynamics::SetStaticGeometry(geometry::sdf::Forest<ScalarType> sdfForest)
+{
     mSdfForest = std::move(sdfForest);
     mSdf       = geometry::sdf::Composite<ScalarType>(
         std::span<geometry::sdf::Node<ScalarType> const>(
@@ -41,6 +44,15 @@ void MeshDynamics::Construct(
                 "MeshDynamics::SetGeometry: invalid SDF forest with status {}",
                 static_cast<int>(mSdf.Status())));
     }
+}
+
+void MeshDynamics::SetDynamicGeometry(MultiMesh<IndexType> meshes)
+{
+    mMeshes = std::move(meshes);
+}
+
+void MeshDynamics::AllocateEnvironmentContactDataStructures(ScalarType nReserveRatio)
+{
     // Preallocate contact constraint storage
     CFP.resize(mMeshes.F.cols() + 1);
     CHEP.resize(mMeshes.F.cols() * 3 + 1);
@@ -55,24 +67,16 @@ void MeshDynamics::Construct(
 
 void MeshDynamics::InitializeMeshMeshContactDetection(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-    geometry::Device const& device,
-    OgcParams const& ogcParams)
+    geometry::Device const& device)
 {
-    mOffsetGeometryContact.Initialize(
-        device,
-        X,
-        mMeshes.V,
-        mMeshes.F,
-        mMeshes.E,
-        mMeshes.VP,
-        mMeshes.FP,
-        mMeshes.EP,
-        ogcParams);
+    mOffsetGeometryContact
+        .Initialize(device, X, mMeshes.V, mMeshes.F, mMeshes.E, mMeshes.VP, mMeshes.FP, mMeshes.EP);
 }
 
-void MeshDynamics::InitializeMeshEnvironmentContactDetection(MeshSdfContactParams const& params)
+void MeshDynamics::InitializeMeshEnvironmentContactDetection(ScalarType nReserveRatio)
 {
-    mMeshSdfContact.Initialize(mMeshes.V, mMeshes.F, params);
+    mMeshSdfContact.Initialize(mMeshes.V, mMeshes.F);
+    AllocateEnvironmentContactDataStructures(nReserveRatio);
     CFP.setZero();
     CHEP.setZero();
     V2CV.setConstant(IndexType(-1));
@@ -385,7 +389,7 @@ void MeshDynamics::UpdateHalfEdgeContactConstraints(
         }
         // Create new contact constraints for this triangle at end of current constraint list, we
         // will swap and erase later to keep only the new constraints.
-        std::size_t const iNewConstraintStart             = CF.size();
+        std::size_t const iNewConstraintStart             = CHE.size();
         ScalarType const hearea                           = HEA(he);
         Eigen::Vector<ScalarType, 3> totalConstraintError = Eigen::Vector<ScalarType, 3>::Zero();
         for (ScalarType u : mMeshSdfContact.mHalfEdgeContactPoints[he])
@@ -395,7 +399,7 @@ void MeshDynamics::UpdateHalfEdgeContactConstraints(
             IndexType const j               = geometry::OutgoingVertex(mMeshes.F, he);
             Eigen::Vector<ScalarType, 3> xc = (1 - u) * X.col(i) + u * X.col(j);
             // Add new constraint
-            CF.push_back(
+            CHE.push_back(
                 detail::CreateNewEnvironmentContactConstraint(
                     xc,
                     mSdf,
@@ -538,7 +542,7 @@ TEST_CASE("[sim][contact] MeshDynamics initialization")
     // Construct MeshDynamics
     sim::contact::MeshDynamics meshDynamics;
     Scalar const nReserveRatio = 2.0;
-    meshDynamics.Construct(X, std::move(meshes), std::move(sdfForest), nReserveRatio);
+    meshDynamics.Construct(std::move(meshes), std::move(sdfForest));
 
     // 3. Assert
 
@@ -549,20 +553,8 @@ TEST_CASE("[sim][contact] MeshDynamics initialization")
     CHECK_EQ(meshDynamics.mSdfForest.transforms.size(), 1);
     CHECK_EQ(meshDynamics.mSdfForest.roots.size(), 1);
     CHECK_EQ(meshDynamics.mSdfForest.children.size(), 1);
-
     // Check that SDF composite is valid
     CHECK(meshDynamics.mSdf.Status() == geometry::sdf::ECompositeStatus::Valid);
-
-    // Check that geometric arrays are sized correctly
-    CHECK_EQ(meshDynamics.FA.size(), meshDynamics.mMeshes.F.cols());
-    CHECK_EQ(meshDynamics.HEA.size(), 3 * meshDynamics.mMeshes.F.cols());
-    CHECK_EQ(meshDynamics.VA.size(), meshDynamics.mMeshes.V.size());
-
-    // Check that prefix arrays are sized correctly
-    CHECK_EQ(meshDynamics.CFP.size(), meshDynamics.mMeshes.F.cols() + 1);
-    CHECK_EQ(meshDynamics.CHEP.size(), 3 * meshDynamics.mMeshes.F.cols() + 1);
-    CHECK_EQ(meshDynamics.V2CV.size(), meshDynamics.mMeshes.V.size());
-
     // Check that contact constraint vectors are initially empty
     CHECK_EQ(meshDynamics.CF.size(), 0);
     CHECK_EQ(meshDynamics.CHE.size(), 0);
@@ -571,12 +563,21 @@ TEST_CASE("[sim][contact] MeshDynamics initialization")
     SUBCASE("Mesh-SDF environment contacts")
     {
         // Act
-        meshDynamics.InitializeMeshEnvironmentContactDetection(
-            sim::contact::MeshSdfContactParams{});
+        meshDynamics.InitializeMeshEnvironmentContactDetection();
         meshDynamics.UpdateEnvironmentContactConstraints(X);
         meshDynamics.PrepareEnvironmentContactsForDualIteration();
 
         // Assert
+        // Check that geometric arrays are sized correctly
+        CHECK_EQ(meshDynamics.FA.size(), meshDynamics.mMeshes.F.cols());
+        CHECK_EQ(meshDynamics.HEA.size(), 3 * meshDynamics.mMeshes.F.cols());
+        CHECK_EQ(meshDynamics.VA.size(), meshDynamics.mMeshes.V.size());
+
+        // Check that prefix arrays are sized correctly
+        CHECK_EQ(meshDynamics.CFP.size(), meshDynamics.mMeshes.F.cols() + 1);
+        CHECK_EQ(meshDynamics.CHEP.size(), 3 * meshDynamics.mMeshes.F.cols() + 1);
+        CHECK_EQ(meshDynamics.V2CV.size(), meshDynamics.mMeshes.V.size());
+
         CHECK_EQ(meshDynamics.CV.size(), 1); // One vertex should be in contact
         CHECK_EQ(meshDynamics.CV.front().mu, meshDynamics.mEnvContactDynamicsParams.mu);
         Eigen::Vector<Scalar, 3> A = X.col(meshDynamics.mMeshes.F(0, 0));

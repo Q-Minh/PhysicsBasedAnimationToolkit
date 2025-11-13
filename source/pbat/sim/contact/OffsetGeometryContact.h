@@ -193,7 +193,7 @@ class OffsetGeometryContact
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param EP `|# connected components| x 1` edge prefix
-     * @param params OGC parameters
+     * @param _params OGC parameters
      */
     PBAT_API OffsetGeometryContact(
         geometry::Device device,
@@ -204,7 +204,7 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-        OgcParams const& params);
+        OgcParams const& _params);
     /**
      * @brief Initialize OGC, i.e. build its spatial acceleration data structures.
      *
@@ -216,7 +216,6 @@ class OffsetGeometryContact
      * @param VP `|# connected components| x 1` vertex prefix
      * @param FP `|# connected components| x 1` face prefix
      * @param EP `|# connected components| x 1` edge prefix
-     * @param params OGC parameters
      */
     PBAT_API void Initialize(
         geometry::Device device,
@@ -226,8 +225,7 @@ class OffsetGeometryContact
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-        OgcParams const& params);
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP);
     /**
      * @brief Prepare for contact iteration.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
@@ -392,7 +390,7 @@ class OffsetGeometryContact
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         dminf; ///< `|# faces|` array of face local displacement bounds
     Eigen::Vector<ScalarType, Eigen::Dynamic>
-        dmine; ///< `|# half-edges|` array of half-edge local displacement bounds
+        dmine;        ///< `|# half-edges|` array of half-edge local displacement bounds
     OgcParams params; ///< OGC parameters
 
   private:

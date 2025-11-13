@@ -123,11 +123,10 @@ AndersonTestSetup SetupAndersonTest(pbat::Index maxIters = 10)
         geometry::sdf::Sphere<Scalar>{Scalar(10)}); // Large sphere to avoid contacts
     sdfForest.transforms.push_back(geometry::sdf::Transform<Scalar>::Identity());
     sdfForest.transforms.back().t(2) = -Scalar(1);
-    sdfForest.roots = {0};
+    sdfForest.roots                  = {0};
     sdfForest.children.push_back({-1, -1});
-    setup.meshDynamics.Construct(setup.X, std::move(multiMesh), std::move(sdfForest), Scalar(2));
-    sim::contact::MeshSdfContactParams meshSdfContactParams{};
-    setup.meshDynamics.InitializeMeshEnvironmentContactDetection(meshSdfContactParams);
+    setup.meshDynamics.Construct(std::move(multiMesh), std::move(sdfForest));
+    setup.meshDynamics.InitializeMeshEnvironmentContactDetection();
     return setup;
 }
 

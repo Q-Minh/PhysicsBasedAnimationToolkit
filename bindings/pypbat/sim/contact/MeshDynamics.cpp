@@ -78,46 +78,61 @@ void BindMeshDynamics(nanobind::module_& m)
     nb::class_<MeshDynamicsType>(m, "MeshDynamics")
         .def(nb::init<>(), "Construct an empty mesh contact dynamics engine.")
         .def(
-            "construct",
-            [](MeshDynamicsType& self,
-               nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-               MultiMeshType meshes,
-               ForestType sdfForest,
-               ScalarType nReserveRatio) { self.Construct(X, meshes, sdfForest, nReserveRatio); },
-            nb::arg("X"),
-            nb::arg("meshes"),
+            "set_static_geometry",
+            [](MeshDynamicsType& self, ForestType sdfForest) {
+                self.SetStaticGeometry(std::move(sdfForest));
+            },
             nb::arg("sdf_forest"),
-            nb::arg("n_reserve_ratio") = ScalarType(0.2),
-            "Set the contact geometries and initialize data structures.\n\n"
+            "Set the static geometry.\n\n"
             "Args:\n"
-            "    X (numpy.ndarray): 3 x |# points| point positions.\n"
-            "    meshes (MultiMesh): Mesh contact geometry representation.\n"
-            "    sdf_forest (pbat.geometry.sdf.Forest): SDF static geometry storage.\n"
+            "    sdf_forest (pbat.geometry.sdf.Forest): SDF static geometry storage.")
+        .def(
+            "set_dynamic_geometry",
+            [](MeshDynamicsType& self, MultiMeshType meshes) {
+                self.SetDynamicGeometry(std::move(meshes));
+            },
+            nb::arg("meshes"),
+            "Set the dynamic geometry.\n\n"
+            "Args:\n"
+            "    meshes (MultiMesh): Mesh contact geometry representation.")
+        .def(
+            "allocate_environment_contact_data_structures",
+            &MeshDynamicsType::AllocateEnvironmentContactDataStructures,
+            nb::arg("n_reserve_ratio") = ScalarType(0.2),
+            "Allocate data structures for environment contact detection.\n\n"
+            "Args:\n"
             "    n_reserve_ratio (float): Ratio of mesh resolution to reserve for contact "
             "detection data structures. Must satisfy 0 < n_reserve_ratio < 1.")
+        .def(
+            "construct",
+            [](MeshDynamicsType& self, MultiMeshType meshes, ForestType sdfForest) {
+                self.Construct(std::move(meshes), std::move(sdfForest));
+            },
+            nb::arg("meshes"),
+            nb::arg("sdf_forest"),
+            "Set the contact geometries and initialize data structures.\n\n"
+            "Args:\n"
+            "    meshes (MultiMesh): Mesh contact geometry representation.\n"
+            "    sdf_forest (pbat.geometry.sdf.Forest): SDF static geometry storage.\n")
         .def(
             "initialize_mesh_mesh_contact_detection",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-               DeviceType const& device,
-               OgcParamsType const& params) {
-                self.InitializeMeshMeshContactDetection(X, device, params);
-            },
+               DeviceType const& device) { self.InitializeMeshMeshContactDetection(X, device); },
             nb::arg("X"),
             nb::arg("device"),
-            nb::arg("params"),
             "Initialize mesh-mesh contact detection.\n\n"
             "Args:\n"
             "    X (numpy.ndarray): 3 x |# points| point positions.\n"
-            "    device (pbat.geometry.Device): Spatial acceleration device.\n"
-            "    params (OgcParams): Offset geometry contact parameters.")
+            "    device (pbat.geometry.Device): Spatial acceleration device.")
         .def(
             "initialize_mesh_environment_contact_detection",
             &MeshDynamicsType::InitializeMeshEnvironmentContactDetection,
-            nb::arg("params"),
+            nb::arg("n_reserve_ratio") = ScalarType(0.2),
             "Initialize mesh-SDF contact detection.\n\n"
             "Args:\n"
-            "    params (MeshSdfContactParams): Mesh-SDF contact parameters.")
+            "    n_reserve_ratio (float): Ratio of mesh resolution to reserve for contact "
+            "detection data structures. Must satisfy 0 < n_reserve_ratio < 1.")
         .def(
             "update_environment_contact_constraints",
             [](MeshDynamicsType& self,

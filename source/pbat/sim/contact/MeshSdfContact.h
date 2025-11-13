@@ -112,22 +112,18 @@ class MeshSdfContact
      * @brief Construct a new Mesh Sdf Contact object
      * @param V `|# vertices| x 1` vertices (global indices into X)
      * @param F `3 x |# triangles|` triangles (global indices into X)
-     * @param params Mesh-SDF contact detection parameters
      */
     PBAT_API MeshSdfContact(
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        MeshSdfContactParams const& params);
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F);
     /**
      * @brief Initialize the mesh-SDF contact detection
      * @param V `|# vertices| x 1` vertices (global indices into X)
      * @param F `3 x |# triangles|` triangles (global indices into X)
-     * @param params Mesh-SDF contact detection parameters
      */
     PBAT_API void Initialize(
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        MeshSdfContactParams const& params);
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F);
     /**
      * @brief Prepare for a new iteration of contact detection
      */

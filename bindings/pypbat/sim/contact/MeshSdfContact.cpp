@@ -149,30 +149,28 @@ void BindMeshSdfContact(nanobind::module_& m)
             "__init__",
             [](MeshSdfContactType* self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-               nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-               MeshSdfContactParams const& params) { new (self) MeshSdfContactType(V, F, params); },
+               nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F) {
+                new (self) MeshSdfContactType(V, F);
+            },
             nb::arg("V"),
             nb::arg("F"),
-            nb::arg("params"),
             "Construct and initialize a mesh-SDF contact detector.\n\n"
             "Args:\n"
             "    V (numpy.ndarray): `|# vertices| x 1` vertices.\n"
-            "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices.\n"
-            "    params (MeshSdfContactParams): Detection parameters.")
+            "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices.\n")
         .def(
             "initialize",
             [](MeshSdfContactType& self,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-               nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-               MeshSdfContactParams const& params) { self.Initialize(V, F, params); },
+               nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F) {
+                self.Initialize(V, F);
+            },
             nb::arg("V"),
             nb::arg("F"),
-            nb::arg("params"),
             "Initialize internal storage.\n\n"
             "Args:\n"
             "    V (numpy.ndarray): `|# vertices| x 1` vertices.\n"
-            "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices.\n"
-            "    params (MeshSdfContactParams): Detection parameters.")
+            "    F (numpy.ndarray): `3 x |# triangles|` triangle vertex indices.\n")
         .def(
             "prepare_iteration",
             &MeshSdfContactType::PrepareIteration,

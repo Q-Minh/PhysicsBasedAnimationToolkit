@@ -183,7 +183,7 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             "    VP (numpy.ndarray): `|# components+1|` vertex prefix.\n"
             "    FP (numpy.ndarray): `|# components+1|` face prefix.\n"
             "    EP (numpy.ndarray): `|# components+1|` edge prefix.\n"
-            "    params (OgcParams): Parameters.\n")
+            "    params (OgcParams): OGC parameters.\n")
         .def(
             "initialize",
             [](OffsetGeometryContact& self,
@@ -193,11 +193,10 @@ void BindOffsetGeometryContact(nanobind::module_& m)
                nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& E,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& VP,
                nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& FP,
-               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP,
-               OgcParams const& params) {
+               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& EP) {
                 // Need a device to re-initialize; reuse a lightweight default
                 pbat::geometry::Device dev{pbat::geometry::DeviceConfig{}};
-                self.Initialize(dev, X, V, F, E, VP, FP, EP, params);
+                self.Initialize(dev, X, V, F, E, VP, FP, EP);
             },
             nb::arg("X"),
             nb::arg("V"),
@@ -206,7 +205,6 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             nb::arg("VP"),
             nb::arg("FP"),
             nb::arg("EP"),
-            nb::arg("params"),
             "Initialize OGC acceleration structures.\n\n"
             "Args:\n"
             "    X (numpy.ndarray): `3 x |# points|` point positions.\n"
@@ -215,8 +213,7 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             "    E (numpy.ndarray): `2 x |# edges|` undirected edges into V.\n"
             "    VP (numpy.ndarray): `|# components+1|` vertex prefix.\n"
             "    FP (numpy.ndarray): `|# components+1|` face prefix.\n"
-            "    EP (numpy.ndarray): `|# components+1|` edge prefix.\n"
-            "    params (OgcParams): Parameters.\n")
+            "    EP (numpy.ndarray): `|# components+1|` edge prefix.\n")
         .def(
             "prepare_iteration",
             [](OffsetGeometryContact& self,

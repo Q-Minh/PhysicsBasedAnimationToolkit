@@ -80,8 +80,24 @@ class MeshDynamics
     using IndexType  = Index;
 
     /**
+     * @brief Set the static geometry
+     * @param sdfForest SDF static geometry storage
+     */
+    PBAT_API void SetStaticGeometry(geometry::sdf::Forest<ScalarType> sdfForest);
+    /**
+     * @brief Set the dynamic geometry
+     * @param meshes Mesh contact geometry representation
+     */
+    PBAT_API void SetDynamicGeometry(MultiMesh<IndexType> meshes);
+    /**
+     * @brief Allocate data structures for environment contact detection
+     * @param nReserveRatio Ratio of mesh resolution to reserve for contact detection data
+     * structures. Must satisfy `0 < nReserveRatio < 1.`
+     */
+    PBAT_API void
+    AllocateEnvironmentContactDataStructures(ScalarType nReserveRatio = ScalarType(0.2));
+    /**
      * @brief Set the contact geometries
-     * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param meshes Mesh contact geometry representation
      * @param sdfForest SDF static geometry storage
      * @param nReserveRatio Ratio of mesh resolution to reserve for contact detection data
@@ -89,33 +105,29 @@ class MeshDynamics
      * @post All data structures for contact detection are initialized, but not the algorithms (OGC
      * and MeshSDF)
      */
-    PBAT_API void Construct(
-        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-        MultiMesh<IndexType> meshes,
-        geometry::sdf::Forest<ScalarType> sdfForest,
-        ScalarType nReserveRatio = 0.2);
+    void Construct(MultiMesh<IndexType> meshes, geometry::sdf::Forest<ScalarType> sdfForest);
     /**
      * @brief Initialize mesh-mesh contact detection
      *
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      * @param device Spatial acceleration device
-     * @param params Offset geometry contact parameters
      * @pre `mMeshes` is set
      */
     PBAT_API void InitializeMeshMeshContactDetection(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-        geometry::Device const& device,
-        OgcParams const& params);
+        geometry::Device const& device);
     /**
      * @brief Initialize mesh-SDF contact detection
-     * @param params Mesh-SDF contact parameters
+     * @param nReserveRatio Ratio of mesh resolution to reserve for contact detection data
      * @pre `mMeshes` is set
      */
-    PBAT_API void InitializeMeshEnvironmentContactDetection(MeshSdfContactParams const& params);
+    PBAT_API void
+    InitializeMeshEnvironmentContactDetection(ScalarType nReserveRatio = ScalarType(0.2));
     /**
      * @brief Reformulates mesh-SDF contact constraints, i.e. their bases and origins, correctly
      * zeroing out inactive constraints and their associated Lagrange multipliers.
-     * @note This does NOT evaluate the constraints, since this is typically during a dynamics solve.
+     * @note This does NOT evaluate the constraints, since this is typically during a dynamics
+     * solve.
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      */
     PBAT_API void UpdateEnvironmentContactConstraints(
