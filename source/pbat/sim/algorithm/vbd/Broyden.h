@@ -130,6 +130,7 @@ struct BroydenParams
  * @brief Initialize Broyden accelerated VBD minimization solve
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param broyden Broyden parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -137,6 +138,7 @@ struct BroydenParams
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden);
 
@@ -144,6 +146,7 @@ void InitializeSolve(
  * @brief One Broyden accelerated VBD minimization step
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param broyden Broyden parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -151,6 +154,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden);
 
@@ -159,6 +163,7 @@ void Iterate(
  * VBD
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param broyden Broyden parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -166,6 +171,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden);
 
@@ -174,6 +180,7 @@ void Solve(
  * solver
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param broyden Broyden parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -181,18 +188,20 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.InitializeSolve");
     broyden.AllocateIfNeeded(fem.x.size());
-    InitializeSolve<TElasticEnergy>(fem, params);
+    InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
 
     switch (broyden.eJacobianEstimate)
     {
@@ -221,7 +230,7 @@ void InitializeSolve(
     }
 
     broyden.xkm1 = fem.x.reshaped();
-    Iterate(fem, params);
+    Iterate(fem, meshDynamics, params);
     broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
     broyden.k    = 1;
 }
@@ -229,6 +238,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden)
 {
@@ -237,7 +247,7 @@ void Iterate(
     // Update (preconditioned) history
     broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
     broyden.xkm1        = fem.x.reshaped();
-    Iterate(fem, params);
+    Iterate(fem, meshDynamics, params);
     broyden.fk          = broyden.xkm1 - fem.x.reshaped();
     broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
     broyden.fkm1        = broyden.fk;
@@ -387,14 +397,15 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
-    InitializeSolve<TElasticEnergy>(fem, params, broyden);
+    InitializeSolve<TElasticEnergy>(fem, meshDynamics, params, broyden);
     for (; broyden.k < params.nMaxIters;)
     {
-        Iterate<TElasticEnergy>(fem, params, broyden);
+        Iterate<TElasticEnergy>(fem, meshDynamics, params, broyden);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
@@ -402,12 +413,13 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
     Params const& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Integrate");
     fem.SetupTimeIntegrationOptimization();
-    Solve<TElasticEnergy>(fem, params, broyden);
+    Solve<TElasticEnergy>(fem, meshDynamics, params, broyden);
     fem.Step();
 }
 

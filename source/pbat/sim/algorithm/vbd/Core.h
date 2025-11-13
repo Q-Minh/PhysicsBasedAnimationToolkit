@@ -22,6 +22,7 @@
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/algorithm/common/Common.h"
 #include "pbat/sim/algorithm/vbd/Kernels.h"
+#include "pbat/sim/contact/MeshDynamics.h"
 
 #include <Eigen/Core>
 #include <tbb/parallel_for.h>
@@ -159,51 +160,73 @@ struct Params
  * @brief Initialize VBD minimization solve
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeSolve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void InitializeSolve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params);
 
 /**
  * @brief One VBD minimization step
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Iterate(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params);
 
 /**
  * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Solve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using VBD as the non-linear solver
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param meshDynamics Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params);
+void Integrate(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeSolve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void InitializeSolve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     fem.SetupTimeIntegrationOptimization(params.eElasticsInitializationStrategy);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Iterate(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
     auto betaTildeBdf      = fem.bdf.BetaTilde();
@@ -262,22 +285,28 @@ void Iterate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& param
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Solve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
-    InitializeSolve<TElasticEnergy>(fem, params);
+    InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
     for (Index k = 0; k < params.nMaxIters; ++k)
     {
-        Iterate<TElasticEnergy>(fem, params);
+        Iterate<TElasticEnergy>(fem, meshDynamics, params);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Integrate(common::FemElastoDynamics<TElasticEnergy>& fem, Params const& params)
+void Integrate(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics& meshDynamics,
+    Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
-    Solve<TElasticEnergy>(fem, params);
+    Solve<TElasticEnergy>(fem, meshDynamics, params);
     fem.Step();
 }
 
