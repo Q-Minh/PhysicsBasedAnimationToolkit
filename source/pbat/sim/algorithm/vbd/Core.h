@@ -304,7 +304,7 @@ void Iterate(
                         // AL gradient + hessian
                         Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
                                        (ilocal == 2) * uv(1);
-                        Eigen::Vector<Scalar, 3> gradAL = alpha * (C.B * C.ForceEstimate());
+                        Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B * C.ForceEstimate());
                         Eigen::Matrix<Scalar, 3, 3> hessAL =
                             alpha * alpha *
                             (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
@@ -335,7 +335,7 @@ void Iterate(
                         C.Eval(xc);
                         // AL gradient + hessian
                         Scalar alpha = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
-                        Eigen::Vector<Scalar, 3> gradAL = alpha * (C.B * C.ForceEstimate());
+                        Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B * C.ForceEstimate());
                         Eigen::Matrix<Scalar, 3, 3> hessAL =
                             alpha * alpha *
                             (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
@@ -353,7 +353,7 @@ void Iterate(
                         meshDynamics.CV[cvi];
                     C.Eval(ToEigen(xi));
                     // AL gradient + hessian
-                    Eigen::Vector<Scalar, 3> gradAL = C.B * C.ForceEstimate();
+                    Eigen::Vector<Scalar, 3> gradAL = -C.B * C.ForceEstimate();
                     Eigen::Matrix<Scalar, 3, 3> hessAL =
                         C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
                         C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +

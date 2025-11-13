@@ -198,9 +198,8 @@ void ComputeEnvironmentContactBasis(
     TScalar sd = mSdf.Eval(mini::FromEigen(xc)) / normGrad;
     O          = xc - sd * n;
     // Contact basis
-    B.col(0) = n;
-    B.rightCols<2>() =
-        mini::ToEigen(PointPointTangentialBasis(mini::FromEigen(xc), mini::FromEigen(O)));
+    B.col(0)         = n;
+    B.rightCols<2>() = mini::ToEigen(TangentialBasis(mini::FromEigen(n)));
 }
 
 template <class TScalar>
@@ -470,10 +469,10 @@ void MeshDynamics::UpdateVertexContactConstraints(
                         mEnvContactDynamicsParams.kstart,
                         mEnvContactDynamicsParams.mu));
             }
-            V2CV[v] = n++;
         }
         // Update map
-        V2CV[v] = (not bIsVertexInContact) * -1 + (bIsVertexInContact)*n++;
+        V2CV[v] = (not bIsVertexInContact) * -1 + (bIsVertexInContact)*n;
+        n += bIsVertexInContact;
     }
     // 2. Swap new constraints to front
     CV.erase(CV.begin(),

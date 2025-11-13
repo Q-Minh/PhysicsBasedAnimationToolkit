@@ -13,6 +13,41 @@
 
 namespace pbat::sim::contact {
 
+template <math::linalg::mini::CMatrix TMatrixN, class TScalar = typename TMatrixN::ScalarType>
+PBAT_HOST_DEVICE auto
+TangentialBasis(TMatrixN const& n, TScalar eps = std::numeric_limits<TScalar>::epsilon())
+    -> math::linalg::mini::SMatrix<TScalar, TMatrixN::kRows, 2>
+{
+    using namespace math::linalg::mini;
+    static_assert(TMatrixN::kRows >= 2, "n must have at least 2 rows.");
+    auto constexpr kDims = TMatrixN::kRows;
+    using namespace std;
+    bool bIsColinearWithX = abs(n(0)) >= TScalar(1) - eps;
+    // NOTE: We vectorize the following code for `t = cross(n, e)`
+    // if (bIsColinearWithX)
+    // {
+    //     // e = (0,1,0)
+    //     t(0) = n(1)*0 - n(2)*1;
+    //     t(1) = n(2)*0 - n(0)*0;
+    //     t(2) = n(0)*1 - n(1)*0;
+    // }
+    // else
+    // {
+    //     // e = (1,0,0)
+    //     t(0) = n(1)*0 - n(2)*0;
+    //     t(1) = n(2)*1 - n(0)*0;
+    //     t(2) = n(0)*0 - n(1)*1;
+    // }
+    SMatrix<TScalar, kDims, 2> T;
+    auto t = T.Col(0);
+    t(0)   = (bIsColinearWithX) * (-n(2));
+    t(1)   = (not bIsColinearWithX) * (n(2));
+    t(2)   = (bIsColinearWithX) * (n(0)) + (not bIsColinearWithX) * (-n(1));
+    t /= Norm(t);
+    T.Col(1) = Cross(n, t);
+    return T;
+}
+
 /**
  * @brief Compute tangential basis for point-point contact
  *
@@ -40,31 +75,7 @@ PBAT_HOST_DEVICE auto PointPointTangentialBasis(
     TScalar xreln                = Norm(xrel);
     assert(xreln > TScalar(0));
     xrel /= xreln;
-    using namespace std;
-    bool bIsColinearWithX = abs(xrel(0)) >= TScalar(1) - eps;
-    // NOTE: We vectorize the following code for `t = cross(xrel, e)`
-    // if (bIsColinearWithX)
-    // {
-    //     // e = (0,1,0)
-    //     t(0) = xrel(1)*0 - xrel(2)*1;
-    //     t(1) = xrel(2)*0 - xrel(0)*0;
-    //     t(2) = xrel(0)*1 - xrel(1)*0;
-    // }
-    // else
-    // {
-    //     // e = (1,0,0)
-    //     t(0) = xrel(1)*0 - xrel(2)*0;
-    //     t(1) = xrel(2)*1 - xrel(0)*0;
-    //     t(2) = xrel(0)*0 - xrel(1)*1;
-    // }
-    SMatrix<TScalar, kDims, 2> T;
-    auto t = T.Col(0);
-    t(0)   = (bIsColinearWithX) * (-xrel(2));
-    t(1)   = (not bIsColinearWithX) * (xrel(2));
-    t(2)   = (bIsColinearWithX) * (xrel(0)) + (not bIsColinearWithX) * (-xrel(1));
-    t /= Norm(t);
-    T.Col(1) = Cross(xrel, t);
-    return T;
+    return TangentialBasis(xrel, eps);
 }
 
 /**

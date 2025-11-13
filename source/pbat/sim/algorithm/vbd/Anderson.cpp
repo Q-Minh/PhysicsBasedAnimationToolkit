@@ -88,12 +88,13 @@ AndersonTestSetup SetupAndersonTest(pbat::Index maxIters = 10)
 
     // Adjacency structures
     IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, setup.dynamics.mesh.E.cols());
-    auto GVT = graph::MeshAdjacencyMatrix(setup.dynamics.mesh.E, ilocal, setup.dynamics.mesh.X.cols());
-    GVT      = GVT.transpose();
+    auto GVT =
+        graph::MeshAdjacencyMatrix(setup.dynamics.mesh.E, ilocal, setup.dynamics.mesh.X.cols());
+    GVT                                = GVT.transpose();
     auto const [GVGp, GVGe, GVGilocal] = graph::MatrixToWeightedAdjacency(GVT);
 
     // Vertex colors
-    auto GVV                = graph::MeshPrimalGraph(setup.dynamics.mesh.E, setup.dynamics.mesh.X.cols());
+    auto GVV = graph::MeshPrimalGraph(setup.dynamics.mesh.E, setup.dynamics.mesh.X.cols());
     auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
     auto eOrdering          = graph::EGreedyColorOrderingStrategy::LargestDegree;
     auto eSelection         = graph::EGreedyColorSelectionStrategy::LeastUsed;
@@ -118,12 +119,15 @@ AndersonTestSetup SetupAndersonTest(pbat::Index maxIters = 10)
     graph::ReindexMeshByConnectedComponents(setup.X, C, XCC, ECC, Xord, Eord);
     sim::contact::MultiMesh<Index> multiMesh(C.bottomRows<4>(), XCC, nComponents);
     geometry::sdf::Forest<Scalar> sdfForest;
-    sdfForest.nodes.push_back(geometry::sdf::Sphere<Scalar>{Scalar(10)}); // Large sphere to avoid contacts
+    sdfForest.nodes.push_back(
+        geometry::sdf::Sphere<Scalar>{Scalar(10)}); // Large sphere to avoid contacts
     sdfForest.transforms.push_back(geometry::sdf::Transform<Scalar>::Identity());
+    sdfForest.transforms.back().t(2) = -Scalar(1);
     sdfForest.roots = {0};
     sdfForest.children.push_back({-1, -1});
     setup.meshDynamics.Construct(setup.X, std::move(multiMesh), std::move(sdfForest), Scalar(2));
-
+    sim::contact::MeshSdfContactParams meshSdfContactParams{};
+    setup.meshDynamics.InitializeMeshEnvironmentContactDetection(meshSdfContactParams);
     return setup;
 }
 
@@ -139,11 +143,17 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     setup.dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = setup.dynamics.Objective(setup.dynamics.x);
     VectorX g0 = setup.dynamics.Gradient(setup.dynamics.x);
-    sim::algorithm::vbd::Solve(setup.dynamics, setup.meshDynamics, setup.vbdParams, setup.andersonParams);
+    sim::algorithm::vbd::Solve(
+        setup.dynamics,
+        setup.meshDynamics,
+        setup.vbdParams,
+        setup.andersonParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};
-    auto xt    = setup.dynamics.bdf.CurrentState(0).reshaped(setup.dynamics.x.rows(), setup.dynamics.x.cols());
-    MatrixX dx = setup.dynamics.x - xt;
+    auto xt             = setup.dynamics.bdf.CurrentState(0).reshaped(
+        setup.dynamics.x.rows(),
+        setup.dynamics.x.cols());
+    MatrixX dx                           = setup.dynamics.x - xt;
     bool const bVerticesFallUnderGravity = (dx.row(2).array() < Scalar{0}).all();
     CHECK(bVerticesFallUnderGravity);
     bool const bVerticesOnlyFall = (dx.topRows(2).array().abs() < zero).all();
