@@ -94,6 +94,36 @@ Device::Device(Device const& other) noexcept : mHandle(other.mHandle)
 
 Device::Device(Device&& other) noexcept : mHandle(std::exchange(other.mHandle, nullptr)) {}
 
+Device& Device::operator=(Device const& other) noexcept
+{
+    if (this != &other)
+    {
+        if (mHandle)
+        {
+            rtcReleaseDevice(static_cast<RTCDevice>(mHandle));
+        }
+        mHandle = other.mHandle;
+        if (mHandle)
+        {
+            rtcRetainDevice(static_cast<RTCDevice>(mHandle));
+        }
+    }
+    return *this;
+}
+
+Device& Device::operator=(Device&& other) noexcept
+{
+    if (this != &other)
+    {
+        if (mHandle)
+        {
+            rtcReleaseDevice(static_cast<RTCDevice>(mHandle));
+        }
+        mHandle = std::exchange(other.mHandle, nullptr);
+    }
+    return *this;
+}
+
 Device::~Device()
 {
     if (mHandle)

@@ -18,16 +18,16 @@ namespace geometry {
  */
 struct DeviceConfig
 {
-    int threads{-1};      ///< Number of build threads (0 = all cores, -1 = default).
-    int userThreads{-1};  ///< Number of user threads used to join and participate in a scene
-                          ///< commit (-1 = unspecified)
-    int setAffinity{-1};  ///< Pin threads to cores (0/1, -1 = unspecified)
-    int startThreads{-1}; ///< Start threads at device creation (0/1, -1 = unspecified)
-    std::string isa;      ///< Instruction set architecture to use (e.g. "sse2", "sse4.2",
-                          ///< "avx", "avx2", "avx512", "" = default)
-    std::string maxIsa;   ///< Maximum instruction set architecture to use (e.g. "sse2",
-                          ///< "sse4.2", "avx", "avx2", "avx512", "" = default)
-    int verbose{-1};      ///< Verbosity level (0..N, -1 = unspecified)
+    int threads{-1};            ///< Number of build threads (0 = all cores, -1 = default).
+    int userThreads{-1};        ///< Number of user threads used to join and participate in a scene
+                                ///< commit (-1 = unspecified)
+    int setAffinity{-1};        ///< Pin threads to cores (0/1, -1 = unspecified)
+    int startThreads{-1};       ///< Start threads at device creation (0/1, -1 = unspecified)
+    std::string isa;            ///< Instruction set architecture to use (e.g. "sse2", "sse4.2",
+                                ///< "avx", "avx2", "avx512", "" = default)
+    std::string maxIsa;         ///< Maximum instruction set architecture to use (e.g. "sse2",
+                                ///< "sse4.2", "avx", "avx2", "avx512", "" = default)
+    int verbose{-1};            ///< Verbosity level (0..N, -1 = unspecified)
     std::string frequencyLevel; ///< Frequency level the application wants to run on (e.g.
                                 ///< "simd128", "simd256", "simd512", "" = default)
 
@@ -69,9 +69,20 @@ class Device
      * @param other The device to move from.
      */
     PBAT_API Device(Device&& other) noexcept;
-
-    PBAT_API Device& operator=(Device const& other) = delete;
-    PBAT_API Device& operator=(Device&& other)      = delete;
+    /**
+     * @brief
+     *
+     * @param other
+     * @return PBAT_API&
+     */
+    PBAT_API Device& operator=(Device const& other) noexcept;
+    /**
+     * @brief
+     *
+     * @param other
+     * @return PBAT_API&
+     */
+    PBAT_API Device& operator=(Device&& other) noexcept;
 
     /**
      * @brief Releases the managed reference if any.
