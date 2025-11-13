@@ -37,7 +37,6 @@ def main():
     sdf: pbat.geometry.sdf.Composite = None
 
     # Contact engine setup
-    mesh_sdf_contact_params = pbat.sim.contact.MeshSdfContactParams()
     mesh_sdf_contact = pbat.sim.contact.MeshSdfContact()
     X: np.ndarray = None
     V: np.ndarray = None
@@ -59,7 +58,7 @@ def main():
 
     def ui_callback():
         nonlocal forest, sdf
-        nonlocal mesh_sdf_contact_params, mesh_sdf_contact
+        nonlocal mesh_sdf_contact
         nonlocal X, V, F, GHEF, GXV, HE
         nonlocal sm, pcf, pche, pcv
         nonlocal auto_detect, step_detect, deduplicate_contacts
@@ -123,7 +122,7 @@ def main():
                     GXV[V] = np.arange(V.shape[0])
                     HE = pbat.geometry.half_edges(F)
                     sm = ps.register_surface_mesh("Mesh", X.T, F.T)
-                    mesh_sdf_contact.initialize(V, F, mesh_sdf_contact_params)
+                    mesh_sdf_contact.initialize(V, F)
                 root.destroy()
             imgui.TreePop()
 
@@ -133,42 +132,42 @@ def main():
             # Parameters UI
             imgui.Separator()
             imgui.TextUnformatted("Parameters")
-            _, mesh_sdf_contact_params.sigmaR = imgui.SliderFloat(
-                "sigmaR", mesh_sdf_contact_params.sigmaR, 1e-6, 1.0, format="%.6f"
+            _, mesh_sdf_contact.params.sigmaR = imgui.SliderFloat(
+                "sigmaR", mesh_sdf_contact.params.sigmaR, 1e-6, 1.0, format="%.6f"
             )
-            _, mesh_sdf_contact_params.sigmaB = imgui.SliderFloat(
-                "sigmaB", mesh_sdf_contact_params.sigmaB, 1e-6, 10.0, format="%.6f"
+            _, mesh_sdf_contact.params.sigmaB = imgui.SliderFloat(
+                "sigmaB", mesh_sdf_contact.params.sigmaB, 1e-6, 10.0, format="%.6f"
             )
-            _, mesh_sdf_contact_params.tauAred = imgui.SliderFloat(
-                "tauAred", mesh_sdf_contact_params.tauAred, 1e-8, 1.0, format="%.8f"
+            _, mesh_sdf_contact.params.tauAred = imgui.SliderFloat(
+                "tauAred", mesh_sdf_contact.params.tauAred, 1e-8, 1.0, format="%.8f"
             )
-            _, mesh_sdf_contact_params.tauPred = imgui.SliderFloat(
-                "tauPred", mesh_sdf_contact_params.tauPred, 1e-8, 1.0, format="%.8f"
+            _, mesh_sdf_contact.params.tauPred = imgui.SliderFloat(
+                "tauPred", mesh_sdf_contact.params.tauPred, 1e-8, 1.0, format="%.8f"
             )
-            _, mesh_sdf_contact_params.n_max_contacts_per_triangle = imgui.SliderInt(
+            _, mesh_sdf_contact.params.n_max_contacts_per_triangle = imgui.SliderInt(
                 "n_max_contacts_per_triangle",
-                mesh_sdf_contact_params.n_max_contacts_per_triangle,
+                mesh_sdf_contact.params.n_max_contacts_per_triangle,
                 1,
                 32,
             )
-            _, mesh_sdf_contact_params.n_max_opt_iters_per_triangle = imgui.SliderInt(
+            _, mesh_sdf_contact.params.n_max_opt_iters_per_triangle = imgui.SliderInt(
                 "n_max_opt_iters_per_triangle",
-                mesh_sdf_contact_params.n_max_opt_iters_per_triangle,
+                mesh_sdf_contact.params.n_max_opt_iters_per_triangle,
                 1,
                 200,
             )
-            _, mesh_sdf_contact_params.coord_zero = imgui.SliderFloat(
+            _, mesh_sdf_contact.params.coord_zero = imgui.SliderFloat(
                 "coord_zero",
-                mesh_sdf_contact_params.coord_zero,
+                mesh_sdf_contact.params.coord_zero,
                 1e-8,
                 1e-2,
                 format="%.8f",
             )
-            _, mesh_sdf_contact_params.hfd = imgui.SliderFloat(
-                "hfd", mesh_sdf_contact_params.hfd, 1e-8, 1e-2, format="%.8f"
+            _, mesh_sdf_contact.params.hfd = imgui.SliderFloat(
+                "hfd", mesh_sdf_contact.params.hfd, 1e-8, 1e-2, format="%.8f"
             )
-            _, mesh_sdf_contact_params.r = imgui.SliderFloat(
-                "r", mesh_sdf_contact_params.r, 1e-8, 1e-1, format="%.8f"
+            _, mesh_sdf_contact.params.r = imgui.SliderFloat(
+                "r", mesh_sdf_contact.params.r, 1e-8, 1e-1, format="%.8f"
             )
             _, deduplicate_contacts = imgui.Checkbox(
                 "Deduplicate contacts", deduplicate_contacts
@@ -188,7 +187,7 @@ def main():
             T = sm.get_transform()
             XT = (T @ XH)[:3, :]
             # Re-initialize engine if parameters changed so it picks up new config
-            mesh_sdf_contact.initialize(V, F, mesh_sdf_contact_params)
+            mesh_sdf_contact.initialize(V, F)
             # Run contact detection
             profiler.begin_frame("Physics")
             mesh_sdf_contact.prepare_iteration()
