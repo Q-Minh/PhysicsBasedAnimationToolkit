@@ -87,6 +87,7 @@ class PrimitiveTransform:
         return f"Name: {self.name}, Type: {self.transform_type.name},\n\t ID: {self.id}, \n\t\t Time: [{self.begin}, {self.begin + self.duration}]"
     
 class GlobalRotateTransform(PrimitiveTransform):
+    """ Rotate all vertices around a global axis """
     def __init__(self, name: str, begin: float, duration: float, axis: np.ndarray, degrees_per_second: float):
         super().__init__(name, begin, duration, TransformType.G_ROTATE)
         self.axis = axis / np.linalg.norm(axis)  # normalize axis
@@ -122,6 +123,7 @@ class GlobalRotateTransform(PrimitiveTransform):
         self.axis = self.axis / np.linalg.norm(self.axis)
 
 class LocalRotateTransform(PrimitiveTransform):
+    """ Rotate all vertices around a local axis and origin """
     def __init__(self, name: str, begin: float, duration: float, axis: np.ndarray, origin: np.ndarray, degrees_per_second: float):
         super().__init__(name, begin, duration, TransformType.L_ROTATE)
         self.axis = axis / np.linalg.norm(axis)  # normalize axis
@@ -163,6 +165,7 @@ class LocalRotateTransform(PrimitiveTransform):
         return f"{base_str}\n\t\t Axis: {self.axis},\n\t\t Origin: {self.origin},\n\t\t Degrees per second: {self.degrees_per_second}"
 
 class TranslateTransform(PrimitiveTransform):
+    """ Translate all vertices along a direction """
     def __init__(self, name: str, begin: float, duration: float, direction: np.ndarray, speed: float):
         super().__init__(name, begin, duration, TransformType.TRANSLATE)
         self.direction = direction / np.linalg.norm(direction)  # normalize direction
@@ -194,6 +197,7 @@ class TranslateTransform(PrimitiveTransform):
 
 
 class FixedTransform(PrimitiveTransform):
+    """ Keep vertices fixed"""
     def __init__(self, name, begin, duration):
         super().__init__(name, begin, duration, TransformType.FIXED)
 
@@ -201,13 +205,14 @@ class FixedTransform(PrimitiveTransform):
     def make_default():
         return FixedTransform("New Fixed", 0, 1)
     
-    def specific_apply(self, t, V):
+    def specific_apply(self, t, dt, V):
         return V
     
     def serialize(self, h5group):
         return super().serialize(h5group)
 
 class CompositeTransform(PrimitiveTransform):
+    """ Assemble multiple primitive transforms sequentially """
     def __init__(self, name: str, begin: float):
         super().__init__(name, begin, 0, TransformType.COMPOSITE)  # Composite is not a primitive type
         self.transforms = []  # list of PrimitiveTransform instances
