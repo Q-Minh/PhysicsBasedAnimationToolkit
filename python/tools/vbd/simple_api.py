@@ -10,6 +10,7 @@ import h5py
 import scipy as sp
 
 import utils.transform_library as tlib
+from utils.transform_library import TransformType
 
 
 def _read_mesh_and_state(integrate_grp: h5py.Group):
@@ -500,6 +501,7 @@ if __name__ == "__main__":
 
     # transform_library = tlib.TransformLibrary()
     # transform_library.deserialize("primitive_transforms.h5")
+    original_mask = None
 
     def callback():
         global Y, nu, rho, aext, b, v0, d_axis, d_percent, d_extremity, d_nodes
@@ -510,7 +512,7 @@ if __name__ == "__main__":
         global i_broyden_l2_solver, i_broyden_jacobian_estimate
         global animate, export, t, vm, dpc
         global archive, archive_path, archive_flush_period
-        # global transform_library
+        # global transform_library, original_mask
         global mesh_dynamics
         global sdf_grid, sdf_grid_dims, sdf_grid_bmin, sdf_grid_bmax
         global pcc, show_contact_frames
@@ -606,8 +608,8 @@ if __name__ == "__main__":
                 root.withdraw()
                 file_path = filedialog.askopenfilename(
                     title="Open HDF5 simulation file",
-                    defaultextension=".h5",
-                    filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+                    defaultextension="*.*",
+                    filetypes=[("All files", "*.*"), ("HDF5 files", "*.h5;*.hdf5")],
                 )
                 if file_path:
                     h5 = h5py.File(file_path, "r")
@@ -619,7 +621,8 @@ if __name__ == "__main__":
                     C = E.T  # to shape (m,4)
                     dynamics.construct(V.T, C.T)
                     dynamics.constrain(d_mask.ravel())
-                    # dynamics.set_elastic_energy(dynamics.E, dynamics.wgU, dynamics.X, dynamics.lamegU[0], dynamics.lamegU[1])
+                    original_mask = d_mask.copy()
+                    #dynamics.set_elastic_energy(dynamics.E, dynamics.wgU, dynamics.X, dynamics.lamegU[0], dynamics.lamegU[1])
                     element = pbat.fem.Element.Tetrahedron
                     order = 1  # linear shape functions only
                     qorder_U = order
@@ -1082,6 +1085,7 @@ if __name__ == "__main__":
                 x0,
                 xdot0,
             )
+            dynamics.constrain(original_mask.ravel() if original_mask is not None else np.zeros(n_nodes, dtype=int))
             t = 0
             for pcci in pcc:
                 pcci.remove()
@@ -1098,12 +1102,17 @@ if __name__ == "__main__":
                 except Exception as e:
                     frame_group = None
                     print(f"Archive group error: {e}")
-            # for transform in transform_library.transforms:
-            #     transformed_v = transform.apply(t, dt, dynamics.x)
-            #     for i in range(dynamics.x.shape[1]):
-            #         if dynamics.dmask[i] == transform.id:
-            #             dynamics.x[:, i] = transformed_v[:, i]
-
+            for transform in transform_library.transforms:
+                v = dynamics.x[:, dynamics.dmask == transform.id]
+                transformed_v = transform.apply(t, dt, v)
+                dynamics.x[:, dynamics.dmask == transform.id] = transformed_v
+                if transform.expired(t * dt) and transform.transform_type == TransformType.FIXED:
+                    dynamics.dmask[dynamics.dmask == transform.id] = 0
+                    dynamics.constrain(dynamics.dmask.ravel())
+                # for i in range(dynamics.x.shape[1]):
+                #     if dynamics.dmask[i] == transform.id:
+                #         dynamics.x[:, i] = transformed_v[:, i]
+                
             if i_solver == 0:
                 vbd_integrate(dynamics, mesh_dynamics, vbd_params, archive=frame_group)
             elif i_solver == 1:
