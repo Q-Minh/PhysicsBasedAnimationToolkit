@@ -212,8 +212,9 @@ class MeshDynamics
         ScalarType gamma{
             0.99}; ///< \cite giles_augmented_2025 decay factor for
                    ///< Lagrange multiplier and stiffness initialization at time step begin
-        ScalarType Fnmax{std::numeric_limits<ScalarType>::max()}; ///< Maximum normal contact force
-                                                                  ///< density magnitude
+        ScalarType Fnmax{1e12}; ///< Maximum normal contact force
+                                ///< density magnitude
+        ScalarType kmax{1e12};  ///< Maximum contact stiffness
     };
     EnvironmentContactDynamicsParams
         mEnvContactDynamicsParams; ///< Environment contact dynamics parameters

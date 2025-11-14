@@ -1,6 +1,7 @@
 #include "MeshDynamics.h"
 
 #include "Friction.h"
+#include "pbat/common/ConstexprFor.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
@@ -149,7 +150,14 @@ void MeshDynamics::DualUpdateEnvironmentContacts(
         c.lambda(1)           = std::clamp(c.lambda(1) - c.k(1) * c.C(1), -muFn, muFn);
         c.lambda(2)           = std::clamp(c.lambda(2) - c.k(2) * c.C(2), -muFn, muFn);
         // Update stiffnesses
-        c.k.array() += mEnvContactDynamicsParams.beta * c.k.array() * c.C.array().abs();
+        common::ForRange<0, 3>([&]<auto d>() {
+            if (c.lambda(d) > -muFn and c.lambda(d) < muFn)
+            {
+                c.k(d) = std::min(
+                    c.k(d) + mEnvContactDynamicsParams.beta * std::abs(c.C(d)),
+                    mEnvContactDynamicsParams.kmax);
+            }
+        });
     };
     tbb::parallel_for(Eigen::Index{0}, mMeshes.F.cols(), [&](Eigen::Index f) {
         Eigen::Matrix<ScalarType, 3, 3> const xf = X(Eigen::placeholders::all, mMeshes.F.col(f));
@@ -260,8 +268,9 @@ void ConstraintErrorProportionalWarmStart(
     MeshDynamics::EnvironmentContactConstraint& c)
 {
     // Signed constraint proportional weights
-    Eigen::Vector<TScalar, 3> const wc = c.C.array() / totalConstraintError.array();
-    c.lambda(0)                        = std::min(wc(0) * totalLambda(0), Fnmax);
+    Eigen::Vector<TScalar, 3> const wc =
+        c.C.array() / (totalConstraintError.array() + std::numeric_limits<TScalar>::min());
+    c.lambda(0) = std::min(wc(0) * totalLambda(0), Fnmax);
     // Coulomb friction bounds
     TScalar const muFn = mu * c.lambda(0);
     c.lambda(1)        = std::clamp(wc(1) * totalLambda(1), -muFn, muFn);

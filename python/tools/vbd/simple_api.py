@@ -93,6 +93,8 @@ def vbd_solve(
     for k in range(params.n_max_iters):
         if grp is not None:
             serialize_solver_iteration(fem, k, grp)
+        if (k + 1) % 5 == 0:
+            mesh_dynamics.update_environment_contact_constraints(fem.x)
         pbat.sim.algorithm.vbd.iterate(fem, mesh_dynamics, params)
     fem.back_substitute_integrated_positions_into_velocities()
     if grp is not None:
@@ -313,25 +315,26 @@ def register_contact_frames_in_polyscope(mesh_dynamics: pbat.sim.contact.MeshDyn
     pcc = []
     for f in range(mesh_dynamics.CFP.shape[0] - 1):
         for c in range(mesh_dynamics.CFP[f], mesh_dynamics.CFP[f + 1]):
+            constraint = mesh_dynamics.CF[c]
             origins = np.stack(
                 [
-                    mesh_dynamics.CF[c].O,
-                    mesh_dynamics.CF[c].O,
-                    mesh_dynamics.CF[c].O,
+                    constraint.O,
+                    constraint.O,
+                    constraint.O,
                 ]
             )
             pcfc = ps.register_point_cloud(
                 f"Contact frame f={f} c={c}",
                 origins,
             )
-            pcfc.add_vector_quantity("basis", mesh_dynamics.CF[c].B.T, enabled=False)
+            pcfc.add_vector_quantity("basis", constraint.B.T, enabled=False)
             pcfc.add_vector_quantity(
-                "normal",
+                "forces",
                 np.stack(
                     [
-                        mesh_dynamics.CF[c].B[:, 0],
-                        mesh_dynamics.CF[c].B[:, 0],
-                        mesh_dynamics.CF[c].B[:, 0],
+                        constraint.B[:, j]
+                        * (constraint.lagrange[j] - constraint.k[j] * constraint.C[j])
+                        for j in [1, 1, 2]
                     ]
                 ),
                 enabled=True,
@@ -340,25 +343,26 @@ def register_contact_frames_in_polyscope(mesh_dynamics: pbat.sim.contact.MeshDyn
 
     for he in range(mesh_dynamics.CHEP.shape[0] - 1):
         for c in range(mesh_dynamics.CHEP[he], mesh_dynamics.CHEP[he + 1]):
+            constraint = mesh_dynamics.CHE[c]
             origins = np.stack(
                 [
-                    mesh_dynamics.CHE[c].O,
-                    mesh_dynamics.CHE[c].O,
-                    mesh_dynamics.CHE[c].O,
+                    constraint.O,
+                    constraint.O,
+                    constraint.O,
                 ]
             )
             pchec = ps.register_point_cloud(
                 f"Contact frame he={he} c={c}",
                 origins,
             )
-            pchec.add_vector_quantity("basis", mesh_dynamics.CHE[c].B.T, enabled=False)
+            pchec.add_vector_quantity("basis", constraint.B.T, enabled=False)
             pchec.add_vector_quantity(
-                "normal",
+                "forces",
                 np.stack(
                     [
-                        mesh_dynamics.CHE[c].B[:, 0],
-                        mesh_dynamics.CHE[c].B[:, 0],
-                        mesh_dynamics.CHE[c].B[:, 0],
+                        constraint.B[:, j]
+                        * (constraint.lagrange[j] - constraint.k[j] * constraint.C[j])
+                        for j in [1, 1, 2]
                     ]
                 ),
                 enabled=True,
@@ -368,28 +372,29 @@ def register_contact_frames_in_polyscope(mesh_dynamics: pbat.sim.contact.MeshDyn
     for v in range(mesh_dynamics.V2CV.shape[0]):
         if mesh_dynamics.V2CV[v] >= 0:
             c = mesh_dynamics.V2CV[v]
+            constraint = mesh_dynamics.CV[c]
             origins = np.stack(
                 [
-                    mesh_dynamics.CV[c].O,
-                    mesh_dynamics.CV[c].O,
-                    mesh_dynamics.CV[c].O,
+                    constraint.O,
+                    constraint.O,
+                    constraint.O,
                 ]
             )
             pcvc = ps.register_point_cloud(
                 f"Contact frame v={v} c={c}",
                 origins,
             )
-            pcvc.add_vector_quantity("basis", mesh_dynamics.CV[c].B.T, enabled=False)
+            pcvc.add_vector_quantity("basis", constraint.B.T, enabled=False)
             pcvc.add_vector_quantity(
-                "normal",
+                "forces",
                 np.stack(
                     [
-                        mesh_dynamics.CV[c].B[:, 0],
-                        mesh_dynamics.CV[c].B[:, 0],
-                        mesh_dynamics.CV[c].B[:, 0],
+                        constraint.B[:, j]
+                        * (constraint.lagrange[j] - constraint.k[j] * constraint.C[j])
+                        for j in [1, 1, 2]
                     ]
                 ),
-                enabled=True,
+                enabled=False,
             )
             pcc.append(pcvc)
     return pcc
@@ -779,16 +784,16 @@ if __name__ == "__main__":
             if imgui.TreeNode("Mesh-SDF Contact"):
                 params = mesh_dynamics.mesh_sdf_contact.params
                 _, params.sigmaR = imgui.SliderFloat(
-                    "sigmaR", params.sigmaR, 1e-6, 1.0, format="%.6f"
+                    "sigmaR", params.sigmaR, 1e-2, 1.0, format="%.2f"
                 )
                 _, params.sigmaB = imgui.SliderFloat(
-                    "sigmaB", params.sigmaB, 1e-6, 10.0, format="%.6f"
+                    "sigmaB", params.sigmaB, 1e-2, 10.0, format="%.2f"
                 )
                 _, params.tauAred = imgui.SliderFloat(
-                    "tauAred", params.tauAred, 1e-8, 1.0, format="%.8f"
+                    "tauAred", params.tauAred, 1e-5, 1e-3, format="%.5f"
                 )
                 _, params.tauPred = imgui.SliderFloat(
-                    "tauPred", params.tauPred, 1e-8, 1.0, format="%.8f"
+                    "tauPred", params.tauPred, 1e-5, 1e-3, format="%.5f"
                 )
                 _, params.n_max_contacts_per_triangle = imgui.SliderInt(
                     "n_max_contacts_per_triangle",
@@ -805,7 +810,7 @@ if __name__ == "__main__":
                 _, params.coord_zero = imgui.SliderFloat(
                     "coord_zero",
                     params.coord_zero,
-                    1e-8,
+                    0,
                     1e-2,
                     format="%.8f",
                 )
@@ -813,7 +818,7 @@ if __name__ == "__main__":
                     "hfd", params.hfd, 1e-8, 1e-2, format="%.8f"
                 )
                 _, params.r = imgui.SliderFloat(
-                    "r", params.r, 1e-8, 1e-1, format="%.8f"
+                    "r", params.r, 1e-3, 1e-1, format="%.8f"
                 )
                 imgui.TreePop()
 
@@ -842,9 +847,7 @@ if __name__ == "__main__":
                 sdf_grid_bmax[:] = bmax
                 # Grid resolution
                 grid_res = sdf_grid_dims[0]
-                dims_changed, grid_res = imgui.InputInt(
-                    "Grid Resolution", grid_res
-                )
+                dims_changed, grid_res = imgui.InputInt("Grid Resolution", grid_res)
                 sdf_grid_dims = (grid_res, grid_res, grid_res)
                 # Transform
                 euler_angles = sp.spatial.transform.Rotation.from_matrix(
@@ -866,13 +869,8 @@ if __name__ == "__main__":
                     for r in mesh_dynamics.sdf_forest.roots:
                         mesh_dynamics.sdf_forest.transforms[r].R = sdf_transform_R
                         mesh_dynamics.sdf_forest.transforms[r].t = sdf_transform_t
-                # Update/refresh grid
-                update_grid = imgui.Button(
-                    "Update SDF Grid", [imgui.GetWindowWidth() / 2.1, 0]
-                )
                 if (
-                    update_grid
-                    or bmin_changed
+                    bmin_changed
                     or bmax_changed
                     or dims_changed
                     or R_changed

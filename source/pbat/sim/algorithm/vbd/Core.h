@@ -304,9 +304,11 @@ void Iterate(
                         // AL gradient + hessian
                         Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
                                        (ilocal == 2) * uv(1);
-                        Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B * C.ForceEstimate());
+                        bool const bPenetrating = C.C(0) <= Scalar(0);
+                        Eigen::Vector<Scalar, 3> gradAL =
+                            -(bPenetrating * alpha) * (C.B * C.ForceEstimate());
                         Eigen::Matrix<Scalar, 3, 3> hessAL =
-                            alpha * alpha *
+                            (bPenetrating * alpha * alpha) *
                             (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
                              C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +
                              C.k(2) * (C.B.col(2) * C.B.col(2).transpose()));
@@ -334,10 +336,12 @@ void Iterate(
                         Eigen::Vector<Scalar, 3> const xc = (1 - u) * xei + u * xej;
                         C.Eval(xc);
                         // AL gradient + hessian
-                        Scalar alpha = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
-                        Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B * C.ForceEstimate());
+                        Scalar alpha            = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
+                        bool const bPenetrating = C.C(0) <= Scalar(0);
+                        Eigen::Vector<Scalar, 3> gradAL =
+                            -(bPenetrating * alpha) * (C.B * C.ForceEstimate());
                         Eigen::Matrix<Scalar, 3, 3> hessAL =
-                            alpha * alpha *
+                            (bPenetrating * alpha * alpha) *
                             (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
                              C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +
                              C.k(2) * (C.B.col(2) * C.B.col(2).transpose()));
@@ -353,11 +357,12 @@ void Iterate(
                         meshDynamics.CV[cvi];
                     C.Eval(ToEigen(xi));
                     // AL gradient + hessian
-                    Eigen::Vector<Scalar, 3> gradAL = -C.B * C.ForceEstimate();
+                    bool const bPenetrating         = C.C(0) <= Scalar(0);
+                    Eigen::Vector<Scalar, 3> gradAL = bPenetrating * (C.B * -C.ForceEstimate());
                     Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
-                        C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +
-                        C.k(2) * (C.B.col(2) * C.B.col(2).transpose());
+                        bPenetrating * (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
+                                        C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +
+                                        C.k(2) * (C.B.col(2) * C.B.col(2).transpose()));
                     gi += FromEigen(gradAL);
                     Hi += FromEigen(hessAL);
                 }

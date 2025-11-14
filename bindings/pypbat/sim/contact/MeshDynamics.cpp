@@ -73,7 +73,11 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_rw(
             "Fnmax",
             &EnvironmentContactDynamicsParamsType::Fnmax,
-            "(float) Maximum normal contact force density magnitude.");
+            "(float) Maximum normal contact force density magnitude.")
+        .def_rw(
+            "kmax",
+            &EnvironmentContactDynamicsParamsType::kmax,
+            "(float) Maximum contact stiffness.");
 
     nb::class_<MeshDynamicsType>(m, "MeshDynamics")
         .def(nb::init<>(), "Construct an empty mesh contact dynamics engine.")
