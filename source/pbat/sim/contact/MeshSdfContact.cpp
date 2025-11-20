@@ -167,9 +167,10 @@ void MeshSdfContact::TriangleSdfContactDetection(
             } /*fCheckConvergence*/,
             xk /*xk*/,
             trParams /*params*/);
-        bool const bIsInContactRadius = trParams.fk <= mParams.r;
-        bool const bIsLowerDimensionalContact =
-            xk(0) == ScalarType(0) or xk(1) == ScalarType(0) or (xk(0) + xk(1) == ScalarType(1));
+        bool const bIsInContactRadius         = trParams.fk <= mParams.r;
+        bool const bIsLowerDimensionalContact = xk(0) <= mParams.coordZero or
+                                                xk(1) <= mParams.coordZero or
+                                                (1 - xk(0) - xk(1) <= mParams.coordZero);
         if (bIsInContactRadius and (not bIsLowerDimensionalContact))
         {
             mTriangleContactMask(f)       = true;
@@ -203,8 +204,8 @@ void MeshSdfContact::TriangleSdfContactDetection(
                 mParams.tauAred * x12.norm(),
                 mParams.nMaxOptimizationIterations);
         bool const bIsInContactRadius = result.fmin <= mParams.r;
-        bool const bIsVertex = (result.xmin <= std::numeric_limits<ScalarType>::epsilon()) or
-                               (1 - result.xmin <= std::numeric_limits<ScalarType>::epsilon());
+        bool const bIsVertex =
+            (result.xmin <= mParams.coordZero) or (1 - result.xmin <= mParams.coordZero);
         if (bIsInContactRadius and not bIsVertex)
         {
             mHalfEdgeContactMask(hei)   = true;

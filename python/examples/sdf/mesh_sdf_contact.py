@@ -154,8 +154,8 @@ def main():
             _, mesh_sdf_contact.params.coord_zero = imgui.SliderFloat(
                 "coord_zero",
                 mesh_sdf_contact.params.coord_zero,
-                1e-8,
-                1e-2,
+                1e-5,
+                1e-1,
                 format="%.8f",
             )
             _, mesh_sdf_contact.params.hfd = imgui.SliderFloat(
@@ -183,50 +183,49 @@ def main():
             # Run contact detection
             profiler.begin_frame("Physics")
             mesh_sdf_contact.prepare_iteration()
-            mesh_sdf_contact.triangle_sdf_contact_detection(XT, F, sdf)
+            mesh_sdf_contact.triangle_sdf_contact_detection(
+                XT, V, F, GHEF, EHE, GXV, sdf
+            )
             profiler.end_frame("Physics")
-            uvcf = mesh_sdf_contact.triangle_contacts
-            uche = mesh_sdf_contact.half_edge_contacts
-            vc = mesh_sdf_contact.vertex_contacts
-            if uvcf.shape[1] > 0:
+            fmask = mesh_sdf_contact.triangle_contact_mask
+            hemask = mesh_sdf_contact.half_edge_contact_mask
+            vmask = mesh_sdf_contact.vertex_contact_mask
+            sm.add_scalar_quantity("Triangle Contact Mask", fmask.astype(np.float64), defined_on="faces", enabled=True)
+            fcinds = np.where(fmask)[0]
+            hecinds = np.where(hemask)[0]
+            vcinds = np.where(vmask)[0]
+
+            if fcinds.shape[0] > 0:
                 # Get the first barycentric coordinate as 1-u-v
+                uvcf = mesh_sdf_contact.triangle_contact_points[:, fcinds]
                 u = uvcf[0, :]
                 v = uvcf[1, :]
                 w = 1 - u - v
-                # Get the triangle indices associated with each contact
-                f = np.repeat(
-                    np.arange(F.shape[1]), mesh_sdf_contact.triangle_contact_counts
-                )
                 # Compute world contact positions via triangle barycentric interpolation
                 xcf = (
-                    XT[:, F[0, f]] * w[np.newaxis, :]
-                    + XT[:, F[1, f]] * u[np.newaxis, :]
-                    + XT[:, F[2, f]] * v[np.newaxis, :]
+                    XT[:, F[0, fcinds]] * w[np.newaxis, :]
+                    + XT[:, F[1, fcinds]] * u[np.newaxis, :]
+                    + XT[:, F[2, fcinds]] * v[np.newaxis, :]
                 )
                 pcf = ps.register_point_cloud("Face Contacts", xcf.T)
             else:
                 if ps.has_point_cloud("Face Contacts"):
                     ps.remove_point_cloud("Face Contacts")
-            if uche.shape[0] > 0:
+            if hecinds.shape[0] > 0:
                 # Get the first barycentric coordinate as 1-u
-                u = uche
+                u = mesh_sdf_contact.half_edge_contact_points[hecinds]
                 v = 1 - u
-                # Get the half-edge indices associated with each contact
-                he = np.repeat(
-                    np.arange(HE.shape[1]),
-                    mesh_sdf_contact.half_edge_contact_counts,
-                )
                 # Compute world contact positions via half-edge barycentric interpolation
                 xche = (
-                    XT[:, HE[0, he]] * v[np.newaxis, :]
-                    + XT[:, HE[1, he]] * u[np.newaxis, :]
+                    XT[:, HE[0, hecinds]] * v[np.newaxis, :]
+                    + XT[:, HE[1, hecinds]] * u[np.newaxis, :]
                 )
                 pche = ps.register_point_cloud("Half-Edge Contacts", xche.T)
             else:
                 if ps.has_point_cloud("Half-Edge Contacts"):
                     ps.remove_point_cloud("Half-Edge Contacts")
-            if vc.shape[0] > 0:
-                xcv = XT[:, V[vc]]
+            if vcinds.shape[0] > 0:
+                xcv = XT[:, V[vcinds]]
                 pcv = ps.register_point_cloud("Vertex Contacts", xcv.T)
             else:
                 if ps.has_point_cloud("Vertex Contacts"):
