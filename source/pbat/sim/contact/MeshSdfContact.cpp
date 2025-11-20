@@ -64,8 +64,9 @@ void MeshSdfContact::TriangleSdfContactDetection(
     geometry::sdf::Composite<ScalarType> const& sdf)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshSdfContact.TriangleSdfContactDetection");
-    // 0. Reset locks
+    // 0. Reset locks and bounds
     mVertexLocks.setConstant(false);
+    mVertexDisplacementBounds.setConstant(std::numeric_limits<ScalarType>::max());
     // 1. Cull triangles that are too far from the surface before doing anything, assume
     // Lipschitz bound of 1 on the SDF.
     tbb::parallel_for(Eigen::Index(0), F.cols(), [&](Eigen::Index f) {
@@ -99,7 +100,7 @@ void MeshSdfContact::TriangleSdfContactDetection(
                 std::atomic_ref<bool> bIsVertexInContact(mVertexContactMask(finds(j)));
                 bIsVertexInContact.store(false, std::memory_order_relaxed);
             }
-            // Compute bounds even if triangle is culled
+            // Compute conservative bound if triangle is culled
             for (IndexType i : finds)
                 common::AtomicMin(mVertexDisplacementBounds(i), signedDistanceLowerBound);
         }
@@ -177,7 +178,7 @@ void MeshSdfContact::TriangleSdfContactDetection(
             mTriangleContactPoints.col(f) = mini::ToEigen(xk);
             // Update vertex displacement bounds if triangle in contact
             for (IndexType i : finds)
-                common::AtomicMin(mVertexDisplacementBounds(i), trParams.fk);
+                common::AtomicMin(mVertexDisplacementBounds(i), trParams.fk - triangleSizeMeasure);
         }
     });
     // 3. Run SDF minimization on potential edge candidates
@@ -193,6 +194,7 @@ void MeshSdfContact::TriangleSdfContactDetection(
         Eigen::Vector<ScalarType, 3> const x1  = X.col(i);
         Eigen::Vector<ScalarType, 3> const x2  = X.col(j);
         Eigen::Vector<ScalarType, 3> const x12 = x2 - x1;
+        ScalarType const edgeLength            = x12.norm();
         math::optimization::GoldenSectionSearchResult<ScalarType> result =
             math::optimization::GoldenSectionSearch(
                 [&](ScalarType u) {
@@ -201,7 +203,7 @@ void MeshSdfContact::TriangleSdfContactDetection(
                 },
                 ScalarType(0),
                 ScalarType(1),
-                mParams.tauAred * x12.norm(),
+                mParams.tauAred * edgeLength,
                 mParams.nMaxOptimizationIterations);
         bool const bIsInContactRadius = result.fmin <= mParams.r;
         bool const bIsVertex =
@@ -210,8 +212,8 @@ void MeshSdfContact::TriangleSdfContactDetection(
         {
             mHalfEdgeContactMask(hei)   = true;
             mHalfEdgeContactPoints(hei) = result.xmin;
-            common::AtomicMin(mVertexDisplacementBounds(i), result.fmin);
-            common::AtomicMin(mVertexDisplacementBounds(j), result.fmin);
+            common::AtomicMin(mVertexDisplacementBounds(i), result.fmin - edgeLength / 2);
+            common::AtomicMin(mVertexDisplacementBounds(j), result.fmin - edgeLength / 2);
             if (hej >= 0)
             {
                 mHalfEdgeContactMask(hej)   = true;
