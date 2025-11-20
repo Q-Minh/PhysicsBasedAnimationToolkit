@@ -52,18 +52,18 @@ void MeshDynamics::SetDynamicGeometry(MultiMesh<IndexType> meshes)
     mMeshes = std::move(meshes);
 }
 
-void MeshDynamics::AllocateEnvironmentContactDataStructures(ScalarType nReserveRatio)
+void MeshDynamics::AllocateEnvironmentContactDataStructures()
 {
     // Preallocate contact constraint storage
-    CFP.resize(mMeshes.F.cols() + 1);
-    CHEP.resize(mMeshes.F.cols() * 3 + 1);
-    V2CV.resize(mMeshes.V.size());
-    FA.resize(mMeshes.F.cols());
-    HEA.resize(mMeshes.F.cols() * 3);
-    VA.resize(mMeshes.V.size());
-    CF.reserve(static_cast<size_t>(mMeshes.F.cols() * nReserveRatio));
-    CHE.reserve(static_cast<size_t>(mMeshes.F.cols() * 3 * nReserveRatio));
-    CV.reserve(static_cast<size_t>(mMeshes.V.size() * nReserveRatio));
+    auto const nTriangles = mMeshes.F.cols();
+    auto const nHalfEdges = nTriangles * 3;
+    auto const nVertices  = mMeshes.V.size();
+    FA.resize(nTriangles);
+    HEA.resize(nHalfEdges);
+    VA.resize(nVertices);
+    CF.resize(static_cast<size_t>(nTriangles));
+    CHE.resize(static_cast<size_t>(nHalfEdges));
+    CV.resize(static_cast<size_t>(nVertices));
 }
 
 void MeshDynamics::InitializeMeshMeshContactDetection(
@@ -74,13 +74,25 @@ void MeshDynamics::InitializeMeshMeshContactDetection(
         .Initialize(device, X, mMeshes.V, mMeshes.F, mMeshes.E, mMeshes.VP, mMeshes.FP, mMeshes.EP);
 }
 
-void MeshDynamics::InitializeMeshEnvironmentContactDetection(ScalarType nReserveRatio)
+void MeshDynamics::InitializeMeshEnvironmentContactDetection()
 {
     mMeshSdfContact.Initialize(mMeshes.V, mMeshes.F);
-    AllocateEnvironmentContactDataStructures(nReserveRatio);
-    CFP.setZero();
-    CHEP.setZero();
-    V2CV.setConstant(IndexType(-1));
+    AllocateEnvironmentContactDataStructures();
+    for (auto& c : CF)
+    {
+        c.C      = ScalarType(0);
+        c.lambda = ScalarType(0);
+    }
+    for (auto& c : CHE)
+    {
+        c.C      = ScalarType(0);
+        c.lambda = ScalarType(0);
+    }
+    for (auto& c : CV)
+    {
+        c.C      = ScalarType(0);
+        c.lambda = ScalarType(0);
+    }
 }
 
 void MeshDynamics::UpdateEnvironmentContactConstraints(
@@ -89,48 +101,93 @@ void MeshDynamics::UpdateEnvironmentContactConstraints(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateEnvironmentContactConstraints");
     // 1. Run mesh-SDF contact detection
     mMeshSdfContact.PrepareIteration();
-    mMeshSdfContact.TriangleSdfContactDetection(X, mMeshes.F, mSdf);
-    mMeshSdfContact.DeduplicateContactSet(mMeshes.F, mMeshes.GHEF, mMeshes.GXV);
+    mMeshSdfContact.TriangleSdfContactDetection(
+        X,
+        mMeshes.V,
+        mMeshes.F,
+        mMeshes.GHEF,
+        mMeshes.EHE,
+        mMeshes.GXV,
+        mSdf);
     // 2. Recompute geometric quantities
-    auto Xa = X(Eigen::placeholders::all, mMeshes.F.row(0)).bottomRows<3>();
-    auto Xb = X(Eigen::placeholders::all, mMeshes.F.row(1)).bottomRows<3>();
-    auto Xc = X(Eigen::placeholders::all, mMeshes.F.row(2)).bottomRows<3>();
-    for (auto f = 0; f < FA.size(); ++f)
-        FA(f) = ScalarType(0.5) * (Xb.col(f) - Xa.col(f)).cross((Xc.col(f) - Xa.col(f))).norm();
-    for (auto he = 0; he < HEA.size(); ++he)
-        HEA(he) = ScalarType(0.5) * (FA(mMeshes.GHEF(0, he)) + FA(mMeshes.GHEF(1, he)));
-    for (auto v = 0; v < VA.size(); ++v)
-    {
-        VA(v)      = ScalarType(0);
-        auto begin = mMeshes.GVHEp(v);
-        auto end   = mMeshes.GVHEp(v + 1);
-        for (IndexType he : mMeshes.GVHEadj(Eigen::seqN(begin, end - begin)))
-            VA(v) += FA(geometry::FaceOfHalfEdge(he));
-    }
+    UpdateGeometricQuantities(X);
     // 3. Update constraint lists
     UpdateTriangleContactConstraints(X);
     UpdateHalfEdgeContactConstraints(X);
     UpdateVertexContactConstraints(X);
 }
 
+void MeshDynamics::UpdateGeometricQuantities(
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateGeometricQuantities");
+    auto Xa = X(Eigen::placeholders::all, mMeshes.F.row(0)).bottomRows<3>();
+    auto Xb = X(Eigen::placeholders::all, mMeshes.F.row(1)).bottomRows<3>();
+    auto Xc = X(Eigen::placeholders::all, mMeshes.F.row(2)).bottomRows<3>();
+    tbb::parallel_for(Eigen::Index{0}, FA.size(), [&](Eigen::Index f) {
+        FA(f) = ScalarType(0.5) * (Xb.col(f) - Xa.col(f)).cross((Xc.col(f) - Xa.col(f))).norm();
+    });
+    tbb::parallel_for(Eigen::Index{0}, HEA.size(), [&](Eigen::Index he) {
+        HEA(he) = ScalarType(0.5) * (FA(mMeshes.GHEF(0, he)) + FA(mMeshes.GHEF(1, he)));
+    });
+    tbb::parallel_for(Eigen::Index{0}, VA.size(), [&](Eigen::Index v) {
+        VA(v)      = ScalarType(0);
+        auto begin = mMeshes.GVHEp(v);
+        auto end   = mMeshes.GVHEp(v + 1);
+        for (IndexType he : mMeshes.GVHEadj(Eigen::seqN(begin, end - begin)))
+            VA(v) += FA(geometry::FaceOfHalfEdge(he));
+    });
+}
+
 void MeshDynamics::PrepareEnvironmentContactsForDualIteration()
 {
     PBAT_PROFILE_NAMED_SCOPE(
         "pbat.sim.contact.MeshDynamics.PrepareEnvironmentContactsForDualIteration");
-    tbb::parallel_for(std::size_t{0}, CF.size(), [&](std::size_t c) {
-        CF[c].lambda *= mEnvContactDynamicsParams.gamma;
-        CF[c].k =
-            (mEnvContactDynamicsParams.gamma * CF[c].k).cwiseMax(mEnvContactDynamicsParams.kstart);
+    auto const nTriangles = mMeshes.F.cols();
+    tbb::parallel_for(Eigen::Index{0}, nTriangles, [&](Eigen::Index f) {
+        EnvironmentContact& c = CF[f];
+        if (mMeshSdfContact.mTriangleContactMask(f))
+        {
+            c.lambda *= mEnvContactDynamicsParams.gamma;
+            c.k = mEnvContactDynamicsParams.gamma * std::max(c.k, mEnvContactDynamicsParams.kstart);
+        }
+        else
+        {
+            c.lambda = ScalarType(0);
+            c.k      = mEnvContactDynamicsParams.kstart;
+        }
     });
-    tbb::parallel_for(std::size_t{0}, CHE.size(), [&](std::size_t c) {
-        CHE[c].lambda *= mEnvContactDynamicsParams.gamma;
-        CHE[c].k =
-            (mEnvContactDynamicsParams.gamma * CHE[c].k).cwiseMax(mEnvContactDynamicsParams.kstart);
+    auto const nEdges = mMeshes.EHE.cols();
+    tbb::parallel_for(Eigen::Index{0}, nEdges, [&](Eigen::Index e) {
+        IndexType const hei   = mMeshes.EHE(0, e);
+        IndexType const hej   = mMeshes.EHE(1, e);
+        EnvironmentContact& c = CHE[hei];
+        if (mMeshSdfContact.mHalfEdgeContactMask(hei))
+        {
+            c.lambda *= mEnvContactDynamicsParams.gamma;
+            c.k = mEnvContactDynamicsParams.gamma * std::max(c.k, mEnvContactDynamicsParams.kstart);
+        }
+        else
+        {
+            c.lambda = ScalarType(0);
+            c.k      = mEnvContactDynamicsParams.kstart;
+        }
+        if (hej >= 0)
+            CHE[hej] = CHE[hei];
     });
-    tbb::parallel_for(std::size_t{0}, CV.size(), [&](std::size_t c) {
-        CV[c].lambda *= mEnvContactDynamicsParams.gamma;
-        CV[c].k =
-            (mEnvContactDynamicsParams.gamma * CV[c].k).cwiseMax(mEnvContactDynamicsParams.kstart);
+    auto const nVerts = mMeshes.V.size();
+    tbb::parallel_for(Eigen::Index{0}, nVerts, [&](Eigen::Index v) {
+        EnvironmentContact& c = CV[v];
+        if (mMeshSdfContact.mVertexContactMask(v))
+        {
+            c.lambda *= mEnvContactDynamicsParams.gamma;
+            c.k = mEnvContactDynamicsParams.gamma * std::max(c.k, mEnvContactDynamicsParams.kstart);
+        }
+        else
+        {
+            c.lambda = ScalarType(0);
+            c.k      = mEnvContactDynamicsParams.kstart;
+        }
     });
 }
 
@@ -138,57 +195,47 @@ void MeshDynamics::DualUpdateEnvironmentContacts(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.DualUpdateEnvironmentContacts");
-    auto const fDualUpdate = [&](Eigen::Vector<ScalarType, 3> const& xc,
-                                 EnvironmentContactConstraint& c) {
+    auto const fDualUpdate = [&](Eigen::Vector<ScalarType, 3> const& xc, EnvironmentContact& c) {
         // Update Lagrange multipliers
-        bool const bViolating = (c.C(0) < ScalarType(0));
-        c.lambda(0)           = std::clamp(
-            c.lambda(0) - bViolating * (c.k(0) * c.C(0)),
+        c.Eval(xc);
+        bool const bViolating = (c.C < ScalarType(0));
+        c.lambda              = std::clamp(
+            c.lambda - bViolating * (c.k * c.C),
             ScalarType(0),
             mEnvContactDynamicsParams.Fnmax);
-        ScalarType const muFn = mEnvContactDynamicsParams.mu * c.lambda(0);
-        c.lambda(1)           = std::clamp(c.lambda(1) - c.k(1) * c.C(1), -muFn, muFn);
-        c.lambda(2)           = std::clamp(c.lambda(2) - c.k(2) * c.C(2), -muFn, muFn);
-        // Update stiffnesses
-        common::ForRange<0, 3>([&]<auto d>() {
-            if (c.lambda(d) > -muFn and c.lambda(d) < muFn)
-            {
-                c.k(d) = std::min(
-                    c.k(d) + mEnvContactDynamicsParams.beta * std::abs(c.C(d)),
-                    mEnvContactDynamicsParams.kmax);
-            }
-        });
+        // Update stiffness
+        c.k = std::min(
+            c.k + mEnvContactDynamicsParams.beta * std::abs(c.C),
+            mEnvContactDynamicsParams.kmax);
     };
-    tbb::parallel_for(Eigen::Index{0}, mMeshes.F.cols(), [&](Eigen::Index f) {
+    auto const nTriangles = mMeshes.F.cols();
+    tbb::parallel_for(Eigen::Index{0}, nTriangles, [&](Eigen::Index f) {
+        if (not mMeshSdfContact.mTriangleContactMask(f))
+            return;
         Eigen::Matrix<ScalarType, 3, 3> const xf = X(Eigen::placeholders::all, mMeshes.F.col(f));
-        std::vector<Eigen::Vector<ScalarType, 2>> const& contactPoints =
-            mMeshSdfContact.mTriangleContactPoints[f];
-        auto begin = CFP[f];
-        auto n     = CFP[f + 1] - begin;
-        for (IndexType k = 0; k < n; ++k)
-        {
-            IndexType const cidx                   = begin + k;
-            Eigen::Vector<ScalarType, 2> const& uv = contactPoints[k];
-            Eigen::Vector<ScalarType, 3> const xc =
-                (ScalarType(1) - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
-            fDualUpdate(xc, CF[cidx]);
-        }
+        Eigen::Vector<ScalarType, 2> const uv    = mMeshSdfContact.mTriangleContactPoints.col(f);
+        Eigen::Vector<ScalarType, 3> const xc =
+            (ScalarType(1) - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
+        fDualUpdate(xc, CF[f]);
     });
-    tbb::parallel_for(Eigen::Index{0}, 3 * mMeshes.F.cols(), [&](Eigen::Index he) {
-        Eigen::Vector<ScalarType, 3> const xi = X.col(geometry::IncomingVertex(mMeshes.F, he));
-        Eigen::Vector<ScalarType, 3> const xj = X.col(geometry::OutgoingVertex(mMeshes.F, he));
-        std::vector<ScalarType> const& contactPoints = mMeshSdfContact.mHalfEdgeContactPoints[he];
-        auto begin                                   = CHEP[he];
-        auto n                                       = CHEP[he + 1] - begin;
-        for (IndexType k = 0; k < n; ++k)
-        {
-            IndexType const cidx                  = begin + k;
-            ScalarType const u                    = contactPoints[k];
-            Eigen::Vector<ScalarType, 3> const xc = (ScalarType(1) - u) * xi + u * xj;
-            fDualUpdate(xc, CHE[cidx]);
-        }
+    auto const nEdges = mMeshes.EHE.cols();
+    tbb::parallel_for(Eigen::Index{0}, nEdges, [&](Eigen::Index e) {
+        IndexType const hei = mMeshes.EHE(0, e);
+        IndexType const hej = mMeshes.EHE(1, e);
+        if (not mMeshSdfContact.mHalfEdgeContactMask(hei))
+            return;
+        Eigen::Vector<ScalarType, 3> const xi = X.col(geometry::IncomingVertex(mMeshes.F, hei));
+        Eigen::Vector<ScalarType, 3> const xj = X.col(geometry::OutgoingVertex(mMeshes.F, hei));
+        ScalarType const u                    = mMeshSdfContact.mHalfEdgeContactPoints(hei);
+        Eigen::Vector<ScalarType, 3> const xc = (1 - u) * xi + u * xj;
+        fDualUpdate(xc, CHE[hei]);
+        if (hej >= 0)
+            CHE[hej] = CHE[hei];
     });
-    tbb::parallel_for(std::size_t(0), CV.size(), [&](std::size_t v) {
+    auto const nVerts = mMeshes.V.size();
+    tbb::parallel_for(Eigen::Index{0}, nVerts, [&](Eigen::Index v) {
+        if (not mMeshSdfContact.mVertexContactMask(v))
+            return;
         fDualUpdate(X.col(mMeshes.V(v)), CV[v]);
     });
 }
@@ -215,286 +262,93 @@ void ComputeEnvironmentContactBasis(
     TScalar sd = mSdf.Eval(mini::FromEigen(xc)) / normGrad;
     O          = xc - sd * n;
     // Contact basis
-    B.col(0)         = n;
-    B.rightCols<2>() = mini::ToEigen(TangentialBasis(mini::FromEigen(n)));
-}
-
-template <class TScalar>
-MeshDynamics::EnvironmentContactConstraint CreateNewEnvironmentContactConstraint(
-    Eigen::Vector<TScalar, 3> const& xc,
-    geometry::sdf::Composite<TScalar> const& mSdf,
-    TScalar hfd,
-    MeshDynamics::ScalarType area,
-    MeshDynamics::ScalarType kstart,
-    MeshDynamics::ScalarType mu)
-{
-    namespace mini = math::linalg::mini;
-    MeshDynamics::EnvironmentContactConstraint c;
-    // Contact basis and origin
-    ComputeEnvironmentContactBasis(xc, mSdf, hfd, c.O, c.B);
-    // Initialize Lagrange multipliers and stiffness as if no warm-starting
-    c.lambda.setZero();
-    c.k.setConstant(kstart * area);
-    // Friction coefficient
-    c.mu = mu;
-    return c;
-}
-
-template <class TScalar>
-MeshDynamics::EnvironmentContactConstraint CreateNewEnvironmentContactConstraint(
-    Eigen::Vector<TScalar, 3> const& xc,
-    geometry::sdf::Composite<TScalar> const& mSdf,
-    TScalar hfd,
-    MeshDynamics::ScalarType area,
-    MeshDynamics::ScalarType kstart,
-    MeshDynamics::ScalarType mu,
-    Eigen::Vector<MeshDynamics::ScalarType, 3>& totalConstraintError)
-{
-    namespace mini = math::linalg::mini;
-    MeshDynamics::EnvironmentContactConstraint c =
-        CreateNewEnvironmentContactConstraint(xc, mSdf, hfd, area, kstart, mu);
-    c.C = c.B.transpose() * (xc - c.O);
-    totalConstraintError += c.C.cwiseAbs();
-    return c;
-}
-
-template <class TScalar>
-void ConstraintErrorProportionalWarmStart(
-    Eigen::Vector<TScalar, 3> const& totalLambda,
-    Eigen::Vector<TScalar, 3> const& totalStiffness,
-    Eigen::Vector<TScalar, 3> const& totalConstraintError,
-    TScalar Fnmax,
-    TScalar mu,
-    MeshDynamics::EnvironmentContactConstraint& c)
-{
-    // Signed constraint proportional weights
-    Eigen::Vector<TScalar, 3> const wc =
-        c.C.array() / (totalConstraintError.array() + std::numeric_limits<TScalar>::min());
-    c.lambda(0) = std::min(wc(0) * totalLambda(0), Fnmax);
-    // Coulomb friction bounds
-    TScalar const muFn = mu * c.lambda(0);
-    c.lambda(1)        = std::clamp(wc(1) * totalLambda(1), -muFn, muFn);
-    c.lambda(2)        = std::clamp(wc(2) * totalLambda(2), -muFn, muFn);
-    // Stiffness should be non-negative
-    c.k = wc.array().abs() * totalStiffness.array();
+    B.col(0)                  = n;
+    B.template rightCols<2>() = mini::ToEigen(TangentialBasis(mini::FromEigen(n)));
 }
 
 } // namespace detail
 
-void MeshDynamics::EnvironmentContactConstraint::Eval(Eigen::Vector<ScalarType, 3> const& xc)
+void MeshDynamics::EnvironmentContact::Eval(Eigen::Vector<ScalarType, 3> const& xc)
 {
-    C = B.transpose() * (xc - O);
+    auto n = B.col(0);
+    C      = n.transpose() * (xc - O);
 }
 
-Eigen::Vector<MeshDynamics::ScalarType, 3>
-MeshDynamics::EnvironmentContactConstraint::ForceEstimate(ScalarType lambdaNmax) const
+MeshDynamics::ScalarType
+MeshDynamics::EnvironmentContact::ForceEstimate(ScalarType lambdaNmax) const
 {
-    ScalarType const muFn = mu * lambda(0);
-    return Eigen::Vector<MeshDynamics::ScalarType, 3>{
-        std::min(lambda(0) - k(0) * C(0), lambdaNmax),
-        std::clamp(lambda(1) - k(1) * C(1), -muFn, muFn),
-        std::clamp(lambda(2) - k(2) * C(2), -muFn, muFn)};
+    ScalarType const muFn = mu * lambda;
+    return std::min(lambda - k * C, lambdaNmax);
 };
 
 void MeshDynamics::UpdateTriangleContactConstraints(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
 {
-    IndexType const nPastTriangleConstraints = static_cast<IndexType>(CF.size());
-    // 1. Warm-start triangle contact constraints
-    IndexType const nTriangles = CFP.size() - 1;
-    for (IndexType f = 0; f < nTriangles; ++f)
-    {
-        // Get contacts on f
-        std::span<EnvironmentContactConstraint const> pastConstraints(
-            CF.data() + CFP[f],
-            CFP[f + 1] - CFP[f]);
-        // Capture aggregate unsigned contact forces
-        Eigen::Vector<ScalarType, 3> totalLambda    = Eigen::Vector<ScalarType, 3>::Zero();
-        Eigen::Vector<ScalarType, 3> totalStiffness = Eigen::Vector<ScalarType, 3>::Zero();
-        for (EnvironmentContactConstraint const& c : pastConstraints)
+    auto const nTriangles = mMeshes.F.cols();
+    tbb::parallel_for(Eigen::Index{0}, nTriangles, [&](std::size_t f) {
+        EnvironmentContact& c   = CF[f];
+        bool const bIsInContact = mMeshSdfContact.mTriangleContactMask(f);
+        if (bIsInContact)
         {
-            totalLambda(0) += c.lambda(0);           // normal contact force should be non-negative
-            totalLambda(1) += std::abs(c.lambda(1)); // frictional forces have no sign requirement
-            totalLambda(2) += std::abs(c.lambda(2)); // frictional forces have no sign requirement
-            totalStiffness += c.k;
+            Eigen::Matrix<ScalarType, 3, 3> const xf =
+                X(Eigen::placeholders::all, mMeshes.F.col(f));
+            Eigen::Vector<ScalarType, 2> const uv = mMeshSdfContact.mTriangleContactPoints.col(f);
+            Eigen::Vector<ScalarType, 3> const xc =
+                (ScalarType(1) - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
+            detail::ComputeEnvironmentContactBasis(xc, mSdf, mMeshSdfContact.mParams.hfd, c.O, c.B);
+            c.mu = mEnvContactDynamicsParams.mu;
         }
-        // Create new contact constraints for this triangle at end of current constraint list, we
-        // will swap and erase later to keep only the new constraints.
-        std::size_t const iNewConstraintStart             = CF.size();
-        ScalarType const farea                            = FA(f);
-        Eigen::Vector<ScalarType, 3> totalConstraintError = Eigen::Vector<ScalarType, 3>::Zero();
-        for (Eigen::Vector<ScalarType, 2> const& uv : mMeshSdfContact.mTriangleContactPoints[f])
+        else
         {
-            // Fetch contact point
-            Eigen::Matrix<ScalarType, 3, 3> xf = X(Eigen::placeholders::all, mMeshes.F.col(f));
-            Eigen::Vector<ScalarType, 3> xc =
-                (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
-            // Add new constraint
-            CF.push_back(
-                detail::CreateNewEnvironmentContactConstraint(
-                    xc,
-                    mSdf,
-                    mMeshSdfContact.mParams.hfd,
-                    farea,
-                    mEnvContactDynamicsParams.kstart,
-                    mEnvContactDynamicsParams.mu,
-                    totalConstraintError));
+            c.C      = ScalarType(0);
+            c.lambda = ScalarType(0);
         }
-        bool const bWarmStart = not pastConstraints.empty();
-        if (bWarmStart)
-        {
-            // Distribute past contact forces and stiffness to new constraints proportionally to
-            // their constraint errors
-            for (std::size_t ci = iNewConstraintStart; ci < CF.size(); ++ci)
-            {
-                EnvironmentContactConstraint& c = CF[ci];
-                detail::ConstraintErrorProportionalWarmStart(
-                    totalLambda,
-                    totalStiffness,
-                    totalConstraintError,
-                    mEnvContactDynamicsParams.Fnmax,
-                    mEnvContactDynamicsParams.mu,
-                    c);
-            }
-        }
-    }
-    // 2. Swap new constraints to front
-    CF.erase(CF.begin(),
-             CF.begin() + nPastTriangleConstraints); // Remove old constraints
-
-    // 3. Update prefix sums
-    CFP[0] = 0;
-    std::transform(
-        mMeshSdfContact.mTriangleContactPoints.begin(),
-        mMeshSdfContact.mTriangleContactPoints.end(),
-        CFP.begin() + 1,
-        [](std::vector<Eigen::Vector<ScalarType, 2>> const& tcp) {
-            return static_cast<IndexType>(tcp.size());
-        });
-    std::inclusive_scan(CFP.begin() + 1, CFP.end(), CFP.begin() + 1);
+    });
 }
 
 void MeshDynamics::UpdateHalfEdgeContactConstraints(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
 {
-    IndexType const nPastHalfEdgeConstraints = static_cast<IndexType>(CHE.size());
-    // 1. Warm-start half-edge contact constraints
-    IndexType const nHalfEdges = CHEP.size() - 1;
-    for (IndexType he = 0; he < nHalfEdges; ++he)
-    {
-        // Get contacts on f
-        std::span<EnvironmentContactConstraint const> pastConstraints(
-            CHE.data() + CHEP[he],
-            CHEP[he + 1] - CHEP[he]);
-        // Capture aggregate unsigned contact forces
-        Eigen::Vector<ScalarType, 3> totalLambda    = Eigen::Vector<ScalarType, 3>::Zero();
-        Eigen::Vector<ScalarType, 3> totalStiffness = Eigen::Vector<ScalarType, 3>::Zero();
-        for (EnvironmentContactConstraint const& c : pastConstraints)
+    auto const nHalfEdges = mMeshes.F.cols() * 3;
+    tbb::parallel_for(Eigen::Index{0}, nHalfEdges, [&](Eigen::Index he) {
+        EnvironmentContact& c   = CHE[he];
+        bool const bIsInContact = mMeshSdfContact.mHalfEdgeContactMask(he);
+        if (bIsInContact)
         {
-            totalLambda(0) += c.lambda(0);           // normal contact force should be non-negative
-            totalLambda(1) += std::abs(c.lambda(1)); // frictional forces have no sign requirement
-            totalLambda(2) += std::abs(c.lambda(2)); // frictional forces have no sign requirement
-            totalStiffness += c.k;
+            Eigen::Vector<ScalarType, 3> const xi = X.col(geometry::IncomingVertex(mMeshes.F, he));
+            Eigen::Vector<ScalarType, 3> const xj = X.col(geometry::OutgoingVertex(mMeshes.F, he));
+            ScalarType const u                    = mMeshSdfContact.mHalfEdgeContactPoints(he);
+            Eigen::Vector<ScalarType, 3> const xc = (1 - u) * xi + u * xj;
+            detail::ComputeEnvironmentContactBasis(xc, mSdf, mMeshSdfContact.mParams.hfd, c.O, c.B);
+            c.mu = mEnvContactDynamicsParams.mu;
         }
-        // Create new contact constraints for this triangle at end of current constraint list, we
-        // will swap and erase later to keep only the new constraints.
-        std::size_t const iNewConstraintStart             = CHE.size();
-        ScalarType const hearea                           = HEA(he);
-        Eigen::Vector<ScalarType, 3> totalConstraintError = Eigen::Vector<ScalarType, 3>::Zero();
-        for (ScalarType u : mMeshSdfContact.mHalfEdgeContactPoints[he])
+        else
         {
-            // Fetch contact point
-            IndexType const i               = geometry::IncomingVertex(mMeshes.F, he);
-            IndexType const j               = geometry::OutgoingVertex(mMeshes.F, he);
-            Eigen::Vector<ScalarType, 3> xc = (1 - u) * X.col(i) + u * X.col(j);
-            // Add new constraint
-            CHE.push_back(
-                detail::CreateNewEnvironmentContactConstraint(
-                    xc,
-                    mSdf,
-                    mMeshSdfContact.mParams.hfd,
-                    hearea,
-                    mEnvContactDynamicsParams.kstart,
-                    mEnvContactDynamicsParams.mu,
-                    totalConstraintError));
+            c.C      = ScalarType(0);
+            c.lambda = ScalarType(0);
         }
-        bool const bWarmStart = not pastConstraints.empty();
-        if (bWarmStart)
-        {
-            // Distribute past contact forces and stiffness to new constraints proportionally to
-            // their constraint errors
-            for (std::size_t ci = iNewConstraintStart; ci < CHE.size(); ++ci)
-            {
-                EnvironmentContactConstraint& c = CHE[ci];
-                detail::ConstraintErrorProportionalWarmStart(
-                    totalLambda,
-                    totalStiffness,
-                    totalConstraintError,
-                    mEnvContactDynamicsParams.Fnmax,
-                    mEnvContactDynamicsParams.mu,
-                    c);
-            }
-        }
-    }
-    // 2. Swap new constraints to front
-    CHE.erase(CHE.begin(),
-              CHE.begin() + nPastHalfEdgeConstraints); // Remove old constraints
-    // 3. Update prefix sums
-    CHEP[0] = 0;
-    std::transform(
-        mMeshSdfContact.mHalfEdgeContactPoints.begin(),
-        mMeshSdfContact.mHalfEdgeContactPoints.end(),
-        CHEP.begin() + 1,
-        [](std::vector<ScalarType> const& hecp) { return static_cast<IndexType>(hecp.size()); });
-    std::inclusive_scan(CHEP.begin() + 1, CHEP.end(), CHEP.begin() + 1);
+    });
 }
 
 void MeshDynamics::UpdateVertexContactConstraints(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X)
 {
-    IndexType const nPastVertexConstraints = static_cast<IndexType>(CV.size());
-    // 1. Warm-start vertex contact constraints
-    IndexType const nVertices = mMeshes.V.size();
-    for (IndexType v = 0, n = 0; v < nVertices; ++v)
-    {
-        IndexType const ci             = V2CV[v];
-        bool const bWasVertexInContact = ci >= 0;
-        bool const bIsVertexInContact  = mMeshSdfContact.mVertexContactPoints[v];
-        if (bIsVertexInContact)
+    auto const nVertices = mMeshes.V.size();
+    tbb::parallel_for(Eigen::Index{0}, nVertices, [&](Eigen::Index v) {
+        EnvironmentContact& c   = CV[v];
+        bool const bIsInContact = mMeshSdfContact.mVertexContactMask(v);
+        if (bIsInContact)
         {
             Eigen::Vector<ScalarType, 3> const xc = X.col(mMeshes.V(v));
-            ScalarType const varea                = VA(v);
-            bool const bWarmStart                 = bWasVertexInContact;
-            if (bWarmStart)
-            {
-                EnvironmentContactConstraint& c = CV[ci];
-                detail::ComputeEnvironmentContactBasis(
-                    xc,
-                    mSdf,
-                    mMeshSdfContact.mParams.hfd,
-                    c.O,
-                    c.B);
-                CV.push_back(c);
-            }
-            else
-            {
-                CV.push_back(
-                    detail::CreateNewEnvironmentContactConstraint(
-                        xc,
-                        mSdf,
-                        mMeshSdfContact.mParams.hfd,
-                        varea,
-                        mEnvContactDynamicsParams.kstart,
-                        mEnvContactDynamicsParams.mu));
-            }
+            detail::ComputeEnvironmentContactBasis(xc, mSdf, mMeshSdfContact.mParams.hfd, c.O, c.B);
+            c.mu = mEnvContactDynamicsParams.mu;
         }
-        // Update map
-        V2CV[v] = (not bIsVertexInContact) * -1 + (bIsVertexInContact)*n;
-        n += bIsVertexInContact;
-    }
-    // 2. Swap new constraints to front
-    CV.erase(CV.begin(),
-             CV.begin() + nPastVertexConstraints); // Remove old constraints
+        else
+        {
+            c.C      = ScalarType(0);
+            c.lambda = ScalarType(0);
+        }
+    });
 }
 
 } // namespace pbat::sim::contact
@@ -504,7 +358,7 @@ void MeshDynamics::UpdateVertexContactConstraints(
 
 #include <doctest/doctest.h>
 
-TEST_CASE("[sim][contact] MeshDynamics initialization")
+TEST_CASE("[sim][contact] MeshDynamics")
 {
     using namespace pbat;
     using namespace pbat::geometry::model;
@@ -582,12 +436,6 @@ TEST_CASE("[sim][contact] MeshDynamics initialization")
         CHECK_EQ(meshDynamics.HEA.size(), 3 * meshDynamics.mMeshes.F.cols());
         CHECK_EQ(meshDynamics.VA.size(), meshDynamics.mMeshes.V.size());
 
-        // Check that prefix arrays are sized correctly
-        CHECK_EQ(meshDynamics.CFP.size(), meshDynamics.mMeshes.F.cols() + 1);
-        CHECK_EQ(meshDynamics.CHEP.size(), 3 * meshDynamics.mMeshes.F.cols() + 1);
-        CHECK_EQ(meshDynamics.V2CV.size(), meshDynamics.mMeshes.V.size());
-
-        CHECK_EQ(meshDynamics.CV.size(), 1); // One vertex should be in contact
         CHECK_EQ(meshDynamics.CV.front().mu, meshDynamics.mEnvContactDynamicsParams.mu);
         Eigen::Vector<Scalar, 3> A = X.col(meshDynamics.mMeshes.F(0, 0));
         Eigen::Vector<Scalar, 3> B = X.col(meshDynamics.mMeshes.F(1, 0));

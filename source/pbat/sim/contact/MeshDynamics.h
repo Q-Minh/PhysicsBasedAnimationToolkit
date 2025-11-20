@@ -91,17 +91,12 @@ class MeshDynamics
     PBAT_API void SetDynamicGeometry(MultiMesh<IndexType> meshes);
     /**
      * @brief Allocate data structures for environment contact detection
-     * @param nReserveRatio Ratio of mesh resolution to reserve for contact detection data
-     * structures. Must satisfy `0 < nReserveRatio < 1.`
      */
-    PBAT_API void
-    AllocateEnvironmentContactDataStructures(ScalarType nReserveRatio = ScalarType(0.2));
+    PBAT_API void AllocateEnvironmentContactDataStructures();
     /**
      * @brief Set the contact geometries
      * @param meshes Mesh contact geometry representation
      * @param sdfForest SDF static geometry storage
-     * @param nReserveRatio Ratio of mesh resolution to reserve for contact detection data
-     * structures. Must satisfy `0 < nReserveRatio < 1`.
      * @post All data structures for contact detection are initialized, but not the algorithms (OGC
      * and MeshSDF)
      */
@@ -118,11 +113,9 @@ class MeshDynamics
         geometry::Device const& device);
     /**
      * @brief Initialize mesh-SDF contact detection
-     * @param nReserveRatio Ratio of mesh resolution to reserve for contact detection data
      * @pre `mMeshes` is set
      */
-    PBAT_API void
-    InitializeMeshEnvironmentContactDetection(ScalarType nReserveRatio = ScalarType(0.2));
+    PBAT_API void InitializeMeshEnvironmentContactDetection();
     /**
      * @brief Reformulates mesh-SDF contact constraints, i.e. their bases and origins, correctly
      * zeroing out inactive constraints and their associated Lagrange multipliers.
@@ -142,6 +135,13 @@ class MeshDynamics
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      */
     PBAT_API void DualUpdateEnvironmentContacts(
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
+    /**
+     * @brief Recomputes geometric quantities (triangle, half-edge, and vertex areas) from current
+     * positions
+     * @param X `3 x |# points|` point positions (column-major: one point per column)
+     */
+    PBAT_API void UpdateGeometricQuantities(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
 
     /**
@@ -168,38 +168,39 @@ class MeshDynamics
      * TODO: Write documentation/derivation based on my personal "Linear constraint derivatives"
      * notes
      */
-    struct EnvironmentContactConstraint
+    struct EnvironmentContact
     {
         Eigen::Vector<ScalarType, 3> O;    ///< Contact basis origin
         Eigen::Matrix<ScalarType, 3, 3> B; ///< Contact basis (columns: normal, tangent, bitangent)
-        Eigen::Vector<ScalarType, 3> C; ///< Contact constraint values (normal, tangent, bitangent)
-        Eigen::Vector<ScalarType, 3> lambda; ///< Contact Lagrange multiplier estimates
-        Eigen::Vector<ScalarType, 3> k;      ///< Contact stiffness (normal, tangent, bitangent)
-        ScalarType mu;                       ///< Friction coefficient
+        ScalarType C;                      ///< Contact constraint values (normal)
+        ScalarType lambda;                 ///< Contact Lagrange multiplier estimate (normal)
+        ScalarType k;                      ///< Contact stiffness (normal)
+        ScalarType mu;                     ///< Friction coefficient
         /**
          * @brief Evaluates and updates the contact constraint based on the current contact frame
          * @param xc Current contact point position
          */
         void Eval(Eigen::Vector<ScalarType, 3> const& xc);
         /**
-         * @brief Estimate each contact/constraint force from Lagrange multipliers
+         * @brief Estimate each contact/constraint force from Lagrange multiplier
          * @param lambdaNmax Maximum normal Lagrange multiplier magnitude
          */
-        Eigen::Vector<ScalarType, 3>
+        ScalarType
         ForceEstimate(ScalarType lambdaNmax = std::numeric_limits<ScalarType>::max()) const;
     };
-    std::vector<EnvironmentContactConstraint> CF; ///< `|# triangle-env contacts|` mesh-SDF triangle
-                                                  ///< contact constraints, sorted by triangle index
-    Eigen::Vector<IndexType, Eigen::Dynamic>
-        CFP; ///< `|# triangles + 1|` mesh-SDF triangle contact constraint prefix
-    std::vector<EnvironmentContactConstraint>
-        CHE; ///< `|# half-edge-env contacts|` mesh-SDF half-edge contact constraints, sorted by
-             ///< half-edge index
-    Eigen::Vector<IndexType, Eigen::Dynamic>
-        CHEP; ///< `|# half-edges + 1|` mesh-SDF half-edge contact constraint prefix
-    std::vector<EnvironmentContactConstraint> CV;  ///< `|# vertex-env contacts|` mesh-SDF vertex
-                                                   ///< contact constraints, sorted by vertex index
-    Eigen::Vector<IndexType, Eigen::Dynamic> V2CV; ///< `|# vertices|` map from vertex index into CV
+    std::vector<EnvironmentContact>
+        CF; ///< `|# triangles|` mesh-SDF triangle
+            ///< contact constraints, sorted by triangle index. For triangle `f` check
+            ///< `MeshSdfContact::mTriangleContactMask(f)` to determine if triangle `f` is in
+            ///< contact.
+    std::vector<EnvironmentContact> CHE; ///< `|# half-edges|` mesh-SDF half-edge contact
+                                         ///< constraints, sorted by half-edge index. For half-edge
+                                         ///< `he` check `MeshSdfContact::mHalfEdgeContactMask(he)`
+                                         ///< to determine if half-edge `he` is in contact.
+    std::vector<EnvironmentContact>
+        CV; ///< `|# vertices|` mesh-SDF vertex
+            ///< contact constraints, sorted by vertex index. For vertex `v` check
+            ///< `MeshSdfContact::mVertexContactMask(v)` to determine if vertex `v` is in contact.
     /**
      * @brief Environment contact (augmented Lagrangian) dynamics parameters
      */
@@ -215,6 +216,8 @@ class MeshDynamics
         ScalarType Fnmax{1e12}; ///< Maximum normal contact force
                                 ///< density magnitude
         ScalarType kmax{1e12};  ///< Maximum contact stiffness
+        ScalarType epsv;        ///< \f$ \epsilon_v \f$ is IPC's relative
+                         ///< velocity threshold for static to dynamic friction's smooth transition
     };
     EnvironmentContactDynamicsParams
         mEnvContactDynamicsParams; ///< Environment contact dynamics parameters

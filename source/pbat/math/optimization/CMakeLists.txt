@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "BranchAndBound.h"
+    "GoldenSectionSearch.h"
     "LineSearch.h"
     "Newton.h"
     "Optimization.h"
@@ -11,6 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "BranchAndBound.cpp"
+    "GoldenSectionSearch.cpp"
     "LineSearch.cpp"
     "Newton.cpp"
     "TriangleConstrainedTrustRegionSr1.cpp"

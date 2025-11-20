@@ -140,7 +140,8 @@ class LaggedFriction
      * https://github.com/ipc-sim/ipc-toolkit/blob/v1.4.0/src/ipc/friction/smooth_friction_mollifier.cpp#L8
      * @tparam TScalar
      * @param y
-     * @param epsvh
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
      * @return \f$ f_0(y, \epsilon_v h) \f$
      */
     template <common::CFloatingPoint TScalar>
@@ -151,7 +152,8 @@ class LaggedFriction
      *
      * @tparam TScalar
      * @param y
-     * @param epsvh
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
      * @return \f$ f_1(y, \epsilon_v h) \f$
      */
     template <common::CFloatingPoint TScalar>
@@ -162,7 +164,8 @@ class LaggedFriction
      *
      * @tparam TScalar
      * @param y
-     * @param epsvh
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
      * @return \f$ \frac{d}{dy} f_1(y, \epsilon_v h) \f$
      */
     template <common::CFloatingPoint TScalar>
@@ -173,7 +176,8 @@ class LaggedFriction
      *
      * @tparam TScalar
      * @param y
-     * @param epsvh
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
      * @return \f$ f_1(y, \epsilon_v h) / y \f$
      */
     template <common::CFloatingPoint TScalar>
@@ -184,7 +188,8 @@ class LaggedFriction
      *
      * @tparam TScalar
      * @param y
-     * @param epsvh
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
      * @return \f$ \frac{\left[ \frac{d}{dy} f_1(y, epsvh) - f_1(y, epsvh) \right]}{y^3} \f$
      */
     template <common::CFloatingPoint TScalar>

@@ -44,6 +44,7 @@ if(NOT TARGET embree)
     set(EMBREE_GEOMETRY_SUBDIVISION OFF CACHE BOOL "")
     set(EMBREE_GEOMETRY_INSTANCE OFF CACHE BOOL "")
     set(EMBREE_GEOMETRY_INSTANCE_ARRAY OFF CACHE BOOL "")
+    set(EMBREE_STATIC_LIB OFF CACHE BOOL "")
     FetchContent_Declare(
         _embree
         GIT_REPOSITORY https://github.com/RenderKit/embree

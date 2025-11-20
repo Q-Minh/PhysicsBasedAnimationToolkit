@@ -286,83 +286,57 @@ void Iterate(
                 for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
                 {
                     Index f = geometry::FaceOfHalfEdge(he);
-                    std::vector<Eigen::Vector<Scalar, 2>> const& contactPoints =
-                        meshDynamics.mMeshSdfContact.mTriangleContactPoints[f];
-                    Eigen::Vector<Index, 3> const finds  = meshDynamics.mMeshes.F.col(f);
+                    if (not meshDynamics.mMeshSdfContact.mTriangleContactMask(f))
+                        continue;
+                    Eigen::Vector<Index, 3> const finds = meshDynamics.mMeshes.F.col(f);
+                    Eigen::Vector<Scalar, 2> const uv =
+                        meshDynamics.mMeshSdfContact.mTriangleContactPoints.col(f);
                     Eigen::Matrix<Scalar, 3, 3> const xf = fem.x(Eigen::placeholders::all, finds);
                     auto ilocal = /*(i==finds(0))*0 + */ (i == finds(1)) * 1 + (i == finds(2)) * 2;
-                    auto begin  = meshDynamics.CFP(f);
-                    auto n      = meshDynamics.CFP(f + 1) - begin;
-                    for (auto k = 0; k < n; ++k)
-                    {
-                        Eigen::Vector<Scalar, 2> const& uv = contactPoints[k];
-                        sim::contact::MeshDynamics::EnvironmentContactConstraint& C =
-                            meshDynamics.CF[begin + k];
-                        Eigen::Vector<Scalar, 3> const xc =
-                            (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
-                        C.Eval(xc);
-                        // AL gradient + hessian
-                        Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
-                                       (ilocal == 2) * uv(1);
-                        bool const bPenetrating = C.C(0) <= Scalar(0);
-                        Eigen::Vector<Scalar, 3> gradAL =
-                            -(bPenetrating * alpha) * (C.B * C.ForceEstimate());
-                        Eigen::Matrix<Scalar, 3, 3> hessAL =
-                            (bPenetrating * alpha * alpha) *
-                            (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
-                             C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +
-                             C.k(2) * (C.B.col(2) * C.B.col(2).transpose()));
-                        gi += FromEigen(gradAL);
-                        Hi += FromEigen(hessAL);
-                    }
+                    sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CF[f];
+                    Eigen::Vector<Scalar, 3> const xc =
+                        (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
+                    C.Eval(xc);
+                    // AL gradient + hessian
+                    Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
+                                   (ilocal == 2) * uv(1);
+                    Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B.col(0) * C.ForceEstimate());
+                    Eigen::Matrix<Scalar, 3, 3> hessAL =
+                        (alpha * alpha) * (C.k * (C.B.col(0) * C.B.col(0).transpose()));
+                    gi += FromEigen(gradAL);
+                    Hi += FromEigen(hessAL);
                 }
                 // Loop over half-edges incident on i for augmented Lagrangian derivatives
                 for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
                 {
-                    std::vector<Scalar> const& contactPoints =
-                        meshDynamics.mMeshSdfContact.mHalfEdgeContactPoints[he];
+                    if (not meshDynamics.mMeshSdfContact.mHalfEdgeContactMask(he))
+                        continue;
+                    Scalar const u = meshDynamics.mMeshSdfContact.mHalfEdgeContactPoints(he);
                     Index const ei = geometry::IncomingVertex(meshDynamics.mMeshes.F, he);
                     Index const ej = geometry::OutgoingVertex(meshDynamics.mMeshes.F, he);
                     Eigen::Vector<Scalar, 3> const xei = fem.x.col(ei);
                     Eigen::Vector<Scalar, 3> const xej = fem.x.col(ej);
                     auto ilocal                        = /*(i == ei) * 0 + */ (i == ej) * 1;
-                    auto begin                         = meshDynamics.CHEP(he);
-                    auto n                             = meshDynamics.CHEP(he + 1) - begin;
-                    for (auto k = 0; k < n; ++k)
-                    {
-                        Scalar const u = contactPoints[k];
-                        sim::contact::MeshDynamics::EnvironmentContactConstraint& C =
-                            meshDynamics.CHE[begin + k];
-                        Eigen::Vector<Scalar, 3> const xc = (1 - u) * xei + u * xej;
-                        C.Eval(xc);
-                        // AL gradient + hessian
-                        Scalar alpha            = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
-                        bool const bPenetrating = C.C(0) <= Scalar(0);
-                        Eigen::Vector<Scalar, 3> gradAL =
-                            -(bPenetrating * alpha) * (C.B * C.ForceEstimate());
-                        Eigen::Matrix<Scalar, 3, 3> hessAL =
-                            (bPenetrating * alpha * alpha) *
-                            (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
-                             C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +
-                             C.k(2) * (C.B.col(2) * C.B.col(2).transpose()));
-                        gi += FromEigen(gradAL);
-                        Hi += FromEigen(hessAL);
-                    }
+                    sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CHE[he];
+                    Eigen::Vector<Scalar, 3> const xc                 = (1 - u) * xei + u * xej;
+                    C.Eval(xc);
+                    // AL gradient + hessian
+                    Scalar alpha                    = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
+                    Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B.col(0) * C.ForceEstimate());
+                    Eigen::Matrix<Scalar, 3, 3> hessAL =
+                        (alpha * alpha) * (C.k * (C.B.col(0) * C.B.col(0).transpose()));
+                    gi += FromEigen(gradAL);
+                    Hi += FromEigen(hessAL);
                 }
                 // Check i itself for augmented Lagrangian derivatives
-                Index const cvi = meshDynamics.V2CV[vi];
-                if (cvi >= 0)
+                if (meshDynamics.mMeshSdfContact.mVertexContactMask(vi))
                 {
-                    sim::contact::MeshDynamics::EnvironmentContactConstraint& C =
-                        meshDynamics.CV[cvi];
+                    sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CV[vi];
                     C.Eval(ToEigen(xi));
                     // AL gradient + hessian
-                    bool const bPenetrating         = C.C(0) <= Scalar(0);
-                    Eigen::Vector<Scalar, 3> gradAL = bPenetrating * (C.B * -C.ForceEstimate());
+                    Eigen::Vector<Scalar, 3> gradAL = -(C.B.col(0) * C.ForceEstimate());
                     Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        bPenetrating * (C.k(0) * (C.B.col(0) * C.B.col(0).transpose()) +
-                                        C.k(1) * (C.B.col(1) * C.B.col(1).transpose()) +
-                                        C.k(2) * (C.B.col(2) * C.B.col(2).transpose()));
+                        C.k * (C.B.col(0) * C.B.col(0).transpose());
                     gi += FromEigen(gradAL);
                     Hi += FromEigen(hessAL);
                 }

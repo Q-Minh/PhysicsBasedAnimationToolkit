@@ -27,9 +27,8 @@ struct MeshSdfContactParams
                               ///< distance reduction to be small. Must be > 0.
     ScalarType tauPred{1e-2}; ///< Proportion of triangle size at/below which we consider a
                               ///< predicted distance reduction to be small. Must be > 0.
-    int nMaxContactsPerTriangle{4}; ///< Maximum number of contact points to store per triangle
-    int nMaxOptimizationIterationsPerTriangle{10}; ///< Maximum number of trust-region
-                                                   ///< optimization iterations per triangle
+    int nMaxOptimizationIterations{10}; ///< Maximum number of trust-region
+                                        ///< optimization iterations per triangle
     ScalarType coordZero{
         1e-6}; ///< Tolerance for comparing if 2 contact points are to be considered duplicates.
     ScalarType hfd{1e-4}; ///< Finite difference step size used for SDF gradient estimation.
@@ -62,12 +61,6 @@ struct MeshSdfContactParams
         ScalarType _tauAred,
         ScalarType _tauPred,
         int _nMaxOptimizationIterationsPerTriangle);
-    /**
-     * @brief Set contact storage limits
-     * @param _nMaxContactsPerTriangle Maximum number of contact points to store per triangle
-     * @return Reference to this
-     */
-    MeshSdfContactParams& WithContactStorageLimits(int _nMaxContactsPerTriangle);
     /**
      * @brief Set numerical parameters
      * @param _coordZero Tolerance for comparing if 2 contact points are to be considered
@@ -112,10 +105,12 @@ class MeshSdfContact
      * @brief Construct a new Mesh Sdf Contact object
      * @param V `|# vertices| x 1` vertices (global indices into X)
      * @param F `3 x |# triangles|` triangles (global indices into X)
+     * @param params Mesh-SDF contact detection parameters
      */
     PBAT_API MeshSdfContact(
         Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F);
+        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+        MeshSdfContactParams const& params = MeshSdfContactParams());
     /**
      * @brief Initialize the mesh-SDF contact detection
      * @param V `|# vertices| x 1` vertices (global indices into X)
@@ -132,27 +127,26 @@ class MeshSdfContact
      * @brief Perform triangle-SDF contact detection
      *
      * @param X `3 x |# points|` point positions (column-major: one point per column)
+     * @param V `|# vertices| x 1` vertex indices (global indices into X)
      * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
+     * @param GHEF `2 x |# half-edges|` half-edge to triangle adjacency s.t. `GHEF(0, hei) == fi`
+     * and `GHEF(1, hei) == fj` where `fi` and `fj` are edge-adjacent triangles
+     * @param EHE `2 x |# edges|` edge to half-edge adjacency s.t. `EHE(0, e) == hei` and `EHE(1,
+     * e)` are opposite half-edges of edge `e`, with `-1` indicating no opposite half-edge. `-1`
+     * may only appear in second row.
+     * @param GXV `|# points| x 1` point to vertex adjacency s.t. `GXV(pi) == vi` where `vi` is the
+     * vertex index of point `pi`. If a point does not correspond to a vertex, `GXV(pi) == -1`.
      * @param sdf Environment (SDF) geometry
      * @pre `PrepareIteration()` has been called to reset contact data
      */
     PBAT_API void TriangleSdfContactDetection(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        geometry::sdf::Composite<ScalarType> const& sdf);
-    /**
-     * @brief Extract lower-dimensional contacts from triangle contacts
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
-     * @param GHEF `2 x |# half edges|` half-edge to face adjacency
-     * @param GXV `|# points| x 1` point to vertex adjacency s.t. `v = GXV[i]` is the vertex `v`
-     * associated with point `i`
-     * @post Extracted lower-dimensional contacts are stored in `mHalfEdgeContactPoints` and
-     * `mVertexContactPoints`, and `mTriangleContactPoints` only contains interior points.
-     */
-    PBAT_API void DeduplicateContactSet(
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& V,
         Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
         Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GXV);
+        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE,
+        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GXV,
+        geometry::sdf::Composite<ScalarType> const& sdf);
     /**
      * @brief Serialize the mesh-SDF contact to an archive.
      * @param archive Archive to serialize to
@@ -164,41 +158,27 @@ class MeshSdfContact
      */
     PBAT_API void Deserialize(io::Archive& archive);
 
-  protected:
-    /**
-     * @brief Deduplicate triangle contacts
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
-     */
-    PBAT_API void DeduplicateTriangleContacts(
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F);
-    /**
-     * @brief Extract lower-dimensional contacts (edge, vertex) from triangle contacts
-     * @param F `3 x |# triangles|` triangle vertex indices (global indices into X)
-     * @param GHEF `2 x |# half edges|` half-edge to face adjacency
-     * @param GXV `|# points| x 1` point to vertex adjacency s.t. `v = GXV[i]` is the vertex `v`
-     */
-    PBAT_API void ExtractLowerDimensionalContactsFromTriangleContacts(
-        Eigen::Ref<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
-        Eigen::Ref<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& GHEF,
-        Eigen::Ref<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& GXV);
-    /**
-     * @brief Deduplicate half-edge contacts
-     */
-    PBAT_API void DeduplicateHalfEdgeContacts();
-
   public:
-    std::vector<std::vector<Eigen::Vector<ScalarType, 2>>>
-        mTriangleContactPoints; ///< `|# triangles|` per-triangle contact points in barycentric
-                                ///< coordinates
-    std::vector<std::vector<ScalarType>>
-        mHalfEdgeContactPoints; ///< `|# half-edges|` per-half-edge contact points
-                                ///< in barycentric coordinates
     Eigen::Vector<bool, Eigen::Dynamic>
-        mVertexContactPoints;     ///< `|# vertices|` per-vertex contact mask
+        mTriangleContactMask; ///< `|# triangles|` per-triangle contact mask
+    Eigen::Matrix<ScalarType, 2, Eigen::Dynamic>
+        mTriangleContactPoints; ///< `2 x |# triangle contacts|` triangle contact points in
+                                ///< barycentric coordinates `(1-u-v), u, v` where we only store `u,
+                                ///< v`
+    Eigen::Vector<bool, Eigen::Dynamic>
+        mHalfEdgeContactMask; ///< `|# half-edges|` per-half-edge contact mask
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        mHalfEdgeContactPoints; ///< `|# half-edges|` per-half-edge contact points in barycentric
+                                ///< coordinates `(1-u), u` where we only store `u`
+    Eigen::Vector<bool, Eigen::Dynamic>
+        mVertexContactMask; ///< `|# vertices|` per-vertex contact mask
+    Eigen::Vector<ScalarType, Eigen::Dynamic>
+        mVertexDisplacementBounds; ///< `|# vertices|` per-vertex contact
+    ///< displacement bounds for near penetration-free movement.
     MeshSdfContactParams mParams; ///< Mesh-SDF contact detection parameters
   private:
     Eigen::Vector<bool, Eigen::Dynamic>
-        mHalfEdgeLocks; ///< `|# half-edges|` per-half-edge synchronization lock
+        mVertexLocks; ///< `|# vertices|` per-vertex synchronization locks
 };
 
 } // namespace pbat::sim::contact

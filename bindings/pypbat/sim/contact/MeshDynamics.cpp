@@ -18,7 +18,7 @@ void BindMeshDynamics(nanobind::module_& m)
     using ScalarType                           = Scalar;
     using IndexType                            = Index;
     using MeshDynamicsType                     = pbat::sim::contact::MeshDynamics;
-    using EnvironmentContactConstraintType     = MeshDynamicsType::EnvironmentContactConstraint;
+    using EnvironmentContactConstraintType     = MeshDynamicsType::EnvironmentContact;
     using EnvironmentContactDynamicsParamsType = MeshDynamicsType::EnvironmentContactDynamicsParams;
     using MultiMeshType                        = pbat::sim::contact::MultiMesh<IndexType>;
     using OffsetGeometryContactType            = pbat::sim::contact::OffsetGeometryContact;
@@ -29,7 +29,7 @@ void BindMeshDynamics(nanobind::module_& m)
     using CompositeType                        = pbat::geometry::sdf::Composite<ScalarType>;
     using DeviceType                           = pbat::geometry::Device;
 
-    nb::class_<EnvironmentContactConstraintType>(m, "EnvironmentContactConstraint")
+    nb::class_<EnvironmentContactConstraintType>(m, "EnvironmentContact")
         .def(nb::init<>(), "Construct an empty environment contact constraint.")
         .def_rw(
             "O",
@@ -102,11 +102,7 @@ void BindMeshDynamics(nanobind::module_& m)
         .def(
             "allocate_environment_contact_data_structures",
             &MeshDynamicsType::AllocateEnvironmentContactDataStructures,
-            nb::arg("n_reserve_ratio") = ScalarType(0.2),
-            "Allocate data structures for environment contact detection.\n\n"
-            "Args:\n"
-            "    n_reserve_ratio (float): Ratio of mesh resolution to reserve for contact "
-            "detection data structures. Must satisfy 0 < n_reserve_ratio < 1.")
+            "Allocate data structures for environment contact detection.\n\n")
         .def(
             "construct",
             [](MeshDynamicsType& self, MultiMeshType meshes, ForestType sdfForest) {
@@ -132,11 +128,7 @@ void BindMeshDynamics(nanobind::module_& m)
         .def(
             "initialize_mesh_environment_contact_detection",
             &MeshDynamicsType::InitializeMeshEnvironmentContactDetection,
-            nb::arg("n_reserve_ratio") = ScalarType(0.2),
-            "Initialize mesh-SDF contact detection.\n\n"
-            "Args:\n"
-            "    n_reserve_ratio (float): Ratio of mesh resolution to reserve for contact "
-            "detection data structures. Must satisfy 0 < n_reserve_ratio < 1.")
+            "Initialize mesh-SDF contact detection.\n\n")
         .def(
             "update_environment_contact_constraints",
             [](MeshDynamicsType& self,
@@ -166,30 +158,18 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_rw(
             "CF",
             &MeshDynamicsType::CF,
-            "(List[EnvironmentContactConstraint]) |# triangle-env contacts| mesh-SDF triangle "
+            "(List[EnvironmentContact]) |# triangle-env contacts| mesh-SDF triangle "
             "contact constraints, sorted by triangle index.")
-        .def_rw(
-            "CFP",
-            &MeshDynamicsType::CFP,
-            "(List[int]) |#triangles + 1| mesh-SDF triangle contact constraint prefix.")
         .def_rw(
             "CHE",
             &MeshDynamicsType::CHE,
-            "(List[EnvironmentContactConstraint]) |# half-edge-env contacts| mesh-SDF half-edge "
+            "(List[EnvironmentContact]) |# half-edge-env contacts| mesh-SDF half-edge "
             "contact constraints, sorted by half-edge index.")
-        .def_rw(
-            "CHEP",
-            &MeshDynamicsType::CHEP,
-            "(List[int]) |# half-edges + 1| mesh-SDF half-edge contact constraint prefix.")
         .def_rw(
             "CV",
             &MeshDynamicsType::CV,
-            "(List[EnvironmentContactConstraint]) |# vertex-env contacts| mesh-SDF vertex contact "
+            "(List[EnvironmentContact]) |# vertex-env contacts| mesh-SDF vertex contact "
             "constraints, sorted by vertex index.")
-        .def_rw(
-            "V2CV",
-            &MeshDynamicsType::V2CV,
-            "(numpy.ndarray[bool]) |# vertices| map from vertex indices to contact indices.")
         .def_rw(
             "env_contact_dynamics_params",
             &MeshDynamicsType::mEnvContactDynamicsParams,

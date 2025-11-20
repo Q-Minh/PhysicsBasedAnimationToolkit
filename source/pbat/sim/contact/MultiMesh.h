@@ -201,8 +201,8 @@ void BoundaryTriangulationEdges(
     TIndex const nPoints     = static_cast<TIndex>(XCC.size());
     std::tie(GVHEp, GVHEadj) = geometry::VertexHalfEdgeAdjacency(F, nPoints);
     GHEF                     = geometry::HalfEdgeFaceAdjacency(F);
-    EHE                      = geometry::EdgeHalfEdgeAdjacency(F, GHEF.bottomRows<2>());
-    E                        = geometry::Edges(F, EHE.bottomRows<2>());
+    EHE                      = geometry::EdgeHalfEdgeAdjacency(F, GHEF.template bottomRows<2>());
+    E                        = geometry::Edges(F, EHE.template bottomRows<2>());
     EP.setZero();
     // Count connected component occurrences in EP[1:]
     EP(XCC(E.row(0)).array() + 1).array() += TIndex(1);
