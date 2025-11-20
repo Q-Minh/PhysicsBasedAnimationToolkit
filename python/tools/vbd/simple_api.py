@@ -312,87 +312,65 @@ def newton_integrate(
     fem.step()
 
 
-def register_contact_frames_in_polyscope(mesh_dynamics: pbat.sim.contact.MeshDynamics):
+def register_contact_frames_in_polyscope(
+    mesh_dynamics: pbat.sim.contact.MeshDynamics,
+    fcinds: np.ndarray,
+    hecinds: np.ndarray,
+    vcinds: np.ndarray,
+):
     pcc = []
-    for f in range(mesh_dynamics.CFP.shape[0] - 1):
-        for c in range(mesh_dynamics.CFP[f], mesh_dynamics.CFP[f + 1]):
-            constraint = mesh_dynamics.CF[c]
-            origins = np.stack(
-                [
-                    constraint.O,
-                    constraint.O,
-                    constraint.O,
-                ]
-            )
-            pcfc = ps.register_point_cloud(
-                f"Contact frame f={f} c={c}",
-                origins,
-            )
+    if fcinds.shape[0] > 0:
+        constraints = [mesh_dynamics.CF[f] for f in fcinds]
+        for f, constraint in zip(fcinds, constraints):
+            origins = np.stack([constraint.O, constraint.O, constraint.O])
+            pcfc = ps.register_point_cloud(f"Contact frame f={f}", origins)
             pcfc.add_vector_quantity("basis", constraint.B.T, enabled=False)
+            pcfc.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=True)
             pcfc.add_vector_quantity(
                 "forces",
                 np.stack(
                     [
-                        constraint.B[:, j]
-                        * (constraint.lagrange[j] - constraint.k[j] * constraint.C[j])
-                        for j in [1, 1, 2]
+                        constraint.B[:, 0]
+                        * (constraint.lagrange - constraint.k * constraint.C)
+                        for _ in range(3)
                     ]
                 ),
-                enabled=True,
+                enabled=False,
             )
             pcc.append(pcfc)
-
-    for he in range(mesh_dynamics.CHEP.shape[0] - 1):
-        for c in range(mesh_dynamics.CHEP[he], mesh_dynamics.CHEP[he + 1]):
-            constraint = mesh_dynamics.CHE[c]
-            origins = np.stack(
-                [
-                    constraint.O,
-                    constraint.O,
-                    constraint.O,
-                ]
-            )
-            pchec = ps.register_point_cloud(
-                f"Contact frame he={he} c={c}",
-                origins,
-            )
+    if hecinds.shape[0] > 0:
+        constraints = [mesh_dynamics.CHE[he] for he in hecinds]
+        for he, constraint in zip(hecinds, constraints):
+            origins = np.stack([constraint.O, constraint.O, constraint.O])
+            pchec = ps.register_point_cloud(f"Contact frame he={he}", origins)
             pchec.add_vector_quantity("basis", constraint.B.T, enabled=False)
+            pchec.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=True)
             pchec.add_vector_quantity(
                 "forces",
                 np.stack(
                     [
-                        constraint.B[:, j]
-                        * (constraint.lagrange[j] - constraint.k[j] * constraint.C[j])
-                        for j in [1, 1, 2]
+                        constraint.B[:, 0]
+                        * (constraint.lagrange - constraint.k * constraint.C)
+                        for _ in range(3)
                     ]
                 ),
-                enabled=True,
+                enabled=False,
             )
             pcc.append(pchec)
-
-    for v in range(mesh_dynamics.V2CV.shape[0]):
-        if mesh_dynamics.V2CV[v] >= 0:
-            c = mesh_dynamics.V2CV[v]
-            constraint = mesh_dynamics.CV[c]
-            origins = np.stack(
-                [
-                    constraint.O,
-                    constraint.O,
-                    constraint.O,
-                ]
-            )
-            pcvc = ps.register_point_cloud(
-                f"Contact frame v={v} c={c}",
-                origins,
-            )
+    if vcinds.shape[0] > 0:
+        constraints = [mesh_dynamics.CV[v] for v in vcinds]
+        for v, constraint in zip(vcinds, constraints):
+            origins = np.stack([constraint.O, constraint.O, constraint.O])
+            pcvc = ps.register_point_cloud(f"Contact frame v={v}", origins)
             pcvc.add_vector_quantity("basis", constraint.B.T, enabled=False)
+            pcvc.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=True)
             pcvc.add_vector_quantity(
                 "forces",
                 np.stack(
                     [
-                        constraint.B[:, j]
-                        * (constraint.lagrange[j] - constraint.k[j] * constraint.C[j])
-                        for j in [1, 1, 2]
+                        constraint.B[:, 0]
+                        * (constraint.lagrange - constraint.k * constraint.C)
+                        for _ in range(3)
                     ]
                 ),
                 enabled=False,
@@ -622,7 +600,7 @@ if __name__ == "__main__":
                     dynamics.construct(V.T, C.T)
                     dynamics.constrain(d_mask.ravel())
                     original_mask = d_mask.copy()
-                    #dynamics.set_elastic_energy(dynamics.E, dynamics.wgU, dynamics.X, dynamics.lamegU[0], dynamics.lamegU[1])
+                    # dynamics.set_elastic_energy(dynamics.E, dynamics.wgU, dynamics.X, dynamics.lamegU[0], dynamics.lamegU[1])
                     element = pbat.fem.Element.Tetrahedron
                     order = 1  # linear shape functions only
                     qorder_U = order
@@ -798,15 +776,9 @@ if __name__ == "__main__":
                 _, params.tauPred = imgui.SliderFloat(
                     "tauPred", params.tauPred, 1e-5, 1e-3, format="%.5f"
                 )
-                _, params.n_max_contacts_per_triangle = imgui.SliderInt(
-                    "n_max_contacts_per_triangle",
-                    params.n_max_contacts_per_triangle,
-                    1,
-                    32,
-                )
-                _, params.n_max_opt_iters_per_triangle = imgui.SliderInt(
-                    "n_max_opt_iters_per_triangle",
-                    params.n_max_opt_iters_per_triangle,
+                _, params.n_max_opt_iters = imgui.SliderInt(
+                    "# max opt iters",
+                    params.n_max_opt_iters,
                     1,
                     200,
                 )
@@ -1085,7 +1057,7 @@ if __name__ == "__main__":
                 x0,
                 xdot0,
             )
-            dynamics.constrain(original_mask.ravel() if original_mask is not None else np.zeros(n_nodes, dtype=int))
+            # dynamics.constrain(original_mask.ravel() if original_mask is not None else np.zeros(n_nodes, dtype=int))
             t = 0
             for pcci in pcc:
                 pcci.remove()
@@ -1102,17 +1074,17 @@ if __name__ == "__main__":
                 except Exception as e:
                     frame_group = None
                     print(f"Archive group error: {e}")
-            for transform in transform_library.transforms:
-                v = dynamics.x[:, dynamics.dmask == transform.id]
-                transformed_v = transform.apply(t, dt, v)
-                dynamics.x[:, dynamics.dmask == transform.id] = transformed_v
-                if transform.expired(t * dt) and transform.transform_type == TransformType.FIXED:
-                    dynamics.dmask[dynamics.dmask == transform.id] = 0
-                    dynamics.constrain(dynamics.dmask.ravel())
-                # for i in range(dynamics.x.shape[1]):
-                #     if dynamics.dmask[i] == transform.id:
-                #         dynamics.x[:, i] = transformed_v[:, i]
-                
+            # for transform in transform_library.transforms:
+            #     v = dynamics.x[:, dynamics.dmask == transform.id]
+            #     transformed_v = transform.apply(t, dt, v)
+            #     dynamics.x[:, dynamics.dmask == transform.id] = transformed_v
+            #     if transform.expired(t * dt) and transform.transform_type == TransformType.FIXED:
+            #         dynamics.dmask[dynamics.dmask == transform.id] = 0
+            #         dynamics.constrain(dynamics.dmask.ravel())
+            # for i in range(dynamics.x.shape[1]):
+            #     if dynamics.dmask[i] == transform.id:
+            #         dynamics.x[:, i] = transformed_v[:, i]
+
             if i_solver == 0:
                 vbd_integrate(dynamics, mesh_dynamics, vbd_params, archive=frame_group)
             elif i_solver == 1:
@@ -1163,7 +1135,15 @@ if __name__ == "__main__":
                     print(f"Point cloud removal error: {e}")
             pcc = []
             if show_contact_frames:
-                pcc = register_contact_frames_in_polyscope(mesh_dynamics)
+                fmask = mesh_dynamics.mesh_sdf_contact.triangle_contact_mask
+                hemask = mesh_dynamics.mesh_sdf_contact.half_edge_contact_mask
+                vmask = mesh_dynamics.mesh_sdf_contact.vertex_contact_mask
+                fcinds = np.where(fmask)[0]
+                hecinds = np.where(hemask)[0]
+                vcinds = np.where(vmask)[0]
+                pcc = register_contact_frames_in_polyscope(
+                    mesh_dynamics, fcinds, hecinds, vcinds
+                )
 
         if not show_contact_frames and len(pcc) > 0:
             for pcci in pcc:

@@ -220,8 +220,23 @@ void InitializeSolve(
     Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
-    fem.SetupTimeIntegrationOptimization(params.eElasticsInitializationStrategy);
+    // Run collision detection with environment and get vertex displacement bounds
     meshDynamics.UpdateEnvironmentContactConstraints(fem.x);
+    // Initialize iterate
+    fem.SetupTimeIntegrationOptimization(params.eElasticsInitializationStrategy);
+    // Truncate displacement
+    auto xt = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
+    tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
+        Index const v = meshDynamics.mMeshes.GXV(i);
+        if (v < 0)
+            return;
+        Scalar const db = meshDynamics.mMeshSdfContact.mVertexDisplacementBounds(v);
+        Eigen::Vector<Scalar, 3> const dxi = fem.x.col(i) - xt.col(i);
+        Scalar const dxiNorm               = dxi.norm();
+        if (dxiNorm > db)
+            fem.x.col(i) = xt.col(i) + (db / dxiNorm) * dxi;
+    });
+    // Initialize AL contact constraints
     meshDynamics.PrepareEnvironmentContactsForDualIteration();
 }
 
@@ -298,11 +313,14 @@ void Iterate(
                         (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
                     C.Eval(xc);
                     // AL gradient + hessian
+                    bool const bIsPenetrating = C.C < 0;
                     Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
                                    (ilocal == 2) * uv(1);
-                    Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B.col(0) * C.ForceEstimate());
+                    Eigen::Vector<Scalar, 3> gradAL =
+                        -(bIsPenetrating * alpha) * (C.B.col(0) * C.ForceEstimate());
                     Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        (alpha * alpha) * (C.k * (C.B.col(0) * C.B.col(0).transpose()));
+                        (bIsPenetrating * alpha * alpha) *
+                        (C.k * (C.B.col(0) * C.B.col(0).transpose()));
                     gi += FromEigen(gradAL);
                     Hi += FromEigen(hessAL);
                 }
@@ -321,10 +339,13 @@ void Iterate(
                     Eigen::Vector<Scalar, 3> const xc                 = (1 - u) * xei + u * xej;
                     C.Eval(xc);
                     // AL gradient + hessian
-                    Scalar alpha                    = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
-                    Eigen::Vector<Scalar, 3> gradAL = -alpha * (C.B.col(0) * C.ForceEstimate());
+                    bool const bIsPenetrating = C.C < 0;
+                    Scalar alpha              = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
+                    Eigen::Vector<Scalar, 3> gradAL =
+                        -(bIsPenetrating * alpha) * (C.B.col(0) * C.ForceEstimate());
                     Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        (alpha * alpha) * (C.k * (C.B.col(0) * C.B.col(0).transpose()));
+                        (bIsPenetrating * alpha * alpha) *
+                        (C.k * (C.B.col(0) * C.B.col(0).transpose()));
                     gi += FromEigen(gradAL);
                     Hi += FromEigen(hessAL);
                 }
@@ -334,9 +355,11 @@ void Iterate(
                     sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CV[vi];
                     C.Eval(ToEigen(xi));
                     // AL gradient + hessian
-                    Eigen::Vector<Scalar, 3> gradAL = -(C.B.col(0) * C.ForceEstimate());
+                    bool const bIsPenetrating = C.C < 0;
+                    Eigen::Vector<Scalar, 3> gradAL =
+                        -static_cast<int>(bIsPenetrating) * (C.B.col(0) * C.ForceEstimate());
                     Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        C.k * (C.B.col(0) * C.B.col(0).transpose());
+                        (bIsPenetrating * C.k) * (C.B.col(0) * C.B.col(0).transpose());
                     gi += FromEigen(gradAL);
                     Hi += FromEigen(hessAL);
                 }
