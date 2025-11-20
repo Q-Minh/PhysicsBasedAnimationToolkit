@@ -73,7 +73,7 @@ void BindMeshSdfContact(nanobind::module_& m)
             &MeshSdfContactParams::WithTerminationCriteria,
             nb::arg("tauAred"),
             nb::arg("tauPred"),
-            nb::arg("n_max_opt_iters_per_triangle"),
+            nb::arg("n_max_opt_iters"),
             nb::rv_policy::reference_internal,
             "Set the trust-region optimization termination criteria.\n\n"
             "Args:\n"
@@ -81,8 +81,7 @@ void BindMeshSdfContact(nanobind::module_& m)
             "considered small.\n"
             "    tauPred (float): Proportion of triangle size below which predicted reduction is "
             "considered small.\n"
-            "    n_max_opt_iters_per_triangle (int): Maximum trust-region iterations per "
-            "triangle.\n"
+            "    n_max_opt_iters (int): Maximum trust-region iterations.\n"
             "Returns:\n"
             "    MeshSdfContactParams: Reference to this parameter set.")
         .def(

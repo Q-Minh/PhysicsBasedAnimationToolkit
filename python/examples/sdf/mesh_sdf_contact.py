@@ -43,6 +43,7 @@ def main():
     F: np.ndarray = None
     GHEF: np.ndarray = None
     GXV: np.ndarray = None
+    EHE: np.ndarray = None
     HE: np.ndarray = None
     sm: ps.SurfaceMesh = None
     pcf: ps.PointCloud = None  # for face contacts
@@ -54,14 +55,13 @@ def main():
     # UI state
     auto_detect = False
     step_detect = False
-    deduplicate_contacts = False
 
     def ui_callback():
         nonlocal forest, sdf
         nonlocal mesh_sdf_contact
-        nonlocal X, V, F, GHEF, GXV, HE
+        nonlocal X, V, F, GHEF, GXV, HE, EHE
         nonlocal sm, pcf, pche, pcv
-        nonlocal auto_detect, step_detect, deduplicate_contacts
+        nonlocal auto_detect, step_detect
         nonlocal profiler
 
         # Allow forest reload
@@ -121,6 +121,7 @@ def main():
                     GXV = np.full(X.shape[1], -1)
                     GXV[V] = np.arange(V.shape[0])
                     HE = pbat.geometry.half_edges(F)
+                    EHE = pbat.geometry.edge_half_edge_adjacency(F, GHEF)
                     sm = ps.register_surface_mesh("Mesh", X.T, F.T)
                     mesh_sdf_contact.initialize(V, F)
                 root.destroy()
@@ -144,15 +145,9 @@ def main():
             _, mesh_sdf_contact.params.tauPred = imgui.SliderFloat(
                 "tauPred", mesh_sdf_contact.params.tauPred, 1e-8, 1.0, format="%.8f"
             )
-            _, mesh_sdf_contact.params.n_max_contacts_per_triangle = imgui.SliderInt(
-                "n_max_contacts_per_triangle",
-                mesh_sdf_contact.params.n_max_contacts_per_triangle,
-                1,
-                32,
-            )
-            _, mesh_sdf_contact.params.n_max_opt_iters_per_triangle = imgui.SliderInt(
-                "n_max_opt_iters_per_triangle",
-                mesh_sdf_contact.params.n_max_opt_iters_per_triangle,
+            _, mesh_sdf_contact.params.n_max_opt_iters = imgui.SliderInt(
+                "# max optimization iters",
+                mesh_sdf_contact.params.n_max_opt_iters,
                 1,
                 200,
             )
@@ -168,9 +163,6 @@ def main():
             )
             _, mesh_sdf_contact.params.r = imgui.SliderFloat(
                 "r", mesh_sdf_contact.params.r, 1e-8, 1e-1, format="%.8f"
-            )
-            _, deduplicate_contacts = imgui.Checkbox(
-                "Deduplicate contacts", deduplicate_contacts
             )
             imgui.TreePop()
 
@@ -192,8 +184,6 @@ def main():
             profiler.begin_frame("Physics")
             mesh_sdf_contact.prepare_iteration()
             mesh_sdf_contact.triangle_sdf_contact_detection(XT, F, sdf)
-            if deduplicate_contacts:
-                mesh_sdf_contact.deduplicate_contact_set(F, GHEF, GXV)
             profiler.end_frame("Physics")
             uvcf = mesh_sdf_contact.triangle_contacts
             uche = mesh_sdf_contact.half_edge_contacts
