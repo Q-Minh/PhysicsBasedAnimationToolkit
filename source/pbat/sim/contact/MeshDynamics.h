@@ -216,8 +216,9 @@ class MeshDynamics
         ScalarType Fnmax{1e12}; ///< Maximum normal contact force
                                 ///< density magnitude
         ScalarType kmax{1e12};  ///< Maximum contact stiffness
-        ScalarType epsv;        ///< \f$ \epsilon_v \f$ is IPC's relative
-                         ///< velocity threshold for static to dynamic friction's smooth transition
+        ScalarType epsv{
+            1e-3}; ///< \f$ \epsilon_v \f$ is IPC's relative
+                   ///< velocity threshold for static to dynamic friction's smooth transition
     };
     EnvironmentContactDynamicsParams
         mEnvContactDynamicsParams; ///< Environment contact dynamics parameters
