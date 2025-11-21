@@ -1008,8 +1008,8 @@ if __name__ == "__main__":
             # Time integration
             dynamics.set_time_integration_scheme(dt, s)
             # Material
-            # mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
-            # dynamics.set_elastic_energy(mu, llambda)
+            mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
+            dynamics.set_elastic_energy(mu, llambda)
             dynamics.set_mass_matrix(rho)
             # Dynamics
             fext = np.asarray(b) + rho * np.asarray(aext)
