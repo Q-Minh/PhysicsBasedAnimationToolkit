@@ -320,10 +320,34 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "Returns:\n"
             "    float: Objective function value.")
         .def(
+            "objective",
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
+                return self.Objective(x);
+            },
+            nb::arg("x"),
+            "Compute the time integration optimization's objective function value.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
+            "Returns:\n"
+            "    float: Objective function value.")
+        .def(
             "gradient",
             [](ElastoDynamics& self,
                nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x) {
                 return self.Gradient(x.reshaped());
+            },
+            nb::arg("x"),
+            "Compute the time integration optimization's gradient.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: kDims*|# nodes| gradient vector.")
+        .def(
+            "gradient",
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
+                return self.Gradient(x);
             },
             nb::arg("x"),
             "Compute the time integration optimization's gradient.\n\n"
