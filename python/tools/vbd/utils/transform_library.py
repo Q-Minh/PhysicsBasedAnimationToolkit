@@ -54,6 +54,10 @@ class PrimitiveTransform:
     def applicable(self, t: float) -> bool:
         """ Check if the transform is applicable at time t """
         return self.begin <= t <= self.duration + self.begin
+    
+    def expired(self, t: float) -> bool:
+        """ Check if the transform has expired at time t """
+        return t > self.duration + self.begin
 
     def apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
         """

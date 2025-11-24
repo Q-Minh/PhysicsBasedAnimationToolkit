@@ -28,6 +28,7 @@ class SceneState:
 
         # Library of fixed transforms for Dirichlet groups
         self.transform_library = tlib.TransformLibrary()
+        self.transform_library.deserialize("primitive_transforms.h5")
 
         # Extras when creating new transforms
         self.unsaved_transforms = {}
@@ -142,10 +143,8 @@ class SceneState:
         bg = np.zeros((dims, math.prod(wgU.shape)))  # dims x # quad.pts.
         for (start, end), m in zip(element_ranges, self.meshes):
             n_elem_quads = wgU.shape[0]
-            fext = (m.rho * aext) + m.b.reshape(dims, 1)  # dims x 1
-            bg[:, start * n_elem_quads : end * n_elem_quads] = np.repeat(
-                fext, n_elem_quads * (end - start), axis=1
-            )
+            fext = (m.rho * aext) + m.b.reshape(dims, 1)  # dims x # quad.pts.
+            bg[:, start * n_elem_quads : end * n_elem_quads] = fext
 
         # Apply heterogeneous fields
         fem.set_mass_matrix(
@@ -317,142 +316,150 @@ def main():
     ps.init()
 
     state = SceneState()
-
+    
     def callback():
         imgui.Text("Scene Editor (FEM)")
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
 
-        # Top-level I/O and scene actions
-        if imgui.TreeNode("Scene"):
-            if imgui.Button("Add Mesh", default_button_size):
-                _load_mesh(state)
-            if imgui.Button("Save FEM", default_button_size):
-                _save_fem(state)
-            imgui.Text(f"Meshes: {len(state.meshes)}")
-            if state.fem is not None:
-                imgui.Text(
-                    f"FEM nodes: {state.fem.X.shape[1]}, elements: {state.fem.E.shape[1]}"
-                )
-            imgui.TreePop()
+        if imgui.BeginTabBar("My bar", imgui.ImGuiTabBarFlags_None):
 
-        # Dynamics (environment-level)
-        if imgui.TreeNode("Dynamics"):
-            _, state.aext = imgui.InputFloat3("External acceleration", state.aext)
-            _, state.dt = imgui.InputFloat("Time step", state.dt)
-            _, state.s = imgui.InputInt("BDF step", state.s)
-            
-            imgui.TreePop()
-        if imgui.TreeNode("Dirichlet Constraints"):
-            # _, state.d_axis = imgui.InputInt("Axis (0=x,1=y,2=z)", state.d_axis)
-            # _, state.d_percent = imgui.InputFloat("Percentage", state.d_percent)
-            # _, state.d_extremity = imgui.InputInt(
-            #     "Extremity (0=min,1=max)", state.d_extremity
-            # )
-            if imgui.Button("Load Transform file", default_button_size):
-                state.load_transform_file()
-            if imgui.Button("Save Transform file", default_button_size):
-                state.save_transform_library()
+            if imgui.BeginTabItem("Scene / Meshes", True)[0]:
+                imgui.Text("")
+                # Buttons for controlling mesh data in scene
+                if imgui.Button("Add Mesh", default_button_size):
+                    _load_mesh(state)
+                if imgui.Button("Save FEM", default_button_size):
+                    _save_fem(state)
+                imgui.Text(f"Meshes: {len(state.meshes)}")
+                if state.fem is not None:
+                    imgui.Text(
+                        f"FEM nodes: {state.fem.X.shape[1]}, elements: {state.fem.E.shape[1]}"
+                    )
+                # Per-mesh controls
+                for i, m in enumerate(state.meshes):
+                    if imgui.TreeNode(f"{m.name}"):
+                        # Material & ICs (not yet heterogeneous in FEM build, but tracked per-mesh)
+                        if imgui.TreeNode("Material"):
+                            _, m.nu = imgui.InputFloat("Poisson's Ratio", m.nu)
+                            _, m.rho = imgui.InputFloat("Mass Density", m.rho)
+                            imgui.TreePop()
+                        if imgui.TreeNode("Body Force"):
+                            changed, vec = imgui.InputFloat3("b", m.b)
+                            if changed:
+                                m.b = np.array(vec)
+                            imgui.TreePop()
+                        if imgui.TreeNode("Initial Velocity"):
+                            changed, vec = imgui.InputFloat3("v0", m.v0)
+                            if changed:
+                                m.v0 = np.array(vec)
+                            imgui.TreePop()
+                        if imgui.Button("Delete", default_button_size):
+                            state.remove_mesh(i)
+                            imgui.TreePop()
+                            break  # indices shifted
+                        imgui.TreePop()
+                imgui.EndTabItem()
 
 
-            if state.transform_library.transforms:
-                _, state.selected_dirichlet_group = imgui.Combo(
-                            "Picked Group", state.selected_dirichlet_group,
-                            [t.name for t in state.transform_library.transforms]
+            if imgui.BeginTabItem("Dynamics", True)[0]:
+                imgui.Text("")
+                _, state.aext = imgui.InputFloat3("External acceleration", state.aext)
+                _, state.dt = imgui.InputFloat("Time step", state.dt)
+                _, state.s = imgui.InputInt("BDF step", state.s)
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Constraints", True)[0]:
+                imgui.Text("")
+                # _, state.d_axis = imgui.InputInt("Axis (0=x,1=y,2=z)", state.d_axis)
+                # _, state.d_percent = imgui.InputFloat("Percentage", state.d_percent)
+                # _, state.d_extremity = imgui.InputInt(
+                #     "Extremity (0=min,1=max)", state.d_extremity
+                # )
+                if imgui.Button("Load Transform file", default_button_size):
+                    state.load_transform_file()
+                if imgui.Button("Save Transform file", default_button_size):
+                    state.save_transform_library()
+
+
+                if state.transform_library.transforms:
+                    _, state.selected_dirichlet_group = imgui.Combo(
+                                "Picked Group", state.selected_dirichlet_group,
+                                [t.name for t in state.transform_library.transforms]
+                            )
+                    
+                # Read/Edit loaded transforms
+                if imgui.TreeNode("Loaded Transforms"):
+                    # Red buttons for buttons per transform, to distinguish from other buttons
+                    imgui.PushStyleColor(imgui.ImGuiCol_Button, (0.8, 0.2, 0.2, 1.0))
+                    for t in state.transform_library.transforms:
+                        if imgui.TreeNode(f"{t.id}"):
+                            transform_editor(t, t.id)
+                            imgui.TreePop()
+                    imgui.PopStyleColor(1)       
+                    if (imgui.Button("Create new Transform", default_button_size) or state.editing_new_transform):
+                        state.editing_new_transform = True
+                        _, state.selected_ttype = imgui.Combo(
+                            "Transform Type", state.selected_ttype,
+                            [ttype.name for ttype in tlib.TransformType]
                         )
-                
-            # Read/Edit loaded transforms
-            if imgui.TreeNode("Loaded Transforms"):
-                # Red buttons for buttons per transform, to distinguish from other buttons
-                imgui.PushStyleColor(imgui.ImGuiCol_Button, (0.8, 0.2, 0.2, 1.0))
-                for t in state.transform_library.transforms:
-                    if imgui.TreeNode(f"{t.id}"):
-                        transform_editor(t, t.id)
+                        for unsaved in state.unsaved_transforms:
+                            if unsaved.value == state.selected_ttype:
+                                transform_editor(state.unsaved_transforms[unsaved], unsaved.value + len(state.transform_library.transforms))
+                                if imgui.Button("Add Transform", default_button_size):
+                                    state.add_transform(state.unsaved_transforms[unsaved])
+                                    state.unsaved_transforms[unsaved] = tlib.PrimitiveTransform.make_default(unsaved)
+                                    state.editing_new_transform = False
+                    imgui.TreePop()
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Selection Boxes", True)[0]:
+                imgui.Text("")
+                if imgui.Button("Spawn Box Selection", default_button_size):
+                    state.spawn_box_selection()
+                for i, box in enumerate(state.selections):
+                    
+                    if imgui.TreeNode(f"{box.name}"):
+                        _, target = imgui.Combo(
+                            "Target", box.target.value - 1,
+                            [t.name for t in pick.SelectionTargets]
+                        )
+                        box.target = pick.SelectionTargets(target + 1)
+                        _, box.pos = imgui.SliderFloat3("Position", box.pos, -50, 50)
+                        _, box.scale = imgui.SliderFloat3("Size", box.scale, 0, 10)
+                        box.ps_mesh.update_vertex_positions(box.vertices * box.scale + box.pos)
+                        if box.target == pick.SelectionTargets.CELL:
+                            _, box.Y = imgui.InputFloat("Young's Modulus to Apply", box.Y)
+                        if imgui.Button("Apply Box Selection", default_button_size):
+                            for m in state.meshes:
+                                VT = m.transformed_vertices()
+                                C = m.C
+                                # Get indices inside box
+                                indices = box.inside_test(VT, C)
+                                if box.target == pick.SelectionTargets.VERTEX:
+                                    # Vertices only affected by Dirichlet
+                                    transform = state.transform_library.transforms[state.selected_dirichlet_group]
+                                    dgroup = state.dirichlet_library[transform.name].get_mesh_indices(m)
+                                    for i in indices:
+                                        dgroup.update_indices(i)
+                                    state.dirichlet_library[transform.name].build_point_cloud()
+                                elif box.target == pick.SelectionTargets.CELL:
+                                    # Cells affected by Young's modulus change, but will expand to mass density, etc. later
+                                    m.Y[indices] = box.Y
+                                    m.handle.add_scalar_quantity("Young's modulus", m.Y, defined_on='cells')
+
+                        if imgui.Button("Delete Box", default_button_size):
+                            try:
+                                ps.remove_surface_mesh(box.name)
+                            except Exception:
+                                pass
+                            state.selections.pop(i)
+                            imgui.TreePop()
+                            break  # indices shifted
                         imgui.TreePop()
-                imgui.PopStyleColor(1)       
-                if (imgui.Button("Create new Transform", default_button_size) or state.editing_new_transform):
-                    state.editing_new_transform = True
-                    _, state.selected_ttype = imgui.Combo(
-                        "Transform Type", state.selected_ttype,
-                        [ttype.name for ttype in tlib.TransformType]
-                    )
-                    for unsaved in state.unsaved_transforms:
-                        if unsaved.value == state.selected_ttype:
-                            transform_editor(state.unsaved_transforms[unsaved], unsaved.value + len(state.transform_library.transforms))
-                            if imgui.Button("Add Transform", default_button_size):
-                                state.add_transform(state.unsaved_transforms[unsaved])
-                                state.unsaved_transforms[unsaved] = tlib.PrimitiveTransform.make_default(unsaved)
-                                state.editing_new_transform = False
-                imgui.TreePop()
-            imgui.TreePop()
-
-        if imgui.TreeNode("Selection Boxes"):
-            if imgui.Button("Spawn Box Selection", default_button_size):
-                state.spawn_box_selection()
-            for i, box in enumerate(state.selections):
-                if imgui.TreeNode(f"{box.name}"):
-                    _, target = imgui.Combo(
-                        "Target", box.target.value - 1,
-                        [t.name for t in pick.SelectionTargets]
-                    )
-                    box.target = pick.SelectionTargets(target + 1)
-                    _, box.pos = imgui.SliderFloat3("Position", box.pos, -50, 50)
-                    _, box.scale = imgui.SliderFloat3("Size", box.scale, 0, 10)
-                    box.ps_mesh.update_vertex_positions(box.vertices * box.scale + box.pos)
-                    if box.target == pick.SelectionTargets.CELL:
-                        _, box.Y = imgui.InputFloat("Young's Modulus to Apply", box.Y)
-                    if imgui.Button("Apply Box Selection", default_button_size):
-                        for m in state.meshes:
-                            VT = m.transformed_vertices()
-                            C = m.C
-                            # Get indices inside box
-                            indices = box.inside_test(VT, C)
-                            if box.target == pick.SelectionTargets.VERTEX:
-                                # Vertices only affected by Dirichlet
-                                transform = state.transform_library.transforms[state.selected_dirichlet_group]
-                                dgroup = state.dirichlet_library[transform.name].get_mesh_indices(m)
-                                for i in indices:
-                                    dgroup.update_indices(i)
-                                state.dirichlet_library[transform.name].build_point_cloud()
-                            elif box.target == pick.SelectionTargets.CELL:
-                                # Cells affected by Young's modulus change, but will expand to mass density, etc. later
-                                m.Y[indices] = box.Y
-                                m.handle.add_scalar_quantity("Young's modulus", m.Y, defined_on='cells')
-
-                    if imgui.Button("Delete Box", default_button_size):
-                        try:
-                            ps.remove_surface_mesh(box.name)
-                        except Exception:
-                            pass
-                        state.selections.pop(i)
-                        imgui.TreePop()
-                        break  # indices shifted
-                    imgui.TreePop()
-            
-            imgui.TreePop()
-
-        # Per-mesh controls
-        for i, m in enumerate(state.meshes):
-            if imgui.TreeNode(f"{m.name}"):
-                # Material & ICs (not yet heterogeneous in FEM build, but tracked per-mesh)
-                if imgui.TreeNode("Material"):
-                    _, m.nu = imgui.InputFloat("Poisson's Ratio", m.nu)
-                    _, m.rho = imgui.InputFloat("Mass Density", m.rho)
-                    imgui.TreePop()
-                if imgui.TreeNode("Body Force"):
-                    changed, vec = imgui.InputFloat3("b", m.b)
-                    if changed:
-                        m.b = np.array(vec)
-                    imgui.TreePop()
-                if imgui.TreeNode("Initial Velocity"):
-                    changed, vec = imgui.InputFloat3("v0", m.v0)
-                    if changed:
-                        m.v0 = np.array(vec)
-                    imgui.TreePop()
-                if imgui.Button("Delete", default_button_size):
-                    state.remove_mesh(i)
-                    imgui.TreePop()
-                    break  # indices shifted
-                imgui.TreePop()
+                imgui.EndTabItem()
+            imgui.EndTabBar()
+          
+        
 
         # Picking IO (Setting heterogeneous constraints, eg Dirichlet)
         io = imgui.GetIO()

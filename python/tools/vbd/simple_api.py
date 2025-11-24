@@ -67,9 +67,9 @@ def serialize_solver_iteration(
     iter = arc[f"{k:06d}"]
     iter.write_data("x", fem.x)
     # Time integration objective and its gradient
-    f = fem.objective()
+    f = fem.objective(fem.x.ravel())
     iter.write_metadata("f", f)
-    g = fem.gradient()
+    g = fem.gradient(fem.x)
     iter.write_data("g", g)
     gnorm = np.linalg.norm(
         g
@@ -477,8 +477,8 @@ if __name__ == "__main__":
     pcc = []
     show_contact_frames = False
 
-    # transform_library = tlib.TransformLibrary()
-    # transform_library.deserialize("primitive_transforms.h5")
+    transform_library = tlib.TransformLibrary()
+    transform_library.deserialize("primitive_transforms.h5")
     original_mask = None
 
     def callback():
@@ -490,7 +490,7 @@ if __name__ == "__main__":
         global i_broyden_l2_solver, i_broyden_jacobian_estimate
         global animate, export, t, vm, dpc
         global archive, archive_path, archive_flush_period
-        # global transform_library, original_mask
+        global transform_library, original_mask
         global mesh_dynamics
         global sdf_grid, sdf_grid_dims, sdf_grid_bmin, sdf_grid_bmax
         global pcc, show_contact_frames
@@ -622,6 +622,7 @@ if __name__ == "__main__":
                     )
 
                     vm = ps.register_volume_mesh("Mesh", dynamics.X.T, dynamics.E.T)
+                    d_nodes = np.where(d_mask > 0)[0]
                     dpc = ps.register_point_cloud(
                         "Dirichlet Nodes", dynamics.x[:, d_nodes].T
                     )
@@ -1015,27 +1016,28 @@ if __name__ == "__main__":
             fext = np.asarray(b) + rho * np.asarray(aext)
             dynamics.set_external_load(fext)
             # Dirichlet
-            if d_axis in [0, 1, 2]:
-                aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(
-                    dynamics.X
-                )
-                Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
-                extent = Xmax - Xmin
-                if d_extremity == 0:
-                    Xmax[d_axis] = Xmin[d_axis] + d_percent * extent[d_axis]
-                    Xmin[d_axis] -= d_percent * extent[d_axis]
-                else:
-                    Xmin[d_axis] = Xmax[d_axis] - d_percent * extent[d_axis]
-                    Xmax[d_axis] += d_percent * extent[d_axis]
-                aabb.min, aabb.max = Xmin, Xmax
-                d_nodes = aabb.contained(dynamics.X)
-                d_mask = np.zeros(dynamics.X.shape[1], dtype=int)
-                d_mask[d_nodes] = 1
-                dynamics.constrain(d_mask)
-            elif d_axis == 3:
-                d_nodes = np.array([], dtype=int)
-                d_mask = np.zeros(dynamics.X.shape[1], dtype=int)
-                dynamics.constrain(d_mask)
+            # if d_axis in [0, 1, 2]:
+            #     aabb: pbat.geometry.AxisAlignedBoundingBox3 = pypbat.geometry.aabb(
+            #         dynamics.X
+            #     )
+            #     Xmin, Xmax = aabb.min.copy(), aabb.max.copy()
+            #     extent = Xmax - Xmin
+            #     if d_extremity == 0:
+            #         Xmax[d_axis] = Xmin[d_axis] + d_percent * extent[d_axis]
+            #         Xmin[d_axis] -= d_percent * extent[d_axis]
+            #     else:
+            #         Xmin[d_axis] = Xmax[d_axis] - d_percent * extent[d_axis]
+            #         Xmax[d_axis] += d_percent * extent[d_axis]
+            #     aabb.min, aabb.max = Xmin, Xmax
+            #     d_nodes = aabb.contained(dynamics.X)
+            #     d_mask = np.zeros(dynamics.X.shape[1], dtype=int)
+            #     d_mask[d_nodes] = 1
+            #     dynamics.constrain(d_mask)
+            # elif d_axis == 3:
+            #     d_nodes = np.array([], dtype=int)
+            #     d_mask = np.zeros(dynamics.X.shape[1], dtype=int)
+            #     dynamics.constrain(d_mask)
+            d_nodes = np.where(d_mask > 0)[0]
             dpc = ps.register_point_cloud("Dirichlet Nodes", dynamics.x[:, d_nodes].T)
             # NOTE: If the time integration scheme has changed, the BDF integrator
             # needs to be re-initialized. However, if we haven't asked to "reset" the
@@ -1057,7 +1059,7 @@ if __name__ == "__main__":
                 x0,
                 xdot0,
             )
-            # dynamics.constrain(original_mask.ravel() if original_mask is not None else np.zeros(n_nodes, dtype=int))
+            dynamics.constrain(original_mask.ravel() if original_mask is not None else np.zeros(n_nodes, dtype=int))
             t = 0
             for pcci in pcc:
                 pcci.remove()
@@ -1074,13 +1076,13 @@ if __name__ == "__main__":
                 except Exception as e:
                     frame_group = None
                     print(f"Archive group error: {e}")
-            # for transform in transform_library.transforms:
-            #     v = dynamics.x[:, dynamics.dmask == transform.id]
-            #     transformed_v = transform.apply(t, dt, v)
-            #     dynamics.x[:, dynamics.dmask == transform.id] = transformed_v
-            #     if transform.expired(t * dt) and transform.transform_type == TransformType.FIXED:
-            #         dynamics.dmask[dynamics.dmask == transform.id] = 0
-            #         dynamics.constrain(dynamics.dmask.ravel())
+            for transform in transform_library.transforms:
+                v = dynamics.x[:, dynamics.dmask == transform.id]
+                transformed_v = transform.apply(t, dt, v)
+                dynamics.x[:, dynamics.dmask == transform.id] = transformed_v
+                if transform.expired(t * dt) and transform.transform_type == TransformType.FIXED:
+                    dynamics.dmask[dynamics.dmask == transform.id] = 0
+                    dynamics.constrain(dynamics.dmask.ravel())
             # for i in range(dynamics.x.shape[1]):
             #     if dynamics.dmask[i] == transform.id:
             #         dynamics.x[:, i] = transformed_v[:, i]
