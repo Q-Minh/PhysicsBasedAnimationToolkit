@@ -18,6 +18,7 @@
 #include "pbat/math/linalg/mini/Mini.h"
 
 #include <cmath>
+#include <limits>
 #include <type_traits>
 
 namespace pbat::sim::contact::potentials {
@@ -241,7 +242,7 @@ class LaggedFriction
     {
         TScalar ukn      = Norm(uk);
         TScalar mulambda = mu * lambdakn;
-        gk               = (mulambda * f1_over_x(ukn, epsvh)) * uk;
+        gk = (mulambda * f1_over_x(ukn + std::numeric_limits<TScalar>::epsilon(), epsvh)) * uk;
         return mulambda * f0(ukn, epsvh);
     }
     /**
@@ -264,7 +265,7 @@ class LaggedFriction
     PBAT_HOST_DEVICE void
     Grad(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh, TMatrixGk& gk)
     {
-        TScalar ukn = Norm(uk);
+        TScalar ukn = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         gk          = (mu * lambdakn * f1_over_x(ukn, epsvh)) * uk;
     }
     /**
@@ -295,7 +296,7 @@ class LaggedFriction
         TMatrixGk& gk,
         TMatrixHk& Hk)
     {
-        TScalar ukn      = Norm(uk);
+        TScalar ukn      = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         TScalar mulambda = mu * lambdakn;
         gk               = ((mulambda * f1_over_x(ukn, epsvh))) * uk;
         mini::Identity<TScalar, 2, 2> I;
@@ -330,7 +331,7 @@ class LaggedFriction
         TScalar epsvh,
         TMatrixHk& Hk)
     {
-        TScalar ukn = Norm(uk);
+        TScalar ukn = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         mini::Identity<TScalar, 2, 2> I;
         Hk = (mu * lambdakn) *
              (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);

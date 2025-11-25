@@ -205,7 +205,7 @@ void MeshDynamics::DualUpdateEnvironmentContacts(
             mEnvContactDynamicsParams.Fnmax);
         // Update stiffness
         c.k = std::min(
-            c.k + mEnvContactDynamicsParams.beta * std::abs(c.C),
+            c.k + bViolating * mEnvContactDynamicsParams.beta * std::abs(c.C),
             mEnvContactDynamicsParams.kmax);
     };
     auto const nTriangles = mMeshes.F.cols();

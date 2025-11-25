@@ -324,8 +324,8 @@ def register_contact_frames_in_polyscope(
         for f, constraint in zip(fcinds, constraints):
             origins = np.stack([constraint.O, constraint.O, constraint.O])
             pcfc = ps.register_point_cloud(f"Contact frame f={f}", origins)
-            pcfc.add_vector_quantity("basis", constraint.B.T, enabled=False)
-            pcfc.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=True)
+            pcfc.add_vector_quantity("basis", constraint.B.T, enabled=True)
+            pcfc.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=False)
             pcfc.add_vector_quantity(
                 "forces",
                 np.stack(
@@ -343,8 +343,8 @@ def register_contact_frames_in_polyscope(
         for he, constraint in zip(hecinds, constraints):
             origins = np.stack([constraint.O, constraint.O, constraint.O])
             pchec = ps.register_point_cloud(f"Contact frame he={he}", origins)
-            pchec.add_vector_quantity("basis", constraint.B.T, enabled=False)
-            pchec.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=True)
+            pchec.add_vector_quantity("basis", constraint.B.T, enabled=True)
+            pchec.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=False)
             pchec.add_vector_quantity(
                 "forces",
                 np.stack(
@@ -362,8 +362,8 @@ def register_contact_frames_in_polyscope(
         for v, constraint in zip(vcinds, constraints):
             origins = np.stack([constraint.O, constraint.O, constraint.O])
             pcvc = ps.register_point_cloud(f"Contact frame v={v}", origins)
-            pcvc.add_vector_quantity("basis", constraint.B.T, enabled=False)
-            pcvc.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=True)
+            pcvc.add_vector_quantity("basis", constraint.B.T, enabled=True)
+            pcvc.add_vector_quantity("normal", np.stack([constraint.B[:,0]]*3), enabled=False)
             pcvc.add_vector_quantity(
                 "forces",
                 np.stack(
@@ -811,6 +811,9 @@ if __name__ == "__main__":
                 _, params.kstart = imgui.SliderFloat(
                     "kstart", params.kstart, 1e1, 1e6, format="%.1f"
                 )
+                _, params.epsv = imgui.SliderFloat(
+                    "epsv", params.epsv, 1e-5, 1e-1, format="%.6f"
+                )
                 imgui.TreePop()
 
             if imgui.TreeNode("SDF Visualization"):
@@ -1009,8 +1012,8 @@ if __name__ == "__main__":
             # Time integration
             dynamics.set_time_integration_scheme(dt, s)
             # Material
-            # mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
-            # dynamics.set_elastic_energy(mu, llambda)
+            mu, llambda = pypbat.fem.lame_coefficients(Y, nu)
+            dynamics.set_elastic_energy(mu, llambda)
             dynamics.set_mass_matrix(rho)
             # Dynamics
             fext = np.asarray(b) + rho * np.asarray(aext)
