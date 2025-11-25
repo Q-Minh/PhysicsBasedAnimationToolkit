@@ -32,7 +32,7 @@ class TetrahedralElastodynamicsBody:
         self._d_mask = None
         self._dirty = False
 
-    def __init__(
+    def construct(
         self,
         V: np.ndarray[float],
         T: np.ndarray[float],
@@ -68,22 +68,39 @@ class TetrahedralElastodynamicsBody:
         self._dirty = True
         self._throw_if_invalid_state()
 
-    def draw(self):
+    def draw(self, n_dirichlet_groups: int):
         if self._vm is None:
             return
         if self._dirty:
             self._vm.add_scalar_quantity(
-                "Young's Modulus", self._Ye, defined_on="cells"
+                "Young's Modulus",
+                np.log10(self._Ye + 1),
+                defined_on="cells",
+                enabled=True,
             )
             self._vm.add_scalar_quantity(
-                "Poisson's Ratio", self._nue, defined_on="cells"
+                "Poisson's Ratio",
+                self._nue,
+                defined_on="cells",
+                enabled=False,
             )
-            self._vm.add_scalar_quantity("Mass Density", self._rhoe, defined_on="cells")
-            self._vm.add_vector_quantity(
-                "External Load", self._bext, defined_on="cells"
+            self._vm.add_scalar_quantity(
+                "Mass Density",
+                np.log10(self._rhoe + 1),
+                defined_on="cells",
+                enabled=False,
             )
             self._vm.add_vector_quantity(
-                "Initial Velocity", self._v0, defined_on="vertices"
+                "External Load",
+                self._bext,
+                defined_on="cells",
+                enabled=False,
+            )
+            self._vm.add_vector_quantity(
+                "Initial Velocity",
+                self._v0,
+                defined_on="vertices",
+                enabled=False,
             )
             d_nodes = np.where(self._d_mask > 0)[0]
             if d_nodes.shape[0] > 0:
@@ -92,7 +109,12 @@ class TetrahedralElastodynamicsBody:
                 )
                 d_groups = self._d_mask[d_nodes]
                 self._pc.add_scalar_quantity(
-                    "Dirichlet Group", d_groups, defined_on="points"
+                    "Dirichlet Group",
+                    d_groups,
+                    defined_on="points",
+                    cmap="turbo",
+                    vminmax=(0, n_dirichlet_groups - 1),
+                    enabled=True,
                 )
             self._dirty = False
         _, aext = imgui.InputFloat3("External Acceleration", self._aext)
@@ -102,7 +124,7 @@ class TetrahedralElastodynamicsBody:
         self._Ye = np.full(T.shape[0], 1e6)
         self._nue = np.full(T.shape[0], 0.45)
         self._rhoe = np.full(T.shape[0], 1e3)
-        self._bext = np.zeros((V.shape[0], 3))
+        self._bext = np.zeros((T.shape[0], 3))
         self._aext = np.array([0.0, -9.81, 0.0])
         self._v0 = np.zeros((V.shape[0], 3))
         self._d_mask = np.full(V.shape[0], False, dtype=bool)
@@ -208,6 +230,23 @@ class TetrahedralElastodynamicsBody:
             self._v0,
             self._d_mask,
         )
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def T(self):
+        return self._T
+
+    @property
+    def VT(self):
+        if self._V is None or self._vm is None:
+            return None
+        T = self._vm.get_transform()
+        VH = np.vstack([self._V.T, np.ones((1, self._V.shape[0]))])
+        VT = (T @ VH).T[:, :3]
+        return VT
 
     def _on_mesh_loaded(
         self,
