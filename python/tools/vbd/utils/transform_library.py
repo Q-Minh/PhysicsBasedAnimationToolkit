@@ -2,6 +2,8 @@ import h5py
 import numpy as np
 from enum import Enum
 from copy import deepcopy
+import polyscope.imgui as imgui
+
 """
 primitive operations
 all primitives require:
@@ -299,3 +301,35 @@ class TransformLibrary:
                     continue
                 transform.id = tgroup.attrs['id']
                 self.add_transform(transform)
+
+
+    def draw(transform: PrimitiveTransform, idx: int):
+        imgui.PushID(idx)
+        _, transform.name = imgui.InputText("Name", transform.name)
+        _, transform.begin = imgui.InputFloat("Begin Time", transform.begin)
+        _, transform.duration = imgui.InputFloat("Duration", transform.duration)
+
+        if transform.transform_type == TransformType.G_ROTATE:
+            _, axis = imgui.InputFloat3("Axis", transform.axis)
+            transform.axis = np.array(axis)
+            if imgui.Button("Normalize"):
+                transform.adjust()
+            _, transform.degrees_per_second = imgui.InputFloat("Degrees per Second", transform.degrees_per_second)
+        
+        elif transform.transform_type == TransformType.L_ROTATE:
+            _, axis = imgui.InputFloat3("Axis", transform.axis)
+            transform.axis = np.array(axis)
+            if imgui.Button("Normalize"):
+                transform.adjust()
+            _, origin = imgui.InputFloat3("Origin", transform.origin)
+            transform.origin = np.array(origin)
+            _, transform.degrees_per_second = imgui.InputFloat("Degrees per Second", transform.degrees_per_second)
+        
+        elif transform.transform_type == TransformType.TRANSLATE:
+            _, direction = imgui.InputFloat3("Direction", transform.direction)
+            transform.direction = np.array(direction)
+            if imgui.Button("Normalize"):
+                transform.adjust()
+            _, transform.speed = imgui.InputFloat("Speed", transform.speed)
+        imgui.PopID()
+            
