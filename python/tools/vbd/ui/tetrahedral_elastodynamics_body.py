@@ -217,6 +217,34 @@ class TetrahedralElastodynamicsBody:
         return VT
 
     @property
+    def Ye(self) -> np.ndarray:
+        return self._Ye
+
+    @property
+    def nue(self) -> np.ndarray:
+        return self._nue
+
+    @property
+    def rhoe(self) -> np.ndarray:
+        return self._rhoe
+
+    @property
+    def bext(self) -> np.ndarray:
+        return self._bext
+
+    @property
+    def aext(self) -> np.ndarray:
+        return self._aext
+
+    @property
+    def v0(self) -> np.ndarray:
+        return self._v0
+
+    @property
+    def d_mask(self) -> np.ndarray:
+        return self._d_mask
+
+    @property
     def dirty(self) -> bool:
         return self._dirty
 
