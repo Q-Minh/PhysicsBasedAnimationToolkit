@@ -204,19 +204,3 @@ class Scene:
         idx = int(body.name.split(" - ")[-1])
         body.on_mesh_removed()
         self._recycled_tet_elastic_body_indices.append(idx)
-
-    def _load_transform_library(self):
-        root = tk.Tk()
-        root.withdraw()
-        file_path = filedialog.askopenfilename(
-            title="Select transform library file",
-            defaultextension=".h5",
-            filetypes=[("HDF5 files", "*.h5"), ("All files", "*.*")],
-        )
-        if file_path:
-            try:
-                self._transform_library.deserialize(file_path)
-            except Exception as e:
-                ps.error(f"Error loading transform library:\n{e}")
-            finally:
-                root.destroy()
