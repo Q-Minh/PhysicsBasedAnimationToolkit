@@ -2,6 +2,7 @@
 import polyscope as ps
 import polyscope.imgui as imgui
 from .ui.scene import Scene
+from .ui.simulation import Simulation
 
 
 def main():
@@ -13,15 +14,16 @@ def main():
     ps.set_program_name("Editor")
     ps.init()
     scene = Scene()
+    simulation = Simulation()
 
     def callback():
-        nonlocal scene
+        nonlocal scene, simulation
         if imgui.BeginTabBar("Mode bar"):
             if imgui.BeginTabItem("Scene", True)[0]:
                 scene.draw()
                 imgui.EndTabItem()
             if imgui.BeginTabItem("Simulation", True)[0]:
-                # simulation.draw()
+                simulation.draw()
                 imgui.EndTabItem()
             imgui.EndTabBar()
 

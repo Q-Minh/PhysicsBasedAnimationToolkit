@@ -4,7 +4,7 @@ from pbatoolkit import pbat, pypbat
 from .draw_parameter_object import draw as draw_params
 import polyscope as ps
 import polyscope.imgui as imgui
-import solver
+from .solver import Solver
 
 
 class Simulation:
@@ -14,6 +14,8 @@ class Simulation:
 
     _fem_dynamics_vm: ps.VolumeMesh
     _fem_dynamics_dirichlet_pc: ps.PointCloud
+    _simulate: bool
+    _solver: Solver
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
@@ -21,6 +23,8 @@ class Simulation:
         self._profiler = pypbat.profiling.Profiler()
         self._fem_dynamics_vm = None
         self._fem_dynamics_dirichlet_pc = None
+        self._simulate = False
+        self._solver = Solver()
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
@@ -31,13 +35,24 @@ class Simulation:
         )
         if imgui.BeginTabBar("Sim bar", tab_flags):
             if imgui.BeginTabItem("Solver", True, tab_flags)[0]:
-                # TODO: Add Combo for selecting different solvers and only draw the selected one
+                self._solver.draw()
                 imgui.EndTabItem()
             if imgui.BeginTabItem("Contact", True, tab_flags)[0]:
                 # TODO: Draw various contact dynamics parameters
                 imgui.EndTabItem()
 
             imgui.EndTabBar()
+
+        _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
+        step = imgui.Button("Step", default_button_size)
+        reset = imgui.Button("Reset", default_button_size)
+        if reset:
+            # TODO
+            ps.error("Reset not implemented yet")
+
+        if step or self._simulate:
+            # TODO
+            ps.error("Simulation stepping not implemented yet")
 
     def on_fem_elasto_dynamics_created(
         self, fem_dynamics: pbat.sim.dynamics.FemElastoDynamics
