@@ -32,42 +32,6 @@ class TetrahedralElastodynamicsBody:
         self._d_mask = None
         self._dirty = False
 
-    def construct(
-        self,
-        V: np.ndarray[float],
-        T: np.ndarray[float],
-        Ye: np.ndarray[float],
-        nue: np.ndarray[float],
-        rhoe: np.ndarray[float],
-        bext: np.ndarray[float],
-        aext: np.ndarray[float],
-        v0: np.ndarray[float],
-        d_mask: np.ndarray[bool],
-    ):
-        if (
-            V is None
-            or T is None
-            or Ye is None
-            or nue is None
-            or rhoe is None
-            or bext is None
-            or aext is None
-            or v0 is None
-            or d_mask is None
-        ):
-            raise ValueError("All parameters must be provided and non-None.")
-        self._V = V
-        self._T = T
-        self._Ye = Ye
-        self._nue = nue
-        self._rhoe = rhoe
-        self._bext = bext
-        self._aext = aext
-        self._v0 = v0
-        self._d_mask = d_mask
-        self._dirty = True
-        self._throw_if_invalid_state()
-
     def draw(self):
         _, aext = imgui.InputFloat3("External Acceleration", self._aext)
         self._aext = np.array(aext)
@@ -113,31 +77,37 @@ class TetrahedralElastodynamicsBody:
                 "Dirichlet Group",
                 d_groups,
                 cmap="turbo",
-                vminmax=(0, n_dirichlet_groups - 1),
+                vminmax=(0, n_dirichlet_groups),
                 enabled=True,
             )
         self._dirty = False
 
-    def on_mesh_loaded(self, name: str, V: np.ndarray[float], T: np.ndarray[float]):
-        self._Ye = np.full(T.shape[0], 1e6)
-        self._nue = np.full(T.shape[0], 0.45)
-        self._rhoe = np.full(T.shape[0], 1e3)
-        self._bext = np.zeros((T.shape[0], 3))
-        self._aext = np.array([0.0, -9.81, 0.0])
-        self._v0 = np.zeros((V.shape[0], 3))
-        self._d_mask = np.full(V.shape[0], 0, dtype=int)
-        self._on_mesh_loaded(
-            name,
-            V,
-            T,
-            self._Ye,
-            self._nue,
-            self._rhoe,
-            self._bext,
-            self._aext,
-            self._v0,
-            self._d_mask,
-        )
+    def on_mesh_loaded(
+        self,
+        name: str,
+        V: np.ndarray[float],
+        T: np.ndarray[float],
+        Ye: np.ndarray[float] = None,
+        nue: np.ndarray[float] = None,
+        rhoe: np.ndarray[float] = None,
+        bext: np.ndarray[float] = None,
+        aext: np.ndarray[float] = None,
+        v0: np.ndarray[float] = None,
+        d_mask: np.ndarray[bool] = None,
+    ):
+        self._V = V
+        self._T = T
+        self._Ye = np.full(T.shape[0], 1e6) if Ye is None else Ye
+        self._nue = np.full(T.shape[0], 0.45) if nue is None else nue
+        self._rhoe = np.full(T.shape[0], 1e3) if rhoe is None else rhoe
+        self._bext = np.zeros((T.shape[0], 3)) if bext is None else bext
+        self._aext = np.array([0.0, -9.81, 0.0]) if aext is None else aext
+        self._v0 = np.zeros((V.shape[0], 3)) if v0 is None else v0
+        self._d_mask = np.full(V.shape[0], 0, dtype=int) if d_mask is None else d_mask
+        self._name = name
+        self._throw_if_invalid_state()
+        self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
+        self._dirty = True
 
     def on_mesh_removed(self):
         if self._vm is not None:
@@ -192,7 +162,7 @@ class TetrahedralElastodynamicsBody:
         self._dirty = True
 
     def serialize(self, grp: h5.Group):
-        grp = grp["tools.vbd.ui.TetrahedralElastodynamicsBody"]
+        grp = grp.create_group("tools.vbd.ui.TetrahedralElastodynamicsBody")
         grp["V"] = self._V
         grp["T"] = self._T
         grp["Ye"] = self._Ye
@@ -216,7 +186,7 @@ class TetrahedralElastodynamicsBody:
         self._v0 = grp["v0"][:]
         self._d_mask = grp["d_mask"][:]
         self._name = grp.attrs["name"]
-        self._on_mesh_loaded(
+        self.on_mesh_loaded(
             self._name,
             self._V,
             self._T,
@@ -249,32 +219,6 @@ class TetrahedralElastodynamicsBody:
     @property
     def dirty(self) -> bool:
         return self._dirty
-
-    def _on_mesh_loaded(
-        self,
-        name: str,
-        V: np.ndarray[float],
-        T: np.ndarray[float],
-        Ye: np.ndarray[float],
-        nue: np.ndarray[float],
-        rhoe: np.ndarray[float],
-        bext: np.ndarray[float],
-        aext: np.ndarray[float],
-        v0: np.ndarray[float],
-        d_mask: np.ndarray[bool],
-    ):
-        self._V = V
-        self._T = T
-        self._Ye = Ye
-        self._nue = nue
-        self._rhoe = rhoe
-        self._bext = bext
-        self._aext = aext
-        self._v0 = v0
-        self._d_mask = d_mask
-        self._name = name
-        self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
-        self._dirty = True
 
     def _throw_if_invalid_state(self):
         if self._V is None or self._T is None:

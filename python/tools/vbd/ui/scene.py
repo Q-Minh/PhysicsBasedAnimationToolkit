@@ -8,6 +8,7 @@ import meshio
 import os
 import typing
 import numpy as np
+import h5py as h5
 from ..utils.pick import BoxSelection, SelectionTargets
 from ..utils.transform_library import TransformLibrary
 
@@ -17,17 +18,17 @@ class BoxSelectionList:
     _selection_target: SelectionTargets
     _listener: typing.Callable[[int, typing.Any, np.ndarray[int]], None]
     _recycled_indices: list[int]
-    selectors: list[BoxSelection]
+    _selectors: list[BoxSelection]
 
     def __init__(self, selection_target: SelectionTargets, default_value, listener):
         self._selection_target = selection_target
         self._default_value = default_value
         self._listener = listener
         self._recycled_indices = []
-        self.selectors = []
+        self._selectors = []
 
     def on_selector_added(self, prop_type: str):
-        self.selectors.append(
+        self._selectors.append(
             BoxSelection(
                 f"{prop_type} - {self._get_new_id()}",
                 prop_type,
@@ -36,10 +37,10 @@ class BoxSelectionList:
                 self._listener,
             )
         )
-        self.selectors[-1].on_added()
+        self._selectors[-1].on_added()
 
     def remove_selector(self, idx: int):
-        selector = self.selectors.pop(idx)
+        selector = self._selectors.pop(idx)
         selector.on_removed()
         id = int(selector.name.split(" - ")[-1])
         self._recycled_indices.append(id)
@@ -48,15 +49,15 @@ class BoxSelectionList:
         if self._recycled_indices:
             return self._recycled_indices.pop()
         else:
-            return len(self.selectors)
+            return len(self._selectors)
 
 
 class Scene:
     _tet_elastic_bodies: list[TetrahedralElastodynamicsBody]
     _recycled_tet_elastic_body_indices: list[int]
+    _transform_library: TransformLibrary
     _selector_lists: dict[str, BoxSelectionList]
     _current_selection_property_idx: int
-    _transform_library: TransformLibrary
 
     def __init__(self):
         self._tet_elastic_bodies = []
@@ -144,7 +145,7 @@ class Scene:
                 box_selection_list = self._selector_lists[prop_name]
                 if imgui.Button("Add", default_button_size):
                     box_selection_list.on_selector_added(prop_name)
-                for s, selector in enumerate(box_selection_list.selectors):
+                for s, selector in enumerate(box_selection_list._selectors):
                     imgui.PushID(f"{prop_name} - {s}")
                     if imgui.TreeNode(selector.name):
                         selector.draw(self._tet_elastic_bodies)
@@ -168,12 +169,53 @@ class Scene:
                 body.undirty(n_dirichlet_groups=len(self._transform_library.transforms))
 
     def _save_session(self):
-        # TODO: Implement saving session
-        ps.warning("Save session not implemented yet.")
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.asksaveasfilename(
+            title="Save session (HDF5)",
+            defaultextension=".h5",
+            filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+        )
+        try:
+            if file_path:
+                with h5.File(file_path, "w") as f:
+                    self._serialize_fem_tet_elastic_bodies(
+                        f.create_group("fem_tet_elastic_bodies")
+                    )
+                    self._transform_library.serialize(
+                        f.create_group("transform_library")
+                    )
+                    f["recycled_tet_elastic_body_indices"] = np.array(
+                        self._recycled_tet_elastic_body_indices, dtype=int
+                    )
+        except Exception as e:
+            ps.error(f"Error saving session:\n{e}")
+        finally:
+            root.destroy()
 
     def _load_session(self):
-        # TODO: Implement loading session
-        ps.warning("Load session not implemented yet.")
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.askopenfilename(
+            title="Load session (HDF5)",
+            defaultextension=".h5",
+            filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+        )
+        try:
+            if file_path:
+                with h5.File(file_path, "r") as f:
+                    self._teardown()
+                    self._deserialize_fem_tet_elastic_bodies(
+                        f["fem_tet_elastic_bodies"]
+                    )
+                    self._recycled_tet_elastic_body_indices = list(
+                        f["recycled_tet_elastic_body_indices"][:]
+                    )
+                    self._transform_library.deserialize(f["transform_library"])
+        except Exception as e:
+            ps.error(f"Error loading session:\n{e}")
+        finally:
+            root.destroy()
 
     def _get_new_id(self) -> int:
         if self._recycled_tet_elastic_body_indices:
@@ -213,3 +255,24 @@ class Scene:
         idx = int(body.name.split(" - ")[-1])
         body.on_mesh_removed()
         self._recycled_tet_elastic_body_indices.append(idx)
+
+    def _serialize_fem_tet_elastic_bodies(self, grp: h5.Group):
+        grp.attrs["num_tet_elastic_bodies"] = len(self._tet_elastic_bodies)
+        for b, body in enumerate(self._tet_elastic_bodies):
+            body_grp = grp.create_group(f"{b}")
+            body.serialize(body_grp)
+
+    def _deserialize_fem_tet_elastic_bodies(self, grp: h5.Group):
+        num_bodies = grp.attrs["num_tet_elastic_bodies"]
+        for b in range(num_bodies):
+            body_grp = grp[f"{b}"]
+            body = TetrahedralElastodynamicsBody()
+            body.deserialize(body_grp)
+            self._tet_elastic_bodies.append(body)
+
+    def _teardown(self):
+        for body in self._tet_elastic_bodies:
+            body.on_mesh_removed()
+        self._tet_elastic_bodies = []
+        self._recycled_tet_elastic_body_indices = []
+        self._transform_library = TransformLibrary()

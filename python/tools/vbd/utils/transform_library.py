@@ -322,7 +322,6 @@ class TransformLibrary:
         self.transforms.append(transform)
 
     def draw(self):
-        # TODO: Draw UI for adding transforms (ComboBox)
         transform_type_names = [tt.name for tt in TransformType]
         _, self._current_transform_index = imgui.Combo(
             "Transform Type",
@@ -343,53 +342,48 @@ class TransformLibrary:
                     self._recycled_indices.append(idx)
                 imgui.TreePop()
 
-    def serialize(self, path: str):
+    def serialize(self, grp: h5py.Group):
         """
         Serialize the entire library to an HDF5 group.
         """
-        with h5py.File(path, "w") as h5file:
-            for transform in self.transforms:
-                tgroup = h5file.create_group(f"transform_{transform.id}")
-                transform.serialize(tgroup)
+        for transform in self.transforms:
+            tgrp = grp.create_group(f"{transform.id}")
+            transform.serialize(tgrp)
 
-    def deserialize(self, path: str):
+    def deserialize(self, grp: h5py.Group):
         """
         Deserialize the library from an HDF5 group.
         """
-        with h5py.File(path, "r") as h5file:
-            for tname, tgroup in h5file.items():
-                name = tgroup.attrs["name"]
-                begin = tgroup.attrs["begin"]
-                duration = tgroup.attrs["duration"]
-                transform_type = TransformType(tgroup.attrs["transform_type"])
-                if transform_type == TransformType.G_ROTATE:
-                    axis = tgroup.attrs["axis"]
-                    degrees_per_second = tgroup.attrs["degrees_per_second"]
-                    transform = GlobalRotateTransform(
-                        name, begin, duration, axis, degrees_per_second
-                    )
-                elif transform_type == TransformType.L_ROTATE:
-                    axis = tgroup.attrs["axis"]
-                    origin = tgroup.attrs["origin"]
-                    degrees_per_second = tgroup.attrs["degrees_per_second"]
-                    transform = LocalRotateTransform(
-                        name, begin, duration, axis, origin, degrees_per_second
-                    )
-                elif transform_type == TransformType.TRANSLATE:
-                    direction = tgroup.attrs["direction"]
-                    speed = tgroup.attrs["speed"]
-                    transform = TranslateTransform(
-                        name, begin, duration, direction, speed
-                    )
-                elif transform_type == TransformType.FIXED:
-                    transform = FixedTransform(name, begin, duration)
-                else:
-                    print(
-                        f"Unknown transform type {transform_type} for transform {name}"
-                    )
-                    continue
-                transform.id = tgroup.attrs["id"]
-                self.add_transform(transform)
+        for tname, tgroup in grp.items():
+            name = tgroup.attrs["name"]
+            begin = tgroup.attrs["begin"]
+            duration = tgroup.attrs["duration"]
+            transform_type = TransformType(tgroup.attrs["transform_type"])
+            if transform_type == TransformType.G_ROTATE:
+                axis = tgroup.attrs["axis"]
+                degrees_per_second = tgroup.attrs["degrees_per_second"]
+                transform = GlobalRotateTransform(
+                    name, begin, duration, axis, degrees_per_second
+                )
+            elif transform_type == TransformType.L_ROTATE:
+                axis = tgroup.attrs["axis"]
+                origin = tgroup.attrs["origin"]
+                degrees_per_second = tgroup.attrs["degrees_per_second"]
+                transform = LocalRotateTransform(
+                    name, begin, duration, axis, origin, degrees_per_second
+                )
+            elif transform_type == TransformType.TRANSLATE:
+                direction = tgroup.attrs["direction"]
+                speed = tgroup.attrs["speed"]
+                transform = TranslateTransform(name, begin, duration, direction, speed)
+            elif transform_type == TransformType.FIXED:
+                transform = FixedTransform(name, begin, duration)
+            else:
+                raise ValueError(
+                    f"Unknown transform type {transform_type} for transform {name}"
+                )
+            transform.id = tgroup.attrs["id"]
+            self.add_transform(transform)
 
     def _draw(self, transform: PrimitiveTransform, idx: int):
         imgui.PushID(idx)
