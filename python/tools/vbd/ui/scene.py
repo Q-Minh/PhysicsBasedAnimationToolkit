@@ -38,7 +38,7 @@ class BoxSelectionList:
         )
         self.selectors[-1].on_added()
 
-    def on_selector_removed(self, idx: int):
+    def remove_selector(self, idx: int):
         selector = self.selectors.pop(idx)
         selector.on_removed()
         id = int(selector.name.split(" - ")[-1])
@@ -148,6 +148,8 @@ class Scene:
                     imgui.PushID(f"{prop_name} - {s}")
                     if imgui.TreeNode(selector.name):
                         selector.draw(self._tet_elastic_bodies)
+                        if imgui.Button("Delete", default_button_size):
+                            box_selection_list.remove_selector(s)
                         imgui.TreePop()
                     imgui.PopID()
                 imgui.EndTabItem()
