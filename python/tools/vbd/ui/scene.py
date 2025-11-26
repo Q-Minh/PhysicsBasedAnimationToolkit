@@ -55,6 +55,7 @@ class Scene:
     _tet_elastic_bodies: list[TetrahedralElastodynamicsBody]
     _recycled_tet_elastic_body_indices: list[int]
     _selector_lists: dict[str, BoxSelectionList]
+    _current_selection_property_idx: int
     _transform_library: TransformLibrary
 
     def __init__(self):
@@ -104,6 +105,7 @@ class Scene:
                 ].set_dirichlet_group(prop_value, inds),
             ),
         }
+        self._current_selection_property_idx = 0
         self._transform_library = TransformLibrary()
 
     def draw(self):
@@ -132,17 +134,22 @@ class Scene:
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Selection", True, tab_flags)[0]:
-                for prop_name, box_selection_list in self._selector_lists.items():
-                    if imgui.TreeNode(prop_name):
-                        if imgui.Button("Add", default_button_size):
-                            box_selection_list.on_selector_added(prop_name)
-                        for s, selector in enumerate(box_selection_list.selectors):
-                            imgui.PushID(f"{prop_name} - {s}")
-                            if imgui.TreeNode(selector.name):
-                                selector.draw(self._tet_elastic_bodies)
-                                imgui.TreePop()
-                            imgui.PopID()
+                prop_names = list(self._selector_lists.keys())
+                _, self._current_selection_property_idx = imgui.Combo(
+                    "Property",
+                    self._current_selection_property_idx,
+                    prop_names,
+                )
+                prop_name = prop_names[self._current_selection_property_idx]
+                box_selection_list = self._selector_lists[prop_name]
+                if imgui.Button("Add", default_button_size):
+                    box_selection_list.on_selector_added(prop_name)
+                for s, selector in enumerate(box_selection_list.selectors):
+                    imgui.PushID(f"{prop_name} - {s}")
+                    if imgui.TreeNode(selector.name):
+                        selector.draw(self._tet_elastic_bodies)
                         imgui.TreePop()
+                    imgui.PopID()
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Session", True, tab_flags)[0]:

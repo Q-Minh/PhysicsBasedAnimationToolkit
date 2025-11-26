@@ -304,10 +304,12 @@ class CompositeTransform(PrimitiveTransform):
 class TransformLibrary:
     transforms: list[PrimitiveTransform]
     _recycled_indices: list[int]
+    _current_transform_index: int
 
     def __init__(self):
         self.transforms = []
         self._recycled_indices = []
+        self._current_transform_index = 0
 
     def build_transform_map(self):
         self._transform_map = {}
@@ -321,11 +323,25 @@ class TransformLibrary:
 
     def draw(self):
         # TODO: Draw UI for adding transforms (ComboBox)
+        transform_type_names = [tt.name for tt in TransformType]
+        _, self._current_transform_index = imgui.Combo(
+            "Transform Type",
+            self._current_transform_index,
+            transform_type_names,
+        )
+        default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
+        if imgui.Button("Add", default_button_size):
+            ttype = TransformType(self._current_transform_index)
+            new_transform = PrimitiveTransform.make_default(ttype)
+            self.add_transform(new_transform)
+
         for idx, transform in enumerate(self.transforms):
-            self._draw(transform, idx)
-            if imgui.Button("Delete"):
-                self.transforms.pop(idx)
-                self._recycled_indices.append(idx)
+            if imgui.TreeNode(f"{idx} - {transform.transform_type.name}"):
+                self._draw(transform, idx)
+                if imgui.Button("Delete"):
+                    self.transforms.pop(idx)
+                    self._recycled_indices.append(idx)
+                imgui.TreePop()
 
     def serialize(self, path: str):
         """
