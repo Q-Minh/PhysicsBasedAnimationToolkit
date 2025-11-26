@@ -169,7 +169,7 @@ class TetrahedralElastodynamicsBody:
 
     def serialize(self, grp: h5.Group):
         grp = grp.create_group("tools.vbd.ui.TetrahedralElastodynamicsBody")
-        grp["V"] = self._V
+        grp["V"] = self.VT
         grp["T"] = self._T
         grp["Ye"] = self._Ye
         grp["nue"] = self._nue
