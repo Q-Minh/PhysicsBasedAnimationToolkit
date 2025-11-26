@@ -349,6 +349,7 @@ class TransformLibrary:
         for transform in self.transforms:
             tgrp = grp.create_group(f"{transform.id}")
             transform.serialize(tgrp)
+        grp["recycled_indices"] = np.array(self._recycled_indices, dtype=np.int32)
 
     def deserialize(self, grp: h5py.Group):
         """
@@ -384,6 +385,8 @@ class TransformLibrary:
                 )
             transform.id = tgroup.attrs["id"]
             self.add_transform(transform)
+        if "recycled_indices" in grp:
+            self._recycled_indices = grp["recycled_indices"][:].tolist()
 
     def _draw(self, transform: PrimitiveTransform, idx: int):
         imgui.PushID(idx)
