@@ -90,7 +90,7 @@ class BoxSelection:
             return indices
         if self._target == SelectionTargets.CELL:
             # Test cell centroids
-            centroids = np.mean(verts[cells], axis=1)
+            centroids = np.mean(VT[cells], axis=1)
             inside = np.all((centroids >= self._min) & (centroids <= self._max), axis=1)
             indices = np.where(inside)[0]
             return indices
@@ -106,6 +106,7 @@ class BoxSelection:
             and type(self._prop_value[0]) in [float, np.float32, np.float64]
         ):
             _, self._prop_value = imgui.InputFloat3(self._prop_name, self._prop_value)
+            self._prop_value = np.array(self._prop_value)
 
     def draw(self, meshes: list[TetrahedralElastodynamicsBody]):
         imgui.PushID(self.name)

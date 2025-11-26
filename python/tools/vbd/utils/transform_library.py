@@ -303,23 +303,29 @@ class CompositeTransform(PrimitiveTransform):
 
 class TransformLibrary:
     transforms: list[PrimitiveTransform]
+    _recycled_indices: list[int]
 
     def __init__(self):
         self.transforms = []
-        # Same as transforms but with transform type as keys
-        self.build_transform_map()
+        self._recycled_indices = []
 
     def build_transform_map(self):
-        self.transform_map = {}
+        self._transform_map = {}
         for ttype in TransformType:
-            self.transform_map[ttype] = []
+            self._transform_map[ttype] = []
 
     def add_transform(self, transform: PrimitiveTransform):
         transform.adjust()
-        if transform.id == -1:
-            transform.id = len(self.transforms) + 1
+        transform.id = self._get_new_id()
         self.transforms.append(transform)
-        self.transform_map[transform.transform_type].append(transform)
+
+    def draw(self):
+        # TODO: Draw UI for adding transforms (ComboBox)
+        for idx, transform in enumerate(self.transforms):
+            self._draw(transform, idx)
+            if imgui.Button("Delete"):
+                self.transforms.pop(idx)
+                self._recycled_indices.append(idx)
 
     def serialize(self, path: str):
         """
@@ -335,9 +341,6 @@ class TransformLibrary:
         Deserialize the library from an HDF5 group.
         """
         with h5py.File(path, "r") as h5file:
-            self.transforms = []
-            self.build_transform_map()
-
             for tname, tgroup in h5file.items():
                 name = tgroup.attrs["name"]
                 begin = tgroup.attrs["begin"]
@@ -372,7 +375,7 @@ class TransformLibrary:
                 transform.id = tgroup.attrs["id"]
                 self.add_transform(transform)
 
-    def draw(transform: PrimitiveTransform, idx: int):
+    def _draw(self, transform: PrimitiveTransform, idx: int):
         imgui.PushID(idx)
         _, transform.name = imgui.InputText("Name", transform.name)
         _, transform.begin = imgui.InputFloat("Begin Time", transform.begin)
@@ -405,3 +408,9 @@ class TransformLibrary:
                 transform.adjust()
             _, transform.speed = imgui.InputFloat("Speed", transform.speed)
         imgui.PopID()
+
+    def _get_new_id(self) -> int:
+        if self._recycled_indices:
+            return self._recycled_indices.pop()
+        else:
+            return len(self.transforms)

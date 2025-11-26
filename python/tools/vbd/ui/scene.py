@@ -55,7 +55,6 @@ class Scene:
     _tet_elastic_bodies: list[TetrahedralElastodynamicsBody]
     _recycled_tet_elastic_body_indices: list[int]
     _selector_lists: dict[str, BoxSelectionList]
-    _current_selector_type_idx: int
     _transform_library: TransformLibrary
 
     def __init__(self):
@@ -105,40 +104,67 @@ class Scene:
                 ].set_dirichlet_group(prop_value, inds),
             ),
         }
-        self._current_selector_type_idx = 0
         self._transform_library = TransformLibrary()
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
-        # Scene modification controls
-        if imgui.Button("Add Tetrahedral Body", default_button_size):
-            self._load_tet_elastic_body()
-        selector_types = list(self._selector_lists.keys())
-        _, self._current_selector_type_idx = imgui.Combo(
-            "Box Selection Type",
-            self._current_selector_type_idx,
-            selector_types,
+        tab_flags = (
+            imgui.ImGuiTabBarFlags_Reorderable
+            | imgui.ImGuiTabBarFlags_FittingPolicyScroll
+            | imgui.ImGuiTabBarFlags_TabListPopupButton
         )
-        if imgui.Button("Add Box Selection", default_button_size):
-            selector_type = selector_types[self._current_selector_type_idx]
-            box_selection_list = self._selector_lists[selector_type]
-            box_selection_list.on_selector_added(selector_type)
-        # Draw box selectors
-        for prop_name, box_selection_list in self._selector_lists.items():
-            for s, selector in enumerate(box_selection_list.selectors):
-                imgui.PushID(f"{prop_name} - {s}")
-                selector.draw(self._tet_elastic_bodies)
-                imgui.PopID()
-        # Draw FEM elastic tet bodies
-        n_dirichlet_groups = len(self._transform_library.transforms)
+        if imgui.BeginTabBar("Mode bar", tab_flags):
+            if imgui.BeginTabItem("Objects", True, tab_flags)[0]:
+                if imgui.Button("Add Tetrahedral Body", default_button_size):
+                    self._load_tet_elastic_body()
+                for b, body in enumerate(self._tet_elastic_bodies):
+                    imgui.PushID(body.name)
+                    if imgui.TreeNode(body.name):
+                        body.draw()
+                        if imgui.Button("Delete", default_button_size):
+                            self._remove_tet_elastic_body(b)
+                        imgui.TreePop()
+                    imgui.PopID()
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Transforms", True, tab_flags)[0]:
+                self._transform_library.draw()
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Selection", True, tab_flags)[0]:
+                for prop_name, box_selection_list in self._selector_lists.items():
+                    if imgui.TreeNode(prop_name):
+                        if imgui.Button("Add", default_button_size):
+                            box_selection_list.on_selector_added(prop_name)
+                        for s, selector in enumerate(box_selection_list.selectors):
+                            imgui.PushID(f"{prop_name} - {s}")
+                            if imgui.TreeNode(selector.name):
+                                selector.draw(self._tet_elastic_bodies)
+                                imgui.TreePop()
+                            imgui.PopID()
+                        imgui.TreePop()
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Session", True, tab_flags)[0]:
+                if imgui.Button("Load session", default_button_size):
+                    self._load_session()
+                if imgui.Button("Save session", default_button_size):
+                    self._save_session()
+                imgui.EndTabItem()
+            imgui.EndTabBar()
+
+        # No matter what tab we're in, undirty any dirty bodies at the end of the frame
         for b, body in enumerate(self._tet_elastic_bodies):
-            imgui.PushID(body.name)
-            if imgui.TreeNode(body.name):
-                body.draw(n_dirichlet_groups)
-                if imgui.Button("Delete", default_button_size):
-                    self._remove_tet_elastic_body(b)
-                imgui.TreePop()
-            imgui.PopID()
+            if body.dirty:
+                body.undirty(n_dirichlet_groups=len(self._transform_library.transforms))
+
+    def _save_session(self):
+        # TODO: Implement saving session
+        ps.warning("Save session not implemented yet.")
+
+    def _load_session(self):
+        # TODO: Implement loading session
+        ps.warning("Load session not implemented yet.")
 
     def _get_new_id(self) -> int:
         if self._recycled_tet_elastic_body_indices:
@@ -178,3 +204,19 @@ class Scene:
         idx = int(body.name.split(" - ")[-1])
         body.on_mesh_removed()
         self._recycled_tet_elastic_body_indices.append(idx)
+
+    def _load_transform_library(self):
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.askopenfilename(
+            title="Select transform library file",
+            defaultextension=".h5",
+            filetypes=[("HDF5 files", "*.h5"), ("All files", "*.*")],
+        )
+        if file_path:
+            try:
+                self._transform_library.deserialize(file_path)
+            except Exception as e:
+                ps.error(f"Error loading transform library:\n{e}")
+            finally:
+                root.destroy()
