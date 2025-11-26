@@ -77,7 +77,7 @@ class TetrahedralElastodynamicsBody:
                 "Dirichlet Group",
                 d_groups,
                 cmap="turbo",
-                vminmax=(0, n_dirichlet_groups),
+                vminmax=(1, n_dirichlet_groups),
                 enabled=True,
             )
         self._dirty = False

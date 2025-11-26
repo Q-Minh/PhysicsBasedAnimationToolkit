@@ -318,7 +318,7 @@ class TransformLibrary:
 
     def add_transform(self, transform: PrimitiveTransform):
         transform.adjust()
-        transform.id = self._get_new_id()
+        transform.id = self._get_new_id() + 1
         self.transforms.append(transform)
 
     def draw(self):
@@ -335,7 +335,7 @@ class TransformLibrary:
             self.add_transform(new_transform)
 
         for idx, transform in enumerate(self.transforms):
-            if imgui.TreeNode(f"{idx} - {transform.transform_type.name}"):
+            if imgui.TreeNode(f"{transform.id} - {transform.transform_type.name}"):
                 self._draw(transform, idx)
                 if imgui.Button("Delete"):
                     self.transforms.pop(idx)
