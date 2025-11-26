@@ -20,6 +20,12 @@ class BoxSelection:
     _prop_value: typing.Any
     _target: SelectionTargets
     _callback: typing.Callable[None, [int, typing.Any, np.ndarray[int]]]
+    _vertices: np.ndarray
+    _faces: np.ndarray
+    _min: np.ndarray
+    _max: np.ndarray
+    _scale: np.ndarray
+    _ps_mesh: ps.SurfaceMesh
 
     def __init__(
         self,
@@ -35,7 +41,7 @@ class BoxSelection:
         self._target = target
         self._callback = callback
         # Cube vertices
-        self.vertices = np.array(
+        self._vertices = np.array(
             [
                 [-0.5, -0.5, -0.5],
                 [0.5, -0.5, -0.5],
@@ -47,10 +53,10 @@ class BoxSelection:
                 [-0.5, 0.5, 0.5],
             ]
         )
-        self._min = np.min(self.vertices, axis=0)
-        self._max = np.max(self.vertices, axis=0)
+        self._min = np.min(self._vertices, axis=0)
+        self._max = np.max(self._vertices, axis=0)
         # Cube faces
-        self.faces = np.array(
+        self._faces = np.array(
             [
                 [0, 1, 2, 3],
                 [4, 5, 6, 7],
@@ -60,20 +66,20 @@ class BoxSelection:
                 [1, 2, 6, 5],
             ]
         )
-        self.scale = np.ones(3, dtype=np.float32)
+        self._scale = np.ones(3, dtype=np.float32)
 
     def on_added(self):
-        self.ps_mesh = ps.register_surface_mesh(self.name, self.vertices, self.faces)
-        self.ps_mesh.set_transparency(0.5)
+        self._ps_mesh = ps.register_surface_mesh(self.name, self._vertices, self._faces)
+        self._ps_mesh.set_transparency(0.5)
 
     def on_removed(self):
-        ps.remove_surface_mesh(self.ps_mesh.get_name())
-        self.ps_mesh = None
+        ps.remove_surface_mesh(self._ps_mesh.get_name())
+        self._ps_mesh = None
 
     def _inverse_transform_points(self, V) -> np.ndarray:
-        T = self.ps_mesh.get_transform()
+        T = self._ps_mesh.get_transform()
         Tinv = np.diag(
-            [1 / self.scale[0], 1 / self.scale[1], 1 / self.scale[2], 1]
+            [1 / self._scale[0], 1 / self._scale[1], 1 / self._scale[2], 1]
         ) @ np.linalg.inv(T)
         VH = np.vstack([V.T, np.ones((1, V.shape[0]))])
         VT = (Tinv @ VH).T[:, :3]
@@ -111,9 +117,9 @@ class BoxSelection:
     def draw(self, meshes: list[TetrahedralElastodynamicsBody]):
         imgui.PushID(self.name)
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
-        _, self.scale = imgui.SliderFloat3("Size", self.scale, 0, 10)
-        self.scale = np.array(self.scale)
-        self.ps_mesh.update_vertex_positions(self.vertices * self.scale)
+        _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 10)
+        self._scale = np.array(self._scale)
+        self._ps_mesh.update_vertex_positions(self._vertices * self._scale)
         # Input field for specific property that we're manipulating
         self.specific_draw()
         if imgui.Button("Apply", default_button_size):
@@ -124,6 +130,10 @@ class BoxSelection:
                 # Apply in callback that depends on property that we selected
                 self._callback(b, self._prop_value, indices)
         imgui.PopID()
+
+    def set_visible(self, visible: bool):
+        if self._ps_mesh is not None:
+            self._ps_mesh.set_enabled(visible)
 
 
 class DirichletSelection(BoxSelection):

@@ -356,6 +356,8 @@ class TransformLibrary:
         Deserialize the library from an HDF5 group.
         """
         for tname, tgroup in grp.items():
+            if tname == "recycled_indices":
+                continue
             name = tgroup.attrs["name"]
             begin = tgroup.attrs["begin"]
             duration = tgroup.attrs["duration"]

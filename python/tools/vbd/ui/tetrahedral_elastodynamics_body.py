@@ -36,6 +36,12 @@ class TetrahedralElastodynamicsBody:
         _, aext = imgui.InputFloat3("External Acceleration", self._aext)
         self._aext = np.array(aext)
 
+    def set_visible(self, visible: bool):
+        if self._vm is not None:
+            self._vm.set_enabled(visible)
+        if self._pc is not None:
+            self._pc.set_enabled(visible)
+
     def undirty(self, n_dirichlet_groups: int):
         if self._vm is None:
             return

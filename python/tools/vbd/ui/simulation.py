@@ -1,30 +1,30 @@
 # type: ignore
 import numpy as np
 from pbatoolkit import pbat, pypbat
-from .draw_parameter_object import draw as draw_params
 import polyscope as ps
 import polyscope.imgui as imgui
 from .solver import Solver
+from .contact import Contact
 
 
 class Simulation:
     _fem_dynamics: pbat.sim.dynamics.FemElastoDynamics
-    _contact_dynamics: pbat.sim.contact.MeshDynamics
     _profiler: pypbat.profiling.Profiler
 
     _fem_dynamics_vm: ps.VolumeMesh
     _fem_dynamics_dirichlet_pc: ps.PointCloud
     _simulate: bool
     _solver: Solver
+    _contact: Contact
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
-        self._contact_dynamics = pbat.sim.contact.MeshDynamics()
         self._profiler = pypbat.profiling.Profiler()
         self._fem_dynamics_vm = None
         self._fem_dynamics_dirichlet_pc = None
         self._simulate = False
         self._solver = Solver()
+        self._contact = Contact()
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
@@ -38,16 +38,15 @@ class Simulation:
                 self._solver.draw()
                 imgui.EndTabItem()
             if imgui.BeginTabItem("Contact", True, tab_flags)[0]:
-                # TODO: Draw various contact dynamics parameters
+                self._contact.draw()
                 imgui.EndTabItem()
-
             imgui.EndTabBar()
 
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
         step = imgui.Button("Step", default_button_size)
         reset = imgui.Button("Reset", default_button_size)
         if reset:
-            # TODO
+            # TODO: We need to rebuild the simulation from the scene tab...
             ps.error("Reset not implemented yet")
 
         if step or self._simulate:

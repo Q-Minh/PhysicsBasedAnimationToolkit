@@ -19,6 +19,7 @@ class SolverType(enum.Enum):
 class Solver:
     _solver: SolverType
     _solvers: dict[SolverType, typing.Any]
+    _solver_params: dict[SolverType, ParameterObject]
 
     def __init__(self):
         self._solver = SolverType.VBD
@@ -42,6 +43,7 @@ class Solver:
         }
 
     def draw(self):
+        imgui.PushID("Solver")
         solver_types = list(SolverType)
         selected_idx = solver_types.index(self._solver)
         _, selected_idx = imgui.Combo(
@@ -56,3 +58,4 @@ class Solver:
             param_obj.draw()
             imgui.PopID()
             imgui.TreePop()
+        imgui.PopID()

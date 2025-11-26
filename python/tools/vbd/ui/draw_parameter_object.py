@@ -13,7 +13,7 @@ def try_draw_tooltip(obj, name):
         imgui.EndTooltip()
 
 
-def draw(obj):
+def draw_params(obj):
     for name, value in inspect.getmembers(obj):
         if (
             isinstance(getattr(type(obj), name), property)
@@ -64,7 +64,7 @@ class ParameterObject:
         self.sub_params = sub_params
 
     def draw(self):
-        draw(self.params)
+        draw_params(self.params)
         self._draw_sub_params(self.params, self.sub_params)
 
     def _draw_sub_params(self, params: typing.Any, sub_params: dict):
@@ -72,7 +72,7 @@ class ParameterObject:
             sub_param = getattr(params, sub_param_name)
             if imgui.TreeNode(sub_param_name):
                 imgui.PushID(sub_param_name)
-                draw(sub_param)
+                draw_params(sub_param)
                 if isinstance(sub_param_entry, dict):
                     self._draw_sub_params(sub_param, sub_param_entry)
                 imgui.PopID()

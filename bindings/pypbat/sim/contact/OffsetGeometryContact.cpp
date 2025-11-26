@@ -1,6 +1,7 @@
 #include "OffsetGeometryContact.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/pair.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 #include <pbat/geometry/Device.h>
@@ -105,16 +106,40 @@ void BindOffsetGeometryContact(nanobind::module_& m)
             "    validate (bool): Throw if invalid.\n"
             "Returns:\n"
             "    self (OgcParams): Reference to this.")
-        .def_rw("r", &OgcParams::r)
-        .def_rw("rq", &OgcParams::rq)
-        .def_rw("scene_features", &OgcParams::eSceneFeatures)
-        .def_rw("scene_bvh_quality", &OgcParams::eSceneBvhQuality)
-        .def_rw("mesh_bvh_quality", &OgcParams::eMeshBvhQuality)
-        .def_rw("max_vertex_face_contacts_estimate", &OgcParams::nMaxVertexFaceContactsEstimate)
-        .def_rw("max_face_vertex_contacts_estimate", &OgcParams::nMaxFaceVertexContactsEstimate)
-        .def_rw("max_edge_face_contacts_estimate", &OgcParams::nMaxEdgeFaceContactsEstimate)
-        .def_rw("gammap", &OgcParams::gammap)
-        .def_rw("gammae", &OgcParams::gammae);
+        .def_rw("r", &OgcParams::r, "(float) Contact radius.")
+        .def_rw("rq", &OgcParams::rq, "(float) Contact query radius.")
+        .def_rw(
+            "scene_features",
+            &OgcParams::eSceneFeatures,
+            "(ESceneFeatures) Scene features for BVH construction.")
+        .def_rw(
+            "scene_bvh_quality",
+            &OgcParams::eSceneBvhQuality,
+            "(EBuildQuality) Scene BVH build quality.")
+        .def_rw(
+            "mesh_bvh_quality",
+            &OgcParams::eMeshBvhQuality,
+            "(EBuildQuality) Mesh BVH build quality.")
+        .def_rw(
+            "max_vertex_face_contacts_estimate",
+            &OgcParams::nMaxVertexFaceContactsEstimate,
+            "(int) Max vertex-face contacts estimate.")
+        .def_rw(
+            "max_face_vertex_contacts_estimate",
+            &OgcParams::nMaxFaceVertexContactsEstimate,
+            "(int) Max face-vertex contacts estimate.")
+        .def_rw(
+            "max_edge_face_contacts_estimate",
+            &OgcParams::nMaxEdgeFaceContactsEstimate,
+            "(int) Max edge-face contacts estimate.")
+        .def_rw(
+            "gammap",
+            &OgcParams::gammap,
+            "(float) Relaxation parameter for vertex displacement bound.")
+        .def_rw(
+            "gammae",
+            &OgcParams::gammae,
+            "(float) Proportion of bounds-violating vertices to trigger collision detection.");
 
     nb::class_<OffsetGeometryContact::ContactFace>(m, "ContactFace")
         .def(nb::init<IndexType, IndexType>(), nb::arg("a"), nb::arg("eFace"))

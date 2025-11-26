@@ -168,6 +168,13 @@ class Scene:
             if body.dirty:
                 body.undirty(n_dirichlet_groups=len(self._transform_library.transforms))
 
+    def set_visible(self, visible: bool):
+        for body in self._tet_elastic_bodies:
+            body.set_visible(visible)
+        for prop_name, box_selection_list in self._selector_lists.items():
+            for selector in box_selection_list._selectors:
+                selector.set_visible(visible)
+
     def _save_session(self):
         root = tk.Tk()
         root.withdraw()
