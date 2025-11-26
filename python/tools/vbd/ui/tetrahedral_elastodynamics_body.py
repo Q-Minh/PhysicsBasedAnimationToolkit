@@ -20,6 +20,8 @@ class TetrahedralElastodynamicsBody:
     _pc: ps.PointCloud = None  # Polyscope point cloud for visualization
     _name: str = None  # Name of the body
 
+    _cached_transform: np.ndarray
+
     def __init__(self):
         self._V = None
         self._T = None
@@ -31,6 +33,7 @@ class TetrahedralElastodynamicsBody:
         self._v0 = None
         self._d_mask = None
         self._dirty = False
+        self._cached_transform = np.eye(4)
 
     def draw(self):
         _, aext = imgui.InputFloat3("External Acceleration", self._aext)
@@ -86,6 +89,7 @@ class TetrahedralElastodynamicsBody:
                 vminmax=(1, n_dirichlet_groups),
                 enabled=True,
             )
+        self._cached_transform = np.array(self._vm.get_transform())
         self._dirty = False
 
     def on_mesh_loaded(
@@ -113,6 +117,8 @@ class TetrahedralElastodynamicsBody:
         self._name = name
         self._throw_if_invalid_state()
         self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
+        self._cached_transform = np.eye(4)
+        self._vm.set_transform(self._cached_transform)
         self._dirty = True
 
     def on_mesh_removed(self):
@@ -252,7 +258,11 @@ class TetrahedralElastodynamicsBody:
 
     @property
     def dirty(self) -> bool:
-        return self._dirty
+        if self._vm is None:
+            return False
+        return self._dirty or np.any(
+            self._cached_transform != np.array(self._vm.get_transform())
+        )
 
     def _throw_if_invalid_state(self):
         if self._V is None or self._T is None:
