@@ -105,7 +105,7 @@ void BindCore(nanobind::module_& m)
                 return std::make_tuple(rows, cols, vals);
             },
             "Hessian triplets as (rows, cols, vals) arrays.")
-        .def_ro("linear_solver", &Params::eLinearSolver, "Linear solver type used for Newton step");
+        .def_rw("linear_solver", &Params::eLinearSolver, "Linear solver type used for Newton step");
 
     // Bind algorithm functions for a concrete energy model (3D stable neo-Hookean)
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
