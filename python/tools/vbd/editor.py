@@ -16,7 +16,14 @@ def main():
 
     def callback():
         nonlocal scene
-        scene.draw()
+        if imgui.BeginTabBar("Mode bar"):
+            if imgui.BeginTabItem("Scene", True)[0]:
+                scene.draw()
+                imgui.EndTabItem()
+            if imgui.BeginTabItem("Simulation", True)[0]:
+                # simulation.draw()
+                imgui.EndTabItem()
+            imgui.EndTabBar()
 
     ps.set_user_callback(callback)
     ps.show()
