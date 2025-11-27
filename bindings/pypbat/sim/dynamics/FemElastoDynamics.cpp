@@ -203,7 +203,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             },
             nb::arg("eg"),
             nb::arg("wg"),
-            nb::arg("Xg"),
+            nb::arg("Xig"),
             nb::arg("mug"),
             nb::arg("lambdag"),
             "Set heterogeneous elastic material with per-quadrature Lame coefficients.\n\n"
@@ -237,7 +237,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             },
             nb::arg("eg"),
             nb::arg("wg"),
-            nb::arg("Xg"),
+            nb::arg("Xig"),
             nb::arg("bg"),
             "Set variable body forces bg at quadrature points.\n\n"
             "Args:\n"
@@ -321,8 +321,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    float: Objective function value.")
         .def(
             "objective",
-            [](ElastoDynamics& self,
-               nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
+            [](ElastoDynamics& self, nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
                 return self.Objective(x);
             },
             nb::arg("x"),
@@ -345,8 +344,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    numpy.ndarray: kDims*|# nodes| gradient vector.")
         .def(
             "gradient",
-            [](ElastoDynamics& self,
-               nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
+            [](ElastoDynamics& self, nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
                 return self.Gradient(x);
             },
             nb::arg("x"),

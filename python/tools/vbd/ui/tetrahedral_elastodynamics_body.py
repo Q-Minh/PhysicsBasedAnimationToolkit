@@ -80,10 +80,12 @@ class TetrahedralElastodynamicsBody:
         )
         d_nodes = np.where(self._d_mask > 0)[0]
         if d_nodes.shape[0] > 0:
-            self._pc = ps.register_point_cloud("Dirichlet Nodes", self.VT[d_nodes, :])
+            self._pc = ps.register_point_cloud(
+                f"{self._name} - Dirichlet", self.VT[d_nodes, :]
+            )
             d_groups = self._d_mask[d_nodes]
             self._pc.add_scalar_quantity(
-                "Dirichlet Group",
+                "Group",
                 d_groups,
                 cmap="turbo",
                 vminmax=(1, n_dirichlet_groups),

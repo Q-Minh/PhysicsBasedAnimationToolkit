@@ -175,9 +175,13 @@ class Scene:
             for selector in box_selection_list._selectors:
                 selector.set_visible(visible)
 
-    def build_simulation_scenario(self):
-        # TODO: Construct the FEM elasto-dynamics and the contact dynamics
-        return None, None
+    @property
+    def tet_elastic_bodies(self) -> list[TetrahedralElastodynamicsBody]:
+        return self._tet_elastic_bodies
+    
+    @property
+    def transform_library(self) -> TransformLibrary:
+        return self._transform_library
 
     def _save_session(self):
         root = tk.Tk()
