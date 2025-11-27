@@ -83,7 +83,7 @@ class Simulation:
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
         step = imgui.Button("Step", default_button_size)
         reset = imgui.Button("Reset", default_button_size)
-        imgui.Text(f"t={self._t}")
+        imgui.Text(f"Time step={self._t}, t={self._t * self._dt:.4f}s")
         if reset:
             self._reset_sim()
 
