@@ -9,8 +9,8 @@ import os
 import typing
 import numpy as np
 import h5py as h5
-from ..utils.pick import BoxSelection, SelectionTargets
-from ..utils.transform_library import TransformLibrary
+from .utils.box_selection import BoxSelection, SelectionTargets
+from .utils.transform_library import TransformLibrary
 
 
 class BoxSelectionList:
@@ -178,7 +178,7 @@ class Scene:
     @property
     def tet_elastic_bodies(self) -> list[TetrahedralElastodynamicsBody]:
         return self._tet_elastic_bodies
-    
+
     @property
     def transform_library(self) -> TransformLibrary:
         return self._transform_library

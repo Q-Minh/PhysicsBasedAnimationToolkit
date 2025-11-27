@@ -121,6 +121,16 @@ class GlobalRotateTransform(PrimitiveTransform):
         return GlobalRotateTransform("New Global Rotate", 0, 1, np.array([1, 0, 0]), 10)
 
     def specific_apply(self, t, dt, V):
+        """Apply the global rotation transform to the given vertices.
+
+        Args:
+            t (int): The current time step.
+            dt (float): The time step size.
+            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
+
+        Returns:
+            np.ndarray: The transformed vertex positions.
+        """
         # Compute rotation angle
         angle_degrees = self.degrees_per_second * (dt)
         angle_radians = np.deg2rad(angle_degrees)
@@ -138,7 +148,7 @@ class GlobalRotateTransform(PrimitiveTransform):
             + (1 - np.cos(angle_radians)) * (K @ K)
         )
         # Apply rotation
-        V_rotated = (V.T @ R.T).T
+        V_rotated = R @ V
         return V_rotated
 
     def serialize(self, h5group: h5py.Group):
@@ -178,6 +188,16 @@ class LocalRotateTransform(PrimitiveTransform):
         )
 
     def specific_apply(self, t, dt, V):
+        """Apply the local rotation transform to the given vertices.
+
+        Args:
+            t (int): The current time step.
+            dt (float): The time step size.
+            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
+
+        Returns:
+            np.ndarray: The transformed vertex positions.
+        """
         # Compute rotation angle
         angle_degrees = self.degrees_per_second * (dt)
         angle_radians = np.deg2rad(angle_degrees)
@@ -195,11 +215,11 @@ class LocalRotateTransform(PrimitiveTransform):
             + (1 - np.cos(angle_radians)) * (K @ K)
         )
         # Translate vertices to origin
-        V_translated = V - self.origin
+        V_translated = V - self.origin[:, np.newaxis]
         # Apply rotation
-        V_rotated = (V_translated.T @ R.T).T
+        V_rotated = R @ V_translated
         # Translate back
-        V_final = V_rotated + self.origin
+        V_final = V_rotated + self.origin[:, np.newaxis]
         return V_final
 
     def serialize(self, h5group: h5py.Group):
@@ -236,11 +256,21 @@ class TranslateTransform(PrimitiveTransform):
         return TranslateTransform("New Translation", 0, 1, np.array([1, 0, 0]), 10)
 
     def specific_apply(self, t, dt, V):
+        """Apply the translation to the given vertices.
+
+        Args:
+            t (int): The current time step.
+            dt (float): The time step size.
+            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
+
+        Returns:
+            np.ndarray: The transformed vertex positions.
+        """
         # Compute translation distance
-        distance = self.speed * (dt)
+        distance = self.speed * dt
         translation_vector = self.direction * distance
         # Apply translation
-        V_translated = (V.T + translation_vector.T).T
+        V_translated = V + translation_vector[:, np.newaxis]
         return V_translated
 
     def serialize(self, h5group: h5py.Group):

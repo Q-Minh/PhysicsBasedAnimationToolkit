@@ -1,11 +1,7 @@
 # type: ignore
-
-import enum
-import typing
 from pbatoolkit import pbat
 import polyscope as ps
 import polyscope.imgui as imgui
-from .params import ParameterObject
 from .solvers import vbd, anderson, broyden, chebyshev, newton, base
 
 

@@ -5,7 +5,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .solver import Solver
 from .contact import Contact
-from ..utils import transform_library as tlib
+from .utils import transform_library as tlib
 
 
 class Simulation:
@@ -15,6 +15,7 @@ class Simulation:
     _fem_dynamics_init_strategy: (
         pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
     )
+    _t: int
     _profiler: pypbat.profiling.Profiler
 
     _fem_dynamics_vm: ps.VolumeMesh
@@ -23,7 +24,8 @@ class Simulation:
     _solver: Solver
     _contact: Contact
     _transform_library: tlib.TransformLibrary
-    _v0: np.ndarray
+    _v0: np.ndarray[float]
+    _d_mask_0: np.ndarray[int]
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
@@ -34,9 +36,11 @@ class Simulation:
         self._solver = Solver()
         self._contact = Contact()
         self._transform_library = tlib.TransformLibrary()
-        self._v0 = np.array([])
+        self._v0 = np.array([], dtype=float)
+        self._d_mask_0 = np.array([], dtype=int)
         self._dt = 1e-2
         self._bdf_scheme = 1
+        self._t = 0
         self._fem_dynamics_init_strategy = (
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
         )
@@ -79,6 +83,7 @@ class Simulation:
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
         step = imgui.Button("Step", default_button_size)
         reset = imgui.Button("Reset", default_button_size)
+        imgui.Text(f"t={self._t}")
         if reset:
             self._reset_sim()
 
@@ -101,6 +106,9 @@ class Simulation:
     ):
         self._fem_dynamics = fem_dynamics
         self._v0 = self._fem_dynamics.v.copy()  # store initial velocity for reset
+        self._d_mask_0 = (
+            self._fem_dynamics.dmask.copy()
+        )  # store initial dmask for reset
         self._contact.on_new_contact_dynamics(contact_dynamics)
         self._transform_library = transform_library
         self._reset_sim()
@@ -133,14 +141,31 @@ class Simulation:
         )
 
     def _reset_sim(self):
-        self._fem_dynamics.set_time_integration_scheme(dt=self._dt, s=self._bdf_scheme)
-        self._fem_dynamics.set_initial_conditions(self._fem_dynamics.X, self._v0)
-        self._update_visuals_after_position_change()
+        if self._fem_dynamics is not None:
+            self._fem_dynamics.set_time_integration_scheme(
+                dt=self._dt, s=self._bdf_scheme
+            )
+            self._fem_dynamics.constrain(self._d_mask_0)
+            self._fem_dynamics.set_initial_conditions(self._fem_dynamics.X, self._v0)
+            self._update_visuals_after_position_change()
+        self._t = 0
 
     def _step(self):
         if self._fem_dynamics is None:
             ps.error("No simulation scenario loaded!")
             return
+        # Apply procedural constraints
+        fem = self._fem_dynamics
+        for transform in self._transform_library.transforms:
+            tmask = fem.dmask == transform.id
+            fem.x[:, tmask] = transform.apply(self._t, self._dt, fem.x[:, tmask])
+            if (
+                transform.expired(self._t * self._dt)
+                and transform.transform_type == tlib.TransformType.FIXED
+            ):
+                fem.dmask[tmask] = 0
+        fem.constrain(fem.dmask)
+        # Solve
         self._solver.step(
             self._fem_dynamics,
             self._contact.contact_dynamics,
@@ -148,6 +173,7 @@ class Simulation:
             archive=None,
         )
         self._update_visuals_after_position_change()
+        self._t += 1
 
     def _update_visuals_after_position_change(self):
         if self._fem_dynamics_vm is not None:

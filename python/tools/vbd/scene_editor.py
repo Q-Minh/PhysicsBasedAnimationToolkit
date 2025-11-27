@@ -11,7 +11,7 @@ from tkinter import filedialog
 from pbatoolkit import pbat, pypbat
 from utils.dirichlet_index_library import DirichletIndices, DirichletLibrary
 import utils.transform_library as tlib
-import utils.pick as pick
+import python.tools.vbd.utils.box_selection as box_selection
 from utils.scene_mesh import SceneMesh
 
 class SceneState:
@@ -229,7 +229,7 @@ class SceneState:
 
     def spawn_box_selection(self):
         name = f"Selection Box {len(self.selections)}"
-        box = pick.BoxSelection(name)
+        box = box_selection.BoxSelection(name)
         self.selections.append(box)
         return box
     
@@ -421,13 +421,13 @@ def main():
                     if imgui.TreeNode(f"{box.name}"):
                         _, target = imgui.Combo(
                             "Target", box.target.value - 1,
-                            [t.name for t in pick.SelectionTargets]
+                            [t.name for t in box_selection.SelectionTargets]
                         )
-                        box.target = pick.SelectionTargets(target + 1)
+                        box.target = box_selection.SelectionTargets(target + 1)
                         _, box.pos = imgui.SliderFloat3("Position", box.pos, -50, 50)
                         _, box.scale = imgui.SliderFloat3("Size", box.scale, 0, 10)
                         box.ps_mesh.update_vertex_positions(box.vertices * box.scale + box.pos)
-                        if box.target == pick.SelectionTargets.CELL:
+                        if box.target == box_selection.SelectionTargets.CELL:
                             _, box.Y = imgui.InputFloat("Young's Modulus to Apply", box.Y)
                         if imgui.Button("Apply Box Selection", default_button_size):
                             for m in state.meshes:
@@ -435,14 +435,14 @@ def main():
                                 C = m.C
                                 # Get indices inside box
                                 indices = box.inside_test(VT, C)
-                                if box.target == pick.SelectionTargets.VERTEX:
+                                if box.target == box_selection.SelectionTargets.VERTEX:
                                     # Vertices only affected by Dirichlet
                                     transform = state.transform_library.transforms[state.selected_dirichlet_group]
                                     dgroup = state.dirichlet_library[transform.name].get_mesh_indices(m)
                                     for i in indices:
                                         dgroup.update_indices(i)
                                     state.dirichlet_library[transform.name].build_point_cloud()
-                                elif box.target == pick.SelectionTargets.CELL:
+                                elif box.target == box_selection.SelectionTargets.CELL:
                                     # Cells affected by Young's modulus change, but will expand to mass density, etc. later
                                     m.Y[indices] = box.Y
                                     m.handle.add_scalar_quantity("Young's modulus", m.Y, defined_on='cells')

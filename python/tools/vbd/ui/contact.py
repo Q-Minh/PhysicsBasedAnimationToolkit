@@ -1,7 +1,5 @@
 # type: ignore
 
-import enum
-import typing
 from pbatoolkit import pbat
 import polyscope as ps
 import polyscope.imgui as imgui

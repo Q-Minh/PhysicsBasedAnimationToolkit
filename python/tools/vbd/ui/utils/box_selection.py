@@ -3,7 +3,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from enum import Enum
 import numpy as np
-from ..ui.tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
+from ..tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
 import typing
 
 
