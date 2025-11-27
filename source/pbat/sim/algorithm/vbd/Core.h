@@ -222,23 +222,23 @@ void InitializeSolve(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     // Run collision detection with environment and get vertex displacement bounds
-    meshDynamics.UpdateEnvironmentContactConstraints(fem.x);
+    // meshDynamics.UpdateEnvironmentContactConstraints(fem.x);
     // Initialize iterate
     fem.SetupTimeIntegrationOptimization(params.eElasticsInitializationStrategy);
     // Truncate displacement
-    auto xt = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
-    tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
-        Index const v = meshDynamics.mMeshes.GXV(i);
-        if (v < 0)
-            return;
-        Scalar const db = meshDynamics.mMeshSdfContact.mVertexDisplacementBounds(v);
-        Eigen::Vector<Scalar, 3> const dxi = fem.x.col(i) - xt.col(i);
-        Scalar const dxiNorm               = dxi.norm();
-        if (dxiNorm > db)
-            fem.x.col(i) = xt.col(i) + (db / dxiNorm) * dxi;
-    });
-    // Initialize AL contact constraints
-    meshDynamics.PrepareEnvironmentContactsForDualIteration();
+    // auto xt = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
+    // tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
+    //     Index const v = meshDynamics.mMeshes.GXV(i);
+    //     if (v < 0)
+    //         return;
+    //     Scalar const db = meshDynamics.mMeshSdfContact.mVertexDisplacementBounds(v);
+    //     Eigen::Vector<Scalar, 3> const dxi = fem.x.col(i) - xt.col(i);
+    //     Scalar const dxiNorm               = dxi.norm();
+    //     if (dxiNorm > db)
+    //         fem.x.col(i) = xt.col(i) + (db / dxiNorm) * dxi;
+    // });
+    // // Initialize AL contact constraints
+    // meshDynamics.PrepareEnvironmentContactsForDualIteration();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -252,7 +252,7 @@ void Iterate(
     auto betaTildeBdf2 = betaTildeBdf * betaTildeBdf;
     auto xtildeBdf     = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
     contact::potentials::LaggedFriction friction;
-    Scalar const epsvh     = meshDynamics.mEnvContactDynamicsParams.epsv * fem.bdf.BetaTilde();
+    // Scalar const epsvh     = meshDynamics.mEnvContactDynamicsParams.epsv * fem.bdf.BetaTilde();
     auto const nPartitions = params.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
     {
@@ -294,138 +294,138 @@ void Iterate(
             // Environment contact energy
             mini::SVector<Scalar, 3> xi  = FromEigen(fem.x.col(i).template head<3>());
             mini::SVector<Scalar, 3> xti = -FromEigen(xtildeBdf.col(i).template head<3>());
-            Index const vi               = meshDynamics.mMeshes.GXV(i);
-            bool const bIsSurfaceVertex  = vi >= 0;
-            if (bIsSurfaceVertex)
-            {
-                // Loop over triangles incident on i for augmented Lagrangian derivatives
-                IndexVectorX const& heAdj = meshDynamics.mMeshes.GVHEadj;
-                Index const heAdjOffset   = meshDynamics.mMeshes.GVHEp(i);
-                Index const heAdjEnd      = meshDynamics.mMeshes.GVHEp(i + 1);
-                for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
-                {
-                    Index f = geometry::FaceOfHalfEdge(he);
-                    if (not meshDynamics.mMeshSdfContact.mTriangleContactMask(f))
-                        continue;
-                    Eigen::Vector<Index, 3> const finds = meshDynamics.mMeshes.F.col(f);
-                    Eigen::Vector<Scalar, 2> const uv =
-                        meshDynamics.mMeshSdfContact.mTriangleContactPoints.col(f);
-                    Eigen::Matrix<Scalar, 3, 3> const xf = fem.x(Eigen::placeholders::all, finds);
-                    auto ilocal = /*(i==finds(0))*0 + */ (i == finds(1)) * 1 + (i == finds(2)) * 2;
-                    sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CF[f];
-                    Eigen::Vector<Scalar, 3> const xc =
-                        (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
-                    C.Eval(xc);
-                    // AL gradient + hessian
-                    bool const bIsPenetrating = C.C < 0;
-                    Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
-                                   (ilocal == 2) * uv(1);
-                    Scalar lambdakn = C.ForceEstimate();
-                    Eigen::Vector<Scalar, 3> gradAL =
-                        -(bIsPenetrating * alpha) * (C.B.col(0) * lambdakn);
-                    Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        (bIsPenetrating * alpha * alpha) *
-                        (C.k * (C.B.col(0) * C.B.col(0).transpose()));
-                    gi += FromEigen(gradAL);
-                    Hi += FromEigen(hessAL);
-                    // Tangential friction forces
-                    if (bIsPenetrating)
-                    {
-                        Eigen::Matrix<Scalar, 3, 3> const xtf =
-                            xtildeBdf(Eigen::placeholders::all, finds);
-                        Eigen::Vector<Scalar, 3> const xct = (1 - uv(0) - uv(1)) * xtf.col(0) +
-                                                             uv(0) * xtf.col(1) +
-                                                             uv(1) * xtf.col(2);
-                        auto const Tk               = C.B.rightCols<2>();
-                        Eigen::Vector<Scalar, 2> uk = Tk.transpose() * (xc - xct);
-                        Eigen::Vector<Scalar, 2> gkf;
-                        Eigen::Matrix<Scalar, 2, 2> Hkf;
-                        auto gkfmini = FromEigen(gkf);
-                        auto Hkfmini = FromEigen(Hkf);
-                        friction
-                            .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
-                        Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
-                        Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
-                        gi += FromEigen(gkfx);
-                        Hi += FromEigen(Hkfx);
-                    }
-                }
-                // Loop over half-edges incident on i for augmented Lagrangian derivatives
-                for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
-                {
-                    if (not meshDynamics.mMeshSdfContact.mHalfEdgeContactMask(he))
-                        continue;
-                    Scalar const u = meshDynamics.mMeshSdfContact.mHalfEdgeContactPoints(he);
-                    Index const ei = geometry::IncomingVertex(meshDynamics.mMeshes.F, he);
-                    Index const ej = geometry::OutgoingVertex(meshDynamics.mMeshes.F, he);
-                    Eigen::Vector<Scalar, 3> const xei = fem.x.col(ei);
-                    Eigen::Vector<Scalar, 3> const xej = fem.x.col(ej);
-                    auto ilocal                        = /*(i == ei) * 0 + */ (i == ej) * 1;
-                    sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CHE[he];
-                    Eigen::Vector<Scalar, 3> const xc                 = (1 - u) * xei + u * xej;
-                    C.Eval(xc);
-                    // AL gradient + hessian
-                    bool const bIsPenetrating = C.C < 0;
-                    Scalar alpha              = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
-                    Scalar const lambdakn     = C.ForceEstimate();
-                    Eigen::Vector<Scalar, 3> gradAL =
-                        -(bIsPenetrating * alpha) * (C.B.col(0) * lambdakn);
-                    Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        (bIsPenetrating * alpha * alpha) *
-                        (C.k * (C.B.col(0) * C.B.col(0).transpose()));
-                    gi += FromEigen(gradAL);
-                    Hi += FromEigen(hessAL);
-                    // Tangential friction forces
-                    if (bIsPenetrating)
-                    {
-                        Eigen::Vector<Scalar, 3> const xtei = xtildeBdf.col(ei);
-                        Eigen::Vector<Scalar, 3> const xtej = xtildeBdf.col(ej);
-                        Eigen::Vector<Scalar, 3> const xct  = (1 - u) * xtei + u * xtej;
-                        auto const Tk                       = C.B.rightCols<2>();
-                        Eigen::Vector<Scalar, 2> uk         = Tk.transpose() * (xc - xct);
-                        Eigen::Vector<Scalar, 2> gkf;
-                        Eigen::Matrix<Scalar, 2, 2> Hkf;
-                        auto gkfmini = FromEigen(gkf);
-                        auto Hkfmini = FromEigen(Hkf);
-                        friction
-                            .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
-                        Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
-                        Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
-                        gi += FromEigen(gkfx);
-                        Hi += FromEigen(Hkfx);
-                    }
-                }
-                // Check i itself for augmented Lagrangian derivatives
-                if (meshDynamics.mMeshSdfContact.mVertexContactMask(vi))
-                {
-                    sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CV[vi];
-                    C.Eval(ToEigen(xi));
-                    // AL gradient + hessian
-                    bool const bIsPenetrating = C.C < 0;
-                    Scalar const lambdakn     = C.ForceEstimate();
-                    Eigen::Vector<Scalar, 3> gradAL =
-                        -static_cast<int>(bIsPenetrating) * (C.B.col(0) * lambdakn);
-                    Eigen::Matrix<Scalar, 3, 3> hessAL =
-                        (bIsPenetrating * C.k) * (C.B.col(0) * C.B.col(0).transpose());
-                    gi += FromEigen(gradAL);
-                    Hi += FromEigen(hessAL);
-                    // Tangential friction forces
-                    if (bIsPenetrating)
-                    {
-                        auto const Tk               = C.B.rightCols<2>();
-                        mini::SVector<Scalar, 2> uk = FromEigen(Tk).Transpose() * (xi - xti);
-                        Eigen::Vector<Scalar, 2> gkf;
-                        Eigen::Matrix<Scalar, 2, 2> Hkf;
-                        auto gkfmini = FromEigen(gkf);
-                        auto Hkfmini = FromEigen(Hkf);
-                        friction.GradAndHessian(uk, C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
-                        Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
-                        Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
-                        gi += FromEigen(gkfx);
-                        Hi += FromEigen(Hkfx);
-                    }
-                }
-            }
+            // Index const vi               = meshDynamics.mMeshes.GXV(i);
+            // bool const bIsSurfaceVertex  = vi >= 0;
+            // if (bIsSurfaceVertex)
+            // {
+            //     // Loop over triangles incident on i for augmented Lagrangian derivatives
+            //     IndexVectorX const& heAdj = meshDynamics.mMeshes.GVHEadj;
+            //     Index const heAdjOffset   = meshDynamics.mMeshes.GVHEp(i);
+            //     Index const heAdjEnd      = meshDynamics.mMeshes.GVHEp(i + 1);
+            //     for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
+            //     {
+            //         Index f = geometry::FaceOfHalfEdge(he);
+            //         if (not meshDynamics.mMeshSdfContact.mTriangleContactMask(f))
+            //             continue;
+            //         Eigen::Vector<Index, 3> const finds = meshDynamics.mMeshes.F.col(f);
+            //         Eigen::Vector<Scalar, 2> const uv =
+            //             meshDynamics.mMeshSdfContact.mTriangleContactPoints.col(f);
+            //         Eigen::Matrix<Scalar, 3, 3> const xf = fem.x(Eigen::placeholders::all, finds);
+            //         auto ilocal = /*(i==finds(0))*0 + */ (i == finds(1)) * 1 + (i == finds(2)) * 2;
+            //         sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CF[f];
+            //         Eigen::Vector<Scalar, 3> const xc =
+            //             (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
+            //         C.Eval(xc);
+            //         // AL gradient + hessian
+            //         bool const bIsPenetrating = C.C < 0;
+            //         Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
+            //                        (ilocal == 2) * uv(1);
+            //         Scalar lambdakn = C.ForceEstimate();
+            //         Eigen::Vector<Scalar, 3> gradAL =
+            //             -(bIsPenetrating * alpha) * (C.B.col(0) * lambdakn);
+            //         Eigen::Matrix<Scalar, 3, 3> hessAL =
+            //             (bIsPenetrating * alpha * alpha) *
+            //             (C.k * (C.B.col(0) * C.B.col(0).transpose()));
+            //         gi += FromEigen(gradAL);
+            //         Hi += FromEigen(hessAL);
+            //         // Tangential friction forces
+            //         if (bIsPenetrating)
+            //         {
+            //             Eigen::Matrix<Scalar, 3, 3> const xtf =
+            //                 xtildeBdf(Eigen::placeholders::all, finds);
+            //             Eigen::Vector<Scalar, 3> const xct = (1 - uv(0) - uv(1)) * xtf.col(0) +
+            //                                                  uv(0) * xtf.col(1) +
+            //                                                  uv(1) * xtf.col(2);
+            //             auto const Tk               = C.B.rightCols<2>();
+            //             Eigen::Vector<Scalar, 2> uk = Tk.transpose() * (xc - xct);
+            //             Eigen::Vector<Scalar, 2> gkf;
+            //             Eigen::Matrix<Scalar, 2, 2> Hkf;
+            //             auto gkfmini = FromEigen(gkf);
+            //             auto Hkfmini = FromEigen(Hkf);
+            //             friction
+            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
+            //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
+            //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
+            //             gi += FromEigen(gkfx);
+            //             Hi += FromEigen(Hkfx);
+            //         }
+            //     }
+            //     // Loop over half-edges incident on i for augmented Lagrangian derivatives
+            //     for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
+            //     {
+            //         if (not meshDynamics.mMeshSdfContact.mHalfEdgeContactMask(he))
+            //             continue;
+            //         Scalar const u = meshDynamics.mMeshSdfContact.mHalfEdgeContactPoints(he);
+            //         Index const ei = geometry::IncomingVertex(meshDynamics.mMeshes.F, he);
+            //         Index const ej = geometry::OutgoingVertex(meshDynamics.mMeshes.F, he);
+            //         Eigen::Vector<Scalar, 3> const xei = fem.x.col(ei);
+            //         Eigen::Vector<Scalar, 3> const xej = fem.x.col(ej);
+            //         auto ilocal                        = /*(i == ei) * 0 + */ (i == ej) * 1;
+            //         sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CHE[he];
+            //         Eigen::Vector<Scalar, 3> const xc                 = (1 - u) * xei + u * xej;
+            //         C.Eval(xc);
+            //         // AL gradient + hessian
+            //         bool const bIsPenetrating = C.C < 0;
+            //         Scalar alpha              = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
+            //         Scalar const lambdakn     = C.ForceEstimate();
+            //         Eigen::Vector<Scalar, 3> gradAL =
+            //             -(bIsPenetrating * alpha) * (C.B.col(0) * lambdakn);
+            //         Eigen::Matrix<Scalar, 3, 3> hessAL =
+            //             (bIsPenetrating * alpha * alpha) *
+            //             (C.k * (C.B.col(0) * C.B.col(0).transpose()));
+            //         gi += FromEigen(gradAL);
+            //         Hi += FromEigen(hessAL);
+            //         // Tangential friction forces
+            //         if (bIsPenetrating)
+            //         {
+            //             Eigen::Vector<Scalar, 3> const xtei = xtildeBdf.col(ei);
+            //             Eigen::Vector<Scalar, 3> const xtej = xtildeBdf.col(ej);
+            //             Eigen::Vector<Scalar, 3> const xct  = (1 - u) * xtei + u * xtej;
+            //             auto const Tk                       = C.B.rightCols<2>();
+            //             Eigen::Vector<Scalar, 2> uk         = Tk.transpose() * (xc - xct);
+            //             Eigen::Vector<Scalar, 2> gkf;
+            //             Eigen::Matrix<Scalar, 2, 2> Hkf;
+            //             auto gkfmini = FromEigen(gkf);
+            //             auto Hkfmini = FromEigen(Hkf);
+            //             friction
+            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
+            //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
+            //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
+            //             gi += FromEigen(gkfx);
+            //             Hi += FromEigen(Hkfx);
+            //         }
+            //     }
+            //     // Check i itself for augmented Lagrangian derivatives
+            //     if (meshDynamics.mMeshSdfContact.mVertexContactMask(vi))
+            //     {
+            //         sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CV[vi];
+            //         C.Eval(ToEigen(xi));
+            //         // AL gradient + hessian
+            //         bool const bIsPenetrating = C.C < 0;
+            //         Scalar const lambdakn     = C.ForceEstimate();
+            //         Eigen::Vector<Scalar, 3> gradAL =
+            //             -static_cast<int>(bIsPenetrating) * (C.B.col(0) * lambdakn);
+            //         Eigen::Matrix<Scalar, 3, 3> hessAL =
+            //             (bIsPenetrating * C.k) * (C.B.col(0) * C.B.col(0).transpose());
+            //         gi += FromEigen(gradAL);
+            //         Hi += FromEigen(hessAL);
+            //         // Tangential friction forces
+            //         if (bIsPenetrating)
+            //         {
+            //             auto const Tk               = C.B.rightCols<2>();
+            //             mini::SVector<Scalar, 2> uk = FromEigen(Tk).Transpose() * (xi - xti);
+            //             Eigen::Vector<Scalar, 2> gkf;
+            //             Eigen::Matrix<Scalar, 2, 2> Hkf;
+            //             auto gkfmini = FromEigen(gkf);
+            //             auto Hkfmini = FromEigen(Hkf);
+            //             friction.GradAndHessian(uk, C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
+            //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
+            //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
+            //             gi += FromEigen(gkfx);
+            //             Hi += FromEigen(Hkfx);
+            //         }
+            //     }
+            // }
             // dt2 scale potential energies' derivatives
             Hi *= betaTildeBdf2;
             gi *= betaTildeBdf2;
@@ -439,7 +439,7 @@ void Iterate(
         });
     }
     // Update dual variables every VBD iteration
-    meshDynamics.DualUpdateEnvironmentContacts(fem.x);
+    // meshDynamics.DualUpdateEnvironmentContacts(fem.x);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

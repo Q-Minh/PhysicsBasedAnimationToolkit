@@ -5,7 +5,7 @@ import typing
 from pbatoolkit import pbat
 import polyscope as ps
 import polyscope.imgui as imgui
-from .draw_parameter_object import ParameterObject
+from .params import ParameterObject
 
 
 class Contact:

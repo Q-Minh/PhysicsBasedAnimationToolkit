@@ -113,7 +113,7 @@ class TetrahedralElastodynamicsBody:
         self._nue = np.full(T.shape[0], 0.45) if nue is None else nue
         self._rhoe = np.full(T.shape[0], 1e3) if rhoe is None else rhoe
         self._bext = np.zeros((T.shape[0], 3)) if bext is None else bext
-        self._aext = np.array([0.0, -9.81, 0.0]) if aext is None else aext
+        self._aext = np.array([0.0, 0.0, -9.81]) if aext is None else aext
         self._v0 = np.zeros((V.shape[0], 3)) if v0 is None else v0
         self._d_mask = np.full(V.shape[0], 0, dtype=int) if d_mask is None else d_mask
         self._name = name

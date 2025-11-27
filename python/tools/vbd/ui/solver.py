@@ -5,60 +5,58 @@ import typing
 from pbatoolkit import pbat
 import polyscope as ps
 import polyscope.imgui as imgui
-from .draw_parameter_object import ParameterObject
-
-
-class SolverType(enum.Enum):
-    VBD = "VBD"
-    ANDERSON = "Anderson"
-    BROYDEN = "Broyden"
-    CHEBYSHEV = "Chebyshev"
-    NEWTON = "Newton"
+from .params import ParameterObject
+from .solvers import vbd, anderson, broyden, chebyshev, newton, base
 
 
 class Solver:
-    _solver: SolverType
-    _solvers: dict[SolverType, typing.Any]
-    _solver_params: dict[SolverType, ParameterObject]
+    _solver: (
+        vbd.VbdSolver
+        | anderson.AndersonSolver
+        | broyden.BroydenSolver
+        | chebyshev.ChebyshevSolver
+        | newton.NewtonSolver
+    )
+    _solvers: list[base.BaseSolver]
 
     def __init__(self):
-        self._solver = SolverType.VBD
-        self._solver_params = {
-            SolverType.VBD: ParameterObject(pbat.sim.algorithm.vbd.Params()),
-            SolverType.ANDERSON: ParameterObject(
-                pbat.sim.algorithm.vbd.AndersonParams()
-            ),
-            SolverType.BROYDEN: ParameterObject(pbat.sim.algorithm.vbd.BroydenParams()),
-            SolverType.CHEBYSHEV: ParameterObject(
-                pbat.sim.algorithm.vbd.ChebyshevParams()
-            ),
-            SolverType.NEWTON: ParameterObject(
-                pbat.sim.algorithm.newton.Params().with_optimizer(
-                    pbat.math.optimization.Newton(
-                        line_search=pbat.math.optimization.BackTrackingLineSearch(),
-                    )
-                ),
-                {"newton": {"line_search": None}},
-            ),
-        }
+        self._solvers = [
+            vbd.VbdSolver(),
+            anderson.AndersonSolver(),
+            broyden.BroydenSolver(),
+            chebyshev.ChebyshevSolver(),
+            newton.NewtonSolver(),
+        ]
+        self._solver = self._solvers[0]
 
     def draw(self):
         imgui.PushID("Solver")
-        solver_types = list(SolverType)
-        selected_idx = solver_types.index(self._solver)
+        selected_idx = self._solvers.index(self._solver)
         _, selected_idx = imgui.Combo(
             "Solver Type",
             selected_idx,
-            [st.name for st in solver_types],
+            [st.name for st in self._solvers],
         )
-        self._solver = solver_types[selected_idx]
-        param_obj = self._solver_params[self._solver]
-        if imgui.TreeNode("Parameters"):
-            imgui.PushID(selected_idx)
-            param_obj.draw()
-            imgui.PopID()
-            imgui.TreePop()
+        self._solver = self._solvers[selected_idx]
+        self._solver.draw()
         imgui.PopID()
+
+    def on_simulation_scenario_created(
+        self,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        for solver in self._solvers:
+            solver.on_simulation_scenario_created(fem, contact)
+
+    def step(
+        self,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+        init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
+        archive: pbat.io.Archive | None = None,
+    ):
+        self._solver.integrate(fem, contact, init, archive)
 
     def set_visible(self, visible: bool):
         pass

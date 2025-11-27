@@ -16,7 +16,7 @@ def try_draw_tooltip(obj, name):
 def draw_params(obj):
     for name, value in inspect.getmembers(obj):
         if (
-            isinstance(getattr(type(obj), name), property)
+            isinstance(getattr(type(obj), name, None), property)
             and getattr(type(obj), name).fset is None
         ):
             continue

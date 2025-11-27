@@ -12,6 +12,9 @@ class Simulation:
     _fem_dynamics: pbat.sim.dynamics.FemElastoDynamics
     _dt: float
     _bdf_scheme: int
+    _fem_dynamics_init_strategy: (
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
+    )
     _profiler: pypbat.profiling.Profiler
 
     _fem_dynamics_vm: ps.VolumeMesh
@@ -34,6 +37,9 @@ class Simulation:
         self._v0 = np.array([])
         self._dt = 1e-2
         self._bdf_scheme = 1
+        self._fem_dynamics_init_strategy = (
+            pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
+        )
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
@@ -49,8 +55,18 @@ class Simulation:
             if imgui.BeginTabItem("Contact", True, tab_flags)[0]:
                 self._contact.draw()
                 imgui.EndTabItem()
-            if imgui.BeginTabItem("ODE", True, tab_flags)[0]:
-                imgui.PushID("ODE")
+            if imgui.BeginTabItem("Integration", True, tab_flags)[0]:
+                imgui.PushID("Integration")
+                init_strategies = list(
+                    pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
+                )
+                selected_idx = init_strategies.index(self._fem_dynamics_init_strategy)
+                _, selected_idx = imgui.Combo(
+                    "Initialization Strategy",
+                    selected_idx,
+                    [s.name for s in init_strategies],
+                )
+                self._fem_dynamics_init_strategy = init_strategies[selected_idx]
                 _, self._dt = imgui.InputFloat("Time Step", self._dt, 1e-5, 1.0, "%.5f")
                 _, self._bdf_scheme = imgui.InputInt(
                     "BDF Scheme", self._bdf_scheme, step=1
@@ -88,6 +104,9 @@ class Simulation:
         self._contact.on_new_contact_dynamics(contact_dynamics)
         self._transform_library = transform_library
         self._reset_sim()
+        self._solver.on_simulation_scenario_created(
+            self._fem_dynamics, contact_dynamics
+        )
         self._fem_dynamics_vm = ps.register_volume_mesh(
             "FEM Elasto Dynamics", self._fem_dynamics.X.T, self._fem_dynamics.E.T
         )
@@ -116,6 +135,25 @@ class Simulation:
     def _reset_sim(self):
         self._fem_dynamics.set_time_integration_scheme(dt=self._dt, s=self._bdf_scheme)
         self._fem_dynamics.set_initial_conditions(self._fem_dynamics.X, self._v0)
+        self._update_visuals_after_position_change()
 
     def _step(self):
-        ps.error("Simulation stepping not implemented yet")
+        if self._fem_dynamics is None:
+            ps.error("No simulation scenario loaded!")
+            return
+        self._solver.step(
+            self._fem_dynamics,
+            self._contact.contact_dynamics,
+            self._fem_dynamics_init_strategy,
+            archive=None,
+        )
+        self._update_visuals_after_position_change()
+
+    def _update_visuals_after_position_change(self):
+        if self._fem_dynamics_vm is not None:
+            self._fem_dynamics_vm.update_vertex_positions(self._fem_dynamics.x.T)
+        if self._fem_dynamics_dirichlet_pc is not None:
+            d_nodes = self._fem_dynamics.dirichlet_nodes
+            self._fem_dynamics_dirichlet_pc.update_point_positions(
+                self._fem_dynamics.x[:, d_nodes].T
+            )

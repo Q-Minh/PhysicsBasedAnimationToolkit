@@ -30,6 +30,12 @@ void BindBdf(nanobind::module_& m)
             &BdfType::SetStep,
             "Step `s` of the `s`-step BDF scheme")
         .def_prop_rw("h", &BdfType::TimeStep, &BdfType::SetTimeStep, "Time step size")
+        .def_prop_ro(
+            "alpha",
+            [](BdfType& self) { return self.Alpha().eval(); },
+            "Inertia coefficients")
+        .def_prop_ro("beta", &BdfType::Beta, "Forcing term coefficient")
+        .def_prop_ro("beta_tilde", &BdfType::BetaTilde, "Time-step scaled forcing term coefficient")
         .def_ro("ti", &BdfType::ti, "Current time index s.t. `t = t0 + h ti`")
         .def(
             "state",
@@ -53,7 +59,7 @@ void BindBdf(nanobind::module_& m)
             "    n x 1: state derivative vector `x^(o)(ti - s + k)`")
         .def(
             "inertia",
-            [](BdfType& self, int o) { return self.Inertia(o); },
+            [](BdfType& self, int o) -> VectorX { return self.Inertia(o); },
             nb::arg("o") = 0,
             "Inertia of the BDF scheme for the o^th state derivative\n"
             "Args:\n"
