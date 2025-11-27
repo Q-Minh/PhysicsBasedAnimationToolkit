@@ -117,7 +117,7 @@ class BoxSelection:
     def draw(self, meshes: list[TetrahedralElastodynamicsBody]):
         imgui.PushID(self.name)
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
-        _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 10)
+        _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 1)
         self._scale = np.array(self._scale)
         self._ps_mesh.update_vertex_positions(self._vertices * self._scale)
         # Input field for specific property that we're manipulating
