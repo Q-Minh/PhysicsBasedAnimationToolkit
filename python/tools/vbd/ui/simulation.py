@@ -53,10 +53,21 @@ class Simulation:
             # TODO
             ps.error("Simulation stepping not implemented yet")
 
-    def on_fem_elasto_dynamics_created(
-        self, fem_dynamics: pbat.sim.dynamics.FemElastoDynamics
+    def set_visible(self, visible: bool):
+        if self._fem_dynamics_vm is not None:
+            self._fem_dynamics_vm.set_enabled(visible)
+        if self._fem_dynamics_dirichlet_pc is not None:
+            self._fem_dynamics_dirichlet_pc.set_enabled(visible)
+        self._solver.set_visible(visible)
+        self._contact.set_visible(visible)
+
+    def on_simulation_scenario_created(
+        self,
+        fem_dynamics: pbat.sim.dynamics.FemElastoDynamics,
+        contact_dynamics: pbat.sim.contact.MeshDynamics,
     ):
         self._fem_dynamics = fem_dynamics
+        self._contact.on_new_contact_dynamics(contact_dynamics)
         if self._fem_dynamics_vm is not None:
             ps.remove_volume_mesh(self._fem_dynamics_vm.name)
         self._fem_dynamics_vm = ps.register_volume_mesh(

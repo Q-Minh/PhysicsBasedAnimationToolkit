@@ -175,6 +175,10 @@ class Scene:
             for selector in box_selection_list._selectors:
                 selector.set_visible(visible)
 
+    def build_simulation_scenario(self):
+        # TODO: Construct the FEM elasto-dynamics and the contact dynamics
+        return None, None
+
     def _save_session(self):
         root = tk.Tk()
         root.withdraw()

@@ -3,3 +3,4 @@ scipy
 meshio==5.3.5
 polyscope==2.5.0
 h5py==3.15.1
+python-statemachine==2.5.0

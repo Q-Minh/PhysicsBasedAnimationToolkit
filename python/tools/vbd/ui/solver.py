@@ -59,3 +59,6 @@ class Solver:
             imgui.PopID()
             imgui.TreePop()
         imgui.PopID()
+
+    def set_visible(self, visible: bool):
+        pass

@@ -30,11 +30,11 @@ class Contact:
             imgui.TreePop()
         imgui.PopID()
 
-    def on_new_fem_elasto_dynamics(
-        self, fem_dynamics: pbat.sim.dynamics.FemElastoDynamics
-    ):
-        # TODO: Set up contact dynamics with the new fem_dynamics
+    def set_visible(self, visible: bool):
         pass
+
+    def on_new_contact_dynamics(self, contact_dynamics: pbat.sim.contact.MeshDynamics):
+        self._contact_dynamics = contact_dynamics
 
     @property
     def contact_dynamics(self):
