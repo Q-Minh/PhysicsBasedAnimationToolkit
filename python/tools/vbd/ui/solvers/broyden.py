@@ -18,7 +18,7 @@ class Params:
     @property
     def vbd_params(self):
         return self._vbd_params
-    
+
     @vbd_params.setter
     def vbd_params(self, value: pbat.sim.algorithm.vbd.Params):
         self._vbd_params = value
@@ -26,7 +26,7 @@ class Params:
     @property
     def broyden_params(self):
         return self._broyden_params
-    
+
     @broyden_params.setter
     def broyden_params(self, value: pbat.sim.algorithm.vbd.BroydenParams):
         self._broyden_params = value
@@ -43,7 +43,7 @@ class BroydenSolver(BaseSolver):
 
     def draw(self):
         imgui.PushID(self._name)
-        if imgui.TreeNode("Parameters"):
+        if imgui.TreeNode(f"{type(self._params.params).__name__}"):
             self._params.draw()
             imgui.TreePop()
         imgui.PopID()

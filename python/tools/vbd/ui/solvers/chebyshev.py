@@ -43,7 +43,7 @@ class ChebyshevSolver(BaseSolver):
 
     def draw(self):
         imgui.PushID(self._name)
-        if imgui.TreeNode("Parameters"):
+        if imgui.TreeNode(f"{type(self._params.params).__name__}"):
             self._params.draw()
             imgui.TreePop()
         imgui.PopID()

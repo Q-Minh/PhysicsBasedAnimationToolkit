@@ -53,42 +53,16 @@ class Simulation:
             | imgui.ImGuiTabBarFlags_TabListPopupButton
         )
         if imgui.BeginTabBar("Sim bar", tab_flags):
+            if imgui.BeginTabItem("Integration", True, tab_flags)[0]:
+                self._draw_integration_ui(default_button_size)
+                imgui.EndTabItem()
             if imgui.BeginTabItem("Solver", True, tab_flags)[0]:
                 self._solver.draw()
                 imgui.EndTabItem()
             if imgui.BeginTabItem("Contact", True, tab_flags)[0]:
                 self._contact.draw()
                 imgui.EndTabItem()
-            if imgui.BeginTabItem("Integration", True, tab_flags)[0]:
-                imgui.PushID("Integration")
-                init_strategies = list(
-                    pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
-                )
-                selected_idx = init_strategies.index(self._fem_dynamics_init_strategy)
-                _, selected_idx = imgui.Combo(
-                    "Initialization Strategy",
-                    selected_idx,
-                    [s.name for s in init_strategies],
-                )
-                self._fem_dynamics_init_strategy = init_strategies[selected_idx]
-                _, self._dt = imgui.InputFloat("Time Step", self._dt, 1e-5, 1.0, "%.5f")
-                _, self._bdf_scheme = imgui.InputInt(
-                    "BDF Scheme", self._bdf_scheme, step=1
-                )
-                self._bdf_scheme = max(1, min(6, self._bdf_scheme))
-                imgui.PopID()
-                imgui.EndTabItem()
             imgui.EndTabBar()
-
-        _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
-        step = imgui.Button("Step", default_button_size)
-        reset = imgui.Button("Reset", default_button_size)
-        imgui.Text(f"Time step={self._t}, t={self._t * self._dt:.4f}s")
-        if reset:
-            self._reset_sim()
-
-        if step or self._simulate:
-            self._step()
 
     def set_visible(self, visible: bool):
         if self._fem_dynamics_vm is not None:
@@ -183,3 +157,31 @@ class Simulation:
             self._fem_dynamics_dirichlet_pc.update_point_positions(
                 self._fem_dynamics.x[:, d_nodes].T
             )
+
+    def _draw_integration_ui(self, button_size):
+        imgui.PushID("Integration")
+        init_strategies = list(
+            pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
+        )
+        selected_idx = init_strategies.index(self._fem_dynamics_init_strategy)
+        _, selected_idx = imgui.Combo(
+            "Initialization Strategy",
+            selected_idx,
+            [s.name for s in init_strategies],
+        )
+        self._fem_dynamics_init_strategy = init_strategies[selected_idx]
+        _, self._dt = imgui.InputFloat("Time Step", self._dt, 1e-5, 1.0, "%.5f")
+        _, self._bdf_scheme = imgui.InputInt("BDF Scheme", self._bdf_scheme, step=1)
+        self._bdf_scheme = max(1, min(6, self._bdf_scheme))
+
+        _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
+        step = imgui.Button("Step", button_size)
+        reset = imgui.Button("Reset", button_size)
+        imgui.Text(f"Time step={self._t}, t={self._t * self._dt:.4f}s")
+        if reset:
+            self._reset_sim()
+
+        if step or self._simulate:
+            self._step()
+
+        imgui.PopID()

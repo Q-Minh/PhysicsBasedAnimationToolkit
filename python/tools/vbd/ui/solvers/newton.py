@@ -30,7 +30,7 @@ class NewtonSolver(BaseSolver):
 
     def draw(self):
         imgui.PushID(self._name)
-        if imgui.TreeNode("Parameters"):
+        if imgui.TreeNode(f"{type(self._params.params).__name__}"):
             self._params.draw()
             if imgui.TreeNode("linear solver parameters"):
                 max_iters_changed, self._linsol_max_iters = imgui.InputInt(
