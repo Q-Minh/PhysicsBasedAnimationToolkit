@@ -3,6 +3,7 @@ from pbatoolkit import pbat
 import polyscope as ps
 import polyscope.imgui as imgui
 from .solvers import vbd, anderson, broyden, chebyshev, newton, base
+from .utils import transform_library as tlib
 
 
 class Solver:
@@ -47,12 +48,33 @@ class Solver:
 
     def step(
         self,
+        t: int,
+        dt: float,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
         init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
+        transform_library: tlib.TransformLibrary,
         archive: pbat.io.Archive | None = None,
     ):
+        # Apply procedural constraints
+        for transform in transform_library.transforms:
+            tmask = fem.dmask == transform.id
+            fem.x[:, tmask] = transform.apply(t, dt, fem.x[:, tmask])
+            if (
+                transform.expired(t * dt)
+                and transform.transform_type == tlib.TransformType.FIXED
+            ):
+                fem.dmask[tmask] = 0
+        fem.constrain(fem.dmask)
         self._solver.integrate(fem, contact, init, archive)
 
     def set_visible(self, visible: bool):
         pass
+
+    @property
+    def solvers(self) -> list[base.BaseSolver]:
+        return self._solvers
+
+    @property
+    def selected(self) -> int:
+        return self._solvers.index(self._solver)

@@ -5,6 +5,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .solver import Solver
 from .contact import Contact
+from .convergence import Convergence
 from .utils import transform_library as tlib
 
 
@@ -23,6 +24,7 @@ class Simulation:
     _simulate: bool
     _solver: Solver
     _contact: Contact
+    _convergence: Convergence
     _transform_library: tlib.TransformLibrary
     _v0: np.ndarray[float]
     _d_mask_0: np.ndarray[int]
@@ -35,6 +37,7 @@ class Simulation:
         self._simulate = False
         self._solver = Solver()
         self._contact = Contact()
+        self._convergence = Convergence()
         self._transform_library = tlib.TransformLibrary()
         self._v0 = np.array([], dtype=float)
         self._d_mask_0 = np.array([], dtype=int)
@@ -61,6 +64,9 @@ class Simulation:
                 imgui.EndTabItem()
             if imgui.BeginTabItem("Contact", True, tab_flags)[0]:
                 self._contact.draw()
+                imgui.EndTabItem()
+            if imgui.BeginTabItem("Convergence", True, tab_flags)[0]:
+                self._draw_convergence_ui()
                 imgui.EndTabItem()
             imgui.EndTabBar()
 
@@ -128,22 +134,13 @@ class Simulation:
         if self._fem_dynamics is None:
             ps.error("No simulation scenario loaded!")
             return
-        # Apply procedural constraints
-        fem = self._fem_dynamics
-        for transform in self._transform_library.transforms:
-            tmask = fem.dmask == transform.id
-            fem.x[:, tmask] = transform.apply(self._t, self._dt, fem.x[:, tmask])
-            if (
-                transform.expired(self._t * self._dt)
-                and transform.transform_type == tlib.TransformType.FIXED
-            ):
-                fem.dmask[tmask] = 0
-        fem.constrain(fem.dmask)
-        # Solve
         self._solver.step(
+            self._t,
+            self._dt,
             self._fem_dynamics,
             self._contact.contact_dynamics,
             self._fem_dynamics_init_strategy,
+            self._transform_library,
             archive=None,
         )
         self._update_visuals_after_position_change()
@@ -185,3 +182,9 @@ class Simulation:
             self._step()
 
         imgui.PopID()
+
+    def _draw_convergence_ui(self):
+        if self._convergence.should_step:
+            # TODO: Pass in simulation step and solvers so that convergence data can be gathered
+            self._convergence.step()
+        self._convergence.draw()
