@@ -135,6 +135,7 @@ class Simulation:
             ps.error("No simulation scenario loaded!")
             return
         self._apply_procedural_constraints()
+        self._profiler.begin_frame("Physics")
         self._fem_dynamics.setup_time_integration_optimization(
             initialization_strategy=self._fem_dynamics_init_strategy
         )
@@ -143,6 +144,7 @@ class Simulation:
             self._contact.contact_dynamics,
         )
         self._fem_dynamics.step()
+        self._profiler.end_frame("Physics")
         self._update_visuals_after_position_change()
         self._t += 1
 
