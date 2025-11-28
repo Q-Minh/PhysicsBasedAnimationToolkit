@@ -143,10 +143,8 @@ class TetrahedralElastodynamicsBody:
             self.Y_ranges = (np.min(logYe), np.max(logYe))
 
         if nue is None:
-            default_nu = np.log10(default_nu)
             self._nu_ranges = (default_nu, default_nu)
         else:
-            lognue = np.log10(nue)
             self._nu_ranges = (np.min(lognue), np.max(lognue))
 
         if rhoe is None:
@@ -178,12 +176,17 @@ class TetrahedralElastodynamicsBody:
         if einds is None:
             einds = np.arange(self._T.shape[0])
         self._nue[einds] = nu
+        m, M = self.nu_ranges
+        self.nu_ranges = (min(m, nu), max(M, nu))
         self._dirty = True
 
     def set_mass_density(self, rho: float, einds: np.ndarray[int] = None):
         if einds is None:
             einds = np.arange(self._T.shape[0])
         self._rhoe[einds] = rho
+        logrho = np.log10(rho)
+        m, M = self.rho_ranges
+        self.rho_ranges = (min(m, logrho), max(M, logrho))
         self._dirty = True
 
     def set_external_load(self, bext: np.ndarray[float], einds: np.ndarray[int] = None):
