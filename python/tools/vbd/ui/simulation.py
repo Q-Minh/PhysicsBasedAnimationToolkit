@@ -134,25 +134,15 @@ class Simulation:
         if self._fem_dynamics is None:
             ps.error("No simulation scenario loaded!")
             return
-        # Apply procedural constraints
-        fem = self._fem_dynamics
-        for transform in self._transform_library.transforms:
-            tmask = fem.dmask == transform.id
-            fem.x[:, tmask] = transform.apply(self._t, self._dt, fem.x[:, tmask])
-            if (
-                transform.expired(self._t * self._dt)
-                and transform.transform_type == tlib.TransformType.FIXED
-            ):
-                fem.dmask[tmask] = 0
-        fem.constrain(fem.dmask)
-        fem.setup_time_integration_optimization(
+        self._apply_procedural_constraints()
+        self._fem_dynamics.setup_time_integration_optimization(
             initialization_strategy=self._fem_dynamics_init_strategy
         )
         self._solver.solve(
             self._fem_dynamics,
             self._contact.contact_dynamics,
         )
-        fem.step()
+        self._fem_dynamics.step()
         self._update_visuals_after_position_change()
         self._t += 1
 
@@ -194,7 +184,30 @@ class Simulation:
         imgui.PopID()
 
     def _draw_convergence_ui(self):
-        if self._convergence.should_step:
-            # TODO: Pass in simulation step and solvers so that convergence data can be gathered
-            self._convergence.step()
+        if self._convergence.is_convergence_analysis_requested:
+            self._apply_procedural_constraints()
+            self._fem_dynamics.setup_time_integration_optimization(
+                initialization_strategy=self._fem_dynamics_init_strategy
+            )
+            self._convergence.analyze_convergence(
+                self._solver.selected,
+                self._solver.solvers,
+                self._fem_dynamics,
+                self._contact.contact_dynamics,
+            )
+            self._fem_dynamics.step()
+            self._update_visuals_after_position_change()
+            self._t += 1
         self._convergence.draw()
+
+    def _apply_procedural_constraints(self):
+        fem = self._fem_dynamics
+        for transform in self._transform_library.transforms:
+            tmask = fem.dmask == transform.id
+            fem.x[:, tmask] = transform.apply(self._t, self._dt, fem.x[:, tmask])
+            if (
+                transform.expired(self._t * self._dt)
+                and transform.transform_type == tlib.TransformType.FIXED
+            ):
+                fem.dmask[tmask] = 0
+        fem.constrain(fem.dmask)

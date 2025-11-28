@@ -5,6 +5,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .serialize import serialize_solver_iteration
 from .base import BaseSolver
+import typing
 
 
 class NewtonSolver(BaseSolver):
@@ -57,21 +58,25 @@ class NewtonSolver(BaseSolver):
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
     ):
-        # TODO: Call the params.with_linear_solver function to construct the linear solver
         pass
 
     def solve(
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
+        callback: typing.Callable[None, None] | None = None,
     ):
+        if callback is None:
+            callback = lambda: None
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
+        callback()
         pbat.sim.algorithm.newton.initialize_solve(fem, params)
         while newton.k < newton.n_max_iters:
             if newton.gknorm2 < newton.gtol2:
                 break
             if not pbat.sim.algorithm.newton.iterate(fem, params):
                 break
+            callback()
             pbat.sim.algorithm.newton.prepare_next_iteration(fem, params)
         fem.back_substitute_integrated_positions_into_velocities()

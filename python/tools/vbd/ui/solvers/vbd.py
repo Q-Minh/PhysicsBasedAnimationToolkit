@@ -5,7 +5,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .serialize import serialize_solver_iteration
 from .base import BaseSolver
-import numpy as np
+import typing
 
 
 class VbdSolver(BaseSolver):
@@ -36,13 +36,18 @@ class VbdSolver(BaseSolver):
         params.with_vertex_element_adjacency_graph(
             GVGp, GVGe, GVGilocal
         ).with_vertex_colors(colors).construct()
-        
+
     def solve(
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
+        callback: typing.Callable[None, None] | None = None,
     ):
+        if callback is None:
+            callback = lambda: None
+        callback()
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         for k in range(params.n_max_iters):
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
+            callback()
         fem.back_substitute_integrated_positions_into_velocities()

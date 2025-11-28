@@ -5,6 +5,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .serialize import serialize_solver_iteration
 from .base import BaseSolver
+import typing
 
 
 class Params:
@@ -67,11 +68,17 @@ class BroydenSolver(BaseSolver):
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
+        callback: typing.Callable[None, None] | None = None,
     ):
+        if callback is None:
+            callback = lambda: None
+        callback()
         params: Params = self._params.params
         vbd = params.vbd_params
         broyden = params.broyden_params
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
+        callback()
         while broyden.k < vbd.n_max_iters:
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
+            callback()
         fem.back_substitute_integrated_positions_into_velocities()
