@@ -153,9 +153,14 @@ class Simulation:
             self._fem_dynamics_vm.update_vertex_positions(self._fem_dynamics.x.T)
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes
-            self._fem_dynamics_dirichlet_pc.update_point_positions(
-                self._fem_dynamics.x[:, d_nodes].T
-            )
+            if d_nodes.shape[0] != self._fem_dynamics_dirichlet_pc.n_points():
+                self._fem_dynamics_dirichlet_pc = ps.register_point_cloud(
+                    "sim - Dirichlet", self._fem_dynamics.X[:, d_nodes].T
+                )
+            else:
+                self._fem_dynamics_dirichlet_pc.update_point_positions(
+                    self._fem_dynamics.x[:, d_nodes].T
+                )
 
     def _draw_integration_ui(self, button_size):
         imgui.PushID("Integration")
