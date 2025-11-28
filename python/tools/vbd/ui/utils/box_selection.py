@@ -2,6 +2,7 @@
 import polyscope as ps
 import polyscope.imgui as imgui
 from enum import Enum
+from igl import boundary_facets
 import numpy as np
 from ..tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
 import typing
@@ -25,7 +26,10 @@ class BoxSelection:
     _min: np.ndarray
     _max: np.ndarray
     _scale: np.ndarray
+    _surface_only: bool
     _ps_mesh: ps.SurfaceMesh
+    _show_mesh : bool
+    _show_gizmo: bool
 
     def __init__(
         self,
@@ -67,6 +71,9 @@ class BoxSelection:
             ]
         )
         self._scale = np.ones(3, dtype=np.float32)
+        self._show_mesh = True
+        self._show_gizmo = False
+        self._surface_only = False
 
     def on_added(self):
         self._ps_mesh = ps.register_surface_mesh(self.name, self._vertices, self._faces)
@@ -93,6 +100,9 @@ class BoxSelection:
             # Test vertices
             inside = np.all((VT >= self._min) & (VT <= self._max), axis=1)
             indices = np.where(inside)[0]
+            if self._surface_only:
+                boundary_indices = np.unique(boundary_facets(cells))
+                indices = np.intersect1d(boundary_indices, indices)            
             return indices
         if self._target == SelectionTargets.CELL:
             # Test cell centroids
@@ -102,6 +112,10 @@ class BoxSelection:
             return indices
 
     def specific_draw(self):
+        if self._target == SelectionTargets.VERTEX:
+            _, self._surface_only = imgui.Checkbox("Surface Only", self._surface_only)
+            imgui.SameLine()
+
         if isinstance(self._prop_value, float):
             _, self._prop_value = imgui.InputFloat(self._prop_name, self._prop_value)
         elif isinstance(self._prop_value, int):
@@ -129,83 +143,93 @@ class BoxSelection:
                 indices = self.inside_test(VT, C)
                 # Apply in callback that depends on property that we selected
                 self._callback(b, self._prop_value, indices)
+        imgui.Text("Show:")
+        imgui.SameLine()
+        self._show_mesh = self._ps_mesh.is_enabled()
+        self._show_gizmo = self._ps_mesh.get_transform_gizmo_enabled()
+        _, self._show_mesh = imgui.Checkbox("Box", self._show_mesh)
+        imgui.SameLine()
+        _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
+        self._ps_mesh.set_enabled(self._show_mesh)
+        self._ps_mesh.set_transform_gizmo_enabled(self._show_mesh and self._show_gizmo)
         imgui.PopID()
 
     def set_visible(self, visible: bool):
         if self._ps_mesh is not None:
             self._ps_mesh.set_enabled(visible)
+            self._ps_mesh.set_transform_gizmo_enabled(visible)
 
 
-class DirichletSelection(BoxSelection):
+# class DirichletSelection(BoxSelection):
 
-    def __init__(self, name, dirichlet_library, transform_library):
-        super().__init__(name, self.callback, SelectionTargets.VERTEX)
-        self.transform_index = 0
-        self.dirichlet_library = dirichlet_library
-        self.transform_library = transform_library
+#     def __init__(self, name, dirichlet_library, transform_library):
+#         super().__init__(name, self.callback, SelectionTargets.VERTEX)
+#         self.transform_index = 0
+#         self.dirichlet_library = dirichlet_library
+#         self.transform_library = transform_library
 
-    def specific_draw(self):
-        if self.transform_library.transforms:
-            _, self.transform_index = imgui.Combo(
-                "Picked Group",
-                self.transform_index,
-                [t.name for t in self.transform_library.transforms],
-            )
+#     def specific_draw(self):
+#         if self.transform_library.transforms:
+#             _, self.transform_index = imgui.Combo(
+#                 "Picked Group",
+#                 self.transform_index,
+#                 [t.name for t in self.transform_library.transforms],
+#             )
 
-    def callback(self, mesh, indices):
-        # Vertices only affected by Dirichlet
-        transform = self.transform_library.transforms[self.transform_index]
-        dgroup = self.dirichlet_library[transform.name].get_mesh_indices(mesh)
-        for i in indices:
-            dgroup.update_indices(i)
-        self.dirichlet_library[transform.name].build_point_cloud()
-
-
-class CellSelection(BoxSelection):
-    def __init__(
-        self, name, callback: typing.Callable[[int, typing.Any, np.ndarray[int]], None]
-    ):
-        super().__init__(name, callback, SelectionTargets.CELL)
-
-    def specific_draw(self):
-        _, self.stored = imgui.InputFloat(self.property_tag, self.stored)
+#     def callback(self, mesh, indices):
+#         # Vertices only affected by Dirichlet
+#         transform = self.transform_library.transforms[self.transform_index]
+#         dgroup = self.dirichlet_library[transform.name].get_mesh_indices(mesh)
+#         for i in indices:
+#             dgroup.update_indices(i)
+#         self.dirichlet_library[transform.name].build_point_cloud()
 
 
-class VertexSelection(BoxSelection):
-    def __init__(self, name, stored, property_tag, mesh_property_name):
-        super().__init__(name, self.callback, SelectionTargets.CELL)
-        self.stored = stored
-        self.property_tag = property_tag
-        self.mesh_property_name = mesh_property_name
+# class CellSelection(BoxSelection):
+#     def __init__(
+#         self, name, callback: typing.Callable[[int, typing.Any, np.ndarray[int]], None]
+#     ):
+#         super().__init__(name, callback, SelectionTargets.CELL)
 
-    def specific_draw(self):
-        _, self.stored = imgui.InputFloat3(self.property_tag, self.stored)
-
-    def callback(self, mesh, indices):
-        arr = getattr(mesh, self.mesh_property_name)
-        arr[indices] = self.stored
-        # mesh.handle.add_scalar_quantity(self.property_tag, arr, defined_on='nodes')
+#     def specific_draw(self):
+#         _, self.stored = imgui.InputFloat(self.property_tag, self.stored)
 
 
-class YoungSelection(CellSelection):
+# class VertexSelection(BoxSelection):
+#     def __init__(self, name, stored, property_tag, mesh_property_name):
+#         super().__init__(name, self.callback, SelectionTargets.CELL)
+#         self.stored = stored
+#         self.property_tag = property_tag
+#         self.mesh_property_name = mesh_property_name
 
-    def __init__(self, name):
-        super().__init__(name)
+#     def specific_draw(self):
+#         _, self.stored = imgui.InputFloat3(self.property_tag, self.stored)
 
-
-class RhoSelection(CellSelection):
-
-    def __init__(self, name):
-        super().__init__(name, 1e3, "MassDensity", "rho")
-
-
-class NuSelection(CellSelection):
-
-    def __init__(self, name):
-        super().__init__(name, 0.45, "Poisson ratio", "nu")
+#     def callback(self, mesh, indices):
+#         arr = getattr(mesh, self.mesh_property_name)
+#         arr[indices] = self.stored
+#         # mesh.handle.add_scalar_quantity(self.property_tag, arr, defined_on='nodes')
 
 
-class V0Selection(VertexSelection):
+# class YoungSelection(CellSelection):
 
-    def __init__(self, name):
-        super().__init__(name, np.array[0, 0, 0], "Initial velocity", "v0")
+#     def __init__(self, name):
+#         super().__init__(name)
+
+
+# class RhoSelection(CellSelection):
+
+#     def __init__(self, name):
+#         super().__init__(name, 1e3, "MassDensity", "rho")
+
+
+# class NuSelection(CellSelection):
+
+#     def __init__(self, name):
+#         super().__init__(name, 0.45, "Poisson ratio", "nu")
+
+
+# class V0Selection(VertexSelection):
+
+#     def __init__(self, name):
+#         super().__init__(name, np.array[0, 0, 0], "Initial velocity", "v0")
