@@ -46,27 +46,12 @@ class Solver:
         for solver in self._solvers:
             solver.on_simulation_scenario_created(fem, contact)
 
-    def step(
+    def solve(
         self,
-        t: int,
-        dt: float,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
-        init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
-        transform_library: tlib.TransformLibrary,
-        archive: pbat.io.Archive | None = None,
     ):
-        # Apply procedural constraints
-        for transform in transform_library.transforms:
-            tmask = fem.dmask == transform.id
-            fem.x[:, tmask] = transform.apply(t, dt, fem.x[:, tmask])
-            if (
-                transform.expired(t * dt)
-                and transform.transform_type == tlib.TransformType.FIXED
-            ):
-                fem.dmask[tmask] = 0
-        fem.constrain(fem.dmask)
-        self._solver.integrate(fem, contact, init, archive)
+        self._solver.solve(fem, contact)
 
     def set_visible(self, visible: bool):
         pass

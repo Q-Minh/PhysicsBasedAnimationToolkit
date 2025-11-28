@@ -53,13 +53,6 @@ Params& Params::WithVertexColors(Eigen::Ref<IndexVectorX const> const& _colors)
     return *this;
 }
 
-Params&
-Params::WithInitializationStrategy(dynamics::EFemElastoDynamicsTimeStepInitialization _strategy)
-{
-    eElasticsInitializationStrategy = _strategy;
-    return *this;
-}
-
 PBAT_API Params& Params::WithDamping(Scalar _betaR)
 {
     this->betaR = _betaR;
@@ -130,9 +123,6 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("colors", colors);
     group.WriteData("Pptr", Pptr);
     group.WriteData("Padj", Padj);
-    group.WriteMetaData(
-        "eElasticsInitializationStrategy",
-        static_cast<int>(eElasticsInitializationStrategy));
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
 }
@@ -146,11 +136,8 @@ void Params::Deserialize(io::Archive const& archive)
     colors            = group.ReadData<IndexVectorX>("colors");
     Pptr              = group.ReadData<IndexVectorX>("Pptr");
     Padj              = group.ReadData<IndexVectorX>("Padj");
-    eElasticsInitializationStrategy =
-        static_cast<dynamics::EFemElastoDynamicsTimeStepInitialization>(
-            group.ReadMetaData<int>("eElasticsInitializationStrategy"));
-    detHZero  = group.ReadMetaData<Scalar>("detHZero");
-    nMaxIters = group.ReadMetaData<Index>("nMaxIters");
+    detHZero          = group.ReadMetaData<Scalar>("detHZero");
+    nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
 }
 
 } // namespace pbat::sim::algorithm::vbd

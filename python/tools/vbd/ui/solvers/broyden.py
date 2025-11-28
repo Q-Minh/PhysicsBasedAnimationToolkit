@@ -5,6 +5,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .serialize import serialize_solver_iteration
 from .base import BaseSolver
+import typing
 
 
 class Params:
@@ -63,47 +64,21 @@ class BroydenSolver(BaseSolver):
             GVGp, GVGe, GVGilocal
         ).with_vertex_colors(colors).construct()
 
-    def integrate(
+    def solve(
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
-        init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
-        archive: pbat.io.Archive | None = None,
+        callback: typing.Callable[None, None] | None = None,
     ):
+        if callback is None:
+            callback = lambda: None
+        callback()
         params: Params = self._params.params
         vbd = params.vbd_params
         broyden = params.broyden_params
-        vbd.strategy = init
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
-        grp = (
-            archive["pbat.sim.algorithm.vbd.Broyden.Integrate"]
-            if archive is not None
-            else None
-        )
-        if grp is not None:
-            fem.serialize(grp)
-        self._solve(fem, contact, archive=grp)
-        fem.step()
-
-    def _solve(
-        self,
-        fem: pbat.sim.dynamics.FemElastoDynamics,
-        contact: pbat.sim.contact.MeshDynamics,
-        archive: pbat.io.Archive | None = None,
-    ):
-        grp = (
-            archive["pbat.sim.algorithm.vbd.Broyden.Solve"]
-            if archive is not None
-            else None
-        )
-        params: Params = self._params.params
-        vbd = params.vbd_params
-        broyden = params.broyden_params
-        # pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
+        callback()
         while broyden.k < vbd.n_max_iters:
-            if grp is not None:
-                serialize_solver_iteration(fem, broyden.k, grp)
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
+            callback()
         fem.back_substitute_integrated_positions_into_velocities()
-        if grp is not None:
-            serialize_solver_iteration(fem, broyden.k, grp, post_solve=True)

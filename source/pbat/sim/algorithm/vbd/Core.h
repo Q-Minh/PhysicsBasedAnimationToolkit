@@ -94,13 +94,6 @@ struct Params
      */
     PBAT_API Params& WithVertexColors(Eigen::Ref<IndexVectorX const> const& _colors);
     /**
-     * @brief BCD optimization initialization strategy
-     * @param _strategy Initialization strategy
-     * @return Reference to this
-     */
-    PBAT_API Params&
-    WithInitializationStrategy(dynamics::EFemElastoDynamicsTimeStepInitialization _strategy);
-    /**
      * @brief Rayleigh damping coefficient
      * @param _betaR Rayleigh damping coefficient
      * @return Reference to this
@@ -149,13 +142,9 @@ struct Params
     IndexVectorX Pptr;   ///< `|# partitions+1|` partition pointers, s.t. the range `[Pptr[p],
                          ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj;   ///< `|# verts|` partition vertices
-    // Time integration optimization parameters
-    dynamics::EFemElastoDynamicsTimeStepInitialization eElasticsInitializationStrategy{
-        dynamics::EFemElastoDynamicsTimeStepInitialization::
-            TrajectoryWithFdLoad}; ///< Elasto-dynamics initialization strategy
-    Scalar betaR{0};               ///< Rayleigh damping coefficient
-    Index nMaxIters{25};           ///< Maximum number of VBD iterations
-    Scalar detHZero{0};            ///< Numerical zero for hessian pseudo-singularity check
+    Scalar betaR{0};     ///< Rayleigh damping coefficient
+    Index nMaxIters{25}; ///< Maximum number of VBD iterations
+    Scalar detHZero{0};  ///< Numerical zero for hessian pseudo-singularity check
 };
 
 /**
@@ -223,8 +212,6 @@ void InitializeSolve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     // Run collision detection with environment and get vertex displacement bounds
     // meshDynamics.UpdateEnvironmentContactConstraints(fem.x);
-    // Initialize iterate
-    fem.SetupTimeIntegrationOptimization(params.eElasticsInitializationStrategy);
     // Truncate displacement
     // auto xt = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
     // tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
@@ -310,10 +297,10 @@ void Iterate(
             //         Eigen::Vector<Index, 3> const finds = meshDynamics.mMeshes.F.col(f);
             //         Eigen::Vector<Scalar, 2> const uv =
             //             meshDynamics.mMeshSdfContact.mTriangleContactPoints.col(f);
-            //         Eigen::Matrix<Scalar, 3, 3> const xf = fem.x(Eigen::placeholders::all, finds);
-            //         auto ilocal = /*(i==finds(0))*0 + */ (i == finds(1)) * 1 + (i == finds(2)) * 2;
-            //         sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CF[f];
-            //         Eigen::Vector<Scalar, 3> const xc =
+            //         Eigen::Matrix<Scalar, 3, 3> const xf = fem.x(Eigen::placeholders::all,
+            //         finds); auto ilocal = /*(i==finds(0))*0 + */ (i == finds(1)) * 1 + (i ==
+            //         finds(2)) * 2; sim::contact::MeshDynamics::EnvironmentContact& C =
+            //         meshDynamics.CF[f]; Eigen::Vector<Scalar, 3> const xc =
             //             (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
             //         C.Eval(xc);
             //         // AL gradient + hessian
@@ -343,7 +330,8 @@ void Iterate(
             //             auto gkfmini = FromEigen(gkf);
             //             auto Hkfmini = FromEigen(Hkf);
             //             friction
-            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
+            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini,
+            //                 Hkfmini);
             //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
             //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
             //             gi += FromEigen(gkfx);
@@ -388,7 +376,8 @@ void Iterate(
             //             auto gkfmini = FromEigen(gkf);
             //             auto Hkfmini = FromEigen(Hkf);
             //             friction
-            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
+            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini,
+            //                 Hkfmini);
             //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
             //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
             //             gi += FromEigen(gkfx);

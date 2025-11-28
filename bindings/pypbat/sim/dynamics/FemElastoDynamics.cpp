@@ -397,6 +397,7 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             &ElastoDynamics::Deserialize,
             nb::arg("archive"),
             "Deserialize the problem from an archive")
+        .def("copy", [](ElastoDynamics const& self) { return ElastoDynamics(self); })
         // Class docstring
         .doc() = R"doc(
 Finite Element Elasto-Dynamics with BDF time integration.
