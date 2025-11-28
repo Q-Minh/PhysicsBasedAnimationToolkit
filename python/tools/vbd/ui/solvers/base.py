@@ -22,12 +22,10 @@ class BaseSolver(ABC):
         pass
 
     @abstractmethod
-    def integrate(
+    def solve(
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
-        init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
-        archive: pbat.io.Archive = None,
     ):
         pass
 

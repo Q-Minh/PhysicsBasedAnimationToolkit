@@ -36,43 +36,13 @@ class VbdSolver(BaseSolver):
         params.with_vertex_element_adjacency_graph(
             GVGp, GVGe, GVGilocal
         ).with_vertex_colors(colors).construct()
-
-    def integrate(
+        
+    def solve(
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
-        init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
-        archive: pbat.io.Archive | None = None,
     ):
-        fem.setup_time_integration_optimization(initialization_strategy=init)
-        # bt = fem.bdf.beta_tilde
-        # xtilde = fem.x + bt * fem.v + bt**2 * fem.aext()
-        # fem.xtilde = xtilde
-        # fem.x = fem.xtilde
-        grp = None
-        if archive is not None:
-            grp = archive["pbat.sim.algorithm.vbd.Integrate"]
-            fem.serialize(grp)
-        self._solve(fem, contact, archive=grp)
-        fem.step()
-
-    def _solve(
-        self,
-        fem: pbat.sim.dynamics.FemElastoDynamics,
-        contact: pbat.sim.contact.MeshDynamics,
-        archive: pbat.io.Archive | None = None,
-    ):
-        grp = None
-        if archive is not None:
-            grp = archive["pbat.sim.algorithm.vbd.Solve"]
         params: pbat.sim.algorithm.vbd.Params = self._params.params
-        # pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
         for k in range(params.n_max_iters):
-            # if grp is not None:
-            #     serialize_solver_iteration(fem, k, grp)
-            # if (k + 1) % 5 == 0:
-            #     contact.update_environment_contact_constraints(fem.x)
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
         fem.back_substitute_integrated_positions_into_velocities()
-        if grp is not None:
-            serialize_solver_iteration(fem, params.n_max_iters, grp, post_solve=True)

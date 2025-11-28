@@ -57,7 +57,7 @@ class Convergence:
         imgui.PushID("Convergence")
         if imgui.TreeNode("Plot Options"):
             for i, (flag_name, flag_value) in enumerate(plot_flags):
-                changed, self._plot_flag_mask[i] = imgui.Checkbox(
+                _, self._plot_flag_mask[i] = imgui.Checkbox(
                     flag_name,
                     self._plot_flag_mask[i],
                 )
@@ -97,7 +97,7 @@ class Convergence:
 
     def step(self):
         # TODO: Step all solvers and collect convergence data for real
-        self._f = [np.arange(5) for _ in range(3)]
+        self._f = [[1, 2, 3], [-1, 0, 1, 2], [3, 4, 5]]
         self._gnorm = [np.arange(5) for _ in range(3)]
         self._solver_names = ["Solver A", "Solver B", "Solver C"]
         self._convergence_analysis_requested = False

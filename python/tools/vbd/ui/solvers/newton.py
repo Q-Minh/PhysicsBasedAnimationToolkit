@@ -60,58 +60,18 @@ class NewtonSolver(BaseSolver):
         # TODO: Call the params.with_linear_solver function to construct the linear solver
         pass
 
-    def integrate(
+    def solve(
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
-        init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
-        archive: pbat.io.Archive | None = None,
     ):
-        fem.setup_time_integration_optimization(initialization_strategy=init)
-        grp = (
-            archive["pbat.sim.algorithm.newton.Integrate"]
-            if archive is not None
-            else None
-        )
-        if grp is not None:
-            fem.serialize(grp)
-        self._solve(fem, contact, archive=grp)
-        fem.back_substitute_integrated_positions_into_velocities()
-        fem.step()
-
-    def _solve(
-        self,
-        fem: pbat.sim.dynamics.FemElastoDynamics,
-        contact: pbat.sim.contact.MeshDynamics,
-        archive: pbat.io.Archive | None = None,
-    ):
-        grp = (
-            archive["pbat.sim.algorithm.newton.Solve"] if archive is not None else None
-        )
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
         pbat.sim.algorithm.newton.initialize_solve(fem, params)
         while newton.k < newton.n_max_iters:
-            if grp is not None:
-                serialize_solver_iteration(
-                    fem, newton.k, newton, grp, f_serialize_more=self._serialize_more
-                )
             if newton.gknorm2 < newton.gtol2:
                 break
             if not pbat.sim.algorithm.newton.iterate(fem, params):
                 break
             pbat.sim.algorithm.newton.prepare_next_iteration(fem, params)
         fem.back_substitute_integrated_positions_into_velocities()
-        if grp is not None:
-            serialize_solver_iteration(
-                fem,
-                newton.k,
-                newton,
-                grp,
-                f_serialize_more=self._serialize_more,
-                post_solve=True,
-            )
-
-    def _serialize_more(self, arc: pbat.io.Archive):
-        newton: pbat.math.optimization.Newton = self._params.params
-        newton.serialize(arc)

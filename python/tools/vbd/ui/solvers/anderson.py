@@ -63,47 +63,15 @@ class AndersonSolver(BaseSolver):
             GVGp, GVGe, GVGilocal
         ).with_vertex_colors(colors).construct()
 
-    def integrate(
+    def solve(
         self,
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
-        init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
-        archive: pbat.io.Archive | None = None,
     ):
-        params: Params = self._params.params
-        vbd = params.vbd_params
-        anderson = params.anderson_params
-        vbd.strategy = init
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
-        grp = (
-            archive["pbat.sim.algorithm.vbd.Anderson.Integrate"]
-            if archive is not None
-            else None
-        )
-        if grp is not None:
-            fem.serialize(grp)
-        self._solve(fem, contact, archive=grp)
-        fem.step()
-
-    def _solve(
-        self,
-        fem: pbat.sim.dynamics.FemElastoDynamics,
-        contact: pbat.sim.contact.MeshDynamics,
-        archive: pbat.io.Archive | None = None,
-    ):
-        grp = (
-            archive["pbat.sim.algorithm.vbd.Anderson.Solve"]
-            if archive is not None
-            else None
-        )
         params: Params = self._params.params
         vbd = params.vbd_params
         anderson = params.anderson_params
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
         while anderson.k < vbd.n_max_iters:
-            if grp is not None:
-                serialize_solver_iteration(fem, anderson.k, grp)
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)
         fem.back_substitute_integrated_positions_into_velocities()
-        if grp is not None:
-            serialize_solver_iteration(fem, anderson.k, grp, post_solve=True)

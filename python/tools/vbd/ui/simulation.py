@@ -134,15 +134,25 @@ class Simulation:
         if self._fem_dynamics is None:
             ps.error("No simulation scenario loaded!")
             return
-        self._solver.step(
-            self._t,
-            self._dt,
+        # Apply procedural constraints
+        fem = self._fem_dynamics
+        for transform in self._transform_library.transforms:
+            tmask = fem.dmask == transform.id
+            fem.x[:, tmask] = transform.apply(self._t, self._dt, fem.x[:, tmask])
+            if (
+                transform.expired(self._t * self._dt)
+                and transform.transform_type == tlib.TransformType.FIXED
+            ):
+                fem.dmask[tmask] = 0
+        fem.constrain(fem.dmask)
+        fem.setup_time_integration_optimization(
+            initialization_strategy=self._fem_dynamics_init_strategy
+        )
+        self._solver.solve(
             self._fem_dynamics,
             self._contact.contact_dynamics,
-            self._fem_dynamics_init_strategy,
-            self._transform_library,
-            archive=None,
         )
+        fem.step()
         self._update_visuals_after_position_change()
         self._t += 1
 
