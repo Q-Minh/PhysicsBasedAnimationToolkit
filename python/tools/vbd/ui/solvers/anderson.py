@@ -70,7 +70,11 @@ class AndersonSolver(BaseSolver):
         init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
         archive: pbat.io.Archive | None = None,
     ):
-        fem.setup_time_integration_optimization(initialization_strategy=init)
+        params: Params = self._params.params
+        vbd = params.vbd_params
+        anderson = params.anderson_params
+        vbd.strategy = init
+        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
         grp = (
             archive["pbat.sim.algorithm.vbd.Anderson.Integrate"]
             if archive is not None

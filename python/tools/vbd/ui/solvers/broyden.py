@@ -70,7 +70,6 @@ class BroydenSolver(BaseSolver):
         init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
         archive: pbat.io.Archive | None = None,
     ):
-        # fem.setup_time_integration_optimization(initialization_strategy=init)
         params: Params = self._params.params
         vbd = params.vbd_params
         broyden = params.broyden_params

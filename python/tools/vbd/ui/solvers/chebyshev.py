@@ -70,7 +70,11 @@ class ChebyshevSolver(BaseSolver):
         init: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization,
         archive: pbat.io.Archive | None = None,
     ):
-        fem.setup_time_integration_optimization(initialization_strategy=init)
+        params: Params = self._params.params
+        vbd = params.vbd_params
+        chebyshev = params.chebyshev_params
+        vbd.strategy = init
+        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
         grp = (
             archive["pbat.sim.algorithm.vbd.Chebyshev.Integrate"]
             if archive is not None

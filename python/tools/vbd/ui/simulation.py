@@ -111,7 +111,6 @@ class Simulation:
         )  # store initial dmask for reset
         self._contact.on_new_contact_dynamics(contact_dynamics)
         self._transform_library = transform_library
-        self._reset_sim()
         self._solver.on_simulation_scenario_created(
             self._fem_dynamics, contact_dynamics
         )
@@ -139,6 +138,7 @@ class Simulation:
         self._fem_dynamics_dirichlet_pc.add_scalar_quantity(
             "Group", self._fem_dynamics.dmask[d_nodes], cmap="turbo", enabled=True
         )
+        self._reset_sim()
 
     def _reset_sim(self):
         if self._fem_dynamics is not None:
