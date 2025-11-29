@@ -3,6 +3,7 @@ import numpy as np
 import h5py as h5
 import polyscope as ps
 import polyscope.imgui as imgui
+from . import material
 
 
 class TetrahedralElastodynamicsBody:
@@ -19,10 +20,6 @@ class TetrahedralElastodynamicsBody:
     _vm: ps.VolumeMesh = None  # Polyscope volume mesh for visualization
     _pc: ps.PointCloud = None  # Polyscope point cloud for visualization
     _name: str = None  # Name of the body
-
-    Y_ranges: tuple[float, float]
-    _nu_ranges: tuple[float, float]
-    _rho_ranges: tuple[float, float]
 
     _cached_transform: np.ndarray
 
@@ -56,19 +53,24 @@ class TetrahedralElastodynamicsBody:
             "Young's Modulus",
             np.log10(self._Ye + 1),
             defined_on="cells",
-            vminmax=self.Y_ranges,
+            vminmax=material.young_modulus_log10_range(),
+            cmap=material.young_modulus_log10_cmap(),
             enabled=True,
         )
         self._vm.add_scalar_quantity(
             "Poisson's Ratio",
             self._nue,
             defined_on="cells",
+            vminmax=material.poisson_ratio_range(),
+            cmap=material.poisson_ratio_cmap(),
             enabled=False,
         )
         self._vm.add_scalar_quantity(
             "Mass Density",
             np.log10(self._rhoe + 1),
             defined_on="cells",
+            vminmax=material.mass_density_log10_range(),
+            cmap=material.mass_density_log10_cmap(),
             enabled=False,
         )
         self._vm.add_vector_quantity(
@@ -135,25 +137,6 @@ class TetrahedralElastodynamicsBody:
         self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
         self._cached_transform = np.eye(4)
         self._vm.set_transform(self._cached_transform)
-        if Ye is None:
-            default_Y = np.log10(default_Y)
-            self.Y_ranges = (default_Y, default_Y)
-        else:
-            logYe = np.log10(Ye)
-            self.Y_ranges = (np.min(logYe), np.max(logYe))
-
-        if nue is None:
-            self._nu_ranges = (default_nu, default_nu)
-        else:
-            self._nu_ranges = (np.min(lognue), np.max(lognue))
-
-        if rhoe is None:
-            default_rho = np.log10(default_rho)
-            self._rho_ranges = (default_rho, default_rho)
-        else:
-            logrhoe = np.log10(rhoe)
-            self._rho_ranges = (np.min(logrhoe), np.max(logrhoe))
-        
         self._dirty = True
 
     def on_mesh_removed(self):
@@ -166,27 +149,24 @@ class TetrahedralElastodynamicsBody:
     def set_young_modulus(self, Y: float, einds: np.ndarray[int] = None):
         if einds is None:
             einds = np.arange(self._T.shape[0])
-        self._Ye[einds] = Y
-        logY = np.log10(Y)
-        m, M = self.Y_ranges
-        self.Y_ranges = (min(m, logY), max(M, logY))
+        Ymin, Ymax = material.young_modulus_log10_range()
+        Ymin, Ymax = 10**Ymin, 10**Ymax
+        self._Ye[einds] = min(max(Y, Ymin), Ymax)
         self._dirty = True
 
     def set_poisson_ratio(self, nu: float, einds: np.ndarray[int] = None):
         if einds is None:
             einds = np.arange(self._T.shape[0])
-        self._nue[einds] = nu
-        m, M = self.nu_ranges
-        self.nu_ranges = (min(m, nu), max(M, nu))
+        numin, numax = material.poisson_ratio_range()
+        self._nue[einds] = min(max(nu, numin), numax)
         self._dirty = True
 
     def set_mass_density(self, rho: float, einds: np.ndarray[int] = None):
         if einds is None:
             einds = np.arange(self._T.shape[0])
-        self._rhoe[einds] = rho
-        logrho = np.log10(rho)
-        m, M = self.rho_ranges
-        self.rho_ranges = (min(m, logrho), max(M, logrho))
+        rmin, rmax = material.mass_density_log10_range()
+        rmin, rmax = 10**rmin, 10**rmax
+        self._rhoe[einds] = min(max(rho, rmin), rmax)
         self._dirty = True
 
     def set_external_load(self, bext: np.ndarray[float], einds: np.ndarray[int] = None):
@@ -215,31 +195,6 @@ class TetrahedralElastodynamicsBody:
     def set_dirichlet_group(self, group: int, vinds: np.ndarray[int]):
         self._d_mask[vinds] = group
         self._dirty = True
-
-    
-    def compare_young_modulus(self, compare):
-        m, M = self.Y_ranges
-        n, N = compare.Y_ranges
-        global_min = min(n, m, M, N)
-        global_max = max(n, m, M, N)
-        self.Y_ranges = (global_min, global_max)
-        compare.Y_ranges = self.Y_ranges
-
-    def compare_rho(self, compare):
-        m, M = self.rho_ranges
-        n, N = compare.rho_ranges
-        global_min = min(n, m, M, N)
-        global_max = max(n, m, M, N)
-        self.rho_ranges = (global_min, global_max)
-        compare.rho_ranges = self.rho_ranges
-
-    def compare_nu(self, compare):
-        m, M = self.nu_ranges
-        n, N = compare.nu_ranges
-        global_min = min(n, m, M, N)
-        global_max = max(n, m, M, N)
-        self.nu_ranges = (global_min, global_max)
-        compare.nu_ranges = self.nu_ranges
 
     def serialize(self, grp: h5.Group):
         grp = grp.create_group("tools.vbd.ui.TetrahedralElastodynamicsBody")

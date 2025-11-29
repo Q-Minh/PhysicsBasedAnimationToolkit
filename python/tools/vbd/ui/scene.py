@@ -259,10 +259,6 @@ class Scene:
                 id = self._get_new_id()
                 body = TetrahedralElastodynamicsBody()
                 body.on_mesh_loaded(f"{filename} - {id}", V, T)
-                for old_bodies in self._tet_elastic_bodies:
-                    old_bodies.compare_young_modulus(body)
-                    old_bodies.compare_nu(body)
-                    old_bodies.compare_rho(body)
                 self._tet_elastic_bodies.append(body)
             except Exception as e:
                 ps.error(f"Error loading tetrahedral mesh:\n{e}")

@@ -28,7 +28,7 @@ class BoxSelection:
     _scale: np.ndarray
     _surface_only: bool
     _ps_mesh: ps.SurfaceMesh
-    _show_mesh : bool
+    _show_mesh: bool
     _show_gizmo: bool
 
     def __init__(
@@ -102,7 +102,7 @@ class BoxSelection:
             indices = np.where(inside)[0]
             if self._surface_only:
                 boundary_indices = np.unique(boundary_facets(cells))
-                indices = np.intersect1d(boundary_indices, indices)            
+                indices = np.intersect1d(boundary_indices, indices)
             return indices
         if self._target == SelectionTargets.CELL:
             # Test cell centroids
@@ -112,10 +112,6 @@ class BoxSelection:
             return indices
 
     def specific_draw(self):
-        if self._target == SelectionTargets.VERTEX:
-            _, self._surface_only = imgui.Checkbox("Surface Only", self._surface_only)
-            imgui.SameLine()
-
         if isinstance(self._prop_value, float):
             _, self._prop_value = imgui.InputFloat(self._prop_name, self._prop_value)
         elif isinstance(self._prop_value, int):
@@ -136,6 +132,8 @@ class BoxSelection:
         self._ps_mesh.update_vertex_positions(self._vertices * self._scale)
         # Input field for specific property that we're manipulating
         self.specific_draw()
+        if self._target == SelectionTargets.VERTEX:
+            _, self._surface_only = imgui.Checkbox("Surface Only", self._surface_only)
         if imgui.Button("Apply", default_button_size):
             for b, m in enumerate(meshes):
                 VT, C = m.VT, m.T
@@ -148,10 +146,13 @@ class BoxSelection:
         self._show_mesh = self._ps_mesh.is_enabled()
         self._show_gizmo = self._ps_mesh.get_transform_gizmo_enabled()
         _, self._show_mesh = imgui.Checkbox("Box", self._show_mesh)
-        imgui.SameLine()
-        _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
         self._ps_mesh.set_enabled(self._show_mesh)
-        self._ps_mesh.set_transform_gizmo_enabled(self._show_mesh and self._show_gizmo)
+        if self._show_mesh:
+            imgui.SameLine()
+            _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
+            self._ps_mesh.set_transform_gizmo_enabled(
+                self._show_mesh and self._show_gizmo
+            )
         imgui.PopID()
 
     def set_visible(self, visible: bool):

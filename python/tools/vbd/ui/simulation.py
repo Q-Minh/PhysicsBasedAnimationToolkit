@@ -7,6 +7,7 @@ from .solver import Solver
 from .contact import Contact
 from .convergence import Convergence
 from .utils import transform_library as tlib
+from . import material
 
 
 class Simulation:
@@ -98,18 +99,23 @@ class Simulation:
             "FEM Elasto Dynamics", self._fem_dynamics.X.T, self._fem_dynamics.E.T
         )
         self._fem_dynamics_vm.add_scalar_quantity(
-            "Mass", np.log10(self._fem_dynamics.m + 1), defined_on="vertices"
+            "Mass",
+            np.log10(self._fem_dynamics.m + 1),
+            defined_on="vertices",
+            cmap=material.mass_density_log10_cmap(),
         )
         self._fem_dynamics_vm.add_scalar_quantity(
             "Lame mu",
             np.log10(self._fem_dynamics.lamegU[0, :] + 1),
             defined_on="cells",
+            cmap=material.lame_parameters_cmap(),
             enabled=True,
         )
         self._fem_dynamics_vm.add_scalar_quantity(
             "Lame lambda",
             np.log10(self._fem_dynamics.lamegU[1, :] + 1),
             defined_on="cells",
+            cmap=material.lame_parameters_cmap(),
         )
         d_nodes = self._fem_dynamics.dirichlet_nodes
         self._fem_dynamics_dirichlet_pc = ps.register_point_cloud(
