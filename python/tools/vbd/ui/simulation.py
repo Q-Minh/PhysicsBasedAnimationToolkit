@@ -27,8 +27,10 @@ class Simulation:
     _contact: Contact
     _convergence: Convergence
     _transform_library: tlib.TransformLibrary
+    _tet_elastic_body_names: list[str]
+    _XP: np.ndarray[int]
     _v0: np.ndarray[float]
-    _d_mask_0: np.ndarray[int]
+    _xD: np.ndarray[float]
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
@@ -40,8 +42,10 @@ class Simulation:
         self._contact = Contact()
         self._convergence = Convergence()
         self._transform_library = tlib.TransformLibrary()
+        self._tet_elastic_body_names = []
+        self._XP = np.array([], dtype=int)
         self._v0 = np.array([], dtype=float)
-        self._d_mask_0 = np.array([], dtype=int)
+        self._xD = np.array([], dtype=float)
         self._dt = 1e-2
         self._bdf_scheme = 1
         self._t = 0
@@ -81,17 +85,19 @@ class Simulation:
 
     def on_simulation_scenario_created(
         self,
+        tet_elastic_body_names: list[str],
+        XP: np.ndarray[int],
         fem_dynamics: pbat.sim.dynamics.FemElastoDynamics,
         contact_dynamics: pbat.sim.contact.MeshDynamics,
         transform_library: tlib.TransformLibrary = None,
     ):
         self._fem_dynamics = fem_dynamics
         self._v0 = self._fem_dynamics.v.copy()  # store initial velocity for reset
-        self._d_mask_0 = (
-            self._fem_dynamics.dmask.copy()
-        )  # store initial dmask for reset
+        self._xD = self._fem_dynamics.x.copy()  # store initial position for reset
         self._contact.on_new_contact_dynamics(contact_dynamics)
         self._transform_library = transform_library
+        self._tet_elastic_body_names = tet_elastic_body_names
+        self._XP = XP
         self._solver.on_simulation_scenario_created(
             self._fem_dynamics, contact_dynamics
         )
@@ -117,24 +123,22 @@ class Simulation:
             defined_on="cells",
             cmap=material.lame_parameters_cmap(),
         )
+        self._constrain()
         d_nodes = self._fem_dynamics.dirichlet_nodes
         self._fem_dynamics_dirichlet_pc = ps.register_point_cloud(
             "sim - Dirichlet", self._fem_dynamics.X[:, d_nodes].T
         )
-        self._fem_dynamics_dirichlet_pc.add_scalar_quantity(
-            "Group", self._fem_dynamics.dmask[d_nodes], cmap="turbo", enabled=True
-        )
         self._reset_sim()
 
     def _reset_sim(self):
+        self._t = 0
         if self._fem_dynamics is not None:
             self._fem_dynamics.set_time_integration_scheme(
                 dt=self._dt, s=self._bdf_scheme
             )
-            self._fem_dynamics.constrain(self._d_mask_0)
             self._fem_dynamics.set_initial_conditions(self._fem_dynamics.X, self._v0)
+            self._constrain()
             self._update_visuals_after_position_change()
-        self._t = 0
 
     def _step(self):
         if self._fem_dynamics is None:
@@ -213,14 +217,23 @@ class Simulation:
             self._t += 1
         self._convergence.draw()
 
+    def _constrain(self):
+        fem = self._fem_dynamics
+        fem.dmask = np.zeros_like(fem.dmask, dtype=int)
+        for name, dnodes in self._transform_library.all_transformed_nodes(
+            self._t, self._dt
+        ):
+            fem.dmask[dnodes] = 1
+        fem.constrain(fem.dmask)
+
     def _apply_procedural_constraints(self):
         fem = self._fem_dynamics
-        for transform in self._transform_library.transforms:
-            tmask = fem.dmask == transform.id
-            fem.x[:, tmask] = transform.apply(self._t, self._dt, fem.x[:, tmask])
-            if (
-                transform.expired(self._t * self._dt)
-                and transform.transform_type == tlib.TransformType.FIXED
-            ):
-                fem.dmask[tmask] = 0
-        fem.constrain(fem.dmask)
+        self._constrain()
+        self._xD = fem.x
+        for start, end, name in zip(
+            self._XP[:-1], self._XP[1:], self._tet_elastic_body_names
+        ):
+            self._xD[:, start:end] = self._transform_library.apply(
+                name, self._xD[:, start:end], self._t, self._dt
+            )
+        fem.x = self._xD

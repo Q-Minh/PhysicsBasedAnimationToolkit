@@ -15,7 +15,6 @@ class TetrahedralElastodynamicsBody:
     _bext: np.ndarray[float]  # `|# vertices| x 3` array of external body forces
     _aext: np.ndarray[float]  # `3 x 1` external acceleration
     _v0: np.ndarray[float]  # `|# vertices| x 3` array of initial velocities
-    _d_mask: np.ndarray[int]  # `|# vertices|` integer array for Dirichlet constraints
     _dirty: bool = False  # Flag indicating if the body has been modified
     _vm: ps.VolumeMesh = None  # Polyscope volume mesh for visualization
     _pc: ps.PointCloud = None  # Polyscope point cloud for visualization
@@ -32,7 +31,6 @@ class TetrahedralElastodynamicsBody:
         self._bext = None
         self._aext = None
         self._v0 = None
-        self._d_mask = None
         self._dirty = False
         self._cached_transform = np.eye(4)
 
@@ -85,25 +83,6 @@ class TetrahedralElastodynamicsBody:
             defined_on="vertices",
             enabled=False,
         )
-        d_nodes = np.where(self._d_mask > 0)[0]
-        if d_nodes.shape[0] > 0:
-            self._pc = ps.register_point_cloud(
-                f"{self._name} - Dirichlet", self.VT[d_nodes, :]
-            )
-            d_groups = self._d_mask[d_nodes]
-            self._pc.add_scalar_quantity(
-                "Group",
-                d_groups,
-                cmap="turbo",
-                vminmax=(1, n_dirichlet_groups),
-                enabled=True,
-            )
-        # It's possible that the object used to have a dnodes but they were all removed using a selection
-        # We want to remove the point cloud
-        elif self._pc is not None and ps.has_point_cloud(self._pc.get_name()):
-            ps.remove_point_cloud(self._pc.get_name())
-            self._pc = None
-
         self._cached_transform = np.array(self._vm.get_transform())
         self._dirty = False
 
@@ -118,7 +97,6 @@ class TetrahedralElastodynamicsBody:
         bext: np.ndarray[float] = None,
         aext: np.ndarray[float] = None,
         v0: np.ndarray[float] = None,
-        d_mask: np.ndarray[bool] = None,
     ):
         default_Y = 1e6
         default_nu = 0.45
@@ -131,7 +109,6 @@ class TetrahedralElastodynamicsBody:
         self._bext = np.zeros((T.shape[0], 3)) if bext is None else bext
         self._aext = np.array([0.0, 0.0, -9.81]) if aext is None else aext
         self._v0 = np.zeros((V.shape[0], 3)) if v0 is None else v0
-        self._d_mask = np.full(V.shape[0], 0, dtype=int) if d_mask is None else d_mask
         self._name = name
         self._throw_if_invalid_state()
         self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
@@ -192,10 +169,6 @@ class TetrahedralElastodynamicsBody:
         self._v0[vinds, :] = v0
         self._dirty = True
 
-    def set_dirichlet_group(self, group: int, vinds: np.ndarray[int]):
-        self._d_mask[vinds] = group
-        self._dirty = True
-
     def serialize(self, grp: h5.Group):
         grp = grp.create_group("tools.vbd.ui.TetrahedralElastodynamicsBody")
         grp["V"] = self.VT
@@ -206,7 +179,6 @@ class TetrahedralElastodynamicsBody:
         grp["bext"] = self._bext
         grp["aext"] = self._aext
         grp["v0"] = self._v0
-        grp["d_mask"] = self._d_mask
         grp.attrs["name"] = self._name
 
     def deserialize(self, grp: h5.Group):
@@ -219,7 +191,6 @@ class TetrahedralElastodynamicsBody:
         self._bext = grp["bext"][:]
         self._aext = grp["aext"][:]
         self._v0 = grp["v0"][:]
-        self._d_mask = grp["d_mask"][:]
         self._name = grp.attrs["name"]
         self.on_mesh_loaded(
             self._name,
@@ -231,7 +202,6 @@ class TetrahedralElastodynamicsBody:
             self._bext,
             self._aext,
             self._v0,
-            self._d_mask,
         )
 
     @property
@@ -276,10 +246,6 @@ class TetrahedralElastodynamicsBody:
         return self._v0
 
     @property
-    def d_mask(self) -> np.ndarray:
-        return self._d_mask
-
-    @property
     def dirty(self) -> bool:
         if self._vm is None:
             return False
@@ -310,5 +276,3 @@ class TetrahedralElastodynamicsBody:
             raise ValueError(
                 "Initial velocities array must have same shape as vertex positions."
             )
-        if self._d_mask.shape[0] != self._V.shape[0]:
-            raise ValueError("Dirichlet mask size must match number of vertices.")

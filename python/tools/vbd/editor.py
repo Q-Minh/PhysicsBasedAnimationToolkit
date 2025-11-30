@@ -143,9 +143,6 @@ class ModeStateMachine(StateMachine):
         fem_dynamics.set_external_load(
             eg=np.ravel(egB, order="F"), wg=np.ravel(wgB, order="F"), Xig=XigB, bg=bg
         )
-        # Dirichlet
-        d_mask = np.concatenate([body.d_mask for body in tet_elastic_bodies])
-        fem_dynamics.constrain(d_mask)
         # Initial velocity
         x0 = fem_dynamics.X
         v0 = np.vstack([body.v0 for body in tet_elastic_bodies]).T
@@ -154,7 +151,9 @@ class ModeStateMachine(StateMachine):
         # Contact
         contact_dynamics = pbat.sim.contact.MeshDynamics()
         n_bodies = len(tet_elastic_bodies)
-        XCC = np.concatenate([np.full(nverts, b) for b, nverts in enumerate(vert_counts)])
+        XCC = np.concatenate(
+            [np.full(nverts, b) for b, nverts in enumerate(vert_counts)]
+        )
         contact_meshes = pbat.sim.contact.MultiMesh(
             fem_dynamics.E, XCC, n_components=n_bodies
         )
@@ -162,8 +161,13 @@ class ModeStateMachine(StateMachine):
         contact_dynamics.allocate_environment_contact_data_structures()
         contact_dynamics.initialize_mesh_environment_contact_detection()
         # Pass simulation scenario to simulation UI
+        tet_elastic_body_names = [body.name for body in tet_elastic_bodies]
         self.simulation.on_simulation_scenario_created(
-            fem_dynamics, contact_dynamics, self.scene.transform_library
+            tet_elastic_body_names,
+            VP,
+            fem_dynamics,
+            contact_dynamics,
+            self.scene.transform_library,
         )
 
 

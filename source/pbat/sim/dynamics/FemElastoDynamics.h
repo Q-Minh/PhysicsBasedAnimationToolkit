@@ -491,11 +491,6 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::SetInit
     v = v0.reshaped(kDims, v0.size() / kDims);
     bdf.SetOrder(2);
     bdf.SetInitialConditions(x0.reshaped(), v0.reshaped());
-    // Adjust IVP based on Dirichlet constraints
-    fext(Eigen::placeholders::all, DirichletNodes()).setZero();
-    v(Eigen::placeholders::all, DirichletNodes()).setZero();
-    for (auto k = 0; k < bdf.GetStep(); ++k)
-        bdf.State(k, 1)(DirichletDofs()).setZero();
 }
 
 template <
@@ -609,6 +604,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     auto it =
         std::stable_partition(dbc.begin(), dbc.end(), [&D](IndexType i) { return D[i] == 0; });
     ndbc = nNodes - std::distance(dbc.begin(), it);
+    // Dirichlet constrained nodes do not move
+    v(Eigen::placeholders::all, DirichletNodes()).setZero();
 }
 
 template <

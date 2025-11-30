@@ -101,9 +101,9 @@ class Scene:
             "Dirichlet Group": BoxSelectionList(
                 SelectionTargets.VERTEX,
                 1,
-                lambda b, prop_value, inds: self._tet_elastic_bodies[
-                    b
-                ].set_dirichlet_group(prop_value, inds),
+                lambda b, prop_value, inds: self._on_dirichlet_group_applied(
+                    b, prop_value, inds
+                ),
             ),
         }
         self._current_selection_property_idx = 0
@@ -163,10 +163,16 @@ class Scene:
                 imgui.EndTabItem()
             imgui.EndTabBar()
 
-        # No matter what tab we're in, undirty any dirty bodies at the end of the frame
+        is_any_body_dirty = False
         for b, body in enumerate(self._tet_elastic_bodies):
             if body.dirty:
                 body.undirty(n_dirichlet_groups=len(self._transform_library.transforms))
+                is_any_body_dirty = True
+        mesh_names = [body.name for body in self._tet_elastic_bodies]
+        mesh_verts = [body.VT for body in self._tet_elastic_bodies]
+        for transform in self._transform_library.transforms:
+            if transform.dirty or is_any_body_dirty:
+                transform.undirty(mesh_names=mesh_names, mesh_verts=mesh_verts)
 
     def set_visible(self, visible: bool):
         for body in self._tet_elastic_bodies:
@@ -174,6 +180,8 @@ class Scene:
         for prop_name, box_selection_list in self._selector_lists.items():
             for selector in box_selection_list._selectors:
                 selector.set_visible(visible)
+        for transform in self._transform_library.transforms:
+            transform.set_visible(visible)
 
     @property
     def tet_elastic_bodies(self) -> list[TetrahedralElastodynamicsBody]:
@@ -259,6 +267,7 @@ class Scene:
                 id = self._get_new_id()
                 body = TetrahedralElastodynamicsBody()
                 body.on_mesh_loaded(f"{filename} - {id}", V, T)
+                self._transform_library.on_mesh_added(body.name)
                 self._tet_elastic_bodies.append(body)
             except Exception as e:
                 ps.error(f"Error loading tetrahedral mesh:\n{e}")
@@ -268,8 +277,17 @@ class Scene:
     def _remove_tet_elastic_body(self, b: int):
         body = self._tet_elastic_bodies.pop(b)
         idx = int(body.name.split(" - ")[-1])
+        self._transform_library.on_mesh_removed(body.name)
         body.on_mesh_removed()
         self._recycled_tet_elastic_body_indices.append(idx)
+
+    def _on_dirichlet_group_applied(self, b: int, group: int, inds: np.ndarray[int]):
+        body = self._tet_elastic_bodies[b]
+        is_dirichlet_constraint_removal = group == 0
+        if is_dirichlet_constraint_removal:
+            self._transform_library.on_dirichlet_nodes_removed(body.name, inds)
+        else:
+            self._transform_library.on_dirichlet_nodes_added(group, body.name, inds)
 
     def _serialize_fem_tet_elastic_bodies(self, grp: h5.Group):
         grp.attrs["num_tet_elastic_bodies"] = len(self._tet_elastic_bodies)

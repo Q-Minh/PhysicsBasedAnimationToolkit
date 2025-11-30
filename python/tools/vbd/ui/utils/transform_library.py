@@ -2,7 +2,7 @@
 import h5py
 import numpy as np
 from enum import Enum
-from copy import deepcopy
+import polyscope as ps
 import polyscope.imgui as imgui
 
 """
@@ -26,12 +26,25 @@ class TransformType(Enum):
     L_ROTATE = 1
     TRANSLATE = 2
     FIXED = 3
-    COMPOSITE = 4
 
 
 class PrimitiveTransform:
+    name: str
+    begin: float
+    duration: float
+    transform_type: TransformType
+    id: int
+
+    _mesh_dirichlet_nodes: dict[str, list[int]]  # mesh name -> dirichlet node indices
+    _dirty: bool
+    _pc: ps.PointCloud
+
     def __init__(
-        self, name: str, begin: float, duration: float, transform_type: TransformType
+        self,
+        name: str,
+        begin: float,
+        duration: float,
+        transform_type: TransformType,
     ):
         self.name = name
         self.begin = begin
@@ -40,6 +53,8 @@ class PrimitiveTransform:
             transform_type  # e.g., "rotate", "revolve", "translate", "empty"
         )
         self.id = -1  # to be set when added to library
+        self._mesh_dirichlet_nodes = {}
+        self._dirty = False
 
     @staticmethod
     def make_default():
@@ -56,14 +71,12 @@ class PrimitiveTransform:
             return TranslateTransform.make_default()
         elif ttype == TransformType.FIXED:
             return FixedTransform.make_default()
-        elif ttype == TransformType.COMPOSITE:
-            return CompositeTransform.make_default()
         else:
             raise ValueError(f"Unknown TransformType {ttype}")
 
-    def applicable(self, t: float) -> bool:
+    def applicable(self, t: int, dt: float) -> bool:
         """Check if the transform is applicable at time t"""
-        return self.begin <= t <= self.duration + self.begin
+        return self.begin <= t * dt <= self.begin + self.duration
 
     def expired(self, t: float) -> bool:
         """Check if the transform has expired at time t"""
@@ -75,10 +88,16 @@ class PrimitiveTransform:
         V: (n, 3) array of vertex positions
         Returns transformed vertices (n, 3)
         """
-        if not self.applicable(t * dt):
-            return V  # no transformation outside the interval
         # Implement specific transformations in subclasses
         return self.specific_apply(t, dt, V)
+
+    def nodes(self, mesh_name: str) -> np.ndarray:
+        """Get the dirichlet node indices for the given mesh"""
+        return self._mesh_dirichlet_nodes[mesh_name]
+
+    def affects(self, mesh_name: str) -> bool:
+        """Check if the transform affects the given mesh"""
+        return mesh_name in self._mesh_dirichlet_nodes
 
     def specific_apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
         raise NotImplementedError("specific_apply must be implemented in subclasses")
@@ -86,6 +105,29 @@ class PrimitiveTransform:
     def adjust(self):
         """Adjust parameters if necessary (e.g., normalize axes)"""
         pass
+
+    def on_transform_added(self, mesh_names: list[str]):
+        for mesh_name in mesh_names:
+            self.on_mesh_added(mesh_name)
+
+    def on_mesh_added(self, mesh_name: str):
+        self._mesh_dirichlet_nodes[mesh_name] = np.array([], dtype=np.int32)
+
+    def on_mesh_removed(self, mesh_name: str):
+        self._mesh_dirichlet_nodes.pop(mesh_name, None)
+        self._dirty = True
+
+    def on_dirichlet_nodes_added(self, mesh_name: str, node_suffix: list[int]):
+        nodes_prefix = self._mesh_dirichlet_nodes[mesh_name]
+        self._mesh_dirichlet_nodes[mesh_name] = np.unique(
+            np.concatenate((nodes_prefix, node_suffix))
+        )
+        self._dirty = True
+
+    def on_dirichlet_nodes_removed(self, mesh_name: str, node_suffix: list[int]):
+        nodes_prefix = self._mesh_dirichlet_nodes[mesh_name]
+        self._mesh_dirichlet_nodes[mesh_name] = np.setdiff1d(nodes_prefix, node_suffix)
+        self._dirty = True
 
     def serialize(self, h5group: h5py.Group):
         """
@@ -96,6 +138,47 @@ class PrimitiveTransform:
         h5group.attrs["duration"] = self.duration
         h5group.attrs["transform_type"] = self.transform_type.value
         h5group.attrs["id"] = self.id
+        for mesh_name, node_indices in self._mesh_dirichlet_nodes.items():
+            mesh_grp = h5group.create_group(f"dirichlet/mesh/{mesh_name}")
+            mesh_grp["node_indices"] = node_indices
+
+    def deserialize(self, h5group: h5py.Group):
+        """
+        Deserialize the transform from an HDF5 group.
+        """
+        self.name = h5group.attrs["name"]
+        self.begin = h5group.attrs["begin"]
+        self.duration = h5group.attrs["duration"]
+        self.transform_type = TransformType(h5group.attrs["transform_type"])
+        self.id = h5group.attrs["id"]
+        dirichlet_grp = h5group.get("dirichlet/mesh", None)
+        if dirichlet_grp is not None:
+            for mesh_name, mesh_grp in dirichlet_grp.items():
+                node_indices = mesh_grp["node_indices"][:]
+                self._mesh_dirichlet_nodes[mesh_name] = node_indices
+        self._dirty = True
+
+    def undirty(self, mesh_names: list[str], mesh_verts: list[np.ndarray]):
+        VD = np.vstack(
+            [
+                V[self._mesh_dirichlet_nodes[name], :]
+                for name, V in zip(mesh_names, mesh_verts)
+            ]
+        )
+        self._pc = ps.register_point_cloud(f"Transform {self.id} - Dirichlet Nodes", VD)
+        self._dirty = False
+
+    def set_visible(self, visible: bool):
+        if self._pc is not None:
+            self._pc.set_enabled(visible)
+
+    def on_removed(self):
+        if self._pc is not None:
+            ps.remove_point_cloud(self._pc.get_name())
+
+    @property
+    def dirty(self) -> bool:
+        return self._dirty
 
     def __str__(self):
         return f"Name: {self.name}, Type: {self.transform_type.name},\n\t ID: {self.id}, \n\t\t Time: [{self.begin}, {self.begin + self.duration}]"
@@ -103,6 +186,9 @@ class PrimitiveTransform:
 
 class GlobalRotateTransform(PrimitiveTransform):
     """Rotate all vertices around a global axis"""
+
+    axis: np.ndarray
+    degrees_per_second: float
 
     def __init__(
         self,
@@ -156,6 +242,11 @@ class GlobalRotateTransform(PrimitiveTransform):
         h5group.attrs["axis"] = self.axis
         h5group.attrs["degrees_per_second"] = self.degrees_per_second
 
+    def deserialize(self, h5group: h5py.Group):
+        super().deserialize(h5group)
+        self.axis = h5group.attrs["axis"]
+        self.degrees_per_second = h5group.attrs["degrees_per_second"]
+
     def __str__(self):
         base_str = super().__str__()
         return f"{base_str}\n\t\t Axis: {self.axis},\n\t\t Degrees per second: {self.degrees_per_second}"
@@ -166,6 +257,10 @@ class GlobalRotateTransform(PrimitiveTransform):
 
 class LocalRotateTransform(PrimitiveTransform):
     """Rotate all vertices around a local axis and origin"""
+
+    axis: np.ndarray
+    origin: np.ndarray
+    degrees_per_second: float
 
     def __init__(
         self,
@@ -228,6 +323,12 @@ class LocalRotateTransform(PrimitiveTransform):
         h5group.attrs["origin"] = self.origin
         h5group.attrs["degrees_per_second"] = self.degrees_per_second
 
+    def deserialize(self, h5group: h5py.Group):
+        super().deserialize(h5group)
+        self.axis = h5group.attrs["axis"]
+        self.origin = h5group.attrs["origin"]
+        self.degrees_per_second = h5group.attrs["degrees_per_second"]
+
     def adjust(self):
         self.axis = self.axis / np.linalg.norm(self.axis)
 
@@ -238,6 +339,9 @@ class LocalRotateTransform(PrimitiveTransform):
 
 class TranslateTransform(PrimitiveTransform):
     """Translate all vertices along a direction"""
+
+    direction: np.ndarray
+    speed: float
 
     def __init__(
         self,
@@ -278,6 +382,11 @@ class TranslateTransform(PrimitiveTransform):
         h5group.attrs["direction"] = self.direction
         h5group.attrs["speed"] = self.speed
 
+    def deserialize(self, h5group: h5py.Group):
+        super().deserialize(h5group)
+        self.direction = h5group.attrs["direction"]
+        self.speed = h5group.attrs["speed"]
+
     def adjust(self):
         self.direction = self.direction / np.linalg.norm(self.direction)
 
@@ -304,52 +413,83 @@ class FixedTransform(PrimitiveTransform):
     def serialize(self, h5group):
         return super().serialize(h5group)
 
-
-class CompositeTransform(PrimitiveTransform):
-    """Assemble multiple primitive transforms sequentially"""
-
-    def __init__(self, name: str, begin: float):
-        super().__init__(
-            name, begin, 0, TransformType.COMPOSITE
-        )  # Composite is not a primitive type
-        self.transforms = []  # list of PrimitiveTransform instances
-
-    @staticmethod
-    def make_default():
-        return CompositeTransform("New Composite", 0)
-
-    def add_transform(self, transform: PrimitiveTransform):
-        stored_transform = deepcopy(transform)
-        stored_transform.begin = self.begin + self.duration
-        self.duration += stored_transform.duration
-        self.transforms.append(stored_transform)
-
-    def specific_apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
-        V_transformed = V
-        for transform in self.transforms:
-            V_transformed = transform.apply(t, dt, V_transformed)
-        return V_transformed
+    def deserialize(self, h5group):
+        return super().deserialize(h5group)
 
 
 class TransformLibrary:
     transforms: list[PrimitiveTransform]
     _recycled_indices: list[int]
     _current_transform_index: int
+    _mesh_names: list[str]
 
     def __init__(self):
         self.transforms = []
         self._recycled_indices = []
         self._current_transform_index = 0
+        self._mesh_names = []
 
     def build_transform_map(self):
         self._transform_map = {}
         for ttype in TransformType:
             self._transform_map[ttype] = []
 
+    def on_mesh_added(self, mesh_name: str):
+        self._mesh_names.append(mesh_name)
+        for transform in self.transforms:
+            transform.on_mesh_added(mesh_name)
+
+    def on_mesh_removed(self, mesh_name: str):
+        self._mesh_names.remove(mesh_name)
+        for transform in self.transforms:
+            transform.on_mesh_removed(mesh_name)
+
+    def on_dirichlet_nodes_added(
+        self, transform_id: int, mesh_name: str, inds: list[int]
+    ):
+        transform = next(
+            (
+                transform
+                for transform in self.transforms
+                if transform.id == transform_id
+            ),
+            None,
+        )
+        if transform is None:
+            ps.warning(
+                f"Dirichlet group {transform_id} does not have a corresponding transform. No-op."
+            )
+            return
+        transform.on_dirichlet_nodes_added(mesh_name, inds)
+
+    def on_dirichlet_nodes_removed(self, mesh_name: str, inds: list[int]):
+        for transform in self.transforms:
+            transform.on_dirichlet_nodes_removed(mesh_name, inds)
+
     def add_transform(self, transform: PrimitiveTransform):
         transform.adjust()
         transform.id = self._get_new_id() + 1
         self.transforms.append(transform)
+        transform.on_transform_added(self._mesh_names)
+
+    def all_transformed_nodes(
+        self, t: int, dt: float
+    ) -> list[tuple[str, np.ndarray[int]]]:
+        all_nodes = [[] for _ in range(len(self._mesh_names))]
+        for i, name in enumerate(self._mesh_names):
+            for transform in self.transforms:
+                if transform.applicable(t, dt) and transform.affects(name):
+                    all_nodes[i].append(transform.nodes(name))
+            if len(all_nodes[i]) > 0:
+                all_nodes[i] = np.unique(np.concatenate(all_nodes[i]))
+        return zip(self._mesh_names, all_nodes)
+
+    def apply(self, name: str, V: np.ndarray, t: int, dt: float) -> np.ndarray:
+        for transform in self.transforms:
+            if transform.applicable(t, dt) and transform.affects(name):
+                dnodes = transform.nodes(name)
+                V[:, dnodes] = transform.apply(t, dt, V[:, dnodes])
+        return V
 
     def draw(self):
         transform_type_names = [tt.name for tt in TransformType]
@@ -368,7 +508,8 @@ class TransformLibrary:
             if imgui.TreeNode(f"{transform.id} - {transform.transform_type.name}"):
                 self._draw(transform, idx)
                 if imgui.Button("Delete"):
-                    self.transforms.pop(idx)
+                    transform = self.transforms.pop(idx)
+                    transform.on_removed()
                     self._recycled_indices.append(idx)
                 imgui.TreePop()
 
@@ -376,8 +517,9 @@ class TransformLibrary:
         """
         Serialize the entire library to an HDF5 group.
         """
+        grp["mesh_names"] = self._mesh_names
         for transform in self.transforms:
-            tgrp = grp.create_group(f"{transform.id}")
+            tgrp = grp.create_group(f"transform/{transform.id}")
             transform.serialize(tgrp)
         grp["recycled_indices"] = np.array(self._recycled_indices, dtype=np.int32)
 
@@ -385,38 +527,16 @@ class TransformLibrary:
         """
         Deserialize the library from an HDF5 group.
         """
-        for tname, tgroup in grp.items():
-            if tname == "recycled_indices":
-                continue
-            name = tgroup.attrs["name"]
-            begin = tgroup.attrs["begin"]
-            duration = tgroup.attrs["duration"]
+        if "mesh_names" in grp:
+            self._mesh_names = grp["mesh_names"][:].astype(str).tolist()
+        grp_transforms = grp.get("transform", None)
+        if grp_transforms is None:
+            return
+        for tname, tgroup in grp_transforms.items():
             transform_type = TransformType(tgroup.attrs["transform_type"])
-            if transform_type == TransformType.G_ROTATE:
-                axis = tgroup.attrs["axis"]
-                degrees_per_second = tgroup.attrs["degrees_per_second"]
-                transform = GlobalRotateTransform(
-                    name, begin, duration, axis, degrees_per_second
-                )
-            elif transform_type == TransformType.L_ROTATE:
-                axis = tgroup.attrs["axis"]
-                origin = tgroup.attrs["origin"]
-                degrees_per_second = tgroup.attrs["degrees_per_second"]
-                transform = LocalRotateTransform(
-                    name, begin, duration, axis, origin, degrees_per_second
-                )
-            elif transform_type == TransformType.TRANSLATE:
-                direction = tgroup.attrs["direction"]
-                speed = tgroup.attrs["speed"]
-                transform = TranslateTransform(name, begin, duration, direction, speed)
-            elif transform_type == TransformType.FIXED:
-                transform = FixedTransform(name, begin, duration)
-            else:
-                raise ValueError(
-                    f"Unknown transform type {transform_type} for transform {name}"
-                )
-            transform.id = tgroup.attrs["id"]
-            self.add_transform(transform)
+            transform = PrimitiveTransform.make_default(transform_type)
+            transform.deserialize(tgroup)
+            self.transforms.append(transform)
         if "recycled_indices" in grp:
             self._recycled_indices = grp["recycled_indices"][:].tolist()
 
