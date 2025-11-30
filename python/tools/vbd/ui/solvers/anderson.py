@@ -82,3 +82,17 @@ class AndersonSolver(BaseSolver):
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
+
+    def serialize(self, archive: pbat.io.Archive):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
+        vbd.serialize(archive)
+        anderson.serialize(archive)
+
+    def deserialize(self, archive: pbat.io.Archive):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
+        vbd.deserialize(archive)
+        anderson.deserialize(archive)

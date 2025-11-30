@@ -80,3 +80,11 @@ class NewtonSolver(BaseSolver):
             callback()
             pbat.sim.algorithm.newton.prepare_next_iteration(fem, params)
         fem.back_substitute_integrated_positions_into_velocities()
+
+    def serialize(self, archive: pbat.io.Archive):
+        params: pbat.sim.algorithm.newton.Params = self._params.params
+        params.serialize(archive)
+
+    def deserialize(self, archive: pbat.io.Archive):
+        params: pbat.sim.algorithm.newton.Params = self._params.params
+        params.deserialize(archive)

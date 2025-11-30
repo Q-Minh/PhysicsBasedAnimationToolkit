@@ -51,3 +51,11 @@ class VbdSolver(BaseSolver):
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
+
+    def serialize(self, archive: pbat.io.Archive):
+        params: pbat.sim.algorithm.vbd.Params = self._params.params
+        params.serialize(archive)
+
+    def deserialize(self, archive: pbat.io.Archive):
+        params: pbat.sim.algorithm.vbd.Params = self._params.params
+        params.deserialize(archive)

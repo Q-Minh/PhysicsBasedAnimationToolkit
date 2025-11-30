@@ -41,6 +41,12 @@ void BindCore(nanobind::module_& m)
 
     nb::class_<Params>(m, "Params")
         .def(nb::init<>(), "Newton solver parameters and buffers.")
+        .def("serialize", &Params::Serialize, nb::arg("archive"), "Serialize this to archive.")
+        .def(
+            "deserialize",
+            &Params::Deserialize,
+            nb::arg("archive"),
+            "Deserialize this from archive.")
         .def_rw("newton", &Params::newton, "Underlying Newton optimizer (math.optimization.Newton)")
         .def_ro(
             "ordering",

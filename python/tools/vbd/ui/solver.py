@@ -3,7 +3,6 @@ from pbatoolkit import pbat
 import polyscope as ps
 import polyscope.imgui as imgui
 from .solvers import vbd, anderson, broyden, chebyshev, newton, base
-from .utils import transform_library as tlib
 
 
 class Solver:
@@ -55,6 +54,14 @@ class Solver:
 
     def set_visible(self, visible: bool):
         pass
+
+    def serialize(self, archive: pbat.io.Archive):
+        for solver in self._solvers:
+            solver.serialize(archive[solver.name])
+
+    def deserialize(self, archive: pbat.io.Archive):
+        for solver in self._solvers:
+            solver.deserialize(archive[solver.name])
 
     @property
     def solvers(self) -> list[base.BaseSolver]:

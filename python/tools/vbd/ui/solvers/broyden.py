@@ -82,3 +82,17 @@ class BroydenSolver(BaseSolver):
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
+
+    def serialize(self, archive: pbat.io.Archive):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        broyden: pbat.sim.algorithm.vbd.BroydenParams = params.broyden_params
+        vbd.serialize(archive)
+        broyden.serialize(archive)
+
+    def deserialize(self, archive: pbat.io.Archive):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        broyden: pbat.sim.algorithm.vbd.BroydenParams = params.broyden_params
+        vbd.deserialize(archive)
+        broyden.deserialize(archive)

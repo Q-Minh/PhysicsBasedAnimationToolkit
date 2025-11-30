@@ -81,3 +81,17 @@ class ChebyshevSolver(BaseSolver):
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
+
+    def serialize(self, archive: pbat.io.Archive):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
+        vbd.serialize(archive)
+        chebyshev.serialize(archive)
+
+    def deserialize(self, archive: pbat.io.Archive):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
+        vbd.deserialize(archive)
+        chebyshev.deserialize(archive)

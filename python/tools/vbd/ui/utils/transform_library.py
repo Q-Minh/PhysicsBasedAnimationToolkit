@@ -55,6 +55,7 @@ class PrimitiveTransform:
         self.id = -1  # to be set when added to library
         self._mesh_dirichlet_nodes = {}
         self._dirty = False
+        self._pc = None
 
     @staticmethod
     def make_default():
@@ -527,6 +528,7 @@ class TransformLibrary:
         """
         Deserialize the library from an HDF5 group.
         """
+        self.empty()
         if "mesh_names" in grp:
             self._mesh_names = grp["mesh_names"][:].astype(str).tolist()
         grp_transforms = grp.get("transform", None)
@@ -579,3 +581,8 @@ class TransformLibrary:
             return self._recycled_indices.pop()
         else:
             return len(self.transforms)
+
+    def empty(self):
+        while len(self.transforms) > 0:
+            transform = self.transforms.pop()
+            transform.on_removed()

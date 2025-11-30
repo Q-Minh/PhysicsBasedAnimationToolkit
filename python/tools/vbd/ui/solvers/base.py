@@ -38,6 +38,14 @@ class BaseSolver(ABC):
         """
         pass
 
+    @abstractmethod
+    def serialize(self, archive: pbat.io.Archive):
+        pass
+
+    @abstractmethod
+    def deserialize(self, archive: pbat.io.Archive):
+        pass
+
     @property
     def name(self) -> str:
         return self._name

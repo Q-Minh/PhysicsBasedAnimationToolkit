@@ -143,6 +143,8 @@ void BindCore(nanobind::module_& m)
             "    validate (bool): Throw on detected ill-formed inputs\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
+        .def("serialize", &Params::Serialize, nb::arg("archive"), "Serialize this to archive.")
+        .def("deserialize", &Params::Deserialize, nb::arg("archive"), "Deserialize this from archive.")
         .def_rw("GVGp", &Params::GVGp, "`|# verts+1|` prefixes into GVGe")
         .def_rw("GVGe", &Params::GVGe, "`|# of vertex-elems adjacencies|` element indices")
         .def_rw(

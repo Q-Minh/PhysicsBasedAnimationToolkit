@@ -21,6 +21,16 @@ void BindAnderson(nanobind::module_& m)
     using AndersonParams = pbat::sim::algorithm::vbd::AndersonParams;
     nb::class_<AndersonParams>(m, "AndersonParams")
         .def(nb::init<>())
+        .def(
+            "serialize",
+            &AndersonParams::Serialize,
+            nb::arg("archive"),
+            "Serialize this to archive.")
+        .def(
+            "deserialize",
+            &AndersonParams::Deserialize,
+            nb::arg("archive"),
+            "Deserialize this from archive.")
         .def_rw("m", &AndersonParams::m, "Window size")
         .def_rw("beta", &AndersonParams::beta, "Mixing parameter")
         .def_rw("cod_numerical_zero", &AndersonParams::codNumericalZero, "Numerical zero threshold")

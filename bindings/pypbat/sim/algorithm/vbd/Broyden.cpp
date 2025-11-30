@@ -41,6 +41,16 @@ void BindBroyden(nanobind::module_& m)
 
     nb::class_<BroydenParams>(m, "BroydenParams")
         .def(nb::init<>())
+        .def(
+            "serialize",
+            &BroydenParams::Serialize,
+            nb::arg("archive"),
+            "Serialize this to archive.")
+        .def(
+            "deserialize",
+            &BroydenParams::Deserialize,
+            nb::arg("archive"),
+            "Deserialize this from archive.")
         .def_rw("m", &BroydenParams::m, "Window size")
         .def_rw("eps_l2_solve", &BroydenParams::epsL2Solve, "L2 solve tolerance")
         .def_rw(
@@ -141,11 +151,7 @@ void BindBroyden(nanobind::module_& m)
            MeshDynamicsType& meshDynamics,
            Params const& params,
            BroydenParams& broyden) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(
-                fem,
-                meshDynamics,
-                params,
-                broyden);
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, meshDynamics, params, broyden);
         },
         nb::arg("fem"),
         nb::arg("mesh_dynamics"),

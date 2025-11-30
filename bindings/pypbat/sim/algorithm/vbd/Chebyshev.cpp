@@ -22,6 +22,16 @@ void BindChebyshev(nanobind::module_& m)
 
     nb::class_<ChebyshevParams>(m, "ChebyshevParams")
         .def(nb::init<>())
+        .def(
+            "serialize",
+            &ChebyshevParams::Serialize,
+            nb::arg("archive"),
+            "Serialize this to archive.")
+        .def(
+            "deserialize",
+            &ChebyshevParams::Deserialize,
+            nb::arg("archive"),
+            "Deserialize this from archive.")
         .def_rw("rho", &ChebyshevParams::rho, "Spectral radius estimate")
         .def_rw("k", &ChebyshevParams::k, "Iteration")
         .def_ro("rho2", &ChebyshevParams::rho2, "Square of spectral radius estimate")
@@ -60,11 +70,7 @@ void BindChebyshev(nanobind::module_& m)
            MeshDynamicsType& meshDynamics,
            Params const& params,
            ChebyshevParams& cheb) {
-            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(
-                fem,
-                meshDynamics,
-                params,
-                cheb);
+            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, meshDynamics, params, cheb);
         },
         nb::arg("fem"),
         nb::arg("mesh_dynamics"),
