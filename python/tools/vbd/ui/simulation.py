@@ -269,8 +269,6 @@ class Simulation:
                     f.attrs["fem_dynamics_init_strategy"] = (
                         self._fem_dynamics_init_strategy.value
                     )
-                    f["v0"] = self._v0
-                    f["xD"] = self._xD
         except Exception as e:
             ps.error(f"Error saving scenario:\n{e}")
         finally:
@@ -315,8 +313,6 @@ class Simulation:
                         f.attrs["fem_dynamics_init_strategy"]
                     )
                 )
-                self._v0 = f["v0"][:]
-                self._xD = f["xD"][:]
             # NOTE:
             # Because contact dynamics deserialization is not implemented yet,
             # if we load a simulation scenario that does not correspond to the
