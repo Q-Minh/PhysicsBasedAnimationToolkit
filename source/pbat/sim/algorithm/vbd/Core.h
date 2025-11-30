@@ -416,12 +416,10 @@ void Iterate(
             //     }
             // }
             // dt2 scale potential energies' derivatives
-            Hi *= betaTildeBdf2;
-            gi *= betaTildeBdf2;
             // "Kinetic" energy
             Scalar m                         = fem.m(i);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
-            kernels::AddInertiaDerivatives(/*betaTildeBdf2*/ Scalar(1), m, xtildei, xi, gi, Hi);
+            kernels::AddInertiaDerivatives(betaTildeBdf2, m, xtildei, xi, gi, Hi);
             kernels::AddDamping(betaTildeBdf, xti, xi, params.betaR, gi, Hi);
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
             fem.x.col(i) = ToEigen(xi);
