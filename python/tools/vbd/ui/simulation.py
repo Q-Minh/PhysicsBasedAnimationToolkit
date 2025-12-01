@@ -10,6 +10,7 @@ import gc
 from .solver import Solver
 from .contact import Contact
 from .convergence import Convergence
+from .trajectory import Trajectory
 from .utils import transform_library as tlib
 from . import material
 
@@ -30,6 +31,7 @@ class Simulation:
     _solver: Solver
     _contact: Contact
     _convergence: Convergence
+    _trajectory: Trajectory
     _transform_library: tlib.TransformLibrary
     _tet_elastic_body_names: list[str]
     _XP: np.ndarray[int]
@@ -45,6 +47,7 @@ class Simulation:
         self._solver = Solver()
         self._contact = Contact()
         self._convergence = Convergence()
+        self._trajectory = Trajectory()
         self._transform_library = tlib.TransformLibrary()
         self._tet_elastic_body_names = []
         self._XP = np.array([], dtype=int)
@@ -164,6 +167,7 @@ class Simulation:
         self._profiler.end_frame("Physics")
         self._update_visuals_after_position_change()
         self._t += 1
+        self._trajectory.t = self._t
 
     def _update_visuals_after_position_change(self):
         if self._fem_dynamics_vm is not None:
@@ -222,24 +226,35 @@ class Simulation:
             self._fem_dynamics.step()
             self._update_visuals_after_position_change()
             self._t += 1
+            self._trajectory.t = self._t
         self._convergence.draw()
 
     def _draw_io_ui(self, button_size):
         imgui.PushID("IO")
-        export = imgui.Button("Export", button_size)
+        export = imgui.Button("Export Scenario", button_size)
         if imgui.IsItemHovered():
             imgui.BeginTooltip()
             imgui.SetTooltip("Export the simulation scenario.")
             imgui.EndTooltip()
         if export:
             self._serialize_simulation_scenario()
-        load = imgui.Button("Load", button_size)
+        load_scenario = imgui.Button("Load Scenario", button_size)
         if imgui.IsItemHovered():
             imgui.BeginTooltip()
             imgui.SetTooltip("Load a simulation scenario or trajectory.")
             imgui.EndTooltip()
-        if load:
+        if load_scenario:
             self._deserialize_simulation()
+        self._trajectory.draw()
+        if self._trajectory.dirty:
+            if self._fem_dynamics is not None:
+                self._trajectory.undirty(
+                    lambda archive: self._fem_dynamics.deserialize(archive)
+                )
+                self._update_visuals_after_position_change()
+                self._t = self._trajectory.t
+            else:
+                self._trajectory.undirty(lambda archive: None)
         imgui.PopID()
 
     def _serialize_simulation_scenario(self):
@@ -290,12 +305,12 @@ class Simulation:
             # TODO: Implement contact dynamics deserialization
             # self._contact.contact_dynamics.deserialize(archive)
             self._solver.deserialize(archive["Solver"])
-            # TODO: 
-            # When the offline simulation runner will be implemented, we will 
-            # assume that it saved the simulation trajectory (i.e. every time 
+            # TODO:
+            # When the offline simulation runner will be implemented, we will
+            # assume that it saved the simulation trajectory (i.e. every time
             # step's FemElastoDynamics) to the archive as the ground truth.
-            # At that point, we will also load that trajectory here, and enable 
-            # playback of the loaded trajectory in the UI, and simulating from 
+            # At that point, we will also load that trajectory here, and enable
+            # playback of the loaded trajectory in the UI, and simulating from
             # any given time step in the loaded trajectory.
             archive = None
             gc.collect()  # Force garbage collection to close the archive...
