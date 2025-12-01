@@ -56,6 +56,15 @@ void BindArchive(nanobind::module_& m)
             &pbat::io::Archive::Flush,
             "Flush the archive to ensure all data is written to disk")
         .def(
+            "get",
+            [](pbat::io::Archive const& archive, const std::string& path) { return archive[path]; },
+            nb::arg("path"),
+            "Get a group if it exists\n\n"
+            "Args:\n"
+            "    path (str): Path to the group\n\n"
+            "Returns:\n"
+            "    Archive: Archive object representing the group\n\n")
+        .def(
             "__getitem__",
             [](pbat::io::Archive& archive, const std::string& path) { return archive[path]; },
             nb::arg("path"),

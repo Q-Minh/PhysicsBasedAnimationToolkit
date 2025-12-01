@@ -755,10 +755,11 @@ template <
 inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::
     BackSubstituteIntegratedPositionsIntoVelocities()
 {
-    auto freeDofs             = FreeDofs();
-    auto xtildebdf            = bdf.Inertia(0);
-    v.reshaped()(freeDofs)    = (x.reshaped()(freeDofs) + xtildebdf(freeDofs)) / bdf.BetaTilde();
-    auto s                    = bdf.GetStep();
+    auto freeDofs          = FreeDofs();
+    auto xtildebdf         = bdf.Inertia(0);
+    v.reshaped()(freeDofs) = (x.reshaped()(freeDofs) + xtildebdf(freeDofs)) / bdf.BetaTilde();
+    auto s                 = bdf.GetStep();
+    atfd.resize(kDims, v.cols());
     atfd.reshaped()(freeDofs) = (v.reshaped()(freeDofs) - bdf.State(s - 1, 1)(freeDofs)) / bdf.h;
 }
 
@@ -883,6 +884,7 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
     femElastoDynamicsArchive.WriteData("xtilde", xtilde);
     femElastoDynamicsArchive.WriteData("x", x);
     femElastoDynamicsArchive.WriteData("v", v);
+    femElastoDynamicsArchive.WriteData("atfd", atfd);
     femElastoDynamicsArchive.WriteData("egU", egU);
     femElastoDynamicsArchive.WriteData("wgU", wgU);
     femElastoDynamicsArchive.WriteData("GNegU", GNegU);
@@ -921,6 +923,8 @@ inline void FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TInd
             .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("x");
     v = femElastoDynamicsArchive
             .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("v");
+    atfd = femElastoDynamicsArchive
+               .ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("atfd");
     egU   = femElastoDynamicsArchive.ReadData<Eigen::Vector<IndexType, Eigen::Dynamic>>("egU");
     wgU   = femElastoDynamicsArchive.ReadData<Eigen::Vector<ScalarType, Eigen::Dynamic>>("wgU");
     GNegU = femElastoDynamicsArchive
