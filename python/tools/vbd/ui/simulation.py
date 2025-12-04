@@ -167,7 +167,6 @@ class Simulation:
         self._profiler.end_frame("Physics")
         self._update_visuals_after_position_change()
         self._t += 1
-        self._trajectory.t = self._t
 
     def _update_visuals_after_position_change(self):
         if self._fem_dynamics_vm is not None:
@@ -226,7 +225,6 @@ class Simulation:
             self._fem_dynamics.step()
             self._update_visuals_after_position_change()
             self._t += 1
-            self._trajectory.t = self._t
         self._convergence.draw()
 
     def _draw_io_ui(self, button_size):

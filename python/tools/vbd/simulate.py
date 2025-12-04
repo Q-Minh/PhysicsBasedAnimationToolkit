@@ -2,11 +2,11 @@
 from pbatoolkit import pbat, pypbat
 from .ui.utils.transform_library import TransformLibrary
 import enum
-import numpy as np
 import argparse
 import h5py as h5
 import gc
 import inspect
+from tqdm import tqdm
 
 
 def vbd_prepare(
@@ -354,6 +354,7 @@ def main():
     t = 0
     archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
     fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+    pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
     while t * dt < args.duration:
         solve = _solver_params[args.solver]["solve"]
         # Apply procedural constraints
@@ -379,6 +380,9 @@ def main():
         t += 1
         # Write output
         fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+        # Update progress bar
+        pbar.update(1)
+    pbar.close()
 
 
 if __name__ == "__main__":

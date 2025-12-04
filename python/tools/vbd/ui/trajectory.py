@@ -30,7 +30,8 @@ class Trajectory:
 
     def draw(self):
         imgui.PushID("Trajectory")
-        button_size = [imgui.GetWindowWidth() / 2.1, 0]
+        width = imgui.GetWindowWidth()
+        button_size = [width / 2.1, 0]
         if imgui.Button("Load Trajectory", button_size):
             self._load_trajectory()
         imgui.SameLine()
@@ -38,8 +39,12 @@ class Trajectory:
         _, self._group = imgui.InputText("Group", self._group)
         if self._archive is not None:
             # TODO: Display trajectory file path
+            imgui.SetNextItemWidth(width * 0.7)
             _, t = imgui.SliderInt("Frame", self._t, self._tmin, self._tmax)
-            if t != self._t:
+            imgui.SameLine()
+            imgui.SetNextItemWidth(width * 0.2)
+            sync = imgui.Button("Sync")
+            if t != self._t or sync:
                 self._t = t
                 self._dirty = True
         imgui.PopID()
