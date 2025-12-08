@@ -15,7 +15,7 @@ class VbdSolver(BaseSolver):
         super().__init__("VBD")
         self._params = ParameterObject(pbat.sim.algorithm.vbd.Params())
 
-    def draw(self):
+    def draw(self, vm: ps.VolumeMesh):
         imgui.PushID(self._name)
         if imgui.TreeNode(f"{type(self._params.params).__name__}"):
             self._params.draw()
@@ -47,7 +47,8 @@ class VbdSolver(BaseSolver):
             callback = lambda: None
         callback()
         params: pbat.sim.algorithm.vbd.Params = self._params.params
-        for k in range(params.n_max_iters):
+        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
+        while params.k < params.n_max_iters:
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()

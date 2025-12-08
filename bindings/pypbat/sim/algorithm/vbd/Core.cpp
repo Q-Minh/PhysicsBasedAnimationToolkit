@@ -164,7 +164,10 @@ void BindCore(nanobind::module_& m)
         .def_rw("Padj", &Params::Padj, "`|# verts|` partition vertices")
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold");
+        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
+        .def_rw("k", &Params::k, "Current iteration index")
+        .def_rw("dxtilde0", &Params::dxtilde0, "Initial distance to inertial targets")
+        .def_rw("kappa", &Params::kappa, "Per-vertex estimated condition numbers");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics;

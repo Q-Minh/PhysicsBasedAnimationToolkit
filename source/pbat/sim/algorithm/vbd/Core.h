@@ -149,7 +149,9 @@ struct Params
     /**
      * @brief Read-write
      */
-    Index k; ///< Current VBD iteration
+    Index k;          ///< Current VBD iteration
+    VectorX dxtilde0; ///< `|# nodes * # dims| x 1` initial distance to inertial targets
+    VectorX kappa;    ///< `|# nodes * # dims| x 1` per-vertex estimated condition numbers
 };
 
 /**
@@ -216,6 +218,13 @@ void InitializeSolve(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     params.k = 0;
+    params.dxtilde0.resize(fem.x.size());
+    params.kappa.resize(fem.x.cols());
+    tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
+        auto xi            = fem.x.col(i);
+        auto xtildei       = fem.xtilde.col(i);
+        params.dxtilde0(i) = (xi - xtildei).norm();
+    });
     // Run collision detection with environment and get vertex displacement bounds
     // meshDynamics.UpdateEnvironmentContactConstraints(fem.x);
     // Truncate displacement
@@ -284,6 +293,7 @@ void Iterate(
                 kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
                 kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
             }
+            Scalar const HUin = Norm(Hi);
             // Environment contact energy
             mini::SVector<Scalar, 3> xi  = FromEigen(fem.x.col(i).template head<3>());
             mini::SVector<Scalar, 3> xti = -FromEigen(xtildeBdf.col(i).template head<3>());
@@ -424,6 +434,8 @@ void Iterate(
             // dt2 scale potential energies' derivatives
             // "Kinetic" energy
             Scalar m                         = fem.m(i);
+            Scalar const HKin                = m / betaTildeBdf2;
+            params.kappa(i)                  = std::max(HUin, HKin) / std::min(HUin, HKin);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
             kernels::AddInertiaDerivatives(betaTildeBdf2, m, xtildei, xi, gi, Hi);
             kernels::AddDamping(betaTildeBdf, xti, xi, params.betaR, gi, Hi);
