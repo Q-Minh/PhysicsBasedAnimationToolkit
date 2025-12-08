@@ -145,6 +145,11 @@ struct Params
     Scalar betaR{0};     ///< Rayleigh damping coefficient
     Index nMaxIters{25}; ///< Maximum number of VBD iterations
     Scalar detHZero{0};  ///< Numerical zero for hessian pseudo-singularity check
+
+    /**
+     * @brief Read-write
+     */
+    Index k; ///< Current VBD iteration
 };
 
 /**
@@ -159,7 +164,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params);
+    Params& params);
 
 /**
  * @brief One VBD minimization step
@@ -173,7 +178,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params);
+    Params& params);
 
 /**
  * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
@@ -187,7 +192,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params);
+    Params& params);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using VBD as the non-linear solver
@@ -201,15 +206,16 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params);
+    Params& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params)
+    Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
+    params.k = 0;
     // Run collision detection with environment and get vertex displacement bounds
     // meshDynamics.UpdateEnvironmentContactConstraints(fem.x);
     // Truncate displacement
@@ -232,7 +238,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params)
+    Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
     auto betaTildeBdf  = fem.bdf.BetaTilde();
@@ -427,17 +433,18 @@ void Iterate(
     }
     // Update dual variables every VBD iteration
     // meshDynamics.DualUpdateEnvironmentContacts(fem.x);
+    ++params.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params)
+    Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
-    for (Index k = 0; k < params.nMaxIters; ++k)
+    for (; params.k < params.nMaxIters;)
     {
         Iterate<TElasticEnergy>(fem, meshDynamics, params);
     }
@@ -448,7 +455,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params)
+    Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
     Solve<TElasticEnergy>(fem, meshDynamics, params);

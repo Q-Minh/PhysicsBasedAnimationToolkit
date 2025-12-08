@@ -33,7 +33,6 @@ void BindChebyshev(nanobind::module_& m)
             nb::arg("archive"),
             "Deserialize this from archive.")
         .def_rw("rho", &ChebyshevParams::rho, "Spectral radius estimate")
-        .def_rw("k", &ChebyshevParams::k, "Iteration")
         .def_ro("rho2", &ChebyshevParams::rho2, "Square of spectral radius estimate")
         .def_ro("omega", &ChebyshevParams::omega, "Relaxation parameter")
         .def_ro("xkm1", &ChebyshevParams::xkm1, "Previous iterate")
@@ -46,7 +45,7 @@ void BindChebyshev(nanobind::module_& m)
         "initialize_solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            ChebyshevParams& cheb) {
             pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(
                 fem,
@@ -68,7 +67,7 @@ void BindChebyshev(nanobind::module_& m)
         "iterate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            ChebyshevParams& cheb) {
             pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, meshDynamics, params, cheb);
         },
@@ -86,7 +85,7 @@ void BindChebyshev(nanobind::module_& m)
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            ChebyshevParams& cheb) {
             pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, meshDynamics, params, cheb);
         },
@@ -104,7 +103,7 @@ void BindChebyshev(nanobind::module_& m)
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            ChebyshevParams& cheb) {
             pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(
                 fem,

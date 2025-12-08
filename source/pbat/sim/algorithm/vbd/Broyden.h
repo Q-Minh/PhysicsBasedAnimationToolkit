@@ -139,7 +139,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden);
 
 /**
@@ -155,7 +155,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden);
 
 /**
@@ -172,7 +172,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden);
 
 /**
@@ -189,14 +189,14 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.InitializeSolve");
@@ -232,18 +232,18 @@ void InitializeSolve(
     broyden.xkm1 = fem.x.reshaped();
     Iterate(fem, meshDynamics, params);
     broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
-    broyden.k    = 1;
+    params.k    = 1;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Iterate");
-    auto dkl = pbat::common::Modulo(broyden.k - 1, broyden.m);
+    auto dkl = pbat::common::Modulo(params.k - 1, broyden.m);
     // Update (preconditioned) history
     broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
     broyden.xkm1        = fem.x.reshaped();
@@ -252,7 +252,7 @@ void Iterate(
     broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
     broyden.fkm1        = broyden.fk;
     // Solve least-squares problem
-    auto mk = std::min(broyden.m, broyden.k);
+    auto mk = std::min(broyden.m, params.k);
     auto Fk = broyden.Fk.leftCols(mk);
     // NOTE: The decomposition solvers (i.e. COD, QR) should use an updating scheme here instead of
     // recomputing from scratch every time (Eigen does not seem to support it), but the updating
@@ -264,7 +264,7 @@ void Iterate(
             if (broyden.qr.info() != Eigen::ComputationInfo::Success)
             {
                 throw std::runtime_error(
-                    fmt::format("QR decomposition failed at iteration {}", broyden.k));
+                    fmt::format("QR decomposition failed at iteration {}", params.k));
             }
             broyden.gammak.head(mk) = broyden.qr.solve(broyden.fk);
         }
@@ -292,7 +292,7 @@ void Iterate(
             if (broyden.cod.info() != Eigen::ComputationInfo::Success)
             {
                 throw std::runtime_error(
-                    fmt::format("COD decomposition failed at iteration {}", broyden.k));
+                    fmt::format("COD decomposition failed at iteration {}", params.k));
             }
             broyden.gammak.head(mk) = broyden.cod.solve(broyden.fk);
         }
@@ -391,19 +391,19 @@ void Iterate(
         }
         default: break;
     }
-    ++broyden.k;
+    ++params.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params, broyden);
-    for (; broyden.k < params.nMaxIters;)
+    for (; params.k < params.nMaxIters;)
     {
         Iterate<TElasticEnergy>(fem, meshDynamics, params, broyden);
     }
@@ -414,7 +414,7 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics& meshDynamics,
-    Params const& params,
+    Params& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Integrate");
