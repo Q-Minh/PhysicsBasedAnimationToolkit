@@ -70,7 +70,6 @@ void BindBroyden(nanobind::module_& m)
             "broyden_beta_B",
             &BroydenParams::betaB,
             "Rank estimate for Bk in diagonal Cauchy-Schwarz updating")
-        .def_ro("k", &BroydenParams::k, "Current iteration")
         .def_ro("Fk", &BroydenParams::Fk, "`|# dofs| x m` residual differences")
         .def_ro("Xk", &BroydenParams::Xk, "`|# dofs| x m` past step differences")
         .def_ro("xkm1", &BroydenParams::xkm1, "`|# dofs| x 1` previous step")
@@ -105,7 +104,7 @@ void BindBroyden(nanobind::module_& m)
         "initialize_solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            BroydenParams& broyden) {
             pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(
                 fem,
@@ -127,7 +126,7 @@ void BindBroyden(nanobind::module_& m)
         "iterate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            BroydenParams& broyden) {
             pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(
                 fem,
@@ -149,7 +148,7 @@ void BindBroyden(nanobind::module_& m)
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            BroydenParams& broyden) {
             pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, meshDynamics, params, broyden);
         },
@@ -167,7 +166,7 @@ void BindBroyden(nanobind::module_& m)
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            BroydenParams& broyden) {
             pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(
                 fem,

@@ -30,7 +30,7 @@ if __name__ == "__main__":
     c = 1
     A = M - c*dt*L
     # Precompute linear solvers
-    Ainv = pbat.math.linalg.ldlt(A)
+    Ainv = pypbat.math.linalg.ldlt(A)
     Ainv.compute(A)
 
     ps.set_up_dir("z_up")

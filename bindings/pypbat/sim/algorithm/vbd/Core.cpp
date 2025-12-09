@@ -144,7 +144,11 @@ void BindCore(nanobind::module_& m)
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def("serialize", &Params::Serialize, nb::arg("archive"), "Serialize this to archive.")
-        .def("deserialize", &Params::Deserialize, nb::arg("archive"), "Deserialize this from archive.")
+        .def(
+            "deserialize",
+            &Params::Deserialize,
+            nb::arg("archive"),
+            "Deserialize this from archive.")
         .def_rw("GVGp", &Params::GVGp, "`|# verts+1|` prefixes into GVGe")
         .def_rw("GVGe", &Params::GVGe, "`|# of vertex-elems adjacencies|` element indices")
         .def_rw(
@@ -160,7 +164,10 @@ void BindCore(nanobind::module_& m)
         .def_rw("Padj", &Params::Padj, "`|# verts|` partition vertices")
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold");
+        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
+        .def_rw("k", &Params::k, "Current iteration index")
+        .def_rw("dxtilde0", &Params::dxtilde0, "Initial distance to inertial targets")
+        .def_rw("kappa", &Params::kappa, "Per-vertex estimated condition numbers");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics;
@@ -169,7 +176,7 @@ void BindCore(nanobind::module_& m)
         "initialize_solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params) {
+           Params& params) {
             pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(
                 fem,
                 meshDynamics,
@@ -187,7 +194,7 @@ void BindCore(nanobind::module_& m)
         "iterate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params) {
+           Params& params) {
             pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, meshDynamics, params);
         },
         nb::arg("fem"),
@@ -202,7 +209,7 @@ void BindCore(nanobind::module_& m)
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params) {
+           Params& params) {
             pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, meshDynamics, params);
         },
         nb::arg("fem"),
@@ -217,7 +224,7 @@ void BindCore(nanobind::module_& m)
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params) {
+           Params& params) {
             pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, meshDynamics, params);
         },
         nb::arg("fem"),

@@ -34,7 +34,6 @@ void BindAnderson(nanobind::module_& m)
         .def_rw("m", &AndersonParams::m, "Window size")
         .def_rw("beta", &AndersonParams::beta, "Mixing parameter")
         .def_rw("cod_numerical_zero", &AndersonParams::codNumericalZero, "Numerical zero threshold")
-        .def_ro("k", &AndersonParams::k, "Number of iterations")
         .def_ro("Fk", &AndersonParams::Fk, "`|# dofs| x m` residual differences")
         .def_ro("Xk", &AndersonParams::Xk, "`|# dofs| x m` past step differences")
         .def_ro("xkm1", &AndersonParams::xkm1, "`|# dofs| x 1` previous step")
@@ -49,7 +48,7 @@ void BindAnderson(nanobind::module_& m)
         "initialize_solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            AndersonParams& anderson) {
             pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(
                 fem,
@@ -72,7 +71,7 @@ void BindAnderson(nanobind::module_& m)
         "iterate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            AndersonParams& anderson) {
             pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(
                 fem,
@@ -95,7 +94,7 @@ void BindAnderson(nanobind::module_& m)
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            AndersonParams& anderson) {
             pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(
                 fem,
@@ -118,7 +117,7 @@ void BindAnderson(nanobind::module_& m)
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
            MeshDynamicsType& meshDynamics,
-           Params const& params,
+           Params& params,
            AndersonParams& anderson) {
             pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(
                 fem,

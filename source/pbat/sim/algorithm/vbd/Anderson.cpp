@@ -8,7 +8,6 @@ void AndersonParams::Serialize(io::Archive& archive) const
     group.WriteMetaData("m", m);
     group.WriteMetaData("beta", beta);
     group.WriteMetaData("codNumericalZero", codNumericalZero);
-    group.WriteMetaData("k", k);
     group.WriteData("Fk", Fk);
     group.WriteData("Xk", Xk);
     group.WriteData("xkm1", xkm1);
@@ -23,7 +22,6 @@ void AndersonParams::Deserialize(io::Archive const& archive)
     m                 = group.ReadMetaData<Index>("m");
     beta              = group.ReadMetaData<Scalar>("beta");
     codNumericalZero  = group.ReadMetaData<Scalar>("codNumericalZero");
-    k                 = group.ReadMetaData<Index>("k");
     Fk                = group.ReadData<MatrixX>("Fk");
     Xk                = group.ReadData<MatrixX>("Xk");
     xkm1              = group.ReadData<VectorX>("xkm1");
