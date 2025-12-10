@@ -15,7 +15,7 @@ class VbdSolver(BaseSolver):
         super().__init__("VBD")
         self._params = ParameterObject(pbat.sim.algorithm.vbd.Params())
 
-    def draw(self, vm: ps.VolumeMesh):
+    def draw(self):
         imgui.PushID(self._name)
         if imgui.TreeNode(f"{type(self._params.params).__name__}"):
             self._params.draw()
