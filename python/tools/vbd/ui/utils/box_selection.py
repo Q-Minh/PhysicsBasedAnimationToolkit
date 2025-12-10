@@ -5,6 +5,7 @@ from enum import Enum
 from igl import boundary_facets
 import numpy as np
 from ..tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
+from python.tools.vbd.ui.utils.ps_helper import PsHelper
 import typing
 
 
@@ -28,8 +29,9 @@ class BoxSelection:
     _scale: np.ndarray
     _surface_only: bool
     _ps_mesh: ps.SurfaceMesh
-    _show_mesh: bool
-    _show_gizmo: bool
+    _ps_helper: PsHelper
+    # _show_mesh: bool
+    # _show_gizmo: bool
 
     def __init__(
         self,
@@ -71,17 +73,22 @@ class BoxSelection:
             ]
         )
         self._scale = np.ones(3, dtype=np.float32)
-        self._show_mesh = True
-        self._show_gizmo = False
+        # self._show_mesh = True
+        # self._show_gizmo = False
         self._surface_only = False
+        
 
     def on_added(self):
         self._ps_mesh = ps.register_surface_mesh(self.name, self._vertices, self._faces)
         self._ps_mesh.set_transparency(0.5)
+        self._ps_helper = PsHelper(self._ps_mesh)
+
 
     def on_removed(self):
         ps.remove_surface_mesh(self._ps_mesh.get_name())
         self._ps_mesh = None
+        self._ps_helper = None
+
 
     def _inverse_transform_points(self, V) -> np.ndarray:
         T = self._ps_mesh.get_transform()
@@ -143,16 +150,17 @@ class BoxSelection:
                 self._callback(b, self._prop_value, indices)
         imgui.Text("Show:")
         imgui.SameLine()
-        self._show_mesh = self._ps_mesh.is_enabled()
-        self._show_gizmo = self._ps_mesh.get_transform_gizmo_enabled()
-        _, self._show_mesh = imgui.Checkbox("Box", self._show_mesh)
-        self._ps_mesh.set_enabled(self._show_mesh)
-        if self._show_mesh:
-            imgui.SameLine()
-            _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
-            self._ps_mesh.set_transform_gizmo_enabled(
-                self._show_mesh and self._show_gizmo
-            )
+        # self._show_mesh = self._ps_mesh.is_enabled()
+        # self._show_gizmo = self._ps_mesh.get_transform_gizmo_enabled()
+        # _, self._show_mesh = imgui.Checkbox("Box", self._show_mesh)
+        # self._ps_mesh.set_enabled(self._show_mesh)
+        # if self._show_mesh:
+        #     imgui.SameLine()
+        #     _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
+        # self._ps_mesh.set_transform_gizmo_enabled(
+        #     self._show_mesh and self._show_gizmo
+        # )
+        self._ps_helper.draw()
         imgui.PopID()
 
     def set_visible(self, visible: bool):

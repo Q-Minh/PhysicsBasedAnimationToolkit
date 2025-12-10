@@ -4,7 +4,7 @@ import h5py as h5
 import polyscope as ps
 import polyscope.imgui as imgui
 from . import material
-
+from .utils.ps_helper import PsHelper
 
 class TetrahedralElastodynamicsBody:
     _V: np.ndarray[float]  # Vertex positions
@@ -19,7 +19,7 @@ class TetrahedralElastodynamicsBody:
     _vm: ps.VolumeMesh = None  # Polyscope volume mesh for visualization
     _pc: ps.PointCloud = None  # Polyscope point cloud for visualization
     _name: str = None  # Name of the body
-
+    _ps_helper = PsHelper
     _cached_transform: np.ndarray
 
     def __init__(self):
@@ -37,6 +37,8 @@ class TetrahedralElastodynamicsBody:
     def draw(self):
         _, aext = imgui.InputFloat3("External Acceleration", self._aext)
         self._aext = np.array(aext)
+        self._ps_helper.draw()
+        
 
     def set_visible(self, visible: bool):
         if self._vm is not None:
@@ -115,6 +117,7 @@ class TetrahedralElastodynamicsBody:
         self._cached_transform = np.eye(4)
         self._vm.set_transform(self._cached_transform)
         self._dirty = True
+        self._ps_helper = PsHelper(self._vm)
 
     def on_mesh_removed(self):
         if self._vm is not None:
