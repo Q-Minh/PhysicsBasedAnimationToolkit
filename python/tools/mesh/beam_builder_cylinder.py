@@ -3,16 +3,11 @@ import numpy as np
 import meshio
 import argparse
 
-from pbatoolkit import pbat, pypbat
-import igl
 import polyscope as ps
 import polyscope.imgui as imgui
-import polyscope.implot as implot
 import numpy as np
-import scipy as sp
 import argparse
 import meshio
-import scipy
 import tetgen as tg
 import tkinter as tk
 from tkinter import filedialog
@@ -72,7 +67,7 @@ def make_cylinder(equator_divisions,
                   dims, 
                   normalize):
     
-    V, T = gpt.cylinder(equator_divisions, height_divisions)
+    V, F = gpt.cylinder(equator_divisions, height_divisions)
     # Make the mesh fit in a unit cube
     V[:, :2] /= 2
 
@@ -103,8 +98,8 @@ def make_cylinder(equator_divisions,
         center_index = V.shape[0] - 1
         for j in range(equator_divisions):
             next_j = (j + 1) % equator_divisions
-            T = np.vstack((T, np.array([start + j, start + next_j, center_index])))
-    return V, T
+            F = np.vstack((F, np.array([start + j, start + next_j, center_index])))
+    return V, F
 
 
 if __name__ == "__main__":

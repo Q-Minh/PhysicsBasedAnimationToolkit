@@ -3,16 +3,11 @@ import numpy as np
 import meshio
 import argparse
 
-from pbatoolkit import pbat, pypbat
-import igl
 import polyscope as ps
 import polyscope.imgui as imgui
-import polyscope.implot as implot
 import numpy as np
-import scipy as sp
 import argparse
 import meshio
-import scipy
 import tetgen as tg
 import tkinter as tk
 from tkinter import filedialog
@@ -69,21 +64,21 @@ def make_prism(resolution,
     
     placement = np.linspace(0, 1, nz)
     V = None
-    T = None
-    new_tets = None
+    F = None
+    new_tris = None
     for i in range(nz):
-        v, t = gpt.regular_square_mesh(nx, ny)
+        v, f = gpt.regular_square_mesh(nx, ny)
         # make it unit length
         v /= 2
         # add 3rd dimension to V
         v = np.hstack((v, np.full((v.shape[0], 1), placement[i])))
         if V is None:
             V = v
-            T = t
+            F = f
             continue
         
-        t += V.shape[0]    
-        T = np.vstack((T, t))
+        f += V.shape[0]    
+        F = np.vstack((F, f))
         V = np.vstack((V, v))
 
         # Add tets between layers (will be added to main list after loop, to avoid thowing off indices)
@@ -103,10 +98,10 @@ def make_prism(resolution,
                         [cur_j, below_j, below_next_j],
                         [cur_j, below_next_j, next_j]
                     ])
-                if new_tets is None:
-                    new_tets = next_tris
+                if new_tris is None:
+                    new_tris = next_tris
                     continue
-                new_tets = np.vstack((new_tets, next_tris))
+                new_tris = np.vstack((new_tris, next_tris))
         
         cur_col = ny * nx * i
         last_col = ny * nx * (i - 1)
@@ -125,12 +120,12 @@ def make_prism(resolution,
                         [cur_j, below_j, below_next_j],
                         [cur_j, below_next_j, next_j]
                     ])
-                if new_tets is None:
-                    new_tets = next_tris
+                if new_tris is None:
+                    new_tris = next_tris
                     continue
-                new_tets = np.vstack((new_tets, next_tris))
+                new_tris = np.vstack((new_tris, next_tris))
 
-    T = np.vstack((T, new_tets))
+    F = np.vstack((F, new_tris))
         
 
     # Scale the mesh by the desired dimensions
@@ -139,7 +134,7 @@ def make_prism(resolution,
         max_dim = max(dims)
         V /= max_dim
 
-    return V, T
+    return V, F
 
 
 if __name__ == "__main__":
