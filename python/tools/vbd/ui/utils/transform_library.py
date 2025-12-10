@@ -160,14 +160,18 @@ class PrimitiveTransform:
         self._dirty = True
 
     def undirty(self, mesh_names: list[str], mesh_verts: list[np.ndarray]):
-        VD = np.vstack(
-            [
-                V[self._mesh_dirichlet_nodes[name], :]
-                for name, V in zip(mesh_names, mesh_verts)
-            ]
-        )
-        self._pc = ps.register_point_cloud(f"Transform {self.id} - Dirichlet Nodes", VD)
+        if len(mesh_names) == 0:
+            VD = np.array([])
+        else:
+            VD = np.vstack(
+                [
+                    V[self._mesh_dirichlet_nodes[name], :]
+                    for name, V in zip(mesh_names, mesh_verts)
+                ]
+            )
+            self._pc = ps.register_point_cloud(f"Transform {self.id} - Dirichlet Nodes", VD)
         self._dirty = False
+        return VD
 
     def set_visible(self, visible: bool):
         if self._pc is not None:
@@ -282,6 +286,15 @@ class LocalRotateTransform(PrimitiveTransform):
         return LocalRotateTransform(
             "New Local Rotate", 0, 1, np.array([1, 0, 0]), np.array([0, 0, 0]), 10
         )
+    
+    def undirty(self, mesh_names: list[str], mesh_verts: list[np.ndarray]):
+        VD = super().undirty(mesh_names, mesh_verts)
+        #We'll use the average position of VD in order to define the local position
+        if VD.shape[0] == 0: 
+            self.origin = np.array([0, 0, 0])
+        else:
+            self.origin = np.mean(VD, axis=0)
+        return VD
 
     def specific_apply(self, t, dt, V):
         """Apply the local rotation transform to the given vertices.
