@@ -360,8 +360,9 @@ def main():
         # Apply procedural constraints
         fem_elasto_dynamics.dmask[:] = 0
         if dirichlet_constraints is not None:
-            for _, dnodes in dirichlet_constraints.all_transformed_nodes(t, dt):
-                fem_elasto_dynamics.dmask[dnodes] = 1
+            for start, tup in zip(XP[:-1], dirichlet_constraints.all_transformed_nodes(t, dt)):
+                _, dnodes = tup
+                fem_elasto_dynamics.dmask[start + dnodes] = 1
             fem_elasto_dynamics.constrain(fem_elasto_dynamics.dmask)
             xD = fem_elasto_dynamics.x
             for start, end, name in zip(XP[:-1], XP[1:], fem_elastic_mesh_names):

@@ -351,10 +351,9 @@ class Simulation:
     def _constrain(self):
         fem = self._fem_dynamics
         fem.dmask = np.zeros_like(fem.dmask, dtype=int)
-        for name, dnodes in self._transform_library.all_transformed_nodes(
-            self._t, self._dt
-        ):
-            fem.dmask[dnodes] = 1
+        for start, tup in zip(self._XP[:-1], self._transform_library.all_transformed_nodes(self._t, self._dt)):
+            _, dnodes = tup
+            fem.dmask[start+dnodes] = 1
         fem.constrain(fem.dmask)
 
     def _apply_procedural_constraints(self):
