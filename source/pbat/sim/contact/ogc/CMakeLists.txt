@@ -1,0 +1,19 @@
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PUBLIC
+    FILE_SET api
+    FILES
+    "ContactFace.h"
+    "Enums.h"
+    "Input.h"
+    "Ogc.h"
+    "Params.h"
+    "State.h"
+)
+target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    "ContactFace.cpp"
+    "Input.cpp"
+    "Ogc.cpp"
+    "Params.cpp"
+    "State.cpp"
+)

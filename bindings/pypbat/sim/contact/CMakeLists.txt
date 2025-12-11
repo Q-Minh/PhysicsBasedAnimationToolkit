@@ -7,7 +7,6 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "MeshSdfContact.h"
     "MultibodyMeshMixedCcdDcd.h"
     "MultiMesh.h"
-    "OffsetGeometryContact.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
@@ -16,5 +15,6 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     "MeshSdfContact.cpp"
     "MultibodyMeshMixedCcdDcd.cpp"
     "MultiMesh.cpp"
-    "OffsetGeometryContact.cpp"
 )
+
+add_subdirectory(ogc)

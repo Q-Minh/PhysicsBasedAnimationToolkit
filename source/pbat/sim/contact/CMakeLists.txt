@@ -10,7 +10,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "MeshSdfContact.h"
     "MultibodyMeshMixedCcdDcd.h"
     "MultiMesh.h"
-    "OffsetGeometryContact.h"
     "Potentials.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -22,6 +21,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "MeshSdfContact.cpp"
     "MultibodyMeshMixedCcdDcd.cpp"
     "MultiMesh.cpp"
-    "OffsetGeometryContact.cpp"
     "Potentials.cpp"
 )
+
+add_subdirectory(ogc)

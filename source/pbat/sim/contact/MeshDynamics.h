@@ -12,7 +12,6 @@
 
 #include "MeshSdfContact.h"
 #include "MultiMesh.h"
-#include "OffsetGeometryContact.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
 #include "pbat/geometry/Device.h"
@@ -234,7 +233,6 @@ class MeshDynamics
      * @brief Contact detection data structures and algorithms
      */
     MultiMesh<IndexType> mMeshes;                 ///< Dynamic geometry
-    OffsetGeometryContact mOffsetGeometryContact; ///< Offset-geometry contact detection
     geometry::sdf::Forest<ScalarType> mSdfForest; ///< Static geometry representation
     geometry::sdf::Composite<ScalarType> mSdf;    ///< SDF of static geometry
     MeshSdfContact mMeshSdfContact;               ///< Mesh-SDF contact detection

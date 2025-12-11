@@ -70,8 +70,9 @@ void MeshDynamics::InitializeMeshMeshContactDetection(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     geometry::Device const& device)
 {
-    mOffsetGeometryContact
-        .Initialize(device, X, mMeshes.V, mMeshes.F, mMeshes.E, mMeshes.VP, mMeshes.FP, mMeshes.EP);
+    throw std::runtime_error(
+        "MeshDynamics::InitializeMeshMeshContactDetection: "
+        "mesh-mesh contact detection has been disabled");
 }
 
 void MeshDynamics::InitializeMeshEnvironmentContactDetection()
