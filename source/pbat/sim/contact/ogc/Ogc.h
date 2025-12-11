@@ -279,14 +279,14 @@ void DynamicVertexFacetRTCCollideFunc(
                 FOGC[iv].emplace_back(a, eFace);
                 common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
             };
-            switch (eFace)
+            switch (static_cast<EVertexFacetClosestFaceType>(eFace))
             {
-                case 2 /* vertex */: {
+                case EVertexFacetClosestFaceType::Vertex: {
                     if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
                         fUpdateContactSets();
                     break;
                 }
-                case 1 /* edge */: {
+                case EVertexFacetClosestFaceType::Edge: {
                     if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
                         fUpdateContactSets();
                     break;
@@ -370,14 +370,14 @@ void DynamicVertexStaticFacetRTCCollideFunc(
             auto const fUpdateContactSets = [&]() {
                 FOGC[iv].emplace_back(a, eFace);
             };
-            switch (eFace)
+            switch (static_cast<EVertexFacetClosestFaceType>(eFace))
             {
-                case 2 /* vertex */: {
+                case EVertexFacetClosestFaceType::Vertex: {
                     if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xi, a))
                         fUpdateContactSets();
                     break;
                 }
-                case 1 /* edge */: {
+                case EVertexFacetClosestFaceType::Edge: {
                     if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xi, f, a))
                         fUpdateContactSets();
                     break;
@@ -450,14 +450,14 @@ void StaticVertexDynamicFacetRTCCollideFunc(
             auto const fUpdateContactSets = [&]() {
                 common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
             };
-            switch (eFace)
+            switch (static_cast<EVertexFacetClosestFaceType>(eFace))
             {
-                case 2 /* vertex */: {
+                case EVertexFacetClosestFaceType::Vertex: {
                     if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
                         fUpdateContactSets();
                     break;
                 }
-                case 1 /* edge */: {
+                case EVertexFacetClosestFaceType::Edge: {
                     if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
                         fUpdateContactSets();
                     break;
@@ -566,9 +566,9 @@ void DynamicEdgeEdgeRTCCollideFunc(
                 if (ehe1(1) >= 0)
                     EOGC[ehe1(1)].emplace_back(a, eFace2);
             };
-            switch (eFace2)
+            switch (static_cast<EEdgeEdgeClosestFaceType>(eFace2))
             {
-                case 1 /* vertex */: {
+                case EEdgeEdgeClosestFaceType::Vertex: {
                     if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc1, a2))
                         fUpdateContactSets();
                     break;
@@ -589,9 +589,9 @@ void DynamicEdgeEdgeRTCCollideFunc(
                 if (ehe2(1) >= 0)
                     EOGC[ehe2(1)].emplace_back(a, eFace1);
             };
-            switch (eFace1)
+            switch (static_cast<EEdgeEdgeClosestFaceType>(eFace1))
             {
-                case 1 /* vertex */: {
+                case EEdgeEdgeClosestFaceType::Vertex: {
                     if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc2, a1))
                         fUpdateContactSets();
                     break;
@@ -682,9 +682,9 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
                 if (ehe1(1) >= 0)
                     EOGC[ehe1(1)].emplace_back(a2, eFace2);
             };
-            switch (eFace2)
+            switch (static_cast<EEdgeEdgeClosestFaceType>(eFace2))
             {
-                case 1 /* vertex */: {
+                case EEdgeEdgeClosestFaceType::Vertex: {
                     if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xc1, a2))
                         fUpdateContactSets();
                     break;

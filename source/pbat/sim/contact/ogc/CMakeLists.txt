@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "ContactFace.h"
+    "Debug.h"
     "Enums.h"
     "Input.h"
     "Ogc.h"
@@ -12,6 +13,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "ContactFace.cpp"
+    "Debug.cpp"
     "Input.cpp"
     "Ogc.cpp"
     "Params.cpp"

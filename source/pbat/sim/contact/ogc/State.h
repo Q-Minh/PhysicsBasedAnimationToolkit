@@ -124,20 +124,23 @@ class State
      * @note We should try custom allocators on the contact sets to see if we can boost performance
      */
     std::vector<std::vector<ContactFace<IndexType>>>
-        mDynamicContactFacesOfVertex; ///< `|# vertices|` per-vertex dynamic contact face sets
+        mDynamicContactFacesOfVertex; ///< `|# vertices|` per-vertex dynamic contact face sets. The ContactFace
+                                     ///< stores vertex, half-edge or triangle.
     std::vector<std::vector<IndexType>>
         mDynamicContactVerticesOfTriangle; ///< `|# triangles|` per-triangle dynamic contact vertex
                                            ///< sets. Stores vertex indices only.
     std::vector<std::vector<ContactFace<IndexType>>>
         mDynamicContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge dynamic contact face
-                                        ///< sets
+                                        ///< sets. The ContactFace stores vertex or half-edge.
     std::vector<std::vector<ContactFace<IndexType>>>
-        mStaticContactFacesOfVertex; ///< `|# vertices|` per-vertex static contact face sets
+        mStaticContactFacesOfVertex; ///< `|# vertices|` per-vertex static contact face sets. The ContactFace
+                                    ///< stores environment vertex, half-edge or triangle.
     std::vector<std::vector<IndexType>>
         mStaticContactVerticesOfTriangle; ///< `|# triangles|` per-triangle static contact vertex
                                           ///< sets. Stores vertex indices only.
     std::vector<std::vector<ContactFace<IndexType>>>
-        mStaticContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge static contact face sets.
+        mStaticContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge static contact face sets. The
+                                     ///< ContactFace stores environment vertex or edge.
 
     /**
      * @brief Displacement bounds

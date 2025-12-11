@@ -6,6 +6,16 @@
 namespace pbat::sim::contact::ogc {
 
 /**
+ * @brief Enumeration of closest face types.
+ */
+enum class EVertexFacetClosestFaceType : int { Vertex = 2, Edge = 1, Facet = 0 };
+
+/**
+ * @brief Enumeration of closest face types for edge-edge contacts.
+ */
+enum class EEdgeEdgeClosestFaceType : int { Edge = 0, Vertex = 1 };
+
+/**
  * @brief Contact face structure.
  */
 template <common::CIndex TIndex>
@@ -20,21 +30,6 @@ struct ContactFace
      * @param _eFace
      */
     ContactFace(IndexType _a, IndexType _eFace) : a(_a), eFace(_eFace) {}
-    /**
-     * @brief Check if the contact face is a triangle
-     * @return true if triangle, false otherwise
-     */
-    bool IsTriangle() const { return eFace == 0; }
-    /**
-     * @brief Check if the contact face is an edge
-     * @return true if edge, false otherwise
-     */
-    bool IsEdge() const { return eFace == 1; }
-    /**
-     * @brief Check if the contact face is a vertex
-     * @return true if vertex, false otherwise
-     */
-    bool IsVertex() const { return eFace == 2; }
     /**
      * @brief Less-than operator for ordering contact faces
      * @param other
@@ -53,8 +48,22 @@ struct ContactFace
     {
         return (a == other.a) and (eFace == other.eFace);
     }
-    IndexType a;     ///< Face (vertex, half-edge, edge or triangle) index
-    IndexType eFace; ///< Face type indicator: (0 | 1 | 2) -> (triangle | (half-)edge | vertex)
+    /**
+     * @brief Get the Vertex Facet Closest Face Type enum
+     * @return EVertexFacetClosestFaceType
+     */
+    EVertexFacetClosestFaceType VertexFacetClosestFaceType() const {
+        return static_cast<EVertexFacetClosestFaceType>(eFace);
+    }
+    /** @brief Get the Edge Edge Closest Face Type enum
+     * @return EEdgeEdgeClosestFaceType
+     */
+    EEdgeEdgeClosestFaceType EdgeEdgeClosestFaceType() const {
+        return static_cast<EEdgeEdgeClosestFaceType>(eFace);
+    }
+    IndexType a; ///< Face (vertex, half-edge, edge or triangle) index
+    IndexType
+        eFace; ///< Face type indicator (EVertexFacetClosestFaceType | EEdgeEdgeClosestFaceType)
 };
 
 } // namespace pbat::sim::contact::ogc

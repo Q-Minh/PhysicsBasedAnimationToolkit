@@ -58,7 +58,8 @@ void BindState(nanobind::module_& m)
         .def_ro(
             "dynamic_contact_faces_of_vertex",
             &StateType::mDynamicContactFacesOfVertex,
-            "(list[list[ContactFace]]) `|# vertices|` per-vertex dynamic contact face sets.")
+            "(list[list[ContactFace]]) `|# vertices|` per-vertex dynamic contact face sets. The "
+            "ContactFace stores vertex, half-edge or triangle.")
         .def_ro(
             "dynamic_contact_vertices_of_triangle",
             &StateType::mDynamicContactVerticesOfTriangle,
@@ -66,11 +67,13 @@ void BindState(nanobind::module_& m)
         .def_ro(
             "dynamic_contact_faces_of_half_edge",
             &StateType::mDynamicContactFacesOfHalfEdge,
-            "(list[list[ContactFace]]) `|# half-edges|` per-half-edge dynamic contact face sets.")
+            "(list[list[ContactFace]]) `|# half-edges|` per-half-edge dynamic contact face sets. "
+            "The ContactFace stores vertex or half-edge.")
         .def_ro(
             "static_contact_faces_of_vertex",
             &StateType::mStaticContactFacesOfVertex,
-            "(list[list[ContactFace]]) `|# vertices|` per-vertex static contact face sets.")
+            "(list[list[ContactFace]]) `|# vertices|` per-vertex static contact face sets. The "
+            "ContactFace stores environment vertex, half-edge or triangle.")
         .def_ro(
             "static_contact_vertices_of_triangle",
             &StateType::mStaticContactVerticesOfTriangle,
@@ -78,7 +81,8 @@ void BindState(nanobind::module_& m)
         .def_ro(
             "static_contact_faces_of_half_edge",
             &StateType::mStaticContactFacesOfHalfEdge,
-            "(list[list[ContactFace]]) `|# half-edges|` per-half-edge static contact face sets.")
+            "(list[list[ContactFace]]) `|# half-edges|` per-half-edge static contact face sets. "
+            "The ContactFace stores environment vertex or edge.")
         .def_rw(
             "bv",
             &StateType::bv,

@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
     FILE_SET api
     FILES
     "ContactFace.h"
+    "Debug.h"
     "Input.h"
     "Ogc.h"
     "Params.h"
@@ -11,6 +12,7 @@ target_sources(PhysicsBasedAnimationToolkit_Python
 target_sources(PhysicsBasedAnimationToolkit_Python
     PRIVATE
     "ContactFace.cpp"
+    "Debug.cpp"
     "Input.cpp"
     "Ogc.cpp"
     "Params.cpp"

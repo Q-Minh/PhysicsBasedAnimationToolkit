@@ -289,20 +289,29 @@ TEST_CASE("[sim][contact][ogc] Ogc")
                 return std::any_of(
                     contactFaces.begin(),
                     contactFaces.end(),
-                    [](ContactFace<Index> const& contactFace) { return contactFace.IsTriangle(); });
+                    [](ContactFace<Index> const& contactFace) {
+                        return contactFace.VertexFacetClosestFaceType() ==
+                               EVertexFacetClosestFaceType::Facet;
+                    });
             };
         auto const fContactSetHasEdges = [](std::vector<ContactFace<Index>> const& contactFaces) {
             return std::any_of(
                 contactFaces.begin(),
                 contactFaces.end(),
-                [](ContactFace<Index> const& contactFace) { return contactFace.IsEdge(); });
+                [](ContactFace<Index> const& contactFace) {
+                    return contactFace.VertexFacetClosestFaceType() ==
+                           EVertexFacetClosestFaceType::Edge;
+                });
         };
         auto const fContactSetHasVertices =
             [](std::vector<ContactFace<Index>> const& contactFaces) {
                 return std::any_of(
                     contactFaces.begin(),
                     contactFaces.end(),
-                    [](ContactFace<Index> const& contactFace) { return contactFace.IsVertex(); });
+                    [](ContactFace<Index> const& contactFace) {
+                        return contactFace.VertexFacetClosestFaceType() ==
+                               EVertexFacetClosestFaceType::Vertex;
+                    });
             };
         Eigen::Index const nVerticesWithTriangleContacts = std::accumulate(
             ogcState.mDynamicContactFacesOfVertex.begin(),

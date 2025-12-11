@@ -1,6 +1,7 @@
 #include "Ogc.h"
 
 #include "ContactFace.h"
+#include "Debug.h"
 #include "Input.h"
 #include "Params.h"
 #include "State.h"
@@ -19,6 +20,7 @@ void Bind(nanobind::module_& m)
     BindInput(m);
     BindParams(m);
     BindState(m);
+    BindDebug(m);
 
     namespace nb     = nanobind;
     using ScalarType = Scalar;
