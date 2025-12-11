@@ -133,6 +133,36 @@ struct MultiMesh
         Eigen::DenseBase<TDerivedT> const& T,
         Eigen::DenseBase<TDerivedXCC> const& XCC,
         Eigen::Index nComponents = -1);
+    /**
+     * @brief Construct a new Multi Mesh object from a tetrahedral mesh `T` with node connected
+     * component labels `XCC`.
+     *
+     * @tparam TDerivedT Tetrahedral matrix type
+     * @tparam TDerivedXCC Connected component label vector type
+     * @param T `4 x |# tetrahedra|` array of tetrahedral element indices
+     * @param XCC `|# nodes| x 1` array of node connected component labels
+     * @param nComponents Number of connected components (optional)
+     */
+    template <class TDerivedT, class TDerivedXCC>
+    void ConstructFromTetrahedralMesh(
+        Eigen::DenseBase<TDerivedT> const& T,
+        Eigen::DenseBase<TDerivedXCC> const& XCC,
+        Eigen::Index nComponents = -1);
+    /**
+     * @brief Construct a new Multi Mesh object from a triangle mesh `F` with node connected
+     * component labels `XCC`.
+     *
+     * @tparam TDerivedF Triangle matrix type
+     * @tparam TDerivedXCC Connected component label vector type
+     * @param F `3 x |# triangles|` array of triangle element indices
+     * @param XCC `|# nodes| x 1` array of node connected component labels
+     * @param nComponents Number of connected components (optional)
+     */
+    template <class TDerivedF, class TDerivedXCC>
+    void ConstructFromTriangleMesh(
+        Eigen::DenseBase<TDerivedF> const& F,
+        Eigen::DenseBase<TDerivedXCC> const& XCC,
+        Eigen::Index nComponents = -1);
 };
 
 template <
@@ -217,6 +247,16 @@ inline MultiMesh<TIndex>::MultiMesh(
     Eigen::DenseBase<TDerivedXCC> const& XCC,
     Eigen::Index nComponents)
 {
+    ConstructFromTetrahedralMesh(T, XCC, nComponents);
+}
+
+template <common::CIndex TIndex>
+template <class TDerivedT, class TDerivedXCC>
+inline void MultiMesh<TIndex>::ConstructFromTetrahedralMesh(
+    Eigen::DenseBase<TDerivedT> const& T,
+    Eigen::DenseBase<TDerivedXCC> const& XCC,
+    Eigen::Index nComponents)
+{
     static_assert(
         TDerivedT::RowsAtCompileTime == 4,
         "Element type must be tetrahedral (4 nodes per element).");
@@ -227,6 +267,39 @@ inline MultiMesh<TIndex>::MultiMesh(
     EP.resize(nComponents + 1);
     BoundaryTriangulation(T, XCC, V, F, VP, FP, GXV);
     BoundaryTriangulationEdges(F, XCC, E, EP, GVHEp, GVHEadj, GHEF, EHE);
+}
+
+template <common::CIndex TIndex>
+template <class TDerivedF, class TDerivedXCC>
+inline void MultiMesh<TIndex>::ConstructFromTriangleMesh(
+    Eigen::DenseBase<TDerivedF> const& Fin,
+    Eigen::DenseBase<TDerivedXCC> const& XCC,
+    Eigen::Index nComponents)
+{
+    static_assert(
+        TDerivedF::RowsAtCompileTime == 3,
+        "Face type must be triangular (3 nodes per face).");
+    if (nComponents < 0)
+        nComponents = XCC.maxCoeff() + 1;
+    VP.resize(nComponents + 1);
+    FP.resize(nComponents + 1);
+    EP.resize(nComponents + 1);
+    F = Fin;
+    V = Eigen::Vector<TIndex, Eigen::Dynamic>::LinSpaced(
+        static_cast<TIndex>(XCC.size()),
+        TIndex(0),
+        static_cast<TIndex>(XCC.size()) - TIndex(1));
+    VP.setZero();
+    FP.setZero();
+    // Count connected component occurrences in VP[1:] and FP[1:]
+    VP(XCC(V.reshaped()).array() + 1).array() += TIndex(1);
+    FP(XCC(F.row(0)).array() + 1).array() += TIndex(1);
+    // Compute prefix sums
+    std::inclusive_scan(VP.begin() + 1, VP.end(), VP.begin() + 1);
+    std::inclusive_scan(FP.begin() + 1, FP.end(), FP.begin() + 1);
+    BoundaryTriangulationEdges(F, XCC, E, EP, GVHEp, GVHEadj, GHEF, EHE);
+    // Compute point to vertex mapping
+    GXV = V;
 }
 
 } // namespace pbat::sim::contact
