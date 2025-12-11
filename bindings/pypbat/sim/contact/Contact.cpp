@@ -11,10 +11,10 @@ namespace pbat::py::sim::contact {
 void Bind(nanobind::module_& m)
 {
     auto mogc = m.def_submodule("ogc", "Offset Geometry Contact (OGC) algorithm bindings");
+    BindMultiMesh(m);
     ogc::Bind(mogc);
     BindMultibodyMeshMixedCcdDcd(m);
     BindMeshSdfContact(m);
-    BindMultiMesh(m);
     BindMeshDynamics(m);
 }
 

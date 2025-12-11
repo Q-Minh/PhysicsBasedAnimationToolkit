@@ -111,15 +111,26 @@ def get_transformed_static_positions(
     return Xstatic.astype(dtype=np.float32)
 
 
+def get_ogc_input(
+    ogc_input_storage: pbat.sim.contact.ogc.InputStorage,
+    Vdynamic: np.ndarray,
+    dynamic_mesh_vms: list[ps.VolumeMesh],
+    Vstatic: np.ndarray = None,
+    static_mesh_sm: ps.SurfaceMesh = None,
+):
+    Xdynamic = get_transformed_dynamic_positions(Vdynamic, dynamic_mesh_vms)
+    ogc_input_storage.Xdynamic = Xdynamic
+    if static_mesh_sm is not None:
+        Xstatic = get_transformed_static_positions(Vstatic, static_mesh_sm)
+        ogc_input_storage.Xstatic = Xstatic
+    return ogc_input_storage.to_input()
+
+
 def main():
     Vdynamic: np.ndarray = None
     Tdynamic: np.ndarray = None
-    Xdynamic: np.ndarray = None
     Vstatic: np.ndarray = None
-    Xstatic: np.ndarray = None
-    dynamic_mesh = pbat.sim.contact.MultiMesh()
-    static_mesh = pbat.sim.contact.MultiMesh()
-    ogc_input = pbat.sim.contact.ogc.Input()
+    ogc_input_storage = pbat.sim.contact.ogc.InputStorage()
     ogc_state = pbat.sim.contact.ogc.State()
     ogc_params = pbat.sim.contact.ogc.Params().with_radii(1e-3, 1e-2)
     n_dynamic_bodies = 0
@@ -127,6 +138,7 @@ def main():
     config = pbat.geometry.DeviceConfig()
     config.verbose = 3
     device = pbat.geometry.Device(config)
+    dmin = 0.0
 
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -140,10 +152,10 @@ def main():
     dynamic_mesh_vms: list[ps.VolumeMesh] = []
 
     def callback():
-        nonlocal Vdynamic, Tdynamic, Xdynamic, Vstatic, Xstatic, n_dynamic_bodies, XdynamicCC
-        nonlocal ogc_input, ogc_state, ogc_params
-        nonlocal dynamic_mesh, static_mesh
+        nonlocal Vdynamic, Tdynamic, Vstatic, n_dynamic_bodies, XdynamicCC
+        nonlocal ogc_input_storage, ogc_state, ogc_params
         nonlocal static_mesh_sm, dynamic_mesh_vms
+        nonlocal dmin
         if imgui.TreeNode("I/O"):
             if imgui.Button("Load dynamic mesh"):
                 try:
@@ -169,7 +181,7 @@ def main():
                             V if n_dynamic_bodies == 0 else np.vstack([Vdynamic, V])
                         )
                         n_dynamic_bodies += 1
-                        dynamic_mesh.construct_from_tetrahedral_mesh(
+                        ogc_input_storage.dynamic_mesh.construct_from_tetrahedral_mesh(
                             Tdynamic.T, XdynamicCC, n_dynamic_bodies
                         )
                 except Exception as e:
@@ -179,7 +191,7 @@ def main():
                     V, F = load_static_mesh()
                     if V is not None and F is not None:
                         Vstatic = V
-                        static_mesh.construct_from_triangle_mesh(
+                        ogc_input_storage.static_mesh.construct_from_triangle_mesh(
                             F.T, np.zeros(V.shape[0], dtype=np.int64)
                         )
                         static_mesh_sm = ps.register_surface_mesh("Static Mesh", V, F)
@@ -189,39 +201,39 @@ def main():
         if imgui.TreeNode("OGC"):
             if imgui.Button("Initialize"):
                 try:
-                    Xdynamic = get_transformed_dynamic_positions(
-                        Vdynamic, dynamic_mesh_vms
+                    ogc_input = get_ogc_input(
+                        ogc_input_storage,
+                        Vdynamic,
+                        dynamic_mesh_vms,
+                        Vstatic,
+                        static_mesh_sm,
                     )
-                    ogc_input.with_dynamic_geometry(
-                        X=Xdynamic,
-                        V=dynamic_mesh.V,
-                        F=dynamic_mesh.F,
-                        E=dynamic_mesh.E,
-                        VP=dynamic_mesh.VP,
-                        FP=dynamic_mesh.FP,
-                        EP=dynamic_mesh.EP,
-                        GVHEp=dynamic_mesh.GVHEp,
-                        GVHEadj=dynamic_mesh.GVHEadj,
-                        GHEF=dynamic_mesh.GHEF,
-                        EHE=dynamic_mesh.EHE,
-                    )
-                    if static_mesh_sm is not None:
-                        Xstatic = get_transformed_static_positions(
-                            Vstatic, static_mesh_sm
-                        )
-                        ogc_input.with_static_geometry(
-                            Venv=Xstatic,
-                            Eenv=static_mesh.E,
-                            Fenv=static_mesh.F,
-                            GVHEp=static_mesh.GVHEp,
-                            GVHEadj=static_mesh.GVHEadj,
-                            GHEF=static_mesh.GHEF,
-                            EHE=static_mesh.EHE,
-                        )
-                    ogc_input.construct()
                     ogc_state.initialize(device, ogc_input, ogc_params)
                 except Exception as e:
                     ps.error(f"Failed to initialize OGC: {e}")
+            if imgui.Button("Execute"):
+                try:
+                    ogc_input = get_ogc_input(
+                        ogc_input_storage,
+                        Vdynamic,
+                        dynamic_mesh_vms,
+                        Vstatic,
+                        static_mesh_sm,
+                    )
+                    ogc_state.prepare_for_execution(ogc_input, ogc_params)
+                    pbat.sim.contact.ogc.vertex_facet_contact_detection(
+                        ogc_input, ogc_params, ogc_state
+                    )
+                    pbat.sim.contact.ogc.edge_edge_contact_detection(
+                        ogc_input, ogc_params, ogc_state
+                    )
+                    pbat.sim.contact.ogc.update_displacement_bounds(
+                        ogc_input, ogc_params, ogc_state
+                    )
+                    dmin = ogc_state.bv.min()
+                except Exception as e:
+                    ps.error(f"Failed to execute OGC: {e}")
+            imgui.Text(f"Minimum displacement: {dmin:.4f}")
             imgui.TreePop()
         if imgui.TreeNode("Params"):
             draw_params(ogc_params)

@@ -2,9 +2,47 @@
 
 #include <nanobind/eigen/dense.h>
 #include <nanobind/stl/optional.h>
+#include <pbat/sim/contact/MultiMesh.h>
 #include <pbat/sim/contact/ogc/Input.h>
 
 namespace pbat::py::sim::contact::ogc {
+
+template <typename TScalar, typename TIndex>
+struct InputStorage
+{
+    pbat::sim::contact::MultiMesh<TIndex> mDynamicMesh;
+    pbat::sim::contact::MultiMesh<TIndex> mStaticMesh;
+    Eigen::Matrix<TScalar, 3, Eigen::Dynamic> Xdynamic;
+    Eigen::Matrix<TScalar, 3, Eigen::Dynamic> Xstatic;
+    pbat::sim::contact::ogc::Input<TScalar, TIndex> ToInput()
+    {
+        pbat::sim::contact::ogc::Input<TScalar, TIndex> input{};
+        input.WithDynamicGeometry(
+            Xdynamic,
+            mDynamicMesh.V,
+            mDynamicMesh.F,
+            mDynamicMesh.E,
+            mDynamicMesh.VP,
+            mDynamicMesh.FP,
+            mDynamicMesh.EP,
+            mDynamicMesh.GVHEp,
+            mDynamicMesh.GVHEadj,
+            mDynamicMesh.GHEF,
+            mDynamicMesh.EHE);
+        if (Xstatic.size() > 0)
+        {
+            input.WithStaticGeometry(
+                Xstatic,
+                mStaticMesh.E,
+                mStaticMesh.F,
+                mStaticMesh.GVHEp,
+                mStaticMesh.GVHEadj,
+                mStaticMesh.GHEF,
+                mStaticMesh.EHE);
+        }
+        return input;
+    }
+};
 
 void BindInput(nanobind::module_& m)
 {
@@ -12,6 +50,14 @@ void BindInput(nanobind::module_& m)
     using ScalarType = Scalar;
     using IndexType  = Index;
     using InputType  = pbat::sim::contact::ogc::Input<ScalarType, IndexType>;
+
+    nb::class_<InputStorage<ScalarType, IndexType>>(m, "InputStorage")
+        .def(nb::init<>())
+        .def("to_input", &InputStorage<ScalarType, IndexType>::ToInput)
+        .def_rw("dynamic_mesh", &InputStorage<ScalarType, IndexType>::mDynamicMesh)
+        .def_rw("static_mesh", &InputStorage<ScalarType, IndexType>::mStaticMesh)
+        .def_rw("Xdynamic", &InputStorage<ScalarType, IndexType>::Xdynamic)
+        .def_rw("Xstatic", &InputStorage<ScalarType, IndexType>::Xstatic);
 
     nb::class_<InputType>(m, "Input")
         .def(nb::init<>(), "Construct an empty OGC input data structure.")
