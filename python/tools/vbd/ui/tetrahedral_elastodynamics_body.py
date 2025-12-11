@@ -4,6 +4,7 @@ import h5py as h5
 import polyscope as ps
 import polyscope.imgui as imgui
 from . import material
+from . import styles
 from .utils.ps_helper import PsHelper
 
 class TetrahedralElastodynamicsBody:
@@ -35,9 +36,25 @@ class TetrahedralElastodynamicsBody:
         self._cached_transform = np.eye(4)
 
     def draw(self):
-        _, aext = imgui.InputFloat3("External Acceleration", self._aext)
-        self._aext = np.array(aext)
-        self._ps_helper.draw()
+        tab_flags = (
+            imgui.ImGuiTabBarFlags_Reorderable
+            | imgui.ImGuiTabBarFlags_FittingPolicyScroll
+            | imgui.ImGuiTabBarFlags_TabListPopupButton
+        )
+        styles.set_style_subtle()
+        if imgui.BeginTabBar("Mesh options", tab_flags):
+            self._ps_helper.draw()
+            if imgui.BeginTabItem("External", True, tab_flags)[0]:
+                _, aext = imgui.InputFloat3("External Acceleration", self._aext)
+                self._aext = np.array(aext)
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Hide", True, tab_flags)[0]:
+                # This is intentionally left empty
+                imgui.EndTabItem()
+            imgui.EndTabBar()
+        styles.pop_most_recent_style()
+        
         
 
     def set_visible(self, visible: bool):

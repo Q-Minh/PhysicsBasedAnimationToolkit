@@ -5,6 +5,7 @@ from enum import Enum
 from igl import boundary_facets
 import numpy as np
 from ..tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
+from .. import styles
 from python.tools.vbd.ui.utils.ps_helper import PsHelper
 import typing
 
@@ -134,13 +135,31 @@ class BoxSelection:
     def draw(self, meshes: list[TetrahedralElastodynamicsBody]):
         imgui.PushID(self.name)
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
-        _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 1)
-        self._scale = np.array(self._scale)
-        self._ps_mesh.update_vertex_positions(self._vertices * self._scale)
-        # Input field for specific property that we're manipulating
-        self.specific_draw()
-        if self._target == SelectionTargets.VERTEX:
-            _, self._surface_only = imgui.Checkbox("Surface Only", self._surface_only)
+        tab_flags = (
+            imgui.ImGuiTabBarFlags_Reorderable
+            | imgui.ImGuiTabBarFlags_FittingPolicyScroll
+            | imgui.ImGuiTabBarFlags_TabListPopupButton
+        )
+        
+        styles.set_style_subtle()
+        if imgui.BeginTabBar("Mode bar", tab_flags):
+            if imgui.BeginTabItem("Setup", True, tab_flags)[0]:
+                _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 1)
+                self._scale = np.array(self._scale)
+                self._ps_mesh.update_vertex_positions(self._vertices * self._scale)
+                # Input field for specific property that we're manipulating
+                self.specific_draw()
+                if self._target == SelectionTargets.VERTEX:
+                    _, self._surface_only = imgui.Checkbox("Surface Only", self._surface_only)
+                imgui.EndTabItem()
+
+            self._ps_helper.draw()
+
+            if imgui.BeginTabItem("Hide", True, tab_flags)[0]:
+                # This is intentionally left empty
+                imgui.EndTabItem()
+            imgui.EndTabBar()
+        styles.pop_most_recent_style()
         if imgui.Button("Apply", default_button_size):
             for b, m in enumerate(meshes):
                 VT, C = m.VT, m.T
@@ -148,25 +167,13 @@ class BoxSelection:
                 indices = self.inside_test(VT, C)
                 # Apply in callback that depends on property that we selected
                 self._callback(b, self._prop_value, indices)
-        imgui.Text("Show:")
-        imgui.SameLine()
-        # self._show_mesh = self._ps_mesh.is_enabled()
-        # self._show_gizmo = self._ps_mesh.get_transform_gizmo_enabled()
-        # _, self._show_mesh = imgui.Checkbox("Box", self._show_mesh)
-        # self._ps_mesh.set_enabled(self._show_mesh)
-        # if self._show_mesh:
-        #     imgui.SameLine()
-        #     _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
-        # self._ps_mesh.set_transform_gizmo_enabled(
-        #     self._show_mesh and self._show_gizmo
-        # )
-        self._ps_helper.draw()
+        
         imgui.PopID()
 
     def set_visible(self, visible: bool):
         if self._ps_mesh is not None:
-            self._ps_mesh.set_enabled(visible)
-            self._ps_mesh.set_transform_gizmo_enabled(visible)
+            self._ps_mesh.set_enabled(visible and self._ps_helper._show_mesh)
+            self._ps_mesh.set_transform_gizmo_enabled(visible and self._ps_helper._show_gizmo)
 
 
 # class DirichletSelection(BoxSelection):
