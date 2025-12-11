@@ -31,17 +31,17 @@ void BindInput(nanobind::module_& m)
                nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE) {
                 return self.WithDynamicGeometry(X, V, F, E, VP, FP, EP, GVHEp, GVHEadj, GHEF, EHE);
             },
-            nb::arg("X"),
-            nb::arg("V"),
-            nb::arg("F"),
-            nb::arg("E"),
-            nb::arg("VP"),
-            nb::arg("FP"),
-            nb::arg("EP"),
-            nb::arg("GVHEp"),
-            nb::arg("GVHEadj"),
-            nb::arg("GHEF"),
-            nb::arg("EHE"),
+            nb::arg("X").noconvert(),
+            nb::arg("V").noconvert(),
+            nb::arg("F").noconvert(),
+            nb::arg("E").noconvert(),
+            nb::arg("VP").noconvert(),
+            nb::arg("FP").noconvert(),
+            nb::arg("EP").noconvert(),
+            nb::arg("GVHEp").noconvert(),
+            nb::arg("GVHEadj").noconvert(),
+            nb::arg("GHEF").noconvert(),
+            nb::arg("EHE").noconvert(),
             nb::rv_policy::reference_internal,
             "Borrow dynamic geometry data.\n\n"
             "Args:\n"
@@ -70,13 +70,13 @@ void BindInput(nanobind::module_& m)
                nb::DRef<Eigen::Matrix<IndexType, 2, Eigen::Dynamic> const> const& EHE) {
                 return self.WithStaticGeometry(Venv, Eenv, Fenv, GVHEp, GVHEadj, GHEF, EHE);
             },
-            nb::arg("Venv"),
-            nb::arg("Eenv"),
-            nb::arg("Fenv"),
-            nb::arg("GVHEp"),
-            nb::arg("GVHEadj"),
-            nb::arg("GHEF"),
-            nb::arg("EHE"),
+            nb::arg("Venv").noconvert(),
+            nb::arg("Eenv").noconvert(),
+            nb::arg("Fenv").noconvert(),
+            nb::arg("GVHEp").noconvert(),
+            nb::arg("GVHEadj").noconvert(),
+            nb::arg("GHEF").noconvert(),
+            nb::arg("EHE").noconvert(),
             nb::rv_policy::reference_internal,
             "Borrow static geometry data.\n\n"
             "Args:\n"

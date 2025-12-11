@@ -28,6 +28,36 @@ void BindMultiMesh(nanobind::module_& m)
             "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedral connectivity.\n"
             "    XCC (numpy.ndarray): `|# nodes|` node connected-component labels.\n"
             "    n_components (int): Optional number of components (-1 infers T.max()+1).\n")
+        .def(
+            "construct_from_tetrahedral_mesh",
+            [](MultiMesh& self,
+               nb::DRef<Eigen::Matrix<IndexType, 4, Eigen::Dynamic> const> const& T,
+               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& XCC,
+               Eigen::Index n_components) {
+                self.ConstructFromTetrahedralMesh(T, XCC, n_components);
+            },
+            nb::arg("T"),
+            nb::arg("XCC"),
+            nb::arg("n_components") = -1,
+            "Construct a MultiMesh from a tetrahedral mesh and connected-component labels.\n\n"
+            "Args:\n"
+            "    T (numpy.ndarray): `4 x |# tetrahedra|` tetrahedral connectivity.\n"
+            "    XCC (numpy.ndarray): `|# nodes|` node connected-component labels.\n"
+            "    n_components (int): Optional number of components (-1 infers T.max()+1).\n")
+        .def(
+            "construct_from_triangle_mesh",
+            [](MultiMesh& self,
+               nb::DRef<Eigen::Matrix<IndexType, 3, Eigen::Dynamic> const> const& F,
+               nb::DRef<Eigen::Vector<IndexType, Eigen::Dynamic> const> const& XCC,
+               Eigen::Index n_components) { self.ConstructFromTriangleMesh(F, XCC, n_components); },
+            nb::arg("F"),
+            nb::arg("XCC"),
+            nb::arg("n_components") = -1,
+            "Construct a MultiMesh from a triangle mesh and connected-component labels.\n\n"
+            "Args:\n"
+            "    F (numpy.ndarray): `3 x |# triangles|` triangle connectivity.\n"
+            "    XCC (numpy.ndarray): `|# nodes|` node connected-component labels.\n"
+            "    n_components (int): Optional number of components (-1 infers XCC.max()+1).\n")
         .def_ro("V", &MultiMesh::V, "`|# vertices| x 1` (surface) vertex indices")
         .def_ro("F", &MultiMesh::F, "`3 x |# faces|` face indices")
         .def_ro("E", &MultiMesh::E, "`2 x |# edges|` edge indices")
