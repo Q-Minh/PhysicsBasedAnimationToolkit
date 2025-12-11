@@ -8,7 +8,6 @@
 #include <pbat/sim/contact/MeshDynamics.h>
 #include <pbat/sim/contact/MeshSdfContact.h>
 #include <pbat/sim/contact/MultiMesh.h>
-#include <pbat/sim/contact/OffsetGeometryContact.h>
 
 namespace pbat::py::sim::contact {
 
@@ -21,8 +20,6 @@ void BindMeshDynamics(nanobind::module_& m)
     using EnvironmentContactConstraintType     = MeshDynamicsType::EnvironmentContact;
     using EnvironmentContactDynamicsParamsType = MeshDynamicsType::EnvironmentContactDynamicsParams;
     using MultiMeshType                        = pbat::sim::contact::MultiMesh<IndexType>;
-    using OffsetGeometryContactType            = pbat::sim::contact::OffsetGeometryContact;
-    using OgcParamsType                        = pbat::sim::contact::OgcParams;
     using MeshSdfContactType                   = pbat::sim::contact::MeshSdfContact;
     using MeshSdfContactParamsType             = pbat::sim::contact::MeshSdfContactParams;
     using ForestType                           = pbat::geometry::sdf::Forest<ScalarType>;
@@ -185,10 +182,6 @@ void BindMeshDynamics(nanobind::module_& m)
             "(numpy.ndarray) |# half-edges| x 1 half-edge areas.")
         .def_rw("VA", &MeshDynamicsType::VA, "(numpy.ndarray) |# vertices| x 1 vertex areas.")
         .def_rw("meshes", &MeshDynamicsType::mMeshes, "(MultiMesh) Dynamic geometry.")
-        .def_ro(
-            "offset_geometry_contact",
-            &MeshDynamicsType::mOffsetGeometryContact,
-            "(OffsetGeometryContact) Offset-geometry contact detection.")
         .def_ro(
             "sdf_forest",
             &MeshDynamicsType::mSdfForest,
