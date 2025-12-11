@@ -134,6 +134,13 @@ def make_prism(resolution,
         max_dim = max(dims)
         V /= max_dim
 
+    R_y = np.array([
+        [0, 0, 1],
+        [0, 1, 0],
+        [-1, 0, 0]
+    ])
+    V = V @ R_y
+
     return V, F
 
 
