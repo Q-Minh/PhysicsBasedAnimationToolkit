@@ -404,7 +404,6 @@ void StaticVertexDynamicFacetRTCCollideFunc(
     auto const& Xenv                       = input->Venv.value();
     auto const& X                          = input->X.value();
     auto const& F                          = input->F.value();
-    auto const& FP                         = input->FP.value();
     auto const& GVHEp                      = input->GVHEp.value();
     auto const& GVHEadj                    = input->GVHEadj.value();
     auto const& GHEF                       = input->GHEF.value();
@@ -444,30 +443,27 @@ void StaticVertexDynamicFacetRTCCollideFunc(
         auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw(0), uvw(1), uvw(2));
         // Vectorize contact face index a based on its type (triangle | edge | vertex)
         TIndex const a = VertexFacetContactFaceIndex(F, f, alocal, eFace);
-        // Synchronize reads/writes to vertex iv's contact sets
-        common::AtomicExecute(mFacetLocks(f), [&]() {
-            // Update contact face sets
-            auto const fUpdateContactSets = [&]() {
-                common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
-            };
-            switch (static_cast<EVertexFacetClosestFaceType>(eFace))
-            {
-                case EVertexFacetClosestFaceType::Vertex: {
-                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                case EVertexFacetClosestFaceType::Edge: {
-                    if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                default /* triangle */: {
+        // Update contact face sets
+        auto const fUpdateContactSets = [&]() {
+            common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
+        };
+        switch (static_cast<EVertexFacetClosestFaceType>(eFace))
+        {
+            case EVertexFacetClosestFaceType::Vertex: {
+                if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
                     fUpdateContactSets();
-                    break;
-                }
+                break;
             }
-        });
+            case EVertexFacetClosestFaceType::Edge: {
+                if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
+                    fUpdateContactSets();
+                break;
+            }
+            default /* triangle */: {
+                fUpdateContactSets();
+                break;
+            }
+        }
     }
 }
 
@@ -633,7 +629,6 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // Get edge-edge pair (e1, e2)
         RTCCollision const& collision      = collisions[ci];
         TIndex const be1                   = static_cast<TIndex>(collision.geomID0);
-        TIndex const be2                   = static_cast<TIndex>(collision.geomID1);
         TIndex const e1                    = input->DynamicEdge(be1, collision.primID0);
         TIndex const e2                    = static_cast<TIndex>(collision.primID1);
         Eigen::Vector<TIndex, 2> const e1v = E.col(e1);
