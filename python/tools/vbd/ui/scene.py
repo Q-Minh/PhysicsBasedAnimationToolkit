@@ -11,6 +11,7 @@ import numpy as np
 import h5py as h5
 from .utils.box_selection import BoxSelection, SelectionTargets
 from .utils.transform_library import TransformLibrary
+from . import styles
 
 
 class BoxSelectionList:
@@ -109,6 +110,8 @@ class Scene:
         self._current_selection_property_idx = 0
         self._transform_library = TransformLibrary()
 
+    
+
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
         tab_flags = (
@@ -124,8 +127,12 @@ class Scene:
                     imgui.PushID(body.name)
                     if imgui.TreeNode(body.name):
                         body.draw()
-                        if imgui.Button("Delete", default_button_size):
-                            self._remove_tet_elastic_body(b)
+                        if imgui.TreeNode("Delete"):
+                            styles.set_style_danger()
+                            if imgui.Button("Delete", default_button_size):
+                                self._remove_tet_elastic_body(b)
+                            styles.pop_most_recent_style()
+                            imgui.TreePop()
                         imgui.TreePop()
                     imgui.PopID()
                 imgui.EndTabItem()
@@ -149,8 +156,13 @@ class Scene:
                     imgui.PushID(f"{prop_name} - {s}")
                     if imgui.TreeNode(selector.name):
                         selector.draw(self._tet_elastic_bodies)
-                        if imgui.Button("Delete", default_button_size):
-                            box_selection_list.remove_selector(s)
+                        imgui.SameLine()
+                        if imgui.TreeNode("Delete"):
+                            styles.set_style_danger()
+                            if imgui.Button("Delete", default_button_size):
+                                box_selection_list.remove_selector(s)
+                            styles.pop_most_recent_style()
+                            imgui.TreePop()
                         imgui.TreePop()
                     imgui.PopID()
                 imgui.EndTabItem()
@@ -158,6 +170,8 @@ class Scene:
             if imgui.BeginTabItem("Session", True, tab_flags)[0]:
                 if imgui.Button("Load session", default_button_size):
                     self._load_session()
+                if imgui.Button("Load session (bodies only)", default_button_size):
+                    self._load_session(bodies_only=True)
                 if imgui.Button("Save session", default_button_size):
                     self._save_session()
                 imgui.EndTabItem()
@@ -197,7 +211,7 @@ class Scene:
         file_path = filedialog.asksaveasfilename(
             title="Save session (HDF5)",
             defaultextension=".h5",
-            filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")],
         )
         try:
             if file_path:
@@ -216,25 +230,21 @@ class Scene:
         finally:
             root.destroy()
 
-    def _load_session(self):
+    def _load_session(self, bodies_only=False):
+        body_info = "- Without transforms" if bodies_only else ""
         root = tk.Tk()
         root.withdraw()
         file_path = filedialog.askopenfilename(
-            title="Load session (HDF5)",
+            title="Load session (HDF5)" + body_info,
             defaultextension=".h5",
-            filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")],
         )
         try:
             if file_path:
                 with h5.File(file_path, "r") as f:
-                    self._teardown()
-                    self._deserialize_fem_tet_elastic_bodies(
-                        f["fem_tet_elastic_bodies"]
-                    )
-                    self._recycled_tet_elastic_body_indices = list(
-                        f["recycled_tet_elastic_body_indices"][:]
-                    )
-                    self._transform_library.deserialize(f["transform_library"])
+                    self._teardown(bodies_only=bodies_only)
+                    self._buildup(f, bodies_only=bodies_only)
+                    
         except Exception as e:
             ps.error(f"Error loading session:\n{e}")
         finally:
@@ -303,9 +313,28 @@ class Scene:
             body.deserialize(body_grp)
             self._tet_elastic_bodies.append(body)
 
-    def _teardown(self):
+    def _teardown(self, bodies_only=False):
+        if not bodies_only:
+            self._transform_library = TransformLibrary()
+        else:
+            for body in self._tet_elastic_bodies:
+                self._transform_library.on_mesh_removed(body.name)
+                
         for body in self._tet_elastic_bodies:
             body.on_mesh_removed()
         self._tet_elastic_bodies = []
         self._recycled_tet_elastic_body_indices = []
-        self._transform_library = TransformLibrary()
+        
+
+    def _buildup(self, f, bodies_only=False):
+        self._deserialize_fem_tet_elastic_bodies(
+            f["fem_tet_elastic_bodies"]
+        )
+        self._recycled_tet_elastic_body_indices = list(
+            f["recycled_tet_elastic_body_indices"][:]
+        )
+        if not bodies_only:
+            self._transform_library.deserialize(f["transform_library"])
+        else:
+            for body in self._tet_elastic_bodies:
+                self._transform_library.on_mesh_added(body.name)

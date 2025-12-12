@@ -261,7 +261,7 @@ class Simulation:
         file_path = filedialog.asksaveasfilename(
             title="Save scenario (HDF5)",
             defaultextension=".h5",
-            filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")],
         )
         try:
             if file_path:
@@ -293,7 +293,7 @@ class Simulation:
         file_path = filedialog.askopenfilename(
             title="Load scenario or trajectory (HDF5)",
             defaultextension=".h5",
-            filetypes=[("HDF5 files", "*.h5;*.hdf5"), ("All files", "*.*")],
+            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")],
         )
         try:
             if not file_path:
@@ -353,7 +353,8 @@ class Simulation:
         fem.dmask = np.zeros_like(fem.dmask, dtype=int)
         for start, tup in zip(self._XP[:-1], self._transform_library.all_transformed_nodes(self._t, self._dt)):
             _, dnodes = tup
-            fem.dmask[start+dnodes] = 1
+            if len(dnodes) != 0:
+                fem.dmask[start+dnodes] = 1
         fem.constrain(fem.dmask)
 
     def _apply_procedural_constraints(self):
