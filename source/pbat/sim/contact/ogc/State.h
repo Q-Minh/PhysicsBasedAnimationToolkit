@@ -56,9 +56,9 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 class State
 {
   public:
-    using SelfType   = State<TScalar, TIndex>;
-    using ScalarType = TScalar;
-    using IndexType  = TIndex;
+    using SelfType   = State<TScalar, TIndex>; ///< Self type
+    using ScalarType = TScalar;                ///< Scalar type
+    using IndexType  = TIndex;                 ///< Index type
 
     /**
      * @brief Construct a new Ogc State object
@@ -108,6 +108,103 @@ class State
      */
     void PrepareForExecution(Input<TScalar, TIndex> const& input, Params<TScalar> const& params);
     /**
+     * @brief Iterate over dynamic contact faces of a vertex and invoke appropriate callbacks
+     * @tparam FOnVertexVertexContact Callable type for vertex-vertex contacts with signature
+     * `void(IndexType vj)`
+     * @tparam FOnVertexHalfEdgeContact Callable type for vertex-(half-)edge contacts with signature
+     * `void(IndexType he)`
+     * @tparam FOnVertexFacetContact Callable type for vertex-facet contacts with signature
+     * `void(IndexType f)`
+     * @param vi Vertex index
+     * @param fOnVertexVertexContact Callback invoked for each vertex-vertex contact face
+     * @param fOnVertexHalfEdgeContact Callback invoked for each vertex-(half-)edge contact face
+     * @param fOnVertexFacetContact Callback invoked for each vertex-facet contact face
+     */
+    template <
+        class FOnVertexVertexContact,
+        class FOnVertexHalfEdgeContact,
+        class FOnVertexFacetContact>
+    void ForEachDynamicContactFaceOfVertex(
+        IndexType vi,
+        FOnVertexVertexContact&& fOnVertexVertexContact,
+        FOnVertexHalfEdgeContact&& fOnVertexHalfEdgeContact,
+        FOnVertexFacetContact&& fOnVertexFacetContact) const;
+    /**
+     * @brief Iterate over static contact faces of a vertex and invoke appropriate callbacks
+     * @tparam FOnVertexVertexContact Callable type for vertex-vertex contacts with signature
+     * `void(IndexType vj)`
+     * @tparam FOnVertexEdgeContact Callable type for vertex-edge contacts with signature
+     * `void(IndexType he)`
+     * @tparam FOnVertexFacetContact Callable type for vertex-facet contacts with signature
+     * `void(IndexType f)`
+     * @param vi Vertex index
+     * @param fOnVertexVertexContact Callback invoked for each vertex-vertex contact face
+     * @param fOnVertexEdgeContact Callback invoked for each vertex-edge contact face
+     * @param fOnVertexFacetContact Callback invoked for each vertex-facet contact face
+     */
+    template <class FOnVertexVertexContact, class FOnVertexEdgeContact, class FOnVertexFacetContact>
+    void ForEachStaticContactFaceOfVertex(
+        IndexType vi,
+        FOnVertexVertexContact&& fOnVertexVertexContact,
+        FOnVertexEdgeContact&& fOnVertexEdgeContact,
+        FOnVertexFacetContact&& fOnVertexFacetContact) const;
+    /**
+     * @brief Iterate over dynamic contact faces of a half-edge and invoke appropriate callbacks
+     *
+     * @tparam FOnHalfEdgeVertexContact Callable type for half-edge-vertex contacts with signature
+     * `void(IndexType vj)`
+     * @tparam FOnHalfEdgeHalfEdgeContact Callable type for half-edge-half-edge contacts with
+     * signature `void(IndexType hej)`
+     * @param hei Half-edge index
+     * @param fOnHalfEdgeVertexContact Callback invoked for each half-edge-vertex contact face
+     * @param fOnHalfEdgeHalfEdgeContact Callback invoked for each half-edge-half-edge contact face
+     */
+    template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeHalfEdgeContact>
+    void ForEachDynamicContactFaceOfHalfEdge(
+        IndexType hei,
+        FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
+        FOnHalfEdgeHalfEdgeContact&& fOnHalfEdgeHalfEdgeContact) const;
+    /**
+     * @brief Iterate over static contact faces of a half-edge and invoke appropriate callbacks
+     * @tparam FOnHalfEdgeVertexContact Callable type for half-edge-vertex contacts with signature
+     * `void(IndexType vj)`
+     * @tparam FOnHalfEdgeEdgeContact Callable type for half-edge-edge contacts with signature
+     * `void(IndexType hej)`
+     * @param hei Half-edge index
+     * @param fOnHalfEdgeVertexContact Callback invoked for each half-edge-vertex contact face
+     * @param fOnHalfEdgeEdgeContact Callback invoked for each half-edge-edge contact face
+     */
+    template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeEdgeContact>
+    void ForEachStaticContactFaceOfHalfEdge(
+        IndexType he,
+        FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
+        FOnHalfEdgeEdgeContact&& fOnHalfEdgeEdgeContact) const;
+    /**
+     * @brief Iterate over dynamic vertex contacts of a triangle and invoke appropriate callbacks
+     *
+     * @tparam FOnTriangleVertexContact Callable type for triangle-vertex contacts with signature
+     * `void(IndexType i)`
+     * @param fi Triangle index
+     * @param fOnTriangleVertexContact Callback invoked for each triangle-vertex contact
+     */
+    template <class FOnTriangleVertexContact>
+    void ForEachDynamicVertexContactOfTriangle(
+        IndexType fi,
+        FOnTriangleVertexContact&& fOnTriangleVertexContact) const;
+    /**
+     * @brief Iterate over static vertex contacts of a dynamic triangle and invoke appropriate
+     * callbacks
+     *
+     * @tparam FOnTriangleVertexContact Callable type for triangle-vertex contacts with signature
+     * `void(IndexType i)`
+     * @param fi Triangle index
+     * @param fOnTriangleVertexContact Callback invoked for each triangle-vertex contact
+     */
+    template <class FOnTriangleVertexContact>
+    void ForEachStaticVertexContactOfTriangle(
+        IndexType fi,
+        FOnTriangleVertexContact&& fOnTriangleVertexContact) const;
+    /**
      * @brief Destroy the State object
      */
     ~State();
@@ -124,8 +221,8 @@ class State
      * @note We should try custom allocators on the contact sets to see if we can boost performance
      */
     std::vector<std::vector<ContactFace<IndexType>>>
-        mDynamicContactFacesOfVertex; ///< `|# vertices|` per-vertex dynamic contact face sets. The ContactFace
-                                     ///< stores vertex, half-edge or triangle.
+        mDynamicContactFacesOfVertex; ///< `|# vertices|` per-vertex dynamic contact face sets. The
+                                      ///< ContactFace stores vertex, half-edge or triangle.
     std::vector<std::vector<IndexType>>
         mDynamicContactVerticesOfTriangle; ///< `|# triangles|` per-triangle dynamic contact vertex
                                            ///< sets. Stores vertex indices only.
@@ -133,14 +230,15 @@ class State
         mDynamicContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge dynamic contact face
                                         ///< sets. The ContactFace stores vertex or half-edge.
     std::vector<std::vector<ContactFace<IndexType>>>
-        mStaticContactFacesOfVertex; ///< `|# vertices|` per-vertex static contact face sets. The ContactFace
-                                    ///< stores environment vertex, half-edge or triangle.
+        mStaticContactFacesOfVertex; ///< `|# vertices|` per-vertex static contact face sets. The
+                                     ///< ContactFace stores environment vertex, half-edge or
+                                     ///< triangle.
     std::vector<std::vector<IndexType>>
         mStaticContactVerticesOfTriangle; ///< `|# triangles|` per-triangle static contact vertex
                                           ///< sets. Stores vertex indices only.
     std::vector<std::vector<ContactFace<IndexType>>>
-        mStaticContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge static contact face sets. The
-                                     ///< ContactFace stores environment vertex or edge.
+        mStaticContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge static contact face sets.
+                                       ///< The ContactFace stores environment vertex or edge.
 
     /**
      * @brief Displacement bounds
@@ -197,6 +295,12 @@ inline State<TScalar, TIndex>::State(
 
 namespace detail {
 
+/**
+ * @brief RTC bounds function for dynamic points
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param args RTC bounds function arguments
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicPointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
@@ -219,6 +323,12 @@ void DynamicPointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args
     args->bounds_o->upper_z             = xv(2) + queryRadius;
 }
 
+/**
+ * @brief RTC bounds function for dynamic edges
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param args RTC bounds function arguments
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicEdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
@@ -243,6 +353,12 @@ void DynamicEdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
     args->bounds_o->upper_z   = xmid(2) + queryRadius;
 }
 
+/**
+ * @brief RTC bounds function for dynamic edges
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param args RTC bounds function arguments
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicTriangleRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
@@ -265,6 +381,12 @@ void DynamicTriangleRTCBoundsFunction(const struct RTCBoundsFunctionArguments* a
     args->bounds_o->upper_z             = std::max({xf(2, 0), xf(2, 1), xf(2, 2)}) + eps;
 }
 
+/**
+ * @brief RTC bounds function for static points
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param args RTC bounds function arguments
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void StaticPointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
@@ -284,6 +406,12 @@ void StaticPointRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
     args->bounds_o->upper_z             = xv(2) + queryRadius;
 }
 
+/**
+ * @brief RTC bounds function for static edges
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param args RTC bounds function arguments
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void StaticEdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
@@ -306,6 +434,12 @@ void StaticEdgeRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
     args->bounds_o->upper_z   = xmid(2) + queryRadius;
 }
 
+/**
+ * @brief RTC bounds function for static triangles
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param args RTC bounds function arguments
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void StaticTriangleRTCBoundsFunction(const struct RTCBoundsFunctionArguments* args)
 {
@@ -657,6 +791,98 @@ inline void State<TScalar, TIndex>::PreparePerBodyRtcBoundsParams(
         mPerBodyRtcBoundsParams[b].params = std::addressof(params);
         mPerBodyRtcBoundsParams[b].b      = b;
     }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnVertexVertexContact, class FOnVertexHalfEdgeContact, class FOnVertexFacetContact>
+inline void State<TScalar, TIndex>::ForEachDynamicContactFaceOfVertex(
+    IndexType v,
+    FOnVertexVertexContact&& fOnVertexVertexContact,
+    FOnVertexHalfEdgeContact&& fOnVertexHalfEdgeContact,
+    FOnVertexFacetContact&& fOnVertexFacetContact) const
+{
+    for (ContactFace<TIndex> const& contactFace : mDynamicContactFacesOfVertex[v])
+    {
+        switch (static_cast<EVertexFacetClosestFaceType>(contactFace.eFace))
+        {
+            case EVertexFacetClosestFaceType::Vertex: fOnVertexVertexContact(contactFace.a); break;
+            case EVertexFacetClosestFaceType::Edge: fOnVertexHalfEdgeContact(contactFace.a); break;
+            case EVertexFacetClosestFaceType::Facet: fOnVertexFacetContact(contactFace.a); break;
+        }
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnVertexVertexContact, class FOnVertexEdgeContact, class FOnVertexFacetContact>
+inline void State<TScalar, TIndex>::ForEachStaticContactFaceOfVertex(
+    IndexType v,
+    FOnVertexVertexContact&& fOnVertexVertexContact,
+    FOnVertexEdgeContact&& fOnVertexEdgeContact,
+    FOnVertexFacetContact&& fOnVertexFacetContact) const
+{
+    for (ContactFace<TIndex> const& contactFace : mStaticContactFacesOfVertex[v])
+    {
+        switch (static_cast<EVertexFacetClosestFaceType>(contactFace.eFace))
+        {
+            case EVertexFacetClosestFaceType::Vertex: fOnVertexVertexContact(contactFace.a); break;
+            case EVertexFacetClosestFaceType::Edge: fOnVertexEdgeContact(contactFace.a); break;
+            case EVertexFacetClosestFaceType::Facet: fOnVertexFacetContact(contactFace.a); break;
+        }
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeHalfEdgeContact>
+inline void State<TScalar, TIndex>::ForEachDynamicContactFaceOfHalfEdge(
+    IndexType he,
+    FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
+    FOnHalfEdgeHalfEdgeContact&& fOnHalfEdgeHalfEdgeContact) const
+{
+    for (ContactFace<TIndex> const& contactFace : mDynamicContactFacesOfHalfEdge[he])
+    {
+        switch (static_cast<EEdgeEdgeClosestFaceType>(contactFace.eFace))
+        {
+            case EEdgeEdgeClosestFaceType::Vertex: fOnHalfEdgeVertexContact(contactFace.a); break;
+            case EEdgeEdgeClosestFaceType::Edge: fOnHalfEdgeHalfEdgeContact(contactFace.a); break;
+        }
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeEdgeContact>
+inline void State<TScalar, TIndex>::ForEachStaticContactFaceOfHalfEdge(
+    IndexType he,
+    FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
+    FOnHalfEdgeEdgeContact&& fOnHalfEdgeEdgeContact) const
+{
+    for (ContactFace<TIndex> const& contactFace : mStaticContactFacesOfHalfEdge[he])
+    {
+        switch (static_cast<EEdgeEdgeClosestFaceType>(contactFace.eFace))
+        {
+            case EEdgeEdgeClosestFaceType::Vertex: fOnHalfEdgeVertexContact(contactFace.a); break;
+            case EEdgeEdgeClosestFaceType::Edge: fOnHalfEdgeEdgeContact(contactFace.a); break;
+        }
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnTriangleVertexContact>
+inline void State<TScalar, TIndex>::ForEachDynamicVertexContactOfTriangle(
+    IndexType fi,
+    FOnTriangleVertexContact&& fOnTriangleVertexContact) const
+{
+    for (IndexType v : mDynamicContactVerticesOfTriangle[fi])
+        fOnTriangleVertexContact(v);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnTriangleVertexContact>
+inline void State<TScalar, TIndex>::ForEachStaticVertexContactOfTriangle(
+    IndexType fi,
+    FOnTriangleVertexContact&& fOnTriangleVertexContact) const
+{
+    for (IndexType v : mStaticContactVerticesOfTriangle[fi])
+        fOnTriangleVertexContact(v);
 }
 
 } // namespace pbat::sim::contact::ogc

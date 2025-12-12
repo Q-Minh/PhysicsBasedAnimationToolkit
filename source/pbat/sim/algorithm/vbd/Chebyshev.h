@@ -68,7 +68,7 @@ struct ChebyshevParams
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb);
 
@@ -84,7 +84,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb);
 
@@ -101,7 +101,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb);
 
@@ -118,14 +118,14 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb)
 {
@@ -139,7 +139,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb)
 {
@@ -158,7 +158,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb)
 {
@@ -174,7 +174,7 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     ChebyshevParams& cheb)
 {

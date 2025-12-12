@@ -39,6 +39,7 @@ namespace pbat::sim::contact {
  * @param F `3 x |# faces|` array of output face indices
  * @param VP `|# connected components + 1| x 1` vertex prefix
  * @param FP `|# connected components + 1| x 1` face prefix
+ * @param GXV `|# points| x 1` point to vertex mapping
  */
 template <
     class TDerivedT,

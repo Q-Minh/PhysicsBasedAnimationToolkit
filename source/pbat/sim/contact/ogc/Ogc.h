@@ -119,7 +119,7 @@ std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
  * - Vertex-face:     a = F(alocal, f)  (global vertex index)
  *
  * @tparam TIndex Index type
- * @tparam TDerivedF Derived Eigen type for face connectivity (3 x |#faces|)
+ * @tparam TDerivedF Derived Eigen type for face connectivity (`3 x |# faces|`)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param f Face index
  * @param alocal Local index within face f (0..2)
@@ -200,6 +200,14 @@ struct VertexFacetRTCCollideFuncParams
     State<TScalar, TIndex>* state;       ///< OGC state for the body
 };
 
+/**
+ * @brief RTC collide function for dynamic vertex - dynamic facet collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicVertexFacetRTCCollideFunc(
     void* userPtr,
@@ -300,6 +308,14 @@ void DynamicVertexFacetRTCCollideFunc(
     }
 }
 
+/**
+ * @brief RTC collide function for dynamic vertex - static facet collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicVertexStaticFacetRTCCollideFunc(
     void* userPtr,
@@ -391,6 +407,14 @@ void DynamicVertexStaticFacetRTCCollideFunc(
     }
 }
 
+/**
+ * @brief RTC collide function for static vertex - dynamic facet collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void StaticVertexDynamicFacetRTCCollideFunc(
     void* userPtr,
@@ -475,6 +499,14 @@ struct EdgeEdgeRTCCollideFuncParams
     State<TScalar, TIndex>* state;       ///< OGC state for the body
 };
 
+/**
+ * @brief RTC collide function for dynamic edge - dynamic edge collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicEdgeEdgeRTCCollideFunc(
     void* userPtr,
@@ -601,6 +633,14 @@ void DynamicEdgeEdgeRTCCollideFunc(
     }
 }
 
+/**
+ * @brief RTC collide function for dynamic edge - static edge collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicEdgeStaticEdgeRTCCollideFunc(
     void* userPtr,

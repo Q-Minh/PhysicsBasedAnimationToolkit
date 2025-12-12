@@ -26,7 +26,7 @@ namespace pbat::sim::contact::ogc {
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 struct Input
 {
-    using SelfType = Input<TScalar, TIndex>;
+    using SelfType = Input<TScalar, TIndex>; ///< Self type
     /**
      * @brief Borrow dynamic geometry data.
      * @param _X `3 x |# points|` dynamic vertex positions
@@ -57,6 +57,7 @@ struct Input
     /**
      * @brief Borrow static geometry data.
      * @param _Venv `3 x |# env. verts|` static vertex positions
+     * @param _Eenv `2 x |# env. edges|` static edge indices into `Venv`
      * @param _Fenv `3 x |# env. facets|` static facet indices into `Venv`
      * @param _GVHEp `|# env. verts + 1|` point to half-edge prefix
      * @param _GVHEadj `|# env. half edges|` point to half-edge adjacency

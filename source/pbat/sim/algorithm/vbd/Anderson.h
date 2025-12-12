@@ -76,7 +76,7 @@ struct AndersonParams
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson);
 
@@ -92,7 +92,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson);
 
@@ -109,7 +109,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson);
 
@@ -126,14 +126,14 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson)
 {
@@ -150,7 +150,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson)
 {
@@ -183,7 +183,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson)
 {
@@ -199,7 +199,7 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     AndersonParams& anderson)
 {

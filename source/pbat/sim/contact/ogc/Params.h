@@ -26,10 +26,10 @@ namespace pbat::sim::contact::ogc {
 template <common::CFloatingPoint TScalar>
 struct Params
 {
-    using ScalarType = TScalar;
+    using ScalarType = TScalar; ///< Scalar type
 
-    ScalarType r{ScalarType(0)};  ///< Contact radius
-    ScalarType rq{ScalarType(0)}; ///< Query inflation radius
+    ScalarType r{ScalarType(1e-3)};  ///< Contact radius
+    ScalarType rq{ScalarType(1e-2)}; ///< Query radius
 
     ESceneFeatures eSceneFeatures{ESceneFeatures::None};       ///< Scene features
     EBuildQuality eDynamicSceneBvhQuality{EBuildQuality::Low}; ///< Scene BVH build quality
@@ -87,9 +87,9 @@ struct Params
     PBAT_API Params& WithMaxContactEstimates(int nvf, int nfv, int nef);
     /**
      * @brief Set displacement bound parameters.
-     * @param gammap Relaxation parameter for vertex displacement bound, must satisfy `0 < gammap <
+     * @param _gammap Relaxation parameter for vertex displacement bound, must satisfy `0 < gammap <
      * 0.5`
-     * @param gammae Proportion of bounds-violating vertices to trigger collision detection
+     * @param _gammae Proportion of bounds-violating vertices to trigger collision detection
      * @return Reference to this
      */
     PBAT_API Params& WithDisplacementBoundConfig(ScalarType _gammap, ScalarType _gammae);

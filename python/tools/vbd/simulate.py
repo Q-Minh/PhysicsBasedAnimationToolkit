@@ -336,9 +336,7 @@ def main():
     contact_meshes = pbat.sim.contact.MultiMesh(
         fem_elasto_dynamics.E, XCC, n_components=n_components
     )
-    contact_dynamics.set_dynamic_geometry(contact_meshes)
-    contact_dynamics.allocate_environment_contact_data_structures()
-    contact_dynamics.initialize_mesh_environment_contact_detection()
+    contact_dynamics.set_dynamic_geometry(fem_elasto_dynamics.x, contact_meshes)
     params = load_solver_params(args.solver, args.params, args.overrides)
     prepare = _solver_params[args.solver]["prepare"]
     prepare(fem_elasto_dynamics, contact_dynamics, params)

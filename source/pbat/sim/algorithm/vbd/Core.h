@@ -165,7 +165,7 @@ struct Params
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params);
 
 /**
@@ -179,7 +179,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params);
 
 /**
@@ -193,7 +193,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params);
 
 /**
@@ -207,13 +207,13 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
@@ -246,7 +246,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
@@ -451,7 +451,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
@@ -466,7 +466,7 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
