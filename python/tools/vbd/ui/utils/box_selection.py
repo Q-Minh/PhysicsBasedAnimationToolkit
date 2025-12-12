@@ -31,8 +31,6 @@ class BoxSelection:
     _surface_only: bool
     _ps_mesh: ps.SurfaceMesh
     _ps_helper: PsHelper
-    # _show_mesh: bool
-    # _show_gizmo: bool
 
     def __init__(
         self,
@@ -74,8 +72,6 @@ class BoxSelection:
             ]
         )
         self._scale = np.ones(3, dtype=np.float32)
-        # self._show_mesh = True
-        # self._show_gizmo = False
         self._surface_only = False
         
 
@@ -172,8 +168,9 @@ class BoxSelection:
 
     def set_visible(self, visible: bool):
         if self._ps_mesh is not None:
-            self._ps_mesh.set_enabled(visible and self._ps_helper._show_mesh)
-            self._ps_mesh.set_transform_gizmo_enabled(visible and self._ps_helper._show_gizmo)
+            self._ps_mesh.set_enabled(visible and self._ps_helper.get_show_mesh())
+            self._ps_mesh.set_transform_gizmo_enabled(visible and self._ps_helper.get_show_gizmo())
+
 
 
 # class DirichletSelection(BoxSelection):
