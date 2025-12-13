@@ -5,6 +5,14 @@ danger_hover    = (205/255, 85/255, 85/255, 1.0)
 subtle          = (120/255, 120/255, 120/255, 1.0)
 subtle_hover    = (150/255, 150/255, 150/255, 1.0)
 
+def get_default_button_size():      
+    return [imgui.GetWindowWidth() / 2.1, 0]
+
+def get_small_button_size():
+    return [imgui.GetWindowWidth() / (2.1*7), 0]
+
+def get_delete_key():
+    return "X"
 
 def set_style_danger():
     imgui.PushStyleColor(imgui.ImGuiCol_Button, danger)

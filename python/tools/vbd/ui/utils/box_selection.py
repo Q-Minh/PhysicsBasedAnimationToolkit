@@ -5,8 +5,8 @@ from enum import Enum
 from igl import boundary_facets
 import numpy as np
 from ..tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
-from .. import styles
-from python.tools.vbd.ui.utils.ps_helper import PsHelper
+from . import styles
+from .ps_helper import PsHelper
 import typing
 
 

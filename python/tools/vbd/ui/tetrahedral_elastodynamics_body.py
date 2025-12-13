@@ -4,7 +4,7 @@ import h5py as h5
 import polyscope as ps
 import polyscope.imgui as imgui
 from . import material
-from . import styles
+from .utils import styles
 from .utils.ps_helper import PsHelper
 
 class TetrahedralElastodynamicsBody:
