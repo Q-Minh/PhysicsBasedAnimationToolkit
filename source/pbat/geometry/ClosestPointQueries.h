@@ -313,7 +313,7 @@ PBAT_HOST_DEVICE auto UvPointOnLineSegment(TMatrixX const& X, TMatrixP const& P,
      * See \cite ericson2004real section 5.12
      */
     mini::SVector<ScalarType, TMatrixX::kRows> const PQ = Q - P;
-    // Project X onto PQ, computing parameterized position R(t) = P + t*(Q � P)
+    // Project X onto PQ, computing parameterized position R(t) = P + t*(Q - P)
     ScalarType t = Dot(X - P, PQ) / SquaredNorm(PQ);
     // If outside segment, clamp t (and therefore d) to the closest endpoint
     t = min(max(t, ScalarType(0)), ScalarType(1));

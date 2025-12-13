@@ -48,7 +48,6 @@ struct ChebyshevTestSetup
     pbat::sim::contact::MeshDynamics<ScalarType, IndexType> meshDynamics;
     pbat::MatrixX X;
     pbat::geometry::Device device;
-    pbat::sim::contact::MeshDynamicsParams<ScalarType, IndexType> meshDynamicsParams;
 };
 
 ChebyshevTestSetup SetupChebyshevTest(pbat::Index maxIters = 20)
@@ -103,7 +102,7 @@ ChebyshevTestSetup SetupChebyshevTest(pbat::Index maxIters = 20)
     graph::ReindexMeshByConnectedComponents(setup.X, C, XCC, ECC, Xord, Eord);
     sim::contact::MultiMesh<Index> multiMesh(C.bottomRows<4>(), XCC, nComponents);
     setup.meshDynamics.SetDynamicGeometry(setup.X, std::move(multiMesh));
-    setup.meshDynamics.Initialize(setup.device, setup.meshDynamicsParams);
+    setup.meshDynamics.Initialize(setup.device);
     return setup;
 }
 

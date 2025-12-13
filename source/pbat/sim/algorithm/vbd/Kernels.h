@@ -21,6 +21,7 @@
 #include "pbat/geometry/IntersectionQueries.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/HyperElasticity.h"
+#include "pbat/sim/contact/Potentials.h"
 
 #include <cmath>
 #include <limits>
@@ -307,6 +308,171 @@ PBAT_HOST_DEVICE ScalarType AccumulateVertexTriangleContact(
     // clang-format on
     E += muFlambda * f0;
     return E;
+}
+
+/**
+ * @brief Accumulate vertex to closest-point contact derivatives into gradient and hessian.
+ *
+ * @tparam TMatrixXI Type for vertex position
+ * @tparam TMatrixXCP Type for closest point position
+ * @tparam TMatrixG Type for gradient
+ * @tparam TMatrixH Type for hessian
+ * @tparam ScalarType Scalar type
+ * @param xi `3 x 1` vertex position
+ * @param xj `3 x 1` closest point position
+ * @param r Contact radius
+ * @param kc Collision penalty
+ * @param kcp `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
+ * @param b `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+ * @param g `3 x 1` gradient
+ * @param H `3 x 3` hessian
+ */
+template <
+    mini::CMatrix TMatrixXI,
+    mini::CMatrix TMatrixXCP,
+    mini::CMatrix TMatrixG,
+    mini::CMatrix TMatrixH,
+    class ScalarType = typename TMatrixXI::ScalarType>
+PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
+    TMatrixXI const& xi,
+    TMatrixXCP const& xcp,
+    ScalarType r,
+    ScalarType kc,
+    ScalarType kcp,
+    ScalarType b,
+    TMatrixG& g,
+    TMatrixH& H)
+{
+    using namespace mini;
+    ScalarType dij = Norm(xi - xcp);
+    SVector<ScalarType, 3> dBdd =
+        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(dij, r, kc, kcp, b);
+    SVector<ScalarType, 3> dBdxi =
+        contact::potentials::GradientSegmentWrtClosestPoints(xi, xcp, dij, dBdd(1), 0);
+    SMatrix<ScalarType, 3, 3> d2Bdxi2 =
+        contact::potentials::HessianBlockWrtClosestPoints(xi, xcp, dij, dBdd(1), dBdd(2), 0, 0);
+    g += dBdxi;
+    H += d2Bdxi2;
+}
+
+/**
+ * @brief Accumulate half-edge vertex to closest-point contact derivatives into gradient and
+ * hessian.
+ *
+ * @param TMatrixXI Type for vertex position
+ * @param TMatrixXJ Type for edge vertex position
+ * @param TMatrixUV Type for barycentric coordinates along edge
+ * @param TMatrixXCP Type for closest point position
+ * @param TMatrixG Type for gradient
+ * @param TMatrixH Type for hessian
+ * @param ScalarType Scalar type
+ * @param xi `3 x 1` vertex position
+ * @param xj `3 x 1` edge vertex position
+ * @param uv `2 x 1` barycentric coordinates along edge
+ * @param xcp `3 x 1` closest point position
+ * @param r Contact radius
+ * @param kc Collision penalty
+ * @param kcp `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
+ * @param b `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+ * @param g `3 x 1` gradient
+ * @param H `3 x 3` hessian
+ */
+template <
+    mini::CMatrix TMatrixXI,
+    mini::CMatrix TMatrixXJ,
+    mini::CMatrix TMatrixUV,
+    mini::CMatrix TMatrixXCP,
+    mini::CMatrix TMatrixG,
+    mini::CMatrix TMatrixH,
+    class ScalarType = typename TMatrixXI::ScalarType>
+PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
+    TMatrixXI const& xi,
+    TMatrixXJ const& xj,
+    TMatrixUV const& uv,
+    int ilocal,
+    TMatrixXCP const& xcp,
+    ScalarType r,
+    ScalarType kc,
+    ScalarType kcp,
+    ScalarType b,
+    TMatrixG& g,
+    TMatrixH& H)
+{
+    using namespace mini;
+    mini::SVector<ScalarType, 3> x = uv(0) * xi + uv(1) * xj;
+    ScalarType d                   = Norm(x - xcp);
+    mini::SVector<ScalarType, 3> dBdd =
+        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
+    mini::SVector<ScalarType, 3> dBdx =
+        contact::potentials::GradientSegmentWrtLinearlyInterpolatedClosestPoints(
+            uv,
+            x,
+            xcp,
+            d,
+            dBdd(1),
+            ilocal);
+    mini::SMatrix<ScalarType, 3, 3> d2Bdx2 =
+        contact::potentials::HessianBlockWrtLinearlyInterpolatedClosestPoints(
+            uv,
+            x,
+            xcp,
+            d,
+            dBdd(1),
+            dBdd(2),
+            ilocal,
+            ilocal);
+    g += dBdx;
+    H += d2Bdx2;
+}
+
+template <
+    mini::CMatrix TMatrixXA,
+    mini::CMatrix TMatrixXB,
+    mini::CMatrix TMatrixXC,
+    mini::CMatrix TMatrixUVW,
+    mini::CMatrix TMatrixXCP,
+    mini::CMatrix TMatrixG,
+    mini::CMatrix TMatrixH,
+    class ScalarType = typename TMatrixXA::ScalarType>
+PBAT_HOST_DEVICE void AccumulateTriangleVertexToClosestPointContactDerivatives(
+    TMatrixXA const& xa,
+    TMatrixXB const& xb,
+    TMatrixXC const& xc,
+    TMatrixUVW const& uvw,
+    int ilocal,
+    TMatrixXCP const& xcp,
+    ScalarType r,
+    ScalarType kc,
+    ScalarType kcp,
+    ScalarType b,
+    TMatrixG& g,
+    TMatrixH& H)
+{
+    using namespace mini;
+    SVector<ScalarType, 3> x = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
+    ScalarType d             = Norm(x - xcp);
+    SVector<ScalarType, 3> dBdd =
+        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
+    SVector<ScalarType, 3> dBdx =
+        contact::potentials::GradientSegmentWrtLinearlyInterpolatedClosestPoints(
+            uvw,
+            x,
+            xcp,
+            d,
+            dBdd(1),
+            ilocal);
+    SMatrix<ScalarType, 3, 3> d2Bdx2 =
+        contact::potentials::HessianBlockWrtLinearlyInterpolatedClosestPoints(
+            uvw,
+            x,
+            xcp,
+            d,
+            dBdd(1),
+            dBdd(2),
+            ilocal,
+            ilocal);
+    g += dBdx;
+    H += d2Bdx2;
 }
 
 template <

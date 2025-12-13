@@ -73,9 +73,9 @@ Params& Params::WithHessianDeterminantZeroUnder(Scalar zero)
 
 Params& Params::Construct(bool bValidate)
 {
+    auto nVerts = colors.size();
     if (bValidate)
     {
-        auto nVerts = colors.size();
         if (GVGp.size() != nVerts + 1)
         {
             throw std::invalid_argument(
@@ -111,6 +111,7 @@ Params& Params::Construct(bool bValidate)
                     nVertexElementAdjacencies));
         }
     }
+    xb.resize(3, nVerts);
     return *this;
 }
 
@@ -125,6 +126,7 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
+    group.WriteData("xb", xb);
 }
 
 void Params::Deserialize(io::Archive const& archive)
@@ -138,6 +140,7 @@ void Params::Deserialize(io::Archive const& archive)
     Padj              = group.ReadData<IndexVectorX>("Padj");
     detHZero          = group.ReadMetaData<Scalar>("detHZero");
     nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
+    xb                = group.ReadData<MatrixX>("xb");
 }
 
 } // namespace pbat::sim::algorithm::vbd
@@ -160,7 +163,6 @@ struct VbdTestSetup
     pbat::sim::contact::MeshDynamics<ScalarType, IndexType> meshDynamics;
     pbat::MatrixX X;
     pbat::geometry::Device device;
-    pbat::sim::contact::MeshDynamicsParams<ScalarType, IndexType> meshDynamicsParams;
 };
 
 VbdTestSetup SetupVbdTest(pbat::Index maxIters = 10)
@@ -212,7 +214,7 @@ VbdTestSetup SetupVbdTest(pbat::Index maxIters = 10)
     graph::ReindexMeshByConnectedComponents(setup.X, C, XCC, ECC, Xord, Eord);
     sim::contact::MultiMesh<Index> multiMesh(C.bottomRows<4>(), XCC, nComponents);
     setup.meshDynamics.SetDynamicGeometry(setup.X, std::move(multiMesh));
-    setup.meshDynamics.Initialize(setup.device, setup.meshDynamicsParams);
+    setup.meshDynamics.Initialize(setup.device);
     return setup;
 }
 

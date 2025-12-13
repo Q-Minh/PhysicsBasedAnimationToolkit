@@ -7,8 +7,10 @@
 #define PBAT_GEOMETRY_DEVICE_H
 
 #include "PhysicsBasedAnimationToolkitExport.h"
+#include "pbat/io/Archive.h"
 
 #include <string>
+#include <string_view>
 
 namespace pbat {
 namespace geometry {
@@ -31,6 +33,47 @@ struct DeviceConfig
     std::string frequencyLevel; ///< Frequency level the application wants to run on (e.g.
                                 ///< "simd128", "simd256", "simd512", "" = default)
 
+    /**
+     * @brief Set threading parameters.
+     * @param nThreads Number of build threads (0 = all cores, -1 = default).
+     * @param nUserThreads Number of user threads used to join and participate in a scene commit (-1
+     * = unspecified).
+     * @param affinity Pin threads to cores (0/1, -1 = unspecified).
+     * @return Reference to this.
+     */
+    DeviceConfig& WithThreading(int nThreads, int nUserThreads, int affinity);
+    /**
+     * @brief Set instruction set parameters.
+     * @param isa Instruction set architecture to use (e.g. "sse2", "sse4.2", "avx", "avx2",
+     * "avx512", "" = default).
+     * @param maxIsa Maximum instruction set architecture to use (e.g. "sse2", "sse4.2", "avx",
+     * "avx2", "avx512", "" = default).
+     * @return Reference to this.
+     */
+    DeviceConfig& WithInstructionSet(std::string_view isa, std::string_view maxIsa);
+    /**
+     * @brief Set verbosity level.
+     * @param verbose Verbosity level (0..N, -1 = unspecified).
+     * @return Reference to this.
+     */
+    DeviceConfig& WithVerbosity(int verbose);
+    /**
+     * @brief Set frequency level.
+     * @param frequencyLevel Frequency level the application wants to run on (e.g. "simd128",
+     * "simd256", "simd512", "" = default).
+     * @return Reference to this.
+     */
+    DeviceConfig& WithFrequencyLevel(std::string_view frequencyLevel);
+    /**
+     * @brief Serialize the configuration to an archive.
+     * @param archive The archive to serialize to.
+     */
+    void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize the configuration from an archive.
+     * @param archive The archive to deserialize from.
+     */
+    void Deserialize(io::Archive const& archive);
     /**
      * @brief Convert the configuration to a string representation.
      * @return The configuration string.

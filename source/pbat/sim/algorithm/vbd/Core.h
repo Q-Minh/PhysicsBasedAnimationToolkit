@@ -15,7 +15,7 @@
 #include "Enums.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
-#include "pbat/geometry/HalfEdges.h"
+#include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Enums.h"
 #include "pbat/math/linalg/mini/Eigen.h"
@@ -24,7 +24,6 @@
 #include "pbat/sim/algorithm/common/Common.h"
 #include "pbat/sim/algorithm/vbd/Kernels.h"
 #include "pbat/sim/contact/MeshDynamics.h"
-#include "pbat/sim/contact/Potentials.h"
 
 #include <Eigen/Core>
 #include <tbb/parallel_for.h>
@@ -149,9 +148,8 @@ struct Params
     /**
      * @brief Read-write
      */
-    Index k;          ///< Current VBD iteration
-    VectorX dxtilde0; ///< `|# nodes * # dims| x 1` initial distance to inertial targets
-    VectorX kappa;    ///< `|# nodes * # dims| x 1` per-vertex estimated condition numbers
+    Index k;                                     ///< Current VBD iteration
+    Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xb; ///< `3 x |# nodes|` buffer positions
 };
 
 /**
@@ -218,29 +216,6 @@ void InitializeSolve(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     params.k = 0;
-    params.dxtilde0.resize(fem.x.size());
-    params.kappa.resize(fem.x.cols());
-    tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
-        auto xi            = fem.x.col(i);
-        auto xtildei       = fem.xtilde.col(i);
-        params.dxtilde0(i) = (xi - xtildei).norm();
-    });
-    // Run collision detection with environment and get vertex displacement bounds
-    // meshDynamics.UpdateEnvironmentContactConstraints(fem.x);
-    // Truncate displacement
-    // auto xt = fem.bdf.CurrentState(0).reshaped(fem.x.rows(), fem.x.cols());
-    // tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
-    //     Index const v = meshDynamics.mMeshes.GXV(i);
-    //     if (v < 0)
-    //         return;
-    //     Scalar const db = meshDynamics.mMeshSdfContact.mVertexDisplacementBounds(v);
-    //     Eigen::Vector<Scalar, 3> const dxi = fem.x.col(i) - xt.col(i);
-    //     Scalar const dxiNorm               = dxi.norm();
-    //     if (dxiNorm > db)
-    //         fem.x.col(i) = xt.col(i) + (db / dxiNorm) * dxi;
-    // });
-    // // Initialize AL contact constraints
-    // meshDynamics.PrepareEnvironmentContactsForDualIteration();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -250,11 +225,22 @@ void Iterate(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
+    if (meshDynamics.RequiresBoundsComputation())
+    {
+        meshDynamics.ComputeDisplacementBounds();
+    }
     auto betaTildeBdf  = fem.bdf.BetaTilde();
     auto betaTildeBdf2 = betaTildeBdf * betaTildeBdf;
     auto xtildeBdf     = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
     contact::potentials::LaggedFriction friction;
-    // Scalar const epsvh     = meshDynamics.mEnvContactDynamicsParams.epsv * fem.bdf.BetaTilde();
+    typename contact::MeshDynamics<Scalar, Index>::Params const& contactParams =
+        meshDynamics.GetParams();
+    Scalar rB              = contactParams.mOgcParams.r;
+    Scalar kcB             = contactParams.kc;
+    Scalar kcpB            = contactParams.kcp;
+    Scalar bB              = contactParams.b;
+    Scalar epsvh           = contactParams.epsv * fem.bdf.TimeStep();
+    params.xb              = fem.x; // Copy current positions to buffer
     auto const nPartitions = params.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
     {
@@ -293,149 +279,150 @@ void Iterate(
                 kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
                 kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
             }
-            Scalar const HUin = Norm(Hi);
-            // Environment contact energy
+            // Contact energy
             mini::SVector<Scalar, 3> xi  = FromEigen(fem.x.col(i).template head<3>());
             mini::SVector<Scalar, 3> xti = -FromEigen(xtildeBdf.col(i).template head<3>());
-            // Index const vi               = meshDynamics.mMeshes.GXV(i);
-            // bool const bIsSurfaceVertex  = vi >= 0;
-            // if (bIsSurfaceVertex)
-            // {
-            //     // Loop over triangles incident on i for augmented Lagrangian derivatives
-            //     IndexVectorX const& heAdj = meshDynamics.mMeshes.GVHEadj;
-            //     Index const heAdjOffset   = meshDynamics.mMeshes.GVHEp(i);
-            //     Index const heAdjEnd      = meshDynamics.mMeshes.GVHEp(i + 1);
-            //     for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
-            //     {
-            //         Index f = geometry::FaceOfHalfEdge(he);
-            //         if (not meshDynamics.mMeshSdfContact.mTriangleContactMask(f))
-            //             continue;
-            //         Eigen::Vector<Index, 3> const finds = meshDynamics.mMeshes.F.col(f);
-            //         Eigen::Vector<Scalar, 2> const uv =
-            //             meshDynamics.mMeshSdfContact.mTriangleContactPoints.col(f);
-            //         Eigen::Matrix<Scalar, 3, 3> const xf = fem.x(Eigen::placeholders::all,
-            //         finds); auto ilocal = /*(i==finds(0))*0 + */ (i == finds(1)) * 1 + (i ==
-            //         finds(2)) * 2; sim::contact::MeshDynamics::EnvironmentContact& C =
-            //         meshDynamics.CF[f]; Eigen::Vector<Scalar, 3> const xc =
-            //             (1 - uv(0) - uv(1)) * xf.col(0) + uv(0) * xf.col(1) + uv(1) * xf.col(2);
-            //         C.Eval(xc);
-            //         // AL gradient + hessian
-            //         bool const bIsPenetrating = C.C < 0;
-            //         Scalar alpha = (ilocal == 0) * (1 - uv(0) - uv(1)) + (ilocal == 1) * uv(0) +
-            //                        (ilocal == 2) * uv(1);
-            //         Scalar lambdakn = C.ForceEstimate();
-            //         Eigen::Vector<Scalar, 3> gradAL =
-            //             -(bIsPenetrating * alpha) * (C.B.col(0) * lambdakn);
-            //         Eigen::Matrix<Scalar, 3, 3> hessAL =
-            //             (bIsPenetrating * alpha * alpha) *
-            //             (C.k * (C.B.col(0) * C.B.col(0).transpose()));
-            //         gi += FromEigen(gradAL);
-            //         Hi += FromEigen(hessAL);
-            //         // Tangential friction forces
-            //         if (bIsPenetrating)
-            //         {
-            //             Eigen::Matrix<Scalar, 3, 3> const xtf =
-            //                 xtildeBdf(Eigen::placeholders::all, finds);
-            //             Eigen::Vector<Scalar, 3> const xct = (1 - uv(0) - uv(1)) * xtf.col(0) +
-            //                                                  uv(0) * xtf.col(1) +
-            //                                                  uv(1) * xtf.col(2);
-            //             auto const Tk               = C.B.rightCols<2>();
-            //             Eigen::Vector<Scalar, 2> uk = Tk.transpose() * (xc - xct);
-            //             Eigen::Vector<Scalar, 2> gkf;
-            //             Eigen::Matrix<Scalar, 2, 2> Hkf;
-            //             auto gkfmini = FromEigen(gkf);
-            //             auto Hkfmini = FromEigen(Hkf);
-            //             friction
-            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini,
-            //                 Hkfmini);
-            //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
-            //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
-            //             gi += FromEigen(gkfx);
-            //             Hi += FromEigen(Hkfx);
-            //         }
-            //     }
-            //     // Loop over half-edges incident on i for augmented Lagrangian derivatives
-            //     for (Index he : heAdj(Eigen::seqN(heAdjOffset, heAdjEnd - heAdjOffset)))
-            //     {
-            //         if (not meshDynamics.mMeshSdfContact.mHalfEdgeContactMask(he))
-            //             continue;
-            //         Scalar const u = meshDynamics.mMeshSdfContact.mHalfEdgeContactPoints(he);
-            //         Index const ei = geometry::IncomingVertex(meshDynamics.mMeshes.F, he);
-            //         Index const ej = geometry::OutgoingVertex(meshDynamics.mMeshes.F, he);
-            //         Eigen::Vector<Scalar, 3> const xei = fem.x.col(ei);
-            //         Eigen::Vector<Scalar, 3> const xej = fem.x.col(ej);
-            //         auto ilocal                        = /*(i == ei) * 0 + */ (i == ej) * 1;
-            //         sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CHE[he];
-            //         Eigen::Vector<Scalar, 3> const xc                 = (1 - u) * xei + u * xej;
-            //         C.Eval(xc);
-            //         // AL gradient + hessian
-            //         bool const bIsPenetrating = C.C < 0;
-            //         Scalar alpha              = (ilocal == 0) * (1 - u) + (ilocal == 1) * u;
-            //         Scalar const lambdakn     = C.ForceEstimate();
-            //         Eigen::Vector<Scalar, 3> gradAL =
-            //             -(bIsPenetrating * alpha) * (C.B.col(0) * lambdakn);
-            //         Eigen::Matrix<Scalar, 3, 3> hessAL =
-            //             (bIsPenetrating * alpha * alpha) *
-            //             (C.k * (C.B.col(0) * C.B.col(0).transpose()));
-            //         gi += FromEigen(gradAL);
-            //         Hi += FromEigen(hessAL);
-            //         // Tangential friction forces
-            //         if (bIsPenetrating)
-            //         {
-            //             Eigen::Vector<Scalar, 3> const xtei = xtildeBdf.col(ei);
-            //             Eigen::Vector<Scalar, 3> const xtej = xtildeBdf.col(ej);
-            //             Eigen::Vector<Scalar, 3> const xct  = (1 - u) * xtei + u * xtej;
-            //             auto const Tk                       = C.B.rightCols<2>();
-            //             Eigen::Vector<Scalar, 2> uk         = Tk.transpose() * (xc - xct);
-            //             Eigen::Vector<Scalar, 2> gkf;
-            //             Eigen::Matrix<Scalar, 2, 2> Hkf;
-            //             auto gkfmini = FromEigen(gkf);
-            //             auto Hkfmini = FromEigen(Hkf);
-            //             friction
-            //                 .GradAndHessian(FromEigen(uk), C.mu, lambdakn, epsvh, gkfmini,
-            //                 Hkfmini);
-            //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
-            //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
-            //             gi += FromEigen(gkfx);
-            //             Hi += FromEigen(Hkfx);
-            //         }
-            //     }
-            //     // Check i itself for augmented Lagrangian derivatives
-            //     if (meshDynamics.mMeshSdfContact.mVertexContactMask(vi))
-            //     {
-            //         sim::contact::MeshDynamics::EnvironmentContact& C = meshDynamics.CV[vi];
-            //         C.Eval(ToEigen(xi));
-            //         // AL gradient + hessian
-            //         bool const bIsPenetrating = C.C < 0;
-            //         Scalar const lambdakn     = C.ForceEstimate();
-            //         Eigen::Vector<Scalar, 3> gradAL =
-            //             -static_cast<int>(bIsPenetrating) * (C.B.col(0) * lambdakn);
-            //         Eigen::Matrix<Scalar, 3, 3> hessAL =
-            //             (bIsPenetrating * C.k) * (C.B.col(0) * C.B.col(0).transpose());
-            //         gi += FromEigen(gradAL);
-            //         Hi += FromEigen(hessAL);
-            //         // Tangential friction forces
-            //         if (bIsPenetrating)
-            //         {
-            //             auto const Tk               = C.B.rightCols<2>();
-            //             mini::SVector<Scalar, 2> uk = FromEigen(Tk).Transpose() * (xi - xti);
-            //             Eigen::Vector<Scalar, 2> gkf;
-            //             Eigen::Matrix<Scalar, 2, 2> Hkf;
-            //             auto gkfmini = FromEigen(gkf);
-            //             auto Hkfmini = FromEigen(Hkf);
-            //             friction.GradAndHessian(uk, C.mu, lambdakn, epsvh, gkfmini, Hkfmini);
-            //             Eigen::Vector<Scalar, 3> gkfx    = Tk * gkf;
-            //             Eigen::Matrix<Scalar, 3, 3> Hkfx = Tk * Hkf * Tk.transpose();
-            //             gi += FromEigen(gkfx);
-            //             Hi += FromEigen(Hkfx);
-            //         }
-            //     }
-            // }
-            // dt2 scale potential energies' derivatives
+            meshDynamics.ForEachPointDynamicMeshContact(
+                i,
+                [&](Index j) {
+                    mini::SVector<Scalar, 3> xcp = FromEigen(params.xb.col(j).template head<3>());
+                    kernels::AccumulateVertexClosestPointContactDerivatives(
+                        xi,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                },
+                [&](Eigen::Vector<Index, 2> const& einds) {
+                    mini::SVector<Scalar, 3> xe1 =
+                        FromEigen(params.xb.col(einds(0)).template head<3>());
+                    mini::SVector<Scalar, 3> xe2 =
+                        FromEigen(params.xb.col(einds(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp =
+                        geometry::ClosestPointQueries::PointOnLineSegment(xi, xe1, xe2);
+                    kernels::AccumulateVertexClosestPointContactDerivatives(
+                        xi,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                },
+                [&](Eigen::Vector<Index, 3> const& finds) {
+                    mini::SVector<Scalar, 3> xa =
+                        FromEigen(params.xb.col(finds(0)).template head<3>());
+                    mini::SVector<Scalar, 3> xb =
+                        FromEigen(params.xb.col(finds(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xc =
+                        FromEigen(params.xb.col(finds(2)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp =
+                        geometry::ClosestPointQueries::PointInTriangle(xi, xa, xb, xc);
+                    kernels::AccumulateVertexClosestPointContactDerivatives(
+                        xi,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                });
+            meshDynamics.ForEachPointStaticMeshContact(
+                i,
+                [&](Index j) {},
+                [&](Eigen::Vector<Index, 2> const& einds) {},
+                [&](Eigen::Vector<Index, 3> const& finds) {});
+            meshDynamics.ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
+                i,
+                [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
+                    // NOTE: xi1 should be xi
+                    // mini::SVector<Scalar, 3> xi1 =
+                    //     FromEigen(fem.x.col(eindsi(0)).template head<3>());
+                    mini::SVector<Scalar, 3> xi2 =
+                        FromEigen(params.xb.col(eindsi(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp = FromEigen(params.xb.col(j).template head<3>());
+                    mini::SVector<Scalar, 2> uv =
+                        geometry::ClosestPointQueries::UvPointOnLineSegment(xcp, xi, xi2);
+                    kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
+                        xi,
+                        xi2,
+                        uv,
+                        0 /*ilocal == 0 because i == eindsi(0)*/,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                },
+                [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
+                    mini::SVector<Scalar, 3> xi2 =
+                        FromEigen(params.xb.col(eindsi(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xj1 =
+                        FromEigen(params.xb.col(eindsj(0)).template head<3>());
+                    mini::SVector<Scalar, 3> xj2 =
+                        FromEigen(params.xb.col(eindsj(1)).template head<3>());
+                    mini::SVector<Scalar, 2> st =
+                        geometry::ClosestPointQueries::LineSegments(xi, xi2, xj1, xj2);
+                    mini::SVector<Scalar, 3> xcp = (1 - st(1)) * xj1 + st(1) * xj2;
+                    mini::SVector<Scalar, 2> uv1{1 - st(0), st(0)};
+                    kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
+                        xi,
+                        xi2,
+                        uv1,
+                        0 /*ilocal == 0 because i == eindsi(0)*/,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                });
+            meshDynamics.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
+                i,
+                [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {},
+                [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
+                });
+            meshDynamics.ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
+                i,
+                [&](Eigen::Vector<Index, 3> const& finds, Index j) {
+                    int ilocal =
+                        /*(finds(0) == i) * 0 + */ (finds(1) == i) * 1 + (finds(2) == i) * 2;
+                    int jlocal = (ilocal + 1) % 3;
+                    int klocal = (ilocal + 2) % 3;
+                    mini::SVector<Scalar, 3> xb =
+                        FromEigen(params.xb.col(finds(jlocal)).template head<3>());
+                    mini::SVector<Scalar, 3> xc =
+                        FromEigen(params.xb.col(finds(klocal)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp = FromEigen(params.xb.col(j).template head<3>());
+                    mini::SVector<Scalar, 3> uvw =
+                        geometry::ClosestPointQueries::UvwPointInTriangle(xcp, xi, xb, xc);
+                    kernels::AccumulateTriangleVertexToClosestPointContactDerivatives(
+                        xi,
+                        xb,
+                        xc,
+                        uvw,
+                        0 /*ilocal == 0, because finds(ilocal) == i*/,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                });
+            meshDynamics.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
+                i,
+                [&](Eigen::Vector<Index, 3> const& finds, Index j) {});
             // "Kinetic" energy
             Scalar m                         = fem.m(i);
-            Scalar const HKin                = m / betaTildeBdf2;
-            params.kappa(i)                  = std::max(HUin, HKin) / std::min(HUin, HKin);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
             kernels::AddInertiaDerivatives(betaTildeBdf2, m, xtildei, xi, gi, Hi);
             kernels::AddDamping(betaTildeBdf, xti, xi, params.betaR, gi, Hi);
@@ -443,8 +430,7 @@ void Iterate(
             fem.x.col(i) = ToEigen(xi);
         });
     }
-    // Update dual variables every VBD iteration
-    // meshDynamics.DualUpdateEnvironmentContacts(fem.x);
+    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     ++params.k;
 }
 
@@ -455,6 +441,7 @@ void Solve(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
+    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
     for (; params.k < params.nMaxIters;)
     {

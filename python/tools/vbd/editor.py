@@ -158,6 +158,9 @@ class ModeStateMachine(StateMachine):
             fem_dynamics.E, XCC, n_components=n_bodies
         )
         contact_dynamics.set_dynamic_geometry(fem_dynamics.x, contact_meshes)
+        device_config = pbat.geometry.DeviceConfig()
+        device = pbat.geometry.Device(device_config)
+        contact_dynamics.initialize(device)
         # Pass simulation scenario to simulation UI
         tet_elastic_body_names = [body.name for body in tet_elastic_bodies]
         self.simulation.on_simulation_scenario_created(

@@ -222,13 +222,13 @@ class State
      */
     std::vector<std::vector<ContactFace<IndexType>>>
         mDynamicContactFacesOfVertex; ///< `|# vertices|` per-vertex dynamic contact face sets. The
-                                      ///< ContactFace stores vertex, half-edge or triangle.
+                                      ///< ContactFace stores point, half-edge or triangle index.
     std::vector<std::vector<IndexType>>
         mDynamicContactVerticesOfTriangle; ///< `|# triangles|` per-triangle dynamic contact vertex
-                                           ///< sets. Stores vertex indices only.
+                                           ///< sets. Stores point indices only.
     std::vector<std::vector<ContactFace<IndexType>>>
         mDynamicContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge dynamic contact face
-                                        ///< sets. The ContactFace stores vertex or half-edge.
+                                        ///< sets. The ContactFace stores point or half-edge.
     std::vector<std::vector<ContactFace<IndexType>>>
         mStaticContactFacesOfVertex; ///< `|# vertices|` per-vertex static contact face sets. The
                                      ///< ContactFace stores environment vertex, half-edge or
@@ -255,12 +255,12 @@ class State
     /**
      * @brief Acceleration structure for static geometry
      */
-    RTCScene mDynamicVertexScene; ///< BVH over dynamic vertices
-    RTCScene mDynamicEdgeScene;   ///< BVH over dynamic edges
-    RTCScene mDynamicFacetScene;  ///< BVH over dynamic facets
-    RTCScene mStaticVertexScene;  ///< BVH over static vertices
-    RTCScene mStaticEdgeScene;    ///< BVH over static edges
-    RTCScene mStaticFacetScene;   ///< BVH over static facets
+    RTCScene mDynamicVertexScene{nullptr}; ///< BVH over dynamic vertices
+    RTCScene mDynamicEdgeScene{nullptr};   ///< BVH over dynamic edges
+    RTCScene mDynamicFacetScene{nullptr};  ///< BVH over dynamic facets
+    RTCScene mStaticVertexScene{nullptr};  ///< BVH over static vertices
+    RTCScene mStaticEdgeScene{nullptr};    ///< BVH over static edges
+    RTCScene mStaticFacetScene{nullptr};   ///< BVH over static facets
 
     /**
      * @brief Synchronization primitives
@@ -481,16 +481,16 @@ inline State<TScalar, TIndex>& State<TScalar, TIndex>::operator=(State&& other) 
     dminv                             = std::move(other.dminv);
     dminf                             = std::move(other.dminf);
     dmine                             = std::move(other.dmine);
-    std::swap(mDynamicVertexScene, other.mDynamicVertexScene);
-    std::swap(mDynamicEdgeScene, other.mDynamicEdgeScene);
-    std::swap(mDynamicFacetScene, other.mDynamicFacetScene);
-    std::swap(mStaticVertexScene, other.mStaticVertexScene);
-    std::swap(mStaticEdgeScene, other.mStaticEdgeScene);
-    std::swap(mStaticFacetScene, other.mStaticFacetScene);
-    mVertexLocks            = std::move(other.mVertexLocks);
-    mEdgeLocks              = std::move(other.mEdgeLocks);
-    mFacetLocks             = std::move(other.mFacetLocks);
-    mPerBodyRtcBoundsParams = std::move(other.mPerBodyRtcBoundsParams);
+    mDynamicVertexScene               = std::exchange(other.mDynamicVertexScene, nullptr);
+    mDynamicEdgeScene                 = std::exchange(other.mDynamicEdgeScene, nullptr);
+    mDynamicFacetScene                = std::exchange(other.mDynamicFacetScene, nullptr);
+    mStaticVertexScene                = std::exchange(other.mStaticVertexScene, nullptr);
+    mStaticEdgeScene                  = std::exchange(other.mStaticEdgeScene, nullptr);
+    mStaticFacetScene                 = std::exchange(other.mStaticFacetScene, nullptr);
+    mVertexLocks                      = std::move(other.mVertexLocks);
+    mEdgeLocks                        = std::move(other.mEdgeLocks);
+    mFacetLocks                       = std::move(other.mFacetLocks);
+    mPerBodyRtcBoundsParams           = std::move(other.mPerBodyRtcBoundsParams);
     return *this;
 }
 
@@ -871,8 +871,8 @@ inline void State<TScalar, TIndex>::ForEachDynamicVertexContactOfTriangle(
     IndexType fi,
     FOnTriangleVertexContact&& fOnTriangleVertexContact) const
 {
-    for (IndexType v : mDynamicContactVerticesOfTriangle[fi])
-        fOnTriangleVertexContact(v);
+    for (IndexType i : mDynamicContactVerticesOfTriangle[fi])
+        fOnTriangleVertexContact(i);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>

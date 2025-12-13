@@ -37,6 +37,7 @@ class Simulation:
     _XP: np.ndarray[int]
     _v0: np.ndarray[float]
     _xD: np.ndarray[float]
+    _dmin: float = float("inf")
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
@@ -59,6 +60,7 @@ class Simulation:
         self._fem_dynamics_init_strategy = (
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
         )
+        self._dmin = float("inf")
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
@@ -208,6 +210,11 @@ class Simulation:
         if step or self._simulate:
             self._step()
 
+        dmin = self._contact.contact_dynamics.ogc_state.bv.min()
+        if self._dmin != dmin:
+            self._dmin = dmin
+        imgui.Text(f"Minimum displacement bound: {self._dmin:.6f}")
+
         imgui.PopID()
 
     def _draw_convergence_ui(self):
@@ -351,10 +358,13 @@ class Simulation:
     def _constrain(self):
         fem = self._fem_dynamics
         fem.dmask = np.zeros_like(fem.dmask, dtype=int)
-        for start, tup in zip(self._XP[:-1], self._transform_library.all_transformed_nodes(self._t, self._dt)):
+        for start, tup in zip(
+            self._XP[:-1],
+            self._transform_library.all_transformed_nodes(self._t, self._dt),
+        ):
             _, dnodes = tup
             if len(dnodes) != 0:
-                fem.dmask[start+dnodes] = 1
+                fem.dmask[start + dnodes] = 1
         fem.constrain(fem.dmask)
 
     def _apply_procedural_constraints(self):

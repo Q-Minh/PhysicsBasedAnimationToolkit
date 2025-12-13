@@ -23,24 +23,11 @@
 #include "pbat/sim/contact/ogc/Ogc.h"
 
 #include <Eigen/Core>
+#include <cmath>
 #include <tbb/parallel_for.h>
+#include <type_traits>
 
 namespace pbat::sim::contact {
-
-/**
- * @brief Mesh dynamics parameters
- * @tparam TScalar Type of scalar
- * @tparam TIndex Type of index
- */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-struct MeshDynamicsParams
-{
-    ogc::Params<TScalar> mOgcParams; ///< OGC parameters
-    TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
-                        ///< smooth transition
-    TScalar kc{1e5};    ///< OGC contact stiffness parameter
-    TScalar mu{0.5};    ///< OGC friction coefficient
-};
 
 /**
  * @brief Mesh contact dynamics
@@ -54,6 +41,52 @@ class MeshDynamics
     using ScalarType = TScalar; ///< Scalar type
     using IndexType  = TIndex;  ///< Index type
 
+    /**
+     * @brief Mesh dynamics parameters
+     */
+    struct Params
+    {
+        using SelfType = typename MeshDynamics<TScalar, TIndex>::Params; ///< Self type
+
+        ogc::Params<TScalar> mOgcParams; ///< OGC parameters
+        TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
+                            ///< smooth transition
+        TScalar kc{1e5};    ///< OGC contact stiffness parameter, `kc > 0`
+        TScalar mu{0.5};    ///< OGC friction coefficient, `mu >= 0`
+
+        /**
+         * @brief Set the OGC parameters
+         * @param params OGC parameters
+         * @return Reference to this
+         */
+        SelfType& WithOgcParams(ogc::Params<TScalar> const& params);
+        /**
+         * @brief Set the frictional contact parameters
+         *
+         * @param mu Friction coefficient
+         * @param epsv Relative velocity threshold for static to dynamic friction's smooth
+         * transition
+         * @return Reference to this
+         */
+        SelfType& WithFrictionalContact(TScalar mu, TScalar epsv);
+        /**
+         * @brief Set the normal contact parameters
+         * @param kc Contact stiffness parameter, `kc > 0`
+         * @return Reference to this
+         */
+        SelfType& WithNormalContact(TScalar kc);
+
+        /**
+         * @brief Read/Write members, not part of the configuration
+         */
+        TScalar kcp; ///< `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
+        TScalar b;   ///< `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+    };
+
+    /**
+     * @brief Construct a new Mesh Dynamics object
+     */
+    MeshDynamics(Params const& params = Params());
     /**
      * @brief Set the contact geometries
      * @param Xdynamic `3 x |# points|` dynamic point positions (column-major: one point per column)
@@ -69,22 +102,39 @@ class MeshDynamics
     /**
      * @brief Initialize the Mesh Dynamics object
      * @param device Device to use for acceleration structures
-     * @param params Mesh dynamics parameters
      * @pre `SetDynamicGeometry()` or `Construct()` has been called
      */
-    void
-    Initialize(geometry::Device device, MeshDynamicsParams<ScalarType, IndexType> const& params);
+    void Initialize(geometry::Device device);
     /**
      * @brief Truncate displacements to satisfy the computed displacement bounds
      * @param Xkp1 `3 x |# points|` proposed new point positions (column-major: one point per
      * column)
-     * @param params Mesh dynamics parameters
+     * @return Number of truncated points
      * @pre `Initialize()` has been called
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
-    void TruncateDisplacement(
+    Eigen::Index
+    TruncateDisplacement(Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> Xkp1);
+    /**
+     * @brief Truncate displacements to satisfy the computed displacement bounds
+     * @tparam TMask Eigen dense base s.t. TMask::Scalar is convertible to bool
+     * @param Xkp1 `3 x |# points|` proposed new point positions (column-major: one point per
+     * column)
+     * @param mask `|# points| x 1` mask of points to ignore (true = ignore, false = process)
+     * @return Number of truncated points
+     * @pre `Initialize()` has been called
+     * @post Displacements have been truncated to satisfy the computed displacement bounds
+     */
+    template <class TMask>
+    Eigen::Index TruncateDisplacement(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> Xkp1,
-        MeshDynamicsParams<ScalarType, IndexType> const& params);
+        Eigen::DenseBase<TMask> const& mask);
+    /**
+     * @brief Get the number of truncated points from the last `TruncateDisplacement()`
+     * call
+     * @return Number of truncated points
+     */
+    Eigen::Index NumTruncatedPoints() const;
     /**
      * @brief Check if displacement bounds computation is required
      * @return true if displacement bounds computation is required, false otherwise
@@ -93,10 +143,9 @@ class MeshDynamics
     /**
      * @brief Executes a collision detection pass and computes resulting per-point displacement
      * bounds.
-     * @param params Mesh dynamics parameters
      * @pre `TruncateDisplacement()` has been called
      */
-    void ComputeDisplacementBounds(MeshDynamicsParams<ScalarType, IndexType> const& params);
+    void ComputeDisplacementBounds();
     /**
      * @brief For each point-(dynamic)face contact of point `i`, invoke the appropriate callback
      *
@@ -279,6 +328,11 @@ class MeshDynamics
     PBAT_API void UpdateGeometricQuantities(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
     /**
+     * @brief Get the Params object
+     * @return Reference to the parameters
+     */
+    Params const& GetParams() const { return mParams; }
+    /**
      * @brief Get the Dynamic Meshes object
      * @return MultiMesh<IndexType> const&
      */
@@ -300,6 +354,8 @@ class MeshDynamics
     auto OgcState() const -> ogc::State<ScalarType, IndexType> const& { return mOgcState; }
 
   private:
+    Params mParams; ///< Mesh dynamics parameters
+
     /**
      * @brief Contact detection data structures and algorithms
      */
@@ -321,6 +377,40 @@ class MeshDynamics
 };
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshDynamics<TScalar, TIndex>::Params&
+MeshDynamics<TScalar, TIndex>::Params::WithOgcParams(ogc::Params<TScalar> const& params)
+{
+    mOgcParams = params;
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshDynamics<TScalar, TIndex>::Params&
+MeshDynamics<TScalar, TIndex>::Params::WithFrictionalContact(TScalar mu, TScalar epsv)
+{
+    this->mu   = mu;
+    this->epsv = epsv;
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshDynamics<TScalar, TIndex>::Params&
+MeshDynamics<TScalar, TIndex>::Params::WithNormalContact(TScalar kc)
+{
+    this->kc = kc;
+    auto tau = TScalar(0.5) * mOgcParams.r;
+    auto r   = mOgcParams.r;
+    kcp      = tau * kc * (tau - r) * (tau - r);
+    b        = (TScalar(0.5) * kc) * (r - tau) * (r - tau) + kcp * std::log(tau);
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline MeshDynamics<TScalar, TIndex>::MeshDynamics(Params const& params) : mParams(params)
+{
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::Construct(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& Xdynamic,
     MultiMesh<IndexType> dynamicMeshes,
@@ -333,26 +423,41 @@ inline void MeshDynamics<TScalar, TIndex>::Construct(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::Initialize(
-    geometry::Device device,
-    MeshDynamicsParams<ScalarType, IndexType> const& params)
+inline void MeshDynamics<TScalar, TIndex>::Initialize(geometry::Device device)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.Initialize");
-    mOgcState.Initialize(device, mOgcInput, params.mOgcParams);
+    mOgcState.Initialize(device, mOgcInput, mParams.mOgcParams);
+    ComputeDisplacementBounds();
     mNumTruncatedPoints          = 0;
     mRequiresBoundsRecomputation = true;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
-    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> Xkp1,
-    MeshDynamicsParams<ScalarType, IndexType> const& params)
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> Xkp1)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacement");
+    auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
+    TruncateDisplacement(Xkp1, mask);
+    return mNumTruncatedPoints;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TMask>
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> Xkp1,
+    Eigen::DenseBase<TMask> const& mask)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacementWithMask");
+    static_assert(
+        std::is_convertible_v<typename TMask::Scalar, bool>,
+        "Mask scalar type must be convertible to bool");
     mNumTruncatedPoints  = 0;
-    auto const nVertices = mDynamicMeshes.V.cols();
+    auto const nVertices = mDynamicMeshes.V.size();
     tbb::parallel_for(Eigen::Index{0}, nVertices, [&](Eigen::Index v) {
-        IndexType i                    = mDynamicMeshes.V(v);
+        IndexType i          = mDynamicMeshes.V(v);
+        bool const bIsMasked = static_cast<bool>(mask(i));
+        if (bIsMasked)
+            return;
         ScalarType const b             = mOgcState.bv(v);
         auto xk                        = mXdynamic.col(i);
         auto xkp1                      = Xkp1.col(i);
@@ -364,11 +469,18 @@ inline void MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
         xkp1 = xk + d;
-        common::AtomicAdd(mNumTruncatedPoints, 1);
+        common::AtomicAdd(mNumTruncatedPoints, Eigen::Index{1});
     });
-    mRequiresBoundsRecomputation = mNumTruncatedPoints >= params.mOgcParams.gammae * nVertices;
+    mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
     if (mRequiresBoundsRecomputation)
         mXdynamic = Xkp1;
+    return mNumTruncatedPoints;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::NumTruncatedPoints() const
+{
+    return mNumTruncatedPoints;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -378,14 +490,14 @@ inline bool MeshDynamics<TScalar, TIndex>::RequiresBoundsComputation() const
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds(
-    MeshDynamicsParams<ScalarType, IndexType> const& params)
+inline void MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeDisplacementBounds");
-    mOgcState.PrepareForExecution(mOgcInput, params.mOgcParams);
-    ogc::VertexFacetContactDetection(mOgcInput, params.mOgcParams, mOgcState);
-    ogc::EdgeEdgeContactDetection(mOgcInput, params.mOgcParams, mOgcState);
-    ogc::UpdateDisplacementBounds(mOgcInput, params.mOgcParams, mOgcState);
+    mOgcState.PrepareForExecution(mOgcInput, mParams.mOgcParams);
+    ogc::VertexFacetContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
+    ogc::EdgeEdgeContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
+    ogc::UpdateDisplacementBounds(mOgcInput, mParams.mOgcParams, mOgcState);
+    mRequiresBoundsRecomputation = false;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -442,19 +554,19 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointDynamicMeshContact(
         return;
     mOgcState.ForEachDynamicContactFaceOfVertex(
         vi,
-        [f = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType vj) {
-            IndexType j = mDynamicMeshes.V(vj);
-            f(j);
+        [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType j) {
+            func(j);
         },
-        [f = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType he) {
+        [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
+            IndexType he) {
             Eigen::Vector<IndexType, 2> einds{
                 geometry::IncomingVertex(mDynamicMeshes.F, he),
                 geometry::OutgoingVertex(mDynamicMeshes.F, he)};
-            f(einds);
+            func(einds);
         },
-        [f = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
+        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
             Eigen::Vector<IndexType, 3> finds = mDynamicMeshes.F.col(f);
-            f(finds);
+            func(finds);
         });
 }
 
@@ -474,19 +586,19 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointStaticMeshContact(
         return;
     mOgcState.ForEachStaticContactFaceOfVertex(
         vi,
-        [f = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType vj) {
-            IndexType j = mStaticMeshes.V(vj);
-            f(j);
+        [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType vj) {
+            func(vj);
         },
-        [f = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType he) {
+        [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
+            IndexType he) {
             Eigen::Vector<IndexType, 2> einds{
                 geometry::IncomingVertex(mStaticMeshes.F, he),
                 geometry::OutgoingVertex(mStaticMeshes.F, he)};
-            f(einds);
+            func(einds);
         },
-        [f = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
+        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
             Eigen::Vector<IndexType, 3> finds = mStaticMeshes.F.col(f);
-            f(finds);
+            func(finds);
         });
 }
 
@@ -502,17 +614,19 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeDynamicMeshContact(
         geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
     mOgcState.ForEachDynamicContactFaceOfHalfEdge(
         hei,
-        [&eindsi,
-         f = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType vj) {
-            IndexType j = mDynamicMeshes.V(vj);
-            f(eindsi, j);
+        [this,
+         &eindsi,
+         func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType j) {
+            func(eindsi, j);
         },
-        [&eindsi,
-         f = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType hej) {
+        [this,
+         &eindsi,
+         func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
+            IndexType hej) {
             Eigen::Vector<IndexType, 2> eindsj{
                 geometry::IncomingVertex(mDynamicMeshes.F, hej),
                 geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
-            f(eindsi, eindsj);
+            func(eindsi, eindsj);
         });
 }
 
@@ -528,13 +642,14 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContact(
         geometry::OutgoingVertex(mStaticMeshes.F, hei)};
     mOgcState.ForEachStaticContactFaceOfHalfEdge(
         hei,
-        [&eindsi, f = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
-            IndexType vj) { f(eindsi, vj); },
-        [&eindsi,
-         f = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
+        [&eindsi, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
+            IndexType vj) { func(eindsi, vj); },
+        [this,
+         &eindsi,
+         func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
             IndexType ej) {
             Eigen::Vector<IndexType, 2> eindsj = mStaticMeshes.E.col(ej);
-            f(eindsi, eindsj);
+            func(eindsi, eindsj);
         });
 }
 
@@ -582,9 +697,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachDynamicPointContactOnTriangle(
 {
     mOgcState.ForEachDynamicVertexContactOfTriangle(
         fi,
-        [f = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType vi) {
-            IndexType i = mDynamicMeshes.V(vi);
-            f(i);
+        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType i) {
+            func(i);
         });
 }
 
@@ -596,8 +710,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachStaticPointContactOnTriangle(
 {
     mOgcState.ForEachStaticVertexContactOfTriangle(
         fi,
-        [f = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType vi) {
-            f(vi);
+        [func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType vi) {
+            func(vi);
         });
 }
 
@@ -615,8 +729,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachDynamicPointContactOnTriangles
         Eigen::Vector<IndexType, 3> finds = mDynamicMeshes.F.col(fi);
         ForEachDynamicPointContactOnTriangle(
             fi,
-            [finds, f = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
-                IndexType j) { f(finds, j); });
+            [finds, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
+                IndexType j) { func(finds, j); });
     }
 }
 
@@ -634,8 +748,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachStaticPointContactOnTrianglesI
         Eigen::Vector<IndexType, 3> finds = mStaticMeshes.F.col(fi);
         ForEachStaticPointContactOnTriangle(
             fi,
-            [finds, f = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
-                IndexType j) { f(finds, j); });
+            [finds, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
+                IndexType j) { func(finds, j); });
     }
 }
 

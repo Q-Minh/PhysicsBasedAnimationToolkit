@@ -11,14 +11,8 @@ class Contact:
     _contact_params: ParameterObject
 
     def __init__(self):
-        self._contact_dynamics = pbat.sim.contact.MeshDynamics()
-        self._contact_params = ParameterObject(
-            self._contact_dynamics,
-            {
-                "env_contact_dynamics_params": None,
-                "offset_geometry_contact": {"params": None},
-                "mesh_sdf_contact": {"params": None},
-            },
+        self.on_new_contact_dynamics(
+            pbat.sim.contact.MeshDynamics(),
         )
 
     def draw(self):
@@ -33,6 +27,12 @@ class Contact:
 
     def on_new_contact_dynamics(self, contact_dynamics: pbat.sim.contact.MeshDynamics):
         self._contact_dynamics = contact_dynamics
+        self._contact_params = ParameterObject(
+            self._contact_dynamics.params,
+            {
+                "ogc_params": None,
+            },
+        )
 
     @property
     def contact_dynamics(self):

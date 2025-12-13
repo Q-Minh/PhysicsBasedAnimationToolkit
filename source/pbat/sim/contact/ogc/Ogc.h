@@ -84,7 +84,7 @@ template <common::CFloatingPoint TScalar>
 std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w);
 
 /**
- * @brief Computes the
+ * @brief Computes the edge face (vertex or edge) nearest to the closest points on two edges.
  *
  * @tparam TScalar
  * @param s Barycentric coordinate of closest point on edge 1
@@ -93,7 +93,7 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w);
  * @param e2 Edge index of edge 2
  * @param e1v Vertex indices of edge 1
  * @param e2v Vertex indices of edge 2
- * @return The tuple (a1, eFace1, a2, eFace2), where a1 and a2 are either vertex indices or
+ * @return The tuple (a1, eFace1, a2, eFace2), where a1 and a2 are either point indices or
  * edge indices, and eFace1 and eFace2 indicate the type of face (vertex or edge), i.e. (0 | 1) ->
  * (edge | vertex)
  */
@@ -116,7 +116,7 @@ std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
  * Definition:
  * - Triangle-face:   a = f
  * - Edge-face:       a = 3*f + alocal  (half-edge index within face f)
- * - Vertex-face:     a = F(alocal, f)  (global vertex index)
+ * - Vertex-face:     a = F(alocal, f)  (global point index)
  *
  * @tparam TIndex Index type
  * @tparam TDerivedF Derived Eigen type for face connectivity (`3 x |# faces|`)

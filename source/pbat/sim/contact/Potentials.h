@@ -439,7 +439,7 @@ PBAT_HOST_DEVICE auto GradientSegmentWrtClosestPoints(
     TMatrixY const& y,
     TScalar d,
     TScalar dEdd,
-    int i)
+    int i) -> mini::SVector<TScalar, TMatrixX::kRows>
 {
     static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
     auto constexpr kDims = TMatrixX::kRows;
@@ -699,7 +699,7 @@ PBAT_HOST_DEVICE auto GradientSegmentWrtLinearlyInterpolatedClosestPoints(
     int ib,
     int i) -> mini::SVector<TScalar, TMatrixX::kRows>
 {
-    TScalar gammai = (ib == 0) ? a(i) : b(i);
+    TScalar gammai = (ib == 0) * a(i) + (ib != 0) * b(i);
     return gammai * GradientSegmentWrtClosestPoints(x, y, d, dEdd, ib);
 }
 
@@ -750,8 +750,8 @@ PBAT_HOST_DEVICE auto HessianBlockWrtLinearlyInterpolatedClosestPoints(
     int i,
     int j) -> mini::SMatrix<TScalar, TMatrixX::kRows, TMatrixX::kRows>
 {
-    TScalar gammai = (ib == 0) ? a(i) : b(i);
-    TScalar gammaj = (jb == 0) ? a(j) : b(j);
+    TScalar gammai = (ib == 0) * a(i) + (ib != 0) * b(i);
+    TScalar gammaj = (jb == 0) * a(j) + (jb != 0) * b(j);
     return (gammai * gammaj) * HessianBlockWrtClosestPoints(x, y, d, dEdd, d2Edd2, ib, jb);
 }
 

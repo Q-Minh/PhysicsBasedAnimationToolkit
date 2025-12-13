@@ -25,6 +25,67 @@ static void EmbreeDeviceErrorFunction(void* userPtr, enum RTCError code, const c
         fmt::format("Embree Device Error (code {}): {}\n", static_cast<int>(code), str));
 }
 
+DeviceConfig& DeviceConfig::WithThreading(int nThreads, int nUserThreads, int affinity)
+{
+    this->threads     = nThreads;
+    this->userThreads = nUserThreads;
+    this->setAffinity = affinity;
+    return *this;
+}
+
+DeviceConfig& DeviceConfig::WithInstructionSet(std::string_view isa, std::string_view maxIsa)
+{
+    this->isa    = isa;
+    this->maxIsa = maxIsa;
+    return *this;
+}
+
+DeviceConfig& DeviceConfig::WithVerbosity(int verbose)
+{
+    this->verbose = verbose;
+    return *this;
+}
+
+DeviceConfig& DeviceConfig::WithFrequencyLevel(std::string_view frequencyLevel)
+{
+    this->frequencyLevel = frequencyLevel;
+    return *this;
+}
+
+void DeviceConfig::Serialize(io::Archive& archive) const
+{
+    auto grp = archive["pbat.geometry.DeviceConfig"];
+    grp.WriteMetaData("threads", threads);
+    grp.WriteMetaData("userThreads", userThreads);
+    grp.WriteMetaData("setAffinity", setAffinity);
+    grp.WriteMetaData("startThreads", startThreads);
+    grp.WriteMetaData("isa", isa);
+    grp.WriteMetaData("maxIsa", maxIsa);
+    grp.WriteMetaData("verbose", verbose);
+    grp.WriteMetaData("frequencyLevel", frequencyLevel);
+}
+
+void DeviceConfig::Deserialize(io::Archive const& archive)
+{
+    auto grp = archive["pbat.geometry.DeviceConfig"];
+    if (grp.HasMetaData("threads"))
+        threads = grp.ReadMetaData<int>("threads");
+    if (grp.HasMetaData("userThreads"))
+        userThreads = grp.ReadMetaData<int>("userThreads");
+    if (grp.HasMetaData("setAffinity"))
+        setAffinity = grp.ReadMetaData<int>("setAffinity");
+    if (grp.HasMetaData("startThreads"))
+        startThreads = grp.ReadMetaData<int>("startThreads");
+    if (grp.HasMetaData("isa"))
+        isa = grp.ReadMetaData<std::string>("isa");
+    if (grp.HasMetaData("maxIsa"))
+        maxIsa = grp.ReadMetaData<std::string>("maxIsa");
+    if (grp.HasMetaData("verbose"))
+        verbose = grp.ReadMetaData<int>("verbose");
+    if (grp.HasMetaData("frequencyLevel"))
+        frequencyLevel = grp.ReadMetaData<std::string>("frequencyLevel");
+}
+
 std::string DeviceConfig::ToString() const
 {
     auto constexpr nParts = 8;
@@ -51,7 +112,7 @@ std::string DeviceConfig::ToString() const
         configParts.end(),
         std::size_t{0},
         [](std::size_t sum, std::string const& part) { return sum + part.size(); });
-    std::size_t nCommas = std::max(std::size_t{0}, configParts.size() - 1);
+    std::size_t nCommas = std::max(int(0), static_cast<int>(configParts.size()) - 1);
     std::string config{};
     config.reserve(nCharacters + nCommas);
     for (std::size_t i = 0; i < configParts.size(); ++i)

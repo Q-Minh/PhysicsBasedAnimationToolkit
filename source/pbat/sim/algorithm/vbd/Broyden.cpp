@@ -82,7 +82,6 @@ struct BroydenTestSetup
     pbat::sim::contact::MeshDynamics<ScalarType, IndexType> meshDynamics;
     pbat::MatrixX X;
     pbat::geometry::Device device;
-    pbat::sim::contact::MeshDynamicsParams<ScalarType, IndexType> meshDynamicsParams;
 };
 
 BroydenTestSetup SetupBroydenTest(pbat::Index maxIters = 10)
@@ -139,7 +138,7 @@ BroydenTestSetup SetupBroydenTest(pbat::Index maxIters = 10)
     graph::ReindexMeshByConnectedComponents(setup.X, C, XCC, ECC, Xord, Eord);
     sim::contact::MultiMesh<Index> multiMesh(C.bottomRows<4>(), XCC, nComponents);
     setup.meshDynamics.SetDynamicGeometry(setup.X, std::move(multiMesh));
-    setup.meshDynamics.Initialize(setup.device, setup.meshDynamicsParams);
+    setup.meshDynamics.Initialize(setup.device);
     return setup;
 }
 
