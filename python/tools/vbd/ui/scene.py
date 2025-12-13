@@ -110,8 +110,6 @@ class Scene:
         self._current_selection_property_idx = 0
         self._transform_library = TransformLibrary()
 
-    
-
     def draw(self):
         tab_flags = (
             imgui.ImGuiTabBarFlags_Reorderable
@@ -239,7 +237,7 @@ class Scene:
                 with h5.File(file_path, "r") as f:
                     self._teardown(bodies_only=bodies_only)
                     self._buildup(f, bodies_only=bodies_only)
-                    
+
         except Exception as e:
             ps.error(f"Error loading session:\n{e}")
         finally:
@@ -310,21 +308,18 @@ class Scene:
 
     def _teardown(self, bodies_only=False):
         if not bodies_only:
-            self._transform_library = TransformLibrary()
+            self._transform_library.empty()
         else:
             for body in self._tet_elastic_bodies:
                 self._transform_library.on_mesh_removed(body.name)
-                
+
         for body in self._tet_elastic_bodies:
             body.on_mesh_removed()
         self._tet_elastic_bodies = []
         self._recycled_tet_elastic_body_indices = []
-        
 
     def _buildup(self, f, bodies_only=False):
-        self._deserialize_fem_tet_elastic_bodies(
-            f["fem_tet_elastic_bodies"]
-        )
+        self._deserialize_fem_tet_elastic_bodies(f["fem_tet_elastic_bodies"])
         self._recycled_tet_elastic_body_indices = list(
             f["recycled_tet_elastic_body_indices"][:]
         )

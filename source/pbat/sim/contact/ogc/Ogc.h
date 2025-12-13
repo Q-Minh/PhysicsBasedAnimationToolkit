@@ -119,7 +119,7 @@ std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
  * - Vertex-face:     a = F(alocal, f)  (global vertex index)
  *
  * @tparam TIndex Index type
- * @tparam TDerivedF Derived Eigen type for face connectivity (3 x |#faces|)
+ * @tparam TDerivedF Derived Eigen type for face connectivity (`3 x |# faces|`)
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param f Face index
  * @param alocal Local index within face f (0..2)
@@ -200,6 +200,14 @@ struct VertexFacetRTCCollideFuncParams
     State<TScalar, TIndex>* state;       ///< OGC state for the body
 };
 
+/**
+ * @brief RTC collide function for dynamic vertex - dynamic facet collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicVertexFacetRTCCollideFunc(
     void* userPtr,
@@ -300,6 +308,14 @@ void DynamicVertexFacetRTCCollideFunc(
     }
 }
 
+/**
+ * @brief RTC collide function for dynamic vertex - static facet collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicVertexStaticFacetRTCCollideFunc(
     void* userPtr,
@@ -391,6 +407,14 @@ void DynamicVertexStaticFacetRTCCollideFunc(
     }
 }
 
+/**
+ * @brief RTC collide function for static vertex - dynamic facet collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void StaticVertexDynamicFacetRTCCollideFunc(
     void* userPtr,
@@ -404,7 +428,6 @@ void StaticVertexDynamicFacetRTCCollideFunc(
     auto const& Xenv                       = input->Venv.value();
     auto const& X                          = input->X.value();
     auto const& F                          = input->F.value();
-    auto const& FP                         = input->FP.value();
     auto const& GVHEp                      = input->GVHEp.value();
     auto const& GVHEadj                    = input->GVHEadj.value();
     auto const& GHEF                       = input->GHEF.value();
@@ -444,30 +467,27 @@ void StaticVertexDynamicFacetRTCCollideFunc(
         auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw(0), uvw(1), uvw(2));
         // Vectorize contact face index a based on its type (triangle | edge | vertex)
         TIndex const a = VertexFacetContactFaceIndex(F, f, alocal, eFace);
-        // Synchronize reads/writes to vertex iv's contact sets
-        common::AtomicExecute(mFacetLocks(f), [&]() {
-            // Update contact face sets
-            auto const fUpdateContactSets = [&]() {
-                common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
-            };
-            switch (static_cast<EVertexFacetClosestFaceType>(eFace))
-            {
-                case EVertexFacetClosestFaceType::Vertex: {
-                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                case EVertexFacetClosestFaceType::Edge: {
-                    if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                default /* triangle */: {
+        // Update contact face sets
+        auto const fUpdateContactSets = [&]() {
+            common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
+        };
+        switch (static_cast<EVertexFacetClosestFaceType>(eFace))
+        {
+            case EVertexFacetClosestFaceType::Vertex: {
+                if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
                     fUpdateContactSets();
-                    break;
-                }
+                break;
             }
-        });
+            case EVertexFacetClosestFaceType::Edge: {
+                if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
+                    fUpdateContactSets();
+                break;
+            }
+            default /* triangle */: {
+                fUpdateContactSets();
+                break;
+            }
+        }
     }
 }
 
@@ -479,6 +499,14 @@ struct EdgeEdgeRTCCollideFuncParams
     State<TScalar, TIndex>* state;       ///< OGC state for the body
 };
 
+/**
+ * @brief RTC collide function for dynamic edge - dynamic edge collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicEdgeEdgeRTCCollideFunc(
     void* userPtr,
@@ -605,6 +633,14 @@ void DynamicEdgeEdgeRTCCollideFunc(
     }
 }
 
+/**
+ * @brief RTC collide function for dynamic edge - static edge collisions.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param userPtr User pointer
+ * @param collisions Array of RTC collisions
+ * @param nCollisions Number of RTC collisions
+ */
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void DynamicEdgeStaticEdgeRTCCollideFunc(
     void* userPtr,
@@ -633,7 +669,6 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // Get edge-edge pair (e1, e2)
         RTCCollision const& collision      = collisions[ci];
         TIndex const be1                   = static_cast<TIndex>(collision.geomID0);
-        TIndex const be2                   = static_cast<TIndex>(collision.geomID1);
         TIndex const e1                    = input->DynamicEdge(be1, collision.primID0);
         TIndex const e2                    = static_cast<TIndex>(collision.primID1);
         Eigen::Vector<TIndex, 2> const e1v = E.col(e1);

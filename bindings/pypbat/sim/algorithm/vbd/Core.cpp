@@ -170,7 +170,7 @@ void BindCore(nanobind::module_& m)
         .def_rw("kappa", &Params::kappa, "Per-vertex estimated condition numbers");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    using MeshDynamicsType  = pbat::sim::contact::MeshDynamics;
+    using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
 
     m.def(
         "initialize_solve",

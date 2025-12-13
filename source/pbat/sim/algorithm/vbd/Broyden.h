@@ -138,7 +138,7 @@ struct BroydenParams
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden);
 
@@ -154,7 +154,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden);
 
@@ -171,7 +171,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden);
 
@@ -188,14 +188,14 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden)
 {
@@ -232,13 +232,13 @@ void InitializeSolve(
     broyden.xkm1 = fem.x.reshaped();
     Iterate(fem, meshDynamics, params);
     broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
-    params.k    = 1;
+    params.k     = 1;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden)
 {
@@ -397,7 +397,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden)
 {
@@ -413,7 +413,7 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params,
     BroydenParams& broyden)
 {

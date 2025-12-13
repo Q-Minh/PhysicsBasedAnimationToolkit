@@ -13,6 +13,15 @@
 
 namespace pbat::sim::contact {
 
+/**
+ * @brief Compute tangential basis given contact normal
+ * 
+ * @tparam TMatrixN Matrix type for normal
+ * @tparam TScalar Scalar type
+ * @param n Contact normal
+ * @param eps Epsilon for colinearity check
+ * @return math::linalg::mini::SMatrix<TScalar, TMatrixN::kRows, 2> 
+ */
 template <math::linalg::mini::CMatrix TMatrixN, class TScalar = typename TMatrixN::ScalarType>
 PBAT_HOST_DEVICE auto
 TangentialBasis(TMatrixN const& n, TScalar eps = std::numeric_limits<TScalar>::epsilon())
@@ -56,6 +65,7 @@ TangentialBasis(TMatrixN const& n, TScalar eps = std::numeric_limits<TScalar>::e
  * @tparam TScalar Scalar type
  * @param x `3 x 1` first point
  * @param y `3 x 1` second point
+ * @param eps Epsilon for colinearity check
  * @return `3 x 2` tangential basis matrix
  */
 template <

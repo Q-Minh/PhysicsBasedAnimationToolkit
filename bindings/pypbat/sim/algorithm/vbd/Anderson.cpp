@@ -42,7 +42,7 @@ void BindAnderson(nanobind::module_& m)
         .def_ro("gammak", &AndersonParams::gammak, "`m x 1` subspace residual");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    using MeshDynamicsType  = pbat::sim::contact::MeshDynamics;
+    using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
 
     m.def(
         "initialize_solve",

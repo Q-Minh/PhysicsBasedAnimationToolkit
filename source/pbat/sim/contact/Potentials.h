@@ -255,7 +255,7 @@ class LaggedFriction
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
      * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
-     * threshold for static to dynamic friction's smooth transition, and \f$ h \f $ is the time step
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
      * @param gk `2 x 1` Gradient matrix
      */
     template <

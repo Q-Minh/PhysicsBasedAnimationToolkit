@@ -98,7 +98,7 @@ void BindBroyden(nanobind::module_& m)
         .def_ro("FkgradL2", &BroydenParams::FkgradL2, "`|# dofs| x 1` Fk * gradL2");
 
     using ElasticEnergyType = physics::StableNeoHookeanEnergy<3>;
-    using MeshDynamicsType  = pbat::sim::contact::MeshDynamics;
+    using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
 
     m.def(
         "initialize_solve",

@@ -39,12 +39,16 @@ struct ChebyshevTestSetup
 {
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using FemElastoDynamics = pbat::sim::algorithm::common::FemElastoDynamics<ElasticEnergyType>;
+    using ScalarType        = typename FemElastoDynamics::ScalarType;
+    using IndexType         = typename FemElastoDynamics::IndexType;
 
     FemElastoDynamics dynamics;
     pbat::sim::algorithm::vbd::Params vbdParams;
     pbat::sim::algorithm::vbd::ChebyshevParams chebyshevParams;
-    pbat::sim::contact::MeshDynamics meshDynamics;
+    pbat::sim::contact::MeshDynamics<ScalarType, IndexType> meshDynamics;
     pbat::MatrixX X;
+    pbat::geometry::Device device;
+    pbat::sim::contact::MeshDynamicsParams<ScalarType, IndexType> meshDynamicsParams;
 };
 
 ChebyshevTestSetup SetupChebyshevTest(pbat::Index maxIters = 20)
@@ -98,15 +102,8 @@ ChebyshevTestSetup SetupChebyshevTest(pbat::Index maxIters = 20)
         graph::SortedConnectedComponentOrdering(setup.X, C, XCC, ECC, Xord, Eord);
     graph::ReindexMeshByConnectedComponents(setup.X, C, XCC, ECC, Xord, Eord);
     sim::contact::MultiMesh<Index> multiMesh(C.bottomRows<4>(), XCC, nComponents);
-    geometry::sdf::Forest<Scalar> sdfForest;
-    sdfForest.nodes.push_back(
-        geometry::sdf::Sphere<Scalar>{Scalar(10)}); // Large sphere to avoid contacts
-    sdfForest.transforms.push_back(geometry::sdf::Transform<Scalar>::Identity());
-    sdfForest.transforms.back().t(2) = -Scalar(1);
-    sdfForest.roots                  = {0};
-    sdfForest.children.push_back({-1, -1});
-    setup.meshDynamics.Construct(std::move(multiMesh), std::move(sdfForest));
-    setup.meshDynamics.InitializeMeshEnvironmentContactDetection();
+    setup.meshDynamics.SetDynamicGeometry(setup.X, std::move(multiMesh));
+    setup.meshDynamics.Initialize(setup.device, setup.meshDynamicsParams);
     return setup;
 }
 

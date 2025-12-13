@@ -21,8 +21,8 @@ enum class EEdgeEdgeClosestFaceType : int { Edge = 0, Vertex = 1 };
 template <common::CIndex TIndex>
 struct ContactFace
 {
-    using IndexType = TIndex;
-    using SelfType  = ContactFace<TIndex>;
+    using IndexType = TIndex; ///< Index type
+    using SelfType  = ContactFace<TIndex>; ///< Self type
     /**
      * @brief Construct a new Contact Face object
      *
