@@ -13,18 +13,17 @@
 #include "MultiMesh.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
+#include "pbat/common/Atomic.h"
 #include "pbat/common/Concepts.h"
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/Device.h"
 #include "pbat/geometry/HalfEdges.h"
+#include "pbat/profiling/Profiling.h"
 #include "pbat/sim/contact/Friction.h"
-#include "pbat/sim/contact/ogc/Input.h"
-#include "pbat/sim/contact/ogc/Params.h"
-#include "pbat/sim/contact/ogc/State.h"
+#include "pbat/sim/contact/ogc/Ogc.h"
 
 #include <Eigen/Core>
-#include <limits>
-#include <vector>
+#include <tbb/parallel_for.h>
 
 namespace pbat::sim::contact {
 
@@ -37,10 +36,10 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 struct MeshDynamicsParams
 {
     ogc::Params<TScalar> mOgcParams; ///< OGC parameters
-    TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's smooth
-                  ///< transition
-    TScalar kc{1e5};   ///< OGC contact stiffness parameter
-    TScalar mu{0.5};   ///< OGC friction coefficient
+    TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
+                        ///< smooth transition
+    TScalar kc{1e5};    ///< OGC contact stiffness parameter
+    TScalar mu{0.5};    ///< OGC friction coefficient
 };
 
 /**
@@ -71,10 +70,33 @@ class MeshDynamics
      * @brief Initialize the Mesh Dynamics object
      * @param device Device to use for acceleration structures
      * @param params Mesh dynamics parameters
-     * @pre SetStaticGeometry() and SetDynamicGeometry() have been called
+     * @pre `SetDynamicGeometry()` or `Construct()` has been called
      */
     void
     Initialize(geometry::Device device, MeshDynamicsParams<ScalarType, IndexType> const& params);
+    /**
+     * @brief Truncate displacements to satisfy the computed displacement bounds
+     * @param Xkp1 `3 x |# points|` proposed new point positions (column-major: one point per
+     * column)
+     * @param params Mesh dynamics parameters
+     * @pre `Initialize()` has been called
+     * @post Displacements have been truncated to satisfy the computed displacement bounds
+     */
+    void TruncateDisplacement(
+        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> Xkp1,
+        MeshDynamicsParams<ScalarType, IndexType> const& params);
+    /**
+     * @brief Check if displacement bounds computation is required
+     * @return true if displacement bounds computation is required, false otherwise
+     */
+    bool RequiresBoundsComputation() const;
+    /**
+     * @brief Executes a collision detection pass and computes resulting per-point displacement
+     * bounds.
+     * @param params Mesh dynamics parameters
+     * @pre `TruncateDisplacement()` has been called
+     */
+    void ComputeDisplacementBounds(MeshDynamicsParams<ScalarType, IndexType> const& params);
     /**
      * @brief For each point-(dynamic)face contact of point `i`, invoke the appropriate callback
      *
@@ -258,22 +280,22 @@ class MeshDynamics
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
     /**
      * @brief Get the Dynamic Meshes object
-     * @return MultiMesh<IndexType> const& 
+     * @return MultiMesh<IndexType> const&
      */
     auto DynamicMeshes() const -> MultiMesh<IndexType> const& { return mDynamicMeshes; }
     /**
      * @brief Get the Static Meshes object
-     * @return MultiMesh<IndexType> const& 
+     * @return MultiMesh<IndexType> const&
      */
     auto StaticMeshes() const -> MultiMesh<IndexType> const& { return mStaticMeshes; }
     /**
      * @brief Get the Ogc Input object
-     * @return ogc::Input<ScalarType, IndexType> const& 
+     * @return ogc::Input<ScalarType, IndexType> const&
      */
     auto OgcInput() const -> ogc::Input<ScalarType, IndexType> const& { return mOgcInput; }
     /**
      * @brief Get the Ogc State object
-     * @return ogc::State<ScalarType, IndexType> const& 
+     * @return ogc::State<ScalarType, IndexType> const&
      */
     auto OgcState() const -> ogc::State<ScalarType, IndexType> const& { return mOgcState; }
 
@@ -281,10 +303,14 @@ class MeshDynamics
     /**
      * @brief Contact detection data structures and algorithms
      */
-    MultiMesh<IndexType> mDynamicMeshes;         ///< Dynamic geometry
-    MultiMesh<IndexType> mStaticMeshes;          ///< Static geometry
-    ogc::Input<ScalarType, IndexType> mOgcInput; ///< OGC input data structures
+    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXdynamic; ///< Dynamic point positions
+    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXstatic;  ///< Static point positions
+    MultiMesh<IndexType> mDynamicMeshes;                    ///< Dynamic geometry
+    MultiMesh<IndexType> mStaticMeshes;                     ///< Static geometry
+    ogc::Input<ScalarType, IndexType> mOgcInput;            ///< OGC input data structures
     ogc::State<ScalarType, IndexType> mOgcState; ///< OGC transient algorithm data structures
+    Eigen::Index mNumTruncatedPoints{0};         ///< Number of truncated points in last truncation
+    bool mRequiresBoundsRecomputation{true};     ///< Whether bounds recomputation is required
 
     /**
      * @brief These geometric quantities are generally useful for contact dynamics
@@ -311,7 +337,55 @@ inline void MeshDynamics<TScalar, TIndex>::Initialize(
     geometry::Device device,
     MeshDynamicsParams<ScalarType, IndexType> const& params)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.Initialize");
     mOgcState.Initialize(device, mOgcInput, params.mOgcParams);
+    mNumTruncatedPoints          = 0;
+    mRequiresBoundsRecomputation = true;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
+    Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic>> Xkp1,
+    MeshDynamicsParams<ScalarType, IndexType> const& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacement");
+    mNumTruncatedPoints  = 0;
+    auto const nVertices = mDynamicMeshes.V.cols();
+    tbb::parallel_for(Eigen::Index{0}, nVertices, [&](Eigen::Index v) {
+        IndexType i                    = mDynamicMeshes.V(v);
+        ScalarType const b             = mOgcState.bv(v);
+        auto xk                        = mXdynamic.col(i);
+        auto xkp1                      = Xkp1.col(i);
+        Eigen::Vector<ScalarType, 3> d = xkp1 - xk;
+        ScalarType const dnorm         = d.norm();
+        bool const bIsWithinBound      = dnorm <= b;
+        if (bIsWithinBound)
+            return;
+        // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
+        d *= (b / dnorm);
+        xkp1 = xk + d;
+        common::AtomicAdd(mNumTruncatedPoints, 1);
+    });
+    mRequiresBoundsRecomputation = mNumTruncatedPoints >= params.mOgcParams.gammae * nVertices;
+    if (mRequiresBoundsRecomputation)
+        mXdynamic = Xkp1;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline bool MeshDynamics<TScalar, TIndex>::RequiresBoundsComputation() const
+{
+    return mRequiresBoundsRecomputation;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds(
+    MeshDynamicsParams<ScalarType, IndexType> const& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeDisplacementBounds");
+    mOgcState.PrepareForExecution(mOgcInput, params.mOgcParams);
+    ogc::VertexFacetContactDetection(mOgcInput, params.mOgcParams, mOgcState);
+    ogc::EdgeEdgeContactDetection(mOgcInput, params.mOgcParams, mOgcState);
+    ogc::UpdateDisplacementBounds(mOgcInput, params.mOgcParams, mOgcState);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -319,9 +393,10 @@ void MeshDynamics<TScalar, TIndex>::SetStaticGeometry(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     MultiMesh<IndexType> meshes)
 {
+    mXstatic      = X;
     mStaticMeshes = std::move(meshes);
     mOgcInput.WithStaticGeometry(
-        X,
+        mXstatic,
         mStaticMeshes.E,
         mStaticMeshes.F,
         mStaticMeshes.GVHEp,
@@ -335,9 +410,10 @@ void MeshDynamics<TScalar, TIndex>::SetDynamicGeometry(
     Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
     MultiMesh<IndexType> meshes)
 {
+    mXdynamic      = X;
     mDynamicMeshes = std::move(meshes);
     mOgcInput.WithDynamicGeometry(
-        X,
+        mXdynamic,
         mDynamicMeshes.V,
         mDynamicMeshes.F,
         mDynamicMeshes.E,
