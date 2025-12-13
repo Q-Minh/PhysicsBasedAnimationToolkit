@@ -165,9 +165,7 @@ void BindCore(nanobind::module_& m)
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
         .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
-        .def_rw("k", &Params::k, "Current iteration index")
-        .def_rw("dxtilde0", &Params::dxtilde0, "Initial distance to inertial targets")
-        .def_rw("kappa", &Params::kappa, "Per-vertex estimated condition numbers");
+        .def_rw("k", &Params::k, "Current iteration index");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
@@ -204,7 +202,7 @@ void BindCore(nanobind::module_& m)
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n");
     m.def(
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
