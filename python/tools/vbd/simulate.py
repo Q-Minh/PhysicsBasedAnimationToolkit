@@ -1,6 +1,8 @@
 # type: ignore
 from pbatoolkit import pbat, pypbat
 from .ui.utils.transform_library import TransformLibrary
+from .ui.tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
+from .editor import make_fem_dynamics_object
 import enum
 import argparse
 import h5py as h5
@@ -23,6 +25,16 @@ def vbd_prepare(
         GVGp, GVGe, GVGilocal
     ).with_vertex_colors(colors).construct()
 
+_archive_solver_groups = {
+    "vbd"       : "Solver/VBD",
+    "anderson"  : "Solver/Anderson",
+    "broyden"   : "Solver/Broyden",
+    "chebychev" : "Solver/Chebychev",
+    "newton"    : "Solver/Newton"
+
+}
+
+_archive_tlib_group = "transform_library"
 
 _solver_params = {
     "vbd": {
@@ -109,24 +121,28 @@ def print_param_obj_spec(solver: str):
 def parse_args():
     parser = argparse.ArgumentParser(description="Simulation Tool")
     parser.add_argument(
-        "-t",
-        "--time-integration",
-        type=str,
+        "-p",
+        "--solver_params", "--solver-params",
+        type=str, 
         default="",
         help=(
-            "Time integration scheme as 'path/to/file.h5:path/to/hdf5/group' "
-            "where 'group' contains attributes 'dt, bdf_scheme, fem_dynamics_init_strategy'"
-        ),
-        dest="time_integration",
+            "Path to an h5 file containing solver parameters. "
+            "The root group must contain attributes 'dt, bdf_scheme, fem_dynamics_init_strategy', "
+            "and it should contain at least one subgroup holding the parameters of a solver. "
+            f"Available solvers and their parameter object names are: {', '.join([f'solver={solver} params_names=({', '.join(data['params'].keys())})' for solver, data in _solver_params.items()])}"
+        ), 
+        dest="solver_params",
     )
     parser.add_argument(
-        "--fem-elasto-dynamics",
-        type=str,
+        "-sess",
+        "--session",
+        type=str, 
+        default="",
         help=(
-            "FEM elasto dynamics problem as 'path/to/file.h5:path/to/hdf5/group' "
-            "where group contains a 'pbat.sim.dynamics.FemElastoDynamics'"
-        ),
-        dest="fem_elasto_dynamics",
+            "Path to an h5 file containing a session to simulate"
+            "The root group must contain a list of TetrahedralElastodynamicsBodies as well as a transform library."
+        ), 
+        dest="session",
     )
     # TODO: Add contact dynamics argument
     parser.add_argument(
@@ -134,19 +150,8 @@ def parse_args():
         "--solver",
         type=str,
         default="vbd",
-        help=f"Solver type. Available type are {', '.join(_solver_params.keys())}",
+        help=f"Solver type. Available types are {', '.join(_solver_params.keys())}",
         dest="solver",
-    )
-    parser.add_argument(
-        "-p",
-        "--params",
-        nargs="+",
-        help=(
-            f"Space-separated list of params_name=path/to/file.h5:path/to/hdf5/group for solver parameters. "
-            f"The hdf5 group should contain the appropriate parameter objects for the selected solver. "
-            f"Available solvers and their parameter object names are: {', '.join([f'solver={solver} params_names=({', '.join(data['params'].keys())})' for solver, data in _solver_params.items()])}"
-        ),
-        dest="params",
     )
     parser.add_argument(
         "--overrides",
@@ -166,17 +171,6 @@ def parse_args():
         dest="duration",
     )
     parser.add_argument(
-        "--dirichlet-constraints",
-        type=str,
-        default="",
-        help=(
-            "Pair path/to/file.h5:path/to/group,path/to/scene where group contains a `TransformLibrary` "
-            "of procedural/kinematic Dirichlet constraints and scene contains datasets 'XP' and "
-            "'tet_elastic_body_names'"
-        ),
-        dest="dirichlet_constraints",
-    )
-    parser.add_argument(
         "--spec",
         action="store_true",
         help="Print solver parameter specification and exit",
@@ -194,49 +188,48 @@ def parse_args():
     return args
 
 
-def load_time_integration(arg: str):
-    if arg == "":
-        dt = 0.01
-        bdf_scheme = 1
-        fem_dynamics_init_strategy = (
-            pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad
-        )
-    else:
-        path, group = arg.split(":")[:2]
-        try:
-            with h5.File(path, "r") as f:
-                h5grp = f if group is None or group == "" else f[group]
-                dt = h5grp.attrs["dt"]
-                bdf_scheme = h5grp.attrs["bdf_scheme"]
-                fem_dynamics_init_strategy = (
-                    pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization(
-                        h5grp.attrs["fem_dynamics_init_strategy"]
-                    )
+def load_time_integration(path: str):
+    try:
+        with h5.File(path, "r") as f:
+            h5grp = f
+            dt = h5grp.attrs["dt"]
+            bdf_scheme = h5grp.attrs["bdf_scheme"]
+            fem_dynamics_init_strategy = (
+                pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization(
+                    h5grp.attrs["fem_dynamics_init_strategy"]
                 )
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to load time integration from '{arg}': {e}"
-            ) from e
+            )
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to load time integration from '{arg}': {e}"
+        ) from e
     return dt, bdf_scheme, fem_dynamics_init_strategy
 
 
-def load_fem_elasto_dynamics(arg: str):
-    path, group = arg.split(":")[:2]
+def load_fem_elasto_dynamics(path: str):
+    
     try:
-        archive = pbat.io.Archive(path, flags=pbat.io.AccessMode.ReadOnly)
-        fem = pbat.sim.dynamics.FemElastoDynamics()
-        fem.deserialize(archive if group is None or group == "" else archive[group])
-        archive = None
-        gc.collect()
-        return fem
+        tet_elastic_bodies = []
+        with h5.File(path, "r") as f:
+            grp = f["fem_tet_elastic_bodies"]
+            num_bodies = grp.attrs["num_tet_elastic_bodies"]
+            
+            for b in range(num_bodies):
+                body_grp = grp[f"{b}"]
+                body = TetrahedralElastodynamicsBody()
+                body.deserialize(body_grp, headless=True)
+                tet_elastic_bodies.append(body)
+
+        fem, _, XP = make_fem_dynamics_object(tet_elastic_bodies, get_external_info=True)
+        return fem, XP
     except Exception as e:
         raise RuntimeError(
-            f"Failed to load fem elasto dynamics from '{arg}': {e}"
+            f"Failed to load fem elasto dynamics from '{path}': {e}"
         ) from e
 
 
 def load_solver_params(
-    solver: str, params: str | None = None, overrides: list[str] | None = None
+    solver: str, solver_params: str | None = None, overrides: list[str] | None = None
 ):
     if solver not in _solver_params:
         raise ValueError(
@@ -244,13 +237,12 @@ def load_solver_params(
         )
     param_objs = _solver_params[solver]["params"]
     param_objs = {name: cls() for name, cls in param_objs.items()}
-    params = [p.split("=")[:2] for p in params]
-    params = [(p[0], p[1].split(":")[:2]) for p in params]
-    for param_name, (path, group) in params:
+
+    for param_name in param_objs:
         try:
-            archive = pbat.io.Archive(path, flags=pbat.io.AccessMode.ReadOnly)
+            archive = pbat.io.Archive(solver_params, flags=pbat.io.AccessMode.ReadOnly)
             param_objs[param_name].deserialize(
-                archive if group is None or group == "" else archive.get(group)
+                archive.get(_archive_solver_groups[param_name])
             )
             archive = None
             gc.collect()
@@ -292,27 +284,19 @@ def load_solver_params(
     return param_objs
 
 
-def load_dirichlet_constraints(arg: str):
-    if arg == "":
-        return None
-    path, groups = arg.split(":")[:2]
-    tlib_group, scene_group = groups.split(",")[:2]
+def load_dirichlet_constraints(path: str):
     try:
         with h5.File(path, "r") as f:
             transform_library = TransformLibrary()
-            tlib_h5grp = f if tlib_group is None or tlib_group == "" else f[tlib_group]
+            tlib_h5grp = f[_archive_tlib_group]
             transform_library.deserialize(tlib_h5grp)
-            scene_h5grp = (
-                f if scene_group is None or scene_group == "" else f[scene_group]
-            )
-            XP = scene_h5grp["XP"][:]
             tet_elastic_body_names = (
-                scene_h5grp["tet_elastic_body_names"][:].astype(str).tolist()
+                tlib_h5grp["mesh_names"][:].astype(str).tolist()
             )
-            return transform_library, XP, tet_elastic_body_names
+            return transform_library, tet_elastic_body_names
     except Exception as e:
         raise RuntimeError(
-            f"Failed to load dirichlet constraints from '{arg}': {e}"
+            f"Failed to load dirichlet constraints from '{path}': {e}"
         ) from e
 
 
@@ -322,9 +306,9 @@ def main():
         print(print_param_obj_spec(args.solver))
         return
     dt, bdf_scheme, fem_dynamics_init_strategy = load_time_integration(
-        args.time_integration
+        args.solver_params
     )
-    fem_elasto_dynamics = load_fem_elasto_dynamics(args.fem_elasto_dynamics)
+    fem_elasto_dynamics, XP = load_fem_elasto_dynamics(args.session)
 
     # TODO: Actually deserialize contact dynamics
     contact_dynamics = pbat.sim.contact.MeshDynamics()
@@ -337,12 +321,16 @@ def main():
         fem_elasto_dynamics.E, XCC, n_components=n_components
     )
     contact_dynamics.set_dynamic_geometry(fem_elasto_dynamics.x, contact_meshes)
-    params = load_solver_params(args.solver, args.params, args.overrides)
+    
+    params = load_solver_params(args.solver, args.solver_params, args.overrides)
+    
     prepare = _solver_params[args.solver]["prepare"]
     prepare(fem_elasto_dynamics, contact_dynamics, params)
-    dirichlet_constraints, XP, fem_elastic_mesh_names = load_dirichlet_constraints(
-        args.dirichlet_constraints
+    
+    dirichlet_constraints, fem_elastic_mesh_names = load_dirichlet_constraints(
+        args.session
     )
+
     out_file, out_group = args.output.split(":")[:2]
     fem_elasto_dynamics.set_time_integration_scheme(dt, bdf_scheme)
     fem_elasto_dynamics.set_initial_conditions(
@@ -353,6 +341,11 @@ def main():
     archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
     fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
+    
+    #################
+    #  RUN THE SIM  #
+    #################
+    
     while t * dt < args.duration:
         solve = _solver_params[args.solver]["solve"]
         # Apply procedural constraints

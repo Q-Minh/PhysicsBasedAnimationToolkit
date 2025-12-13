@@ -236,20 +236,20 @@ class Simulation:
 
     def _draw_io_ui(self, button_size):
         imgui.PushID("IO")
-        export = imgui.Button("Export Scenario", button_size)
+        export = imgui.Button("Export Sim Parameters", button_size)
         if imgui.IsItemHovered():
             imgui.BeginTooltip()
-            imgui.SetTooltip("Export the simulation scenario.")
+            imgui.SetTooltip("Export the solver parameters of this simulation.")
             imgui.EndTooltip()
         if export:
-            self._serialize_simulation_scenario()
-        load_scenario = imgui.Button("Load Scenario", button_size)
+            self._serialize_simulation_parameters()
+        load_scenario = imgui.Button("Load Sim Parameters", button_size)
         if imgui.IsItemHovered():
             imgui.BeginTooltip()
-            imgui.SetTooltip("Load a simulation scenario or trajectory.")
+            imgui.SetTooltip("Load solver parameters of a simulation or trajectory.")
             imgui.EndTooltip()
         if load_scenario:
-            self._deserialize_simulation()
+            self._deserialize_simulation_parameters()
         self._trajectory.draw()
         if self._trajectory.dirty:
             if self._fem_dynamics is not None:
@@ -262,7 +262,7 @@ class Simulation:
                 self._trajectory.undirty(lambda archive: None)
         imgui.PopID()
 
-    def _serialize_simulation_scenario(self):
+    def _serialize_simulation_parameters(self):
         root = tk.Tk()
         root.withdraw()
         file_path = filedialog.asksaveasfilename(
@@ -273,17 +273,12 @@ class Simulation:
         try:
             if file_path:
                 archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
-                self._fem_dynamics.serialize(archive)
                 # TODO: Implement contact dynamics serialization
                 # self._contact.contact_dynamics.serialize(archive)
                 self._solver.serialize(archive["Solver"])
                 archive = None
                 gc.collect()  # Force garbage collection to close the archive...
                 with h5.File(file_path, "a") as f:
-                    tlib_group = f.create_group("TransformLibrary")
-                    self._transform_library.serialize(tlib_group)
-                    f["tet_elastic_body_names"] = self._tet_elastic_body_names
-                    f["XP"] = self._XP
                     f.attrs["dt"] = self._dt
                     f.attrs["bdf_scheme"] = self._bdf_scheme
                     f.attrs["fem_dynamics_init_strategy"] = (
@@ -294,7 +289,7 @@ class Simulation:
         finally:
             root.destroy()
 
-    def _deserialize_simulation(self):
+    def _deserialize_simulation_parameters(self):
         root = tk.Tk()
         root.withdraw()
         file_path = filedialog.askopenfilename(
@@ -306,7 +301,6 @@ class Simulation:
             if not file_path:
                 return
             archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
-            self._fem_dynamics.deserialize(archive)
             # TODO: Implement contact dynamics deserialization
             # self._contact.contact_dynamics.deserialize(archive)
             self._solver.deserialize(archive["Solver"])
@@ -320,12 +314,6 @@ class Simulation:
             archive = None
             gc.collect()  # Force garbage collection to close the archive...
             with h5.File(file_path, "r") as f:
-                tlib_group = f["TransformLibrary"]
-                self._transform_library.deserialize(tlib_group)
-                self._tet_elastic_body_names = (
-                    f["tet_elastic_body_names"][:].astype(str).tolist()
-                )
-                self._XP = f["XP"][:].astype(int)
                 self._dt = f.attrs["dt"]
                 self._bdf_scheme = f.attrs["bdf_scheme"]
                 self._fem_dynamics_init_strategy = (

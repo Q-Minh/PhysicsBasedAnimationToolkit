@@ -11,7 +11,7 @@ import numpy as np
 import h5py as h5
 from .utils.box_selection import BoxSelection, SelectionTargets
 from .utils.transform_library import TransformLibrary
-from . import styles
+from .utils import styles
 
 
 class BoxSelectionList:
@@ -111,7 +111,6 @@ class Scene:
         self._transform_library = TransformLibrary()
 
     def draw(self):
-        default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
         tab_flags = (
             imgui.ImGuiTabBarFlags_Reorderable
             | imgui.ImGuiTabBarFlags_FittingPolicyScroll
@@ -119,18 +118,16 @@ class Scene:
         )
         if imgui.BeginTabBar("Mode bar", tab_flags):
             if imgui.BeginTabItem("Objects", True, tab_flags)[0]:
-                if imgui.Button("Add Tetrahedral Body", default_button_size):
+                if imgui.Button("Add Tetrahedral Body", styles.get_default_button_size()):
                     self._load_tet_elastic_body()
                 for b, body in enumerate(self._tet_elastic_bodies):
                     imgui.PushID(body.name)
                     if imgui.TreeNode(body.name):
                         body.draw()
-                        if imgui.TreeNode("Delete"):
-                            styles.set_style_danger()
-                            if imgui.Button("Delete", default_button_size):
-                                self._remove_tet_elastic_body(b)
-                            styles.pop_most_recent_style()
-                            imgui.TreePop()
+                        styles.set_style_danger()
+                        if imgui.Button(styles.get_delete_key(), styles.get_small_button_size()):
+                            box_selection_list.remove_selector(s)
+                        styles.pop_most_recent_style()
                         imgui.TreePop()
                     imgui.PopID()
                 imgui.EndTabItem()
@@ -148,29 +145,27 @@ class Scene:
                 )
                 prop_name = prop_names[self._current_selection_property_idx]
                 box_selection_list = self._selector_lists[prop_name]
-                if imgui.Button("Add", default_button_size):
+                if imgui.Button("Add", styles.get_default_button_size()):
                     box_selection_list.on_selector_added(prop_name)
                 for s, selector in enumerate(box_selection_list._selectors):
                     imgui.PushID(f"{prop_name} - {s}")
                     if imgui.TreeNode(selector.name):
                         selector.draw(self._tet_elastic_bodies)
                         imgui.SameLine()
-                        if imgui.TreeNode("Delete"):
-                            styles.set_style_danger()
-                            if imgui.Button("Delete", default_button_size):
-                                box_selection_list.remove_selector(s)
-                            styles.pop_most_recent_style()
-                            imgui.TreePop()
+                        styles.set_style_danger()
+                        if imgui.Button(styles.get_delete_key(), styles.get_small_button_size()):
+                            box_selection_list.remove_selector(s)
+                        styles.pop_most_recent_style()
                         imgui.TreePop()
                     imgui.PopID()
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Session", True, tab_flags)[0]:
-                if imgui.Button("Load session", default_button_size):
+                if imgui.Button("Load session", styles.get_default_button_size()):
                     self._load_session()
-                if imgui.Button("Load session (bodies only)", default_button_size):
+                if imgui.Button("Load session (bodies only)", styles.get_default_button_size()):
                     self._load_session(bodies_only=True)
-                if imgui.Button("Save session", default_button_size):
+                if imgui.Button("Save session", styles.get_default_button_size()):
                     self._save_session()
                 imgui.EndTabItem()
             imgui.EndTabBar()

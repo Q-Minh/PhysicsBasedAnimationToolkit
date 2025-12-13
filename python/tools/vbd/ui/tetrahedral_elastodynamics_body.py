@@ -4,7 +4,7 @@ import h5py as h5
 import polyscope as ps
 import polyscope.imgui as imgui
 from . import material
-from . import styles
+from .utils import styles
 from .utils.ps_helper import PsHelper
 
 class TetrahedralElastodynamicsBody:
@@ -116,6 +116,7 @@ class TetrahedralElastodynamicsBody:
         bext: np.ndarray[float] = None,
         aext: np.ndarray[float] = None,
         v0: np.ndarray[float] = None,
+        headless=False
     ):
         default_Y = 1e6
         default_nu = 0.45
@@ -130,11 +131,12 @@ class TetrahedralElastodynamicsBody:
         self._v0 = np.zeros((V.shape[0], 3)) if v0 is None else v0
         self._name = name
         self._throw_if_invalid_state()
-        self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
-        self._cached_transform = np.eye(4)
-        self._vm.set_transform(self._cached_transform)
-        self._dirty = True
-        self._ps_helper = PsHelper(self._vm)
+        if not headless:
+            self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
+            self._cached_transform = np.eye(4)
+            self._vm.set_transform(self._cached_transform)
+            self._dirty = True
+            self._ps_helper = PsHelper(self._vm)
 
     def on_mesh_removed(self):
         if self._vm is not None:
@@ -201,7 +203,7 @@ class TetrahedralElastodynamicsBody:
         grp["v0"] = self._v0
         grp.attrs["name"] = self._name
 
-    def deserialize(self, grp: h5.Group):
+    def deserialize(self, grp: h5.Group, headless=False):
         grp = grp["tools.vbd.ui.TetrahedralElastodynamicsBody"]
         self._V = grp["V"][:]
         self._T = grp["T"][:]
@@ -222,6 +224,7 @@ class TetrahedralElastodynamicsBody:
             self._bext,
             self._aext,
             self._v0,
+            headless=headless
         )
 
     @property
@@ -234,8 +237,10 @@ class TetrahedralElastodynamicsBody:
 
     @property
     def VT(self) -> np.ndarray:
-        if self._V is None or self._vm is None:
+        if self._V is None:
             return None
+        if self._vm is None:
+            return self._V
         T = self._vm.get_transform()
         VH = np.vstack([self._V.T, np.ones((1, self._V.shape[0]))])
         VT = (T @ VH).T[:, :3]

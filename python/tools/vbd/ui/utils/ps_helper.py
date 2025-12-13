@@ -13,7 +13,13 @@ class PsHelper:
         self._show_gizmo = show_gizmo
         self._show_mesh = show_mesh
 
-    def draw(self):
+    def get_show_gizmo(self):
+        return self._show_gizmo
+    
+    def get_show_mesh(self):
+        return self._show_mesh
+
+    def draw(self, as_tab_items=True):
 
         # Since visibility can be manipulated elsewhere, always get current value first
         self._show_mesh = self._mesh.is_enabled()
@@ -24,38 +30,49 @@ class PsHelper:
             | imgui.ImGuiTabBarFlags_TabListPopupButton
         )
 
+        if as_tab_items:
+            if imgui.BeginTabItem("Visibility", True, tab_flags)[0]:
+                self._visibility_controls_draw()
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Fine Transform", True, tab_flags)[0]:
+                self._fine_transfrom_controls_draw()
+            
+                if imgui.TreeNode("Actual transform matrix"):
+                    self._transform_matrix_draw()
+                    imgui.TreePop()
+                imgui.EndTabItem()
         
-        if imgui.BeginTabItem("Visibility", True, tab_flags)[0]:
-            imgui.Text("Show:")
-            imgui.SameLine()
-
-            _, self._show_mesh = imgui.Checkbox("Structure", self._show_mesh)
-            self._mesh.set_enabled(self._show_mesh)
-
-            if self._show_mesh:
-                imgui.SameLine()
-                _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
-
-            self._mesh.set_transform_gizmo_enabled(
-                self._show_mesh and self._show_gizmo
-            )
-            imgui.EndTabItem()
-
-        if imgui.BeginTabItem("Fine transform controls", True, tab_flags)[0]:
-            self.on_fine_transfrom_controls()
-        
-            if imgui.TreeNode("Actual transform matrix"):
-                transform = self._mesh.get_transform()
-                for row in range(4):                
-                    imgui.PushID(f"{self._mesh.get_name()}--{row}")
-                    _, transform[row, :] = imgui.InputFloat4("", transform[row, :])
-                    imgui.PopID()
-                self._mesh.set_transform(transform)
+        else:
+            if imgui.TreeNode("Visibility", True, tab_flags)[0]:
+                self._visibility_controls_draw()
                 imgui.TreePop()
-            imgui.EndTabItem()
+
+            if imgui.TreeNode("Fine Transforms", True, tab_flags)[0]:
+                self._fine_transfrom_controls_draw()
+            
+                if imgui.TreeNode("Actual transform matrix"):
+                    self._transform_matrix_draw()
+                    imgui.TreePop()
+                imgui.TreePop()
 
 
-    def on_fine_transfrom_controls(self):
+    def _visibility_controls_draw(self):
+        imgui.Text("Show:")
+        imgui.SameLine()
+
+        _, self._show_mesh = imgui.Checkbox("Structure", self._show_mesh)
+        self._mesh.set_enabled(self._show_mesh)
+
+        if self._show_mesh:
+            imgui.SameLine()
+            _, self._show_gizmo = imgui.Checkbox("Gizmo", self._show_gizmo)
+
+        self._mesh.set_transform_gizmo_enabled(
+            self._show_mesh and self._show_gizmo
+        )
+
+    def _fine_transfrom_controls_draw(self):
         transform = self._mesh.get_transform()
         euler_angles = sp.spatial.transform.Rotation.from_matrix(transform[:3, :3]).as_euler(
             "xyz", degrees=True
@@ -74,3 +91,10 @@ class PsHelper:
         if t_updated or r_updated:    
             self._mesh.set_transform(transform)
     
+    def _transform_matrix_draw(self):
+        transform = self._mesh.get_transform()
+        for row in range(4):                
+            imgui.PushID(f"{self._mesh.get_name()}--{row}")
+            _, transform[row, :] = imgui.InputFloat4("", transform[row, :])
+            imgui.PopID()
+        self._mesh.set_transform(transform)
