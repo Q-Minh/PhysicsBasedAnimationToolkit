@@ -15,6 +15,7 @@
 #include "pbat/common/Concepts.h"
 #include "pbat/geometry/HalfEdges.h"
 #include "pbat/geometry/MeshBoundary.h"
+#include "pbat/io/Archive.h"
 
 #include <Eigen/Core>
 #include <numeric>
@@ -164,6 +165,16 @@ struct MultiMesh
         Eigen::DenseBase<TDerivedF> const& F,
         Eigen::DenseBase<TDerivedXCC> const& XCC,
         Eigen::Index nComponents = -1);
+    /**
+     * @brief Serialize this MultiMesh to an archive.
+     * @param archive Archive to serialize to.
+     */
+    void Serialize(io::Archive& archive) const;
+    /**
+     * @brief Deserialize this MultiMesh from an archive.
+     * @param archive Archive to deserialize from.
+     */
+    void Deserialize(io::Archive const& archive);
 };
 
 template <
@@ -301,6 +312,40 @@ inline void MultiMesh<TIndex>::ConstructFromTriangleMesh(
     BoundaryTriangulationEdges(F, XCC, E, EP, GVHEp, GVHEadj, GHEF, EHE);
     // Compute point to vertex mapping
     GXV = V;
+}
+
+template <common::CIndex TIndex>
+inline void MultiMesh<TIndex>::Serialize(io::Archive& archive) const
+{
+    auto grp = archive.GetOrCreateGroup("pbat.sim.contact.MultiMesh");
+    grp.WriteData("V", V);
+    grp.WriteData("F", F);
+    grp.WriteData("E", E);
+    grp.WriteData("VP", VP);
+    grp.WriteData("FP", FP);
+    grp.WriteData("EP", EP);
+    grp.WriteData("GVHEp", GVHEp);
+    grp.WriteData("GVHEadj", GVHEadj);
+    grp.WriteData("GHEF", GHEF);
+    grp.WriteData("EHE", EHE);
+    grp.WriteData("GXV", GXV);
+}
+
+template <common::CIndex TIndex>
+inline void MultiMesh<TIndex>::Deserialize(io::Archive const& archive)
+{
+    auto grp = archive["pbat.sim.contact.MultiMesh"];
+    V        = grp.ReadData<Eigen::Vector<TIndex, Eigen::Dynamic>>("V");
+    F        = grp.ReadData<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>("F");
+    E        = grp.ReadData<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>("E");
+    VP       = grp.ReadData<Eigen::Vector<TIndex, Eigen::Dynamic>>("VP");
+    FP       = grp.ReadData<Eigen::Vector<TIndex, Eigen::Dynamic>>("FP");
+    EP       = grp.ReadData<Eigen::Vector<TIndex, Eigen::Dynamic>>("EP");
+    GVHEp    = grp.ReadData<Eigen::Vector<TIndex, Eigen::Dynamic>>("GVHEp");
+    GVHEadj  = grp.ReadData<Eigen::Vector<TIndex, Eigen::Dynamic>>("GVHEadj");
+    GHEF     = grp.ReadData<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>("GHEF");
+    EHE      = grp.ReadData<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>("EHE");
+    GXV      = grp.ReadData<Eigen::Vector<TIndex, Eigen::Dynamic>>("GXV");
 }
 
 } // namespace pbat::sim::contact

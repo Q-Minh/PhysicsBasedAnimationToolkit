@@ -1,11 +1,9 @@
 # type: ignore
 from pbatoolkit import pbat
 from ..params import ParameterObject
-import polyscope as ps
 import polyscope.imgui as imgui
 from .base import BaseSolver
 import typing
-import numpy as np
 
 
 class VbdSolver(BaseSolver):
@@ -48,12 +46,9 @@ class VbdSolver(BaseSolver):
         callback()
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         fem.x = contact.truncate_displacement(fem.x, fem.dmask)
-        if contact.requires_bounds_computation:
-            contact.compute_displacement_bounds()
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
-        verbose = False
         while params.k < params.n_max_iters:
-            pbat.sim.algorithm.vbd.iterate(fem, contact, params, verbose)
+            pbat.sim.algorithm.vbd.iterate(fem, contact, params)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
 

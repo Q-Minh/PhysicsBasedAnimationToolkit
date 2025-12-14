@@ -213,7 +213,7 @@ class Simulation:
         dmin = self._contact.contact_dynamics.ogc_state.bv.min()
         if self._dmin != dmin:
             self._dmin = dmin
-        imgui.Text(f"Minimum displacement bound: {self._dmin:.6f}")
+        imgui.Text(f"Minimum displacement bound: {self._dmin:.16f}")
 
         imgui.PopID()
 

@@ -18,6 +18,7 @@
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/Device.h"
 #include "pbat/geometry/HalfEdges.h"
+#include "pbat/io/Archive.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/contact/Friction.h"
 #include "pbat/sim/contact/ogc/Ogc.h"
@@ -75,6 +76,16 @@ class MeshDynamics
          * @return Reference to this
          */
         SelfType& WithNormalContact(TScalar kc);
+        /**
+         * @brief Serialize to archive
+         * @param archive Archive to serialize to
+         */
+        void Serialize(io::Archive& archive) const;
+        /**
+         * @brief Deserialize from archive
+         * @param archive Archive to deserialize from
+         */
+        void Deserialize(io::Archive const& archive);
 
         /**
          * @brief Read/Write members, not part of the configuration
@@ -353,6 +364,17 @@ class MeshDynamics
      */
     auto OgcState() const -> ogc::State<ScalarType, IndexType> const& { return mOgcState; }
 
+    /**
+     * @brief Serialize to archive
+     * @param archive Archive to serialize to
+     */
+    void Serialize(io::Archive& archive);
+    /**
+     * @brief Deserialize from archive
+     * @param archive Archive to deserialize from
+     */
+    void Deserialize(io::Archive const& archive);
+
   private:
     Params mParams; ///< Mesh dynamics parameters
 
@@ -403,6 +425,38 @@ MeshDynamics<TScalar, TIndex>::Params::WithNormalContact(TScalar kc)
     kcp      = tau * kc * (tau - r) * (tau - r);
     b        = (TScalar(0.5) * kc) * (r - tau) * (r - tau) + kcp * std::log(tau);
     return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Params::Serialize(io::Archive& archive) const
+{
+    auto grp = archive.GetOrCreateGroup("pbat.sim.contact.MeshDynamics.Params");
+    {
+        auto paramsGrp = grp["mOgcParams"];
+        mOgcParams.Serialize(paramsGrp);
+    }
+    grp.WriteMetaData("epsv", epsv);
+    grp.WriteMetaData("kc", kc);
+    grp.WriteMetaData("mu", mu);
+    grp.WriteMetaData("kcp", kcp);
+    grp.WriteMetaData("b", b);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Params::Deserialize(io::Archive const& archive)
+{
+    auto grp = archive["pbat.sim.contact.MeshDynamics.Params"];
+    mOgcParams.Deserialize(grp["mOgcParams"]);
+    if (grp.HasMetaData("epsv"))
+        epsv = grp.ReadMetaData<TScalar>("epsv");
+    if (grp.HasMetaData("kc"))
+        kc = grp.ReadMetaData<TScalar>("kc");
+    if (grp.HasMetaData("mu"))
+        mu = grp.ReadMetaData<TScalar>("mu");
+    if (grp.HasMetaData("kcp"))
+        kcp = grp.ReadMetaData<TScalar>("kcp");
+    if (grp.HasMetaData("b"))
+        b = grp.ReadMetaData<TScalar>("b");
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -539,6 +593,74 @@ void MeshDynamics<TScalar, TIndex>::SetDynamicGeometry(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Serialize(io::Archive& archive)
+{
+    auto grp = archive.GetOrCreateGroup("pbat.sim.contact.MeshDynamics");
+    {
+        auto paramsGrp = grp["mParams"];
+        mParams.Serialize(paramsGrp);
+    }
+    grp.WriteData("mXdynamic", mXdynamic);
+    {
+        auto dynamicMeshesGrp = grp["mDynamicMeshes"];
+        mDynamicMeshes.Serialize(dynamicMeshesGrp);
+    }
+    if (mXstatic.size() > 0)
+    {
+        grp.WriteData("mXstatic", mXstatic);
+        {
+            auto staticMeshesGrp = grp["mStaticMeshes"];
+            mStaticMeshes.Serialize(staticMeshesGrp);
+        }
+    }
+    grp.WriteMetaData("mNumTruncatedPoints", mNumTruncatedPoints);
+    grp.WriteMetaData(
+        "mRequiresBoundsRecomputation",
+        static_cast<int>(mRequiresBoundsRecomputation));
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Deserialize(io::Archive const& archive)
+{
+    auto grp = archive["pbat.sim.contact.MeshDynamics"];
+    mParams.Deserialize(grp["mParams"]);
+    mXdynamic =
+        grp.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("mXdynamic");
+    mDynamicMeshes.Deserialize(grp["mDynamicMeshes"]);
+    if (grp.HasMetaData("mNumTruncatedPoints"))
+        mNumTruncatedPoints = grp.ReadMetaData<Eigen::Index>("mNumTruncatedPoints");
+    if (grp.HasMetaData("mRequiresBoundsRecomputation"))
+        mRequiresBoundsRecomputation =
+            static_cast<bool>(grp.ReadMetaData<int>("mRequiresBoundsRecomputation"));
+    mOgcInput.WithDynamicGeometry(
+        mXdynamic,
+        mDynamicMeshes.V,
+        mDynamicMeshes.F,
+        mDynamicMeshes.E,
+        mDynamicMeshes.VP,
+        mDynamicMeshes.FP,
+        mDynamicMeshes.EP,
+        mDynamicMeshes.GVHEp,
+        mDynamicMeshes.GVHEadj,
+        mDynamicMeshes.GHEF,
+        mDynamicMeshes.EHE);
+    if (grp.HasData("mXstatic") and grp.HasGroup("mStaticMeshes"))
+    {
+        mXstatic =
+            grp.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("mXstatic");
+        mStaticMeshes.Deserialize(grp["mStaticMeshes"]);
+        mOgcInput.WithStaticGeometry(
+            mXstatic,
+            mStaticMeshes.E,
+            mStaticMeshes.F,
+            mStaticMeshes.GVHEp,
+            mStaticMeshes.GVHEadj,
+            mStaticMeshes.GHEF,
+            mStaticMeshes.EHE);
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <
     class FOnPointPointContact,
     class FOnPointLineSegmentContact,
@@ -638,8 +760,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContact(
     FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact)
 {
     Eigen::Vector<IndexType, 2> eindsi{
-        geometry::IncomingVertex(mStaticMeshes.F, hei),
-        geometry::OutgoingVertex(mStaticMeshes.F, hei)};
+        geometry::IncomingVertex(mDynamicMeshes.F, hei),
+        geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
     mOgcState.ForEachStaticContactFaceOfHalfEdge(
         hei,
         [&eindsi, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
@@ -745,7 +867,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachStaticPointContactOnTrianglesI
     for (IndexType hei : mDynamicMeshes.GVHEadj.segment(hebegin, heend - hebegin))
     {
         IndexType fi                      = geometry::FaceOfHalfEdge(hei);
-        Eigen::Vector<IndexType, 3> finds = mStaticMeshes.F.col(fi);
+        Eigen::Vector<IndexType, 3> finds = mDynamicMeshes.F.col(fi);
         ForEachStaticPointContactOnTriangle(
             fi,
             [finds, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](

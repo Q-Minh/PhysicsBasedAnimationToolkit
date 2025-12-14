@@ -58,6 +58,20 @@ void BindMultiMesh(nanobind::module_& m)
             "    F (numpy.ndarray): `3 x |# triangles|` triangle connectivity.\n"
             "    XCC (numpy.ndarray): `|# nodes|` node connected-component labels.\n"
             "    n_components (int): Optional number of components (-1 infers XCC.max()+1).\n")
+        .def(
+            "serialize",
+            &MultiMesh::Serialize,
+            nb::arg("archive"),
+            "Serialize MultiMesh.\n\n"
+            "Args:\n"
+            "    archive (io.Archive): Archive to serialize to.\n")
+        .def(
+            "deserialize",
+            &MultiMesh::Deserialize,
+            nb::arg("archive"),
+            "Deserialize MultiMesh.\n\n"
+            "Args:\n"
+            "    archive (io.Archive): Archive to deserialize from.\n")
         .def_ro("V", &MultiMesh::V, "`|# vertices| x 1` (surface) vertex indices")
         .def_ro("F", &MultiMesh::F, "`3 x |# faces|` face indices")
         .def_ro("E", &MultiMesh::E, "`2 x |# edges|` edge indices")

@@ -191,47 +191,53 @@ Params<TScalar>& Params<TScalar>::Construct(bool bValidate)
 template <common::CFloatingPoint TScalar>
 void Params<TScalar>::Serialize(io::Archive& archive) const
 {
-    archive.WriteMetaData("r", r);
-    archive.WriteMetaData("rq", rq);
-    archive.WriteMetaData("eSceneFeatures", static_cast<int>(eSceneFeatures));
-    archive.WriteMetaData("eDynamicSceneBvhQuality", static_cast<int>(eDynamicSceneBvhQuality));
-    archive.WriteMetaData("eDynamicMeshBvhQuality", static_cast<int>(eDynamicMeshBvhQuality));
-    archive.WriteMetaData("eStaticSceneBvhQuality", static_cast<int>(eStaticSceneBvhQuality));
-    archive.WriteMetaData("eStaticMeshBvhQuality", static_cast<int>(eStaticMeshBvhQuality));
-    archive.WriteMetaData("nMaxVertexFaceContactsEstimate", nMaxVertexFaceContactsEstimate);
-    archive.WriteMetaData("nMaxFaceVertexContactsEstimate", nMaxFaceVertexContactsEstimate);
-    archive.WriteMetaData("nMaxEdgeFaceContactsEstimate", nMaxEdgeFaceContactsEstimate);
+    auto grp = archive.GetOrCreateGroup("pbat.sim.contact.ogc.Params");
+    grp.WriteMetaData("r", r);
+    grp.WriteMetaData("rq", rq);
+    grp.WriteMetaData("gammap", gammap);
+    grp.WriteMetaData("gammae", gammae);
+    grp.WriteMetaData("eSceneFeatures", static_cast<int>(eSceneFeatures));
+    grp.WriteMetaData("eDynamicSceneBvhQuality", static_cast<int>(eDynamicSceneBvhQuality));
+    grp.WriteMetaData("eDynamicMeshBvhQuality", static_cast<int>(eDynamicMeshBvhQuality));
+    grp.WriteMetaData("eStaticSceneBvhQuality", static_cast<int>(eStaticSceneBvhQuality));
+    grp.WriteMetaData("eStaticMeshBvhQuality", static_cast<int>(eStaticMeshBvhQuality));
+    grp.WriteMetaData("nMaxVertexFaceContactsEstimate", nMaxVertexFaceContactsEstimate);
+    grp.WriteMetaData("nMaxFaceVertexContactsEstimate", nMaxFaceVertexContactsEstimate);
+    grp.WriteMetaData("nMaxEdgeFaceContactsEstimate", nMaxEdgeFaceContactsEstimate);
 }
 
 template <common::CFloatingPoint TScalar>
 void Params<TScalar>::Deserialize(io::Archive const& archive)
 {
-    if (archive.HasMetaData("r"))
-        r = archive.ReadMetaData<Scalar>("r");
-    if (archive.HasMetaData("rq"))
-        rq = archive.ReadMetaData<Scalar>("rq");
-    if (archive.HasMetaData("eSceneFeatures"))
-        eSceneFeatures = static_cast<ESceneFeatures>(archive.ReadMetaData<int>("eSceneFeatures"));
-    if (archive.HasMetaData("eDynamicSceneBvhQuality"))
+    auto grp = archive["pbat.sim.contact.ogc.Params"];
+    if (grp.HasMetaData("r"))
+        r = grp.ReadMetaData<Scalar>("r");
+    if (grp.HasMetaData("rq"))
+        rq = grp.ReadMetaData<Scalar>("rq");
+    if (grp.HasMetaData("gammap"))
+        gammap = grp.ReadMetaData<Scalar>("gammap");
+    if (grp.HasMetaData("gammae"))
+        gammae = grp.ReadMetaData<Scalar>("gammae");
+    if (grp.HasMetaData("eSceneFeatures"))
+        eSceneFeatures = static_cast<ESceneFeatures>(grp.ReadMetaData<int>("eSceneFeatures"));
+    if (grp.HasMetaData("eDynamicSceneBvhQuality"))
         eDynamicSceneBvhQuality =
-            static_cast<EBuildQuality>(archive.ReadMetaData<int>("eDynamicSceneBvhQuality"));
-    if (archive.HasMetaData("eDynamicMeshBvhQuality"))
+            static_cast<EBuildQuality>(grp.ReadMetaData<int>("eDynamicSceneBvhQuality"));
+    if (grp.HasMetaData("eDynamicMeshBvhQuality"))
         eDynamicMeshBvhQuality =
-            static_cast<EBuildQuality>(archive.ReadMetaData<int>("eDynamicMeshBvhQuality"));
-    if (archive.HasMetaData("eStaticSceneBvhQuality"))
+            static_cast<EBuildQuality>(grp.ReadMetaData<int>("eDynamicMeshBvhQuality"));
+    if (grp.HasMetaData("eStaticSceneBvhQuality"))
         eStaticSceneBvhQuality =
-            static_cast<EBuildQuality>(archive.ReadMetaData<int>("eStaticSceneBvhQuality"));
-    if (archive.HasMetaData("eStaticMeshBvhQuality"))
+            static_cast<EBuildQuality>(grp.ReadMetaData<int>("eStaticSceneBvhQuality"));
+    if (grp.HasMetaData("eStaticMeshBvhQuality"))
         eStaticMeshBvhQuality =
-            static_cast<EBuildQuality>(archive.ReadMetaData<int>("eStaticMeshBvhQuality"));
-    if (archive.HasMetaData("nMaxVertexFaceContactsEstimate"))
-        nMaxVertexFaceContactsEstimate =
-            archive.ReadMetaData<int>("nMaxVertexFaceContactsEstimate");
-    if (archive.HasMetaData("nMaxFaceVertexContactsEstimate"))
-        nMaxFaceVertexContactsEstimate =
-            archive.ReadMetaData<int>("nMaxFaceVertexContactsEstimate");
-    if (archive.HasMetaData("nMaxEdgeFaceContactsEstimate"))
-        nMaxEdgeFaceContactsEstimate = archive.ReadMetaData<int>("nMaxEdgeFaceContactsEstimate");
+            static_cast<EBuildQuality>(grp.ReadMetaData<int>("eStaticMeshBvhQuality"));
+    if (grp.HasMetaData("nMaxVertexFaceContactsEstimate"))
+        nMaxVertexFaceContactsEstimate = grp.ReadMetaData<int>("nMaxVertexFaceContactsEstimate");
+    if (grp.HasMetaData("nMaxFaceVertexContactsEstimate"))
+        nMaxFaceVertexContactsEstimate = grp.ReadMetaData<int>("nMaxFaceVertexContactsEstimate");
+    if (grp.HasMetaData("nMaxEdgeFaceContactsEstimate"))
+        nMaxEdgeFaceContactsEstimate = grp.ReadMetaData<int>("nMaxEdgeFaceContactsEstimate");
 }
 
 } // namespace pbat::sim::contact::ogc

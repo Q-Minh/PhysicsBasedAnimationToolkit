@@ -126,6 +126,7 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
+    group.WriteMetaData("k", k);
     group.WriteData("xb", xb);
 }
 
@@ -140,7 +141,9 @@ void Params::Deserialize(io::Archive const& archive)
     Padj              = group.ReadData<IndexVectorX>("Padj");
     detHZero          = group.ReadMetaData<Scalar>("detHZero");
     nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
-    xb                = group.ReadData<MatrixX>("xb");
+    if (group.HasMetaData("k"))
+        k = group.ReadMetaData<Index>("k");
+    xb = group.ReadData<MatrixX>("xb");
 }
 
 } // namespace pbat::sim::algorithm::vbd
@@ -247,4 +250,20 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     Scalar g0norm = g0.norm();
     Scalar gnorm  = g.norm();
     CHECK_LT(gnorm, g0norm);
+}
+
+TEST_CASE("[sim][algorithm][vbd] Sandbox")
+{
+    // using namespace pbat;
+    // auto archive            = io::Archive("frame.h5", HighFive::File::AccessMode::ReadOnly);
+    // using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    // sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
+    // fem.Deserialize(archive["fem"]);
+    // sim::contact::MeshDynamics<Scalar, Index> contact;
+    // contact.Deserialize(archive["contact"]);
+    // sim::algorithm::vbd::Params params;
+    // params.Deserialize(archive["params"]);
+    // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
+    // contact.Initialize(device);
+    // sim::algorithm::vbd::Solve(fem, contact, params);
 }

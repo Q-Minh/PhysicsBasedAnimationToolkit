@@ -47,6 +47,20 @@ void BindMeshDynamics(nanobind::module_& m)
             "Set the normal contact parameters.\n\n"
             "Args:\n"
             "    kc (float): Contact stiffness parameter, `kc > 0`.\n")
+        .def(
+            "serialize",
+            &MeshDynamicsParamsType::Serialize,
+            nb::arg("archive"),
+            "Serialize to archive.\n\n"
+            "Args:\n"
+            "    archive (io.Archive): Archive to serialize to.\n")
+        .def(
+            "deserialize",
+            &MeshDynamicsParamsType::Deserialize,
+            nb::arg("archive"),
+            "Deserialize from archive.\n\n"
+            "Args:\n"
+            "    archive (io.Archive): Archive to deserialize from.\n")
         .def_rw("ogc_params", &MeshDynamicsParamsType::mOgcParams, "OGC parameters.")
         .def_rw(
             "epsv",
@@ -148,6 +162,21 @@ void BindMeshDynamics(nanobind::module_& m)
             "compute_displacement_bounds",
             &MeshDynamicsType::ComputeDisplacementBounds,
             "Compute the per-point displacement bounds based on current geometry and OGC state.")
+        .def(
+            "serialize",
+            &MeshDynamicsType::Serialize,
+            nb::arg("archive"),
+            "Serialize to archive.\n\n"
+            "Args:\n"
+            "    archive (io.Archive): Archive to serialize to.\n")
+        .def(
+            "deserialize",
+            &MeshDynamicsType::Deserialize,
+            nb::arg("archive"),
+            "Deserialize from archive. initialize() must be called after deserialization for "
+            "usability.\n\n"
+            "Args:\n"
+            "    archive (io.Archive): Archive to deserialize from.\n")
         .def_prop_ro("params", &MeshDynamicsType::GetParams, "Mesh dynamics parameters.")
         .def_prop_ro("dynamic_meshes", &MeshDynamicsType::DynamicMeshes, "Dynamic meshes.")
         .def_prop_ro("static_meshes", &MeshDynamicsType::StaticMeshes, "Static meshes.")

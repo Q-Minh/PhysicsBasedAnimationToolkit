@@ -18,6 +18,7 @@
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Enums.h"
+#include "pbat/io/Archive.h"
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/profiling/Profiling.h"
@@ -26,6 +27,7 @@
 #include "pbat/sim/contact/MeshDynamics.h"
 
 #include <Eigen/Core>
+#include <fmt/core.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::algorithm::vbd {
@@ -148,7 +150,7 @@ struct Params
     /**
      * @brief Read-write
      */
-    Index k;                                     ///< Current VBD iteration
+    Index k{0};                                  ///< Current VBD iteration
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xb; ///< `3 x |# nodes|` buffer positions
 };
 
@@ -295,6 +297,22 @@ void Iterate(
                         bB,
                         gi,
                         Hi);
+                    if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
+                    {
+                        fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
+                        fmt::print(
+                            "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
+                            Hi(0, 0),
+                            Hi(0, 1),
+                            Hi(0, 2),
+                            Hi(1, 0),
+                            Hi(1, 1),
+                            Hi(1, 2),
+                            Hi(2, 0),
+                            Hi(2, 1),
+                            Hi(2, 2));
+                        std::terminate();
+                    }
                 },
                 [&](Eigen::Vector<Index, 2> const& einds) {
                     mini::SVector<Scalar, 3> xe1 =
@@ -312,6 +330,22 @@ void Iterate(
                         bB,
                         gi,
                         Hi);
+                    if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
+                    {
+                        fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
+                        fmt::print(
+                            "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
+                            Hi(0, 0),
+                            Hi(0, 1),
+                            Hi(0, 2),
+                            Hi(1, 0),
+                            Hi(1, 1),
+                            Hi(1, 2),
+                            Hi(2, 0),
+                            Hi(2, 1),
+                            Hi(2, 2));
+                        std::terminate();
+                    }
                 },
                 [&](Eigen::Vector<Index, 3> const& finds) {
                     mini::SVector<Scalar, 3> xa =
@@ -331,6 +365,22 @@ void Iterate(
                         bB,
                         gi,
                         Hi);
+                    if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
+                    {
+                        fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
+                        fmt::print(
+                            "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
+                            Hi(0, 0),
+                            Hi(0, 1),
+                            Hi(0, 2),
+                            Hi(1, 0),
+                            Hi(1, 1),
+                            Hi(1, 2),
+                            Hi(2, 0),
+                            Hi(2, 1),
+                            Hi(2, 2));
+                        std::terminate();
+                    }
                 });
             meshDynamics.ForEachPointStaticMeshContact(
                 i,
@@ -360,6 +410,22 @@ void Iterate(
                         bB,
                         gi,
                         Hi);
+                    if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
+                    {
+                        fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
+                        fmt::print(
+                            "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
+                            Hi(0, 0),
+                            Hi(0, 1),
+                            Hi(0, 2),
+                            Hi(1, 0),
+                            Hi(1, 1),
+                            Hi(1, 2),
+                            Hi(2, 0),
+                            Hi(2, 1),
+                            Hi(2, 2));
+                        std::terminate();
+                    }
                 },
                 [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
                     mini::SVector<Scalar, 3> xi2 =
@@ -384,6 +450,41 @@ void Iterate(
                         bB,
                         gi,
                         Hi);
+                    if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
+                    {
+                        mini::SVector<Scalar, 3> x = uv1(0) * xi + uv1(1) * xi2;
+                        Scalar d                   = Norm(x - xcp);
+                        mini::SVector<Scalar, 3> dBdd =
+                            contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(
+                                d,
+                                rB,
+                                kcB,
+                                kcpB,
+                                bB);
+                        fmt::print("x=({}, {}, {})\n", x(0), x(1), x(2));
+                        fmt::print("d=({})\n", d);
+                        fmt::print("dBdd=({}, {}, {})\n", dBdd(0), dBdd(1), dBdd(2));
+                        fmt::print("xi=({}, {}, {})\n", xi(0), xi(1), xi(2));
+                        fmt::print("xi2=({}, {}, {})\n", xi2(0), xi2(1), xi2(2));
+                        fmt::print("xj1=({}, {}, {})\n", xj1(0), xj1(1), xj1(2));
+                        fmt::print("xj2=({}, {}, {})\n", xj2(0), xj2(1), xj2(2));
+                        fmt::print("st=({}, {})\n", st(0), st(1));
+                        fmt::print("xcp=({}, {}, {})\n", xcp(0), xcp(1), xcp(2));
+                        fmt::print("uv1=({}, {})\n", uv1(0), uv1(1));
+                        fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
+                        fmt::print(
+                            "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
+                            Hi(0, 0),
+                            Hi(0, 1),
+                            Hi(0, 2),
+                            Hi(1, 0),
+                            Hi(1, 1),
+                            Hi(1, 2),
+                            Hi(2, 0),
+                            Hi(2, 1),
+                            Hi(2, 2));
+                        std::terminate();
+                    }
                 });
             meshDynamics.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
                 i,
@@ -417,6 +518,22 @@ void Iterate(
                         bB,
                         gi,
                         Hi);
+                    if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
+                    {
+                        fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
+                        fmt::print(
+                            "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
+                            Hi(0, 0),
+                            Hi(0, 1),
+                            Hi(0, 2),
+                            Hi(1, 0),
+                            Hi(1, 1),
+                            Hi(1, 2),
+                            Hi(2, 0),
+                            Hi(2, 1),
+                            Hi(2, 2));
+                        std::terminate();
+                    }
                 });
             meshDynamics.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
                 i,

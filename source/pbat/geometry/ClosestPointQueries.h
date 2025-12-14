@@ -324,9 +324,9 @@ template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixQ
 PBAT_HOST_DEVICE auto PointOnLineSegment(TMatrixX const& X, TMatrixP const& P, TMatrixQ const& Q)
     -> mini::SVector<typename TMatrixX::ScalarType, TMatrixX::kRows>
 {
-    using ScalarType                      = typename TMatrixX::ScalarType;
-    mini::SVector<ScalarType, 2> const uv = UvPointOnLineSegment(X, P, Q);
-    auto const Xpq                        = uv(0) * P + uv(1) * Q;
+    using ScalarType                       = typename TMatrixX::ScalarType;
+    mini::SVector<ScalarType, 2> const uv  = UvPointOnLineSegment(X, P, Q);
+    mini::SVector<ScalarType, 3> const Xpq = uv(0) * P + uv(1) * Q;
     return Xpq;
 }
 
