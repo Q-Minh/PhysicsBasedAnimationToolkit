@@ -9,6 +9,7 @@ from statemachine import State, StateMachine, Event
 import itertools
 import math
 
+
 def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
     vert_counts = [body.VT.shape[0] for body in tet_elastic_bodies]
     tet_counts = [body.T.shape[0] for body in tet_elastic_bodies]
@@ -154,9 +155,11 @@ class ModeStateMachine(StateMachine):
         tet_elastic_bodies = self.scene.tet_elastic_bodies
         if len(tet_elastic_bodies) == 0:
             return
-        
+
         # FEM dynamics object
-        fem_dynamics, vert_counts, VP = make_fem_dynamics_object(tet_elastic_bodies, get_external_info=True)
+        fem_dynamics, vert_counts, VP = make_fem_dynamics_object(
+            tet_elastic_bodies, get_external_info=True
+        )
 
         # Contact
         contact_dynamics = pbat.sim.contact.MeshDynamics()
@@ -168,6 +171,23 @@ class ModeStateMachine(StateMachine):
             fem_dynamics.E, XCC, n_components=n_bodies
         )
         contact_dynamics.set_dynamic_geometry(fem_dynamics.x, contact_meshes)
+        static_mesh_colliders = self.scene.static_mesh_colliders
+        if len(static_mesh_colliders) > 0:
+            static_vert_counts = [smc.VT.shape[0] for smc in static_mesh_colliders]
+            Vstatic = np.vstack([smc.VT for smc in static_mesh_colliders])
+            VPstatic = [0] + list(itertools.accumulate(static_vert_counts))
+            Fstatic = np.vstack(
+                [smc.F + VPstatic[b] for b, smc in enumerate(static_mesh_colliders)]
+            )
+            XCCstatic = np.concatenate(
+                [np.full(nverts, b) for b, nverts in enumerate(static_vert_counts)]
+            )
+            static_contact_meshes = pbat.sim.contact.MultiMesh()
+            static_contact_meshes.construct_from_triangle_mesh(
+                Fstatic.T, XCCstatic, n_components=len(static_mesh_colliders)
+            )
+            contact_dynamics.set_static_geometry(Vstatic.T, static_contact_meshes)
+
         device_config = pbat.geometry.DeviceConfig()
         device = pbat.geometry.Device(device_config)
         contact_dynamics.initialize(device)

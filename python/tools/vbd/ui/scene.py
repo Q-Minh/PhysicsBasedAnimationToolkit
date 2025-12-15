@@ -1,5 +1,6 @@
 # type: ignore
 from .tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
+from .static_mesh_collider import StaticMeshCollider
 import polyscope as ps
 import polyscope.imgui as imgui
 import tkinter as tk
@@ -59,6 +60,7 @@ class Scene:
     _transform_library: TransformLibrary
     _selector_lists: dict[str, BoxSelectionList]
     _current_selection_property_idx: int
+    _static_mesh_colliders: list[StaticMeshCollider]
 
     def __init__(self):
         self._tet_elastic_bodies = []
@@ -109,6 +111,7 @@ class Scene:
         }
         self._current_selection_property_idx = 0
         self._transform_library = TransformLibrary()
+        self._static_mesh_colliders = []
 
     def draw(self):
         tab_flags = (
@@ -118,18 +121,31 @@ class Scene:
         )
         if imgui.BeginTabBar("Mode bar", tab_flags):
             if imgui.BeginTabItem("Objects", True, tab_flags)[0]:
-                if imgui.Button("Add Tetrahedral Body", styles.get_default_button_size()):
+                if imgui.Button(
+                    "Add Tetrahedral Body", styles.get_default_button_size()
+                ):
                     self._load_tet_elastic_body()
-                for b, body in enumerate(self._tet_elastic_bodies):
-                    imgui.PushID(body.name)
-                    if imgui.TreeNode(body.name):
-                        body.draw()
-                        styles.set_style_danger()
-                        if imgui.Button(styles.get_delete_key(), styles.get_small_button_size()):
-                            box_selection_list.remove_selector(s)
-                        styles.pop_most_recent_style()
-                        imgui.TreePop()
-                    imgui.PopID()
+                if imgui.Button(
+                    "Add Static Mesh Collider", styles.get_default_button_size()
+                ):
+                    self._load_static_mesh_collider()
+                if imgui.TreeNode("Tetrahedral Elastic Bodies"):
+                    for b, body in enumerate(self._tet_elastic_bodies):
+                        imgui.PushID(body.name)
+                        if imgui.TreeNode(body.name):
+                            body.draw()
+                            styles.set_style_danger()
+                            if imgui.Button(
+                                styles.get_delete_key(), styles.get_small_button_size()
+                            ):
+                                box_selection_list.remove_selector(s)
+                            styles.pop_most_recent_style()
+                            imgui.TreePop()
+                        imgui.PopID()
+                    imgui.TreePop()
+                if imgui.TreeNode("Static Mesh Colliders"):
+                    self._draw_static_mesh_colliders()
+                    imgui.TreePop()
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Transforms", True, tab_flags)[0]:
@@ -153,7 +169,9 @@ class Scene:
                         selector.draw(self._tet_elastic_bodies)
                         imgui.SameLine()
                         styles.set_style_danger()
-                        if imgui.Button(styles.get_delete_key(), styles.get_small_button_size()):
+                        if imgui.Button(
+                            styles.get_delete_key(), styles.get_small_button_size()
+                        ):
                             box_selection_list.remove_selector(s)
                         styles.pop_most_recent_style()
                         imgui.TreePop()
@@ -163,7 +181,9 @@ class Scene:
             if imgui.BeginTabItem("Session", True, tab_flags)[0]:
                 if imgui.Button("Load session", styles.get_default_button_size()):
                     self._load_session()
-                if imgui.Button("Load session (bodies only)", styles.get_default_button_size()):
+                if imgui.Button(
+                    "Load session (bodies only)", styles.get_default_button_size()
+                ):
                     self._load_session(bodies_only=True)
                 if imgui.Button("Save session", styles.get_default_button_size()):
                     self._save_session()
@@ -195,6 +215,10 @@ class Scene:
         return self._tet_elastic_bodies
 
     @property
+    def static_mesh_colliders(self) -> list[StaticMeshCollider]:
+        return self._static_mesh_colliders
+
+    @property
     def transform_library(self) -> TransformLibrary:
         return self._transform_library
 
@@ -211,6 +235,9 @@ class Scene:
                 with h5.File(file_path, "w") as f:
                     self._serialize_fem_tet_elastic_bodies(
                         f.create_group("fem_tet_elastic_bodies")
+                    )
+                    self._serialize_static_mesh_colliders(
+                        f.create_group("static_mesh_colliders")
                     )
                     self._transform_library.serialize(
                         f.create_group("transform_library")
@@ -277,6 +304,47 @@ class Scene:
             finally:
                 root.destroy()
 
+    def _load_static_mesh_collider(self):
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.askopenfilename(
+            title="Select static mesh collider file",
+            defaultextension=".obj",
+            filetypes=[
+                ("Mesh files", "*.obj *.stl *.ply"),
+                ("All files", "*.*"),
+            ],
+        )
+        if file_path:
+            try:
+                imesh = meshio.read(file_path)
+                V = imesh.points
+                if "triangle" not in imesh.cells_dict:
+                    raise ValueError("Mesh must contain triangle faces.")
+                F = imesh.cells_dict["triangle"]
+                filename = os.path.basename(file_path)
+                identifier = f"{filename} - {len(self._static_mesh_colliders)}"
+                smc = StaticMeshCollider()
+                smc.on_mesh_added(identifier, V, F)
+                self._static_mesh_colliders.append(smc)
+            except Exception as e:
+                ps.error(f"Error loading static mesh collider:\n{e}")
+            finally:
+                root.destroy()
+
+    def _draw_static_mesh_colliders(self):
+        for idx, smc in enumerate(self._static_mesh_colliders):
+            if imgui.TreeNode(smc.name):
+                smc.draw()
+                styles.set_style_danger()
+                if imgui.Button(
+                    styles.get_delete_key(), styles.get_small_button_size()
+                ):
+                    smc = self._static_mesh_colliders.pop(idx)
+                    smc.on_mesh_removed()
+                styles.pop_most_recent_style()
+                imgui.TreePop()
+
     def _remove_tet_elastic_body(self, b: int):
         body = self._tet_elastic_bodies.pop(b)
         idx = int(body.name.split(" - ")[-1])
@@ -298,6 +366,12 @@ class Scene:
             body_grp = grp.create_group(f"{b}")
             body.serialize(body_grp)
 
+    def _serialize_static_mesh_colliders(self, grp: h5.Group):
+        grp.attrs["num_static_mesh_colliders"] = len(self._static_mesh_colliders)
+        for i, smc in enumerate(self._static_mesh_colliders):
+            collider_grp = grp.create_group(f"{i}")
+            smc.serialize(collider_grp)
+
     def _deserialize_fem_tet_elastic_bodies(self, grp: h5.Group):
         num_bodies = grp.attrs["num_tet_elastic_bodies"]
         for b in range(num_bodies):
@@ -306,9 +380,20 @@ class Scene:
             body.deserialize(body_grp)
             self._tet_elastic_bodies.append(body)
 
+    def _deserialize_static_mesh_colliders(self, grp: h5.Group):
+        num_colliders = grp.attrs["num_static_mesh_colliders"]
+        for i in range(num_colliders):
+            collider_grp = grp[f"{i}"]
+            smc = StaticMeshCollider()
+            smc.deserialize(collider_grp)
+            self._static_mesh_colliders.append(smc)
+
     def _teardown(self, bodies_only=False):
         if not bodies_only:
             self._transform_library.empty()
+            for smc in self._static_mesh_colliders:
+                smc.on_mesh_removed()
+            self._static_mesh_colliders = []
         else:
             for body in self._tet_elastic_bodies:
                 self._transform_library.on_mesh_removed(body.name)
@@ -320,6 +405,7 @@ class Scene:
 
     def _buildup(self, f, bodies_only=False):
         self._deserialize_fem_tet_elastic_bodies(f["fem_tet_elastic_bodies"])
+        self._deserialize_static_mesh_colliders(f["static_mesh_colliders"])
         self._recycled_tet_elastic_body_indices = list(
             f["recycled_tet_elastic_body_indices"][:]
         )
