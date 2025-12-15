@@ -151,6 +151,8 @@ class Simulation:
             self._fem_dynamics.set_initial_conditions(self._fem_dynamics.X, self._v0)
             self._constrain()
             self._update_visuals_after_position_change()
+            if self._contact.contact_dynamics is not None:
+                self._contact.contact_dynamics.compute_displacement_bounds(self._fem_dynamics.x)
 
     def _step(self):
         if self._fem_dynamics is None:
@@ -160,6 +162,9 @@ class Simulation:
         self._profiler.begin_frame("Physics")
         self._fem_dynamics.setup_time_integration_optimization(
             initialization_strategy=self._fem_dynamics_init_strategy
+        )
+        self._fem_dynamics.x = self._contact.contact_dynamics.truncate_displacement(
+            self._fem_dynamics.x, self._fem_dynamics.dmask
         )
         self._solver.solve(
             self._fem_dynamics,
@@ -178,7 +183,10 @@ class Simulation:
             bx = np.full(self._fem_dynamics.x.shape[1], bvmax)
             bx[self._contact.contact_dynamics.dynamic_meshes.V] = bv
             self._fem_dynamics_vm.add_scalar_quantity(
-                "-log(bv+1)", -np.log10(bx + 1), defined_on="vertices", cmap="coolwarm"
+                "bv", bx, defined_on="vertices", cmap="coolwarm"
+            )
+            self._fem_dynamics_vm.add_scalar_quantity(
+                "log(bv+1)", np.log10(bx + 1), defined_on="vertices", cmap="coolwarm"
             )
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes

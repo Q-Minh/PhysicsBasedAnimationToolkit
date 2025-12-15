@@ -160,8 +160,15 @@ void BindMeshDynamics(nanobind::module_& m)
             "Number of truncated points.")
         .def(
             "compute_displacement_bounds",
-            &MeshDynamicsType::ComputeDisplacementBounds,
-            "Compute the per-point displacement bounds based on current geometry and OGC state.")
+            [](MeshDynamicsType& self,
+               nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X) {
+                self.ComputeDisplacementBounds(X);
+            },
+            nb::arg("X"),
+            "Compute the per-point displacement bounds based on current geometry and OGC state.\n\n"
+            "Args:\n"
+            "    X (Eigen.Matrix): `3 x |# points|` current point positions (column-major: one "
+            "point per column).\n")
         .def(
             "serialize",
             &MeshDynamicsType::Serialize,

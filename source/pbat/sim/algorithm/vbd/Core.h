@@ -227,10 +227,6 @@ void Iterate(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
-    if (meshDynamics.RequiresBoundsComputation())
-    {
-        meshDynamics.ComputeDisplacementBounds();
-    }
     auto betaTildeBdf  = fem.bdf.BetaTilde();
     auto betaTildeBdf2 = betaTildeBdf * betaTildeBdf;
     auto xtildeBdf     = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
@@ -547,7 +543,6 @@ void Iterate(
             fem.x.col(i) = ToEigen(xi);
         });
     }
-    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     ++params.k;
 }
 
@@ -562,7 +557,10 @@ void Solve(
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
     for (; params.k < params.nMaxIters;)
     {
+        if (meshDynamics.RequiresBoundsComputation())
+            meshDynamics.ComputeDisplacementBounds(fem.x);
         Iterate<TElasticEnergy>(fem, meshDynamics, params);
+        meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

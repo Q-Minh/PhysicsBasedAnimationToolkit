@@ -255,15 +255,22 @@ TEST_CASE("[sim][algorithm][vbd] Core")
 TEST_CASE("[sim][algorithm][vbd] Sandbox")
 {
     // using namespace pbat;
-    // auto archive            = io::Archive("frame.h5", HighFive::File::AccessMode::ReadOnly);
+    // auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
     // using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     // sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
     // fem.Deserialize(archive["fem"]);
     // sim::contact::MeshDynamics<Scalar, Index> contact;
     // contact.Deserialize(archive["contact"]);
     // sim::algorithm::vbd::Params params;
-    // params.Deserialize(archive["params"]);
+    // params.Deserialize(archive["vbd/params"]);
     // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
     // contact.Initialize(device);
-    // sim::algorithm::vbd::Solve(fem, contact, params);
+    // contact.ComputeDisplacementBounds(fem.x);
+    // for (auto t = 0; t < 100; ++t)
+    // {
+    //     fem.SetupTimeIntegrationOptimization(
+    //         sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
+    //     sim::algorithm::vbd::Solve(fem, contact, params);
+    //     fem.Step();
+    // }
 }
