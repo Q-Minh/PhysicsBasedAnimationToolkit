@@ -344,6 +344,14 @@ class MeshDynamics
      */
     Params const& GetParams() const { return mParams; }
     /**
+     * @brief Get the static point positions
+     * @return `3 x |# points|` static point positions
+     */
+    auto StaticPointPositions() const -> Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const&
+    {
+        return mXstatic;
+    }
+    /**
      * @brief Get the Dynamic Meshes object
      * @return MultiMesh<IndexType> const&
      */

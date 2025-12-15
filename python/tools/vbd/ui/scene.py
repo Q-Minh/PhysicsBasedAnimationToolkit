@@ -138,7 +138,8 @@ class Scene:
                             if imgui.Button(
                                 styles.get_delete_key(), styles.get_small_button_size()
                             ):
-                                box_selection_list.remove_selector(s)
+                                body = self._tet_elastic_bodies.pop(b)
+                                body.on_mesh_removed()
                             styles.pop_most_recent_style()
                             imgui.TreePop()
                         imgui.PopID()
@@ -204,6 +205,8 @@ class Scene:
     def set_visible(self, visible: bool):
         for body in self._tet_elastic_bodies:
             body.set_visible(visible)
+        for smc in self._static_mesh_colliders:
+            smc.set_visible(visible)
         for prop_name, box_selection_list in self._selector_lists.items():
             for selector in box_selection_list._selectors:
                 selector.set_visible(visible)

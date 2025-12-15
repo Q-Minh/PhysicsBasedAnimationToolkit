@@ -177,7 +177,9 @@ class Simulation:
             bvmax = bv.max()
             bx = np.full(self._fem_dynamics.x.shape[1], bvmax)
             bx[self._contact.contact_dynamics.dynamic_meshes.V] = bv
-            self._fem_dynamics_vm.add_scalar_quantity("-log(bv+1)", -np.log10(bx+1), defined_on="vertices")
+            self._fem_dynamics_vm.add_scalar_quantity(
+                "-log(bv+1)", -np.log10(bx + 1), defined_on="vertices", cmap="coolwarm"
+            )
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes
             if d_nodes.shape[0] != self._fem_dynamics_dirichlet_pc.n_points():

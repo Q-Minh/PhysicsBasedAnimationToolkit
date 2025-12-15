@@ -9,8 +9,12 @@ from .params import ParameterObject
 class Contact:
     _contact_dynamics: pbat.sim.contact.MeshDynamics
     _contact_params: ParameterObject
+    _environment_mesh: ps.SurfaceMesh
 
     def __init__(self):
+        self._contact_dynamics = None
+        self._contact_params = None
+        self._environment_mesh = None
         self.on_new_contact_dynamics(
             pbat.sim.contact.MeshDynamics(),
         )
@@ -23,7 +27,8 @@ class Contact:
         imgui.PopID()
 
     def set_visible(self, visible: bool):
-        pass
+        if self._environment_mesh is not None:
+            self._environment_mesh.set_enabled(visible)
 
     def on_new_contact_dynamics(self, contact_dynamics: pbat.sim.contact.MeshDynamics):
         self._contact_dynamics = contact_dynamics
@@ -33,6 +38,13 @@ class Contact:
                 "ogc_params": None,
             },
         )
+        if self._contact_dynamics.ogc_input.has_static_geometry:
+            self._environment_mesh = ps.register_surface_mesh(
+                "Contact Environment",
+                self._contact_dynamics.Xstatic.T,
+                self._contact_dynamics.static_meshes.F.T,
+                color=(0.72, 0.72, 0.72)
+            )
 
     @property
     def contact_dynamics(self):
