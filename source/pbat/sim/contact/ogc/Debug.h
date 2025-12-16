@@ -122,8 +122,8 @@ void ToVisualDebugContacts(
             }
             case EVertexFacetClosestFaceType::Edge: {
                 TIndex const he        = face.a;
-                auto const P           = X.col(geometry::IncomingVertex(F, he)).head<3>();
-                auto const Q           = X.col(geometry::OutgoingVertex(F, he)).head<3>();
+                auto const P           = X.col(geometry::IncomingVertex(F, he)).template head<3>();
+                auto const Q           = X.col(geometry::OutgoingVertex(F, he)).template head<3>();
                 SVector<TScalar, 3> xj = geometry::ClosestPointQueries::PointOnLineSegment(
                     FromEigen(contact.xi),
                     FromEigen(P),
@@ -136,9 +136,9 @@ void ToVisualDebugContacts(
                 TIndex const f         = face.a;
                 SVector<TScalar, 3> xj = geometry::ClosestPointQueries::PointInTriangle(
                     FromEigen(contact.xi),
-                    FromEigen(X.col(F(0, f)).head<3>()),
-                    FromEigen(X.col(F(1, f)).head<3>()),
-                    FromEigen(X.col(F(2, f)).head<3>()));
+                    FromEigen(X.col(F(0, f)).template head<3>()),
+                    FromEigen(X.col(F(1, f)).template head<3>()),
+                    FromEigen(X.col(F(2, f)).template head<3>()));
                 contact.xj = ToEigen(xj);
                 vertexFacetContacts.emplace_back(contact);
                 break;
@@ -150,8 +150,8 @@ void ToVisualDebugContacts(
         using math::linalg::mini::ToEigen;
         using math::linalg::mini::SVector;
         VisualDebugContact<TScalar> contact;
-        auto const PI = X.col(geometry::IncomingVertex(F, hei)).head<3>();
-        auto const QI = X.col(geometry::OutgoingVertex(F, hei)).head<3>();
+        auto const PI = X.col(geometry::IncomingVertex(F, hei)).template head<3>();
+        auto const QI = X.col(geometry::OutgoingVertex(F, hei)).template head<3>();
         switch (face.EdgeEdgeClosestFaceType())
         {
             case EEdgeEdgeClosestFaceType::Vertex: {
@@ -167,8 +167,8 @@ void ToVisualDebugContacts(
             }
             case EEdgeEdgeClosestFaceType::Edge: {
                 TIndex const he2       = face.a;
-                auto const PJ          = X.col(geometry::IncomingVertex(F, he2)).head<3>();
-                auto const QJ          = X.col(geometry::OutgoingVertex(F, he2)).head<3>();
+                auto const PJ          = X.col(geometry::IncomingVertex(F, he2)).template head<3>();
+                auto const QJ          = X.col(geometry::OutgoingVertex(F, he2)).template head<3>();
                 SVector<TScalar, 2> st = geometry::ClosestPointQueries::LineSegments(
                     FromEigen(PI),
                     FromEigen(QI),
@@ -209,8 +209,8 @@ void ToVisualDebugContacts(
                 }
                 case EVertexFacetClosestFaceType::Edge: {
                     TIndex const e         = face.a;
-                    auto const P           = Xenv.col(Eenv(0, e)).head<3>();
-                    auto const Q           = Xenv.col(Eenv(1, e)).head<3>();
+                    auto const P           = Xenv.col(Eenv(0, e)).template head<3>();
+                    auto const Q           = Xenv.col(Eenv(1, e)).template head<3>();
                     SVector<TScalar, 3> xj = geometry::ClosestPointQueries::PointOnLineSegment(
                         FromEigen(contact.xi),
                         FromEigen(P),
@@ -223,9 +223,9 @@ void ToVisualDebugContacts(
                     TIndex const f         = face.a;
                     SVector<TScalar, 3> xj = geometry::ClosestPointQueries::PointInTriangle(
                         FromEigen(contact.xi),
-                        FromEigen(Xenv.col(Fenv(0, f)).head<3>()),
-                        FromEigen(Xenv.col(Fenv(1, f)).head<3>()),
-                        FromEigen(Xenv.col(Fenv(2, f)).head<3>()));
+                        FromEigen(Xenv.col(Fenv(0, f)).template head<3>()),
+                        FromEigen(Xenv.col(Fenv(1, f)).template head<3>()),
+                        FromEigen(Xenv.col(Fenv(2, f)).template head<3>()));
                     contact.xj = ToEigen(xj);
                     vertexFacetContacts.emplace_back(contact);
                     break;
@@ -237,8 +237,8 @@ void ToVisualDebugContacts(
             using math::linalg::mini::ToEigen;
             using math::linalg::mini::SVector;
             VisualDebugContact<TScalar> contact;
-            auto const PI = X.col(geometry::IncomingVertex(F, hei)).head<3>();
-            auto const QI = X.col(geometry::OutgoingVertex(F, hei)).head<3>();
+            auto const PI = X.col(geometry::IncomingVertex(F, hei)).template head<3>();
+            auto const QI = X.col(geometry::OutgoingVertex(F, hei)).template head<3>();
             switch (face.EdgeEdgeClosestFaceType())
             {
                 case EEdgeEdgeClosestFaceType::Vertex: {
@@ -254,8 +254,8 @@ void ToVisualDebugContacts(
                 }
                 case EEdgeEdgeClosestFaceType::Edge: {
                     TIndex const e2        = face.a;
-                    auto const PJ          = Xenv.col(Eenv(0, e2)).head<3>();
-                    auto const QJ          = Xenv.col(Eenv(1, e2)).head<3>();
+                    auto const PJ          = Xenv.col(Eenv(0, e2)).template head<3>();
+                    auto const QJ          = Xenv.col(Eenv(1, e2)).template head<3>();
                     SVector<TScalar, 2> st = geometry::ClosestPointQueries::LineSegments(
                         FromEigen(PI),
                         FromEigen(QI),
