@@ -156,7 +156,7 @@ class Simulation:
             self._update_visuals_after_position_change()
             if self._contact.contact_dynamics is not None:
                 self._contact.contact_dynamics.compute_displacement_bounds(
-                    self._fem_dynamics.x
+                    self._fem_dynamics.X
                 )
 
     def _step(self):

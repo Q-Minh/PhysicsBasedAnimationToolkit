@@ -944,10 +944,13 @@ bool IsEdgeFeasible(
         TDerivedF::RowsAtCompileTime == 3,
         "F must have 3 rows representing triangle vertex indices.");
     TIndex fj = GHEF(1, he);
-    TIndex i  = geometry::IncomingVertex(F, he);
-    TIndex j  = geometry::OutgoingVertex(F, he);
-    TIndex k  = geometry::OutgoingVertex(F, he, 1 /* step */);
-    // Get the third vertex l of triangle fj that is not part of undirected edge (i,j)
+    // Handle boundary edge case: no adjacent face (i.e. fj == -1)
+    fj       = (fj < 0) * fi + (fj >= 0) * fj;
+    TIndex i = geometry::IncomingVertex(F, he);
+    TIndex j = geometry::OutgoingVertex(F, he);
+    TIndex k = geometry::OutgoingVertex(F, he, 1 /* step */);
+    // Get the third vertex l of triangle fj that is not part of undirected edge (i,j).
+    // NOTE: Whenever fj == fi (i.e. boundary edge), l == k.
     TIndex l = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
                (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
                (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
@@ -960,6 +963,7 @@ bool IsEdgeFeasible(
     // Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
     Eigen::Vector<TScalar, 3> pin = (xi - xk) + (xk - xi).dot(xij) / xijn2 * xij;
     // Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
+    // NOTE: whenever fj == fi (i.e. boundary edge), pjn == pin
     Eigen::Vector<TScalar, 3> pjn = (xi - xl) + (xl - xi).dot(xij) / xijn2 * xij;
     bool bInEdgeFeasibleRegion =
         ((x - xi).dot(xj - xi) >= TScalar(0)) and // within half-plane of vertex i

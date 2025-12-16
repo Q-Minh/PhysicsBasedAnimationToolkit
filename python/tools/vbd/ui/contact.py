@@ -23,6 +23,10 @@ class Contact:
         imgui.PushID("Contact")
         if imgui.TreeNode("Parameters"):
             self._contact_params.draw()
+            params: pbat.sim.contact.MeshDynamicsParams = self._contact_params.params
+            params.with_normal_contact(params.kc).with_frictional_contact(
+                params.mu, params.epsv
+            )
             imgui.TreePop()
         imgui.PopID()
 

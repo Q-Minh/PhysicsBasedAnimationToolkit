@@ -76,10 +76,16 @@ class AndersonSolver(BaseSolver):
         params: Params = self._params.params
         vbd = params.vbd_params
         anderson = params.anderson_params
+        if contact.requires_bounds_computation:
+            contact.compute_displacement_bounds(fem.x)
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         while vbd.k < vbd.n_max_iters:
+            if contact.requires_bounds_computation:
+                contact.compute_displacement_bounds(fem.x)
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)
+            fem.x = contact.truncate_displacement(fem.x, fem.dmask)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
 

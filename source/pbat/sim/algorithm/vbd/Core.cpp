@@ -266,8 +266,10 @@ TEST_CASE("[sim][algorithm][vbd] Sandbox")
     // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
     // contact.Initialize(device);
     // Scalar const zPlane = contact.StaticPointPositions().row(2).minCoeff();
+    // contact.GetParams()
+    //     .WithNormalContact(contact.GetParams().kc)
+    //     .WithFrictionalContact(contact.GetParams().mu, contact.GetParams().epsv);
     // contact.ComputeDisplacementBounds(fem.x);
-    // contact.GetParams().WithNormalContact(1e10);
     // for (auto t = 0; t < 50; ++t)
     // {
     //     fem.SetupTimeIntegrationOptimization(

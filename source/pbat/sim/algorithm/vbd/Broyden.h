@@ -402,7 +402,10 @@ void Solve(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
+    if (meshDynamics.RequiresBoundsComputation())
+        meshDynamics.ComputeDisplacementBounds(fem.x);
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params, broyden);
+    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     for (; params.k < params.nMaxIters;)
     {
         if (meshDynamics.RequiresBoundsComputation())
