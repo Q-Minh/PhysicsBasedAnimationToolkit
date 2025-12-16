@@ -106,6 +106,9 @@ class Simulation:
         self._fem_dynamics = fem_dynamics
         self._v0 = self._fem_dynamics.v.copy()  # store initial velocity for reset
         self._xD = self._fem_dynamics.x.copy()  # store initial position for reset
+        device_config = pbat.geometry.DeviceConfig()
+        device = pbat.geometry.Device(device_config)
+        contact_dynamics.initialize(device)
         self._contact.on_new_contact_dynamics(contact_dynamics)
         self._transform_library = transform_library
         self._tet_elastic_body_names = tet_elastic_body_names
@@ -152,7 +155,9 @@ class Simulation:
             self._constrain()
             self._update_visuals_after_position_change()
             if self._contact.contact_dynamics is not None:
-                self._contact.contact_dynamics.compute_displacement_bounds(self._fem_dynamics.x)
+                self._contact.contact_dynamics.compute_displacement_bounds(
+                    self._fem_dynamics.x
+                )
 
     def _step(self):
         if self._fem_dynamics is None:
@@ -288,8 +293,7 @@ class Simulation:
         try:
             if file_path:
                 archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
-                # TODO: Implement contact dynamics serialization
-                # self._contact.contact_dynamics.serialize(archive)
+                self._contact.contact_dynamics.serialize(archive)
                 self._solver.serialize(archive["Solver"])
                 archive = None
                 gc.collect()  # Force garbage collection to close the archive...
@@ -316,16 +320,8 @@ class Simulation:
             if not file_path:
                 return
             archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
-            # TODO: Implement contact dynamics deserialization
-            # self._contact.contact_dynamics.deserialize(archive)
+            self._contact.contact_dynamics.deserialize(archive)
             self._solver.deserialize(archive["Solver"])
-            # TODO:
-            # When the offline simulation runner will be implemented, we will
-            # assume that it saved the simulation trajectory (i.e. every time
-            # step's FemElastoDynamics) to the archive as the ground truth.
-            # At that point, we will also load that trajectory here, and enable
-            # playback of the loaded trajectory in the UI, and simulating from
-            # any given time step in the loaded trajectory.
             archive = None
             gc.collect()  # Force garbage collection to close the archive...
             with h5.File(file_path, "r") as f:
@@ -336,15 +332,6 @@ class Simulation:
                         f.attrs["fem_dynamics_init_strategy"]
                     )
                 )
-            # NOTE:
-            # Because contact dynamics deserialization is not implemented yet,
-            # if we load a simulation scenario that does not correspond to the
-            # current scene, then the contact dynamics will not be properly
-            # initialized. Thus, the next time we perform a simulation step, i.e.
-            # via self._step(), the app will crash. However, if we load a scene first,
-            # and then switch to simulation mode, and load a simulation scenario that
-            # corresponds to the current scene, then everything will work fine. In the
-            # future, we will address this by implementing contact dynamics serialization/deserialization.
             self.on_simulation_scenario_created(
                 self._tet_elastic_body_names,
                 self._XP,

@@ -1,3 +1,4 @@
+# type: ignore
 import polyscope as ps
 import polyscope.imgui as imgui
 import numpy as np

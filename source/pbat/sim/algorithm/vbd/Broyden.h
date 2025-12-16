@@ -405,7 +405,10 @@ void Solve(
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params, broyden);
     for (; params.k < params.nMaxIters;)
     {
+        if (meshDynamics.RequiresBoundsComputation())
+            meshDynamics.ComputeDisplacementBounds(fem.x);
         Iterate<TElasticEnergy>(fem, meshDynamics, params, broyden);
+        meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

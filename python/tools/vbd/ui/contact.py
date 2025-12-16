@@ -43,7 +43,7 @@ class Contact:
                 "Contact Environment",
                 self._contact_dynamics.Xstatic.T,
                 self._contact_dynamics.static_meshes.F.T,
-                color=(0.72, 0.72, 0.72)
+                color=(0.72, 0.72, 0.72),
             )
 
     @property

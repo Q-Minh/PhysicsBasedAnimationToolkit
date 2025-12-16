@@ -453,6 +453,9 @@ PBAT_HOST_DEVICE auto GradientSegmentWrtClosestPoints(
  * @brief Compute Hessian with respect to closest points given distance and energy's first and
  * second derivatives.
  *
+ * @note The hessian is approximate, omitting the term proportional to the first derivative of
+ * energy (Gauss-Newton approximation) to preserve positive definiteness.
+ *
  * @tparam TMatrixX Matrix type for first closest point
  * @tparam TMatrixY Matrix type for second closest point
  * @tparam TScalar Scalar type
@@ -471,31 +474,35 @@ PBAT_HOST_DEVICE auto HessianWrtClosestPoints(
     TMatrixX const& x,
     TMatrixY const& y,
     TScalar d,
-    TScalar dEdd,
+    [[maybe_unused]] TScalar dEdd,
     TScalar d2Edd2) -> mini::SMatrix<TScalar, 2 * TMatrixX::kRows, 2 * TMatrixX::kRows>
 {
     static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
     auto constexpr kDims = TMatrixX::kRows;
     TScalar dinv         = TScalar(1) / (d + std::numeric_limits<TScalar>::min());
     mini::Identity<TScalar, kDims, kDims> I{};
-    mini::SVector<TScalar, kDims> const gx            = (x - y) * dinv;
-    mini::SMatrix<TScalar, kDims, kDims> const gxgxT  = gx * gx.Transpose();
-    mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
+    mini::SVector<TScalar, kDims> const gx           = (x - y) * dinv;
+    mini::SMatrix<TScalar, kDims, kDims> const gxgxT = gx * gx.Transpose();
+    // mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
     mini::SMatrix<TScalar, 2 * kDims, 2 * kDims> H;
     auto Hxx = H.template Slice<kDims, kDims>(0, 0);
     auto Hxy = H.template Slice<kDims, kDims>(0, kDims);
     auto Hyx = H.template Slice<kDims, kDims>(kDims, 0);
     auto Hyy = H.template Slice<kDims, kDims>(kDims, kDims);
-    Hxx      = d2Edd2 * gxgxT + dEdd * d2ddxx;
-    Hxy      = -Hxx;
-    Hyx      = Hxy;
-    Hyy      = Hxx;
+    // NOTE: We omit the dEdd * d2ddxx term (Gauss-Newton approximation) to preserve positivity
+    Hxx = d2Edd2 * gxgxT /*+ dEdd * d2ddxx*/;
+    Hxy = -Hxx;
+    Hyx = Hxy;
+    Hyy = Hxx;
     return H;
 }
 
 /**
  * @brief Compute Hessian block (i,j) with respect to the closest points given distance and energy's
  * first and second derivatives.
+ *
+ * @note The hessian is approximate, omitting the term proportional to the
+ * first derivative of energy (Gauss-Newton approximation) to preserve positive definiteness.
  *
  * @tparam TMatrixX Matrix type for first closest point
  * @tparam TMatrixY Matrix type for second closest point
@@ -517,7 +524,7 @@ PBAT_HOST_DEVICE auto HessianBlockWrtClosestPoints(
     TMatrixX const& x,
     TMatrixY const& y,
     TScalar d,
-    TScalar dEdd,
+    [[maybe_unused]] TScalar dEdd,
     TScalar d2Edd2,
     int i,
     int j) -> mini::SMatrix<TScalar, TMatrixX::kRows, TMatrixX::kRows>
@@ -526,11 +533,12 @@ PBAT_HOST_DEVICE auto HessianBlockWrtClosestPoints(
     auto constexpr kDims = TMatrixX::kRows;
     TScalar dinv         = TScalar(1) / (d + std::numeric_limits<TScalar>::min());
     mini::Identity<TScalar, kDims, kDims> I{};
-    mini::SVector<TScalar, kDims> const gx            = (x - y) * dinv;
-    mini::SMatrix<TScalar, kDims, kDims> const gxgxT  = gx * gx.Transpose();
-    mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
-    int const sgn                                     = (i == j) * 1 + (i != j) * -1;
-    mini::SMatrix<TScalar, kDims, kDims> Hij = (sgn * d2Edd2) * gxgxT + (sgn * dEdd) * d2ddxx;
+    mini::SVector<TScalar, kDims> const gx           = (x - y) * dinv;
+    mini::SMatrix<TScalar, kDims, kDims> const gxgxT = gx * gx.Transpose();
+    // mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
+    int const sgn = (i == j) * 1 + (i != j) * -1;
+    // NOTE: We omit the dEdd * d2ddxx term (Gauss-Newton approximation) to preserve positivity
+    mini::SMatrix<TScalar, kDims, kDims> Hij = (sgn * d2Edd2) * gxgxT /* + (sgn * dEdd) * d2ddxx*/;
     return Hij;
 }
 

@@ -233,6 +233,7 @@ void Iterate(
     contact::potentials::LaggedFriction friction;
     typename contact::MeshDynamics<Scalar, Index>::Params const& contactParams =
         meshDynamics.GetParams();
+    auto const& Xenv       = meshDynamics.StaticPointPositions();
     Scalar rB              = contactParams.mOgcParams.r;
     Scalar kcB             = contactParams.kc;
     Scalar kcpB            = contactParams.kcp;
@@ -380,9 +381,49 @@ void Iterate(
                 });
             meshDynamics.ForEachPointStaticMeshContact(
                 i,
-                [&](Index j) {},
-                [&](Eigen::Vector<Index, 2> const& einds) {},
-                [&](Eigen::Vector<Index, 3> const& finds) {});
+                [&](Index j) {
+                    mini::SVector<Scalar, 3> xcp = FromEigen(Xenv.col(j).template head<3>());
+                    kernels::AccumulateVertexClosestPointContactDerivatives(
+                        xi,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                },
+                [&](Eigen::Vector<Index, 2> const& einds) {
+                    mini::SVector<Scalar, 3> xe1 = FromEigen(Xenv.col(einds(0)).template head<3>());
+                    mini::SVector<Scalar, 3> xe2 = FromEigen(Xenv.col(einds(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp =
+                        geometry::ClosestPointQueries::PointOnLineSegment(xi, xe1, xe2);
+                    kernels::AccumulateVertexClosestPointContactDerivatives(
+                        xi,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                },
+                [&](Eigen::Vector<Index, 3> const& finds) {
+                    mini::SVector<Scalar, 3> xf1 = FromEigen(Xenv.col(finds(0)).template head<3>());
+                    mini::SVector<Scalar, 3> xf2 = FromEigen(Xenv.col(finds(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xf3 = FromEigen(Xenv.col(finds(2)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp =
+                        geometry::ClosestPointQueries::PointInTriangle(xi, xf1, xf2, xf3);
+                    kernels::AccumulateVertexClosestPointContactDerivatives(
+                        xi,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                });
             meshDynamics.ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
                 i,
                 [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
@@ -484,8 +525,48 @@ void Iterate(
                 });
             meshDynamics.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
                 i,
-                [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {},
+                [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
+                    mini::SVector<Scalar, 3> xi2 =
+                        FromEigen(params.xb.col(eindsi(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp = FromEigen(Xenv.col(j).template head<3>());
+                    mini::SVector<Scalar, 2> uv =
+                        geometry::ClosestPointQueries::UvPointOnLineSegment(xcp, xi, xi2);
+                    kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
+                        xi,
+                        xi2,
+                        uv,
+                        0 /*ilocal == 0 because i == eindsi(0)*/,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                },
                 [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
+                    mini::SVector<Scalar, 3> xi2 =
+                        FromEigen(params.xb.col(eindsi(1)).template head<3>());
+                    mini::SVector<Scalar, 3> xj1 =
+                        FromEigen(Xenv.col(eindsj(0)).template head<3>());
+                    mini::SVector<Scalar, 3> xj2 =
+                        FromEigen(Xenv.col(eindsj(1)).template head<3>());
+                    mini::SVector<Scalar, 2> st =
+                        geometry::ClosestPointQueries::LineSegments(xi, xi2, xj1, xj2);
+                    mini::SVector<Scalar, 3> xcp = (1 - st(1)) * xj1 + st(1) * xj2;
+                    mini::SVector<Scalar, 2> uv1{1 - st(0), st(0)};
+                    kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
+                        xi,
+                        xi2,
+                        uv1,
+                        0 /*ilocal == 0 because i == eindsi(0)*/,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
                 });
             meshDynamics.ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
                 i,
@@ -533,7 +614,32 @@ void Iterate(
                 });
             meshDynamics.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
                 i,
-                [&](Eigen::Vector<Index, 3> const& finds, Index j) {});
+                [&](Eigen::Vector<Index, 3> const& finds, Index j) {
+                    int ilocal =
+                        /*(finds(0) == i) * 0 + */ (finds(1) == i) * 1 + (finds(2) == i) * 2;
+                    int jlocal = (ilocal + 1) % 3;
+                    int klocal = (ilocal + 2) % 3;
+                    mini::SVector<Scalar, 3> xb =
+                        FromEigen(params.xb.col(finds(jlocal)).template head<3>());
+                    mini::SVector<Scalar, 3> xc =
+                        FromEigen(params.xb.col(finds(klocal)).template head<3>());
+                    mini::SVector<Scalar, 3> xcp = FromEigen(Xenv.col(j).template head<3>());
+                    mini::SVector<Scalar, 3> uvw =
+                        geometry::ClosestPointQueries::UvwPointInTriangle(xcp, xi, xb, xc);
+                    kernels::AccumulateTriangleVertexToClosestPointContactDerivatives(
+                        xi,
+                        xb,
+                        xc,
+                        uvw,
+                        0 /*ilocal == 0, because finds(ilocal) == i*/,
+                        xcp,
+                        rB,
+                        kcB,
+                        kcpB,
+                        bB,
+                        gi,
+                        Hi);
+                });
             // "Kinetic" energy
             Scalar m                         = fem.m(i);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
@@ -553,7 +659,6 @@ void Solve(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
-    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
     for (; params.k < params.nMaxIters;)
     {

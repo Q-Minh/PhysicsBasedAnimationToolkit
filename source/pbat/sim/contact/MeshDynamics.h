@@ -349,6 +349,11 @@ class MeshDynamics
      */
     Params const& GetParams() const { return mParams; }
     /**
+     * @brief Get the Params object
+     * @return Reference to the parameters
+     */
+    Params& GetParams() { return mParams; }
+    /**
      * @brief Get the static point positions
      * @return `3 x |# points|` static point positions
      */

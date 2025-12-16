@@ -187,10 +187,6 @@ class ModeStateMachine(StateMachine):
                 Fstatic.T, XCCstatic, n_components=len(static_mesh_colliders)
             )
             contact_dynamics.set_static_geometry(Vstatic.T, static_contact_meshes)
-
-        device_config = pbat.geometry.DeviceConfig()
-        device = pbat.geometry.Device(device_config)
-        contact_dynamics.initialize(device)
         # Pass simulation scenario to simulation UI
         tet_elastic_body_names = [body.name for body in tet_elastic_bodies]
         self.simulation.on_simulation_scenario_created(
