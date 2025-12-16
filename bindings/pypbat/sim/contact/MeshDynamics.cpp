@@ -184,7 +184,11 @@ void BindMeshDynamics(nanobind::module_& m)
             "usability.\n\n"
             "Args:\n"
             "    archive (io.Archive): Archive to deserialize from.\n")
-        .def_prop_ro("params", &MeshDynamicsType::GetParams, "Mesh dynamics parameters.")
+        .def_prop_ro(
+            "params",
+            [](MeshDynamicsType& self) -> MeshDynamicsParamsType& { return self.GetParams(); },
+            nb::rv_policy::reference_internal,
+            "Mesh dynamics parameters.")
         .def_prop_ro("Xstatic", &MeshDynamicsType::StaticPointPositions, "Static point positions.")
         .def_prop_ro("dynamic_meshes", &MeshDynamicsType::DynamicMeshes, "Dynamic meshes.")
         .def_prop_ro("static_meshes", &MeshDynamicsType::StaticMeshes, "Static meshes.")
