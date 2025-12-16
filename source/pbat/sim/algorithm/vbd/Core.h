@@ -150,23 +150,8 @@ struct Params
     /**
      * @brief Read-write
      */
-    Index k{0};                                  ///< Current VBD iteration
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xb; ///< `3 x |# nodes|` buffer positions
 };
-
-/**
- * @brief Initialize VBD minimization solve
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
- * @param params Solver parameters
- * @pre `TElasticEnergy::kDims == 3`
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeSolve(
-    common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
-    Params& params);
 
 /**
  * @brief One VBD minimization step
@@ -209,16 +194,6 @@ void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& meshDynamics,
     Params& params);
-
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeSolve(
-    common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
-    Params& params)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
-    params.k = 0;
-}
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
@@ -649,7 +624,6 @@ void Iterate(
             fem.x.col(i) = ToEigen(xi);
         });
     }
-    ++params.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -659,8 +633,7 @@ void Solve(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
-    InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
-    for (; params.k < params.nMaxIters;)
+    for (auto k = 0; k < params.nMaxIters; ++k)
     {
         if (meshDynamics.RequiresBoundsComputation())
             meshDynamics.ComputeDisplacementBounds(fem.x);

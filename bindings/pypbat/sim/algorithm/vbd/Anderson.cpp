@@ -39,7 +39,8 @@ void BindAnderson(nanobind::module_& m)
         .def_ro("xkm1", &AndersonParams::xkm1, "`|# dofs| x 1` previous step")
         .def_ro("fk", &AndersonParams::fk, "`|# dofs| x 1` current residual")
         .def_ro("fkm1", &AndersonParams::fkm1, "`|# dofs| x 1` past residual")
-        .def_ro("gammak", &AndersonParams::gammak, "`m x 1` subspace residual");
+        .def_ro("gammak", &AndersonParams::gammak, "`m x 1` subspace residual")
+        .def_ro("k", &AndersonParams::k, "Current iteration index");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;

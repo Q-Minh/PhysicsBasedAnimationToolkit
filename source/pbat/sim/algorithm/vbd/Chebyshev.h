@@ -131,8 +131,7 @@ void InitializeSolve(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.InitializeSolve");
     cheb.AllocateIfNeeded(fem.x.cols());
-    InitializeSolve<TElasticEnergy>(fem, meshDynamics, params);
-    params.k  = 0;
+    cheb.k    = 0;
     cheb.rho2 = cheb.rho * cheb.rho;
 }
 
@@ -145,14 +144,15 @@ void Iterate(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Iterate");
     Iterate(fem, meshDynamics, params);
+    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
     // Chebyshev Update
-    cheb.omega = kernels::ChebyshevOmega(params.k, cheb.rho2, cheb.omega);
+    cheb.omega = kernels::ChebyshevOmega(cheb.k, cheb.rho2, cheb.omega);
     auto& xk   = fem.x;
-    if (params.k > 1)
+    if (cheb.k > 1)
         xk = cheb.omega * (xk - cheb.xkm2) + cheb.xkm2;
     cheb.xkm2 = cheb.xkm1;
     cheb.xkm1 = xk;
-    ++params.k;
+    ++cheb.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -166,8 +166,7 @@ void Solve(
     if (meshDynamics.RequiresBoundsComputation())
         meshDynamics.ComputeDisplacementBounds(fem.x);
     InitializeSolve<TElasticEnergy>(fem, meshDynamics, params, cheb);
-    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
-    for (; params.k < params.nMaxIters;)
+    for (; cheb.k < params.nMaxIters;)
     {
         if (meshDynamics.RequiresBoundsComputation())
             meshDynamics.ComputeDisplacementBounds(fem.x);

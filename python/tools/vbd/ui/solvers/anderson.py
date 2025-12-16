@@ -1,11 +1,10 @@
 # type: ignore
 from pbatoolkit import pbat
 from ..params import ParameterObject
-import polyscope as ps
 import polyscope.imgui as imgui
-from .serialize import serialize_solver_iteration
 from .base import BaseSolver
 import typing
+import gc
 
 
 class Params:
@@ -76,12 +75,20 @@ class AndersonSolver(BaseSolver):
         params: Params = self._params.params
         vbd = params.vbd_params
         anderson = params.anderson_params
+        # serialize = False
+        # if serialize:
+        #     archive = pbat.io.Archive("sandbox.h5", pbat.io.AccessMode.Overwrite)
+        #     fem.serialize(archive["fem"])
+        #     contact.serialize(archive["contact"])
+        #     vbd.serialize(archive["vbd/params"])
+        #     anderson.serialize(archive["vbd/anderson_params"])
+        #     archive = None
+        #     gc.collect()
         if contact.requires_bounds_computation:
             contact.compute_displacement_bounds(fem.x)
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
-        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
-        while vbd.k < vbd.n_max_iters:
+        while anderson.k < vbd.n_max_iters:
             if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)

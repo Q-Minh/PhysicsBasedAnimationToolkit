@@ -46,17 +46,16 @@ class VbdSolver(BaseSolver):
             callback = lambda: None
         callback()
         params: pbat.sim.algorithm.vbd.Params = self._params.params
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
         # TODO: Remove
-        serialize=False
-        if serialize:
-            archive = pbat.io.Archive("sandbox.h5", pbat.io.AccessMode.Overwrite)
-            fem.serialize(archive["fem"])
-            contact.serialize(archive["contact"])
-            params.serialize(archive["vbd/params"])
-            archive = None
-            gc.collect()
-        while params.k < params.n_max_iters:
+        # serialize=False
+        # if serialize:
+        #     archive = pbat.io.Archive("sandbox.h5", pbat.io.AccessMode.Overwrite)
+        #     fem.serialize(archive["fem"])
+        #     contact.serialize(archive["contact"])
+        #     params.serialize(archive["vbd/params"])
+        #     archive = None
+        #     gc.collect()
+        for k in range(params.n_max_iters):
             if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)

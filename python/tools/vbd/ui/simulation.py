@@ -165,9 +165,16 @@ class Simulation:
             return
         self._apply_procedural_constraints()
         self._profiler.begin_frame("Physics")
+        # xt = self._fem_dynamics.bdf.current_state().reshape(
+        #     self._fem_dynamics.x.shape, order="F"
+        # )
         self._fem_dynamics.setup_time_integration_optimization(
             initialization_strategy=self._fem_dynamics_init_strategy
         )
+        # rq = np.linalg.norm(self._fem_dynamics.xtilde - xt, axis=1).max()
+        # self._contact.contact_dynamics.params.ogc_params.rq = max(
+        #     rq, self._contact.contact_dynamics.params.ogc_params.r
+        # )
         self._fem_dynamics.x = self._contact.contact_dynamics.truncate_displacement(
             self._fem_dynamics.x, self._fem_dynamics.dmask
         )
@@ -188,10 +195,13 @@ class Simulation:
             bx = np.full(self._fem_dynamics.x.shape[1], bvmax)
             bx[self._contact.contact_dynamics.dynamic_meshes.V] = bv
             self._fem_dynamics_vm.add_scalar_quantity(
-                "bv", bx, defined_on="vertices", cmap="coolwarm"
+                "-bv", -bx, defined_on="vertices", cmap="coolwarm"
             )
             self._fem_dynamics_vm.add_scalar_quantity(
-                "log(bv+1)", np.log10(bx + 1), defined_on="vertices", cmap="coolwarm"
+                "bvr",
+                bx <= self._contact.contact_dynamics.params.ogc_params.r,
+                defined_on="vertices",
+                cmap="reds",
             )
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes

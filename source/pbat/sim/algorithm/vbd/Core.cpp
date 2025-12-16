@@ -126,7 +126,6 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
-    group.WriteMetaData("k", k);
     group.WriteData("xb", xb);
 }
 
@@ -141,9 +140,7 @@ void Params::Deserialize(io::Archive const& archive)
     Padj              = group.ReadData<IndexVectorX>("Padj");
     detHZero          = group.ReadMetaData<Scalar>("detHZero");
     nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
-    if (group.HasMetaData("k"))
-        k = group.ReadMetaData<Index>("k");
-    xb = group.ReadData<MatrixX>("xb");
+    xb                = group.ReadData<MatrixX>("xb");
 }
 
 } // namespace pbat::sim::algorithm::vbd

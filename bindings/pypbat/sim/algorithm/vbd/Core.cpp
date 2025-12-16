@@ -164,30 +164,11 @@ void BindCore(nanobind::module_& m)
         .def_rw("Padj", &Params::Padj, "`|# verts|` partition vertices")
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
-        .def_rw("k", &Params::k, "Current iteration index");
+        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
 
-    m.def(
-        "initialize_solve",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
-           Params& params) {
-            pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(
-                fem,
-                meshDynamics,
-                params);
-        },
-        nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
-        nb::arg("params"),
-        "Initialize the VBD minimization solve.\n\n"
-        "Args:\n"
-        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     m.def(
         "iterate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
