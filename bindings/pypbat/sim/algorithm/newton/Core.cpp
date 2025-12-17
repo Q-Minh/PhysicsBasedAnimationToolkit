@@ -116,55 +116,65 @@ void BindCore(nanobind::module_& m)
     // Bind algorithm functions for a concrete energy model (3D stable neo-Hookean)
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using ElastoDynamics    = pbat::sim::algorithm::newton::FemElastoDynamics<ElasticEnergyType>;
+    using MeshDynamics      = pbat::sim::algorithm::newton::MeshDynamics;
 
     m.def(
         "prepare_next_iteration",
-        [](ElastoDynamics& fem, Params& params) {
+        [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
             return pbat::sim::algorithm::newton::PrepareNextIteration<ElasticEnergyType>(
                 fem,
+                contact,
                 params);
         },
         nb::arg("fem"),
+        nb::arg("contact"),
         nb::arg("params"),
         "Perform derivative precomputations and objective function evaluation. Returns f(xk).\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
+        "    contact (MeshDynamics): Contact dynamics problem.\n"
         "    params (Params): Newton solver parameters.\n");
     m.def(
         "initialize_solve",
-        [](ElastoDynamics& fem, Params& params) {
-            pbat::sim::algorithm::newton::InitializeSolve<ElasticEnergyType>(fem, params);
+        [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
+            pbat::sim::algorithm::newton::InitializeSolve<ElasticEnergyType>(fem, contact, params);
         },
         nb::arg("fem"),
+        nb::arg("contact"),
         nb::arg("params"),
         "Initialize Newton solve (computes initial derivatives and gradient).\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
+        "    contact (MeshDynamics): Contact dynamics problem.\n"
         "    params (Params): Newton solver parameters.\n");
     m.def(
         "iterate",
-        [](ElastoDynamics& fem, Params& params) {
-            return pbat::sim::algorithm::newton::Iterate<ElasticEnergyType>(fem, params);
+        [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
+            return pbat::sim::algorithm::newton::Iterate<ElasticEnergyType>(fem, contact, params);
         },
         nb::arg("fem"),
+        nb::arg("contact"),
         nb::arg("params"),
         "Perform one Newton iteration; returns True if a step was taken.\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
+        "    contact (MeshDynamics): Contact dynamics problem.\n"
         "    params (Params): Newton solver parameters.\n"
         "Returns:\n"
         "    bool: True if a step was taken, False otherwise.");
     m.def(
         "solve",
-        [](ElastoDynamics& fem, Params& params) {
-            return pbat::sim::algorithm::newton::Solve<ElasticEnergyType>(fem, params);
+        [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
+            return pbat::sim::algorithm::newton::Solve<ElasticEnergyType>(fem, contact, params);
         },
         nb::arg("fem"),
+        nb::arg("contact"),
         nb::arg("params"),
         "Run Newton's method to convergence (or until max iterations); returns True on "
         "convergence.\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
+        "    contact (MeshDynamics): Contact dynamics problem.\n"
         "    params (Params): Newton solver parameters.\n"
         "Returns:\n"
         "    bool: True if convergence is achieved, False otherwise.");

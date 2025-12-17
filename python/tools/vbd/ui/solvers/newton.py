@@ -71,14 +71,14 @@ class NewtonSolver(BaseSolver):
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
         callback()
-        pbat.sim.algorithm.newton.initialize_solve(fem, params)
+        pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
         while newton.k < newton.n_max_iters:
             if newton.gknorm2 < newton.gtol2:
                 break
-            if not pbat.sim.algorithm.newton.iterate(fem, params):
+            if not pbat.sim.algorithm.newton.iterate(fem, contact, params):
                 break
             callback()
-            pbat.sim.algorithm.newton.prepare_next_iteration(fem, params)
+            pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
         fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):

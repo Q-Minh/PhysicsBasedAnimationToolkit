@@ -408,7 +408,8 @@ class Scene:
 
     def _buildup(self, f, bodies_only=False):
         self._deserialize_fem_tet_elastic_bodies(f["fem_tet_elastic_bodies"])
-        self._deserialize_static_mesh_colliders(f["static_mesh_colliders"])
+        if "static_mesh_colliders" in f:
+            self._deserialize_static_mesh_colliders(f["static_mesh_colliders"])
         self._recycled_tet_elastic_body_indices = list(
             f["recycled_tet_elastic_body_indices"][:]
         )
