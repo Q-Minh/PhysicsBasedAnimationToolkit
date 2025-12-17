@@ -52,7 +52,7 @@ class MeshDynamics
         ogc::Params<TScalar> mOgcParams; ///< OGC parameters
         TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
                             ///< smooth transition
-        TScalar kc{1e5};    ///< OGC contact stiffness parameter, `kc > 0`
+        TScalar kc{1e8};    ///< OGC contact stiffness parameter, `kc > 0`
         TScalar mu{0.5};    ///< OGC friction coefficient, `mu >= 0`
 
         /**
@@ -76,6 +76,12 @@ class MeshDynamics
          * @return Reference to this
          */
         SelfType& WithNormalContact(TScalar kc);
+        /**
+         * @brief Construct the Params object
+         * @param bValidate Whether to validate parameters
+         * @return Reference to this
+         */
+        SelfType& Construct(bool bValidate = true);
         /**
          * @brief Serialize to archive
          * @param archive Archive to serialize to
@@ -438,6 +444,25 @@ MeshDynamics<TScalar, TIndex>::Params&
 MeshDynamics<TScalar, TIndex>::Params::WithNormalContact(TScalar kc)
 {
     this->kc = kc;
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshDynamics<TScalar, TIndex>::Params&
+MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
+{
+    if (bValidate)
+    {
+        if (kc <= TScalar(0))
+        {
+            throw std::invalid_argument("MeshDynamics::Params::Construct(): kc must be positive.");
+        }
+        if (mu < TScalar(0))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): mu must be non-negative.");
+        }
+    }
     auto tau = TScalar(0.5) * mOgcParams.r;
     auto r   = mOgcParams.r;
     kcp      = tau * kc * (tau - r) * (tau - r);
@@ -480,6 +505,7 @@ inline void MeshDynamics<TScalar, TIndex>::Params::Deserialize(io::Archive const
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline MeshDynamics<TScalar, TIndex>::MeshDynamics(Params const& params) : mParams(params)
 {
+    mParams.Construct();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>

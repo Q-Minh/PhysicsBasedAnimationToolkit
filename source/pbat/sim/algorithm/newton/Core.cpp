@@ -92,7 +92,9 @@ void Params::Deserialize(io::Archive const& archive)
 
 } // namespace pbat::sim::algorithm::newton
 
+#include "pbat/geometry/Device.h"
 #include "pbat/physics/StableNeoHookeanEnergy.h"
+#include "pbat/sim/contact/MultiMesh.h"
 
 #include <doctest/doctest.h>
 
@@ -116,8 +118,17 @@ TEST_CASE("[sim][algorithm][newton] Core")
     using namespace pbat::sim::algorithm;
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
+    using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
     FemElastoDynamics dynamics{};
     dynamics.Construct(V, C);
+    MeshDynamics contact{};
+    sim::contact::MultiMesh<Index> dynamicMesh{};
+    dynamicMesh.ConstructFromTetrahedralMesh(
+        dynamics.mesh.E,
+        Eigen::Vector<Index, Eigen::Dynamic>::Zero(V.cols()),
+        1);
+    contact.SetDynamicGeometry(V, std::move(dynamicMesh));
+    contact.Initialize(geometry::Device{});
     // Act
     dynamics.SetInitialConditions(dynamics.x, dynamics.v);
     newton::Params params{};
@@ -132,7 +143,7 @@ TEST_CASE("[sim][algorithm][newton] Core")
     dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = dynamics.Objective(dynamics.x);
     VectorX g0 = dynamics.Gradient(dynamics.x);
-    newton::Solve(dynamics, params);
+    newton::Solve(dynamics, contact, params);
     // Assert
     auto constexpr zero = Scalar{1e-4};
     auto xt    = dynamics.bdf.CurrentState(0).reshaped(dynamics.x.rows(), dynamics.x.cols());
