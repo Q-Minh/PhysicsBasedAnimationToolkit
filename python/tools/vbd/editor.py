@@ -4,6 +4,7 @@ import polyscope.imgui as imgui
 from pbatoolkit import pbat, pypbat
 import numpy as np
 from .ui.scene import Scene
+from .ui.static_mesh_collider import StaticMeshCollider
 from .ui.simulation import Simulation
 from statemachine import State, StateMachine, Event
 import itertools
@@ -113,6 +114,38 @@ def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
     return fem_dynamics
 
 
+def make_contact_dynamics_object(
+    fem_dynamics: pbat.sim.dynamics.FemElastoDynamics,
+    n_bodies: int,
+    vert_counts: list[int],
+    static_mesh_colliders: list[StaticMeshCollider],
+):
+    contact_dynamics = pbat.sim.contact.MeshDynamics()
+    XCC = np.concatenate([np.full(nverts, b) for b, nverts in enumerate(vert_counts)])
+    contact_meshes = pbat.sim.contact.MultiMesh()
+    contact_meshes.construct_from_tetrahedral_mesh(
+        fem_dynamics.E, XCC, n_components=n_bodies
+    )
+    contact_dynamics.set_dynamic_geometry(fem_dynamics.x, contact_meshes)
+    static_mesh_colliders = static_mesh_colliders
+    if len(static_mesh_colliders) > 0:
+        static_vert_counts = [smc.VT.shape[0] for smc in static_mesh_colliders]
+        Vstatic = np.vstack([smc.VT for smc in static_mesh_colliders])
+        VPstatic = [0] + list(itertools.accumulate(static_vert_counts))
+        Fstatic = np.vstack(
+            [smc.F + VPstatic[b] for b, smc in enumerate(static_mesh_colliders)]
+        )
+        XCCstatic = np.concatenate(
+            [np.full(nverts, b) for b, nverts in enumerate(static_vert_counts)]
+        )
+        static_contact_meshes = pbat.sim.contact.MultiMesh()
+        static_contact_meshes.construct_from_triangle_mesh(
+            Fstatic.T, XCCstatic, n_components=len(static_mesh_colliders)
+        )
+        contact_dynamics.set_static_geometry(Vstatic.T, static_contact_meshes)
+    return contact_dynamics
+
+
 class ModeStateMachine(StateMachine):
     editing = State("Editing", initial=True)
     simulating = State("Simulating")
@@ -153,7 +186,8 @@ class ModeStateMachine(StateMachine):
 
     def _convert_scene_to_simulation(self):
         tet_elastic_bodies = self.scene.tet_elastic_bodies
-        if len(tet_elastic_bodies) == 0:
+        n_bodies = len(tet_elastic_bodies)
+        if n_bodies == 0:
             return
 
         # FEM dynamics object
@@ -162,31 +196,12 @@ class ModeStateMachine(StateMachine):
         )
 
         # Contact
-        contact_dynamics = pbat.sim.contact.MeshDynamics()
-        n_bodies = len(tet_elastic_bodies)
-        XCC = np.concatenate(
-            [np.full(nverts, b) for b, nverts in enumerate(vert_counts)]
+        contact_dynamics = make_contact_dynamics_object(
+            fem_dynamics,
+            n_bodies,
+            vert_counts,
+            static_mesh_colliders=self.scene.static_mesh_colliders,
         )
-        contact_meshes = pbat.sim.contact.MultiMesh(
-            fem_dynamics.E, XCC, n_components=n_bodies
-        )
-        contact_dynamics.set_dynamic_geometry(fem_dynamics.x, contact_meshes)
-        static_mesh_colliders = self.scene.static_mesh_colliders
-        if len(static_mesh_colliders) > 0:
-            static_vert_counts = [smc.VT.shape[0] for smc in static_mesh_colliders]
-            Vstatic = np.vstack([smc.VT for smc in static_mesh_colliders])
-            VPstatic = [0] + list(itertools.accumulate(static_vert_counts))
-            Fstatic = np.vstack(
-                [smc.F + VPstatic[b] for b, smc in enumerate(static_mesh_colliders)]
-            )
-            XCCstatic = np.concatenate(
-                [np.full(nverts, b) for b, nverts in enumerate(static_vert_counts)]
-            )
-            static_contact_meshes = pbat.sim.contact.MultiMesh()
-            static_contact_meshes.construct_from_triangle_mesh(
-                Fstatic.T, XCCstatic, n_components=len(static_mesh_colliders)
-            )
-            contact_dynamics.set_static_geometry(Vstatic.T, static_contact_meshes)
         # Pass simulation scenario to simulation UI
         tet_elastic_body_names = [body.name for body in tet_elastic_bodies]
         self.simulation.on_simulation_scenario_created(

@@ -54,6 +54,12 @@ class Contact:
                 ps.remove_surface_mesh(self._environment_mesh.get_name())
                 self._environment_mesh = None
 
+    def serialize(self, archive: pbat.io.Archive):
+        self._contact_dynamics.params.serialize(archive)
+
+    def deserialize(self, archive: pbat.io.Archive):
+        self._contact_dynamics.params.deserialize(archive)
+
     @property
     def contact_dynamics(self):
         return self._contact_dynamics

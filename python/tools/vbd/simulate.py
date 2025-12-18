@@ -2,7 +2,7 @@
 from pbatoolkit import pbat, pypbat
 from .ui.utils.transform_library import TransformLibrary
 from .ui.tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
-from .editor import make_fem_dynamics_object
+from .editor import make_fem_dynamics_object, make_contact_dynamics_object
 import enum
 import argparse
 import h5py as h5
@@ -26,13 +26,13 @@ def vbd_prepare(
         GVGp, GVGe, GVGilocal
     ).with_vertex_colors(colors).construct()
 
-_archive_solver_groups = {
-    "vbd"       : "Solver/VBD",
-    "anderson"  : "Solver/Anderson",
-    "broyden"   : "Solver/Broyden",
-    "chebychev" : "Solver/Chebychev",
-    "newton"    : "Solver/Newton"
 
+_archive_solver_groups = {
+    "vbd": "Solver/VBD",
+    "anderson": "Solver/Anderson",
+    "broyden": "Solver/Broyden",
+    "chebychev": "Solver/Chebychev",
+    "newton": "Solver/Newton",
 }
 
 _archive_tlib_group = "transform_library"
@@ -90,7 +90,7 @@ _solver_params = {
             "newton": pbat.sim.algorithm.newton.Params,
         },
         "solve": lambda fem, contact, params: pbat.sim.algorithm.newton.solve(
-            fem, params["newton"]  # TODO: Add contact dynamics to newton solve
+            fem, contact, params["newton"]
         ),
         "prepare": lambda fem, contact, params: None,
     },
@@ -123,26 +123,27 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Simulation Tool")
     parser.add_argument(
         "-p",
-        "--simulation_params", "--simulation-params",
-        type=str, 
+        "--simulation_params",
+        "--simulation-params",
+        type=str,
         default="",
         help=(
             "Path to an h5 file containing solver and contact parameters. "
             "The root group must contain attributes 'dt, bdf_scheme, fem_dynamics_init_strategy', "
             "and it should contain at least one subgroup holding the parameters of a solver. "
             f"Available solvers and their parameter object names are: {', '.join([f'solver={solver} params_names=({', '.join(data['params'].keys())})' for solver, data in _solver_params.items()])}"
-        ), 
+        ),
         dest="simulation_params",
     )
     parser.add_argument(
         "-sess",
         "--session",
-        type=str, 
+        type=str,
         default="",
         help=(
             "Path to an h5 file containing a session to simulate"
             "The root group must contain a list of TetrahedralElastodynamicsBodies as well as a transform library."
-        ), 
+        ),
         dest="session",
     )
     # TODO: Add contact dynamics argument
@@ -201,27 +202,27 @@ def load_time_integration(path: str):
                 )
             )
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load time integration from '{arg}': {e}"
-        ) from e
+        raise RuntimeError(f"Failed to load time integration from '{arg}': {e}") from e
     return dt, bdf_scheme, fem_dynamics_init_strategy
 
 
 def load_fem_elasto_dynamics(path: str):
-    
+
     try:
         tet_elastic_bodies = []
         with h5.File(path, "r") as f:
             grp = f["fem_tet_elastic_bodies"]
             num_bodies = grp.attrs["num_tet_elastic_bodies"]
-            
+
             for b in range(num_bodies):
                 body_grp = grp[f"{b}"]
                 body = TetrahedralElastodynamicsBody()
                 body.deserialize(body_grp, headless=True)
                 tet_elastic_bodies.append(body)
 
-        fem, _, XP = make_fem_dynamics_object(tet_elastic_bodies, get_external_info=True)
+        fem, _, XP = make_fem_dynamics_object(
+            tet_elastic_bodies, get_external_info=True
+        )
         return fem, XP
     except Exception as e:
         raise RuntimeError(
@@ -285,24 +286,17 @@ def load_solver_params(
     return param_objs
 
 
-def load_contact_dynamics(
-    path: str | None = None
-):
+def load_contact_dynamics(path: str | None = None):
     contact_dynamics = pbat.sim.contact.MeshDynamics()
-    
     try:
         archive = pbat.io.Archive(path, flags=pbat.io.AccessMode.ReadOnly)
-        contact_dynamics.deserialize(
-            archive
-        )
+        contact_dynamics.deserialize(archive)
         archive = None
         gc.collect()
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load contact dynamics from '{path}': {e}"
-        ) from e
-    
+        raise RuntimeError(f"Failed to load contact dynamics from '{path}': {e}") from e
     return contact_dynamics
+
 
 def load_dirichlet_constraints(path: str):
     try:
@@ -310,9 +304,7 @@ def load_dirichlet_constraints(path: str):
             transform_library = TransformLibrary()
             tlib_h5grp = f[_archive_tlib_group]
             transform_library.deserialize(tlib_h5grp)
-            tet_elastic_body_names = (
-                tlib_h5grp["mesh_names"][:].astype(str).tolist()
-            )
+            tet_elastic_body_names = tlib_h5grp["mesh_names"][:].astype(str).tolist()
             return transform_library, tet_elastic_body_names
     except Exception as e:
         raise RuntimeError(
@@ -328,36 +320,19 @@ def main():
     dt, bdf_scheme, fem_dynamics_init_strategy = load_time_integration(
         args.simulation_params
     )
+    # TODO: Consolidate load_fem_elasto_dynamics and load_contact_dynamics, 
+    # since this is how scene building works (see editor.py).
     fem_elasto_dynamics, XP = load_fem_elasto_dynamics(args.session)
-
-    # TODO: Actually deserialize contact dynamics
     contact_dynamics = load_contact_dynamics(args.simulation_params)
-    
-    Xordering, Eordering, XCC, ECC, n_components = (
-        pbat.graph.sorted_connected_component_ordering(
-            fem_elasto_dynamics.X, fem_elasto_dynamics.E
-        )
-    )
-    contact_meshes = pbat.sim.contact.MultiMesh(
-        fem_elasto_dynamics.E, XCC, n_components=n_components
-    )
-    contact_dynamics.set_dynamic_geometry(fem_elasto_dynamics.x, contact_meshes)
-    
-    
-    # TODO: something with static meshes
-    # static_contact_meshes = pbat.sim.contact.MultiMesh(
-    #     np.array([]), np.array([]), n_components=0
-    # )
-    # contact_dynamics.set_static_geometry(np.array([]), static_contact_meshes)
     device_config = pbat.geometry.DeviceConfig()
     device = pbat.geometry.Device(device_config)
     contact_dynamics.initialize(device)
-    
+
     params = load_solver_params(args.solver, args.simulation_params, args.overrides)
-    
+
     prepare = _solver_params[args.solver]["prepare"]
     prepare(fem_elasto_dynamics, contact_dynamics, params)
-    
+
     dirichlet_constraints, fem_elastic_mesh_names = load_dirichlet_constraints(
         args.session
     )
@@ -367,24 +342,26 @@ def main():
     fem_elasto_dynamics.set_initial_conditions(
         fem_elasto_dynamics.x, fem_elasto_dynamics.v
     )
-    
+
     contact_dynamics.compute_displacement_bounds(fem_elasto_dynamics.X)
     xD = None if dirichlet_constraints is None else fem_elasto_dynamics.x.copy()
     t = 0
     archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
     fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
-    
+
     #################
     #  RUN THE SIM  #
     #################
-    
+
     while t * dt < args.duration:
         solve = _solver_params[args.solver]["solve"]
         # Apply procedural constraints
         fem_elasto_dynamics.dmask[:] = 0
         if dirichlet_constraints is not None:
-            for start, tup in zip(XP[:-1], dirichlet_constraints.all_transformed_nodes(t, dt)):
+            for start, tup in zip(
+                XP[:-1], dirichlet_constraints.all_transformed_nodes(t, dt)
+            ):
                 _, dnodes = tup
                 fem_elasto_dynamics.dmask[start + dnodes] = 1
             fem_elasto_dynamics.constrain(fem_elasto_dynamics.dmask)
@@ -399,7 +376,9 @@ def main():
             initialization_strategy=fem_dynamics_init_strategy
         )
         # Solve time step
-        fem_elasto_dynamics.x = contact_dynamics.truncate_displacement(fem_elasto_dynamics.x, fem_elasto_dynamics.dmask)
+        fem_elasto_dynamics.x = contact_dynamics.truncate_displacement(
+            fem_elasto_dynamics.x, fem_elasto_dynamics.dmask
+        )
         solve(fem_elasto_dynamics, contact_dynamics, params)
         # Step
         fem_elasto_dynamics.step()

@@ -222,9 +222,9 @@ class Simulation:
 
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
         step = imgui.Button("Step", button_size)
+        reset = imgui.Button("Reset", button_size)
         if imgui.Button("Dump", button_size):
             self._serialize_problem()
-        reset = imgui.Button("Reset", button_size)
         imgui.Text(f"Time step={self._t}, t={self._t * self._dt:.4f}s")
         if reset:
             self._reset_sim()
@@ -236,6 +236,9 @@ class Simulation:
         if self._dmin != dmin:
             self._dmin = dmin
         imgui.Text(f"Minimum displacement bound: {self._dmin:.16f}")
+        imgui.Text(
+            f"Query radius: {self._contact.contact_dynamics.params.ogc_params.rq:.6f}"
+        )
 
         imgui.PopID()
 
@@ -295,7 +298,7 @@ class Simulation:
         try:
             if file_path:
                 archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
-                self._contact.contact_dynamics.serialize(archive)
+                self._contact.serialize(archive["Contact"])
                 self._solver.serialize(archive["Solver"])
                 archive = None
                 gc.collect()  # Force garbage collection to close the archive...
@@ -322,7 +325,7 @@ class Simulation:
             if not file_path:
                 return
             archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
-            self._contact.contact_dynamics.deserialize(archive)
+            self._contact.deserialize(archive["Contact"])
             self._solver.deserialize(archive["Solver"])
             archive = None
             gc.collect()  # Force garbage collection to close the archive...
@@ -386,7 +389,8 @@ class Simulation:
                     archive, self._fem_dynamics, self._contact.contact_dynamics
                 )
                 archive.write_metadata(
-                    "initialization_strategy", int(self._fem_dynamics_init_strategy.value)
+                    "initialization_strategy",
+                    int(self._fem_dynamics_init_strategy.value),
                 )
                 archive = None
                 gc.collect()  # Force garbage collection to close the archive...
