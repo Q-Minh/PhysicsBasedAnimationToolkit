@@ -43,18 +43,19 @@ enum EMeshEnergyComputationFlags : int {
 
 /**
  * @brief Energy (derivatives)
- * @tparam kNumVerticesInvolved Number of vertices involved in the contact
+ * @tparam kStencil Number of vertices involved in the contact
  */
-template <common::CFloatingPoint TScalar, int kNumVerticesInvolved>
-struct MeshMeshContactEnergy
+template <common::CFloatingPoint TScalar, common::CIndex TIndex, int kStencil>
+struct MeshContactEnergy
 {
-    static constexpr int kDofs = 3 * kNumVerticesInvolved; ///< Degrees of freedom involved
-    TScalar En;                                            ///< Normal contact energy
-    TScalar Ef;                                            ///< Frictional contact energy
-    Eigen::Vector<TScalar, kDofs> gradEn;                  ///< Normal contact energy gradient
-    Eigen::Matrix<TScalar, kDofs, kDofs> hessEn;           ///< Normal contact energy Hessian
-    Eigen::Vector<TScalar, kDofs> gradEf;                  ///< Frictional contact energy gradient
-    Eigen::Matrix<TScalar, kDofs, kDofs> hessEf;           ///< Frictional contact energy Hessian
+    static constexpr int kDofs = 3 * kStencil;   ///< Degrees of freedom involved
+    TScalar En;                                  ///< Normal contact energy
+    TScalar Ef;                                  ///< Frictional contact energy
+    Eigen::Vector<TScalar, kDofs> gradEn;        ///< Normal contact energy gradient
+    Eigen::Matrix<TScalar, kDofs, kDofs> hessEn; ///< Normal contact energy Hessian
+    Eigen::Vector<TScalar, kDofs> gradEf;        ///< Frictional contact energy gradient
+    Eigen::Matrix<TScalar, kDofs, kDofs> hessEf; ///< Frictional contact energy Hessian
+    Eigen::Vector<TIndex, kStencil> stencil;     ///< Indices of involved vertices
 };
 
 /**
@@ -431,6 +432,15 @@ class MeshDynamics
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& x,
         int computationFlags);
     /**
+     * @brief For each mesh contact energy (i.e. mesh-mesh and mesh-env), invoke the callback
+     * @tparam FOnMeshContactEnergy Callable type with signature
+     * `template <int K> void(MeshContactEnergy<ScalarType, kStencil>& energy)` for
+     * each mesh contact energy
+     * @param fOnMeshContactEnergy Callback to invoke
+     */
+    template <class FOnMeshContactEnergy>
+    void ForEachMeshContactEnergy(FOnMeshContactEnergy&& fOnMeshContactEnergy);
+    /**
      * @brief Compute the number of contacts of each type
      * @param nVertexVertexContacts Out: number of vertex-vertex dynamic contacts
      * @param nVertexEdgeContacts Out: number of vertex-edge dynamic contacts
@@ -453,7 +463,7 @@ class MeshDynamics
      * positions
      * @param X `3 x |# points|` point positions (column-major: one point per column)
      */
-    PBAT_API void UpdateGeometricQuantities(
+    void UpdateGeometricQuantities(
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
     /**
      * @brief Get the Params object
@@ -520,16 +530,19 @@ class MeshDynamics
     Eigen::Index mNumTruncatedPoints{0};         ///< Number of truncated points in last truncation
     bool mRequiresBoundsRecomputation{true};     ///< Whether bounds recomputation is required
 
-    std::vector<MeshMeshContactEnergy<ScalarType, 2>>
+    std::vector<MeshContactEnergy<ScalarType, IndexType, 2>>
         mVertexVertexEnergies; ///< Vertex-vertex energies
-    std::vector<MeshMeshContactEnergy<ScalarType, 3>> mVertexEdgeEnergies; ///< Vertex-edge energies
-    std::vector<MeshMeshContactEnergy<ScalarType, 4>>
+    std::vector<MeshContactEnergy<ScalarType, IndexType, 3>>
+        mVertexEdgeEnergies; ///< Vertex-edge energies
+    std::vector<MeshContactEnergy<ScalarType, IndexType, 4>>
         mVertexTriangleEnergies; ///< Vertex-triangle energies
-    std::vector<MeshMeshContactEnergy<ScalarType, 4>> mEdgeEdgeEnergies; ///< Edge-edge energies
-    std::vector<MeshMeshContactEnergy<ScalarType, 1>>
-        mVertexEnvironmentEnergies;                                 ///< Vertex-environment energies
-    std::vector<MeshMeshContactEnergy<2>> mEdgeEnvironmentEnergies; ///< Edge-environment energies
-    std::vector<MeshMeshContactEnergy<ScalarType, 3>>
+    std::vector<MeshContactEnergy<ScalarType, IndexType, 4>>
+        mEdgeEdgeEnergies; ///< Edge-edge energies
+    std::vector<MeshContactEnergy<ScalarType, IndexType, 1>>
+        mVertexEnvironmentEnergies; ///< Vertex-environment energies
+    std::vector<MeshContactEnergy<ScalarType, IndexType, 2>>
+        mEdgeEnvironmentEnergies; ///< Edge-environment energies
+    std::vector<MeshContactEnergy<ScalarType, IndexType, 3>>
         mTriangleEnvironmentEnergies; ///< Triangle-environment energies
 
     /**
@@ -569,18 +582,17 @@ class MeshDynamics
  * @param kcp
  * @param b
  * @param eFlags Energy computation flags
- * @param energy Out: contact energy and its derivatives
+ * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar>
-void VertexVertexContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xj,
     TScalar r,
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 2>& energy);
+    EMeshEnergyComputationFlags eFlags);
 
 /**
  * @brief Compute vertex-edge contact energy and its derivatives
@@ -593,10 +605,10 @@ void VertexVertexContactEnergy(
  * @param kcp
  * @param b
  * @param eFlags Energy computation flags
- * @param energy Out: contact energy and its derivatives
+ * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar>
-void VertexEdgeContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
@@ -604,8 +616,7 @@ void VertexEdgeContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 3>& energy);
+    EMeshEnergyComputationFlags eFlags);
 
 /**
  * @brief Compute vertex-triangle contact energy and its derivatives
@@ -619,10 +630,10 @@ void VertexEdgeContactEnergy(
  * @param kcp
  * @param b
  * @param eFlags Energy computation flags
- * @param energy Out: contact energy and its derivatives
+ * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar>
-void VertexTriangleContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
@@ -631,8 +642,7 @@ void VertexTriangleContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 4>& energy);
+    EMeshEnergyComputationFlags eFlags);
 
 /**
  * @brief Compute edge-edge contact energy and its derivatives
@@ -646,10 +656,10 @@ void VertexTriangleContactEnergy(
  * @param kcp
  * @param b
  * @param eFlags Energy computation flags
- * @param energy Out: contact energy and its derivatives
+ * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar>
-void EdgeEdgeContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
     Eigen::Vector<TScalar, 3> const& xc,
@@ -658,8 +668,7 @@ void EdgeEdgeContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 4>& energy);
+    EMeshEnergyComputationFlags eFlags);
 
 /**
  * @brief Compute vertex-environment contact energy and its derivatives
@@ -671,18 +680,17 @@ void EdgeEdgeContactEnergy(
  * @param kcp
  * @param b
  * @param eFlags Energy computation flags
- * @param energy Out: contact energy and its derivatives
+ * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar>
-void VertexEnvironmentContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 1>& energy);
+    EMeshEnergyComputationFlags eFlags);
 
 /**
  * @brief Compute edge-environment contact energy and its derivatives
@@ -696,10 +704,10 @@ void VertexEnvironmentContactEnergy(
  * @param kcp
  * @param b
  * @param eFlags Energy computation flags
- * @param energy Out: contact energy and its derivatives
+ * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar>
-void EdgeEnvironmentContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
     Eigen::Vector<TScalar, 2> const& uv,
@@ -708,8 +716,7 @@ void EdgeEnvironmentContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 2>& energy);
+    EMeshEnergyComputationFlags eFlags);
 
 /**
  * @brief Compute triangle-environment contact energy and its derivatives
@@ -725,10 +732,10 @@ void EdgeEnvironmentContactEnergy(
  * @param kcp
  * @param b
  * @param eFlags Energy computation flags
- * @param energy Out: contact energy and its derivatives
+ * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar>
-void TriangleEnvironmentContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
     Eigen::Vector<TScalar, 3> const& xc,
@@ -738,8 +745,7 @@ void TriangleEnvironmentContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 3>& energy);
+    EMeshEnergyComputationFlags eFlags);
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 MeshDynamics<TScalar, TIndex>::Params&
@@ -959,7 +965,7 @@ void MeshDynamics<TScalar, TIndex>::SetDynamicGeometry(
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
     Eigen::Ref<Eigen::Matrix<TScalar, 3, Eigen::Dynamic> const> const& x,
-    int computationFlags)
+    int eFlags)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeEnergies");
     Eigen::Index nVertexVertexContacts{0};
@@ -1007,24 +1013,22 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
         [&](IndexType i, IndexType j) {
             Eigen::Vector<ScalarType, 3> xi = x.col(i);
             Eigen::Vector<ScalarType, 3> xj = x.col(j);
-            MeshMeshContactEnergy<ScalarType, 2> E{};
-            VertexVertexContactEnergy(
+            auto E                          = VertexVertexContactEnergy(
                 xi,
                 xj,
                 r,
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << i, j;
             mVertexVertexEnergies.push_back(std::move(E));
         },
         [&](IndexType i, Eigen::Vector<IndexType, 2> einds) {
-            MeshMeshContactEnergy<ScalarType, 3> E{};
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const xa = x.col(einds(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(einds(1));
-            VertexEdgeContactEnergy(
+            auto E                                = VertexEdgeContactEnergy(
                 xi,
                 xa,
                 xb,
@@ -1032,17 +1036,16 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << i, einds(0), einds(1);
             mVertexEdgeEnergies.push_back(std::move(E));
         },
         [&](IndexType i, Eigen::Vector<IndexType, 3> finds) {
-            MeshMeshContactEnergy<ScalarType, 4> E{};
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const xa = x.col(finds(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(finds(1));
             Eigen::Vector<ScalarType, 3> const xc = x.col(finds(2));
-            VertexTriangleContactEnergy(
+            auto E                                = VertexTriangleContactEnergy(
                 xi,
                 xa,
                 xb,
@@ -1051,17 +1054,16 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << i, finds(0), finds(1), finds(2);
             mVertexTriangleEnergies.push_back(std::move(E));
         },
         [&](Eigen::Vector<IndexType, 2> eindsi, Eigen::Vector<IndexType, 2> eindsj) {
-            MeshMeshContactEnergy<ScalarType, 4> E{};
             Eigen::Vector<ScalarType, 3> const xa = x.col(eindsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(eindsi(1));
             Eigen::Vector<ScalarType, 3> const xc = x.col(eindsj(0));
             Eigen::Vector<ScalarType, 3> const xd = x.col(eindsj(1));
-            EdgeEdgeContactEnergy(
+            auto E                                = EdgeEdgeContactEnergy(
                 xa,
                 xb,
                 xc,
@@ -1070,28 +1072,26 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << eindsi(0), eindsi(1), eindsj(0), eindsj(1);
             mEdgeEdgeEnergies.push_back(std::move(E));
         });
     ForEachMeshEnvironmentContact(
         [&](IndexType i, IndexType j) {
-            MeshMeshContactEnergy<ScalarType, 1> E{};
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
-            VertexEnvironmentContactEnergy(
+            auto E                                = VertexEnvironmentContactEnergy(
                 xi,
                 yj,
                 r,
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << i;
             mVertexEnvironmentEnergies.push_back(std::move(E));
         },
         [&](IndexType i, Eigen::Vector<IndexType, 2> eindsj) {
-            MeshMeshContactEnergy<ScalarType, 1> E{};
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const yc = mXstatic.col(eindsj(0));
             Eigen::Vector<ScalarType, 3> const yd = mXstatic.col(eindsj(1));
@@ -1099,19 +1099,18 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 FromEigen(xi),
                 FromEigen(yc),
                 FromEigen(yd));
-            VertexEnvironmentContactEnergy(
+            auto E = VertexEnvironmentContactEnergy(
                 xi,
                 xcp,
                 r,
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << i;
             mVertexEnvironmentEnergies.push_back(std::move(E));
         },
         [&](IndexType i, Eigen::Vector<IndexType, 3> findsj) {
-            MeshMeshContactEnergy<ScalarType, 1> E{};
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const ya = mXstatic.col(findsj(0));
             Eigen::Vector<ScalarType, 3> const yb = mXstatic.col(findsj(1));
@@ -1121,19 +1120,18 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 FromEigen(ya),
                 FromEigen(yb),
                 FromEigen(yc));
-            VertexEnvironmentContactEnergy(
+            auto E = VertexEnvironmentContactEnergy(
                 xi,
                 xcp,
                 r,
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << i;
             mVertexEnvironmentEnergies.push_back(std::move(E));
         },
         [&](Eigen::Vector<IndexType, 2> eindsi, IndexType j) {
-            MeshMeshContactEnergy<ScalarType, 2> E{};
             Eigen::Vector<ScalarType, 3> const xa = x.col(eindsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(eindsi(1));
             Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
@@ -1142,7 +1140,7 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 FromEigen(yj),
                 FromEigen(xa),
                 FromEigen(xb));
-            EdgeEnvironmentContactEnergy(
+            auto E = EdgeEnvironmentContactEnergy(
                 xa,
                 xb,
                 uv,
@@ -1151,12 +1149,11 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << eindsi(0), eindsi(1);
             mEdgeEnvironmentEnergies.push_back(std::move(E));
         },
         [&](Eigen::Vector<IndexType, 2> eindsi, Eigen::Vector<IndexType, 2> eindsj) {
-            MeshMeshContactEnergy<ScalarType, 2> E{};
             Eigen::Vector<ScalarType, 3> const xa = x.col(eindsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(eindsi(1));
             Eigen::Vector<ScalarType, 3> const yc = mXstatic.col(eindsj(0));
@@ -1168,7 +1165,7 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 FromEigen(yd));
             SVector<ScalarType, 2> const u{1 - st(0), st(0)};
             Eigen::Vector<ScalarType, 3> const xcp = (1 - st(1)) * yc + st(1) * yd;
-            EdgeEnvironmentContactEnergy(
+            auto E                                 = EdgeEnvironmentContactEnergy(
                 xa,
                 xb,
                 u,
@@ -1177,24 +1174,21 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << eindsi(0), eindsi(1);
             mEdgeEnvironmentEnergies.push_back(std::move(E));
         },
         [&](Eigen::Vector<IndexType, 3> findsi, IndexType j) {
-            MeshMeshContactEnergy<ScalarType, 3> E{};
             Eigen::Vector<ScalarType, 3> const xa = x.col(findsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(findsi(1));
             Eigen::Vector<ScalarType, 3> const xc = x.col(findsi(2));
             Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
-            // Closest point on dynamic triangle to static vertex
             SVector<ScalarType, 3> const uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
                 FromEigen(yj),
                 FromEigen(xa),
                 FromEigen(xb),
                 FromEigen(xc));
-            Eigen::Vector<ScalarType, 3> const xci = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
-            TriangleEnvironmentContactEnergy(
+            auto E = TriangleEnvironmentContactEnergy(
                 xa,
                 xb,
                 xc,
@@ -1204,8 +1198,8 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
                 kc,
                 kcp,
                 b,
-                static_cast<EMeshEnergyComputationFlags>(computationFlags),
-                E);
+                static_cast<EMeshEnergyComputationFlags>(eFlags));
+            E.stencil << findsi(0), findsi(1), findsi(2);
             mTriangleEnvironmentEnergies.push_back(std::move(E));
         });
 }
@@ -1642,38 +1636,88 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
     }
 }
 
-template <common::CFloatingPoint TScalar>
-void VertexVertexContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnMeshContactEnergy>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachMeshContactEnergy(FOnMeshContactEnergy&& fOnMeshContactEnergy)
+{
+    for (auto const& E : mVertexVertexEnergies)
+    {
+        fOnMeshContactEnergy(E);
+    }
+    for (auto const& E : mVertexEdgeEnergies)
+    {
+        fOnMeshContactEnergy(E);
+    }
+    for (auto const& E : mVertexTriangleEnergies)
+    {
+        fOnMeshContactEnergy(E);
+    }
+    for (auto const& E : mEdgeEdgeEnergies)
+    {
+        fOnMeshContactEnergy(E);
+    }
+    for (auto const& E : mVertexEnvironmentEnergies)
+    {
+        fOnMeshContactEnergy(E);
+    }
+    for (auto const& E : mEdgeEnvironmentEnergies)
+    {
+        fOnMeshContactEnergy(E);
+    }
+    for (auto const& E : mTriangleEnvironmentEnergies)
+    {
+        fOnMeshContactEnergy(E);
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xj,
     TScalar r,
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 2>& energy)
+    EMeshEnergyComputationFlags eFlags)
 {
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
+    MeshContactEnergy<TScalar, TIndex, 2> energy{};
     TScalar d = (xi - xj).norm();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    energy.En = dBdd(0);
-    energy.gradEn =
-        contact::potentials::GradientWrtClosestPoints(FromEigen(xi), FromEigen(xj), d, dBdd(1));
-    energy.hessEn = contact::potentials::HessianWrtClosestPoints(
-        FromEigen(xi),
-        FromEigen(xj),
-        d,
-        dBdd(1),
-        dBdd(2));
+    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    {
+        energy.En = dBdd(0);
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Gradient)
+    {
+        energy.gradEn = ToEigen(
+            contact::potentials::GradientWrtClosestPoints(
+                FromEigen(xi),
+                FromEigen(xj),
+                d,
+                dBdd(1)));
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Hessian)
+    {
+        energy.hessEn = ToEigen(
+            contact::potentials::HessianWrtClosestPoints(
+                FromEigen(xi),
+                FromEigen(xj),
+                d,
+                dBdd(1),
+                dBdd(2)));
+    }
     // TODO: Friction
+    return energy;
 }
 
-template <common::CFloatingPoint TScalar>
-void VertexEdgeContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
@@ -1681,13 +1725,13 @@ void VertexEdgeContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 3>& energy)
+    EMeshEnergyComputationFlags eFlags)
 {
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
+    MeshContactEnergy<TScalar, TIndex, 3> energy{};
     SVector<TScalar, 1> w{TScalar(1)};
     SVector<TScalar, 2> const uv = geometry::ClosestPointQueries::UvPointOnLineSegment(
         FromEigen(xi),
@@ -1697,28 +1741,40 @@ void VertexEdgeContactEnergy(
     TScalar const d                     = (xi - xcp).norm();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<3>(d, r, kc, kcp, b);
-    energy.En     = dBdd(0);
-    energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-        w,
-        uv,
-        FromEigen(xi),
-        FromEigen(xcp),
-        d,
-        dBdd(1));
-    energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-        w,
-        uv,
-        FromEigen(xi),
-        FromEigen(xcp),
-        d,
-        dBdd(1),
-        dBdd(2));
+    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    {
+        energy.En = dBdd(0);
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Gradient)
+    {
+        energy.gradEn = ToEigen(
+            contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
+                w,
+                uv,
+                FromEigen(xi),
+                FromEigen(xcp),
+                d,
+                dBdd(1)));
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Hessian)
+    {
+        energy.hessEn = ToEigen(
+            contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
+                w,
+                uv,
+                FromEigen(xi),
+                FromEigen(xcp),
+                d,
+                dBdd(1),
+                dBdd(2)));
+    }
     // TODO: Frictional contact energy, gradient, hessian
     // ...
+    return energy;
 }
 
-template <common::CFloatingPoint TScalar>
-void VertexTriangleContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
@@ -1727,13 +1783,13 @@ void VertexTriangleContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 4>& energy)
+    EMeshEnergyComputationFlags eFlags)
 {
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
+    MeshContactEnergy<TScalar, TIndex, 4> energy{};
     SVector<TScalar, 1> w{TScalar(1)};
     SVector<TScalar, 3> const uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
         FromEigen(xi),
@@ -1744,26 +1800,38 @@ void VertexTriangleContactEnergy(
     TScalar const d                     = (xi - xcp).norm();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    energy.En     = dBdd(0);
-    energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-        w,
-        uvw,
-        FromEigen(xi),
-        FromEigen(xcp),
-        d,
-        dBdd(1));
-    energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-        w,
-        uvw,
-        FromEigen(xi),
-        FromEigen(xcp),
-        d,
-        dBdd(1),
-        dBdd(2));
+    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    {
+        energy.En = dBdd(0);
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Gradient)
+    {
+        energy.gradEn = ToEigen(
+            contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
+                w,
+                uvw,
+                FromEigen(xi),
+                FromEigen(xcp),
+                d,
+                dBdd(1)));
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Hessian)
+    {
+        energy.hessEn = ToEigen(
+            contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
+                w,
+                uvw,
+                FromEigen(xi),
+                FromEigen(xcp),
+                d,
+                dBdd(1),
+                dBdd(2)));
+    }
+    return energy;
 }
 
-template <common::CFloatingPoint TScalar>
-void EdgeEdgeContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
     Eigen::Vector<TScalar, 3> const& xc,
@@ -1772,13 +1840,13 @@ void EdgeEdgeContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 4>& energy)
+    EMeshEnergyComputationFlags eFlags)
 {
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
+    MeshContactEnergy<TScalar, TIndex, 4> energy{};
     SVector<TScalar, 2> const st = geometry::ClosestPointQueries::LineSegments(
         FromEigen(xa),
         FromEigen(xb),
@@ -1791,61 +1859,85 @@ void EdgeEdgeContactEnergy(
     TScalar const d                     = (xci - xcj).norm();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    energy.En     = dBdd(0);
-    energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-        u,
-        v,
-        FromEigen(xci),
-        FromEigen(xcj),
-        d,
-        dBdd(1));
-    energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-        u,
-        v,
-        FromEigen(xci),
-        FromEigen(xcj),
-        d,
-        dBdd(1),
-        dBdd(2));
+    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    {
+        energy.En = dBdd(0);
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Gradient)
+    {
+        energy.gradEn = ToEigen(
+            contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
+                u,
+                v,
+                FromEigen(xci),
+                FromEigen(xcj),
+                d,
+                dBdd(1)));
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Hessian)
+    {
+        energy.hessEn = ToEigen(
+            contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
+                u,
+                v,
+                FromEigen(xci),
+                FromEigen(xcj),
+                d,
+                dBdd(1),
+                dBdd(2)));
+    }
+    return energy;
 }
 
-template <common::CFloatingPoint TScalar>
-void VertexEnvironmentContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
     Eigen::Vector<TScalar, 3> const& xi,
     Eigen::Vector<TScalar, 3> const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 1>& energy)
+    EMeshEnergyComputationFlags eFlags)
 {
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
+    MeshContactEnergy<TScalar, TIndex, 1> energy{};
     TScalar const d = (xi - xcp).norm();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    energy.En     = dBdd(0);
-    energy.gradEn = contact::potentials::GradientSegmentWrtClosestPoints(
-        FromEigen(xi),
-        FromEigen(xcp),
-        d,
-        dBdd(1),
-        0);
-    energy.hessEn = contact::potentials::HessianBlockWrtClosestPoints(
-        FromEigen(xi),
-        FromEigen(xcp),
-        d,
-        dBdd(1),
-        dBdd(2),
-        0,
-        0);
+    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    {
+        energy.En = dBdd(0);
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Gradient)
+    {
+        energy.gradEn = ToEigen(
+            contact::potentials::GradientSegmentWrtClosestPoints(
+                FromEigen(xi),
+                FromEigen(xcp),
+                d,
+                dBdd(1),
+                0));
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Hessian)
+    {
+        energy.hessEn = ToEigen(
+            contact::potentials::HessianBlockWrtClosestPoints(
+                FromEigen(xi),
+                FromEigen(xcp),
+                d,
+                dBdd(1),
+                dBdd(2),
+                0,
+                0));
+    }
+    return energy;
 }
 
-template <common::CFloatingPoint TScalar>
-void EdgeEnvironmentContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
     Eigen::Vector<TScalar, 2> const& uv,
@@ -1854,35 +1946,47 @@ void EdgeEnvironmentContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 2>& energy)
+    EMeshEnergyComputationFlags eFlags)
 {
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
+    MeshContactEnergy<TScalar, TIndex, 2> energy{};
     Eigen::Vector<TScalar, 3> const xci = uv(0) * xa + uv(1) * xb;
     TScalar const d                     = (xci - xcp).norm();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    energy.En     = dBdd(0);
-    energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-        uv,
-        FromEigen(xci),
-        FromEigen(xcp),
-        d,
-        dBdd(1));
-    energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-        uv,
-        FromEigen(xci),
-        FromEigen(xcp),
-        d,
-        dBdd(1),
-        dBdd(2));
+    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    {
+        energy.En = dBdd(0);
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Gradient)
+    {
+        energy.gradEn = ToEigen(
+            contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
+                uv,
+                FromEigen(xci),
+                FromEigen(xcp),
+                d,
+                dBdd(1)));
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Hessian)
+    {
+        energy.hessEn = ToEigen(
+            contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
+                uv,
+                FromEigen(xci),
+                FromEigen(xcp),
+                d,
+                dBdd(1),
+                dBdd(2)));
+    }
+    return energy;
 }
 
-template <common::CFloatingPoint TScalar>
-void TriangleEnvironmentContactEnergy(
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
     Eigen::Vector<TScalar, 3> const& xa,
     Eigen::Vector<TScalar, 3> const& xb,
     Eigen::Vector<TScalar, 3> const& xc,
@@ -1892,26 +1996,43 @@ void TriangleEnvironmentContactEnergy(
     TScalar kc,
     TScalar kcp,
     TScalar b,
-    EMeshEnergyComputationFlags eFlags,
-    MeshMeshContactEnergy<TScalar, 3>& energy)
+    EMeshEnergyComputationFlags eFlags)
 {
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
-    TScalar const d = (xci - yj).norm();
+    MeshContactEnergy<TScalar, TIndex, 3> energy{};
+    Eigen::Vector<TScalar, 3> const xci = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
+    TScalar const d                     = (xci - xcp).norm();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    E.En = dBdd(0);
-    E.gradEn =
-        contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(uvw, xci, yj, d, dBdd(1));
-    E.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-        uvw,
-        xci,
-        yj,
-        d,
-        dBdd(1),
-        dBdd(2));
+    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    {
+        energy.En = dBdd(0);
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Gradient)
+    {
+        energy.gradEn = ToEigen(
+            contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
+                uvw,
+                xci,
+                xcp,
+                d,
+                dBdd(1)));
+    }
+    if (eFlags | EMeshEnergyComputationFlags::Hessian)
+    {
+        energy.hessEn = ToEigen(
+            contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
+                uvw,
+                xci,
+                xcp,
+                d,
+                dBdd(1),
+                dBdd(2)));
+    }
+    return energy;
 }
 
 } // namespace pbat::sim::contact
