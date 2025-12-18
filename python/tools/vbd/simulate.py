@@ -9,6 +9,7 @@ import h5py as h5
 import gc
 import inspect
 from tqdm import tqdm
+import numpy as np
 
 
 def vbd_prepare(
@@ -122,16 +123,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Simulation Tool")
     parser.add_argument(
         "-p",
-        "--solver_params", "--solver-params",
+        "--simulation_params", "--simulation-params",
         type=str, 
         default="",
         help=(
-            "Path to an h5 file containing solver parameters. "
+            "Path to an h5 file containing solver and contact parameters. "
             "The root group must contain attributes 'dt, bdf_scheme, fem_dynamics_init_strategy', "
             "and it should contain at least one subgroup holding the parameters of a solver. "
             f"Available solvers and their parameter object names are: {', '.join([f'solver={solver} params_names=({', '.join(data['params'].keys())})' for solver, data in _solver_params.items()])}"
         ), 
-        dest="solver_params",
+        dest="simulation_params",
     )
     parser.add_argument(
         "-sess",
@@ -284,6 +285,25 @@ def load_solver_params(
     return param_objs
 
 
+def load_contact_dynamics(
+    path: str | None = None
+):
+    contact_dynamics = pbat.sim.contact.MeshDynamics()
+    
+    try:
+        archive = pbat.io.Archive(path, flags=pbat.io.AccessMode.ReadOnly)
+        contact_dynamics.deserialize(
+            archive
+        )
+        archive = None
+        gc.collect()
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to load contact dynamics from '{path}': {e}"
+        ) from e
+    
+    return contact_dynamics
+
 def load_dirichlet_constraints(path: str):
     try:
         with h5.File(path, "r") as f:
@@ -306,12 +326,13 @@ def main():
         print(print_param_obj_spec(args.solver))
         return
     dt, bdf_scheme, fem_dynamics_init_strategy = load_time_integration(
-        args.solver_params
+        args.simulation_params
     )
     fem_elasto_dynamics, XP = load_fem_elasto_dynamics(args.session)
 
     # TODO: Actually deserialize contact dynamics
-    contact_dynamics = pbat.sim.contact.MeshDynamics()
+    contact_dynamics = load_contact_dynamics(args.simulation_params)
+    
     Xordering, Eordering, XCC, ECC, n_components = (
         pbat.graph.sorted_connected_component_ordering(
             fem_elasto_dynamics.X, fem_elasto_dynamics.E
@@ -322,7 +343,17 @@ def main():
     )
     contact_dynamics.set_dynamic_geometry(fem_elasto_dynamics.x, contact_meshes)
     
-    params = load_solver_params(args.solver, args.solver_params, args.overrides)
+    
+    # TODO: something with static meshes
+    # static_contact_meshes = pbat.sim.contact.MultiMesh(
+    #     np.array([]), np.array([]), n_components=0
+    # )
+    # contact_dynamics.set_static_geometry(np.array([]), static_contact_meshes)
+    device_config = pbat.geometry.DeviceConfig()
+    device = pbat.geometry.Device(device_config)
+    contact_dynamics.initialize(device)
+    
+    params = load_solver_params(args.solver, args.simulation_params, args.overrides)
     
     prepare = _solver_params[args.solver]["prepare"]
     prepare(fem_elasto_dynamics, contact_dynamics, params)
@@ -336,6 +367,8 @@ def main():
     fem_elasto_dynamics.set_initial_conditions(
         fem_elasto_dynamics.x, fem_elasto_dynamics.v
     )
+    
+    contact_dynamics.compute_displacement_bounds(fem_elasto_dynamics.X)
     xD = None if dirichlet_constraints is None else fem_elasto_dynamics.x.copy()
     t = 0
     archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
@@ -366,6 +399,7 @@ def main():
             initialization_strategy=fem_dynamics_init_strategy
         )
         # Solve time step
+        fem_elasto_dynamics.x = contact_dynamics.truncate_displacement(fem_elasto_dynamics.x, fem_elasto_dynamics.dmask)
         solve(fem_elasto_dynamics, contact_dynamics, params)
         # Step
         fem_elasto_dynamics.step()
