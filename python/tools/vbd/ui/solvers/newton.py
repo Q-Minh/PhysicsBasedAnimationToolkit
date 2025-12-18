@@ -73,7 +73,8 @@ class NewtonSolver(BaseSolver):
         # Newton needs a special truncation
         # dmin = contact.ogc_state.bv.min()
         # xt = fem.bdf.current_state()
-
+        # TODO: Remove this truncation method
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
         while newton.k < newton.n_max_iters:

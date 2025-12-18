@@ -72,6 +72,7 @@ class BroydenSolver(BaseSolver):
     ):
         if callback is None:
             callback = lambda: None
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         params: Params = self._params.params
         vbd = params.vbd_params
@@ -79,6 +80,7 @@ class BroydenSolver(BaseSolver):
         if contact.requires_bounds_computation:
             contact.compute_displacement_bounds(fem.x)
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         while broyden.k < vbd.n_max_iters:
             if contact.requires_bounds_computation:

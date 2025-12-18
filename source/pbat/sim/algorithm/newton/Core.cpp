@@ -164,3 +164,36 @@ TEST_CASE("[sim][algorithm][newton] Core")
     Scalar gnorm  = g.norm();
     CHECK_LT(gnorm, g0norm);
 }
+
+#include "pbat/io/Archive.h"
+
+TEST_CASE("[sim][algorithm][newton] Sandbox")
+{
+//     using namespace pbat;
+//     using namespace pbat::sim::algorithm;
+//     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+//     using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
+//     using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
+//     // Arrange
+//     io::Archive archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
+//     FemElastoDynamics fem{};
+//     fem.Deserialize(archive["fem"]);
+//     MeshDynamics contact{};
+//     contact.Deserialize(archive["contact"]);
+//     newton::Params params{};
+//     params.Deserialize(archive["newton/params"]);
+//     geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
+//     contact.Initialize(device);
+//     contact.GetParams().Construct();
+//     contact.ComputeDisplacementBounds(fem.x);
+//     auto initStrategy = static_cast<sim::dynamics::EFemElastoDynamicsTimeStepInitialization>(
+//         archive.ReadMetaData<int>("initialization_strategy"));
+//     // Act
+//     for (auto t = 0; t < 50; ++t)
+//     {
+//         fem.SetupTimeIntegrationOptimization(initStrategy);
+//         contact.TruncateDisplacement(fem.x, fem.dmask);
+//         newton::Solve(fem, contact, params);
+//         fem.Step();
+//     }
+}

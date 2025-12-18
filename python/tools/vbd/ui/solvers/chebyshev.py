@@ -72,12 +72,11 @@ class ChebyshevSolver(BaseSolver):
     ):
         if callback is None:
             callback = lambda: None
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         params: Params = self._params.params
         vbd = params.vbd_params
         chebyshev = params.chebyshev_params
-        if contact.requires_bounds_computation:
-            contact.compute_displacement_bounds(fem.x)
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
         while chebyshev.k < vbd.n_max_iters:
             if contact.requires_bounds_computation:

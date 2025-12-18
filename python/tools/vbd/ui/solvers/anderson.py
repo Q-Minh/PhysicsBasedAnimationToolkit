@@ -70,6 +70,7 @@ class AndersonSolver(BaseSolver):
     ):
         if callback is None:
             callback = lambda: None
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         params: Params = self._params.params
         vbd = params.vbd_params
@@ -77,6 +78,7 @@ class AndersonSolver(BaseSolver):
         if contact.requires_bounds_computation:
             contact.compute_displacement_bounds(fem.x)
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         while anderson.k < vbd.n_max_iters:
             if contact.requires_bounds_computation:

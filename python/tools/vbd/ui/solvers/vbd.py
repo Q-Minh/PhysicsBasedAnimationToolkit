@@ -43,6 +43,7 @@ class VbdSolver(BaseSolver):
     ):
         if callback is None:
             callback = lambda: None
+        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         for k in range(params.n_max_iters):

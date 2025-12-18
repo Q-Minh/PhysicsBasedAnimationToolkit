@@ -1667,7 +1667,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshMeshContact(
     }
     for (auto e = 0; e < nEdges; ++e)
     {
-        auto hei                                 = mDynamicMeshes.EHE(e, 0);
+        auto hei                                 = mDynamicMeshes.EHE(0, e);
         Eigen::Vector<IndexType, 2> const eindsi = mDynamicMeshes.E.col(e);
         mOgcState.ForEachDynamicContactFaceOfHalfEdge(
             hei,
@@ -1723,7 +1723,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
     }
     for (auto e = 0; e < nEdges; ++e)
     {
-        auto hei                                 = mDynamicMeshes.EHE(e, 0);
+        auto hei                                 = mDynamicMeshes.EHE(0, e);
         Eigen::Vector<IndexType, 2> const eindsi = mDynamicMeshes.E.col(e);
         mOgcState.ForEachStaticContactFaceOfHalfEdge(
             hei,
