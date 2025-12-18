@@ -165,16 +165,9 @@ class Simulation:
             return
         self._apply_procedural_constraints()
         self._profiler.begin_frame("Physics")
-        # xt = self._fem_dynamics.bdf.current_state().reshape(
-        #     self._fem_dynamics.x.shape, order="F"
-        # )
         self._fem_dynamics.setup_time_integration_optimization(
             initialization_strategy=self._fem_dynamics_init_strategy
         )
-        # rq = np.linalg.norm(self._fem_dynamics.xtilde - xt, axis=1).max()
-        # self._contact.contact_dynamics.params.ogc_params.rq = max(
-        #     rq, self._contact.contact_dynamics.params.ogc_params.r
-        # )
         self._solver.solve(
             self._fem_dynamics,
             self._contact.contact_dynamics,

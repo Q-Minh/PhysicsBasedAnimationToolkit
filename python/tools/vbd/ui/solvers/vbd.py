@@ -4,6 +4,7 @@ from ..params import ParameterObject
 import polyscope.imgui as imgui
 from .base import BaseSolver
 import typing
+import numpy as np
 
 
 class VbdSolver(BaseSolver):
@@ -43,6 +44,10 @@ class VbdSolver(BaseSolver):
     ):
         if callback is None:
             callback = lambda: None
+        xt = fem.bdf.current_state().reshape(fem.x.shape, order="F")
+        dnorms = np.linalg.norm(fem.x - xt, axis=0)
+        dnorm = np.max(dnorms)
+        contact.params.ogc_params.rq = contact.params.ogc_params.r + dnorm
         fem.x = contact.truncate_displacement(fem.x, fem.dmask)
         callback()
         params: pbat.sim.algorithm.vbd.Params = self._params.params

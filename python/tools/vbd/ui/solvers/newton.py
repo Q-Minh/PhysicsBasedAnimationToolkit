@@ -6,6 +6,7 @@ import polyscope.imgui as imgui
 from .serialize import serialize_solver_iteration
 from .base import BaseSolver
 import typing
+import numpy as np
 
 
 class NewtonSolver(BaseSolver):
@@ -71,10 +72,16 @@ class NewtonSolver(BaseSolver):
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
         # Newton needs a special truncation
-        # dmin = contact.ogc_state.bv.min()
-        # xt = fem.bdf.current_state()
-        # TODO: Remove this truncation method
-        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
+        contact.compute_displacement_bounds(fem.x)
+        xt = fem.bdf.current_state().reshape(fem.x.shape, order="F")
+        dnorms = np.linalg.norm(fem.x - xt, axis=0)
+        dnorm = np.max(dnorms)
+        contact.params.ogc_params.rq = contact.params.ogc_params.r + dnorm
+        dmin = contact.ogc_state.bv.min()
+        if dnorm > dmin:
+            fem.x[:, fem.free_nodes] = (
+                xt[:, fem.free_nodes] + (dmin / dnorm) * (fem.x - xt)[:, fem.free_nodes]
+            )
         callback()
         pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
         while newton.k < newton.n_max_iters:

@@ -49,6 +49,10 @@ class Contact:
                 self._contact_dynamics.static_meshes.F.T,
                 color=(0.72, 0.72, 0.72),
             )
+        else:
+            if self._environment_mesh is not None:
+                ps.remove_surface_mesh(self._environment_mesh.get_name())
+                self._environment_mesh = None
 
     @property
     def contact_dynamics(self):
