@@ -46,6 +46,22 @@ class BaseSolver(ABC):
     def deserialize(self, archive: pbat.io.Archive):
         pass
 
+    @abstractmethod
+    def serialize_problem(
+        self,
+        archive: pbat.io.Archive,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        """Serialize the current simulation problem.
+
+        Args:
+            archive (pbat.io.Archive): The archive to serialize to.
+            fem (pbat.sim.dynamics.FemElastoDynamics): The FEM dynamics object.
+            contact (pbat.sim.contact.MeshDynamics): The contact dynamics object.
+        """
+        pass
+
     @property
     def name(self) -> str:
         return self._name

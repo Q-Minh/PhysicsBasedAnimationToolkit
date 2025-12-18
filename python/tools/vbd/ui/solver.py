@@ -63,6 +63,14 @@ class Solver:
         for solver in self._solvers:
             solver.deserialize(archive[solver.name])
 
+    def serialize_problem(
+        self,
+        archive: pbat.io.Archive,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        self._solver.serialize_problem(archive, fem, contact)
+
     @property
     def solvers(self) -> list[base.BaseSolver]:
         return self._solvers

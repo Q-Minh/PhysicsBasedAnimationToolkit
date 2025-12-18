@@ -205,13 +205,26 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
             fem::EElementElasticityComputationFlags::Gradient |
             fem::EElementElasticityComputationFlags::Hessian,
         params.eSpdCorrection);
+    contact.ComputeEnergies(
+        fem.x,
+        sim::contact::EMeshEnergyComputationFlags::Potential |
+            sim::contact::EMeshEnergyComputationFlags::Gradient |
+            sim::contact::EMeshEnergyComputationFlags::Hessian);
     Scalar bt  = fem.bdf.BetaTilde();
     Scalar bt2 = bt * bt;
     fem.HgU *= bt2;
     fem.GgU *= bt2;
+    contact.ForEachMeshContactEnergy(
+        [&]<int kStencil>(sim::contact::MeshContactEnergy<Scalar, Index, kStencil>& energy) {
+            energy.gradEn *= bt2;
+            energy.gradEf *= bt2;
+            energy.hessEn *= bt2;
+            energy.hessEf *= bt2;
+        });
     Scalar U = fem::HyperElasticPotential(fem.UgU);
     Scalar K = fem.DiscreteKineticEnergy(fem.x);
-    return K + bt2 * U /* + C*/;
+    Scalar C = contact.Potential();
+    return K + bt2 * U + C;
 }
 
 /**
@@ -225,12 +238,13 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void ToGradient(
     FemElastoDynamics<TElasticEnergy> const& fem,
-    MeshDynamics& contact,
+    MeshDynamics const& contact,
     Eigen::Vector<Scalar, Eigen::Dynamic>& gk)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ToGradient");
-    // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x)
+    // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
+    contact.ToGradient(gk);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
     gk(fem.DirichletDofs()).setZero();
 }
@@ -250,8 +264,23 @@ void AssembleHessian(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.AssembleHessian");
-    // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x)
-    auto nTriplets = fem.HgU.size() + fem.M().size() /* + |C|*/;
+    // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
+    auto constexpr kVertexVertexStencil   = 2;
+    auto constexpr kVertexEdgeStencil     = 3;
+    auto constexpr kVertexTriangleStencil = 4;
+    auto constexpr kEdgeEdgeStencil       = 4;
+    auto constexpr kVertexEnvStencil      = 1;
+    auto constexpr kEdgeEnvStencil        = 2;
+    auto constexpr kTriangleEnvStencil    = 3;
+    auto const nTriplets =
+        fem.HgU.size() + fem.M().size() +
+        contact.NumVertexVertexContacts() * 9 * kVertexVertexStencil * kVertexVertexStencil +
+        contact.NumVertexEdgeContacts() * 9 * kVertexEdgeStencil * kVertexEdgeStencil +
+        contact.NumVertexTriangleContacts() * 9 * kVertexTriangleStencil * kVertexTriangleStencil +
+        contact.NumEdgeEdgeContacts() * 9 * kEdgeEdgeStencil * kEdgeEdgeStencil +
+        contact.NumVertexEnvironmentContacts() * 9 * kVertexEnvStencil * kVertexEnvStencil +
+        contact.NumEdgeEnvironmentContacts() * 9 * kEdgeEnvStencil * kEdgeEnvStencil +
+        contact.NumTriangleEnvironmentContacts() * 9 * kTriangleEnvStencil * kTriangleEnvStencil;
     params.triplets.resize(nTriplets);
     // Assemble
     std::size_t k{0};
@@ -279,6 +308,19 @@ void AssembleHessian(
                             nodes(jl) * kDims + jd,
                             HUg(il * kDims + id, jl * kDims + jd));
     }
+    // Contact Hessian contribution
+    contact.ForEachMeshContactEnergy(
+        [&]<int kStencil>(sim::contact::MeshContactEnergy<Scalar, Index, kStencil> const& E) {
+            for (auto jl = 0; jl < kStencil; ++jl)
+                for (auto jd = 0; jd < kDims; ++jd)
+                    for (auto il = 0; il < kStencil; ++il)
+                        for (auto id = 0; id < kDims; ++id)
+                            params.triplets[k++] = Eigen::Triplet<Scalar, Index>(
+                                E.stencil(il) * kDims + id,
+                                E.stencil(jl) * kDims + jd,
+                                E.hessEn(il * kDims + id, jl * kDims + jd) +
+                                    E.hessEf(il * kDims + id, jl * kDims + jd));
+        });
     // Assemble
     params.hessian.resize(fem.x.size(), fem.x.size());
     // Remove off-diagonal Dirichlet entries (always) and upper triangular part (when LLT is used)
@@ -342,6 +384,8 @@ void PrepareNextIteration(
     auto xk = fem.x.reshaped();
     params.newton.PrepareNextIteration(
         [&]([[maybe_unused]] auto const& xk) {
+            if (contact.RequiresBoundsComputation())
+                contact.ComputeDisplacementBounds(fem.x);
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
@@ -364,13 +408,20 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
     auto xk = fem.x.reshaped();
     return params.newton.Iterate(
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            return fem.Objective(xk) /* + C*/;
+            contact.ComputeEnergies(xk, sim::contact::EMeshEnergyComputationFlags::Potential);
+            auto const bt  = fem.bdf.BetaTilde();
+            auto const bt2 = bt * bt;
+            return fem.Objective(xk) + bt2 * contact.Potential();
         } /* f */,
-        [&]([[maybe_unused]] auto const& xk,
+        [&](auto const& xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
+            Scalar dxkn = dxk.stableNorm();
+            Scalar dmin = contact.OgcState().bv.minCoeff();
+            if (dxkn > dmin)
+                dxk *= (dmin / dxkn);
         } /* Hinv */,
         xk /* xk */);
 }
@@ -382,19 +433,28 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
     auto x0 = fem.x.reshaped();
     return params.newton.Solve(
         [&]([[maybe_unused]] auto const& xk) {
+            if (contact.RequiresBoundsComputation())
+                contact.ComputeDisplacementBounds(fem.x);
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            return fem.Objective(xk) /* + C*/;
+            contact.ComputeEnergies(xk, sim::contact::EMeshEnergyComputationFlags::Potential);
+            auto const bt  = fem.bdf.BetaTilde();
+            auto const bt2 = bt * bt;
+            return fem.Objective(xk) + bt2 * contact.Potential();
         } /* f */,
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, contact, gk);
         } /* g */,
-        [&]([[maybe_unused]] auto const& xk,
+        [&](auto const& xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
+            Scalar dxkn = dxk.stableNorm();
+            Scalar dmin = contact.OgcState().bv.minCoeff();
+            if (dxkn > dmin)
+                dxk *= (dmin / dxkn);
         } /* Hinv */,
         x0 /* xk */);
 }

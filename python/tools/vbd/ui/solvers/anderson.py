@@ -4,7 +4,6 @@ from ..params import ParameterObject
 import polyscope.imgui as imgui
 from .base import BaseSolver
 import typing
-import gc
 
 
 class Params:
@@ -75,15 +74,6 @@ class AndersonSolver(BaseSolver):
         params: Params = self._params.params
         vbd = params.vbd_params
         anderson = params.anderson_params
-        # serialize = False
-        # if serialize:
-        #     archive = pbat.io.Archive("sandbox.h5", pbat.io.AccessMode.Overwrite)
-        #     fem.serialize(archive["fem"])
-        #     contact.serialize(archive["contact"])
-        #     vbd.serialize(archive["vbd/params"])
-        #     anderson.serialize(archive["vbd/anderson_params"])
-        #     archive = None
-        #     gc.collect()
         if contact.requires_bounds_computation:
             contact.compute_displacement_bounds(fem.x)
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
@@ -109,3 +99,17 @@ class AndersonSolver(BaseSolver):
         anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
         vbd.deserialize(archive)
         anderson.deserialize(archive)
+
+    def serialize_problem(
+        self,
+        archive: pbat.io.Archive,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
+        fem.serialize(archive["fem"])
+        contact.serialize(archive["contact"])
+        vbd.serialize(archive["vbd/params"])
+        anderson.serialize(archive["vbd/anderson_params"])

@@ -17,6 +17,13 @@ void BindMeshDynamics(nanobind::module_& m)
     using MeshDynamicsParamsType = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>::Params;
     using MultiMeshType          = pbat::sim::contact::MultiMesh<IndexType>;
     using DeviceType             = pbat::geometry::Device;
+    using EMeshEnergyComputationFlags = pbat::sim::contact::EMeshEnergyComputationFlags;
+
+    nb::enum_<EMeshEnergyComputationFlags>(m, "EMeshEnergyComputationFlags", nb::is_arithmetic())
+        .value("Potential", EMeshEnergyComputationFlags::Potential, "Compute potential energy.")
+        .value("Gradient", EMeshEnergyComputationFlags::Gradient, "Compute contact gradients.")
+        .value("Hessian", EMeshEnergyComputationFlags::Hessian, "Compute contact hessians.")
+        .export_values();
 
     nb::class_<MeshDynamicsParamsType>(m, "MeshDynamicsParams")
         .def(nb::init<>(), "Construct default MeshDynamicsParams.")
@@ -169,6 +176,24 @@ void BindMeshDynamics(nanobind::module_& m)
             "Args:\n"
             "    X (Eigen.Matrix): `3 x |# points|` current point positions (column-major: one "
             "point per column).\n")
+        .def(
+            "compute_energies",
+            [](MeshDynamicsType& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
+               EMeshEnergyComputationFlags eFlags) { self.ComputeEnergies(x, eFlags); },
+            nb::arg("x"),
+            nb::arg("computation_flags"),
+            "Compute the contact energies based on current geometry.\n\n"
+            "Args:\n"
+            "    x (Eigen.Matrix): `3*|# points| x 1` or `3 x |# points|` current point positions "
+            "(column-major: one point per column).\n"
+            "    computation_flags (EMeshEnergyComputationFlags): Flags controlling which energy "
+            "components to compute (e.g., potential, gradient, hessian).\n")
+        .def_prop_ro("potential", &MeshDynamicsType::Potential, "Contact potential energy.")
+        .def_prop_ro(
+            "gradient",
+            &MeshDynamicsType::Gradient,
+            "`3*|# points| x 1` contact energy gradient.")
         .def(
             "serialize",
             &MeshDynamicsType::Serialize,

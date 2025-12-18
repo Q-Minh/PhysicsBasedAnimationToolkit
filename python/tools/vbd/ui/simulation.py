@@ -175,9 +175,6 @@ class Simulation:
         # self._contact.contact_dynamics.params.ogc_params.rq = max(
         #     rq, self._contact.contact_dynamics.params.ogc_params.r
         # )
-        self._fem_dynamics.x = self._contact.contact_dynamics.truncate_displacement(
-            self._fem_dynamics.x, self._fem_dynamics.dmask
-        )
         self._solver.solve(
             self._fem_dynamics,
             self._contact.contact_dynamics,
@@ -232,6 +229,8 @@ class Simulation:
 
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
         step = imgui.Button("Step", button_size)
+        if imgui.Button("Dump", button_size):
+            self._serialize_problem()
         reset = imgui.Button("Reset", button_size)
         imgui.Text(f"Time step={self._t}, t={self._t * self._dt:.4f}s")
         if reset:
@@ -378,3 +377,27 @@ class Simulation:
                 name, self._xD[:, start:end], self._t, self._dt
             )
         fem.x = self._xD
+
+    def _serialize_problem(self):
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.asksaveasfilename(
+            title="Save problem (HDF5)",
+            defaultextension=".h5",
+            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")],
+        )
+        try:
+            if file_path:
+                archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
+                self._solver.serialize_problem(
+                    archive, self._fem_dynamics, self._contact.contact_dynamics
+                )
+                archive.write_metadata(
+                    "initialization_strategy", int(self._fem_dynamics_init_strategy.value)
+                )
+                archive = None
+                gc.collect()  # Force garbage collection to close the archive...
+        except Exception as e:
+            ps.error(f"Error saving problem:\n{e}")
+        finally:
+            root.destroy()

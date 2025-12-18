@@ -70,6 +70,10 @@ class NewtonSolver(BaseSolver):
             callback = lambda: None
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
+        # Newton needs a special truncation
+        # dmin = contact.ogc_state.bv.min()
+        # xt = fem.bdf.current_state()
+
         callback()
         pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
         while newton.k < newton.n_max_iters:
@@ -88,3 +92,14 @@ class NewtonSolver(BaseSolver):
     def deserialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.newton.Params = self._params.params
         params.deserialize(archive)
+
+    def serialize_problem(
+        self,
+        archive: pbat.io.Archive,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        fem.serialize(archive["fem"])
+        contact.serialize(archive["contact"])
+        params: pbat.sim.algorithm.newton.Params = self._params.params
+        params.serialize(archive["newton/params"])

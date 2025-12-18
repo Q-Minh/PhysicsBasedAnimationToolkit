@@ -100,3 +100,17 @@ class ChebyshevSolver(BaseSolver):
         chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
         vbd.deserialize(archive)
         chebyshev.deserialize(archive)
+
+    def serialize_problem(
+        self,
+        archive: pbat.io.Archive,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        params: Params = self._params.params
+        vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
+        chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
+        fem.serialize(archive["fem"])
+        contact.serialize(archive["contact"])
+        vbd.serialize(archive["vbd/params"])
+        chebyshev.serialize(archive["vbd/chebyshev_params"])

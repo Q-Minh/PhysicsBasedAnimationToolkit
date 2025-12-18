@@ -4,7 +4,6 @@ from ..params import ParameterObject
 import polyscope.imgui as imgui
 from .base import BaseSolver
 import typing
-import gc
 
 
 class VbdSolver(BaseSolver):
@@ -46,15 +45,6 @@ class VbdSolver(BaseSolver):
             callback = lambda: None
         callback()
         params: pbat.sim.algorithm.vbd.Params = self._params.params
-        # TODO: Remove
-        # serialize=False
-        # if serialize:
-        #     archive = pbat.io.Archive("sandbox.h5", pbat.io.AccessMode.Overwrite)
-        #     fem.serialize(archive["fem"])
-        #     contact.serialize(archive["contact"])
-        #     params.serialize(archive["vbd/params"])
-        #     archive = None
-        #     gc.collect()
         for k in range(params.n_max_iters):
             if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)
@@ -70,3 +60,14 @@ class VbdSolver(BaseSolver):
     def deserialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         params.deserialize(archive)
+
+    def serialize_problem(
+        self,
+        archive: pbat.io.Archive,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        fem.serialize(archive["fem"])
+        contact.serialize(archive["contact"])
+        params: pbat.sim.algorithm.vbd.Params = self._params.params
+        params.serialize(archive["vbd/params"])
