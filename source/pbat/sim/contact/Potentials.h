@@ -396,6 +396,7 @@ PBAT_HOST_DEVICE TScalar LaggedFriction::f2_x_minus_f1_over_x3(const TScalar y, 
  * @param d Distance (in the 2-norm) between closest points
  * @param dEdd Derivative of energy with respect to distance
  * @return `2*|# dims| x 1` gradient with respect to closest points `x` and `y`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixX,
@@ -410,7 +411,7 @@ GradientWrtClosestPoints(TMatrixX const& x, TMatrixY const& y, TScalar d, TScala
     mini::SVector<TScalar, 2 * kDims> g;
     auto gx = g.template Slice<kDims, 1>(0, 0);
     auto gy = g.template Slice<kDims, 1>(kDims, 0);
-    gx      = dEdd * (x - y) / (d + std::numeric_limits<TScalar>::min());
+    gx      = dEdd * (x - y) / d;
     gy      = -gx;
     return g;
 }
@@ -429,6 +430,7 @@ GradientWrtClosestPoints(TMatrixX const& x, TMatrixY const& y, TScalar d, TScala
  * @param i Index indicating which closest point to compute gradient for (0 for `x`, 1 for `y`)
  * @return `|# dims| x 1` gradient with respect to closest point `x` if `i==0`, or `y` if `i==1`
  * @pre `i` must be either `0` or `1`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixX,
@@ -442,10 +444,9 @@ PBAT_HOST_DEVICE auto GradientSegmentWrtClosestPoints(
     int i) -> mini::SVector<TScalar, TMatrixX::kRows>
 {
     static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
-    auto constexpr kDims = TMatrixX::kRows;
-    int const sgn        = (i == 0) * 1 + (i == 1) * -1;
-    mini::SVector<TScalar, kDims> gi =
-        (sgn * dEdd) * (x - y) / (d + std::numeric_limits<TScalar>::min());
+    auto constexpr kDims             = TMatrixX::kRows;
+    int const sgn                    = (i == 0) * 1 + (i == 1) * -1;
+    mini::SVector<TScalar, kDims> gi = (sgn * dEdd) * (x - y) / d;
     return gi;
 }
 
@@ -465,6 +466,7 @@ PBAT_HOST_DEVICE auto GradientSegmentWrtClosestPoints(
  * @param dEdd First derivative of energy with respect to distance
  * @param d2Edd2 Second derivative of energy with respect to distance
  * @return `2*|# dims| x 2*|# dims|` Hessian with respect to closest points `x` and `y`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixX,
@@ -479,7 +481,7 @@ PBAT_HOST_DEVICE auto HessianWrtClosestPoints(
 {
     static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
     auto constexpr kDims = TMatrixX::kRows;
-    TScalar dinv         = TScalar(1) / (d + std::numeric_limits<TScalar>::min());
+    TScalar dinv         = TScalar(1) / d;
     mini::Identity<TScalar, kDims, kDims> I{};
     mini::SVector<TScalar, kDims> const gx           = (x - y) * dinv;
     mini::SMatrix<TScalar, kDims, kDims> const gxgxT = gx * gx.Transpose();
@@ -515,6 +517,7 @@ PBAT_HOST_DEVICE auto HessianWrtClosestPoints(
  * @param i Block row index (0 for `x`, 1 for `y`)
  * @param j Block column index (0 for `x`, 1 for `y`)
  * @return `|# dims| x |# dims|` Hessian block `(i,j)` with respect to closest points `x` and `y`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixX,
@@ -531,7 +534,7 @@ PBAT_HOST_DEVICE auto HessianBlockWrtClosestPoints(
 {
     static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same dimensions.");
     auto constexpr kDims = TMatrixX::kRows;
-    TScalar dinv         = TScalar(1) / (d + std::numeric_limits<TScalar>::min());
+    TScalar dinv         = TScalar(1) / d;
     mini::Identity<TScalar, kDims, kDims> I{};
     mini::SVector<TScalar, kDims> const gx           = (x - y) * dinv;
     mini::SMatrix<TScalar, kDims, kDims> const gxgxT = gx * gx.Transpose();
@@ -559,6 +562,7 @@ PBAT_HOST_DEVICE auto HessianBlockWrtClosestPoints(
  * @param dEdd Derivative of energy with respect to distance
  * @return `|# verts 1 * # dims * # verts 2 * # dims| x 1` gradient with respect to `a,b` s.t.
  * closest points `x=U*a` and `y=V*b`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
@@ -613,6 +617,7 @@ PBAT_HOST_DEVICE auto GradientWrtLinearlyInterpolatedClosestPoints(
  * @param d2Edd2 Second derivative of energy with respect to distance
  * @return `|# verts 1 * # dims * # verts 2 * # dims| x |# verts 1 * # dims * # verts 2 * # dims|`
  * Hessian with respect `a,b` s.t. closest points `x=U*a` and `y=V*b`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
@@ -690,6 +695,7 @@ PBAT_HOST_DEVICE auto HessianWrtLinearlyInterpolatedClosestPoints(
  * @param i Index indicating which vertex of the selected closest point to compute gradient for
  * @return `|# dims| x 1` gradient with respect to vertex `i` of closest point `x` if `ib==0`, or
  * `y` if `ib==1`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
@@ -738,6 +744,7 @@ PBAT_HOST_DEVICE auto GradientSegmentWrtLinearlyInterpolatedClosestPoints(
  * @return `|# dims| x |# dims|` Hessian block `(i,j)` with respect to vertex `i` of closest point
  * `x` if `ib==0`, or `y` if `ib==1`, and vertex `j` of closest point `x` if `jb==0`, or `y` if
  * `jb==1`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
@@ -782,6 +789,7 @@ PBAT_HOST_DEVICE auto HessianBlockWrtLinearlyInterpolatedClosestPoints(
  * @param dEdd First derivative of energy with respect to distance
  * @return `|# verts 1 * # dims| x 1` gradient with respect to `a` such that `x = U*a` and `y` is
  * static
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
@@ -826,6 +834,7 @@ PBAT_HOST_DEVICE auto GradientWrtLinearlyInterpolatedClosestPoints(
  * @param d2Edd2 Second derivative of energy with respect to distance
  * @return `|# verts 1 * # dims| x |# verts 1 * # dims|` Hessian with respect to `a` such that
  * `x=U*a` and `y` is static
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
@@ -874,6 +883,7 @@ PBAT_HOST_DEVICE auto HessianWrtLinearlyInterpolatedClosestPoints(
  * @param dEdd First derivative of energy with respect to distance
  * @param i Vertex index on x to compute the gradient segment for
  * @return `|# dims| x 1` gradient with respect to vertex `i` of closest point `x`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
@@ -910,6 +920,7 @@ PBAT_HOST_DEVICE auto GradientSegmentWrtLinearlyInterpolatedClosestPoints(
  * @param i Vertex index on x for block row
  * @param j Vertex index on x for block column
  * @return `|# dims| x |# dims|` Hessian block `(i,j)` with respect to vertices of `x`
+ * @pre `d > 0`
  */
 template <
     mini::CMatrix TMatrixA,
