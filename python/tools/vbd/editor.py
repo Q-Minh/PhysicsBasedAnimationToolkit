@@ -189,12 +189,10 @@ class ModeStateMachine(StateMachine):
         n_bodies = len(tet_elastic_bodies)
         if n_bodies == 0:
             return
-
         # FEM dynamics object
         fem_dynamics, vert_counts, VP = make_fem_dynamics_object(
             tet_elastic_bodies, get_external_info=True
         )
-
         # Contact
         contact_dynamics = make_contact_dynamics_object(
             fem_dynamics,

@@ -55,6 +55,14 @@ void BindMeshDynamics(nanobind::module_& m)
             "Args:\n"
             "    kc (float): Contact stiffness parameter, `kc > 0`.\n")
         .def(
+            "construct",
+            &MeshDynamicsParamsType::Construct,
+            nb::arg("validate") = true,
+            nb::rv_policy::reference_internal,
+            "Construct the Params object.\n\n"
+            "Args:\n"
+            "    validate (bool, optional): Whether to validate parameters. Default is True.\n")
+        .def(
             "serialize",
             &MeshDynamicsParamsType::Serialize,
             nb::arg("archive"),
@@ -213,9 +221,14 @@ void BindMeshDynamics(nanobind::module_& m)
             "usability.\n\n"
             "Args:\n"
             "    archive (io.Archive): Archive to deserialize from.\n")
-        .def_prop_ro(
+        .def_prop_rw(
             "params",
-            [](MeshDynamicsType& self) -> MeshDynamicsParamsType& { return self.GetParams(); },
+            [](MeshDynamicsType const& self) -> MeshDynamicsParamsType const& {
+                return self.GetParams();
+            },
+            [](MeshDynamicsType& self, MeshDynamicsParamsType const& params) {
+                self.GetParams() = params;
+            },
             nb::rv_policy::reference_internal,
             "Mesh dynamics parameters.")
         .def_prop_ro("Xstatic", &MeshDynamicsType::StaticPointPositions, "Static point positions.")
