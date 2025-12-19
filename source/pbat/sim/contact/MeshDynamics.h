@@ -176,6 +176,10 @@ class MeshDynamics
         Eigen::MatrixBase<TDerivedXkp1>& Xkp1,
         Eigen::DenseBase<TMask> const& mask);
     /**
+     * @brief Request computation of displacement bounds
+     */
+    void RequestDisplacementBoundsComputation();
+    /**
      * @brief Get the number of truncated points from the last `TruncateDisplacement()`
      * call
      * @return Number of truncated points
@@ -925,6 +929,12 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
     });
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
     return mNumTruncatedPoints;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::RequestDisplacementBoundsComputation()
+{
+    mRequiresBoundsRecomputation = true;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
