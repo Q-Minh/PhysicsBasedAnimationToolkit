@@ -645,6 +645,7 @@ void InitializeSolve(
     contact::MeshDynamics<Scalar, Index>& contact,
     [[maybe_unused]] Params& params)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
     auto& ogcParams = contact.GetParams().mOgcParams;
     ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();

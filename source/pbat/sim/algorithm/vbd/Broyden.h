@@ -403,9 +403,6 @@ void Solve(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
-    if (contact.RequiresBoundsComputation())
-        contact.ComputeDisplacementBounds(fem.x);
-    InitializeSolve<TElasticEnergy>(fem, contact, params, broyden);
     for (; broyden.k < params.nMaxIters;)
     {
         if (contact.RequiresBoundsComputation())

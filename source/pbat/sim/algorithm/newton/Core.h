@@ -455,7 +455,10 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
             Scalar dmax = dxk.reshaped(fem.x.rows(), fem.x.cols()).colwise().norm().maxCoeff();
             Scalar dmin = contact.OgcState().bv.minCoeff();
             if (dmax > dmin)
+            {
                 dxk *= (dmin / dmax);
+                contact.RequestDisplacementBoundsComputation();
+            }
         } /* Hinv */,
         xk /* xk */);
 }
@@ -488,7 +491,10 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             Scalar dmax = dxk.reshaped(fem.x.rows(), fem.x.cols()).colwise().norm().maxCoeff();
             Scalar dmin = contact.OgcState().bv.minCoeff();
             if (dmax > dmin)
+            {
                 dxk *= (dmin / dmax);
+                contact.RequestDisplacementBoundsComputation();
+            }
         } /* Hinv */,
         x0 /* xk */);
 }

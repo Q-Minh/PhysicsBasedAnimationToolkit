@@ -157,6 +157,10 @@ void BindMeshDynamics(nanobind::module_& m)
             "ignore, false = process).\n\n"
             "Returns:\n"
             "    numpy.ndarray: `3 x |# points|` truncated point positions.\n")
+        .def(
+            "request_displacement_bounds_computation",
+            &MeshDynamicsType::RequestDisplacementBoundsComputation,
+            "Request recomputation of displacement bounds.")
         .def_prop_ro(
             "requires_bounds_computation",
             &MeshDynamicsType::RequiresBoundsComputation,

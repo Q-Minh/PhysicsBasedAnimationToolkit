@@ -192,9 +192,6 @@ void Solve(
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
-    if (contact.RequiresBoundsComputation())
-        contact.ComputeDisplacementBounds(fem.x);
-    InitializeSolve<TElasticEnergy>(fem, contact, params, anderson);
     for (; anderson.k < params.nMaxIters;)
     {
         if (contact.RequiresBoundsComputation())

@@ -164,9 +164,6 @@ void Solve(
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Solve");
-    if (contact.RequiresBoundsComputation())
-        contact.ComputeDisplacementBounds(fem.x);
-    InitializeSolve<TElasticEnergy>(fem, contact, params, cheb);
     for (; cheb.k < params.nMaxIters;)
     {
         if (contact.RequiresBoundsComputation())
