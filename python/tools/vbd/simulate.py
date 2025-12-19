@@ -206,6 +206,15 @@ def parse_args():
         dest="duration",
     )
     parser.add_argument(
+        "-f",
+        "--start_from",
+        "--start-from",
+        type=int,
+        default=0,
+        help="Frame number to start from. If greater than 0, will read fem object at that frame from the output file.",
+        dest="start_from",
+    )
+    parser.add_argument(
         "--spec",
         action="store_true",
         help="Print solver parameter specification and exit",
@@ -388,9 +397,17 @@ def main():
 
     xD = None if dirichlet_constraints is None else fem_elasto_dynamics.x.copy()
     t = 0
-    archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
-    fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
+    if args.start_from > 0:
+        t = args.start_from
+        archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.ReadWrite)
+        fem_elasto_dynamics.deserialize(archive[f"{out_group}/{t:08d}"])
+        pbar.update(t)
+    else:
+        archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
+        fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+    
 
     #################
     #  RUN THE SIM  #
