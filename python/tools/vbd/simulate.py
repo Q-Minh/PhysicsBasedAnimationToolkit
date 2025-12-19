@@ -103,6 +103,9 @@ _solver_params = {
         "params": {
             "newton": pbat.sim.algorithm.newton.Params,
         },
+        "sub_params": {
+            "newton": (pbat.math.optimization.Newton, pbat.math.optimization.BackTrackingLineSearch)
+        },
         "initialize_solve": lambda fem, contact, params: pbat.sim.algorithm.newton.initialize_solve(
             fem, contact, params["newton"]
         ),
@@ -114,6 +117,25 @@ _solver_params = {
 }
 
 
+def params(param_name, param_cls, basic_param_types, sub_param_types, message, tab_increment=0):
+    param_obj = param_cls()
+    for name, member in inspect.getmembers(param_obj):
+        if name.startswith("_"):
+            continue
+        if not isinstance(member, basic_param_types):
+            if sub_param_types is None or not isinstance(member, sub_param_types):
+                continue
+
+        t = type(member)
+        fqname = f"{t.__module__}.{t.__qualname__}"
+        if fqname.startswith("builtins."):
+            fqname = fqname[len("builtins.") :]
+        message += "    " * tab_increment
+        message += f"{param_name}.{name} = {fqname} ({getattr(type(param_obj), name).__doc__})\n"
+        # if sub_param_types is not None and isinstance(member, sub_param_types):
+        #     message = params(f"{param_name}.{name}", member, basic_param_types, sub_param_types, message, tab_increment=tab_increment + 1)
+    return message
+
 # TODO: Also print recursively, for example, a parameter object may have a member which is another parameter object!!!!
 def print_param_obj_spec(solver: str):
     if solver not in _solver_params:
@@ -122,18 +144,10 @@ def print_param_obj_spec(solver: str):
         )
     data = _solver_params[solver]
     message = ""
+    basic_param_types = (int, float, bool, str, enum.Enum)
     for param_name, param_cls in data["params"].items():
-        param_obj = param_cls()
-        for name, member in inspect.getmembers(param_obj):
-            if name.startswith("_") or not isinstance(
-                member, (int, float, bool, str, enum.Enum)
-            ):
-                continue
-            t = type(member)
-            fqname = f"{t.__module__}.{t.__qualname__}"
-            if fqname.startswith("builtins."):
-                fqname = fqname[len("builtins.") :]
-            message += f"{param_name}.{name} = {fqname} ({getattr(type(param_obj), name).__doc__})\n"
+        sub_param_types = data["sub_params"][param_name] if "sub_params" in data.keys() else None
+        message = params(param_name, param_cls, basic_param_types, sub_param_types, message)
     return message
 
 
