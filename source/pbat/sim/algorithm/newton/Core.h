@@ -319,9 +319,10 @@ void AssembleHessian(
     for (Eigen::Index g = 0; g < nQuadPtsU; ++g)
     {
         auto const nodes = fem.mesh.E.col(fem.egU(g));
-        auto HUg = fem.HgU.template block<kDims * ElementType::kNodes, kDims * ElementType::kNodes>(
-            0,
-            g * kDims * ElementType::kNodes);
+        auto const HUg =
+            fem.HgU.template block<kDims * ElementType::kNodes, kDims * ElementType::kNodes>(
+                0,
+                g * kDims * ElementType::kNodes);
         for (auto jl = 0; jl < ElementType::kNodes; ++jl)
             for (auto jd = 0; jd < kDims; ++jd)
                 for (auto il = 0; il < ElementType::kNodes; ++il)
@@ -355,11 +356,18 @@ void AssembleHessian(
             bool bIsDiag            = triplet.row() == triplet.col();
             bool bIsDirichletEntry =
                 fem.IsDirichletDof(triplet.row()) or fem.IsDirichletDof(triplet.col());
-            return (bIsUpperTriangular and params.eLinearSolver == ELinearSolver::LLT) or
-                   (not bIsDiag and bIsDirichletEntry);
+            return (bIsUpperTriangular) or (not bIsDiag and bIsDirichletEntry);
         });
     params.triplets.erase(itRemoveBegin, params.triplets.end());
     params.hessian.setFromTriplets(params.triplets.begin(), params.triplets.end());
+    // Make sure the hessian is symmetric after Eigen's setFromTriplets, which is subject to
+    // rounding errors
+    if (params.eLinearSolver != ELinearSolver::LLT)
+    {
+        using SparseMatrixType = decltype(params.hessian);
+        params.hessian         = (Scalar(0.5) * params.hessian) +
+                         SparseMatrixType(Scalar(0.5) * params.hessian.transpose());
+    }
 }
 
 /**
