@@ -27,6 +27,7 @@
 #include "pbat/sim/contact/MeshDynamics.h"
 
 #include <Eigen/Core>
+#include <exception>
 #include <fmt/core.h>
 #include <tbb/parallel_for.h>
 
@@ -296,7 +297,7 @@ void Iterate(
                             Hi(2, 0),
                             Hi(2, 1),
                             Hi(2, 2));
-                        std::terminate();
+                        throw std::runtime_error("NaN detected in contact derivative computation");
                     }
                 },
                 [&](Eigen::Vector<Index, 2> const& einds) {
@@ -329,7 +330,7 @@ void Iterate(
                             Hi(2, 0),
                             Hi(2, 1),
                             Hi(2, 2));
-                        std::terminate();
+                        throw std::runtime_error("NaN detected in contact derivative computation");
                     }
                 },
                 [&](Eigen::Vector<Index, 3> const& finds) {
@@ -364,7 +365,7 @@ void Iterate(
                             Hi(2, 0),
                             Hi(2, 1),
                             Hi(2, 2));
-                        std::terminate();
+                        throw std::runtime_error("NaN detected in contact derivative computation");
                     }
                 });
             contact.ForEachPointStaticMeshContact(
@@ -449,7 +450,7 @@ void Iterate(
                             Hi(2, 0),
                             Hi(2, 1),
                             Hi(2, 2));
-                        std::terminate();
+                        throw std::runtime_error("NaN detected in contact derivative computation");
                     }
                 },
                 [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
@@ -508,7 +509,7 @@ void Iterate(
                             Hi(2, 0),
                             Hi(2, 1),
                             Hi(2, 2));
-                        std::terminate();
+                        throw std::runtime_error("NaN detected in contact derivative computation");
                     }
                 });
             contact.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
@@ -597,7 +598,7 @@ void Iterate(
                             Hi(2, 0),
                             Hi(2, 1),
                             Hi(2, 2));
-                        std::terminate();
+                        throw std::runtime_error("NaN detected in contact derivative computation");
                     }
                 });
             contact.ForEachStaticPointContactOnTrianglesIncidentOnPoint(

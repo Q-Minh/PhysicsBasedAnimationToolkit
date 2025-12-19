@@ -1,6 +1,7 @@
 # type: ignore
 from pbatoolkit import pbat
 from ..params import ParameterObject
+import polyscope as ps
 import polyscope.imgui as imgui
 from .base import BaseSolver
 import typing
@@ -74,21 +75,24 @@ class BroydenSolver(BaseSolver):
         broyden = params.broyden_params
         if callback is None:
             callback = lambda: None
-        # Hack to register the initial iterate, because Anderson's initialize_solve
-        # computes both the initial iterate and the first iteration.
-        xcpy = fem.x.copy()
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd)
-        callback()
-        fem.x = xcpy
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
-        callback()
-        while broyden.k < vbd.n_max_iters:
-            if contact.requires_bounds_computation:
-                contact.compute_displacement_bounds(fem.x)
-            pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
-            fem.x = contact.truncate_displacement(fem.x, fem.dmask)
+        try:
+            # Hack to register the initial iterate, because Anderson's initialize_solve
+            # computes both the initial iterate and the first iteration.
+            xcpy = fem.x.copy()
+            pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd)
             callback()
-        fem.back_substitute_integrated_positions_into_velocities()
+            fem.x = xcpy
+            pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
+            callback()
+            while broyden.k < vbd.n_max_iters:
+                if contact.requires_bounds_computation:
+                    contact.compute_displacement_bounds(fem.x)
+                pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
+                fem.x = contact.truncate_displacement(fem.x, fem.dmask)
+                callback()
+            fem.back_substitute_integrated_positions_into_velocities()
+        except Exception as e:
+            ps.error(f"Broyden Solver encountered an error: {e}")
 
     def serialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params

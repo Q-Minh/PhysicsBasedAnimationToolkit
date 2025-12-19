@@ -5,7 +5,6 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .base import BaseSolver
 import typing
-import numpy as np
 
 
 class Params:
@@ -75,15 +74,18 @@ class ChebyshevSolver(BaseSolver):
         chebyshev = params.chebyshev_params
         if callback is None:
             callback = lambda: None
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
-        callback()
-        while chebyshev.k < vbd.n_max_iters:
-            if contact.requires_bounds_computation:
-                contact.compute_displacement_bounds(fem.x)
-            pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
-            fem.x = contact.truncate_displacement(fem.x, fem.dmask)
+        try:
+            pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
             callback()
-        fem.back_substitute_integrated_positions_into_velocities()
+            while chebyshev.k < vbd.n_max_iters:
+                if contact.requires_bounds_computation:
+                    contact.compute_displacement_bounds(fem.x)
+                pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
+                fem.x = contact.truncate_displacement(fem.x, fem.dmask)
+                callback()
+            fem.back_substitute_integrated_positions_into_velocities()
+        except Exception as e:
+            ps.error(f"Chebyshev Solver encountered an error: {e}")
 
     def serialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
