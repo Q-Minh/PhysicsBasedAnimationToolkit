@@ -70,18 +70,13 @@ class ChebyshevSolver(BaseSolver):
         contact: pbat.sim.contact.MeshDynamics,
         callback: typing.Callable[None, None] | None = None,
     ):
-        if callback is None:
-            callback = lambda: None
-        xt = fem.bdf.current_state().reshape(fem.x.shape, order="F")
-        dnorms = np.linalg.norm(fem.x - xt, axis=0)
-        dnorm = np.max(dnorms)
-        contact.params.ogc_params.rq = contact.params.ogc_params.r + dnorm
-        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
-        callback()
         params: Params = self._params.params
         vbd = params.vbd_params
         chebyshev = params.chebyshev_params
+        if callback is None:
+            callback = lambda: None
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
+        callback()
         while chebyshev.k < vbd.n_max_iters:
             if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)

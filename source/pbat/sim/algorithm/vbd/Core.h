@@ -154,51 +154,64 @@ struct Params
 };
 
 /**
+ * @brief Initialize VBD solve by preparing contact displacement bounds
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void InitializeSolve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact,
+    [[maybe_unused]] Params& params);
+
+/**
  * @brief One VBD minimization step
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params);
 
 /**
  * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params);
 
 /**
  * @brief Integrate FEM elasto dynamics one step using VBD as the non-linear solver
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
@@ -207,8 +220,8 @@ void Iterate(
     auto xtildeBdf     = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
     contact::potentials::LaggedFriction friction;
     typename contact::MeshDynamics<Scalar, Index>::Params const& contactParams =
-        meshDynamics.GetParams();
-    auto const& Xenv       = meshDynamics.StaticPointPositions();
+        contact.GetParams();
+    auto const& Xenv       = contact.StaticPointPositions();
     Scalar rB              = contactParams.mOgcParams.r;
     Scalar kcB             = contactParams.kc;
     Scalar kcpB            = contactParams.kcp;
@@ -256,7 +269,7 @@ void Iterate(
             // Contact energy
             mini::SVector<Scalar, 3> xi  = FromEigen(fem.x.col(i).template head<3>());
             mini::SVector<Scalar, 3> xti = -FromEigen(xtildeBdf.col(i).template head<3>());
-            meshDynamics.ForEachPointDynamicMeshContact(
+            contact.ForEachPointDynamicMeshContact(
                 i,
                 [&](Index j) {
                     mini::SVector<Scalar, 3> xcp = FromEigen(params.xb.col(j).template head<3>());
@@ -354,7 +367,7 @@ void Iterate(
                         std::terminate();
                     }
                 });
-            meshDynamics.ForEachPointStaticMeshContact(
+            contact.ForEachPointStaticMeshContact(
                 i,
                 [&](Index j) {
                     mini::SVector<Scalar, 3> xcp = FromEigen(Xenv.col(j).template head<3>());
@@ -399,7 +412,7 @@ void Iterate(
                         gi,
                         Hi);
                 });
-            meshDynamics.ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
+            contact.ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
                 i,
                 [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
                     // NOTE: xi1 should be xi
@@ -498,7 +511,7 @@ void Iterate(
                         std::terminate();
                     }
                 });
-            meshDynamics.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
+            contact.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
                 i,
                 [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
                     mini::SVector<Scalar, 3> xi2 =
@@ -543,7 +556,7 @@ void Iterate(
                         gi,
                         Hi);
                 });
-            meshDynamics.ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
+            contact.ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
                 i,
                 [&](Eigen::Vector<Index, 3> const& finds, Index j) {
                     int ilocal =
@@ -587,7 +600,7 @@ void Iterate(
                         std::terminate();
                     }
                 });
-            meshDynamics.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
+            contact.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
                 i,
                 [&](Eigen::Vector<Index, 3> const& finds, Index j) {
                     int ilocal =
@@ -627,18 +640,31 @@ void Iterate(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
+void InitializeSolve(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact,
+    [[maybe_unused]] Params& params)
+{
+    auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+    auto& ogcParams = contact.GetParams().mOgcParams;
+    ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
+    contact.ComputeDisplacementBounds(xt);
+    contact.TruncateDisplacement(fem.x, fem.dmask);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
     for (auto k = 0; k < params.nMaxIters; ++k)
     {
-        if (meshDynamics.RequiresBoundsComputation())
-            meshDynamics.ComputeDisplacementBounds(fem.x);
-        Iterate<TElasticEnergy>(fem, meshDynamics, params);
-        meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
+        if (contact.RequiresBoundsComputation())
+            contact.ComputeDisplacementBounds(fem.x);
+        Iterate<TElasticEnergy>(fem, contact, params);
+        contact.TruncateDisplacement(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
@@ -646,11 +672,11 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
-    Solve<TElasticEnergy>(fem, meshDynamics, params);
+    Solve<TElasticEnergy>(fem, contact, params);
     fem.Step();
 }
 

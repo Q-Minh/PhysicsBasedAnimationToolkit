@@ -42,15 +42,11 @@ class VbdSolver(BaseSolver):
         contact: pbat.sim.contact.MeshDynamics,
         callback: typing.Callable[None, None] | None = None,
     ):
+        params: pbat.sim.algorithm.vbd.Params = self._params.params
         if callback is None:
             callback = lambda: None
-        xt = fem.bdf.current_state().reshape(fem.x.shape, order="F")
-        dnorms = np.linalg.norm(fem.x - xt, axis=0)
-        dnorm = np.max(dnorms)
-        contact.params.ogc_params.rq = contact.params.ogc_params.r + dnorm
-        fem.x = contact.truncate_displacement(fem.x, fem.dmask)
+        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
         callback()
-        params: pbat.sim.algorithm.vbd.Params = self._params.params
         for k in range(params.n_max_iters):
             if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)

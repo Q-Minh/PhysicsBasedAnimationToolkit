@@ -71,19 +71,9 @@ class NewtonSolver(BaseSolver):
             callback = lambda: None
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
-        # Newton needs a special truncation
-        contact.compute_displacement_bounds(fem.x)
-        xt = fem.bdf.current_state().reshape(fem.x.shape, order="F")
-        dnorms = np.linalg.norm(fem.x - xt, axis=0)
-        dnorm = np.max(dnorms)
-        contact.params.ogc_params.rq = contact.params.ogc_params.r + dnorm
-        dmin = contact.ogc_state.bv.min()
-        if dnorm > dmin:
-            fem.x[:, fem.free_nodes] = (
-                xt[:, fem.free_nodes] + (dmin / dnorm) * (fem.x - xt)[:, fem.free_nodes]
-            )
-        callback()
         pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
+        callback()
+        pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
         while newton.k < newton.n_max_iters:
             if newton.gknorm2 < newton.gtol2:
                 break

@@ -104,85 +104,77 @@ void BindBroyden(nanobind::module_& m)
     m.def(
         "initialize_solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
+           MeshDynamicsType& contact,
            Params& params,
            BroydenParams& broyden) {
             pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(
                 fem,
-                meshDynamics,
+                contact,
                 params,
                 broyden);
         },
         nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
+        nb::arg("contact"),
         nb::arg("params"),
         nb::arg("broyden"),
         "Initialize the Broyden solver for VBD.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
         "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
     m.def(
         "iterate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
+           MeshDynamicsType& contact,
            Params& params,
            BroydenParams& broyden) {
-            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(
-                fem,
-                meshDynamics,
-                params,
-                broyden);
+            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, contact, params, broyden);
         },
         nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
+        nb::arg("contact"),
         nb::arg("params"),
         nb::arg("broyden"),
         "Perform one Broyden-accelerated VBD minimization iteration.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
         "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n");
     m.def(
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
+           MeshDynamicsType& contact,
            Params& params,
            BroydenParams& broyden) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, meshDynamics, params, broyden);
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, contact, params, broyden);
         },
         nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
+        nb::arg("contact"),
         nb::arg("params"),
         nb::arg("broyden"),
         "Solve the Broyden accelerated VBD minimization problem.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
         "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters");
     m.def(
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
+           MeshDynamicsType& contact,
            Params& params,
            BroydenParams& broyden) {
-            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(
-                fem,
-                meshDynamics,
-                params,
-                broyden);
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, contact, params, broyden);
         },
         nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
+        nb::arg("contact"),
         nb::arg("params"),
         nb::arg("broyden"),
         "Integrate one time step using VBD as non-linear solver.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
         "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters");
 }

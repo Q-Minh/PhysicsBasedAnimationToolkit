@@ -186,6 +186,29 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params const& params);
 
 /**
+ * @brief Truncate Newton step for OGC.
+ * @tparam TDerivedxk Eigen matrix type for xt
+ * @tparam TDerivedxkp1 Eigen matrix type for x
+ * @param contact The mesh contact dynamics problem
+ * @param xk `3 x |# points|` or `3*|# points| x 1` matrix of previous positions
+ * @param xkp1 `3 x |# points|` or `3*|# points| x 1` matrix of current positions
+ * @return (min,max) step size after truncation
+ */
+template <class TDerivedxk, class TDerivedxkp1>
+std::pair<Scalar, Scalar> MinMaxStepSize(
+    MeshDynamics const& contact,
+    Eigen::MatrixBase<TDerivedxk> const& _xk,
+    Eigen::MatrixBase<TDerivedxkp1> const& _xkp1)
+{
+    auto xkp1          = _xkp1.derived().reshaped(3, _xkp1.size() / 3);
+    auto xk            = _xk.derived().reshaped(3, _xk.size() / 3);
+    auto const dnorms  = (xkp1 - xk).colwise().norm();
+    Scalar const dnorm = dnorms.maxCoeff();
+    Scalar const dmin  = contact.OgcState().bv.minCoeff();
+    return {dmin, dnorm};
+}
+
+/**
  * @brief Derivative precomputation for the given finite element elasto dynamics problem.
  *
  * @tparam TElasticEnergy Hyper-elastic energy model
@@ -383,12 +406,12 @@ void PrepareNextIteration(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareNextIteration");
     auto xk = fem.x.reshaped();
     params.newton.PrepareNextIteration(
-        [&]([[maybe_unused]] auto const& xk) {
+        [&]([[maybe_unused]] auto const& _xk) {
             if (contact.RequiresBoundsComputation())
                 contact.ComputeDisplacementBounds(fem.x);
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
-        [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
+        [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, contact, gk);
         } /* g */,
         xk /* xk */);
@@ -398,7 +421,18 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
     params.newton.k = 0;
-    PrepareNextIteration(fem, contact, params);
+    auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+    auto& ogcParams = contact.GetParams().mOgcParams;
+    ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
+    contact.ComputeDisplacementBounds(xt);
+    Scalar const dmax = (fem.x - xt).colwise().norm().maxCoeff();
+    Scalar const dmin = contact.OgcState().bv.minCoeff();
+    if (dmax > dmin)
+    {
+        fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
+            xt(Eigen::placeholders::all, fem.FreeNodes()) +
+            (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
+    }
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -413,15 +447,15 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
             auto const bt2 = bt * bt;
             return fem.Objective(xk) + bt2 * contact.Potential();
         } /* f */,
-        [&](auto const& xk,
+        [&]([[maybe_unused]] auto const& _xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-            Scalar dxkn = dxk.stableNorm();
+            Scalar dmax = dxk.reshaped(fem.x.rows(), fem.x.cols()).colwise().norm().maxCoeff();
             Scalar dmin = contact.OgcState().bv.minCoeff();
-            if (dxkn > dmin)
-                dxk *= (dmin / dxkn);
+            if (dmax > dmin)
+                dxk *= (dmin / dmax);
         } /* Hinv */,
         xk /* xk */);
 }
@@ -446,15 +480,15 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, contact, gk);
         } /* g */,
-        [&](auto const& xk,
+        [&]([[maybe_unused]] auto const& _xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-            Scalar dxkn = dxk.stableNorm();
+            Scalar dmax = dxk.reshaped(fem.x.rows(), fem.x.cols()).colwise().norm().maxCoeff();
             Scalar dmin = contact.OgcState().bv.minCoeff();
-            if (dxkn > dmin)
-                dxk *= (dmin / dxkn);
+            if (dmax > dmin)
+                dxk *= (dmin / dmax);
         } /* Hinv */,
         x0 /* xk */);
 }

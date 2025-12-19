@@ -60,7 +60,7 @@ struct ChebyshevParams
  * @brief Initialize Chebyshev accelerated VBD minimization solve
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param cheb Chebyshev parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -68,7 +68,7 @@ struct ChebyshevParams
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb);
 
@@ -76,7 +76,7 @@ void InitializeSolve(
  * @brief One Chebyshev accelerated VBD minimization step
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param cheb Chebyshev parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -84,7 +84,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb);
 
@@ -93,7 +93,7 @@ void Iterate(
  * Chebyshev-accelerated VBD
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param cheb Chebyshev parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -101,7 +101,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb);
 
@@ -110,7 +110,7 @@ void Solve(
  * solver
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param cheb Chebyshev parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -118,19 +118,20 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.InitializeSolve");
     cheb.AllocateIfNeeded(fem.x.cols());
+    InitializeSolve(fem, contact, params);
     cheb.k    = 0;
     cheb.rho2 = cheb.rho * cheb.rho;
 }
@@ -138,13 +139,13 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Iterate");
-    Iterate(fem, meshDynamics, params);
-    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
+    Iterate(fem, contact, params);
+    contact.TruncateDisplacement(fem.x, fem.dmask);
     // Chebyshev Update
     cheb.omega = kernels::ChebyshevOmega(cheb.k, cheb.rho2, cheb.omega);
     auto& xk   = fem.x;
@@ -158,20 +159,20 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Solve");
-    if (meshDynamics.RequiresBoundsComputation())
-        meshDynamics.ComputeDisplacementBounds(fem.x);
-    InitializeSolve<TElasticEnergy>(fem, meshDynamics, params, cheb);
+    if (contact.RequiresBoundsComputation())
+        contact.ComputeDisplacementBounds(fem.x);
+    InitializeSolve<TElasticEnergy>(fem, contact, params, cheb);
     for (; cheb.k < params.nMaxIters;)
     {
-        if (meshDynamics.RequiresBoundsComputation())
-            meshDynamics.ComputeDisplacementBounds(fem.x);
-        Iterate<TElasticEnergy>(fem, meshDynamics, params, cheb);
-        meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
+        if (contact.RequiresBoundsComputation())
+            contact.ComputeDisplacementBounds(fem.x);
+        Iterate<TElasticEnergy>(fem, contact, params, cheb);
+        contact.TruncateDisplacement(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
@@ -179,13 +180,13 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Integrate");
     fem.SetupTimeIntegrationOptimization();
-    Solve<TElasticEnergy>(fem, meshDynamics, params, cheb);
+    Solve<TElasticEnergy>(fem, contact, params, cheb);
     fem.Step();
 }
 

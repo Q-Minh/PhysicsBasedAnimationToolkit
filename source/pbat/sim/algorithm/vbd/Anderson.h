@@ -69,7 +69,7 @@ struct AndersonParams
  * @brief Initialize Anderson accelerated VBD minimization solve
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param anderson Anderson parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -77,7 +77,7 @@ struct AndersonParams
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson);
 
@@ -85,7 +85,7 @@ void InitializeSolve(
  * @brief One Anderson accelerated VBD minimization step
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param anderson Anderson parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -93,7 +93,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson);
 
@@ -102,7 +102,7 @@ void Iterate(
  * VBD
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param anderson Anderson parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -110,7 +110,7 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson);
 
@@ -119,7 +119,7 @@ void Solve(
  * solver
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param meshDynamics Mesh contact dynamics (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
  * @param params Solver parameters
  * @param anderson Anderson parameters
  * @pre `TElasticEnergy::kDims == 3`
@@ -127,22 +127,23 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.InitializeSolve");
     anderson.AllocateIfNeeded(fem.x.size());
+    InitializeSolve(fem, contact, params);
     anderson.xkm1 = fem.x.reshaped();
-    Iterate(fem, meshDynamics, params);
-    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
+    Iterate(fem, contact, params);
+    contact.TruncateDisplacement(fem.x, fem.dmask);
     anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     anderson.cod.setThreshold(anderson.codNumericalZero);
     anderson.k = 1;
@@ -151,7 +152,7 @@ void InitializeSolve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Iterate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson)
 {
@@ -159,8 +160,8 @@ void Iterate(
     auto dkl             = pbat::common::Modulo(anderson.k - 1, anderson.m);
     anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
     anderson.xkm1        = fem.x.reshaped();
-    Iterate(fem, meshDynamics, params);
-    meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
+    Iterate(fem, contact, params);
+    contact.TruncateDisplacement(fem.x, fem.dmask);
     anderson.fk          = fem.x.reshaped() - anderson.xkm1;
     anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
     anderson.fkm1        = anderson.fk;
@@ -186,20 +187,20 @@ void Iterate(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
-    if (meshDynamics.RequiresBoundsComputation())
-        meshDynamics.ComputeDisplacementBounds(fem.x);
-    InitializeSolve<TElasticEnergy>(fem, meshDynamics, params, anderson);
+    if (contact.RequiresBoundsComputation())
+        contact.ComputeDisplacementBounds(fem.x);
+    InitializeSolve<TElasticEnergy>(fem, contact, params, anderson);
     for (; anderson.k < params.nMaxIters;)
     {
-        if (meshDynamics.RequiresBoundsComputation())
-            meshDynamics.ComputeDisplacementBounds(fem.x);
-        Iterate<TElasticEnergy>(fem, meshDynamics, params, anderson);
-        meshDynamics.TruncateDisplacement(fem.x, fem.dmask);
+        if (contact.RequiresBoundsComputation())
+            contact.ComputeDisplacementBounds(fem.x);
+        Iterate<TElasticEnergy>(fem, contact, params, anderson);
+        contact.TruncateDisplacement(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
@@ -207,13 +208,13 @@ void Solve(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Integrate(
     common::FemElastoDynamics<TElasticEnergy>& fem,
-    contact::MeshDynamics<Scalar, Index>& meshDynamics,
+    contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Integrate");
     fem.SetupTimeIntegrationOptimization();
-    Solve<TElasticEnergy>(fem, meshDynamics, params, anderson);
+    Solve<TElasticEnergy>(fem, contact, params, anderson);
     fem.Step();
 }
 

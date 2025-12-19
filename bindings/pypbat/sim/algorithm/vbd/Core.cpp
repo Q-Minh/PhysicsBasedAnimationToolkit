@@ -171,48 +171,55 @@ void BindCore(nanobind::module_& m)
 
     m.def(
         "iterate",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
-           Params& params) {
-            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, meshDynamics, params);
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
+            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, contact, params);
         },
         nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
+        nb::arg("contact"),
         nb::arg("params"),
         "Perform one VBD minimization iteration.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n");
+    m.def(
+        "initialize_solve",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
+            pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(fem, contact, params);
+        },
+        nb::arg("fem"),
+        nb::arg("contact"),
+        nb::arg("params"),
+        "Initialize the VBD minimization solve.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n");
     m.def(
         "solve",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
-           Params& params) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, meshDynamics, params);
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
+            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, contact, params);
         },
         nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
+        nb::arg("contact"),
         nb::arg("params"),
         "Solve the VBD minimization.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
     m.def(
         "integrate",
-        [](FemElastoDynamics<ElasticEnergyType>& fem,
-           MeshDynamicsType& meshDynamics,
-           Params& params) {
-            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, meshDynamics, params);
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
+            pbat::sim::algorithm::vbd::Integrate<ElasticEnergyType>(fem, contact, params);
         },
         nb::arg("fem"),
-        nb::arg("mesh_dynamics"),
+        nb::arg("contact"),
         nb::arg("params"),
         "Integrate one time step using VBD as non-linear solver.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    mesh_dynamics (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
 }
 
