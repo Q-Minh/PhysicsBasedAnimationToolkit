@@ -143,7 +143,7 @@ void InitializeSolve(
     InitializeSolve(fem, contact, params);
     anderson.xkm1 = fem.x.reshaped();
     Iterate(fem, contact, params);
-    contact.TruncateDisplacement(fem.x, fem.dmask);
+    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     anderson.cod.setThreshold(anderson.codNumericalZero);
     anderson.k = 1;
@@ -161,7 +161,7 @@ void Iterate(
     anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
     anderson.xkm1        = fem.x.reshaped();
     Iterate(fem, contact, params);
-    contact.TruncateDisplacement(fem.x, fem.dmask);
+    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     anderson.fk          = fem.x.reshaped() - anderson.xkm1;
     anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
     anderson.fkm1        = anderson.fk;
@@ -197,7 +197,7 @@ void Solve(
         if (contact.RequiresBoundsComputation())
             contact.ComputeDisplacementBounds(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, anderson);
-        contact.TruncateDisplacement(fem.x, fem.dmask);
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

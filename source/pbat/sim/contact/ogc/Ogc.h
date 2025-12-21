@@ -692,6 +692,7 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         TScalar const d2 = (xc1 - xc2).squaredNorm();
         // Update half-edge displacement bounds
         Eigen::Vector<TIndex, 2> const ehe1 = EHE.col(e1);
+        Eigen::Vector<TIndex, 2> const ehe2 = EHEenv.col(e2);
         common::AtomicMin(dmine(ehe1(0)), d2);
         if (ehe1(1) >= 0) // Boundary edge has no 2nd half-edge
             common::AtomicMin(dmine(ehe1(1)), d2);
@@ -713,9 +714,11 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
                 // need to reach ehe2(1), as it is redundant/unnecessary for computing an edge-edge
                 // contact potential (we only need the 2 pairs of 2 vertices in no particular
                 // order).
-                EOGC[ehe1(0)].emplace_back(a2, eFace2);
+                bool const bIsA2Edge = (eFace2 == 0);
+                TIndex const a       = bIsA2Edge * ehe2(0) + (not bIsA2Edge) * a2;
+                EOGC[ehe1(0)].emplace_back(a, eFace2);
                 if (ehe1(1) >= 0)
-                    EOGC[ehe1(1)].emplace_back(a2, eFace2);
+                    EOGC[ehe1(1)].emplace_back(a, eFace2);
             };
             switch (static_cast<EEdgeEdgeClosestFaceType>(eFace2))
             {

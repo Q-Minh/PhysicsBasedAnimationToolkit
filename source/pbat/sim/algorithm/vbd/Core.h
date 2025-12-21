@@ -651,7 +651,7 @@ void InitializeSolve(
     auto& ogcParams = contact.GetParams().mOgcParams;
     ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
     contact.ComputeDisplacementBounds(xt);
-    contact.TruncateDisplacement(fem.x, fem.dmask);
+    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -666,7 +666,7 @@ void Solve(
         if (contact.RequiresBoundsComputation())
             contact.ComputeDisplacementBounds(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params);
-        contact.TruncateDisplacement(fem.x, fem.dmask);
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

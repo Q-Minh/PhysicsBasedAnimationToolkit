@@ -159,28 +159,41 @@ class MeshDynamics
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
     template <class TDerivedXkp1>
-    Eigen::Index TruncateDisplacement(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
+    Eigen::Index TruncateDisplacedPositions(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
     /**
-     * @brief Truncate displacements to satisfy the computed displacement bounds
+     * @brief Truncate displacements from positions to satisfy the computed displacement bounds
      * @tparam TDerivedXkp1 Writeable matrix type
      * @tparam TMask Eigen dense base s.t. TMask::Scalar is convertible to bool
-     * @param Xkp1 `3 x |# points|` proposed new point positions (column-major: one point per
-     * column)
+     * @param Xkp1 `3 x |# points|` or `3*|# points| x 1` proposed new point positions
      * @param mask `|# points| x 1` mask of points to ignore (true = ignore, false = process)
      * @return Number of truncated points
      * @pre `Initialize()` has been called
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
     template <class TDerivedXkp1, class TMask>
-    Eigen::Index TruncateDisplacement(
+    Eigen::Index TruncateDisplacedPositions(
         Eigen::MatrixBase<TDerivedXkp1>& Xkp1,
+        Eigen::DenseBase<TMask> const& mask);
+    /**
+     * @brief Truncate displacements to satisfy the computed displacement bounds
+     * @tparam TDerivedDxkp1 Writeable matrix type
+     * @tparam TMask Eigen dense base s.t. TMask::Scalar is convertible to bool
+     * @param Dxkp1 `3 x |# points|` or `3*|# points| x 1` displacements
+     * @param mask `|# points| x 1` mask of points to ignore (true = ignore, false = process)
+     * @return Number of truncated points
+     * @pre `Initialize()` has been called
+     * @post Displacements have been truncated to satisfy the computed displacement bounds
+     */
+    template <class TDerivedDxkp1, class TMask>
+    Eigen::Index TruncateDisplacements(
+        Eigen::MatrixBase<TDerivedDxkp1>& Dxkp1,
         Eigen::DenseBase<TMask> const& mask);
     /**
      * @brief Request computation of displacement bounds
      */
     void RequestDisplacementBoundsComputation();
     /**
-     * @brief Get the number of truncated points from the last `TruncateDisplacement()`
+     * @brief Get the number of truncated points from the last `TruncateDisplacedPositions()`
      * call
      * @return Number of truncated points
      */
@@ -195,7 +208,7 @@ class MeshDynamics
      * bounds.
      * @tparam TDerivedX Matrix type
      * @param X `3 x |# points|` current point positions (column-major: one point per column)
-     * @pre `TruncateDisplacement()` has been called
+     * @pre `TruncateDisplacedPositions()` has been called
      */
     template <class TDerivedX>
     void ComputeDisplacementBounds(Eigen::DenseBase<TDerivedX> const& X);
@@ -889,20 +902,20 @@ inline void MeshDynamics<TScalar, TIndex>::Initialize(geometry::Device device)
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedXkp1>
 inline Eigen::Index
-MeshDynamics<TScalar, TIndex>::TruncateDisplacement(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
+MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
 {
     auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
-    TruncateDisplacement(Xkp1, mask);
+    TruncateDisplacedPositions(Xkp1, mask);
     return mNumTruncatedPoints;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedXkp1, class TMask>
-inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
     Eigen::MatrixBase<TDerivedXkp1>& _Xkp1,
     Eigen::DenseBase<TMask> const& mask)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacementWithMask");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacedPositions");
     static_assert(
         std::is_convertible_v<typename TMask::Scalar, bool>,
         "Mask scalar type must be convertible to bool");
@@ -925,6 +938,38 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacement(
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
         xkp1 = xk + d;
+        common::AtomicAdd(mNumTruncatedPoints, Eigen::Index{1});
+    });
+    mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
+    return mNumTruncatedPoints;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedDxkp1, class TMask>
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
+    Eigen::MatrixBase<TDerivedDxkp1>& _Dxkp1,
+    Eigen::DenseBase<TMask> const& mask)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacements");
+    static_assert(
+        std::is_convertible_v<typename TMask::Scalar, bool>,
+        "Mask scalar type must be convertible to bool");
+    mNumTruncatedPoints  = 0;
+    auto const nVertices = mDynamicMeshes.V.size();
+    auto Dxkp1           = _Dxkp1.derived().reshaped(3, _Dxkp1.size() / 3);
+    tbb::parallel_for(Eigen::Index{0}, nVertices, [&](Eigen::Index v) {
+        IndexType i          = mDynamicMeshes.V(v);
+        bool const bIsMasked = static_cast<bool>(mask(i));
+        if (bIsMasked)
+            return;
+        ScalarType const b        = mOgcState.bv(v);
+        auto d                    = Dxkp1.col(i);
+        ScalarType const dnorm    = d.norm();
+        bool const bIsWithinBound = dnorm <= b;
+        if (bIsWithinBound)
+            return;
+        // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
+        d *= (b / dnorm);
         common::AtomicAdd(mNumTruncatedPoints, Eigen::Index{1});
     });
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
@@ -1068,7 +1113,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << i, j;
             mVertexVertexEnergies.push_back(std::move(E));
         },
-        [&](IndexType i, Eigen::Vector<IndexType, 2> einds) {
+        [&](IndexType i, Eigen::Vector<IndexType, 2> const& einds) {
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const xa = x.col(einds(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(einds(1));
@@ -1084,7 +1129,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << i, einds(0), einds(1);
             mVertexEdgeEnergies.push_back(std::move(E));
         },
-        [&](IndexType i, Eigen::Vector<IndexType, 3> finds) {
+        [&](IndexType i, Eigen::Vector<IndexType, 3> const& finds) {
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const xa = x.col(finds(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(finds(1));
@@ -1102,7 +1147,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << i, finds(0), finds(1), finds(2);
             mVertexTriangleEnergies.push_back(std::move(E));
         },
-        [&](Eigen::Vector<IndexType, 2> eindsi, Eigen::Vector<IndexType, 2> eindsj) {
+        [&](Eigen::Vector<IndexType, 2> const& eindsi, Eigen::Vector<IndexType, 2> const& eindsj) {
             Eigen::Vector<ScalarType, 3> const xa = x.col(eindsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(eindsi(1));
             Eigen::Vector<ScalarType, 3> const xc = x.col(eindsj(0));
@@ -1135,7 +1180,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << i;
             mVertexEnvironmentEnergies.push_back(std::move(E));
         },
-        [&](IndexType i, Eigen::Vector<IndexType, 2> eindsj) {
+        [&](IndexType i, Eigen::Vector<IndexType, 2> const& eindsj) {
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const yc = mXstatic.col(eindsj(0));
             Eigen::Vector<ScalarType, 3> const yd = mXstatic.col(eindsj(1));
@@ -1154,7 +1199,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << i;
             mVertexEnvironmentEnergies.push_back(std::move(E));
         },
-        [&](IndexType i, Eigen::Vector<IndexType, 3> findsj) {
+        [&](IndexType i, Eigen::Vector<IndexType, 3> const& findsj) {
             Eigen::Vector<ScalarType, 3> const xi = x.col(i);
             Eigen::Vector<ScalarType, 3> const ya = mXstatic.col(findsj(0));
             Eigen::Vector<ScalarType, 3> const yb = mXstatic.col(findsj(1));
@@ -1175,7 +1220,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << i;
             mVertexEnvironmentEnergies.push_back(std::move(E));
         },
-        [&](Eigen::Vector<IndexType, 2> eindsi, IndexType j) {
+        [&](Eigen::Vector<IndexType, 2> const& eindsi, IndexType j) {
             Eigen::Vector<ScalarType, 3> const xa = x.col(eindsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(eindsi(1));
             Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
@@ -1197,7 +1242,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << eindsi(0), eindsi(1);
             mEdgeEnvironmentEnergies.push_back(std::move(E));
         },
-        [&](Eigen::Vector<IndexType, 2> eindsi, Eigen::Vector<IndexType, 2> eindsj) {
+        [&](Eigen::Vector<IndexType, 2> const& eindsi, Eigen::Vector<IndexType, 2> const& eindsj) {
             Eigen::Vector<ScalarType, 3> const xa = x.col(eindsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(eindsi(1));
             Eigen::Vector<ScalarType, 3> const yc = mXstatic.col(eindsj(0));
@@ -1222,7 +1267,7 @@ MeshDynamics<TScalar, TIndex>::ComputeEnergies(Eigen::MatrixBase<TDerivedX> cons
             E.stencil << eindsi(0), eindsi(1);
             mEdgeEnvironmentEnergies.push_back(std::move(E));
         },
-        [&](Eigen::Vector<IndexType, 3> findsi, IndexType j) {
+        [&](Eigen::Vector<IndexType, 3> const& findsi, IndexType j) {
             Eigen::Vector<ScalarType, 3> const xa = x.col(findsi(0));
             Eigen::Vector<ScalarType, 3> const xb = x.col(findsi(1));
             Eigen::Vector<ScalarType, 3> const xc = x.col(findsi(2));
@@ -1446,13 +1491,13 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointDynamicMeshContact(
         },
         [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
             IndexType he) {
-            Eigen::Vector<IndexType, 2> einds{
+            Eigen::Vector<IndexType, 2> const einds{
                 geometry::IncomingVertex(mDynamicMeshes.F, he),
                 geometry::OutgoingVertex(mDynamicMeshes.F, he)};
             func(einds);
         },
         [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
-            Eigen::Vector<IndexType, 3> finds = mDynamicMeshes.F.col(f);
+            Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
             func(finds);
         });
 }
@@ -1478,13 +1523,13 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointStaticMeshContact(
         },
         [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
             IndexType he) {
-            Eigen::Vector<IndexType, 2> einds{
+            Eigen::Vector<IndexType, 2> const einds{
                 geometry::IncomingVertex(mStaticMeshes.F, he),
                 geometry::OutgoingVertex(mStaticMeshes.F, he)};
             func(einds);
         },
         [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
-            Eigen::Vector<IndexType, 3> finds = mStaticMeshes.F.col(f);
+            Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
             func(finds);
         });
 }
@@ -1496,7 +1541,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeDynamicMeshContact(
     FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
     FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact)
 {
-    Eigen::Vector<IndexType, 2> eindsi{
+    Eigen::Vector<IndexType, 2> const eindsi{
         geometry::IncomingVertex(mDynamicMeshes.F, hei),
         geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
     mOgcState.ForEachDynamicContactFaceOfHalfEdge(
@@ -1510,7 +1555,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeDynamicMeshContact(
          &eindsi,
          func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
             IndexType hej) {
-            Eigen::Vector<IndexType, 2> eindsj{
+            Eigen::Vector<IndexType, 2> const eindsj{
                 geometry::IncomingVertex(mDynamicMeshes.F, hej),
                 geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
             func(eindsi, eindsj);
@@ -1524,7 +1569,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContact(
     FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
     FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact)
 {
-    Eigen::Vector<IndexType, 2> eindsi{
+    Eigen::Vector<IndexType, 2> const eindsi{
         geometry::IncomingVertex(mDynamicMeshes.F, hei),
         geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
     mOgcState.ForEachStaticContactFaceOfHalfEdge(
@@ -1534,8 +1579,10 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContact(
         [this,
          &eindsi,
          func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
-            IndexType ej) {
-            Eigen::Vector<IndexType, 2> eindsj = mStaticMeshes.E.col(ej);
+            IndexType hej) {
+            Eigen::Vector<IndexType, 2> const eindsj{
+                geometry::IncomingVertex(mStaticMeshes.F, hej),
+                geometry::OutgoingVertex(mStaticMeshes.F, hej)};
             func(eindsi, eindsj);
         });
 }
@@ -1612,8 +1659,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachDynamicPointContactOnTriangles
     auto heend   = mDynamicMeshes.GVHEp(i + 1);
     for (IndexType hei : mDynamicMeshes.GVHEadj.segment(hebegin, heend - hebegin))
     {
-        IndexType fi                      = geometry::FaceOfHalfEdge(hei);
-        Eigen::Vector<IndexType, 3> finds = mDynamicMeshes.F.col(fi);
+        IndexType fi                            = geometry::FaceOfHalfEdge(hei);
+        Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(fi);
         ForEachDynamicPointContactOnTriangle(
             fi,
             [finds, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
@@ -1631,8 +1678,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachStaticPointContactOnTrianglesI
     auto heend   = mDynamicMeshes.GVHEp(i + 1);
     for (IndexType hei : mDynamicMeshes.GVHEadj.segment(hebegin, heend - hebegin))
     {
-        IndexType fi                      = geometry::FaceOfHalfEdge(hei);
-        Eigen::Vector<IndexType, 3> finds = mDynamicMeshes.F.col(fi);
+        IndexType fi                            = geometry::FaceOfHalfEdge(hei);
+        Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(fi);
         ForEachStaticPointContactOnTriangle(
             fi,
             [finds, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
@@ -1720,8 +1767,10 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
                  fOnVertexEnvironmentVertexContact)](IndexType j) { func(i, j); },
             [&,
              func = std::forward<FOnVertexEnvironmentEdgeContact>(fOnVertexEnvironmentEdgeContact)](
-                IndexType e) {
-                Eigen::Vector<IndexType, 2> const einds = mStaticMeshes.E.col(e);
+                IndexType hej) {
+                Eigen::Vector<IndexType, 2> const einds{
+                    geometry::IncomingVertex(mStaticMeshes.F, hej),
+                    geometry::OutgoingVertex(mStaticMeshes.F, hej)};
                 func(i, einds);
             },
             [&,
@@ -1741,8 +1790,10 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
              func = std::forward<FOnEdgeEnvironmentVertexContact>(fOnEdgeEnvironmentVertexContact)](
                 IndexType j) { func(eindsi, j); },
             [&, func = std::forward<FOnEdgeEnvironmentEdgeContact>(fOnEdgeEnvironmentEdgeContact)](
-                IndexType ej) {
-                Eigen::Vector<IndexType, 2> const eindsj = mStaticMeshes.E.col(ej);
+                IndexType hej) {
+                Eigen::Vector<IndexType, 2> const eindsj{
+                    geometry::IncomingVertex(mStaticMeshes.F, hej),
+                    geometry::OutgoingVertex(mStaticMeshes.F, hej)};
                 func(eindsi, eindsj);
             });
     }

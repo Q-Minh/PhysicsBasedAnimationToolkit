@@ -168,10 +168,16 @@ class Simulation:
         self._fem_dynamics.setup_time_integration_optimization(
             initialization_strategy=self._fem_dynamics_init_strategy
         )
-        self._solver.solve(
-            self._fem_dynamics,
-            self._contact.contact_dynamics,
-        )
+        try:
+            self._solver.solve(
+                self._fem_dynamics,
+                self._contact.contact_dynamics,
+            )
+        except Exception as e:
+            ps.error(f"Simulation step failed:\n{e}")
+            self._simulate = False
+            self._profiler.end_frame("Physics")
+            return
         self._fem_dynamics.step()
         self._profiler.end_frame("Physics")
         self._update_visuals_after_position_change()

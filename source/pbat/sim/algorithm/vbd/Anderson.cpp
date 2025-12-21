@@ -180,7 +180,7 @@ TEST_CASE("[sim][algorithm][vbd] Anderson Sandbox")
 //     {
 //         fem.SetupTimeIntegrationOptimization(
 //             sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
-//         contact.TruncateDisplacement(fem.x, fem.dmask);
+//         contact.TruncateDisplacedPositions(fem.x, fem.dmask);
 //         sim::algorithm::vbd::Solve(fem, contact, params, andersonParams);
 //         fem.Step();
 //         Scalar const zMin = fem.x.row(2).minCoeff();

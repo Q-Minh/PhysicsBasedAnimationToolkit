@@ -230,7 +230,7 @@ void InitializeSolve(
 
     broyden.xkm1 = fem.x.reshaped();
     Iterate(fem, contact, params);
-    contact.TruncateDisplacement(fem.x, fem.dmask);
+    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
     broyden.k    = 1;
 }
@@ -248,7 +248,7 @@ void Iterate(
     broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
     broyden.xkm1        = fem.x.reshaped();
     Iterate(fem, contact, params);
-    contact.TruncateDisplacement(fem.x, fem.dmask);
+    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     broyden.fk          = broyden.xkm1 - fem.x.reshaped();
     broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
     broyden.fkm1        = broyden.fk;
@@ -408,7 +408,7 @@ void Solve(
         if (contact.RequiresBoundsComputation())
             contact.ComputeDisplacementBounds(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, broyden);
-        contact.TruncateDisplacement(fem.x, fem.dmask);
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

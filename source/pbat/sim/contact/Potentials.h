@@ -483,16 +483,17 @@ PBAT_HOST_DEVICE auto HessianWrtClosestPoints(
     auto constexpr kDims = TMatrixX::kRows;
     TScalar dinv         = TScalar(1) / d;
     mini::Identity<TScalar, kDims, kDims> I{};
-    mini::SVector<TScalar, kDims> const gx           = (x - y) * dinv;
-    mini::SMatrix<TScalar, kDims, kDims> const gxgxT = gx * gx.Transpose();
-    // mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
+    mini::SVector<TScalar, kDims> const gx            = (x - y) * dinv;
+    mini::SMatrix<TScalar, kDims, kDims> const gxgxT  = gx * gx.Transpose();
+    mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
     mini::SMatrix<TScalar, 2 * kDims, 2 * kDims> H;
     auto Hxx = H.template Slice<kDims, kDims>(0, 0);
     auto Hxy = H.template Slice<kDims, kDims>(0, kDims);
     auto Hyx = H.template Slice<kDims, kDims>(kDims, 0);
     auto Hyy = H.template Slice<kDims, kDims>(kDims, kDims);
     // NOTE: We omit the dEdd * d2ddxx term (Gauss-Newton approximation) to preserve positivity
-    Hxx = d2Edd2 * gxgxT /*+ dEdd * d2ddxx*/;
+    using namespace std;
+    Hxx = d2Edd2 * gxgxT + abs(dEdd) * Norm(d2ddxx) * I /*+ dEdd * d2ddxx*/;
     Hxy = -Hxx;
     Hyx = Hxy;
     Hyy = Hxx;
@@ -536,12 +537,14 @@ PBAT_HOST_DEVICE auto HessianBlockWrtClosestPoints(
     auto constexpr kDims = TMatrixX::kRows;
     TScalar dinv         = TScalar(1) / d;
     mini::Identity<TScalar, kDims, kDims> I{};
-    mini::SVector<TScalar, kDims> const gx           = (x - y) * dinv;
-    mini::SMatrix<TScalar, kDims, kDims> const gxgxT = gx * gx.Transpose();
-    // mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
-    int const sgn = (i == j) * 1 + (i != j) * -1;
+    mini::SVector<TScalar, kDims> const gx            = (x - y) * dinv;
+    mini::SMatrix<TScalar, kDims, kDims> const gxgxT  = gx * gx.Transpose();
+    mini::SMatrix<TScalar, kDims, kDims> const d2ddxx = dinv * (I - gxgxT);
+    int const sgn                                     = (i == j) * 1 + (i != j) * -1;
     // NOTE: We omit the dEdd * d2ddxx term (Gauss-Newton approximation) to preserve positivity
-    mini::SMatrix<TScalar, kDims, kDims> Hij = (sgn * d2Edd2) * gxgxT /* + (sgn * dEdd) * d2ddxx*/;
+    using namespace std;
+    mini::SMatrix<TScalar, kDims, kDims> Hij =
+        (sgn * d2Edd2) * gxgxT + (sgn * abs(dEdd) * Norm(d2ddxx)) * I /* + (sgn * dEdd) * d2ddxx*/;
     return Hij;
 }
 

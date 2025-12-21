@@ -144,15 +144,15 @@ void BindMeshDynamics(nanobind::module_& m)
             "Args:\n"
             "    device (Device): Device to use for acceleration structures.\n")
         .def(
-            "truncate_displacement",
+            "truncate_displaced_positions",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& Xkp1,
                std::optional<Eigen::Vector<bool, Eigen::Dynamic> const> mask) {
                 Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> Xkp1Copy = Xkp1;
                 if (mask)
-                    self.TruncateDisplacement(Xkp1Copy, *mask);
+                    self.TruncateDisplacedPositions(Xkp1Copy, *mask);
                 else
-                    self.TruncateDisplacement(Xkp1Copy);
+                    self.TruncateDisplacedPositions(Xkp1Copy);
                 return Xkp1Copy;
             },
             nb::arg("xkp1"),
@@ -165,6 +165,28 @@ void BindMeshDynamics(nanobind::module_& m)
             "ignore, false = process).\n\n"
             "Returns:\n"
             "    numpy.ndarray: `3 x |# points|` truncated point positions.\n")
+        .def(
+            "truncate_displacements",
+            [](MeshDynamicsType& self,
+               nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& Dxkp1,
+               std::optional<Eigen::Vector<bool, Eigen::Dynamic> const> mask) {
+                Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> Dxkp1Copy = Dxkp1;
+                if (mask)
+                    self.TruncateDisplacements(Dxkp1Copy, *mask);
+                else
+                    self.TruncateDisplacements(
+                        Dxkp1Copy,
+                        Eigen::Vector<bool, Eigen::Dynamic>::Constant(Dxkp1Copy.cols(), false));
+                return Dxkp1Copy;
+            },
+            nb::arg("dx"),
+            nb::arg("mask").none(),
+            "Truncate the displacements to be within the precomputed bounds.\n\n"
+            "Args:\n"
+            "    dx (numpy.ndarray): `3 x |# points|` point displacements (column-major: "
+            "one point per column).\n"
+            "    mask (numpy.ndarray | None): `|# points| x 1` mask of points to ignore (true = "
+            "ignore, false = process).\n")
         .def(
             "request_displacement_bounds_computation",
             &MeshDynamicsType::RequestDisplacementBoundsComputation,

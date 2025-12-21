@@ -21,7 +21,7 @@ enum class EEdgeEdgeClosestFaceType : int { Edge = 0, Vertex = 1 };
 template <common::CIndex TIndex>
 struct ContactFace
 {
-    using IndexType = TIndex; ///< Index type
+    using IndexType = TIndex;              ///< Index type
     using SelfType  = ContactFace<TIndex>; ///< Self type
     /**
      * @brief Construct a new Contact Face object
@@ -52,16 +52,18 @@ struct ContactFace
      * @brief Get the Vertex Facet Closest Face Type enum
      * @return EVertexFacetClosestFaceType
      */
-    EVertexFacetClosestFaceType VertexFacetClosestFaceType() const {
+    EVertexFacetClosestFaceType VertexFacetClosestFaceType() const
+    {
         return static_cast<EVertexFacetClosestFaceType>(eFace);
     }
     /** @brief Get the Edge Edge Closest Face Type enum
      * @return EEdgeEdgeClosestFaceType
      */
-    EEdgeEdgeClosestFaceType EdgeEdgeClosestFaceType() const {
+    EEdgeEdgeClosestFaceType EdgeEdgeClosestFaceType() const
+    {
         return static_cast<EEdgeEdgeClosestFaceType>(eFace);
     }
-    IndexType a; ///< Face (vertex, half-edge, edge or triangle) index
+    IndexType a; ///< Face (vertex, half-edge or triangle) index
     IndexType
         eFace; ///< Face type indicator (EVertexFacetClosestFaceType | EEdgeEdgeClosestFaceType)
 };

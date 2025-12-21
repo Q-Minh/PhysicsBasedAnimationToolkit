@@ -45,18 +45,15 @@ class VbdSolver(BaseSolver):
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         if callback is None:
             callback = lambda: None
-        try:
-            pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
+        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
+        callback()
+        for k in range(params.n_max_iters):
+            if contact.requires_bounds_computation:
+                contact.compute_displacement_bounds(fem.x)
+            pbat.sim.algorithm.vbd.iterate(fem, contact, params)
+            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
             callback()
-            for k in range(params.n_max_iters):
-                if contact.requires_bounds_computation:
-                    contact.compute_displacement_bounds(fem.x)
-                pbat.sim.algorithm.vbd.iterate(fem, contact, params)
-                fem.x = contact.truncate_displacement(fem.x, fem.dmask)
-                callback()
-            fem.back_substitute_integrated_positions_into_velocities()
-        except Exception as e:
-            ps.error(f"VBD Solver encountered an error: {e}")
+        fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.vbd.Params = self._params.params

@@ -433,14 +433,7 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& conta
     auto& ogcParams = contact.GetParams().mOgcParams;
     ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
     contact.ComputeDisplacementBounds(xt);
-    Scalar const dmax = (fem.x - xt).colwise().norm().maxCoeff();
-    Scalar const dmin = contact.OgcState().bv.minCoeff();
-    if (dmax > dmin)
-    {
-        fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
-            xt(Eigen::placeholders::all, fem.FreeNodes()) +
-            (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
-    }
+    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -460,13 +453,7 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-            Scalar dmax = dxk.reshaped(fem.x.rows(), fem.x.cols()).colwise().norm().maxCoeff();
-            Scalar dmin = contact.OgcState().bv.minCoeff();
-            if (dmax > dmin)
-            {
-                dxk *= (dmin / dmax);
-                contact.RequestDisplacementBoundsComputation();
-            }
+            contact.TruncateDisplacements(dxk, fem.dmask);
         } /* Hinv */,
         xk /* xk */);
 }
@@ -496,13 +483,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-            Scalar dmax = dxk.reshaped(fem.x.rows(), fem.x.cols()).colwise().norm().maxCoeff();
-            Scalar dmin = contact.OgcState().bv.minCoeff();
-            if (dmax > dmin)
-            {
-                dxk *= (dmin / dmax);
-                contact.RequestDisplacementBoundsComputation();
-            }
+            contact.TruncateDisplacements(dxk, fem.dmask);
         } /* Hinv */,
         x0 /* xk */);
 }
