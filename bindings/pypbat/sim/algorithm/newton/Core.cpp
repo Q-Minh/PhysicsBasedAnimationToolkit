@@ -15,6 +15,7 @@ void BindCore(nanobind::module_& m)
 {
     namespace nb = nanobind;
     using pbat::sim::algorithm::newton::ELinearSolver;
+    using pbat::sim::algorithm::newton::EOgcTruncationStrategy;
     using pbat::sim::algorithm::newton::Params;
     using ScalarType = pbat::Scalar;
     using IndexType  = pbat::Index;
@@ -37,6 +38,11 @@ void BindCore(nanobind::module_& m)
             "PCGLaplacian",
             ELinearSolver::PCGLaplacian,
             "Preconditioned Conjugate Gradient with Laplacian preconditioner")
+        .export_values();
+
+    nb::enum_<EOgcTruncationStrategy>(m, "EOgcTruncationStrategy")
+        .value("PerVertex", EOgcTruncationStrategy::PerVertex, "Per-vertex OGC truncation")
+        .value("Global", EOgcTruncationStrategy::Global, "Global OGC truncation")
         .export_values();
 
     nb::class_<Params>(m, "Params")
@@ -81,6 +87,12 @@ void BindCore(nanobind::module_& m)
             nb::rv_policy::reference_internal,
             "Set the linear solver type for the Newton step. Returns self.")
         .def(
+            "with_ogc_truncation_strategy",
+            &Params::WithOgcTruncationStrategy,
+            nb::arg("strategy"),
+            nb::rv_policy::reference_internal,
+            "Set the OGC truncation strategy. Returns self.")
+        .def(
             "construct",
             &Params::Construct,
             nb::arg("validate") = true,
@@ -111,7 +123,11 @@ void BindCore(nanobind::module_& m)
                 return std::make_tuple(rows, cols, vals);
             },
             "Hessian triplets as (rows, cols, vals) arrays.")
-        .def_rw("linear_solver", &Params::eLinearSolver, "Linear solver type used for Newton step");
+        .def_rw("linear_solver", &Params::eLinearSolver, "Linear solver type used for Newton step")
+        .def_rw(
+            "ogc_truncation_strategy",
+            &Params::eOgcTruncationStrategy,
+            "OGC truncation strategy used during Newton iterations");
 
     // Bind algorithm functions for a concrete energy model (3D stable neo-Hookean)
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
