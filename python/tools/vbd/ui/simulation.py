@@ -245,7 +245,7 @@ class Simulation:
         imgui.Text(
             f"Query radius: {self._contact.contact_dynamics.params.ogc_params.rq:.6f}"
         )
-
+        self._draw_trajectory_ui()
         imgui.PopID()
 
     def _draw_convergence_ui(self):
@@ -265,6 +265,19 @@ class Simulation:
             self._t += 1
         self._convergence.draw()
 
+    def _draw_trajectory_ui(self):
+        self._trajectory.set_timestep(self._dt)
+        self._trajectory.draw()
+        if self._trajectory.dirty:
+            if self._fem_dynamics is not None:
+                self._trajectory.undirty(
+                    lambda archive: self._fem_dynamics.deserialize(archive)
+                )
+                self._update_visuals_after_position_change()
+                self._t = self._trajectory.t
+            else:
+                self._trajectory.undirty(lambda archive: None)
+
     def _draw_io_ui(self, button_size):
         imgui.PushID("IO")
         export = imgui.Button("Export Sim Parameters", button_size)
@@ -281,16 +294,6 @@ class Simulation:
             imgui.EndTooltip()
         if load_scenario:
             self._deserialize_simulation_parameters()
-        self._trajectory.draw()
-        if self._trajectory.dirty:
-            if self._fem_dynamics is not None:
-                self._trajectory.undirty(
-                    lambda archive: self._fem_dynamics.deserialize(archive)
-                )
-                self._update_visuals_after_position_change()
-                self._t = self._trajectory.t
-            else:
-                self._trajectory.undirty(lambda archive: None)
         imgui.PopID()
 
     def _serialize_simulation_parameters(self):

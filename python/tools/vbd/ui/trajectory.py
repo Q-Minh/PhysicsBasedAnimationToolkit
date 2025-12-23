@@ -18,6 +18,8 @@ class Trajectory:
     _group: str
     _tmin: int
     _tmax: int
+    _autoplay: bool
+    _dt: float
 
     def __init__(self):
         self._archive = None
@@ -27,6 +29,8 @@ class Trajectory:
         self._group = "sim"
         self._tmin = 0
         self._tmax = 0
+        self._autoplay = False
+        self._dt = 1e-2
 
     def draw(self):
         imgui.PushID("Trajectory")
@@ -38,16 +42,25 @@ class Trajectory:
         imgui.SetNextItemWidth(button_size[0] * 0.8)
         _, self._group = imgui.InputText("Group", self._group)
         if self._archive is not None:
-            # TODO: Display trajectory file path
             imgui.SetNextItemWidth(width * 0.7)
             _, t = imgui.SliderInt("Frame", self._t, self._tmin, self._tmax)
             imgui.SameLine()
             imgui.SetNextItemWidth(width * 0.2)
             sync = imgui.Button("Sync")
+            _, self._autoplay = imgui.Checkbox("Autoplay", self._autoplay)
             if t != self._t or sync:
                 self._t = t
                 self._dirty = True
+            if self._autoplay:
+                elapsed = imgui.GetIO().DeltaTime
+                n_frames_advance = round(elapsed / self._dt)
+                self._t = min(self._t + n_frames_advance, self._tmax)
+                self._dirty = True
+
         imgui.PopID()
+
+    def set_timestep(self, dt: float):
+        self._dt = dt
 
     @property
     def dirty(self) -> bool:
