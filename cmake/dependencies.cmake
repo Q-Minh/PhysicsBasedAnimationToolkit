@@ -61,6 +61,17 @@ if(NOT TARGET embree)
     )
 endif()
 
+if(NOT TARGET Spectra)
+    FetchContent_Declare(
+        _spectra
+        GIT_REPOSITORY https://github.com/yixuan/spectra.git
+        GIT_TAG v1.2.0
+        GIT_PROGRESS TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(_spectra)
+endif()
+
 find_package(HDF5 CONFIG REQUIRED)
 
 if(NOT TARGET HighFive::HighFive)
