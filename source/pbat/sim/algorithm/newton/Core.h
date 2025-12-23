@@ -480,7 +480,11 @@ void TruncateDisplacedPositions(
             auto const dmax = (fem.x - xt).colwise().norm().maxCoeff();
             auto const dmin = contact.OgcState().bv.minCoeff();
             if (dmax > dmin)
-                fem.x = xt + (dmin / dmax) * (fem.x - xt);
+            {
+                fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
+                    xt(Eigen::placeholders::all, fem.FreeNodes()) +
+                    (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
+            }
             break;
         }
     }
