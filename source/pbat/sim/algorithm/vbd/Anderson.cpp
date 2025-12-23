@@ -159,31 +159,30 @@ TEST_CASE("[sim][algorithm][vbd] Anderson")
     CHECK_LT(gnorm, g0norm);
 }
 
-TEST_CASE("[sim][algorithm][vbd] Anderson Sandbox")
+#include <tbb/global_control.h>
+
+TEST_CASE("[sim][algorithm][anderson] Anderson Sandbox")
 {
-//     using namespace pbat;
-//     auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
-//     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-//     sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
-//     fem.Deserialize(archive["fem"]);
-//     sim::contact::MeshDynamics<Scalar, Index> contact;
-//     contact.Deserialize(archive["contact"]);
-//     sim::algorithm::vbd::Params params;
-//     params.Deserialize(archive["vbd/params"]);
-//     sim::algorithm::vbd::AndersonParams andersonParams;
-//     andersonParams.Deserialize(archive["vbd/anderson_params"]);
-//     geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
-//     contact.Initialize(device);
-//     Scalar const zPlane = contact.StaticPointPositions().row(2).minCoeff();
-//     contact.ComputeDisplacementBounds(fem.x);
-//     for (auto t = 0; t < 50; ++t)
-//     {
-//         fem.SetupTimeIntegrationOptimization(
-//             sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
-//         contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-//         sim::algorithm::vbd::Solve(fem, contact, params, andersonParams);
-//         fem.Step();
-//         Scalar const zMin = fem.x.row(2).minCoeff();
-//         CHECK_GT(zMin, zPlane);
-//     }
+    // using namespace pbat;
+    // auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
+    // using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    // sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
+    // fem.Deserialize(archive["fem"]);
+    // sim::contact::MeshDynamics<Scalar, Index> contact;
+    // contact.Deserialize(archive["contact"]);
+    // sim::algorithm::vbd::Params params;
+    // params.Deserialize(archive["vbd/params"]);
+    // sim::algorithm::vbd::AndersonParams andersonParams;
+    // andersonParams.Deserialize(archive["vbd/anderson_params"]);
+    // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
+    // contact.Initialize(device);
+    // tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
+    // for (auto t = 0; t < 50; ++t)
+    // {
+    //     fem.SetupTimeIntegrationOptimization(
+    //         sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
+    //     sim::algorithm::vbd::InitializeSolve(fem, contact, params, andersonParams);
+    //     sim::algorithm::vbd::Solve(fem, contact, params, andersonParams);
+    //     fem.Step();
+    // }
 }
