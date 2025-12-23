@@ -436,8 +436,11 @@ def main():
             initialization_strategy=fem_dynamics_init_strategy
         )
         # Solve
-        initialize_solve(fem_elasto_dynamics, contact_dynamics, solver_params)
-        solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+        try:
+            initialize_solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+            solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+        except Exception as e:
+            raise RuntimeError(f"Simulation failed at time step {t} (time={t*dt} s): {e}") from e
         # Step
         fem_elasto_dynamics.step()
         t += 1
