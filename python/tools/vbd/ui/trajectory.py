@@ -8,6 +8,7 @@ from pbatoolkit import pbat
 import h5py as h5
 import typing
 import gc
+import time
 
 
 class Trajectory:
@@ -20,6 +21,7 @@ class Trajectory:
     _tmax: int
     _autoplay: bool
     _dt: float
+    _clock_time: float
 
     def __init__(self):
         self._archive = None
@@ -31,6 +33,7 @@ class Trajectory:
         self._tmax = 0
         self._autoplay = False
         self._dt = 1e-2
+        self._clock_time = time.time()
 
     def draw(self):
         imgui.PushID("Trajectory")
@@ -47,15 +50,22 @@ class Trajectory:
             imgui.SameLine()
             imgui.SetNextItemWidth(width * 0.2)
             sync = imgui.Button("Sync")
-            _, self._autoplay = imgui.Checkbox("Autoplay", self._autoplay)
+            autoplay_changed, self._autoplay = imgui.Checkbox(
+                "Autoplay", self._autoplay
+            )
             if t != self._t or sync:
                 self._t = t
                 self._dirty = True
             if self._autoplay:
-                elapsed = imgui.GetIO().DeltaTime
-                n_frames_advance = round(elapsed / self._dt)
-                self._t = min(self._t + n_frames_advance, self._tmax)
-                self._dirty = True
+                self._dirty = self._t < self._tmax or self._dirty
+                if autoplay_changed:
+                    self._clock_time = time.time()
+                else:
+                    now = time.time()
+                    elapsed = now - self._clock_time
+                    self._clock_time = now
+                    n_frames_advance = round(elapsed / self._dt)
+                    self._t = min(self._t + n_frames_advance, self._tmax)
 
         imgui.PopID()
 
