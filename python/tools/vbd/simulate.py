@@ -342,9 +342,9 @@ def load_solver_params(
             final_attr = attr_path[-1]
             current_value = getattr(obj, final_attr)
             value_type = type(current_value)
-            if value_type == bool:
+            if isinstance(current_value, bool):
                 value = rhs.lower() in ("true", "1", "yes", "on")
-            elif value_type == enum.Enum:
+            elif isinstance(current_value, enum.Enum):
                 enum_values = list(value_type)
                 matched = False
                 for enum_value in enum_values:
@@ -486,6 +486,12 @@ def main():
         # Update progress bar
         pbar.update(1)
     pbar.close()
+
+    # If we made it to the end, delete the last checkpoint file
+    if previous_checkpoint_file is not None and os.path.exists(
+        previous_checkpoint_file
+    ):
+        os.remove(previous_checkpoint_file)
 
 
 if __name__ == "__main__":

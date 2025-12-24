@@ -190,14 +190,16 @@ class Simulation:
             bvmax = bv.max()
             bx = np.full(self._fem_dynamics.x.shape[1], bvmax)
             bx[self._contact.contact_dynamics.dynamic_meshes.V] = bv
+            r = self._contact.contact_dynamics.params.ogc_params.r
             self._fem_dynamics_vm.add_scalar_quantity(
-                "-bv", -bx, defined_on="vertices", cmap="coolwarm"
+                "-bv", -bx, defined_on="vertices", cmap="coolwarm", vminmax=(-r, 0)
             )
             self._fem_dynamics_vm.add_scalar_quantity(
                 "bvr",
                 bx <= self._contact.contact_dynamics.params.ogc_params.r,
                 defined_on="vertices",
                 cmap="reds",
+                vminmax=(0, 1),
             )
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes
