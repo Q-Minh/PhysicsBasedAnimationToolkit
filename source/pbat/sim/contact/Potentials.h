@@ -297,10 +297,10 @@ class LaggedFriction
     {
         TScalar ukn      = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         TScalar mulambda = mu * lambdakn;
-        gk               = ((mulambda * f1_over_x(ukn, epsvh))) * uk;
+        TScalar f1overx  = f1_over_x(ukn, epsvh);
+        gk               = (mulambda * f1overx) * uk;
         mini::Identity<TScalar, 2, 2> I;
-        Hk = mulambda *
-             (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
+        Hk = mulambda * (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1overx * I);
     }
     /**
      * @brief Compute the Hessian w.r.t. sliding velocity \f$ u_k \f$.
@@ -357,10 +357,10 @@ class LaggedFriction
     {
         TScalar ukn      = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         TScalar mulambda = mu * lambdakn;
-        gk               = ((mulambda * f1_over_x(ukn, epsvh))) * uk;
+        TScalar f1overx  = f1_over_x(ukn, epsvh);
+        gk               = (mulambda * f1overx) * uk;
         mini::Identity<TScalar, 2, 2> I;
-        Hk = mulambda *
-             (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
+        Hk = mulambda * (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1overx * I);
         return mulambda * f0(ukn, epsvh);
     }
 };

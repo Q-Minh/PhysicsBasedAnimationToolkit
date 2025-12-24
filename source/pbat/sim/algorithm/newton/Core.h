@@ -240,6 +240,7 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
         params.eSpdCorrection);
     contact.ComputeEnergies(
         fem.x,
+        -fem.bdf.Inertia(0),
         bt,
         sim::contact::EMeshEnergyComputationFlags::Potential |
             sim::contact::EMeshEnergyComputationFlags::Gradient |
@@ -504,7 +505,11 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
     return params.newton.Iterate(
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
             auto const bt = fem.bdf.BetaTilde();
-            contact.ComputeEnergies(xk, bt, sim::contact::EMeshEnergyComputationFlags::Potential);
+            contact.ComputeEnergies(
+                xk,
+                -fem.bdf.Inertia(0),
+                bt,
+                sim::contact::EMeshEnergyComputationFlags::Potential);
             return fem.Objective(xk) + contact.Potential();
         } /* f */,
         [&]([[maybe_unused]] auto const& _xk,
@@ -530,7 +535,11 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         } /* fPrepareDerivatives */,
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
             auto const bt = fem.bdf.BetaTilde();
-            contact.ComputeEnergies(xk, bt, sim::contact::EMeshEnergyComputationFlags::Potential);
+            contact.ComputeEnergies(
+                xk,
+                -fem.bdf.Inertia(0),
+                bt,
+                sim::contact::EMeshEnergyComputationFlags::Potential);
             return fem.Objective(xk) + contact.Potential();
         } /* f */,
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
