@@ -214,13 +214,16 @@ void BindMeshDynamics(nanobind::module_& m)
             "compute_energies",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
-               EMeshEnergyComputationFlags eFlags) { self.ComputeEnergies(x, eFlags); },
+               ScalarType h,
+               EMeshEnergyComputationFlags eFlags) { self.ComputeEnergies(x, h, eFlags); },
             nb::arg("x"),
+            nb::arg("h"),
             nb::arg("computation_flags"),
             "Compute the contact energies based on current geometry.\n\n"
             "Args:\n"
             "    x (Eigen.Matrix): `3*|# points| x 1` or `3 x |# points|` current point positions "
             "(column-major: one point per column).\n"
+            "    h (float): Time step size.\n"
             "    computation_flags (EMeshEnergyComputationFlags): Flags controlling which energy "
             "components to compute (e.g., potential, gradient, hessian).\n")
         .def_prop_ro("potential", &MeshDynamicsType::Potential, "Contact potential energy.")

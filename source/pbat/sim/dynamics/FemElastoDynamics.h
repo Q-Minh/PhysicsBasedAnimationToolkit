@@ -823,6 +823,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Gradien
         fem::EElementElasticityComputationFlags::Gradient,
         fem::EHyperElasticSpdCorrection::None);
     Eigen::Vector<ScalarType, Eigen::Dynamic> gU(_x.size());
+    gU.setZero();
     fem::ToHyperElasticGradient(mesh, egU, GgU, gU);
     Eigen::Vector<ScalarType, Eigen::Dynamic> gK =
         M().asDiagonal() * (_x.reshaped() - xtilde.reshaped());

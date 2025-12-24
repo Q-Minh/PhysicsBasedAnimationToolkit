@@ -31,7 +31,6 @@ namespace pbat::geometry {
 #include "Morton.h"
 #include "OverlapQueries.h"
 #include "PointTriangleCcd.h"
-#include "ShapeMatching.h"
 #include "SpatialSearch.h"
 #include "TetrahedralAabbHierarchy.h"
 #include "TriangleAabbHierarchy.h"

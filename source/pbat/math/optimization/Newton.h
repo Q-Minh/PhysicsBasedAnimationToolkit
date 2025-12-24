@@ -71,25 +71,14 @@ struct Newton
         Index n                     = 0,
         LineSearchType lineSearchIn = {});
     /**
-     * @brief Calls `PrepareNextIteration` but resets the iteration index to 0.
+     * @brief Resets the iteration index to 0 and allocates (if necessary) for the gradient.
      *
-     * @tparam FPrepareDerivatives Callable type with signature
-     * `fPrepareDerivatives(xk) -> TScalar`
-     * @tparam FGradient Callable type with signature `g(xk, gk) -> void` that computes the gradient
-     * at `xk` and stores it in `gk`
      * @tparam TDerivedX Derived type for the input iterate
-     * @param fPrepareDerivatives Callback to compute any quantities necessary prior to evaluating
-     * the objective function gradient and hessian. It must also return the objective function value
-     * at `xk`.
-     * @param g Gradient function
      * @param xk Current iterate
      * @post `k == 0`
      */
-    template <class FPrepareDerivatives, class FGradient, class TDerivedX>
-    void InitializeSolve(
-        FPrepareDerivatives const& fPrepareDerivatives,
-        FGradient const& g,
-        Eigen::MatrixBase<TDerivedX> const& xk);
+    template <class TDerivedX>
+    void InitializeSolve(Eigen::MatrixBase<TDerivedX> const& xk);
     /**
      * @brief Calls fPrepareDerivatives and evaluates the objective function and gradient at `xk`
      *
@@ -187,14 +176,11 @@ inline Newton<TScalar>::Newton(int nMaxItersIn, TScalar gtol, Index n, LineSearc
 }
 
 template <class TScalar>
-template <class FPrepareDerivatives, class FGradient, class TDerivedX>
-inline void Newton<TScalar>::InitializeSolve(
-    FPrepareDerivatives const& fPrepareDerivatives,
-    FGradient const& g,
-    Eigen::MatrixBase<TDerivedX> const& xk)
+template <class TDerivedX>
+inline void Newton<TScalar>::InitializeSolve(Eigen::MatrixBase<TDerivedX> const& xk)
 {
     k = 0;
-    PrepareNextIteration(fPrepareDerivatives, g, xk.derived());
+    gk.resize(xk.size());
 }
 
 template <class TScalar>
@@ -254,7 +240,7 @@ inline bool Newton<TScalar>::Solve(
     FHessianInverseProduct Hinv,
     Eigen::MatrixBase<TDerivedX>& xk)
 {
-    InitializeSolve(fPrepareDerivatives, g, xk.derived());
+    PrepareNextIteration(fPrepareDerivatives, g, xk.derived());
     for (; k < nMaxIters;)
     {
         if (gknorm2 < gtol2)
