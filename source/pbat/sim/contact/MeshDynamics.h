@@ -1915,10 +1915,10 @@ MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
     MeshContactEnergy<TScalar, TIndex, 2> energy{};
     TScalar d = (xi - xj).norm();
     contact::potentials::LaggedFriction friction{};
-    SMatrix<TScalar, 6, 2> T =
+    SMatrix<TScalar, 6, 2> const T =
         contact::PointPointLinearTangentialOperator(FromEigen(xi), FromEigen(xj));
-    SVector<TScalar, 2> uk = T.template Slice<3, 2>(0, 0).Transpose() * FromEigen(xi) +
-                             T.template Slice<3, 2>(3, 0).Transpose() * FromEigen(xj);
+    SVector<TScalar, 2> const uk = T.template Slice<3, 2>(0, 0).Transpose() * FromEigen(xi) +
+                                   T.template Slice<3, 2>(3, 0).Transpose() * FromEigen(xj);
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
     if (eFlags | EMeshEnergyComputationFlags::Potential)
@@ -2223,10 +2223,11 @@ MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
     using math::linalg::mini::ToEigen;
     MeshContactEnergy<TScalar, TIndex, 1> energy{};
     contact::potentials::LaggedFriction friction{};
-    TScalar const d = (xi - xcp).norm();
+    Eigen::Vector<TScalar, 3> const dx = xi - xcp;
+    TScalar const d                    = dx.norm();
     SMatrix<TScalar, 3, 2> T =
         contact::PointPointLinearTangentialOperatorBlock(FromEigen(xi), FromEigen(xcp), 0);
-    SVector<TScalar, 2> uk = T.Transpose() * FromEigen(xi);
+    SVector<TScalar, 2> uk = T.Transpose() * FromEigen(dx);
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
     TScalar const lambda = -dBdd(1);
@@ -2293,21 +2294,15 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
     contact::potentials::LaggedFriction friction{};
     Eigen::Vector<TScalar, 3> const xci = uv(0) * xa + uv(1) * xb;
     TScalar const d                     = (xci - xcp).norm();
-    SMatrix<TScalar, 6, 2> T;
-    T.template Slice<3, 2>(0, 0) = contact::PointEdgeLinearTangentialOperatorBlock(
+    SMatrix<TScalar, 9, 2> const T      = contact::PointEdgeLinearTangentialOperator(
         FromEigen(xcp),
         FromEigen(xa),
         FromEigen(xb),
-        uv(1),
-        1);
-    T.template Slice<3, 2>(3, 0) = contact::PointEdgeLinearTangentialOperatorBlock(
-        FromEigen(xcp),
-        FromEigen(xa),
-        FromEigen(xb),
-        uv(1),
-        2);
-    SVector<TScalar, 2> uk = T.template Slice<3, 2>(0, 0).Transpose() * FromEigen(xa) +
-                             T.template Slice<3, 2>(3, 0).Transpose() * FromEigen(xb);
+        uv(1));
+    SVector<TScalar, 2> const uk = T.template Slice<3, 2>(0, 0).Transpose() * FromEigen(xcp) +
+                                   T.template Slice<3, 2>(3, 0).Transpose() * FromEigen(xa) +
+                                   T.template Slice<3, 2>(6, 0).Transpose() * FromEigen(xb);
+    auto const Tedge = ToEigen(T).template bottomRows<6>();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
     TScalar const lambda = -dBdd(1);
@@ -2327,7 +2322,7 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
                 dBdd(1)));
         SVector<TScalar, 2> gradEf;
         friction.Grad(uk, mu, lambda, epsvh, gradEf);
-        energy.gradEf = ToEigen(T) * ToEigen(gradEf);
+        energy.gradEf = Tedge * ToEigen(gradEf);
     }
     if (eFlags | EMeshEnergyComputationFlags::Hessian)
     {
@@ -2346,7 +2341,7 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
             hessEf,
             math::linalg::EEigenvalueFilter::SpdProjection,
             hessEf);
-        energy.hessEf = ToEigen(T) * hessEf * ToEigen(T).transpose();
+        energy.hessEf = Tedge * hessEf * Tedge.transpose();
     }
     return energy;
 }
@@ -2374,28 +2369,16 @@ MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
     contact::potentials::LaggedFriction friction{};
     Eigen::Vector<TScalar, 3> const xci = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
     TScalar const d                     = (xci - xcp).norm();
-    SMatrix<TScalar, 9, 2> T;
-    T.template Slice<3, 2>(0, 0) = contact::PointTriangleLinearTangentialOperatorBlock(
+    SMatrix<TScalar, 12, 2> const T     = contact::PointTriangleLinearTangentialOperator(
         FromEigen(xa),
         FromEigen(xb),
         FromEigen(xc),
-        FromEigen(uvw),
-        1);
-    T.template Slice<3, 2>(3, 0) = contact::PointTriangleLinearTangentialOperatorBlock(
-        FromEigen(xa),
-        FromEigen(xb),
-        FromEigen(xc),
-        FromEigen(uvw),
-        2);
-    T.template Slice<3, 2>(6, 0) = contact::PointTriangleLinearTangentialOperatorBlock(
-        FromEigen(xa),
-        FromEigen(xb),
-        FromEigen(xc),
-        FromEigen(uvw),
-        3);
-    SVector<TScalar, 2> uk = T.template Slice<3, 2>(0, 0).Transpose() * FromEigen(xa) +
-                             T.template Slice<3, 2>(3, 0).Transpose() * FromEigen(xb) +
-                             T.template Slice<3, 2>(6, 0).Transpose() * FromEigen(xc);
+        FromEigen(uvw));
+    SVector<TScalar, 2> const uk = T.template Slice<3, 2>(0, 0).Transpose() * FromEigen(xcp) +
+                                   T.template Slice<3, 2>(3, 0).Transpose() * FromEigen(xa) +
+                                   T.template Slice<3, 2>(6, 0).Transpose() * FromEigen(xb) +
+                                   T.template Slice<3, 2>(9, 0).Transpose() * FromEigen(xc);
+    auto const Ttri = ToEigen(T).template bottomRows<9>();
     SVector<TScalar, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
     TScalar const lambda = -dBdd(1);
@@ -2415,7 +2398,7 @@ MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
                 dBdd(1)));
         SVector<TScalar, 2> gradEf;
         friction.Grad(uk, mu, lambda, epsvh, gradEf);
-        energy.gradEf = ToEigen(T) * ToEigen(gradEf);
+        energy.gradEf = Ttri * ToEigen(gradEf);
     }
     if (eFlags | EMeshEnergyComputationFlags::Hessian)
     {
@@ -2434,7 +2417,7 @@ MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
             hessEf,
             math::linalg::EEigenvalueFilter::SpdProjection,
             hessEf);
-        energy.hessEf = ToEigen(T) * hessEf * ToEigen(T).transpose();
+        energy.hessEf = Ttri * hessEf * Ttri.transpose();
     }
     return energy;
 }
