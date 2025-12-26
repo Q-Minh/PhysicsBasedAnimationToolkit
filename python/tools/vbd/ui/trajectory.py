@@ -8,6 +8,7 @@ from pbatoolkit import pbat
 import h5py as h5
 import typing
 import gc
+import time
 
 
 class Trajectory:
@@ -18,6 +19,9 @@ class Trajectory:
     _group: str
     _tmin: int
     _tmax: int
+    _autoplay: bool
+    _dt: float
+    _clock_time: float
 
     def __init__(self):
         self._archive = None
@@ -27,6 +31,9 @@ class Trajectory:
         self._group = "sim"
         self._tmin = 0
         self._tmax = 0
+        self._autoplay = False
+        self._dt = 1e-2
+        self._clock_time = time.time()
 
     def draw(self):
         imgui.PushID("Trajectory")
@@ -38,16 +45,32 @@ class Trajectory:
         imgui.SetNextItemWidth(button_size[0] * 0.8)
         _, self._group = imgui.InputText("Group", self._group)
         if self._archive is not None:
-            # TODO: Display trajectory file path
             imgui.SetNextItemWidth(width * 0.7)
             _, t = imgui.SliderInt("Frame", self._t, self._tmin, self._tmax)
             imgui.SameLine()
             imgui.SetNextItemWidth(width * 0.2)
             sync = imgui.Button("Sync")
+            autoplay_changed, self._autoplay = imgui.Checkbox(
+                "Autoplay", self._autoplay
+            )
             if t != self._t or sync:
                 self._t = t
                 self._dirty = True
+            if self._autoplay:
+                self._dirty = self._t < self._tmax or self._dirty
+                if autoplay_changed:
+                    self._clock_time = time.time()
+                else:
+                    now = time.time()
+                    elapsed = now - self._clock_time
+                    self._clock_time = now
+                    n_frames_advance = round(elapsed / self._dt)
+                    self._t = min(self._t + n_frames_advance, self._tmax)
+
         imgui.PopID()
+
+    def set_timestep(self, dt: float):
+        self._dt = dt
 
     @property
     def dirty(self) -> bool:

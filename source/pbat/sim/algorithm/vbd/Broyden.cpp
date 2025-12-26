@@ -176,3 +176,28 @@ TEST_CASE("[sim][algorithm][vbd] Broyden")
     Scalar gnorm  = g.norm();
     CHECK_LT(gnorm, g0norm);
 }
+
+TEST_CASE("[sim][algorithm][broyden] Broyden Sandbox")
+{
+    // using namespace pbat;
+    // auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
+    // using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    // sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
+    // fem.Deserialize(archive["fem"]);
+    // sim::contact::MeshDynamics<Scalar, Index> contact;
+    // contact.Deserialize(archive["contact"]);
+    // sim::algorithm::vbd::Params params;
+    // params.Deserialize(archive["vbd/params"]);
+    // sim::algorithm::vbd::BroydenParams broydenParams;
+    // broydenParams.Deserialize(archive["vbd/broyden_params"]);
+    // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
+    // contact.Initialize(device);
+    // for (auto t = 0; t < 50; ++t)
+    // {
+    //     fem.SetupTimeIntegrationOptimization(
+    //         sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
+    //     sim::algorithm::vbd::InitializeSolve(fem, contact, params, broydenParams);
+    //     sim::algorithm::vbd::Solve(fem, contact, params, broydenParams);
+    //     fem.Step();
+    // }
+}

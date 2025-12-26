@@ -81,6 +81,7 @@ target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     range-v3::concepts
     range-v3::meta
     range-v3::range-v3
+    Spectra
     TBB::tbb
 )
 

@@ -262,7 +262,6 @@ TEST_CASE("[sim][algorithm][vbd] Sandbox")
     // params.Deserialize(archive["vbd/params"]);
     // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
     // contact.Initialize(device);
-    // Scalar const zPlane = contact.StaticPointPositions().row(2).minCoeff();
     // contact.GetParams()
     //     .WithNormalContact(contact.GetParams().kc)
     //     .WithFrictionalContact(contact.GetParams().mu, contact.GetParams().epsv);
@@ -274,7 +273,5 @@ TEST_CASE("[sim][algorithm][vbd] Sandbox")
     //     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     //     sim::algorithm::vbd::Solve(fem, contact, params);
     //     fem.Step();
-    //     Scalar const zMin = fem.x.row(2).minCoeff();
-    //     CHECK_GT(zMin, zPlane);
     // }
 }

@@ -12,6 +12,8 @@ import inspect
 from tqdm import tqdm
 import numpy as np
 import typing
+import shutil
+import os
 
 
 def vbd_prepare(
@@ -104,7 +106,10 @@ _solver_params = {
             "newton": pbat.sim.algorithm.newton.Params,
         },
         "sub_params": {
-            "newton": (pbat.math.optimization.Newton, pbat.math.optimization.BackTrackingLineSearch)
+            "newton": (
+                pbat.math.optimization.Newton,
+                pbat.math.optimization.BackTrackingLineSearch,
+            )
         },
         "initialize_solve": lambda fem, contact, params: pbat.sim.algorithm.newton.initialize_solve(
             fem, contact, params["newton"]
@@ -117,7 +122,9 @@ _solver_params = {
 }
 
 
-def params(param_name, param_cls, basic_param_types, sub_param_types, message, tab_increment=0):
+def params(
+    param_name, param_cls, basic_param_types, sub_param_types, message, tab_increment=0
+):
     param_obj = param_cls()
     for name, member in inspect.getmembers(param_obj):
         if name.startswith("_"):
@@ -136,6 +143,7 @@ def params(param_name, param_cls, basic_param_types, sub_param_types, message, t
         #     message = params(f"{param_name}.{name}", member, basic_param_types, sub_param_types, message, tab_increment=tab_increment + 1)
     return message
 
+
 # TODO: Also print recursively, for example, a parameter object may have a member which is another parameter object!!!!
 def print_param_obj_spec(solver: str):
     if solver not in _solver_params:
@@ -146,8 +154,12 @@ def print_param_obj_spec(solver: str):
     message = ""
     basic_param_types = (int, float, bool, str, enum.Enum)
     for param_name, param_cls in data["params"].items():
-        sub_param_types = data["sub_params"][param_name] if "sub_params" in data.keys() else None
-        message = params(param_name, param_cls, basic_param_types, sub_param_types, message)
+        sub_param_types = (
+            data["sub_params"][param_name] if "sub_params" in data.keys() else None
+        )
+        message = params(
+            param_name, param_cls, basic_param_types, sub_param_types, message
+        )
     return message
 
 
@@ -227,6 +239,13 @@ def parse_args():
         default="out.h5:sim",
         help="Output file.h5:group to store simulation trajectory",
         dest="output",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=int,
+        default=0,
+        help="Checkpoint interval in steps. If > 0, creates a backup copy of the output file every N steps. Checkpoint files are named 'output_file.checkpoint-NNNNNNNN.h5' where NNNNNNNN is the step number.",
+        dest="checkpoint",
     )
     args = parser.parse_args()
     return args
@@ -323,9 +342,9 @@ def load_solver_params(
             final_attr = attr_path[-1]
             current_value = getattr(obj, final_attr)
             value_type = type(current_value)
-            if value_type == bool:
+            if isinstance(current_value, bool):
                 value = rhs.lower() in ("true", "1", "yes", "on")
-            elif value_type == enum.Enum:
+            elif isinstance(current_value, enum.Enum):
                 enum_values = list(value_type)
                 matched = False
                 for enum_value in enum_values:
@@ -397,6 +416,7 @@ def main():
 
     xD = None if dirichlet_constraints is None else fem_elasto_dynamics.x.copy()
     t = 0
+    previous_checkpoint_file = None
 
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
     if args.start_from > 0:
@@ -407,7 +427,6 @@ def main():
     else:
         archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
         fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
-    
 
     #################
     #  RUN THE SIM  #
@@ -436,16 +455,43 @@ def main():
             initialization_strategy=fem_dynamics_init_strategy
         )
         # Solve
-        initialize_solve(fem_elasto_dynamics, contact_dynamics, solver_params)
-        solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+        try:
+            initialize_solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+            solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+        except Exception as e:
+            raise RuntimeError(
+                f"Simulation failed at time step {t} (time={t*dt} s): {e}"
+            ) from e
         # Step
         fem_elasto_dynamics.step()
         t += 1
         # Write output
         fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+        # Checkpoint if requested
+        if args.checkpoint > 0 and t % args.checkpoint == 0:
+            # Close the current archive
+            archive = None
+            gc.collect()
+            # Remove previous checkpoint file if it exists
+            if previous_checkpoint_file is not None and os.path.exists(
+                previous_checkpoint_file
+            ):
+                os.remove(previous_checkpoint_file)
+            # Copy to checkpoint file
+            checkpoint_file = out_file.replace(".h5", f".checkpoint-{t:08d}.h5")
+            shutil.copy2(out_file, checkpoint_file)
+            previous_checkpoint_file = checkpoint_file
+            # Reopen the archive in ReadWrite mode
+            archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.ReadWrite)
         # Update progress bar
         pbar.update(1)
     pbar.close()
+
+    # If we made it to the end, delete the last checkpoint file
+    if previous_checkpoint_file is not None and os.path.exists(
+        previous_checkpoint_file
+    ):
+        os.remove(previous_checkpoint_file)
 
 
 if __name__ == "__main__":

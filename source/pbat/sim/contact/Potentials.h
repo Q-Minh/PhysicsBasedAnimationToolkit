@@ -212,8 +212,7 @@ class LaggedFriction
     template <
         mini::CMatrix TMatrixUk,
         common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
-    PBAT_HOST_DEVICE static TScalar
-    Eval(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh)
+    PBAT_HOST_DEVICE TScalar Eval(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh)
     {
         TScalar ukn = Norm(uk);
         return mu * lambdakn * f0(ukn, epsvh);
@@ -237,7 +236,7 @@ class LaggedFriction
         mini::CMatrix TMatrixUk,
         mini::CMatrix TMatrixGk,
         common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
-    PBAT_HOST_DEVICE static TScalar
+    PBAT_HOST_DEVICE TScalar
     EvalWithGrad(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh, TMatrixGk& gk)
     {
         TScalar ukn      = Norm(uk);
@@ -298,19 +297,17 @@ class LaggedFriction
     {
         TScalar ukn      = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         TScalar mulambda = mu * lambdakn;
-        gk               = ((mulambda * f1_over_x(ukn, epsvh))) * uk;
+        TScalar f1overx  = f1_over_x(ukn, epsvh);
+        gk               = (mulambda * f1overx) * uk;
         mini::Identity<TScalar, 2, 2> I;
-        Hk = mulambda *
-             (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
+        Hk = mulambda * (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1overx * I);
     }
     /**
      * @brief Compute the Hessian w.r.t. sliding velocity \f$ u_k \f$.
      *
-     * @tparam TMatrixTk Matrix type for tangential basis
      * @tparam TMatrixUk Matrix type for tangential relative velocity
      * @tparam TMatrixHk Hessian matrix type
      * @tparam TScalar Scalar type
-     * @param Tk `2 x 2` Tangential basis matrix
      * @param uk `2 x 1` Tangential relative velocity
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
@@ -319,22 +316,52 @@ class LaggedFriction
      * @param Hk `2 x 2` Hessian matrix
      */
     template <
-        mini::CMatrix TMatrixTk,
         mini::CMatrix TMatrixUk,
         mini::CMatrix TMatrixHk,
         common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
-    PBAT_HOST_DEVICE void Hessian(
-        TMatrixTk const& Tk,
-        TMatrixUk const& uk,
-        TScalar mu,
-        TScalar lambdakn,
-        TScalar epsvh,
-        TMatrixHk& Hk)
+    PBAT_HOST_DEVICE void
+    Hessian(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh, TMatrixHk& Hk)
     {
         TScalar ukn = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         mini::Identity<TScalar, 2, 2> I;
         Hk = (mu * lambdakn) *
              (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
+    }
+    /**
+     * @brief Compute the gradient and Hessian w.r.t. sliding velocity \f$ u_k \f$.
+     *
+     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixGk Gradient matrix type
+     * @tparam TMatrixHk Hessian matrix type
+     * @tparam TScalar Scalar type
+     * @param uk `2 x 1` tangential relative velocity
+     * @param mu Friction coefficient
+     * @param lambdakn Normal contact force magnitude
+     * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
+     * threshold for static to dynamic friction's smooth transition, and \f$ h \f$ is the time step
+     * @param gk `2 x 1` Gradient matrix
+     * @param Hk `2 x 2` Hessian matrix
+     */
+    template <
+        mini::CMatrix TMatrixUk,
+        mini::CMatrix TMatrixGk,
+        mini::CMatrix TMatrixHk,
+        common::CFloatingPoint TScalar = typename TMatrixUk::ScalarType>
+    PBAT_HOST_DEVICE TScalar EvalWithGradAndHessian(
+        TMatrixUk const& uk,
+        TScalar mu,
+        TScalar lambdakn,
+        TScalar epsvh,
+        TMatrixGk& gk,
+        TMatrixHk& Hk)
+    {
+        TScalar ukn      = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
+        TScalar mulambda = mu * lambdakn;
+        TScalar f1overx  = f1_over_x(ukn, epsvh);
+        gk               = (mulambda * f1overx) * uk;
+        mini::Identity<TScalar, 2, 2> I;
+        Hk = mulambda * (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1overx * I);
+        return mulambda * f0(ukn, epsvh);
     }
 };
 

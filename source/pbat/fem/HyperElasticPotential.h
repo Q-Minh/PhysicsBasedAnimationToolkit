@@ -658,6 +658,7 @@ auto HyperElasticGradient(
     using ScalarType        = typename TDerivedGg::Scalar;
     auto const numberOfDofs = Dims * nNodes;
     Eigen::Vector<ScalarType, Eigen::Dynamic> G(numberOfDofs);
+    G.setZero();
     ToHyperElasticGradient<TElement, Dims>(
         E.derived(),
         nNodes,
@@ -1371,8 +1372,6 @@ inline void ToHyperElasticGradient(
     Eigen::PlainObjectBase<TDerivedOut>& G)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.fem.ToHyperElasticGradient");
-    G.resize(Dims * nNodes, 1);
-    G.setZero();
     auto constexpr kNodesPerElement = TElement::kNodes;
     auto const nQuadPts             = eg.size();
     auto unvecG                     = G.reshaped(Dims, nNodes);

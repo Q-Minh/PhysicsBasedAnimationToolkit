@@ -39,6 +39,14 @@ enum class ELinearSolver {
 };
 
 /**
+ * @brief Truncation strategies for OGC-based contact
+ */
+enum class EOgcTruncationStrategy {
+    PerVertex, ///< Truncate displacements per-vertex based on contact distance bounds
+    Global,    ///< Truncate displacements globally based on contact distance bounds
+};
+
+/**
  * @brief Parameters for the Newton simulation algorithm.
  */
 struct Params
@@ -65,6 +73,12 @@ struct Params
     PBAT_API Params&
     WithLinearSolver(ELinearSolver _eLinearSolver, Eigen::Index maxIters = 100, Scalar tol = 1e-6);
     /**
+     * @brief Set the OGC truncation strategy.
+     * @param strategy OGC truncation strategy
+     * @return Reference to this
+     */
+    PBAT_API Params& WithOgcTruncationStrategy(EOgcTruncationStrategy strategy);
+    /**
      * @brief Construct the parameters
      * @param bValidate Throw on detected ill-formed inputs
      * @return Reference to this
@@ -88,6 +102,7 @@ struct Params
     fem::EHyperElasticSpdCorrection
         eSpdCorrection;          ///< SPD correction method for hyper-elastic Hessians
     ELinearSolver eLinearSolver; ///< Linear solver type for Newton step
+    EOgcTruncationStrategy eOgcTruncationStrategy; ///< OGC truncation strategy
 
 #ifdef PBAT_USE_SUITESPARSE
     using DecompositionType =
@@ -135,6 +150,22 @@ using FemElastoDynamics =
  * @brief Mesh dynamics problem for Newton's method
  */
 using MeshDynamics = sim::contact::MeshDynamics<Scalar, Index>;
+
+/**
+ * @brief Truncate displacement vector based on OGC truncation strategy
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact problem
+ * @param params Solver parameters
+ * @param dxk Displacement vector to be truncated (in/out parameter)
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedDxk>
+void TruncateDisplacement(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params,
+    Eigen::MatrixBase<TDerivedDxk>& dxk);
 
 /**
  * @brief Prepare next iteration for the given finite element elasto dynamics problem.
@@ -186,29 +217,6 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params const& params);
 
 /**
- * @brief Truncate Newton step for OGC.
- * @tparam TDerivedxk Eigen matrix type for xt
- * @tparam TDerivedxkp1 Eigen matrix type for x
- * @param contact The mesh contact dynamics problem
- * @param xk `3 x |# points|` or `3*|# points| x 1` matrix of previous positions
- * @param xkp1 `3 x |# points|` or `3*|# points| x 1` matrix of current positions
- * @return (min,max) step size after truncation
- */
-template <class TDerivedxk, class TDerivedxkp1>
-std::pair<Scalar, Scalar> MinMaxStepSize(
-    MeshDynamics const& contact,
-    Eigen::MatrixBase<TDerivedxk> const& _xk,
-    Eigen::MatrixBase<TDerivedxkp1> const& _xkp1)
-{
-    auto xkp1          = _xkp1.derived().reshaped(3, _xkp1.size() / 3);
-    auto xk            = _xk.derived().reshaped(3, _xk.size() / 3);
-    auto const dnorms  = (xkp1 - xk).colwise().norm();
-    Scalar const dnorm = dnorms.maxCoeff();
-    Scalar const dmin  = contact.OgcState().bv.minCoeff();
-    return {dmin, dnorm};
-}
-
-/**
  * @brief Derivative precomputation for the given finite element elasto dynamics problem.
  *
  * @tparam TElasticEnergy Hyper-elastic energy model
@@ -222,6 +230,8 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareDerivatives");
     // Precompute elastic energy and its derivatives
+    Scalar bt  = fem.bdf.BetaTilde();
+    Scalar bt2 = bt * bt;
     fem.ComputeElasticEnergy(
         fem.x,
         fem::EElementElasticityComputationFlags::Potential |
@@ -230,24 +240,17 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
         params.eSpdCorrection);
     contact.ComputeEnergies(
         fem.x,
+        -fem.bdf.Inertia(0),
+        bt,
         sim::contact::EMeshEnergyComputationFlags::Potential |
             sim::contact::EMeshEnergyComputationFlags::Gradient |
             sim::contact::EMeshEnergyComputationFlags::Hessian);
-    Scalar bt  = fem.bdf.BetaTilde();
-    Scalar bt2 = bt * bt;
     fem.HgU *= bt2;
     fem.GgU *= bt2;
-    contact.ForEachMeshContactEnergy(
-        [&]<int kStencil>(sim::contact::MeshContactEnergy<Scalar, Index, kStencil>& energy) {
-            energy.gradEn *= bt2;
-            energy.gradEf *= bt2;
-            energy.hessEn *= bt2;
-            energy.hessEf *= bt2;
-        });
     Scalar U = fem::HyperElasticPotential(fem.UgU);
     Scalar K = fem.DiscreteKineticEnergy(fem.x);
     Scalar C = contact.Potential();
-    return K + bt2 * U + bt2 * C;
+    return K + bt2 * U + C;
 }
 
 /**
@@ -266,6 +269,7 @@ void ToGradient(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ToGradient");
     // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
+    gk.setZero();
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
     contact.ToGradient(gk);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
@@ -304,15 +308,15 @@ void AssembleHessian(
         contact.NumVertexEnvironmentContacts() * 9 * kVertexEnvStencil * kVertexEnvStencil +
         contact.NumEdgeEnvironmentContacts() * 9 * kEdgeEnvStencil * kEdgeEnvStencil +
         contact.NumTriangleEnvironmentContacts() * 9 * kTriangleEnvStencil * kTriangleEnvStencil;
-    params.triplets.resize(nTriplets);
+    params.triplets.reserve(nTriplets);
+    params.triplets.clear();
     // Assemble
     std::size_t k{0};
     auto constexpr kDims = std::decay_t<decltype(fem)>::kDims;
     // Mass matrix contribution
     for (Eigen::Index i = 0; i < fem.m.size(); ++i)
         for (auto d = 0; d < kDims; ++d)
-            params.triplets[k++] =
-                Eigen::Triplet<Scalar, Index>(i * kDims + d, i * kDims + d, fem.m(i));
+            params.triplets.emplace_back(i * kDims + d, i * kDims + d, fem.m(i));
     // Hyper-elastic Hessian contribution
     using ElementType = typename FemElastoDynamics<TElasticEnergy>::ElementType;
     auto nQuadPtsU    = fem.egU.size();
@@ -327,7 +331,7 @@ void AssembleHessian(
             for (auto jd = 0; jd < kDims; ++jd)
                 for (auto il = 0; il < ElementType::kNodes; ++il)
                     for (auto id = 0; id < kDims; ++id)
-                        params.triplets[k++] = Eigen::Triplet<Scalar, Index>(
+                        params.triplets.emplace_back(
                             nodes(il) * kDims + id,
                             nodes(jl) * kDims + jd,
                             HUg(il * kDims + id, jl * kDims + jd));
@@ -339,7 +343,7 @@ void AssembleHessian(
                 for (auto jd = 0; jd < kDims; ++jd)
                     for (auto il = 0; il < kStencil; ++il)
                         for (auto id = 0; id < kDims; ++id)
-                            params.triplets[k++] = Eigen::Triplet<Scalar, Index>(
+                            params.triplets.emplace_back(
                                 E.stencil(il) * kDims + id,
                                 E.stencil(jl) * kDims + jd,
                                 E.hessEn(il * kDims + id, jl * kDims + jd) +
@@ -356,18 +360,11 @@ void AssembleHessian(
             bool bIsDiag            = triplet.row() == triplet.col();
             bool bIsDirichletEntry =
                 fem.IsDirichletDof(triplet.row()) or fem.IsDirichletDof(triplet.col());
-            return (bIsUpperTriangular) or (not bIsDiag and bIsDirichletEntry);
+            return (bIsUpperTriangular and params.eLinearSolver == ELinearSolver::LLT) or
+                   (not bIsDiag and bIsDirichletEntry);
         });
     params.triplets.erase(itRemoveBegin, params.triplets.end());
     params.hessian.setFromTriplets(params.triplets.begin(), params.triplets.end());
-    // Make sure the hessian is symmetric after Eigen's setFromTriplets, which is subject to
-    // rounding errors
-    if (params.eLinearSolver != ELinearSolver::LLT)
-    {
-        using SparseMatrixType = decltype(params.hessian);
-        params.hessian         = (Scalar(0.5) * params.hessian) +
-                         SparseMatrixType(Scalar(0.5) * params.hessian.transpose());
-    }
 }
 
 /**
@@ -425,15 +422,79 @@ void PrepareNextIteration(
         xk /* xk */);
 }
 
+template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedDxk>
+void TruncateDisplacement(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params,
+    Eigen::MatrixBase<TDerivedDxk>& dxk)
+{
+    switch (params.eOgcTruncationStrategy)
+    {
+        case EOgcTruncationStrategy::PerVertex: {
+            // Per-vertex truncation
+            contact.TruncateDisplacements(dxk, fem.dmask);
+            break;
+        }
+        case EOgcTruncationStrategy::Global: {
+            // Global truncation
+            auto const dmax = dxk.reshaped(fem.x.rows(), fem.x.cols()).colwise().norm().maxCoeff();
+            auto const dmin = contact.OgcState().bv.minCoeff();
+            if (dmax > dmin)
+            {
+                dxk *= (dmin / dmax);
+                contact.RequestDisplacementBoundsComputation();
+            }
+            break;
+        }
+    }
+}
+
+/**
+ * @brief Truncate displaced positions based on OGC truncation strategy for solve initialization
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem The finite element elasto dynamics problem
+ * @param contact The mesh dynamics
+ * @param params The solver parameters
+ * @param xt The current state
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedXt>
+void TruncateDisplacedPositions(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params const& params,
+    Eigen::MatrixBase<TDerivedXt> const& xt)
+{
+    switch (params.eOgcTruncationStrategy)
+    {
+        case EOgcTruncationStrategy::PerVertex: {
+            contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+            break;
+        }
+        case EOgcTruncationStrategy::Global: {
+            auto const dmax = (fem.x - xt).colwise().norm().maxCoeff();
+            auto const dmin = contact.OgcState().bv.minCoeff();
+            if (dmax > dmin)
+            {
+                fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
+                    xt(Eigen::placeholders::all, fem.FreeNodes()) +
+                    (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
+            }
+            break;
+        }
+    }
+}
+
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
-    params.newton.k = 0;
+    params.newton.InitializeSolve(fem.x.reshaped());
     auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
     auto& ogcParams = contact.GetParams().mOgcParams;
     ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
     contact.ComputeDisplacementBounds(xt);
-    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+    TruncateDisplacedPositions(fem, contact, params, xt);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -443,17 +504,20 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
     auto xk = fem.x.reshaped();
     return params.newton.Iterate(
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            contact.ComputeEnergies(xk, sim::contact::EMeshEnergyComputationFlags::Potential);
-            auto const bt  = fem.bdf.BetaTilde();
-            auto const bt2 = bt * bt;
-            return fem.Objective(xk) + bt2 * contact.Potential();
+            auto const bt = fem.bdf.BetaTilde();
+            contact.ComputeEnergies(
+                xk,
+                -fem.bdf.Inertia(0),
+                bt,
+                sim::contact::EMeshEnergyComputationFlags::Potential);
+            return fem.Objective(xk) + contact.Potential();
         } /* f */,
         [&]([[maybe_unused]] auto const& _xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-            contact.TruncateDisplacements(dxk, fem.dmask);
+            TruncateDisplacement(fem, contact, params, dxk);
         } /* Hinv */,
         xk /* xk */);
 }
@@ -470,10 +534,13 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            contact.ComputeEnergies(xk, sim::contact::EMeshEnergyComputationFlags::Potential);
-            auto const bt  = fem.bdf.BetaTilde();
-            auto const bt2 = bt * bt;
-            return fem.Objective(xk) + bt2 * contact.Potential();
+            auto const bt = fem.bdf.BetaTilde();
+            contact.ComputeEnergies(
+                xk,
+                -fem.bdf.Inertia(0),
+                bt,
+                sim::contact::EMeshEnergyComputationFlags::Potential);
+            return fem.Objective(xk) + contact.Potential();
         } /* f */,
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, contact, gk);
@@ -483,7 +550,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
             AssembleHessian<TElasticEnergy>(fem, contact, params);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-            contact.TruncateDisplacements(dxk, fem.dmask);
+            TruncateDisplacement(fem, contact, params, dxk);
         } /* Hinv */,
         x0 /* xk */);
 }
