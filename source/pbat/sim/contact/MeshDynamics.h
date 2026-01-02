@@ -512,6 +512,62 @@ class MeshDynamics
      */
     std::size_t NumTriangleEnvironmentContacts() const;
     /**
+     * @brief Get the vertex-vertex contact energies
+     * @return Vector of vertex-vertex contact energies
+     */
+    auto VertexVertexEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
+    {
+        return mVertexVertexEnergies;
+    }
+    /**
+     * @brief Get the vertex-edge contact energies
+     * @return Vector of vertex-edge contact energies
+     */
+    auto VertexEdgeEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
+    {
+        return mVertexEdgeEnergies;
+    }
+    /**
+     * @brief Get the vertex-triangle contact energies
+     * @return Vector of vertex-triangle contact energies
+     */
+    auto VertexTriangleEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
+    {
+        return mVertexTriangleEnergies;
+    }
+    /**
+     * @brief Get the edge-edge contact energies
+     * @return Vector of edge-edge contact energies
+     */
+    auto EdgeEdgeEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
+    {
+        return mEdgeEdgeEnergies;
+    }
+    /**
+     * @brief Get the vertex-environment contact energies
+     * @return Vector of vertex-environment contact energies
+     */
+    auto VertexEnvironmentEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 1>> const&
+    {
+        return mVertexEnvironmentEnergies;
+    }
+    /**
+     * @brief Get the edge-environment contact energies
+     * @return Vector of edge-environment contact energies
+     */
+    auto EdgeEnvironmentEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
+    {
+        return mEdgeEnvironmentEnergies;
+    }
+    /**
+     * @brief Get the triangle-environment contact energies
+     * @return Vector of triangle-environment contact energies
+     */
+    auto TriangleEnvironmentEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
+    {
+        return mTriangleEnvironmentEnergies;
+    }
+    /**
      * @brief Recomputes geometric quantities (triangle, half-edge, and vertex areas) from current
      * positions
      * @param X `3 x |# points|` point positions (column-major: one point per column)
