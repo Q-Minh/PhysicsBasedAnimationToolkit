@@ -474,7 +474,7 @@ class MeshDynamics
      * @return Total contact gradient
      * @pre `ComputeEnergies()` has been called with the `Gradient` flag
      */
-    Eigen::Vector<ScalarType, Eigen::Dynamic> Gradient() const;
+    auto Gradient() const -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
     /**
      * @brief Compute the total contact gradient and add it to `g`
      * @tparam TDerivedg Writeable matrix type
@@ -483,6 +483,34 @@ class MeshDynamics
      */
     template <class TDerivedg>
     void ToGradient(Eigen::MatrixBase<TDerivedg>& g) const;
+    /**
+     * @brief Compute the normal contact gradient
+     * @return Normal contact gradient
+     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
+     */
+    auto NormalGradient() const -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
+    /**
+     * @brief Compute the normal contact gradient and add it to `g`
+     * @tparam TDerivedg Writeable matrix type
+     * @param g `3*|# points| x 1` or `3 x |# points|` normal contact gradient
+     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
+     */
+    template <class TDerivedg>
+    void ToNormalGradient(Eigen::MatrixBase<TDerivedg>& g) const;
+    /**
+     * @brief Compute the frictional contact gradient
+     * @return Frictional contact gradient
+     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
+     */
+    auto FrictionalGradient() const -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
+    /**
+     * @brief Compute the frictional contact gradient and add it to `g`
+     * @tparam TDerivedg Writeable matrix type
+     * @param g `3*|# points| x 1` or `3 x |# points|` frictional contact gradient
+     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
+     */
+    template <class TDerivedg>
+    void ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g) const;
     /**
      * @brief Get the number of vertex-vertex contacts
      */
@@ -1424,7 +1452,8 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential() const
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline Eigen::Vector<TScalar, Eigen::Dynamic> MeshDynamics<TScalar, TIndex>::Gradient() const
+inline auto MeshDynamics<TScalar, TIndex>::Gradient() const
+    -> Eigen::Vector<TScalar, Eigen::Dynamic>
 {
     Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
     grad.setZero();
@@ -1482,6 +1511,63 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(Eigen::MatrixBase<TDerived
     auto fAccumulateGradient = [&](auto const& energies) {
         for (auto const& e : energies)
             G(Eigen::placeholders::all, e.stencil).reshaped() += e.gradEn + e.gradEf;
+    };
+    fAccumulateGradient(mVertexVertexEnergies);
+    fAccumulateGradient(mVertexEdgeEnergies);
+    fAccumulateGradient(mVertexTriangleEnergies);
+    fAccumulateGradient(mEdgeEdgeEnergies);
+    fAccumulateGradient(mVertexEnvironmentEnergies);
+    fAccumulateGradient(mEdgeEnvironmentEnergies);
+    fAccumulateGradient(mTriangleEnvironmentEnergies);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline auto MeshDynamics<TScalar, TIndex>::NormalGradient() const
+    -> Eigen::Vector<TScalar, Eigen::Dynamic>
+{
+    Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
+    grad.setZero();
+    ToNormalGradient(grad);
+    return grad;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedg>
+inline void MeshDynamics<TScalar, TIndex>::ToNormalGradient(Eigen::MatrixBase<TDerivedg>& g) const
+{
+    auto G                   = g.derived().reshaped(3, g.size() / 3);
+    auto fAccumulateGradient = [&](auto const& energies) {
+        for (auto const& e : energies)
+            G(Eigen::placeholders::all, e.stencil).reshaped() += e.gradEn;
+    };
+    fAccumulateGradient(mVertexVertexEnergies);
+    fAccumulateGradient(mVertexEdgeEnergies);
+    fAccumulateGradient(mVertexTriangleEnergies);
+    fAccumulateGradient(mEdgeEdgeEnergies);
+    fAccumulateGradient(mVertexEnvironmentEnergies);
+    fAccumulateGradient(mEdgeEnvironmentEnergies);
+    fAccumulateGradient(mTriangleEnvironmentEnergies);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline auto MeshDynamics<TScalar, TIndex>::FrictionalGradient() const
+    -> Eigen::Vector<TScalar, Eigen::Dynamic>
+{
+    Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
+    grad.setZero();
+    ToFrictionalGradient(grad);
+    return grad;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedg>
+inline void MeshDynamics<TScalar, TIndex>::ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g)
+    const
+{
+    auto G                   = g.derived().reshaped(3, g.size() / 3);
+    auto fAccumulateGradient = [&](auto const& energies) {
+        for (auto const& e : energies)
+            G(Eigen::placeholders::all, e.stencil).reshaped() += e.gradEf;
     };
     fAccumulateGradient(mVertexVertexEnergies);
     fAccumulateGradient(mVertexEdgeEnergies);

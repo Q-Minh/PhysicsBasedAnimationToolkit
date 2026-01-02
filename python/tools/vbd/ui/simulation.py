@@ -201,6 +201,16 @@ class Simulation:
                 cmap="reds",
                 vminmax=(0, 1),
             )
+            if self._contact.requires_force_display:
+                bdf: pbat.sim.integration.Bdf = self._fem_dynamics.bdf
+                x = self._fem_dynamics.x
+                xt = -bdf.inertia().reshape((3, -1), order="F")
+                bt = bdf.beta_tilde
+                self._contact.on_contact_force_display_requested(
+                    x,
+                    xt,
+                    bt,
+                )
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes
             if d_nodes.shape[0] != self._fem_dynamics_dirichlet_pc.n_points():

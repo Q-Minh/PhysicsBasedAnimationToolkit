@@ -340,6 +340,14 @@ void BindMeshDynamics(nanobind::module_& m)
             "gradient",
             &MeshDynamicsType::Gradient,
             "`3*|# points| x 1` contact energy gradient.")
+        .def_prop_ro(
+            "normal_gradient",
+            &MeshDynamicsType::NormalGradient,
+            "`3*|# points| x 1` normal contact energy gradient.")
+        .def_prop_ro(
+            "frictional_gradient",
+            &MeshDynamicsType::FrictionalGradient,
+            "`3*|# points| x 1` frictional contact energy gradient.")
         .def(
             "serialize",
             &MeshDynamicsType::Serialize,
