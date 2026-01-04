@@ -255,6 +255,74 @@ PBAT_HOST_DEVICE auto PointEdgeLinearTangentialOperatorBlock(
 }
 
 /**
+ * @brief Compute linear tangential operator \f$ \mathbf{T} \f$ for point-edge contact s.t.
+ * tangential displacements are \f$ \mathbf{T} \begin{bmatrix}\mathbf{x} \\ \mathbf{p}
+ * \\ \mathbf{q}\end{bmatrix} \f$, using a pre-interpolated point on the edge.
+ *
+ * @tparam TMatrixX Matrix type for point
+ * @tparam TMatrixY Matrix type for interpolated edge point
+ * @tparam TScalar Scalar type
+ * @param x `3 x 1` point
+ * @param y `3 x 1` interpolated point on edge, i.e., `y = (1-u)*p + u*q`
+ * @param u Barycentric coordinate of `y` on edge `pq` in [0,1]
+ * @param eps Epsilon for colinearity check
+ * @return `3*|# dims| x 2` tangential operator
+ */
+template <
+    math::linalg::mini::CMatrix TMatrixX,
+    math::linalg::mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto PointEdgeLinearTangentialOperator(
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar u,
+    TScalar eps = std::numeric_limits<TScalar>::epsilon())
+{
+    using namespace math::linalg::mini;
+    static_assert(TMatrixX::kRows == TMatrixY::kRows, "x and y must have the same number of rows.");
+    assert(u >= TScalar(0) and u <= TScalar(1));
+    auto constexpr kDims = TMatrixX::kRows;
+    SMatrix<TScalar, kDims * 3, 2> T;
+    auto B                                   = T.template Slice<kDims, 2>(0, 0);
+    B                                        = PointPointTangentialBasis(x, y, eps);
+    T.template Slice<kDims, 2>(kDims, 0)     = (u - TScalar(1)) * B;
+    T.template Slice<kDims, 2>(2 * kDims, 0) = -u * B;
+    return T;
+}
+
+/**
+ * @brief Compute the (i-th) block of the linear tangential operator \f$ \mathbf{T} \f$ returned by
+ * function `PointEdgeLinearTangentialOperator`, using a pre-interpolated point on the edge.
+ *
+ * @tparam TMatrixX Matrix type for point
+ * @tparam TMatrixY Matrix type for interpolated edge point
+ * @tparam TScalar Scalar type
+ * @param x `3 x 1` point
+ * @param y `3 x 1` interpolated point on edge, i.e., `y = (1-u)*p + u*q`
+ * @param u Barycentric coordinate of `y` on edge `pq` in [0,1]
+ * @param i Block row
+ * @param eps Epsilon for colinearity check
+ * @return `|# dims| x 2` tangential operator
+ * @pre `i` must be either `0`, `1`, or `2`
+ */
+template <
+    math::linalg::mini::CMatrix TMatrixX,
+    math::linalg::mini::CMatrix TMatrixY,
+    class TScalar = typename TMatrixX::ScalarType>
+PBAT_HOST_DEVICE auto PointEdgeLinearTangentialOperatorBlock(
+    TMatrixX const& x,
+    TMatrixY const& y,
+    TScalar u,
+    int i,
+    TScalar eps = std::numeric_limits<TScalar>::epsilon())
+{
+    assert(i >= 0 and i <= 2);
+    auto B    = PointPointTangentialBasis(x, y, eps);
+    TScalar k = (i == 0) * TScalar(1) + (i == 1) * (u - TScalar(1)) + (i == 2) * (-u);
+    return k * B;
+}
+
+/**
  * @brief Compute tangential basis for point-triangle contact
  *
  * @tparam TMatrixA Matrix type for first triangle point

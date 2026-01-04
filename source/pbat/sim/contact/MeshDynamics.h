@@ -543,7 +543,8 @@ class MeshDynamics
      * @brief Get the vertex-vertex contact energies
      * @return Vector of vertex-vertex contact energies
      */
-    auto VertexVertexEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
+    auto VertexVertexEnergies() const
+        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
     {
         return mVertexVertexEnergies;
     }
@@ -551,7 +552,8 @@ class MeshDynamics
      * @brief Get the vertex-edge contact energies
      * @return Vector of vertex-edge contact energies
      */
-    auto VertexEdgeEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
+    auto VertexEdgeEnergies() const
+        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
     {
         return mVertexEdgeEnergies;
     }
@@ -559,7 +561,8 @@ class MeshDynamics
      * @brief Get the vertex-triangle contact energies
      * @return Vector of vertex-triangle contact energies
      */
-    auto VertexTriangleEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
+    auto VertexTriangleEnergies() const
+        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
     {
         return mVertexTriangleEnergies;
     }
@@ -575,7 +578,8 @@ class MeshDynamics
      * @brief Get the vertex-environment contact energies
      * @return Vector of vertex-environment contact energies
      */
-    auto VertexEnvironmentEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 1>> const&
+    auto VertexEnvironmentEnergies() const
+        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 1>> const&
     {
         return mVertexEnvironmentEnergies;
     }
@@ -583,7 +587,8 @@ class MeshDynamics
      * @brief Get the edge-environment contact energies
      * @return Vector of edge-environment contact energies
      */
-    auto EdgeEnvironmentEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
+    auto EdgeEnvironmentEnergies() const
+        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
     {
         return mEdgeEnvironmentEnergies;
     }
@@ -591,7 +596,8 @@ class MeshDynamics
      * @brief Get the triangle-environment contact energies
      * @return Vector of triangle-environment contact energies
      */
-    auto TriangleEnvironmentEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
+    auto TriangleEnvironmentEnergies() const
+        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
     {
         return mTriangleEnvironmentEnergies;
     }
@@ -1561,8 +1567,8 @@ inline auto MeshDynamics<TScalar, TIndex>::FrictionalGradient() const
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedg>
-inline void MeshDynamics<TScalar, TIndex>::ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g)
-    const
+inline void
+MeshDynamics<TScalar, TIndex>::ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g) const
 {
     auto G                   = g.derived().reshaped(3, g.size() / 3);
     auto fAccumulateGradient = [&](auto const& energies) {
@@ -2117,7 +2123,7 @@ MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
     SVector<TScalar, 2> const uv  = geometry::ClosestPointQueries::UvPointOnLineSegment(xi, xa, xb);
     SVector<TScalar, 3> const xcp = uv(0) * xa + uv(1) * xb;
     TScalar const d               = Norm(xi - xcp);
-    SMatrix<TScalar, 9, 2> const T = contact::PointEdgeLinearTangentialOperator(xi, xa, xb, uv(1));
+    SMatrix<TScalar, 9, 2> const T = contact::PointEdgeLinearTangentialOperator(xi, xcp, uv(1));
     SVector<TScalar, 2> const uk   = T.Transpose() * (FromEigen(x) - FromEigen(xt));
     SVector<TScalar, 3> const dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
@@ -2403,10 +2409,11 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
     auto const xb                 = FromEigen(x.template segment<3>(3));
     SVector<TScalar, 3> const xci = uv(0) * xa + uv(1) * xb;
     TScalar const d               = Norm(xci - FromEigen(xcp));
-    SMatrix<TScalar, 9, 2> const T =
-        contact::PointEdgeLinearTangentialOperator(FromEigen(xcp), xa, xb, uv(1));
+    SMatrix<TScalar, 6, 2> const T =
+        contact::PointEdgeLinearTangentialOperator(xci, FromEigen(xcp), uv(1))
+            .template Slice<6, 2>(3, 0);
+    auto const Tedge             = ToEigen(T);
     SVector<TScalar, 2> const uk = T.Transpose() * (FromEigen(x) - FromEigen(xt));
-    auto const Tedge             = ToEigen(T).template bottomRows<6>();
     SVector<TScalar, 3> const dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
     if (eFlags | EMeshEnergyComputationFlags::Potential)
@@ -2474,12 +2481,13 @@ MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
     auto const xc                 = FromEigen(x.template segment<3>(6));
     SVector<TScalar, 3> const xci = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
     TScalar const d               = Norm(xci - FromEigen(xcp));
-    SMatrix<TScalar, 12, 2> const T =
-        contact::PointTriangleLinearTangentialOperator(xa, xb, xc, FromEigen(uvw));
+    SMatrix<TScalar, 9, 2> const T =
+        contact::PointTriangleLinearTangentialOperator(xa, xb, xc, FromEigen(uvw))
+            .template Slice<9, 2>(3, 0);
     SVector<TScalar, 2> const uk = T.Transpose() * (FromEigen(x) - FromEigen(xt));
-    auto const Ttri              = ToEigen(T).template bottomRows<9>();
     SVector<TScalar, 3> const dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
+    auto const Ttri = ToEigen(T);
     if (eFlags | EMeshEnergyComputationFlags::Potential)
     {
         energy.En = dBdd(0);

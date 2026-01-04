@@ -178,6 +178,7 @@ class Contact:
 
         # Compute contact energies
         flags = pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
+        self._contact_dynamics.compute_displacement_bounds(x)
         self._contact_dynamics.compute_energies(x, xt, h, flags)
 
         # Get the gradients (3*|# points| x 1) and reshape to (|# points| x 3)
@@ -241,7 +242,7 @@ class Contact:
             The updated or created point cloud, or None if no contacts
         """
         if len(energies) == 0:
-            return None
+            return ps.register_point_cloud(name, np.empty((0, 3), dtype=x.dtype))
 
         n_contacts = len(energies)
         n_stencil_points = n_contacts * stencil_size
@@ -283,17 +284,22 @@ class Contact:
         pc.set_enabled(is_visible)
         return pc
 
-    def on_stencil_display_requested(self, x: np.ndarray):
+    def on_stencil_display_requested(self, x: np.ndarray, xt: np.ndarray, h: float):
         """
         Update all contact stencil point clouds.
 
         Args:
             x: Current vertex positions (3 x |# points|)
-
-        Note: compute_energies must have been called before this method.
+            xt: Reference vertex positions (3 x |# points|)
+            h: Time step size
         """
         if self._contact_dynamics is None:
             return
+
+        # Compute contact energies
+        flags = pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
+        self._contact_dynamics.compute_displacement_bounds(x)
+        self._contact_dynamics.compute_energies(x, xt, h, flags)
 
         # Mesh-mesh contacts
         self._vv_stencil_pc = self._update_stencil_point_cloud(
