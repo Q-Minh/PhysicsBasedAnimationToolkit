@@ -1,8 +1,10 @@
 #ifndef PBAT_MATH_LINALG_MINI_SVD_H
 #define PBAT_MATH_LINALG_MINI_SVD_H
 
+#include "BinaryOperations.h"
 #include "Concepts.h"
 #include "Eigenvalues.h"
+#include "Geometry.h"
 #include "Matrix.h"
 #include "Norm.h"
 #include "Product.h"
@@ -51,33 +53,24 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 2 and MatrixType::kCols == 2, "Matrix must be 2x2");
-
     using ScalarType = typename MatrixType::ScalarType;
-
     SVDResult<ScalarType, 2, 2> result{};
-
     // Compute A^T * A
     SMatrix<ScalarType, 2, 2> AtA;
     AtA(0, 0) = A(0, 0) * A(0, 0) + A(1, 0) * A(1, 0);
     AtA(0, 1) = A(0, 0) * A(0, 1) + A(1, 0) * A(1, 1);
     AtA(1, 0) = AtA(0, 1);
     AtA(1, 1) = A(0, 1) * A(0, 1) + A(1, 1) * A(1, 1);
-
     // Eigendecomposition of A^T * A gives V and sigma^2
     auto [lambda, V] = SymmetricEigen2x2(AtA);
-
     // Singular values are sqrt of eigenvalues (clamp negatives from numerical error)
     ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
-
-    ScalarType sigma0Sq = lambda(1); // Largest first for descending order
-    ScalarType sigma1Sq = lambda(0);
-
+    ScalarType sigma0Sq  = lambda(1); // Largest first for descending order
+    ScalarType sigma1Sq  = lambda(0);
     // Clamp small negative values
-    if (sigma0Sq < ScalarType{0})
-        sigma0Sq = ScalarType{0};
-    if (sigma1Sq < ScalarType{0})
-        sigma1Sq = ScalarType{0};
-
+    using namespace std;
+    sigma0Sq = max(sigma0Sq, ScalarType{0});
+    sigma1Sq = max(sigma1Sq, ScalarType{0});
     ScalarType sigma0, sigma1;
     if constexpr (std::is_same_v<ScalarType, float>)
     {
@@ -89,16 +82,13 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
         sigma0 = sqrt(sigma0Sq);
         sigma1 = sqrt(sigma1Sq);
     }
-
     result.S(0) = sigma0;
     result.S(1) = sigma1;
-
     // V columns in order corresponding to descending singular values
     result.V(0, 0) = V(0, 1);
     result.V(1, 0) = V(1, 1);
     result.V(0, 1) = V(0, 0);
     result.V(1, 1) = V(1, 0);
-
     // Compute U = A * V * S^{-1}
     // For each column: u_i = A * v_i / sigma_i
     for (int j = 0; j < 2; ++j)
@@ -106,11 +96,9 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
         ScalarType sigma = result.S(j);
         ScalarType vx    = result.V(0, j);
         ScalarType vy    = result.V(1, j);
-
         // A * v
         ScalarType avx = A(0, 0) * vx + A(0, 1) * vy;
         ScalarType avy = A(1, 0) * vx + A(1, 1) * vy;
-
         if (sigma > eps)
         {
             ScalarType invSigma = ScalarType{1} / sigma;
@@ -134,7 +122,6 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
             }
         }
     }
-
     // Ensure U is orthonormal (correct for any numerical drift)
     // Normalize first column
     ScalarType u0norm = result.U(0, 0) * result.U(0, 0) + result.U(1, 0) * result.U(1, 0);
@@ -148,14 +135,11 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
         result.U(0, 0) *= invNorm;
         result.U(1, 0) *= invNorm;
     }
-
     // Make second column orthogonal to first
-    ScalarType dot = result.U(0, 0) * result.U(0, 1) + result.U(1, 0) * result.U(1, 1);
-    result.U(0, 1) -= dot * result.U(0, 0);
-    result.U(1, 1) -= dot * result.U(1, 0);
-
+    ScalarType dot = Dot(result.U.Col(0), result.U.Col(1));
+    result.U.Col(1) -= dot * result.U.Col(0);
     // Normalize second column
-    ScalarType u1norm = result.U(0, 1) * result.U(0, 1) + result.U(1, 1) * result.U(1, 1);
+    ScalarType u1norm = Dot(result.U.Col(1), result.U.Col(1));
     if (u1norm > eps * eps)
     {
         ScalarType invNorm;
@@ -163,8 +147,7 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
             invNorm = ScalarType{1} / sqrtf(u1norm);
         else
             invNorm = ScalarType{1} / sqrt(u1norm);
-        result.U(0, 1) *= invNorm;
-        result.U(1, 1) *= invNorm;
+        result.U.Col(1) *= invNorm;
     }
     else
     {
@@ -172,7 +155,6 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
         result.U(0, 1) = -result.U(1, 0);
         result.U(1, 1) = result.U(0, 0);
     }
-
     return result;
 }
 
@@ -202,18 +184,7 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
     ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
 
     // Compute A^T * A
-    SMatrix<ScalarType, 3, 3> AtA;
-    for (int i = 0; i < 3; ++i)
-    {
-        for (int j = i; j < 3; ++j)
-        {
-            ScalarType sum{0};
-            for (int k = 0; k < 3; ++k)
-                sum += A(k, i) * A(k, j);
-            AtA(i, j) = sum;
-            AtA(j, i) = sum;
-        }
-    }
+    SMatrix<ScalarType, 3, 3> AtA = A.Transpose() * A;
 
     // Eigendecomposition of A^T * A gives V and sigma^2
     auto [lambda, V] = SymmetricEigen3x3(AtA);
@@ -223,84 +194,54 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
     for (int j = 0; j < 3; ++j)
     {
         ScalarType sigmaSq = lambda(2 - j);
-        if (sigmaSq < ScalarType{0})
-            sigmaSq = ScalarType{0};
-
+        using namespace std;
+        sigmaSq = max(sigmaSq, ScalarType{0});
         ScalarType sigma;
         if constexpr (std::is_same_v<ScalarType, float>)
             sigma = sqrtf(sigmaSq);
         else
             sigma = sqrt(sigmaSq);
-
         result.S(j) = sigma;
-
         // V column (reverse order for descending singular values)
-        result.V(0, j) = V(0, 2 - j);
-        result.V(1, j) = V(1, 2 - j);
-        result.V(2, j) = V(2, 2 - j);
+        result.V.Col(j) = V.Col(2 - j);
     }
-
     // Compute U = A * V * S^{-1} for non-zero singular values
+    result.U.SetZero();
     for (int j = 0; j < 3; ++j)
     {
         ScalarType sigma = result.S(j);
-
         // A * v_j
-        ScalarType av0 =
-            A(0, 0) * result.V(0, j) + A(0, 1) * result.V(1, j) + A(0, 2) * result.V(2, j);
-        ScalarType av1 =
-            A(1, 0) * result.V(0, j) + A(1, 1) * result.V(1, j) + A(1, 2) * result.V(2, j);
-        ScalarType av2 =
-            A(2, 0) * result.V(0, j) + A(2, 1) * result.V(1, j) + A(2, 2) * result.V(2, j);
-
+        SVector<ScalarType, 3> Avj = A * result.V.Col(j);
         if (sigma > eps)
         {
             ScalarType invSigma = ScalarType{1} / sigma;
-            result.U(0, j)      = av0 * invSigma;
-            result.U(1, j)      = av1 * invSigma;
-            result.U(2, j)      = av2 * invSigma;
-        }
-        else
-        {
-            // Zero singular value: will be fixed by orthogonalization below
-            result.U(0, j) = (j == 0) ? ScalarType{1} : ScalarType{0};
-            result.U(1, j) = (j == 1) ? ScalarType{1} : ScalarType{0};
-            result.U(2, j) = (j == 2) ? ScalarType{1} : ScalarType{0};
+            result.U.Col(j)     = Avj * invSigma;
         }
     }
 
     // Orthogonalize U using modified Gram-Schmidt for robustness
     // Column 0
-    ScalarType n0 = result.U(0, 0) * result.U(0, 0) + result.U(1, 0) * result.U(1, 0) +
-                    result.U(2, 0) * result.U(2, 0);
-    if (n0 > eps * eps)
+    ScalarType n0 = Norm(result.U.Col(0));
+    if (n0 > eps)
     {
-        ScalarType invN0;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            invN0 = ScalarType{1} / sqrtf(n0);
-        else
-            invN0 = ScalarType{1} / sqrt(n0);
-        result.U(0, 0) *= invN0;
-        result.U(1, 0) *= invN0;
-        result.U(2, 0) *= invN0;
+        ScalarType invN0 = ScalarType{1} / n0;
+        result.U.Col(0) *= invN0;
+    }
+    else
+    {
+        // First column is zero, use a unit vector
+        result.U(0, 0) = ScalarType{1};
+        result.U(1, 0) = ScalarType{0};
+        result.U(2, 0) = ScalarType{0};
     }
 
     // Column 1: orthogonalize against column 0
-    ScalarType d01 = result.U(0, 0) * result.U(0, 1) + result.U(1, 0) * result.U(1, 1) +
-                     result.U(2, 0) * result.U(2, 1);
-    result.U(0, 1) -= d01 * result.U(0, 0);
-    result.U(1, 1) -= d01 * result.U(1, 0);
-    result.U(2, 1) -= d01 * result.U(2, 0);
-
-    ScalarType n1 = result.U(0, 1) * result.U(0, 1) + result.U(1, 1) * result.U(1, 1) +
-                    result.U(2, 1) * result.U(2, 1);
-    if (n1 > eps * eps)
+    ScalarType d01 = Dot(result.U.Col(0), result.U.Col(1));
+    result.U.Col(1) -= d01 * result.U.Col(0);
+    ScalarType n1 = Norm(result.U.Col(1));
+    if (n1 > eps)
     {
-        ScalarType invN1;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            invN1 = ScalarType{1} / sqrtf(n1);
-        else
-            invN1 = ScalarType{1} / sqrt(n1);
+        ScalarType invN1 = ScalarType{1} / n1;
         result.U(0, 1) *= invN1;
         result.U(1, 1) *= invN1;
         result.U(2, 1) *= invN1;
@@ -319,7 +260,6 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
             abs0 = fabs(result.U(0, 0));
             abs1 = fabs(result.U(1, 0));
         }
-
         if (abs0 < abs1)
         {
             // Cross with x-axis
@@ -334,22 +274,51 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
             result.U(1, 1) = ScalarType{0};
             result.U(2, 1) = -result.U(0, 0);
         }
-        n1 = result.U(0, 1) * result.U(0, 1) + result.U(1, 1) * result.U(1, 1) +
-             result.U(2, 1) * result.U(2, 1);
-        ScalarType invN1;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            invN1 = ScalarType{1} / sqrtf(n1);
-        else
-            invN1 = ScalarType{1} / sqrt(n1);
+        n1               = Norm(result.U.Col(1));
+        ScalarType invN1 = ScalarType{1} / n1;
         result.U(0, 1) *= invN1;
         result.U(1, 1) *= invN1;
         result.U(2, 1) *= invN1;
     }
 
-    // Column 2: cross product of columns 0 and 1
-    result.U(0, 2) = result.U(1, 0) * result.U(2, 1) - result.U(2, 0) * result.U(1, 1);
-    result.U(1, 2) = result.U(2, 0) * result.U(0, 1) - result.U(0, 0) * result.U(2, 1);
-    result.U(2, 2) = result.U(0, 0) * result.U(1, 1) - result.U(1, 0) * result.U(0, 1);
+    // Column 2: orthogonalize against columns 0 and 1, then normalize
+    ScalarType d02 = Dot(result.U.Col(0), result.U.Col(2));
+    ScalarType d12 = Dot(result.U.Col(1), result.U.Col(2));
+    result.U.Col(2) -= d02 * result.U.Col(0);
+    result.U.Col(2) -= d12 * result.U.Col(1);
+    ScalarType n2 = Norm(result.U.Col(2));
+    if (n2 > eps)
+    {
+        // We have a valid third column from A * V(:,2) / sigma_2
+        // Normalize it
+        ScalarType invN2 = ScalarType{1} / n2;
+        result.U(0, 2) *= invN2;
+        result.U(1, 2) *= invN2;
+        result.U(2, 2) *= invN2;
+
+        // Check if it's consistent with a right-handed system
+        // If not, we need to flip both U(:,2) and V(:,2) to maintain A = U * S * V^T
+        // with non-negative singular values
+        SVector<ScalarType, 3> crossU01 = Cross(result.U.Col(0), result.U.Col(1));
+        ScalarType dotCheck             = Dot(crossU01, result.U.Col(2));
+        if (dotCheck < ScalarType{0})
+        {
+            // The third column is in the wrong direction
+            // Flip both U(:,2) and V(:,2) to maintain A = U * S * V^T
+            // (flipping both keeps the product U * S * V^T unchanged)
+            result.U(0, 2) = -result.U(0, 2);
+            result.U(1, 2) = -result.U(1, 2);
+            result.U(2, 2) = -result.U(2, 2);
+            result.V(0, 2) = -result.V(0, 2);
+            result.V(1, 2) = -result.V(1, 2);
+            result.V(2, 2) = -result.V(2, 2);
+        }
+    }
+    else
+    {
+        // Third column is degenerate (zero singular value), use cross product
+        result.U.Col(2) = Cross(result.U.Col(0), result.U.Col(1));
+    }
 
     return result;
 }
@@ -397,28 +366,23 @@ PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A)
 
     // Compute A^T * A
     SMatrix<ScalarType, 2, 2> AtA;
-    AtA(0, 0) = A(0, 0) * A(0, 0) + A(1, 0) * A(1, 0);
-    AtA(0, 1) = A(0, 0) * A(0, 1) + A(1, 0) * A(1, 1);
-    AtA(1, 0) = AtA(0, 1);
-    AtA(1, 1) = A(0, 1) * A(0, 1) + A(1, 1) * A(1, 1);
-
+    AtA(0, 0)   = A(0, 0) * A(0, 0) + A(1, 0) * A(1, 0);
+    AtA(0, 1)   = A(0, 0) * A(0, 1) + A(1, 0) * A(1, 1);
+    AtA(1, 0)   = AtA(0, 1);
+    AtA(1, 1)   = A(0, 1) * A(0, 1) + A(1, 1) * A(1, 1);
     auto lambda = SymmetricEigenvalues2x2(AtA);
-
     SVector<ScalarType, 2> singularValues;
-
     // Singular values in descending order (eigenvalues are ascending)
     for (int i = 0; i < 2; ++i)
     {
         ScalarType sigmaSq = lambda(1 - i);
-        if (sigmaSq < ScalarType{0})
-            sigmaSq = ScalarType{0};
-
+        using namespace std;
+        sigmaSq = max(sigmaSq, ScalarType{0});
         if constexpr (std::is_same_v<ScalarType, float>)
             singularValues(i) = sqrtf(sigmaSq);
         else
             singularValues(i) = sqrt(sigmaSq);
     }
-
     return singularValues;
 }
 
@@ -435,40 +399,22 @@ PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A)
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 3 and MatrixType::kCols == 3, "Matrix must be 3x3");
-
     using ScalarType = typename MatrixType::ScalarType;
-
     // Compute A^T * A
-    SMatrix<ScalarType, 3, 3> AtA;
-    for (int i = 0; i < 3; ++i)
-    {
-        for (int j = i; j < 3; ++j)
-        {
-            ScalarType sum{0};
-            for (int k = 0; k < 3; ++k)
-                sum += A(k, i) * A(k, j);
-            AtA(i, j) = sum;
-            AtA(j, i) = sum;
-        }
-    }
-
-    auto lambda = SymmetricEigenvalues3x3(AtA);
-
+    SMatrix<ScalarType, 3, 3> AtA = A.Transpose() * A;
+    auto lambda                   = SymmetricEigenvalues3x3(AtA);
     SVector<ScalarType, 3> singularValues;
-
     // Singular values in descending order (eigenvalues are ascending)
     for (int i = 0; i < 3; ++i)
     {
         ScalarType sigmaSq = lambda(2 - i);
-        if (sigmaSq < ScalarType{0})
-            sigmaSq = ScalarType{0};
-
+        using namespace std;
+        sigmaSq = max(sigmaSq, ScalarType{0});
         if constexpr (std::is_same_v<ScalarType, float>)
             singularValues(i) = sqrtf(sigmaSq);
         else
             singularValues(i) = sqrt(sigmaSq);
     }
-
     return singularValues;
 }
 

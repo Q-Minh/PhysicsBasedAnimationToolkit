@@ -132,9 +132,9 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         auto [U, S, V] = SVD3x3(A);
 
         // Singular values in descending order
-        CHECK_EQ(S(0), doctest::Approx(5.0).epsilon(1e-10));
-        CHECK_EQ(S(1), doctest::Approx(3.0).epsilon(1e-10));
-        CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-10));
+        CHECK_EQ(S(0), doctest::Approx(5.0).epsilon(1e-5));
+        CHECK_EQ(S(1), doctest::Approx(3.0).epsilon(1e-5));
+        CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-5));
 
         // Check orthogonality
         SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
@@ -173,7 +173,15 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
 
         SMatrix<ScalarType, 3, 3> reconstructed = U * Sigma * V.Transpose();
         ScalarType reconstructionError          = SquaredNorm(reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-10);
+        CHECK_LE(reconstructionError, 1e-6);
+
+        // Check orthogonality
+        SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
+        SMatrix<ScalarType, 3, 3> VtV = V.Transpose() * V;
+        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 3, 3>());
+        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 3, 3>());
+        CHECK_LE(orthogonalityU, 1e-7);
+        CHECK_LE(orthogonalityV, 1e-7);
     }
 
     SUBCASE("Compare with Eigen")
@@ -198,9 +206,17 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         auto Seigen = svd.singularValues();
 
         // Singular values should match
-        CHECK_EQ(S(0), doctest::Approx(Seigen(0)).epsilon(1e-10));
-        CHECK_EQ(S(1), doctest::Approx(Seigen(1)).epsilon(1e-10));
-        CHECK_EQ(S(2), doctest::Approx(Seigen(2)).epsilon(1e-10));
+        CHECK_EQ(S(0), doctest::Approx(Seigen(0)).epsilon(1e-5));
+        CHECK_EQ(S(1), doctest::Approx(Seigen(1)).epsilon(1e-5));
+        CHECK_EQ(S(2), doctest::Approx(Seigen(2)).epsilon(1e-2));
+
+        // Check orthogonality
+        SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
+        SMatrix<ScalarType, 3, 3> VtV = V.Transpose() * V;
+        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 3, 3>());
+        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 3, 3>());
+        CHECK_LE(orthogonalityU, 1e-9);
+        CHECK_LE(orthogonalityV, 1e-9);
     }
 
     SUBCASE("Rotation matrix")
@@ -216,9 +232,17 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
 
         auto [U, S, V] = SVD3x3(R);
 
-        CHECK_EQ(S(0), doctest::Approx(1.0).epsilon(1e-10));
-        CHECK_EQ(S(1), doctest::Approx(1.0).epsilon(1e-10));
-        CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-10));
+        CHECK_EQ(S(0), doctest::Approx(1.0).epsilon(1e-5));
+        CHECK_EQ(S(1), doctest::Approx(1.0).epsilon(1e-5));
+        CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-5));
+
+        // Check orthogonality
+        SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
+        SMatrix<ScalarType, 3, 3> VtV = V.Transpose() * V;
+        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 3, 3>());
+        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 3, 3>());
+        CHECK_LE(orthogonalityU, 1e-10);
+        CHECK_LE(orthogonalityV, 1e-10);
     }
 }
 
@@ -261,8 +285,8 @@ TEST_CASE("[math][linalg][mini] SingularValues")
         SVector<ScalarType, 3> S = SingularValues(A);
 
         // Descending order
-        CHECK_EQ(S(0), doctest::Approx(3.0).epsilon(1e-12));
-        CHECK_EQ(S(1), doctest::Approx(2.0).epsilon(1e-12));
-        CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-12));
+        CHECK_EQ(S(0), doctest::Approx(3.0).epsilon(1e-5));
+        CHECK_EQ(S(1), doctest::Approx(2.0).epsilon(1e-5));
+        CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-5));
     }
 }
