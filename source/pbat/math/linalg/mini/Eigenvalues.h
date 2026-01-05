@@ -23,7 +23,7 @@ namespace mini {
 template <class TScalar, int N>
 struct SymmetricEigenResult
 {
-    SVector<TScalar, N> lambda; ///< Eigenvalues in ascending order
+    SVector<TScalar, N> lambda; ///< Eigenvalues (ascending order if sorted)
     SMatrix<TScalar, N, N> V;   ///< Eigenvectors as columns
 };
 
@@ -39,10 +39,12 @@ struct SymmetricEigenResult
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A `2 x 2` symmetric matrix
- * @return SymmetricEigenResult with eigenvalues in ascending order and orthonormal eigenvectors
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A)
+PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -175,10 +177,12 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A `3 x 3` symmetric matrix
- * @return SymmetricEigenResult with eigenvalues in ascending order and orthonormal eigenvectors
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A)
+PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -290,31 +294,34 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A)
         cos_phi_4pi3 = cos(phi + ScalarType{2} * twopi3);
     }
 
-    // Eigenvalues (will sort to ascending order)
+    // Eigenvalues (will sort to ascending order if requested)
     ScalarType eig0 = mean + twosqrtP * cos_phi;
     ScalarType eig1 = mean + twosqrtP * cos_phi_2pi3;
     ScalarType eig2 = mean + twosqrtP * cos_phi_4pi3;
 
     // Sort eigenvalues in ascending order using sorting network
     // (branchless when compiler optimizes min/max)
-    ScalarType t;
-    if (eig0 > eig1)
+    if (bSortEigenvalues)
     {
-        t    = eig0;
-        eig0 = eig1;
-        eig1 = t;
-    }
-    if (eig1 > eig2)
-    {
-        t    = eig1;
-        eig1 = eig2;
-        eig2 = t;
-    }
-    if (eig0 > eig1)
-    {
-        t    = eig0;
-        eig0 = eig1;
-        eig1 = t;
+        ScalarType t;
+        if (eig0 > eig1)
+        {
+            t    = eig0;
+            eig0 = eig1;
+            eig1 = t;
+        }
+        if (eig1 > eig2)
+        {
+            t    = eig1;
+            eig1 = eig2;
+            eig2 = t;
+        }
+        if (eig0 > eig1)
+        {
+            t    = eig0;
+            eig0 = eig1;
+            eig1 = t;
+        }
     }
 
     result.lambda(0) = eig0;
@@ -465,10 +472,12 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Symmetric square matrix (2x2 or 3x3)
- * @return SymmetricEigenResult with eigenvalues in ascending order and orthonormal eigenvectors
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigen(TMatrix&& A)
+PBAT_HOST_DEVICE auto SymmetricEigen(TMatrix&& A, bool bSortEigenvalues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -478,9 +487,9 @@ PBAT_HOST_DEVICE auto SymmetricEigen(TMatrix&& A)
         "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
-        return SymmetricEigen2x2(std::forward<TMatrix>(A));
+        return SymmetricEigen2x2(std::forward<TMatrix>(A), bSortEigenvalues);
     else
-        return SymmetricEigen3x3(std::forward<TMatrix>(A));
+        return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues);
 }
 
 /**
@@ -488,10 +497,12 @@ PBAT_HOST_DEVICE auto SymmetricEigen(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Symmetric 2x2 matrix
- * @return Vector of 2 eigenvalues in ascending order
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return Vector of 2 eigenvalues (ascending order if bSortEigenvalues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A)
+PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A, bool bSortEigenvalues = true)
     -> SVector<typename std::remove_cvref_t<TMatrix>::ScalarType, 2>
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
@@ -515,8 +526,13 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A)
         sqrtDiscr = sqrt(discr);
 
     SVector<ScalarType, 2> eigenvalues;
+    // Compute in ascending order by default (trace - sqrt <= trace + sqrt)
     eigenvalues(0) = ScalarType{0.5} * (trace - sqrtDiscr);
     eigenvalues(1) = ScalarType{0.5} * (trace + sqrtDiscr);
+
+    // Note: The formula inherently produces ascending order, so bSortEigenvalues
+    // doesn't change behavior here but is kept for API consistency
+    (void)bSortEigenvalues;
 
     return eigenvalues;
 }
@@ -526,14 +542,16 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Symmetric 3x3 matrix
- * @return Vector of 3 eigenvalues in ascending order
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return Vector of 3 eigenvalues (ascending order if bSortEigenvalues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(TMatrix&& A)
+PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(TMatrix&& A, bool bSortEigenvalues = true)
 {
     // Use full decomposition - eigenvalue-only version could be optimized
     // but the overhead of computing eigenvectors is small
-    return SymmetricEigen3x3(std::forward<TMatrix>(A)).lambda;
+    return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues).lambda;
 }
 
 /**
@@ -541,10 +559,12 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Symmetric square matrix (2x2 or 3x3)
- * @return Vector of eigenvalues in ascending order
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return Vector of eigenvalues (ascending order if bSortEigenvalues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigenvalues(TMatrix&& A)
+PBAT_HOST_DEVICE auto SymmetricEigenvalues(TMatrix&& A, bool bSortEigenvalues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -554,9 +574,9 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues(TMatrix&& A)
         "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
-        return SymmetricEigenvalues2x2(std::forward<TMatrix>(A));
+        return SymmetricEigenvalues2x2(std::forward<TMatrix>(A), bSortEigenvalues);
     else
-        return SymmetricEigenvalues3x3(std::forward<TMatrix>(A));
+        return SymmetricEigenvalues3x3(std::forward<TMatrix>(A), bSortEigenvalues);
 }
 
 } // namespace mini

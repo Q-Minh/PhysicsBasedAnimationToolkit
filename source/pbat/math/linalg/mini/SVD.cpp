@@ -89,6 +89,15 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         Eigen::JacobiSVD<pbat::Matrix<2, 2>> svd(Aeigen, Eigen::ComputeFullU | Eigen::ComputeFullV);
         auto Seigen = svd.singularValues();
 
+        // Check reconstruction
+        SMatrix<ScalarType, 2, 2> Sigma = Zeros<ScalarType, 2, 2>();
+        Sigma(0, 0)                     = S(0);
+        Sigma(1, 1)                     = S(1);
+
+        SMatrix<ScalarType, 2, 2> reconstructed = U * Sigma * V.Transpose();
+        ScalarType reconstructionError          = SquaredNorm(reconstructed - Amini);
+        CHECK_LE(reconstructionError, 1e-10);
+
         // Singular values should match
         CHECK_EQ(S(0), doctest::Approx(Seigen(0)).epsilon(1e-5));
         CHECK_EQ(S(1), doctest::Approx(Seigen(1)).epsilon(1e-5));
@@ -106,6 +115,15 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
 
         // Second singular value should be ~0
         CHECK_EQ(S(1), doctest::Approx(0.0).epsilon(1e-10));
+
+        // Check reconstruction
+        SMatrix<ScalarType, 2, 2> Sigma = Zeros<ScalarType, 2, 2>();
+        Sigma(0, 0)                     = S(0);
+        Sigma(1, 1)                     = S(1);
+
+        SMatrix<ScalarType, 2, 2> reconstructed = U * Sigma * V.Transpose();
+        ScalarType reconstructionError          = SquaredNorm(reconstructed - A);
+        CHECK_LE(reconstructionError, 1e-10);
 
         // U and V should still be orthogonal
         SMatrix<ScalarType, 2, 2> UtU = U.Transpose() * U;

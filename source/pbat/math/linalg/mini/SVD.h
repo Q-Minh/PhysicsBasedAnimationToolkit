@@ -45,10 +45,12 @@ struct SVDResult
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Input 2x2 matrix
+ * @param bSortSingularValues If true, singular values are sorted in descending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
  * @return SVDResult containing U, S (singular values), V such that A = U * diag(S) * V^T
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
+PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -65,8 +67,11 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
     auto [lambda, V] = SymmetricEigen2x2(AtA);
     // Singular values are sqrt of eigenvalues (clamp negatives from numerical error)
     ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
-    ScalarType sigma0Sq  = lambda(1); // Largest first for descending order
-    ScalarType sigma1Sq  = lambda(0);
+    // Eigenvalues come in ascending order; optionally reverse for descending singular values
+    int const idx0 = bSortSingularValues ? 1 : 0;
+    int const idx1 = bSortSingularValues ? 0 : 1;
+    ScalarType sigma0Sq = lambda(idx0);
+    ScalarType sigma1Sq = lambda(idx1);
     // Clamp small negative values
     using namespace std;
     sigma0Sq = max(sigma0Sq, ScalarType{0});
@@ -84,11 +89,11 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
     }
     result.S(0) = sigma0;
     result.S(1) = sigma1;
-    // V columns in order corresponding to descending singular values
-    result.V(0, 0) = V(0, 1);
-    result.V(1, 0) = V(1, 1);
-    result.V(0, 1) = V(0, 0);
-    result.V(1, 1) = V(1, 0);
+    // V columns in order corresponding to singular values
+    result.V(0, 0) = V(0, idx0);
+    result.V(1, 0) = V(1, idx0);
+    result.V(0, 1) = V(0, idx1);
+    result.V(1, 1) = V(1, idx1);
     // Compute U = A * V * S^{-1}
     // For each column: u_i = A * v_i / sigma_i
     for (int j = 0; j < 2; ++j)
@@ -168,10 +173,12 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Input 3x3 matrix
+ * @param bSortSingularValues If true, singular values are sorted in descending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
  * @return SVDResult containing U, S (singular values), V such that A = U * diag(S) * V^T
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
+PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -189,11 +196,12 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
     // Eigendecomposition of A^T * A gives V and sigma^2
     auto [lambda, V] = SymmetricEigen3x3(AtA);
 
-    // Singular values are sqrt of eigenvalues, in descending order
-    // Eigenvalues come in ascending order, so reverse
+    // Singular values are sqrt of eigenvalues
+    // Eigenvalues come in ascending order; optionally reverse for descending singular values
     for (int j = 0; j < 3; ++j)
     {
-        ScalarType sigmaSq = lambda(2 - j);
+        int const srcIdx   = bSortSingularValues ? (2 - j) : j;
+        ScalarType sigmaSq = lambda(srcIdx);
         using namespace std;
         sigmaSq = max(sigmaSq, ScalarType{0});
         ScalarType sigma;
@@ -202,8 +210,8 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
         else
             sigma = sqrt(sigmaSq);
         result.S(j) = sigma;
-        // V column (reverse order for descending singular values)
-        result.V.Col(j) = V.Col(2 - j);
+        // V column
+        result.V.Col(j) = V.Col(srcIdx);
     }
     // Compute U = A * V * S^{-1} for non-zero singular values
     result.U.SetZero();
@@ -330,10 +338,12 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Input square matrix (2x2 or 3x3)
+ * @param bSortSingularValues If true, singular values are sorted in descending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
  * @return SVDResult containing U, S, V such that A = U * diag(S) * V^T
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SVD(TMatrix&& A)
+PBAT_HOST_DEVICE auto SVD(TMatrix&& A, bool bSortSingularValues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -343,9 +353,9 @@ PBAT_HOST_DEVICE auto SVD(TMatrix&& A)
         "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
-        return SVD2x2(std::forward<TMatrix>(A));
+        return SVD2x2(std::forward<TMatrix>(A), bSortSingularValues);
     else
-        return SVD3x3(std::forward<TMatrix>(A));
+        return SVD3x3(std::forward<TMatrix>(A), bSortSingularValues);
 }
 
 /**
@@ -353,10 +363,12 @@ PBAT_HOST_DEVICE auto SVD(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Input 2x2 matrix
- * @return Vector of 2 singular values in descending order
+ * @param bSortSingularValues If true, singular values are sorted in descending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return Vector of 2 singular values (descending order if bSortSingularValues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A)
+PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A, bool bSortSingularValues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -372,10 +384,11 @@ PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A)
     AtA(1, 1)   = A(0, 1) * A(0, 1) + A(1, 1) * A(1, 1);
     auto lambda = SymmetricEigenvalues2x2(AtA);
     SVector<ScalarType, 2> singularValues;
-    // Singular values in descending order (eigenvalues are ascending)
+    // Eigenvalues are ascending; optionally reverse for descending singular values
     for (int i = 0; i < 2; ++i)
     {
-        ScalarType sigmaSq = lambda(1 - i);
+        int const srcIdx   = bSortSingularValues ? (1 - i) : i;
+        ScalarType sigmaSq = lambda(srcIdx);
         using namespace std;
         sigmaSq = max(sigmaSq, ScalarType{0});
         if constexpr (std::is_same_v<ScalarType, float>)
@@ -391,10 +404,12 @@ PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Input 3x3 matrix
- * @return Vector of 3 singular values in descending order
+ * @param bSortSingularValues If true, singular values are sorted in descending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return Vector of 3 singular values (descending order if bSortSingularValues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A)
+PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A, bool bSortSingularValues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -404,10 +419,11 @@ PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A)
     SMatrix<ScalarType, 3, 3> AtA = A.Transpose() * A;
     auto lambda                   = SymmetricEigenvalues3x3(AtA);
     SVector<ScalarType, 3> singularValues;
-    // Singular values in descending order (eigenvalues are ascending)
+    // Eigenvalues are ascending; optionally reverse for descending singular values
     for (int i = 0; i < 3; ++i)
     {
-        ScalarType sigmaSq = lambda(2 - i);
+        int const srcIdx   = bSortSingularValues ? (2 - i) : i;
+        ScalarType sigmaSq = lambda(srcIdx);
         using namespace std;
         sigmaSq = max(sigmaSq, ScalarType{0});
         if constexpr (std::is_same_v<ScalarType, float>)
@@ -423,10 +439,12 @@ PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A)
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Input square matrix (2x2 or 3x3)
- * @return Vector of singular values in descending order
+ * @param bSortSingularValues If true, singular values are sorted in descending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return Vector of singular values (descending order if bSortSingularValues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SingularValues(TMatrix&& A)
+PBAT_HOST_DEVICE auto SingularValues(TMatrix&& A, bool bSortSingularValues = true)
 {
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -436,9 +454,9 @@ PBAT_HOST_DEVICE auto SingularValues(TMatrix&& A)
         "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
-        return SingularValues2x2(std::forward<TMatrix>(A));
+        return SingularValues2x2(std::forward<TMatrix>(A), bSortSingularValues);
     else
-        return SingularValues3x3(std::forward<TMatrix>(A));
+        return SingularValues3x3(std::forward<TMatrix>(A), bSortSingularValues);
 }
 
 } // namespace mini
