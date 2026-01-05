@@ -79,7 +79,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
     // Eigenvectors
     // For numerical stability, we compute the eigenvector for the eigenvalue
     // that's furthest from a (or c), then use orthogonality for the other.
-    ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
+    ScalarType const eps = ScalarType{4} * std::numeric_limits<ScalarType>::epsilon(); // 2x2 matrix
 
     ScalarType absB;
     if constexpr (std::is_same_v<ScalarType, float>)
@@ -200,7 +200,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
     ScalarType const a23 = A(1, 2);
     ScalarType const a33 = A(2, 2);
 
-    ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
+    ScalarType const eps = ScalarType{9} * std::numeric_limits<ScalarType>::epsilon(); // 3x3 matrix
 
     // Compute characteristic polynomial coefficients
     // det(A - λI) = -λ³ + c2*λ² + c1*λ + c0 = 0

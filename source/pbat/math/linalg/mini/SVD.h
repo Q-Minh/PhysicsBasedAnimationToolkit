@@ -66,10 +66,10 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
     // Eigendecomposition of A^T * A gives V and sigma^2
     auto [lambda, V] = SymmetricEigen2x2(AtA);
     // Singular values are sqrt of eigenvalues (clamp negatives from numerical error)
-    ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
+    ScalarType const eps = ScalarType{4} * std::numeric_limits<ScalarType>::epsilon(); // 2x2 matrix
     // Eigenvalues come in ascending order; optionally reverse for descending singular values
-    int const idx0 = bSortSingularValues ? 1 : 0;
-    int const idx1 = bSortSingularValues ? 0 : 1;
+    int const idx0      = bSortSingularValues ? 1 : 0;
+    int const idx1      = bSortSingularValues ? 0 : 1;
     ScalarType sigma0Sq = lambda(idx0);
     ScalarType sigma1Sq = lambda(idx1);
     // Clamp small negative values
@@ -188,7 +188,7 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
 
     SVDResult<ScalarType, 3, 3> result{};
 
-    ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
+    ScalarType const eps = ScalarType{9} * std::numeric_limits<ScalarType>::epsilon(); // 3x3 matrix
 
     // Compute A^T * A
     SMatrix<ScalarType, 3, 3> AtA = A.Transpose() * A;

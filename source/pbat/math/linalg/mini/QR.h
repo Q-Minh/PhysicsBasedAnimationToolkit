@@ -62,19 +62,18 @@ PBAT_HOST_DEVICE auto QR(TMatrix&& A)
     Q = A;
     // Initialize R to zero
     R.SetZero();
+    // Threshold for near-zero detection (scaled by matrix dimension)
+    ScalarType const eps = ScalarType(kRows) * std::numeric_limits<ScalarType>::epsilon();
     // Modified Gram-Schmidt
     for (auto j = 0; j < kCols; ++j)
     {
         // Compute norm of column j
         ScalarType norm = Norm(Q.Col(j));
         R(j, j)         = norm;
-        // Threshold for near-zero detection (scaled by matrix dimension)
-        ScalarType const eps = ScalarType{128} * std::numeric_limits<ScalarType>::epsilon();
         // Normalize column j (or set to zero if degenerate)
         // Use branchless selection: multiply by 1/norm if norm > eps, else by 0
         ScalarType const invNorm = (norm > eps) ? (ScalarType{1} / norm) : ScalarType{0};
-        for (auto i = 0; i < kRows; ++i)
-            Q(i, j) *= invNorm;
+        Q.Col(j) *= invNorm;
         // Orthogonalize remaining columns against column j
         for (auto k = j + 1; k < kCols; ++k)
         {
@@ -85,21 +84,6 @@ PBAT_HOST_DEVICE auto QR(TMatrix&& A)
         }
     }
     return result;
-}
-
-/**
- * @brief Compute the thin Q factor of QR decomposition.
- *
- * This is a convenience function when only the orthogonal basis is needed.
- *
- * @tparam TMatrix Matrix type satisfying CMatrix concept
- * @param A Input matrix
- * @return Orthogonal matrix Q
- */
-template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto OrthogonalBasis(TMatrix&& A)
-{
-    return QR(std::forward<TMatrix>(A)).Q;
 }
 
 /**
