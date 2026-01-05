@@ -501,14 +501,15 @@ PBAT_HOST_DEVICE auto JacobiRotation(TScalar a, TScalar b, TScalar c) -> SVector
  * @param A Input MxN matrix (M >= N for this implementation)
  * @param bSortSingularValues If true, singular values are sorted in descending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
- * @param maxSweeps Maximum number of sweeps through all column pairs (default: 20)
+ * @param maxSweeps Maximum number of sweeps through all column pairs. If -1 (default),
+ *        uses 5 * min(M, N) which is typically sufficient for convergence.
  * @return SVDResult containing U, S (singular values), V such that A = U * diag(S) * V^T
  *
  * @note This implementation assumes M >= N. For M < N, transpose the matrix,
  *       compute SVD, then swap U and V.
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps = 20)
+PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps = -1)
 {
     using namespace std;
 
@@ -528,6 +529,10 @@ PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, in
     // Working dimensions (ensure we work with a "tall" or square matrix)
     static auto constexpr kWorkRows = kTrans ? kCols : kRows;
     static auto constexpr kWorkCols = kTrans ? kRows : kCols;
+
+    // Default max sweeps: 5 * min(M, N) is typically more than enough for convergence
+    if (maxSweeps < 0)
+        maxSweeps = 5 * kRank;
 
     SVDResult<ScalarType, kRows, kCols> result{};
 
@@ -786,12 +791,13 @@ PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, in
  * @param A Input MxN matrix
  * @param bSortSingularValues If true, singular values are sorted in descending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
- * @param maxSweeps Maximum number of Jacobi sweeps (default: 20)
+ * @param maxSweeps Maximum number of Jacobi sweeps. If -1 (default),
+ *        uses 5 * min(M, N) which is typically sufficient for convergence.
  * @return Vector of singular values
  */
 template <class /*CMatrix*/ TMatrix>
 PBAT_HOST_DEVICE auto
-JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps = 20)
+JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps = -1)
 {
     using namespace std;
 
@@ -807,6 +813,10 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
     // Working dimensions
     static auto constexpr kWorkRows = kTrans ? kCols : kRows;
     static auto constexpr kWorkCols = kTrans ? kRows : kCols;
+
+    // Default max sweeps: 5 * min(M, N) is typically more than enough for convergence
+    if (maxSweeps < 0)
+        maxSweeps = 5 * kRank;
 
     // Working copy of the matrix (possibly transposed)
     SMatrix<ScalarType, kWorkRows, kWorkCols> B;
