@@ -11,8 +11,8 @@
 #include "Transpose.h"
 #include "pbat/HostDevice.h"
 
+#include <cmath>
 #include <limits>
-#include <math.h>
 #include <type_traits>
 #include <utility>
 
@@ -74,19 +74,10 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
     ScalarType sigma1Sq = lambda(idx1);
     // Clamp small negative values
     using namespace std;
-    sigma0Sq = max(sigma0Sq, ScalarType{0});
-    sigma1Sq = max(sigma1Sq, ScalarType{0});
-    ScalarType sigma0, sigma1;
-    if constexpr (std::is_same_v<ScalarType, float>)
-    {
-        sigma0 = sqrtf(sigma0Sq);
-        sigma1 = sqrtf(sigma1Sq);
-    }
-    else
-    {
-        sigma0 = sqrt(sigma0Sq);
-        sigma1 = sqrt(sigma1Sq);
-    }
+    sigma0Sq            = max(sigma0Sq, ScalarType{0});
+    sigma1Sq            = max(sigma1Sq, ScalarType{0});
+    ScalarType sigma0   = sqrt(sigma0Sq);
+    ScalarType sigma1   = sqrt(sigma1Sq);
     result.S(0) = sigma0;
     result.S(1) = sigma1;
     // V columns in order corresponding to singular values
@@ -132,11 +123,8 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
     ScalarType u0norm = result.U(0, 0) * result.U(0, 0) + result.U(1, 0) * result.U(1, 0);
     if (u0norm > eps * eps)
     {
-        ScalarType invNorm;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            invNorm = ScalarType{1} / sqrtf(u0norm);
-        else
-            invNorm = ScalarType{1} / sqrt(u0norm);
+        using namespace std;
+        ScalarType invNorm = ScalarType{1} / sqrt(u0norm);
         result.U(0, 0) *= invNorm;
         result.U(1, 0) *= invNorm;
     }
@@ -147,11 +135,8 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
     ScalarType u1norm = Dot(result.U.Col(1), result.U.Col(1));
     if (u1norm > eps * eps)
     {
-        ScalarType invNorm;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            invNorm = ScalarType{1} / sqrtf(u1norm);
-        else
-            invNorm = ScalarType{1} / sqrt(u1norm);
+        using namespace std;
+        ScalarType invNorm = ScalarType{1} / sqrt(u1norm);
         result.U.Col(1) *= invNorm;
     }
     else
@@ -203,12 +188,8 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
         int const srcIdx   = bSortSingularValues ? (2 - j) : j;
         ScalarType sigmaSq = lambda(srcIdx);
         using namespace std;
-        sigmaSq = max(sigmaSq, ScalarType{0});
-        ScalarType sigma;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            sigma = sqrtf(sigmaSq);
-        else
-            sigma = sqrt(sigmaSq);
+        sigmaSq          = max(sigmaSq, ScalarType{0});
+        ScalarType sigma = sqrt(sigmaSq);
         result.S(j) = sigma;
         // V column
         result.V.Col(j) = V.Col(srcIdx);
@@ -257,17 +238,9 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
     else
     {
         // Find vector orthogonal to U(:,0)
-        ScalarType abs0, abs1;
-        if constexpr (std::is_same_v<ScalarType, float>)
-        {
-            abs0 = fabsf(result.U(0, 0));
-            abs1 = fabsf(result.U(1, 0));
-        }
-        else
-        {
-            abs0 = fabs(result.U(0, 0));
-            abs1 = fabs(result.U(1, 0));
-        }
+        using namespace std;
+        ScalarType abs0 = fabs(result.U(0, 0));
+        ScalarType abs1 = fabs(result.U(1, 0));
         if (abs0 < abs1)
         {
             // Cross with x-axis
@@ -390,11 +363,8 @@ PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A, bool bSortSingularValues = 
         int const srcIdx   = bSortSingularValues ? (1 - i) : i;
         ScalarType sigmaSq = lambda(srcIdx);
         using namespace std;
-        sigmaSq = max(sigmaSq, ScalarType{0});
-        if constexpr (std::is_same_v<ScalarType, float>)
-            singularValues(i) = sqrtf(sigmaSq);
-        else
-            singularValues(i) = sqrt(sigmaSq);
+        sigmaSq              = max(sigmaSq, ScalarType{0});
+        singularValues(i)    = sqrt(sigmaSq);
     }
     return singularValues;
 }
@@ -425,11 +395,8 @@ PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A, bool bSortSingularValues = 
         int const srcIdx   = bSortSingularValues ? (2 - i) : i;
         ScalarType sigmaSq = lambda(srcIdx);
         using namespace std;
-        sigmaSq = max(sigmaSq, ScalarType{0});
-        if constexpr (std::is_same_v<ScalarType, float>)
-            singularValues(i) = sqrtf(sigmaSq);
-        else
-            singularValues(i) = sqrt(sigmaSq);
+        sigmaSq              = max(sigmaSq, ScalarType{0});
+        singularValues(i)    = sqrt(sigmaSq);
     }
     return singularValues;
 }

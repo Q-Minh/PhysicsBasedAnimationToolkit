@@ -6,7 +6,7 @@
 #include "Norm.h"
 #include "pbat/HostDevice.h"
 
-#include <math.h>
+#include <cmath>
 #include <type_traits>
 #include <utility>
 
@@ -104,65 +104,35 @@ PBAT_HOST_DEVICE auto QR(TMatrix&& A)
 template <class TScalar>
 PBAT_HOST_DEVICE auto GivensRotation(TScalar a, TScalar b)
 {
+    using namespace std;
     TScalar c, s;
     TScalar const eps = std::numeric_limits<TScalar>::epsilon();
-    if constexpr (std::is_same_v<TScalar, float>)
+
+    TScalar const absa = fabs(a);
+    TScalar const absb = fabs(b);
+    if (absb < eps)
     {
-        TScalar const absa = fabsf(a);
-        TScalar const absb = fabsf(b);
-        if (absb < eps)
-        {
-            c = TScalar{1};
-            s = TScalar{0};
-        }
-        else if (absa < eps)
-        {
-            c = TScalar{0};
-            s = (b > TScalar{0}) ? TScalar{1} : TScalar{-1};
-        }
-        else if (absb > absa)
-        {
-            TScalar const t = a / b;
-            TScalar const u = copysignf(sqrtf(TScalar{1} + t * t), b);
-            s               = TScalar{1} / u;
-            c               = s * t;
-        }
-        else
-        {
-            TScalar const t = b / a;
-            TScalar const u = copysignf(sqrtf(TScalar{1} + t * t), a);
-            c               = TScalar{1} / u;
-            s               = c * t;
-        }
+        c = TScalar{1};
+        s = TScalar{0};
+    }
+    else if (absa < eps)
+    {
+        c = TScalar{0};
+        s = (b > TScalar{0}) ? TScalar{1} : TScalar{-1};
+    }
+    else if (absb > absa)
+    {
+        TScalar const t = a / b;
+        TScalar const u = copysign(sqrt(TScalar{1} + t * t), b);
+        s               = TScalar{1} / u;
+        c               = s * t;
     }
     else
     {
-        TScalar const absa = fabs(a);
-        TScalar const absb = fabs(b);
-        if (absb < eps)
-        {
-            c = TScalar{1};
-            s = TScalar{0};
-        }
-        else if (absa < eps)
-        {
-            c = TScalar{0};
-            s = (b > TScalar{0}) ? TScalar{1} : TScalar{-1};
-        }
-        else if (absb > absa)
-        {
-            TScalar const t = a / b;
-            TScalar const u = copysign(sqrt(TScalar{1} + t * t), b);
-            s               = TScalar{1} / u;
-            c               = s * t;
-        }
-        else
-        {
-            TScalar const t = b / a;
-            TScalar const u = copysign(sqrt(TScalar{1} + t * t), a);
-            c               = TScalar{1} / u;
-            s               = c * t;
-        }
+        TScalar const t = b / a;
+        TScalar const u = copysign(sqrt(TScalar{1} + t * t), a);
+        c               = TScalar{1} / u;
+        s               = c * t;
     }
     return SVector<TScalar, 2>{c, s};
 }

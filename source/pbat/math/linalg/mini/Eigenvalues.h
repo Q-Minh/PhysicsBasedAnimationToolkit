@@ -6,8 +6,8 @@
 #include "QR.h"
 #include "pbat/HostDevice.h"
 
+#include <cmath>
 #include <limits>
-#include <math.h>
 #include <type_traits>
 #include <utility>
 
@@ -67,11 +67,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
     ScalarType const diff  = a - c;
     ScalarType const discr = diff * diff + ScalarType{4} * b * b;
 
-    ScalarType sqrtDiscr;
-    if constexpr (std::is_same_v<ScalarType, float>)
-        sqrtDiscr = sqrtf(discr);
-    else
-        sqrtDiscr = sqrt(discr);
+    using namespace std;
+    ScalarType sqrtDiscr = sqrt(discr);
 
     // Eigenvalues (ascending order)
     result.lambda(0) = ScalarType{0.5} * (trace - sqrtDiscr);
@@ -82,11 +79,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
     // that's furthest from a (or c), then use orthogonality for the other.
     ScalarType const eps = ScalarType{4} * std::numeric_limits<ScalarType>::epsilon(); // 2x2 matrix
 
-    ScalarType absB;
-    if constexpr (std::is_same_v<ScalarType, float>)
-        absB = fabsf(b);
-    else
-        absB = fabs(b);
+    ScalarType absB = fabs(b);
 
     if (absB < eps * (ScalarType{1} + (a > c ? a : c)))
     {
@@ -118,17 +111,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
         ScalarType const lambda0_minus_a = result.lambda(0) - a;
         ScalarType const lambda0_minus_c = result.lambda(0) - c;
 
-        ScalarType abs_lma, abs_lmc;
-        if constexpr (std::is_same_v<ScalarType, float>)
-        {
-            abs_lma = fabsf(lambda0_minus_a);
-            abs_lmc = fabsf(lambda0_minus_c);
-        }
-        else
-        {
-            abs_lma = fabs(lambda0_minus_a);
-            abs_lmc = fabs(lambda0_minus_c);
-        }
+        ScalarType abs_lma = fabs(lambda0_minus_a);
+        ScalarType abs_lmc = fabs(lambda0_minus_c);
 
         if (abs_lma > abs_lmc)
         {
@@ -144,12 +128,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
         }
 
         // Normalize first eigenvector
-        ScalarType norm0sq = v0x * v0x + v0y * v0y;
-        ScalarType invNorm0;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            invNorm0 = ScalarType{1} / sqrtf(norm0sq);
-        else
-            invNorm0 = ScalarType{1} / sqrt(norm0sq);
+        ScalarType norm0sq  = v0x * v0x + v0y * v0y;
+        ScalarType invNorm0 = ScalarType{1} / sqrt(norm0sq);
 
         v0x *= invNorm0;
         v0y *= invNorm0;
@@ -253,47 +233,27 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
     }
 
     // Compute sqrt(p) first - we need it for the ratio calculation
-    ScalarType sqrtP;
-    if constexpr (std::is_same_v<ScalarType, float>)
-        sqrtP = sqrtf(p);
-    else
-        sqrtP = sqrt(p);
+    using namespace std;
+    ScalarType sqrtP = sqrt(p);
 
     // ratio = q / p^(3/2) = q / (p * sqrt(p))
     ratio = q / (p * sqrtP);
 
     // Clamp to [-1, 1] for acos (numerical robustness)
-    if constexpr (std::is_same_v<ScalarType, float>)
-        ratio = fminf(fmaxf(ratio, ScalarType{-1}), ScalarType{1});
-    else
-        ratio = fmin(fmax(ratio, ScalarType{-1}), ScalarType{1});
+    ratio = fmin(fmax(ratio, ScalarType{-1}), ScalarType{1});
 
     // Eigenvalues from Cardano's formula
-    ScalarType phi;
-    if constexpr (std::is_same_v<ScalarType, float>)
-        phi = acosf(ratio) / ScalarType{3};
-    else
-        phi = acos(ratio) / ScalarType{3};
+    ScalarType phi = acos(ratio) / ScalarType{3};
 
     ScalarType const twosqrtP = ScalarType{2} * sqrtP;
 
     // Eigenvalues in descending order from Cardano
-    ScalarType cos_phi, cos_phi_2pi3, cos_phi_4pi3;
     ScalarType const pi     = ScalarType{3.14159265358979323846};
     ScalarType const twopi3 = ScalarType{2} * pi / ScalarType{3};
 
-    if constexpr (std::is_same_v<ScalarType, float>)
-    {
-        cos_phi      = cosf(phi);
-        cos_phi_2pi3 = cosf(phi + twopi3);
-        cos_phi_4pi3 = cosf(phi + ScalarType{2} * twopi3);
-    }
-    else
-    {
-        cos_phi      = cos(phi);
-        cos_phi_2pi3 = cos(phi + twopi3);
-        cos_phi_4pi3 = cos(phi + ScalarType{2} * twopi3);
-    }
+    ScalarType cos_phi      = cos(phi);
+    ScalarType cos_phi_2pi3 = cos(phi + twopi3);
+    ScalarType cos_phi_4pi3 = cos(phi + ScalarType{2} * twopi3);
 
     // Eigenvalues (will sort to ascending order if requested)
     ScalarType eig0 = mean + twosqrtP * cos_phi;
@@ -385,10 +345,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
         ScalarType invNorm;
         if (normSq > eps * eps)
         {
-            if constexpr (std::is_same_v<ScalarType, float>)
-                invNorm = ScalarType{1} / sqrtf(normSq);
-            else
-                invNorm = ScalarType{1} / sqrt(normSq);
+            invNorm = ScalarType{1} / sqrt(normSq);
         }
         else
         {
@@ -409,17 +366,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
                 ScalarType const v0z = result.V(2, 0);
 
                 // Pick a non-parallel axis
-                ScalarType absv0x, absv0y;
-                if constexpr (std::is_same_v<ScalarType, float>)
-                {
-                    absv0x = fabsf(v0x);
-                    absv0y = fabsf(v0y);
-                }
-                else
-                {
-                    absv0x = fabs(v0x);
-                    absv0y = fabs(v0y);
-                }
+                ScalarType absv0x = fabs(v0x);
+                ScalarType absv0y = fabs(v0y);
 
                 if (absv0x < absv0y)
                 {
@@ -435,11 +383,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
                     vy = ScalarType{0};
                     vz = -v0x;
                 }
-                normSq = vx * vx + vy * vy + vz * vz;
-                if constexpr (std::is_same_v<ScalarType, float>)
-                    invNorm = ScalarType{1} / sqrtf(normSq);
-                else
-                    invNorm = ScalarType{1} / sqrt(normSq);
+                normSq  = vx * vx + vy * vy + vz * vz;
+                invNorm = ScalarType{1} / sqrt(normSq);
             }
             else
             {
@@ -487,6 +432,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
 template <class TScalar>
 PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
 {
+    using namespace std;
+
     // Eigenvalues of the 2x2 block are:
     // λ = (a + c)/2 ± sqrt(((a - c)/2)^2 + b^2)
     // We want the one closer to c
@@ -494,21 +441,13 @@ PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
     TScalar const delta = (a - c) / TScalar{2};
     TScalar const bsq   = b * b;
 
-    TScalar sqrtTerm;
-    if constexpr (std::is_same_v<TScalar, float>)
-        sqrtTerm = sqrtf(delta * delta + bsq);
-    else
-        sqrtTerm = sqrt(delta * delta + bsq);
+    TScalar sqrtTerm = sqrt(delta * delta + bsq);
 
     // The eigenvalue closer to c is:
     // c - sign(delta) * b^2 / (|delta| + sqrt(delta^2 + b^2))
     // This formulation avoids catastrophic cancellation
 
-    TScalar absD;
-    if constexpr (std::is_same_v<TScalar, float>)
-        absD = fabsf(delta);
-    else
-        absD = fabs(delta);
+    TScalar absD = fabs(delta);
 
     TScalar const eps = std::numeric_limits<TScalar>::epsilon();
 
@@ -562,8 +501,7 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
     SymmetricEigenResult<ScalarType, kDims> result{};
 
     // Tolerance for convergence (scaled by matrix dimension)
-    ScalarType const eps =
-        ScalarType(kDims * kDims) * std::numeric_limits<ScalarType>::epsilon();
+    ScalarType const eps = ScalarType(kDims * kDims) * std::numeric_limits<ScalarType>::epsilon();
 
     // Default max iterations: 30 * N is typically more than enough for convergence
     if (maxIterations < 0)
@@ -585,34 +523,23 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
 
     for (int iter = 0; iter < maxIterations and activeSize > 1; ++iter)
     {
+        using namespace std;
+
         // Check for convergence of the bottom-right off-diagonal element
         // This allows deflation when an eigenvalue has converged
         ScalarType offDiagNorm = ScalarType{0};
         for (int i = 0; i < activeSize - 1; ++i)
         {
-            ScalarType absVal;
-            if constexpr (std::is_same_v<ScalarType, float>)
-                absVal = fabsf(T(i, i + 1));
-            else
-                absVal = fabs(T(i, i + 1));
+            ScalarType absVal = fabs(T(i, i + 1));
             offDiagNorm += absVal;
         }
 
         // Check if last off-diagonal element is small enough for deflation
-        ScalarType lastOffDiag;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            lastOffDiag = fabsf(T(activeSize - 2, activeSize - 1));
-        else
-            lastOffDiag = fabs(T(activeSize - 2, activeSize - 1));
+        ScalarType lastOffDiag = fabs(T(activeSize - 2, activeSize - 1));
 
         // Scale tolerance by magnitude of relevant diagonal elements
-        ScalarType scale;
-        if constexpr (std::is_same_v<ScalarType, float>)
-            scale = fabsf(T(activeSize - 2, activeSize - 2)) +
-                    fabsf(T(activeSize - 1, activeSize - 1));
-        else
-            scale =
-                fabs(T(activeSize - 2, activeSize - 2)) + fabs(T(activeSize - 1, activeSize - 1));
+        ScalarType scale =
+            fabs(T(activeSize - 2, activeSize - 2)) + fabs(T(activeSize - 1, activeSize - 1));
 
         if (lastOffDiag < eps * (ScalarType{1} + scale))
         {
@@ -670,10 +597,7 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
             ScalarType norm = ScalarType{0};
             for (int i = 0; i < activeSize; ++i)
                 norm += Q(i, j) * Q(i, j);
-            if constexpr (std::is_same_v<ScalarType, float>)
-                norm = sqrtf(norm);
-            else
-                norm = sqrt(norm);
+            norm = sqrt(norm);
 
             R(j, j) = norm;
 
@@ -705,10 +629,7 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
                 ScalarType newNorm = ScalarType{0};
                 for (int i = 0; i < activeSize; ++i)
                     newNorm += Q(i, j) * Q(i, j);
-                if constexpr (std::is_same_v<ScalarType, float>)
-                    newNorm = sqrtf(newNorm);
-                else
-                    newNorm = sqrt(newNorm);
+                newNorm = sqrt(newNorm);
 
                 if (newNorm > qrEps)
                 {
@@ -811,15 +732,15 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
             if (minIdx != i)
             {
                 // Swap eigenvalues
-                ScalarType tmp     = result.lambda(i);
-                result.lambda(i)   = result.lambda(minIdx);
+                ScalarType tmp        = result.lambda(i);
+                result.lambda(i)      = result.lambda(minIdx);
                 result.lambda(minIdx) = tmp;
 
                 // Swap eigenvector columns
                 for (int k = 0; k < kDims; ++k)
                 {
-                    tmp                = result.V(k, i);
-                    result.V(k, i)     = result.V(k, minIdx);
+                    tmp                 = result.V(k, i);
+                    result.V(k, i)      = result.V(k, minIdx);
                     result.V(k, minIdx) = tmp;
                 }
             }
@@ -883,11 +804,8 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A, bool bSortEigenvalues
     ScalarType const diff  = a - c;
     ScalarType const discr = diff * diff + ScalarType{4} * b * b;
 
-    ScalarType sqrtDiscr;
-    if constexpr (std::is_same_v<ScalarType, float>)
-        sqrtDiscr = sqrtf(discr);
-    else
-        sqrtDiscr = sqrt(discr);
+    using namespace std;
+    ScalarType sqrtDiscr = sqrt(discr);
 
     SVector<ScalarType, 2> eigenvalues;
     // Compute in ascending order by default (trace - sqrt <= trace + sqrt)
