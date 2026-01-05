@@ -567,16 +567,9 @@ PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, in
                 // Compute elements of the 2x2 Gram matrix for columns i and j
                 // G = [B_i · B_i,  B_i · B_j]
                 //     [B_j · B_i,  B_j · B_j]
-                ScalarType aii = ScalarType{0};
-                ScalarType aij = ScalarType{0};
-                ScalarType ajj = ScalarType{0};
-
-                for (int k = 0; k < kWorkRows; ++k)
-                {
-                    aii += B(k, i) * B(k, i);
-                    aij += B(k, i) * B(k, j);
-                    ajj += B(k, j) * B(k, j);
-                }
+                ScalarType aii = SquaredNorm(B.Col(i));
+                ScalarType aij = Dot(B.Col(i), B.Col(j));
+                ScalarType ajj = SquaredNorm(B.Col(j));
 
                 // Track maximum off-diagonal for convergence check
                 ScalarType absAij = fabs(aij);
@@ -760,24 +753,15 @@ PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, in
         // We computed SVD(A^T) = U * S * V^T, so U_orig = V, V_orig = U
         // result.U is kRows x kRows, V is kWorkCols x kWorkCols = kRows x kRows
         // result.V is kCols x kCols, U is kWorkRows x kWorkRows = kCols x kCols
-        for (int i = 0; i < kRows; ++i)
-            for (int j = 0; j < kRows; ++j)
-                result.U(i, j) = V(i, j);
-        for (int i = 0; i < kCols; ++i)
-            for (int j = 0; j < kCols; ++j)
-                result.V(i, j) = U(i, j);
+        result.U = V;
+        result.V = U;
     }
     else
     {
-        for (int i = 0; i < kRows; ++i)
-            for (int j = 0; j < kRows; ++j)
-                result.U(i, j) = U(i, j);
-        for (int i = 0; i < kCols; ++i)
-            for (int j = 0; j < kCols; ++j)
-                result.V(i, j) = V(i, j);
+        result.U = U;
+        result.V = V;
     }
     result.S = S;
-
     return result;
 }
 
@@ -822,9 +806,7 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
     SMatrix<ScalarType, kWorkRows, kWorkCols> B;
     if constexpr (kTrans)
     {
-        for (int i = 0; i < kRows; ++i)
-            for (int j = 0; j < kCols; ++j)
-                B(j, i) = A(i, j);
+        B = A.Transpose();
     }
     else
     {
@@ -883,12 +865,7 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
     // Extract singular values (column norms)
     SVector<ScalarType, kRank> S;
     for (int j = 0; j < kRank; ++j)
-    {
-        ScalarType normSq = ScalarType{0};
-        for (int i = 0; i < kWorkRows; ++i)
-            normSq += B(i, j) * B(i, j);
-        S(j) = sqrt(normSq);
-    }
+        S(j) = Norm(B.Col(j));
 
     // Sort in descending order if requested
     if (bSortSingularValues)

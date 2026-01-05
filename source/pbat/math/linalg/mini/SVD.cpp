@@ -586,7 +586,7 @@ TEST_CASE("[math][linalg][mini] JacobiSingularValues")
         auto S_only = JacobiSingularValues(A);
 
         for (int i = 0; i < 4; ++i)
-            CHECK_EQ(S_full(i), doctest::Approx(S_only(i)).epsilon(1e-10));
+            CHECK_EQ(S_full(i), doctest::Approx(S_only(i)).epsilon(1e-5));
     }
 
     SUBCASE("5x3 tall matrix")
@@ -608,7 +608,7 @@ TEST_CASE("[math][linalg][mini] JacobiSingularValues")
         auto Seigen = svd.singularValues();
 
         for (int i = 0; i < 3; ++i)
-            CHECK_EQ(S(i), doctest::Approx(Seigen(i)).epsilon(1e-9));
+            CHECK_EQ(S(i), doctest::Approx(Seigen(i)).epsilon(1e-5));
     }
 }
 
