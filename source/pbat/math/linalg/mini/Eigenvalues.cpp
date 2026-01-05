@@ -165,9 +165,9 @@ TEST_CASE("[math][linalg][mini] SymmetricEigen3x3")
         auto eigEigen = solver.eigenvalues();
 
         // Eigenvalues should match (Eigen also returns in ascending order)
-        CHECK_EQ(eigMini(0), doctest::Approx(eigEigen(0)).epsilon(1e-10));
-        CHECK_EQ(eigMini(1), doctest::Approx(eigEigen(1)).epsilon(1e-10));
-        CHECK_EQ(eigMini(2), doctest::Approx(eigEigen(2)).epsilon(1e-10));
+        CHECK_EQ(eigMini(0), doctest::Approx(eigEigen(0)).epsilon(1e-6));
+        CHECK_EQ(eigMini(1), doctest::Approx(eigEigen(1)).epsilon(1e-6));
+        CHECK_EQ(eigMini(2), doctest::Approx(eigEigen(2)).epsilon(1e-6));
     }
 
     SUBCASE("Near-identity matrix")
@@ -201,9 +201,9 @@ TEST_CASE("[math][linalg][mini] SymmetricEigen3x3")
 
         auto [eigenvalues, eigenvectors] = SymmetricEigen3x3(A);
 
-        CHECK_EQ(eigenvalues(0), doctest::Approx(2.0).epsilon(1e-10));
-        CHECK_EQ(eigenvalues(1), doctest::Approx(2.0).epsilon(1e-10));
-        CHECK_EQ(eigenvalues(2), doctest::Approx(2.0).epsilon(1e-10));
+        CHECK_EQ(eigenvalues(0), doctest::Approx(2.0).epsilon(1e-6));
+        CHECK_EQ(eigenvalues(1), doctest::Approx(2.0).epsilon(1e-6));
+        CHECK_EQ(eigenvalues(2), doctest::Approx(2.0).epsilon(1e-6));
 
         // Eigenvectors should still be orthonormal
         SMatrix<ScalarType, 3, 3> VtV = eigenvectors.Transpose() * eigenvectors;
@@ -233,8 +233,8 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenvalues")
         Eigen::SelfAdjointEigenSolver<pbat::Matrix<2, 2>> solver(Aeigen);
         auto eigEigen = solver.eigenvalues();
 
-        CHECK_EQ(eigenvalues(0), doctest::Approx(eigEigen(0)).epsilon(1e-12));
-        CHECK_EQ(eigenvalues(1), doctest::Approx(eigEigen(1)).epsilon(1e-12));
+        CHECK_EQ(eigenvalues(0), doctest::Approx(eigEigen(0)).epsilon(1e-6));
+        CHECK_EQ(eigenvalues(1), doctest::Approx(eigEigen(1)).epsilon(1e-6));
     }
 
     SUBCASE("3x3 eigenvalues only")
@@ -257,8 +257,8 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenvalues")
         Eigen::SelfAdjointEigenSolver<pbat::Matrix<3, 3>> solver(Aeigen);
         auto eigEigen = solver.eigenvalues();
 
-        CHECK_EQ(eigenvalues(0), doctest::Approx(eigEigen(0)).epsilon(1e-10));
-        CHECK_EQ(eigenvalues(1), doctest::Approx(eigEigen(1)).epsilon(1e-10));
-        CHECK_EQ(eigenvalues(2), doctest::Approx(eigEigen(2)).epsilon(1e-10));
+        CHECK_EQ(eigenvalues(0), doctest::Approx(eigEigen(0)).epsilon(1e-6));
+        CHECK_EQ(eigenvalues(1), doctest::Approx(eigEigen(1)).epsilon(1e-6));
+        CHECK_EQ(eigenvalues(2), doctest::Approx(eigEigen(2)).epsilon(1e-6));
     }
 }

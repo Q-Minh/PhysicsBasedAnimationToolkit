@@ -247,18 +247,21 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A)
         return result;
     }
 
-    ratio = q / (p * (p_cubed > eps ? (ScalarType{1} / p) : ScalarType{1}));
+    // Compute sqrt(p) first - we need it for the ratio calculation
+    ScalarType sqrtP;
     if constexpr (std::is_same_v<ScalarType, float>)
-    {
-        ratio = ratio / sqrtf(p);
-        // Clamp to [-1, 1] for acos
-        ratio = fminf(fmaxf(ratio, ScalarType{-1}), ScalarType{1});
-    }
+        sqrtP = sqrtf(p);
     else
-    {
-        ratio = ratio / sqrt(p);
+        sqrtP = sqrt(p);
+
+    // ratio = q / p^(3/2) = q / (p * sqrt(p))
+    ratio = q / (p * sqrtP);
+
+    // Clamp to [-1, 1] for acos (numerical robustness)
+    if constexpr (std::is_same_v<ScalarType, float>)
+        ratio = fminf(fmaxf(ratio, ScalarType{-1}), ScalarType{1});
+    else
         ratio = fmin(fmax(ratio, ScalarType{-1}), ScalarType{1});
-    }
 
     // Eigenvalues from Cardano's formula
     ScalarType phi;
@@ -266,12 +269,6 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A)
         phi = acosf(ratio) / ScalarType{3};
     else
         phi = acos(ratio) / ScalarType{3};
-
-    ScalarType sqrtP;
-    if constexpr (std::is_same_v<ScalarType, float>)
-        sqrtP = sqrtf(p);
-    else
-        sqrtP = sqrt(p);
 
     ScalarType const twosqrtP = ScalarType{2} * sqrtP;
 
