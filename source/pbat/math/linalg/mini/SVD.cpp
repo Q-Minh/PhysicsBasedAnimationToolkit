@@ -296,3 +296,355 @@ TEST_CASE("[math][linalg][mini] SingularValues")
         CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-5));
     }
 }
+
+TEST_CASE("[math][linalg][mini] JacobiSVD")
+{
+    using namespace pbat::math::linalg::mini;
+    using ScalarType = pbat::Scalar;
+
+    SUBCASE("3x3 diagonal matrix")
+    {
+        SMatrix<ScalarType, 3, 3> A;
+        A(0, 0) = 3.0;
+        A(0, 1) = 0.0;
+        A(0, 2) = 0.0;
+        A(1, 0) = 0.0;
+        A(1, 1) = 1.0;
+        A(1, 2) = 0.0;
+        A(2, 0) = 0.0;
+        A(2, 1) = 0.0;
+        A(2, 2) = 2.0;
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        // Singular values in descending order: 3, 2, 1
+        CHECK_EQ(S(0), doctest::Approx(3.0).epsilon(1e-10));
+        CHECK_EQ(S(1), doctest::Approx(2.0).epsilon(1e-10));
+        CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-10));
+
+        // U and V orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
+
+        // Reconstruction
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+    }
+
+    SUBCASE("3x3 general matrix")
+    {
+        SMatrix<ScalarType, 3, 3> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(0, 2) = 0.0;
+        A(1, 0) = 0.0;
+        A(1, 1) = 3.0;
+        A(1, 2) = 1.0;
+        A(2, 0) = 2.0;
+        A(2, 1) = 0.0;
+        A(2, 2) = 4.0;
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        // U and V orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
+
+        // Reconstruction
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+
+        // Compare with Eigen
+        pbat::Matrix<3, 3> Aeigen;
+        Aeigen << 1.0, 2.0, 0.0, 0.0, 3.0, 1.0, 2.0, 0.0, 4.0;
+        Eigen::JacobiSVD<pbat::Matrix<3, 3>> svd(Aeigen, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        auto Seigen = svd.singularValues();
+
+        for (int i = 0; i < 3; ++i)
+            CHECK_EQ(S(i), doctest::Approx(Seigen(i)).epsilon(1e-5));
+    }
+
+    SUBCASE("4x4 general matrix")
+    {
+        SMatrix<ScalarType, 4, 4> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(0, 2) = 3.0;
+        A(0, 3) = 0.5;
+        A(1, 0) = 4.0;
+        A(1, 1) = 5.0;
+        A(1, 2) = 6.0;
+        A(1, 3) = 1.5;
+        A(2, 0) = 7.0;
+        A(2, 1) = 8.0;
+        A(2, 2) = 9.0;
+        A(2, 3) = 2.5;
+        A(3, 0) = 0.1;
+        A(3, 1) = 0.2;
+        A(3, 2) = 0.3;
+        A(3, 3) = 10.0;
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        // U and V orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-9});
+        test::CheckOrthonormality(V, ScalarType{1e-9});
+
+        // Reconstruction
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-9});
+
+        // Compare with Eigen
+        pbat::Matrix<4, 4> Aeigen;
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                Aeigen(i, j) = A(i, j);
+
+        Eigen::JacobiSVD<pbat::Matrix<4, 4>> svd(Aeigen, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        auto Seigen = svd.singularValues();
+
+        for (int i = 0; i < 4; ++i)
+            CHECK_EQ(S(i), doctest::Approx(Seigen(i)).epsilon(1e-5));
+    }
+
+    SUBCASE("4x3 tall matrix (M > N)")
+    {
+        SMatrix<ScalarType, 4, 3> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(0, 2) = 3.0;
+        A(1, 0) = 4.0;
+        A(1, 1) = 5.0;
+        A(1, 2) = 6.0;
+        A(2, 0) = 7.0;
+        A(2, 1) = 8.0;
+        A(2, 2) = 9.0;
+        A(3, 0) = 10.0;
+        A(3, 1) = 11.0;
+        A(3, 2) = 12.0;
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        // U is 4x4 orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-9});
+        // V is 3x3 orthonormal
+        test::CheckOrthonormality(V, ScalarType{1e-9});
+
+        // Reconstruction: A = U[:, :3] * diag(S) * V^T
+        SMatrix<ScalarType, 4, 3> Arecon;
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                ScalarType sum = ScalarType{0};
+                for (int k = 0; k < 3; ++k)
+                    sum += U(i, k) * S(k) * V(j, k);
+                Arecon(i, j) = sum;
+            }
+        }
+        ScalarType reconError = SquaredNorm(A - Arecon);
+        CHECK_LE(reconError, 1e-9);
+
+        // Compare with Eigen
+        pbat::Matrix<4, 3> Aeigen;
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 3; ++j)
+                Aeigen(i, j) = A(i, j);
+
+        Eigen::JacobiSVD<pbat::Matrix<4, 3>> svd(Aeigen, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        auto Seigen = svd.singularValues();
+
+        for (int i = 0; i < 3; ++i)
+            CHECK_EQ(S(i), doctest::Approx(Seigen(i)).epsilon(1e-5));
+    }
+
+    SUBCASE("3x4 wide matrix (M < N)")
+    {
+        SMatrix<ScalarType, 3, 4> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(0, 2) = 3.0;
+        A(0, 3) = 4.0;
+        A(1, 0) = 5.0;
+        A(1, 1) = 6.0;
+        A(1, 2) = 7.0;
+        A(1, 3) = 8.0;
+        A(2, 0) = 9.0;
+        A(2, 1) = 10.0;
+        A(2, 2) = 11.0;
+        A(2, 3) = 12.0;
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        // U is 3x3 orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-9});
+        // V is 4x4 orthonormal
+        test::CheckOrthonormality(V, ScalarType{1e-9});
+
+        // Reconstruction: A = U * diag(S) * V[:, :3]^T
+        SMatrix<ScalarType, 3, 4> Arecon;
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                ScalarType sum = ScalarType{0};
+                for (int k = 0; k < 3; ++k)
+                    sum += U(i, k) * S(k) * V(j, k);
+                Arecon(i, j) = sum;
+            }
+        }
+        ScalarType reconError = SquaredNorm(A - Arecon);
+        CHECK_LE(reconError, 1e-9);
+
+        // Compare with Eigen
+        pbat::Matrix<3, 4> Aeigen;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 4; ++j)
+                Aeigen(i, j) = A(i, j);
+
+        Eigen::JacobiSVD<pbat::Matrix<3, 4>> svd(Aeigen, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        auto Seigen = svd.singularValues();
+
+        for (int i = 0; i < 3; ++i)
+            CHECK_EQ(S(i), doctest::Approx(Seigen(i)).epsilon(1e-5));
+    }
+
+    SUBCASE("5x5 symmetric positive definite")
+    {
+        SMatrix<ScalarType, 5, 5> A;
+        // Create SPD matrix: A = B * B^T + I
+        for (int i = 0; i < 5; ++i)
+        {
+            for (int j = 0; j < 5; ++j)
+            {
+                A(i, j) = ScalarType(1) / ScalarType(1 + i + j);
+            }
+        }
+        // Make it SPD by adding diagonal
+        for (int i = 0; i < 5; ++i)
+            A(i, i) += ScalarType{5};
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        test::CheckOrthonormality(U, ScalarType{1e-9});
+        test::CheckOrthonormality(V, ScalarType{1e-9});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-9});
+
+        // For SPD matrix, all singular values should be positive
+        for (int i = 0; i < 5; ++i)
+            CHECK_GT(S(i), ScalarType{0});
+    }
+
+    SUBCASE("Rank-deficient matrix")
+    {
+        // 3x3 matrix with rank 2
+        SMatrix<ScalarType, 3, 3> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(0, 2) = 3.0;
+        A(1, 0) = 2.0;
+        A(1, 1) = 4.0;
+        A(1, 2) = 6.0; // Row 1 = 2 * Row 0
+        A(2, 0) = 1.0;
+        A(2, 1) = 1.0;
+        A(2, 2) = 1.0;
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+
+        // Third singular value should be essentially zero
+        CHECK_LT(S(2), 1e-6);
+    }
+}
+
+TEST_CASE("[math][linalg][mini] JacobiSingularValues")
+{
+    using namespace pbat::math::linalg::mini;
+    using ScalarType = pbat::Scalar;
+
+    SUBCASE("4x4 compare with full SVD")
+    {
+        SMatrix<ScalarType, 4, 4> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(0, 2) = 3.0;
+        A(0, 3) = 0.5;
+        A(1, 0) = 4.0;
+        A(1, 1) = 5.0;
+        A(1, 2) = 6.0;
+        A(1, 3) = 1.5;
+        A(2, 0) = 7.0;
+        A(2, 1) = 8.0;
+        A(2, 2) = 9.0;
+        A(2, 3) = 2.5;
+        A(3, 0) = 0.1;
+        A(3, 1) = 0.2;
+        A(3, 2) = 0.3;
+        A(3, 3) = 10.0;
+
+        auto S_full = JacobiSVD(A).S;
+        auto S_only = JacobiSingularValues(A);
+
+        for (int i = 0; i < 4; ++i)
+            CHECK_EQ(S_full(i), doctest::Approx(S_only(i)).epsilon(1e-10));
+    }
+
+    SUBCASE("5x3 tall matrix")
+    {
+        SMatrix<ScalarType, 5, 3> A;
+        for (int i = 0; i < 5; ++i)
+            for (int j = 0; j < 3; ++j)
+                A(i, j) = ScalarType(i + 1) * ScalarType(j + 1) + ScalarType(0.1) * (i - j);
+
+        auto S = JacobiSingularValues(A);
+
+        // Compare with Eigen
+        pbat::Matrix<5, 3> Aeigen;
+        for (int i = 0; i < 5; ++i)
+            for (int j = 0; j < 3; ++j)
+                Aeigen(i, j) = A(i, j);
+
+        Eigen::JacobiSVD<pbat::Matrix<5, 3>> svd(Aeigen);
+        auto Seigen = svd.singularValues();
+
+        for (int i = 0; i < 3; ++i)
+            CHECK_EQ(S(i), doctest::Approx(Seigen(i)).epsilon(1e-9));
+    }
+}
+
+TEST_CASE("[math][linalg][mini] JacobiRotation")
+{
+    using namespace pbat::math::linalg::mini;
+    using ScalarType = pbat::Scalar;
+
+    SUBCASE("Diagonalizes 2x2 symmetric matrix")
+    {
+        ScalarType a = 5.0, b = 2.0, c = 3.0;
+
+        SVector<ScalarType, 2> jr = JacobiRotation(a, b, c);
+        ScalarType cosTheta       = jr(0);
+        ScalarType sinTheta       = jr(1);
+
+        // Apply rotation: R^T * [a b; b c] * R should be diagonal
+        // R = [c -s; s c]
+        // New off-diagonal: (c^2 - s^2) * b + cs * (a - c)
+        ScalarType c2  = cosTheta * cosTheta;
+        ScalarType s2  = sinTheta * sinTheta;
+        ScalarType cs  = cosTheta * sinTheta;
+        ScalarType off = (c2 - s2) * b + cs * (a - c);
+        CHECK_LT(std::fabs(off), 1e-14);
+    }
+
+    SUBCASE("Already diagonal matrix")
+    {
+        ScalarType a = 5.0, b = 0.0, c = 3.0;
+
+        SVector<ScalarType, 2> jr = JacobiRotation(a, b, c);
+        ScalarType cosTheta       = jr(0);
+        ScalarType sinTheta       = jr(1);
+
+        // Should return identity rotation
+        CHECK_EQ(cosTheta, doctest::Approx(1.0).epsilon(1e-14));
+        CHECK_LT(std::fabs(sinTheta), 1e-14);
+    }
+}

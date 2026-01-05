@@ -511,12 +511,7 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
     SMatrix<ScalarType, kDims, kDims> T = A;
 
     // Eigenvector accumulator (starts as identity)
-    SMatrix<ScalarType, kDims, kDims> V;
-    for (int i = 0; i < kDims; ++i)
-    {
-        for (int j = 0; j < kDims; ++j)
-            V(i, j) = (i == j) ? ScalarType{1} : ScalarType{0};
-    }
+    SMatrix<ScalarType, kDims, kDims> V = Identity<ScalarType, kDims, kDims>();
 
     // Track which eigenvalues have converged (deflation)
     int activeSize = kDims;
