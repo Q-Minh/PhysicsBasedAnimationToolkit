@@ -4,12 +4,41 @@
 #include "Matrix.h"
 #include "Norm.h"
 #include "Product.h"
+#include "CheckOrthogonality.h"
 #include "Transpose.h"
 #include "pbat/Aliases.h"
 
 #include <Eigen/QR>
 #include <cmath>
 #include <doctest/doctest.h>
+
+namespace pbat::math::linalg::mini::test {
+
+/**
+ * @brief Check QR reconstruction error: ||Q * R - A||^2.
+ *
+ * @tparam TMatrixQ Q matrix type
+ * @tparam TMatrixR R matrix type
+ * @tparam TMatrixA Original matrix type
+ * @param Q Orthogonal matrix from QR decomposition
+ * @param R Upper triangular matrix from QR decomposition
+ * @param A Original matrix
+ * @param tol Tolerance for the squared Frobenius norm of the reconstruction error
+ */
+template <class /*CMatrix*/ TMatrixQ, class /*CMatrix*/ TMatrixR, class /*CMatrix*/ TMatrixA>
+void CheckQRReconstruction(
+    TMatrixQ const& Q,
+    TMatrixR const& R,
+    TMatrixA const& A,
+    typename std::remove_cvref_t<TMatrixA>::ScalarType tol)
+{
+    using ScalarType               = typename std::remove_cvref_t<TMatrixA>::ScalarType;
+    auto QR                        = Q * R;
+    ScalarType reconstructionError = SquaredNorm(QR - A);
+    CHECK_LE(reconstructionError, tol);
+}
+
+} // namespace pbat::math::linalg::mini::test
 
 TEST_CASE("[math][linalg][mini] QR")
 {
@@ -27,17 +56,13 @@ TEST_CASE("[math][linalg][mini] QR")
         auto [Q, R] = QR(A);
 
         // Check that Q is orthogonal: Q^T * Q = I
-        SMatrix<ScalarType, 2, 2> QtQ = Q.Transpose() * Q;
-        ScalarType orthogonality      = (SquaredNorm(QtQ - Identity<ScalarType, 2, 2>()));
-        CHECK_LE(orthogonality, 1e-10);
+        test::CheckOrthonormality(Q, ScalarType{1e-10});
 
         // Check that R is upper triangular
         CHECK_EQ(R(1, 0), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check that Q * R = A
-        SMatrix<ScalarType, 2, 2> QR_reconstructed = Q * R;
-        ScalarType reconstructionError             = SquaredNorm(QR_reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-10);
+        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-10});
     }
 
     SUBCASE("3x3 QR decomposition")
@@ -56,9 +81,7 @@ TEST_CASE("[math][linalg][mini] QR")
         auto [Q, R] = QR(A);
 
         // Check that Q is orthogonal: Q^T * Q = I
-        SMatrix<ScalarType, 3, 3> QtQ = Q.Transpose() * Q;
-        ScalarType orthogonality      = SquaredNorm(QtQ - Identity<ScalarType, 3, 3>());
-        CHECK_LE(orthogonality, 1e-10);
+        test::CheckOrthonormality(Q, ScalarType{1e-10});
 
         // Check that R is upper triangular
         CHECK_EQ(R(1, 0), doctest::Approx(0.0).epsilon(1e-10));
@@ -66,9 +89,7 @@ TEST_CASE("[math][linalg][mini] QR")
         CHECK_EQ(R(2, 1), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check that Q * R = A
-        SMatrix<ScalarType, 3, 3> QR_reconstructed = Q * R;
-        ScalarType reconstructionError             = SquaredNorm(QR_reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-10);
+        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-10});
     }
 
     SUBCASE("3x2 thin QR decomposition")
@@ -84,17 +105,13 @@ TEST_CASE("[math][linalg][mini] QR")
         auto [Q, R] = QR(A);
 
         // Check that Q has orthonormal columns: Q^T * Q = I (2x2)
-        SMatrix<ScalarType, 2, 2> QtQ = Q.Transpose() * Q;
-        ScalarType orthogonality      = SquaredNorm(QtQ - Identity<ScalarType, 2, 2>());
-        CHECK_LE(orthogonality, 1e-10);
+        test::CheckOrthonormality(Q, ScalarType{1e-10});
 
         // Check that R is upper triangular
         CHECK_EQ(R(1, 0), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check that Q * R = A
-        SMatrix<ScalarType, 3, 2> QR_reconstructed = Q * R;
-        ScalarType reconstructionError             = SquaredNorm(QR_reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-10);
+        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-10});
     }
 
     SUBCASE("Compare with Eigen")
@@ -118,13 +135,8 @@ TEST_CASE("[math][linalg][mini] QR")
         pbat::Matrix<3, 3> Qeigen = qr.householderQ();
         pbat::Matrix<3, 3> Reigen = qr.matrixQR().triangularView<Eigen::Upper>();
 
-        // Reconstruct A from both
-        SMatrix<ScalarType, 3, 3> Amini_reconstructed = Qmini * Rmini;
-        pbat::Matrix<3, 3> Aeigen_reconstructed       = Qeigen * Reigen;
-
         // Both reconstructions should match the original
-        ScalarType reconstructionError = SquaredNorm(Amini_reconstructed - Amini);
-        CHECK_LE(reconstructionError, 1e-10);
+        test::CheckQRReconstruction(Qmini, Rmini, Amini, ScalarType{1e-10});
     }
 }
 

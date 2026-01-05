@@ -154,6 +154,11 @@ TEST_CASE("[sim][algorithm][vbd] Broyden")
     setup.dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = setup.dynamics.Objective(setup.dynamics.x);
     VectorX g0 = setup.dynamics.Gradient(setup.dynamics.x);
+    sim::algorithm::vbd::InitializeSolve(
+        setup.dynamics,
+        setup.meshDynamics,
+        setup.vbdParams,
+        *setup.broydenParams);
     sim::algorithm::vbd::Solve(
         setup.dynamics,
         setup.meshDynamics,

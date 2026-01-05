@@ -1,6 +1,7 @@
 #include "SVD.h"
 
 #include "BinaryOperations.h"
+#include "CheckOrthogonality.h"
 #include "Matrix.h"
 #include "Norm.h"
 #include "Product.h"
@@ -11,6 +12,48 @@
 #include <Eigen/SVD>
 #include <cmath>
 #include <doctest/doctest.h>
+
+namespace pbat::math::linalg::mini::test {
+
+/**
+ * @brief Check SVD reconstruction error: ||U * diag(S) * V^T - A||^2.
+ *
+ * @tparam TMatrixU U matrix type
+ * @tparam TVectorS Singular values vector type
+ * @tparam TMatrixV V matrix type
+ * @tparam TMatrixA Original matrix type
+ * @param U Left singular vectors
+ * @param S Singular values
+ * @param V Right singular vectors
+ * @param A Original matrix
+ * @param tol Tolerance for the squared Frobenius norm of the reconstruction error
+ */
+template <
+    class /*CMatrix*/ TMatrixU,
+    class /*CMatrix*/ TVectorS,
+    class /*CMatrix*/ TMatrixV,
+    class /*CMatrix*/ TMatrixA>
+void CheckSVDReconstruction(
+    TMatrixU const& U,
+    TVectorS const& S,
+    TMatrixV const& V,
+    TMatrixA const& A,
+    typename std::remove_cvref_t<TMatrixA>::ScalarType tol)
+{
+    using ScalarType            = typename std::remove_cvref_t<TMatrixA>::ScalarType;
+    static auto constexpr kDims = std::remove_cvref_t<TVectorS>::kRows;
+
+    // Build diagonal matrix from singular values
+    SMatrix<ScalarType, kDims, kDims> Sigma = Zeros<ScalarType, kDims, kDims>();
+    for (int i = 0; i < kDims; ++i)
+        Sigma(i, i) = S(i);
+
+    auto reconstructed             = U * Sigma * V.Transpose();
+    ScalarType reconstructionError = SquaredNorm(reconstructed - A);
+    CHECK_LE(reconstructionError, tol);
+}
+
+} // namespace pbat::math::linalg::mini::test
 
 TEST_CASE("[math][linalg][mini] SVD2x2")
 {
@@ -32,21 +75,11 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         CHECK_EQ(S(1), doctest::Approx(2.0).epsilon(1e-12));
 
         // Check U and V are orthogonal
-        SMatrix<ScalarType, 2, 2> UtU = U.Transpose() * U;
-        SMatrix<ScalarType, 2, 2> VtV = V.Transpose() * V;
-        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 2, 2>());
-        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 2, 2>());
-        CHECK_LE(orthogonalityU, 1e-12);
-        CHECK_LE(orthogonalityV, 1e-12);
+        test::CheckOrthonormality(U, ScalarType{1e-12});
+        test::CheckOrthonormality(V, ScalarType{1e-12});
 
         // Check reconstruction: A = U * diag(S) * V^T
-        SMatrix<ScalarType, 2, 2> Sigma = Zeros<ScalarType, 2, 2>();
-        Sigma(0, 0)                     = S(0);
-        Sigma(1, 1)                     = S(1);
-
-        SMatrix<ScalarType, 2, 2> reconstructed = U * Sigma * V.Transpose();
-        ScalarType reconstructionError          = SquaredNorm(reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-12);
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-12});
     }
 
     SUBCASE("General matrix")
@@ -64,13 +97,7 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         CHECK(S(1) >= 0.0);
 
         // Check reconstruction
-        SMatrix<ScalarType, 2, 2> Sigma = Zeros<ScalarType, 2, 2>();
-        Sigma(0, 0)                     = S(0);
-        Sigma(1, 1)                     = S(1);
-
-        SMatrix<ScalarType, 2, 2> reconstructed = U * Sigma * V.Transpose();
-        ScalarType reconstructionError          = SquaredNorm(reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-10);
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
     }
 
     SUBCASE("Compare with Eigen")
@@ -90,13 +117,7 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         auto Seigen = svd.singularValues();
 
         // Check reconstruction
-        SMatrix<ScalarType, 2, 2> Sigma = Zeros<ScalarType, 2, 2>();
-        Sigma(0, 0)                     = S(0);
-        Sigma(1, 1)                     = S(1);
-
-        SMatrix<ScalarType, 2, 2> reconstructed = U * Sigma * V.Transpose();
-        ScalarType reconstructionError          = SquaredNorm(reconstructed - Amini);
-        CHECK_LE(reconstructionError, 1e-10);
+        test::CheckSVDReconstruction(U, S, V, Amini, ScalarType{1e-10});
 
         // Singular values should match
         CHECK_EQ(S(0), doctest::Approx(Seigen(0)).epsilon(1e-5));
@@ -117,21 +138,11 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         CHECK_EQ(S(1), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check reconstruction
-        SMatrix<ScalarType, 2, 2> Sigma = Zeros<ScalarType, 2, 2>();
-        Sigma(0, 0)                     = S(0);
-        Sigma(1, 1)                     = S(1);
-
-        SMatrix<ScalarType, 2, 2> reconstructed = U * Sigma * V.Transpose();
-        ScalarType reconstructionError          = SquaredNorm(reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-10);
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
 
         // U and V should still be orthogonal
-        SMatrix<ScalarType, 2, 2> UtU = U.Transpose() * U;
-        SMatrix<ScalarType, 2, 2> VtV = V.Transpose() * V;
-        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 2, 2>());
-        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 2, 2>());
-        CHECK_LE(orthogonalityU, 1e-10);
-        CHECK_LE(orthogonalityV, 1e-10);
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
     }
 }
 
@@ -155,12 +166,8 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-5));
 
         // Check orthogonality
-        SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
-        SMatrix<ScalarType, 3, 3> VtV = V.Transpose() * V;
-        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 3, 3>());
-        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 3, 3>());
-        CHECK_LE(orthogonalityU, 1e-10);
-        CHECK_LE(orthogonalityV, 1e-10);
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
     }
 
     SUBCASE("General matrix")
@@ -184,22 +191,11 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         CHECK(S(2) >= 0.0);
 
         // Check reconstruction
-        SMatrix<ScalarType, 3, 3> Sigma = Zeros<ScalarType, 3, 3>();
-        Sigma(0, 0)                     = S(0);
-        Sigma(1, 1)                     = S(1);
-        Sigma(2, 2)                     = S(2);
-
-        SMatrix<ScalarType, 3, 3> reconstructed = U * Sigma * V.Transpose();
-        ScalarType reconstructionError          = SquaredNorm(reconstructed - A);
-        CHECK_LE(reconstructionError, 1e-6);
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-6});
 
         // Check orthogonality
-        SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
-        SMatrix<ScalarType, 3, 3> VtV = V.Transpose() * V;
-        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 3, 3>());
-        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 3, 3>());
-        CHECK_LE(orthogonalityU, 1e-7);
-        CHECK_LE(orthogonalityV, 1e-7);
+        test::CheckOrthonormality(U, ScalarType{1e-7});
+        test::CheckOrthonormality(V, ScalarType{1e-7});
     }
 
     SUBCASE("Compare with Eigen")
@@ -229,12 +225,8 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         CHECK_EQ(S(2), doctest::Approx(Seigen(2)).epsilon(1e-2));
 
         // Check orthogonality
-        SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
-        SMatrix<ScalarType, 3, 3> VtV = V.Transpose() * V;
-        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 3, 3>());
-        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 3, 3>());
-        CHECK_LE(orthogonalityU, 1e-9);
-        CHECK_LE(orthogonalityV, 1e-9);
+        test::CheckOrthonormality(U, ScalarType{1e-9});
+        test::CheckOrthonormality(V, ScalarType{1e-9});
     }
 
     SUBCASE("Rotation matrix")
@@ -255,12 +247,8 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         CHECK_EQ(S(2), doctest::Approx(1.0).epsilon(1e-5));
 
         // Check orthogonality
-        SMatrix<ScalarType, 3, 3> UtU = U.Transpose() * U;
-        SMatrix<ScalarType, 3, 3> VtV = V.Transpose() * V;
-        ScalarType orthogonalityU     = SquaredNorm(UtU - Identity<ScalarType, 3, 3>());
-        ScalarType orthogonalityV     = SquaredNorm(VtV - Identity<ScalarType, 3, 3>());
-        CHECK_LE(orthogonalityU, 1e-10);
-        CHECK_LE(orthogonalityV, 1e-10);
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
     }
 }
 

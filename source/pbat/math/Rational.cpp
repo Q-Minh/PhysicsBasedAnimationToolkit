@@ -116,7 +116,7 @@ Rational::operator float() const
 
 void Rational::simplify()
 {
-    if (a >= 0 && b < 0)
+    if (a >= 0 and b < 0)
     {
         using IntegerType = std::remove_cvref_t<decltype(a)>;
         a                 = -OverflowChecked<IntegerType>{a};

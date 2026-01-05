@@ -6,6 +6,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Assign.h"
     "BinaryOperations.h"
     "Concepts.h"
+    "CheckOrthogonality.h"
     "Determinant.h"
     "Eigen.h"
     "Eigenvalues.h"

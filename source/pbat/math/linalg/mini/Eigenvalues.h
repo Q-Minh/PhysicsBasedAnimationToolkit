@@ -3,6 +3,7 @@
 
 #include "Concepts.h"
 #include "Matrix.h"
+#include "QR.h"
 #include "pbat/HostDevice.h"
 
 #include <limits>
@@ -466,12 +467,290 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
 }
 
 /**
- * @brief Compute eigenvalue decomposition of a symmetric matrix.
+ * @brief Compute the Wilkinson shift for the QR algorithm.
  *
- * Dispatcher that calls the appropriate 2x2 or 3x3 analytic solver.
+ * Given the bottom-right 2x2 block of a symmetric tridiagonal (or general symmetric)
+ * matrix during the QR iteration:
+ *
+ *   [a  b]
+ *   [b  c]
+ *
+ * The Wilkinson shift is the eigenvalue of this 2x2 block that is closer to c,
+ * which provides superior convergence compared to the Rayleigh quotient shift.
+ *
+ * @tparam TScalar Scalar type
+ * @param a Top-left element (A(n-2, n-2))
+ * @param b Off-diagonal element (A(n-2, n-1) = A(n-1, n-2))
+ * @param c Bottom-right element (A(n-1, n-1))
+ * @return The Wilkinson shift value
+ */
+template <class TScalar>
+PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
+{
+    // Eigenvalues of the 2x2 block are:
+    // λ = (a + c)/2 ± sqrt(((a - c)/2)^2 + b^2)
+    // We want the one closer to c
+
+    TScalar const delta = (a - c) / TScalar{2};
+    TScalar const bsq   = b * b;
+
+    TScalar sqrtTerm;
+    if constexpr (std::is_same_v<TScalar, float>)
+        sqrtTerm = sqrtf(delta * delta + bsq);
+    else
+        sqrtTerm = sqrt(delta * delta + bsq);
+
+    // The eigenvalue closer to c is:
+    // c - sign(delta) * b^2 / (|delta| + sqrt(delta^2 + b^2))
+    // This formulation avoids catastrophic cancellation
+
+    TScalar absD;
+    if constexpr (std::is_same_v<TScalar, float>)
+        absD = fabsf(delta);
+    else
+        absD = fabs(delta);
+
+    TScalar const eps = std::numeric_limits<TScalar>::epsilon();
+
+    if (absD < eps and bsq < eps * eps)
+    {
+        // Nearly diagonal or zero off-diagonal: shift by c itself
+        return c;
+    }
+
+    // sign(delta) * b^2 / (|delta| + sqrt(delta^2 + b^2))
+    TScalar correction = bsq / (absD + sqrtTerm);
+    if (delta > TScalar{0})
+        return c - correction;
+    else
+        return c + correction;
+}
+
+/**
+ * @brief Compute eigenvalues and eigenvectors of a symmetric NxN matrix using the QR algorithm.
+ *
+ * This implementation uses the implicit QR algorithm with Wilkinson shifts for
+ * cubic convergence. For small matrices (N <= 10), the full QR factorization via
+ * Modified Gram-Schmidt is used at each iteration rather than the more complex
+ * Hessenberg reduction + Givens rotations approach.
+ *
+ * The algorithm converges when all off-diagonal elements are below a tolerance,
+ * at which point the diagonal contains the eigenvalues and the accumulated
+ * orthogonal transformations form the eigenvector matrix.
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
- * @param A Symmetric square matrix (2x2 or 3x3)
+ * @param A Symmetric square NxN matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param maxIterations Maximum number of QR iterations (default: 30 * N)
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
+ *
+ * @note For N=2 or N=3, consider using the specialized analytic solvers
+ *       SymmetricEigen2x2 or SymmetricEigen3x3 for better performance.
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto
+SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations = -1)
+{
+    using MatrixType = std::remove_cvref_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
+
+    using ScalarType            = typename MatrixType::ScalarType;
+    static auto constexpr kDims = MatrixType::kRows;
+
+    SymmetricEigenResult<ScalarType, kDims> result{};
+
+    // Tolerance for convergence (scaled by matrix dimension)
+    ScalarType const eps =
+        ScalarType(kDims * kDims) * std::numeric_limits<ScalarType>::epsilon();
+
+    // Default max iterations: 30 * N is typically more than enough for convergence
+    if (maxIterations < 0)
+        maxIterations = 30 * kDims;
+
+    // Working copy of A that will converge to diagonal form
+    SMatrix<ScalarType, kDims, kDims> T = A;
+
+    // Eigenvector accumulator (starts as identity)
+    SMatrix<ScalarType, kDims, kDims> V;
+    for (int i = 0; i < kDims; ++i)
+    {
+        for (int j = 0; j < kDims; ++j)
+            V(i, j) = (i == j) ? ScalarType{1} : ScalarType{0};
+    }
+
+    // Track which eigenvalues have converged (deflation)
+    int activeSize = kDims;
+
+    for (int iter = 0; iter < maxIterations and activeSize > 1; ++iter)
+    {
+        // Check for convergence of the bottom-right off-diagonal element
+        // This allows deflation when an eigenvalue has converged
+        ScalarType offDiagNorm = ScalarType{0};
+        for (int i = 0; i < activeSize - 1; ++i)
+        {
+            ScalarType absVal;
+            if constexpr (std::is_same_v<ScalarType, float>)
+                absVal = fabsf(T(i, i + 1));
+            else
+                absVal = fabs(T(i, i + 1));
+            offDiagNorm += absVal;
+        }
+
+        // Check if last off-diagonal element is small enough for deflation
+        ScalarType lastOffDiag;
+        if constexpr (std::is_same_v<ScalarType, float>)
+            lastOffDiag = fabsf(T(activeSize - 2, activeSize - 1));
+        else
+            lastOffDiag = fabs(T(activeSize - 2, activeSize - 1));
+
+        // Scale tolerance by magnitude of relevant diagonal elements
+        ScalarType scale;
+        if constexpr (std::is_same_v<ScalarType, float>)
+            scale = fabsf(T(activeSize - 2, activeSize - 2)) +
+                    fabsf(T(activeSize - 1, activeSize - 1));
+        else
+            scale =
+                fabs(T(activeSize - 2, activeSize - 2)) + fabs(T(activeSize - 1, activeSize - 1));
+
+        if (lastOffDiag < eps * (ScalarType{1} + scale))
+        {
+            // Eigenvalue at position (activeSize-1) has converged
+            // Zero out the off-diagonal explicitly for cleanliness
+            T(activeSize - 2, activeSize - 1) = ScalarType{0};
+            T(activeSize - 1, activeSize - 2) = ScalarType{0};
+            --activeSize;
+            continue;
+        }
+
+        // Check for overall convergence
+        if (offDiagNorm < eps)
+            break;
+
+        // Compute Wilkinson shift from bottom-right 2x2 block
+        ScalarType const shift = WilkinsonShift(
+            T(activeSize - 2, activeSize - 2),
+            T(activeSize - 2, activeSize - 1),
+            T(activeSize - 1, activeSize - 1));
+
+        // Apply shift: T_shifted = T - shift * I
+        for (int i = 0; i < activeSize; ++i)
+            T(i, i) -= shift;
+
+        // Extract the active submatrix for QR decomposition
+        // For efficiency with small matrices, we work on the full active portion
+        SMatrix<ScalarType, kDims, kDims> Tactive;
+        Tactive.SetZero();
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = 0; j < activeSize; ++j)
+                Tactive(i, j) = T(i, j);
+        }
+
+        // QR decomposition of shifted matrix
+        auto [Q, R] = QR(Tactive);
+
+        // Compute R * Q (the similarity transform)
+        SMatrix<ScalarType, kDims, kDims> RQ;
+        RQ.SetZero();
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = 0; j < activeSize; ++j)
+            {
+                ScalarType sum = ScalarType{0};
+                for (int k = 0; k < activeSize; ++k)
+                    sum += R(i, k) * Q(k, j);
+                RQ(i, j) = sum;
+            }
+        }
+
+        // Update T with R*Q + shift*I
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = 0; j < activeSize; ++j)
+                T(i, j) = RQ(i, j);
+            T(i, i) += shift;
+        }
+
+        // Enforce symmetry (to counter numerical drift)
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = i + 1; j < activeSize; ++j)
+            {
+                ScalarType avg    = (T(i, j) + T(j, i)) / ScalarType{2};
+                T(i, j)           = avg;
+                T(j, i)           = avg;
+            }
+        }
+
+        // Accumulate eigenvectors: V = V * Q
+        SMatrix<ScalarType, kDims, kDims> VQ;
+        VQ.SetZero();
+        for (int i = 0; i < kDims; ++i)
+        {
+            for (int j = 0; j < activeSize; ++j)
+            {
+                ScalarType sum = ScalarType{0};
+                for (int k = 0; k < activeSize; ++k)
+                    sum += V(i, k) * Q(k, j);
+                VQ(i, j) = sum;
+            }
+            // Copy unchanged columns (converged eigenvalues)
+            for (int j = activeSize; j < kDims; ++j)
+                VQ(i, j) = V(i, j);
+        }
+        V = VQ;
+    }
+
+    // Extract eigenvalues from diagonal
+    for (int i = 0; i < kDims; ++i)
+        result.lambda(i) = T(i, i);
+
+    // Copy eigenvectors
+    result.V = V;
+
+    // Sort eigenvalues and eigenvectors in ascending order if requested
+    if (bSortEigenvalues)
+    {
+        // Simple selection sort (efficient for small N)
+        for (int i = 0; i < kDims - 1; ++i)
+        {
+            int minIdx = i;
+            for (int j = i + 1; j < kDims; ++j)
+            {
+                if (result.lambda(j) < result.lambda(minIdx))
+                    minIdx = j;
+            }
+            if (minIdx != i)
+            {
+                // Swap eigenvalues
+                ScalarType tmp     = result.lambda(i);
+                result.lambda(i)   = result.lambda(minIdx);
+                result.lambda(minIdx) = tmp;
+
+                // Swap eigenvector columns
+                for (int k = 0; k < kDims; ++k)
+                {
+                    tmp                = result.V(k, i);
+                    result.V(k, i)     = result.V(k, minIdx);
+                    result.V(k, minIdx) = tmp;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @brief Compute eigenvalue decomposition of a symmetric matrix.
+ *
+ * Dispatcher that calls the appropriate 2x2 or 3x3 analytic solver,
+ * or the general QR algorithm for larger matrices.
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A Symmetric square matrix
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
  * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
@@ -482,14 +761,13 @@ PBAT_HOST_DEVICE auto SymmetricEigen(TMatrix&& A, bool bSortEigenvalues = true)
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
-    static_assert(
-        MatrixType::kRows == 2 or MatrixType::kRows == 3,
-        "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
         return SymmetricEigen2x2(std::forward<TMatrix>(A), bSortEigenvalues);
-    else
+    else if constexpr (MatrixType::kRows == 3)
         return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues);
+    else
+        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues);
 }
 
 /**
@@ -558,7 +836,7 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(TMatrix&& A, bool bSortEigenvalues
  * @brief Compute only eigenvalues of a symmetric matrix.
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
- * @param A Symmetric square matrix (2x2 or 3x3)
+ * @param A Symmetric square matrix
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
  * @return Vector of eigenvalues (ascending order if bSortEigenvalues is true)
@@ -569,14 +847,13 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues(TMatrix&& A, bool bSortEigenvalues = 
     using MatrixType = std::remove_cvref_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
-    static_assert(
-        MatrixType::kRows == 2 or MatrixType::kRows == 3,
-        "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
         return SymmetricEigenvalues2x2(std::forward<TMatrix>(A), bSortEigenvalues);
-    else
+    else if constexpr (MatrixType::kRows == 3)
         return SymmetricEigenvalues3x3(std::forward<TMatrix>(A), bSortEigenvalues);
+    else
+        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues).lambda;
 }
 
 } // namespace mini
