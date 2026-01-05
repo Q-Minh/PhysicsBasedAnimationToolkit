@@ -638,20 +638,102 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
         for (int i = 0; i < activeSize; ++i)
             T(i, i) -= shift;
 
-        // Extract the active submatrix for QR decomposition
-        // For efficiency with small matrices, we work on the full active portion
-        SMatrix<ScalarType, kDims, kDims> Tactive;
-        Tactive.SetZero();
+        // QR decomposition of the active portion of T
+        // Q will be the orthogonal matrix from QR factorization
+        // Initialize Q: identity for rows/cols >= activeSize, zero elsewhere initially
+        SMatrix<ScalarType, kDims, kDims> Q;
+        Q.SetZero();
+        // Set identity for the inactive portion (bottom-right block)
+        for (int i = activeSize; i < kDims; ++i)
+            Q(i, i) = ScalarType{1};
+
+        // Modified Gram-Schmidt QR on the active submatrix
+        // We build Q_active and R_active such that T_active = Q_active * R_active
+        SMatrix<ScalarType, kDims, kDims> R;
+        R.SetZero();
+
+        // Copy active portion of T to Q's active block (will be orthogonalized in-place)
         for (int i = 0; i < activeSize; ++i)
         {
             for (int j = 0; j < activeSize; ++j)
-                Tactive(i, j) = T(i, j);
+                Q(i, j) = T(i, j);
         }
 
-        // QR decomposition of shifted matrix
-        auto [Q, R] = QR(Tactive);
+        // Threshold for near-zero detection
+        ScalarType const qrEps =
+            ScalarType(activeSize) * std::numeric_limits<ScalarType>::epsilon();
 
-        // Compute R * Q (the similarity transform)
+        // Modified Gram-Schmidt on activeSize columns (operating directly on Q)
+        for (int j = 0; j < activeSize; ++j)
+        {
+            // Compute norm of column j (only active rows)
+            ScalarType norm = ScalarType{0};
+            for (int i = 0; i < activeSize; ++i)
+                norm += Q(i, j) * Q(i, j);
+            if constexpr (std::is_same_v<ScalarType, float>)
+                norm = sqrtf(norm);
+            else
+                norm = sqrt(norm);
+
+            R(j, j) = norm;
+
+            if (norm > qrEps)
+            {
+                // Normalize column j
+                ScalarType const invNorm = ScalarType{1} / norm;
+                for (int i = 0; i < activeSize; ++i)
+                    Q(i, j) *= invNorm;
+            }
+            else
+            {
+                // Column is nearly zero - use a unit vector orthogonal to previous columns
+                // Start with standard basis vector e_j
+                for (int i = 0; i < activeSize; ++i)
+                    Q(i, j) = (i == j) ? ScalarType{1} : ScalarType{0};
+
+                // Orthogonalize against all previous columns
+                for (int p = 0; p < j; ++p)
+                {
+                    ScalarType dot = ScalarType{0};
+                    for (int i = 0; i < activeSize; ++i)
+                        dot += Q(i, p) * Q(i, j);
+                    for (int i = 0; i < activeSize; ++i)
+                        Q(i, j) -= dot * Q(i, p);
+                }
+
+                // Re-normalize
+                ScalarType newNorm = ScalarType{0};
+                for (int i = 0; i < activeSize; ++i)
+                    newNorm += Q(i, j) * Q(i, j);
+                if constexpr (std::is_same_v<ScalarType, float>)
+                    newNorm = sqrtf(newNorm);
+                else
+                    newNorm = sqrt(newNorm);
+
+                if (newNorm > qrEps)
+                {
+                    ScalarType const invNorm = ScalarType{1} / newNorm;
+                    for (int i = 0; i < activeSize; ++i)
+                        Q(i, j) *= invNorm;
+                }
+            }
+
+            // Orthogonalize remaining columns against column j
+            for (int k = j + 1; k < activeSize; ++k)
+            {
+                // Compute dot product
+                ScalarType dot = ScalarType{0};
+                for (int i = 0; i < activeSize; ++i)
+                    dot += Q(i, j) * Q(i, k);
+                R(j, k) = dot;
+
+                // Subtract projection
+                for (int i = 0; i < activeSize; ++i)
+                    Q(i, k) -= dot * Q(i, j);
+            }
+        }
+
+        // Compute R * Q (the similarity transform) for the active portion
         SMatrix<ScalarType, kDims, kDims> RQ;
         RQ.SetZero();
         for (int i = 0; i < activeSize; ++i)
@@ -678,17 +760,21 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
         {
             for (int j = i + 1; j < activeSize; ++j)
             {
-                ScalarType avg    = (T(i, j) + T(j, i)) / ScalarType{2};
-                T(i, j)           = avg;
-                T(j, i)           = avg;
+                ScalarType avg = (T(i, j) + T(j, i)) / ScalarType{2};
+                T(i, j)        = avg;
+                T(j, i)        = avg;
             }
         }
 
         // Accumulate eigenvectors: V = V * Q
+        // Q has block structure: Q_active in top-left, I in bottom-right
+        // For j < activeSize: VQ(i,j) = sum_k V(i,k) * Q(k,j) but Q(k,j)=0 for k >= activeSize
+        // For j >= activeSize: VQ(i,j) = V(i,j) since Q(k,j) = delta(k,j) for k,j >= activeSize
         SMatrix<ScalarType, kDims, kDims> VQ;
         VQ.SetZero();
         for (int i = 0; i < kDims; ++i)
         {
+            // Update active columns: only active rows of Q are non-zero for active columns
             for (int j = 0; j < activeSize; ++j)
             {
                 ScalarType sum = ScalarType{0};
