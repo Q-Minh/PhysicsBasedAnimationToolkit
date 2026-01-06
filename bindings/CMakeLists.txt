@@ -134,6 +134,18 @@ nanobind_add_stub(
     VERBOSE
 )
 
+if(WIN32)
+    # NOTE: Ideally, I could use $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python> instead of manually listing
+    # embree and nanobind, but somehow the resulting command is ill-formed, causing a setlocal error.
+    add_custom_command(
+        TARGET PhysicsBasedAnimationToolkit_PythonStub
+        PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:embree> $<TARGET_FILE:${_nanobind_target}> $<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>
+        VERBATIM
+        COMMENT "PBAT[python] -- Copying dependent DLLs to Python module directory"
+    )
+endif()
+
 if(SKBUILD EQUAL "2")
     if(PBAT_BUILD_SHARED_LIBS)
         message(WARNING
