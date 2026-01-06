@@ -3,6 +3,7 @@
 #include "HyperElasticity.h"
 
 #include <doctest/doctest.h>
+#include <fmt/core.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/linalg/mini/Eigen.h>
 
@@ -17,7 +18,7 @@ TEST_CASE("[physics] SaintVenantKirchhoffEnergy")
         Scalar constexpr Y         = Scalar(1e6);
         Scalar constexpr nu        = Scalar(0.45);
         auto const [mu, lambda]    = physics::LameCoefficients(Y, nu);
-        auto vecF                  = FromEigen(F.reshaped());
+        auto vecF                  = FromEigen(F);
         Scalar const ePsi          = psi.Eval(vecF, mu, lambda);
         mini::SVector<Scalar, Dims * Dims> gF;
         Scalar const ePsiFromGrad = psi.EvalWithGrad(vecF, mu, lambda, gF);

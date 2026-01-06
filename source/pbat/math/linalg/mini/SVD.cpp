@@ -42,14 +42,12 @@ void CheckSVDReconstruction(
 {
     using ScalarType            = typename std::remove_cvref_t<TMatrixA>::ScalarType;
     static auto constexpr kDims = std::remove_cvref_t<TVectorS>::kRows;
-
     // Build diagonal matrix from singular values
     SMatrix<ScalarType, kDims, kDims> Sigma = Zeros<ScalarType, kDims, kDims>();
     for (int i = 0; i < kDims; ++i)
         Sigma(i, i) = S(i);
-
-    auto reconstructed             = U * Sigma * V.Transpose();
-    ScalarType reconstructionError = SquaredNorm(reconstructed - A);
+    SMatrix<ScalarType, kDims, kDims> reconstructed = U * Sigma * V.Transpose();
+    ScalarType reconstructionError                  = SquaredNorm(reconstructed - A);
     CHECK_LE(reconstructionError, tol);
 }
 

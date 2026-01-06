@@ -40,8 +40,8 @@ void CheckEigenReconstruction(
     for (int i = 0; i < kDims; ++i)
         D(i, i) = lambda(i);
 
-    auto reconstructed             = V * D * V.Transpose();
-    ScalarType reconstructionError = SquaredNorm(reconstructed - A);
+    SMatrix<ScalarType, kDims, kDims> reconstructed = V * D * V.Transpose();
+    ScalarType reconstructionError                  = SquaredNorm(reconstructed - A);
     CHECK_LE(reconstructionError, tol);
 }
 

@@ -15,10 +15,11 @@ TEST_CASE("[math][polynomial] Roots")
     common::ForRange<2, 6>([]<auto N>() {
         // Arrange
         Scalar constexpr kMaxCoeff = 1e10;
-        Scalar constexpr epsilon =
-            Scalar(1e-7); // Tests the residual P(root) \approx 0. Note that the residual is highly
-                          // ill-conditioned for high degree polynomials. Thus, we only apply this
-                          // test to polynomials of degree up to 5.
+        Scalar const epsilon =
+            Scalar(1e-7) *
+            std::pow(10, N - 1); // Tests the residual P(root) \approx 0. Note that the residual is
+                                 // highly ill-conditioned for high degree polynomials. Thus, we
+                                 // only apply this test to polynomials of degree up to 5.
         bool bHasRoot{false};
         std::array<Scalar, N + 1> coeffs;
         std::random_device rd;

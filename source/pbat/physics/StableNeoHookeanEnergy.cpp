@@ -20,7 +20,7 @@ TEST_CASE("[physics] StableNeoHookeanEnergy")
         Scalar constexpr Y         = Scalar(1e6);
         Scalar constexpr nu        = Scalar(0.45);
         auto const [mu, lambda]    = physics::LameCoefficients(Y, nu);
-        auto vecF                  = FromEigen(F.reshaped());
+        auto vecF                  = FromEigen(F);
         auto const ePsi            = psi.Eval(vecF, mu, lambda);
         mini::SVector<Scalar, Dims * Dims> gF;
         Scalar const ePsiFromGrad = psi.EvalWithGrad(vecF, mu, lambda, gF);
