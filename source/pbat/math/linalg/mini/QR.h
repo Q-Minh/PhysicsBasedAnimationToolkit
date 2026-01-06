@@ -108,8 +108,8 @@ PBAT_HOST_DEVICE auto GivensRotation(TScalar a, TScalar b)
     TScalar c, s;
     TScalar const eps = std::numeric_limits<TScalar>::epsilon();
 
-    TScalar const absa = fabs(a);
-    TScalar const absb = fabs(b);
+    TScalar const absa = abs(a);
+    TScalar const absb = abs(b);
     if (absb < eps)
     {
         c = TScalar{1};

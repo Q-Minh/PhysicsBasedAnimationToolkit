@@ -79,7 +79,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
     // that's furthest from a (or c), then use orthogonality for the other.
     ScalarType const eps = ScalarType{4} * std::numeric_limits<ScalarType>::epsilon(); // 2x2 matrix
 
-    ScalarType absB = fabs(b);
+    ScalarType absB = abs(b);
 
     if (absB < eps * (ScalarType{1} + (a > c ? a : c)))
     {
@@ -111,8 +111,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
         ScalarType const lambda0_minus_a = result.lambda(0) - a;
         ScalarType const lambda0_minus_c = result.lambda(0) - c;
 
-        ScalarType abs_lma = fabs(lambda0_minus_a);
-        ScalarType abs_lmc = fabs(lambda0_minus_c);
+        ScalarType abs_lma = abs(lambda0_minus_a);
+        ScalarType abs_lmc = abs(lambda0_minus_c);
 
         if (abs_lma > abs_lmc)
         {
@@ -240,7 +240,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
     ratio = q / (p * sqrtP);
 
     // Clamp to [-1, 1] for acos (numerical robustness)
-    ratio = fmin(fmax(ratio, ScalarType{-1}), ScalarType{1});
+    ratio = min(max(ratio, ScalarType{-1}), ScalarType{1});
 
     // Eigenvalues from Cardano's formula
     ScalarType phi = acos(ratio) / ScalarType{3};
@@ -366,8 +366,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
                 ScalarType const v0z = result.V(2, 0);
 
                 // Pick a non-parallel axis
-                ScalarType absv0x = fabs(v0x);
-                ScalarType absv0y = fabs(v0y);
+                ScalarType absv0x = abs(v0x);
+                ScalarType absv0y = abs(v0y);
 
                 if (absv0x < absv0y)
                 {
@@ -447,7 +447,7 @@ PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
     // c - sign(delta) * b^2 / (|delta| + sqrt(delta^2 + b^2))
     // This formulation avoids catastrophic cancellation
 
-    TScalar absD = fabs(delta);
+    TScalar absD = abs(delta);
 
     TScalar const eps = std::numeric_limits<TScalar>::epsilon();
 
@@ -525,16 +525,16 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
         ScalarType offDiagNorm = ScalarType{0};
         for (int i = 0; i < activeSize - 1; ++i)
         {
-            ScalarType absVal = fabs(T(i, i + 1));
+            ScalarType absVal = abs(T(i, i + 1));
             offDiagNorm += absVal;
         }
 
         // Check if last off-diagonal element is small enough for deflation
-        ScalarType lastOffDiag = fabs(T(activeSize - 2, activeSize - 1));
+        ScalarType lastOffDiag = abs(T(activeSize - 2, activeSize - 1));
 
         // Scale tolerance by magnitude of relevant diagonal elements
         ScalarType scale =
-            fabs(T(activeSize - 2, activeSize - 2)) + fabs(T(activeSize - 1, activeSize - 1));
+            abs(T(activeSize - 2, activeSize - 2)) + abs(T(activeSize - 1, activeSize - 1));
 
         if (lastOffDiag < eps * (ScalarType{1} + scale))
         {

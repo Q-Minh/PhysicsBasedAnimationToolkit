@@ -239,8 +239,8 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
     {
         // Find vector orthogonal to U(:,0)
         using namespace std;
-        ScalarType abs0 = fabs(result.U(0, 0));
-        ScalarType abs1 = fabs(result.U(1, 0));
+        ScalarType abs0 = abs(result.U(0, 0));
+        ScalarType abs1 = abs(result.U(1, 0));
         if (abs0 < abs1)
         {
             // Cross with x-axis
@@ -453,7 +453,7 @@ PBAT_HOST_DEVICE auto JacobiRotation(TScalar a, TScalar b, TScalar c) -> SVector
     TScalar const eps = std::numeric_limits<TScalar>::epsilon();
 
     // If b is essentially zero, no rotation needed
-    if (fabs(b) < eps * (fabs(a) + fabs(c) + TScalar{1}))
+    if (abs(b) < eps * (abs(a) + abs(c) + TScalar{1}))
     {
         return SVector<TScalar, 2>{TScalar{1}, TScalar{0}};
     }
@@ -572,7 +572,7 @@ PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, in
                 ScalarType ajj = SquaredNorm(B.Col(j));
 
                 // Track maximum off-diagonal for convergence check
-                ScalarType absAij = fabs(aij);
+                ScalarType absAij = abs(aij);
                 if (absAij > maxOffDiag)
                     maxOffDiag = absAij;
 
@@ -837,7 +837,7 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
                     ajj += B(k, j) * B(k, j);
                 }
 
-                ScalarType absAij = fabs(aij);
+                ScalarType absAij = abs(aij);
                 if (absAij > maxOffDiag)
                     maxOffDiag = absAij;
 
