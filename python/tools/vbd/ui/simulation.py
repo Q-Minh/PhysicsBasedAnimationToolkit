@@ -408,6 +408,8 @@ class Simulation:
         try:
             if file_path:
                 archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
+                xt = self._fem_dynamics.x.copy()
+                self._apply_procedural_constraints()
                 self._solver.serialize_problem(
                     archive, self._fem_dynamics, self._contact.contact_dynamics
                 )
@@ -417,6 +419,7 @@ class Simulation:
                 )
                 archive = None
                 gc.collect()  # Force garbage collection to close the archive...
+                self._fem_dynamics.x = xt
         except Exception as e:
             ps.error(f"Error saving problem:\n{e}")
         finally:
