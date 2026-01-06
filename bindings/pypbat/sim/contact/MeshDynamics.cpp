@@ -405,7 +405,8 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_prop_ro(
             "triangle_environment_energies",
             &MeshDynamicsType::TriangleEnvironmentEnergies,
-            "List of triangle-environment contact energies (list of MeshContactEnergy3).");
+            "List of triangle-environment contact energies (list of MeshContactEnergy3).")
+        .def_prop_ro("num_contacts", &MeshDynamicsType::NumContacts, "Number of contacts.");
 }
 
 } // namespace pbat::py::sim::contact

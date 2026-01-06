@@ -259,6 +259,7 @@ class Simulation:
         imgui.Text(
             f"Query radius: {self._contact.contact_dynamics.params.ogc_params.rq:.6f}"
         )
+        imgui.Text(f"# contacts: {self._contact.contact_dynamics.num_contacts}")
         self._draw_trajectory_ui()
         imgui.PopID()
 

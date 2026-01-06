@@ -512,6 +512,10 @@ class MeshDynamics
     template <class TDerivedg>
     void ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g) const;
     /**
+     * @brief Get the total number of contacts
+     */
+    std::size_t NumContacts() const;
+    /**
      * @brief Get the number of vertex-vertex contacts
      */
     std::size_t NumVertexVertexContacts() const;
@@ -1468,6 +1472,14 @@ inline auto MeshDynamics<TScalar, TIndex>::Gradient() const
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline std::size_t MeshDynamics<TScalar, TIndex>::NumContacts() const
+{
+    return NumVertexVertexContacts() + NumVertexEdgeContacts() + NumVertexTriangleContacts() +
+           NumEdgeEdgeContacts() + NumVertexEnvironmentContacts() + NumEdgeEnvironmentContacts() +
+           NumTriangleEnvironmentContacts();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexVertexContacts() const
 {
     return mVertexVertexEnergies.size();
@@ -2061,9 +2073,9 @@ MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
     using math::linalg::mini::SVector;
     using math::linalg::mini::ToEigen;
     MeshContactEnergy<TScalar, TIndex, 2> energy{};
-    auto const xi = FromEigen(x.template head<3>());
-    auto const xj = FromEigen(x.template tail<3>());
-    TScalar d     = Norm(xi - xj);
+    SVector<TScalar, 3> const xi = FromEigen(x.template head<3>());
+    SVector<TScalar, 3> const xj = FromEigen(x.template tail<3>());
+    TScalar d                    = Norm(xi - xj);
     contact::potentials::LaggedFriction friction{};
     SMatrix<TScalar, 6, 2> const T = contact::PointPointLinearTangentialOperator(xi, xj);
     SVector<TScalar, 2> const uk   = T.Transpose() * (FromEigen(x) - FromEigen(xt));
@@ -2116,9 +2128,9 @@ MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
     using math::linalg::mini::ToEigen;
     MeshContactEnergy<TScalar, TIndex, 3> energy{};
     contact::potentials::LaggedFriction friction{};
-    auto const xi = FromEigen(x.template segment<3>(0));
-    auto const xa = FromEigen(x.template segment<3>(3));
-    auto const xb = FromEigen(x.template segment<3>(6));
+    SVector<TScalar, 3> const xi = FromEigen(x.template segment<3>(0));
+    SVector<TScalar, 3> const xa = FromEigen(x.template segment<3>(3));
+    SVector<TScalar, 3> const xb = FromEigen(x.template segment<3>(6));
     Ones<TScalar, 1, 1> w;
     SVector<TScalar, 2> const uv  = geometry::ClosestPointQueries::UvPointOnLineSegment(xi, xa, xb);
     SVector<TScalar, 3> const xcp = uv(0) * xa + uv(1) * xb;
@@ -2188,10 +2200,10 @@ MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
     using math::linalg::mini::ToEigen;
     MeshContactEnergy<TScalar, TIndex, 4> energy{};
     contact::potentials::LaggedFriction friction{};
-    auto const xi = FromEigen(x.template segment<3>(0));
-    auto const xa = FromEigen(x.template segment<3>(3));
-    auto const xb = FromEigen(x.template segment<3>(6));
-    auto const xc = FromEigen(x.template segment<3>(9));
+    SVector<TScalar, 3> const xi = FromEigen(x.template segment<3>(0));
+    SVector<TScalar, 3> const xa = FromEigen(x.template segment<3>(3));
+    SVector<TScalar, 3> const xb = FromEigen(x.template segment<3>(6));
+    SVector<TScalar, 3> const xc = FromEigen(x.template segment<3>(9));
     Ones<TScalar, 1, 1> w;
     SVector<TScalar, 3> const uvw =
         geometry::ClosestPointQueries::UvwPointInTriangle(xi, xa, xb, xc);
@@ -2262,10 +2274,10 @@ MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
     using math::linalg::mini::ToEigen;
     MeshContactEnergy<TScalar, TIndex, 4> energy{};
     contact::potentials::LaggedFriction friction{};
-    auto const xa                = FromEigen(x.template segment<3>(0));
-    auto const xb                = FromEigen(x.template segment<3>(3));
-    auto const xc                = FromEigen(x.template segment<3>(6));
-    auto const xd                = FromEigen(x.template segment<3>(9));
+    SVector<TScalar, 3> const xa = FromEigen(x.template segment<3>(0));
+    SVector<TScalar, 3> const xb = FromEigen(x.template segment<3>(3));
+    SVector<TScalar, 3> const xc = FromEigen(x.template segment<3>(6));
+    SVector<TScalar, 3> const xd = FromEigen(x.template segment<3>(9));
     SVector<TScalar, 2> const st = geometry::ClosestPointQueries::LineSegments(xa, xb, xc, xd);
     SVector<TScalar, 2> const u{1 - st(0), st(0)};
     SVector<TScalar, 2> const v{1 - st(1), st(1)};
@@ -2405,8 +2417,8 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
     using math::linalg::mini::ToEigen;
     MeshContactEnergy<TScalar, TIndex, 2> energy{};
     contact::potentials::LaggedFriction friction{};
-    auto const xa                 = FromEigen(x.template segment<3>(0));
-    auto const xb                 = FromEigen(x.template segment<3>(3));
+    SVector<TScalar, 3> const xa  = FromEigen(x.template segment<3>(0));
+    SVector<TScalar, 3> const xb  = FromEigen(x.template segment<3>(3));
     SVector<TScalar, 3> const xci = uv(0) * xa + uv(1) * xb;
     TScalar const d               = Norm(xci - FromEigen(xcp));
     SMatrix<TScalar, 6, 2> const T =
@@ -2476,9 +2488,9 @@ MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
     using math::linalg::mini::ToEigen;
     MeshContactEnergy<TScalar, TIndex, 3> energy{};
     contact::potentials::LaggedFriction friction{};
-    auto const xa                 = FromEigen(x.template segment<3>(0));
-    auto const xb                 = FromEigen(x.template segment<3>(3));
-    auto const xc                 = FromEigen(x.template segment<3>(6));
+    SVector<TScalar, 3> const xa  = FromEigen(x.template segment<3>(0));
+    SVector<TScalar, 3> const xb  = FromEigen(x.template segment<3>(3));
+    SVector<TScalar, 3> const xc  = FromEigen(x.template segment<3>(6));
     SVector<TScalar, 3> const xci = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
     TScalar const d               = Norm(xci - FromEigen(xcp));
     SMatrix<TScalar, 9, 2> const T =

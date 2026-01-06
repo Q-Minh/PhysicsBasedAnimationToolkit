@@ -413,7 +413,9 @@ void PrepareNextIteration(
     params.newton.PrepareNextIteration(
         [&]([[maybe_unused]] auto const& _xk) {
             if (contact.RequiresBoundsComputation())
+            {
                 contact.ComputeDisplacementBounds(fem.x);
+            }
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
@@ -489,6 +491,7 @@ void TruncateDisplacedPositions(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.InitializeSolve");
     params.newton.InitializeSolve(fem.x.reshaped());
     auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
     auto& ogcParams = contact.GetParams().mOgcParams;
@@ -530,7 +533,9 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
     return params.newton.Solve(
         [&]([[maybe_unused]] auto const& xk) {
             if (contact.RequiresBoundsComputation())
+            {
                 contact.ComputeDisplacementBounds(fem.x);
+            }
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
