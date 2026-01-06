@@ -2273,7 +2273,7 @@ MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
     SVector<TScalar, 3> const xcj = v(0) * xc + v(1) * xd;
     TScalar const d               = Norm(xci - xcj);
     SMatrix<TScalar, 12, 2> const T =
-        contact::EdgeEdgeLinearTangentialOperator(xa, xb, xc, xd, u(1), v(1));
+        contact::EdgeEdgeLinearTangentialOperator(xci, xcj, u(1), v(1));
     SVector<TScalar, 2> const uk = T.Transpose() * (FromEigen(x) - FromEigen(xt));
     SVector<TScalar, 3> const dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
