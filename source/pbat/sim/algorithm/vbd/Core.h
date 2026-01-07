@@ -762,15 +762,15 @@ void Iterate(
     auto xt            = -xtildeBdf;
     typename contact::MeshDynamics<Scalar, Index>::Params const& contactParams =
         contact.GetParams();
+    Scalar h               = betaTildeBdf;
+    Scalar h2              = betaTildeBdf2;
+    Scalar h2inv           = 1 / h2;
     Scalar rB              = contactParams.mOgcParams.r;
     Scalar kcB             = contactParams.kc;
     Scalar kcpB            = contactParams.kcp;
     Scalar bB              = contactParams.b;
-    Scalar epsvh           = contactParams.epsv * fem.bdf.TimeStep();
+    Scalar epsvh           = contactParams.epsv * h;
     Scalar mu              = contactParams.mu;
-    Scalar h               = betaTildeBdf;
-    Scalar h2              = betaTildeBdf2;
-    Scalar h2inv           = 1 / h2;
     params.xb              = fem.x; // Copy current positions to buffer
     auto const nPartitions = params.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
@@ -790,6 +790,8 @@ void Iterate(
             mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
             // Elastic energy
             detail::AccumulateElasticEnergy<TElasticEnergy>(i, fem, params, gi, Hi);
+            gi *= h2;
+            Hi *= h2;
             // Contact energy
             mini::SVector<Scalar, 3> xi  = FromEigen(fem.x.col(i).template head<3>());
             mini::SVector<Scalar, 3> xti = FromEigen(xt.col(i).template head<3>());
@@ -807,14 +809,14 @@ void Iterate(
                 bB,
                 mu,
                 epsvh,
-                h2inv,
+                Scalar(1) /*h2inv*/,
                 gi,
                 Hi);
             // "Kinetic" energy
             Scalar m                         = fem.m(i);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
-            kernels::AddInertiaDerivatives(h2, m, xtildei, xi, gi, Hi);
-            kernels::AddDamping(h, xti, xi, params.betaR, gi, Hi);
+            kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
+            kernels::AddDamping(Scalar(1) / h /*h*/, xti, xi, params.betaR, gi, Hi);
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
             fem.x.col(i) = ToEigen(xi);
         });
