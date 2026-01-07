@@ -27,6 +27,7 @@
 #include "pbat/sim/contact/MeshDynamics.h"
 
 #include <Eigen/Core>
+#include <cassert>
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::algorithm::vbd {
@@ -314,6 +315,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         },
         // Vertex-edge contact
         [&](Eigen::Vector<Index, 2> const& einds) {
@@ -339,6 +343,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         },
         // Vertex-triangle contact
         [&](Eigen::Vector<Index, 3> const& finds) {
@@ -366,6 +373,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         });
     contact.ForEachPointStaticMeshContact(
         i,
@@ -386,6 +396,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         },
         // Vertex-edge contact
         [&](Eigen::Vector<Index, 2> const& einds) {
@@ -407,6 +420,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         },
         // Vertex-triangle contact
         [&](Eigen::Vector<Index, 3> const& finds) {
@@ -429,6 +445,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         });
     contact.ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
         i,
@@ -461,6 +480,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         },
         // Edge-edge contact
         [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
@@ -493,6 +515,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         });
     contact.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
         i,
@@ -521,6 +546,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         },
         // Edge-edge contact
         [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
@@ -550,6 +578,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         });
     contact.ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
         i,
@@ -589,6 +620,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         });
     contact.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
         i,
@@ -627,6 +661,9 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
+            assert(
+                not ToEigen(gi).hasNaN() and not ToEigen(Hi).hasNaN() and
+                ToEigen(gi).allFinite() and ToEigen(Hi).allFinite());
         });
 }
 
