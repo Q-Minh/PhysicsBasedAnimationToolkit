@@ -143,6 +143,24 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         test::CheckOrthonormality(U, ScalarType{1e-10});
         test::CheckOrthonormality(V, ScalarType{1e-10});
     }
+
+    SUBCASE("Zero matrix")
+    {
+        SMatrix<ScalarType, 2, 2> A = Zeros<ScalarType, 2, 2>();
+
+        auto [U, S, V] = SVD2x2(A);
+
+        // All singular values should be zero
+        CHECK_EQ(S(0), doctest::Approx(0.0).epsilon(1e-12));
+        CHECK_EQ(S(1), doctest::Approx(0.0).epsilon(1e-12));
+
+        // U and V should be orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-12});
+        test::CheckOrthonormality(V, ScalarType{1e-12});
+
+        // Reconstruction should be zero
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
+    }
 }
 
 TEST_CASE("[math][linalg][mini] SVD3x3")
@@ -248,6 +266,25 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         // Check orthogonality
         test::CheckOrthonormality(U, ScalarType{1e-10});
         test::CheckOrthonormality(V, ScalarType{1e-10});
+    }
+
+    SUBCASE("Zero matrix")
+    {
+        SMatrix<ScalarType, 3, 3> A = Zeros<ScalarType, 3, 3>();
+
+        auto [U, S, V] = SVD3x3(A);
+
+        // All singular values should be zero
+        CHECK_EQ(S(0), doctest::Approx(0.0).epsilon(1e-10));
+        CHECK_EQ(S(1), doctest::Approx(0.0).epsilon(1e-10));
+        CHECK_EQ(S(2), doctest::Approx(0.0).epsilon(1e-10));
+
+        // U and V should be orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
+
+        // Reconstruction should be zero
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
     }
 }
 
@@ -553,6 +590,26 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
 
         // Third singular value should be essentially zero
         CHECK_LT(S(2), 1e-6);
+    }
+
+    SUBCASE("4x4 zero matrix")
+    {
+        SMatrix<ScalarType, 4, 4> A = Zeros<ScalarType, 4, 4>();
+
+        auto [U, S, V] = JacobiSVD(A);
+
+        // All singular values should be zero
+        CHECK_EQ(S(0), doctest::Approx(0.0).epsilon(1e-10));
+        CHECK_EQ(S(1), doctest::Approx(0.0).epsilon(1e-10));
+        CHECK_EQ(S(2), doctest::Approx(0.0).epsilon(1e-10));
+        CHECK_EQ(S(3), doctest::Approx(0.0).epsilon(1e-10));
+
+        // U and V should be orthonormal
+        test::CheckOrthonormality(U, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-10});
+
+        // Reconstruction should be zero
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
     }
 }
 

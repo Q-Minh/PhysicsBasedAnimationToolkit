@@ -92,7 +92,8 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(
     // that's furthest from a (or c), then use orthogonality for the other.
     ScalarType absB = abs(b);
 
-    if (absB < eps)
+    // Must be <=, since eps may be zero (for a zero matrix)
+    if (absB <= eps)
     {
         // Matrix is essentially diagonal
         if (a <= c)
@@ -232,7 +233,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(
 
     // Clamp the ratio for numerical stability
     ScalarType ratio;
-    if (p < epsSq)
+    if (p <= epsSq)
     {
         // Matrix is essentially a multiple of identity
         result.lambda(0) = mean;
@@ -474,7 +475,8 @@ PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
     TScalar const maxAbs = max(max(abs(a), absB), abs(c));
     TScalar const eps    = maxAbs * std::numeric_limits<TScalar>::epsilon();
 
-    if (absD < eps and absB < eps)
+    // Must be <=, since eps may be zero (for a zero matrix)
+    if (absD <= eps and absB <= eps)
     {
         // Nearly diagonal or zero off-diagonal: shift by c itself
         return c;
@@ -562,7 +564,7 @@ PBAT_HOST_DEVICE auto SymmetricEigenNxN(
         // Check if last off-diagonal element is small enough for deflation
         ScalarType lastOffDiag = abs(T(activeSize - 2, activeSize - 1));
 
-        if (lastOffDiag < eps)
+        if (lastOffDiag <= eps)
         {
             // Eigenvalue at position (activeSize-1) has converged
             // Zero out the off-diagonal explicitly for cleanliness
@@ -573,7 +575,7 @@ PBAT_HOST_DEVICE auto SymmetricEigenNxN(
         }
 
         // Check for overall convergence
-        if (offDiagNorm < eps)
+        if (offDiagNorm <= eps)
             break;
 
         // Compute Wilkinson shift from bottom-right 2x2 block

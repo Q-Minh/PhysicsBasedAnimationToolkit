@@ -447,7 +447,8 @@ PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A, bool bSortSingularValues = 
  * @return Vector of singular values (descending order if bSortSingularValues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SingularValues(TMatrix&& A, bool bSortSingularValues = true, int nMaxIters = -1)
+PBAT_HOST_DEVICE auto
+SingularValues(TMatrix&& A, bool bSortSingularValues = true, int nMaxIters = -1)
 {
     using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
@@ -490,7 +491,8 @@ PBAT_HOST_DEVICE auto JacobiRotation(TScalar a, TScalar b, TScalar c) -> SVector
     TScalar const eps    = maxAbs * std::numeric_limits<TScalar>::epsilon();
 
     // If b is essentially zero, no rotation needed
-    if (abs(b) < eps)
+    // Must be <=, since eps may be zero (for a zero matrix)
+    if (abs(b) <= eps)
     {
         return SVector<TScalar, 2>{TScalar{1}, TScalar{0}};
     }
@@ -622,7 +624,7 @@ PBAT_HOST_DEVICE auto JacobiSVD(
                     maxOffDiag = absAij;
 
                 // Skip if already orthogonal
-                if (absAij < eps * (sqrt(aii * ajj) + ScalarType{1}))
+                if (absAij <= eps * (sqrt(aii * ajj) + ScalarType{1}))
                     continue;
 
                 // Compute Jacobi rotation to zero out aij
@@ -651,7 +653,7 @@ PBAT_HOST_DEVICE auto JacobiSVD(
         }
 
         // Check for convergence
-        if (maxOffDiag < eps)
+        if (maxOffDiag <= eps)
             break;
     }
 
@@ -822,11 +824,17 @@ PBAT_HOST_DEVICE auto JacobiSVD(
  *        Set to false to avoid unnecessary work when order doesn't matter.
  * @param maxSweeps Maximum number of Jacobi sweeps. If -1 (default),
  *        uses 5 * min(M, N) which is typically sufficient for convergence.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return Vector of singular values
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto
-JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps = -1)
+PBAT_HOST_DEVICE auto JacobiSingularValues(
+    TMatrix&& A,
+    bool bSortSingularValues = true,
+    int maxSweeps            = -1,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
     using namespace std;
 
@@ -859,8 +867,8 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
     }
 
     // Convergence tolerance
-    ScalarType const eps =
-        ScalarType(kWorkRows * kWorkCols) * std::numeric_limits<ScalarType>::epsilon();
+    ScalarType nA = Norm(A);
+    eps *= nA;
 
     // Jacobi sweeps (without accumulating V)
     for (int sweep = 0; sweep < maxSweeps; ++sweep)
@@ -886,7 +894,7 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
                 if (absAij > maxOffDiag)
                     maxOffDiag = absAij;
 
-                if (absAij < eps * (sqrt(aii * ajj) + ScalarType{1}))
+                if (absAij <= eps * (sqrt(aii * ajj) + ScalarType{1}))
                     continue;
 
                 SVector<ScalarType, 2> cosSinTheta = JacobiRotation(aii, aij, ajj);
@@ -903,7 +911,7 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
             }
         }
 
-        if (maxOffDiag < eps)
+        if (maxOffDiag <= eps)
             break;
     }
 

@@ -123,12 +123,13 @@ PBAT_HOST_DEVICE auto GivensRotation(TScalar a, TScalar b)
     TScalar const maxAbs = max(absa, absb);
     TScalar const eps    = maxAbs * std::numeric_limits<TScalar>::epsilon();
 
-    if (absb < eps)
+    // Must be <=, since eps may be zero (for a zero matrix)
+    if (absb <= eps)
     {
         c = TScalar{1};
         s = TScalar{0};
     }
-    else if (absa < eps)
+    else if (absa <= eps)
     {
         c = TScalar{0};
         s = (b > TScalar{0}) ? TScalar{1} : TScalar{-1};
