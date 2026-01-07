@@ -19,6 +19,7 @@
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/IntersectionQueries.h"
+#include "pbat/math/linalg/FilterEigenvalues.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/sim/contact/Friction.h"
@@ -332,6 +333,7 @@ PBAT_HOST_DEVICE ScalarType AccumulateVertexTriangleContact(
  * @param mu Friction coefficient
  * @param epsvh Time-step scaled relative velocity threshold for static to dynamic friction
  * transition
+ * @param h2inv Inverse squared time step
  * @param g `3 x 1` gradient
  * @param H `3 x 3` hessian
  */
@@ -354,6 +356,7 @@ PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
     ScalarType b,
     ScalarType mu,
     ScalarType epsvh,
+    ScalarType h2inv,
     TMatrixG& g,
     TMatrixH& H)
 {
@@ -366,24 +369,17 @@ PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
         contact::potentials::GradientSegmentWrtClosestPoints(xi, xcp, dij, dBdd(1), 0);
     SMatrix<ScalarType, 3, 3> d2Bdxi2 =
         contact::potentials::HessianBlockWrtClosestPoints(xi, xcp, dij, dBdd(1), dBdd(2), 0, 0);
-    g += dBdxi;
-    H += d2Bdxi2;
+    g += h2inv * dBdxi;
+    H += h2inv * d2Bdxi2;
     // Frictional contact
     contact::potentials::LaggedFriction friction{};
     SMatrix<ScalarType, 3, 2> const T = contact::PointPointTangentialBasis(xi, xcp);
     SVector<ScalarType, 2> const uk   = T.Transpose() * ((xi - xti) - (xcp - xtcp));
     SVector<ScalarType, 2> gf;
     SMatrix<ScalarType, 2, 2> Hf;
-    friction.GradAndHessian(uk, mu, -dBdd(1), epsvh, gf, Hf);
-    // Ensure positive semi-definite hessian
-    {
-        using namespace std;
-        auto eigs      = SymmetricEigen(Hf, false /*bSortEigenvalues*/);
-        eigs.lambda(0) = max(eigs.lambda(0), ScalarType(0));
-        eigs.lambda(1) = max(eigs.lambda(1), ScalarType(0));
-        Hf             = eigs.lambda(0) * eigs.V.Col(0) * eigs.V.Col(0).Transpose() +
-             eigs.lambda(1) * eigs.V.Col(1) * eigs.V.Col(1).Transpose();
-    }
+    ScalarType lambda = -dBdd(1) * h2inv;
+    friction.GradAndHessian(uk, mu, lambda, epsvh, gf, Hf);
+    Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
     g += T * gf;
     H += T * Hf * T.Transpose();
 }
@@ -416,6 +412,7 @@ PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
  * @param mu Friction coefficient
  * @param epsvh Time-step scaled relative velocity threshold for static to dynamic friction
  * transition
+ * @param h2inv Inverse squared time step
  * @param g `3 x 1` gradient
  * @param H `3 x 3` hessian
  */
@@ -445,6 +442,7 @@ PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
     ScalarType b,
     ScalarType mu,
     ScalarType epsvh,
+    ScalarType h2inv,
     TMatrixG& g,
     TMatrixH& H)
 {
@@ -473,24 +471,17 @@ PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
             dBdd(2),
             ilocal,
             ilocal);
-    g += dBdx;
-    H += d2Bdx2;
+    g += h2inv * dBdx;
+    H += h2inv * d2Bdx2;
     // Frictional contact
     contact::potentials::LaggedFriction friction{};
     SMatrix<ScalarType, 3, 2> const T = contact::PointPointTangentialBasis(x, xcp);
     SVector<ScalarType, 2> const uk   = T.Transpose() * ((x - xt) - (xcp - xtcp));
     SVector<ScalarType, 2> gf;
     SMatrix<ScalarType, 2, 2> Hf;
-    friction.GradAndHessian(uk, mu, -dBdd(1), epsvh, gf, Hf);
-    // Ensure positive semi-definite hessian
-    {
-        using namespace std;
-        auto eigs      = SymmetricEigen(Hf, false /*bSortEigenvalues*/);
-        eigs.lambda(0) = max(eigs.lambda(0), ScalarType(0));
-        eigs.lambda(1) = max(eigs.lambda(1), ScalarType(0));
-        Hf             = eigs.lambda(0) * eigs.V.Col(0) * eigs.V.Col(0).Transpose() +
-             eigs.lambda(1) * eigs.V.Col(1) * eigs.V.Col(1).Transpose();
-    }
+    ScalarType lambda = -dBdd(1) * h2inv;
+    friction.GradAndHessian(uk, mu, lambda, epsvh, gf, Hf);
+    Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
     g += uv(0) * (T * gf);
     H += (uv(0) * uv(0)) * (T * Hf * T.Transpose());
 }
@@ -526,6 +517,7 @@ PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
  * @param mu Friction coefficient
  * @param epsvh Time-step scaled relative velocity threshold for static to dynamic friction
  * transition
+ * @param h2inv Inverse squared time step
  * @param g `3 x 1` gradient
  * @param H `3 x 3` hessian
  */
@@ -559,6 +551,7 @@ PBAT_HOST_DEVICE void AccumulateTriangleVertexToClosestPointContactDerivatives(
     ScalarType b,
     ScalarType mu,
     ScalarType epsvh,
+    ScalarType h2inv,
     TMatrixG& g,
     TMatrixH& H)
 {
@@ -587,24 +580,17 @@ PBAT_HOST_DEVICE void AccumulateTriangleVertexToClosestPointContactDerivatives(
             dBdd(2),
             ilocal,
             ilocal);
-    g += dBdx;
-    H += d2Bdx2;
+    g += h2inv * dBdx;
+    H += h2inv * d2Bdx2;
     // Frictional contact
     contact::potentials::LaggedFriction friction{};
     SMatrix<ScalarType, 3, 2> const T = contact::PointPointTangentialBasis(x, xcp);
     SVector<ScalarType, 2> const uk   = T.Transpose() * ((x - xt) - (xcp - xtcp));
     SVector<ScalarType, 2> gf;
     SMatrix<ScalarType, 2, 2> Hf;
-    friction.GradAndHessian(uk, mu, -dBdd(1), epsvh, gf, Hf);
-    // Ensure positive semi-definite hessian
-    {
-        using namespace std;
-        auto eigs      = SymmetricEigen(Hf, false /*bSortEigenvalues*/);
-        eigs.lambda(0) = max(eigs.lambda(0), ScalarType(0));
-        eigs.lambda(1) = max(eigs.lambda(1), ScalarType(0));
-        Hf             = eigs.lambda(0) * eigs.V.Col(0) * eigs.V.Col(0).Transpose() +
-             eigs.lambda(1) * eigs.V.Col(1) * eigs.V.Col(1).Transpose();
-    }
+    ScalarType lambda = -dBdd(1) * h2inv;
+    friction.GradAndHessian(uk, mu, lambda, epsvh, gf, Hf);
+    Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
     g += uvw(0) * (T * gf);
     H += (uvw(0) * uvw(0)) * (T * Hf * T.Transpose());
 }

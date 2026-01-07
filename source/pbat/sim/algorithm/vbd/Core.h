@@ -269,6 +269,7 @@ void AccumulateElasticEnergy(
  * @param bB Contact barrier parameter
  * @param mu Contact friction coefficient
  * @param epsvh Relative velocity threshold for static to dynamic friction transition
+ * @param h2inv Inverse time step size squared
  * @param gi Gradient accumulator (in/out)
  * @param Hi Hessian accumulator (in/out)
  */
@@ -287,6 +288,7 @@ inline void AccumulateContactEnergy(
     Scalar bB,
     Scalar mu,
     Scalar epsvh,
+    Scalar h2inv,
     math::linalg::mini::SVector<Scalar, 3>& gi,
     math::linalg::mini::SMatrix<Scalar, 3, 3>& Hi)
 {
@@ -311,6 +313,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
             if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
@@ -351,6 +354,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
             if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
@@ -393,6 +397,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
             if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
@@ -428,6 +433,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
         },
@@ -448,6 +454,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
         },
@@ -469,6 +476,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
         });
@@ -500,6 +508,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
             if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
@@ -547,6 +556,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
             if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
@@ -609,6 +619,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
         },
@@ -637,6 +648,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
         });
@@ -675,6 +687,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
             if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
@@ -728,6 +741,7 @@ inline void AccumulateContactEnergy(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
         });
@@ -754,6 +768,9 @@ void Iterate(
     Scalar bB              = contactParams.b;
     Scalar epsvh           = contactParams.epsv * fem.bdf.TimeStep();
     Scalar mu              = contactParams.mu;
+    Scalar h               = betaTildeBdf;
+    Scalar h2              = betaTildeBdf2;
+    Scalar h2inv           = 1 / h2;
     params.xb              = fem.x; // Copy current positions to buffer
     auto const nPartitions = params.Pptr.size() - 1;
     for (Index p = 0; p < nPartitions; ++p)
@@ -790,13 +807,14 @@ void Iterate(
                 bB,
                 mu,
                 epsvh,
+                h2inv,
                 gi,
                 Hi);
             // "Kinetic" energy
             Scalar m                         = fem.m(i);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
-            kernels::AddInertiaDerivatives(betaTildeBdf2, m, xtildei, xi, gi, Hi);
-            kernels::AddDamping(betaTildeBdf, xti, xi, params.betaR, gi, Hi);
+            kernels::AddInertiaDerivatives(h2, m, xtildei, xi, gi, Hi);
+            kernels::AddDamping(h, xti, xi, params.betaR, gi, Hi);
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
             fem.x.col(i) = ToEigen(xi);
         });
