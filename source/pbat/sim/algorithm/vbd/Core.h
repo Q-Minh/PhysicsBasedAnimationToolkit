@@ -27,8 +27,6 @@
 #include "pbat/sim/contact/MeshDynamics.h"
 
 #include <Eigen/Core>
-#include <exception>
-#include <fmt/core.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::algorithm::vbd {
@@ -316,22 +314,6 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
-            if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
-            {
-                fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
-                fmt::print(
-                    "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
-                    Hi(0, 0),
-                    Hi(0, 1),
-                    Hi(0, 2),
-                    Hi(1, 0),
-                    Hi(1, 1),
-                    Hi(1, 2),
-                    Hi(2, 0),
-                    Hi(2, 1),
-                    Hi(2, 2));
-                throw std::runtime_error("NaN detected in contact derivative computation");
-            }
         },
         // Vertex-edge contact
         [&](Eigen::Vector<Index, 2> const& einds) {
@@ -357,22 +339,6 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
-            if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
-            {
-                fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
-                fmt::print(
-                    "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
-                    Hi(0, 0),
-                    Hi(0, 1),
-                    Hi(0, 2),
-                    Hi(1, 0),
-                    Hi(1, 1),
-                    Hi(1, 2),
-                    Hi(2, 0),
-                    Hi(2, 1),
-                    Hi(2, 2));
-                throw std::runtime_error("NaN detected in contact derivative computation");
-            }
         },
         // Vertex-triangle contact
         [&](Eigen::Vector<Index, 3> const& finds) {
@@ -400,22 +366,6 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
-            if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
-            {
-                fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
-                fmt::print(
-                    "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
-                    Hi(0, 0),
-                    Hi(0, 1),
-                    Hi(0, 2),
-                    Hi(1, 0),
-                    Hi(1, 1),
-                    Hi(1, 2),
-                    Hi(2, 0),
-                    Hi(2, 1),
-                    Hi(2, 2));
-                throw std::runtime_error("NaN detected in contact derivative computation");
-            }
         });
     contact.ForEachPointStaticMeshContact(
         i,
@@ -511,22 +461,6 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
-            if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
-            {
-                fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
-                fmt::print(
-                    "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
-                    Hi(0, 0),
-                    Hi(0, 1),
-                    Hi(0, 2),
-                    Hi(1, 0),
-                    Hi(1, 1),
-                    Hi(1, 2),
-                    Hi(2, 0),
-                    Hi(2, 1),
-                    Hi(2, 2));
-                throw std::runtime_error("NaN detected in contact derivative computation");
-            }
         },
         // Edge-edge contact
         [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
@@ -559,41 +493,6 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
-            if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
-            {
-                mini::SVector<Scalar, 3> x = uv1(0) * xi + uv1(1) * xi2;
-                Scalar d                   = Norm(x - xcp);
-                mini::SVector<Scalar, 3> dBdd =
-                    contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(
-                        d,
-                        rB,
-                        kcB,
-                        kcpB,
-                        bB);
-                fmt::print("x=({}, {}, {})\n", x(0), x(1), x(2));
-                fmt::print("d=({})\n", d);
-                fmt::print("dBdd=({}, {}, {})\n", dBdd(0), dBdd(1), dBdd(2));
-                fmt::print("xi=({}, {}, {})\n", xi(0), xi(1), xi(2));
-                fmt::print("xi2=({}, {}, {})\n", xi2(0), xi2(1), xi2(2));
-                fmt::print("xj1=({}, {}, {})\n", xj1(0), xj1(1), xj1(2));
-                fmt::print("xj2=({}, {}, {})\n", xj2(0), xj2(1), xj2(2));
-                fmt::print("st=({}, {})\n", st(0), st(1));
-                fmt::print("xcp=({}, {}, {})\n", xcp(0), xcp(1), xcp(2));
-                fmt::print("uv1=({}, {})\n", uv1(0), uv1(1));
-                fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
-                fmt::print(
-                    "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
-                    Hi(0, 0),
-                    Hi(0, 1),
-                    Hi(0, 2),
-                    Hi(1, 0),
-                    Hi(1, 1),
-                    Hi(1, 2),
-                    Hi(2, 0),
-                    Hi(2, 1),
-                    Hi(2, 2));
-                throw std::runtime_error("NaN detected in contact derivative computation");
-            }
         });
     contact.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
         i,
@@ -690,22 +589,6 @@ inline void AccumulateContactEnergy(
                 h2inv,
                 gi,
                 Hi);
-            if (ToEigen(gi).hasNaN() or ToEigen(Hi).hasNaN())
-            {
-                fmt::print("gi=({}, {}, {})\n", gi(0), gi(1), gi(2));
-                fmt::print(
-                    "Hi=\n({}, {}, {})\n({}, {}, {})\n({}, {}, {})\n",
-                    Hi(0, 0),
-                    Hi(0, 1),
-                    Hi(0, 2),
-                    Hi(1, 0),
-                    Hi(1, 1),
-                    Hi(1, 2),
-                    Hi(2, 0),
-                    Hi(2, 1),
-                    Hi(2, 2));
-                throw std::runtime_error("NaN detected in contact derivative computation");
-            }
         });
     contact.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
         i,
