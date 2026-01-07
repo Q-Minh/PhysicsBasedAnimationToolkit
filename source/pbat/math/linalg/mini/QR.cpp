@@ -1,10 +1,10 @@
 #include "QR.h"
 
 #include "BinaryOperations.h"
+#include "CheckOrthogonality.h"
 #include "Matrix.h"
 #include "Norm.h"
 #include "Product.h"
-#include "CheckOrthogonality.h"
 #include "Transpose.h"
 #include "pbat/Aliases.h"
 
@@ -33,9 +33,10 @@ void CheckQRReconstruction(
     typename std::remove_cvref_t<TMatrixA>::ScalarType tol)
 {
     using ScalarType               = typename std::remove_cvref_t<TMatrixA>::ScalarType;
+    ScalarType nA                  = Norm(A);
     auto QR                        = Q * R;
-    ScalarType reconstructionError = SquaredNorm(QR - A);
-    CHECK_LE(reconstructionError, tol);
+    ScalarType reconstructionError = Norm(QR - A);
+    CHECK_LE(reconstructionError, nA * tol);
 }
 
 } // namespace pbat::math::linalg::mini::test
@@ -62,7 +63,7 @@ TEST_CASE("[math][linalg][mini] QR")
         CHECK_EQ(R(1, 0), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check that Q * R = A
-        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-10});
+        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-5});
     }
 
     SUBCASE("3x3 QR decomposition")
@@ -89,7 +90,7 @@ TEST_CASE("[math][linalg][mini] QR")
         CHECK_EQ(R(2, 1), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check that Q * R = A
-        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-10});
+        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-5});
     }
 
     SUBCASE("3x2 thin QR decomposition")
@@ -111,7 +112,7 @@ TEST_CASE("[math][linalg][mini] QR")
         CHECK_EQ(R(1, 0), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check that Q * R = A
-        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-10});
+        test::CheckQRReconstruction(Q, R, A, ScalarType{1e-5});
     }
 
     SUBCASE("Compare with Eigen")
@@ -136,7 +137,7 @@ TEST_CASE("[math][linalg][mini] QR")
         pbat::Matrix<3, 3> Reigen = qr.matrixQR().triangularView<Eigen::Upper>();
 
         // Both reconstructions should match the original
-        test::CheckQRReconstruction(Qmini, Rmini, Amini, ScalarType{1e-10});
+        test::CheckQRReconstruction(Qmini, Rmini, Amini, ScalarType{1e-5});
     }
 }
 

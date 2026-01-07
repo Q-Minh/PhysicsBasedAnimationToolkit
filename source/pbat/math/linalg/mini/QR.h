@@ -1,12 +1,15 @@
 #ifndef PBAT_MATH_LINALG_MINI_QR_H
 #define PBAT_MATH_LINALG_MINI_QR_H
 
+#include "BinaryOperations.h"
 #include "Concepts.h"
 #include "Matrix.h"
 #include "Norm.h"
+#include "UnaryOperations.h"
 #include "pbat/HostDevice.h"
 
 #include <cmath>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -40,15 +43,20 @@ struct QRResult
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
  * @param A Input matrix of size M x N (M >= N for full rank)
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return QRResult containing orthogonal Q and upper triangular R
  *
  * @note For numerical robustness, columns with near-zero norm are handled gracefully
  *       by setting the corresponding Q column to zero and R diagonal to zero.
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto QR(TMatrix&& A)
+PBAT_HOST_DEVICE auto QR(
+    TMatrix&& A,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
 
     using ScalarType            = typename MatrixType::ScalarType;
@@ -62,8 +70,9 @@ PBAT_HOST_DEVICE auto QR(TMatrix&& A)
     Q = A;
     // Initialize R to zero
     R.SetZero();
-    // Threshold for near-zero detection (scaled by matrix dimension)
-    ScalarType const eps = ScalarType(kRows) * std::numeric_limits<ScalarType>::epsilon();
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
     // Modified Gram-Schmidt
     for (auto j = 0; j < kCols; ++j)
     {
@@ -106,10 +115,14 @@ PBAT_HOST_DEVICE auto GivensRotation(TScalar a, TScalar b)
 {
     using namespace std;
     TScalar c, s;
-    TScalar const eps = std::numeric_limits<TScalar>::epsilon();
 
     TScalar const absa = abs(a);
     TScalar const absb = abs(b);
+
+    // Scale epsilon by magnitude of inputs (infinity norm, avoids sqrt)
+    TScalar const maxAbs = max(absa, absb);
+    TScalar const eps    = maxAbs * std::numeric_limits<TScalar>::epsilon();
+
     if (absb < eps)
     {
         c = TScalar{1};

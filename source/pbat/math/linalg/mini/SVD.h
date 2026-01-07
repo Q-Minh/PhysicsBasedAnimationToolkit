@@ -9,6 +9,7 @@
 #include "Norm.h"
 #include "Product.h"
 #include "Transpose.h"
+#include "UnaryOperations.h"
 #include "pbat/HostDevice.h"
 
 #include <cmath>
@@ -47,16 +48,28 @@ struct SVDResult
  * @param A Input 2x2 matrix
  * @param bSortSingularValues If true, singular values are sorted in descending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SVDResult containing U, S (singular values), V such that A = U * diag(S) * V^T
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
+PBAT_HOST_DEVICE auto SVD2x2(
+    TMatrix&& A,
+    bool bSortSingularValues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 2 and MatrixType::kCols == 2, "Matrix must be 2x2");
     using ScalarType = typename MatrixType::ScalarType;
     SVDResult<ScalarType, 2, 2> result{};
+
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
+    ScalarType const epsSq = eps * eps;
+
     // Compute A^T * A
     SMatrix<ScalarType, 2, 2> AtA;
     AtA(0, 0) = A(0, 0) * A(0, 0) + A(1, 0) * A(1, 0);
@@ -66,7 +79,6 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
     // Eigendecomposition of A^T * A gives V and sigma^2
     auto [lambda, V] = SymmetricEigen2x2(AtA);
     // Singular values are sqrt of eigenvalues (clamp negatives from numerical error)
-    ScalarType const eps = ScalarType{4} * std::numeric_limits<ScalarType>::epsilon(); // 2x2 matrix
     // Eigenvalues come in ascending order; optionally reverse for descending singular values
     int const idx0      = bSortSingularValues ? 1 : 0;
     int const idx1      = bSortSingularValues ? 0 : 1;
@@ -121,7 +133,7 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
     // Ensure U is orthonormal (correct for any numerical drift)
     // Normalize first column
     ScalarType u0norm = result.U(0, 0) * result.U(0, 0) + result.U(1, 0) * result.U(1, 0);
-    if (u0norm > eps * eps)
+    if (u0norm > epsSq)
     {
         using namespace std;
         ScalarType invNorm = ScalarType{1} / sqrt(u0norm);
@@ -133,7 +145,7 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
     result.U.Col(1) -= dot * result.U.Col(0);
     // Normalize second column
     ScalarType u1norm = Dot(result.U.Col(1), result.U.Col(1));
-    if (u1norm > eps * eps)
+    if (u1norm > epsSq)
     {
         using namespace std;
         ScalarType invNorm = ScalarType{1} / sqrt(u1norm);
@@ -160,12 +172,18 @@ PBAT_HOST_DEVICE auto SVD2x2(TMatrix&& A, bool bSortSingularValues = true)
  * @param A Input 3x3 matrix
  * @param bSortSingularValues If true, singular values are sorted in descending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SVDResult containing U, S (singular values), V such that A = U * diag(S) * V^T
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
+PBAT_HOST_DEVICE auto SVD3x3(
+    TMatrix&& A,
+    bool bSortSingularValues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 3 and MatrixType::kCols == 3, "Matrix must be 3x3");
 
@@ -173,7 +191,9 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
 
     SVDResult<ScalarType, 3, 3> result{};
 
-    ScalarType const eps = ScalarType{9} * std::numeric_limits<ScalarType>::epsilon(); // 3x3 matrix
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
 
     // Compute A^T * A
     SMatrix<ScalarType, 3, 3> AtA = A.Transpose() * A;
@@ -307,28 +327,38 @@ PBAT_HOST_DEVICE auto SVD3x3(TMatrix&& A, bool bSortSingularValues = true)
 /**
  * @brief Compute SVD of a matrix.
  *
- * Dispatcher that calls the appropriate 2x2 or 3x3 analytic solver.
+ * Dispatcher that calls the appropriate 2x2 or 3x3 analytic solver, or JacobiSVD for larger
+ * matrices.
  *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
- * @param A Input square matrix (2x2 or 3x3)
+ * @param A Input square matrix
  * @param bSortSingularValues If true, singular values are sorted in descending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param nMaxIters Maximum number of Jacobi sweeps for iterative solver (used for matrices larger
+ *        than 3x3). If -1, a default based on matrix dimension is used. Ignored for 2x2 and 3x3
+ *        matrices which use analytic solvers.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SVDResult containing U, S, V such that A = U * diag(S) * V^T
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SVD(TMatrix&& A, bool bSortSingularValues = true)
+PBAT_HOST_DEVICE auto
+SVD(TMatrix&& A,
+    bool bSortSingularValues = true,
+    int nMaxIters            = -1,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
-    static_assert(
-        MatrixType::kRows == 2 or MatrixType::kRows == 3,
-        "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
-        return SVD2x2(std::forward<TMatrix>(A), bSortSingularValues);
+        return SVD2x2(std::forward<TMatrix>(A), bSortSingularValues, eps);
+    else if constexpr (MatrixType::kRows == 3)
+        return SVD3x3(std::forward<TMatrix>(A), bSortSingularValues, eps);
     else
-        return SVD3x3(std::forward<TMatrix>(A), bSortSingularValues);
+        return JacobiSVD(std::forward<TMatrix>(A), bSortSingularValues, nMaxIters, eps);
 }
 
 /**
@@ -343,7 +373,7 @@ PBAT_HOST_DEVICE auto SVD(TMatrix&& A, bool bSortSingularValues = true)
 template <class /*CMatrix*/ TMatrix>
 PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A, bool bSortSingularValues = true)
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 2 and MatrixType::kCols == 2, "Matrix must be 2x2");
 
@@ -381,7 +411,7 @@ PBAT_HOST_DEVICE auto SingularValues2x2(TMatrix&& A, bool bSortSingularValues = 
 template <class /*CMatrix*/ TMatrix>
 PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A, bool bSortSingularValues = true)
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 3 and MatrixType::kCols == 3, "Matrix must be 3x3");
     using ScalarType = typename MatrixType::ScalarType;
@@ -404,26 +434,31 @@ PBAT_HOST_DEVICE auto SingularValues3x3(TMatrix&& A, bool bSortSingularValues = 
 /**
  * @brief Compute only singular values of a matrix.
  *
+ * Dispatcher that calls the appropriate 2x2 or 3x3 analytic solver, or JacobiSingularValues for
+ * larger matrices.
+ *
  * @tparam TMatrix Matrix type satisfying CMatrix concept
- * @param A Input square matrix (2x2 or 3x3)
+ * @param A Input square matrix
  * @param bSortSingularValues If true, singular values are sorted in descending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param nMaxIters Maximum number of Jacobi sweeps for iterative solver (used for matrices larger
+ *        than 3x3). If -1, a default based on matrix dimension is used. Ignored for 2x2 and 3x3
+ *        matrices which use analytic solvers.
  * @return Vector of singular values (descending order if bSortSingularValues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SingularValues(TMatrix&& A, bool bSortSingularValues = true)
+PBAT_HOST_DEVICE auto SingularValues(TMatrix&& A, bool bSortSingularValues = true, int nMaxIters = -1)
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
-    static_assert(
-        MatrixType::kRows == 2 or MatrixType::kRows == 3,
-        "Only 2x2 and 3x3 matrices supported");
 
     if constexpr (MatrixType::kRows == 2)
         return SingularValues2x2(std::forward<TMatrix>(A), bSortSingularValues);
-    else
+    else if constexpr (MatrixType::kRows == 3)
         return SingularValues3x3(std::forward<TMatrix>(A), bSortSingularValues);
+    else
+        return JacobiSingularValues(std::forward<TMatrix>(A), bSortSingularValues, nMaxIters);
 }
 
 /**
@@ -450,10 +485,12 @@ PBAT_HOST_DEVICE auto JacobiRotation(TScalar a, TScalar b, TScalar c) -> SVector
 {
     using namespace std;
 
-    TScalar const eps = std::numeric_limits<TScalar>::epsilon();
+    // Scale epsilon by magnitude of inputs (infinity norm, avoids sqrt)
+    TScalar const maxAbs = max(max(abs(a), abs(b)), abs(c));
+    TScalar const eps    = maxAbs * std::numeric_limits<TScalar>::epsilon();
 
     // If b is essentially zero, no rotation needed
-    if (abs(b) < eps * (abs(a) + abs(c) + TScalar{1}))
+    if (abs(b) < eps)
     {
         return SVector<TScalar, 2>{TScalar{1}, TScalar{0}};
     }
@@ -503,17 +540,24 @@ PBAT_HOST_DEVICE auto JacobiRotation(TScalar a, TScalar b, TScalar c) -> SVector
  *        Set to false to avoid unnecessary work when order doesn't matter.
  * @param maxSweeps Maximum number of sweeps through all column pairs. If -1 (default),
  *        uses 5 * min(M, N) which is typically sufficient for convergence.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SVDResult containing U, S (singular values), V such that A = U * diag(S) * V^T
  *
  * @note This implementation assumes M >= N. For M < N, transpose the matrix,
  *       compute SVD, then swap U and V.
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps = -1)
+PBAT_HOST_DEVICE auto JacobiSVD(
+    TMatrix&& A,
+    bool bSortSingularValues = true,
+    int maxSweeps            = -1,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
     using namespace std;
 
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
 
     using ScalarType             = typename MatrixType::ScalarType;
@@ -550,8 +594,9 @@ PBAT_HOST_DEVICE auto JacobiSVD(TMatrix&& A, bool bSortSingularValues = true, in
     // Initialize V to identity
     SMatrix<ScalarType, kWorkCols, kWorkCols> V = Identity<ScalarType, kWorkCols, kWorkCols>();
 
-    // Convergence tolerance
-    ScalarType const eps = ScalarType(kWorkRows) * std::numeric_limits<ScalarType>::epsilon();
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
 
     // Jacobi sweeps
     for (int sweep = 0; sweep < maxSweeps; ++sweep)
@@ -785,7 +830,7 @@ JacobiSingularValues(TMatrix&& A, bool bSortSingularValues = true, int maxSweeps
 {
     using namespace std;
 
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
 
     using ScalarType             = typename MatrixType::ScalarType;

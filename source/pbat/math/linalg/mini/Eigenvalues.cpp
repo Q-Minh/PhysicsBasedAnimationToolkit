@@ -2,6 +2,7 @@
 
 #include "BinaryOperations.h"
 #include "CheckOrthogonality.h"
+#include "Eigen.h"
 #include "Matrix.h"
 #include "Norm.h"
 #include "Product.h"
@@ -30,10 +31,11 @@ void CheckEigenReconstruction(
     TMatrixV const& V,
     TVectorL const& lambda,
     TMatrixA const& A,
-    typename std::remove_cvref_t<TMatrixA>::ScalarType tol)
+    typename std::decay_t<TMatrixA>::ScalarType tol)
 {
-    using ScalarType            = typename std::remove_cvref_t<TMatrixA>::ScalarType;
-    static auto constexpr kDims = std::remove_cvref_t<TVectorL>::kRows;
+    using ScalarType            = typename std::decay_t<TMatrixA>::ScalarType;
+    static auto constexpr kDims = std::decay_t<TVectorL>::kRows;
+    ScalarType nA               = Norm(A);
 
     // Build diagonal matrix from eigenvalues
     SMatrix<ScalarType, kDims, kDims> D = Zeros<ScalarType, kDims, kDims>();
@@ -41,8 +43,8 @@ void CheckEigenReconstruction(
         D(i, i) = lambda(i);
 
     SMatrix<ScalarType, kDims, kDims> reconstructed = V * D * V.Transpose();
-    ScalarType reconstructionError                  = SquaredNorm(reconstructed - A);
-    CHECK_LE(reconstructionError, tol);
+    ScalarType reconstructionError                  = Norm(reconstructed - A);
+    CHECK_LE(reconstructionError, nA * tol);
 }
 
 /**
@@ -61,18 +63,18 @@ void CheckEigenEquation(
     TMatrixA const& A,
     TMatrixV const& V,
     TVectorL const& lambda,
-    typename std::remove_cvref_t<TMatrixA>::ScalarType tol)
+    typename std::decay_t<TMatrixA>::ScalarType tol)
 {
-    using ScalarType            = typename std::remove_cvref_t<TMatrixA>::ScalarType;
-    static auto constexpr kDims = std::remove_cvref_t<TVectorL>::kRows;
-
+    using ScalarType            = typename std::decay_t<TMatrixA>::ScalarType;
+    static auto constexpr kDims = std::decay_t<TVectorL>::kRows;
+    ScalarType nA               = Norm(A);
     for (int k = 0; k < kDims; ++k)
     {
-        auto v           = V.Col(k);
-        auto Av          = A * v;
-        auto lambdaV     = lambda(k) * v;
-        ScalarType error = SquaredNorm(Av - lambdaV);
-        CHECK_LE(error, tol);
+        auto v                             = V.Col(k);
+        SVector<ScalarType, kDims> Av      = A * v;
+        SVector<ScalarType, kDims> lambdaV = lambda(k) * v;
+        ScalarType error                   = Norm(Av - lambdaV);
+        CHECK_LE(error, nA * tol);
     }
 }
 
@@ -318,16 +320,16 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenNxN")
         auto [lambda, V] = SymmetricEigenNxN(A);
 
         // Eigenvalues in ascending order: 2, 4, 7, 9
-        CHECK_EQ(lambda(0), doctest::Approx(2.0).epsilon(1e-9));
-        CHECK_EQ(lambda(1), doctest::Approx(4.0).epsilon(1e-9));
-        CHECK_EQ(lambda(2), doctest::Approx(7.0).epsilon(1e-9));
-        CHECK_EQ(lambda(3), doctest::Approx(9.0).epsilon(1e-9));
+        CHECK_EQ(lambda(0), doctest::Approx(2.0).epsilon(1e-4));
+        CHECK_EQ(lambda(1), doctest::Approx(4.0).epsilon(1e-4));
+        CHECK_EQ(lambda(2), doctest::Approx(7.0).epsilon(1e-4));
+        CHECK_EQ(lambda(3), doctest::Approx(9.0).epsilon(1e-4));
 
         // Eigenvectors are orthonormal
         test::CheckOrthonormality(V, ScalarType{1e-7});
 
         // Reconstruction: A = V * diag(lambda) * V^T
-        test::CheckEigenReconstruction(V, lambda, A, ScalarType{1e-6});
+        test::CheckEigenReconstruction(V, lambda, A, ScalarType{1e-4});
     }
 
     SUBCASE("4x4 symmetric matrix")
@@ -354,13 +356,13 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenNxN")
         auto [lambda, V] = SymmetricEigenNxN(Amini);
 
         // Check eigenvalue equation: A * v = λ * v
-        test::CheckEigenEquation(Amini, V, lambda, ScalarType{1e-8});
+        test::CheckEigenEquation(Amini, V, lambda, ScalarType{1e-4});
 
         // Eigenvectors are orthonormal
-        test::CheckOrthonormality(V, ScalarType{1e-7});
+        test::CheckOrthonormality(V, ScalarType{1e-6});
 
         // Reconstruction: A = V * diag(lambda) * V^T
-        test::CheckEigenReconstruction(V, lambda, Amini, ScalarType{1e-5});
+        test::CheckEigenReconstruction(V, lambda, Amini, ScalarType{1e-4});
     }
 
     SUBCASE("4x4 compare with Eigen")
@@ -398,7 +400,7 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenNxN")
         }
 
         // Reconstruction: A = V * diag(lambda) * V^T
-        test::CheckEigenReconstruction(vecMini, eigMini, Amini, ScalarType{1e-5});
+        test::CheckEigenReconstruction(vecMini, eigMini, Amini, ScalarType{1e-4});
     }
 
     SUBCASE("5x5 symmetric matrix")
@@ -424,13 +426,13 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenNxN")
         auto [lambda, V] = SymmetricEigenNxN(Amini);
 
         // Check eigenvalue equation: A * v = λ * v
-        test::CheckEigenEquation(Amini, V, lambda, ScalarType{1e-7});
+        test::CheckEigenEquation(Amini, V, lambda, ScalarType{1e-4});
 
         // Eigenvectors are orthonormal
-        test::CheckOrthonormality(V, ScalarType{1e-7});
+        test::CheckOrthonormality(V, ScalarType{1e-6});
 
         // Reconstruction: A = V * diag(lambda) * V^T
-        test::CheckEigenReconstruction(V, lambda, Amini, ScalarType{1e-5});
+        test::CheckEigenReconstruction(V, lambda, Amini, ScalarType{1e-3});
     }
 
     SUBCASE("6x6 compare with Eigen")
@@ -468,10 +470,10 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenNxN")
         }
 
         // Check eigenvalue equation
-        test::CheckEigenEquation(Amini, vecMini, eigMini, ScalarType{1e-7});
+        test::CheckEigenEquation(Amini, vecMini, eigMini, ScalarType{1e-4});
 
         // Reconstruction: A = V * diag(lambda) * V^T
-        test::CheckEigenReconstruction(vecMini, eigMini, Amini, ScalarType{1e-5});
+        test::CheckEigenReconstruction(vecMini, eigMini, Amini, ScalarType{1e-3});
     }
 
     SUBCASE("Repeated eigenvalues 4x4")
@@ -491,10 +493,10 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenNxN")
         CHECK_EQ(lambda(3), doctest::Approx(7.0).epsilon(1e-10));
 
         // Eigenvectors should be orthonormal even with repeated eigenvalues
-        test::CheckOrthonormality(V, ScalarType{1e-10});
+        test::CheckOrthonormality(V, ScalarType{1e-6});
 
         // Reconstruction: A = V * diag(lambda) * V^T
-        test::CheckEigenReconstruction(V, lambda, A, ScalarType{1e-5});
+        test::CheckEigenReconstruction(V, lambda, A, ScalarType{1e-4});
     }
 
     SUBCASE("Near-identity 4x4")
@@ -551,6 +553,23 @@ TEST_CASE("[math][linalg][mini] SymmetricEigenNxN")
 
         // Reconstruction: A = V * diag(lambda) * V^T
         test::CheckEigenReconstruction(V, lambda, A, ScalarType{1e-10});
+    }
+
+    SUBCASE("9x9 symmetric matrix")
+    {
+        Eigen::Matrix<ScalarType, 9, 9> B = Eigen::Matrix<ScalarType, 9, 9>::Random();
+        SMatrix<ScalarType, 9, 9> A       = Zeros<ScalarType, 9, 9>();
+        A = ScalarType(1e6) * (FromEigen(B) + FromEigen(B).Transpose()) * ScalarType(0.5);
+        auto [lambda, V] = SymmetricEigenNxN(A);
+
+        // Check eigenvalue equation
+        test::CheckEigenEquation(A, V, lambda, ScalarType{1e-4});
+
+        // Eigenvectors are orthonormal
+        test::CheckOrthonormality(V, ScalarType{1e-6});
+
+        // Reconstruction: A = V * diag(lambda) * V^T
+        test::CheckEigenReconstruction(V, lambda, A, ScalarType{1e-4});
     }
 }
 

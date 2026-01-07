@@ -1,9 +1,12 @@
 #ifndef PBAT_MATH_LINALG_MINI_EIGENVALUES_H
 #define PBAT_MATH_LINALG_MINI_EIGENVALUES_H
 
+#include "BinaryOperations.h"
 #include "Concepts.h"
 #include "Matrix.h"
+#include "Norm.h"
 #include "QR.h"
+#include "UnaryOperations.h"
 #include "pbat/HostDevice.h"
 
 #include <cmath>
@@ -42,12 +45,18 @@ struct SymmetricEigenResult
  * @param A `2 x 2` symmetric matrix
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = true)
+PBAT_HOST_DEVICE auto SymmetricEigen2x2(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 2 and MatrixType::kCols == 2, "Matrix must be 2x2");
 
@@ -58,6 +67,10 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
     ScalarType const a = A(0, 0);
     ScalarType const b = A(0, 1); // = A(1,0) for symmetric
     ScalarType const c = A(1, 1);
+
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
 
     // Trace and determinant
     ScalarType const trace = a + c;
@@ -77,11 +90,9 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
     // Eigenvectors
     // For numerical stability, we compute the eigenvector for the eigenvalue
     // that's furthest from a (or c), then use orthogonality for the other.
-    ScalarType const eps = ScalarType{4} * std::numeric_limits<ScalarType>::epsilon(); // 2x2 matrix
-
     ScalarType absB = abs(b);
 
-    if (absB < eps * (ScalarType{1} + (a > c ? a : c)))
+    if (absB < eps)
     {
         // Matrix is essentially diagonal
         if (a <= c)
@@ -160,12 +171,18 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(TMatrix&& A, bool bSortEigenvalues = tru
  * @param A `3 x 3` symmetric matrix
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = true)
+PBAT_HOST_DEVICE auto SymmetricEigen3x3(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 3 and MatrixType::kCols == 3, "Matrix must be 3x3");
 
@@ -181,7 +198,9 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
     ScalarType const a23 = A(1, 2);
     ScalarType const a33 = A(2, 2);
 
-    ScalarType const eps = ScalarType{9} * std::numeric_limits<ScalarType>::epsilon(); // 3x3 matrix
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
 
     // Compute characteristic polynomial coefficients
     // det(A - λI) = -λ³ + c2*λ² + c1*λ + c0 = 0
@@ -207,12 +226,13 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
     ScalarType const q = detB / ScalarType{2};
 
     // For a symmetric matrix, p >= 0 and the discriminant p^3 - q^2 >= 0
-    ScalarType p_cubed = p * p * p;
-    ScalarType q_sq    = q * q;
+    // p = ||B||_F^2 / 6, so p ~ normA^2 when matrix is not near scalar multiple of identity.
+    // We check if p is small (matrix is essentially scalar * I).
+    ScalarType const epsSq = eps * eps;
 
     // Clamp the ratio for numerical stability
     ScalarType ratio;
-    if (p_cubed < eps)
+    if (p < epsSq)
     {
         // Matrix is essentially a multiple of identity
         result.lambda(0) = mean;
@@ -343,7 +363,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(TMatrix&& A, bool bSortEigenvalues = tru
 
         // Normalize
         ScalarType invNorm;
-        if (normSq > eps * eps)
+        if (normSq > epsSq)
         {
             invNorm = ScalarType{1} / sqrt(normSq);
         }
@@ -448,10 +468,13 @@ PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
     // This formulation avoids catastrophic cancellation
 
     TScalar absD = abs(delta);
+    TScalar absB = abs(b);
 
-    TScalar const eps = std::numeric_limits<TScalar>::epsilon();
+    // Scale epsilon by the magnitude of the 2x2 block (infinity norm, avoids sqrt)
+    TScalar const maxAbs = max(max(abs(a), absB), abs(c));
+    TScalar const eps    = maxAbs * std::numeric_limits<TScalar>::epsilon();
 
-    if (absD < eps and bsq < eps * eps)
+    if (absD < eps and absB < eps)
     {
         // Nearly diagonal or zero off-diagonal: shift by c itself
         return c;
@@ -482,16 +505,22 @@ PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
  * @param maxIterations Maximum number of QR iterations (default: 30 * N)
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
  *
  * @note For N=2 or N=3, consider using the specialized analytic solvers
  *       SymmetricEigen2x2 or SymmetricEigen3x3 for better performance.
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto
-SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations = -1)
+PBAT_HOST_DEVICE auto SymmetricEigenNxN(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    int maxIterations     = -1,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
 
@@ -500,8 +529,9 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
 
     SymmetricEigenResult<ScalarType, kDims> result{};
 
-    // Tolerance for convergence (scaled by matrix dimension)
-    ScalarType const eps = ScalarType(kDims * kDims) * std::numeric_limits<ScalarType>::epsilon();
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
 
     // Default max iterations: 30 * N is typically more than enough for convergence
     if (maxIterations < 0)
@@ -532,11 +562,7 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
         // Check if last off-diagonal element is small enough for deflation
         ScalarType lastOffDiag = abs(T(activeSize - 2, activeSize - 1));
 
-        // Scale tolerance by magnitude of relevant diagonal elements
-        ScalarType scale =
-            abs(T(activeSize - 2, activeSize - 2)) + abs(T(activeSize - 1, activeSize - 1));
-
-        if (lastOffDiag < eps * (ScalarType{1} + scale))
+        if (lastOffDiag < eps)
         {
             // Eigenvalue at position (activeSize-1) has converged
             // Zero out the off-diagonal explicitly for cleanliness
@@ -581,10 +607,6 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
                 Q(i, j) = T(i, j);
         }
 
-        // Threshold for near-zero detection
-        ScalarType const qrEps =
-            ScalarType(activeSize) * std::numeric_limits<ScalarType>::epsilon();
-
         // Modified Gram-Schmidt on activeSize columns (operating directly on Q)
         for (int j = 0; j < activeSize; ++j)
         {
@@ -596,7 +618,7 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
 
             R(j, j) = norm;
 
-            if (norm > qrEps)
+            if (norm > eps)
             {
                 // Normalize column j
                 ScalarType const invNorm = ScalarType{1} / norm;
@@ -626,7 +648,7 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
                     newNorm += Q(i, j) * Q(i, j);
                 newNorm = sqrt(newNorm);
 
-                if (newNorm > qrEps)
+                if (newNorm > eps)
                 {
                     ScalarType const invNorm = ScalarType{1} / newNorm;
                     for (int i = 0; i < activeSize; ++i)
@@ -755,21 +777,29 @@ SymmetricEigenNxN(TMatrix&& A, bool bSortEigenvalues = true, int maxIterations =
  * @param A Symmetric square matrix
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param nMaxIters Maximum number of iterations for NxN QR algorithm (default: -1 for auto)
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigen(TMatrix&& A, bool bSortEigenvalues = true)
+PBAT_HOST_DEVICE auto SymmetricEigen(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    int nMaxIters         = -1,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
 
     if constexpr (MatrixType::kRows == 2)
-        return SymmetricEigen2x2(std::forward<TMatrix>(A), bSortEigenvalues);
+        return SymmetricEigen2x2(std::forward<TMatrix>(A), bSortEigenvalues, eps);
     else if constexpr (MatrixType::kRows == 3)
-        return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues);
+        return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues, eps);
     else
-        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues);
+        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues, nMaxIters, eps);
 }
 
 /**
@@ -783,9 +813,9 @@ PBAT_HOST_DEVICE auto SymmetricEigen(TMatrix&& A, bool bSortEigenvalues = true)
  */
 template <class /*CMatrix*/ TMatrix>
 PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A, bool bSortEigenvalues = true)
-    -> SVector<typename std::remove_cvref_t<TMatrix>::ScalarType, 2>
+    -> SVector<typename std::decay_t<TMatrix>::ScalarType, 2>
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == 2 and MatrixType::kCols == 2, "Matrix must be 2x2");
 
@@ -821,14 +851,20 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A, bool bSortEigenvalues
  * @param A Symmetric 3x3 matrix
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return Vector of 3 eigenvalues (ascending order if bSortEigenvalues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(TMatrix&& A, bool bSortEigenvalues = true)
+PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
     // Use full decomposition - eigenvalue-only version could be optimized
     // but the overhead of computing eigenvectors is small
-    return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues).lambda;
+    return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues, eps).lambda;
 }
 
 /**
@@ -838,21 +874,27 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(TMatrix&& A, bool bSortEigenvalues
  * @param A Symmetric square matrix
  * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
  *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
  * @return Vector of eigenvalues (ascending order if bSortEigenvalues is true)
  */
 template <class /*CMatrix*/ TMatrix>
-PBAT_HOST_DEVICE auto SymmetricEigenvalues(TMatrix&& A, bool bSortEigenvalues = true)
+PBAT_HOST_DEVICE auto SymmetricEigenvalues(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
 {
-    using MatrixType = std::remove_cvref_t<TMatrix>;
+    using MatrixType = std::decay_t<TMatrix>;
     PBAT_MINI_CHECK_CMATRIX(MatrixType);
     static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
 
     if constexpr (MatrixType::kRows == 2)
         return SymmetricEigenvalues2x2(std::forward<TMatrix>(A), bSortEigenvalues);
     else if constexpr (MatrixType::kRows == 3)
-        return SymmetricEigenvalues3x3(std::forward<TMatrix>(A), bSortEigenvalues);
+        return SymmetricEigenvalues3x3(std::forward<TMatrix>(A), bSortEigenvalues, eps);
     else
-        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues).lambda;
+        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues, -1, eps).lambda;
 }
 
 } // namespace mini

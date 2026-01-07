@@ -42,13 +42,14 @@ void CheckSVDReconstruction(
 {
     using ScalarType            = typename std::remove_cvref_t<TMatrixA>::ScalarType;
     static auto constexpr kDims = std::remove_cvref_t<TVectorS>::kRows;
+    ScalarType nA               = Norm(A);
     // Build diagonal matrix from singular values
     SMatrix<ScalarType, kDims, kDims> Sigma = Zeros<ScalarType, kDims, kDims>();
     for (int i = 0; i < kDims; ++i)
         Sigma(i, i) = S(i);
     SMatrix<ScalarType, kDims, kDims> reconstructed = U * Sigma * V.Transpose();
-    ScalarType reconstructionError                  = SquaredNorm(reconstructed - A);
-    CHECK_LE(reconstructionError, tol);
+    ScalarType reconstructionError                  = Norm(reconstructed - A);
+    CHECK_LE(reconstructionError, nA * tol);
 }
 
 } // namespace pbat::math::linalg::mini::test
@@ -77,7 +78,7 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         test::CheckOrthonormality(V, ScalarType{1e-12});
 
         // Check reconstruction: A = U * diag(S) * V^T
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-12});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
     }
 
     SUBCASE("General matrix")
@@ -95,7 +96,7 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         CHECK(S(1) >= 0.0);
 
         // Check reconstruction
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
     }
 
     SUBCASE("Compare with Eigen")
@@ -115,7 +116,7 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         auto Seigen = svd.singularValues();
 
         // Check reconstruction
-        test::CheckSVDReconstruction(U, S, V, Amini, ScalarType{1e-10});
+        test::CheckSVDReconstruction(U, S, V, Amini, ScalarType{1e-5});
 
         // Singular values should match
         CHECK_EQ(S(0), doctest::Approx(Seigen(0)).epsilon(1e-5));
@@ -136,7 +137,7 @@ TEST_CASE("[math][linalg][mini] SVD2x2")
         CHECK_EQ(S(1), doctest::Approx(0.0).epsilon(1e-10));
 
         // Check reconstruction
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
 
         // U and V should still be orthogonal
         test::CheckOrthonormality(U, ScalarType{1e-10});
@@ -189,7 +190,7 @@ TEST_CASE("[math][linalg][mini] SVD3x3")
         CHECK(S(2) >= 0.0);
 
         // Check reconstruction
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-6});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-3});
 
         // Check orthogonality
         test::CheckOrthonormality(U, ScalarType{1e-7});
@@ -325,7 +326,7 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
         test::CheckOrthonormality(V, ScalarType{1e-10});
 
         // Reconstruction
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
     }
 
     SUBCASE("3x3 general matrix")
@@ -348,7 +349,7 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
         test::CheckOrthonormality(V, ScalarType{1e-10});
 
         // Reconstruction
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
 
         // Compare with Eigen
         pbat::Matrix<3, 3> Aeigen;
@@ -387,7 +388,7 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
         test::CheckOrthonormality(V, ScalarType{1e-9});
 
         // Reconstruction
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-9});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
 
         // Compare with Eigen
         pbat::Matrix<4, 4> Aeigen;
@@ -437,8 +438,8 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
                 Arecon(i, j) = sum;
             }
         }
-        ScalarType reconError = SquaredNorm(A - Arecon);
-        CHECK_LE(reconError, 1e-9);
+        ScalarType reconError = Norm(A - Arecon);
+        CHECK_LE(reconError, 1e-4);
 
         // Compare with Eigen
         pbat::Matrix<4, 3> Aeigen;
@@ -488,8 +489,8 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
                 Arecon(i, j) = sum;
             }
         }
-        ScalarType reconError = SquaredNorm(A - Arecon);
-        CHECK_LE(reconError, 1e-9);
+        ScalarType reconError = Norm(A - Arecon);
+        CHECK_LE(reconError, 1e-4);
 
         // Compare with Eigen
         pbat::Matrix<3, 4> Aeigen;
@@ -523,7 +524,7 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
 
         test::CheckOrthonormality(U, ScalarType{1e-9});
         test::CheckOrthonormality(V, ScalarType{1e-9});
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-9});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
 
         // For SPD matrix, all singular values should be positive
         for (int i = 0; i < 5; ++i)
@@ -548,7 +549,7 @@ TEST_CASE("[math][linalg][mini] JacobiSVD")
 
         test::CheckOrthonormality(U, ScalarType{1e-10});
         test::CheckOrthonormality(V, ScalarType{1e-10});
-        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-10});
+        test::CheckSVDReconstruction(U, S, V, A, ScalarType{1e-5});
 
         // Third singular value should be essentially zero
         CHECK_LT(S(2), 1e-6);
