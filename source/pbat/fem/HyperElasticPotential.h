@@ -1053,14 +1053,11 @@ void ToElementElasticity(
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * gradPhi;
             auto vecF                                     = FromEigen(F);
             auto psiF                                     = Psi.Eval(vecF, mug(g), lambdag(g));
-            auto const hessPsiF                           = Psi.Hessian(vecF, mug(g), lambdag(g));
-            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
-            math::linalg::FilterEigenvalues(
-                ToEigen(hessPsiF),
-                ToEigenvalueFilter(eSpdCorrection),
-                hessPsiFCorrected);
+            auto hessPsiF                                 = Psi.Hessian(vecF, mug(g), lambdag(g));
+            hessPsiF =
+                math::linalg::FilterEigenvalues(hessPsiF, ToEigenvalueFilter(eSpdCorrection));
             auto const GP = FromEigen(gradPhi);
-            auto HPsix    = HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Ug(g) += wg(g) * psiF;
             heg += wg(g) * ToEigen(HPsix);
@@ -1082,14 +1079,11 @@ void ToElementElasticity(
             mini::SVector<ScalarType, Dims * Dims> gradPsiF;
             mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
             auto psiF = Psi.EvalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
-            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
-            math::linalg::FilterEigenvalues(
-                ToEigen(hessPsiF),
-                ToEigenvalueFilter(eSpdCorrection),
-                hessPsiFCorrected);
+            hessPsiF =
+                math::linalg::FilterEigenvalues(hessPsiF, ToEigenvalueFilter(eSpdCorrection));
             auto const GP = FromEigen(GPeg);
             auto GPsix    = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
-            auto HPsix    = HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Ug(g) += wg(g) * psiF;
             Gg.col(g) += wg(g) * ToEigen(GPsix);
@@ -1125,14 +1119,11 @@ void ToElementElasticity(
             mini::SVector<ScalarType, Dims * Dims> gradPsiF;
             mini::SMatrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiF;
             Psi.EvalWithGradAndHessian(vecF, mug(g), lambdag(g), gradPsiF, hessPsiF);
-            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
-            math::linalg::FilterEigenvalues(
-                ToEigen(hessPsiF),
-                ToEigenvalueFilter(eSpdCorrection),
-                hessPsiFCorrected);
+            hessPsiF =
+                math::linalg::FilterEigenvalues(hessPsiF, ToEigenvalueFilter(eSpdCorrection));
             auto const GP = FromEigen(GPeg);
             auto GPsix    = GradientWrtDofs<TElement, Dims>(gradPsiF, GP);
-            auto HPsix    = HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
+            auto HPsix    = HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             Gg.col(g) += wg(g) * ToEigen(GPsix);
             heg += wg(g) * ToEigen(HPsix);
@@ -1150,14 +1141,11 @@ void ToElementElasticity(
             Eigen::Matrix<ScalarType, Dims, Dims> const F = xe * GPeg;
             auto vecF                                     = FromEigen(F);
             auto hessPsiF                                 = Psi.Hessian(vecF, mug(g), lambdag(g));
-            Eigen::Matrix<ScalarType, Dims * Dims, Dims * Dims> hessPsiFCorrected;
-            math::linalg::FilterEigenvalues(
-                ToEigen(hessPsiF),
-                ToEigenvalueFilter(eSpdCorrection),
-                hessPsiFCorrected);
+            hessPsiF =
+                math::linalg::FilterEigenvalues(hessPsiF, ToEigenvalueFilter(eSpdCorrection));
             auto const GP = FromEigen(GPeg);
             mini::SMatrix<ScalarType, kDofsPerElement, kDofsPerElement> HPsix =
-                HessianWrtDofs<TElement, Dims>(FromEigen(hessPsiFCorrected), GP);
+                HessianWrtDofs<TElement, Dims>(hessPsiF, GP);
             auto heg = Hg.template block<kDofsPerElement, kDofsPerElement>(0, g * kDofsPerElement);
             heg += wg(g) * ToEigen(HPsix);
         });
