@@ -18,6 +18,7 @@
 #include "pbat/math/linalg/mini/Mini.h"
 
 #include <cmath>
+#include <limits>
 #include <type_traits>
 
 namespace pbat::sim::contact::potentials {
@@ -240,7 +241,7 @@ class LaggedFriction
     {
         TScalar ukn      = Norm(uk);
         TScalar mulambda = mu * lambdakn;
-        gk               = (mulambda * f1_over_x(ukn, epsvh)) * uk;
+        gk = (mulambda * f1_over_x(ukn + std::numeric_limits<TScalar>::epsilon(), epsvh)) * uk;
         return mulambda * f0(ukn, epsvh);
     }
     /**
@@ -263,7 +264,7 @@ class LaggedFriction
     PBAT_HOST_DEVICE void
     Grad(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh, TMatrixGk& gk)
     {
-        TScalar ukn = Norm(uk);
+        TScalar ukn = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         gk          = (mu * lambdakn * f1_over_x(ukn, epsvh)) * uk;
     }
     /**
@@ -294,8 +295,7 @@ class LaggedFriction
         TMatrixGk& gk,
         TMatrixHk& Hk)
     {
-        using namespace std;
-        TScalar ukn      = Norm(uk);
+        TScalar ukn      = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         TScalar mulambda = mu * lambdakn;
         TScalar f1overx  = f1_over_x(ukn, epsvh);
         gk               = (mulambda * f1overx) * uk;
@@ -322,7 +322,7 @@ class LaggedFriction
     PBAT_HOST_DEVICE void
     Hessian(TMatrixUk const& uk, TScalar mu, TScalar lambdakn, TScalar epsvh, TMatrixHk& Hk)
     {
-        TScalar ukn = Norm(uk);
+        TScalar ukn = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         mini::Identity<TScalar, 2, 2> I;
         Hk = (mu * lambdakn) *
              (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
@@ -355,7 +355,7 @@ class LaggedFriction
         TMatrixGk& gk,
         TMatrixHk& Hk)
     {
-        TScalar ukn      = Norm(uk);
+        TScalar ukn      = Norm(uk) + std::numeric_limits<TScalar>::epsilon();
         TScalar mulambda = mu * lambdakn;
         TScalar f1overx  = f1_over_x(ukn, epsvh);
         gk               = (mulambda * f1overx) * uk;
@@ -390,7 +390,7 @@ PBAT_HOST_DEVICE TScalar LaggedFriction::f2(TScalar y, TScalar epsvh)
     assert(epsvh > 0);
     assert(y >= 0);
     bool bSliding = y >= epsvh;
-    return /*(bSliding) * 0 + */ (not bSliding) * (2 - 2 * y / epsvh) / epsvh;
+    return (bSliding) * 0 + (not bSliding) * (2 - 2 * y / epsvh) / epsvh;
 }
 
 template <common::CFloatingPoint TScalar>
@@ -399,9 +399,7 @@ PBAT_HOST_DEVICE TScalar LaggedFriction::f1_over_x(const TScalar y, const TScala
     assert(epsvh > 0);
     assert(y >= 0);
     bool bSliding = y >= epsvh;
-    // NOTE: Cannot manually remove the branching here since it would lead to NaNs when y=0 in the
-    // static friction regime. The compiler will probably optimize this branching anyway.
-    return bSliding ? (1 / y) : ((2 - y / epsvh) / epsvh);
+    return (bSliding) * (1 / y) + (not bSliding) * ((2 - y / epsvh) / epsvh);
 }
 
 template <common::CFloatingPoint TScalar>
@@ -410,10 +408,7 @@ PBAT_HOST_DEVICE TScalar LaggedFriction::f2_x_minus_f1_over_x3(const TScalar y, 
     assert(epsvh > 0);
     assert(y >= 0);
     bool bSliding = y >= epsvh;
-    // NOTE: Cannot manually remove the branching here since it would lead to NaNs when y=0 in the
-    // static friction regime. The compiler will probably optimize this branching anyway.
-    // Do not multiply the y^3 term in the denominator to avoid division by zero.
-    return bSliding ? ((-1 / y) / y / y) : (-1 / (y * epsvh * epsvh));
+    return (bSliding) * (-1 / (y * y * y)) + (not bSliding) * (-1 / (y * epsvh * epsvh));
 }
 
 /**
