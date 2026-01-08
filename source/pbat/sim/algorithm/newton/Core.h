@@ -529,8 +529,8 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Solve");
-    auto x0 = fem.x.reshaped();
-    return params.newton.Solve(
+    auto x0         = fem.x.reshaped();
+    bool bConverged = params.newton.Solve(
         [&]([[maybe_unused]] auto const& xk) {
             if (contact.RequiresBoundsComputation())
             {
@@ -558,6 +558,8 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             TruncateDisplacement(fem, contact, params, dxk);
         } /* Hinv */,
         x0 /* xk */);
+    fem.BackSubstituteIntegratedPositionsIntoVelocities();
+    return bConverged;
 }
 
 } // namespace pbat::sim::algorithm::newton
