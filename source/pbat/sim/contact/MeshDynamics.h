@@ -725,6 +725,9 @@ class MeshDynamics
 /**
  * @brief Compute vertex-vertex contact energy and its derivatives
  * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @tparam TMatrixx Matrix type for x
+ * @tparam TMatrixxt Matrix type for xt
  * @param x `6 x 1` contiguous positions of vertices i and j
  * @param xt `6 x 1` contiguous previous positions of vertices i and j
  * @param r Contact radius
@@ -736,10 +739,14 @@ class MeshDynamics
  * @param eFlags Energy computation flags
  * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
-    math::linalg::mini::SVector<TScalar, 6> const& x,
-    math::linalg::mini::SVector<TScalar, 6> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -751,6 +758,9 @@ MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
 /**
  * @brief Compute vertex-edge contact energy and its derivatives
  * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @tparam TMatrixx Matrix type for x
+ * @tparam TMatrixxt Matrix type for xt
  * @param x `9 x 1` contiguous positions of vertex i and edge endpoints a, b
  * @param xt `9 x 1` contiguous previous positions of vertex i and edge endpoints a, b
  * @param r Contact radius
@@ -762,10 +772,14 @@ MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
  * @param eFlags Energy computation flags
  * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
-    math::linalg::mini::SVector<TScalar, 9> const& x,
-    math::linalg::mini::SVector<TScalar, 9> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -777,6 +791,9 @@ MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
 /**
  * @brief Compute vertex-triangle contact energy and its derivatives
  * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @tparam TMatrixx Matrix type for x
+ * @tparam TMatrixxt Matrix type for xt
  * @param x `12 x 1` contiguous positions of vertex i and triangle vertices a, b, c
  * @param xt `12 x 1` contiguous previous positions of vertex i and triangle vertices a, b, c
  * @param r Contact radius
@@ -788,10 +805,14 @@ MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
  * @param eFlags Energy computation flags
  * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
-    math::linalg::mini::SVector<TScalar, 12> const& x,
-    math::linalg::mini::SVector<TScalar, 12> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -803,6 +824,9 @@ MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
 /**
  * @brief Compute edge-edge contact energy and its derivatives
  * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @tparam TMatrixx Matrix type for x
+ * @tparam TMatrixxt Matrix type for xt
  * @param x `12 x 1` contiguous positions of edge 1 endpoints a, b and edge 2 endpoints c, d
  * @param xt `12 x 1` contiguous previous positions of edge 1 endpoints a, b and edge 2 endpoints c,
  * d
@@ -815,10 +839,14 @@ MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
  * @param eFlags Energy computation flags
  * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
-    math::linalg::mini::SVector<TScalar, 12> const& x,
-    math::linalg::mini::SVector<TScalar, 12> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -830,6 +858,10 @@ MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
 /**
  * @brief Compute vertex-environment contact energy and its derivatives
  * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @tparam TMatrixx Matrix type for x
+ * @tparam TMatrixxt Matrix type for xt
+ * @tparam TMatrixxcp Matrix type for xcp
  * @param x `3 x 1` position of vertex i
  * @param xt `3 x 1` previous position of vertex i
  * @param xcp `3 x 1` closest point on environment
@@ -842,11 +874,16 @@ MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
  * @param eFlags Energy computation flags
  * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt,
+    math::linalg::mini::CMatrix TMatrixxcp>
 MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
-    math::linalg::mini::SVector<TScalar, 3> const& x,
-    math::linalg::mini::SVector<TScalar, 3> const& xt,
-    math::linalg::mini::SVector<TScalar, 3> const& xcp,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
+    TMatrixxcp const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -858,6 +895,11 @@ MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
 /**
  * @brief Compute edge-environment contact energy and its derivatives
  * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @tparam TMatrixx Matrix type for x
+ * @tparam TMatrixxt Matrix type for xt
+ * @tparam TMatrixxuv Matrix type for uv
+ * @tparam TMatrixxcp Matrix type for xcp
  * @param x `6 x 1` contiguous positions of edge endpoints a, b
  * @param xt `6 x 1` contiguous previous positions of edge endpoints a, b
  * @param uv `2 x 1` barycentric coordinates of closest point on edge
@@ -871,12 +913,18 @@ MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
  * @param eFlags Energy computation flags
  * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt,
+    math::linalg::mini::CMatrix TMatrixuv,
+    math::linalg::mini::CMatrix TMatrixxcp>
 MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
-    math::linalg::mini::SVector<TScalar, 6> const& x,
-    math::linalg::mini::SVector<TScalar, 6> const& xt,
-    math::linalg::mini::SVector<TScalar, 2> const& uv,
-    math::linalg::mini::SVector<TScalar, 3> const& xcp,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
+    TMatrixuv const& uv,
+    TMatrixxcp const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -889,6 +937,11 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
  * @brief Compute triangle-environment contact energy and its derivatives
  *
  * @tparam TScalar Scalar type
+ * @tparam TIndex Index type
+ * @param TMatrixx Matrix type for x
+ * @param TMatrixxt Matrix type for xt
+ * @param TMatrixuvw Matrix type for uvw
+ * @param TMatrixxcp Matrix type for xcp
  * @param x `9 x 1` contiguous positions of triangle vertices a, b, c
  * @param xt `9 x 1` contiguous previous positions of triangle vertices a, b, c
  * @param uvw `3 x 1` barycentric coordinates of closest point on triangle
@@ -902,12 +955,18 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
  * @param eFlags Energy computation flags
  * @return contact energy and its derivatives
  */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt,
+    math::linalg::mini::CMatrix TMatrixuvw,
+    math::linalg::mini::CMatrix TMatrixxcp>
 MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
-    math::linalg::mini::SVector<TScalar, 9> const& x,
-    math::linalg::mini::SVector<TScalar, 9> const& xt,
-    math::linalg::mini::SVector<TScalar, 3> const& uvw,
-    math::linalg::mini::SVector<TScalar, 3> const& xcp,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
+    TMatrixuvw const& uvw,
+    TMatrixxcp const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -1217,7 +1276,6 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
     using math::linalg::mini::FromEigen;
     using math::linalg::mini::SMatrix;
     using math::linalg::mini::SVector;
-    using math::linalg::mini::ToEigen;
     ScalarType r     = mParams.mOgcParams.r;
     ScalarType epsv  = mParams.epsv;
     ScalarType epsvh = epsv * h;
@@ -2063,10 +2121,14 @@ MeshDynamics<TScalar, TIndex>::ForEachMeshContactEnergy(FOnMeshContactEnergy&& f
     }
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
-    math::linalg::mini::SVector<TScalar, 6> const& x,
-    math::linalg::mini::SVector<TScalar, 6> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -2110,10 +2172,14 @@ MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
     return energy;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
-    math::linalg::mini::SVector<TScalar, 9> const& x,
-    math::linalg::mini::SVector<TScalar, 9> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -2175,10 +2241,14 @@ MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
     return energy;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
-    math::linalg::mini::SVector<TScalar, 12> const& x,
-    math::linalg::mini::SVector<TScalar, 12> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -2243,10 +2313,14 @@ MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
     return energy;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt>
 MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
-    math::linalg::mini::SVector<TScalar, 12> const& x,
-    math::linalg::mini::SVector<TScalar, 12> const& xt,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -2311,11 +2385,16 @@ MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
     return energy;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt,
+    math::linalg::mini::CMatrix TMatrixxcp>
 MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
-    math::linalg::mini::SVector<TScalar, 3> const& x,
-    math::linalg::mini::SVector<TScalar, 3> const& xt,
-    math::linalg::mini::SVector<TScalar, 3> const& xcp,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
+    TMatrixxcp const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -2358,12 +2437,18 @@ MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
     return energy;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt,
+    math::linalg::mini::CMatrix TMatrixuv,
+    math::linalg::mini::CMatrix TMatrixxcp>
 MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
-    math::linalg::mini::SVector<TScalar, 6> const& x,
-    math::linalg::mini::SVector<TScalar, 6> const& xt,
-    math::linalg::mini::SVector<TScalar, 2> const& uv,
-    math::linalg::mini::SVector<TScalar, 3> const& xcp,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
+    TMatrixuv const& uv,
+    TMatrixxcp const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
@@ -2420,12 +2505,18 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
     return energy;
 }
 
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex,
+    math::linalg::mini::CMatrix TMatrixx,
+    math::linalg::mini::CMatrix TMatrixxt,
+    math::linalg::mini::CMatrix TMatrixuvw,
+    math::linalg::mini::CMatrix TMatrixxcp>
 MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
-    math::linalg::mini::SVector<TScalar, 9> const& x,
-    math::linalg::mini::SVector<TScalar, 9> const& xt,
-    math::linalg::mini::SVector<TScalar, 3> const& uvw,
-    math::linalg::mini::SVector<TScalar, 3> const& xcp,
+    TMatrixx const& x,
+    TMatrixxt const& xt,
+    TMatrixuvw const& uvw,
+    TMatrixxcp const& xcp,
     TScalar r,
     TScalar kc,
     TScalar kcp,
