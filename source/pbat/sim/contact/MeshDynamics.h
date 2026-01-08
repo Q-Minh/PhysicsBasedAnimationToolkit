@@ -2103,14 +2103,11 @@ MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
     if (eFlags | EMeshEnergyComputationFlags::Hessian)
     {
         energy.hessEn = contact::potentials::HessianWrtClosestPoints(xi, xj, d, dBdd(1), dBdd(2));
-        Eigen::Matrix<TScalar, 2, 2> hessEf;
-        auto miniHessEf = FromEigen(hessEf);
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, miniHessEf);
-        math::linalg::FilterEigenvalues(
-            hessEf,
-            math::linalg::EEigenvalueFilter::SpdProjection,
-            hessEf);
-        energy.hessEf = T * FromEigen(hessEf) * T.Transpose();
+        SMatrix<TScalar, 2, 2> hessEf;
+        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
+        hessEf =
+            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
+        energy.hessEf = T * hessEf * T.Transpose();
     }
     return energy;
 }
@@ -2173,14 +2170,11 @@ MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
             d,
             dBdd(1),
             dBdd(2));
-        Eigen::Matrix<TScalar, 2, 2> hessEf;
-        auto miniHessEf = FromEigen(hessEf);
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, miniHessEf);
-        math::linalg::FilterEigenvalues(
-            hessEf,
-            math::linalg::EEigenvalueFilter::SpdProjection,
-            hessEf);
-        energy.hessEf = T * FromEigen(hessEf) * T.Transpose();
+        SMatrix<TScalar, 2, 2> hessEf;
+        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
+        hessEf =
+            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
+        energy.hessEf = T * hessEf * T.Transpose();
     }
     return energy;
 }
@@ -2246,14 +2240,11 @@ MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
             d,
             dBdd(1),
             dBdd(2));
-        Eigen::Matrix<TScalar, 2, 2> hessEf;
-        auto miniHessEf = FromEigen(hessEf);
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, miniHessEf);
-        math::linalg::FilterEigenvalues(
-            hessEf,
-            math::linalg::EEigenvalueFilter::SpdProjection,
-            hessEf);
-        energy.hessEf = T * FromEigen(hessEf) * T.Transpose();
+        SMatrix<TScalar, 2, 2> hessEf;
+        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
+        hessEf =
+            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
+        energy.hessEf = T * hessEf * T.Transpose();
     }
     return energy;
 }
@@ -2319,14 +2310,11 @@ MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
             d,
             dBdd(1),
             dBdd(2));
-        Eigen::Matrix<TScalar, 2, 2> hessEf;
-        auto miniHessEf = FromEigen(hessEf);
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, miniHessEf);
-        math::linalg::FilterEigenvalues(
-            hessEf,
-            math::linalg::EEigenvalueFilter::SpdProjection,
-            hessEf);
-        energy.hessEf = T * FromEigen(hessEf) * T.Transpose();
+        SMatrix<TScalar, 2, 2> hessEf;
+        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
+        hessEf =
+            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
+        energy.hessEf = T * hessEf * T.Transpose();
     }
     return energy;
 }
@@ -2383,14 +2371,11 @@ MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
             dBdd(2),
             0,
             0);
-        Eigen::Matrix<TScalar, 2, 2> hessEf;
-        auto miniHessEf = FromEigen(hessEf);
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, miniHessEf);
-        math::linalg::FilterEigenvalues(
-            hessEf,
-            math::linalg::EEigenvalueFilter::SpdProjection,
-            hessEf);
-        energy.hessEf = T * FromEigen(hessEf) * T.Transpose();
+        SMatrix<TScalar, 2, 2> hessEf;
+        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
+        hessEf =
+            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
+        energy.hessEf = T * hessEf * T.Transpose();
     }
     return energy;
 }
@@ -2451,14 +2436,11 @@ MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
             d,
             dBdd(1),
             dBdd(2));
-        Eigen::Matrix<TScalar, 2, 2> hessEf;
-        auto miniHessEf = FromEigen(hessEf);
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, miniHessEf);
-        math::linalg::FilterEigenvalues(
-            hessEf,
-            math::linalg::EEigenvalueFilter::SpdProjection,
-            hessEf);
-        energy.hessEf = T * FromEigen(hessEf) * T.Transpose();
+        SMatrix<TScalar, 2, 2> hessEf;
+        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
+        hessEf =
+            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
+        energy.hessEf = T * hessEf * T.Transpose();
     }
     return energy;
 }
@@ -2520,14 +2502,11 @@ MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
             d,
             dBdd(1),
             dBdd(2));
-        Eigen::Matrix<TScalar, 2, 2> hessEf;
-        auto miniHessEf = FromEigen(hessEf);
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, miniHessEf);
-        math::linalg::FilterEigenvalues(
-            hessEf,
-            math::linalg::EEigenvalueFilter::SpdProjection,
-            hessEf);
-        energy.hessEf = T * FromEigen(hessEf) * T.Transpose();
+        SMatrix<TScalar, 2, 2> hessEf;
+        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
+        hessEf =
+            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
+        energy.hessEf = T * hessEf * T.Transpose();
     }
     return energy;
 }
