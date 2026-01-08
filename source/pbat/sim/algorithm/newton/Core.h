@@ -344,8 +344,8 @@ void AssembleHessian(
                     for (auto il = 0; il < kStencil; ++il)
                         for (auto id = 0; id < kDims; ++id)
                             params.triplets.emplace_back(
-                                E.stencil(il) * kDims + id,
-                                E.stencil(jl) * kDims + jd,
+                                E.stencil[il] * kDims + id,
+                                E.stencil[jl] * kDims + jd,
                                 E.hessEn(il * kDims + id, jl * kDims + jd) +
                                     E.hessEf(il * kDims + id, jl * kDims + jd));
         });
