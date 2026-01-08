@@ -204,8 +204,9 @@ def parse_args():
         "--overrides",
         nargs="+",
         help=(
-            "List of solver parameter overrides in the format params_name.path.to.attribute=value, "
-            "where 'params_name' is one of the params entries for the selected solver."
+            "List of solver parameter overrides in the format param_name.path.to.attribute=value, "
+            "where 'param_name' is one of the params entries for the selected solver, or 'contact' "
+            "for contact parameters."
         ),
         dest="overrides",
     )
@@ -306,9 +307,56 @@ def load_simulation_scenario_from_scene(path: str):
         ) from e
 
 
+def apply_overrides(
+    param_objs: dict[str, typing.Any], overrides: list[str] | None
+) -> None:
+    """Apply parameter overrides to a collection of parameter objects.
+
+    Args:
+        param_objs: Dictionary mapping parameter names to parameter objects.
+        overrides: List of overrides in the format 'param_name.path.to.attribute=value',
+                   where 'param_name' is a key in param_objs.
+
+    Raises:
+        ValueError: If an override path or value is invalid.
+    """
+    for override in overrides:
+        lhs, rhs = override.split("=")[:2]
+        param_name, *attr_path = lhs.split(".")
+        if param_name not in param_objs:
+            raise ValueError(
+                f"Invalid override parameter name '{param_name}'. "
+                f"Available parameter names are: {', '.join(param_objs.keys())}"
+            )
+        obj = param_objs[param_name]
+        for attr in attr_path[:-1]:
+            obj = getattr(obj, attr)
+        final_attr = attr_path[-1]
+        current_value = getattr(obj, final_attr)
+        value_type = type(current_value)
+        if isinstance(current_value, bool):
+            value = rhs.lower() in ("true", "1", "yes", "on")
+        elif isinstance(current_value, enum.Enum):
+            enum_values = list(value_type)
+            matched = False
+            for enum_value in enum_values:
+                if enum_value.name == rhs:
+                    value = enum_value
+                    matched = True
+                    break
+            if not matched:
+                raise ValueError(
+                    f"Invalid enum value '{rhs}' for attribute '{final_attr}'. "
+                    f"Available values are: {', '.join([ev.name for ev in enum_values])}"
+                )
+        else:
+            value = value_type(rhs)
+        setattr(obj, final_attr, value)
+
+
 def load_solver_params(
-    solver: str, solver_params: str | None = None, overrides: list[str] | None = None
-) -> typing.Any:
+    solver: str, solver_params: str | None = None
+) -> dict[str, typing.Any]:
     if solver not in _solver_params:
         raise ValueError(
             f"Unsupported solver '{solver}'. Available solvers are: {', '.join(_solver_params.keys())}"
@@ -326,39 +374,8 @@ def load_solver_params(
             gc.collect()
         except Exception as e:
             raise RuntimeError(
-                f"Failed to load solver params from '{path}:{group}': {e}"
+                f"Failed to load solver params from '{solver_params}': {e}"
             ) from e
-    if overrides is not None:
-        for override in overrides:
-            lhs, rhs = override.split("=")[:2]
-            param_name, *attr_path = lhs.split(".")
-            if param_name not in param_objs:
-                raise ValueError(
-                    f"Invalid override parameter name '{param_name}'. Available parameter names are: {', '.join(param_objs.keys())}"
-                )
-            obj = param_objs[param_name]
-            for attr in attr_path[:-1]:
-                obj = getattr(obj, attr)
-            final_attr = attr_path[-1]
-            current_value = getattr(obj, final_attr)
-            value_type = type(current_value)
-            if isinstance(current_value, bool):
-                value = rhs.lower() in ("true", "1", "yes", "on")
-            elif isinstance(current_value, enum.Enum):
-                enum_values = list(value_type)
-                matched = False
-                for enum_value in enum_values:
-                    if enum_value.name == rhs:
-                        value = enum_value
-                        matched = True
-                        break
-                if not matched:
-                    raise ValueError(
-                        f"Invalid enum value '{rhs}' for attribute '{final_attr}'. Available values are: {', '.join([ev.name for ev in enum_values])}"
-                    )
-            else:
-                value = value_type(rhs)
-            setattr(obj, final_attr, value)
     return param_objs
 
 
@@ -401,6 +418,7 @@ def apply_procedural_constraints(
         ):
             _, dnodes = tup
             fem_elasto_dynamics.dmask[start + dnodes] = 1
+
         fem_elasto_dynamics.constrain(fem_elasto_dynamics.dmask)
         xD = fem_elasto_dynamics.x
         for start, end, name in zip(XP[:-1], XP[1:], fem_elastic_mesh_names):
@@ -457,10 +475,13 @@ def main():
     dt, bdf_scheme, fem_dynamics_init_strategy = load_time_integration(
         args.simulation_params
     )
-    solver_params = load_solver_params(
-        args.solver, args.simulation_params, args.overrides
-    )
+    solver_params = load_solver_params(args.solver, args.simulation_params)
     contact_dynamics_params = load_contact_dynamics_params(args.simulation_params)
+
+    # Collect all param objects and apply overrides in one fell swoop
+    all_params = {**solver_params, "contact": contact_dynamics_params}
+    if len(args.overrides) > 0:
+        apply_overrides(all_params, args.overrides)
     contact_dynamics.params = contact_dynamics_params.construct()
 
     out_file, out_group = args.output.split(":")[:2]
