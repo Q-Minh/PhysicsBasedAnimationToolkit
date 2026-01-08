@@ -158,7 +158,7 @@ class MeshDynamics
      * @brief Truncate displacements to satisfy the computed displacement bounds
      * @tparam TDerivedXkp1 Writeable matrix type
      * @param Xkp1 `3 x |# points|` or `3*|# points| x 1` proposed new point positions
-     * @return Number of truncated points
+     * @return Number of truncated points in this call.
      * @pre `Initialize()` has been called
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
@@ -170,7 +170,7 @@ class MeshDynamics
      * @tparam TMask Eigen dense base s.t. TMask::Scalar is convertible to bool
      * @param Xkp1 `3 x |# points|` or `3*|# points| x 1` proposed new point positions
      * @param mask `|# points| x 1` mask of points to ignore (true = ignore, false = process)
-     * @return Number of truncated points
+     * @return Number of truncated points in this call.
      * @pre `Initialize()` has been called
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
@@ -184,7 +184,7 @@ class MeshDynamics
      * @tparam TMask Eigen dense base s.t. TMask::Scalar is convertible to bool
      * @param Dxkp1 `3 x |# points|` or `3*|# points| x 1` displacements
      * @param mask `|# points| x 1` mask of points to ignore (true = ignore, false = process)
-     * @return Number of truncated points
+     * @return Number of truncated points in this call.
      * @pre `Initialize()` has been called
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
@@ -1088,8 +1088,7 @@ inline Eigen::Index
 MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
 {
     auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
-    TruncateDisplacedPositions(Xkp1, mask);
-    return mNumTruncatedPoints;
+    return TruncateDisplacedPositions(Xkp1, mask);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1102,7 +1101,7 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
     static_assert(
         std::is_convertible_v<typename TMask::Scalar, bool>,
         "Mask scalar type must be convertible to bool");
-    mNumTruncatedPoints  = 0;
+    Eigen::Index nTruncated{0};
     auto const nVertices = mDynamicMeshes.V.size();
     auto Xkp1            = _Xkp1.derived().reshaped(3, _Xkp1.size() / 3);
     tbb::parallel_for(Eigen::Index{0}, nVertices, [&](Eigen::Index v) {
@@ -1121,10 +1120,11 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
         xkp1 = xk + d;
-        common::AtomicAdd(mNumTruncatedPoints, Eigen::Index{1});
+        common::AtomicAdd(nTruncated, Eigen::Index{1});
     });
+    mNumTruncatedPoints += nTruncated;
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
-    return mNumTruncatedPoints;
+    return nTruncated;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1137,7 +1137,7 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
     static_assert(
         std::is_convertible_v<typename TMask::Scalar, bool>,
         "Mask scalar type must be convertible to bool");
-    mNumTruncatedPoints  = 0;
+    Eigen::Index nTruncated{0};
     auto const nVertices = mDynamicMeshes.V.size();
     auto Dxkp1           = _Dxkp1.derived().reshaped(3, _Dxkp1.size() / 3);
     tbb::parallel_for(Eigen::Index{0}, nVertices, [&](Eigen::Index v) {
@@ -1153,10 +1153,11 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
             return;
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
-        common::AtomicAdd(mNumTruncatedPoints, Eigen::Index{1});
+        common::AtomicAdd(nTruncated, Eigen::Index{1});
     });
+    mNumTruncatedPoints += nTruncated;
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
-    return mNumTruncatedPoints;
+    return nTruncated;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1189,6 +1190,7 @@ MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds(Eigen::DenseBase<TDeriv
     ogc::EdgeEdgeContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
     ogc::UpdateDisplacementBounds(mOgcInput, mParams.mOgcParams, mOgcState);
     mRequiresBoundsRecomputation = false;
+    mNumTruncatedPoints          = 0;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
