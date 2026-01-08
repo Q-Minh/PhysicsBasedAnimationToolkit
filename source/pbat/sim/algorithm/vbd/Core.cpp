@@ -230,6 +230,7 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     setup.dynamics.SetupTimeIntegrationOptimization();
     Scalar f0  = setup.dynamics.Objective(setup.dynamics.x);
     VectorX g0 = setup.dynamics.Gradient(setup.dynamics.x);
+    sim::algorithm::vbd::InitializeSolve(setup.dynamics, setup.meshDynamics, setup.vbdParams);
     sim::algorithm::vbd::Solve(setup.dynamics, setup.meshDynamics, setup.vbdParams);
     // Assert
     auto constexpr zero = Scalar{1e-4};

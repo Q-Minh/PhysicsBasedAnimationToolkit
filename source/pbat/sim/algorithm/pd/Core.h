@@ -227,7 +227,7 @@ void Iterate(
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.Iterate");
+    // PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.Iterate");
     // get xtilde?
     // per iteration:
         // global solve: equation 10 of PD paper, fully parallelizable
@@ -243,73 +243,73 @@ void InitializeSolve(
     contact::MeshDynamics<Scalar, Index>& contact,
     [[maybe_unused]] Params& params)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.InitializeSolve");
+//     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.InitializeSolve");
     
     
-    using Triplet          = Eigen::Triplet<Scalar, Index>;
+//     using Triplet          = Eigen::Triplet<Scalar, Index>;
 
-    auto constexpr nQuadPts         = fem.egU.size();
-    auto constexpr kNodesPerElement = fem.mesh.kNodesPerElement;
-    auto constexpr kDims            = fem.mesh.kDims;
+//     auto constexpr nQuadPts         = fem.egU.size();
+//     auto constexpr kNodesPerElement = fem.mesh.kNodesPerElement;
+//     auto constexpr kDims            = fem.mesh.kDims;
 
-    auto const dims = fem.mesh.X.rows();
-    auto const nNodes = fem.mesh.X.cols();
-    auto const nQuadPts = eg.size();
-    auto const GNeg = fem.GNegU;
+//     auto const dims = fem.mesh.X.rows();
+//     auto const nNodes = fem.mesh.X.cols();
+//     auto const nQuadPts = eg.size();
+//     auto const GNeg = fem.GNegU;
 
-    std::vector<Triplet> triplets{};
-    triplets.reserve(
-        static_cast<std::size_t>(kNodesPerElement * kNodesPerElement * nQuadPts * dims));
+//     std::vector<Triplet> triplets{};
+//     triplets.reserve(
+//         static_cast<std::size_t>(kNodesPerElement * kNodesPerElement * nQuadPts * dims));
 
-    auto const numberOfDofs = dims * nNodes;
-    params.lhs = SparseMatrixType(numberOfDofs, numberOfDofs);
+//     auto const numberOfDofs = dims * nNodes;
+//     params.lhs = SparseMatrixType(numberOfDofs, numberOfDofs);
 
-    auto h_squared_inv = 1 / (fem.bdf.h * fem.bdf.h);
+//     auto h_squared_inv = 1 / (fem.bdf.h * fem.bdf.h);
 
-    for (auto g = 0; g < nQuadPts; ++g)
-    {
-        auto const e     = fem.egU(g);
-        auto const nodes = fem.mesh.E.col(e);
-        auto const w     = fem.wgU(g);
+//     for (auto g = 0; g < nQuadPts; ++g)
+//     {
+//         auto const e     = fem.egU(g);
+//         auto const nodes = fem.mesh.E.col(e);
+//         auto const w     = fem.wgU(g);
 
-        // Get shape function gradients at this quadrature point
-        auto const GP = GNeg.template block<kNodesPerElement, kDims>(0, g * kDims);
+//         // Get shape function gradients at this quadrature point
+//         auto const GP = GNeg.template block<kNodesPerElement, kDims>(0, g * kDims);
 
-        // Compute element Laplacian: -w * GP * GP^T
-        auto const Leg = -w * GP * GP.transpose();
+//         // Compute element Laplacian: -w * GP * GP^T
+//         auto const Leg = -w * GP * GP.transpose();
 
-        // Add contributions for each dimension
-        for (auto i = 0; i < kNodesPerElement; ++i)
-        {
-            auto const m_h_inv = fem.m(i) * h_squared_inv;
-            for (auto j = 0; j < kNodesPerElement; ++j)
-            {
-                for (auto d = 0; d < dims; ++d)
-                {
-                    auto const ni = static_cast<Index>(dims * nodes(i) + d);
-                    auto const nj = static_cast<Index>(dims * nodes(j) + d);
-                    triplets.emplace_back(ni, nj, Leg(i, j));
-                }
-            }
-            auto ind = nodes(i);
-            for (auto d = 0; d < dims; ++d)
-            {
-                auto const ni = static_cast<Index>(dims * ind + d);
-                triplets.emplace_back(ni, ni, fem.m(ind) * h_squared_inv);
-            }
-        }
-    }
+//         // Add contributions for each dimension
+//         for (auto i = 0; i < kNodesPerElement; ++i)
+//         {
+//             auto const m_h_inv = fem.m(i) * h_squared_inv;
+//             for (auto j = 0; j < kNodesPerElement; ++j)
+//             {
+//                 for (auto d = 0; d < dims; ++d)
+//                 {
+//                     auto const ni = static_cast<Index>(dims * nodes(i) + d);
+//                     auto const nj = static_cast<Index>(dims * nodes(j) + d);
+//                     triplets.emplace_back(ni, nj, Leg(i, j));
+//                 }
+//             }
+//             auto ind = nodes(i);
+//             for (auto d = 0; d < dims; ++d)
+//             {
+//                 auto const ni = static_cast<Index>(dims * ind + d);
+//                 triplets.emplace_back(ni, ni, fem.m(ind) * h_squared_inv);
+//             }
+//         }
+//     }
 
-    params.lhs.setFromTriplets(triplets.begin(), triplets.end());
+//     params.lhs.setFromTriplets(triplets.begin(), triplets.end());
 
 
-    // TODO: Initialize structures for contact when the time comes
+//     // TODO: Initialize structures for contact when the time comes
 
-    // auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
-    // auto& ogcParams = contact.GetParams().mOgcParams;
-    // ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
-    // contact.ComputeDisplacementBounds(xt);
-    // contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+//     // auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+//     // auto& ogcParams = contact.GetParams().mOgcParams;
+//     // ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
+//     // contact.ComputeDisplacementBounds(xt);
+//     // contact.TruncateDisplacedPositions(fem.x, fem.dmask);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -318,15 +318,15 @@ void Solve(
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.Solve");
-    for (auto k = 0; k < params.nMaxIters; ++k)
-    {
-        // if (contact.RequiresBoundsComputation())
-        //     contact.ComputeDisplacementBounds(fem.x);
-        Iterate<TElasticEnergy>(fem, contact, params);
-        // contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-    }
-    fem.BackSubstituteIntegratedPositionsIntoVelocities();
+//     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.Solve");
+//     for (auto k = 0; k < params.nMaxIters; ++k)
+//     {
+//         // if (contact.RequiresBoundsComputation())
+//         //     contact.ComputeDisplacementBounds(fem.x);
+//         Iterate<TElasticEnergy>(fem, contact, params);
+//         // contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+//     }
+//     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -335,9 +335,9 @@ void Integrate(
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.Integrate");
-    Solve<TElasticEnergy>(fem, contact, params);
-    fem.Step();
+    // PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.pd.Integrate");
+    // Solve<TElasticEnergy>(fem, contact, params);
+    // fem.Step();
 }
 
 } // namespace pbat::sim::algorithm::pd

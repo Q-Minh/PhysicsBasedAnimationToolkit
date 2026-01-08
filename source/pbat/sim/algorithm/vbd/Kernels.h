@@ -19,8 +19,10 @@
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/IntersectionQueries.h"
+#include "pbat/math/linalg/FilterEigenvalues.h"
 #include "pbat/math/linalg/mini/Mini.h"
 #include "pbat/physics/HyperElasticity.h"
+#include "pbat/sim/contact/Friction.h"
 #include "pbat/sim/contact/Potentials.h"
 
 #include <cmath>
@@ -315,35 +317,51 @@ PBAT_HOST_DEVICE ScalarType AccumulateVertexTriangleContact(
  *
  * @tparam TMatrixXI Type for vertex position
  * @tparam TMatrixXCP Type for closest point position
+ * @tparam TMatrixXTI Type for vertex position at previous time step
+ * @tparam TMatrixXTCP Type for closest point position at previous time step
  * @tparam TMatrixG Type for gradient
  * @tparam TMatrixH Type for hessian
  * @tparam ScalarType Scalar type
  * @param xi `3 x 1` vertex position
  * @param xj `3 x 1` closest point position
+ * @param xti `3 x 1` vertex position at previous time step
+ * @param xtcp `3 x 1` closest point position at previous time step
  * @param r Contact radius
  * @param kc Collision penalty
  * @param kcp `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
  * @param b `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+ * @param mu Friction coefficient
+ * @param epsvh Time-step scaled relative velocity threshold for static to dynamic friction
+ * transition
+ * @param h2inv Inverse squared time step
  * @param g `3 x 1` gradient
  * @param H `3 x 3` hessian
  */
 template <
     mini::CMatrix TMatrixXI,
+    mini::CMatrix TMatrixXTI,
     mini::CMatrix TMatrixXCP,
+    mini::CMatrix TMatrixXTCP,
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXI::ScalarType>
 PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
     TMatrixXI const& xi,
+    TMatrixXTI const& xti,
     TMatrixXCP const& xcp,
+    TMatrixXTCP const& xtcp,
     ScalarType r,
     ScalarType kc,
     ScalarType kcp,
     ScalarType b,
+    ScalarType mu,
+    ScalarType epsvh,
+    ScalarType h2inv,
     TMatrixG& g,
     TMatrixH& H)
 {
     using namespace mini;
+    // Normal contact
     ScalarType dij = Norm(xi - xcp);
     SVector<ScalarType, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(dij, r, kc, kcp, b);
@@ -351,8 +369,19 @@ PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
         contact::potentials::GradientSegmentWrtClosestPoints(xi, xcp, dij, dBdd(1), 0);
     SMatrix<ScalarType, 3, 3> d2Bdxi2 =
         contact::potentials::HessianBlockWrtClosestPoints(xi, xcp, dij, dBdd(1), dBdd(2), 0, 0);
-    g += dBdxi;
-    H += d2Bdxi2;
+    g += h2inv * dBdxi;
+    H += h2inv * d2Bdxi2;
+    // Frictional contact
+    contact::potentials::LaggedFriction friction{};
+    SMatrix<ScalarType, 3, 2> const T = contact::PointPointTangentialBasis(xi, xcp);
+    SVector<ScalarType, 2> const uk   = T.Transpose() * ((xi - xti) - (xcp - xtcp));
+    SVector<ScalarType, 2> gf;
+    SMatrix<ScalarType, 2, 2> Hf;
+    ScalarType lambda = -dBdd(1) * h2inv;
+    friction.GradAndHessian(uk, mu, lambda, epsvh, gf, Hf);
+    Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
+    g += T * gf;
+    H += T * Hf * T.Transpose();
 }
 
 /**
@@ -361,46 +390,67 @@ PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
  *
  * @param TMatrixXI Type for vertex position
  * @param TMatrixXJ Type for edge vertex position
+ * @param TMatrixXTI Type for vertex position at previous time step
+ * @param TMatrixXTJ Type for edge vertex position at previous time step
  * @param TMatrixUV Type for barycentric coordinates along edge
  * @param TMatrixXCP Type for closest point position
+ * @param TMatrixXTCP Type for closest point position at previous time step
  * @param TMatrixG Type for gradient
  * @param TMatrixH Type for hessian
  * @param ScalarType Scalar type
  * @param xi `3 x 1` vertex position
  * @param xj `3 x 1` edge vertex position
+ * @param xti `3 x 1` vertex position at previous time step
+ * @param xtj `3 x 1` edge vertex position at previous time step
  * @param uv `2 x 1` barycentric coordinates along edge
  * @param xcp `3 x 1` closest point position
+ * @param xtcp `3 x 1` closest point position at previous time step
  * @param r Contact radius
  * @param kc Collision penalty
  * @param kcp `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
  * @param b `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+ * @param mu Friction coefficient
+ * @param epsvh Time-step scaled relative velocity threshold for static to dynamic friction
+ * transition
+ * @param h2inv Inverse squared time step
  * @param g `3 x 1` gradient
  * @param H `3 x 3` hessian
  */
 template <
     mini::CMatrix TMatrixXI,
     mini::CMatrix TMatrixXJ,
+    mini::CMatrix TMatrixXTI,
+    mini::CMatrix TMatrixXTJ,
     mini::CMatrix TMatrixUV,
     mini::CMatrix TMatrixXCP,
+    mini::CMatrix TMatrixXTCP,
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXI::ScalarType>
 PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
     TMatrixXI const& xi,
     TMatrixXJ const& xj,
+    TMatrixXTI const& xti,
+    TMatrixXTJ const& xtj,
     TMatrixUV const& uv,
     int ilocal,
     TMatrixXCP const& xcp,
+    TMatrixXTCP const& xtcp,
     ScalarType r,
     ScalarType kc,
     ScalarType kcp,
     ScalarType b,
+    ScalarType mu,
+    ScalarType epsvh,
+    ScalarType h2inv,
     TMatrixG& g,
     TMatrixH& H)
 {
     using namespace mini;
-    mini::SVector<ScalarType, 3> x = uv(0) * xi + uv(1) * xj;
-    ScalarType d                   = Norm(x - xcp);
+    // Normal contact
+    mini::SVector<ScalarType, 3> x  = uv(0) * xi + uv(1) * xj;
+    mini::SVector<ScalarType, 3> xt = uv(0) * xti + uv(1) * xtj;
+    ScalarType d                    = Norm(x - xcp);
     mini::SVector<ScalarType, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
     mini::SVector<ScalarType, 3> dBdx =
@@ -421,16 +471,66 @@ PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
             dBdd(2),
             ilocal,
             ilocal);
-    g += dBdx;
-    H += d2Bdx2;
+    g += h2inv * dBdx;
+    H += h2inv * d2Bdx2;
+    // Frictional contact
+    contact::potentials::LaggedFriction friction{};
+    SMatrix<ScalarType, 3, 2> const T = contact::PointPointTangentialBasis(x, xcp);
+    SVector<ScalarType, 2> const uk   = T.Transpose() * ((x - xt) - (xcp - xtcp));
+    SVector<ScalarType, 2> gf;
+    SMatrix<ScalarType, 2, 2> Hf;
+    ScalarType lambda = -dBdd(1) * h2inv;
+    friction.GradAndHessian(uk, mu, lambda, epsvh, gf, Hf);
+    Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
+    g += uv(0) * (T * gf);
+    H += (uv(0) * uv(0)) * (T * Hf * T.Transpose());
 }
 
+/**
+ * @brief Accumulate triangle vertex to closest-point contact derivatives into gradient and hessian.
+ * @tparam TMatrixXA Type for first triangle vertex position
+ * @tparam TMatrixXB Type for second triangle vertex position
+ * @tparam TMatrixXC Type for third triangle vertex position
+ * @tparam TMatrixXTA Type for first triangle vertex position at previous time step
+ * @tparam TMatrixXTB Type for second triangle vertex position at previous time step
+ * @tparam TMatrixXTC Type for third triangle vertex position at previous time step
+ * @tparam TMatrixUVW Type for barycentric coordinates within triangle
+ * @tparam TMatrixXCP Type for closest point position
+ * @tparam TMatrixXTCP Type for closest point position at previous time step
+ * @tparam TMatrixG Type for gradient
+ * @tparam TMatrixH Type for hessian
+ * @tparam ScalarType Scalar type
+ * @param xa `3 x 1` first triangle vertex position
+ * @param xb `3 x 1` second triangle vertex position
+ * @param xc `3 x 1` third triangle vertex position
+ * @param xta `3 x 1` first triangle vertex position at previous time step
+ * @param xtb `3 x 1` second triangle vertex position at previous time step
+ * @param xtc `3 x 1` third triangle vertex position at previous time step
+ * @param uvw `3 x 1` barycentric coordinates within triangle
+ * @param ilocal Local index of closest point on triangle (0, 1, or 2)
+ * @param xcp `3 x 1` closest point position
+ * @param xtcp `3 x 1` closest point position at previous time step
+ * @param r Contact radius
+ * @param kc Collision penalty
+ * @param kcp `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
+ * @param b `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+ * @param mu Friction coefficient
+ * @param epsvh Time-step scaled relative velocity threshold for static to dynamic friction
+ * transition
+ * @param h2inv Inverse squared time step
+ * @param g `3 x 1` gradient
+ * @param H `3 x 3` hessian
+ */
 template <
     mini::CMatrix TMatrixXA,
     mini::CMatrix TMatrixXB,
     mini::CMatrix TMatrixXC,
+    mini::CMatrix TMatrixXTA,
+    mini::CMatrix TMatrixXTB,
+    mini::CMatrix TMatrixXTC,
     mini::CMatrix TMatrixUVW,
     mini::CMatrix TMatrixXCP,
+    mini::CMatrix TMatrixXTCP,
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXA::ScalarType>
@@ -438,19 +538,28 @@ PBAT_HOST_DEVICE void AccumulateTriangleVertexToClosestPointContactDerivatives(
     TMatrixXA const& xa,
     TMatrixXB const& xb,
     TMatrixXC const& xc,
+    TMatrixXTA const& xta,
+    TMatrixXTB const& xtb,
+    TMatrixXTC const& xtc,
     TMatrixUVW const& uvw,
     int ilocal,
     TMatrixXCP const& xcp,
+    TMatrixXTCP const& xtcp,
     ScalarType r,
     ScalarType kc,
     ScalarType kcp,
     ScalarType b,
+    ScalarType mu,
+    ScalarType epsvh,
+    ScalarType h2inv,
     TMatrixG& g,
     TMatrixH& H)
 {
     using namespace mini;
-    SVector<ScalarType, 3> x = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
-    ScalarType d             = Norm(x - xcp);
+    // Normal contact
+    SVector<ScalarType, 3> x  = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
+    SVector<ScalarType, 3> xt = uvw(0) * xta + uvw(1) * xtb + uvw(2) * xtc;
+    ScalarType d              = Norm(x - xcp);
     SVector<ScalarType, 3> dBdd =
         contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
     SVector<ScalarType, 3> dBdx =
@@ -471,8 +580,19 @@ PBAT_HOST_DEVICE void AccumulateTriangleVertexToClosestPointContactDerivatives(
             dBdd(2),
             ilocal,
             ilocal);
-    g += dBdx;
-    H += d2Bdx2;
+    g += h2inv * dBdx;
+    H += h2inv * d2Bdx2;
+    // Frictional contact
+    contact::potentials::LaggedFriction friction{};
+    SMatrix<ScalarType, 3, 2> const T = contact::PointPointTangentialBasis(x, xcp);
+    SVector<ScalarType, 2> const uk   = T.Transpose() * ((x - xt) - (xcp - xtcp));
+    SVector<ScalarType, 2> gf;
+    SMatrix<ScalarType, 2, 2> Hf;
+    ScalarType lambda = -dBdd(1) * h2inv;
+    friction.GradAndHessian(uk, mu, lambda, epsvh, gf, Hf);
+    Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
+    g += uvw(0) * (T * gf);
+    H += (uvw(0) * uvw(0)) * (T * Hf * T.Transpose());
 }
 
 template <

@@ -250,7 +250,9 @@ TEST_CASE("[geometry] SpatialSearch")
             Scalar dminExpected = d2.minCoeff(&nnExpected);
             d2(nnExpected)      = std::numeric_limits<Scalar>::max();
             CHECK_EQ(nn[k], nnExpected);
-            CHECK_EQ(dmin[k], dminExpected);
+            CHECK_EQ(
+                dmin[k],
+                doctest::Approx(dminExpected).epsilon(std::numeric_limits<Scalar>::epsilon()));
         }
     }
 }

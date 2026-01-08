@@ -1,0 +1,907 @@
+#ifndef PBAT_MATH_LINALG_MINI_EIGENVALUES_H
+#define PBAT_MATH_LINALG_MINI_EIGENVALUES_H
+
+#include "BinaryOperations.h"
+#include "Concepts.h"
+#include "Matrix.h"
+#include "Norm.h"
+#include "QR.h"
+#include "UnaryOperations.h"
+#include "pbat/HostDevice.h"
+
+#include <cmath>
+#include <limits>
+#include <type_traits>
+#include <utility>
+
+namespace pbat {
+namespace math {
+namespace linalg {
+namespace mini {
+
+/**
+ * @brief Result of eigenvalue decomposition for symmetric matrices
+ * @tparam TScalar Scalar type
+ * @tparam N Matrix dimension
+ */
+template <class TScalar, int N>
+struct SymmetricEigenResult
+{
+    SVector<TScalar, N> lambda; ///< Eigenvalues (ascending order if sorted)
+    SMatrix<TScalar, N, N> V;   ///< Eigenvectors as columns
+};
+
+/**
+ * @brief Compute eigenvalues and eigenvectors of a 2x2 symmetric matrix analytically.
+ *
+ * For a 2x2 symmetric matrix:
+ * [a  b]
+ * [b  c]
+ *
+ * The eigenvalues are computed using the quadratic formula with numerical
+ * robustness improvements to avoid catastrophic cancellation.
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A `2 x 2` symmetric matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto SymmetricEigen2x2(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
+{
+    using MatrixType = std::decay_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    static_assert(MatrixType::kRows == 2 and MatrixType::kCols == 2, "Matrix must be 2x2");
+
+    using ScalarType = typename MatrixType::ScalarType;
+
+    SymmetricEigenResult<ScalarType, 2> result{};
+
+    ScalarType const a = A(0, 0);
+    ScalarType const b = A(0, 1); // = A(1,0) for symmetric
+    ScalarType const c = A(1, 1);
+
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
+
+    // Trace and determinant
+    ScalarType const trace = a + c;
+    ScalarType const det   = a * c - b * b;
+
+    // Discriminant: trace^2 - 4*det = (a-c)^2 + 4*b^2 >= 0
+    ScalarType const diff  = a - c;
+    ScalarType const discr = diff * diff + ScalarType{4} * b * b;
+
+    using namespace std;
+    ScalarType sqrtDiscr = sqrt(discr);
+
+    // Eigenvalues (ascending order)
+    result.lambda(0) = ScalarType{0.5} * (trace - sqrtDiscr);
+    result.lambda(1) = ScalarType{0.5} * (trace + sqrtDiscr);
+
+    // Eigenvectors
+    // For numerical stability, we compute the eigenvector for the eigenvalue
+    // that's furthest from a (or c), then use orthogonality for the other.
+    ScalarType absB = abs(b);
+
+    // Must be <=, since eps may be zero (for a zero matrix)
+    if (absB <= eps)
+    {
+        // Matrix is essentially diagonal
+        if (a <= c)
+        {
+            result.V(0, 0) = ScalarType{1};
+            result.V(1, 0) = ScalarType{0};
+            result.V(0, 1) = ScalarType{0};
+            result.V(1, 1) = ScalarType{1};
+        }
+        else
+        {
+            result.V(0, 0) = ScalarType{0};
+            result.V(1, 0) = ScalarType{1};
+            result.V(0, 1) = ScalarType{1};
+            result.V(1, 1) = ScalarType{0};
+        }
+    }
+    else
+    {
+        // Standard case: compute eigenvector from (A - λI)v = 0
+        // For λ1 (smaller), eigenvector is proportional to (b, λ1 - a) or (λ1 - c, b)
+        // Use the formulation that avoids subtracting similar numbers
+
+        ScalarType v0x, v0y, v1x, v1y;
+
+        // For first eigenvalue
+        ScalarType const lambda0_minus_a = result.lambda(0) - a;
+        ScalarType const lambda0_minus_c = result.lambda(0) - c;
+
+        ScalarType abs_lma = abs(lambda0_minus_a);
+        ScalarType abs_lmc = abs(lambda0_minus_c);
+
+        if (abs_lma > abs_lmc)
+        {
+            // Use (λ - c, b)
+            v0x = lambda0_minus_c;
+            v0y = b;
+        }
+        else
+        {
+            // Use (b, λ - a)
+            v0x = b;
+            v0y = lambda0_minus_a;
+        }
+
+        // Normalize first eigenvector
+        ScalarType norm0sq  = v0x * v0x + v0y * v0y;
+        ScalarType invNorm0 = ScalarType{1} / sqrt(norm0sq);
+
+        v0x *= invNorm0;
+        v0y *= invNorm0;
+
+        // Second eigenvector is orthogonal to first
+        v1x = -v0y;
+        v1y = v0x;
+
+        result.V(0, 0) = v0x;
+        result.V(1, 0) = v0y;
+        result.V(0, 1) = v1x;
+        result.V(1, 1) = v1y;
+    }
+
+    return result;
+}
+
+/**
+ * @brief Compute eigenvalues and eigenvectors of a 3x3 symmetric matrix analytically.
+ *
+ * Uses Cardano's formula for the cubic characteristic polynomial with
+ * numerical robustness improvements. This is an O(1) algorithm with no
+ * iteration, making it deterministic and suitable for GPU execution.
+ *
+ * See @cite kopp2008symmetric3x3eigen
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A `3 x 3` symmetric matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto SymmetricEigen3x3(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
+{
+    using MatrixType = std::decay_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    static_assert(MatrixType::kRows == 3 and MatrixType::kCols == 3, "Matrix must be 3x3");
+
+    using ScalarType = typename MatrixType::ScalarType;
+
+    SymmetricEigenResult<ScalarType, 3> result{};
+
+    // Extract elements (symmetric, so only upper triangle needed)
+    ScalarType const a11 = A(0, 0);
+    ScalarType const a12 = A(0, 1);
+    ScalarType const a13 = A(0, 2);
+    ScalarType const a22 = A(1, 1);
+    ScalarType const a23 = A(1, 2);
+    ScalarType const a33 = A(2, 2);
+
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
+
+    // Compute characteristic polynomial coefficients
+    // det(A - λI) = -λ³ + c2*λ² + c1*λ + c0 = 0
+    // where c2 = trace(A), c1 = sum of 2x2 principal minors, c0 = det(A)
+
+    ScalarType const trace = a11 + a22 + a33;
+    ScalarType const mean  = trace / ScalarType{3};
+
+    // Shift matrix by mean to improve numerical stability (Kopp's method)
+    ScalarType const b11 = a11 - mean;
+    ScalarType const b22 = a22 - mean;
+    ScalarType const b33 = a33 - mean;
+
+    // q = det(B) / 2, p = ||B||_F^2 / 6 where B = A - mean*I
+    ScalarType const p =
+        (b11 * b11 + b22 * b22 + b33 * b33 + ScalarType{2} * (a12 * a12 + a13 * a13 + a23 * a23)) /
+        ScalarType{6};
+
+    // Determinant of shifted matrix B
+    ScalarType const detB = b11 * (b22 * b33 - a23 * a23) - a12 * (a12 * b33 - a23 * a13) +
+                            a13 * (a12 * a23 - b22 * a13);
+
+    ScalarType const q = detB / ScalarType{2};
+
+    // For a symmetric matrix, p >= 0 and the discriminant p^3 - q^2 >= 0
+    // p = ||B||_F^2 / 6, so p ~ normA^2 when matrix is not near scalar multiple of identity.
+    // We check if p is small (matrix is essentially scalar * I).
+    ScalarType const epsSq = eps * eps;
+
+    // Clamp the ratio for numerical stability
+    ScalarType ratio;
+    if (p <= epsSq)
+    {
+        // Matrix is essentially a multiple of identity
+        result.lambda(0) = mean;
+        result.lambda(1) = mean;
+        result.lambda(2) = mean;
+
+        result.V(0, 0) = ScalarType{1};
+        result.V(1, 0) = ScalarType{0};
+        result.V(2, 0) = ScalarType{0};
+        result.V(0, 1) = ScalarType{0};
+        result.V(1, 1) = ScalarType{1};
+        result.V(2, 1) = ScalarType{0};
+        result.V(0, 2) = ScalarType{0};
+        result.V(1, 2) = ScalarType{0};
+        result.V(2, 2) = ScalarType{1};
+
+        return result;
+    }
+
+    // Compute sqrt(p) first - we need it for the ratio calculation
+    using namespace std;
+    ScalarType sqrtP = sqrt(p);
+
+    // ratio = q / p^(3/2) = q / (p * sqrt(p))
+    ratio = q / (p * sqrtP);
+
+    // Clamp to [-1, 1] for acos (numerical robustness)
+    ratio = min(max(ratio, ScalarType{-1}), ScalarType{1});
+
+    // Eigenvalues from Cardano's formula
+    ScalarType phi = acos(ratio) / ScalarType{3};
+
+    ScalarType const twosqrtP = ScalarType{2} * sqrtP;
+
+    // Eigenvalues in descending order from Cardano
+    ScalarType const pi     = ScalarType{3.14159265358979323846};
+    ScalarType const twopi3 = ScalarType{2} * pi / ScalarType{3};
+
+    ScalarType cos_phi      = cos(phi);
+    ScalarType cos_phi_2pi3 = cos(phi + twopi3);
+    ScalarType cos_phi_4pi3 = cos(phi + ScalarType{2} * twopi3);
+
+    // Eigenvalues (will sort to ascending order if requested)
+    ScalarType eig0 = mean + twosqrtP * cos_phi;
+    ScalarType eig1 = mean + twosqrtP * cos_phi_2pi3;
+    ScalarType eig2 = mean + twosqrtP * cos_phi_4pi3;
+
+    // Sort eigenvalues in ascending order using sorting network
+    // (branchless when compiler optimizes min/max)
+    if (bSortEigenvalues)
+    {
+        ScalarType t;
+        if (eig0 > eig1)
+        {
+            t    = eig0;
+            eig0 = eig1;
+            eig1 = t;
+        }
+        if (eig1 > eig2)
+        {
+            t    = eig1;
+            eig1 = eig2;
+            eig2 = t;
+        }
+        if (eig0 > eig1)
+        {
+            t    = eig0;
+            eig0 = eig1;
+            eig1 = t;
+        }
+    }
+
+    result.lambda(0) = eig0;
+    result.lambda(1) = eig1;
+    result.lambda(2) = eig2;
+
+    // Compute eigenvectors using cross products for robustness
+    // For each eigenvalue λ, find eigenvector from null space of (A - λI)
+    for (int k = 0; k < 3; ++k)
+    {
+        ScalarType const lambda = result.lambda(k);
+
+        // Rows of (A - λI)
+        ScalarType r0x = a11 - lambda, r0y = a12, r0z = a13;
+        ScalarType r1x = a12, r1y = a22 - lambda, r1z = a23;
+        ScalarType r2x = a13, r2y = a23, r2z = a33 - lambda;
+
+        // Cross products of rows to find null space direction
+        ScalarType c01x = r0y * r1z - r0z * r1y;
+        ScalarType c01y = r0z * r1x - r0x * r1z;
+        ScalarType c01z = r0x * r1y - r0y * r1x;
+
+        ScalarType c02x = r0y * r2z - r0z * r2y;
+        ScalarType c02y = r0z * r2x - r0x * r2z;
+        ScalarType c02z = r0x * r2y - r0y * r2x;
+
+        ScalarType c12x = r1y * r2z - r1z * r2y;
+        ScalarType c12y = r1z * r2x - r1x * r2z;
+        ScalarType c12z = r1x * r2y - r1y * r2x;
+
+        // Pick the cross product with largest magnitude
+        ScalarType n01 = c01x * c01x + c01y * c01y + c01z * c01z;
+        ScalarType n02 = c02x * c02x + c02y * c02y + c02z * c02z;
+        ScalarType n12 = c12x * c12x + c12y * c12y + c12z * c12z;
+
+        ScalarType vx, vy, vz, normSq;
+        if (n01 >= n02 and n01 >= n12)
+        {
+            vx     = c01x;
+            vy     = c01y;
+            vz     = c01z;
+            normSq = n01;
+        }
+        else if (n02 >= n12)
+        {
+            vx     = c02x;
+            vy     = c02y;
+            vz     = c02z;
+            normSq = n02;
+        }
+        else
+        {
+            vx     = c12x;
+            vy     = c12y;
+            vz     = c12z;
+            normSq = n12;
+        }
+
+        // Normalize
+        ScalarType invNorm;
+        if (normSq > epsSq)
+        {
+            invNorm = ScalarType{1} / sqrt(normSq);
+        }
+        else
+        {
+            // Fallback for degenerate case (repeated eigenvalue)
+            // Use a unit vector orthogonal to previous eigenvectors
+            if (k == 0)
+            {
+                vx      = ScalarType{1};
+                vy      = ScalarType{0};
+                vz      = ScalarType{0};
+                invNorm = ScalarType{1};
+            }
+            else if (k == 1)
+            {
+                // Orthogonal to first eigenvector
+                ScalarType const v0x = result.V(0, 0);
+                ScalarType const v0y = result.V(1, 0);
+                ScalarType const v0z = result.V(2, 0);
+
+                // Pick a non-parallel axis
+                ScalarType absv0x = abs(v0x);
+                ScalarType absv0y = abs(v0y);
+
+                if (absv0x < absv0y)
+                {
+                    // Cross with x-axis
+                    vx = ScalarType{0};
+                    vy = -v0z;
+                    vz = v0y;
+                }
+                else
+                {
+                    // Cross with y-axis
+                    vx = v0z;
+                    vy = ScalarType{0};
+                    vz = -v0x;
+                }
+                normSq  = vx * vx + vy * vy + vz * vz;
+                invNorm = ScalarType{1} / sqrt(normSq);
+            }
+            else
+            {
+                // Cross product of first two eigenvectors
+                ScalarType const v0x = result.V(0, 0);
+                ScalarType const v0y = result.V(1, 0);
+                ScalarType const v0z = result.V(2, 0);
+                ScalarType const v1x = result.V(0, 1);
+                ScalarType const v1y = result.V(1, 1);
+                ScalarType const v1z = result.V(2, 1);
+
+                vx      = v0y * v1z - v0z * v1y;
+                vy      = v0z * v1x - v0x * v1z;
+                vz      = v0x * v1y - v0y * v1x;
+                invNorm = ScalarType{1}; // Already normalized if v0, v1 are orthonormal
+            }
+        }
+
+        result.V(0, k) = vx * invNorm;
+        result.V(1, k) = vy * invNorm;
+        result.V(2, k) = vz * invNorm;
+    }
+
+    return result;
+}
+
+/**
+ * @brief Compute the Wilkinson shift for the QR algorithm.
+ *
+ * Given the bottom-right 2x2 block of a symmetric tridiagonal (or general symmetric)
+ * matrix during the QR iteration:
+ *
+ *   [a  b]
+ *   [b  c]
+ *
+ * The Wilkinson shift is the eigenvalue of this 2x2 block that is closer to c,
+ * which provides superior convergence compared to the Rayleigh quotient shift.
+ *
+ * @tparam TScalar Scalar type
+ * @param a Top-left element (A(n-2, n-2))
+ * @param b Off-diagonal element (A(n-2, n-1) = A(n-1, n-2))
+ * @param c Bottom-right element (A(n-1, n-1))
+ * @return The Wilkinson shift value
+ */
+template <class TScalar>
+PBAT_HOST_DEVICE auto WilkinsonShift(TScalar a, TScalar b, TScalar c) -> TScalar
+{
+    using namespace std;
+
+    // Eigenvalues of the 2x2 block are:
+    // λ = (a + c)/2 ± sqrt(((a - c)/2)^2 + b^2)
+    // We want the one closer to c
+
+    TScalar const delta = (a - c) / TScalar{2};
+    TScalar const bsq   = b * b;
+
+    TScalar sqrtTerm = sqrt(delta * delta + bsq);
+
+    // The eigenvalue closer to c is:
+    // c - sign(delta) * b^2 / (|delta| + sqrt(delta^2 + b^2))
+    // This formulation avoids catastrophic cancellation
+
+    TScalar absD = abs(delta);
+    TScalar absB = abs(b);
+
+    // Scale epsilon by the magnitude of the 2x2 block (infinity norm, avoids sqrt)
+    TScalar const maxAbs = max(max(abs(a), absB), abs(c));
+    TScalar const eps    = maxAbs * std::numeric_limits<TScalar>::epsilon();
+
+    // Must be <=, since eps may be zero (for a zero matrix)
+    if (absD <= eps and absB <= eps)
+    {
+        // Nearly diagonal or zero off-diagonal: shift by c itself
+        return c;
+    }
+
+    // sign(delta) * b^2 / (|delta| + sqrt(delta^2 + b^2))
+    TScalar correction = bsq / (absD + sqrtTerm);
+    if (delta > TScalar{0})
+        return c - correction;
+    else
+        return c + correction;
+}
+
+/**
+ * @brief Compute eigenvalues and eigenvectors of a symmetric NxN matrix using the QR algorithm.
+ *
+ * This implementation uses the implicit QR algorithm with Wilkinson shifts for
+ * cubic convergence. For small matrices (N <= 10), the full QR factorization via
+ * Modified Gram-Schmidt is used at each iteration rather than the more complex
+ * Hessenberg reduction + Givens rotations approach.
+ *
+ * The algorithm converges when all off-diagonal elements are below a tolerance,
+ * at which point the diagonal contains the eigenvalues and the accumulated
+ * orthogonal transformations form the eigenvector matrix.
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A Symmetric square NxN matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param maxIterations Maximum number of QR iterations (default: 30 * N)
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
+ *
+ * @note For N=2 or N=3, consider using the specialized analytic solvers
+ *       SymmetricEigen2x2 or SymmetricEigen3x3 for better performance.
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto SymmetricEigenNxN(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    int maxIterations     = -1,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
+{
+    using MatrixType = std::decay_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
+
+    using ScalarType            = typename MatrixType::ScalarType;
+    static auto constexpr kDims = MatrixType::kRows;
+
+    SymmetricEigenResult<ScalarType, kDims> result{};
+
+    // Scale epsilon by matrix norm
+    ScalarType const normA = Norm(A);
+    eps *= normA;
+
+    // Default max iterations: 30 * N is typically more than enough for convergence
+    if (maxIterations < 0)
+        maxIterations = 30 * kDims;
+
+    // Working copy of A that will converge to diagonal form
+    SMatrix<ScalarType, kDims, kDims> T = A;
+
+    // Eigenvector accumulator (starts as identity)
+    SMatrix<ScalarType, kDims, kDims> V = Identity<ScalarType, kDims, kDims>();
+
+    // Track which eigenvalues have converged (deflation)
+    int activeSize = kDims;
+
+    for (int iter = 0; iter < maxIterations and activeSize > 1; ++iter)
+    {
+        using namespace std;
+
+        // Check for convergence of the bottom-right off-diagonal element
+        // This allows deflation when an eigenvalue has converged
+        ScalarType offDiagNorm = ScalarType{0};
+        for (int i = 0; i < activeSize - 1; ++i)
+        {
+            ScalarType absVal = abs(T(i, i + 1));
+            offDiagNorm += absVal;
+        }
+
+        // Check if last off-diagonal element is small enough for deflation
+        ScalarType lastOffDiag = abs(T(activeSize - 2, activeSize - 1));
+
+        if (lastOffDiag <= eps)
+        {
+            // Eigenvalue at position (activeSize-1) has converged
+            // Zero out the off-diagonal explicitly for cleanliness
+            T(activeSize - 2, activeSize - 1) = ScalarType{0};
+            T(activeSize - 1, activeSize - 2) = ScalarType{0};
+            --activeSize;
+            continue;
+        }
+
+        // Check for overall convergence
+        if (offDiagNorm <= eps)
+            break;
+
+        // Compute Wilkinson shift from bottom-right 2x2 block
+        ScalarType const shift = WilkinsonShift(
+            T(activeSize - 2, activeSize - 2),
+            T(activeSize - 2, activeSize - 1),
+            T(activeSize - 1, activeSize - 1));
+
+        // Apply shift: T_shifted = T - shift * I
+        for (int i = 0; i < activeSize; ++i)
+            T(i, i) -= shift;
+
+        // QR decomposition of the active portion of T
+        // Q will be the orthogonal matrix from QR factorization
+        // Initialize Q: identity for rows/cols >= activeSize, zero elsewhere initially
+        SMatrix<ScalarType, kDims, kDims> Q;
+        Q.SetZero();
+        // Set identity for the inactive portion (bottom-right block)
+        for (int i = activeSize; i < kDims; ++i)
+            Q(i, i) = ScalarType{1};
+
+        // Modified Gram-Schmidt QR on the active submatrix
+        // We build Q_active and R_active such that T_active = Q_active * R_active
+        SMatrix<ScalarType, kDims, kDims> R;
+        R.SetZero();
+
+        // Copy active portion of T to Q's active block (will be orthogonalized in-place)
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = 0; j < activeSize; ++j)
+                Q(i, j) = T(i, j);
+        }
+
+        // Modified Gram-Schmidt on activeSize columns (operating directly on Q)
+        for (int j = 0; j < activeSize; ++j)
+        {
+            // Compute norm of column j (only active rows)
+            ScalarType norm = ScalarType{0};
+            for (int i = 0; i < activeSize; ++i)
+                norm += Q(i, j) * Q(i, j);
+            norm = sqrt(norm);
+
+            R(j, j) = norm;
+
+            if (norm > eps)
+            {
+                // Normalize column j
+                ScalarType const invNorm = ScalarType{1} / norm;
+                for (int i = 0; i < activeSize; ++i)
+                    Q(i, j) *= invNorm;
+            }
+            else
+            {
+                // Column is nearly zero - use a unit vector orthogonal to previous columns
+                // Start with standard basis vector e_j
+                for (int i = 0; i < activeSize; ++i)
+                    Q(i, j) = (i == j) ? ScalarType{1} : ScalarType{0};
+
+                // Orthogonalize against all previous columns
+                for (int p = 0; p < j; ++p)
+                {
+                    ScalarType dot = ScalarType{0};
+                    for (int i = 0; i < activeSize; ++i)
+                        dot += Q(i, p) * Q(i, j);
+                    for (int i = 0; i < activeSize; ++i)
+                        Q(i, j) -= dot * Q(i, p);
+                }
+
+                // Re-normalize
+                ScalarType newNorm = ScalarType{0};
+                for (int i = 0; i < activeSize; ++i)
+                    newNorm += Q(i, j) * Q(i, j);
+                newNorm = sqrt(newNorm);
+
+                if (newNorm > eps)
+                {
+                    ScalarType const invNorm = ScalarType{1} / newNorm;
+                    for (int i = 0; i < activeSize; ++i)
+                        Q(i, j) *= invNorm;
+                }
+            }
+
+            // Orthogonalize remaining columns against column j
+            for (int k = j + 1; k < activeSize; ++k)
+            {
+                // Compute dot product
+                ScalarType dot = ScalarType{0};
+                for (int i = 0; i < activeSize; ++i)
+                    dot += Q(i, j) * Q(i, k);
+                R(j, k) = dot;
+
+                // Subtract projection
+                for (int i = 0; i < activeSize; ++i)
+                    Q(i, k) -= dot * Q(i, j);
+            }
+        }
+
+        // Compute R * Q (the similarity transform) for the active portion
+        SMatrix<ScalarType, kDims, kDims> RQ;
+        RQ.SetZero();
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = 0; j < activeSize; ++j)
+            {
+                ScalarType sum = ScalarType{0};
+                for (int k = 0; k < activeSize; ++k)
+                    sum += R(i, k) * Q(k, j);
+                RQ(i, j) = sum;
+            }
+        }
+
+        // Update T with R*Q + shift*I
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = 0; j < activeSize; ++j)
+                T(i, j) = RQ(i, j);
+            T(i, i) += shift;
+        }
+
+        // Enforce symmetry (to counter numerical drift)
+        for (int i = 0; i < activeSize; ++i)
+        {
+            for (int j = i + 1; j < activeSize; ++j)
+            {
+                ScalarType avg = (T(i, j) + T(j, i)) / ScalarType{2};
+                T(i, j)        = avg;
+                T(j, i)        = avg;
+            }
+        }
+
+        // Accumulate eigenvectors: V = V * Q
+        // Q has block structure: Q_active in top-left, I in bottom-right
+        // For j < activeSize: VQ(i,j) = sum_k V(i,k) * Q(k,j) but Q(k,j)=0 for k >= activeSize
+        // For j >= activeSize: VQ(i,j) = V(i,j) since Q(k,j) = delta(k,j) for k,j >= activeSize
+        SMatrix<ScalarType, kDims, kDims> VQ;
+        VQ.SetZero();
+        for (int i = 0; i < kDims; ++i)
+        {
+            // Update active columns: only active rows of Q are non-zero for active columns
+            for (int j = 0; j < activeSize; ++j)
+            {
+                ScalarType sum = ScalarType{0};
+                for (int k = 0; k < activeSize; ++k)
+                    sum += V(i, k) * Q(k, j);
+                VQ(i, j) = sum;
+            }
+            // Copy unchanged columns (converged eigenvalues)
+            for (int j = activeSize; j < kDims; ++j)
+                VQ(i, j) = V(i, j);
+        }
+        V = VQ;
+    }
+
+    // Extract eigenvalues from diagonal
+    for (int i = 0; i < kDims; ++i)
+        result.lambda(i) = T(i, i);
+
+    // Copy eigenvectors
+    result.V = V;
+
+    // Sort eigenvalues and eigenvectors in ascending order if requested
+    if (bSortEigenvalues)
+    {
+        // Simple selection sort (efficient for small N)
+        for (int i = 0; i < kDims - 1; ++i)
+        {
+            int minIdx = i;
+            for (int j = i + 1; j < kDims; ++j)
+            {
+                if (result.lambda(j) < result.lambda(minIdx))
+                    minIdx = j;
+            }
+            if (minIdx != i)
+            {
+                // Swap eigenvalues
+                ScalarType tmp        = result.lambda(i);
+                result.lambda(i)      = result.lambda(minIdx);
+                result.lambda(minIdx) = tmp;
+
+                // Swap eigenvector columns
+                for (int k = 0; k < kDims; ++k)
+                {
+                    tmp                 = result.V(k, i);
+                    result.V(k, i)      = result.V(k, minIdx);
+                    result.V(k, minIdx) = tmp;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @brief Compute eigenvalue decomposition of a symmetric matrix.
+ *
+ * Dispatcher that calls the appropriate 2x2 or 3x3 analytic solver,
+ * or the general QR algorithm for larger matrices.
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A Symmetric square matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param nMaxIters Maximum number of iterations for NxN QR algorithm (default: -1 for auto)
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
+ * @return SymmetricEigenResult with eigenvalues and orthonormal eigenvectors
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto SymmetricEigen(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    int nMaxIters         = -1,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
+{
+    using MatrixType = std::decay_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
+
+    if constexpr (MatrixType::kRows == 2)
+        return SymmetricEigen2x2(std::forward<TMatrix>(A), bSortEigenvalues, eps);
+    else if constexpr (MatrixType::kRows == 3)
+        return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues, eps);
+    else
+        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues, nMaxIters, eps);
+}
+
+/**
+ * @brief Compute only the eigenvalues of a 2x2 symmetric matrix.
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A Symmetric 2x2 matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @return Vector of 2 eigenvalues (ascending order if bSortEigenvalues is true)
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A, bool bSortEigenvalues = true)
+    -> SVector<typename std::decay_t<TMatrix>::ScalarType, 2>
+{
+    using MatrixType = std::decay_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    static_assert(MatrixType::kRows == 2 and MatrixType::kCols == 2, "Matrix must be 2x2");
+
+    using ScalarType = typename MatrixType::ScalarType;
+
+    ScalarType const a = A(0, 0);
+    ScalarType const b = A(0, 1);
+    ScalarType const c = A(1, 1);
+
+    ScalarType const trace = a + c;
+    ScalarType const diff  = a - c;
+    ScalarType const discr = diff * diff + ScalarType{4} * b * b;
+
+    using namespace std;
+    ScalarType sqrtDiscr = sqrt(discr);
+
+    SVector<ScalarType, 2> eigenvalues;
+    // Compute in ascending order by default (trace - sqrt <= trace + sqrt)
+    eigenvalues(0) = ScalarType{0.5} * (trace - sqrtDiscr);
+    eigenvalues(1) = ScalarType{0.5} * (trace + sqrtDiscr);
+
+    // Note: The formula inherently produces ascending order, so bSortEigenvalues
+    // doesn't change behavior here but is kept for API consistency
+    (void)bSortEigenvalues;
+
+    return eigenvalues;
+}
+
+/**
+ * @brief Compute only the eigenvalues of a 3x3 symmetric matrix.
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A Symmetric 3x3 matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
+ * @return Vector of 3 eigenvalues (ascending order if bSortEigenvalues is true)
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto SymmetricEigenvalues3x3(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
+{
+    // Use full decomposition - eigenvalue-only version could be optimized
+    // but the overhead of computing eigenvectors is small
+    return SymmetricEigen3x3(std::forward<TMatrix>(A), bSortEigenvalues, eps).lambda;
+}
+
+/**
+ * @brief Compute only eigenvalues of a symmetric matrix.
+ *
+ * @tparam TMatrix Matrix type satisfying CMatrix concept
+ * @param A Symmetric square matrix
+ * @param bSortEigenvalues If true, eigenvalues are sorted in ascending order.
+ *        Set to false to avoid unnecessary work when order doesn't matter.
+ * @param eps Base epsilon for numerical zero checks, scaled internally by matrix norm.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
+ * @return Vector of eigenvalues (ascending order if bSortEigenvalues is true)
+ */
+template <class /*CMatrix*/ TMatrix>
+PBAT_HOST_DEVICE auto SymmetricEigenvalues(
+    TMatrix&& A,
+    bool bSortEigenvalues = true,
+    typename std::decay_t<TMatrix>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrix>::ScalarType>::epsilon())
+{
+    using MatrixType = std::decay_t<TMatrix>;
+    PBAT_MINI_CHECK_CMATRIX(MatrixType);
+    static_assert(MatrixType::kRows == MatrixType::kCols, "Matrix must be square");
+
+    if constexpr (MatrixType::kRows == 2)
+        return SymmetricEigenvalues2x2(std::forward<TMatrix>(A), bSortEigenvalues);
+    else if constexpr (MatrixType::kRows == 3)
+        return SymmetricEigenvalues3x3(std::forward<TMatrix>(A), bSortEigenvalues, eps);
+    else
+        return SymmetricEigenNxN(std::forward<TMatrix>(A), bSortEigenvalues, -1, eps).lambda;
+}
+
+} // namespace mini
+} // namespace linalg
+} // namespace math
+} // namespace pbat
+
+#endif // PBAT_MATH_LINALG_MINI_EIGENVALUES_H

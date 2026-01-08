@@ -24,6 +24,10 @@ class Convergence:
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
         imgui.PushID("Convergence")
+        imgui.Text(
+            "Note that contact detection will be computed every iteration\n"
+            "no matter the solver and contact parameters."
+        )
         if imgui.Button("Step", default_button_size):
             self._convergence_analysis_requested = True
         flags = implot.ImPlotAxisFlags_None
@@ -73,6 +77,34 @@ class Convergence:
             implot.EndPlot()
         imgui.PopID()
 
+    def objective(
+        self,
+        x: np.ndarray,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        xt = -fem.bdf.inertia().reshape((3, -1), order="F")
+        bt = fem.bdf.beta_tilde
+        contact.compute_displacement_bounds(x)
+        contact.compute_energies(
+            x, xt, bt, pbat.sim.contact.EMeshEnergyComputationFlags.Potential
+        )
+        return fem.objective(x) + contact.potential
+
+    def gradient(
+        self,
+        x: np.ndarray,
+        fem: pbat.sim.dynamics.FemElastoDynamics,
+        contact: pbat.sim.contact.MeshDynamics,
+    ):
+        xt = -fem.bdf.inertia().reshape((3, -1), order="F")
+        bt = fem.bdf.beta_tilde
+        contact.compute_displacement_bounds(x)
+        contact.compute_energies(
+            x, xt, bt, pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
+        )
+        return fem.gradient(x) + contact.gradient
+
     def analyze_convergence(
         self,
         selected: int,
@@ -83,8 +115,8 @@ class Convergence:
         self._solver_names = [solver.name for solver in solvers]
         x0 = fem.x.copy()
         v0 = fem.v.copy()
-        f0 = fem.objective(x0)
-        g0 = fem.gradient(x0)
+        f0 = self.objective(x0, fem, contact)
+        g0 = self.gradient(x0, fem, contact)
         self._f = [[f0] for _ in solvers]
         self._gnorm2 = [[np.dot(g0, g0)] for _ in solvers]
         self._errors = [[] for _ in solvers]
@@ -113,8 +145,8 @@ class Convergence:
             ]
             for s in range(len(solvers))
         ]
-        fstar = fem.objective(fem.x)
-        gstar = fem.gradient(fem.x)
+        fstar = self.objective(fem.x, fem, contact)
+        gstar = self.gradient(fem.x, fem, contact)
         gstarnorm2 = np.dot(gstar, gstar)
         self._f = [
             [(fval + 1) / (fstar + 1) for fval in self._f[s]]
@@ -133,8 +165,8 @@ class Convergence:
         contact: pbat.sim.contact.MeshDynamics,
         xs: list[list[np.ndarray]],
     ):
-        fs = fem.objective(fem.x)
-        gs = fem.gradient(fem.x)
+        fs = self.objective(fem.x, fem, contact)
+        gs = self.gradient(fem.x, fem, contact)
         gsnorm2 = np.dot(gs, gs)
         self._f[s].append(fs)
         self._gnorm2[s].append(gsnorm2)

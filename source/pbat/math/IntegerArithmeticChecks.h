@@ -29,17 +29,17 @@ namespace math {
 template <std::integral Integer>
 bool AddOverflows(Integer a, Integer b)
 {
-    if (a == 0 || b == 0)
+    if (a == 0 or b == 0)
         return false;
 
     auto constexpr max = std::numeric_limits<Integer>::max();
     auto constexpr min = std::numeric_limits<Integer>::lowest();
-    if (a < 0 && b < 0)
+    if (a < 0 and b < 0)
     {
         // adding negative numbers may underflow, i.e. a+b < min
         return a < (min - b);
     }
-    if (a > 0 && b > 0)
+    if (a > 0 and b > 0)
     {
         // a+b > max <=> overflow
         return a > (max - b);
@@ -63,7 +63,7 @@ bool MultiplyOverflows(Integer a, Integer b)
 
     auto constexpr max   = std::numeric_limits<Integer>::max();
     auto constexpr min   = std::numeric_limits<Integer>::lowest();
-    bool const bSameSign = (a > 0 && b > 0) or (a < 0 && b < 0);
+    bool const bSameSign = (a > 0 and b > 0) or (a < 0 and b < 0);
     if (bSameSign)
     {
         // multiplying 2 same-sign numbers may overflow

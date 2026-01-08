@@ -20,7 +20,7 @@ TEST_CASE("[physics] StableNeoHookeanEnergy")
         Scalar constexpr Y         = Scalar(1e6);
         Scalar constexpr nu        = Scalar(0.45);
         auto const [mu, lambda]    = physics::LameCoefficients(Y, nu);
-        auto vecF                  = FromEigen(F.reshaped());
+        auto vecF                  = FromEigen(F);
         auto const ePsi            = psi.Eval(vecF, mu, lambda);
         mini::SVector<Scalar, Dims * Dims> gF;
         Scalar const ePsiFromGrad = psi.EvalWithGrad(vecF, mu, lambda, gF);
@@ -28,7 +28,7 @@ TEST_CASE("[physics] StableNeoHookeanEnergy")
         mini::SMatrix<Scalar, Dims * Dims, Dims * Dims> HF;
         Scalar const ePsiFromHess = psi.EvalWithGradAndHessian(vecF, mu, lambda, gF, HF);
         bool const bIsEnergyNonNegative =
-            (ePsi >= 0.) && (ePsiFromGrad >= 0.) && (ePsiFromHess >= 0.);
+            (ePsi >= 0.) and (ePsiFromGrad >= 0.) and (ePsiFromHess >= 0.);
         CHECK(bIsEnergyNonNegative);
 
         Scalar const gamma = Scalar(1) + mu / lambda;

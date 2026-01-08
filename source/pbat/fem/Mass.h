@@ -43,7 +43,7 @@ inline auto
 ElementMassMatrix(Eigen::MatrixBase<TN> const& N, typename TN::Scalar w, typename TN::Scalar rho)
 {
     static_assert(
-        TElement::kNodes == TN::RowsAtCompileTime || TN::RowsAtCompileTime == Eigen::Dynamic,
+        TElement::kNodes == TN::RowsAtCompileTime or TN::RowsAtCompileTime == Eigen::Dynamic,
         "Shape function vector size must match number of element nodes");
     return w * rho * N * N.transpose();
 }

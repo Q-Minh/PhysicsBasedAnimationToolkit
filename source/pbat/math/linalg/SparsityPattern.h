@@ -133,8 +133,8 @@ inline void SparsityPattern<TIndex, Options>::Compute(
     }
     auto const [rowMin, rowMax] = srng::minmax_element(rowIndices);
     auto const [colMin, colMax] = srng::minmax_element(colIndices);
-    bool const bRowsInBounds    = (*rowMin >= 0) && (*rowMax < nRows);
-    bool const bColsInBounds    = (*colMin >= 0) && (*colMax < nCols);
+    bool const bRowsInBounds    = (*rowMin >= 0) and (*rowMax < nRows);
+    bool const bColsInBounds    = (*colMin >= 0) and (*colMax < nCols);
     if (not(bRowsInBounds and bColsInBounds))
     {
         std::string const what = fmt::format(

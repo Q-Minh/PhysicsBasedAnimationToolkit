@@ -265,11 +265,11 @@ Bdf<TScalar, TIndex>::Bdf(int step, int order)
 template <class TScalar, class TIndex>
 auto Bdf<TScalar, TIndex>::State(int k, int o) const -> decltype(xt.col(0))
 {
-    if (k < 0 || k > mStep)
+    if (k < 0 or k > mStep)
     {
         throw std::out_of_range("0 <= k <= s");
     }
-    if (o < 0 || o >= mOrder)
+    if (o < 0 or o >= mOrder)
     {
         throw std::out_of_range("0 <= o < order");
     }
@@ -280,11 +280,11 @@ auto Bdf<TScalar, TIndex>::State(int k, int o) const -> decltype(xt.col(0))
 template <class TScalar, class TIndex>
 auto Bdf<TScalar, TIndex>::State(int k, int o) -> decltype(xt.col(0))
 {
-    if (k < 0 || k > mStep)
+    if (k < 0 or k > mStep)
     {
         throw std::out_of_range("0 <= k <= s");
     }
-    if (o < 0 || o >= mOrder)
+    if (o < 0 or o >= mOrder)
     {
         throw std::out_of_range("0 <= o < order");
     }
@@ -317,7 +317,7 @@ void Bdf<TScalar, TIndex>::SetOrder(int order)
 template <class TScalar, class TIndex>
 void Bdf<TScalar, TIndex>::SetStep(int step)
 {
-    if (step < 1 || step > 6)
+    if (step < 1 or step > 6)
     {
         throw std::invalid_argument("0 < s < 7.");
     }

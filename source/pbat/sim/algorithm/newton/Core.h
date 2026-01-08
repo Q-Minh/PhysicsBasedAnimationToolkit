@@ -344,8 +344,8 @@ void AssembleHessian(
                     for (auto il = 0; il < kStencil; ++il)
                         for (auto id = 0; id < kDims; ++id)
                             params.triplets.emplace_back(
-                                E.stencil(il) * kDims + id,
-                                E.stencil(jl) * kDims + jd,
+                                E.stencil[il] * kDims + id,
+                                E.stencil[jl] * kDims + jd,
                                 E.hessEn(il * kDims + id, jl * kDims + jd) +
                                     E.hessEf(il * kDims + id, jl * kDims + jd));
         });
@@ -413,7 +413,9 @@ void PrepareNextIteration(
     params.newton.PrepareNextIteration(
         [&]([[maybe_unused]] auto const& _xk) {
             if (contact.RequiresBoundsComputation())
+            {
                 contact.ComputeDisplacementBounds(fem.x);
+            }
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
@@ -489,6 +491,7 @@ void TruncateDisplacedPositions(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.InitializeSolve");
     params.newton.InitializeSolve(fem.x.reshaped());
     auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
     auto& ogcParams = contact.GetParams().mOgcParams;
@@ -526,11 +529,13 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Solve");
-    auto x0 = fem.x.reshaped();
-    return params.newton.Solve(
+    auto x0         = fem.x.reshaped();
+    bool bConverged = params.newton.Solve(
         [&]([[maybe_unused]] auto const& xk) {
             if (contact.RequiresBoundsComputation())
+            {
                 contact.ComputeDisplacementBounds(fem.x);
+            }
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
@@ -553,6 +558,8 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             TruncateDisplacement(fem, contact, params, dxk);
         } /* Hinv */,
         x0 /* xk */);
+    fem.BackSubstituteIntegratedPositionsIntoVelocities();
+    return bConverged;
 }
 
 } // namespace pbat::sim::algorithm::newton

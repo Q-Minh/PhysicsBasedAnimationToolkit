@@ -24,7 +24,7 @@ void BindTriangleAabbHierarchy(nanobind::module_& m)
             else if constexpr (kDims == 3)
                 return "TriangleAabbHierarchy3D";
             else
-                static_assert(kDims == 2 || kDims == 3, "Only 2D and 3D BVHs are supported.");
+                static_assert(kDims == 2 or kDims == 3, "Only 2D and 3D BVHs are supported.");
         }();
         nb::class_<BvhType>(m, className.data())
             .def(

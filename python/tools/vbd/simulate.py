@@ -204,8 +204,9 @@ def parse_args():
         "--overrides",
         nargs="+",
         help=(
-            "List of solver parameter overrides in the format params_name.path.to.attribute=value, "
-            "where 'params_name' is one of the params entries for the selected solver."
+            "List of solver parameter overrides in the format param_name.path.to.attribute=value, "
+            "where 'param_name' is one of the params entries for the selected solver, or 'contact' "
+            "for contact parameters."
         ),
         dest="overrides",
     )
@@ -306,9 +307,56 @@ def load_simulation_scenario_from_scene(path: str):
         ) from e
 
 
+def apply_overrides(
+    param_objs: dict[str, typing.Any], overrides: list[str] | None
+) -> None:
+    """Apply parameter overrides to a collection of parameter objects.
+
+    Args:
+        param_objs: Dictionary mapping parameter names to parameter objects.
+        overrides: List of overrides in the format 'param_name.path.to.attribute=value',
+                   where 'param_name' is a key in param_objs.
+
+    Raises:
+        ValueError: If an override path or value is invalid.
+    """
+    for override in overrides:
+        lhs, rhs = override.split("=")[:2]
+        param_name, *attr_path = lhs.split(".")
+        if param_name not in param_objs:
+            raise ValueError(
+                f"Invalid override parameter name '{param_name}'. "
+                f"Available parameter names are: {', '.join(param_objs.keys())}"
+            )
+        obj = param_objs[param_name]
+        for attr in attr_path[:-1]:
+            obj = getattr(obj, attr)
+        final_attr = attr_path[-1]
+        current_value = getattr(obj, final_attr)
+        value_type = type(current_value)
+        if isinstance(current_value, bool):
+            value = rhs.lower() in ("true", "1", "yes", "on")
+        elif isinstance(current_value, enum.Enum):
+            enum_values = list(value_type)
+            matched = False
+            for enum_value in enum_values:
+                if enum_value.name == rhs:
+                    value = enum_value
+                    matched = True
+                    break
+            if not matched:
+                raise ValueError(
+                    f"Invalid enum value '{rhs}' for attribute '{final_attr}'. "
+                    f"Available values are: {', '.join([ev.name for ev in enum_values])}"
+                )
+        else:
+            value = value_type(rhs)
+        setattr(obj, final_attr, value)
+
+
 def load_solver_params(
-    solver: str, solver_params: str | None = None, overrides: list[str] | None = None
-) -> typing.Any:
+    solver: str, solver_params: str | None = None
+) -> dict[str, typing.Any]:
     if solver not in _solver_params:
         raise ValueError(
             f"Unsupported solver '{solver}'. Available solvers are: {', '.join(_solver_params.keys())}"
@@ -326,39 +374,8 @@ def load_solver_params(
             gc.collect()
         except Exception as e:
             raise RuntimeError(
-                f"Failed to load solver params from '{path}:{group}': {e}"
+                f"Failed to load solver params from '{solver_params}': {e}"
             ) from e
-    if overrides is not None:
-        for override in overrides:
-            lhs, rhs = override.split("=")[:2]
-            param_name, *attr_path = lhs.split(".")
-            if param_name not in param_objs:
-                raise ValueError(
-                    f"Invalid override parameter name '{param_name}'. Available parameter names are: {', '.join(param_objs.keys())}"
-                )
-            obj = param_objs[param_name]
-            for attr in attr_path[:-1]:
-                obj = getattr(obj, attr)
-            final_attr = attr_path[-1]
-            current_value = getattr(obj, final_attr)
-            value_type = type(current_value)
-            if isinstance(current_value, bool):
-                value = rhs.lower() in ("true", "1", "yes", "on")
-            elif isinstance(current_value, enum.Enum):
-                enum_values = list(value_type)
-                matched = False
-                for enum_value in enum_values:
-                    if enum_value.name == rhs:
-                        value = enum_value
-                        matched = True
-                        break
-                if not matched:
-                    raise ValueError(
-                        f"Invalid enum value '{rhs}' for attribute '{final_attr}'. Available values are: {', '.join([ev.name for ev in enum_values])}"
-                    )
-            else:
-                value = value_type(rhs)
-            setattr(obj, final_attr, value)
     return param_objs
 
 
@@ -374,6 +391,72 @@ def load_contact_dynamics_params(
     except Exception as e:
         raise RuntimeError(f"Failed to load contact dynamics from '{path}': {e}") from e
     return contact_dynamics_params
+
+
+def apply_procedural_constraints(
+    fem_elasto_dynamics: pbat.sim.dynamics.FemElastoDynamics,
+    dirichlet_constraints: TransformLibrary,
+    fem_elastic_mesh_names: list[str],
+    XP: np.ndarray,
+    t: float,
+    dt: float,
+):
+    """Apply procedural Dirichlet constraints to the FEM elasto-dynamics problem.
+
+    Args:
+        fem_elasto_dynamics: The FEM elasto-dynamics problem.
+        dirichlet_constraints: The transform library containing Dirichlet constraints.
+        fem_elastic_mesh_names: List of mesh names for the FEM elastic bodies.
+        XP: Array of vertex partition indices (start indices for each mesh).
+        t: Current simulation time step.
+        dt: Time step size.
+    """
+    fem_elasto_dynamics.dmask[:] = 0
+    if len(dirichlet_constraints.transforms) > 0:
+        for start, tup in zip(
+            XP[:-1], dirichlet_constraints.all_transformed_nodes(t, dt)
+        ):
+            _, dnodes = tup
+            fem_elasto_dynamics.dmask[start + dnodes] = 1
+
+        fem_elasto_dynamics.constrain(fem_elasto_dynamics.dmask)
+        xD = fem_elasto_dynamics.x
+        for start, end, name in zip(XP[:-1], XP[1:], fem_elastic_mesh_names):
+            xD[:, start:end] = dirichlet_constraints.apply(
+                name, xD[:, start:end], t, dt
+            )
+        fem_elasto_dynamics.x = xD
+
+
+def checkpoint(
+    out_file: str,
+    t: int,
+    previous_checkpoint_file: str | None,
+) -> tuple[pbat.io.Archive, str | None]:
+    """Create a checkpoint of the simulation output file.
+
+    Closes the current archive, removes the previous checkpoint if it exists,
+    copies the output file to a new checkpoint file, and reopens the archive.
+
+    Args:
+        out_file: Path to the output HDF5 file.
+        t: Current time step number.
+        previous_checkpoint_file: Path to the previous checkpoint file, or None.
+
+    Returns:
+        A tuple of (reopened archive, new checkpoint file path).
+    """
+    # Remove previous checkpoint file if it exists
+    if previous_checkpoint_file is not None and os.path.exists(
+        previous_checkpoint_file
+    ):
+        os.remove(previous_checkpoint_file)
+    # Copy to checkpoint file
+    checkpoint_file = out_file.replace(".h5", f".checkpoint-{t:08d}.h5")
+    shutil.copy2(out_file, checkpoint_file)
+    # Reopen the archive in ReadWrite mode
+    archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.ReadWrite)
+    return archive, checkpoint_file
 
 
 def main():
@@ -392,10 +475,13 @@ def main():
     dt, bdf_scheme, fem_dynamics_init_strategy = load_time_integration(
         args.simulation_params
     )
-    solver_params = load_solver_params(
-        args.solver, args.simulation_params, args.overrides
-    )
+    solver_params = load_solver_params(args.solver, args.simulation_params)
     contact_dynamics_params = load_contact_dynamics_params(args.simulation_params)
+
+    # Collect all param objects and apply overrides in one fell swoop
+    all_params = {**solver_params, "contact": contact_dynamics_params}
+    if len(args.overrides) > 0:
+        apply_overrides(all_params, args.overrides)
     contact_dynamics.params = contact_dynamics_params.construct()
 
     out_file, out_group = args.output.split(":")[:2]
@@ -436,20 +522,14 @@ def main():
     initialize_solve = _solver_params[args.solver]["initialize_solve"]
     while t * dt < args.duration:
         # Apply procedural constraints
-        fem_elasto_dynamics.dmask[:] = 0
-        if len(dirichlet_constraints.transforms) > 0:
-            for start, tup in zip(
-                XP[:-1], dirichlet_constraints.all_transformed_nodes(t, dt)
-            ):
-                _, dnodes = tup
-                fem_elasto_dynamics.dmask[start + dnodes] = 1
-            fem_elasto_dynamics.constrain(fem_elasto_dynamics.dmask)
-            xD = fem_elasto_dynamics.x
-            for start, end, name in zip(XP[:-1], XP[1:], fem_elastic_mesh_names):
-                xD[:, start:end] = dirichlet_constraints.apply(
-                    name, xD[:, start:end], t, dt
-                )
-            fem_elasto_dynamics.x = xD
+        apply_procedural_constraints(
+            fem_elasto_dynamics,
+            dirichlet_constraints,
+            fem_elastic_mesh_names,
+            XP,
+            t,
+            dt,
+        )
         # Initialize time step optimization
         fem_elasto_dynamics.setup_time_integration_optimization(
             initialization_strategy=fem_dynamics_init_strategy
@@ -469,20 +549,11 @@ def main():
         fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
         # Checkpoint if requested
         if args.checkpoint > 0 and t % args.checkpoint == 0:
-            # Close the current archive
             archive = None
             gc.collect()
-            # Remove previous checkpoint file if it exists
-            if previous_checkpoint_file is not None and os.path.exists(
-                previous_checkpoint_file
-            ):
-                os.remove(previous_checkpoint_file)
-            # Copy to checkpoint file
-            checkpoint_file = out_file.replace(".h5", f".checkpoint-{t:08d}.h5")
-            shutil.copy2(out_file, checkpoint_file)
-            previous_checkpoint_file = checkpoint_file
-            # Reopen the archive in ReadWrite mode
-            archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.ReadWrite)
+            archive, previous_checkpoint_file = checkpoint(
+                out_file, t, previous_checkpoint_file
+            )
         # Update progress bar
         pbar.update(1)
     pbar.close()

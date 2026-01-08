@@ -426,3 +426,36 @@ keywords = {continuum mechanics, implicit Euler method, physics-based animation,
 	year = {2025},
 	pages = {90:1--90:12},
 }
+
+@article{kopp2008symmetric3x3eigen,
+  author = {Kopp, Joachim},
+  title = {Efficient numerical diagonalization of hermitian 3x3 matrices},
+  journal = {International Journal of Modern Physics C},
+  volume = {19},
+  number = {03},
+  pages = {523-548},
+  year = {2008},
+  doi = {10.1142/S0129183108012303},
+  url = {https://doi.org/10.1142/S0129183108012303},
+  abstract = {A very common problem in science is the numerical diagonalization of symmetric or hermitian 3x3 matrices. Since standard "black box" packages may be too inefficient if the number of matrices is large, we study several alternatives. We consider optimized implementations of the Jacobi, QL, and Cuppen algorithms and compare them with an analytical method relying on Cardano's formula for the eigenvalues and on vector cross products for the eigenvectors. Owing to the optimization, one Jacobi iteration can be reduced to just about 20 floating-point operations. For symmetric matrices, the resulting "Hybrid" algorithm is comparable to Cuppen's divide-and-conquer scheme in speed but more accurate. For hermitian matrices, Jacobi is the fastest method overall. Unlike higher-dimensional cases, the optimization of the Jacobi algorithm for 3x3 matrices does not require to sacrifice numerical stability. We provide a detailed analysis of the rounding errors, showing that both Jacobi and QL are more accurate than Cuppen's algorithm, and that the analytical scheme is the least accurate. All algorithms discussed here are available online.}
+}
+
+@book{golub2013matrix,
+  author = {Golub, Gene H. and Van Loan, Charles F.},
+  title = {Matrix Computations},
+  edition = {4th},
+  year = {2013},
+  publisher = {Johns Hopkins University Press},
+  address = {Baltimore, MD},
+  isbn = {978-1-4214-0794-4}
+}
+
+@techreport{McAdams2011,
+  author = {McAdams, Aleka and Selle, Andrew and Tamstorf, Rasmus and Teran, Joseph and Sifakis, Eftychios},
+  title = {Computing the Singular Value Decomposition of 3x3 matrices with minimal branching and elementary floating point operations},
+  institution = {University of Wisconsin-Madison},
+  year = {2011},
+  number = {TR1690},
+  url = {https://pages.cs.wisc.edu/~sifakis/papers/SVD_TR1690.pdf},
+  abstract = {The Singular Value Decomposition (SVD) of 3x3 matrices is an essential numerical tool, particularly in graphics applications where it enables polar decomposition, inversion-robust elasticity, and shape matching. We present a novel formulation of the 3x3 SVD that is extremely compact and uses no trigonometric functions and only elementary floating point operations. This is achieved by formulating a symmetric eigenvalue problem via Jacobi iterations and computing a QR factorization using quaternion representations of Givens rotations. The algorithm is particularly well suited for highly parallel execution on SIMD and GPU architectures.}
+}

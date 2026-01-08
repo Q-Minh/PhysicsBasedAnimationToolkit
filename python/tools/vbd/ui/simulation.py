@@ -201,6 +201,18 @@ class Simulation:
                 cmap="reds",
                 vminmax=(0, 1),
             )
+            x = self._fem_dynamics.x
+            bdf: pbat.sim.integration.Bdf = self._fem_dynamics.bdf
+            xt = -bdf.inertia().reshape((3, -1), order="F")
+            bt = bdf.beta_tilde
+            if self._contact.requires_force_display:
+                self._contact.on_contact_force_display_requested(
+                    x,
+                    xt,
+                    bt,
+                )
+            if self._contact.requires_stencil_display:
+                self._contact.on_stencil_display_requested(x, xt, bt)
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes
             if d_nodes.shape[0] != self._fem_dynamics_dirichlet_pc.n_points():
@@ -247,6 +259,7 @@ class Simulation:
         imgui.Text(
             f"Query radius: {self._contact.contact_dynamics.params.ogc_params.rq:.6f}"
         )
+        imgui.Text(f"# contacts: {self._contact.contact_dynamics.num_contacts}")
         self._draw_trajectory_ui()
         imgui.PopID()
 
@@ -396,6 +409,8 @@ class Simulation:
         try:
             if file_path:
                 archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
+                xt = self._fem_dynamics.x.copy()
+                self._apply_procedural_constraints()
                 self._solver.serialize_problem(
                     archive, self._fem_dynamics, self._contact.contact_dynamics
                 )
@@ -405,6 +420,7 @@ class Simulation:
                 )
                 archive = None
                 gc.collect()  # Force garbage collection to close the archive...
+                self._fem_dynamics.x = xt
         except Exception as e:
             ps.error(f"Error saving problem:\n{e}")
         finally:

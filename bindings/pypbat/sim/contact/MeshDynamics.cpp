@@ -1,8 +1,11 @@
 #include "MeshDynamics.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/array.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/geometry/Device.h>
+#include <pbat/math/linalg/mini/Eigen.h>
 #include <pbat/sim/contact/MeshDynamics.h>
 #include <pbat/sim/contact/MultiMesh.h>
 
@@ -18,12 +21,164 @@ void BindMeshDynamics(nanobind::module_& m)
     using MultiMeshType          = pbat::sim::contact::MultiMesh<IndexType>;
     using DeviceType             = pbat::geometry::Device;
     using EMeshEnergyComputationFlags = pbat::sim::contact::EMeshEnergyComputationFlags;
+    using MeshContactEnergy1 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 1>;
+    using MeshContactEnergy2 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 2>;
+    using MeshContactEnergy3 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 3>;
+    using MeshContactEnergy4 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 4>;
 
     nb::enum_<EMeshEnergyComputationFlags>(m, "EMeshEnergyComputationFlags", nb::is_arithmetic())
         .value("Potential", EMeshEnergyComputationFlags::Potential, "Compute potential energy.")
         .value("Gradient", EMeshEnergyComputationFlags::Gradient, "Compute contact gradients.")
         .value("Hessian", EMeshEnergyComputationFlags::Hessian, "Compute contact hessians.")
         .export_values();
+
+    nb::class_<MeshContactEnergy1>(m, "MeshContactEnergy_1NodeStencil")
+        .def(nb::init<>(), "Construct a MeshContactEnergy with 1-node stencil (3 DOFs).")
+        .def_ro("En", &MeshContactEnergy1::En, "(float) Normal contact energy.")
+        .def_ro("Ef", &MeshContactEnergy1::Ef, "(float) Frictional contact energy.")
+        .def_prop_ro(
+            "gradEn",
+            [](MeshContactEnergy1 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy1::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEn);
+            },
+            "(numpy.ndarray) Normal contact energy gradient (3x1).")
+        .def_prop_ro(
+            "hessEn",
+            [](MeshContactEnergy1 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy1::kDofs, MeshContactEnergy1::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEn);
+            },
+            "(numpy.ndarray) Normal contact energy Hessian (3x3).")
+        .def_prop_ro(
+            "gradEf",
+            [](MeshContactEnergy1 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy1::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEf);
+            },
+            "(numpy.ndarray) Frictional contact energy gradient (3x1).")
+        .def_prop_ro(
+            "hessEf",
+            [](MeshContactEnergy1 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy1::kDofs, MeshContactEnergy1::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEf);
+            },
+            "(numpy.ndarray) Frictional contact energy Hessian (3x3).")
+        .def_ro(
+            "stencil",
+            &MeshContactEnergy1::stencil,
+            "(numpy.ndarray) Indices of involved vertices (1x1).");
+
+    nb::class_<MeshContactEnergy2>(m, "MeshContactEnergy_2NodeStencil")
+        .def(nb::init<>(), "Construct a MeshContactEnergy with 2-node stencil (6 DOFs).")
+        .def_ro("En", &MeshContactEnergy2::En, "(float) Normal contact energy.")
+        .def_ro("Ef", &MeshContactEnergy2::Ef, "(float) Frictional contact energy.")
+        .def_prop_ro(
+            "gradEn",
+            [](MeshContactEnergy2 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy2::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEn);
+            },
+            "(numpy.ndarray) Normal contact energy gradient (6x1).")
+        .def_prop_ro(
+            "hessEn",
+            [](MeshContactEnergy2 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy2::kDofs, MeshContactEnergy2::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEn);
+            },
+            "(numpy.ndarray) Normal contact energy Hessian (6x6).")
+        .def_prop_ro(
+            "gradEf",
+            [](MeshContactEnergy2 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy2::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEf);
+            },
+            "(numpy.ndarray) Frictional contact energy gradient (6x1).")
+        .def_prop_ro(
+            "hessEf",
+            [](MeshContactEnergy2 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy2::kDofs, MeshContactEnergy2::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEf);
+            },
+            "(numpy.ndarray) Frictional contact energy Hessian (6x6).")
+        .def_ro(
+            "stencil",
+            &MeshContactEnergy2::stencil,
+            "(numpy.ndarray) Indices of involved vertices (2x1).");
+
+    nb::class_<MeshContactEnergy3>(m, "MeshContactEnergy_3NodeStencil")
+        .def(nb::init<>(), "Construct a MeshContactEnergy with 3-node stencil (9 DOFs).")
+        .def_ro("En", &MeshContactEnergy3::En, "(float) Normal contact energy.")
+        .def_ro("Ef", &MeshContactEnergy3::Ef, "(float) Frictional contact energy.")
+        .def_prop_ro(
+            "gradEn",
+            [](MeshContactEnergy3 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy3::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEn);
+            },
+            "(numpy.ndarray) Normal contact energy gradient (9x1).")
+        .def_prop_ro(
+            "hessEn",
+            [](MeshContactEnergy3 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy3::kDofs, MeshContactEnergy3::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEn);
+            },
+            "(numpy.ndarray) Normal contact energy Hessian (9x9).")
+        .def_prop_ro(
+            "gradEf",
+            [](MeshContactEnergy3 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy3::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEf);
+            },
+            "(numpy.ndarray) Frictional contact energy gradient (9x1).")
+        .def_prop_ro(
+            "hessEf",
+            [](MeshContactEnergy3 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy3::kDofs, MeshContactEnergy3::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEf);
+            },
+            "(numpy.ndarray) Frictional contact energy Hessian (9x9).")
+        .def_ro(
+            "stencil",
+            &MeshContactEnergy3::stencil,
+            "(numpy.ndarray) Indices of involved vertices (3x1).");
+
+    nb::class_<MeshContactEnergy4>(m, "MeshContactEnergy_4NodeStencil")
+        .def(nb::init<>(), "Construct a MeshContactEnergy with 4-node stencil (12 DOFs).")
+        .def_ro("En", &MeshContactEnergy4::En, "(float) Normal contact energy.")
+        .def_ro("Ef", &MeshContactEnergy4::Ef, "(float) Frictional contact energy.")
+        .def_prop_ro(
+            "gradEn",
+            [](MeshContactEnergy4 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy4::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEn);
+            },
+            "(numpy.ndarray) Normal contact energy gradient (12x1).")
+        .def_prop_ro(
+            "hessEn",
+            [](MeshContactEnergy4 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy4::kDofs, MeshContactEnergy4::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEn);
+            },
+            "(numpy.ndarray) Normal contact energy Hessian (12x12).")
+        .def_prop_ro(
+            "gradEf",
+            [](MeshContactEnergy4 const& self)
+                -> Eigen::Vector<ScalarType, MeshContactEnergy4::kDofs> {
+                return math::linalg::mini::ToEigen(self.gradEf);
+            },
+            "(numpy.ndarray) Frictional contact energy gradient (12x1).")
+        .def_prop_ro(
+            "hessEf",
+            [](MeshContactEnergy4 const& self)
+                -> Eigen::Matrix<ScalarType, MeshContactEnergy4::kDofs, MeshContactEnergy4::kDofs> {
+                return math::linalg::mini::ToEigen(self.hessEf);
+            },
+            "(numpy.ndarray) Frictional contact energy Hessian (12x12).")
+        .def_ro(
+            "stencil",
+            &MeshContactEnergy4::stencil,
+            "(numpy.ndarray) Indices of involved vertices (4x1).");
 
     nb::class_<MeshDynamicsParamsType>(m, "MeshDynamicsParams")
         .def(nb::init<>(), "Construct default MeshDynamicsParams.")
@@ -235,6 +390,14 @@ void BindMeshDynamics(nanobind::module_& m)
             "gradient",
             &MeshDynamicsType::Gradient,
             "`3*|# points| x 1` contact energy gradient.")
+        .def_prop_ro(
+            "normal_gradient",
+            &MeshDynamicsType::NormalGradient,
+            "`3*|# points| x 1` normal contact energy gradient.")
+        .def_prop_ro(
+            "frictional_gradient",
+            &MeshDynamicsType::FrictionalGradient,
+            "`3*|# points| x 1` frictional contact energy gradient.")
         .def(
             "serialize",
             &MeshDynamicsType::Serialize,
@@ -264,7 +427,36 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_prop_ro("dynamic_meshes", &MeshDynamicsType::DynamicMeshes, "Dynamic meshes.")
         .def_prop_ro("static_meshes", &MeshDynamicsType::StaticMeshes, "Static meshes.")
         .def_prop_ro("ogc_input", &MeshDynamicsType::OgcInput, "OGC input.")
-        .def_prop_ro("ogc_state", &MeshDynamicsType::OgcState, "OGC state.");
+        .def_prop_ro("ogc_state", &MeshDynamicsType::OgcState, "OGC state.")
+        .def_prop_ro(
+            "vertex_vertex_energies",
+            &MeshDynamicsType::VertexVertexEnergies,
+            "List of vertex-vertex contact energies (list of MeshContactEnergy2).")
+        .def_prop_ro(
+            "vertex_edge_energies",
+            &MeshDynamicsType::VertexEdgeEnergies,
+            "List of vertex-edge contact energies (list of MeshContactEnergy3).")
+        .def_prop_ro(
+            "vertex_triangle_energies",
+            &MeshDynamicsType::VertexTriangleEnergies,
+            "List of vertex-triangle contact energies (list of MeshContactEnergy4).")
+        .def_prop_ro(
+            "edge_edge_energies",
+            &MeshDynamicsType::EdgeEdgeEnergies,
+            "List of edge-edge contact energies (list of MeshContactEnergy4).")
+        .def_prop_ro(
+            "vertex_environment_energies",
+            &MeshDynamicsType::VertexEnvironmentEnergies,
+            "List of vertex-environment contact energies (list of MeshContactEnergy1).")
+        .def_prop_ro(
+            "edge_environment_energies",
+            &MeshDynamicsType::EdgeEnvironmentEnergies,
+            "List of edge-environment contact energies (list of MeshContactEnergy2).")
+        .def_prop_ro(
+            "triangle_environment_energies",
+            &MeshDynamicsType::TriangleEnvironmentEnergies,
+            "List of triangle-environment contact energies (list of MeshContactEnergy3).")
+        .def_prop_ro("num_contacts", &MeshDynamicsType::NumContacts, "Number of contacts.");
 }
 
 } // namespace pbat::py::sim::contact

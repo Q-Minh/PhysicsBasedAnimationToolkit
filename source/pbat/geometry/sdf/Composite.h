@@ -185,7 +185,7 @@ inline Composite<TScalar>::Composite(
                 using NodeType = std::remove_cvref_t<decltype(node)>;
                 if constexpr (std::is_base_of_v<Primitive, NodeType>)
                 {
-                    if (mChildren[n].first >= 0 || mChildren[n].second >= 0)
+                    if (mChildren[n].first >= 0 or mChildren[n].second >= 0)
                         mStatus = ECompositeStatus::InvalidForest;
                 }
                 else if constexpr (std::is_base_of_v<UnaryNode, NodeType>)
@@ -197,7 +197,7 @@ inline Composite<TScalar>::Composite(
                 }
                 else if constexpr (std::is_base_of_v<BinaryNode, NodeType>)
                 {
-                    if (mChildren[n].first < 0 || mChildren[n].second < 0)
+                    if (mChildren[n].first < 0 or mChildren[n].second < 0)
                         mStatus = ECompositeStatus::InvalidForest;
                 }
             },

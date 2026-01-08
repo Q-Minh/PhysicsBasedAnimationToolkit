@@ -555,6 +555,11 @@ void DynamicEdgeEdgeRTCCollideFunc(
             FromEigen(xe1.col(1)),
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
+        // Skip if closest point on edge e1 is a vertex, this will be captured in vertex-facet
+        // contacts
+        bool const bIsE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
+        if (bIsE1Vertex)
+            continue;
         // Closest points on edges e1 and e2
         Eigen::Vector<TScalar, 3> const xc1 =
             (TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1);
@@ -684,6 +689,11 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
             FromEigen(xe1.col(1)),
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
+        // Skip if closest point on edge e1 is a vertex, this will be captured in vertex-facet
+        // contacts
+        bool const bIsE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
+        if (bIsE1Vertex)
+            continue;
         // Closest points on edges e1 and e2
         Eigen::Vector<TScalar, 3> const xc1 =
             (TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1);
