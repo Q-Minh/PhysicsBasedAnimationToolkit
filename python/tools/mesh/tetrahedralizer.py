@@ -67,6 +67,17 @@ def define_args():
         help="Min dihedral angle argument for TetGen.",
     )
     parser.add_argument(
+        "--steiner_points",
+        type=int,
+        default=-1,
+        help="Number of steiner points to use in TetGen. -1 for automatic.",
+    )
+    parser.add_argument(
+        "--nobisect",
+        action="store_true",
+        help="Disable bisecting the mesh when tetrahedralizing."
+    )
+    parser.add_argument(
         "-o",
         "--output",
         type=str,
@@ -284,9 +295,10 @@ def simplify(V, T, args):
 def to_tets(V, T, args):
     tgen = tg.TetGen(V, T)
     nodes, elem, attrib = tgen.tetrahedralize(
-        steinerleft=-1, 
+        steinerleft=args.steiner_points, 
         minratio=args.min_ratio, 
         mindihedral=args.min_dihedral,
+        nobisect=args.nobisect,
         regionattrib=True)
     return nodes, elem, attrib
 
@@ -394,6 +406,8 @@ if __name__ == "__main__":
         if imgui.TreeNode("TetGen Parameters"):
             _, args.min_ratio = imgui.InputFloat("Minimal ratio", args.min_ratio)
             _, args.min_dihedral = imgui.InputFloat("Minimal dihedral angle", args.min_dihedral)
+            _, args.steiner_points = imgui.InputInt("Steiner points (-1 for auto)", args.steiner_points)
+            _, args.nobisect = imgui.Checkbox("Disable bisecting mesh", args.nobisect)
             imgui.TreePop()
 
         if imgui.TreeNode("Remeshing Parameters"):
@@ -401,13 +415,15 @@ if __name__ == "__main__":
             b, args.iterations = imgui.InputInt("Remeshing iterations", args.iterations)
             c, args.feature_dihedral = imgui.InputFloat("Feature dihedral angle", args.feature_dihedral)
             d, args.project = imgui.Checkbox("Project onto original mesh", args.project)
+
+            if imgui.Button("Remesh Surface"):
+                Vr, Tr = remesh(V, T, args)
+                transform = sm2.get_transform()
+                sm2 = ps.register_surface_mesh("Remeshed Surface", Vr, Tr, edge_width=1.0)
+                sm2.set_transform(transform)
             imgui.TreePop()
 
-        if imgui.Button("Remesh Surface"):
-            Vr, Tr = remesh(V, T, args)
-            transform = sm2.get_transform()
-            sm2 = ps.register_surface_mesh("Remeshed Surface", Vr, Tr, edge_width=1.0)
-            sm2.set_transform(transform)
+        
 
         if imgui.Button("Tetrahedralize"):
             if vm is not None:
