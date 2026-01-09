@@ -36,8 +36,7 @@ void BindChebyshev(nanobind::module_& m)
         .def_ro("rho2", &ChebyshevParams::rho2, "Square of spectral radius estimate")
         .def_ro("omega", &ChebyshevParams::omega, "Relaxation parameter")
         .def_ro("xkm1", &ChebyshevParams::xkm1, "Previous iterate")
-        .def_ro("xkm2", &ChebyshevParams::xkm2, "Second previous iterate")
-        .def_ro("k", &ChebyshevParams::k, "Current iteration index");
+        .def_ro("xkm2", &ChebyshevParams::xkm2, "Second previous iterate");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;

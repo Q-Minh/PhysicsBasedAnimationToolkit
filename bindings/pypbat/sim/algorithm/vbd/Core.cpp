@@ -19,6 +19,7 @@ void BindCore(nanobind::module_& m)
     using ScalarType = Scalar;
     using IndexType  = Index;
     using pbat::sim::algorithm::common::FemElastoDynamics;
+    using pbat::sim::algorithm::vbd::EHomogenizationStrategy;
     using pbat::sim::algorithm::vbd::EInitializationStrategy;
     using pbat::sim::algorithm::vbd::Params;
 
@@ -74,6 +75,17 @@ void BindCore(nanobind::module_& m)
         "Returns:\n"
         "    numpy.ndarray: `|# verts| x 1` Vertex colors");
 
+    nb::enum_<EHomogenizationStrategy>(m, "EHomogenizationStrategy")
+        .value("Off", EHomogenizationStrategy::None, "No homogenization")
+        .value(
+            "Sensitivity",
+            EHomogenizationStrategy::Sensitivity,
+            "Homogenize using sensitivity histogram")
+        .value(
+            "Conditioning",
+            EHomogenizationStrategy::Conditioning,
+            "Homogenize using conditioning histogram");
+
     nb::class_<Params>(m, "Params")
         .def(nb::init<>())
         .def(
@@ -124,6 +136,17 @@ void BindCore(nanobind::module_& m)
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
+            "with_homogenization",
+            &Params::WithHomogenization,
+            nb::arg("strategy"),
+            nb::rv_policy::reference_internal,
+            "Homogenization strategy.\n\n"
+            "Args:\n"
+            "    strategy (pbat.sim.algorithm.vbd.EHomogenizationStrategy): Homogenization "
+            "strategy\n"
+            "Returns:\n"
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
+        .def(
             "with_hessian_determinant_zero",
             &Params::WithHessianDeterminantZeroUnder,
             nb::arg("zero"),
@@ -164,7 +187,9 @@ void BindCore(nanobind::module_& m)
         .def_rw("Padj", &Params::Padj, "`|# verts|` partition vertices")
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold");
+        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
+        .def_ro("smin", &Params::smin, "`|# nodes|` minimum sensitivities")
+        .def_ro("k", &Params::k, "Current iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;

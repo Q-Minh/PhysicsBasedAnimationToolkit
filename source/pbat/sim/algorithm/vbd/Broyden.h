@@ -44,7 +44,6 @@ struct BroydenParams
     /**
      * @brief Read/Write parameters
      */
-    Index k;        ///< Current iteration
     MatrixX Fk;     ///< `|# dofs| x m` residual differences
     MatrixX Xk;     ///< `|# dofs| x m` past step differences
     VectorX xkm1;   ///< `|# dofs| x 1` previous step
@@ -232,7 +231,6 @@ void InitializeSolve(
     Iterate(fem, contact, params);
     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
-    broyden.k    = 1;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -243,7 +241,8 @@ void Iterate(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Iterate");
-    auto dkl = pbat::common::Modulo(broyden.k - 1, broyden.m);
+    Index k  = params.k;
+    auto dkl = pbat::common::Modulo(k - 1, broyden.m);
     // Update (preconditioned) history
     broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
     broyden.xkm1        = fem.x.reshaped();
@@ -253,7 +252,7 @@ void Iterate(
     broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
     broyden.fkm1        = broyden.fk;
     // Solve least-squares problem
-    auto mk = std::min(broyden.m, broyden.k);
+    auto mk = std::min(broyden.m, k);
     auto Fk = broyden.Fk.leftCols(mk);
     // NOTE: The decomposition solvers (i.e. COD, QR) should use an updating scheme here instead of
     // recomputing from scratch every time (Eigen does not seem to support it), but the updating
@@ -264,8 +263,7 @@ void Iterate(
             broyden.qr.compute(Fk);
             if (broyden.qr.info() != Eigen::ComputationInfo::Success)
             {
-                throw std::runtime_error(
-                    fmt::format("QR decomposition failed at iteration {}", broyden.k));
+                throw std::runtime_error(fmt::format("QR decomposition failed at iteration {}", k));
             }
             broyden.gammak.head(mk) = broyden.qr.solve(broyden.fk);
         }
@@ -293,7 +291,7 @@ void Iterate(
             if (broyden.cod.info() != Eigen::ComputationInfo::Success)
             {
                 throw std::runtime_error(
-                    fmt::format("COD decomposition failed at iteration {}", broyden.k));
+                    fmt::format("COD decomposition failed at iteration {}", k));
             }
             broyden.gammak.head(mk) = broyden.cod.solve(broyden.fk);
         }
@@ -392,7 +390,6 @@ void Iterate(
         }
         default: break;
     }
-    ++broyden.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -403,7 +400,7 @@ void Solve(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
-    for (; broyden.k < params.nMaxIters;)
+    while (params.k < params.nMaxIters)
     {
         if (contact.RequiresBoundsComputation())
             contact.ComputeDisplacementBounds(fem.x);

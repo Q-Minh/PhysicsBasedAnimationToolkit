@@ -70,7 +70,6 @@ void BindBroyden(nanobind::module_& m)
             "broyden_beta_B",
             &BroydenParams::betaB,
             "Rank estimate for Bk in diagonal Cauchy-Schwarz updating")
-        .def_ro("k", &BroydenParams::k, "Current iteration")
         .def_ro("Fk", &BroydenParams::Fk, "`|# dofs| x m` residual differences")
         .def_ro("Xk", &BroydenParams::Xk, "`|# dofs| x m` past step differences")
         .def_ro("xkm1", &BroydenParams::xkm1, "`|# dofs| x 1` previous step")

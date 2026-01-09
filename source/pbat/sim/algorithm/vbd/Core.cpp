@@ -65,6 +65,12 @@ Params& Params::WithMaximumIterations(Index nIters)
     return *this;
 }
 
+PBAT_API Params& Params::WithHomogenization(EHomogenizationStrategy strategy)
+{
+    eHomogenizationStrategy = strategy;
+    return *this;
+}
+
 Params& Params::WithHessianDeterminantZeroUnder(Scalar zero)
 {
     detHZero = zero;
@@ -112,6 +118,7 @@ Params& Params::Construct(bool bValidate)
         }
     }
     xb.resize(3, nVerts);
+    smin.resize(nVerts);
     return *this;
 }
 
@@ -127,20 +134,24 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteData("xb", xb);
+    group.WriteData("smin", smin);
+    group.WriteMetaData("k", k);
 }
 
 void Params::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
-    GVGp              = group.ReadData<IndexVectorX>("GVGp");
-    GVGe              = group.ReadData<IndexVectorX>("GVGe");
-    GVGilocal         = group.ReadData<IndexVectorX>("GVGilocal");
-    colors            = group.ReadData<IndexVectorX>("colors");
-    Pptr              = group.ReadData<IndexVectorX>("Pptr");
-    Padj              = group.ReadData<IndexVectorX>("Padj");
-    detHZero          = group.ReadMetaData<Scalar>("detHZero");
-    nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
-    xb                = group.ReadData<MatrixX>("xb");
+    GVGp              = group.ReadData<decltype(GVGp)>("GVGp");
+    GVGe              = group.ReadData<decltype(GVGe)>("GVGe");
+    GVGilocal         = group.ReadData<decltype(GVGilocal)>("GVGilocal");
+    colors            = group.ReadData<decltype(colors)>("colors");
+    Pptr              = group.ReadData<decltype(Pptr)>("Pptr");
+    Padj              = group.ReadData<decltype(Padj)>("Padj");
+    detHZero          = group.ReadMetaData<decltype(detHZero)>("detHZero");
+    nMaxIters         = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
+    xb                = group.ReadData<decltype(xb)>("xb");
+    smin              = group.ReadData<decltype(smin)>("smin");
+    k                 = group.ReadMetaData<decltype(k)>("k");
 }
 
 } // namespace pbat::sim::algorithm::vbd

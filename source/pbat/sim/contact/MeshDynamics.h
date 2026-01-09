@@ -84,7 +84,7 @@ class MeshDynamics
         ogc::Params<TScalar> mOgcParams; ///< OGC parameters
         TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
                             ///< smooth transition
-        TScalar kc{1e8};    ///< OGC contact stiffness parameter, `kc > 0`
+        TScalar kc{1e3};    ///< OGC contact stiffness parameter, `kc > 0`
         TScalar mu{0.5};    ///< OGC friction coefficient, `mu >= 0`
 
         /**

@@ -48,6 +48,15 @@ enum class EBroydenJacobianEstimate {
 };
 // clang-format on
 
+/**
+ * @brief Homogenization strategy
+ */
+enum class EHomogenizationStrategy {
+    None,                  ///< No homogenization
+    Sensitivity,  ///< Homogenize using sensitivity histogram
+    Conditioning, ///< Homogenize using conditioning histogram
+};
+
 } // namespace pbat::sim::algorithm::vbd
 
 #endif // PBAT_SIM_ALGORITHM_VBD_ENUMS_H
