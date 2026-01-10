@@ -161,8 +161,10 @@ struct Params
      * @brief Read-write
      */
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xb; ///< `3 x |# nodes|` buffer positions
-    Eigen::Vector<Scalar, Eigen::Dynamic> smin;  ///< `|# nodes|` minimum sensitivities
-    Index k;                                     ///< Current iteration index
+    Eigen::Matrix<Scalar, 5, Eigen::Dynamic>
+        gamma; ///< `5 x |# nodes|` homogenization factors per column (mass, hydrostatic stress,
+               ///< deviatoric stress, normal contact, frictional contact)
+    Index k;   ///< Current iteration index
 };
 
 /**
@@ -263,9 +265,8 @@ void AccumulateElasticEnergy(
 {
     using namespace math::linalg;
     using mini::FromEigen;
-    auto begin  = params.GVGp(i);
-    auto end    = params.GVGp(i + 1);
-    Scalar smin = std::numeric_limits<Scalar>::max();
+    auto begin = params.GVGp(i);
+    auto end   = params.GVGp(i + 1);
     for (auto n = begin; n < end; ++n)
     {
         auto ilocal                     = params.GVGilocal(n);
@@ -835,12 +836,12 @@ void Iterate(
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact dynamics
- * @param params Solver parameters (in/out: smin is initialized based on homogenization strategy)
+ * @param params Solver parameters (in/out: gamma is initialized based on homogenization strategy)
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeHomogenization(
-    common::FemElastoDynamics<TElasticEnergy>& fem,
+    [[maybe_unused]] common::FemElastoDynamics<TElasticEnergy>& fem,
     [[maybe_unused]] contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
@@ -849,11 +850,9 @@ void InitializeHomogenization(
     {
         case EHomogenizationStrategy::None: break;
         case EHomogenizationStrategy::Sensitivity: {
-            params.smin = ((fem.x - fem.xtilde) * fem.m.asDiagonal()).colwise().norm();
             break;
         }
         case EHomogenizationStrategy::Conditioning: {
-            params.smin = fem.m;
             break;
         }
     }

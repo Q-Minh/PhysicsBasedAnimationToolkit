@@ -188,7 +188,11 @@ void BindCore(nanobind::module_& m)
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
         .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
-        .def_ro("smin", &Params::smin, "`|# nodes|` minimum sensitivities")
+        .def_ro(
+            "gamma",
+            &Params::gamma,
+            "`5 x |# nodes|` homogenization factors (mass, hydrostatic stress, deviatoric stress, "
+            "normal contact, frictional contact)")
         .def_ro("k", &Params::k, "Current iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;

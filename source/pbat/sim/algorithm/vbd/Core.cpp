@@ -118,7 +118,7 @@ Params& Params::Construct(bool bValidate)
         }
     }
     xb.resize(3, nVerts);
-    smin.resize(nVerts);
+    gamma.resize(5, nVerts);
     return *this;
 }
 
@@ -134,24 +134,35 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteData("xb", xb);
-    group.WriteData("smin", smin);
+    group.WriteData("gamma", gamma);
     group.WriteMetaData("k", k);
 }
 
 void Params::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
-    GVGp              = group.ReadData<decltype(GVGp)>("GVGp");
-    GVGe              = group.ReadData<decltype(GVGe)>("GVGe");
-    GVGilocal         = group.ReadData<decltype(GVGilocal)>("GVGilocal");
-    colors            = group.ReadData<decltype(colors)>("colors");
-    Pptr              = group.ReadData<decltype(Pptr)>("Pptr");
-    Padj              = group.ReadData<decltype(Padj)>("Padj");
-    detHZero          = group.ReadMetaData<decltype(detHZero)>("detHZero");
-    nMaxIters         = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
-    xb                = group.ReadData<decltype(xb)>("xb");
-    smin              = group.ReadData<decltype(smin)>("smin");
-    k                 = group.ReadMetaData<decltype(k)>("k");
+    if (group.HasData("GVGp"))
+        GVGp = group.ReadData<decltype(GVGp)>("GVGp");
+    if (group.HasData("GVGe"))
+        GVGe = group.ReadData<decltype(GVGe)>("GVGe");
+    if (group.HasData("GVGilocal"))
+        GVGilocal = group.ReadData<decltype(GVGilocal)>("GVGilocal");
+    if (group.HasData("colors"))
+        colors = group.ReadData<decltype(colors)>("colors");
+    if (group.HasData("Pptr"))
+        Pptr = group.ReadData<decltype(Pptr)>("Pptr");
+    if (group.HasData("Padj"))
+        Padj = group.ReadData<decltype(Padj)>("Padj");
+    if (group.HasData("detHZero"))
+        detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
+    if (group.HasMetaData("nMaxIters"))
+        nMaxIters = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
+    if (group.HasData("xb"))
+        xb = group.ReadData<decltype(xb)>("xb");
+    if (group.HasData("gamma"))
+        gamma = group.ReadData<decltype(gamma)>("gamma");
+    if (group.HasMetaData("k"))
+        k = group.ReadMetaData<decltype(k)>("k");
 }
 
 } // namespace pbat::sim::algorithm::vbd
