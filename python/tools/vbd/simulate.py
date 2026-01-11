@@ -480,6 +480,7 @@ def main():
 
     # Collect all param objects and apply overrides in one fell swoop
     all_params = {**solver_params, "contact": contact_dynamics_params}
+    args.overrides = args.overrides or []
     if len(args.overrides) > 0:
         apply_overrides(all_params, args.overrides)
     contact_dynamics.params = contact_dynamics_params.construct()
