@@ -52,7 +52,11 @@ enum class EBroydenJacobianEstimate {
  * @brief Homogenization strategy
  */
 enum class EHomogenizationStrategy {
-    None,                  ///< No homogenization
+    None,                                                      ///< No homogenization
+    HomogeneousElasticityWithDynamicsMatchingContactStiffness, ///< Homogenize elastic material and
+                                                               ///< ensure dynamics matching contact
+                                                               ///< stiffness in the spirit of \cite
+                                                               ///< ando_cubic_2024
     Sensitivity,  ///< Homogenize using sensitivity histogram
     Conditioning, ///< Homogenize using conditioning histogram
 };

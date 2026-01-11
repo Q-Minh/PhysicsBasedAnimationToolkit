@@ -261,12 +261,15 @@ void AccumulateElasticEnergy(
     Index i,
     common::FemElastoDynamics<TElasticEnergy>& fem,
     Params& params,
+    Scalar gammaimu,
+    Scalar gammailambda,
     FOnEnergyDerivativesComputed&& fOnEnergyDerivativesComputed)
 {
     using namespace math::linalg;
     using mini::FromEigen;
-    auto begin = params.GVGp(i);
-    auto end   = params.GVGp(i + 1);
+    Scalar kbudget = (1 - Scalar(params.k) / (params.nMaxIters - 1));
+    auto begin     = params.GVGp(i);
+    auto end       = params.GVGp(i + 1);
     for (auto n = begin; n < end; ++n)
     {
         auto ilocal                     = params.GVGilocal(n);
@@ -281,7 +284,22 @@ void AccumulateElasticEnergy(
         TElasticEnergy Psi{};
         mini::SVector<Scalar, 9> gF;
         mini::SMatrix<Scalar, 9, 9> HF;
-        Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
+        if (params.eHomogenizationStrategy ==
+            EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness)
+        {
+            auto expmu     = kbudget * (gammaimu - std::log10(lamee(0)));
+            auto explambda = kbudget * (gammailambda - std::log10(lamee(1)));
+            Psi.GradAndHessian(
+                Fe,
+                std::pow(Scalar(10), expmu) * lamee(0),
+                std::pow(Scalar(10), explambda) * lamee(1),
+                gF,
+                HF);
+        }
+        else
+        {
+            Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
+        }
         mini::SMatrix<Scalar, 3, 3> Hie = mini::Zeros<Scalar, 3, 3>();
         mini::SVector<Scalar, 3> gie    = mini::Zeros<Scalar, 3, 1>();
         kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hie);
@@ -780,6 +798,12 @@ void Iterate(
             auto i = params.Padj(k);
             if (fem.IsDirichletNode(i))
                 return;
+            // Fetch vertex data
+            mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).template head<3>());
+            mini::SVector<Scalar, 3> xti     = FromEigen(xt.col(i).template head<3>());
+            Scalar m                         = fem.m(i);
+            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
+            mini::SVector<Scalar, 5> gammai  = FromEigen(params.gamma.col(i).template head<5>());
             // Vertex derivatives
             mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
             mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
@@ -788,6 +812,8 @@ void Iterate(
                 i,
                 fem,
                 params,
+                gammai(1),
+                gammai(2),
                 [&](Scalar lambda,
                     Scalar mu,
                     mini::SVector<Scalar, 3> const& gie,
@@ -820,10 +846,10 @@ void Iterate(
                     Hi += Hic;
                 });
             // "Kinetic" energy
-            Scalar m                         = fem.m(i);
-            mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
             kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
+            // Damping
             kernels::AddDamping(Scalar(1) / h /*h*/, xti, xi, params.betaR, gi, Hi);
+            // Solve
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
             fem.x.col(i) = ToEigen(xi);
         });
@@ -841,14 +867,32 @@ void Iterate(
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeHomogenization(
-    [[maybe_unused]] common::FemElastoDynamics<TElasticEnergy>& fem,
+    common::FemElastoDynamics<TElasticEnergy>& fem,
     [[maybe_unused]] contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeHomogenization");
     switch (params.eHomogenizationStrategy)
     {
-        case EHomogenizationStrategy::None: break;
+        case EHomogenizationStrategy::None: break; params.gamma.setOnes();
+        case EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness: {
+            // Mass
+            params.gamma.row(0).setOnes();
+            // Elasticity
+            tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
+                auto begin         = params.GVGp(i);
+                auto end           = params.GVGp(i + 1);
+                auto e             = params.GVGe(Eigen::seqN(begin, end - begin));
+                auto lamee         = fem.lamegU(Eigen::placeholders::all, e);
+                params.gamma(1, i) = std::log10(lamee.row(0).minCoeff());
+                params.gamma(2, i) = std::log10(lamee.row(1).minCoeff());
+            });
+            // Contact
+            Scalar kc = contact.GetParams().kc;
+            Scalar r  = contact.GetParams().mOgcParams.r;
+            params.gamma.bottomRows<2>().setConstant(r / kc);
+            break;
+        }
         case EHomogenizationStrategy::Sensitivity: {
             break;
         }

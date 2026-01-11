@@ -133,6 +133,7 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
+    group.WriteMetaData("eHomogenizationStrategy", static_cast<int>(eHomogenizationStrategy));
     group.WriteData("xb", xb);
     group.WriteData("gamma", gamma);
     group.WriteMetaData("k", k);
@@ -157,6 +158,9 @@ void Params::Deserialize(io::Archive const& archive)
         detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
     if (group.HasMetaData("nMaxIters"))
         nMaxIters = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
+    if (group.HasMetaData("eHomogenizationStrategy"))
+        eHomogenizationStrategy = static_cast<EHomogenizationStrategy>(
+            group.ReadMetaData<int>("eHomogenizationStrategy"));
     if (group.HasData("xb"))
         xb = group.ReadData<decltype(xb)>("xb");
     if (group.HasData("gamma"))

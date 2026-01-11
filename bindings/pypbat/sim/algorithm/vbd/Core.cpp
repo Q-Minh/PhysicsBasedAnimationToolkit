@@ -78,6 +78,12 @@ void BindCore(nanobind::module_& m)
     nb::enum_<EHomogenizationStrategy>(m, "EHomogenizationStrategy")
         .value("Off", EHomogenizationStrategy::None, "No homogenization")
         .value(
+            "HomogeneousElasticityWithDynamicsMatchingContactStiffness",
+            EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness,
+            "Homogenize elastic material and ensure dynamics matching contact stiffness in the "
+            "spirit of "
+            "@cite ando_cubic_2024")
+        .value(
             "Sensitivity",
             EHomogenizationStrategy::Sensitivity,
             "Homogenize using sensitivity histogram")
@@ -188,6 +194,10 @@ void BindCore(nanobind::module_& m)
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
         .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
         .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
+        .def_rw(
+            "homogenization_strategy",
+            &Params::eHomogenizationStrategy,
+            "Homogenization strategy")
         .def_ro(
             "gamma",
             &Params::gamma,
