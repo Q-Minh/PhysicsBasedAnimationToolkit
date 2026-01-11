@@ -210,6 +210,19 @@ void BindMeshDynamics(nanobind::module_& m)
             "Args:\n"
             "    kc (float): Contact stiffness parameter, `kc > 0`.\n")
         .def(
+            "with_query_radius_initialization",
+            &MeshDynamicsParamsType::WithQueryRadiusInitialization,
+            nb::arg("rqstart"),
+            nb::arg("betarq"),
+            nb::rv_policy::reference_internal,
+            "Set the query radius initialization parameters.\n\n"
+            "Args:\n"
+            "    rqstart (float): Base query radius (larger than contact radius `r`) on which we "
+            "add a linear function of inertial target distance to initialize the actual query "
+            "radius.\n"
+            "    betarq (float): Slope of the linear function of inertial target distance to add "
+            "to `rqstart` to initialize the actual query radius.\n")
+        .def(
             "construct",
             &MeshDynamicsParamsType::Construct,
             nb::arg("validate") = true,
@@ -217,6 +230,14 @@ void BindMeshDynamics(nanobind::module_& m)
             "Construct the Params object.\n\n"
             "Args:\n"
             "    validate (bool, optional): Whether to validate parameters. Default is True.\n")
+        .def(
+            "compute_query_radius",
+            &MeshDynamicsParamsType::ComputeQueryRadius,
+            nb::arg("inertial_target_distance"),
+            "Compute the contact query radius given the inertial target distance.\n\n"
+            "Args:\n"
+            "    inertial_target_distance (float): Inertial target distance (or other relevant "
+            "distance).\n")
         .def(
             "serialize",
             &MeshDynamicsParamsType::Serialize,
@@ -238,7 +259,9 @@ void BindMeshDynamics(nanobind::module_& m)
             "(float) IPC's relative velocity threshold for static to dynamic friction's smooth "
             "transition.")
         .def_rw("mu", &MeshDynamicsParamsType::mu, "(float) Dynamic friction coefficient.")
-        .def_rw("kc", &MeshDynamicsParamsType::kc, "(float) OGC contact stiffness parameter.");
+        .def_rw("kc", &MeshDynamicsParamsType::kc, "(float) OGC contact stiffness parameter.")
+        .def_rw("rqstart", &MeshDynamicsParamsType::rqstart, "(float) Initial query radius base.")
+        .def_rw("betarq", &MeshDynamicsParamsType::betarq, "(float) Query radius growth factor.");
 
     nb::class_<MeshDynamicsType>(m, "MeshDynamics")
         .def(nb::init<>(), "Construct an empty mesh contact dynamics engine.")

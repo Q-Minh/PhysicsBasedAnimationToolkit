@@ -493,9 +493,8 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& conta
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.InitializeSolve");
     params.newton.InitializeSolve(fem.x.reshaped());
-    auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
-    auto& ogcParams = contact.GetParams().mOgcParams;
-    ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
+    auto const xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+    contact.GetParams().ComputeQueryRadius((fem.xtilde - xt).colwise().norm().maxCoeff());
     contact.ComputeDisplacementBounds(xt);
     TruncateDisplacedPositions(fem, contact, params, xt);
 }
