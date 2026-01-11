@@ -126,7 +126,7 @@ Params& Params::Construct(bool bValidate)
         }
     }
     xb.resize(3, nVerts);
-    gamma.resize(5, nVerts);
+    log10lame.resize(2, GVGe.size());
     return *this;
 }
 
@@ -144,7 +144,7 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteMetaData("eHomogenizationStrategy", static_cast<int>(eHomogenizationStrategy));
     group.WriteMetaData("betac", betac);
     group.WriteData("xb", xb);
-    group.WriteData("gamma", gamma);
+    group.WriteData("log10lame", log10lame);
     group.WriteMetaData("k", k);
 }
 
@@ -174,8 +174,8 @@ void Params::Deserialize(io::Archive const& archive)
         betac = group.ReadMetaData<decltype(betac)>("betac");
     if (group.HasData("xb"))
         xb = group.ReadData<decltype(xb)>("xb");
-    if (group.HasData("gamma"))
-        gamma = group.ReadData<decltype(gamma)>("gamma");
+    if (group.HasData("log10lame"))
+        log10lame = group.ReadData<decltype(log10lame)>("log10lame");
     if (group.HasMetaData("k"))
         k = group.ReadMetaData<decltype(k)>("k");
 }
@@ -300,16 +300,9 @@ TEST_CASE("[sim][algorithm][vbd] Sandbox")
     // params.Deserialize(archive["vbd/params"]);
     // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
     // contact.Initialize(device);
-    // contact.GetParams()
-    //     .WithNormalContact(contact.GetParams().kc)
-    //     .WithFrictionalContact(contact.GetParams().mu, contact.GetParams().epsv);
-    // contact.ComputeDisplacementBounds(fem.x);
-    // for (auto t = 0; t < 50; ++t)
-    // {
-    //     fem.SetupTimeIntegrationOptimization(
-    //         sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
-    //     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-    //     sim::algorithm::vbd::Solve(fem, contact, params);
-    //     fem.Step();
-    // }
+    // contact.GetParams().Construct();
+    // fem.SetupTimeIntegrationOptimization(
+    //     sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
+    // sim::algorithm::vbd::InitializeSolve(fem, contact, params);
+    // sim::algorithm::vbd::Solve(fem, contact, params);
 }

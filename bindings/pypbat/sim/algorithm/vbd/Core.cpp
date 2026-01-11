@@ -202,11 +202,6 @@ void BindCore(nanobind::module_& m)
             &Params::eHomogenizationStrategy,
             "Homogenization strategy")
         .def_rw("betac", &Params::betac, "Contact homogenization conditioning factor")
-        .def_ro(
-            "gamma",
-            &Params::gamma,
-            "`5 x |# nodes|` homogenization factors (mass, hydrostatic stress, deviatoric stress, "
-            "normal contact, frictional contact)")
         .def_ro("k", &Params::k, "Current iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
