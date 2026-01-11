@@ -824,8 +824,6 @@ void Iterate(
             gi *= h2;
             Hi *= h2;
             // Contact energy
-            mini::SVector<Scalar, 3> xi  = FromEigen(fem.x.col(i).template head<3>());
-            mini::SVector<Scalar, 3> xti = FromEigen(xt.col(i).template head<3>());
             detail::AccumulateContactEnergy(
                 i,
                 xi,
@@ -909,9 +907,8 @@ void InitializeSolve(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
-    auto const xt   = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
-    auto& ogcParams = contact.GetParams().mOgcParams;
-    ogcParams.rq    = ogcParams.r + (fem.xtilde - xt).colwise().norm().maxCoeff();
+    auto const xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+    contact.GetParams().ComputeQueryRadius((fem.xtilde - xt).colwise().norm().maxCoeff());
     contact.ComputeDisplacementBounds(xt);
     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     InitializeHomogenization<TElasticEnergy>(fem, contact, params);
