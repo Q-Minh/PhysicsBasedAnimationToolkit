@@ -65,9 +65,10 @@ Params& Params::WithMaximumIterations(Index nIters)
     return *this;
 }
 
-PBAT_API Params& Params::WithHomogenization(EHomogenizationStrategy strategy)
+PBAT_API Params& Params::WithHomogenization(EHomogenizationStrategy strategy, Scalar _betac)
 {
-    eHomogenizationStrategy = strategy;
+    this->eHomogenizationStrategy = strategy;
+    this->betac                   = _betac;
     return *this;
 }
 
@@ -116,6 +117,13 @@ Params& Params::Construct(bool bValidate)
                     GVGilocal.size(),
                     nVertexElementAdjacencies));
         }
+        if (betac <= 0)
+        {
+            throw std::invalid_argument(
+                fmt::format(
+                    "Contact homogenization conditioning factor betac {} must be positive",
+                    betac));
+        }
     }
     xb.resize(3, nVerts);
     gamma.resize(5, nVerts);
@@ -134,6 +142,7 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("eHomogenizationStrategy", static_cast<int>(eHomogenizationStrategy));
+    group.WriteMetaData("betac", betac);
     group.WriteData("xb", xb);
     group.WriteData("gamma", gamma);
     group.WriteMetaData("k", k);
@@ -161,6 +170,8 @@ void Params::Deserialize(io::Archive const& archive)
     if (group.HasMetaData("eHomogenizationStrategy"))
         eHomogenizationStrategy = static_cast<EHomogenizationStrategy>(
             group.ReadMetaData<int>("eHomogenizationStrategy"));
+    if (group.HasMetaData("betac"))
+        betac = group.ReadMetaData<decltype(betac)>("betac");
     if (group.HasData("xb"))
         xb = group.ReadData<decltype(xb)>("xb");
     if (group.HasData("gamma"))

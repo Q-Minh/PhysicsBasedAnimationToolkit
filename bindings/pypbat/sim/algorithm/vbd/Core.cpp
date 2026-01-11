@@ -145,11 +145,14 @@ void BindCore(nanobind::module_& m)
             "with_homogenization",
             &Params::WithHomogenization,
             nb::arg("strategy"),
+            nb::arg("betac") = 0.5,
             nb::rv_policy::reference_internal,
             "Homogenization strategy.\n\n"
             "Args:\n"
             "    strategy (pbat.sim.algorithm.vbd.EHomogenizationStrategy): Homogenization "
             "strategy\n"
+            "    betac (float): Contact homogenization conditioning factor for stiffness "
+            "matching strategy\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
@@ -198,6 +201,7 @@ void BindCore(nanobind::module_& m)
             "homogenization_strategy",
             &Params::eHomogenizationStrategy,
             "Homogenization strategy")
+        .def_rw("betac", &Params::betac, "Contact homogenization conditioning factor")
         .def_ro(
             "gamma",
             &Params::gamma,

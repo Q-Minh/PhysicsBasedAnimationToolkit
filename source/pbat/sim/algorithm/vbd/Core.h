@@ -111,9 +111,10 @@ struct Params
     /**
      * @brief Homogenization strategy
      * @param strategy Homogenization strategy
+     * @param betac Contact homogenization conditioning factor for stiffness matching strategy
      * @return Reference to this
      */
-    PBAT_API Params& WithHomogenization(EHomogenizationStrategy strategy);
+    PBAT_API Params& WithHomogenization(EHomogenizationStrategy strategy, Scalar betac = 0.5);
     /**
      * @brief Numerical zero for hessian pseudo-singularity check
      * @param zero Numerical zero
@@ -154,8 +155,12 @@ struct Params
     Scalar betaR{0};     ///< Rayleigh damping coefficient
     Index nMaxIters{25}; ///< Maximum number of VBD iterations
     Scalar detHZero{0};  ///< Numerical zero for hessian pseudo-singularity check
+
+    // Homogenization
     EHomogenizationStrategy eHomogenizationStrategy{
         EHomogenizationStrategy::None}; ///< Homogenization strategy
+    Scalar betac{
+        10}; ///< Contact homogenization conditioning factor for stiffness matching strategy
 
     /**
      * @brief Read-write
@@ -824,6 +829,14 @@ void Iterate(
             gi *= h2;
             Hi *= h2;
             // Contact energy
+            bool bHomogenize =
+                (params.eHomogenizationStrategy ==
+                 EHomogenizationStrategy::
+                     HomogeneousElasticityWithDynamicsMatchingContactStiffness);
+            Scalar gammac                   = bHomogenize ? (m + Norm(Hi)) * (rB / kcB) : Scalar(1);
+            mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
+            mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
+            int nContacts{0};
             detail::AccumulateContactEnergy(
                 i,
                 xi,
@@ -839,10 +852,24 @@ void Iterate(
                 mu,
                 epsvh,
                 Scalar(1) /*h2inv*/,
-                [&](mini::SVector<Scalar, 3> const& gic, mini::SMatrix<Scalar, 3, 3> const& Hic) {
+                [&](mini::SVector<Scalar, 3> const& gicc, mini::SMatrix<Scalar, 3, 3> const& Hicc) {
+                    gic += gammac * gicc;
+                    Hic += gammac * Hicc;
+                    ++nContacts;
+                });
+            if (nContacts > 0)
+            {
+                if (bHomogenize)
+                {
+                    gi += params.betac * gic / Scalar(nContacts);
+                    Hi += params.betac * Hic / Scalar(nContacts);
+                }
+                else
+                {
                     gi += gic;
                     Hi += Hic;
-                });
+                }
+            }
             // "Kinetic" energy
             kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
             // Damping
@@ -874,8 +901,6 @@ void InitializeHomogenization(
     {
         case EHomogenizationStrategy::None: break; params.gamma.setOnes();
         case EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness: {
-            // Mass
-            params.gamma.row(0).setOnes();
             // Elasticity
             tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
                 auto begin         = params.GVGp(i);
@@ -885,10 +910,6 @@ void InitializeHomogenization(
                 params.gamma(1, i) = std::log10(lamee.row(0).minCoeff());
                 params.gamma(2, i) = std::log10(lamee.row(1).minCoeff());
             });
-            // Contact
-            Scalar kc = contact.GetParams().kc;
-            Scalar r  = contact.GetParams().mOgcParams.r;
-            params.gamma.bottomRows<2>().setConstant(r / kc);
             break;
         }
         case EHomogenizationStrategy::Sensitivity: {
