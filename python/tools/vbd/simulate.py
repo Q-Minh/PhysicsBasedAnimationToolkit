@@ -33,9 +33,9 @@ def vbd_prepare(
 
 _archive_solver_groups = {
     "vbd": "Solver/VBD",
-    "anderson": "Solver/Anderson",
-    "broyden": "Solver/Broyden",
-    "chebychev": "Solver/Chebychev",
+    "anderson_vbd": "Solver/Anderson",
+    "broyden_vbd": "Solver/Broyden",
+    "chebyshev_vbd": "Solver/Chebychev",
     "newton": "Solver/Newton",
 }
 
@@ -368,7 +368,7 @@ def load_solver_params(
         try:
             archive = pbat.io.Archive(solver_params, flags=pbat.io.AccessMode.ReadOnly)
             param_objs[param_name].deserialize(
-                archive.get(_archive_solver_groups[param_name])
+                archive.get(_archive_solver_groups[solver])
             )
             archive = None
             gc.collect()
