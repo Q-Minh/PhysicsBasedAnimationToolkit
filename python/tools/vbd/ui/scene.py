@@ -10,35 +10,49 @@ import os
 import typing
 import numpy as np
 import h5py as h5
-from .utils.box_selection import BoxSelection, SelectionTargets
+from .utils.box_selection import Selection, BoxSelection, RegionSelection, SelectionTargets
 from .utils.transform_library import TransformLibrary
 from .utils import styles
 
 
-class BoxSelectionList:
+class SelectionList:
     _default_value: typing.Any
     _selection_target: SelectionTargets
     _listener: typing.Callable[[int, typing.Any, np.ndarray[int]], None]
     _recycled_indices: list[int]
-    _selectors: list[BoxSelection]
+    _selectors: list[Selection]
+    _list_type: str
 
-    def __init__(self, selection_target: SelectionTargets, default_value, listener):
+    def __init__(self, selection_target: SelectionTargets, default_value, list_type: str, listener):
         self._selection_target = selection_target
         self._default_value = default_value
         self._listener = listener
         self._recycled_indices = []
         self._selectors = []
-
+        self._list_type = list_type
+        
     def on_selector_added(self, prop_type: str):
-        self._selectors.append(
-            BoxSelection(
-                f"{prop_type} - {self._get_new_id()}",
-                prop_type,
-                self._default_value,
-                self._selection_target,
-                self._listener,
+        if self._list_type == BoxSelection.__name__:
+            self._selectors.append(
+                BoxSelection(
+                    f"{prop_type} - {self._get_new_id()}",
+                    prop_type,
+                    self._default_value,
+                    self._selection_target,
+                    self._listener,
+                )
             )
-        )
+        elif self._list_type == RegionSelection.__name__:
+            self._selectors.append(
+                RegionSelection(
+                    f"{prop_type} - {self._get_new_id()}",
+                    prop_type,
+                    self._default_value,
+                    self._listener,
+                )
+            )
+        else:
+            raise ValueError(f"No SelectionList support for type {self._list_type}")
         self._selectors[-1].on_added()
 
     def remove_selector(self, idx: int):
@@ -58,75 +72,96 @@ class Scene:
     _tet_elastic_bodies: list[TetrahedralElastodynamicsBody]
     _recycled_tet_elastic_body_indices: list[int]
     _transform_library: TransformLibrary
-    _selector_lists: dict[str, BoxSelectionList]
+    _box_selector_lists: dict[str, SelectionList]
+    _region_selector_lists: dict[str, SelectionList]
     _current_selection_property_idx: int
     _static_mesh_colliders: list[StaticMeshCollider]
+
+    def set_young_modulus(self, b, prop_value, inds): 
+        self._tet_elastic_bodies[b].set_young_modulus(prop_value, inds)
+
+    def set_poisson_ratio(self, b, prop_value, inds): 
+        self._tet_elastic_bodies[b].set_poisson_ratio(prop_value, inds)
+    
+    def set_mass_density(self, b, prop_value, inds): 
+        self._tet_elastic_bodies[b].set_mass_density(prop_value, inds)
+
+    def set_external_load(self, b, prop_value, inds): 
+        self._tet_elastic_bodies[b].set_external_load(prop_value, inds)
+
+    def set_initial_velocities(self, b, prop_value, inds): 
+        self._tet_elastic_bodies[b].set_initial_velocities(prop_value, inds),
+
 
     def __init__(self):
         self._tet_elastic_bodies = []
         self._recycled_tet_elastic_body_indices = []
-        self._selector_lists = {
-            "Young's Modulus": BoxSelectionList(
-                SelectionTargets.CELL,
-                1e6,
-                lambda b, prop_value, inds: self._tet_elastic_bodies[
-                    b
-                ].set_young_modulus(prop_value, inds),
-            ),
-            "Poisson's Ratio": BoxSelectionList(
-                SelectionTargets.CELL,
-                0.45,
-                lambda b, prop_value, inds: self._tet_elastic_bodies[
-                    b
-                ].set_poisson_ratio(prop_value, inds),
-            ),
-            "Mass Density": BoxSelectionList(
-                SelectionTargets.CELL,
-                1e3,
-                lambda b, prop_value, inds: self._tet_elastic_bodies[
-                    b
-                ].set_mass_density(prop_value, inds),
-            ),
-            "External Load": BoxSelectionList(
-                SelectionTargets.CELL,
-                np.zeros(3),
-                lambda b, prop_value, inds: self._tet_elastic_bodies[
-                    b
-                ].set_external_load(prop_value, inds),
-            ),
-            "Initial Velocity": BoxSelectionList(
-                SelectionTargets.VERTEX,
-                np.zeros(3),
-                lambda b, prop_value, inds: self._tet_elastic_bodies[
-                    b
-                ].set_initial_velocities(prop_value, inds),
-            ),
-            "Dirichlet Group": BoxSelectionList(
-                SelectionTargets.VERTEX,
-                1,
-                lambda b, prop_value, inds: self._on_dirichlet_group_applied(
-                    b, prop_value, inds
-                ),
-            ),
+
+        name_to_vars = {
+            "Young's Modulus": {
+                "default": 1e6,
+                "func": self.set_young_modulus
+            },
+            "Poisson's Ratio": {
+                "default": 0.45, 
+                "func": self.set_poisson_ratio
+            }, 
+            "Mass Density": {
+                "default": 1e3,
+                "func": self.set_mass_density
+            },
+            "External Load": {
+                "default": np.zeros(3),
+                "func": self.set_external_load
+            }
         }
+        self._box_selector_lists = {}
+        self._region_selector_lists = {}
+
+        for (name, item) in name_to_vars.items():
+            self._box_selector_lists[name] = SelectionList(
+                SelectionTargets.CELL,
+                item["default"],
+                BoxSelection.__name__,
+                item["func"]
+            )
+            self._region_selector_lists[name] = SelectionList(
+                SelectionTargets.CELL,
+                item["default"],
+                RegionSelection.__name__,
+                item["func"]
+            )
+
+        self._box_selector_lists["Initial Velocity"] = SelectionList(
+            SelectionTargets.VERTEX,
+            np.zeros(3),
+            BoxSelection.__name__,
+            self.set_initial_velocities
+        )
+        self._box_selector_lists["Dirichlet Group"] = SelectionList(
+            SelectionTargets.VERTEX,
+            1,
+            BoxSelection.__name__,
+            lambda b, prop_value, inds: self._on_dirichlet_group_applied(
+                b, prop_value, inds
+            ),
+        )
+        
+
         self._current_selection_property_idx = 0
         self._transform_library = TransformLibrary()
         self._static_mesh_colliders = []
 
     def draw(self):
-        tab_flags = (
-            imgui.ImGuiTabBarFlags_Reorderable
-            | imgui.ImGuiTabBarFlags_FittingPolicyScroll
-            | imgui.ImGuiTabBarFlags_TabListPopupButton
-        )
+        tab_flags = styles.default_tab_flags()
         if imgui.BeginTabBar("Mode bar", tab_flags):
             if imgui.BeginTabItem("Objects", True, tab_flags)[0]:
                 if imgui.Button(
-                    "Add Tetrahedral Body", styles.get_default_button_size()
+                    "Add Tetrahedral Body", styles.default_button_size()
                 ):
                     self._load_tet_elastic_body()
                 if imgui.Button(
-                    "Add Static Mesh Collider", styles.get_default_button_size()
+                    "Add Static Mesh Collider", styles.default_button_size()
                 ):
                     self._load_static_mesh_collider()
                 if imgui.TreeNode("Tetrahedral Elastic Bodies"):
@@ -136,7 +171,7 @@ class Scene:
                             body.draw()
                             styles.set_style_danger()
                             if imgui.Button(
-                                styles.get_delete_key(), styles.get_small_button_size()
+                                styles.delete_key(), styles.small_button_size()
                             ):
                                 body = self._tet_elastic_bodies.pop(b)
                                 body.on_mesh_removed()
@@ -154,39 +189,65 @@ class Scene:
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Selection", True, tab_flags)[0]:
-                prop_names = list(self._selector_lists.keys())
+                prop_names = list(self._box_selector_lists.keys())
                 _, self._current_selection_property_idx = imgui.Combo(
                     "Property",
                     self._current_selection_property_idx,
                     prop_names,
                 )
                 prop_name = prop_names[self._current_selection_property_idx]
-                box_selection_list = self._selector_lists[prop_name]
-                if imgui.Button("Add", styles.get_default_button_size()):
-                    box_selection_list.on_selector_added(prop_name)
-                for s, selector in enumerate(box_selection_list._selectors):
-                    imgui.PushID(f"{prop_name} - {s}")
-                    if imgui.TreeNode(selector.name):
-                        selector.draw(self._tet_elastic_bodies)
-                        imgui.SameLine()
-                        styles.set_style_danger()
-                        if imgui.Button(
-                            styles.get_delete_key(), styles.get_small_button_size()
-                        ):
-                            box_selection_list.remove_selector(s)
-                        styles.pop_most_recent_style()
-                        imgui.TreePop()
-                    imgui.PopID()
+                if imgui.BeginTabBar("Selection_types", tab_flags):
+                    if imgui.BeginTabItem("Box", True, tab_flags)[0]:
+                        box_selection_list = self._box_selector_lists[prop_name]
+                        if imgui.Button("Add", styles.default_button_size()):
+                            box_selection_list.on_selector_added(prop_name)
+                        for s, selector in enumerate(box_selection_list._selectors):
+                            imgui.PushID(f"{prop_name} - {s}")
+                            if imgui.TreeNode(selector.name):
+                                selector.draw(self._tet_elastic_bodies)
+                                imgui.SameLine()
+                                styles.set_style_danger()
+                                if imgui.Button(
+                                    styles.delete_key(), styles.small_button_size()
+                                ):
+                                    box_selection_list.remove_selector(s)
+                                styles.pop_most_recent_style()
+                                imgui.TreePop()
+                            imgui.PopID()
+                        imgui.EndTabItem()
+
+                    if imgui.BeginTabItem("Region", True, tab_flags)[0]:
+                        region_selection_list = self._region_selector_lists.get(prop_name)
+                        if region_selection_list is None:
+                            imgui.Text(f"Region Selection not available for {prop_name}")
+                        else:
+                            if imgui.Button("Add", styles.default_button_size()):
+                                region_selection_list.on_selector_added(prop_name)
+                            for s, selector in enumerate(region_selection_list._selectors):
+                                imgui.PushID(f"{prop_name} - {s}")
+                                if imgui.TreeNode(selector.name):
+                                    selector.draw(self._tet_elastic_bodies)
+                                    imgui.SameLine()
+                                    styles.set_style_danger()
+                                    if imgui.Button(
+                                        styles.delete_key(), styles.small_button_size()
+                                    ):
+                                        region_selection_list.remove_selector(s)
+                                    styles.pop_most_recent_style()
+                                    imgui.TreePop()
+                                imgui.PopID()
+                        imgui.EndTabItem()
+                    imgui.EndTabBar()
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Session", True, tab_flags)[0]:
-                if imgui.Button("Load session", styles.get_default_button_size()):
+                if imgui.Button("Load session", styles.default_button_size()):
                     self._load_session()
                 if imgui.Button(
-                    "Load session (bodies only)", styles.get_default_button_size()
+                    "Load session (bodies only)", styles.default_button_size()
                 ):
                     self._load_session(bodies_only=True)
-                if imgui.Button("Save session", styles.get_default_button_size()):
+                if imgui.Button("Save session", styles.default_button_size()):
                     self._save_session()
                 imgui.EndTabItem()
             imgui.EndTabBar()
@@ -207,7 +268,7 @@ class Scene:
             body.set_visible(visible)
         for smc in self._static_mesh_colliders:
             smc.set_visible(visible)
-        for prop_name, box_selection_list in self._selector_lists.items():
+        for prop_name, box_selection_list in self._box_selector_lists.items():
             for selector in box_selection_list._selectors:
                 selector.set_visible(visible)
         for transform in self._transform_library.transforms:
@@ -292,20 +353,21 @@ class Scene:
             ],
         )
         if file_path:
-            try:
-                imesh = meshio.read(file_path)
-                V = imesh.points
-                T = imesh.cells_dict["tetra"]
-                filename = os.path.basename(file_path)
-                id = self._get_new_id()
-                body = TetrahedralElastodynamicsBody()
-                body.on_mesh_loaded(f"{filename} - {id}", V, T)
-                self._transform_library.on_mesh_added(body.name)
-                self._tet_elastic_bodies.append(body)
-            except Exception as e:
-                ps.error(f"Error loading tetrahedral mesh:\n{e}")
-            finally:
-                root.destroy()
+            #try:
+            imesh = meshio.read(file_path)
+            V = imesh.points
+            T = imesh.cells_dict["tetra"]
+            R = imesh.cell_data["medit:ref"][0].T
+            filename = os.path.basename(file_path)
+            id = self._get_new_id()
+            body = TetrahedralElastodynamicsBody()
+            body.on_mesh_loaded(f"{filename} - {id}", V, T, R)
+            self._transform_library.on_mesh_added(body.name)
+            self._tet_elastic_bodies.append(body)
+            # except Exception as e:
+            #     ps.error(f"Error loading tetrahedral mesh:\n{e}")
+            # finally:
+            #     root.destroy()
 
     def _load_static_mesh_collider(self):
         root = tk.Tk()
@@ -341,7 +403,7 @@ class Scene:
                 smc.draw()
                 styles.set_style_danger()
                 if imgui.Button(
-                    styles.get_delete_key(), styles.get_small_button_size()
+                    styles.delete_key(), styles.small_button_size()
                 ):
                     smc = self._static_mesh_colliders.pop(idx)
                     smc.on_mesh_removed()

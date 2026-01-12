@@ -26,11 +26,7 @@ class StaticMeshCollider:
 
     def draw(self):
         imgui.PushID(self.name)
-        tab_flags = (
-            imgui.ImGuiTabBarFlags_Reorderable
-            | imgui.ImGuiTabBarFlags_FittingPolicyScroll
-            | imgui.ImGuiTabBarFlags_TabListPopupButton
-        )
+        tab_flags = styles.default_tab_flags()
         styles.set_style_subtle()
         if imgui.BeginTabBar("Mesh options", tab_flags):
             self._ps_helper.draw()

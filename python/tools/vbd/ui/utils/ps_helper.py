@@ -3,6 +3,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 import numpy as np
 import scipy as sp
+from . import styles
 
 class PsHelper:
     _show_mesh: bool = True
@@ -25,11 +26,7 @@ class PsHelper:
         # Since visibility can be manipulated elsewhere, always get current value first
         self._show_mesh = self._mesh.is_enabled()
         self._show_gizmo = self._mesh.get_transform_gizmo_enabled()
-        tab_flags = (
-            imgui.ImGuiTabBarFlags_Reorderable
-            | imgui.ImGuiTabBarFlags_FittingPolicyScroll
-            | imgui.ImGuiTabBarFlags_TabListPopupButton
-        )
+        tab_flags = styles.default_tab_flags()
 
         if as_tab_items:
             if imgui.BeginTabItem("Visibility", True, tab_flags)[0]:
