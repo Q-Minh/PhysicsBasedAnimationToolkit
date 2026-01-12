@@ -57,8 +57,7 @@ enum class EHomogenizationStrategy {
                                                                ///< ensure dynamics matching contact
                                                                ///< stiffness in the spirit of \cite
                                                                ///< ando_cubic_2024
-    Sensitivity,  ///< Homogenize using sensitivity histogram
-    Conditioning, ///< Homogenize using conditioning histogram
+    Conditioning, ///< Conditioning homogenization
 };
 
 } // namespace pbat::sim::algorithm::vbd

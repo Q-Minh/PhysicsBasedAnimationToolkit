@@ -84,10 +84,6 @@ void BindCore(nanobind::module_& m)
             "spirit of "
             "@cite ando_cubic_2024")
         .value(
-            "Sensitivity",
-            EHomogenizationStrategy::Sensitivity,
-            "Homogenize using sensitivity histogram")
-        .value(
             "Conditioning",
             EHomogenizationStrategy::Conditioning,
             "Homogenize using conditioning histogram");
