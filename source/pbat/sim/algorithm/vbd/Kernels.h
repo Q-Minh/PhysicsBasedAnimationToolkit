@@ -345,7 +345,7 @@ template <
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXI::ScalarType>
-PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
+PBAT_HOST_DEVICE ScalarType AccumulateVertexClosestPointContactDerivatives(
     TMatrixXI const& xi,
     TMatrixXTI const& xti,
     TMatrixXCP const& xcp,
@@ -382,6 +382,7 @@ PBAT_HOST_DEVICE void AccumulateVertexClosestPointContactDerivatives(
     Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
     g += T * gf;
     H += T * Hf * T.Transpose();
+    return dij;
 }
 
 /**
@@ -427,7 +428,7 @@ template <
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXI::ScalarType>
-PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
+PBAT_HOST_DEVICE ScalarType AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
     TMatrixXI const& xi,
     TMatrixXJ const& xj,
     TMatrixXTI const& xti,
@@ -484,6 +485,7 @@ PBAT_HOST_DEVICE void AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
     Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
     g += uv(0) * (T * gf);
     H += (uv(0) * uv(0)) * (T * Hf * T.Transpose());
+    return d;
 }
 
 /**
@@ -534,7 +536,7 @@ template <
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixXA::ScalarType>
-PBAT_HOST_DEVICE void AccumulateTriangleVertexToClosestPointContactDerivatives(
+PBAT_HOST_DEVICE ScalarType AccumulateTriangleVertexToClosestPointContactDerivatives(
     TMatrixXA const& xa,
     TMatrixXB const& xb,
     TMatrixXC const& xc,
@@ -593,6 +595,7 @@ PBAT_HOST_DEVICE void AccumulateTriangleVertexToClosestPointContactDerivatives(
     Hf = math::linalg::FilterEigenvalues(Hf, math::linalg::EEigenvalueFilter::FlipNegative);
     g += uvw(0) * (T * gf);
     H += (uvw(0) * uvw(0)) * (T * Hf * T.Transpose());
+    return d;
 }
 
 template <

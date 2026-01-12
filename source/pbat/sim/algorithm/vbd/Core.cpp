@@ -65,6 +65,13 @@ Params& Params::WithMaximumIterations(Index nIters)
     return *this;
 }
 
+PBAT_API Params& Params::WithHomogenization(EHomogenizationStrategy strategy, Scalar _betac)
+{
+    this->eHomogenizationStrategy = strategy;
+    this->betac                   = _betac;
+    return *this;
+}
+
 Params& Params::WithHessianDeterminantZeroUnder(Scalar zero)
 {
     detHZero = zero;
@@ -110,8 +117,16 @@ Params& Params::Construct(bool bValidate)
                     GVGilocal.size(),
                     nVertexElementAdjacencies));
         }
+        if (betac <= 0)
+        {
+            throw std::invalid_argument(
+                fmt::format(
+                    "Contact homogenization conditioning factor betac {} must be positive",
+                    betac));
+        }
     }
     xb.resize(3, nVerts);
+    log10lame.resize(2, GVGe.size());
     return *this;
 }
 
@@ -126,21 +141,43 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
+    group.WriteMetaData("eHomogenizationStrategy", static_cast<int>(eHomogenizationStrategy));
+    group.WriteMetaData("betac", betac);
     group.WriteData("xb", xb);
+    group.WriteData("log10lame", log10lame);
+    group.WriteMetaData("k", k);
 }
 
 void Params::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
-    GVGp              = group.ReadData<IndexVectorX>("GVGp");
-    GVGe              = group.ReadData<IndexVectorX>("GVGe");
-    GVGilocal         = group.ReadData<IndexVectorX>("GVGilocal");
-    colors            = group.ReadData<IndexVectorX>("colors");
-    Pptr              = group.ReadData<IndexVectorX>("Pptr");
-    Padj              = group.ReadData<IndexVectorX>("Padj");
-    detHZero          = group.ReadMetaData<Scalar>("detHZero");
-    nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
-    xb                = group.ReadData<MatrixX>("xb");
+    if (group.HasData("GVGp"))
+        GVGp = group.ReadData<decltype(GVGp)>("GVGp");
+    if (group.HasData("GVGe"))
+        GVGe = group.ReadData<decltype(GVGe)>("GVGe");
+    if (group.HasData("GVGilocal"))
+        GVGilocal = group.ReadData<decltype(GVGilocal)>("GVGilocal");
+    if (group.HasData("colors"))
+        colors = group.ReadData<decltype(colors)>("colors");
+    if (group.HasData("Pptr"))
+        Pptr = group.ReadData<decltype(Pptr)>("Pptr");
+    if (group.HasData("Padj"))
+        Padj = group.ReadData<decltype(Padj)>("Padj");
+    if (group.HasData("detHZero"))
+        detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
+    if (group.HasMetaData("nMaxIters"))
+        nMaxIters = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
+    if (group.HasMetaData("eHomogenizationStrategy"))
+        eHomogenizationStrategy = static_cast<EHomogenizationStrategy>(
+            group.ReadMetaData<int>("eHomogenizationStrategy"));
+    if (group.HasMetaData("betac"))
+        betac = group.ReadMetaData<decltype(betac)>("betac");
+    if (group.HasData("xb"))
+        xb = group.ReadData<decltype(xb)>("xb");
+    if (group.HasData("log10lame"))
+        log10lame = group.ReadData<decltype(log10lame)>("log10lame");
+    if (group.HasMetaData("k"))
+        k = group.ReadMetaData<decltype(k)>("k");
 }
 
 } // namespace pbat::sim::algorithm::vbd
@@ -263,16 +300,9 @@ TEST_CASE("[sim][algorithm][vbd] Sandbox")
     // params.Deserialize(archive["vbd/params"]);
     // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
     // contact.Initialize(device);
-    // contact.GetParams()
-    //     .WithNormalContact(contact.GetParams().kc)
-    //     .WithFrictionalContact(contact.GetParams().mu, contact.GetParams().epsv);
-    // contact.ComputeDisplacementBounds(fem.x);
-    // for (auto t = 0; t < 50; ++t)
-    // {
-    //     fem.SetupTimeIntegrationOptimization(
-    //         sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
-    //     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-    //     sim::algorithm::vbd::Solve(fem, contact, params);
-    //     fem.Step();
-    // }
+    // contact.GetParams().Construct();
+    // fem.SetupTimeIntegrationOptimization(
+    //     sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
+    // sim::algorithm::vbd::InitializeSolve(fem, contact, params);
+    // sim::algorithm::vbd::Solve(fem, contact, params);
 }

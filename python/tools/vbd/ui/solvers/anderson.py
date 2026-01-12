@@ -84,7 +84,7 @@ class AndersonSolver(BaseSolver):
         fem.x = xcpy
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
         callback()
-        while anderson.k < vbd.n_max_iters:
+        while vbd.k < vbd.n_max_iters:
             if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)

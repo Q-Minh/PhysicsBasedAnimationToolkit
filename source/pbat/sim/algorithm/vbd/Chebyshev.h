@@ -27,7 +27,6 @@ struct ChebyshevParams
     /**
      * @brief Read/Write parameters
      */
-    Index k;      ///< Iteration
     Scalar rho2;  ///< Square of spectral radius estimate
     Scalar omega; ///< Chebyshev omega parameter
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
@@ -132,7 +131,6 @@ void InitializeSolve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.InitializeSolve");
     cheb.AllocateIfNeeded(fem.x.cols());
     InitializeSolve(fem, contact, params);
-    cheb.k    = 0;
     cheb.rho2 = cheb.rho * cheb.rho;
 }
 
@@ -144,16 +142,16 @@ void Iterate(
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Iterate");
+    Index k = params.k;
     Iterate(fem, contact, params);
     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     // Chebyshev Update
-    cheb.omega = kernels::ChebyshevOmega(cheb.k, cheb.rho2, cheb.omega);
+    cheb.omega = kernels::ChebyshevOmega(k, cheb.rho2, cheb.omega);
     auto& xk   = fem.x;
-    if (cheb.k > 1)
+    if (k > 1)
         xk = cheb.omega * (xk - cheb.xkm2) + cheb.xkm2;
     cheb.xkm2 = cheb.xkm1;
     cheb.xkm1 = xk;
-    ++cheb.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -164,7 +162,7 @@ void Solve(
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Solve");
-    for (; cheb.k < params.nMaxIters;)
+    while (params.k < params.nMaxIters)
     {
         if (contact.RequiresBoundsComputation())
             contact.ComputeDisplacementBounds(fem.x);

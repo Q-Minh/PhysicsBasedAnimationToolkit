@@ -84,8 +84,13 @@ class MeshDynamics
         ogc::Params<TScalar> mOgcParams; ///< OGC parameters
         TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
                             ///< smooth transition
-        TScalar kc{1e8};    ///< OGC contact stiffness parameter, `kc > 0`
+        TScalar kc{1e3};    ///< OGC contact stiffness parameter, `kc > 0`
         TScalar mu{0.5};    ///< OGC friction coefficient, `mu >= 0`
+        TScalar rqstart{0}; ///< Base query radius (larger than contact radius `r`) on which we add
+                            ///< a linear function of inertial target distance to initialize the
+                            ///< actual query radius
+        TScalar betarq{1};  ///< Slope of the linear function of inertial target distance to add to
+                            ///< `rqstart` to initialize the actual query radius
 
         /**
          * @brief Set the OGC parameters
@@ -109,11 +114,25 @@ class MeshDynamics
          */
         SelfType& WithNormalContact(TScalar kc);
         /**
+         * @brief Set the query radius initialization parameters
+         * @param rqstart Base query radius
+         * @param betarq Slope of the linear function of inertial target distance to add to
+         * `rqstart` to initialize the actual query radius
+         * @return Reference to this
+         */
+        SelfType& WithQueryRadiusInitialization(TScalar rqstart, TScalar betarq);
+        /**
          * @brief Construct the Params object
          * @param bValidate Whether to validate parameters
          * @return Reference to this
          */
         SelfType& Construct(bool bValidate = true);
+        /**
+         * @brief Query the contact query radius given the inertial target distance
+         * @param inertialTargetDistance Inertial target distance (or other relevant distance)
+         * @post `mOgcParams.rq` is set
+         */
+        void ComputeQueryRadius(TScalar inertialTargetDistance);
         /**
          * @brief Serialize to archive
          * @param archive Archive to serialize to
@@ -1001,6 +1020,17 @@ MeshDynamics<TScalar, TIndex>::Params::WithNormalContact(TScalar kc)
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline MeshDynamics<TScalar, TIndex>::Params&
+MeshDynamics<TScalar, TIndex>::Params::WithQueryRadiusInitialization(
+    TScalar _rqstart,
+    TScalar _betarq)
+{
+    this->rqstart = _rqstart;
+    this->betarq  = _betarq;
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 MeshDynamics<TScalar, TIndex>::Params&
 MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
 {
@@ -1015,12 +1045,24 @@ MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
             throw std::invalid_argument(
                 "MeshDynamics::Params::Construct(): mu must be non-negative.");
         }
+        if (betarq < TScalar(0))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): betarq must be non-negative.");
+        }
     }
     auto tau = TScalar(0.5) * mOgcParams.r;
     auto r   = mOgcParams.r;
     kcp      = tau * kc * (tau - r) * (tau - r);
     b        = (TScalar(0.5) * kc) * (r - tau) * (r - tau) + kcp * std::log(tau);
     return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void
+MeshDynamics<TScalar, TIndex>::Params::ComputeQueryRadius(TScalar inertialTargetDistance)
+{
+    mOgcParams.rq = std::max(mOgcParams.r, rqstart) + betarq * inertialTargetDistance;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1034,6 +1076,8 @@ inline void MeshDynamics<TScalar, TIndex>::Params::Serialize(io::Archive& archiv
     grp.WriteMetaData("epsv", epsv);
     grp.WriteMetaData("kc", kc);
     grp.WriteMetaData("mu", mu);
+    grp.WriteMetaData("rqstart", rqstart);
+    grp.WriteMetaData("betarq", betarq);
     grp.WriteMetaData("kcp", kcp);
     grp.WriteMetaData("b", b);
 }
@@ -1049,6 +1093,10 @@ inline void MeshDynamics<TScalar, TIndex>::Params::Deserialize(io::Archive const
         kc = grp.ReadMetaData<TScalar>("kc");
     if (grp.HasMetaData("mu"))
         mu = grp.ReadMetaData<TScalar>("mu");
+    if (grp.HasMetaData("rqstart"))
+        rqstart = grp.ReadMetaData<TScalar>("rqstart");
+    if (grp.HasMetaData("betarq"))
+        betarq = grp.ReadMetaData<TScalar>("betarq");
     if (grp.HasMetaData("kcp"))
         kcp = grp.ReadMetaData<TScalar>("kcp");
     if (grp.HasMetaData("b"))

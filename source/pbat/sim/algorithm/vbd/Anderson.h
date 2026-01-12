@@ -41,7 +41,6 @@ struct AndersonParams
     VectorX fk;     ///< `|# dofs| x 1` current residual
     VectorX fkm1;   ///< `|# dofs| x 1` past residual
     VectorX gammak; ///< `m x 1` subspace residual
-    Index k{0};     ///< Current VBD iteration
     /**
      * @brief Least-squares solver
      */
@@ -146,7 +145,6 @@ void InitializeSolve(
     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     anderson.cod.setThreshold(anderson.codNumericalZero);
-    anderson.k = 1;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -157,7 +155,8 @@ void Iterate(
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Iterate");
-    auto dkl             = pbat::common::Modulo(anderson.k - 1, anderson.m);
+    Index k = params.k;
+    auto dkl           = pbat::common::Modulo(k - 1, anderson.m);
     anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
     anderson.xkm1        = fem.x.reshaped();
     Iterate(fem, contact, params);
@@ -165,7 +164,7 @@ void Iterate(
     anderson.fk          = fem.x.reshaped() - anderson.xkm1;
     anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
     anderson.fkm1        = anderson.fk;
-    auto mk              = std::min(anderson.m, anderson.k);
+    auto mk              = std::min(anderson.m, k);
     auto Fk              = anderson.Fk.leftCols(mk);
     // NOTE: I would like to use a COD or QR updating scheme here instead of recomputing from
     // scratch every time (Eigen does not seem to support it), but the updating scheme needs to
@@ -174,14 +173,13 @@ void Iterate(
     if (anderson.cod.info() != Eigen::ComputationInfo::Success)
     {
         throw std::runtime_error(
-            fmt::format("COD decomposition failed at iteration {}", anderson.k));
+            fmt::format("COD decomposition failed at iteration {}", k));
     }
     anderson.gammak.head(mk) = anderson.cod.solve(anderson.fk);
     // At this point, anderson.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
     fem.x.reshaped() = anderson.xkm1 + anderson.beta * anderson.fk;
     fem.x.reshaped() -= anderson.Xk.leftCols(mk) * anderson.gammak.head(mk);
     fem.x.reshaped() -= anderson.beta * (anderson.Fk.leftCols(mk) * anderson.gammak.head(mk));
-    ++anderson.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -192,7 +190,7 @@ void Solve(
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
-    for (; anderson.k < params.nMaxIters;)
+    while (params.k < params.nMaxIters)
     {
         if (contact.RequiresBoundsComputation())
             contact.ComputeDisplacementBounds(fem.x);

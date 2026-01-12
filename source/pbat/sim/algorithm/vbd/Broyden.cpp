@@ -12,7 +12,6 @@ void BroydenParams::Serialize(io::Archive& archive) const
     group.WriteMetaData("eJacobianEstimate", static_cast<int>(eJacobianEstimate));
     group.WriteMetaData("betaF", betaF);
     group.WriteMetaData("betaB", betaB);
-    group.WriteMetaData("k", k);
     group.WriteData("Fk", Fk);
     group.WriteData("Xk", Xk);
     group.WriteData("xkm1", xkm1);
@@ -40,7 +39,6 @@ void BroydenParams::Deserialize(io::Archive const& archive)
         static_cast<EBroydenJacobianEstimate>(group.ReadMetaData<int>("eJacobianEstimate"));
     betaF      = group.ReadMetaData<Scalar>("betaF");
     betaB      = group.ReadMetaData<Scalar>("betaB");
-    k          = group.ReadMetaData<Index>("k");
     Fk         = group.ReadData<MatrixX>("Fk");
     Xk         = group.ReadData<MatrixX>("Xk");
     xkm1       = group.ReadData<VectorX>("xkm1");

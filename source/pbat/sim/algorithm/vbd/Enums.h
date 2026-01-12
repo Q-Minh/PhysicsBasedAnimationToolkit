@@ -48,6 +48,18 @@ enum class EBroydenJacobianEstimate {
 };
 // clang-format on
 
+/**
+ * @brief Homogenization strategy
+ */
+enum class EHomogenizationStrategy {
+    None,                                                      ///< No homogenization
+    HomogeneousElasticityWithDynamicsMatchingContactStiffness, ///< Homogenize elastic material and
+                                                               ///< ensure dynamics matching contact
+                                                               ///< stiffness in the spirit of \cite
+                                                               ///< ando_cubic_2024
+    Conditioning, ///< Conditioning homogenization
+};
+
 } // namespace pbat::sim::algorithm::vbd
 
 #endif // PBAT_SIM_ALGORITHM_VBD_ENUMS_H
