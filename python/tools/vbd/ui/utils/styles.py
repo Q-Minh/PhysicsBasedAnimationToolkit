@@ -5,13 +5,21 @@ danger_hover    = (205/255, 85/255, 85/255, 1.0)
 subtle          = (120/255, 120/255, 120/255, 1.0)
 subtle_hover    = (150/255, 150/255, 150/255, 1.0)
 
-def get_default_button_size():      
+def default_button_size():      
     return [imgui.GetWindowWidth() / 2.1, 0]
 
-def get_small_button_size():
+def half_button_size():      
+    return [imgui.GetWindowWidth() / (2.1*2), 0]
+
+def small_button_size():
     return [imgui.GetWindowWidth() / (2.1*7), 0]
 
-def get_delete_key():
+def default_tab_flags():
+    return (imgui.ImGuiTabBarFlags_Reorderable 
+            | imgui.ImGuiTabBarFlags_FittingPolicyScroll 
+            | imgui.ImGuiTabBarFlags_TabListPopupButton)
+
+def delete_key():
     return "X"
 
 def set_style_danger():

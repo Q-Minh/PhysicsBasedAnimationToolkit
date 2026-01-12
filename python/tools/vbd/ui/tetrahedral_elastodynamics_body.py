@@ -8,24 +8,26 @@ from .utils import styles
 from .utils.ps_helper import PsHelper
 
 class TetrahedralElastodynamicsBody:
-    _V: np.ndarray[float]  # Vertex positions
-    _T: np.ndarray[float]  # Tetrahedral elements
-    _Ye: np.ndarray[float]  # `|# tetrahedra|` array of Young's moduli
-    _nue: np.ndarray[float]  # `|# tetrahedra|` array of Poisson's ratios
-    _rhoe: np.ndarray[float]  # `|# tetrahedra|` array of mass densities
-    _bext: np.ndarray[float]  # `|# vertices| x 3` array of external body forces
-    _aext: np.ndarray[float]  # `3 x 1` external acceleration
-    _v0: np.ndarray[float]  # `|# vertices| x 3` array of initial velocities
-    _dirty: bool = False  # Flag indicating if the body has been modified
-    _vm: ps.VolumeMesh = None  # Polyscope volume mesh for visualization
-    _pc: ps.PointCloud = None  # Polyscope point cloud for visualization
-    _name: str = None  # Name of the body
+    _V: np.ndarray[float]       # Vertex positions
+    _T: np.ndarray[float]       # Tetrahedral elements
+    _R: np.ndarray[float]       # `|# tetrahedra|` array of regions, as defined by Tetgen
+    _Ye: np.ndarray[float]      # `|# tetrahedra|` array of Young's moduli
+    _nue: np.ndarray[float]     # `|# tetrahedra|` array of Poisson's ratios
+    _rhoe: np.ndarray[float]    # `|# tetrahedra|` array of mass densities
+    _bext: np.ndarray[float]    # `|# vertices| x 3` array of external body forces
+    _aext: np.ndarray[float]    # `3 x 1` external acceleration
+    _v0: np.ndarray[float]      # `|# vertices| x 3` array of initial velocities
+    _dirty: bool = False        # Flag indicating if the body has been modified
+    _vm: ps.VolumeMesh = None   # Polyscope volume mesh for visualization
+    _pc: ps.PointCloud = None   # Polyscope point cloud for visualization
+    _name: str = None           # Name of the body
     _ps_helper = PsHelper
     _cached_transform: np.ndarray
 
     def __init__(self):
         self._V = None
         self._T = None
+        self._R = None
         self._Ye = None
         self._nue = None
         self._rhoe = None
@@ -36,11 +38,7 @@ class TetrahedralElastodynamicsBody:
         self._cached_transform = np.eye(4)
 
     def draw(self):
-        tab_flags = (
-            imgui.ImGuiTabBarFlags_Reorderable
-            | imgui.ImGuiTabBarFlags_FittingPolicyScroll
-            | imgui.ImGuiTabBarFlags_TabListPopupButton
-        )
+        tab_flags = styles.default_tab_flags()
         styles.set_style_subtle()
         if imgui.BeginTabBar("Mesh options", tab_flags):
             self._ps_helper.draw()
@@ -110,6 +108,7 @@ class TetrahedralElastodynamicsBody:
         name: str,
         V: np.ndarray[float],
         T: np.ndarray[float],
+        R: np.ndarray[int] = None,
         Ye: np.ndarray[float] = None,
         nue: np.ndarray[float] = None,
         rhoe: np.ndarray[float] = None,
@@ -123,6 +122,7 @@ class TetrahedralElastodynamicsBody:
         default_rho = 1e3
         self._V = V
         self._T = T
+        self._R = np.ones(T.shape[0]) if R is None or R.shape[0] != T.shape[0] else R
         self._Ye = np.full(T.shape[0], default_Y) if Ye is None else Ye
         self._nue = np.full(T.shape[0], default_nu) if nue is None else nue
         self._rhoe = np.full(T.shape[0], default_rho) if rhoe is None else rhoe
@@ -133,6 +133,13 @@ class TetrahedralElastodynamicsBody:
         self._throw_if_invalid_state()
         if not headless:
             self._vm = ps.register_volume_mesh(f"{self._name}", self._V, self._T)
+            self._vm.add_scalar_quantity(
+                "Regions",
+                self._R,
+                defined_on="cells",
+                cmap=material.regions_cmap(),
+                enabled=False
+            )
             self._cached_transform = np.eye(4)
             self._vm.set_transform(self._cached_transform)
             self._dirty = True
@@ -195,6 +202,7 @@ class TetrahedralElastodynamicsBody:
         grp = grp.create_group("tools.vbd.ui.TetrahedralElastodynamicsBody")
         grp["V"] = self.VT
         grp["T"] = self._T
+        grp["R"] = self._R
         grp["Ye"] = self._Ye
         grp["nue"] = self._nue
         grp["rhoe"] = self._rhoe
@@ -207,6 +215,10 @@ class TetrahedralElastodynamicsBody:
         grp = grp["tools.vbd.ui.TetrahedralElastodynamicsBody"]
         self._V = grp["V"][:]
         self._T = grp["T"][:]
+        if "R" in grp:
+            self._R = grp["R"][:]
+        else:
+            self._R = None
         self._Ye = grp["Ye"][:]
         self._nue = grp["nue"][:]
         self._rhoe = grp["rhoe"][:]
@@ -218,6 +230,7 @@ class TetrahedralElastodynamicsBody:
             self._name,
             self._V,
             self._T,
+            self._R,
             self._Ye,
             self._nue,
             self._rhoe,
@@ -245,6 +258,10 @@ class TetrahedralElastodynamicsBody:
         VH = np.vstack([self._V.T, np.ones((1, self._V.shape[0]))])
         VT = (T @ VH).T[:, :3]
         return VT
+    
+    @property
+    def R(self) -> np.ndarray:
+        return self._R
 
     @property
     def Ye(self) -> np.ndarray:

@@ -17,6 +17,7 @@
 
 #include <exception>
 #include <fmt/format.h>
+#include <limits>
 
 namespace pbat::fem {
 
@@ -50,6 +51,13 @@ void ToMeshQuadratureWeights(Eigen::MatrixBase<TDerivedDetJe>& detJeThenWg)
                 QuadratureType::kPoints,
                 detJeThenWg.rows()));
     }
+    ScalarType constexpr eps = std::numeric_limits<ScalarType>::epsilon() * 1e-2;
+    bool const bHasNegativeDet = (detJeThenWg.array() < eps).any();
+    if (bHasNegativeDet)
+    {
+        throw std::invalid_argument("Inverted or singular jacobian");
+    }
+
     auto const wg = common::ToEigen(QuadratureType::weights);
     detJeThenWg.array().colwise() *= wg.array();
 }

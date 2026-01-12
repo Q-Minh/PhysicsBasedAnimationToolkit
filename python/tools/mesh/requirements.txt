@@ -1,10 +1,10 @@
-numpy==1.26.0
-scipy==1.16
+numpy==2.0
+scipy==1.13
 meshio==5.3.5
-tetgen==0.6.4
+tetgen==0.6.6
 libigl==v2.5.1
 polyscope==2.5.0
-gpytoolbox==0.3.1
+gpytoolbox==0.3.4
 pymeshfix==0.17.0
-fast-simplification==0.1.7
+fast-simplification==0.1.13
 networkx==3.3

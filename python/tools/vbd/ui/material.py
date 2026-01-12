@@ -19,3 +19,6 @@ def mass_density_log10_cmap() -> str:
 
 def lame_parameters_cmap() -> str:
     return "blues"
+
+def regions_cmap() -> str:
+    return "viridis"
