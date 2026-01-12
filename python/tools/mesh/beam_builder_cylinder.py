@@ -170,7 +170,7 @@ if __name__ == "__main__":
             root = tk.Tk()
             root.withdraw()
             file_path = filedialog.asksaveasfilename(
-                title="Save session (HDF5)",
+                title="Save session (MESH)",
                 defaultextension=".mesh",
                 filetypes=[
                     ("Tetrahedral mesh files (ASCII)", "*.mesh"),
