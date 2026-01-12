@@ -72,11 +72,11 @@ template <class TDerived>
     using ScalarType         = typename TDerived::Scalar;
     bool const bIsSquare     = J.rows() == J.cols();
     auto const detJ          = bIsSquare ? J.determinant() : J.jacobiSvd().singularValues().prod();
-    ScalarType constexpr eps = ScalarType(1e-10);
-    if (detJ <= eps)
-    {
-        throw std::invalid_argument("Inverted or singular jacobian");
-    }
+    // ScalarType constexpr eps = ScalarType(1e-10);
+    // if (detJ <= eps)
+    // {
+    //     throw std::invalid_argument("Inverted or singular jacobian");
+    // }
     return detJ;
 }
 
