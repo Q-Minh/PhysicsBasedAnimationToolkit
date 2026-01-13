@@ -417,7 +417,8 @@ def apply_procedural_constraints(
             XP[:-1], dirichlet_constraints.all_transformed_nodes(t, dt)
         ):
             _, dnodes = tup
-            fem_elasto_dynamics.dmask[start + dnodes] = 1
+            if len(dnodes) != 0:
+                fem_elasto_dynamics.dmask[start + dnodes] = 1
 
         fem_elasto_dynamics.constrain(fem_elasto_dynamics.dmask)
         xD = fem_elasto_dynamics.x
