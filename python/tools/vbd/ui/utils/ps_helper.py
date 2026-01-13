@@ -9,6 +9,7 @@ class PsHelper:
     _show_mesh: bool = True
     _show_gizmo: bool = False
     _mesh: ps.Structure
+    _translation_scale: float = 1.0
 
     def __init__(self, mesh:ps.Structure, show_mesh=True, show_gizmo=False):
         self._mesh = mesh
@@ -76,7 +77,8 @@ class PsHelper:
             "xyz", degrees=True
         )
         r_updated, r = imgui.SliderFloat3("Rotation XYZ", euler_angles, -180.0, 180.0)
-        t_updated, t = imgui.SliderFloat3("Translation", transform[:3, 3].T, -2, 2)
+        t_updated, t = imgui.SliderFloat3("Translation", transform[:3, 3].T, -self._translation_scale, self._translation_scale)
+        _, self._translation_scale = imgui.InputFloat("Translation Scale", self._translation_scale)
         if r_updated:
             transform[:3, :3] = sp.spatial.transform.Rotation.from_euler(
                 "xyz", r, degrees=True
