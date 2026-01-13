@@ -831,11 +831,14 @@ auto BuildVertexEquation(
             auto K = static_cast<Scalar>(params.nMaxIters);
             auto k = static_cast<Scalar>(params.k);
             // Linear interpolation:
-            h *= ((k + 1) < 0.8 * K) ? (k + 1) / K / 0.8 : 1;
+            // h *= ((k + 1) < 0.8 * K) ? (k + 1) / K / 0.8 : 1;
             // Exponential interpolation:
             // h     = h * exp(-log(K) * (1 - k / (K - 1)));
             // Log interpolation
-            // h     = math::LogInterpolate(h / K, h, Scalar(1), K, k + 1);
+            Scalar regime{0.2};
+            h     = ((k + 1) < regime * K) ?
+                        math::LogInterpolate(h / K, h, Scalar(1), K * regime, k + 1) :
+                        h;
             h2    = h * h;
             h2inv = 1 / h2;
             // Elastic energy
