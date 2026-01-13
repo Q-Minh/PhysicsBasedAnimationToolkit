@@ -26,6 +26,7 @@ class TransformType(Enum):
     L_ROTATE = 1
     TRANSLATE = 2
     FIXED = 3
+    L_TRANSLATE = 4
 
 
 class PrimitiveTransform:
@@ -72,6 +73,8 @@ class PrimitiveTransform:
             return TranslateTransform.make_default()
         elif ttype == TransformType.FIXED:
             return FixedTransform.make_default()
+        elif ttype == TransformType.L_TRANSLATE:
+            return LocalTranslateTransform.make_default()
         else:
             raise ValueError(f"Unknown TransformType {ttype}")
 
@@ -409,6 +412,64 @@ class TranslateTransform(PrimitiveTransform):
         return (
             f"{base_str}\n\t\t Direction: {self.direction},\n\t\t Speed: {self.speed}"
         )
+    
+class LocalTranslateTransform(PrimitiveTransform):
+    """Translate all vertices away from point of origin"""
+
+    origin: np.ndarray
+    speed: float
+
+    def __init__(
+        self,
+        name: str,
+        begin: float,
+        duration: float,
+        origin: np.ndarray,
+        speed: float,
+    ):
+        super().__init__(name, begin, duration, TransformType.L_TRANSLATE)
+        self.origin = origin
+        self.speed = speed  # units per second
+
+    @staticmethod
+    def make_default():
+        return LocalTranslateTransform("New Local Translation", 0, 1, np.array([0, 0, 0]), 10)
+
+    def specific_apply(self, t, dt, V):
+        """Apply the translation to the given vertices.
+
+        Args:
+            t (int): The current time step.
+            dt (float): The time step size.
+            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
+
+        Returns:
+            np.ndarray: The transformed vertex positions.
+        """
+        # Compute translation distance
+        distance = self.speed * dt
+        translation_vector = V - self.origin[:, np.newaxis]
+        translation_vector[2] = 0
+        translation_vector = translation_vector / np.linalg.norm(translation_vector) * distance
+        # Apply translation
+        V_translated = V + translation_vector
+        return V_translated
+
+    def serialize(self, h5group: h5py.Group):
+        super().serialize(h5group)
+        h5group.attrs["origin"] = self.origin
+        h5group.attrs["speed"] = self.speed
+
+    def deserialize(self, h5group: h5py.Group):
+        super().deserialize(h5group)
+        self.origin = h5group.attrs["origin"]
+        self.speed = h5group.attrs["speed"]
+
+    def __str__(self):
+        base_str = super().__str__()
+        return (
+            f"{base_str}\n\t\t Origin: {self.origin},\n\t\t Speed: {self.speed}"
+        )
 
 
 class FixedTransform(PrimitiveTransform):
@@ -586,6 +647,11 @@ class TransformLibrary:
             transform.direction = np.array(direction)
             if imgui.Button("Normalize"):
                 transform.adjust()
+            _, transform.speed = imgui.InputFloat("Speed", transform.speed)
+
+        elif transform.transform_type == TransformType.L_TRANSLATE:
+            _, origin = imgui.InputFloat3("Origin", transform.origin)
+            transform.origin = np.array(origin)
             _, transform.speed = imgui.InputFloat("Speed", transform.speed)
         imgui.PopID()
 
