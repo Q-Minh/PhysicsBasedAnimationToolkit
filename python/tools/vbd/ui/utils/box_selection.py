@@ -1,4 +1,5 @@
 # type: ignore
+import h5py
 import polyscope as ps
 import polyscope.imgui as imgui
 from enum import Enum
@@ -8,6 +9,7 @@ from ..tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
 from . import styles
 from .ps_helper import PsHelper
 import typing
+import scipy as sp
 
 
 class SelectionTargets(Enum):
@@ -200,6 +202,107 @@ class BoxSelection(Selection):
             self._ps_mesh.set_enabled(visible and self._ps_helper.get_show_mesh())
             self._ps_mesh.set_transform_gizmo_enabled(visible and self._ps_helper.get_show_gizmo())
 
+
+class CylinderSelection(Selection):
+    """ We will cheat cylinder selection as a chain of box selections. """
+    _box_selections: list[BoxSelection]
+    _radius: float
+    _box_num: int
+    _scale: np.ndarray
+
+    def __init__(
+        self,
+        name: str,
+        prop_name: str,
+        prop_value: typing.Any,
+        target: SelectionTargets,
+        callback: typing.Callable[None, [int, typing.Any, np.ndarray[int]]],
+    ):
+        super().__init__(name, prop_name, prop_value, target, callback)
+        self._box_selections = []
+        self._radius = 1.0
+        self._box_num = 10
+        self._scale = np.ones(3, dtype=np.float32)
+        self.make_ring()
+
+    def add_box_selection(self, box_selection: BoxSelection):
+        self._box_selections.append(box_selection)
+
+    def make_ring(self):
+        """Create a ring of box selections."""
+        angle = 360 / self._box_num
+        for i in range(self._box_num):
+            box = BoxSelection(
+                name=f"Box {i}",
+                prop_name=self._prop_name,
+                prop_value=self._prop_value,
+                target=self._target,
+                callback=self._callback,
+            )
+            self.add_box_selection(box)
+            box.on_added()
+            # Move the box
+            transform = np.zeros((4, 4))
+            transform[:3, :3] = sp.spatial.transform.Rotation.from_euler(
+                "xyz", [0, 0, angle * i], degrees=True
+            ).as_matrix()
+            transform[:, 3] = np.array([
+                np.cos(np.radians(angle * i)) * self._radius,
+                np.sin(np.radians(angle * i)) * self._radius,
+                0,
+                1
+            ])
+            box._ps_mesh.set_transform(transform)
+
+    def on_removed(self):
+        for box in self._box_selections:
+                        box.on_removed()
+
+    def draw(self, meshes: list[TetrahedralElastodynamicsBody]):
+        imgui.PushID(self.name)
+        tab_flags = styles.default_tab_flags()
+        styles.set_style_subtle()
+        if imgui.BeginTabBar("Mode bar", tab_flags):
+            if imgui.BeginTabItem("Setup", True, tab_flags)[0]:
+                num_change, self._box_num = imgui.InputInt("Number of boxes", self._box_num)
+                rad_change, self._radius = imgui.SliderFloat("Radius", self._radius, 0, 2)
+                if num_change or rad_change:
+                    for box in self._box_selections:
+                        box.on_removed()
+                    self._box_selections = []
+                    self.make_ring()
+
+                _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 2)
+                self._scale = np.array(self._scale)
+                for box in self._box_selections:
+                    box._scale = self._scale
+                    box._ps_mesh.update_vertex_positions(box._vertices * box._scale)
+                
+                # Input field for specific property that we're manipulating
+                
+                self.specific_draw()
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Hide", True, tab_flags)[0]:
+                # This is intentionally left empty
+                imgui.EndTabItem()
+            imgui.EndTabBar()
+        styles.pop_most_recent_style()
+
+        if imgui.Button("Apply", styles.default_button_size()):
+            for b, m in enumerate(meshes):
+                for box in self._box_selections:
+                    VT, C = m.VT, m.T
+                    # Get indices inside box
+                    indices = box.inside_test(VT, C)
+                    # Apply in callback that depends on property that we selected
+                    box._callback(b, self._prop_value, indices)
+
+        imgui.PopID()
+
+    def set_visible(self, visible: bool):
+        for box in self._box_selections:
+            box.set_visible(visible)
 
 
 class RegionSelection(Selection):

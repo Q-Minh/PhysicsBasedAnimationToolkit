@@ -10,7 +10,7 @@ import os
 import typing
 import numpy as np
 import h5py as h5
-from .utils.box_selection import Selection, BoxSelection, RegionSelection, SelectionTargets
+from .utils.box_selection import Selection, BoxSelection, RegionSelection, CylinderSelection, SelectionTargets
 from .utils.transform_library import TransformLibrary
 from .utils import styles
 
@@ -51,6 +51,16 @@ class SelectionList:
                     self._listener,
                 )
             )
+        elif self._list_type == CylinderSelection.__name__:
+            self._selectors.append(
+                CylinderSelection(
+                    f"{prop_type} - {self._get_new_id()}",
+                    prop_type,
+                    self._default_value,
+                    self._selection_target,
+                    self._listener,
+                )
+            )
         else:
             raise ValueError(f"No SelectionList support for type {self._list_type}")
         self._selectors[-1].on_added()
@@ -74,6 +84,7 @@ class Scene:
     _transform_library: TransformLibrary
     _box_selector_lists: dict[str, SelectionList]
     _region_selector_lists: dict[str, SelectionList]
+    _cylinder_selector_lists: dict[str, SelectionList]
     _current_selection_property_idx: int
     _static_mesh_colliders: list[StaticMeshCollider]
 
@@ -117,6 +128,7 @@ class Scene:
         }
         self._box_selector_lists = {}
         self._region_selector_lists = {}
+        self._cylinder_selector_lists = {}
 
         for (name, item) in name_to_vars.items():
             self._box_selector_lists[name] = SelectionList(
@@ -131,6 +143,12 @@ class Scene:
                 RegionSelection.__name__,
                 item["func"]
             )
+            self._cylinder_selector_lists[name] = SelectionList(
+                SelectionTargets.CELL,
+                item["default"],
+                CylinderSelection.__name__,
+                item["func"]
+            )
 
         self._box_selector_lists["Initial Velocity"] = SelectionList(
             SelectionTargets.VERTEX,
@@ -142,6 +160,20 @@ class Scene:
             SelectionTargets.VERTEX,
             1,
             BoxSelection.__name__,
+            lambda b, prop_value, inds: self._on_dirichlet_group_applied(
+                b, prop_value, inds
+            ),
+        )
+        self._cylinder_selector_lists["Initial Velocity"] = SelectionList(
+            SelectionTargets.VERTEX,
+            np.zeros(3),
+            CylinderSelection.__name__,
+            self.set_initial_velocities
+        )
+        self._cylinder_selector_lists["Dirichlet Group"] = SelectionList(
+            SelectionTargets.VERTEX,
+            1,
+            CylinderSelection.__name__,
             lambda b, prop_value, inds: self._on_dirichlet_group_applied(
                 b, prop_value, inds
             ),
@@ -237,6 +269,28 @@ class Scene:
                                     imgui.TreePop()
                                 imgui.PopID()
                         imgui.EndTabItem()
+                    
+                    if imgui.BeginTabItem("Cylinder", True, tab_flags)[0]:
+                        cylinder_selection_list = self._cylinder_selector_lists.get(prop_name)
+                        if cylinder_selection_list is None:
+                            imgui.Text(f"Cylinder Selection not available for {prop_name}")
+                        else:
+                            if imgui.Button("Add", styles.default_button_size()):
+                                cylinder_selection_list.on_selector_added(prop_name)
+                            for s, selector in enumerate(cylinder_selection_list._selectors):
+                                imgui.PushID(f"{prop_name} - {s}")
+                                if imgui.TreeNode(selector.name):
+                                    selector.draw(self._tet_elastic_bodies)
+                                    imgui.SameLine()
+                                    styles.set_style_danger()
+                                    if imgui.Button(
+                                        styles.delete_key(), styles.small_button_size()
+                                    ):
+                                        cylinder_selection_list.remove_selector(s)
+                                    styles.pop_most_recent_style()
+                                    imgui.TreePop()
+                                imgui.PopID()
+                        imgui.EndTabItem()
                     imgui.EndTabBar()
                 imgui.EndTabItem()
 
@@ -270,6 +324,9 @@ class Scene:
             smc.set_visible(visible)
         for prop_name, box_selection_list in self._box_selector_lists.items():
             for selector in box_selection_list._selectors:
+                selector.set_visible(visible)
+        for prop_name, cylinder_selection_list in self._cylinder_selector_lists.items():
+            for selector in cylinder_selection_list._selectors:
                 selector.set_visible(visible)
         for transform in self._transform_library.transforms:
             transform.set_visible(visible)
@@ -353,21 +410,21 @@ class Scene:
             ],
         )
         if file_path:
-            #try:
-            imesh = meshio.read(file_path)
-            V = imesh.points
-            T = imesh.cells_dict["tetra"]
-            R = imesh.cell_data["medit:ref"][0].T
-            filename = os.path.basename(file_path)
-            id = self._get_new_id()
-            body = TetrahedralElastodynamicsBody()
-            body.on_mesh_loaded(f"{filename} - {id}", V, T, R)
-            self._transform_library.on_mesh_added(body.name)
-            self._tet_elastic_bodies.append(body)
-            # except Exception as e:
-            #     ps.error(f"Error loading tetrahedral mesh:\n{e}")
-            # finally:
-            #     root.destroy()
+            try:
+                imesh = meshio.read(file_path)
+                V = imesh.points
+                T = imesh.cells_dict["tetra"]
+                R = imesh.cell_data["medit:ref"][0].T if "medit:ref" in imesh.cell_data else None
+                filename = os.path.basename(file_path)
+                id = self._get_new_id()
+                body = TetrahedralElastodynamicsBody()
+                body.on_mesh_loaded(f"{filename} - {id}", V, T, R)
+                self._transform_library.on_mesh_added(body.name)
+                self._tet_elastic_bodies.append(body)
+            except Exception as e:
+                ps.error(f"Error loading tetrahedral mesh:\n{e}")
+            finally:
+                root.destroy()
 
     def _load_static_mesh_collider(self):
         root = tk.Tk()
