@@ -226,11 +226,6 @@ void InitializeSolve(
         break;
         default: break;
     }
-
-    broyden.xkm1 = fem.x.reshaped();
-    Iterate(fem, contact, params);
-    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-    broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -241,154 +236,167 @@ void Iterate(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Iterate");
-    Index k  = params.k;
-    auto dkl = pbat::common::Modulo(k - 1, broyden.m);
-    // Update (preconditioned) history
-    broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
-    broyden.xkm1        = fem.x.reshaped();
-    Iterate(fem, contact, params);
-    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-    broyden.fk          = broyden.xkm1 - fem.x.reshaped();
-    broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
-    broyden.fkm1        = broyden.fk;
-    // Solve least-squares problem
-    auto mk = std::min(broyden.m, k);
-    auto Fk = broyden.Fk.leftCols(mk);
-    // NOTE: The decomposition solvers (i.e. COD, QR) should use an updating scheme here instead of
-    // recomputing from scratch every time (Eigen does not seem to support it), but the updating
-    // scheme needs to account for pivoting as well.
-    switch (broyden.eL2Solver)
+    if (params.k == 0)
     {
-        case EBroydenLeastSquaresSolver::QR: {
-            broyden.qr.compute(Fk);
-            if (broyden.qr.info() != Eigen::ComputationInfo::Success)
-            {
-                throw std::runtime_error(fmt::format("QR decomposition failed at iteration {}", k));
-            }
-            broyden.gammak.head(mk) = broyden.qr.solve(broyden.fk);
-        }
-        break;
-        case EBroydenLeastSquaresSolver::LSCG: {
-            broyden.lscg.setMaxIterations(
-                broyden.maxL2SolverIters > 0 ? broyden.maxL2SolverIters : mk);
-            broyden.lscg.setTolerance(broyden.epsL2Solve);
-            broyden.lscg.compute(Fk);
-            broyden.gammak.head(mk) = broyden.lscg.solve(broyden.fk);
-        }
-        break;
-        case EBroydenLeastSquaresSolver::OneStepSteepestDescent: {
-            broyden.gradL2       = Fk.transpose() * broyden.fk;
-            broyden.FkgradL2     = Fk * broyden.gradL2;
-            Scalar gradL2norm2   = broyden.gradL2.squaredNorm();
-            Scalar FkgradL2norm2 = broyden.FkgradL2.squaredNorm();
-            Scalar alpha = FkgradL2norm2 > Scalar(0) ? gradL2norm2 / FkgradL2norm2 : Scalar(0);
-            broyden.gammak.head(mk) = alpha * broyden.gradL2;
-        }
-        break;
-        case EBroydenLeastSquaresSolver::COD: [[fallthrough]];
-        default: {
-            broyden.cod.compute(Fk);
-            if (broyden.cod.info() != Eigen::ComputationInfo::Success)
-            {
-                throw std::runtime_error(
-                    fmt::format("COD decomposition failed at iteration {}", k));
-            }
-            broyden.gammak.head(mk) = broyden.cod.solve(broyden.fk);
-        }
-        break;
-    }
-    // Broyden step
-    bool const bHasUpdatingDiagonal =
-        broyden.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz or
-        broyden.eJacobianEstimate == EBroydenJacobianEstimate::UsdDiagonal or
-        broyden.eJacobianEstimate == EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating;
-    bool const bHasScaledIdentityJacobian =
-        broyden.eJacobianEstimate == EBroydenJacobianEstimate::ScaledIdentity;
-    // NOTE: At this point, broyden.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
-    if (bHasUpdatingDiagonal)
-    {
-        // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
-        fem.x.reshaped() = broyden.xkm1 - broyden.Gkm.col(dkl).asDiagonal() * broyden.fk;
-        fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
-        fem.x.reshaped() +=
-            broyden.Gkm.col(dkl).asDiagonal() * (broyden.Fk.leftCols(mk) * broyden.gammak.head(mk));
-    }
-    else if (bHasScaledIdentityJacobian)
-    {
-        Scalar sigma     = broyden.Sigma(dkl);
-        fem.x.reshaped() = broyden.xkm1 - sigma * broyden.fk;
-        fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
-        fem.x.reshaped() += sigma * (broyden.Fk.leftCols(mk) * broyden.gammak.head(mk));
+        broyden.xkm1 = fem.x.reshaped();
+        Iterate(fem, contact, params);
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
     }
     else
     {
-        fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
-        fem.x.reshaped() += broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
-    }
-    // Update Jacobian (inverse) estimate
-    switch (broyden.eJacobianEstimate)
-    {
-        case EBroydenJacobianEstimate::Identity: break;
-        case EBroydenJacobianEstimate::ScaledIdentity: {
-            auto sk      = broyden.Xk.col(dkl);
-            auto yk      = broyden.Fk.col(dkl);
-            Scalar ykTyk = yk.squaredNorm();
-            Scalar skTyk = sk.dot(yk);
-            broyden.Sigma(dkl) =
-                ykTyk > Scalar(0) ? skTyk / ykTyk : Scalar(1) /* fall back to VBD */;
-        }
-        break;
-        case EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating: {
-            auto ddkl        = pbat::common::Modulo(dkl - 1, broyden.m);
-            auto Hkm1        = broyden.Gkm.col(ddkl);
-            auto sk          = broyden.Xk.col(dkl);
-            auto yk          = broyden.Fk.col(dkl);
-            Scalar skTyk     = sk.dot(yk);
-            auto Dkm1        = Hkm1.cwiseInverse();
-            Scalar skTDkm1sk = sk.dot(Dkm1.asDiagonal() * sk);
-            auto Ek          = sk.array().square();
-            Scalar trEk2     = (Ek * Ek).sum();
-            if (trEk2 > Scalar(0) and skTyk > skTDkm1sk)
-            {
-                broyden.Gkm.col(dkl) =
-                    (Dkm1.array() + ((skTyk - skTDkm1sk) / trEk2) * Ek).cwiseInverse();
+        Index k  = params.k;
+        auto dkl = pbat::common::Modulo(k - 1, broyden.m);
+        // Update (preconditioned) history
+        broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
+        broyden.xkm1        = fem.x.reshaped();
+        Iterate(fem, contact, params);
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        broyden.fk          = broyden.xkm1 - fem.x.reshaped();
+        broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
+        broyden.fkm1        = broyden.fk;
+        // Solve least-squares problem
+        auto mk = std::min(broyden.m, k);
+        auto Fk = broyden.Fk.leftCols(mk);
+        // NOTE: The decomposition solvers (i.e. COD, QR) should use an updating scheme here instead
+        // of recomputing from scratch every time (Eigen does not seem to support it), but the
+        // updating scheme needs to account for pivoting as well.
+        switch (broyden.eL2Solver)
+        {
+            case EBroydenLeastSquaresSolver::QR: {
+                broyden.qr.compute(Fk);
+                if (broyden.qr.info() != Eigen::ComputationInfo::Success)
+                {
+                    throw std::runtime_error(
+                        fmt::format("QR decomposition failed at iteration {}", k));
+                }
+                broyden.gammak.head(mk) = broyden.qr.solve(broyden.fk);
             }
+            break;
+            case EBroydenLeastSquaresSolver::LSCG: {
+                broyden.lscg.setMaxIterations(
+                    broyden.maxL2SolverIters > 0 ? broyden.maxL2SolverIters : mk);
+                broyden.lscg.setTolerance(broyden.epsL2Solve);
+                broyden.lscg.compute(Fk);
+                broyden.gammak.head(mk) = broyden.lscg.solve(broyden.fk);
+            }
+            break;
+            case EBroydenLeastSquaresSolver::OneStepSteepestDescent: {
+                broyden.gradL2       = Fk.transpose() * broyden.fk;
+                broyden.FkgradL2     = Fk * broyden.gradL2;
+                Scalar gradL2norm2   = broyden.gradL2.squaredNorm();
+                Scalar FkgradL2norm2 = broyden.FkgradL2.squaredNorm();
+                Scalar alpha = FkgradL2norm2 > Scalar(0) ? gradL2norm2 / FkgradL2norm2 : Scalar(0);
+                broyden.gammak.head(mk) = alpha * broyden.gradL2;
+            }
+            break;
+            case EBroydenLeastSquaresSolver::COD: [[fallthrough]];
+            default: {
+                broyden.cod.compute(Fk);
+                if (broyden.cod.info() != Eigen::ComputationInfo::Success)
+                {
+                    throw std::runtime_error(
+                        fmt::format("COD decomposition failed at iteration {}", k));
+                }
+                broyden.gammak.head(mk) = broyden.cod.solve(broyden.fk);
+            }
+            break;
         }
-        break;
-        case EBroydenJacobianEstimate::UsdDiagonal: {
-            // Compute Delta 1 and store it in Gkm.col(dkl)
-            auto yk        = broyden.Fk.col(dkl);
-            auto sk        = broyden.Xk.col(dkl);
-            Scalar skTyk   = sk.dot(yk);
-            Scalar ykTyk   = yk.squaredNorm();
-            Scalar ykTsk2  = skTyk * skTyk;
-            Scalar deltaki = skTyk / ykTyk;
-            Scalar ykTDkyk = deltaki * ykTyk;
-            broyden.Gkm.col(dkl).array() =
-                deltaki + (Scalar(1) / skTyk + ykTDkyk / ykTsk2) * sk.array().square() -
-                (Scalar(2) * deltaki / skTyk) * sk.array() * yk.array();
-            // Compute Hkm and store it in Gkm.col(dkl)
-            auto Yk        = yk.array().square();
-            Scalar trYk2   = (Yk * Yk).sum();
-            Scalar ykTD1yk = yk.dot(broyden.Gkm.col(dkl).asDiagonal() * yk);
-            broyden.Gkm.col(dkl).array() += Scalar(1) + ((skTyk - ykTD1yk - ykTyk) / trYk2) * Yk;
+        // Broyden step
+        bool const bHasUpdatingDiagonal =
+            broyden.eJacobianEstimate == EBroydenJacobianEstimate::DiagonalCauchySchwarz or
+            broyden.eJacobianEstimate == EBroydenJacobianEstimate::UsdDiagonal or
+            broyden.eJacobianEstimate ==
+                EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating;
+        bool const bHasScaledIdentityJacobian =
+            broyden.eJacobianEstimate == EBroydenJacobianEstimate::ScaledIdentity;
+        // NOTE: At this point, broyden.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
+        if (bHasUpdatingDiagonal)
+        {
+            // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
+            fem.x.reshaped() = broyden.xkm1 - broyden.Gkm.col(dkl).asDiagonal() * broyden.fk;
+            fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
+            fem.x.reshaped() += broyden.Gkm.col(dkl).asDiagonal() *
+                                (broyden.Fk.leftCols(mk) * broyden.gammak.head(mk));
         }
-        break;
-        case EBroydenJacobianEstimate::DiagonalCauchySchwarz: {
-            // Accumulate lumped diagonal inverse Jacobian
-            broyden.Fknorm2 += broyden.Fk.col(dkl).squaredNorm();
-            broyden.Bknorm2 += (broyden.Xk.col(dkl).array() -
-                                broyden.Gkm.col(dkl).array() * broyden.Fk.col(dkl).array())
-                                   .square()
-                                   .sum();
-            auto ddkl = pbat::common::Modulo(dkl - 1, broyden.m);
-            broyden.FkRowNorm2.col(dkl) =
-                broyden.FkRowNorm2.col(ddkl) + broyden.Fk.col(dkl).cwiseSquare();
-            Scalar sigma = (broyden.betaF / broyden.sqrtBetaB) *
-                           (std::sqrt(broyden.Bknorm2) / broyden.Fknorm2);
-            broyden.Gkm.col(dkl) += sigma * broyden.FkRowNorm2.col(dkl).cwiseSqrt();
+        else if (bHasScaledIdentityJacobian)
+        {
+            Scalar sigma     = broyden.Sigma(dkl);
+            fem.x.reshaped() = broyden.xkm1 - sigma * broyden.fk;
+            fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
+            fem.x.reshaped() += sigma * (broyden.Fk.leftCols(mk) * broyden.gammak.head(mk));
         }
-        default: break;
+        else
+        {
+            fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
+            fem.x.reshaped() += broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
+        }
+        // Update Jacobian (inverse) estimate
+        switch (broyden.eJacobianEstimate)
+        {
+            case EBroydenJacobianEstimate::Identity: break;
+            case EBroydenJacobianEstimate::ScaledIdentity: {
+                auto sk      = broyden.Xk.col(dkl);
+                auto yk      = broyden.Fk.col(dkl);
+                Scalar ykTyk = yk.squaredNorm();
+                Scalar skTyk = sk.dot(yk);
+                broyden.Sigma(dkl) =
+                    ykTyk > Scalar(0) ? skTyk / ykTyk : Scalar(1) /* fall back to VBD */;
+            }
+            break;
+            case EBroydenJacobianEstimate::QuasiCauchyRelationDiagonalUpdating: {
+                auto ddkl        = pbat::common::Modulo(dkl - 1, broyden.m);
+                auto Hkm1        = broyden.Gkm.col(ddkl);
+                auto sk          = broyden.Xk.col(dkl);
+                auto yk          = broyden.Fk.col(dkl);
+                Scalar skTyk     = sk.dot(yk);
+                auto Dkm1        = Hkm1.cwiseInverse();
+                Scalar skTDkm1sk = sk.dot(Dkm1.asDiagonal() * sk);
+                auto Ek          = sk.array().square();
+                Scalar trEk2     = (Ek * Ek).sum();
+                if (trEk2 > Scalar(0) and skTyk > skTDkm1sk)
+                {
+                    broyden.Gkm.col(dkl) =
+                        (Dkm1.array() + ((skTyk - skTDkm1sk) / trEk2) * Ek).cwiseInverse();
+                }
+            }
+            break;
+            case EBroydenJacobianEstimate::UsdDiagonal: {
+                // Compute Delta 1 and store it in Gkm.col(dkl)
+                auto yk        = broyden.Fk.col(dkl);
+                auto sk        = broyden.Xk.col(dkl);
+                Scalar skTyk   = sk.dot(yk);
+                Scalar ykTyk   = yk.squaredNorm();
+                Scalar ykTsk2  = skTyk * skTyk;
+                Scalar deltaki = skTyk / ykTyk;
+                Scalar ykTDkyk = deltaki * ykTyk;
+                broyden.Gkm.col(dkl).array() =
+                    deltaki + (Scalar(1) / skTyk + ykTDkyk / ykTsk2) * sk.array().square() -
+                    (Scalar(2) * deltaki / skTyk) * sk.array() * yk.array();
+                // Compute Hkm and store it in Gkm.col(dkl)
+                auto Yk        = yk.array().square();
+                Scalar trYk2   = (Yk * Yk).sum();
+                Scalar ykTD1yk = yk.dot(broyden.Gkm.col(dkl).asDiagonal() * yk);
+                broyden.Gkm.col(dkl).array() +=
+                    Scalar(1) + ((skTyk - ykTD1yk - ykTyk) / trYk2) * Yk;
+            }
+            break;
+            case EBroydenJacobianEstimate::DiagonalCauchySchwarz: {
+                // Accumulate lumped diagonal inverse Jacobian
+                broyden.Fknorm2 += broyden.Fk.col(dkl).squaredNorm();
+                broyden.Bknorm2 += (broyden.Xk.col(dkl).array() -
+                                    broyden.Gkm.col(dkl).array() * broyden.Fk.col(dkl).array())
+                                       .square()
+                                       .sum();
+                auto ddkl = pbat::common::Modulo(dkl - 1, broyden.m);
+                broyden.FkRowNorm2.col(dkl) =
+                    broyden.FkRowNorm2.col(ddkl) + broyden.Fk.col(dkl).cwiseSquare();
+                Scalar sigma = (broyden.betaF / broyden.sqrtBetaB) *
+                               (std::sqrt(broyden.Bknorm2) / broyden.Fknorm2);
+                broyden.Gkm.col(dkl) += sigma * broyden.FkRowNorm2.col(dkl).cwiseSqrt();
+            }
+            default: break;
+        }
     }
 }
 

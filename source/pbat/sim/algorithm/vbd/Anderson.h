@@ -140,10 +140,6 @@ void InitializeSolve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.InitializeSolve");
     anderson.AllocateIfNeeded(fem.x.size());
     InitializeSolve(fem, contact, params);
-    anderson.xkm1 = fem.x.reshaped();
-    Iterate(fem, contact, params);
-    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-    anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     anderson.cod.setThreshold(anderson.codNumericalZero);
 }
 
@@ -155,31 +151,40 @@ void Iterate(
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Iterate");
-    Index k = params.k;
-    auto dkl           = pbat::common::Modulo(k - 1, anderson.m);
-    anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
-    anderson.xkm1        = fem.x.reshaped();
-    Iterate(fem, contact, params);
-    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
-    anderson.fk          = fem.x.reshaped() - anderson.xkm1;
-    anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
-    anderson.fkm1        = anderson.fk;
-    auto mk              = std::min(anderson.m, k);
-    auto Fk              = anderson.Fk.leftCols(mk);
-    // NOTE: I would like to use a COD or QR updating scheme here instead of recomputing from
-    // scratch every time (Eigen does not seem to support it), but the updating scheme needs to
-    // account for pivoting as well.
-    anderson.cod.compute(Fk);
-    if (anderson.cod.info() != Eigen::ComputationInfo::Success)
+    if (params.k == 0)
     {
-        throw std::runtime_error(
-            fmt::format("COD decomposition failed at iteration {}", k));
+        anderson.xkm1 = fem.x.reshaped();
+        Iterate(fem, contact, params);
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     }
-    anderson.gammak.head(mk) = anderson.cod.solve(anderson.fk);
-    // At this point, anderson.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
-    fem.x.reshaped() = anderson.xkm1 + anderson.beta * anderson.fk;
-    fem.x.reshaped() -= anderson.Xk.leftCols(mk) * anderson.gammak.head(mk);
-    fem.x.reshaped() -= anderson.beta * (anderson.Fk.leftCols(mk) * anderson.gammak.head(mk));
+    else
+    {
+        Index k              = params.k;
+        auto dkl             = pbat::common::Modulo(k - 1, anderson.m);
+        anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
+        anderson.xkm1        = fem.x.reshaped();
+        Iterate(fem, contact, params);
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        anderson.fk          = fem.x.reshaped() - anderson.xkm1;
+        anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
+        anderson.fkm1        = anderson.fk;
+        auto mk              = std::min(anderson.m, k);
+        auto Fk              = anderson.Fk.leftCols(mk);
+        // NOTE: I would like to use a COD or QR updating scheme here instead of recomputing from
+        // scratch every time (Eigen does not seem to support it), but the updating scheme needs to
+        // account for pivoting as well.
+        anderson.cod.compute(Fk);
+        if (anderson.cod.info() != Eigen::ComputationInfo::Success)
+        {
+            throw std::runtime_error(fmt::format("COD decomposition failed at iteration {}", k));
+        }
+        anderson.gammak.head(mk) = anderson.cod.solve(anderson.fk);
+        // At this point, anderson.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
+        fem.x.reshaped() = anderson.xkm1 + anderson.beta * anderson.fk;
+        fem.x.reshaped() -= anderson.Xk.leftCols(mk) * anderson.gammak.head(mk);
+        fem.x.reshaped() -= anderson.beta * (anderson.Fk.leftCols(mk) * anderson.gammak.head(mk));
+    }
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

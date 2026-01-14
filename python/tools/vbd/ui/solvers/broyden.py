@@ -75,12 +75,6 @@ class BroydenSolver(BaseSolver):
         broyden = params.broyden_params
         if callback is None:
             callback = lambda: None
-        # Hack to register the initial iterate, because Anderson's initialize_solve
-        # computes both the initial iterate and the first iteration.
-        xcpy = fem.x.copy()
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd)
-        callback()
-        fem.x = xcpy
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
         callback()
         while vbd.k < vbd.n_max_iters:

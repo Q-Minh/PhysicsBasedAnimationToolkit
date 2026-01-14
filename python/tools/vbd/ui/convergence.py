@@ -36,10 +36,11 @@ class Convergence:
         if implot.BeginPlot("Objective"):
             implot.SetupAxes(
                 "Iteration",
-                "f / f*",
+                "f / max(f)",
                 flags,
                 flags,
             )
+            implot.SetupLegend(implot.ImPlotLocation_NorthEast)
             for solver_name, f_vals in zip(self._solver_names, self._f):
                 implot.PlotLine(
                     solver_name,
@@ -50,10 +51,11 @@ class Convergence:
         if implot.BeginPlot("Gradient"):
             implot.SetupAxes(
                 "Iteration",
-                "||g||^2 / ||g*||^2",
+                "||g||^2 / max(||g*||^2)",
                 flags,
                 flags,
             )
+            implot.SetupLegend(implot.ImPlotLocation_NorthEast)
             for solver_name, gnorm_vals in zip(self._solver_names, self._gnorm2):
                 implot.PlotLine(
                     solver_name,
@@ -68,6 +70,7 @@ class Convergence:
                 flags,
                 flags,
             )
+            implot.SetupLegend(implot.ImPlotLocation_NorthEast)
             for solver_name, error_vals in zip(self._solver_names, self._errors):
                 implot.PlotLine(
                     solver_name,
@@ -115,12 +118,10 @@ class Convergence:
         self._solver_names = [solver.name for solver in solvers]
         x0 = fem.x.copy()
         v0 = fem.v.copy()
-        f0 = self.objective(x0, fem, contact)
-        g0 = self.gradient(x0, fem, contact)
-        self._f = [[f0] for _ in solvers]
-        self._gnorm2 = [[np.dot(g0, g0)] for _ in solvers]
+        self._f = [[] for _ in solvers]
+        self._gnorm2 = [[] for _ in solvers]
         self._errors = [[] for _ in solvers]
-        xs = [[x0.copy()] for _ in solvers]
+        xs = [[] for _ in solvers]
         xstar = np.zeros_like(fem.x)
         vstar = np.zeros_like(fem.v)
         for s, solver in enumerate(solvers):
@@ -138,23 +139,19 @@ class Convergence:
         fem.v = vstar
         dx = lambda a, b: a.ravel() - b.ravel()
         dxstarnorm2 = np.dot(dx(x0, xstar), dx(x0, xstar))
+        zero = 1e-12
         self._errors = [
             [
-                (np.dot(dx(x, xstar), dx(x, xstar)) + 1) / (dxstarnorm2 + 1)
+                (np.dot(dx(x, xstar), dx(x, xstar))) / max(dxstarnorm2, zero)
                 for x in xs[s]
             ]
             for s in range(len(solvers))
         ]
-        fstar = self.objective(fem.x, fem, contact)
-        gstar = self.gradient(fem.x, fem, contact)
-        gstarnorm2 = np.dot(gstar, gstar)
-        self._f = [
-            [(fval + 1) / (fstar + 1) for fval in self._f[s]]
-            for s in range(len(solvers))
-        ]
+        fmax = np.max([np.max(self._f[s]) for s in range(len(solvers))])
+        self._f = [[fval / fmax for fval in self._f[s]] for s in range(len(solvers))]
+        gmax2 = np.max([np.max(gnorm2) for gnorm2 in self._gnorm2])
         self._gnorm2 = [
-            [(gnorm2 + 1) / (gstarnorm2 + 1) for gnorm2 in self._gnorm2[s]]
-            for s in range(len(solvers))
+            [gnorm2 / gmax2 for gnorm2 in self._gnorm2[s]] for s in range(len(solvers))
         ]
         self._convergence_analysis_requested = False
 
