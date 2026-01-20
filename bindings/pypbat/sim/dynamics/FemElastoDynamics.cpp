@@ -353,6 +353,29 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
             "Returns:\n"
             "    numpy.ndarray: kDims*|# nodes| gradient vector.")
+        .def(
+            "total_elastic_potential",
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x) {
+                return self.ElasticPotentialEnergy(x.reshaped());
+            },
+            nb::arg("x"),
+            "Total elastic potential energy.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims x |# nodes|` matrix of nodal positions.\n\n"
+            "Returns:\n"
+            "    float: Total elastic potential energy.")
+        .def(
+            "total_elastic_potential",
+            [](ElastoDynamics& self, nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
+                return self.ElasticPotentialEnergy(x);
+            },
+            nb::arg("x"),
+            "Total elastic potential energy.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
+            "Returns:\n"
+            "    float: Total elastic potential energy.")
         .def("is_dirichlet_node", &ElastoDynamics::IsDirichletNode, nb::arg("node"))
         .def("is_dirichlet_dof", &ElastoDynamics::IsDirichletDof, nb::arg("i"))
         .def_prop_ro(

@@ -3,6 +3,7 @@ import numpy as np
 from pbatoolkit import pbat, pypbat
 import polyscope as ps
 import polyscope.imgui as imgui
+import polyscope.implot as implot
 import tkinter as tk
 from tkinter import filedialog
 import h5py as h5
@@ -38,6 +39,8 @@ class Simulation:
     _v0: np.ndarray[float]
     _xD: np.ndarray[float]
     _dmin: float = float("inf")
+    _energy_history_kinetic: list[float]
+    _energy_history_potential: list[float]
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
@@ -61,6 +64,8 @@ class Simulation:
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
         )
         self._dmin = float("inf")
+        self._energy_history_kinetic = []
+        self._energy_history_potential = []
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
@@ -158,6 +163,9 @@ class Simulation:
                 self._contact.contact_dynamics.compute_displacement_bounds(
                     self._fem_dynamics.X
                 )
+            self._energy_history_kinetic = []
+            self._energy_history_potential = []
+            self._record_energy()
 
     def _step(self):
         if self._fem_dynamics is None:
@@ -181,6 +189,7 @@ class Simulation:
         self._fem_dynamics.step()
         self._profiler.end_frame("Physics")
         self._update_visuals_after_position_change()
+        self._record_energy()
         self._t += 1
 
     def _update_visuals_after_position_change(self):
@@ -261,6 +270,7 @@ class Simulation:
         )
         imgui.Text(f"# contacts: {self._contact.contact_dynamics.num_contacts}")
         self._draw_trajectory_ui()
+        self._draw_energy_ui()
         imgui.PopID()
 
     def _draw_convergence_ui(self):
@@ -292,6 +302,62 @@ class Simulation:
                 self._t = self._trajectory.t
             else:
                 self._trajectory.undirty(lambda archive: None)
+
+    def _record_energy(self):
+        if self._fem_dynamics is None:
+            return
+        fem = self._fem_dynamics
+        # Kinetic energy: K = 0.5 * v^T * M * v
+        v = fem.v.flatten(order="F")  # kDims*|#nodes| x 1
+        M = fem.M()  # kDims*|#nodes| x 1 lumped mass diagonal
+        kinetic_energy = 0.5 * np.dot(v, M * v)
+        # Elastic potential energy: compute from elastic energy at quadrature points
+        fem.compute_elastic_energy(
+            fem.x,
+            pbat.fem.ElementElasticityComputationFlags.Potential,
+            pbat.fem.HyperElasticSpdCorrection.NoCorrection,
+        )
+        potential_energy = np.sum(fem.UgU)
+        # Total mechanical energy
+        total_energy = kinetic_energy + potential_energy
+        # Record
+        self._energy_history_kinetic.append(kinetic_energy)
+        self._energy_history_potential.append(potential_energy)
+
+    def _draw_energy_ui(self):
+        imgui.PushID("Energy")
+        # if len(self._energy_history_timesteps) > 0:
+        #     flags = implot.ImPlotAxisFlags_AutoFit
+        #     if implot.BeginPlot("Mechanical Energy", [-1, 200]):
+        #         implot.SetupAxes(
+        #             "Time step",
+        #             "Energy",
+        #             flags,
+        #             flags,
+        #         )
+        #         implot.SetupLegend(implot.ImPlotLocation_NorthEast)
+        #         timesteps = np.array(self._energy_history_timesteps, dtype=np.float64)
+        #         implot.PlotLine(
+        #             "Kinetic",
+        #             timesteps,
+        #             np.array(self._energy_history_kinetic),
+        #         )
+        #         implot.PlotLine(
+        #             "Potential",
+        #             timesteps,
+        #             np.array(self._energy_history_potential),
+        #         )
+        #         implot.PlotLine(
+        #             "Total",
+        #             timesteps,
+        #             np.array(self._energy_history_total),
+        #         )
+        #         implot.EndPlot()
+        # else:
+        #     imgui.Text(
+        #         "No energy data recorded yet. Run simulation to see energy plot."
+        #     )
+        imgui.PopID()
 
     def _draw_io_ui(self, button_size):
         imgui.PushID("IO")
