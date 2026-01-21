@@ -449,8 +449,14 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_prop_ro("Xstatic", &MeshDynamicsType::StaticPointPositions, "Static point positions.")
         .def_prop_ro("dynamic_meshes", &MeshDynamicsType::DynamicMeshes, "Dynamic meshes.")
         .def_prop_ro("static_meshes", &MeshDynamicsType::StaticMeshes, "Static meshes.")
-        .def_prop_ro("ogc_input", &MeshDynamicsType::OgcInput, "OGC input.")
-        .def_prop_ro("ogc_state", &MeshDynamicsType::OgcState, "OGC state.")
+        .def_prop_ro(
+            "ogc_input",
+            [](MeshDynamicsType& self) -> decltype(auto) { return self.OgcInput(); },
+            "OGC input.")
+        .def_prop_ro(
+            "ogc_state",
+            [](MeshDynamicsType& self) -> decltype(auto) { return self.OgcState(); },
+            "OGC state.")
         .def_prop_ro(
             "vertex_vertex_energies",
             &MeshDynamicsType::VertexVertexEnergies,

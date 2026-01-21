@@ -668,10 +668,20 @@ class MeshDynamics
      */
     auto OgcInput() const -> ogc::Input<ScalarType, IndexType> const& { return mOgcInput; }
     /**
+     * @brief Get the Ogc Input object
+     * @return ogc::Input<ScalarType, IndexType>&
+     */
+    auto OgcInput() -> ogc::Input<ScalarType, IndexType>& { return mOgcInput; }
+    /**
      * @brief Get the Ogc State object
      * @return ogc::State<ScalarType, IndexType> const&
      */
     auto OgcState() const -> ogc::State<ScalarType, IndexType> const& { return mOgcState; }
+    /**
+     * @brief Get the Ogc State object
+     * @return ogc::State<ScalarType, IndexType>&
+     */
+    auto OgcState() -> ogc::State<ScalarType, IndexType>& { return mOgcState; }
 
     /**
      * @brief Serialize to archive
