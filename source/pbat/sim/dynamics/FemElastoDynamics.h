@@ -306,13 +306,23 @@ struct FemElastoDynamics
     template <class TDerivedX>
     Eigen::Vector<ScalarType, Eigen::Dynamic> Gradient(Eigen::MatrixBase<TDerivedX> const& _x);
     /**
-     * @brief Compute the time integration optimization's discrete kinetic energy
+     * @brief Compute the time integration optimization's momentum energy
      * @tparam TDerivedX Eigen matrix expression type for nodal positions
      * @param _x `kDims*|# nodes| x 1` vector of nodal positions
-     * @return Discrete kinetic energy
+     * @return Momentum energy
      */
     template <class TDerivedX>
-    ScalarType DiscreteKineticEnergy(Eigen::MatrixBase<TDerivedX> const& _x) const;
+    ScalarType MomentumEnergy(Eigen::MatrixBase<TDerivedX> const& _x) const;
+    /**
+     * @brief Compute and add momentum gradient
+     * @tparam TDerivedX Eigen dense expression type for nodal positions
+     * @tparam TDerivedG Eigen dense expression type for gradient
+     * @param _x `kDims*|# nodes| x 1` vector of nodal positions
+     * @param _g `kDims*|# nodes| x 1` vector to add momentum gradient to
+     */
+    template <class TDerivedX, class TDerivedG>
+    void ToMomentumGradient(Eigen::MatrixBase<TDerivedX> const& _x, Eigen::DenseBase<TDerivedG>& _g)
+        const;
     /**
      * @brief Compute the time integration optimization's elastic potential energy
      * @tparam TDerivedX Eigen dense expression type for nodal positions
@@ -322,6 +332,17 @@ struct FemElastoDynamics
      */
     template <class TDerivedX>
     ScalarType ElasticPotentialEnergy(Eigen::DenseBase<TDerivedX> const& _x);
+    /**
+     * @brief Compute and add elastic gradient
+     * @tparam TDerivedX Eigen dense expression type for nodal positions
+     * @tparam TDerivedG Eigen dense expression type for gradient
+     * @param _x `kDims*|# nodes| x 1` vector of nodal positions
+     * @param _g `kDims*|# nodes| x 1` vector to add elastic gradient to
+     */
+    template <class TDerivedX, class TDerivedG>
+    void ToElasticGradient(
+        Eigen::MatrixBase<TDerivedX> const& _x,
+        Eigen::PlainObjectBase<TDerivedG>& _g);
     /**
      * @brief k-dimensional mass matrix
      * @return `kDims * |#nodes| x 1` vector of the `kDims`-dimensional lumped mass matrix diagonal
@@ -803,7 +824,7 @@ inline TScalar FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, T
 {
     ScalarType U  = ElasticPotentialEnergy(_x.reshaped());
     ScalarType bt = bdf.BetaTilde();
-    ScalarType K  = DiscreteKineticEnergy(_x.reshaped());
+    ScalarType K  = MomentumEnergy(_x.reshaped());
     return K + (bt * bt) * U;
 }
 
@@ -818,17 +839,16 @@ inline Eigen::Vector<TScalar, Eigen::Dynamic>
 FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::Gradient(
     Eigen::MatrixBase<TDerivedX> const& _x)
 {
+    ScalarType bt = bdf.BetaTilde();
     ComputeElasticEnergy(
         _x.reshaped(),
         fem::EElementElasticityComputationFlags::Gradient,
         fem::EHyperElasticSpdCorrection::None);
-    Eigen::Vector<ScalarType, Eigen::Dynamic> gU(_x.size());
-    gU.setZero();
-    fem::ToHyperElasticGradient(mesh, egU, GgU, gU);
-    Eigen::Vector<ScalarType, Eigen::Dynamic> gK =
-        M().asDiagonal() * (_x.reshaped() - xtilde.reshaped());
-    ScalarType bt                               = bdf.BetaTilde();
-    Eigen::Vector<ScalarType, Eigen::Dynamic> g = gK + (bt * bt) * gU;
+    Eigen::Vector<ScalarType, Eigen::Dynamic> g(_x.size());
+    g.setZero();
+    ToElasticGradient(_x, g);
+    g *= (bt * bt);
+    ToMomentumGradient(_x, g);
     g(DirichletDofs()).setZero();
     return g;
 }
@@ -841,12 +861,46 @@ template <
     common::CIndex TIndex>
 template <class TDerivedX>
 inline TScalar
-FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::DiscreteKineticEnergy(
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::MomentumEnergy(
     Eigen::MatrixBase<TDerivedX> const& _x) const
 {
     auto dx   = (_x.reshaped() - xtilde.reshaped());
     TScalar K = TScalar(0.5) * dx.dot(M().asDiagonal() * dx);
     return K;
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+template <class TDerivedX, class TDerivedG>
+inline void
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::ToMomentumGradient(
+    Eigen::MatrixBase<TDerivedX> const& _x,
+    Eigen::DenseBase<TDerivedG>& _g) const
+{
+    _g += M().asDiagonal() * (_x.reshaped() - xtilde.reshaped());
+}
+
+template <
+    fem::CElement TElement,
+    int Dims,
+    physics::CHyperElasticEnergy THyperElasticEnergy,
+    common::CFloatingPoint TScalar,
+    common::CIndex TIndex>
+template <class TDerivedX, class TDerivedG>
+inline void
+FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::ToElasticGradient(
+    Eigen::MatrixBase<TDerivedX> const& _x,
+    Eigen::PlainObjectBase<TDerivedG>& _g)
+{
+    ComputeElasticEnergy(
+        _x.reshaped(),
+        fem::EElementElasticityComputationFlags::Gradient,
+        fem::EHyperElasticSpdCorrection::None);
+    fem::ToHyperElasticGradient(mesh, egU, GgU, _g);
 }
 
 template <

@@ -5,19 +5,27 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from .base import BaseSolver
 import typing
+import numpy as np
 
 
 class VbdSolver(BaseSolver):
     _params: ParameterObject
+    _handle_contacts: bool
 
     def __init__(self):
         super().__init__("VBD")
         self._params = ParameterObject(pbat.sim.algorithm.vbd.Params())
+        self._handle_contacts = True
 
     def draw(self):
         imgui.PushID(self._name)
         if imgui.TreeNode(f"{type(self._params.params).__name__}"):
             self._params.draw()
+            imgui.TreePop()
+        if imgui.TreeNode(f"Control"):
+            _, self._handle_contacts = imgui.Checkbox(
+                "Handle Contacts", self._handle_contacts
+            )
             imgui.TreePop()
         imgui.PopID()
 
@@ -45,13 +53,17 @@ class VbdSolver(BaseSolver):
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         if callback is None:
             callback = lambda: None
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
+        if self._handle_contacts:
+            pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
+        else:
+            params.k = 0
         callback()
         for k in range(params.n_max_iters):
-            if contact.requires_bounds_computation:
+            if contact.requires_bounds_computation and self._handle_contacts:
                 contact.compute_displacement_bounds(fem.x)
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
-            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
+            if self._handle_contacts:
+                fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
 

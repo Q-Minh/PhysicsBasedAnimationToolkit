@@ -248,7 +248,7 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
     fem.HgU *= bt2;
     fem.GgU *= bt2;
     Scalar U = fem::HyperElasticPotential(fem.UgU);
-    Scalar K = fem.DiscreteKineticEnergy(fem.x);
+    Scalar K = fem.MomentumEnergy(fem.x);
     Scalar C = contact.Potential();
     return K + bt2 * U + C;
 }
