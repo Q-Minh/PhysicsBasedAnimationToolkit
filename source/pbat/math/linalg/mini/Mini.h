@@ -34,6 +34,7 @@ namespace pbat::math::linalg::mini {
 #include "QR.h"
 #include "Reductions.h"
 #include "Repeat.h"
+#include "Reshape.h"
 #include "Scale.h"
 #include "Stack.h"
 #include "SubMatrix.h"
