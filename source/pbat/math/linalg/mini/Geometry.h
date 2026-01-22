@@ -140,13 +140,13 @@ PBAT_HOST_DEVICE void ToSkewSymmetricMatrix(TVector const& a, TMatrix& M)
     using ScalarType = typename TVector::ScalarType;
 
     M(0, 0) = ScalarType{0};
-    M(0, 1) = -a(2, 0);
-    M(0, 2) = a(1, 0);
     M(1, 0) = a(2, 0);
-    M(1, 1) = ScalarType{0};
-    M(1, 2) = -a(0, 0);
     M(2, 0) = -a(1, 0);
+    M(0, 1) = -a(2, 0);
+    M(1, 1) = ScalarType{0};
     M(2, 1) = a(0, 0);
+    M(0, 2) = a(1, 0);
+    M(1, 2) = -a(0, 0);
     M(2, 2) = ScalarType{0};
 }
 
