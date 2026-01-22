@@ -240,7 +240,7 @@ class Simulation:
             if fem.xtilde.shape == x.shape:
                 gradK = fem.momentum_gradient(x)
                 self._fem_dynamics_vm.add_scalar_quantity(
-                    "log(||grad K||+1)",
+                    "log(||grad K|| + 1)",
                     np.log10(np.linalg.norm(gradK, axis=0) + 1),
                     defined_on="vertices",
                     cmap="turbo",
@@ -248,7 +248,7 @@ class Simulation:
                 grad = fem.gradient(x).reshape((3, -1), order="F")
                 gnorms = np.linalg.norm(grad, axis=0)
                 self._fem_dynamics_vm.add_scalar_quantity(
-                    "log(residual)",
+                    "log(residual + 1)",
                     np.log10(gnorms + 1),
                     defined_on="vertices",
                     cmap="turbo",
