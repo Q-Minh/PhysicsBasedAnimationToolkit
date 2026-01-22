@@ -163,9 +163,9 @@ class Simulation:
                 self._contact.contact_dynamics.compute_displacement_bounds(
                     self._fem_dynamics.X
                 )
-            self._energy_history_kinetic = []
-            self._energy_history_potential = []
-            self._record_energy()
+            # self._energy_history_kinetic = []
+            # self._energy_history_potential = []
+            # self._record_energy()
 
     def _step(self):
         if self._fem_dynamics is None:
@@ -189,7 +189,7 @@ class Simulation:
         self._fem_dynamics.step()
         self._profiler.end_frame("Physics")
         self._update_visuals_after_position_change()
-        self._record_energy()
+        # self._record_energy()
         self._t += 1
 
     def _update_visuals_after_position_change(self):
@@ -211,6 +211,27 @@ class Simulation:
                 vminmax=(0, 1),
             )
             x = self._fem_dynamics.x
+            self._fem_dynamics.compute_elastic_energy(
+                x,
+                pbat.fem.ElementElasticityComputationFlags.Potential,
+                pbat.fem.HyperElasticSpdCorrection.NoCorrection,
+            )
+            self._fem_dynamics_vm.add_scalar_quantity(
+                "Elastic Energy Density",
+                self._fem_dynamics.UgU / self._fem_dynamics.wgU,
+                defined_on="cells",
+                cmap="turbo",
+            )
+            if self._fem_dynamics.xtilde.shape == x.shape:
+                grad = self._fem_dynamics.gradient(x).reshape((3, -1), order="F")
+                gnorms = np.linalg.norm(grad, axis=0)
+                self._fem_dynamics_vm.add_scalar_quantity(
+                    "log(residual)",
+                    np.log10(gnorms + 1e-10),
+                    defined_on="vertices",
+                    cmap="turbo",
+                    vminmax=(-8, 0),
+                )
             bdf: pbat.sim.integration.Bdf = self._fem_dynamics.bdf
             xt = -bdf.inertia().reshape((3, -1), order="F")
             bt = bdf.beta_tilde
