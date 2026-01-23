@@ -30,6 +30,7 @@ class Selection:
         prop_value: typing.Any,
         target: SelectionTargets,
         callback: typing.Callable[None, [int, typing.Any, np.ndarray[int]]],
+        
     ):
         self.name = name
         self._prop_name = prop_name
@@ -50,6 +51,7 @@ class Selection:
         pass
 
     def specific_draw(self):
+        """ Create input field according to the type of the property this selection is storing."""
         if isinstance(self._prop_value, float):
             _, self._prop_value = imgui.InputFloat(self._prop_name, self._prop_value)
         elif isinstance(self._prop_value, int):
@@ -66,6 +68,7 @@ class Selection:
         pass
 
     def set_visible(self, visible: bool):
+        """ If this selection class uses meshes, toggle their visibility"""
         pass
 
 class BoxSelection(Selection):
@@ -180,7 +183,8 @@ class BoxSelection(Selection):
                     _, self._surface_only = imgui.Checkbox("Surface Only", self._surface_only)
                 imgui.EndTabItem()
 
-            self._ps_helper.draw()
+            if self._ps_helper is not None:
+                self._ps_helper.draw()
 
             if imgui.BeginTabItem("Hide", True, tab_flags)[0]:
                 # This is intentionally left empty
@@ -206,9 +210,12 @@ class BoxSelection(Selection):
 class CylinderSelection(Selection):
     """ We will cheat cylinder selection as a chain of box selections. """
     _box_selections: list[BoxSelection]
+    _box_transforms: list[np.ndarray]
     _radius: float
     _box_num: int
     _scale: np.ndarray
+    _ps_cloud: ps.PointCloud
+    _ps_helper: PsHelper
 
     def __init__(
         self,
@@ -220,26 +227,39 @@ class CylinderSelection(Selection):
     ):
         super().__init__(name, prop_name, prop_value, target, callback)
         self._box_selections = []
+        self._box_transforms = []
         self._radius = 1.0
         self._box_num = 10
         self._scale = np.ones(3, dtype=np.float32)
-        self.make_ring()
 
-    def add_box_selection(self, box_selection: BoxSelection):
+    def on_added(self):
+        self._ps_cloud = ps.register_point_cloud(self.name, np.array([[0.0, 0.0, 0.0]]))
+        self._ps_helper = PsHelper(self._ps_cloud)
+        self._make_ring()
+
+    def on_removed(self):
+        for box in self._box_selections:
+            box.on_removed()
+        ps.remove_point_cloud(self._ps_cloud.get_name())
+        self._ps_cloud = None
+        self._ps_helper = None
+
+    def _add_box_selection(self, box_selection: BoxSelection, transform: np.ndarray):
         self._box_selections.append(box_selection)
+        self._box_transforms.append(transform)
+        box_selection._ps_mesh.set_transform(self._ps_cloud.get_transform() @ transform)
 
-    def make_ring(self):
+    def _make_ring(self):
         """Create a ring of box selections."""
         angle = 360 / self._box_num
         for i in range(self._box_num):
             box = BoxSelection(
-                name=f"Box {i}",
+                name=f"Box {i} of Cylinder {self.name}",
                 prop_name=self._prop_name,
                 prop_value=self._prop_value,
                 target=self._target,
                 callback=self._callback,
             )
-            self.add_box_selection(box)
             box.on_added()
             # Move the box
             transform = np.zeros((4, 4))
@@ -252,25 +272,32 @@ class CylinderSelection(Selection):
                 0,
                 1
             ])
-            box._ps_mesh.set_transform(transform)
+            self._add_box_selection(box, transform)
 
-    def on_removed(self):
-        for box in self._box_selections:
-                        box.on_removed()
+    
 
     def draw(self, meshes: list[TetrahedralElastodynamicsBody]):
         imgui.PushID(self.name)
         tab_flags = styles.default_tab_flags()
         styles.set_style_subtle()
+        for box, transform in zip(self._box_selections, self._box_transforms):
+            box._ps_mesh.set_transform(self._ps_cloud.get_transform() @ transform)
+            box._ps_mesh.set_enabled(self._ps_cloud.is_enabled())
+        
         if imgui.BeginTabBar("Mode bar", tab_flags):
+
             if imgui.BeginTabItem("Setup", True, tab_flags)[0]:
                 num_change, self._box_num = imgui.InputInt("Number of boxes", self._box_num)
                 rad_change, self._radius = imgui.SliderFloat("Radius", self._radius, 0, 2)
-                if num_change or rad_change:
+                
+                if (num_change or rad_change) and self._box_num > 0:
+                    # Clear all previous data
                     for box in self._box_selections:
                         box.on_removed()
+                    self._box_transforms = []
                     self._box_selections = []
-                    self.make_ring()
+                    # Regenerate ring
+                    self._make_ring()
 
                 _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 2)
                 self._scale = np.array(self._scale)
@@ -282,6 +309,9 @@ class CylinderSelection(Selection):
                 
                 self.specific_draw()
                 imgui.EndTabItem()
+
+            if self._ps_helper is not None:
+                self._ps_helper.draw()
 
             if imgui.BeginTabItem("Hide", True, tab_flags)[0]:
                 # This is intentionally left empty
