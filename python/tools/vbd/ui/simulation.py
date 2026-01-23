@@ -181,7 +181,9 @@ class Simulation:
             initialization_strategy=self._fem_dynamics_init_strategy
         )
         if self._static_elasticity:
-            self._fem_dynamics.xtilde = self._fem_dynamics.x
+            # NOTE: Uncomment to add rest shape matching term
+            # self._fem_dynamics.m = self._masscpy
+            self._fem_dynamics.xtilde = self._fem_dynamics.X
         try:
             self._solver.solve(
                 self._fem_dynamics,
@@ -231,25 +233,44 @@ class Simulation:
                 vminmax=(4, 7),
             )
             gradU = fem.elastic_gradient(x)
+            # self._fem_dynamics_vm.add_scalar_quantity(
+            #     "log(||grad U||)",
+            #     np.log10(np.maximum(np.linalg.norm(gradU, axis=0), 1e-8)),
+            #     defined_on="vertices",
+            #     cmap="turbo",
+            #     vminmax=(0, 8)
+            # )
             self._fem_dynamics_vm.add_scalar_quantity(
-                "log(||grad U|| + 1)",
-                np.log10(np.linalg.norm(gradU, axis=0) + 1),
+                "||grad U||",
+                np.linalg.norm(gradU, axis=0),
                 defined_on="vertices",
                 cmap="turbo",
             )
             if fem.xtilde.shape == x.shape:
                 gradK = fem.momentum_gradient(x)
+                # self._fem_dynamics_vm.add_scalar_quantity(
+                #     "log(||grad K|| + 1)",
+                #     np.log10(np.linalg.norm(gradK, axis=0) + 1),
+                #     defined_on="vertices",
+                #     cmap="turbo",
+                # )
                 self._fem_dynamics_vm.add_scalar_quantity(
-                    "log(||grad K|| + 1)",
-                    np.log10(np.linalg.norm(gradK, axis=0) + 1),
+                    "||grad K||",
+                    np.linalg.norm(gradK, axis=0),
                     defined_on="vertices",
                     cmap="turbo",
                 )
                 grad = fem.gradient(x).reshape((3, -1), order="F")
                 gnorms = np.linalg.norm(grad, axis=0)
+                # self._fem_dynamics_vm.add_scalar_quantity(
+                #     "log(residual + 1)",
+                #     np.log10(gnorms + 1),
+                #     defined_on="vertices",
+                #     cmap="turbo",
+                # )
                 self._fem_dynamics_vm.add_scalar_quantity(
-                    "log(residual + 1)",
-                    np.log10(gnorms + 1),
+                    "residual",
+                    gnorms,
                     defined_on="vertices",
                     cmap="turbo",
                 )
