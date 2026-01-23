@@ -211,12 +211,17 @@ def make_prism(resolution, dims, normalize):
     V = None
     F = None
     new_tris = None
+    middles = []
     for i in range(nz):
         v, f = gpt.regular_square_mesh(nx, ny)
         # make it unit length
         v /= 2
         # add 3rd dimension to V
         v = np.hstack((v, np.full((v.shape[0], 1), placement[i])))
+        if i != 0:
+            middle = np.mean(v, axis=0)
+            middle[2] = (placement[i] + placement[i - 1]) / 2
+            middles.append(middle)
         if V is None:
             V = v
             F = f
@@ -268,15 +273,19 @@ def make_prism(resolution, dims, normalize):
 
     F = np.vstack((F, new_tris))
 
+    middles = np.array(middles)
     # Scale the mesh by the desired dimensions
     V *= np.array(dims)
+    middles *= np.array(dims)
     if normalize:
         max_dim = max(dims)
         V /= max_dim
+        middles /= max_dim
 
     R_y = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
     V = V @ R_y
-
+    middles = middles @ R_y
+    args.middle_points = middles
     return V, F
 
 
@@ -304,6 +313,11 @@ def simplify(V, T, args):
 
 def to_tets(V, T, args):
     tgen = tg.TetGen(V, T)
+    if args.mode == "prism":
+        # add a region at every layer
+        for i in range(args.middle_points.shape[0]):
+            tgen.add_region(i, args.middle_points[i])
+
     nodes, elem, attrib = tgen.tetrahedralize(
         steinerleft=args.steiner_points,
         minratio=args.min_ratio,
@@ -376,7 +390,7 @@ if __name__ == "__main__":
 
     sm = ps.register_surface_mesh("Surface", V, T, edge_width=1.0)
     sm2 = ps.register_surface_mesh("Remeshed Surface", Vr, Tr, edge_width=1.0)
-    sm2.set_position(np.array([1.5, 0.0, 0.0]))
+    sm2.set_position(np.array([0, 0.0, -0.4]))
 
     vm = None
 
@@ -407,6 +421,7 @@ if __name__ == "__main__":
                 )
                 sm = ps.register_surface_mesh("Surface", V, T, edge_width=1.0)
                 sm.set_transform(transform)
+                Vr, Tr = V, T
 
         elif args.mode == "prism":
             a, args.resolution = imgui.InputInt3("Resolution", args.resolution)
@@ -424,6 +439,7 @@ if __name__ == "__main__":
                 )
                 sm = ps.register_surface_mesh("Surface", V, T, edge_width=1.0)
                 sm.set_transform(transform)
+                Vr, Tr = V, T
 
         if imgui.TreeNode("TetGen Parameters"):
             _, args.min_ratio = imgui.InputFloat("Minimal ratio", args.min_ratio)
@@ -460,7 +476,7 @@ if __name__ == "__main__":
                 transform = vm.get_transform()
             else:
                 transform = sm.get_transform()
-                transform[:3, 3] = np.array([0.0, 0.0, 1.5])
+                transform[:3, 3] = np.array([0.0, 0.0, 0.4])
             nodes, elem, attrib = to_tets(Vr, Tr, args)
             vm = set_volume_mesh(nodes, elem, attrib)
             vm.set_transform(transform)

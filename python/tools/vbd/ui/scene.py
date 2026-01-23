@@ -15,7 +15,8 @@ from .utils.transform_library import TransformLibrary
 from .utils import styles
 
 
-class SelectionList:
+class SelectorList:
+    """List of selection objects, per property"""
     _default_value: typing.Any
     _selection_target: SelectionTargets
     _listener: typing.Callable[[int, typing.Any, np.ndarray[int]], None]
@@ -32,6 +33,7 @@ class SelectionList:
         self._list_type = list_type
         
     def on_selector_added(self, prop_type: str):
+        """Create a new selector"""
         if self._list_type == BoxSelection.__name__:
             self._selectors.append(
                 BoxSelection(
@@ -62,10 +64,11 @@ class SelectionList:
                 )
             )
         else:
-            raise ValueError(f"No SelectionList support for type {self._list_type}")
+            raise ValueError(f"No SelectorList support for type {self._list_type}")
         self._selectors[-1].on_added()
 
     def remove_selector(self, idx: int):
+        """Remove a selector"""
         selector = self._selectors.pop(idx)
         selector.on_removed()
         id = int(selector.name.split(" - ")[-1])
@@ -77,16 +80,32 @@ class SelectionList:
         else:
             return len(self._selectors)
 
+class SelectorListManager:
+    """Class that will monitor a selector list"""
+    selector_list: dict[str, SelectorList]
+    usable_on: list[SelectionTargets]
+    class_name: str
+
+    def __init__(self, selector_list: dict[str, SelectorList], usable_on: list[SelectionTargets], class_name: str):
+        self.selector_list = selector_list
+        self.usable_on = usable_on
+        self.class_name = class_name
+
+    def is_usable_on(self, target: SelectionTargets) -> bool:
+        return target in self.usable_on
 
 class Scene:
     _tet_elastic_bodies: list[TetrahedralElastodynamicsBody]
     _recycled_tet_elastic_body_indices: list[int]
     _transform_library: TransformLibrary
-    _box_selector_lists: dict[str, SelectionList]
-    _region_selector_lists: dict[str, SelectionList]
-    _cylinder_selector_lists: dict[str, SelectionList]
+
+    _all_selectors: dict[str, SelectorListManager]
+    # _box_selector_lists: dict[str, SelectorList]
+    # _region_selector_lists: dict[str, SelectorList]
+    # _cylinder_selector_lists: dict[str, SelectorList]
     _current_selection_property_idx: int
     _static_mesh_colliders: list[StaticMeshCollider]
+    _selection_props: dict[str, dict[str, typing.Any]]
 
     def set_young_modulus(self, b, prop_value, inds): 
         self._tet_elastic_bodies[b].set_young_modulus(prop_value, inds)
@@ -101,84 +120,64 @@ class Scene:
         self._tet_elastic_bodies[b].set_external_load(prop_value, inds)
 
     def set_initial_velocities(self, b, prop_value, inds): 
-        self._tet_elastic_bodies[b].set_initial_velocities(prop_value, inds),
+        self._tet_elastic_bodies[b].set_initial_velocities(prop_value, inds)
+
+    def set_dirichlet_group(self, b, prop_value, inds):
+        self._on_dirichlet_group_applied(b, prop_value, inds)
 
 
     def __init__(self):
         self._tet_elastic_bodies = []
         self._recycled_tet_elastic_body_indices = []
 
-        name_to_vars = {
+        self._selection_props = {
             "Young's Modulus": {
                 "default": 1e6,
-                "func": self.set_young_modulus
+                "func": self.set_young_modulus,
+                "target": SelectionTargets.CELL
             },
             "Poisson's Ratio": {
                 "default": 0.45, 
-                "func": self.set_poisson_ratio
+                "func": self.set_poisson_ratio,
+                "target": SelectionTargets.CELL
             }, 
             "Mass Density": {
                 "default": 1e3,
-                "func": self.set_mass_density
+                "func": self.set_mass_density,
+                "target": SelectionTargets.CELL
             },
             "External Load": {
                 "default": np.zeros(3),
-                "func": self.set_external_load
+                "func": self.set_external_load,
+                "target": SelectionTargets.CELL
+            },
+            "Initial Velocity": {
+                "default": np.zeros(3),
+                "func": self.set_initial_velocities,
+                "target": SelectionTargets.VERTEX
+            },
+            "Dirichlet Group": {
+                "default": 1,
+                "func": self.set_dirichlet_group,
+                "target": SelectionTargets.VERTEX
             }
         }
-        self._box_selector_lists = {}
-        self._region_selector_lists = {}
-        self._cylinder_selector_lists = {}
 
-        for (name, item) in name_to_vars.items():
-            self._box_selector_lists[name] = SelectionList(
-                SelectionTargets.CELL,
-                item["default"],
-                BoxSelection.__name__,
-                item["func"]
-            )
-            self._region_selector_lists[name] = SelectionList(
-                SelectionTargets.CELL,
-                item["default"],
-                RegionSelection.__name__,
-                item["func"]
-            )
-            self._cylinder_selector_lists[name] = SelectionList(
-                SelectionTargets.CELL,
-                item["default"],
-                CylinderSelection.__name__,
-                item["func"]
-            )
+        self._all_selectors = {
+            "Box": SelectorListManager({}, [SelectionTargets.CELL, SelectionTargets.VERTEX], BoxSelection.__name__),
+            "Region": SelectorListManager({}, [SelectionTargets.CELL], RegionSelection.__name__),
+            "Cylinder": SelectorListManager({}, [SelectionTargets.CELL, SelectionTargets.VERTEX], CylinderSelection.__name__),
+        }
 
-        self._box_selector_lists["Initial Velocity"] = SelectionList(
-            SelectionTargets.VERTEX,
-            np.zeros(3),
-            BoxSelection.__name__,
-            self.set_initial_velocities
-        )
-        self._box_selector_lists["Dirichlet Group"] = SelectionList(
-            SelectionTargets.VERTEX,
-            1,
-            BoxSelection.__name__,
-            lambda b, prop_value, inds: self._on_dirichlet_group_applied(
-                b, prop_value, inds
-            ),
-        )
-        self._cylinder_selector_lists["Initial Velocity"] = SelectionList(
-            SelectionTargets.VERTEX,
-            np.zeros(3),
-            CylinderSelection.__name__,
-            self.set_initial_velocities
-        )
-        self._cylinder_selector_lists["Dirichlet Group"] = SelectionList(
-            SelectionTargets.VERTEX,
-            1,
-            CylinderSelection.__name__,
-            lambda b, prop_value, inds: self._on_dirichlet_group_applied(
-                b, prop_value, inds
-            ),
-        )
-        
+        for (_, manager) in self._all_selectors.items():
+            for (name, item) in self._selection_props.items():
+                if item["target"] in manager.usable_on:
+                    manager.selector_list[name] = SelectorList(
+                        item["target"],
+                        item["default"],
+                        manager.class_name,
+                        item["func"]
+                    )
 
         self._current_selection_property_idx = 0
         self._transform_library = TransformLibrary()
@@ -221,7 +220,7 @@ class Scene:
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Selection", True, tab_flags)[0]:
-                prop_names = list(self._box_selector_lists.keys())
+                prop_names = list(self._selection_props.keys())
                 _, self._current_selection_property_idx = imgui.Combo(
                     "Property",
                     self._current_selection_property_idx,
@@ -229,68 +228,31 @@ class Scene:
                 )
                 prop_name = prop_names[self._current_selection_property_idx]
                 if imgui.BeginTabBar("Selection_types", tab_flags):
-                    if imgui.BeginTabItem("Box", True, tab_flags)[0]:
-                        box_selection_list = self._box_selector_lists[prop_name]
-                        if imgui.Button("Add", styles.default_button_size()):
-                            box_selection_list.on_selector_added(prop_name)
-                        for s, selector in enumerate(box_selection_list._selectors):
-                            imgui.PushID(f"{prop_name} - {s}")
-                            if imgui.TreeNode(selector.name):
-                                selector.draw(self._tet_elastic_bodies)
-                                imgui.SameLine()
-                                styles.set_style_danger()
-                                if imgui.Button(
-                                    styles.delete_key(), styles.small_button_size()
-                                ):
-                                    box_selection_list.remove_selector(s)
-                                styles.pop_most_recent_style()
-                                imgui.TreePop()
-                            imgui.PopID()
-                        imgui.EndTabItem()
-
-                    if imgui.BeginTabItem("Region", True, tab_flags)[0]:
-                        region_selection_list = self._region_selector_lists.get(prop_name)
-                        if region_selection_list is None:
-                            imgui.Text(f"Region Selection not available for {prop_name}")
-                        else:
-                            if imgui.Button("Add", styles.default_button_size()):
-                                region_selection_list.on_selector_added(prop_name)
-                            for s, selector in enumerate(region_selection_list._selectors):
-                                imgui.PushID(f"{prop_name} - {s}")
-                                if imgui.TreeNode(selector.name):
-                                    selector.draw(self._tet_elastic_bodies)
-                                    imgui.SameLine()
-                                    styles.set_style_danger()
-                                    if imgui.Button(
-                                        styles.delete_key(), styles.small_button_size()
-                                    ):
-                                        region_selection_list.remove_selector(s)
-                                    styles.pop_most_recent_style()
-                                    imgui.TreePop()
-                                imgui.PopID()
-                        imgui.EndTabItem()
-                    
-                    if imgui.BeginTabItem("Cylinder", True, tab_flags)[0]:
-                        cylinder_selection_list = self._cylinder_selector_lists.get(prop_name)
-                        if cylinder_selection_list is None:
-                            imgui.Text(f"Cylinder Selection not available for {prop_name}")
-                        else:
-                            if imgui.Button("Add", styles.default_button_size()):
-                                cylinder_selection_list.on_selector_added(prop_name)
-                            for s, selector in enumerate(cylinder_selection_list._selectors):
-                                imgui.PushID(f"{prop_name} - {s}")
-                                if imgui.TreeNode(selector.name):
-                                    selector.draw(self._tet_elastic_bodies)
-                                    imgui.SameLine()
-                                    styles.set_style_danger()
-                                    if imgui.Button(
-                                        styles.delete_key(), styles.small_button_size()
-                                    ):
-                                        cylinder_selection_list.remove_selector(s)
-                                    styles.pop_most_recent_style()
-                                    imgui.TreePop()
-                                imgui.PopID()
-                        imgui.EndTabItem()
+                    for (selector_name, manager) in self._all_selectors.items():
+                        imgui.PushID(selector_name)
+                        if imgui.BeginTabItem(selector_name, True, tab_flags)[0]:
+                            if not manager.is_usable_on(self._selection_props[prop_name]["target"]):
+                                imgui.Text(f"{selector_name} Selection not available for {prop_name}")
+                            
+                            else:
+                                selection_list = manager.selector_list.get(prop_name)
+                                if imgui.Button("Add", styles.default_button_size()):
+                                    selection_list.on_selector_added(prop_name)
+                                for s, selector in enumerate(selection_list._selectors):
+                                    imgui.PushID(f"{prop_name} - {s}")
+                                    if imgui.TreeNode(selector.name):
+                                        selector.draw(self._tet_elastic_bodies)
+                                        imgui.SameLine()
+                                        styles.set_style_danger()
+                                        if imgui.Button(
+                                            styles.delete_key(), styles.small_button_size()
+                                        ):
+                                            selection_list.remove_selector(s)
+                                        styles.pop_most_recent_style()
+                                        imgui.TreePop()
+                                    imgui.PopID()
+                            imgui.EndTabItem()
+                        imgui.PopID()
                     imgui.EndTabBar()
                 imgui.EndTabItem()
 
@@ -322,12 +284,13 @@ class Scene:
             body.set_visible(visible)
         for smc in self._static_mesh_colliders:
             smc.set_visible(visible)
-        for prop_name, box_selection_list in self._box_selector_lists.items():
-            for selector in box_selection_list._selectors:
-                selector.set_visible(visible)
-        for prop_name, cylinder_selection_list in self._cylinder_selector_lists.items():
-            for selector in cylinder_selection_list._selectors:
-                selector.set_visible(visible)
+
+        for selector_name, manager in self._all_selectors.items():
+            if selector_name in ["Box", "Cylinder"]:
+                for _, selector_list in manager.selector_list.items():
+                    for selector in selector_list._selectors:
+                        selector.set_visible(visible)
+
         for transform in self._transform_library.transforms:
             transform.set_visible(visible)
 
