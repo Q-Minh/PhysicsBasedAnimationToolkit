@@ -1,11 +1,12 @@
 #include "StableNeoHookeanEnergy.h"
 
 #include "HyperElasticity.h"
+#include "pbat/common/ConstexprFor.h"
+#include "pbat/math/linalg/mini/Eigen.h"
+#include "pbat/math/linalg/mini/Eigenvalues.h"
 
 #include <Eigen/LU>
 #include <doctest/doctest.h>
-#include <pbat/common/ConstexprFor.h>
-#include <pbat/math/linalg/mini/Eigen.h>
 
 TEST_CASE("[physics] StableNeoHookeanEnergy")
 {
@@ -30,12 +31,15 @@ TEST_CASE("[physics] StableNeoHookeanEnergy")
         bool const bIsEnergyNonNegative =
             (ePsi >= 0.) and (ePsiFromGrad >= 0.) and (ePsiFromHess >= 0.);
         CHECK(bIsEnergyNonNegative);
+        auto eigs = mini::SymmetricEigenNxN(HF);
+        bool const bHasNegativeEigenvalue = mini::Max(eigs.lambda < Scalar(0));
+        CHECK_FALSE(bHasNegativeEigenvalue);
 
-        Scalar const gamma = Scalar(1) + mu / lambda;
-        Scalar const I2    = (F.array() * F.array()).sum();
-        Scalar const I3    = F.determinant();
+        Scalar const I2         = (F.array() * F.array()).sum();
+        Scalar const I3         = F.determinant();
+        Scalar const I3minAlpha = I3 - 1 - mu / lambda;
         Scalar const ePsiExpected =
-            Scalar(0.5) * mu * (I2 - Dims) + Scalar(0.5) * lambda * (I3 - gamma) * (I3 - gamma);
+            Scalar(0.5) * mu * (I2 - Dims) + Scalar(0.5) * lambda * (I3minAlpha * I3minAlpha);
         Scalar const ePsiError = std::abs(ePsi - ePsiExpected) +
                                  std::abs(ePsiFromGrad - ePsiExpected) +
                                  std::abs(ePsiFromHess - ePsiExpected);

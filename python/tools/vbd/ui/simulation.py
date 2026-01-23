@@ -3,6 +3,7 @@ import numpy as np
 from pbatoolkit import pbat, pypbat
 import polyscope as ps
 import polyscope.imgui as imgui
+import polyscope.implot as implot
 import tkinter as tk
 from tkinter import filedialog
 import h5py as h5
@@ -38,6 +39,10 @@ class Simulation:
     _v0: np.ndarray[float]
     _xD: np.ndarray[float]
     _dmin: float = float("inf")
+    _energy_history_kinetic: list[float]
+    _energy_history_potential: list[float]
+    _masscpy: np.ndarray[float]
+    _static_elasticity: bool
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
@@ -61,6 +66,10 @@ class Simulation:
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
         )
         self._dmin = float("inf")
+        self._energy_history_kinetic = []
+        self._energy_history_potential = []
+        self._masscpy = self._fem_dynamics.m.copy()
+        self._static_elasticity = False
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
@@ -158,6 +167,9 @@ class Simulation:
                 self._contact.contact_dynamics.compute_displacement_bounds(
                     self._fem_dynamics.X
                 )
+            # self._energy_history_kinetic = []
+            # self._energy_history_potential = []
+            # self._record_energy()
 
     def _step(self):
         if self._fem_dynamics is None:
@@ -168,6 +180,8 @@ class Simulation:
         self._fem_dynamics.setup_time_integration_optimization(
             initialization_strategy=self._fem_dynamics_init_strategy
         )
+        if self._static_elasticity:
+            self._fem_dynamics.xtilde = self._fem_dynamics.x
         try:
             self._solver.solve(
                 self._fem_dynamics,
@@ -181,14 +195,16 @@ class Simulation:
         self._fem_dynamics.step()
         self._profiler.end_frame("Physics")
         self._update_visuals_after_position_change()
+        # self._record_energy()
         self._t += 1
 
     def _update_visuals_after_position_change(self):
         if self._fem_dynamics_vm is not None:
-            self._fem_dynamics_vm.update_vertex_positions(self._fem_dynamics.x.T)
+            fem = self._fem_dynamics
+            self._fem_dynamics_vm.update_vertex_positions(fem.x.T)
             bv = self._contact.contact_dynamics.ogc_state.bv
             bvmax = bv.max()
-            bx = np.full(self._fem_dynamics.x.shape[1], bvmax)
+            bx = np.full(fem.x.shape[1], bvmax)
             bx[self._contact.contact_dynamics.dynamic_meshes.V] = bv
             r = self._contact.contact_dynamics.params.ogc_params.r
             self._fem_dynamics_vm.add_scalar_quantity(
@@ -201,8 +217,43 @@ class Simulation:
                 cmap="reds",
                 vminmax=(0, 1),
             )
-            x = self._fem_dynamics.x
-            bdf: pbat.sim.integration.Bdf = self._fem_dynamics.bdf
+            x = fem.x
+            fem.compute_elastic_energy(
+                x,
+                pbat.fem.ElementElasticityComputationFlags.Potential,
+                pbat.fem.HyperElasticSpdCorrection.NoCorrection,
+            )
+            self._fem_dynamics_vm.add_scalar_quantity(
+                "log(Psi)",
+                np.log10(fem.UgU / fem.wgU),
+                defined_on="cells",
+                cmap="turbo",
+                vminmax=(4, 7),
+            )
+            gradU = fem.elastic_gradient(x)
+            self._fem_dynamics_vm.add_scalar_quantity(
+                "log(||grad U|| + 1)",
+                np.log10(np.linalg.norm(gradU, axis=0) + 1),
+                defined_on="vertices",
+                cmap="turbo",
+            )
+            if fem.xtilde.shape == x.shape:
+                gradK = fem.momentum_gradient(x)
+                self._fem_dynamics_vm.add_scalar_quantity(
+                    "log(||grad K|| + 1)",
+                    np.log10(np.linalg.norm(gradK, axis=0) + 1),
+                    defined_on="vertices",
+                    cmap="turbo",
+                )
+                grad = fem.gradient(x).reshape((3, -1), order="F")
+                gnorms = np.linalg.norm(grad, axis=0)
+                self._fem_dynamics_vm.add_scalar_quantity(
+                    "log(residual + 1)",
+                    np.log10(gnorms + 1),
+                    defined_on="vertices",
+                    cmap="turbo",
+                )
+            bdf: pbat.sim.integration.Bdf = fem.bdf
             xt = -bdf.inertia().reshape((3, -1), order="F")
             bt = bdf.beta_tilde
             if self._contact.requires_force_display:
@@ -240,6 +291,18 @@ class Simulation:
         _, self._bdf_scheme = imgui.InputInt("BDF Scheme", self._bdf_scheme, step=1)
         self._bdf_scheme = max(1, min(6, self._bdf_scheme))
 
+        static_elasticity_changed, self._static_elasticity = imgui.Checkbox(
+            "Static Elasticity", self._static_elasticity
+        )
+        if static_elasticity_changed:
+            if self._static_elasticity:
+                self._masscpy = self._fem_dynamics.m.copy()
+                self._fem_dynamics.m = np.zeros_like(self._masscpy)
+                self._fem_dynamics_init_strategy = (
+                    pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
+                )
+            else:
+                self._fem_dynamics.m = self._masscpy
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
         step = imgui.Button("Step", button_size)
         reset = imgui.Button("Reset", button_size)
@@ -261,6 +324,7 @@ class Simulation:
         )
         imgui.Text(f"# contacts: {self._contact.contact_dynamics.num_contacts}")
         self._draw_trajectory_ui()
+        self._draw_energy_ui()
         imgui.PopID()
 
     def _draw_convergence_ui(self):
@@ -292,6 +356,62 @@ class Simulation:
                 self._t = self._trajectory.t
             else:
                 self._trajectory.undirty(lambda archive: None)
+
+    def _record_energy(self):
+        if self._fem_dynamics is None:
+            return
+        fem = self._fem_dynamics
+        # Kinetic energy: K = 0.5 * v^T * M * v
+        v = fem.v.flatten(order="F")  # kDims*|#nodes| x 1
+        M = fem.M()  # kDims*|#nodes| x 1 lumped mass diagonal
+        kinetic_energy = 0.5 * np.dot(v, M * v)
+        # Elastic potential energy: compute from elastic energy at quadrature points
+        fem.compute_elastic_energy(
+            fem.x,
+            pbat.fem.ElementElasticityComputationFlags.Potential,
+            pbat.fem.HyperElasticSpdCorrection.NoCorrection,
+        )
+        potential_energy = np.sum(fem.UgU)
+        # Total mechanical energy
+        total_energy = kinetic_energy + potential_energy
+        # Record
+        self._energy_history_kinetic.append(kinetic_energy)
+        self._energy_history_potential.append(potential_energy)
+
+    def _draw_energy_ui(self):
+        imgui.PushID("Energy")
+        # if len(self._energy_history_timesteps) > 0:
+        #     flags = implot.ImPlotAxisFlags_AutoFit
+        #     if implot.BeginPlot("Mechanical Energy", [-1, 200]):
+        #         implot.SetupAxes(
+        #             "Time step",
+        #             "Energy",
+        #             flags,
+        #             flags,
+        #         )
+        #         implot.SetupLegend(implot.ImPlotLocation_NorthEast)
+        #         timesteps = np.array(self._energy_history_timesteps, dtype=np.float64)
+        #         implot.PlotLine(
+        #             "Kinetic",
+        #             timesteps,
+        #             np.array(self._energy_history_kinetic),
+        #         )
+        #         implot.PlotLine(
+        #             "Potential",
+        #             timesteps,
+        #             np.array(self._energy_history_potential),
+        #         )
+        #         implot.PlotLine(
+        #             "Total",
+        #             timesteps,
+        #             np.array(self._energy_history_total),
+        #         )
+        #         implot.EndPlot()
+        # else:
+        #     imgui.Text(
+        #         "No energy data recorded yet. Run simulation to see energy plot."
+        #     )
+        imgui.PopID()
 
     def _draw_io_ui(self, button_size):
         imgui.PushID("IO")

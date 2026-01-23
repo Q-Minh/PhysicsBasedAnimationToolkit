@@ -80,6 +80,10 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
         .def_rw("xtilde", &ElastoDynamics::xtilde, "kDims x |# nodes| BDF inertial targets")
         .def_rw("bdf", &ElastoDynamics::bdf, "Underlying BDF time integrator")
         .def_rw(
+            "egU",
+            &ElastoDynamics::egU,
+            "|# quad.pts.| x 1 element indices for quadrature points")
+        .def_rw(
             "wgU",
             &ElastoDynamics::wgU,
             "|# quad.pts.| x 1 quadrature weights for elastic potential")
@@ -353,6 +357,59 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
             "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
             "Returns:\n"
             "    numpy.ndarray: kDims*|# nodes| gradient vector.")
+        .def(
+            "total_elastic_potential",
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x) {
+                return self.ElasticPotentialEnergy(x.reshaped());
+            },
+            nb::arg("x"),
+            "Total elastic potential energy.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims x |# nodes|` matrix of nodal positions.\n\n"
+            "Returns:\n"
+            "    float: Total elastic potential energy.")
+        .def(
+            "total_elastic_potential",
+            [](ElastoDynamics& self, nb::DRef<Eigen::Vector<ScalarType, Eigen::Dynamic> const> x) {
+                return self.ElasticPotentialEnergy(x);
+            },
+            nb::arg("x"),
+            "Total elastic potential energy.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
+            "Returns:\n"
+            "    float: Total elastic potential energy.")
+        .def(
+            "elastic_gradient",
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x) {
+                Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> g(x.rows(), x.cols());
+                g.setZero();
+                self.ToElasticGradient(x, g);
+                return g;
+            },
+            nb::arg("x"),
+            "Compute the elastic potential energy gradient.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `kDims*|# nodes| x 1` elastic gradient vector.")
+        .def(
+            "momentum_gradient",
+            [](ElastoDynamics& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> x) {
+                Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> g(x.rows(), x.cols());
+                g.setZero();
+                self.ToMomentumGradient(x, g);
+                return g;
+            },
+            nb::arg("x"),
+            "Compute the momentum energy gradient.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `kDims*|# nodes| x 1` vector of nodal positions.\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `kDims*|# nodes| x 1` momentum gradient.")
         .def("is_dirichlet_node", &ElastoDynamics::IsDirichletNode, nb::arg("node"))
         .def("is_dirichlet_dof", &ElastoDynamics::IsDirichletDof, nb::arg("i"))
         .def_prop_ro(
