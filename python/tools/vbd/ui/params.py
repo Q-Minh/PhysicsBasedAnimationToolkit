@@ -24,12 +24,13 @@ def draw_params(obj):
             _, new_value = imgui.InputFloat(name, value, format="%.10f")
             try_draw_tooltip(obj, name)
             setattr(obj, name, new_value)
-        elif isinstance(value, int):
-            _, new_value = imgui.InputInt(name, value)
-            try_draw_tooltip(obj, name)
-            setattr(obj, name, new_value)
+        # bool check must come before int check since bool is a subclass of int
         elif isinstance(value, bool):
             _, new_value = imgui.Checkbox(name, value)
+            try_draw_tooltip(obj, name)
+            setattr(obj, name, new_value)
+        elif isinstance(value, int):
+            _, new_value = imgui.InputInt(name, value)
             try_draw_tooltip(obj, name)
             setattr(obj, name, new_value)
         elif isinstance(value, enum.Enum):

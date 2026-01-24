@@ -10,12 +10,12 @@ import numpy as np
 
 class VbdSolver(BaseSolver):
     _params: ParameterObject
-    _handle_contacts: bool
+    _step_size: float
 
     def __init__(self):
         super().__init__("VBD")
         self._params = ParameterObject(pbat.sim.algorithm.vbd.Params())
-        self._handle_contacts = True
+        self._step_size = 1.0
 
     def draw(self):
         imgui.PushID(self._name)
@@ -23,9 +23,7 @@ class VbdSolver(BaseSolver):
             self._params.draw()
             imgui.TreePop()
         if imgui.TreeNode(f"Control"):
-            _, self._handle_contacts = imgui.Checkbox(
-                "Handle Contacts", self._handle_contacts
-            )
+            _, self._step_size = imgui.InputFloat("Step Size", self._step_size)
             imgui.TreePop()
         imgui.PopID()
 
@@ -53,17 +51,15 @@ class VbdSolver(BaseSolver):
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         if callback is None:
             callback = lambda: None
-        if self._handle_contacts:
-            pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
-        else:
-            params.k = 0
+        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
         callback()
         for k in range(params.n_max_iters):
-            if contact.requires_bounds_computation and self._handle_contacts:
+            if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)
+            xk = fem.x.copy()
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
-            if self._handle_contacts:
-                fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
+            fem.x = xk + self._step_size * (fem.x - xk)
+            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
 

@@ -239,6 +239,12 @@ void BindMeshDynamics(nanobind::module_& m)
             "    inertial_target_distance (float): Inertial target distance (or other relevant "
             "distance).\n")
         .def(
+            "activate",
+            &MeshDynamicsParamsType::Activate,
+            nb::arg("active") = true,
+            "Activate (or deactivate) contacts.\n")
+        .def("deactivate", &MeshDynamicsParamsType::Deactivate, "Deactivate contacts.\n")
+        .def(
             "serialize",
             &MeshDynamicsParamsType::Serialize,
             nb::arg("archive"),
@@ -259,6 +265,10 @@ void BindMeshDynamics(nanobind::module_& m)
             "(float) IPC's relative velocity threshold for static to dynamic friction's smooth "
             "transition.")
         .def_rw("mu", &MeshDynamicsParamsType::mu, "(float) Dynamic friction coefficient.")
+        .def_rw(
+            "deactivate",
+            &MeshDynamicsParamsType::bDeactivate,
+            "(bool) Whether to deactivate contacts.")
         .def_rw("kc", &MeshDynamicsParamsType::kc, "(float) OGC contact stiffness parameter.")
         .def_rw("rqstart", &MeshDynamicsParamsType::rqstart, "(float) Initial query radius base.")
         .def_rw("betarq", &MeshDynamicsParamsType::betarq, "(float) Query radius growth factor.");

@@ -91,6 +91,7 @@ class MeshDynamics
                             ///< actual query radius
         TScalar betarq{1};  ///< Slope of the linear function of inertial target distance to add to
                             ///< `rqstart` to initialize the actual query radius
+        bool bDeactivate{false}; ///< Whether to deactivate contacts
 
         /**
          * @brief Set the OGC parameters
@@ -133,6 +134,15 @@ class MeshDynamics
          * @post `mOgcParams.rq` is set
          */
         void ComputeQueryRadius(TScalar inertialTargetDistance);
+        /**
+         * @brief Activate or deactivate contacts
+         * @param bActive true to activate, false to deactivate
+         */
+        void Activate(bool bActive = true);
+        /**
+         * @brief Deactivate contacts
+         */
+        void Deactivate();
         /**
          * @brief Serialize to archive
          * @param archive Archive to serialize to
@@ -1076,6 +1086,18 @@ MeshDynamics<TScalar, TIndex>::Params::ComputeQueryRadius(TScalar inertialTarget
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Params::Activate(bool bActive)
+{
+    this->bDeactivate = not bActive;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Params::Deactivate()
+{
+    bDeactivate = true;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::Params::Serialize(io::Archive& archive) const
 {
     auto grp = archive.GetOrCreateGroup("pbat.sim.contact.MeshDynamics.Params");
@@ -1242,6 +1264,13 @@ inline void
 MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds(Eigen::DenseBase<TDerivedX> const& X)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeDisplacementBounds");
+    if (mParams.bDeactivate)
+    {
+        mOgcState.bv.setConstant(std::numeric_limits<ScalarType>::max());
+        mRequiresBoundsRecomputation = false;
+        mNumTruncatedPoints          = 0;
+        return;
+    }
     mXdynamic = X.derived();
     mOgcState.PrepareForExecution(mOgcInput, mParams.mOgcParams);
     ogc::VertexFacetContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
