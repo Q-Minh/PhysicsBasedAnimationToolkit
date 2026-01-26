@@ -308,9 +308,19 @@ class Simulation:
             [s.name for s in init_strategies],
         )
         self._fem_dynamics_init_strategy = init_strategies[selected_idx]
-        _, self._dt = imgui.InputFloat("Time Step", self._dt, 1e-5, 1.0, "%.5f")
-        _, self._bdf_scheme = imgui.InputInt("BDF Scheme", self._bdf_scheme, step=1)
+        dt_changed, self._dt = imgui.InputFloat(
+            "Time Step", self._dt, 1e-5, 1.0, "%.5f"
+        )
+        bdf_changed, self._bdf_scheme = imgui.InputInt(
+            "BDF Scheme", self._bdf_scheme, step=1
+        )
         self._bdf_scheme = max(1, min(6, self._bdf_scheme))
+        if dt_changed and not bdf_changed:
+            # We should never changed the bdf scheme in the draw loop alone, 
+            # only in the reset to make sure it is called before fem.set_initial_conditions
+            self._fem_dynamics.set_time_integration_scheme(
+                dt=self._dt, s=self._bdf_scheme
+            )
 
         static_elasticity_changed, self._static_elasticity = imgui.Checkbox(
             "Static Elasticity", self._static_elasticity
