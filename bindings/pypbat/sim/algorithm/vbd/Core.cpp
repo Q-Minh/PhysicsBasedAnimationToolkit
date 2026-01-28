@@ -58,8 +58,17 @@ void BindCore(nanobind::module_& m)
            graph::EGreedyColorOrderingStrategy eOrdering,
            graph::EGreedyColorSelectionStrategy eSelection) {
             IndexVectorX colors(nNodes);
-            pbat::sim::algorithm::vbd::VertexColors(E, nNodes, eOrdering, eSelection, colors);
-            return colors;
+            IndexVectorX GVVp(nNodes + 1);
+            IndexVectorX GVVadj{};
+            pbat::sim::algorithm::vbd::VertexColors(
+                E,
+                nNodes,
+                eOrdering,
+                eSelection,
+                GVVp,
+                GVVadj,
+                colors);
+            return std::make_tuple(GVVp, GVVadj, colors);
         },
         nb::arg("E"),
         nb::arg("n_nodes"),
@@ -73,7 +82,10 @@ void BindCore(nanobind::module_& m)
         "    selection (pbat.graph.EGreedyColorSelectionStrategy): Vertex color selection "
         "strategy\n"
         "Returns:\n"
-        "    numpy.ndarray: `|# verts| x 1` Vertex colors");
+        "    Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: (GVVp, GVVadj, colors) where "
+        "`GVVp` is a `|# verts + 1| x 1` array of pointers into `GVVadj`, `GVVadj` is a `|# "
+        "vertex-vertex adjacencies| x 1` array of adjacent vertex indices, and `colors` is a `|# "
+        "verts| x 1` array of vertex colors");
 
     nb::enum_<EHomogenizationStrategy>(m, "EHomogenizationStrategy")
         .value("Off", EHomogenizationStrategy::None, "No homogenization")
@@ -110,6 +122,8 @@ void BindCore(nanobind::module_& m)
         .def(
             "with_vertex_colors",
             &Params::WithVertexColors,
+            nb::arg("GVVp"),
+            nb::arg("GVVadj"),
             nb::arg("colors"),
             nb::rv_policy::reference_internal,
             "Vertex colors used for coloring the VBD solve.\n\n"
@@ -183,6 +197,11 @@ void BindCore(nanobind::module_& m)
             "GVGilocal",
             &Params::GVGilocal,
             "`|# of vertex-elems adjacencies|` local vertex indices")
+        .def_rw("GVVp", &Params::GVVp, "`|# verts+1|` prefixes into GVVadj")
+        .def_rw(
+            "GVVadj",
+            &Params::GVVadj,
+            "`|# vertex-vertex adjacencies|` adjacent vertex indices")
         .def_rw("colors", &Params::colors, "`|# verts|` vertex colors")
         .def_rw(
             "Pptr",
@@ -198,6 +217,7 @@ void BindCore(nanobind::module_& m)
             &Params::eHomogenizationStrategy,
             "Homogenization strategy")
         .def_rw("betac", &Params::betac, "Contact homogenization conditioning factor")
+        .def_rw("betaG", &Params::betaG, "Gradient acceleration factor")
         .def_rw("k", &Params::k, "Current iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;

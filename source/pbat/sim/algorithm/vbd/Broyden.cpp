@@ -104,22 +104,28 @@ BroydenTestSetup SetupBroydenTest(pbat::Index maxIters = 10)
     setup.dynamics.Construct(setup.X, C);
 
     // Adjacency structures
-    IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, setup.dynamics.mesh.E.cols());
-    auto GVT =
-        graph::MeshAdjacencyMatrix(setup.dynamics.mesh.E, ilocal, setup.dynamics.mesh.X.cols());
-    GVT                                = GVT.transpose();
-    auto const [GVGp, GVGe, GVGilocal] = graph::MatrixToWeightedAdjacency(GVT);
+    sim::algorithm::vbd::VertexElementAdjacencyGraph(
+        C,
+        setup.X.cols(),
+        setup.vbdParams.GVGp,
+        setup.vbdParams.GVGe,
+        setup.vbdParams.GVGilocal);
 
     // Vertex colors
-    auto GVV = graph::MeshPrimalGraph(setup.dynamics.mesh.E, setup.dynamics.mesh.X.cols());
-    auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
-    auto eOrdering          = graph::EGreedyColorOrderingStrategy::LargestDegree;
-    auto eSelection         = graph::EGreedyColorSelectionStrategy::LeastUsed;
-    auto colors             = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
+    auto eOrdering  = graph::EGreedyColorOrderingStrategy::LargestDegree;
+    auto eSelection = graph::EGreedyColorSelectionStrategy::LeastUsed;
+    sim::algorithm::vbd::VertexColors(
+        C,
+        setup.X.cols(),
+        graph::EGreedyColorOrderingStrategy::LargestDegree,
+        graph::EGreedyColorSelectionStrategy::LeastUsed,
+        setup.vbdParams.GVVp,
+        setup.vbdParams.GVVadj,
+        setup.vbdParams.colors);
 
     // VBD params
-    setup.vbdParams.WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
-        .WithVertexColors(colors)
+    setup.vbdParams
+        .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();

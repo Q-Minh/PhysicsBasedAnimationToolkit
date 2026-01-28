@@ -11,9 +11,9 @@ namespace pbat::sim::algorithm::vbd {
 void VertexElementAdjacencyGraph(
     Eigen::Ref<IndexMatrixX const> const& E,
     Index nNodes,
-    Eigen::Ref<IndexVectorX> GVGp,
-    Eigen::Ref<IndexVectorX> GVGe,
-    Eigen::Ref<IndexVectorX> GVGilocal)
+    IndexVectorX& GVGp,
+    IndexVectorX& GVGe,
+    IndexVectorX& GVGilocal)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.VertexElementAdjacencyGraph");
     IndexMatrixX ilocal             = IndexVector<4>{0, 1, 2, 3}.replicate(1, E.cols());
@@ -27,12 +27,14 @@ void VertexColors(
     Index nNodes,
     graph::EGreedyColorOrderingStrategy eOrdering,
     graph::EGreedyColorSelectionStrategy eSelection,
-    Eigen::Ref<IndexVectorX> colors)
+    IndexVectorX& GVVp,
+    IndexVectorX& GVVadj,
+    IndexVectorX& colors)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.VertexColors");
-    auto GVV                = graph::MeshPrimalGraph(E, nNodes);
-    auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
-    colors                  = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
+    auto GVV               = graph::MeshPrimalGraph(E, nNodes);
+    std::tie(GVVp, GVVadj) = graph::MatrixToAdjacency(GVV);
+    colors                 = graph::GreedyColor(GVVp, GVVadj, eOrdering, eSelection);
 }
 
 Params& Params::WithVertexElementAdjacencyGraph(
@@ -46,8 +48,13 @@ Params& Params::WithVertexElementAdjacencyGraph(
     return *this;
 }
 
-Params& Params::WithVertexColors(Eigen::Ref<IndexVectorX const> const& _colors)
+Params& Params::WithVertexColors(
+    Eigen::Ref<IndexVectorX const> const& _GVVp,
+    Eigen::Ref<IndexVectorX const> const& _GVVadj,
+    Eigen::Ref<IndexVectorX const> const& _colors)
 {
+    GVVp                 = _GVVp;
+    GVVadj               = _GVVadj;
     colors               = _colors;
     std::tie(Pptr, Padj) = graph::MapToAdjacency(colors);
     return *this;
@@ -127,6 +134,7 @@ Params& Params::Construct(bool bValidate)
     }
     xb.resize(3, nVerts);
     log10lame.resize(2, GVGe.size());
+    gk.resize(3, nVerts);
     return *this;
 }
 
@@ -224,22 +232,28 @@ VbdTestSetup SetupVbdTest(pbat::Index maxIters = 10)
     setup.dynamics.Construct(setup.X, C);
 
     // Adjacency structures
-    IndexMatrixX ilocal = IndexVector<4>{0, 1, 2, 3}.replicate(1, setup.dynamics.mesh.E.cols());
-    auto GVT =
-        graph::MeshAdjacencyMatrix(setup.dynamics.mesh.E, ilocal, setup.dynamics.mesh.X.cols());
-    GVT                                = GVT.transpose();
-    auto const [GVGp, GVGe, GVGilocal] = graph::MatrixToWeightedAdjacency(GVT);
+    sim::algorithm::vbd::VertexElementAdjacencyGraph(
+        C,
+        setup.X.cols(),
+        setup.vbdParams.GVGp,
+        setup.vbdParams.GVGe,
+        setup.vbdParams.GVGilocal);
 
     // Vertex colors
-    auto GVV = graph::MeshPrimalGraph(setup.dynamics.mesh.E, setup.dynamics.mesh.X.cols());
-    auto [GVVp, GVVv, GVVw] = graph::MatrixToWeightedAdjacency(GVV);
-    auto eOrdering          = graph::EGreedyColorOrderingStrategy::LargestDegree;
-    auto eSelection         = graph::EGreedyColorSelectionStrategy::LeastUsed;
-    auto colors             = graph::GreedyColor(GVVp, GVVv, eOrdering, eSelection);
+    auto eOrdering  = graph::EGreedyColorOrderingStrategy::LargestDegree;
+    auto eSelection = graph::EGreedyColorSelectionStrategy::LeastUsed;
+    sim::algorithm::vbd::VertexColors(
+        C,
+        setup.X.cols(),
+        graph::EGreedyColorOrderingStrategy::LargestDegree,
+        graph::EGreedyColorSelectionStrategy::LeastUsed,
+        setup.vbdParams.GVVp,
+        setup.vbdParams.GVVadj,
+        setup.vbdParams.colors);
 
     // VBD params
-    setup.vbdParams.WithVertexElementAdjacencyGraph(GVGp, GVGe, GVGilocal)
-        .WithVertexColors(colors)
+    setup.vbdParams
+        .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();

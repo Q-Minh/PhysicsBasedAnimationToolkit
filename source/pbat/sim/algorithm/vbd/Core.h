@@ -50,9 +50,9 @@ namespace pbat::sim::algorithm::vbd {
 PBAT_API void VertexElementAdjacencyGraph(
     Eigen::Ref<IndexMatrixX const> const& E,
     Index nNodes,
-    Eigen::Ref<IndexVectorX> GVGp,
-    Eigen::Ref<IndexVectorX> GVGe,
-    Eigen::Ref<IndexVectorX> GVGilocal);
+    IndexVectorX& GVGp,
+    IndexVectorX& GVGe,
+    IndexVectorX& GVGilocal);
 
 /**
  * @brief Compute vertex colors using a greedy algorithm
@@ -61,6 +61,8 @@ PBAT_API void VertexElementAdjacencyGraph(
  * @param nNodes Number of nodes in the mesh
  * @param eOrdering Vertex color ordering strategy
  * @param eSelection Vertex color selection strategy
+ * @param GVVp `|# verts+1|` prefixes into GVVadj
+ * @param GVVadj `|# vertex-vertex adjacencies|` adjacent vertex indices
  * @param colors `|# verts| x 1` Vertex colors
  */
 PBAT_API void VertexColors(
@@ -68,7 +70,9 @@ PBAT_API void VertexColors(
     Index nNodes,
     graph::EGreedyColorOrderingStrategy eOrdering,
     graph::EGreedyColorSelectionStrategy eSelection,
-    Eigen::Ref<IndexVectorX> colors);
+    IndexVectorX& GVVp,
+    IndexVectorX& GVVadj,
+    IndexVectorX& colors);
 
 /**
  * @brief VBD simulation configuration
@@ -93,10 +97,15 @@ struct Params
         Eigen::Ref<IndexVectorX const> const& _GVGilocal);
     /**
      * @brief Vertex colors
+     * @param _GVVp `|# verts+1|` prefixes into GVVadj
+     * @param _GVVadj `|# vertex-vertex adjacencies|` adjacent vertex indices
      * @param _colors Vertex colors
      * @return Reference to this
      */
-    PBAT_API Params& WithVertexColors(Eigen::Ref<IndexVectorX const> const& _colors);
+    PBAT_API Params& WithVertexColors(
+        Eigen::Ref<IndexVectorX const> const& _GVVp,
+        Eigen::Ref<IndexVectorX const> const& _GVVadj,
+        Eigen::Ref<IndexVectorX const> const& _colors);
     /**
      * @brief Rayleigh damping coefficient
      * @param _betaR Rayleigh damping coefficient
@@ -150,6 +159,8 @@ struct Params
                             ///< index of vertex `i` in element `e=GVGe[k]`
     // Parallelization
     IndexVectorX colors; ///< `|# vertices|` map of vertex colors
+    IndexVectorX GVVp;   ///< `|# verts+1|` prefixes into GVVadj
+    IndexVectorX GVVadj; ///< `|# vertex-vertex adjacencies|` adjacent vertex indices
     IndexVectorX Pptr;   ///< `|# partitions+1|` partition pointers, s.t. the range `[Pptr[p],
                          ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj;   ///< `|# verts|` partition vertices
@@ -163,10 +174,14 @@ struct Params
     Scalar betac{
         10}; ///< Contact homogenization conditioning factor for stiffness matching strategy
 
+    Scalar betaG{0}; ///< Stencil gradient acceleration coefficient
+
     /**
      * @brief Read-write
      */
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xb; ///< `3 x |# nodes|` buffer positions
+    Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
+        gk; ///< `3 x |# nodes|` approximate gradient at iteration k
     Eigen::Matrix<Scalar, 2, Eigen::Dynamic>
         log10lame; ///< `2 x |# vertex-element adj.|` matrix of \f$ \log_{10}(\min \mu_{g'} /
                    ///< \mu_{g}) \f$
@@ -824,6 +839,19 @@ auto BuildVertexEquation(
             kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
             // Damping
             kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
+            // Store gradient
+            params.gk.col(i) = ToEigen(gi);
+            // Modify r.h.s. with gradient acceleration
+            auto nbegin                 = params.GVVp(i);
+            auto nend                   = params.GVVp(i + 1);
+            mini::SVector<Scalar, 3> gp = mini::Zeros<Scalar, 3, 1>();
+            for (auto n = nbegin; n < nend; ++n)
+            {
+                auto j = params.GVVadj(n);
+                gp += mini::FromEigen(params.gk.col(j).template head<3>());
+            }
+            Scalar lambda = params.betaG * Dot(gi, gp) / Dot(gp, gp);
+            gi += std::max(lambda, Scalar(0)) * gp;
             break;
         }
         case EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness: {
@@ -1061,6 +1089,7 @@ void InitializeSolve(
     contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     InitializeHomogenization<TElasticEnergy>(fem, contact, params);
     params.k = 0;
+    params.gk.setZero();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
