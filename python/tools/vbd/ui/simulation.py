@@ -255,10 +255,16 @@ class Simulation:
                     defined_on="vertices",
                     cmap="turbo",
                 )
-                bdf_res = np.linalg.norm(gradK + bt*bt*gradU, axis=0)
+                grad = gradK + bt*bt*gradU
+                gnorms = np.linalg.norm(grad, axis=0)
+                self._fem_dynamics_vm.add_vector_quantity(
+                    "residual", 
+                    grad.T / gnorms[:, np.newaxis],
+                    defined_on="vertices",
+                )
                 self._fem_dynamics_vm.add_scalar_quantity(
-                    "residual",
-                    bdf_res,
+                    "|residual|",
+                    gnorms,
                     defined_on="vertices",
                     cmap="turbo",
                 )
