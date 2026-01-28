@@ -220,6 +220,8 @@ class Simulation:
                 vminmax=(0, 1),
             )
             x = fem.x
+            bdf: pbat.sim.integration.Bdf = fem.bdf
+            bt = bdf.beta_tilde
             fem.compute_elastic_energy(
                 x,
                 pbat.fem.ElementElasticityComputationFlags.Potential,
@@ -233,50 +235,34 @@ class Simulation:
                 vminmax=(4, 7),
             )
             gradU = fem.elastic_gradient(x)
-            # self._fem_dynamics_vm.add_scalar_quantity(
-            #     "log(||grad U||)",
-            #     np.log10(np.maximum(np.linalg.norm(gradU, axis=0), 1e-8)),
-            #     defined_on="vertices",
-            #     cmap="turbo",
-            #     vminmax=(0, 8)
-            # )
             self._fem_dynamics_vm.add_scalar_quantity(
                 "||grad U||",
                 np.linalg.norm(gradU, axis=0),
                 defined_on="vertices",
                 cmap="turbo",
             )
+            self._fem_dynamics_vm.add_scalar_quantity(
+                "h2||grad U||",
+                bt*bt*np.linalg.norm(gradU, axis=0),
+                defined_on="vertices",
+                cmap="turbo",
+            )
             if fem.xtilde.shape == x.shape:
                 gradK = fem.momentum_gradient(x)
-                # self._fem_dynamics_vm.add_scalar_quantity(
-                #     "log(||grad K|| + 1)",
-                #     np.log10(np.linalg.norm(gradK, axis=0) + 1),
-                #     defined_on="vertices",
-                #     cmap="turbo",
-                # )
                 self._fem_dynamics_vm.add_scalar_quantity(
                     "||grad K||",
                     np.linalg.norm(gradK, axis=0),
                     defined_on="vertices",
                     cmap="turbo",
                 )
-                grad = fem.gradient(x).reshape((3, -1), order="F")
-                gnorms = np.linalg.norm(grad, axis=0)
-                # self._fem_dynamics_vm.add_scalar_quantity(
-                #     "log(residual + 1)",
-                #     np.log10(gnorms + 1),
-                #     defined_on="vertices",
-                #     cmap="turbo",
-                # )
+                bdf_res = np.linalg.norm(gradK + bt*bt*gradU, axis=0)
                 self._fem_dynamics_vm.add_scalar_quantity(
                     "residual",
-                    gnorms,
+                    bdf_res,
                     defined_on="vertices",
                     cmap="turbo",
                 )
-            bdf: pbat.sim.integration.Bdf = fem.bdf
             xt = -bdf.inertia().reshape((3, -1), order="F")
-            bt = bdf.beta_tilde
             if self._contact.requires_force_display:
                 self._contact.on_contact_force_display_requested(
                     x,
