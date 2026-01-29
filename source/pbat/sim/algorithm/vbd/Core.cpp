@@ -79,6 +79,19 @@ PBAT_API Params& Params::WithHomogenization(EHomogenizationStrategy strategy, Sc
     return *this;
 }
 
+PBAT_API Params& Params::WithStencilGradientAcceleration(
+    Scalar _betaG0,
+    Scalar _rhohat,
+    Scalar _gammadown,
+    Scalar _gammaup)
+{
+    this->betaG0    = _betaG0;
+    this->rhohat    = _rhohat;
+    this->gammadown = _gammadown;
+    this->gammaup   = _gammaup;
+    return *this;
+}
+
 Params& Params::WithHessianDeterminantZeroUnder(Scalar zero)
 {
     detHZero = zero;
@@ -131,10 +144,36 @@ Params& Params::Construct(bool bValidate)
                     "Contact homogenization conditioning factor betac {} must be positive",
                     betac));
         }
+        if (betaG0 < 0 or betaG0 >= 1)
+        {
+            throw std::invalid_argument(
+                fmt::format(
+                    "Initial stencil gradient augmentation coefficient betaG0 {} must satisfy 0 < "
+                    "betaG0 < 1",
+                    betaG0));
+        }
+        if (gammadown <= 0 or gammadown >= 1)
+        {
+            throw std::invalid_argument(
+                fmt::format(
+                    "Stencil gradient beta reduction factor gammadown {} must satisfy 0 < "
+                    "gammadown < 1",
+                    gammadown));
+        }
+        if (gammaup <= 0 or gammaup >= 1)
+        {
+            throw std::invalid_argument(
+                fmt::format(
+                    "Stencil gradient beta increase factor gammaup {} must satisfy 0 < gammaup < 1",
+                    gammaup));
+        }
     }
     xb.resize(3, nVerts);
     log10lame.resize(2, GVGe.size());
     gk.resize(3, nVerts);
+    xk.resize(3, nVerts);
+    Hnk.resize(nVerts);
+    betaG.resize(nVerts);
     return *this;
 }
 

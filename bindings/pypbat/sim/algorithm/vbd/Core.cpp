@@ -217,7 +217,14 @@ void BindCore(nanobind::module_& m)
             &Params::eHomogenizationStrategy,
             "Homogenization strategy")
         .def_rw("betac", &Params::betac, "Contact homogenization conditioning factor")
-        .def_rw("betaG", &Params::betaG, "Gradient acceleration factor")
+        .def_rw("betaG", &Params::betaG, "Per-vertex stencil gradient augmentation scale")
+        .def_rw("betaG0", &Params::betaG0, "Initial stencil gradient augmentation scale")
+        .def_rw(
+            "rhohat",
+            &Params::rhohat,
+            "Lipschitz-normalized threshold for considering steps small")
+        .def_rw("gammadown", &Params::gammadown, "Beta reduction factor")
+        .def_rw("gammaup", &Params::gammaup, "Beta increase factor")
         .def_rw("k", &Params::k, "Current iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;

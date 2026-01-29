@@ -126,6 +126,17 @@ struct Params
      */
     PBAT_API Params& WithHomogenization(EHomogenizationStrategy strategy, Scalar betac = 0.5);
     /**
+     * @brief Stencil gradient acceleration parameters
+     * @param betaG0 Initial augmentation coefficient `0 < betaG0 < 1`
+     * @param rhohat Lipschitz-normalized threshold above which steps are considered small (i.e.
+     * solver progress is slow)
+     * @param gammadown Beta reduction factor
+     * @param gammaup Beta increase factor
+     * @return Reference to this
+     */
+    PBAT_API Params&
+    WithStencilGradientAcceleration(Scalar betaG0, Scalar rhohat, Scalar gammadown, Scalar gammaup);
+    /**
      * @brief Numerical zero for hessian pseudo-singularity check
      * @param zero Numerical zero
      * @return Reference to this
@@ -174,7 +185,12 @@ struct Params
     Scalar betac{
         10}; ///< Contact homogenization conditioning factor for stiffness matching strategy
 
-    Scalar betaG{0}; ///< Stencil gradient acceleration coefficient
+    // Stencil gradient acceleration
+    Scalar betaG0{0.5}; ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
+    Scalar rhohat{0.005}; ///< Lipschitz-normalized threshold above which steps are considered small
+                      ///< (i.e. solver progress is slow)
+    Scalar gammadown{0.95}; ///< Beta reduction factor
+    Scalar gammaup{0.5};   ///< Beta increase factor
 
     /**
      * @brief Read-write
@@ -182,6 +198,10 @@ struct Params
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xb; ///< `3 x |# nodes|` buffer positions
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
         gk; ///< `3 x |# nodes|` approximate gradient at iteration k
+    Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xk; ///< `3 x |# nodes|` past iteration
+    Eigen::Vector<Scalar, Eigen::Dynamic> Hnk;   ///< Hessian norms at iteration k
+    Eigen::Vector<Scalar, Eigen::Dynamic>
+        betaG; ///< Per-vertex stencil gradient augmentation scale coefficient `0 < betaG < 1`
     Eigen::Matrix<Scalar, 2, Eigen::Dynamic>
         log10lame; ///< `2 x |# vertex-element adj.|` matrix of \f$ \log_{10}(\min \mu_{g'} /
                    ///< \mu_{g}) \f$
@@ -839,19 +859,6 @@ auto BuildVertexEquation(
             kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
             // Damping
             kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
-            // Store gradient
-            params.gk.col(i) = ToEigen(gi);
-            // Modify r.h.s. with gradient acceleration
-            auto nbegin                 = params.GVVp(i);
-            auto nend                   = params.GVVp(i + 1);
-            mini::SVector<Scalar, 3> gp = mini::Zeros<Scalar, 3, 1>();
-            for (auto n = nbegin; n < nend; ++n)
-            {
-                auto j = params.GVVadj(n);
-                gp += mini::FromEigen(params.gk.col(j).template head<3>());
-            }
-            Scalar lambda = params.betaG * Dot(gi, gp) / Dot(gp, gp);
-            gi += std::max(lambda, Scalar(0)) * gp;
             break;
         }
         case EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness: {
@@ -991,6 +998,72 @@ auto BuildVertexEquation(
     return {Hi, gi};
 }
 
+/**
+ * @brief Adapt stencil gradient acceleration parameter for vertex i
+ * @param i Vertex index
+ * @param xi Current position of vertex i
+ * @param gi Gradient at vertex i
+ * @param Hi Hessian at vertex i
+ * @param params Solver parameters (in/out: betaG, gk, xk, Hnk are updated)
+ */
+inline void AdaptStencilGradientAccelerationParameter(
+    Index i,
+    math::linalg::mini::SVector<Scalar, 3> const& xi,
+    math::linalg::mini::SVector<Scalar, 3> const& gi,
+    math::linalg::mini::SMatrix<Scalar, 3, 3> const& Hi,
+    Params& params)
+{
+    using namespace math::linalg;
+    using mini::FromEigen;
+    using mini::Norm;
+    using mini::ToEigen;
+    if (params.k > 0)
+    {
+        Scalar ngk       = Norm(gi);
+        auto gkm1        = params.gk.col(i).template head<3>();
+        Scalar ngkm1     = Norm(FromEigen(gkm1));
+        Scalar ndgkm1    = Norm(gi - FromEigen(gkm1));
+        params.gk.col(i) = ToEigen(gi);
+        auto xk          = params.xk.col(i).template head<3>();
+        Scalar ndxkm1    = Norm(xi - FromEigen(xk));
+        Scalar L         = params.Hnk(i) + ngk / ndxkm1;
+        Scalar rho       = ndgkm1 / (L * ndxkm1);
+        if (ngk > ngkm1)
+            params.betaG(i) *= params.gammadown;
+        else if (rho > params.rhohat)
+            params.betaG(i) += (1 - params.betaG(i)) * params.gammaup;
+    }
+    params.gk.col(i) = ToEigen(gi);
+    params.xk.col(i) = ToEigen(xi);
+    params.Hnk(i)    = Norm(Hi);
+}
+
+/**
+ * @brief Compute stencil gradient augmentation for vertex i
+ * @param i Vertex index
+ * @param gi Gradient at vertex i
+ * @param params Solver parameters
+ * @return Augmentation vector to be added to the gradient
+ */
+inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation(
+    Index i,
+    math::linalg::mini::SVector<Scalar, 3> const& gi,
+    Params const& params)
+{
+    using namespace math::linalg;
+    using mini::Dot;
+    auto nbegin                 = params.GVVp(i);
+    auto nend                   = params.GVVp(i + 1);
+    mini::SVector<Scalar, 3> gp = mini::Zeros<Scalar, 3, 1>();
+    for (auto n = nbegin; n < nend; ++n)
+    {
+        auto j = params.GVVadj(n);
+        gp += mini::FromEigen(params.gk.col(j).template head<3>());
+    }
+    Scalar lambda = params.betaG(i) * Dot(gi, gp) / Dot(gp, gp);
+    return std::max(lambda, Scalar(0)) * gp;
+}
+
 } // namespace detail
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -1024,8 +1097,12 @@ void Iterate(
             Scalar m                         = fem.m(i);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
             // Build and solve the vertex equation
-            auto const [Hi, gi] = detail::BuildVertexEquation<
+            auto [Hi, gi] = detail::BuildVertexEquation<
                 TElasticEnergy>(i, xi, xti, xtildei, m, h, h2, fem.x, xt, fem, contact, params);
+            // Adapt stencil gradient acceleration parameter
+            detail::AdaptStencilGradientAccelerationParameter(i, xi, gi, Hi, params);
+            // Augment gradient
+            gi += detail::ComputeStencilGradientAugmentation(i, gi, params);
             // Solve
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
             fem.x.col(i) = ToEigen(xi);
@@ -1090,6 +1167,9 @@ void InitializeSolve(
     InitializeHomogenization<TElasticEnergy>(fem, contact, params);
     params.k = 0;
     params.gk.setZero();
+    params.xk = fem.x;
+    params.betaG.setConstant(params.betaG0);
+    params.Hnk.setZero();
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
