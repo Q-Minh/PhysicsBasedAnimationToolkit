@@ -76,7 +76,7 @@ TEST_CASE("[math][linalg][mini] Reshape")
         A(0, 0) = 1; A(0, 1) = 3; A(0, 2) = 5;
         A(1, 0) = 2; A(1, 1) = 4; A(1, 2) = 6;
 
-        auto B = Reshape<3, 2, true>(A);
+        auto B = Reshape<3, 2>(A);
 
         // Row-major 3x2 interpretation:
         // Linear [1,2,3,4,5,6] -> row-major means:

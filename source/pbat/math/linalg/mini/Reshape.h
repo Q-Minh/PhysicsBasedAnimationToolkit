@@ -12,21 +12,21 @@ namespace math {
 namespace linalg {
 namespace mini {
 
-template <class /*CMatrix*/ TMatrix, int Rows, int Cols, bool RowMajor = false>
+template <class /*CMatrix*/ TMatrix, int M, int N>
 class ReshapedView
 {
   public:
     using NestedType = TMatrix;
     using ScalarType = typename NestedType::ScalarType;
-    using SelfType   = ReshapedView<NestedType, Rows, Cols, RowMajor>;
+    using SelfType   = ReshapedView<NestedType, M, N>;
 
     static_assert(
-        Rows * Cols == NestedType::kRows * NestedType::kCols,
+        M * N == NestedType::kRows * NestedType::kCols,
         "Reshape dimensions must preserve total number of elements");
 
-    static auto constexpr kRows     = Rows;
-    static auto constexpr kCols     = Cols;
-    static bool constexpr bRowMajor = RowMajor;
+    static auto constexpr kRows     = M;
+    static auto constexpr kCols     = N;
+    static bool constexpr bRowMajor = NestedType::bRowMajor;
 
     PBAT_HOST_DEVICE ReshapedView(NestedType const& A) : mA(A) {}
 
@@ -37,10 +37,7 @@ class ReshapedView
     }
 
     // Vector(ized) access
-    PBAT_HOST_DEVICE ScalarType operator()(auto i) const
-    {
-        return bRowMajor ? mA(i) : mA(i);
-    }
+    PBAT_HOST_DEVICE ScalarType operator()(auto i) const { return bRowMajor ? mA(i) : mA(i); }
     PBAT_HOST_DEVICE ScalarType operator[](auto i) const { return (*this)(i); }
 
     PBAT_MINI_READ_API(SelfType)
@@ -49,11 +46,11 @@ class ReshapedView
     NestedType const& mA;
 };
 
-template <int Rows, int Cols, bool RowMajor = false, class /*CMatrix*/ TMatrix>
+template <int M, int N, class /*CMatrix*/ TMatrix>
 PBAT_HOST_DEVICE auto Reshape(TMatrix&& A)
 {
     using MatrixType = std::decay_t<TMatrix>;
-    return ReshapedView<MatrixType, Rows, Cols, RowMajor>(std::forward<TMatrix>(A));
+    return ReshapedView<MatrixType, M, N>(std::forward<TMatrix>(A));
 }
 
 } // namespace mini
