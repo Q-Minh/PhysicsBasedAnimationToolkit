@@ -38,12 +38,14 @@ struct BroydenParams
         EBroydenLeastSquaresSolver::COD}; ///< Least-squares solver type
     EBroydenJacobianEstimate eJacobianEstimate{
         EBroydenJacobianEstimate::Identity}; ///< Jacobian estimate strategy
-    Scalar betaF{1}; ///< Rank estimate for Fk in diagonal Cauchy-Schwarz updating
-    Scalar betaB{1}; ///< Rank estimate for Bk in diagonal Cauchy-Schwarz updating
+    Scalar betaF{1};     ///< Rank estimate for Fk in diagonal Cauchy-Schwarz updating
+    Scalar betaB{1};     ///< Rank estimate for Bk in diagonal Cauchy-Schwarz updating
+    Index nMaxIters{15}; ///< Maximum number of Broyden iterations
 
     /**
      * @brief Read/Write parameters
      */
+    Index k;        ///< Current iteration
     MatrixX Fk;     ///< `|# dofs| x m` residual differences
     MatrixX Xk;     ///< `|# dofs| x m` past step differences
     VectorX xkm1;   ///< `|# dofs| x 1` previous step
@@ -226,6 +228,7 @@ void InitializeSolve(
         break;
         default: break;
     }
+    broyden.k = 0;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -236,22 +239,21 @@ void Iterate(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Iterate");
-    if (params.k == 0)
+    if (broyden.k == 0)
     {
         broyden.xkm1 = fem.x.reshaped();
-        Iterate(fem, contact, params);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        Solve(fem, contact, params);
         broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
     }
     else
     {
-        Index k  = params.k;
+        params.k = 0;
+        Index k  = broyden.k;
         auto dkl = pbat::common::Modulo(k - 1, broyden.m);
         // Update (preconditioned) history
         broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
         broyden.xkm1        = fem.x.reshaped();
-        Iterate(fem, contact, params);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        Solve(fem, contact, params);
         broyden.fk          = broyden.xkm1 - fem.x.reshaped();
         broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
         broyden.fkm1        = broyden.fk;
@@ -311,6 +313,7 @@ void Iterate(
         bool const bHasScaledIdentityJacobian =
             broyden.eJacobianEstimate == EBroydenJacobianEstimate::ScaledIdentity;
         // NOTE: At this point, broyden.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
+        contact.ComputeDisplacementBounds(broyden.xkm1);
         if (bHasUpdatingDiagonal)
         {
             // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
@@ -331,6 +334,7 @@ void Iterate(
             fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
             fem.x.reshaped() += broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
         }
+        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
         // Update Jacobian (inverse) estimate
         switch (broyden.eJacobianEstimate)
         {
@@ -398,6 +402,7 @@ void Iterate(
             default: break;
         }
     }
+    ++broyden.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -410,10 +415,10 @@ void Solve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
     while (params.k < params.nMaxIters)
     {
-        if (contact.RequiresBoundsComputation())
-            contact.ComputeDisplacementBounds(fem.x);
+        // if (contact.RequiresBoundsComputation())
+        //     contact.ComputeDisplacementBounds(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, broyden);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        // contact.TruncateDisplacedPositions(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

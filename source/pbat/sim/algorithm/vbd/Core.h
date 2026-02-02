@@ -186,11 +186,11 @@ struct Params
         10}; ///< Contact homogenization conditioning factor for stiffness matching strategy
 
     // Stencil gradient acceleration
-    Scalar betaG0{0.5}; ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
+    Scalar betaG0{0.5};   ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
     Scalar rhohat{0.005}; ///< Lipschitz-normalized threshold above which steps are considered small
-                      ///< (i.e. solver progress is slow)
+                          ///< (i.e. solver progress is slow)
     Scalar gammadown{0.95}; ///< Beta reduction factor
-    Scalar gammaup{0.5};   ///< Beta increase factor
+    Scalar gammaup{0.5};    ///< Beta increase factor
 
     /**
      * @brief Read-write
@@ -1029,9 +1029,13 @@ inline void AdaptStencilGradientAccelerationParameter(
         Scalar L         = params.Hnk(i) + ngk / ndxkm1;
         Scalar rho       = ndgkm1 / (L * ndxkm1);
         if (ngk > ngkm1)
+        {
             params.betaG(i) *= params.gammadown;
+        }
         else if (rho > params.rhohat)
+        {
             params.betaG(i) += (1 - params.betaG(i)) * params.gammaup;
+        }
     }
     params.gk.col(i) = ToEigen(gi);
     params.xk.col(i) = ToEigen(xi);

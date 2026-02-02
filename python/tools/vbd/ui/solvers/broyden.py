@@ -77,11 +77,8 @@ class BroydenSolver(BaseSolver):
             callback = lambda: None
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
         callback()
-        while vbd.k < vbd.n_max_iters:
-            if contact.requires_bounds_computation:
-                contact.compute_displacement_bounds(fem.x)
+        while broyden.k < broyden.n_max_iters:
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
-            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
 

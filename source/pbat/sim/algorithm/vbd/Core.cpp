@@ -190,7 +190,15 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("eHomogenizationStrategy", static_cast<int>(eHomogenizationStrategy));
     group.WriteMetaData("betac", betac);
+    group.WriteMetaData("betaG0", betaG0);
+    group.WriteMetaData("rhohat", rhohat);
+    group.WriteMetaData("gammadown", gammadown);
+    group.WriteMetaData("gammaup", gammaup);
     group.WriteData("xb", xb);
+    group.WriteData("gk", gk);
+    group.WriteData("xk", xk);
+    group.WriteData("Hnk", Hnk);
+    group.WriteData("betaG", betaG);
     group.WriteData("log10lame", log10lame);
     group.WriteMetaData("k", k);
 }
@@ -219,8 +227,24 @@ void Params::Deserialize(io::Archive const& archive)
             group.ReadMetaData<int>("eHomogenizationStrategy"));
     if (group.HasMetaData("betac"))
         betac = group.ReadMetaData<decltype(betac)>("betac");
+    if (group.HasMetaData("betaG0"))
+        betaG0 = group.ReadMetaData<decltype(betaG0)>("betaG0");
+    if (group.HasMetaData("rhohat"))
+        rhohat = group.ReadMetaData<decltype(rhohat)>("rhohat");
+    if (group.HasMetaData("gammadown"))
+        gammadown = group.ReadMetaData<decltype(gammadown)>("gammadown");
+    if (group.HasMetaData("gammaup"))
+        gammaup = group.ReadMetaData<decltype(gammaup)>("gammaup");
     if (group.HasData("xb"))
         xb = group.ReadData<decltype(xb)>("xb");
+    if (group.HasData("gk"))
+        gk = group.ReadData<decltype(gk)>("gk");
+    if (group.HasData("xk"))
+        xk = group.ReadData<decltype(xk)>("xk");
+    if (group.HasData("Hnk"))
+        Hnk = group.ReadData<decltype(Hnk)>("Hnk");
+    if (group.HasMetaData("betaG"))
+        betaG = group.ReadMetaData<decltype(betaG)>("betaG");
     if (group.HasData("log10lame"))
         log10lame = group.ReadData<decltype(log10lame)>("log10lame");
     if (group.HasMetaData("k"))
