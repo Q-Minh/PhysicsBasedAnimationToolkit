@@ -209,6 +209,16 @@ class AdjacencySet
      * @brief Iterate over all adjacencies in the set, calling @p fOnAdj for each one.
      *
      * @tparam FOnAdjacency Callable with signature `void(TVertexIndex u, TVertexIndex v,
+     * TData& w)`
+     * @param fOnAdj Callback invoked for each adjacency
+     */
+    template <class FOnAdjacency>
+    void ForAll(FOnAdjacency&& fOnAdj);
+
+    /**
+     * @brief Const overload of ForAll
+     *
+     * @tparam FOnAdjacency Callable with signature `void(TVertexIndex u, TVertexIndex v,
      * TData const& w)`
      * @param fOnAdj Callback invoked for each adjacency
      */
@@ -438,13 +448,17 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
     TVertexIndex u,
     FOnAdjacency&& fOnAdj)
 {
+    static_assert(
+        std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData&>,
+        "FOnAdjacency must be invocable with either (TVertexIndex, TVertexIndex) or "
+        "(TVertexIndex, TVertexIndex, TData&)");
     assert(static_cast<std::size_t>(u) + 1u < mPrefix.size() and "u out of range");
     TVertexIndex const begin = mPrefix[u];
     TVertexIndex const end   = mPrefix[static_cast<std::size_t>(u) + 1u];
     for (auto k = begin; k < end; ++k)
     {
-        auto const& [tu, tv, tid] = mAdjacencies[k];
-        TIdIndex c                = mIdToData[tid];
+        auto& [tu, tv, tid] = mAdjacencies[k];
+        TIdIndex c          = mIdToData[tid];
         fOnAdj(tu, tv, mData[c]);
     }
 }
@@ -461,7 +475,32 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
     for (auto k = begin; k < end; ++k)
     {
         auto const& [tu, tv, tid] = mAdjacencies[k];
-        TIdIndex c                = mIdToData[tid];
+        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData const&>)
+        {
+            TIdIndex c = mIdToData[tid];
+            fOnAdj(tu, tv, mData[c]);
+        }
+        else
+        {
+            static_assert(
+                std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>,
+                "FOnAdjacency must be invocable with either (TVertexIndex, TVertexIndex) or "
+                "(TVertexIndex, TVertexIndex, TData const&)");
+            fOnAdj(tu, tv);
+        }
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class FOnAdjacency>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj)
+{
+    static_assert(
+        std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData&>,
+        "FOnAdjacency must be invocable with (TVertexIndex, TVertexIndex, TData&)");
+    for (auto& [tu, tv, tid] : mAdjacencies)
+    {
+        TIdIndex c = mIdToData[tid];
         fOnAdj(tu, tv, mData[c]);
     }
 }
@@ -473,7 +512,18 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj) 
     for (auto const& [tu, tv, tid] : mAdjacencies)
     {
         TIdIndex c = mIdToData[tid];
-        fOnAdj(tu, tv, mData[c]);
+        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData const&>)
+        {
+            fOnAdj(tu, tv, mData[c]);
+        }
+        else
+        {
+            static_assert(
+                std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>,
+                "FOnAdjacency must be invocable with either (TVertexIndex, TVertexIndex) or "
+                "(TVertexIndex, TVertexIndex, TData const&)");
+            fOnAdj(tu, tv);
+        }
     }
 }
 
