@@ -18,8 +18,10 @@
 #include <compare>
 #include <concepts>
 #include <cstdint>
+#include <iterator>
 #include <numeric>
 #include <ranges>
+#include <tbb/parallel_for.h>
 #include <tbb/parallel_sort.h>
 #include <type_traits>
 #include <utility>
@@ -142,12 +144,6 @@ class AdjacencySet
     AdjacencySet() = default;
 
     /**
-     * @brief Initialise the set for @p n possible source vertices u ∈ [0, n).
-     * @param n Number of possible source vertices
-     */
-    void Construct(TVertexIndex n);
-
-    /**
      * @brief Preallocate memory for the expected number of adjacencies and incoming Add() calls,
      * minimising reallocations during Add() and Update().
      * @param nExpectedAdjacencies Expected number of unique adjacencies (edges) after Update()
@@ -183,6 +179,57 @@ class AdjacencySet
     template <class FOnAdded, class FOnRemoved>
     void
     Update(FOnAdded&& fOnAdded, FOnRemoved&& fOnRemoved, AdjacencySetUpdateOptions options = {});
+
+    /**
+     * @brief Merge all adjacencies from @p other into this set, consuming @p other.
+     *
+     * Designed for the thread-local reduce pattern: each thread builds its own AdjacencySet,
+     * then all thread-local sets are merged into a single global set.
+     *
+     * Adjacencies present in @p other but not in this are added, moving their associated data
+     * from @p other. Adjacencies already present in this are left unchanged (this's data wins).
+     *
+     * When @p bAssumeDisjoint is true, the merge assumes that this and @p other share no
+     * common adjacencies. This skips the O(n+m) set-difference check and directly merges all
+     * triplets.
+     *
+     * Complexity: O(this->Size() + other.Size()).
+     *
+     * @post @p other is left empty (Size() == 0) but retains its allocated capacity.
+     *
+     * @param other          The adjacency set whose entries are merged into this (consumed)
+     * @param bAssumeDisjoint If true, skip duplicate detection (caller guarantees no overlap)
+     */
+    void Merge(AdjacencySet&& other, bool bAssumeDisjoint = false);
+
+    /**
+     * @brief Reduce a collection of AdjacencySets into a single set via parallel tree reduction.
+     *
+     * Each level of the tree merges pairs of sets in parallel, yielding O(A log T) total work
+     * and O(A) span, where A is the total number of adjacencies and T is the number of sets.
+     * The input sets are consumed (moved from). The iterator's value_type must be AdjacencySet.
+     *
+     * @post All input sets in [begin, end) are left in a default-constructed (empty) state.
+     * @post This set is finalized (prefix array is computed).
+     *
+     * @tparam TRandomIt     Random-access iterator over AdjacencySet elements
+     * @param begin          Iterator to the first AdjacencySet
+     * @param end            Iterator past the last AdjacencySet
+     * @param bAssumeDisjoint If true, skip duplicate detection in each merge
+     * @return The merged AdjacencySet
+     */
+    template <std::random_access_iterator TRandomIt>
+        requires std::is_same_v<std::iter_value_t<TRandomIt>, AdjacencySet>
+    void Reduce(TRandomIt begin, TRandomIt end, bool bAssumeDisjoint = false);
+
+    /**
+     * @brief Finalize the adjacency set by recomputing the prefix-sum array.
+     *
+     * Must be called once after any sequence of Update() and/or Merge() calls, before
+     * using AdjacenciesOf(). Grows the prefix array if adjacencies reference source
+     * vertices beyond the range established by Construct().
+     */
+    void Finalize();
 
     /**
      * @brief Iterate over all adjacencies (u, v, w) where u is fixed.
@@ -226,6 +273,12 @@ class AdjacencySet
     void ForAll(FOnAdjacency&& fOnAdj) const;
 
     /**
+     * @brief Clear all vectors, resetting the set to an empty state while preserving
+     * allocated capacity for reuse.
+     */
+    void Clear();
+
+    /**
      * @brief Compact the indirection tables so that all live ids are dense in [0, Size()).
      *
      * After many add/remove cycles, mIdToData grows monotonically (one entry per id ever
@@ -246,8 +299,8 @@ class AdjacencySet
     std::size_t Size() const noexcept { return mAdjacencies.size(); }
 
     /**
-     * @brief Number of source vertices
-     * @return n passed to Construct()
+     * @brief Number of source vertices inferred from the prefix array
+     * @return Number of source vertices, or 0 if Finalize() has not been called
      */
     TVertexIndex NumVertices() const noexcept
     {
@@ -279,11 +332,6 @@ class AdjacencySet
      */
     void ReleaseId(TIdIndex id);
 
-    /**
-     * @brief Compute the prefix-sum array over u from the sorted mAdjacencies.
-     */
-    void ComputePrefix();
-
     // -- Committed state (read by AdjacenciesOf / ForAll) --
     std::vector<TripletType> mAdjacencies; ///< Current sorted unique (u,v,id)
     std::vector<TVertexIndex> mPrefix;     ///< Prefix sum over u for fast AdjacenciesOf()
@@ -301,23 +349,6 @@ class AdjacencySet
 };
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Construct(TVertexIndex n)
-{
-    // Committed state
-    mAdjacencies.clear();
-    mPrefix.resize(static_cast<std::size_t>(n) + 1u);
-    // Per-adjacency data and indirection
-    mData.clear();
-    mIdToData.clear();
-    mDataToId.clear();
-    // Staging buffers
-    mIncomingAdjacencies.clear();
-    mExistingAdjacencies.clear();
-    mAdjacenciesToAdd.clear();
-    mAdjacenciesToRemove.clear();
-}
-
-template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reserve(
     std::size_t nExpectedAdjacencies,
     std::size_t nExpectedIncoming)
@@ -332,7 +363,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reserve(
     mIncomingAdjacencies.reserve(nExpectedIncoming);
     mExistingAdjacencies.reserve(nExpectedAdjacencies);
     mAdjacenciesToAdd.reserve(nExpectedIncoming);
-    mAdjacenciesToRemove.reserve(nExpectedAdjacencies);
+    mAdjacenciesToRemove.reserve(nExpectedIncoming);
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -435,9 +466,129 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     mIncomingAdjacencies.clear();
     mAdjacenciesToRemove.clear();
     mAdjacenciesToAdd.clear();
+}
 
-    // 10. Recompute prefix sum
-    ComputePrefix();
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(AdjacencySet&& other, bool bAssumeDisjoint)
+{
+    // 1. Determine which of other's adjacencies to add.
+    assert(mAdjacenciesToAdd.empty() and "mAdjacenciesToAdd must be empty before Merge");
+    if (bAssumeDisjoint)
+    {
+        // Fast path: all of other's adjacencies are new — skip set_difference entirely.
+        std::swap(mAdjacenciesToAdd, other.mAdjacencies);
+    }
+    else
+    {
+        // General path: other \ this
+        std::ranges::set_difference(
+            other.mAdjacencies,
+            mAdjacencies,
+            std::back_inserter(mAdjacenciesToAdd));
+    }
+
+    // 2. Allocate ids and move data from other for each new adjacency.
+    //    The triplets in mAdjacenciesToAdd carry other's ids; we use them to look up
+    //    other's data before overwriting with our own freshly allocated ids.
+    for (auto& [au, av, aid] : mAdjacenciesToAdd)
+    {
+        TIdIndex otherC = other.mIdToData[aid];
+        aid             = AllocateId();
+        TIdIndex c      = mIdToData[aid];
+        mData[c]        = std::move(other.mData[otherC]);
+    }
+
+    // 3. Merge sorted arrays
+    if (not mAdjacenciesToAdd.empty())
+    {
+        assert(
+            mExistingAdjacencies.empty() and
+            "mExistingAdjacencies must be empty before merging additions");
+        std::swap(mAdjacencies, mExistingAdjacencies);
+        mAdjacencies.reserve(mExistingAdjacencies.size() + mAdjacenciesToAdd.size());
+        std::ranges::merge(
+            mExistingAdjacencies,
+            mAdjacenciesToAdd,
+            std::back_inserter(mAdjacencies));
+    }
+
+    // 4. Clear temporaries
+    mExistingAdjacencies.clear();
+    mAdjacenciesToAdd.clear();
+
+    // 5. Leave other in an empty state, preserving its allocated capacity.
+    other.Clear();
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
+{
+    // Committed state
+    mAdjacencies.clear();
+    mPrefix.clear();
+    // Per-adjacency data and indirection
+    mData.clear();
+    mIdToData.clear();
+    mDataToId.clear();
+    // Staging buffers
+    mIncomingAdjacencies.clear();
+    mExistingAdjacencies.clear();
+    mAdjacenciesToAdd.clear();
+    mAdjacenciesToRemove.clear();
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <std::random_access_iterator TRandomIt>
+    requires std::
+        is_same_v<std::iter_value_t<TRandomIt>, AdjacencySet<TData, TVertexIndex, TIdIndex>>
+    void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
+        TRandomIt begin,
+        TRandomIt end,
+        bool bAssumeDisjoint)
+{
+    auto const n = static_cast<std::size_t>(std::distance(begin, end));
+    if (n == 0u)
+        return;
+
+    // Tree reduction: at each level, merge adjacent pairs in parallel.
+    // stride = distance between a 'dst' and its 'src' partner.
+    // After ceil(log2(n)) levels, begin[0] holds the fully merged result.
+    for (std::size_t stride = 1u; stride < n; stride *= 2u)
+    {
+        std::size_t const step = stride * 2u;
+        // Number of pairs at this level: every 'dst' at index k*step that has a
+        // partner at k*step + stride (partner must be < n).
+        std::size_t const nPairs = (n - stride + step - 1u) / step; // = ceil((n - stride) / step)
+        tbb::parallel_for(std::size_t{0}, nPairs, [&](std::size_t k) {
+            std::size_t dst = k * step;
+            std::size_t src = dst + stride;
+            if (src < n)
+                begin[dst].Merge(std::move(begin[src]), bAssumeDisjoint);
+        });
+    }
+
+    std::swap(*this, *begin);
+    this->Finalize();
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize()
+{
+    // Grow mPrefix if any adjacency source vertex exceeds the current range
+    // (can happen after Merge with a larger set).
+    if (not mAdjacencies.empty())
+    {
+        auto maxU = mAdjacencies.back().u; // mAdjacencies is sorted by u
+        if (static_cast<std::size_t>(maxU) + 1u >= mPrefix.size())
+            mPrefix.resize(static_cast<std::size_t>(maxU) + 2u);
+    }
+    // Reset all counts to zero
+    std::fill(mPrefix.begin(), mPrefix.end(), TVertexIndex{0});
+    // Count adjacencies per source vertex u
+    for (auto const& [tu, tv, tid] : mAdjacencies)
+        ++mPrefix[static_cast<std::size_t>(tu)];
+    // Exclusive prefix sum: mPrefix[i] = sum of counts for vertices [0, i)
+    std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TVertexIndex{0});
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -568,22 +719,6 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ReleaseId(TIdIndex id)
     // Shrink the data array
     mData.pop_back();
     mDataToId.pop_back();
-}
-
-template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::ComputePrefix()
-{
-    TVertexIndex const n = NumVertices();
-    // Reset all counts to zero
-    std::fill(mPrefix.begin(), mPrefix.end(), TVertexIndex{0});
-    // Count adjacencies per source vertex u
-    for (auto const& [tu, tv, tid] : mAdjacencies)
-    {
-        assert(tu < n and "Adjacency source vertex out of range");
-        ++mPrefix[static_cast<std::size_t>(tu)];
-    }
-    // Exclusive prefix sum: mPrefix[i] = sum of counts for vertices [0, i)
-    std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TVertexIndex{0});
 }
 
 } // namespace graph

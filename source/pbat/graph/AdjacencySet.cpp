@@ -20,19 +20,17 @@ TEST_CASE("[graph] AdjacencySet")
         int tag{-1};
     };
 
-    SUBCASE("Construct initialises empty set")
+    SUBCASE("Default-constructed set is empty")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(10u);
         CHECK(adj.Size() == 0u);
-        CHECK(adj.NumVertices() == 10u);
+        CHECK(adj.NumVertices() == 0u);
         CHECK(adj.Data().empty());
     }
 
     SUBCASE("Add and Update create adjacencies")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(5u);
 
         // Add some edges
         adj.Add(0u, 1u);
@@ -57,7 +55,6 @@ TEST_CASE("[graph] AdjacencySet")
     SUBCASE("Add stores directed edges as-is")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(5u);
 
         adj.Add(3u, 1u); // stored as (3,1)
         adj.Add(1u, 3u); // stored as (1,3) — distinct from (3,1)
@@ -81,7 +78,6 @@ TEST_CASE("[graph] AdjacencySet")
     SUBCASE("Update preserves existing adjacencies and detects additions/removals")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(5u);
 
         // First update: add edges (0,1) and (1,2)
         adj.Add(0u, 1u);
@@ -124,7 +120,6 @@ TEST_CASE("[graph] AdjacencySet")
     SUBCASE("AdjacenciesOf iterates over neighbours of u")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(5u);
 
         adj.Add(1u, 0u);
         adj.Add(1u, 2u);
@@ -135,6 +130,7 @@ TEST_CASE("[graph] AdjacencySet")
                 return {static_cast<float>(u * 10 + v), 0};
             },
             [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        adj.Finalize();
 
         // Edges are directed: Add(1,0) stores (1,0).
         // Adjacencies with first endpoint 0: none
@@ -180,7 +176,6 @@ TEST_CASE("[graph] AdjacencySet")
     SUBCASE("Id recycling reuses data slots")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(5u);
 
         // Add 3 edges
         adj.Add(0u, 1u);
@@ -210,7 +205,6 @@ TEST_CASE("[graph] AdjacencySet")
     SUBCASE("Multiple updates converge correctly")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(6u);
 
         // Build a triangle (0,1), (1,2), (0,2)
         adj.Add(0u, 1u);
@@ -251,7 +245,6 @@ TEST_CASE("[graph] AdjacencySet")
         using Options = AdjacencySetUpdateOptions;
 
         AdjacencySet<EdgeData> adj;
-        adj.Construct(6u);
 
         Options appendOnly;
         appendOnly.eUpdatePolicy = Options::EUpdatePolicy::AppendOnly;
@@ -329,7 +322,6 @@ TEST_CASE("[graph] AdjacencySet")
     SUBCASE("CompactIds shrinks indirection tables")
     {
         AdjacencySet<EdgeData> adj;
-        adj.Construct(5u);
 
         // Round 1: add 4 edges
         adj.Add(0u, 1u);
@@ -366,6 +358,7 @@ TEST_CASE("[graph] AdjacencySet")
             [](std::uint32_t, std::uint32_t, EdgeData&) {});
         CHECK(adj.Size() == 3u);
         CHECK(adj.Data().size() == 3u);
+        adj.Finalize();
 
         // Before compaction: indirection tables are larger than Size() because of prior
         // allocations.
@@ -412,6 +405,7 @@ TEST_CASE("[graph] AdjacencySet")
             },
             [](std::uint32_t, std::uint32_t, EdgeData&) {});
         CHECK(adj.Size() == 4u);
+        adj.Finalize();
 
         // Verify the new edge got proper data
         adj.AdjacenciesOf(1u, [&](std::uint32_t u, std::uint32_t v, EdgeData const& w) {
