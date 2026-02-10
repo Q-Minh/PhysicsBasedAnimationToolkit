@@ -416,8 +416,6 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
 
     // 8. Merge the kept adjacencies (mAdjacencies) with the sorted additions
     //    (mAdjacenciesToAdd) into a single sorted array — O(n), no re-sort needed.
-    //    We swap mAdjacencies into mExistingAdjacencies (already consumed) as scratch,
-    //    then merge back into mAdjacencies.
     if (not mAdjacenciesToAdd.empty())
     {
         assert(mAdjacencies.empty() and "mAdjacencies must be empty before merging additions");
