@@ -17,6 +17,7 @@ namespace pbat::graph {
 };
 
 #include "Adjacency.h"
+#include "AdjacencySet.h"
 #include "BreadthFirstSearch.h"
 #include "Color.h"
 #include "DepthFirstSearch.h"

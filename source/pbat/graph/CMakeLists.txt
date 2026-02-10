@@ -3,6 +3,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     FILE_SET api
     FILES
     "Adjacency.h"
+    "AdjacencySet.h"
     "BreadthFirstSearch.h"
     "Color.h"
     "ConnectedComponents.h"
@@ -16,6 +17,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PRIVATE
     "Adjacency.cpp"
+    "AdjacencySet.cpp"
     "BreadthFirstSearch.cpp"
     "Color.cpp"
     "ConnectedComponents.cpp"
