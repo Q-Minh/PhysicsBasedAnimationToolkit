@@ -3,9 +3,8 @@
 namespace pbat::graph {
 } // namespace pbat::graph
 
-#include <doctest/doctest.h>
-
 #include <cstdint>
+#include <doctest/doctest.h>
 #include <set>
 #include <tuple>
 #include <utility>
@@ -326,5 +325,218 @@ TEST_CASE("[graph] AdjacencySet")
             appendOnly);
         CHECK(addedCount == 0);
         CHECK(adj.Size() == 3u);
+    }
+
+    SUBCASE("InverseAdjacenciesOf iterates neighbours keyed by v")
+    {
+        using namespace pbat::graph;
+        using Options = AdjacencySetUpdateOptions;
+
+        AdjacencySet<EdgeData> adj;
+        adj.Construct(5u);
+
+        // Edges: (0,1), (0,3), (1,2), (1,4), (2,4)
+        // After canonicalisation, u < v always holds.
+        adj.Add(0u, 1u);
+        adj.Add(0u, 3u);
+        adj.Add(1u, 2u);
+        adj.Add(1u, 4u);
+        adj.Add(2u, 4u);
+
+        Options opts;
+        opts.bBuildInverse = true;
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u * 10 + v), 0};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {},
+            opts);
+
+        CHECK(adj.Size() == 5u);
+
+        // AdjacenciesOf(0) = {(0,1), (0,3)}  — forward: u == 0
+        {
+            std::vector<std::uint32_t> neighbours;
+            adj.AdjacenciesOf(0u, [&](std::uint32_t u, std::uint32_t v, EdgeData const&) {
+                CHECK(u == 0u);
+                neighbours.push_back(v);
+            });
+            REQUIRE(neighbours.size() == 2u);
+            CHECK(neighbours[0] == 1u);
+            CHECK(neighbours[1] == 3u);
+        }
+
+        // InverseAdjacenciesOf(4) = {(4,1), (4,2)}  — inverse: v == 4
+        // These come from forward edges (1,4) and (2,4).
+        {
+            std::vector<std::uint32_t> sources;
+            adj.InverseAdjacenciesOf(4u, [&](std::uint32_t v, std::uint32_t u, EdgeData const& w) {
+                CHECK(v == 4u);
+                sources.push_back(u);
+                CHECK(w.weight == doctest::Approx(static_cast<float>(u * 10 + v)));
+            });
+            REQUIRE(sources.size() == 2u);
+            // Within the v==4 bucket, sources should appear in u-order (1, 2)
+            // because mAdjacencies is sorted by (u,v) and the counting sort is stable.
+            CHECK(sources[0] == 1u);
+            CHECK(sources[1] == 2u);
+        }
+
+        // InverseAdjacenciesOf(1) = {(1,0)}  — only edge with v==1 is (0,1)
+        {
+            std::vector<std::uint32_t> sources;
+            adj.InverseAdjacenciesOf(1u, [&](std::uint32_t v, std::uint32_t u, EdgeData const& w) {
+                CHECK(v == 1u);
+                sources.push_back(u);
+            });
+            REQUIRE(sources.size() == 1u);
+            CHECK(sources[0] == 0u);
+        }
+
+        // InverseAdjacenciesOf(0) = {}  — no edge has v==0 (since u < v, 0 is never a second
+        // endpoint)
+        {
+            int count = 0;
+            adj.InverseAdjacenciesOf(0u, [&](std::uint32_t, std::uint32_t, EdgeData const&) {
+                ++count;
+            });
+            CHECK(count == 0);
+        }
+
+        // InverseAdjacenciesOf(2) = {(2,1)}  — edge (1,2) has v==2
+        {
+            std::vector<std::uint32_t> sources;
+            adj.InverseAdjacenciesOf(2u, [&](std::uint32_t v, std::uint32_t u, EdgeData const& w) {
+                CHECK(v == 2u);
+                sources.push_back(u);
+            });
+            REQUIRE(sources.size() == 1u);
+            CHECK(sources[0] == 1u);
+        }
+
+        // InverseAdjacenciesOf(3) = {(3,0)}  — edge (0,3) has v==3
+        {
+            std::vector<std::uint32_t> sources;
+            adj.InverseAdjacenciesOf(3u, [&](std::uint32_t v, std::uint32_t u, EdgeData const& w) {
+                CHECK(v == 3u);
+                sources.push_back(u);
+                CHECK(w.weight == doctest::Approx(static_cast<float>(u * 10 + v)));
+            });
+            REQUIRE(sources.size() == 1u);
+            CHECK(sources[0] == 0u);
+        }
+    }
+
+    SUBCASE("Inverse is not built when bBuildInverse is false")
+    {
+        using namespace pbat::graph;
+
+        AdjacencySet<EdgeData> adj;
+        adj.Construct(3u);
+
+        adj.Add(0u, 1u);
+        adj.Add(1u, 2u);
+        // Default options: bBuildInverse == false
+        adj.Update(
+            [](std::uint32_t, std::uint32_t) -> EdgeData { return {}; },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+
+        CHECK(adj.Size() == 2u);
+        // No inverse arrays should be allocated — we just verify the set works without inverse.
+        // (InverseAdjacenciesOf would assert-fail here, so we don't call it.)
+    }
+
+    SUBCASE("CompactIds shrinks indirection tables")
+    {
+        AdjacencySet<EdgeData> adj;
+        adj.Construct(5u);
+
+        // Round 1: add 4 edges
+        adj.Add(0u, 1u);
+        adj.Add(0u, 2u);
+        adj.Add(1u, 3u);
+        adj.Add(2u, 4u);
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u + v), static_cast<int>(u * 10 + v)};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        CHECK(adj.Size() == 4u);
+
+        // Round 2: keep only 2 of the 4 edges — this triggers 2 removals,
+        // so 2 ids are "wasted" (indirection tables grow but mData stays at 2).
+        adj.Add(0u, 1u);
+        adj.Add(2u, 4u);
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u + v), static_cast<int>(u * 10 + v)};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        CHECK(adj.Size() == 2u);
+        CHECK(adj.Data().size() == 2u);
+
+        // Round 3: add a new edge — allocates yet another fresh id
+        adj.Add(0u, 1u);
+        adj.Add(2u, 4u);
+        adj.Add(3u, 4u);
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u + v), static_cast<int>(u * 10 + v)};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        CHECK(adj.Size() == 3u);
+        CHECK(adj.Data().size() == 3u);
+
+        // Before compaction: indirection tables are larger than Size() because of prior
+        // allocations.
+        // Capture data values before compaction for later verification.
+        std::vector<std::tuple<std::uint32_t, std::uint32_t, float, int>> before;
+        adj.ForAll([&](std::uint32_t u, std::uint32_t v, EdgeData const& w) {
+            before.emplace_back(u, v, w.weight, w.tag);
+        });
+
+        // Compact
+        adj.CompactIds();
+
+        // After compaction: indirection tables have exactly Size() entries.
+        // Verify that queries still return the same data.
+        std::vector<std::tuple<std::uint32_t, std::uint32_t, float, int>> after;
+        adj.ForAll([&](std::uint32_t u, std::uint32_t v, EdgeData const& w) {
+            after.emplace_back(u, v, w.weight, w.tag);
+        });
+        REQUIRE(before.size() == after.size());
+        for (std::size_t i = 0u; i < before.size(); ++i)
+        {
+            CHECK(std::get<0>(before[i]) == std::get<0>(after[i]));
+            CHECK(std::get<1>(before[i]) == std::get<1>(after[i]));
+            CHECK(std::get<2>(before[i]) == doctest::Approx(std::get<2>(after[i])));
+            CHECK(std::get<3>(before[i]) == std::get<3>(after[i]));
+        }
+
+        // AdjacenciesOf still works correctly
+        adj.AdjacenciesOf(0u, [&](std::uint32_t u, std::uint32_t v, EdgeData const& w) {
+            CHECK(u == 0u);
+            CHECK(v == 1u);
+            CHECK(w.weight == doctest::Approx(1.f));
+            CHECK(w.tag == 1);
+        });
+
+        // Further updates still work after compaction
+        adj.Add(0u, 1u);
+        adj.Add(2u, 4u);
+        adj.Add(3u, 4u);
+        adj.Add(1u, 2u);
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u * 100 + v), 0};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        CHECK(adj.Size() == 4u);
+
+        // Verify the new edge got proper data
+        adj.AdjacenciesOf(1u, [&](std::uint32_t u, std::uint32_t v, EdgeData const& w) {
+            if (v == 2u)
+                CHECK(w.weight == doctest::Approx(102.f));
+        });
     }
 }

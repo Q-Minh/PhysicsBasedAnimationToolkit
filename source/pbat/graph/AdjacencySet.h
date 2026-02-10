@@ -90,6 +90,9 @@ struct AdjacencySetUpdateOptions
                 ///< already sorted in canonical form (u < v). This can be set to true to skip the
                 ///< sorting step in Update() when the user can guarantee that Add() is called with
                 ///< pairs in canonical form and in sorted order.
+    bool bBuildInverse{
+        false}; ///< If true, build the inverse adjacency array keyed by v, enabling
+                ///< InverseAdjacenciesOf(v). Costs one extra O(n) counting-sort pass.
 };
 
 /**
@@ -111,18 +114,20 @@ struct AdjacencySetUpdateOptions
  * clang-format off
  * ### Memory layout
  *
- * | Array                | Element type       | Purpose                                          |
- * |----------------------|--------------------|--------------------------------------------------|
- * | mAdjacencies         | TripletType        | Sorted unique (u,v,id) of the current set        |
- * | mExistingAdjacencies | TripletType        | Previous mAdjacencies (swapped in during Update) |
- * | mData                | TData              | Per-adjacency payload                            |
- * | mIdToData            | TIdIndex           | id -> data index c (mData[c])                    |
- * | mDataToId            | TIdIndex           | data index c -> id                               |
- * | mIncomingAdjacencies | TripletType        | Incoming (possibly duplicated) user Add() calls  |
- * | mAdjacenciesToRemove | TripletType        | Old \ New (set difference)                       |
- * | mAdjacenciesToAdd    | TripletType        | New \ Old (set difference)                       |
- * | mRecycledId          | TIdIndex           | Recycled ids from removed adjacencies            |
- * | mPrefix              | TVertexIndex       | Prefix sum over u for fast AdjacenciesOf()       |
+ * | Array                | Element type       | Purpose                                           |
+ * |----------------------|--------------------|---------------------------------------------------|
+ * | mAdjacencies         | TripletType        | Sorted unique (u,v,id) of the current set         |
+ * | mExistingAdjacencies | TripletType        | Previous mAdjacencies (swapped in during Update)  |
+ * | mData                | TData              | Per-adjacency payload                             |
+ * | mIdToData            | TIdIndex           | id -> data index c (mData[c])                     |
+ * | mDataToId            | TIdIndex           | data index c -> id                                |
+ * | mIncomingAdjacencies | TripletType        | Incoming (possibly duplicated) user Add() calls   |
+ * | mAdjacenciesToRemove | TripletType        | Old \ New (set difference)                        |
+ * | mAdjacenciesToAdd    | TripletType        | New \ Old (set difference)                        |
+ * | mPrefix              | TVertexIndex       | Prefix sum over u for fast AdjacenciesOf()        |
+ * | mInverseAdjacencies  | TripletType        | Adjacencies sorted by v (opt-in via bBuildInverse)|
+ * | mInversePrefix       | TVertexIndex       | Prefix sum over v for InverseAdjacenciesOf()      |
+ * | mInverseCursors      | TVertexIndex       | Cursors for iterating over inverse adjacencies    |
  * clang-format on
  */
 template <
@@ -214,6 +219,49 @@ class AdjacencySet
     void ForAll(FOnAdjacency&& fOnAdj) const;
 
     /**
+     * @brief Iterate over all inverse adjacencies (v, u, w) where v is fixed.
+     * Requires that the last Update() was called with bBuildInverse = true.
+     *
+     * @tparam FOnAdjacency Callable with signature `void(TVertexIndex v, TVertexIndex u, TData& w)`
+     * @param v       Target vertex
+     * @param fOnAdj  Callback invoked for each source neighbour of v
+     */
+    template <class FOnAdjacency>
+    void InverseAdjacenciesOf(TVertexIndex v, FOnAdjacency&& fOnAdj);
+
+    /**
+     * @brief Const overload of InverseAdjacenciesOf
+     *
+     * @tparam FOnAdjacency Callable with signature `void(TVertexIndex v, TVertexIndex u,
+     * TData const& w)`
+     * @param v       Target vertex
+     * @param fOnAdj  Callback invoked for each source neighbour of v
+     */
+    template <class FOnAdjacency>
+    void InverseAdjacenciesOf(TVertexIndex v, FOnAdjacency&& fOnAdj) const;
+
+    /**
+     * @brief Preallocate memory for the inverse adjacency array and its prefix sum.
+     * Only useful when bBuildInverse will be set to true in Update().
+     * @param nExpectedAdjacencies Expected number of unique adjacencies
+     */
+    void ReserveInverse(std::size_t nExpectedAdjacencies);
+
+    /**
+     * @brief Compact the indirection tables so that all live ids are dense in [0, Size()).
+     *
+     * After many add/remove cycles, mIdToData grows monotonically (one entry per id ever
+     * allocated) while mData stays dense at Size() entries. The gap wastes memory.
+     * This function remaps every triplet's id to its current data index, then shrinks
+     * mIdToData and mDataToId to exactly Size() entries with identity values.
+     *
+     * Complexity: O(Size()).
+     *
+     * @note Call this periodically when memory pressure is a concern, not on every Update().
+     */
+    void CompactIds();
+
+    /**
      * @brief Number of live adjacencies in the set
      * @return Number of adjacencies
      */
@@ -258,9 +306,19 @@ class AdjacencySet
      */
     void ComputePrefix();
 
+    /**
+     * @brief Build the inverse adjacency array via counting sort by v.
+     */
+    void ComputeInverse();
+
     // -- Committed state (read by AdjacenciesOf / ForAll) --
     std::vector<TripletType> mAdjacencies; ///< Current sorted unique (u,v,id)
     std::vector<TVertexIndex> mPrefix;     ///< Prefix sum over u for fast AdjacenciesOf()
+
+    // -- Inverse adjacencies (opt-in, read by InverseAdjacenciesOf) --
+    std::vector<TripletType> mInverseAdjacencies; ///< Adjacencies sorted by v
+    std::vector<TVertexIndex> mInversePrefix;     ///< Prefix sum over v
+    std::vector<TVertexIndex> mInverseCursors;    ///< Write cursors for counting sort scatter
 
     // -- Per-adjacency data and indirection --
     std::vector<TData> mData;        ///< Per-adjacency payload (dense, exactly Size() entries)
@@ -280,6 +338,10 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Construct(TVertexIndex n)
     // Committed state
     mAdjacencies.clear();
     mPrefix.resize(static_cast<std::size_t>(n) + 1u);
+    // Inverse adjacencies
+    mInverseAdjacencies.clear();
+    mInversePrefix.clear();
+    mInverseCursors.clear();
     // Per-adjacency data and indirection
     mData.clear();
     mIdToData.clear();
@@ -415,6 +477,10 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
 
     // 10. Recompute prefix sum
     ComputePrefix();
+
+    // 11. Optionally build inverse adjacency array
+    if (options.bBuildInverse)
+        ComputeInverse();
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -463,6 +529,70 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj) 
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class FOnAdjacency>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::InverseAdjacenciesOf(
+    TVertexIndex v,
+    FOnAdjacency&& fOnAdj)
+{
+    assert(not mInversePrefix.empty() and "InverseAdjacenciesOf requires bBuildInverse = true");
+    assert(static_cast<std::size_t>(v) + 1u < mInversePrefix.size() and "v out of range");
+    TVertexIndex const begin = mInversePrefix[v];
+    TVertexIndex const end   = mInversePrefix[static_cast<std::size_t>(v) + 1u];
+    for (auto k = begin; k < end; ++k)
+    {
+        auto const& [tv, tu, tid] = mInverseAdjacencies[k];
+        TIdIndex c                = mIdToData[tid];
+        fOnAdj(tv, tu, mData[c]);
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class FOnAdjacency>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::InverseAdjacenciesOf(
+    TVertexIndex v,
+    FOnAdjacency&& fOnAdj) const
+{
+    assert(not mInversePrefix.empty() and "InverseAdjacenciesOf requires bBuildInverse = true");
+    assert(static_cast<std::size_t>(v) + 1u < mInversePrefix.size() and "v out of range");
+    TVertexIndex const begin = mInversePrefix[v];
+    TVertexIndex const end   = mInversePrefix[static_cast<std::size_t>(v) + 1u];
+    for (auto k = begin; k < end; ++k)
+    {
+        auto const& [tv, tu, tid] = mInverseAdjacencies[k];
+        TIdIndex c                = mIdToData[tid];
+        fOnAdj(tv, tu, mData[c]);
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::ReserveInverse(std::size_t nExpectedAdjacencies)
+{
+    mInverseAdjacencies.reserve(nExpectedAdjacencies);
+    mInversePrefix.reserve(static_cast<std::size_t>(NumVertices()) + 1u);
+    mInverseCursors.reserve(static_cast<std::size_t>(NumVertices()) + 1u);
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::CompactIds()
+{
+    std::size_t const n = mAdjacencies.size();
+    // Remap each triplet's id to its current data index
+    for (auto& [tu, tv, tid] : mAdjacencies)
+        tid = static_cast<TIdIndex>(mIdToData[tid]);
+    // Also remap inverse adjacencies if they are populated
+    for (auto& [tv, tu, tid] : mInverseAdjacencies)
+        tid = static_cast<TIdIndex>(mIdToData[tid]);
+    // Rebuild indirection as identity: id == data index
+    mIdToData.resize(n);
+    mDataToId.resize(n);
+    for (std::size_t i = 0u; i < n; ++i)
+    {
+        mIdToData[i] = static_cast<TIdIndex>(i);
+        mDataToId[i] = static_cast<TIdIndex>(i);
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 TIdIndex AdjacencySet<TData, TVertexIndex, TIdIndex>::AllocateId()
 {
     TIdIndex id = static_cast<TIdIndex>(mIdToData.size());
@@ -504,6 +634,40 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ComputePrefix()
     }
     // Exclusive prefix sum: mPrefix[i] = sum of counts for vertices [0, i)
     std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TVertexIndex{0});
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::ComputeInverse()
+{
+    TVertexIndex const n     = NumVertices();
+    std::size_t const nAdj   = mAdjacencies.size();
+    std::size_t const nSlots = static_cast<std::size_t>(n) + 1u;
+
+    // 1. Resize inverse prefix to n+1 and zero it
+    mInversePrefix.resize(nSlots);
+    std::fill(mInversePrefix.begin(), mInversePrefix.end(), TVertexIndex{0});
+
+    // 2. Count adjacencies per target vertex v
+    for (auto const& [tu, tv, tid] : mAdjacencies)
+        ++mInversePrefix[static_cast<std::size_t>(tv)];
+
+    // 3. Exclusive prefix sum
+    std::exclusive_scan(
+        mInversePrefix.begin(),
+        mInversePrefix.end(),
+        mInversePrefix.begin(),
+        TVertexIndex{0});
+
+    // 4. Scatter: write (v, u, id) into the correct position via running offsets.
+    //    We copy the prefix array into mInverseCursors as write cursors.
+    mInverseCursors = mInversePrefix;
+    mInverseAdjacencies.resize(nAdj);
+    for (auto const& [tu, tv, tid] : mAdjacencies)
+    {
+        auto& pos                = mInverseCursors[static_cast<std::size_t>(tv)];
+        mInverseAdjacencies[pos] = {tv, tu, tid};
+        ++pos;
+    }
 }
 
 } // namespace graph
