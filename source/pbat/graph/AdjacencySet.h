@@ -136,12 +136,11 @@ template <
 class AdjacencySet
 {
   public:
+    using SelfType        = AdjacencySet<TData, TVertexIndex, TIdIndex>;
     using DataType        = TData;
     using VertexIndexType = TVertexIndex;
     using IdIndexType     = TIdIndex;
     using TripletType     = AdjacencyTriplet<TVertexIndex, TIdIndex>;
-
-    AdjacencySet() = default;
 
     /**
      * @brief Preallocate memory for the expected number of adjacencies and incoming Add() calls,
@@ -183,11 +182,9 @@ class AdjacencySet
     /**
      * @brief Merge all adjacencies from @p other into this set, consuming @p other.
      *
-     * Designed for the thread-local reduce pattern: each thread builds its own AdjacencySet,
-     * then all thread-local sets are merged into a single global set.
-     *
      * Adjacencies present in @p other but not in this are added, moving their associated data
-     * from @p other. Adjacencies already present in this are left unchanged (this's data wins).
+     * from @p other if applicable. Adjacencies already present in this are left unchanged (this's
+     * data wins).
      *
      * When @p bAssumeDisjoint is true, the merge assumes that this and @p other share no
      * common adjacencies. This skips the O(n+m) set-difference check and directly merges all
@@ -197,10 +194,14 @@ class AdjacencySet
      *
      * @post @p other is left empty (Size() == 0) but retains its allocated capacity.
      *
+     * @tparam TOtherData    Data type of the other set, not necessarily the same as this's TData.
      * @param other          The adjacency set whose entries are merged into this (consumed)
      * @param bAssumeDisjoint If true, skip duplicate detection (caller guarantees no overlap)
      */
-    void Merge(AdjacencySet&& other, bool bAssumeDisjoint = false);
+    template <class TOtherData>
+    void Merge(
+        AdjacencySet<TOtherData, VertexIndexType, IdIndexType>&& other,
+        bool bAssumeDisjoint = false);
 
     /**
      * @brief Reduce a collection of AdjacencySets into a single set via parallel tree reduction.
@@ -209,17 +210,16 @@ class AdjacencySet
      * and O(A) span, where A is the total number of adjacencies and T is the number of sets.
      * The input sets are consumed (moved from). The iterator's value_type must be AdjacencySet.
      *
-     * @post All input sets in [begin, end) are left in a default-constructed (empty) state.
-     * @post This set is finalized (prefix array is computed).
+     * @post All input sets in [begin, end) are left in an empty state.
      *
-     * @tparam TRandomIt     Random-access iterator over AdjacencySet elements
+     * @tparam TRandomIt     Random-access iterator over AdjacencySet elements, not necessarily of
+     * same data type.
      * @param begin          Iterator to the first AdjacencySet
      * @param end            Iterator past the last AdjacencySet
      * @param bAssumeDisjoint If true, skip duplicate detection in each merge
      * @return The merged AdjacencySet
      */
     template <std::random_access_iterator TRandomIt>
-        requires std::is_same_v<std::iter_value_t<TRandomIt>, AdjacencySet>
     void Reduce(TRandomIt begin, TRandomIt end, bool bAssumeDisjoint = false);
 
     /**
@@ -469,7 +469,27 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(AdjacencySet&& other, bool bAssumeDisjoint)
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
+{
+    // Committed state
+    mAdjacencies.clear();
+    mPrefix.clear();
+    // Per-adjacency data and indirection
+    mData.clear();
+    mIdToData.clear();
+    mDataToId.clear();
+    // Staging buffers
+    mIncomingAdjacencies.clear();
+    mExistingAdjacencies.clear();
+    mAdjacenciesToAdd.clear();
+    mAdjacenciesToRemove.clear();
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class TOtherData>
+inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
+    AdjacencySet<TOtherData, VertexIndexType, IdIndexType>&& other,
+    bool bAssumeDisjoint)
 {
     // 1. Determine which of other's adjacencies to add.
     assert(mAdjacenciesToAdd.empty() and "mAdjacenciesToAdd must be empty before Merge");
@@ -492,10 +512,13 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(AdjacencySet&& other, bo
     //    other's data before overwriting with our own freshly allocated ids.
     for (auto& [au, av, aid] : mAdjacenciesToAdd)
     {
-        TIdIndex otherC = other.mIdToData[aid];
-        aid             = AllocateId();
-        TIdIndex c      = mIdToData[aid];
-        mData[c]        = std::move(other.mData[otherC]);
+        aid = AllocateId();
+        if constexpr (std::is_assignable_v<TData&, TOtherData&&>)
+        {
+            TIdIndex otherC = other.mIdToData[aid];
+            TIdIndex c      = mIdToData[aid];
+            mData[c]        = std::move(other.mData[otherC]);
+        }
     }
 
     // 3. Merge sorted arrays
@@ -521,31 +544,17 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(AdjacencySet&& other, bo
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
-{
-    // Committed state
-    mAdjacencies.clear();
-    mPrefix.clear();
-    // Per-adjacency data and indirection
-    mData.clear();
-    mIdToData.clear();
-    mDataToId.clear();
-    // Staging buffers
-    mIncomingAdjacencies.clear();
-    mExistingAdjacencies.clear();
-    mAdjacenciesToAdd.clear();
-    mAdjacenciesToRemove.clear();
-}
-
-template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <std::random_access_iterator TRandomIt>
-    requires std::
-        is_same_v<std::iter_value_t<TRandomIt>, AdjacencySet<TData, TVertexIndex, TIdIndex>>
-    void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
-        TRandomIt begin,
-        TRandomIt end,
-        bool bAssumeDisjoint)
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
+    TRandomIt begin,
+    TRandomIt end,
+    bool bAssumeDisjoint)
 {
+    using IterValueType = std::iter_value_t<TRandomIt>;
+    using TOtherData    = typename IterValueType::DataType;
+    static_assert(
+        std::is_same_v<IterValueType, AdjacencySet<TOtherData, VertexIndexType, IdIndexType>>,
+        "Iterator value_type must be AdjacencySet with compatible template parameters");
     auto const n = static_cast<std::size_t>(std::distance(begin, end));
     if (n == 0u)
         return;
@@ -566,9 +575,7 @@ template <std::random_access_iterator TRandomIt>
                 begin[dst].Merge(std::move(begin[src]), bAssumeDisjoint);
         });
     }
-
-    std::swap(*this, *begin);
-    this->Finalize();
+    this->Merge(std::move(begin[0]), bAssumeDisjoint);
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
