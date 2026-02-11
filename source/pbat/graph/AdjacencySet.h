@@ -12,6 +12,7 @@
 
 #include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <cassert>
@@ -509,6 +510,8 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     FOnRemoved&& fOnRemoved,
     AdjacencySetUpdateOptions options)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Update");
+
     // 1. Move the current adjacency set into mExistingAdjacencies
     assert(mExistingAdjacencies.empty() and "mExistingAdjacencies must be empty before Update");
     std::swap(mAdjacencies, mExistingAdjacencies);
@@ -611,6 +614,8 @@ inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
     AdjacencySet<TOtherData, VertexIndexType, IdIndexType>&& other,
     bool bAssumeDisjoint)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Merge");
+
     // 1. Determine which of other's adjacencies to add.
     assert(mAdjacenciesToAdd.empty() and "mAdjacenciesToAdd must be empty before Merge");
     if (bAssumeDisjoint)
@@ -674,6 +679,8 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
     bool bAssumeInputDisjoint,
     bool bAssumeOutputDisjoint)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Reduce");
+
     using IterValueType = std::iter_value_t<TRandomIt>;
     using TOtherData    = typename IterValueType::DataType;
     static_assert(
@@ -709,6 +716,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize()
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Finalize");
     // Grow mPrefix if any adjacency source vertex exceeds the current range
     // (can happen after Merge with a larger set).
     if (not mAdjacencies.empty())
@@ -868,6 +876,7 @@ template <class TOtherData>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddAdjacencyDataFrom(
     AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.AddAdjacencyDataFrom");
     // No-op when either this has void data, since ids and data are unused.
     if constexpr (std::is_void_v<TData>)
     {
@@ -897,6 +906,7 @@ template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdded>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddNewAdjacencies(FOnAdded&& fOnAdded)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.AddNewAdjacencies");
     for (AdjacencyEntryType& adj : mAdjacenciesToAdd)
     {
         if constexpr (std::is_void_v<TData>)
@@ -916,6 +926,7 @@ template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnRemoved>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::RemoveOldAdjacencies(FOnRemoved&& fOnRemoved)
 {
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.RemoveOldAdjacencies");
     for (AdjacencyEntryType const& adj : mAdjacenciesToRemove)
     {
         if constexpr (std::is_void_v<TData>)
