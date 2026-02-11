@@ -23,7 +23,6 @@
 #include <numeric>
 #include <ranges>
 #include <tbb/parallel_for.h>
-#include <tbb/parallel_sort.h>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -519,7 +518,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     // 2. Sort and deduplicate incoming adjacencies. mExistingAdjacencies is already sorted (it was
     // mAdjacencies which we maintain sorted).
     if (not options.bAssumeSortedIncoming)
-        tbb::parallel_sort(mIncomingAdjacencies);
+        std::ranges::sort(mIncomingAdjacencies);
     if (not options.bAssumeUniqueIncoming)
         mIncomingAdjacencies.erase(
             std::unique(mIncomingAdjacencies.begin(), mIncomingAdjacencies.end()),
