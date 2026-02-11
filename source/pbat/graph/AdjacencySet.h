@@ -568,12 +568,16 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
         // Number of pairs at this level: every 'dst' at index k*step that has a
         // partner at k*step + stride (partner must be < n).
         std::size_t const nPairs = (n - stride + step - 1u) / step; // = ceil((n - stride) / step)
-        tbb::parallel_for(std::size_t{0}, nPairs, [&](std::size_t k) {
-            std::size_t dst = k * step;
-            std::size_t src = dst + stride;
-            if (src < n)
-                begin[dst].Merge(std::move(begin[src]), bAssumeDisjoint);
-        });
+        tbb::parallel_for(
+            std::size_t{0},
+            nPairs,
+            [&](std::size_t k) {
+                std::size_t dst = k * step;
+                std::size_t src = dst + stride;
+                if (src < n)
+                    begin[dst].Merge(std::move(begin[src]), bAssumeDisjoint);
+            },
+            tbb::static_partitioner());
     }
     this->Merge(std::move(begin[0]), bAssumeDisjoint);
 }
