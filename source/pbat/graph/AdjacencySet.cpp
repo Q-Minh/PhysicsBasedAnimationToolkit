@@ -414,3 +414,228 @@ TEST_CASE("[graph] AdjacencySet")
         });
     }
 }
+
+TEST_CASE("[graph] AdjacencySet<void>")
+{
+    using namespace pbat::graph;
+
+    SUBCASE("Default-constructed void set is empty")
+    {
+        AdjacencySet<void> adj;
+        CHECK(adj.Size() == 0u);
+        CHECK(adj.NumVertices() == 0u);
+    }
+
+    SUBCASE("Add and Update create adjacencies")
+    {
+        AdjacencySet<void> adj;
+
+        adj.Add(0u, 1u);
+        adj.Add(1u, 3u);
+        adj.Add(2u, 4u);
+
+        int addedCount   = 0;
+        int removedCount = 0;
+        adj.Update(
+            [&](std::uint32_t, std::uint32_t) { ++addedCount; },
+            [&](std::uint32_t, std::uint32_t) { ++removedCount; });
+
+        CHECK(addedCount == 3);
+        CHECK(removedCount == 0);
+        CHECK(adj.Size() == 3u);
+    }
+
+    SUBCASE("Overwrite mode removes un-re-added adjacencies")
+    {
+        AdjacencySet<void> adj;
+
+        adj.Add(0u, 1u);
+        adj.Add(1u, 2u);
+        adj.Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+        CHECK(adj.Size() == 2u);
+
+        // Keep (0,1), drop (1,2), add (2,3)
+        adj.Add(0u, 1u);
+        adj.Add(2u, 3u);
+
+        std::vector<std::pair<std::uint32_t, std::uint32_t>> added, removed;
+        adj.Update(
+            [&](std::uint32_t u, std::uint32_t v) { added.emplace_back(u, v); },
+            [&](std::uint32_t u, std::uint32_t v) { removed.emplace_back(u, v); });
+
+        CHECK(adj.Size() == 2u);
+        REQUIRE(added.size() == 1u);
+        CHECK(added[0] == std::pair{2u, 3u});
+        REQUIRE(removed.size() == 1u);
+        CHECK(removed[0] == std::pair{1u, 2u});
+    }
+
+    SUBCASE("AdjacenciesOf iterates over neighbours")
+    {
+        AdjacencySet<void> adj;
+
+        adj.Add(1u, 0u);
+        adj.Add(1u, 2u);
+        adj.Add(1u, 4u);
+        adj.Add(3u, 4u);
+        adj.Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+        adj.Finalize();
+
+        std::vector<std::uint32_t> neighbours;
+        adj.AdjacenciesOf(1u, [&](std::uint32_t u, std::uint32_t v) {
+            CHECK(u == 1u);
+            neighbours.push_back(v);
+        });
+        REQUIRE(neighbours.size() == 3u);
+        CHECK(neighbours[0] == 0u);
+        CHECK(neighbours[1] == 2u);
+        CHECK(neighbours[2] == 4u);
+    }
+
+    SUBCASE("Merge void into void")
+    {
+        AdjacencySet<void> a;
+        a.Add(0u, 1u);
+        a.Add(1u, 2u);
+        a.Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+
+        AdjacencySet<void> b;
+        b.Add(1u, 2u);
+        b.Add(2u, 3u);
+        b.Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+
+        a.Merge(std::move(b));
+        CHECK(a.Size() == 3u); // (0,1), (1,2), (2,3)
+        CHECK(b.Size() == 0u);
+
+        a.Finalize();
+        std::set<std::pair<std::uint32_t, std::uint32_t>> edges;
+        a.ForAll([&](std::uint32_t u, std::uint32_t v) { edges.emplace(u, v); });
+        CHECK(edges.count({0u, 1u}) == 1u);
+        CHECK(edges.count({1u, 2u}) == 1u);
+        CHECK(edges.count({2u, 3u}) == 1u);
+    }
+
+    SUBCASE("Merge data-carrying set into void set (discard data)")
+    {
+        AdjacencySet<void> a;
+        a.Add(0u, 1u);
+        a.Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+
+        struct EdgeData
+        {
+            float weight{0.f};
+        };
+        AdjacencySet<EdgeData> b;
+        b.Add(1u, 2u);
+        b.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u + v)};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+
+        a.Merge(std::move(b));
+        CHECK(a.Size() == 2u);
+        CHECK(b.Size() == 0u);
+
+        a.Finalize();
+        std::set<std::pair<std::uint32_t, std::uint32_t>> edges;
+        a.ForAll([&](std::uint32_t u, std::uint32_t v) { edges.emplace(u, v); });
+        CHECK(edges.count({0u, 1u}) == 1u);
+        CHECK(edges.count({1u, 2u}) == 1u);
+    }
+
+    SUBCASE("Merge void set into data-carrying set (default-construct data)")
+    {
+        struct EdgeData
+        {
+            float weight{0.f};
+            int tag{-1};
+        };
+        AdjacencySet<EdgeData> a;
+        a.Add(0u, 1u);
+        a.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u + v), 42};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+
+        AdjacencySet<void> b;
+        b.Add(1u, 2u);
+        b.Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+
+        a.Merge(std::move(b));
+        CHECK(a.Size() == 2u);
+        CHECK(b.Size() == 0u);
+
+        a.Finalize();
+        // The original edge should keep its data
+        a.AdjacenciesOf(0u, [](std::uint32_t u, std::uint32_t v, EdgeData const& w) {
+            CHECK(u == 0u);
+            CHECK(v == 1u);
+            CHECK(w.weight == doctest::Approx(1.f));
+            CHECK(w.tag == 42);
+        });
+        // The edge from the void set gets default-constructed data
+        a.AdjacenciesOf(1u, [](std::uint32_t u, std::uint32_t v, EdgeData const& w) {
+            CHECK(u == 1u);
+            CHECK(v == 2u);
+            CHECK(w.weight == doctest::Approx(0.f));
+            CHECK(w.tag == -1);
+        });
+    }
+
+    SUBCASE("Reduce void sets")
+    {
+        std::vector<AdjacencySet<void>> sets(4);
+        // Thread 0: (0,1)
+        sets[0].Add(0u, 1u);
+        sets[0].Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+        // Thread 1: (1,2)
+        sets[1].Add(1u, 2u);
+        sets[1].Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+        // Thread 2: (2,3)
+        sets[2].Add(2u, 3u);
+        sets[2].Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+        // Thread 3: (3,4), (0,1) duplicate
+        sets[3].Add(3u, 4u);
+        sets[3].Add(0u, 1u);
+        sets[3].Update(
+            [](std::uint32_t, std::uint32_t) {},
+            [](std::uint32_t, std::uint32_t) {});
+
+        AdjacencySet<void> result;
+        result.Reduce(sets.begin(), sets.end());
+        result.Finalize();
+
+        CHECK(result.Size() == 4u); // (0,1), (1,2), (2,3), (3,4)
+        std::set<std::pair<std::uint32_t, std::uint32_t>> edges;
+        result.ForAll([&](std::uint32_t u, std::uint32_t v) { edges.emplace(u, v); });
+        CHECK(edges.count({0u, 1u}) == 1u);
+        CHECK(edges.count({1u, 2u}) == 1u);
+        CHECK(edges.count({2u, 3u}) == 1u);
+        CHECK(edges.count({3u, 4u}) == 1u);
+
+        // All input sets should be empty
+        for (auto const& s : sets)
+            CHECK(s.Size() == 0u);
+    }
+}

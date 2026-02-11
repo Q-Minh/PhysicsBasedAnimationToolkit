@@ -30,6 +30,8 @@
 namespace pbat {
 namespace graph {
 
+namespace detail {
+
 /**
  * @brief A unique adjacency triplet (u, v, id) where id indexes into an indirection table.
  *
@@ -67,6 +69,76 @@ struct AdjacencyTriplet
         return lhs.u == rhs.u and lhs.v == rhs.v;
     }
 };
+
+/**
+ * @brief A unique adjacency pair (u, v) without associated data, used when TData is void.
+ *
+ * @tparam TVertexIndex Integer type for vertex indices u and v.
+ */
+template <common::CIndex TVertexIndex = std::uint32_t>
+struct AdjacencyPair
+{
+    using SelfType        = AdjacencyPair<TVertexIndex>; ///< Type of the pair itself
+    using VertexIndexType = TVertexIndex;                ///< Index type of vertex endpoints u, v
+
+    TVertexIndex u; ///< First endpoint (source)
+    TVertexIndex v; ///< Second endpoint (target)
+
+    /**
+     * @brief Lexicographic ordering over (u, v) only; id is excluded.
+     */
+    friend auto operator<=>(SelfType const& lhs, SelfType const& rhs) noexcept
+    {
+        return std::tie(lhs.u, lhs.v) <=> std::tie(rhs.u, rhs.v);
+    }
+
+    /**
+     * @brief Equality comparison (compares only u, v); id is excluded.
+     */
+    friend bool operator==(SelfType const& lhs, SelfType const& rhs) noexcept
+    {
+        return lhs.u == rhs.u and lhs.v == rhs.v;
+    }
+};
+
+/**
+ * @brief A minimal vector-like type that ignores all operations. Used as a placeholder when TData
+ * is void.
+ */
+struct EmptyVector
+{
+    [[maybe_unused]]
+    void reserve([[maybe_unused]] std::size_t)
+    {
+    }
+    [[maybe_unused]]
+    void clear() noexcept
+    {
+    }
+    [[maybe_unused]]
+    std::size_t size() const noexcept
+    {
+        return 0;
+    }
+    [[maybe_unused]]
+    void emplace_back(auto&&...)
+    {
+    }
+    [[maybe_unused]]
+    void pop_back()
+    {
+    }
+    [[maybe_unused]]
+    void resize([[maybe_unused]] std::size_t)
+    {
+    }
+    [[maybe_unused]]
+    void push_back([[maybe_unused]] auto&&)
+    {
+    }
+};
+
+} // namespace detail
 
 /**
  * @brief Options for AdjacencySet::Update()
@@ -118,14 +190,14 @@ struct AdjacencySetUpdateOptions
  *
  * | Array                | Element type       | Purpose                                           |
  * |----------------------|--------------------|---------------------------------------------------|
- * | mAdjacencies         | TripletType        | Sorted unique (u,v,id) of the current set         |
- * | mExistingAdjacencies | TripletType        | Previous mAdjacencies (swapped in during Update)  |
+ * | mAdjacencies         | AdjacencyEntryType | Sorted unique (u,v,id) of the current set         |
+ * | mExistingAdjacencies | AdjacencyEntryType | Previous mAdjacencies (swapped in during Update)  |
  * | mData                | TData              | Per-adjacency payload                             |
  * | mIdToData            | TIdIndex           | id -> data index c (mData[c])                     |
  * | mDataToId            | TIdIndex           | data index c -> id                                |
- * | mIncomingAdjacencies | TripletType        | Incoming (possibly duplicated) user Add() calls   |
- * | mAdjacenciesToRemove | TripletType        | Old \ New (set difference)                        |
- * | mAdjacenciesToAdd    | TripletType        | New \ Old (set difference)                        |
+ * | mIncomingAdjacencies | AdjacencyEntryType | Incoming (possibly duplicated) user Add() calls   |
+ * | mAdjacenciesToRemove | AdjacencyEntryType | Old \ New (set difference)                        |
+ * | mAdjacenciesToAdd    | AdjacencyEntryType | New \ Old (set difference)                        |
  * | mPrefix              | TVertexIndex       | Prefix sum over u for fast AdjacenciesOf()        |
  * clang-format on
  */
@@ -136,11 +208,18 @@ template <
 class AdjacencySet
 {
   public:
-    using SelfType        = AdjacencySet<TData, TVertexIndex, TIdIndex>;
-    using DataType        = TData;
-    using VertexIndexType = TVertexIndex;
-    using IdIndexType     = TIdIndex;
-    using TripletType     = AdjacencyTriplet<TVertexIndex, TIdIndex>;
+    using SelfType           = AdjacencySet<TData, TVertexIndex, TIdIndex>;
+    using DataType           = TData;
+    using VertexIndexType    = TVertexIndex;
+    using IdIndexType        = TIdIndex;
+    using AdjacencyEntryType = std::conditional_t<
+        std::is_void_v<DataType>,
+        detail::AdjacencyPair<TVertexIndex>,
+        detail::AdjacencyTriplet<TVertexIndex, TIdIndex>>;
+    using DataContainerType =
+        std::conditional_t<std::is_void_v<DataType>, detail::EmptyVector, std::vector<DataType>>;
+    using IndirectionContainerType =
+        std::conditional_t<std::is_void_v<DataType>, detail::EmptyVector, std::vector<IdIndexType>>;
 
     /**
      * @brief Preallocate memory for the expected number of adjacencies and incoming Add() calls,
@@ -169,8 +248,11 @@ class AdjacencySet
      * only genuinely new adjacencies are added (invoking @p fOnAdded). @p fOnRemoved is never
      * called.
      *
-     * @tparam FOnAdded   Callable with signature `TData(TVertexIndex u, TVertexIndex v)`
+     * @tparam FOnAdded   Callable with signature `TData(TVertexIndex u, TVertexIndex v)` or
+     * `void(TVertexIndex u, TVertexIndex v)` if TData is void. The return value is used to
+     * initialise the data for newly added adjacencies.
      * @tparam FOnRemoved Callable with signature `void(TVertexIndex u, TVertexIndex v, TData& w)`
+     * or `void(TVertexIndex u, TVertexIndex v)` if TData is void.
      * @param fOnAdded   Callback invoked for each newly added adjacency
      * @param fOnRemoved Callback invoked for each removed adjacency (Overwrite only)
      * @param policy     Update policy (default: Overwrite)
@@ -216,11 +298,17 @@ class AdjacencySet
      * same data type.
      * @param begin          Iterator to the first AdjacencySet
      * @param end            Iterator past the last AdjacencySet
-     * @param bAssumeDisjoint If true, skip duplicate detection in each merge
+     * @param bAssumeInputDisjoint If true, skip duplicate detection in each input-input merge
+     * @param bAssumeOutputDisjoint If true, skip duplicate detection of all inputs against the
+     * output set in final merge
      * @return The merged AdjacencySet
      */
     template <std::random_access_iterator TRandomIt>
-    void Reduce(TRandomIt begin, TRandomIt end, bool bAssumeDisjoint = false);
+    void Reduce(
+        TRandomIt begin,
+        TRandomIt end,
+        bool bAssumeInputDisjoint  = false,
+        bool bAssumeOutputDisjoint = false);
 
     /**
      * @brief Finalize the adjacency set by recomputing the prefix-sum array.
@@ -304,22 +392,25 @@ class AdjacencySet
      */
     TVertexIndex NumVertices() const noexcept
     {
-        return std::max(static_cast<TVertexIndex>(mPrefix.size() - 1u), TVertexIndex{0});
+        return mPrefix.empty() ? TVertexIndex{0} : static_cast<TVertexIndex>(mPrefix.size() - 1);
     }
 
     /**
      * @brief Read-only access to the data array
      * @return Const reference to the data vector
      */
-    std::vector<TData> const& Data() const noexcept { return mData; }
+    DataContainerType const& Data() const noexcept { return mData; }
 
     /**
      * @brief Read-write access to the data array
      * @return Reference to the data vector
      */
-    std::vector<TData>& Data() noexcept { return mData; }
+    DataContainerType& Data() noexcept { return mData; }
 
   private:
+    template <class, common::CIndex, common::CIndex>
+    friend class AdjacencySet;
+
     /**
      * @brief Allocate a fresh data slot and return its id.
      * @return The allocated id
@@ -330,22 +421,61 @@ class AdjacencySet
      * @brief Release the given id, compacting the data array via swap-and-pop.
      * @param id The id to release
      */
-    void ReleaseId(TIdIndex id);
+    void ReleaseId([[maybe_unused]] TIdIndex id);
+
+    /**
+     * @brief Allocate ids and transfer data from @p other for each adjacency in
+     * mAdjacenciesToAdd.
+     *
+     * Called by Merge() after the set-difference step has populated mAdjacenciesToAdd.
+     * Specialise or branch on TData/TOtherData to control how data is moved.
+     *
+     * @tparam TOtherData Data type of the source set
+     * @param other       The source set being merged from
+     */
+    template <class TOtherData>
+    void AddAdjacencyDataFrom(AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other);
+
+    /**
+     * @brief Release ids and invoke @p fOnRemoved for each adjacency in mAdjacenciesToRemove.
+     *
+     * Called by Update() after the set-difference step has populated mAdjacenciesToRemove.
+     * When TData is void, only invokes fOnRemoved(u, v) and skips id/data operations.
+     *
+     * @tparam FOnRemoved Callback type
+     * @param fOnRemoved  Invoked for each removed adjacency
+     */
+    template <class FOnRemoved>
+    void RemoveOldAdjacencies(FOnRemoved&& fOnRemoved);
+
+    /**
+     * @brief Allocate ids and create data entries via @p fOnAdded for each adjacency in
+     * mAdjacenciesToAdd.
+     *
+     * Called by Update() after the set-difference step has populated mAdjacenciesToAdd.
+     * When TData is void, only invokes fOnAdded(u, v) and skips id/data operations.
+     *
+     * @tparam FOnAdded Callback type
+     * @param fOnAdded  Invoked for each newly added adjacency
+     */
+    template <class FOnAdded>
+    void AddNewAdjacencies(FOnAdded&& fOnAdded);
 
     // -- Committed state (read by AdjacenciesOf / ForAll) --
-    std::vector<TripletType> mAdjacencies; ///< Current sorted unique (u,v,id)
-    std::vector<TVertexIndex> mPrefix;     ///< Prefix sum over u for fast AdjacenciesOf()
+    std::vector<AdjacencyEntryType> mAdjacencies; ///< Current sorted unique (u,v,id)
+    std::vector<TVertexIndex> mPrefix;            ///< Prefix sum over u for fast AdjacenciesOf()
 
     // -- Per-adjacency data and indirection --
-    std::vector<TData> mData;        ///< Per-adjacency payload (dense, exactly Size() entries)
-    std::vector<TIdIndex> mIdToData; ///< id -> index into mData
-    std::vector<TIdIndex> mDataToId; ///< index into mData -> id
+    DataContainerType mData;            ///< Per-adjacency payload (dense, exactly Size() entries)
+    IndirectionContainerType mIdToData; ///< id -> index into mData
+    IndirectionContainerType mDataToId; ///< index into mData -> id
 
     // -- Staging buffers (used only during Add / Update) --
-    std::vector<TripletType> mIncomingAdjacencies; ///< Incoming Add() calls
-    std::vector<TripletType> mExistingAdjacencies; ///< Previous adjacencies (scratch during Update)
-    std::vector<TripletType> mAdjacenciesToAdd;    ///< New \ Old (set difference)
-    std::vector<TripletType> mAdjacenciesToRemove; ///< Old \ New (set difference)
+    std::vector<AdjacencyEntryType> mIncomingAdjacencies; ///< Incoming Add() calls
+    std::vector<AdjacencyEntryType>
+        mExistingAdjacencies; ///< Previous adjacencies (scratch during Update)
+    std::vector<AdjacencyEntryType> mAdjacenciesToAdd;    ///< New \ Old (set difference)
+    std::vector<AdjacencyEntryType> mAdjacenciesToRemove; ///< Old \ New (set difference)
 };
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -369,7 +499,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reserve(
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::Add(TVertexIndex u, TVertexIndex v)
 {
-    mIncomingAdjacencies.push_back({u, v, TIdIndex{0}});
+    mIncomingAdjacencies.push_back({u, v});
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -420,13 +550,8 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
                 mIncomingAdjacencies,
                 std::back_inserter(mAdjacenciesToRemove));
 
-            // 6a. Process removals: recycle ids and invoke fOnRemoved.
-            for (auto const& [ru, rv, rid] : mAdjacenciesToRemove)
-            {
-                TIdIndex c = mIdToData[rid];
-                fOnRemoved(ru, rv, mData[c]);
-                ReleaseId(rid);
-            }
+            // 6a. Process removals and invoke fOnRemoved.
+            RemoveOldAdjacencies(fOnRemoved);
 
             std::swap(mAdjacencies, mExistingAdjacencies);
             mAdjacencies.clear();
@@ -438,12 +563,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     // 7. Process additions: allocate ids and create data entries via fOnAdded.
     //    mAdjacenciesToAdd is already sorted (output of set_difference on sorted inputs),
     //    so we update each triplet's id in-place, preserving the sorted order.
-    for (auto& [au, av, aid] : mAdjacenciesToAdd)
-    {
-        aid        = AllocateId();
-        TIdIndex c = mIdToData[aid];
-        mData[c]   = fOnAdded(au, av);
-    }
+    AddNewAdjacencies(fOnAdded);
 
     // 8. Merge the kept adjacencies (mAdjacencies) with the sorted additions
     //    (mAdjacenciesToAdd) into a single sorted array — O(n), no re-sort needed.
@@ -496,30 +616,33 @@ inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
     if (bAssumeDisjoint)
     {
         // Fast path: all of other's adjacencies are new — skip set_difference entirely.
-        std::swap(mAdjacenciesToAdd, other.mAdjacencies);
+        if constexpr (std::is_same_v<TData, TOtherData>)
+            std::swap(mAdjacenciesToAdd, other.mAdjacencies);
+        else
+            std::ranges::transform(
+                other.mAdjacencies,
+                std::back_inserter(mAdjacenciesToAdd),
+                [](auto const& adj) { return AdjacencyEntryType{adj.u, adj.v}; });
     }
     else
     {
         // General path: other \ this
-        std::ranges::set_difference(
-            other.mAdjacencies,
-            mAdjacencies,
-            std::back_inserter(mAdjacenciesToAdd));
+        if constexpr (std::is_same_v<TData, TOtherData>)
+            std::ranges::set_difference(
+                other.mAdjacencies,
+                mAdjacencies,
+                std::back_inserter(mAdjacenciesToAdd));
+        else
+            std::ranges::set_difference(
+                std::views::transform(
+                    other.mAdjacencies,
+                    [](auto&& adj) -> AdjacencyEntryType { return {adj.u, adj.v}; }),
+                mAdjacencies,
+                std::back_inserter(mAdjacenciesToAdd));
     }
 
-    // 2. Allocate ids and move data from other for each new adjacency.
-    //    The triplets in mAdjacenciesToAdd carry other's ids; we use them to look up
-    //    other's data before overwriting with our own freshly allocated ids.
-    for (auto& [au, av, aid] : mAdjacenciesToAdd)
-    {
-        aid = AllocateId();
-        if constexpr (std::is_assignable_v<TData&, TOtherData&&>)
-        {
-            TIdIndex otherC = other.mIdToData[aid];
-            TIdIndex c      = mIdToData[aid];
-            mData[c]        = std::move(other.mData[otherC]);
-        }
-    }
+    // 2. Allocate ids and transfer data from other for each new adjacency.
+    AddAdjacencyDataFrom(other);
 
     // 3. Merge sorted arrays
     if (not mAdjacenciesToAdd.empty())
@@ -548,7 +671,8 @@ template <std::random_access_iterator TRandomIt>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
     TRandomIt begin,
     TRandomIt end,
-    bool bAssumeDisjoint)
+    bool bAssumeInputDisjoint,
+    bool bAssumeOutputDisjoint)
 {
     using IterValueType = std::iter_value_t<TRandomIt>;
     using TOtherData    = typename IterValueType::DataType;
@@ -575,11 +699,11 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
                 std::size_t dst = k * step;
                 std::size_t src = dst + stride;
                 if (src < n)
-                    begin[dst].Merge(std::move(begin[src]), bAssumeDisjoint);
+                    begin[dst].Merge(std::move(begin[src]), bAssumeInputDisjoint);
             },
             tbb::static_partitioner());
     }
-    this->Merge(std::move(begin[0]), bAssumeDisjoint);
+    this->Merge(std::move(begin[0]), bAssumeOutputDisjoint);
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -596,8 +720,8 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize()
     // Reset all counts to zero
     std::fill(mPrefix.begin(), mPrefix.end(), TVertexIndex{0});
     // Count adjacencies per source vertex u
-    for (auto const& [tu, tv, tid] : mAdjacencies)
-        ++mPrefix[static_cast<std::size_t>(tu)];
+    for (AdjacencyEntryType const& adj : mAdjacencies)
+        ++mPrefix[static_cast<std::size_t>(adj.u)];
     // Exclusive prefix sum: mPrefix[i] = sum of counts for vertices [0, i)
     std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TVertexIndex{0});
 }
@@ -608,18 +732,21 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
     TVertexIndex u,
     FOnAdjacency&& fOnAdj)
 {
-    static_assert(
-        std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData&>,
-        "FOnAdjacency must be invocable with either (TVertexIndex, TVertexIndex) or "
-        "(TVertexIndex, TVertexIndex, TData&)");
-    assert(static_cast<std::size_t>(u) + 1u < mPrefix.size() and "u out of range");
+    assert(u < NumVertices() and u >= 0 and "u out of range");
     TVertexIndex const begin = mPrefix[u];
     TVertexIndex const end   = mPrefix[static_cast<std::size_t>(u) + 1u];
     for (auto k = begin; k < end; ++k)
     {
-        auto& [tu, tv, tid] = mAdjacencies[k];
-        TIdIndex c          = mIdToData[tid];
-        fOnAdj(tu, tv, mData[c]);
+        AdjacencyEntryType const& adj = mAdjacencies[k];
+        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>)
+        {
+            fOnAdj(adj.u, adj.v);
+        }
+        else
+        {
+            TIdIndex c = mIdToData[adj.id];
+            fOnAdj(adj.u, adj.v, mData[c]);
+        }
     }
 }
 
@@ -629,24 +756,20 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
     TVertexIndex u,
     FOnAdjacency&& fOnAdj) const
 {
-    assert(static_cast<std::size_t>(u) + 1u < mPrefix.size() and "u out of range");
+    assert(u < NumVertices() and u >= 0 and "u out of range");
     TVertexIndex const begin = mPrefix[u];
     TVertexIndex const end   = mPrefix[static_cast<std::size_t>(u) + 1u];
     for (auto k = begin; k < end; ++k)
     {
-        auto const& [tu, tv, tid] = mAdjacencies[k];
-        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData const&>)
+        AdjacencyEntryType const& adj = mAdjacencies[k];
+        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>)
         {
-            TIdIndex c = mIdToData[tid];
-            fOnAdj(tu, tv, mData[c]);
+            fOnAdj(adj.u, adj.v);
         }
         else
         {
-            static_assert(
-                std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>,
-                "FOnAdjacency must be invocable with either (TVertexIndex, TVertexIndex) or "
-                "(TVertexIndex, TVertexIndex, TData const&)");
-            fOnAdj(tu, tv);
+            TIdIndex c = mIdToData[adj.id];
+            fOnAdj(adj.u, adj.v, mData[c]);
         }
     }
 }
@@ -655,13 +778,17 @@ template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdjacency>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj)
 {
-    static_assert(
-        std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData&>,
-        "FOnAdjacency must be invocable with (TVertexIndex, TVertexIndex, TData&)");
-    for (auto& [tu, tv, tid] : mAdjacencies)
+    for (AdjacencyEntryType& adj : mAdjacencies)
     {
-        TIdIndex c = mIdToData[tid];
-        fOnAdj(tu, tv, mData[c]);
+        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>)
+        {
+            fOnAdj(adj.u, adj.v);
+        }
+        else
+        {
+            TIdIndex c = mIdToData[adj.id];
+            fOnAdj(adj.u, adj.v, mData[c]);
+        }
     }
 }
 
@@ -669,20 +796,16 @@ template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdjacency>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj) const
 {
-    for (auto const& [tu, tv, tid] : mAdjacencies)
+    for (AdjacencyEntryType const& adj : mAdjacencies)
     {
-        TIdIndex c = mIdToData[tid];
-        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex, TData const&>)
+        if constexpr (std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>)
         {
-            fOnAdj(tu, tv, mData[c]);
+            fOnAdj(adj.u, adj.v);
         }
         else
         {
-            static_assert(
-                std::invocable<FOnAdjacency, TVertexIndex, TVertexIndex>,
-                "FOnAdjacency must be invocable with either (TVertexIndex, TVertexIndex) or "
-                "(TVertexIndex, TVertexIndex, TData const&)");
-            fOnAdj(tu, tv);
+            TIdIndex c = mIdToData[adj.id];
+            fOnAdj(adj.u, adj.v, mData[c]);
         }
     }
 }
@@ -690,17 +813,25 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj) 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 void AdjacencySet<TData, TVertexIndex, TIdIndex>::CompactIds()
 {
-    std::size_t const n = mAdjacencies.size();
-    // Remap each triplet's id to its current data index
-    for (auto& [tu, tv, tid] : mAdjacencies)
-        tid = static_cast<TIdIndex>(mIdToData[tid]);
-    // Rebuild indirection as identity: id == data index
-    mIdToData.resize(n);
-    mDataToId.resize(n);
-    for (std::size_t i = 0u; i < n; ++i)
+    // No-op when TData is void, since ids and data are unused.
+    if constexpr (std::is_void_v<TData>)
     {
-        mIdToData[i] = static_cast<TIdIndex>(i);
-        mDataToId[i] = static_cast<TIdIndex>(i);
+        return;
+    }
+    else
+    {
+        std::size_t const n = mAdjacencies.size();
+        // Remap each triplet's id to its current data index
+        for (auto& [tu, tv, tid] : mAdjacencies)
+            tid = static_cast<TIdIndex>(mIdToData[tid]);
+        // Rebuild indirection as identity: id == data index
+        mIdToData.resize(n);
+        mDataToId.resize(n);
+        for (std::size_t i = 0u; i < n; ++i)
+        {
+            mIdToData[i] = static_cast<TIdIndex>(i);
+            mDataToId[i] = static_cast<TIdIndex>(i);
+        }
     }
 }
 
@@ -730,6 +861,74 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ReleaseId(TIdIndex id)
     // Shrink the data array
     mData.pop_back();
     mDataToId.pop_back();
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class TOtherData>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddAdjacencyDataFrom(
+    AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other)
+{
+    // No-op when either this has void data, since ids and data are unused.
+    if constexpr (std::is_void_v<TData>)
+    {
+        return;
+    }
+    else
+    {
+        for (AdjacencyEntryType& adj : mAdjacenciesToAdd)
+        {
+            auto aid = AllocateId();
+            // Only assign if other's data is non-void and can be assigned into this's data.
+            if constexpr (not std::is_void_v<TOtherData>)
+            {
+                if constexpr (std::is_assignable_v<TData&, TOtherData&&>)
+                {
+                    TIdIndex otherC = other.mIdToData[adj.id];
+                    TIdIndex c      = mIdToData[aid];
+                    mData[c]        = std::move(other.mData[otherC]);
+                }
+            }
+            adj.id = aid;
+        }
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class FOnAdded>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddNewAdjacencies(FOnAdded&& fOnAdded)
+{
+    for (AdjacencyEntryType& adj : mAdjacenciesToAdd)
+    {
+        if constexpr (std::is_void_v<TData>)
+        {
+            fOnAdded(adj.u, adj.v);
+        }
+        else
+        {
+            adj.id     = AllocateId();
+            TIdIndex c = mIdToData[adj.id];
+            mData[c]   = fOnAdded(adj.u, adj.v);
+        }
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class FOnRemoved>
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::RemoveOldAdjacencies(FOnRemoved&& fOnRemoved)
+{
+    for (AdjacencyEntryType const& adj : mAdjacenciesToRemove)
+    {
+        if constexpr (std::is_void_v<TData>)
+        {
+            fOnRemoved(adj.u, adj.v);
+        }
+        else
+        {
+            TIdIndex c = mIdToData[adj.id];
+            fOnRemoved(adj.u, adj.v, mData[c]);
+            ReleaseId(adj.id);
+        }
+    }
 }
 
 } // namespace graph
