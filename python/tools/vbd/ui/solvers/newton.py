@@ -71,11 +71,7 @@ class NewtonSolver(BaseSolver):
             callback = lambda: None
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
-        # pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
-        # TODO: Do this conditionally only
-        newton.k = 0
-        newton.gk = np.zeros(fem.x.shape[0] * fem.x.shape[1])
-        contact.ogc_state.bv = np.full_like(contact.ogc_state.bv, 1e10)
+        pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
         callback()
         pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
         while newton.k < newton.n_max_iters:
