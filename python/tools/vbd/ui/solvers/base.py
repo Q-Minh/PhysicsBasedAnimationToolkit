@@ -1,14 +1,16 @@
 # type: ignore
 from abc import ABC, abstractmethod
-from pbatoolkit import pbat
+from pbatoolkit import pbat, pypbat
 import typing
 
 
 class BaseSolver(ABC):
     _name: str
+    profiler: pypbat.profiling.Profiler
 
     def __init__(self, name: str):
         self._name = name
+        self.profiler = None
 
     @abstractmethod
     def draw(self):

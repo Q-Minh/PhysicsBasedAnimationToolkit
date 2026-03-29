@@ -248,6 +248,19 @@ def parse_args():
         help="Checkpoint interval in steps. If > 0, creates a backup copy of the output file every N steps. Checkpoint files are named 'output_file.checkpoint-NNNNNNNN.h5' where NNNNNNNN is the step number.",
         dest="checkpoint",
     )
+    parser.add_argument(
+        "--convergence",
+        action="store_true",
+        help="Perform convergence analysis",
+        dest="convergence",
+    )
+    parser.add_argument(
+        "--conv_output",
+        type=str,
+        default="convout.csv",
+        help="Output file.csv to store convergence results",
+        dest="conv_output",
+    )
     args = parser.parse_args()
     return args
 
@@ -522,8 +535,65 @@ def main():
 
     solve = _solver_params[args.solver]["solve"]
     initialize_solve = _solver_params[args.solver]["initialize_solve"]
-    while t * dt < args.duration:
-        # Apply procedural constraints
+
+    if not args.convergence:
+        while t * dt < args.duration:
+            # Apply procedural constraints
+            apply_procedural_constraints(
+                fem_elasto_dynamics,
+                dirichlet_constraints,
+                fem_elastic_mesh_names,
+                XP,
+                t,
+                dt,
+            )
+            # Initialize time step optimization
+            fem_elasto_dynamics.setup_time_integration_optimization(
+                initialization_strategy=fem_dynamics_init_strategy
+            )
+            # Solve
+            try:
+                initialize_solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+                solve(fem_elasto_dynamics, contact_dynamics, solver_params)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Simulation failed at time step {t} (time={t*dt} s): {e}"
+                ) from e
+            # Step
+            fem_elasto_dynamics.step()
+            t += 1
+            # Write output
+            fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+            # Checkpoint if requested
+            if args.checkpoint > 0 and t % args.checkpoint == 0:
+                archive = None
+                gc.collect()
+                archive, previous_checkpoint_file = checkpoint(
+                    out_file, t, previous_checkpoint_file
+                )
+            # Update progress bar
+            pbar.update(1)
+        pbar.close()
+
+        # If we made it to the end, delete the last checkpoint file
+        if previous_checkpoint_file is not None and os.path.exists(
+            previous_checkpoint_file
+        ):
+            os.remove(previous_checkpoint_file)
+    else: # convergence plots
+        from .ui.convergence import Convergence
+        from .ui.solvers import vbd, newton
+        
+        profiler = pypbat.profiling.Profiler()
+        convergence = Convergence()
+        sim_solver = [
+            newton.NewtonSolver(),
+            vbd.VbdSolver(),
+        ]
+        selected = 0 # newton is our baseline
+        for solver in sim_solver:
+            solver.profiler = profiler
+
         apply_procedural_constraints(
             fem_elasto_dynamics,
             dirichlet_constraints,
@@ -532,39 +602,21 @@ def main():
             t,
             dt,
         )
-        # Initialize time step optimization
         fem_elasto_dynamics.setup_time_integration_optimization(
             initialization_strategy=fem_dynamics_init_strategy
         )
-        # Solve
-        try:
-            initialize_solve(fem_elasto_dynamics, contact_dynamics, solver_params)
-            solve(fem_elasto_dynamics, contact_dynamics, solver_params)
-        except Exception as e:
-            raise RuntimeError(
-                f"Simulation failed at time step {t} (time={t*dt} s): {e}"
-            ) from e
-        # Step
-        fem_elasto_dynamics.step()
-        t += 1
-        # Write output
-        fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
-        # Checkpoint if requested
-        if args.checkpoint > 0 and t % args.checkpoint == 0:
-            archive = None
-            gc.collect()
-            archive, previous_checkpoint_file = checkpoint(
-                out_file, t, previous_checkpoint_file
-            )
-        # Update progress bar
-        pbar.update(1)
-    pbar.close()
+        convergence.analyze_convergence(
+            selected,
+            sim_solver,
+            fem_elasto_dynamics,
+            contact_dynamics,
+            profiler=profiler
+        )
 
-    # If we made it to the end, delete the last checkpoint file
-    if previous_checkpoint_file is not None and os.path.exists(
-        previous_checkpoint_file
-    ):
-        os.remove(previous_checkpoint_file)
+        with open(args.conv_output, "w") as f:
+            for solver_name, gnorm_vals in zip(convergence._solver_names, convergence._gnorm2):
+                vals = ", ".join(f"{v:.6f}" for v in gnorm_vals)
+                f.write(f"{solver_name}, {vals}\n")
 
 
 if __name__ == "__main__":

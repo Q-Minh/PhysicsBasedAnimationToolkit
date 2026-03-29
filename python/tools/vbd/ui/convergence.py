@@ -114,6 +114,7 @@ class Convergence:
         solvers: list[BaseSolver],
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
+        profiler=None
     ):
         self._solver_names = [solver.name for solver in solvers]
         x0 = fem.x.copy()
@@ -125,6 +126,8 @@ class Convergence:
         xstar = np.zeros_like(fem.x)
         vstar = np.zeros_like(fem.v)
         for s, solver in enumerate(solvers):
+            if profiler is not None:
+                profiler.begin_frame("Convergence")
             fem.x = x0
             fem.v = v0
             solver.solve(
@@ -135,6 +138,8 @@ class Convergence:
             if s == selected:
                 xstar = fem.x.copy()
                 vstar = fem.v.copy()
+            if profiler is not None:
+                profiler.end_frame("Convergence")
         fem.x = xstar
         fem.v = vstar
         dx = lambda a, b: a.ravel() - b.ravel()

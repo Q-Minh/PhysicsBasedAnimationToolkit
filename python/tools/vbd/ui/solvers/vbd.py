@@ -53,7 +53,8 @@ class VbdSolver(BaseSolver):
             callback = lambda: None
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
         callback()
-        for k in range(params.n_max_iters):
+
+        def iterate():
             if contact.requires_bounds_computation:
                 contact.compute_displacement_bounds(fem.x)
             xk = fem.x.copy()
@@ -61,6 +62,13 @@ class VbdSolver(BaseSolver):
             fem.x = xk + self._step_size * (fem.x - xk)
             fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
             callback()
+
+        for k in range(params.n_max_iters):
+            if self.profiler is not None:
+                self.profiler.profile("VBD", iterate)
+            else:
+                iterate()
+
         fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
