@@ -289,8 +289,9 @@ def convergence_graph(args, df):
         events = traceEvents(df_slice)
         for e in events:
             print("event name:", e.name, type(e.name))
+            # NOTE: For some reason the outer scope for the initialization is empty, which is interpreted as a float
+            # This is a bug (maybe a conflict between C++ side profiler and Python side profiler?)
             if type(e.name) == float:
-                # The iterate scope holds all that happens when we step the solver
                 # We want to see how the convergence value changes with the execution time of each iteration
                 x_axis.append(e.ns_since_start - start_time)
 

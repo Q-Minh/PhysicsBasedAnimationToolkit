@@ -474,6 +474,8 @@ def checkpoint(
 
 
 def main():
+    profiler = pypbat.profiling.Profiler()
+    
     args = parse_args()
     if args.spec:
         print(print_param_obj_spec(args.solver))
@@ -584,7 +586,6 @@ def main():
         from .ui.convergence import Convergence
         from .ui.solvers import vbd, newton
         
-        profiler = pypbat.profiling.Profiler()
         convergence = Convergence()
         sim_solver = [
             newton.NewtonSolver(),
@@ -614,8 +615,8 @@ def main():
         )
 
         with open(args.conv_output, "w") as f:
-            for solver_name, gnorm_vals in zip(convergence._solver_names, convergence._gnorm2):
-                vals = ", ".join(f"{v:.6f}" for v in gnorm_vals)
+            for solver_name, vals in zip(convergence._solver_names, convergence._f):
+                vals = ", ".join(f"{v:.6f}" for v in vals)
                 f.write(f"{solver_name}, {vals}\n")
 
 

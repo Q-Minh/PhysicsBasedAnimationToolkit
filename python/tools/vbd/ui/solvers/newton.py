@@ -75,7 +75,9 @@ class NewtonSolver(BaseSolver):
         callback()
         pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
 
+        global iteration_stop
         iteration_stop = False
+
         def iterate():
             global iteration_stop
             if newton.gknorm2 < newton.gtol2:
