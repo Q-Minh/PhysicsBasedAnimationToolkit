@@ -64,7 +64,8 @@ void CountingSort(TRng&& rng, TWork&& work, TKey min, TKey max, FProject fProjec
         while (i < work[k] - 1)
         {
             auto j = --work[k];
-            std::swap(rng[i], rng[j]);
+            using std::swap;
+            swap(rng[i], rng[j]);
             k = fProject(rng[i]) - min;
         }
     }

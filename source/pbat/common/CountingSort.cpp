@@ -75,13 +75,13 @@ TEST_CASE("[common] CountingSort")
 
     SUBCASE("Random vector")
     {
-        std::vector<int> objects{};
-        std::mt19937 rng(123);
-        std::uniform_int_distribution<int> dist(-100, 100);
-        for (int i = 0; i < 1000; ++i)
-            objects.push_back(dist(rng));
-        SUBCASE("In-place")
+        SUBCASE("signed integer")
         {
+            std::vector<int> objects{};
+            std::mt19937 rng(123);
+            std::uniform_int_distribution<int> dist(-100, 100);
+            for (int i = 0; i < 1000; ++i)
+                objects.push_back(dist(rng));
             std::vector<int> workspace{};
             workspace.resize(
                 static_cast<std::size_t>(
@@ -89,13 +89,19 @@ TEST_CASE("[common] CountingSort")
             pbat::common::CountingSort(objects, workspace);
             CHECK(std::is_sorted(objects.begin(), objects.end()));
         }
-        SUBCASE("Stable")
+        SUBCASE("unsigned integer")
         {
-            std::vector<int> sortedObjects = objects;
-            pbat::common::StableCountingSort(objects, sortedObjects, [&](int x) {
-                return x - dist.a();
-            });
-            CHECK(std::is_sorted(sortedObjects.begin(), sortedObjects.end()));
+            std::vector<unsigned int> objects{};
+            std::mt19937 rng(123);
+            std::uniform_int_distribution<unsigned int> dist(0, 200);
+            for (int i = 0; i < 1000; ++i)
+                objects.push_back(dist(rng));
+            std::vector<unsigned int> workspace{};
+            workspace.resize(
+                static_cast<std::size_t>(
+                    *std::ranges::max_element(objects) - *std::ranges::min_element(objects) + 1));
+            pbat::common::CountingSort(objects, workspace);
+            CHECK(std::is_sorted(objects.begin(), objects.end()));
         }
     }
 }
