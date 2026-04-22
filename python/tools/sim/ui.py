@@ -116,7 +116,7 @@ class SolverType(enum.Enum):
 class UIState:
     def __init__(self):
         self.request_reset: bool = False
-        self.item_width: int = 150
+        self.item_width: int = 250
         self.screenshot_after_step: bool = False
 
 
