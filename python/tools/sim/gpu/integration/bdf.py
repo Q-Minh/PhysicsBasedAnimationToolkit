@@ -161,3 +161,36 @@ class Bdf:
         kt = self._state_index(self._step - 1)
         for o in range(self._order):
             self.xt[o, kt] = x_new[o]
+
+
+import unittest
+import warp as wp
+
+
+@wp.kernel
+def _explicit_integration_kernel(
+    a0: wp.array[wp.vec3f], h: float, x0: wp.array[wp.vec3f], v0: wp.array[wp.vec3f]
+):
+    i = wp.tid()
+    v0[i] += h * a0[i]  # pyright: ignore[reportIndexIssue]
+    x0[i] += h * v0[i]  # pyright: ignore[reportIndexIssue]
+
+
+class TestBdf(unittest.TestCase):
+    def test_bdf_step(self):
+        bdf = Bdf(step=1, order=2, dt=1e-2)
+        n = 10
+        x0, v0 = wp.zeros((n,), dtype=wp.vec3f), wp.zeros((n,), dtype=wp.vec3f)
+        a0 = cp.tile(cp.array([0.0, 0.0, -9.81], dtype=cp.float32), (n, 1))
+        bdf.set_initial_conditions(cp.asarray(x0).ravel(), cp.asarray(v0).ravel())
+        for _ in range(2):
+            bdf.construct_equations()
+            # v0 = cp.asarray(v0) + bdf.beta_tilde * a0
+            # x0 = cp.asarray(x0) + bdf.beta_tilde * cp.asarray(v0)
+            wp.launch(_explicit_integration_kernel, dim=n, inputs=[a0, bdf.beta_tilde, x0, v0])
+            bdf.step(cp.asarray(x0).ravel(), cp.asarray(v0).ravel())
+
+
+if __name__ == "__main__":
+    wp.init()
+    unittest.main()
