@@ -2563,6 +2563,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bC
     tg.run([&] { fUpdateContactSet(mPointEdgeContacts, mOgcState.mXE, nPoints); });
     tg.run([&] { fUpdateContactSet(mPointTriangleContacts, mOgcState.mXF, nPoints); });
     tg.run([&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
+    tg.wait();
     if (bComputeReversePairs)
     {
         tg.run(
@@ -2574,8 +2575,8 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bC
         });
         tg.run(
             [&] { fBuildReversePairs(mEdgeEdgeContacts, nHalfEdges, mReverseEdgeEdgeContacts); });
+        tg.wait();
     }
-    tg.wait();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
