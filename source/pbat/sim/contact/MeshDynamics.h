@@ -32,6 +32,7 @@
 #include <Eigen/SparseCore>
 #include <cmath>
 #include <new>
+#include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
 #include <type_traits>
 #include <vector>
@@ -1184,18 +1185,22 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
     Eigen::SparseCompressedBase<TDerived> const& H)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdatePenaltyParameter");
-    mParams.kc = 0;
-    ForAllContacts([&]<class TContactSet>(
-                       typename TContactSet::AccessorType C,
-                       Stencil stencil,
-                       std::int32_t /*t*/) {
-        using ConstraintAccessorType   = decltype(C);
-        static auto constexpr kDims    = ConstraintAccessorType::kDims;
-        static auto constexpr kStencil = ConstraintAccessorType::kStencil;
-        auto nodes                     = LoadStencil<TContactSet>(stencil);
-        TScalar Q                      = RayleighQuotient<kDims, kStencil>(H, C.Grad(), nodes);
-        mParams.kc                     = std::max(mParams.kc, mParams.gamma * Q);
-    });
+    auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
+    mParams.kc    = 0;
+    ForAllContacts(
+        [&]<class TContactSet>(
+            typename TContactSet::AccessorType C,
+            Stencil stencil,
+            std::int32_t /*t*/) {
+            using ConstraintAccessorType   = decltype(C);
+            static auto constexpr kDims    = ConstraintAccessorType::kDims;
+            static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+            auto nodes                     = LoadStencil<TContactSet>(stencil);
+            TScalar Q                      = RayleighQuotient<kDims, kStencil>(H, C.Grad(), nodes);
+            common::AtomicMin(mParams.kc, -Q);
+        },
+        nThreads);
+    mParams.kc *= -mParams.gamma;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1237,6 +1242,9 @@ template <class FOnContact>
 inline void
 MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads)
 {
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<std::size_t>(nThreads)};
     tbb::task_group tg;
     ForEachContact(mPointPointContacts, fOnContact, nThreads, tg);
     ForEachContact(mPointEdgeContacts, fOnContact, nThreads, tg);
@@ -1250,6 +1258,9 @@ template <class FOnContact>
 inline void
 MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads) const
 {
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<std::size_t>(nThreads)};
     tbb::task_group tg;
     ForEachContact(mPointPointContacts, fOnContact, nThreads, tg);
     ForEachContact(mPointEdgeContacts, fOnContact, nThreads, tg);
@@ -1755,6 +1766,9 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
     std::int32_t nThreads,
     tbb::task_group& tg)
 {
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<size_t>(nThreads)};
     auto const fForEachThread = [&tg, nThreads](auto&& f) {
         for (std::int32_t t = 0; t < nThreads; ++t)
             tg.run([f, t]() { f(t); });
@@ -1781,6 +1795,9 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
     std::int32_t nThreads,
     tbb::task_group& tg) const
 {
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<size_t>(nThreads)};
     auto const fForEachThread = [&tg, nThreads](auto&& f) {
         for (std::int32_t t = 0; t < nThreads; ++t)
             tg.run([f, t]() { f(t); });
