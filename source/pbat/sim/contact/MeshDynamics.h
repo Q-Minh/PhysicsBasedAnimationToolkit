@@ -64,14 +64,6 @@ class MeshDynamics
         TScalar mu{0};                                        ///< Complementarity slack relaxation
         TScalar chat;                                         ///< \f$ c(x_k) - gradc(x_k)^T x_k \f$
         math::linalg::mini::SVector<TScalar, kDofs> gradc;    ///< \f$ \nabla c(x_k) \f$
-        /**
-         * @brief Compute the Lagrange multiplier for the constraint given the current positions and
-         * the smooth-step S(c(x)).
-         * @param x `kDofs x 1` stacked positions of the vertices in the stencil
-         * @param cstep Smooth-step value S(c(x)) for the constraint value at the current positions
-         * @return Lagrange multiplier value
-         */
-        TScalar LagrangeMultiplier(auto&& x, TScalar cstep = TScalar(1)) const;
     };
     /**
      * @brief Evaluate the constraint barrier anti-derivative \f$ a(c) \f$.
@@ -711,15 +703,6 @@ class MeshDynamics
     PointTriangleContactSet mPointTriangleContacts; ///< Point-triangle contact set
     EdgeEdgeContactSet mEdgeEdgeContacts;           ///< (Half-)Edge-(half-)edge contact set
 };
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <geometry::CMeshDistance TDistance>
-inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::LagrangeMultiplier(
-    auto&& x,
-    TScalar cstep) const
-{
-    return (mu * cstep) / DistanceType{}.Eval(x);
-}
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline TScalar MeshDynamics<TScalar, TIndex>::Barrier(
