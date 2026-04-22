@@ -352,27 +352,6 @@ void ComputeElasticDerivatives(
 
 /**
  * @brief Derivative precomputation for the given finite element elasto dynamics problem.
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem
- * @param contact Mesh contact problem
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void ComputeFrictionDerivatives(FemElastoDynamics<TElasticEnergy> const& fem, MeshDynamics& contact)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ComputeFrictionDerivatives");
-    // Precompute friction energy and its derivatives
-    auto xt = -fem.bdf.Inertia(0);
-    auto bt = fem.bdf.BetaTilde();
-    contact.ComputeEnergy(
-        fem.x,
-        xt,
-        bt,
-        MeshDynamics::EComputeFlags::Hessian,
-        math::linalg::EEigenvalueFilter::SpdProjection);
-}
-
-/**
- * @brief Derivative precomputation for the given finite element elasto dynamics problem.
  *
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem
@@ -470,9 +449,6 @@ void AssembleHessian(
     // \f$ \sum_c \gamma_c \mu \nabla c \nabla c^T \f$
     if (bWithContacts)
     {
-        using math::linalg::mini::Dot;
-        using math::linalg::mini::Reshape;
-        using math::linalg::mini::ToEigen;
         auto const& contactParams        = contact.GetParams();
         Eigen::Index const nDynamicNodes = fem.x.size() / kDims;
         contact.ForAllContacts(
@@ -480,18 +456,19 @@ void AssembleHessian(
                 typename TContactSet::ConstAccessorType C,
                 typename MeshDynamics::Stencil stencil,
                 std::int32_t /*t*/) {
-                using ConstraintAccessorType   = decltype(C);
-                auto nodes                     = contact.LoadStencil<TContactSet>(stencil);
-                auto const& gradc              = C.Grad();
-                auto gamma                     = /*C.Decay()*/ 1;
-                auto mu                        = contactParams.kc;
-                Scalar dH                      = gamma * mu;
-                auto F                         = C.Friction();
-                auto const& Hfu                = F.Hessian();
-                auto const& Tf                 = F.TangentBasis();
-                auto const& Wf                 = F.Weights();
-                using SMatrixDD                = math::linalg::mini::SMatrix<Scalar, kDims, kDims>;
-                SMatrixDD Hf                   = Tf * Hfu * Tf.Transpose();
+                using ConstraintAccessorType = decltype(C);
+                auto nodes                   = contact.LoadStencil<TContactSet>(stencil);
+                auto const& gradc            = C.Grad();
+                auto gamma                   = /*C.Decay()*/ 1;
+                auto kn                      = contactParams.kc;
+                Scalar dH                    = gamma * kn;
+                auto F                       = C.Friction();
+                auto const& Tf               = F.TangentBasis();
+                auto const& Wf               = F.Weights();
+                // Friction Hessian: kf * W_i * W_j * T * T^T
+                Scalar kf       = contactParams.kc / contactParams.gamma * contactParams.gammaf;
+                using SMatrixDD = math::linalg::mini::SMatrix<Scalar, kDims, kDims>;
+                SMatrixDD Hf    = kf * Tf * Tf.Transpose();
                 static auto constexpr kStencil = ConstraintAccessorType::kStencil;
                 for (auto jl = 0; jl < kStencil; ++jl)
                 {
@@ -658,7 +635,8 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void LinearizeConstraints(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.LinearizeConstraints");
-    contact.LinearizeConstraints(fem.x);
+    auto xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+    contact.LinearizeConstraints(fem.x, xt);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -745,10 +723,10 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
     for (; params.k < params.nMaxIters; ++params.k)
     {
         // 1. Linearize constraints
-        contact.LinearizeConstraints(xk);
+        auto xt = fem.bdf.CurrentState();
+        contact.LinearizeConstraints(xk, xt);
         // 2. Check KKT conditions and exit if converged
         ComputeElasticDerivatives(fem, contact, params);
-        ComputeFrictionDerivatives(fem, contact);
         ToGradient(fem, contact, params.newton.gk);
         params.newton.gknorm2 = params.newton.gk.squaredNorm();
         if (params.newton.gknorm2 <= params.newton.gtol2)
@@ -762,16 +740,10 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             [&]([[maybe_unused]] auto const& xk) {
                 if (params.newton.k > 0)
                     ComputeElasticDerivatives<TElasticEnergy>(fem, contact, params);
-                ComputeFrictionDerivatives(fem, contact);
                 return MeritFunctionFromPrecomputedPotentials(fem, contact);
             } /* fPrepareDerivatives */,
             [&](auto const& xk) {
                 Scalar Edyn = fem.Objective(xk);
-                contact.ComputeEnergy(
-                    xk,
-                    -fem.bdf.Inertia(0),
-                    fem.bdf.BetaTilde(),
-                    MeshDynamics::EComputeFlags::Potential);
                 Scalar Econ = contact.Potential(xk);
                 return Edyn + Econ;
             } /* f */,

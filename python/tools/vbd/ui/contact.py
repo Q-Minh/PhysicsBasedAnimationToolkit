@@ -33,7 +33,7 @@ class Contact:
         ("c(x)", lambda c: c.cx),
         ("lambda", lambda c: c.lam),
         ("slack", lambda c: c.slack),
-        ("friction potential", lambda c: c.Ef),
+        ("friction constraint", lambda c: np.linalg.norm(c.cf)),
     ]
 
     def __init__(self):
@@ -148,7 +148,8 @@ class Contact:
             imgui.Text(f"slack = {c.slack:.6g}")
             imgui.Text(f"decay = {c.decay:.6g}")
             imgui.Text(f"c = {c.c:.6g}")
-            imgui.Text(f"Ef = {c.Ef:.6g}")
+            imgui.Text(f"cf = [{c.cf[0]:.6g}, {c.cf[1]:.6g}]")
+            imgui.Text(f"lambdaf = [{c.lambdaf[0]:.6g}, {c.lambdaf[1]:.6g}]")
             imgui.Text(f"u={c.u}, v={c.v} (gu={c.gu}, gv={c.gv})")
             imgui.Text(f"nodes = {list(c.nodes)}")
             imgui.TreePop()
