@@ -25,10 +25,10 @@ def vbd_prepare(
     GVGp, GVGe, GVGilocal = pbat.sim.algorithm.vbd.vertex_element_adjacency_graph(
         fem.E, n_nodes
     )
-    colors = pbat.sim.algorithm.vbd.vertex_colors(fem.E, n_nodes)
+    GVVp, GVVadj, colors = pbat.sim.algorithm.vbd.vertex_colors(fem.E, n_nodes)
     params.with_vertex_element_adjacency_graph(
         GVGp, GVGe, GVGilocal
-    ).with_vertex_colors(colors).construct()
+    ).with_vertex_colors(GVVp, GVVadj, colors).construct()
 
 
 _archive_solver_groups = {
