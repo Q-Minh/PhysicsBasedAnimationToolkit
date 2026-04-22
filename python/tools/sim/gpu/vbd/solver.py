@@ -5,6 +5,7 @@ Mirrors `pbat::sim::algorithm::vbd::Solve` from `source/pbat/sim/algorithm/vbd/C
 Contact constraints are left as placeholders for future implementation.
 """
 
+from typing import Tuple
 import warp as wp
 import warp.fem.linalg
 import numpy as np
@@ -26,19 +27,20 @@ from .params import (
 
 
 @wp.func
-def elastic_derivatives(
-    i: int,
+def local_elastic_derivatives(
+    i: wp.int32,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
-    gi: wp.vec3f,
-    Hi: wp.mat33f,
+    local_tid: wp.int32,
+    block_dims: wp.int32,
 ):
-    """Accumulate elastic gradient and hessian for vertex i over adjacent elements."""
-    begin = params.GVGp[i]  # pyright: ignore[reportIndexIssue]
-    end = params.GVGp[i + 1]  # pyright: ignore[reportIndexIssue]
-    for n in range(begin, end):
-        e = params.GVGe[n]  # pyright: ignore[reportIndexIssue]
-        nodes = fem.E[e]  # pyright: ignore[reportIndexIssue]
+    gi = wp.vec3f()
+    Hi = wp.mat33f()
+    GVGbegin = params.GVGp[i]
+    n_adj_elems = params.GVGp[i + 1] - GVGbegin
+    for elocal in range(local_tid, n_adj_elems, block_dims):
+        e = params.GVGadj[GVGbegin + elocal]
+        nodes = fem.E[e]
         ilocal = (
             wp.int32(i == nodes[1])
             * wp.int32(1)  # pyright: ignore[reportOperatorIssue]
@@ -47,10 +49,10 @@ def elastic_derivatives(
             + wp.int32(i == nodes[3])
             * wp.int32(3)  # pyright: ignore[reportOperatorIssue]
         )
-        wg = fem.wg[e]  # pyright: ignore[reportIndexIssue]
-        GP = fem.GNeg[e]  # pyright: ignore[reportIndexIssue]
-        mu = fem.mug[e]  # pyright: ignore[reportIndexIssue]
-        llambda = fem.lambdag[e]  # pyright: ignore[reportIndexIssue]
+        wg = fem.wg[e]
+        GP = fem.GNeg[e]
+        mu = fem.mug[e]
+        llambda = fem.lambdag[e]
         # Gather element positions -> compute F
         xe = types.mat3x4f()
         for j in range(4):
@@ -125,8 +127,11 @@ def _vertex_solve_kernel(
 ):
     """Process one vertex in the current color partition."""
     k = wp.tid()
+    block_dims = wp.block_dim()
+    block_id = k / block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = k % block_dims  # pyright: ignore[reportOperatorIssue]
     i = params.Padj[
-        pbegin + k  # pyright: ignore[reportOperatorIssue, reportIndexIssue]
+        pbegin + block_id  # pyright: ignore[reportOperatorIssue, reportIndexIssue]
     ]
     # Skip Dirichlet nodes
     if is_dirichlet_node(fem.dmask, i):  # pyright: ignore[reportArgumentType]
@@ -135,15 +140,22 @@ def _vertex_solve_kernel(
     xtildei = fem.xtilde[i]  # pyright: ignore[reportIndexIssue]
     mi = fem.m[i]  # pyright: ignore[reportIndexIssue]
     # Accumulate elastic energy derivatives
-    gi = wp.vec3f()
-    Hi = wp.mat33f()
-    gi, Hi = elastic_derivatives(
-        i, fem, params, gi, Hi
-    )  # pyright: ignore[reportArgumentType]
-    # Scale by h^2
-    gi *= h2  # pyright: ignore[reportOperatorIssue]
-    Hi *= h2  # pyright: ignore[reportOperatorIssue]
+    gil, Hil = local_elastic_derivatives(
+        i, fem, params, local_tid, block_dims  # pyright: ignore[reportArgumentType]
+    )
+    gil *= h2  # pyright: ignore[reportOperatorIssue]
+    Hil *= h2  # pyright: ignore[reportOperatorIssue]
+    gs, Hs = (
+        wp.tile(gil, preserve_type=True),  # pyright: ignore[reportArgumentType]
+        wp.tile(Hil, preserve_type=True),  # pyright: ignore[reportArgumentType]
+    )
+    gi, Hi = (
+        wp.tile_reduce(wp.add, gs)[0],  # pyright: ignore[reportIndexIssue]
+        wp.tile_reduce(wp.add, Hs)[0],  # pyright: ignore[reportIndexIssue]
+    )
     # TODO: AccumulateContactEnergy(i, params.xb, contact, gi, Hi)
+    if local_tid > 0:
+        return
     # Add inertia derivatives (K = m, already in position space)
     gi, Hi = add_inertia_derivatives(
         mi, xtildei, xi, gi, Hi
@@ -202,30 +214,39 @@ def iterate(fem: FemElastoDynamics, params: Params):
         p_end = int(Pptr[p + 1])
         n_verts_in_partition = p_end - p_begin
         if n_verts_in_partition > 0:
-            # TODO: Implement CUDA block parallelism for vertex solves
+            block_dim = 32
             wp.launch(
                 _vertex_solve_kernel,
-                dim=n_verts_in_partition,
+                dim=n_verts_in_partition * block_dim,
                 inputs=[fem.data, params.data, p_begin, h2],
+                block_dim=block_dim,
             )
 
 
-def solve(fem: FemElastoDynamics, params: Params) -> bool:
-    """Solve the VBD minimization problem.
+def solve_subproblem(
+    fem: FemElastoDynamics,
+    params: Params,
+):
+    n_subproblem_max_iters = params.data.n_subproblem_max_iters
+    # TODO: prepare_subproblem(fem, params)
+    prepare_subproblem(fem, params)
+    for kp in range(n_subproblem_max_iters):
+        iterate(fem, params)
+    # TODO: finalize_subproblem(fem, params)
+    finalize_subproblem(fem, params)
 
+
+def solve(
+    fem: FemElastoDynamics,
+    params: Params,
+    capture: wp.ScopedCapture | None = None,
+    request_capture: bool = False,
+) -> Tuple[bool, wp.ScopedCapture]:
+    """Solve the VBD minimization problem.
     Mimics `pbat::sim::algorithm::vbd::Solve`:
-        for k in range(n_max_iters):
-            linearize_constraints(fem, params)
-            if check_convergence(fem, params): break
-            prepare_subproblem(fem, params)
-            for kp in range(n_subproblem_max_iters):
-                iterate(fem, params)
-            finalize_subproblem(fem, params)
-        fem.back_substitute_velocities()
     """
     converged = False
     n_max_iters = params.data.n_max_iters
-    n_subproblem_max_iters = params.data.n_subproblem_max_iters
     for k in range(n_max_iters):
         # TODO: linearize_constraints(fem, params)
         linearize_constraints(fem, params)
@@ -233,14 +254,17 @@ def solve(fem: FemElastoDynamics, params: Params) -> bool:
         if check_convergence(fem, params):
             converged = True
             break
-        # TODO: prepare_subproblem(fem, params)
-        prepare_subproblem(fem, params)
-        for kp in range(n_subproblem_max_iters):
-            iterate(fem, params)
-        # TODO: finalize_subproblem(fem, params)
-        finalize_subproblem(fem, params)
+        # Solve linearized subproblem
+        if not request_capture:
+            solve_subproblem(fem, params)
+        elif capture is None:
+            with wp.ScopedCapture() as scap:
+                solve_subproblem(fem, params)
+            capture = scap
+        else:
+            wp.capture_launch(capture.graph)  # pyright: ignore[reportArgumentType]
     fem.back_substitute_velocities()
-    return converged
+    return converged, capture  # pyright: ignore[reportReturnType]
 
 
 def integrate(fem: FemElastoDynamics, params: Params):

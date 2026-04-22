@@ -29,10 +29,10 @@ class ParamsData:
     """From `source/pbat/sim/algorithm/vbd/Core.h`."""
 
     # --- Vertex-element adjacency graph ---
-    GVGp: wp.array[wp.int32]  # (N+1,) prefix sums into GVGe
-    GVGe: wp.array[
+    GVGp: wp.array[wp.int32]  # (N+1,) prefix sums into GVGadj
+    GVGadj: wp.array[
         wp.int32
-    ]  # (# of vertex-elems adjacencies,) element indices s.t. `GVGe[k]
+    ]  # (# of vertex-elems adjacencies,) element indices s.t. `GVGadj[k]
     # for GVGp[i] <= k < GVGp[i+1]` gives the element `e` adjacent to
     # vertex `i`
 
@@ -96,7 +96,7 @@ class Params:
         self._data = ParamsData()
         # Vertex-element adjacency graph
         self._data.GVGp = wp.array(params.GVGp, dtype=wp.int32)
-        self._data.GVGe = wp.array(params.GVGe, dtype=wp.int32)
+        self._data.GVGadj = wp.array(params.GVGe, dtype=wp.int32)
         # Vertex-vertex adjacency graph
         self._data.GVVp = wp.array(params.GVVp, dtype=wp.int32)
         self._data.GVVadj = wp.array(params.GVVadj, dtype=wp.int32)
@@ -172,7 +172,7 @@ class TestParams(unittest.TestCase):
 
         # Verify adjacency graph
         self.assertTrue(np.all(params.data.GVGp.numpy() == params_cpu.GVGp))
-        self.assertTrue(np.all(params.data.GVGe.numpy() == params_cpu.GVGe))
+        self.assertTrue(np.all(params.data.GVGadj.numpy() == params_cpu.GVGe))
         # Verify vertex-vertex adjacency
         self.assertTrue(np.all(params.data.GVVp.numpy() == params_cpu.GVVp))
         self.assertTrue(np.all(params.data.GVVadj.numpy() == params_cpu.GVVadj))

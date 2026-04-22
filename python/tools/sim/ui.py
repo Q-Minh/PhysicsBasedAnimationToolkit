@@ -124,7 +124,7 @@ class SimulationState:
         self.dt: float = 1e-2
         self.bdf_scheme: int = 1
         self.init_strategy = (
-            pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
+            pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad
         )
 
         # Configure time integration
@@ -134,6 +134,7 @@ class SimulationState:
         # Build GPU mirrors
         self.fem = FemElastoDynamics(fem_cpu)
         self.params = Params(params_cpu)
+        self.capture = None
 
         # UI state
         self.simulate: bool = False
@@ -142,7 +143,9 @@ class SimulationState:
 
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
-        vbd.solver.solve(self.fem, self.params)
+        _, self.capture = vbd.solver.solve(
+            self.fem, self.params, capture=self.capture, request_capture=True
+        )
         self.fem.step()
         self.t += 1
 
@@ -152,6 +155,7 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = FemElastoDynamics(self.fem_cpu)
         self.params = Params(self.params_cpu)
+        self.capture = None
 
 
 def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
@@ -254,9 +258,15 @@ def main():
     ps.init()
     mesh_name = "Mesh"
     vm = ps.register_volume_mesh(mesh_name, fem_cpu.X.T, fem_cpu.E.T)
-    vm.add_scalar_quantity("mug", fem_cpu.lamegU[0,:], defined_on="cells", enabled=True, cmap="blues")
-    vm.add_scalar_quantity("lambdag", fem_cpu.lamegU[1,:], defined_on="cells", enabled=False, cmap="blues")
-    vm.add_scalar_quantity("lumped mass", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds")
+    vm.add_scalar_quantity(
+        "mug", fem_cpu.lamegU[0, :], defined_on="cells", enabled=True, cmap="blues"
+    )
+    vm.add_scalar_quantity(
+        "lambdag", fem_cpu.lamegU[1, :], defined_on="cells", enabled=False, cmap="blues"
+    )
+    vm.add_scalar_quantity(
+        "lumped mass", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
+    )
     ps.set_user_callback(make_callback(state, mesh_name))
     ps.show()
 
