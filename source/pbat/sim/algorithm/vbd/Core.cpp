@@ -46,6 +46,7 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
     auto nThreads             = std::thread::hardware_concurrency();
     auto const& contactParams = contact.GetParams();
     auto nDynamicNodes        = params.xk.cols();
+    Scalar maxQ{0};
     contact.ForAllContacts(
         [&]<class TContactSet>(
             typename TContactSet::AccessorType C,
@@ -54,7 +55,7 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
         ) {
             auto nodes = contact.LoadStencil<TContactSet>(stencil);
             auto gradc = ToEigen(C.Grad());
-            Scalar maxQ{0};
+            Scalar maxQc{0};
             for (auto ki = 0; ki < nodes.size(); ++ki)
             {
                 auto i = nodes[ki];
@@ -63,10 +64,22 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
                 auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
                 auto gradci = gradc.template segment<3>(ki * 3);
                 Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
-                maxQ        = std::max(maxQ, Q);
+                maxQc       = std::max(maxQc, Q);
             }
-            C.Penalty() = contactParams.gamma * maxQ;
+            // auto F      = C.Friction();
+            // C.Penalty() = contactParams.gamma * maxQc;
+            // F.Penalty() = contactParams.gammaf * maxQc;
+            pbat::common::AtomicMax(maxQ, maxQc);
+        },
+        nThreads);
+    contact.ForAllContacts(
+        [&]<class TContactSet>(
+            typename TContactSet::AccessorType C,
+            auto&& stencil,
+            std::int32_t /*t*/
+        ) {
             auto F      = C.Friction();
+            C.Penalty() = contactParams.gamma * maxQ;
             F.Penalty() = contactParams.gammaf * maxQ;
         },
         nThreads);
