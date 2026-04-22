@@ -1,4 +1,4 @@
-#include "AdjacencySet.h"
+#include "DenseAdjacencySet.h"
 
 namespace pbat::graph {
 } // namespace pbat::graph
@@ -10,7 +10,7 @@ namespace pbat::graph {
 #include <utility>
 #include <vector>
 
-TEST_CASE("[graph] AdjacencySet")
+TEST_CASE("[graph] DenseAdjacencySet")
 {
     using namespace pbat::graph;
 
@@ -22,7 +22,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("Default-constructed set is empty")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
         CHECK(adj.Size() == 0u);
         CHECK(adj.NumVertices() == 0u);
         CHECK(adj.Data().empty());
@@ -30,7 +30,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("Add and Update create adjacencies")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         // Add some edges
         adj.Add(0u, 1u);
@@ -54,7 +54,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("Add stores directed edges as-is")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         adj.Add(3u, 1u); // stored as (3,1)
         adj.Add(1u, 3u); // stored as (1,3) — distinct from (3,1)
@@ -77,7 +77,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("Update preserves existing adjacencies and detects additions/removals")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         // First update: add edges (0,1) and (1,2)
         adj.Add(0u, 1u);
@@ -119,7 +119,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("AdjacenciesOf iterates over neighbours of u")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         adj.Add(1u, 0u);
         adj.Add(1u, 2u);
@@ -185,7 +185,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("Id recycling reuses data slots")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         // Add 3 edges
         adj.Add(0u, 1u);
@@ -214,7 +214,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("Multiple updates converge correctly")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         // Build a triangle (0,1), (1,2), (0,2)
         adj.Add(0u, 1u);
@@ -254,7 +254,7 @@ TEST_CASE("[graph] AdjacencySet")
         using namespace pbat::graph;
         using Options = AdjacencySetUpdateOptions;
 
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         Options appendOnly;
         appendOnly.eUpdatePolicy = Options::EUpdatePolicy::AppendOnly;
@@ -331,7 +331,7 @@ TEST_CASE("[graph] AdjacencySet")
 
     SUBCASE("CompactIds shrinks indirection tables")
     {
-        AdjacencySet<EdgeData> adj;
+        DenseAdjacencySet<EdgeData> adj;
 
         // Round 1: add 4 edges
         adj.Add(0u, 1u);
@@ -425,20 +425,20 @@ TEST_CASE("[graph] AdjacencySet")
     }
 }
 
-TEST_CASE("[graph] AdjacencySet<void>")
+TEST_CASE("[graph] DenseAdjacencySet<void>")
 {
     using namespace pbat::graph;
 
     SUBCASE("Default-constructed void set is empty")
     {
-        AdjacencySet<void> adj;
+        DenseAdjacencySet<void> adj;
         CHECK(adj.Size() == 0u);
         CHECK(adj.NumVertices() == 0u);
     }
 
     SUBCASE("Add and Update create adjacencies")
     {
-        AdjacencySet<void> adj;
+        DenseAdjacencySet<void> adj;
 
         adj.Add(0u, 1u);
         adj.Add(1u, 3u);
@@ -457,7 +457,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
 
     SUBCASE("Overwrite mode removes un-re-added adjacencies")
     {
-        AdjacencySet<void> adj;
+        DenseAdjacencySet<void> adj;
 
         adj.Add(0u, 1u);
         adj.Add(1u, 2u);
@@ -482,7 +482,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
 
     SUBCASE("AdjacenciesOf iterates over neighbours")
     {
-        AdjacencySet<void> adj;
+        DenseAdjacencySet<void> adj;
 
         adj.Add(1u, 0u);
         adj.Add(1u, 2u);
@@ -504,12 +504,12 @@ TEST_CASE("[graph] AdjacencySet<void>")
 
     SUBCASE("Merge void into void")
     {
-        AdjacencySet<void> a;
+        DenseAdjacencySet<void> a;
         a.Add(0u, 1u);
         a.Add(1u, 2u);
         a.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
-        AdjacencySet<void> b;
+        DenseAdjacencySet<void> b;
         b.Add(1u, 2u);
         b.Add(2u, 3u);
         b.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
@@ -528,7 +528,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
 
     SUBCASE("Merge data-carrying set into void set (discard data)")
     {
-        AdjacencySet<void> a;
+        DenseAdjacencySet<void> a;
         a.Add(0u, 1u);
         a.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
@@ -536,7 +536,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
         {
             float weight{0.f};
         };
-        AdjacencySet<EdgeData> b;
+        DenseAdjacencySet<EdgeData> b;
         b.Add(1u, 2u);
         b.Update(
             [](std::uint32_t u, std::uint32_t v) -> EdgeData {
@@ -562,7 +562,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
             float weight{0.f};
             int tag{-1};
         };
-        AdjacencySet<EdgeData> a;
+        DenseAdjacencySet<EdgeData> a;
         a.Add(0u, 1u);
         a.Update(
             [](std::uint32_t u, std::uint32_t v) -> EdgeData {
@@ -570,7 +570,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
             },
             [](std::uint32_t, std::uint32_t, EdgeData&) {});
 
-        AdjacencySet<void> b;
+        DenseAdjacencySet<void> b;
         b.Add(1u, 2u);
         b.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
@@ -597,7 +597,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
 
     SUBCASE("Reduce void sets")
     {
-        std::vector<AdjacencySet<void>> sets(4);
+        std::vector<DenseAdjacencySet<void>> sets(4);
         // Thread 0: (0,1)
         sets[0].Add(0u, 1u);
         sets[0].Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
@@ -612,7 +612,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
         sets[3].Add(0u, 1u);
         sets[3].Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
-        AdjacencySet<void> result;
+        DenseAdjacencySet<void> result;
         result.Reduce(sets.begin(), sets.end());
         result.Finalize();
 

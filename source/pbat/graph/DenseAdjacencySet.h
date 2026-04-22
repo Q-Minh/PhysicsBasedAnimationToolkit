@@ -1,5 +1,5 @@
 /**
- * @file AdjacencySet.h
+ * @file DenseAdjacencySet.h
  * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
  * @brief Dynamic adjacency set with per-edge associated data
  * @date 2026-02-10
@@ -142,7 +142,7 @@ struct EmptyVector
 } // namespace detail
 
 /**
- * @brief Options for AdjacencySet::Update()
+ * @brief Options for DenseAdjacencySet::Update()
  */
 struct AdjacencySetUpdateOptions
 {
@@ -208,10 +208,10 @@ template <
     class TData,
     common::CIndex TVertexIndex = std::uint32_t,
     common::CIndex TIdIndex     = std::uint32_t>
-class AdjacencySet
+class DenseAdjacencySet
 {
   public:
-    using SelfType           = AdjacencySet<TData, TVertexIndex, TIdIndex>;
+    using SelfType           = DenseAdjacencySet<TData, TVertexIndex, TIdIndex>;
     using DataType           = TData;
     using VertexIndexType    = TVertexIndex;
     using IdIndexType        = TIdIndex;
@@ -295,7 +295,7 @@ class AdjacencySet
      */
     template <class TOtherData>
     void Merge(
-        AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
+        DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
         bool bAssumeDisjoint = false);
 
     /**
@@ -303,18 +303,19 @@ class AdjacencySet
      *
      * Each level of the tree merges pairs of sets in parallel, yielding O(A log T) total work
      * and O(A) span, where A is the total number of adjacencies and T is the number of sets.
-     * The input sets are consumed (moved from). The iterator's value_type must be AdjacencySet.
+     * The input sets are consumed (moved from). The iterator's value_type must be
+     * DenseAdjacencySet.
      *
      * @post All input sets in [begin, end) are left in an empty state.
      *
-     * @tparam TRandomIt     Random-access iterator over AdjacencySet elements, not necessarily of
-     * same data type.
-     * @param begin          Iterator to the first AdjacencySet
-     * @param end            Iterator past the last AdjacencySet
+     * @tparam TRandomIt     Random-access iterator over DenseAdjacencySet elements, not necessarily
+     * of same data type.
+     * @param begin          Iterator to the first DenseAdjacencySet
+     * @param end            Iterator past the last DenseAdjacencySet
      * @param bAssumeInputDisjoint If true, skip duplicate detection in each input-input merge
      * @param bAssumeOutputDisjoint If true, skip duplicate detection of all inputs against the
      * output set in final merge
-     * @return The merged AdjacencySet
+     * @return The merged DenseAdjacencySet
      */
     template <std::random_access_iterator TRandomIt>
     void Reduce(
@@ -457,7 +458,7 @@ class AdjacencySet
 
   private:
     template <class, common::CIndex, common::CIndex>
-    friend class AdjacencySet;
+    friend class DenseAdjacencySet;
 
     /**
      * @brief Allocate a fresh data slot and return its id.
@@ -482,7 +483,7 @@ class AdjacencySet
      * @param other       The source set being merged from
      */
     template <class TOtherData>
-    void AddAdjacencyDataFrom(AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other);
+    void AddAdjacencyDataFrom(DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other);
 
     /**
      * @brief Release ids and invoke @p fOnRemoved for each adjacency in mAdjacenciesToRemove.
@@ -526,8 +527,141 @@ class AdjacencySet
     std::vector<AdjacencyEntryType> mAdjacenciesToRemove; ///< Old \ New (set difference)
 };
 
+/**
+ * @brief Stores the reverse of a source DenseAdjacencySet of (u, v).
+ *
+ * This view enables efficient iteration over the reverse adjacency graph, where we query "which
+ * sources u are adjacent to a given target v?" rather than "which targets v are adjacent to a
+ * given source u?".
+ *
+ * The view is built from an existing DenseAdjacencySet via the Update() method using a linear-time
+ * counting sort (O(n) where n is the number of adjacencies), exploiting the fact that the input
+ * set is already sorted by (u, v).
+ *
+ * When the source set has associated data (TData is not void), the view stores triplets
+ * (v, u, c) where c directly indexes into the source set's Data() array. When TData is void,
+ * the view stores pairs (v, u) without the c index.
+ *
+ * @tparam TData        Data type of the source DenseAdjacencySet (void for no data)
+ * @tparam TVertexIndex Integer type for vertex indices u, v (default: uint32_t)
+ * @tparam TIdIndex     Integer type for data indices (default: uint32_t)
+ *
+ * @note This is a **view**: it does not own the data. The source DenseAdjacencySet must remain
+ * valid and unmodified while this view is in use. If you need to access the data via this view,
+ * you must pass the source set to methods like AdjacenciesOf() and ForAll().
+ */
+template <
+    class TData,
+    common::CIndex TVertexIndex = std::uint32_t,
+    common::CIndex TIdIndex     = std::uint32_t>
+class DenseReverseAdjacencySetView
+{
+  public:
+    using SelfType           = DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>;
+    using DataType           = TData;
+    using VertexIndexType    = TVertexIndex;
+    using IdIndexType        = TIdIndex;
+    using SourceSetType      = DenseAdjacencySet<TData, TVertexIndex, TIdIndex>;
+    using AdjacencyEntryType = std::conditional_t<
+        std::is_void_v<DataType>,
+        detail::AdjacencyPair<TVertexIndex>,
+        detail::AdjacencyTriplet<TVertexIndex, TIdIndex>>;
+
+    /**
+     * @brief Build the reverse adjacency view from a finalized DenseAdjacencySet.
+     *
+     * Uses counting sort to reorder adjacencies by (v, u) in O(n) time, where n is the number of
+     * adjacencies. The input set must have had Finalize() called on it.
+     *
+     * @param set The source adjacency set
+     * @param n Number of target vertices `v`. If `v < 0`, inferred from max `v` in `set`.
+     * @pre `Finalize()` has been called on `set` to establish its prefix array and enable counting
+     * sort.
+     */
+    void Update(SourceSetType const& set, std::make_signed_t<TVertexIndex> n = -1);
+
+    /**
+     * @brief Check if the adjacency (u, v) exists in the view, optionally retrieving its
+     * associated data index.
+     *
+     * @param u Source vertex
+     * @param v Target vertex
+     * @param c Optional pointer to store the data index (if TData is not void)
+     * @param bUseBinarySearch If true, use binary search. Otherwise, linear search.
+     * @return true if the adjacency exists, false otherwise
+     */
+    bool
+    Has(TVertexIndex u, TVertexIndex v, TIdIndex* c = nullptr, bool bUseBinarySearch = true) const;
+
+    /**
+     * @brief Return the degree of vertex v (number of incoming adjacencies to v).
+     * @param v Target vertex (from the perspective of this reverse view)
+     * @return Number of adjacencies incident on v
+     */
+    TVertexIndex Degree(TVertexIndex v) const;
+
+    /**
+     * @brief Iterate over all adjacencies (u, v) incident on v.
+     *
+     * @tparam FOnAdjacency Callable with signature `void(TVertexIndex u, TVertexIndex v)` if
+     * `TData` is void, or `void(TVertexIndex u, TVertexIndex v, TIdIndex c)` if `TData` is not
+     * void. The callback receives the source vertex `u`, the target vertex `v`, and optionally the
+     * data index `c` for the adjacency.
+     * @param v      Target vertex
+     * @param fOnAdj Callback invoked for each source u adjacent to v
+     */
+    template <class FOnAdjacency>
+    void AdjacenciesOf(TVertexIndex v, FOnAdjacency&& fOnAdj) const;
+
+    /**
+     * @brief Iterate over all adjacencies in the view.
+     *
+     * @tparam FOnAdjacency Callable with signature `void(TVertexIndex u, TVertexIndex v)` when
+     * TData is void, or `void(TVertexIndex u, TVertexIndex v, TIdIndex c)` when TData is not void.
+     *
+     * @param fOnAdj Callback invoked for each adjacency
+     */
+    template <class FOnAdjacency>
+    void ForAll(FOnAdjacency&& fOnAdj) const;
+
+    /**
+     * @brief Clear all vectors, resetting the view to an empty state while preserving capacity.
+     */
+    void Clear();
+
+    /**
+     * @brief Number of adjacencies in the view
+     * @return Number of adjacencies
+     */
+    std::size_t Size() const noexcept { return mAdjacencies.size(); }
+
+    /**
+     * @brief Check if the view is empty
+     * @return true if empty, false otherwise
+     */
+    bool Empty() const noexcept { return mAdjacencies.empty(); }
+
+    /**
+     * @brief Number of target vertices inferred from the prefix array
+     * @return Number of target vertices, or 0 if Update() has not been called
+     */
+    TVertexIndex NumVertices() const noexcept
+    {
+        return mPrefix.empty() ? TVertexIndex{0} : static_cast<TVertexIndex>(mPrefix.size() - 1);
+    }
+
+  private:
+    std::vector<AdjacencyEntryType> mAdjacencies; ///< Adjacencies sorted by (v, u)
+    std::vector<TVertexIndex> mPrefix;            ///< Prefix sum over v for fast AdjacenciesOf()
+    std::vector<TVertexIndex> mCounts;            ///< Temporary storage for counting sort
+};
+
+// =============================================================================
+// DenseAdjacencySet implementation
+// ============================================================================
+
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reserve(
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Reserve(
     std::size_t nExpectedAdjacencies,
     std::size_t nExpectedIncoming)
 {
@@ -545,19 +679,19 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reserve(
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Add(TVertexIndex u, TVertexIndex v)
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Add(TVertexIndex u, TVertexIndex v)
 {
     mIncomingAdjacencies.push_back({u, v});
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdded, class FOnRemoved>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     FOnAdded&& fOnAdded,
     FOnRemoved&& fOnRemoved,
     AdjacencySetUpdateOptions options)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Update");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.Update");
 
     // 1. Move the current adjacency set into mExistingAdjacencies
     assert(mExistingAdjacencies.empty() and "mExistingAdjacencies must be empty before Update");
@@ -642,13 +776,14 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(AdjacencySetUpdateOptions options)
+inline void
+DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Update(AdjacencySetUpdateOptions options)
 {
     this->Update([](auto&&...) {}, [](auto&&...) {}, options);
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
 {
     // Committed state
     mAdjacencies.clear();
@@ -666,11 +801,11 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class TOtherData>
-inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
-    AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
+inline void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
+    DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
     bool bAssumeDisjoint)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Merge");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.Merge");
 
     // 1. Determine which of other's adjacencies to add.
     assert(mAdjacenciesToAdd.empty() and "mAdjacenciesToAdd must be empty before Merge");
@@ -729,19 +864,19 @@ inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <std::random_access_iterator TRandomIt>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
     TRandomIt begin,
     TRandomIt end,
     bool bAssumeInputDisjoint,
     bool bAssumeOutputDisjoint)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Reduce");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.Reduce");
 
     using IterValueType = std::iter_value_t<TRandomIt>;
     using TOtherData    = typename IterValueType::DataType;
     static_assert(
-        std::is_same_v<IterValueType, AdjacencySet<TOtherData, VertexIndexType, IdIndexType>>,
-        "Iterator value_type must be AdjacencySet with compatible template parameters");
+        std::is_same_v<IterValueType, DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>>,
+        "Iterator value_type must be DenseAdjacencySet with compatible template parameters");
     auto const n = static_cast<std::size_t>(std::distance(begin, end));
     if (n == 0u)
         return;
@@ -770,9 +905,9 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize(std::make_signed_t<TVertexIndex> n)
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize(std::make_signed_t<TVertexIndex> n)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Finalize");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.Finalize");
     // Grow mPrefix if any adjacency source vertex exceeds the current range
     // (can happen after Merge with a larger set).
     if (not mAdjacencies.empty())
@@ -792,7 +927,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize(std::make_signed_t<TV
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-inline bool AdjacencySet<TData, TVertexIndex, TIdIndex>::Has(
+inline bool DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Has(
     TVertexIndex u,
     TVertexIndex v,
     TIdIndex* c,
@@ -828,14 +963,14 @@ inline bool AdjacencySet<TData, TVertexIndex, TIdIndex>::Has(
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-inline TVertexIndex AdjacencySet<TData, TVertexIndex, TIdIndex>::Degree(TVertexIndex u) const
+inline TVertexIndex DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Degree(TVertexIndex u) const
 {
     return mPrefix[static_cast<std::size_t>(u) + 1u] - mPrefix[u];
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdjacency>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
     TVertexIndex u,
     FOnAdjacency&& fOnAdj)
 {
@@ -859,7 +994,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdjacency>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
     TVertexIndex u,
     FOnAdjacency&& fOnAdj) const
 {
@@ -883,7 +1018,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdjacency>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj)
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj)
 {
     for (AdjacencyEntryType& adj : mAdjacencies)
     {
@@ -901,7 +1036,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj)
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdjacency>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj) const
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj) const
 {
     for (AdjacencyEntryType const& adj : mAdjacencies)
     {
@@ -918,7 +1053,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ForAll(FOnAdjacency&& fOnAdj) 
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::CompactIds()
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::CompactIds()
 {
     // No-op when TData is void, since ids and data are unused.
     if constexpr (std::is_void_v<TData>)
@@ -943,7 +1078,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::CompactIds()
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-TIdIndex AdjacencySet<TData, TVertexIndex, TIdIndex>::AllocateId()
+TIdIndex DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::AllocateId()
 {
     TIdIndex id = static_cast<TIdIndex>(mIdToData.size());
     TIdIndex c  = static_cast<TIdIndex>(mData.size());
@@ -954,7 +1089,7 @@ TIdIndex AdjacencySet<TData, TVertexIndex, TIdIndex>::AllocateId()
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::ReleaseId(TIdIndex id)
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::ReleaseId(TIdIndex id)
 {
     // Compact the data array by swapping the released slot with the last element.
     TIdIndex c    = mIdToData[id];
@@ -972,10 +1107,10 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::ReleaseId(TIdIndex id)
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class TOtherData>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddAdjacencyDataFrom(
-    AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other)
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::AddAdjacencyDataFrom(
+    DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.AddAdjacencyDataFrom");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.AddAdjacencyDataFrom");
     // No-op when either this has void data, since ids and data are unused.
     if constexpr (std::is_void_v<TData>)
     {
@@ -1003,9 +1138,9 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddAdjacencyDataFrom(
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnAdded>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddNewAdjacencies(FOnAdded&& fOnAdded)
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::AddNewAdjacencies(FOnAdded&& fOnAdded)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.AddNewAdjacencies");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.AddNewAdjacencies");
     for (AdjacencyEntryType& adj : mAdjacenciesToAdd)
     {
         if constexpr (std::is_void_v<TData>)
@@ -1023,9 +1158,9 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::AddNewAdjacencies(FOnAdded&& f
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class FOnRemoved>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::RemoveOldAdjacencies(FOnRemoved&& fOnRemoved)
+void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::RemoveOldAdjacencies(FOnRemoved&& fOnRemoved)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.RemoveOldAdjacencies");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.RemoveOldAdjacencies");
     for (AdjacencyEntryType const& adj : mAdjacenciesToRemove)
     {
         if constexpr (std::is_void_v<TData>)
@@ -1039,6 +1174,174 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::RemoveOldAdjacencies(FOnRemove
             ReleaseId(adj.id);
         }
     }
+}
+
+// =============================================================================
+// DenseReverseAdjacencySetView implementation
+// ============================================================================
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Update(
+    SourceSetType const& set,
+    std::make_signed_t<TVertexIndex> n)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseReverseAdjacencySetView.Update");
+
+    // 1. Determine the number of target vertices
+    // We need to scan all adjacencies to find the maximum v if not provided
+    if (n < 0)
+    {
+        TVertexIndex maxV{0};
+        set.ForAll([&maxV](TVertexIndex /*u*/, TVertexIndex v) { maxV = std::max(maxV, v); });
+        n = static_cast<decltype(n)>(maxV) + 1;
+    }
+
+    // 2. Resize arrays
+    std::size_t const nAdj = set.Size();
+    mAdjacencies.resize(nAdj);
+    auto const nV = static_cast<std::size_t>(n);
+    mPrefix.resize(nV + 1u);
+    mCounts.resize(nV);
+
+    // 3. Count occurrences of each v (first pass)
+    std::fill(mCounts.begin(), mCounts.end(), TVertexIndex{0});
+    set.ForAll([this](TVertexIndex /*u*/, TVertexIndex v) { ++mCounts[v]; });
+
+    // 4. Build prefix sum over v
+    std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TVertexIndex{0});
+
+    // 5. Reset counts to use as write cursors
+    std::fill(mCounts.begin(), mCounts.end(), TVertexIndex{0});
+
+    // 6. Scatter adjacencies into their correct positions (second pass)
+    // Since the input is sorted by (u, v), within each bucket (same v), the elements
+    // will be sorted by u automatically as we iterate in order.
+    if constexpr (std::is_void_v<TData>)
+    {
+        set.ForAll([this](TVertexIndex u, TVertexIndex v) {
+            std::size_t const pos = mPrefix[v] + mCounts[v];
+            mAdjacencies[pos]     = AdjacencyEntryType{v, u}; // Store as (v, u) for reverse view
+            ++mCounts[v];
+        });
+    }
+    else
+    {
+        // We need to get the data index c for each adjacency.
+        // ForAll with 3-arg callback gives (u, v, data&), and we can compute c
+        // from pointer arithmetic against set.Data()[0]. Alternatively, we could
+        // make DenseReverseAdjacencySetView a friend of SourceSetType to access internal data
+        // structures, but let's keep it simple.
+        auto const* dataBegin = set.Data().data();
+        set.ForAll([this, dataBegin](TVertexIndex u, TVertexIndex v, TData const& w) {
+            std::size_t const pos = mPrefix[v] + mCounts[v];
+            auto c                = static_cast<TIdIndex>(std::addressof(w) - dataBegin);
+            mAdjacencies[pos]     = AdjacencyEntryType{v, u, c}; // Store (v, u, c)
+            ++mCounts[v];
+        });
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+bool DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Has(
+    TVertexIndex u,
+    TVertexIndex v,
+    TIdIndex* c,
+    bool bUseBinarySearch) const
+{
+    if (v >= NumVertices())
+        return false;
+
+    TVertexIndex const first = mPrefix[v];
+    TVertexIndex const last  = mPrefix[static_cast<std::size_t>(v) + 1u];
+    auto begin               = mAdjacencies.begin() + first;
+    auto end                 = mAdjacencies.begin() + last;
+    auto it                  = end;
+    bool bFound{false};
+
+    // Note: mAdjacencies stores (v, u, [c]) - the first element is v, second is u
+    // So when searching for (u, v), we look for entries where adj.u == v and adj.v == u
+    if (bUseBinarySearch)
+    {
+        // Within a bucket for target v, entries are sorted by u (stored in adj.v)
+        it = std::lower_bound(begin, end, u, [](AdjacencyEntryType const& adj, TVertexIndex tu) {
+            return adj.v < tu; // adj.v holds the source u in our reverse view
+        });
+        bFound = it != end and (it->v == u); // adj.u is v (the target), adj.v is u (the source)
+    }
+    else
+    {
+        it = std::find_if(begin, end, [u](AdjacencyEntryType const& adj) { return adj.v == u; });
+        bFound = it != end;
+    }
+
+    if constexpr (not std::is_void_v<TData>)
+    {
+        if (bFound and c != nullptr)
+            *c = it->id;
+    }
+    return bFound;
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+TVertexIndex
+DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Degree(TVertexIndex v) const
+{
+    if (v >= NumVertices())
+        return TVertexIndex{0};
+    return mPrefix[static_cast<std::size_t>(v) + 1u] - mPrefix[v];
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class FOnAdjacency>
+void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
+    TVertexIndex v,
+    FOnAdjacency&& fOnAdj) const
+{
+    assert(v < NumVertices() and "v out of range");
+    TVertexIndex const begin = mPrefix[v];
+    TVertexIndex const end   = mPrefix[static_cast<std::size_t>(v) + 1u];
+    for (auto k = begin; k < end; ++k)
+    {
+        AdjacencyEntryType const& adj = mAdjacencies[k];
+        if constexpr (std::is_void_v<TData>)
+        {
+            // adj.u is v (target), adj.v is u (source)
+            fOnAdj(adj.v, adj.u); // Return as (u, v) to caller
+        }
+        else
+        {
+            // adj.u is v (target), adj.v is u (source)
+            fOnAdj(adj.v, adj.u, adj.id); // Return as (u, v, c) to caller
+        }
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+template <class FOnAdjacency>
+void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::ForAll(
+    FOnAdjacency&& fOnAdj) const
+{
+    for (AdjacencyEntryType const& adj : mAdjacencies)
+    {
+        if constexpr (std::is_void_v<TData>)
+        {
+            // adj.u is v (target), adj.v is u (source)
+            fOnAdj(adj.v, adj.u); // Return as (u, v) to caller
+        }
+        else
+        {
+            // adj.u is v (target), adj.v is u (source)
+            fOnAdj(adj.v, adj.u, adj.id); // Return as (u, v, c) to caller
+        }
+    }
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Clear()
+{
+    mAdjacencies.clear();
+    mPrefix.clear();
+    mCounts.clear();
 }
 
 } // namespace graph

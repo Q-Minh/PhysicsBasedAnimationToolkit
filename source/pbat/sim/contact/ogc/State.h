@@ -15,7 +15,7 @@
 #include "pbat/common/Concepts.h"
 #include "pbat/common/Indexing.h"
 #include "pbat/geometry/Device.h"
-#include "pbat/graph/AdjacencySet.h"
+#include "pbat/graph/DenseAdjacencySet.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
@@ -156,7 +156,7 @@ class State
     /**
      * @brief Contact sets (thread-local).
      *
-     * API users can use the graph::AdjacencySet::Reduce function to merge the thread-local
+     * API users can use the graph::DenseAdjacencySet::Reduce function to merge the thread-local
      * contact sets into a single set for each contact type after parallel contact generation.
      */
 
@@ -177,13 +177,13 @@ class State
     std::array<IndexType, 3> mTriangleGeometryPrefix; ///< Prefix sum over (triangle) facets of each
                                                       ///< geometry type (i.e. dynamic, static)
 
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
+    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
         mXX; ///< Point-point contact pairs.
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
+    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
         mXE; ///< Point-(half-)edge contact pairs.
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
+    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
         mXF; ///< Point-triangle contact pairs.
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
+    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
         mEE; ///< Edge-edge contact pairs.
 
     /**
@@ -213,15 +213,15 @@ class State
 namespace detail {
 
 template <common::CIndex TIndex>
-graph::AdjacencySet<void, TIndex> CreateEmptyContactFaceAdjacencySet()
+graph::DenseAdjacencySet<void, TIndex> CreateEmptyContactFaceAdjacencySet()
 {
-    graph::AdjacencySet<void, TIndex> adjSet;
+    graph::DenseAdjacencySet<void, TIndex> adjSet;
     adjSet.Reserve(4096, 1024);
     return adjSet;
 }
 
 /**
- * @brief Perform a parallel Update() on every thread-local AdjacencySet in @p sets.
+ * @brief Perform a parallel Update() on every thread-local DenseAdjacencySet in @p sets.
  *
  * Deduplicates and commits the incoming adjacencies accumulated via Add() in each
  * thread-local set, using Overwrite policy and assuming unique incoming adjacencies.
@@ -230,7 +230,7 @@ graph::AdjacencySet<void, TIndex> CreateEmptyContactFaceAdjacencySet()
  * @param sets Thread-local adjacency sets to update
  */
 template <common::CIndex TIndex>
-void UpdateContactSet(tbb::enumerable_thread_specific<graph::AdjacencySet<void, TIndex>>& sets)
+void UpdateContactSet(tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, TIndex>>& sets)
 {
     graph::AdjacencySetUpdateOptions opts{};
     opts.bAssumeSortedIncoming = false;
@@ -675,13 +675,13 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.PrepareForExecution");
     // 1. Clear contact sets
-    for (graph::AdjacencySet<void, TIndex>& xx : mXX)
+    for (graph::DenseAdjacencySet<void, TIndex>& xx : mXX)
         xx.Clear();
-    for (graph::AdjacencySet<void, TIndex>& xe : mXE)
+    for (graph::DenseAdjacencySet<void, TIndex>& xe : mXE)
         xe.Clear();
-    for (graph::AdjacencySet<void, TIndex>& xf : mXF)
+    for (graph::DenseAdjacencySet<void, TIndex>& xf : mXF)
         xf.Clear();
-    for (graph::AdjacencySet<void, TIndex>& ee : mEE)
+    for (graph::DenseAdjacencySet<void, TIndex>& ee : mEE)
         ee.Clear();
     common::ExclusivePrefixSum(
         mPointGeometryPrefix,

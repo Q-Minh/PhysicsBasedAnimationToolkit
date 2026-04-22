@@ -269,7 +269,7 @@ TEST_CASE("[sim][contact][ogc] Ogc")
         VertexFacetContactDetection(ogcInput, ogcParams, ogcState);
 
         // Assert: expect contacts between top vertices of bottom cube and bottom faces of top cube
-        graph::AdjacencySet<void, Index> XX, XE, XF;
+        graph::DenseAdjacencySet<void, Index> XX, XE, XF;
         XX.Reduce(ogcState.mXX.begin(), ogcState.mXX.end());
         XE.Reduce(ogcState.mXE.begin(), ogcState.mXE.end());
         XF.Reduce(ogcState.mXF.begin(), ogcState.mXF.end());
@@ -288,7 +288,7 @@ TEST_CASE("[sim][contact][ogc] Ogc")
         // Act: prepare iteration and perform edge-edge contact detection
         EdgeEdgeContactDetection(ogcInput, ogcParams, ogcState);
         // Assert: expect some edge-edge contacts
-        graph::AdjacencySet<void, Index> EE;
+        graph::DenseAdjacencySet<void, Index> EE;
         EE.Reduce(ogcState.mEE.begin(), ogcState.mEE.end());
         EE.Finalize(E.cols());
         auto const nHalfEdgeEdgeContacts = EE.Size();
