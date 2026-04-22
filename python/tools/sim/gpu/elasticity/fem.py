@@ -98,7 +98,7 @@ class FemElastoDynamicsData:
     # --- Elastic quadrature ---
     wg: wp.array[wp.float32]  # (Q,) quadrature weights
     GNeg: wp.array[
-        types.mat43f  # type: ignore
+        types.mat4x3f  # type: ignore
     ]  # (Q,) shape function gradients (4x3 per quad pt) at quad pts
     mug: wp.array[wp.float32]  # (Q,) 1st Lame parameter at quad pts
     lambdag: wp.array[wp.float32]  # (Q,) 2nd Lame parameter at quad pts
@@ -140,7 +140,7 @@ class FemElastoDynamics:
         self._data.wg = wp.array(fem.wgU, dtype=wp.float32)
         self._data.GNeg = wp.array(
             fem.GNegU.reshape(4, -1, 3).transpose(1, 0, 2),
-            dtype=types.mat43f,
+            dtype=types.mat4x3f,
         )
         self._data.mug = wp.array(fem.lamegU[0, :], dtype=wp.float32)
         self._data.lambdag = wp.array(fem.lamegU[1, :], dtype=wp.float32)

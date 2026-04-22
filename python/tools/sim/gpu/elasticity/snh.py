@@ -76,7 +76,7 @@ def snh_hess(F: wp.mat33f, mu: wp.float32, llambda: wp.float32):
     S0 = wp.skew(f0)  # pyright: ignore[reportArgumentType]
     S1 = wp.skew(f1)  # pyright: ignore[reportArgumentType]
     # Build H = 0
-    H = types.mat99f()
+    H = types.mat9x9f()
     # Off-diagonal skew blocks
     for i in range(3):
         for j in range(3):
@@ -144,7 +144,7 @@ def snh_grad_and_hess(F: wp.mat33f, mu: wp.float32, llambda: wp.float32):
     S2 = wp.skew(f2)  # pyright: ignore[reportArgumentType]
     S0 = wp.skew(f0)  # pyright: ignore[reportArgumentType]
     S1 = wp.skew(f1)  # pyright: ignore[reportArgumentType]
-    H = types.mat99f()
+    H = types.mat9x9f()
     for i in range(3):
         for j in range(3):
             # H10 = c * S2, H01 = -c * S2
@@ -210,7 +210,7 @@ def snh_eval_with_grad_and_hess(F: wp.mat33f, mu: wp.float32, llambda: wp.float3
     S2 = wp.skew(f2)  # pyright: ignore[reportArgumentType]
     S0 = wp.skew(f0)  # pyright: ignore[reportArgumentType]
     S1 = wp.skew(f1)  # pyright: ignore[reportArgumentType]
-    H = types.mat99f()
+    H = types.mat9x9f()
     for i in range(3):
         for j in range(3):
             # H10 = c * S2, H01 = -c * S2
@@ -296,7 +296,7 @@ def _test_snh_kernel(
     llambda: wp.float32,
     psi: wp.array[wp.float32],
     grad: wp.array[types.vec9f],  # pyright: ignore[reportInvalidTypeForm]
-    hess: wp.array[types.mat99f],  # pyright: ignore[reportInvalidTypeForm]
+    hess: wp.array[types.mat9x9f],  # pyright: ignore[reportInvalidTypeForm]
 ):
     g = wp.tid()
     Fg = F[g]
@@ -322,7 +322,7 @@ class TestStableNeoHookean(unittest.TestCase):
         F_wp = wp.array([F_np], dtype=wp.mat33f)
         psi_out = wp.zeros(1, dtype=wp.float32)
         grad_out = wp.zeros(1, dtype=types.vec9f)
-        hess_out = wp.zeros(1, dtype=types.mat99f)
+        hess_out = wp.zeros(1, dtype=types.mat9x9f)
         mu, lam = float(1e5), float(1e6)
         wp.launch(
             _test_snh_kernel, dim=1, inputs=[F_wp, mu, lam, psi_out, grad_out, hess_out]
