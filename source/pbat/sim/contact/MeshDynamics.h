@@ -33,6 +33,7 @@
 #include <new>
 #include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_sort.h>
 #include <type_traits>
 #include <vector>
 
@@ -519,10 +520,14 @@ class MeshDynamics
      * bounds.
      * @tparam TDerivedX Matrix type
      * @param X `3 x |# points|` current point positions (column-major: one point per column)
+     * @param bComputeReverseContactPairs Store reverse contact pair (j,i) for contact pair (i,j) if
+     * true
      * @pre `RestoreFeasibility()` has been called
      */
     template <class TDerivedX>
-    void UpdateConstraintSet(Eigen::DenseBase<TDerivedX> const& X);
+    void UpdateConstraintSet(
+        Eigen::DenseBase<TDerivedX> const& X,
+        bool bComputeReverseContactPairs = false);
     /**
      * @brief Linearize all contact constraints, initializing them if necessary.
      * @tparam TDerivedx Matrix type
@@ -854,8 +859,9 @@ class MeshDynamics
         tbb::task_group& tg) const;
     /**
      * @brief Transfer OGC contact pairs to our contact sets
+     * @param bComputeReversePairs Store reverse contact pair (j,i) for contact pair (i,j) if true
      */
-    void UpdateContactSetsFromOgcPairs();
+    void UpdateContactSetsFromOgcPairs(bool bComputeReversePairs);
     /**
      * @brief Serialize a single constraint set to an archive group
      * @tparam TContactSet Contact set type
@@ -978,6 +984,20 @@ class MeshDynamics
     PointEdgeContactSet mPointEdgeContacts;         ///< Point-edge contact set
     PointTriangleContactSet mPointTriangleContacts; ///< Point-triangle contact set
     EdgeEdgeContactSet mEdgeEdgeContacts;           ///< (Half-)Edge-(half-)edge contact set
+
+    /**
+     * @brief Contact pair reference sorted by `v`.
+     */
+    struct ReverseContactPair
+    {
+        IndexType v; ///< Mesh primitive index
+        IndexType u; ///< Mesh primitive index
+        IndexType k; ///< Contact index
+    };
+    std::vector<ReverseContactPair> mReversePointPointContacts;    ///< Point-point reverse pairs
+    std::vector<ReverseContactPair> mReversePointEdgeContacts;     ///< Point-edge reverse pairs
+    std::vector<ReverseContactPair> mReversePointTriangleContacts; ///< Point-triangle reverse pairs
+    std::vector<ReverseContactPair> mReverseEdgeEdgeContacts;      ///< Edge-edge reverse pairs
 };
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1292,7 +1312,9 @@ inline bool MeshDynamics<TScalar, TIndex>::RequiresConstraintSetUpdate() const
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedX>
-inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(Eigen::DenseBase<TDerivedX> const& X)
+inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(
+    Eigen::DenseBase<TDerivedX> const& X,
+    bool bComputeReverseContactPairs)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateConstraintSet");
     if (mParams.bDeactivate)
@@ -1302,6 +1324,10 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(Eigen::DenseBase<
         mPointEdgeContacts.Clear();
         mPointTriangleContacts.Clear();
         mEdgeEdgeContacts.Clear();
+        mReversePointPointContacts.clear();
+        mReversePointEdgeContacts.clear();
+        mReversePointTriangleContacts.clear();
+        mReverseEdgeEdgeContacts.clear();
         mRequiresBoundsRecomputation = false;
         mNumTruncatedPoints          = 0;
         return;
@@ -1309,7 +1335,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(Eigen::DenseBase<
     mXdynamic = X.derived();
     mOgcState.PrepareForExecution(mOgcInput, mParams.mOgcParams);
     ogc::Execute(mOgcInput, mParams.mOgcParams, mOgcState);
-    UpdateContactSetsFromOgcPairs();
+    UpdateContactSetsFromOgcPairs(bComputeReverseContactPairs);
     mRequiresBoundsRecomputation = false;
     mNumTruncatedPoints          = 0;
 }
@@ -2098,7 +2124,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
+inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bComputeReversePairs)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateContactSetsFromOgcPairs");
     using OgcStateType = decltype(mOgcState);
@@ -2114,12 +2140,37 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
         set.Finalize(nSourcePrimitives);
         set.CompactIds();
     };
+    auto const fBuildReversePairs = [](auto const& set,
+                                       std::vector<ReverseContactPair>& reversePairs) {
+        auto const n = static_cast<TIndex>(set.Size());
+        reversePairs.resize(n);
+        for (TIndex c = 0; c < n; ++c)
+        {
+            auto const [u, v, k] = set.WeightedAdjacency(c);
+            reversePairs[c]      = ReverseContactPair{v, u, k};
+        }
+        tbb::parallel_sort(
+            reversePairs.begin(),
+            reversePairs.end(),
+            [](ReverseContactPair const& a, ReverseContactPair const& b) {
+                // Technically, we only need to sort by v, but also sorting by u and k generally
+                // helps with cache locality.
+                return std::tie(a.v, a.u, a.k) < std::tie(b.v, b.u, b.k);
+            });
+    };
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
     auto const nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
     tg.run([&] { fUpdateContactSet(mPointPointContacts, mOgcState.mXX, nPoints); });
     tg.run([&] { fUpdateContactSet(mPointEdgeContacts, mOgcState.mXE, nPoints); });
     tg.run([&] { fUpdateContactSet(mPointTriangleContacts, mOgcState.mXF, nPoints); });
     tg.run([&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
+    if (bComputeReversePairs)
+    {
+        tg.run([&] { fBuildReversePairs(mPointPointContacts, mReversePointPointContacts); });
+        tg.run([&] { fBuildReversePairs(mPointEdgeContacts, mReversePointEdgeContacts); });
+        tg.run([&] { fBuildReversePairs(mPointTriangleContacts, mReversePointTriangleContacts); });
+        tg.run([&] { fBuildReversePairs(mEdgeEdgeContacts, mReverseEdgeEdgeContacts); });
+    }
     tg.wait();
 }
 
