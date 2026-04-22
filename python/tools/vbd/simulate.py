@@ -525,13 +525,13 @@ def main():
         try:
             fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
             contact_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
-            for param_name in solver_params:
-                solver_params[param_name].serialize(
-                    archive[
-                        f"{out_group}/{t:08d}/{_archive_solver_groups[args.solver]}"
-                    ],
-                    minimal=False,
-                )
+            # for param_name in solver_params:
+            #     solver_params[param_name].serialize(
+            #         archive[
+            #             f"{out_group}/{t:08d}/{_archive_solver_groups[args.solver]}"
+            #         ],
+            #         minimal=False,
+            #     )
         except Exception as e:
             raise RuntimeError(f"Failed to serialize frame {t} to archive: {e}") from e
 
@@ -542,10 +542,10 @@ def main():
         frame_group = f"{out_group}/{t:08d}"
         fem_elasto_dynamics.deserialize(archive[frame_group])
         contact_dynamics.deserialize(archive[frame_group])
-        solver_group = f"{frame_group}/{_archive_solver_groups[args.solver]}"
-        for param_name in solver_params:
-            solver_params[param_name].deserialize(archive[solver_group])
-            solver_params[param_name].construct()
+        # solver_group = f"{frame_group}/{_archive_solver_groups[args.solver]}"
+        # for param_name in solver_params:
+        #     solver_params[param_name].deserialize(archive[solver_group])
+        #     solver_params[param_name].construct()
         pbar.update(t)
     else:
         archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
