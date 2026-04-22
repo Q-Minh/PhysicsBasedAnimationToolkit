@@ -775,7 +775,7 @@ void Solve(
         // 3. Setup subproblem
         AssembleBlockDiagonalDynamicsHessian(fem, params);
         UpdatePenaltyParameter(contact, params);
-        // params.betaG.setConstant(params.betaG0);
+        params.betaG.setConstant(params.betaG0);
         // 4. VBD solve the linear constraint subproblem
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
         for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
