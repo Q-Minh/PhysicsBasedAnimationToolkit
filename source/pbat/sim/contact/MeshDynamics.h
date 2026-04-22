@@ -1585,10 +1585,9 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
             static auto constexpr kStencil = ConstraintAccessorType::kStencil;
             auto nodes                     = LoadStencil<TContactSet>(stencil);
             TScalar Q                      = RayleighQuotient<kDims, kStencil>(H, C.Grad(), nodes);
-            common::AtomicMin(mParams.kc, -Q);
+            common::AtomicMax(mParams.kc, Q);
         },
         nThreads);
-    mParams.kc = -mParams.kc;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -2572,24 +2571,16 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bC
     tg.wait();
     if (bComputeReversePairs)
     {
-        // tg.run(
-        //     [&] { fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts);
-        //     });
-        // tg.run(
-        //     [&] { fBuildReversePairs(mPointEdgeContacts, nHalfEdges, mReversePointEdgeContacts);
-        //     });
-        // tg.run([&] {
-        //     fBuildReversePairs(mPointTriangleContacts, nTriangles,
-        //     mReversePointTriangleContacts);
-        // });
-        // tg.run(
-        //     [&] { fBuildReversePairs(mEdgeEdgeContacts, nHalfEdges, mReverseEdgeEdgeContacts);
-        //     });
-        // tg.wait();
-        fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts);
-        fBuildReversePairs(mPointEdgeContacts, nHalfEdges, mReversePointEdgeContacts);
-        fBuildReversePairs(mPointTriangleContacts, nTriangles, mReversePointTriangleContacts);
-        fBuildReversePairs(mEdgeEdgeContacts, nHalfEdges, mReverseEdgeEdgeContacts);
+        tg.run(
+            [&] { fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts); });
+        tg.run(
+            [&] { fBuildReversePairs(mPointEdgeContacts, nHalfEdges, mReversePointEdgeContacts); });
+        tg.run([&] {
+            fBuildReversePairs(mPointTriangleContacts, nTriangles, mReversePointTriangleContacts);
+        });
+        tg.run(
+            [&] { fBuildReversePairs(mEdgeEdgeContacts, nHalfEdges, mReverseEdgeEdgeContacts); });
+        tg.wait();
     }
 }
 

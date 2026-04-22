@@ -6,6 +6,7 @@
 
 #include <exception>
 #include <fmt/core.h>
+#include <thread>
 
 namespace pbat::sim::algorithm::vbd {
 
@@ -41,7 +42,7 @@ void VertexColors(
 void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.UpdatePenaltyParameter");
-    // auto nThreads       = std::thread::hardware_concurrency();
+    auto nThreads       = std::thread::hardware_concurrency();
     auto& contactParams = contact.GetParams();
     auto nDynamicNodes  = params.xk.cols();
     Scalar& kc          = contactParams.kc;
@@ -62,12 +63,10 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
                 auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
                 auto gradci = gradc.template segment<3>(ki * 3);
                 Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
-                // pbat::common::AtomicMin(kc, -Q);
-                kc = std::max(kc, Q);
+                pbat::common::AtomicMax(kc, Q);
             }
         },
-        /*nThreads*/ 1);
-    // kc = -kc;
+        nThreads);
 }
 
 Params& Params::WithVertexElementAdjacencyGraph(

@@ -221,10 +221,8 @@ void Execute(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.Execute");
     VertexFacetContactDetection(input, params, state);
     EdgeEdgeContactDetection(input, params, state);
-    tbb::task_group tg;
-    tg.run([&] { UpdateDisplacementBounds(input, params, state); });
-    tg.run([&] { state.CollectContactPairs(); });
-    tg.wait();
+    UpdateDisplacementBounds(input, params, state);
+    state.CollectContactPairs();
 }
 
 namespace detail {
