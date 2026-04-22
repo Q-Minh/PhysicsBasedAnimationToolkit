@@ -292,20 +292,24 @@ void AssembleHessian(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.AssembleHessian");
     // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
-    using PointPointContactType = contact::MeshPointPointConstraint<Scalar>;
-    using PointEdgeContactType = contact::MeshPointEdgeConstraint<Scalar>;
-    using PointTriangleContactType = contact::MeshPointTriangleConstraint<Scalar>;
-    using EdgeEdgeContactType = contact::MeshEdgeEdgeConstraint<Scalar>;
-    auto constexpr kVertexVertexDofs   = PointPointContactType::kDofs;
-    auto constexpr kVertexEdgeDofs     = PointEdgeContactType::kDofs;
-    auto constexpr kVertexTriangleDofs = PointTriangleContactType::kDofs;
-    auto constexpr kEdgeEdgeDofs       = EdgeEdgeContactType::kDofs;
+    using PointPointConstraint =
+        typename std::decay_t<decltype(contact.PointPointContacts())>::ConstraintDataType;
+    using PointEdgeConstraint =
+        typename std::decay_t<decltype(contact.PointEdgeContacts())>::ConstraintDataType;
+    using PointTriangleConstraint =
+        typename std::decay_t<decltype(contact.PointTriangleContacts())>::ConstraintDataType;
+    using EdgeEdgeConstraint =
+        typename std::decay_t<decltype(contact.EdgeEdgeContacts())>::ConstraintDataType;
+    auto constexpr kPointPointDofs    = PointPointConstraint::kDofs;
+    auto constexpr kPointEdgeDofs     = PointEdgeConstraint::kDofs;
+    auto constexpr kPointTriangleDofs = PointTriangleConstraint::kDofs;
+    auto constexpr kEdgeEdgeDofs      = EdgeEdgeConstraint::kDofs;
     auto const nTriplets =
         fem.HgU.size() + fem.M().size() +
-        contact.NumVertexVertexContacts() * kVertexVertexDofs * kVertexVertexDofs +
-        contact.NumVertexEdgeContacts() * kVertexEdgeDofs * kVertexEdgeDofs +
-        contact.NumVertexTriangleContacts() * kVertexTriangleDofs * kVertexTriangleDofs +
-        contact.NumEdgeEdgeContacts() * kEdgeEdgeDofs * kEdgeEdgeDofs;
+        contact.PointPointContacts().Size() * kPointPointDofs * kPointPointDofs +
+        contact.PointEdgeContacts().Size() * kPointEdgeDofs * kPointEdgeDofs +
+        contact.PointTriangleContacts().Size() * kPointTriangleDofs * kPointTriangleDofs +
+        contact.EdgeEdgeContacts().Size() * kEdgeEdgeDofs * kEdgeEdgeDofs;
     params.triplets.reserve(nTriplets);
     params.triplets.clear();
     // Assemble

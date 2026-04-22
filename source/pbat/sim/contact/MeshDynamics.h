@@ -29,7 +29,6 @@
 #include "pbat/sim/contact/ogc/Ogc.h"
 
 #include <Eigen/Core>
-#include <array>
 #include <cmath>
 #include <tbb/parallel_for.h>
 #include <type_traits>
@@ -564,26 +563,6 @@ class MeshDynamics
     template <class TDerivedg>
     void ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g) const;
     /**
-     * @brief Get the total number of contacts
-     */
-    std::size_t NumContacts() const;
-    /**
-     * @brief Get the number of vertex-vertex contacts
-     */
-    std::size_t NumVertexVertexContacts() const;
-    /**
-     * @brief Get the number of vertex-edge contacts
-     */
-    std::size_t NumVertexEdgeContacts() const;
-    /**
-     * @brief Get the number of vertex-triangle contacts
-     */
-    std::size_t NumVertexTriangleContacts() const;
-    /**
-     * @brief Get the number of edge-edge contacts
-     */
-    std::size_t NumEdgeEdgeContacts() const;
-    /**
      * @brief Get the Params object
      * @return Reference to the parameters
      */
@@ -1057,37 +1036,6 @@ inline auto MeshDynamics<TScalar, TIndex>::Gradient() const
     grad.setZero();
     ToGradient(grad);
     return grad;
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumContacts() const
-{
-    return NumVertexVertexContacts() + NumVertexEdgeContacts() + NumVertexTriangleContacts() +
-           NumEdgeEdgeContacts();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexVertexContacts() const
-{
-    return mPointPointContacts.Size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexEdgeContacts() const
-{
-    return mPointEdgeContacts.Size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexTriangleContacts() const
-{
-    return mPointTriangleContacts.Size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumEdgeEdgeContacts() const
-{
-    return mEdgeEdgeContacts.Size();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
