@@ -36,6 +36,13 @@
 #include <tbb/parallel_for.h>
 #include <tuple>
 
+/**
+ * TODO: Things to try out
+ * - Use different stencil gradient acceleration parameters for surface vs interior nodes.
+ * - Warm-start next SAL subproblem with solution of previous subproblem, instead of the
+ * OGC-truncated step.
+ */
+
 namespace pbat::sim::algorithm::vbd {
 
 /**
@@ -140,11 +147,7 @@ struct Params
      * solver progress is slow)
      * @param gammadown Beta reduction factor
      * @param gammaup Beta increase factor
-     * @param bWarmStartBeta If true, initialize beta for the first iteration of each subproblem
-     * using the final beta from the previous subproblem
-     * @param wkinetic Weight factor for kinetic energy
-     * @param welastic Weight factor for elastic energy
-     * @param wcontact Weight factor for contact energy
+     * @param eWarmStartMask Warm start mask for beta initialization
      * @return Reference to this
      */
     PBAT_API Params& WithStencilGradientAcceleration(
@@ -152,10 +155,8 @@ struct Params
         Scalar rhohat,
         Scalar gammadown,
         Scalar gammaup,
-        bool bWarmStartBeta = true,
-        Scalar wkinetic     = Scalar(1),
-        Scalar welastic     = Scalar(1),
-        Scalar wcontact     = Scalar(1));
+        EStencilGradientBetaWarmStartMask eWarmStartMask =
+            EStencilGradientBetaWarmStartMask::Subproblem);
     /**
      * @brief Vertex linear solver
      * @param solver Vertex integration linear solver
@@ -229,24 +230,16 @@ struct Params
     Scalar betaG0{0.5};   ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
     Scalar rhohat{0.005}; ///< Lipschitz-normalized threshold above which steps are considered small
                           ///< (i.e. solver progress is slow)
-    bool bWarmStartBeta{true}; ///< If true, initialize beta for the first iteration of each
-                               ///< subproblem using the final beta from the previous subproblem
-    Scalar gammadown{0.95};    ///< Beta reduction factor
-    Scalar gammaup{0.5};       ///< Beta increase factor
-    Scalar wkinetic{1};        ///< Stencil gradient weight for kinetic energy term
-    Scalar welastic{1};        ///< Stencil gradient weight for elastic energy term
-    Scalar wcontact{1};        ///< Stencil gradient weight for contact energy term
+    EStencilGradientBetaWarmStartMask eWarmStartMask{
+        EStencilGradientBetaWarmStartMask::Subproblem}; ///< Warm start mask for beta initialization
+    Scalar gammadown{0.95};                             ///< Beta reduction factor
+    Scalar gammaup{0.5};                                ///< Beta increase factor
 
     /**
      * @brief Read-write
      */
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xb; ///< `3 x |# nodes|` buffer positions
-    Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
-        gkinetic; ///< `3 x |# nodes|` kinetic energy gradient at iteration k
-    Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
-        gelastic; ///< `3 x |# nodes|` elastic energy gradient at iteration k
-    Eigen::Matrix<Scalar, 3, Eigen::Dynamic>
-        gcontact; ///< `3 x |# nodes|` contact energy gradient at iteration k
+    Eigen::Matrix<Scalar, 3, Eigen::Dynamic> gk; ///< `3 x |# nodes|` gradient at iteration k
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> xk; ///< `3 x |# nodes|` past iteration
     Eigen::Vector<Scalar, Eigen::Dynamic> Hnk;   ///< Hessian norms at iteration k
     Eigen::Vector<Scalar, Eigen::Dynamic>
@@ -497,9 +490,8 @@ inline void AccumulateContactEnergy(
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact dynamics
  * @param params Solver parameters
- * @return (Hi, gkinetici, gelastici, gcontacti) where Hi is the Hessian and the g vectors are
- * per-energy-term gradients for vertex i. The kinetic gradient includes the Rayleigh damping
- * contribution.
+ * @return (Hi, gi) where Hi is the Hessian and gi is the total gradient for vertex i, including
+ * contributions from kinetic, elastic, and contact energies.
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 auto BuildVertexEquation(
@@ -513,26 +505,20 @@ auto BuildVertexEquation(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
-    -> std::tuple<
-        math::linalg::mini::SMatrix<Scalar, 3, 3>,
-        math::linalg::mini::SVector<Scalar, 3>,
-        math::linalg::mini::SVector<Scalar, 3>,
-        math::linalg::mini::SVector<Scalar, 3>>
+    -> std::tuple<math::linalg::mini::SMatrix<Scalar, 3, 3>, math::linalg::mini::SVector<Scalar, 3>>
 {
     using namespace math::linalg;
     mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
     // Elastic energy gradient
-    mini::SVector<Scalar, 3> gelastici = mini::Zeros<Scalar, 3, 1>();
-    AccumulateElasticEnergy<TElasticEnergy>(i, fem, params, gelastici, Hi);
-    gelastici *= h2;
+    mini::SVector<Scalar, 3> gi = mini::Zeros<Scalar, 3, 1>();
+    AccumulateElasticEnergy<TElasticEnergy>(i, fem, params, gi, Hi);
+    gi *= h2;
     Hi *= h2;
     // Contact energy gradient (augmented Lagrangian)
-    mini::SVector<Scalar, 3> gcontacti = mini::Zeros<Scalar, 3, 1>();
-    AccumulateContactEnergy(i, params.xb, contact, gcontacti, Hi);
+    AccumulateContactEnergy(i, params.xb, contact, gi, Hi);
     // Kinetic energy gradient (+ Rayleigh damping, which couples through the full Hessian)
-    mini::SVector<Scalar, 3> gkinetici = mini::Zeros<Scalar, 3, 1>();
-    kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gkinetici, Hi);
-    return {Hi, gkinetici, gelastici, gcontacti};
+    kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
+    return {Hi, gi};
 }
 
 /**
@@ -542,20 +528,15 @@ auto BuildVertexEquation(
  * @param xi Current position of vertex i
  * @param gi Total gradient at vertex i
  * @param Hi Hessian at vertex i
- * @param gkinetici Kinetic energy gradient at vertex i (including Rayleigh damping)
- * @param gelastici Elastic energy gradient at vertex i
- * @param gcontacti Contact energy gradient at vertex i
- * @param params Solver parameters (in/out: betaG, gkinetic, gelastic, gcontact, xk, Hnk are
- * updated)
+ * @param params Solver parameters
  * @return Augmentation vector to be added to the gradient
  */
 inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation(
     Index i,
     math::linalg::mini::SVector<Scalar, 3> const& xi,
+    math::linalg::mini::SVector<Scalar, 3> const& gi,
     math::linalg::mini::SMatrix<Scalar, 3, 3> const& Hi,
-    math::linalg::mini::SVector<Scalar, 3> const& gkinetici,
-    math::linalg::mini::SVector<Scalar, 3> const& gelastici,
-    math::linalg::mini::SVector<Scalar, 3> const& gcontacti,
+    contact::MeshDynamics<Scalar, Index> const& contact,
     Params& params)
 {
     using namespace math::linalg;
@@ -565,13 +546,10 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     using mini::ToEigen;
     // Adapt stencil gradient acceleration parameter using the total gradient
     Scalar constexpr kSmallEpsilon{1e-10};
-    mini::SVector<Scalar, 3> gi = gkinetici + gelastici + gcontacti;
     if (params.kp > 0)
     {
         Scalar ngk                    = Norm(gi);
-        mini::SVector<Scalar, 3> gkm1 = FromEigen(params.gkinetic.col(i).template head<3>()) +
-                                        FromEigen(params.gelastic.col(i).template head<3>()) +
-                                        FromEigen(params.gcontact.col(i).template head<3>());
+        mini::SVector<Scalar, 3> gkm1 = FromEigen(params.gk.col(i).template head<3>());
         Scalar ngkm1                  = Norm(gkm1);
         Scalar ndgkm1                 = Norm(gi - gkm1);
         auto xk                       = params.xk.col(i).template head<3>();
@@ -583,34 +561,30 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
         else if (rho > params.rhohat)
             params.betaG(i) += (1 - params.betaG(i)) * params.gammaup;
     }
-    params.gkinetic.col(i) = ToEigen(gkinetici);
-    params.gelastic.col(i) = ToEigen(gelastici);
-    params.gcontact.col(i) = ToEigen(gcontacti);
-    params.xk.col(i)       = ToEigen(xi);
-    params.Hnk(i)          = Norm(Hi);
-    if (params.kp == 0)
-        return gi;
+    params.gk.col(i) = ToEigen(gi);
+    params.xk.col(i) = ToEigen(xi);
+    params.Hnk(i)    = Norm(Hi);
     // Compute weighted stencil gradient augmentation
-    auto nbegin                 = params.GVVp(i);
-    auto nend                   = params.GVVp(i + 1);
-    mini::SVector<Scalar, 3> gp = mini::Zeros<Scalar, 3, 1>();
+    mini::SVector<Scalar, 3> ai = mini::Zeros<Scalar, 3, 1>();
+    if (params.kp == 0)
+        return ai;
+    auto nbegin = params.GVVp(i);
+    auto nend   = params.GVVp(i + 1);
     for (auto n = nbegin; n < nend; ++n)
     {
         auto j = params.GVVadj(n);
-        gp += params.wkinetic * FromEigen(params.gkinetic.col(j)) +
-              params.welastic * FromEigen(params.gelastic.col(j)) +
-              params.wcontact * FromEigen(params.gcontact.col(j));
+        ai += FromEigen(params.gk.col(j).template head<3>());
     }
-    // Also go through contact neighbours and add to `gp`
     // auto const fAddToExpectedFromContacts = [&](auto C, auto stencil) {
     //     using ConstraintAccessorType = decltype(C);
     //     using ContactSetType         = typename ConstraintAccessorType::ContactSetType;
     //     auto const nodes             = contact.template LoadStencil<ContactSetType>(stencil);
     //     for (auto j : nodes)
     //         if (j != i)
-    //             gp += params.wkinetic * FromEigen(params.gkinetic.col(j)) +
-    //                   params.welastic * FromEigen(params.gelastic.col(j)) +
-    //                   params.wcontact * FromEigen(params.gcontact.col(j));
+    //             if (params.colors(j) != params.colors(i))
+    //                 ai += FromEigen(params.gk.col(j).template head<3>());
+    //             else
+    //                 ai += FromEigen(params.gb.col(j).template head<3>());
     // };
     // contact.ForEachPointPointContact(i, fAddToExpectedFromContacts);
     // contact.ForEachPointEdgeContact(i, fAddToExpectedFromContacts);
@@ -626,8 +600,9 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     //     contact.ForEachTrianglePointContact(f, fAddToExpectedFromContacts);
     //     contact.ForEachEdgeEdgeContact(he, fAddToExpectedFromContacts);
     // }
-    Scalar lambda = params.betaG(i) * Dot(gi, gp) / std::max(Dot(gp, gp), kSmallEpsilon);
-    return gi + std::max(lambda, Scalar(0)) * gp;
+    // Add augmentation
+    Scalar lambda = params.betaG(i) * Dot(gi, ai) / std::max(Dot(ai, ai), kSmallEpsilon);
+    return std::max(lambda, Scalar(0)) * ai;
 }
 
 } // namespace detail
@@ -663,18 +638,11 @@ void Iterate(
             Scalar m                         = fem.m(i);
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
             // Compute vertex derivatives
-            auto [Hi, gkinetici, gelastici, gcontacti] = detail::BuildVertexEquation<
+            auto [Hi, gi] = detail::BuildVertexEquation<
                 TElasticEnergy>(i, xi, xti, xtildei, m, h, h2, fem, contact, params);
             // kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
             // Augment gradient with stencil gradient acceleration
-            mini::SVector<Scalar, 3> gi = detail::ComputeStencilGradientAugmentation(
-                i,
-                xi,
-                Hi,
-                gkinetici,
-                gelastici,
-                gcontacti,
-                params);
+            gi += detail::ComputeStencilGradientAugmentation(i, xi, gi, Hi, contact, params);
             // Solve
             kernels::IntegratePositions(
                 gi,
@@ -712,7 +680,9 @@ void InitializeSolve(
     contact.RestoreFeasibility(fem.x, fem.dmask);
     params.k  = 0;
     params.xk = fem.x;
-    params.betaG.setConstant(params.betaG0);
+    if (static_cast<int>(params.eWarmStartMask) <
+        static_cast<int>(EStencilGradientBetaWarmStartMask::TimeStep))
+        params.betaG.setConstant(params.betaG0);
 }
 
 /**
@@ -731,8 +701,7 @@ bool CheckConvergence(
 {
     auto bt  = fem.bdf.BetaTilde();
     auto bt2 = bt * bt;
-    // Use gkinetic as scratch buffer for the assembled total gradient
-    auto& gk = params.gkinetic;
+    auto& gk = params.gk;
     gk.setZero();
     fem.ToElasticGradient(fem.x, gk);
     gk *= bt2;
@@ -819,7 +788,8 @@ void Solve(
         // 3. Setup subproblem
         AssembleBlockDiagonalDynamicsHessian(fem, params);
         UpdatePenaltyParameter(contact, params);
-        if (not params.bWarmStartBeta)
+        if (static_cast<int>(params.eWarmStartMask) <
+            static_cast<int>(EStencilGradientBetaWarmStartMask::Subproblem))
             params.betaG.setConstant(params.betaG0);
         // 4. VBD solve the linear constraint subproblem
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;

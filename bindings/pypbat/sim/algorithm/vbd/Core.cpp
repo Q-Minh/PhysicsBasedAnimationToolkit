@@ -20,6 +20,7 @@ void BindCore(nanobind::module_& m)
     using IndexType  = Index;
     using pbat::sim::algorithm::common::FemElastoDynamics;
     using pbat::sim::algorithm::vbd::ESALPenaltyStiffness;
+    using pbat::sim::algorithm::vbd::EStencilGradientBetaWarmStartMask;
     using pbat::sim::algorithm::vbd::EVertexIntegrationLinearSolver;
     using pbat::sim::algorithm::vbd::Params;
 
@@ -33,6 +34,12 @@ void BindCore(nanobind::module_& m)
     nb::enum_<ESALPenaltyStiffness>(m, "SALPenaltyStiffness")
         .value("LocalMaxRayleighQuotient", ESALPenaltyStiffness::LocalMaxRayleighQuotient)
         .value("GlobalMaxRayleighQuotient", ESALPenaltyStiffness::GlobalMaxRayleighQuotient)
+        .export_values();
+
+    nb::enum_<EStencilGradientBetaWarmStartMask>(m, "StencilGradientBetaWarmStartMask")
+        .value("Never", EStencilGradientBetaWarmStartMask::None)
+        .value("Subproblem", EStencilGradientBetaWarmStartMask::Subproblem)
+        .value("TimeStep", EStencilGradientBetaWarmStartMask::TimeStep)
         .export_values();
 
     m.def(
@@ -167,10 +174,7 @@ void BindCore(nanobind::module_& m)
             nb::arg("rhohat"),
             nb::arg("gammadown")       = Scalar(0.5),
             nb::arg("gammaup")         = Scalar(0.5),
-            nb::arg("warm_start_beta") = false,
-            nb::arg("wkinetic")        = Scalar(1),
-            nb::arg("welastic")        = Scalar(1),
-            nb::arg("wcontact")        = Scalar(1),
+            nb::arg("warm_start_beta") = EStencilGradientBetaWarmStartMask::Subproblem,
             nb::rv_policy::reference_internal,
             "Stencil gradient acceleration parameters.\n\n"
             "Args:\n"
@@ -178,11 +182,9 @@ void BindCore(nanobind::module_& m)
             "    rhohat (float): Stencil gradient density factor\n"
             "    gammadown (float): Stencil gradient beta reduction factor\n"
             "    gammaup (float): Stencil gradient beta increase factor\n"
-            "    warm_start_beta (bool): If true, initialize beta for the first iteration of each "
-            "subproblem to the final beta from the previous subproblem (default: False)\n"
-            "    wkinetic (float): Kinetic weight factor\n"
-            "    welastic (float): Elastic weight factor\n"
-            "    wcontact (float): Contact weight factor\n"
+            "    warm_start_beta (StencilGradientBetaWarmStartMask): If Subproblem, initialize "
+            "beta for the first iteration of each subproblem to the final beta from the previous "
+            "subproblem (default: Subproblem)\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
@@ -273,12 +275,8 @@ void BindCore(nanobind::module_& m)
         .def_rw("gammaup", &Params::gammaup, "Beta increase factor")
         .def_rw(
             "warm_start_beta",
-            &Params::bWarmStartBeta,
-            "If true, initialize beta for the first iteration of each subproblem to the final beta "
-            "from the previous subproblem")
-        .def_rw("wkinetic", &Params::wkinetic, "Stencil gradient weight for kinetic energy term")
-        .def_rw("welastic", &Params::welastic, "Stencil gradient weight for elastic energy term")
-        .def_rw("wcontact", &Params::wcontact, "Stencil gradient weight for contact energy term")
+            &Params::eWarmStartMask,
+            "Warm start mask for stencil gradient augmentation scale initialization")
         .def_rw("k", &Params::k, "Current iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;

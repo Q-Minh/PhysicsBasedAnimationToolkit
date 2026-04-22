@@ -25,6 +25,17 @@ enum class EVertexIntegrationLinearSolver {
 };
 
 /**
+ * @brief Stencil gradient beta warm start masks
+ */
+enum class EStencilGradientBetaWarmStartMask : int {
+    None       = 0,
+    Subproblem = 1 << 0, ///< Warm start beta for each subproblem using the final beta from the
+                         ///< previous subproblem
+    TimeStep = 1 << 1,   ///< Warm start beta for each time step using the final beta from the
+                         ///< previous time step
+};
+
+/**
  * @brief Strategies for updating the augmented Lagrangian penalty parameter
  */
 enum class ESALPenaltyStiffness {
