@@ -1638,12 +1638,13 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
     using OgcStateType = decltype(mOgcState);
     tbb::task_group tg;
     auto const fUpdateContactSet = [&](auto& set, auto& newSet, auto nSourcePrimitives) {
-        set.Union(newSet);
-        set.RemoveIf([&]([[maybe_unused]] TIndex u, [[maybe_unused]] TIndex v, TIndex k) {
-            using ContactSetType = std::remove_cvref_t<decltype(set)>;
-            ConstraintAccessor<ContactSetType> C{set, k};
-            return C.Decay() < mParams.decaylo;
-        });
+        // set.Union(newSet);
+        // set.RemoveIf([&]([[maybe_unused]] TIndex u, [[maybe_unused]] TIndex v, TIndex k) {
+        //     using ContactSetType = std::remove_cvref_t<decltype(set)>;
+        //     ConstraintAccessor<ContactSetType> C{set, k};
+        //     return C.Decay() < mParams.decaylo;
+        // });
+        set.Assign(newSet);
         set.Finalize(nSourcePrimitives);
     };
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
