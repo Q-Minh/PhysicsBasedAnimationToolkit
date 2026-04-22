@@ -1,4 +1,4 @@
-import warp as wp
+import cupy as cp
 import numpy as np
 
 # BDF coefficients (alpha, beta) for steps 1..6
@@ -34,25 +34,130 @@ _BDF_COEFFS = {
 }
 
 
-@wp.struct
 class Bdf:
-    """BDF (Backward Differentiation Formula) time integration scheme for a system of ODEs for an initial value problem (IVP)
-    See `source/pbat/sim/integration/Bdf.h`
+    """BDF (Backward Differentiation Formula) time integration scheme.
+
+    Mirrors `pbat::sim::integration::Bdf` from `source/pbat/sim/integration/Bdf.h`.
+
+    Storage layout:
+        xt:     (order, step, N) circular buffer of past states per derivative order.
+        xtilde: (order, N) aggregated inertia terms.
+
+    Usage:
+        bdf = Bdf(step=1, order=2, dt=0.01)
+        bdf.set_initial_conditions(x0, v0)  # each (N,)
+        for _ in range(num_steps):
+            bdf.construct_equations()
+            xn, vn = solve(bdf)
+            bdf.step(xn, vn)
+
+    Interop CuPy/warp:
+        @wp.kernel
+        def solve(
+            a0: wp.array[wp.vec3f], h: float, x0: wp.array[wp.vec3f], v0: wp.array[wp.vec3f]
+        ):
+            i = wp.tid()
+            v0[i] += h * a0[i]  # pyright: ignore[reportIndexIssue]
+            x0[i] += h * v0[i]  # pyright: ignore[reportIndexIssue]
+
+        bdf = Bdf(step=1, order=2, dt=1e-2)
+        n = 10
+        x0, v0 = wp.zeros((n,), dtype=wp.vec3f), wp.zeros((n,), dtype=wp.vec3f)
+        a0 = cp.tile(cp.array([0.0, 0.0, -9.81], dtype=cp.float32), (n, 1))
+        bdf.set_initial_conditions(cp.asarray(x0).ravel(), cp.asarray(v0).ravel())
+        for _ in range(2):
+            bdf.construct_equations()
+            # option 1:
+            wp.launch(solve, n, [a0, bdf.beta_tilde], [x0, v0])
+            # option 2:
+            v0 = cp.asarray(v0) + bdf.beta_tilde * a0
+            x0 = cp.asarray(x0) + bdf.beta_tilde * cp.asarray(v0)
+            bdf.step(cp.asarray(x0).ravel(), cp.asarray(v0).ravel())
     """
 
-    xt: wp.array3d[
-        wp.vec3f
-    ]  # (N,step,order) matrix of `N`-dimensional states and their time derivatives
-    # s.t. \f$ xt[o,k] = x^(k)(t - k*dt) \f$ for \f$ k = 0, ..., step-1 \f$ and
-    # \f$ o = 0, ..., \text{order}-1 \f$
-    xbar: wp.array2d[
-        wp.vec3f
-    ]  # (N,order) matrix of `N`-dimensional aggregated past states and time
-    # derivatives s.t. xtilde[o] = \f$ \frac{1}{\alpha_s} \sum_{k=t_i-s}^{s-1}
-    # \alpha_k x_k \f$ for \f$ o = 0, ..., \text{order}-1 \f$
-    t: wp.int32  # current time step index
-    h: wp.float32  # time step size
-    order: wp.int32  # ODE order (1 for quasistatics, 2 for elastodynamics)
-    step: wp.int32  # BDF step (1..6)
-    alpha: wp.array[wp.float32]  # (step,) BDF interpolation coefficients
-    beta: wp.float32  # BDF forcing term coefficient
+    def __init__(self, step: int = 1, order: int = 2, dt: float = 0.01):
+        assert 1 <= step <= 6
+        assert order > 0
+        self._step = step
+        self._order = order
+        self._ti = 0
+        self._h = dt
+        self._alpha, self._beta = _BDF_COEFFS[step]
+        self.xt: cp.ndarray = None  # (order, step, N)
+        self.xtilde: cp.ndarray = None  # (order, N)
+
+    @property
+    def order(self) -> int:
+        return self._order
+
+    @property
+    def num_steps(self) -> int:
+        return self._step
+
+    @property
+    def ti(self) -> int:
+        return self._ti
+
+    @property
+    def h(self) -> float:
+        return self._h
+
+    @h.setter
+    def h(self, dt: float):
+        assert dt > 0
+        self._h = dt
+
+    @property
+    def alpha(self) -> cp.ndarray:
+        return self._alpha
+
+    @property
+    def beta(self) -> float:
+        return self._beta
+
+    @property
+    def beta_tilde(self) -> float:
+        return self._beta * self._h
+
+    def _state_index(self, k: int) -> int:
+        """Map logical index k to circular buffer column: (ti + k) % step."""
+        return (self._ti + k) % self._step
+
+    def state(self, k: int, o: int = 0) -> cp.ndarray:
+        """Return xt[o, (ti+k)%step] which is x^{(o)}_{ti - step + k}, shape (N,)."""
+        return self.xt[o, self._state_index(k)]
+
+    def current_state(self, o: int = 0) -> cp.ndarray:
+        """Current state x^{(o)}_{ti}, shape (N,)."""
+        return self.state(self._step - 1, o)
+
+    def inertia(self, o: int = 0) -> cp.ndarray:
+        """Inertia xtilde[o], shape (N,)."""
+        return self.xtilde[o]
+
+    def set_initial_conditions(self, *x0: cp.ndarray):
+        """Set ICs. Pass `order` arrays each of shape (N,)."""
+        assert len(x0) == self._order
+        self._ti = 0
+        n = x0[0].shape[0]
+        self.xt = cp.zeros((self._order, self._step, n), dtype=cp.float32)
+        self.xtilde = cp.zeros((self._order, n), dtype=cp.float32)
+        for o in range(self._order):
+            self.xt[o, :] = x0[o][cp.newaxis, :]
+
+    def construct_equations(self):
+        """Compute xtilde[o] = sum_k alpha[k] * State(k, o) for all o."""
+        self.xtilde[:] = 0
+        for o in range(self._order):
+            # We could implement this as a matrix-multiplication by permuting
+            # alpha similarly to our circular buffer on self.xt
+            for k in range(self._step):
+                self.xtilde[o] += self._alpha[k] * self.state(k, o)
+
+    def step(self, *x_new: cp.ndarray):
+        """Advance by one time step. Pass `order` arrays each of shape (N,)."""
+        assert len(x_new) == self._order
+        self._ti += 1
+        kt = self._state_index(self._step - 1)
+        for o in range(self._order):
+            self.xt[o, kt] = x_new[o]
