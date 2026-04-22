@@ -2639,7 +2639,7 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadPoint(
         case EGeometry::Static: xi = FromEigen(mXstatic.col(i).template topRows<kDims>()); break;
         default: break;
     }
-    return i;
+    return i + mOgcState.mPointGeometryPrefix[g];
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
