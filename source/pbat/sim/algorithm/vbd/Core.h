@@ -588,6 +588,8 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     params.gcontact.col(i) = ToEigen(gcontacti);
     params.xk.col(i)       = ToEigen(xi);
     params.Hnk(i)          = Norm(Hi);
+    if (params.kp == 0)
+        return gi;
     // Compute weighted stencil gradient augmentation
     auto nbegin                 = params.GVVp(i);
     auto nend                   = params.GVVp(i + 1);
@@ -595,9 +597,35 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     for (auto n = nbegin; n < nend; ++n)
     {
         auto j = params.GVVadj(n);
-        gp +=
-            params.wkinetic * gkinetici + params.welastic * gelastici + params.wcontact * gcontacti;
+        gp += params.wkinetic * FromEigen(params.gkinetic.col(j)) +
+              params.welastic * FromEigen(params.gelastic.col(j)) +
+              params.wcontact * FromEigen(params.gcontact.col(j));
     }
+    // Also go through contact neighbours and add to `gp`
+    // auto const fAddToExpectedFromContacts = [&](auto C, auto stencil) {
+    //     using ConstraintAccessorType = decltype(C);
+    //     using ContactSetType         = typename ConstraintAccessorType::ContactSetType;
+    //     auto const nodes             = contact.template LoadStencil<ContactSetType>(stencil);
+    //     for (auto j : nodes)
+    //         if (j != i)
+    //             gp += params.wkinetic * FromEigen(params.gkinetic.col(j)) +
+    //                   params.welastic * FromEigen(params.gelastic.col(j)) +
+    //                   params.wcontact * FromEigen(params.gcontact.col(j));
+    // };
+    // contact.ForEachPointPointContact(i, fAddToExpectedFromContacts);
+    // contact.ForEachPointEdgeContact(i, fAddToExpectedFromContacts);
+    // contact.ForEachPointTriangleContact(i, fAddToExpectedFromContacts);
+    // auto const& dm     = contact.DynamicMeshes();
+    // auto const hebegin = dm.GVHEp(i);
+    // auto const heend   = dm.GVHEp(i + 1);
+    // for (auto k = hebegin; k < heend; ++k)
+    // {
+    //     auto const he = dm.GVHEadj(k);
+    //     auto const f  = geometry::FaceOfHalfEdge(he);
+    //     contact.ForEachEdgePointContact(he, fAddToExpectedFromContacts);
+    //     contact.ForEachTrianglePointContact(f, fAddToExpectedFromContacts);
+    //     contact.ForEachEdgeEdgeContact(he, fAddToExpectedFromContacts);
+    // }
     Scalar lambda = params.betaG(i) * Dot(gi, gp) / std::max(Dot(gp, gp), kSmallEpsilon);
     return gi + std::max(lambda, Scalar(0)) * gp;
 }
