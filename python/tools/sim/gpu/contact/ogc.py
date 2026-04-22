@@ -238,6 +238,32 @@ def _vertex_facet_contact_detection(
     query = wp.tile_bvh_query_aabb(
         ogc.f_bvh_id, xi, xi  # pyright: ignore[reportArgumentType]
     )
+
+    # TODO: Use block-parallelism to compute contact pairs
+    # 1. Declare 3 "count" tiles for vv,ve,vf contacts, where
+    # each thread owns an element (partial count) in the tile
+    # 2. Declare 3 "vv,ve,vf" 2D tiles for actually storing
+    # the contact pairs where each thread owns a column with
+    # fixed capacity (the row dims) as a partial pair list
+    # 3. During bvh traversal, each thread increments its own "count"
+    # whenever it finds a contact pair, and stores the pair neighbor
+    # in its column of the right vv, ve or vf tile
+    # 4. Use a tile scan to compute a prefix sum of the "count" tiles
+    # to determine the offset of each thread's contact pairs in the global
+    # contact pair arrays. The total count will be the last element of
+    # "count".
+    # 5. If there are contacts (i.e. total block count > 0):
+    # a. Increment (with global atomicity) the global contact pair count
+    # by the total count in this block, and write the "block count" pairs
+    # to the global list.
+    # b. Write the block total count to global memory for this block.
+    # 6. Outside of this kernel, use the block total counts to compute
+    # the prefix sum of each block's contact pair offsets,
+    # and then simply sort the global contact pair arrays. We can sort
+    # the global vv,ve,vf independently via stream parallelism.
+    # 7. Use kernel fusion to fuse the vertex-facet and edge-edge contact
+    # detection kernels, so that we can keep consistent counts/offsets/sums/pairs.
+
     candidates = wp.tile_bvh_query_next(query)
     while candidates[local_tid] >= 0:  # pyright: ignore[reportIndexIssue]
         f = candidates[local_tid]  # pyright: ignore[reportIndexIssue]
