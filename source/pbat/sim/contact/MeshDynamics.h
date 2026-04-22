@@ -10,6 +10,7 @@
 #ifndef PBAT_SIM_CONTACT_MESHDYNAMICS_H
 #define PBAT_SIM_CONTACT_MESHDYNAMICS_H
 
+#include "Constraints.h"
 #include "MultiMesh.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
@@ -18,6 +19,7 @@
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/Device.h"
 #include "pbat/geometry/HalfEdges.h"
+#include "pbat/graph/DenseAdjacencySet.h"
 #include "pbat/io/Archive.h"
 #include "pbat/math/linalg/FilterEigenvalues.h"
 #include "pbat/math/linalg/mini/Matrix.h"
@@ -564,80 +566,6 @@ class MeshDynamics
      */
     std::size_t NumEdgeEdgeContacts() const;
     /**
-     * @brief Get the number of vertex-environment contacts
-     */
-    std::size_t NumVertexEnvironmentContacts() const;
-    /**
-     * @brief Get the number of edge-environment contacts
-     */
-    std::size_t NumEdgeEnvironmentContacts() const;
-    /**
-     * @brief Get the number of triangle-environment contacts
-     */
-    std::size_t NumTriangleEnvironmentContacts() const;
-    /**
-     * @brief Get the vertex-vertex contact energies
-     * @return Vector of vertex-vertex contact energies
-     */
-    auto VertexVertexEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
-    {
-        return mVertexVertexEnergies;
-    }
-    /**
-     * @brief Get the vertex-edge contact energies
-     * @return Vector of vertex-edge contact energies
-     */
-    auto VertexEdgeEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
-    {
-        return mVertexEdgeEnergies;
-    }
-    /**
-     * @brief Get the vertex-triangle contact energies
-     * @return Vector of vertex-triangle contact energies
-     */
-    auto VertexTriangleEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
-    {
-        return mVertexTriangleEnergies;
-    }
-    /**
-     * @brief Get the edge-edge contact energies
-     * @return Vector of edge-edge contact energies
-     */
-    auto EdgeEdgeEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
-    {
-        return mEdgeEdgeEnergies;
-    }
-    /**
-     * @brief Get the vertex-environment contact energies
-     * @return Vector of vertex-environment contact energies
-     */
-    auto VertexEnvironmentEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 1>> const&
-    {
-        return mVertexEnvironmentEnergies;
-    }
-    /**
-     * @brief Get the edge-environment contact energies
-     * @return Vector of edge-environment contact energies
-     */
-    auto EdgeEnvironmentEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
-    {
-        return mEdgeEnvironmentEnergies;
-    }
-    /**
-     * @brief Get the triangle-environment contact energies
-     * @return Vector of triangle-environment contact energies
-     */
-    auto TriangleEnvironmentEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
-    {
-        return mTriangleEnvironmentEnergies;
-    }
-    /**
      * @brief Get the Params object
      * @return Reference to the parameters
      */
@@ -685,7 +613,50 @@ class MeshDynamics
      * @return ogc::State<ScalarType, IndexType>&
      */
     auto OgcState() -> ogc::State<ScalarType, IndexType>& { return mOgcState; }
-
+    /**
+     * @brief Get the point-point contact adjacency set
+     * @return Reference to the point-point contact adjacency set
+     */
+    auto PointPointContacts() const
+        -> graph::DenseAdjacencySet<PointPointConstraint<ScalarType>, IndexType> const&
+    {
+        return mPointPointContacts;
+    }
+    /**
+     * @brief Get the point-edge contact adjacency set
+     * @return Reference to the point-edge contact adjacency set
+     */
+    auto PointEdgeContacts() const
+        -> graph::DenseAdjacencySet<PointEdgeConstraint<ScalarType>, IndexType> const&
+    {
+        return mPointEdgeContacts;
+    }
+    /**
+     * @brief Get the point-triangle contact adjacency set
+     * @return Reference to the point-triangle contact adjacency set
+     */
+    auto PointTriangleContacts() const
+        -> graph::DenseAdjacencySet<PointTriangleConstraint<ScalarType>, IndexType> const&
+    {
+        return mPointTriangleContacts;
+    }
+    /**
+     * @brief Get the edge-edge contact adjacency set
+     * @return Reference to the edge-edge contact adjacency set
+     */
+    auto EdgeEdgeContacts() const
+        -> graph::DenseAdjacencySet<EdgeEdgeConstraint<ScalarType>, IndexType> const&
+    {
+        return mEdgeEdgeContacts;
+    }
+    /**
+     * @brief Reduce the thread-local contact sets from ogc::State into the contact adjacency sets
+     *
+     * This method merges all thread-local contact pairs from mOgcState into the
+     * mPointPointContacts, mPointEdgeContacts, mPointTriangleContacts, and mEdgeEdgeContacts
+     * adjacency sets.
+     */
+    void ReduceContactSets();
     /**
      * @brief Serialize to archive
      * @param archive Archive to serialize to
@@ -712,39 +683,20 @@ class MeshDynamics
     Eigen::Index mNumTruncatedPoints{0};         ///< Number of truncated points in last truncation
     bool mRequiresBoundsRecomputation{true};     ///< Whether bounds recomputation is required
 
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 2>>
-        mVertexVertexEnergies; ///< Vertex-vertex energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 3>>
-        mVertexEdgeEnergies; ///< Vertex-edge energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 4>>
-        mVertexTriangleEnergies; ///< Vertex-triangle energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 4>>
-        mEdgeEdgeEnergies; ///< Edge-edge energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 1>>
-        mVertexEnvironmentEnergies; ///< Vertex-environment energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 2>>
-        mEdgeEnvironmentEnergies; ///< Edge-environment energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 3>>
-        mTriangleEnvironmentEnergies; ///< Triangle-environment energies
-
     /**
-     * @brief Resize energy buffers for each contact type
-     * @param nVertexVertexContacts Number of vertex-vertex dynamic contacts
-     * @param nVertexEdgeContacts Number of vertex-edge dynamic contacts
-     * @param nVertexTriangleContacts Number of vertex-triangle dynamic contacts
-     * @param nEdgeEdgeContacts Number of edge-edge dynamic contacts
-     * @param nVertexEnvironmentContacts Number of vertex-environment static contacts
-     * @param nEdgeEnvironmentContacts Number of edge-environment static contacts
-     * @param nTriangleEnvironmentContacts Number of triangle-environment static contacts
+     * @brief Contact constraint adjacency sets
+     *
+     * These store the contact pairs along with their associated constraint data.
+     * The adjacency sets are populated by reducing the thread-local contact sets from ogc::State.
      */
-    void ReserveContactEnergies(
-        Eigen::Index nVertexVertexContacts,
-        Eigen::Index nVertexEdgeContacts,
-        Eigen::Index nVertexTriangleContacts,
-        Eigen::Index nEdgeEdgeContacts,
-        Eigen::Index nVertexEnvironmentContacts,
-        Eigen::Index nEdgeEnvironmentContacts,
-        Eigen::Index nTriangleEnvironmentContacts);
+    graph::DenseAdjacencySet<PointPointConstraint<ScalarType>, IndexType>
+        mPointPointContacts; ///< Point-point contact pairs with constraint data
+    graph::DenseAdjacencySet<PointEdgeConstraint<ScalarType>, IndexType>
+        mPointEdgeContacts; ///< Point-edge contact pairs with constraint data
+    graph::DenseAdjacencySet<PointTriangleConstraint<ScalarType>, IndexType>
+        mPointTriangleContacts; ///< Point-triangle contact pairs with constraint data
+    graph::DenseAdjacencySet<EdgeEdgeConstraint<ScalarType>, IndexType>
+        mEdgeEdgeContacts; ///< Edge-edge contact pairs with constraint data
 };
 
 /**
@@ -1305,278 +1257,6 @@ void MeshDynamics<TScalar, TIndex>::SetDynamicGeometry(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedX, class TDerivedXt>
-inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
-    Eigen::MatrixBase<TDerivedX> const& _x,
-    Eigen::MatrixBase<TDerivedXt> const& _xt,
-    ScalarType h,
-    int eFlags)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeEnergies");
-    Eigen::Index nVertexVertexContacts{0};
-    Eigen::Index nVertexEdgeContacts{0};
-    Eigen::Index nVertexTriangleContacts{0};
-    Eigen::Index nEdgeEdgeContacts{0};
-    Eigen::Index nVertexEnvironmentContacts{0};
-    Eigen::Index nEdgeEnvironmentContacts{0};
-    Eigen::Index nTriangleEnvironmentContacts{0};
-    ForEachMeshMeshContact(
-        [&](auto /*i*/, auto /*j*/) { ++nVertexVertexContacts; },
-        [&](auto /*i*/, auto /*einds*/) { ++nVertexEdgeContacts; },
-        [&](auto /*i*/, auto /*finds*/) { ++nVertexTriangleContacts; },
-        [&](auto /*eindsi*/, auto /*eindsj*/) { ++nEdgeEdgeContacts; });
-    ForEachMeshEnvironmentContact(
-        [&](auto /*i*/, auto /*j*/) { ++nVertexEnvironmentContacts; },
-        [&](auto /*i*/, auto /*einds*/) { ++nVertexEnvironmentContacts; },
-        [&](auto /*i*/, auto /*finds*/) { ++nVertexEnvironmentContacts; },
-        [&](auto /*eindsi*/, auto /*j*/) { ++nEdgeEnvironmentContacts; },
-        [&](auto /*eindsi*/, auto /*eindsj*/) { ++nEdgeEnvironmentContacts; },
-        [&](auto /*finds*/, auto /*j*/) { ++nTriangleEnvironmentContacts; });
-    ReserveContactEnergies(
-        nVertexVertexContacts,
-        nVertexEdgeContacts,
-        nVertexTriangleContacts,
-        nEdgeEdgeContacts,
-        nVertexEnvironmentContacts,
-        nEdgeEnvironmentContacts,
-        nTriangleEnvironmentContacts);
-    mVertexVertexEnergies.clear();
-    mVertexEdgeEnergies.clear();
-    mVertexTriangleEnergies.clear();
-    mEdgeEdgeEnergies.clear();
-    mVertexEnvironmentEnergies.clear();
-    mEdgeEnvironmentEnergies.clear();
-    mTriangleEnvironmentEnergies.clear();
-    // Compute energies
-    using math::linalg::mini::FromEigen;
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    ScalarType r     = mParams.mOgcParams.r;
-    ScalarType epsv  = mParams.epsv;
-    ScalarType epsvh = epsv * h;
-    ScalarType mu    = mParams.mu;
-    ScalarType kc    = mParams.kc;
-    ScalarType kcp   = mParams.kcp;
-    ScalarType b     = mParams.b;
-    auto const x     = _x.reshaped(3, _x.size() / 3);
-    auto const xt    = _xt.reshaped(3, _xt.size() / 3);
-    ForEachMeshMeshContact(
-        [&](IndexType i, IndexType j) {
-            Eigen::Vector<ScalarType, 6> xvv, xtvv;
-            xvv << x.col(i), x.col(j);
-            xtvv << xt.col(i), xt.col(j);
-            auto E = VertexVertexContactEnergy<ScalarType, IndexType>(
-                FromEigen(xvv),
-                FromEigen(xtvv),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i, j};
-            mVertexVertexEnergies.push_back(std::move(E));
-        },
-        [&](IndexType i, Eigen::Vector<IndexType, 2> const& einds) {
-            Eigen::Vector<ScalarType, 9> xve, xtve;
-            xve << x.col(i), x.col(einds(0)), x.col(einds(1));
-            xtve << xt.col(i), xt.col(einds(0)), xt.col(einds(1));
-            auto E = VertexEdgeContactEnergy<ScalarType, IndexType>(
-                FromEigen(xve),
-                FromEigen(xtve),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i, einds(0), einds(1)};
-            mVertexEdgeEnergies.push_back(std::move(E));
-        },
-        [&](IndexType i, Eigen::Vector<IndexType, 3> const& finds) {
-            Eigen::Vector<ScalarType, 12> xvt, xtvt;
-            xvt << x.col(i), x.col(finds(0)), x.col(finds(1)), x.col(finds(2));
-            xtvt << xt.col(i), xt.col(finds(0)), xt.col(finds(1)), xt.col(finds(2));
-            auto E = VertexTriangleContactEnergy<ScalarType, IndexType>(
-                FromEigen(xvt),
-                FromEigen(xtvt),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i, finds(0), finds(1), finds(2)};
-            mVertexTriangleEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 2> const& eindsi, Eigen::Vector<IndexType, 2> const& eindsj) {
-            Eigen::Vector<ScalarType, 12> xee, xtee;
-            xee << x.col(eindsi(0)), x.col(eindsi(1)), x.col(eindsj(0)), x.col(eindsj(1));
-            xtee << xt.col(eindsi(0)), xt.col(eindsi(1)), xt.col(eindsj(0)), xt.col(eindsj(1));
-            auto E = EdgeEdgeContactEnergy<ScalarType, IndexType>(
-                FromEigen(xee),
-                FromEigen(xtee),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {eindsi(0), eindsi(1), eindsj(0), eindsj(1)};
-            mEdgeEdgeEnergies.push_back(std::move(E));
-        });
-    ForEachMeshEnvironmentContact(
-        [&](IndexType i, IndexType j) {
-            Eigen::Vector<ScalarType, 3> const xv  = x.col(i);
-            Eigen::Vector<ScalarType, 3> const xtv = xt.col(i);
-            Eigen::Vector<ScalarType, 3> const yj  = mXstatic.col(j);
-            auto E = VertexEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xv),
-                FromEigen(xtv),
-                FromEigen(yj),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i};
-            mVertexEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](IndexType i, Eigen::Vector<IndexType, 2> const& eindsj) {
-            Eigen::Vector<ScalarType, 3> const xv  = x.col(i);
-            Eigen::Vector<ScalarType, 3> const xtv = xt.col(i);
-            Eigen::Vector<ScalarType, 3> const yc  = mXstatic.col(eindsj(0));
-            Eigen::Vector<ScalarType, 3> const yd  = mXstatic.col(eindsj(1));
-            SVector<ScalarType, 3> const xcp = geometry::ClosestPointQueries::PointOnLineSegment(
-                FromEigen(xv),
-                FromEigen(yc),
-                FromEigen(yd));
-            auto E = VertexEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xv),
-                FromEigen(xtv),
-                xcp,
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i};
-            mVertexEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](IndexType i, Eigen::Vector<IndexType, 3> const& findsj) {
-            Eigen::Vector<ScalarType, 3> const xv  = x.col(i);
-            Eigen::Vector<ScalarType, 3> const xtv = xt.col(i);
-            Eigen::Vector<ScalarType, 3> const ya  = mXstatic.col(findsj(0));
-            Eigen::Vector<ScalarType, 3> const yb  = mXstatic.col(findsj(1));
-            Eigen::Vector<ScalarType, 3> const yc  = mXstatic.col(findsj(2));
-            SVector<ScalarType, 3> const xcp       = geometry::ClosestPointQueries::PointInTriangle(
-                FromEigen(xv),
-                FromEigen(ya),
-                FromEigen(yb),
-                FromEigen(yc));
-            auto E = VertexEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xv),
-                FromEigen(xtv),
-                xcp,
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i};
-            mVertexEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 2> const& eindsi, IndexType j) {
-            Eigen::Vector<ScalarType, 6> xe, xte;
-            xe << x.col(eindsi(0)), x.col(eindsi(1));
-            xte << xt.col(eindsi(0)), xt.col(eindsi(1));
-            Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
-            // Closest point on dynamic edge to static vertex
-            SVector<ScalarType, 2> const uv = geometry::ClosestPointQueries::UvPointOnLineSegment(
-                FromEigen(yj),
-                FromEigen(xe.template head<3>()),
-                FromEigen(xe.template tail<3>()));
-            auto E = EdgeEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xe),
-                FromEigen(xte),
-                uv,
-                FromEigen(yj),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {eindsi(0), eindsi(1)};
-            mEdgeEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 2> const& eindsi, Eigen::Vector<IndexType, 2> const& eindsj) {
-            Eigen::Vector<ScalarType, 6> xe, xte;
-            xe << x.col(eindsi(0)), x.col(eindsi(1));
-            xte << xt.col(eindsi(0)), xt.col(eindsi(1));
-            Eigen::Vector<ScalarType, 3> const yc = mXstatic.col(eindsj(0));
-            Eigen::Vector<ScalarType, 3> const yd = mXstatic.col(eindsj(1));
-            SVector<ScalarType, 2> const st       = geometry::ClosestPointQueries::LineSegments(
-                FromEigen(xe.template head<3>()),
-                FromEigen(xe.template tail<3>()),
-                FromEigen(yc),
-                FromEigen(yd));
-            SVector<ScalarType, 2> const u{1 - st(0), st(0)};
-            Eigen::Vector<ScalarType, 3> const xcp = (1 - st(1)) * yc + st(1) * yd;
-            auto E = EdgeEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xe),
-                FromEigen(xte),
-                u,
-                FromEigen(xcp),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {eindsi(0), eindsi(1)};
-            mEdgeEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 3> const& findsi, IndexType j) {
-            Eigen::Vector<ScalarType, 9> xf, xtf;
-            xf << x.col(findsi(0)), x.col(findsi(1)), x.col(findsi(2));
-            xtf << xt.col(findsi(0)), xt.col(findsi(1)), xt.col(findsi(2));
-            Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
-            SVector<ScalarType, 3> const uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
-                FromEigen(yj),
-                FromEigen(xf.template segment<3>(0)),
-                FromEigen(xf.template segment<3>(3)),
-                FromEigen(xf.template segment<3>(6)));
-            auto E = TriangleEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xf),
-                FromEigen(xtf),
-                uvw,
-                FromEigen(yj),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {findsi(0), findsi(1), findsi(2)};
-            mTriangleEnvironmentEnergies.push_back(std::move(E));
-        });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline TScalar MeshDynamics<TScalar, TIndex>::Potential() const
 {
     ScalarType E{0};
@@ -1611,70 +1291,55 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline std::size_t MeshDynamics<TScalar, TIndex>::NumContacts() const
 {
     return NumVertexVertexContacts() + NumVertexEdgeContacts() + NumVertexTriangleContacts() +
-           NumEdgeEdgeContacts() + NumVertexEnvironmentContacts() + NumEdgeEnvironmentContacts() +
-           NumTriangleEnvironmentContacts();
+           NumEdgeEdgeContacts();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexVertexContacts() const
 {
-    return mVertexVertexEnergies.size();
+    return mPointPointContacts.Size();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexEdgeContacts() const
 {
-    return mVertexEdgeEnergies.size();
+    return mPointEdgeContacts.Size();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexTriangleContacts() const
 {
-    return mVertexTriangleEnergies.size();
+    return mPointTriangleContacts.Size();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline std::size_t MeshDynamics<TScalar, TIndex>::NumEdgeEdgeContacts() const
 {
-    return mEdgeEdgeEnergies.size();
+    return mEdgeEdgeContacts.Size();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexEnvironmentContacts() const
+inline void MeshDynamics<TScalar, TIndex>::ReduceContactSets()
 {
-    return mVertexEnvironmentEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumEdgeEnvironmentContacts() const
-{
-    return mEdgeEnvironmentEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumTriangleEnvironmentContacts() const
-{
-    return mTriangleEnvironmentEnergies.size();
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ReduceContactSets");
+    mPointPointContacts.Reduce(mOgcState.mXX.begin(), mOgcState.mXX.end());
+    mPointEdgeContacts.Reduce(mOgcState.mXE.begin(), mOgcState.mXE.end());
+    mPointTriangleContacts.Reduce(mOgcState.mXF.begin(), mOgcState.mXF.end());
+    mEdgeEdgeContacts.Reduce(mOgcState.mEE.begin(), mOgcState.mEE.end());
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedg>
-inline void MeshDynamics<TScalar, TIndex>::ToGradient(Eigen::MatrixBase<TDerivedg>& g) const
+inline void
+MeshDynamics<TScalar, TIndex>::ToGradient([[maybe_unused]] Eigen::MatrixBase<TDerivedg>& g) const
 {
-    auto G                   = g.derived().reshaped(3, g.size() / 3);
-    auto fAccumulateGradient = [&](auto const& energies) {
-        using math::linalg::mini::ToEigen;
-        for (auto const& e : energies)
-            G(Eigen::placeholders::all, e.stencil).reshaped() +=
-                ToEigen(e.gradEn) + ToEigen(e.gradEf);
-    };
-    fAccumulateGradient(mVertexVertexEnergies);
-    fAccumulateGradient(mVertexEdgeEnergies);
-    fAccumulateGradient(mVertexTriangleEnergies);
-    fAccumulateGradient(mEdgeEdgeEnergies);
-    fAccumulateGradient(mVertexEnvironmentEnergies);
-    fAccumulateGradient(mEdgeEnvironmentEnergies);
-    fAccumulateGradient(mTriangleEnvironmentEnergies);
+    // auto G                   = g.derived().reshaped(3, g.size() / 3);
+    // auto fAccumulateGradient = [&](auto const& energies) {
+    //     using math::linalg::mini::ToEigen;
+    //     for (auto const& e : energies)
+    //         G(Eigen::placeholders::all, e.stencil).reshaped() +=
+    //             ToEigen(e.gradEn) + ToEigen(e.gradEf);
+    // };
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1691,19 +1356,19 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedg>
 inline void MeshDynamics<TScalar, TIndex>::ToNormalGradient(Eigen::MatrixBase<TDerivedg>& g) const
 {
-    auto G                   = g.derived().reshaped(3, g.size() / 3);
-    auto fAccumulateGradient = [&](auto const& energies) {
-        using math::linalg::mini::ToEigen;
-        for (auto const& e : energies)
-            G(Eigen::placeholders::all, e.stencil).reshaped() += ToEigen(e.gradEn);
-    };
-    fAccumulateGradient(mVertexVertexEnergies);
-    fAccumulateGradient(mVertexEdgeEnergies);
-    fAccumulateGradient(mVertexTriangleEnergies);
-    fAccumulateGradient(mEdgeEdgeEnergies);
-    fAccumulateGradient(mVertexEnvironmentEnergies);
-    fAccumulateGradient(mEdgeEnvironmentEnergies);
-    fAccumulateGradient(mTriangleEnvironmentEnergies);
+    // auto G                   = g.derived().reshaped(3, g.size() / 3);
+    // auto fAccumulateGradient = [&](auto const& energies) {
+    //     using math::linalg::mini::ToEigen;
+    //     for (auto const& e : energies)
+    //         G(Eigen::placeholders::all, e.stencil).reshaped() += ToEigen(e.gradEn);
+    // };
+    // fAccumulateGradient(mVertexVertexEnergies);
+    // fAccumulateGradient(mVertexEdgeEnergies);
+    // fAccumulateGradient(mVertexTriangleEnergies);
+    // fAccumulateGradient(mEdgeEdgeEnergies);
+    // fAccumulateGradient(mVertexEnvironmentEnergies);
+    // fAccumulateGradient(mEdgeEnvironmentEnergies);
+    // fAccumulateGradient(mTriangleEnvironmentEnergies);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1721,38 +1386,19 @@ template <class TDerivedg>
 inline void
 MeshDynamics<TScalar, TIndex>::ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g) const
 {
-    auto G                   = g.derived().reshaped(3, g.size() / 3);
-    auto fAccumulateGradient = [&](auto const& energies) {
-        using math::linalg::mini::ToEigen;
-        for (auto const& e : energies)
-            G(Eigen::placeholders::all, e.stencil).reshaped() += ToEigen(e.gradEf);
-    };
-    fAccumulateGradient(mVertexVertexEnergies);
-    fAccumulateGradient(mVertexEdgeEnergies);
-    fAccumulateGradient(mVertexTriangleEnergies);
-    fAccumulateGradient(mEdgeEdgeEnergies);
-    fAccumulateGradient(mVertexEnvironmentEnergies);
-    fAccumulateGradient(mEdgeEnvironmentEnergies);
-    fAccumulateGradient(mTriangleEnvironmentEnergies);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::ReserveContactEnergies(
-    Eigen::Index nVertexVertexContacts,
-    Eigen::Index nVertexEdgeContacts,
-    Eigen::Index nVertexTriangleContacts,
-    Eigen::Index nEdgeEdgeContacts,
-    Eigen::Index nVertexEnvironmentContacts,
-    Eigen::Index nEdgeEnvironmentContacts,
-    Eigen::Index nTriangleEnvironmentContacts)
-{
-    mVertexVertexEnergies.reserve(static_cast<std::size_t>(nVertexVertexContacts));
-    mVertexEdgeEnergies.reserve(static_cast<std::size_t>(nVertexEdgeContacts));
-    mVertexTriangleEnergies.reserve(static_cast<std::size_t>(nVertexTriangleContacts));
-    mEdgeEdgeEnergies.reserve(static_cast<std::size_t>(nEdgeEdgeContacts));
-    mVertexEnvironmentEnergies.reserve(static_cast<std::size_t>(nVertexEnvironmentContacts));
-    mEdgeEnvironmentEnergies.reserve(static_cast<std::size_t>(nEdgeEnvironmentContacts));
-    mTriangleEnvironmentEnergies.reserve(static_cast<std::size_t>(nTriangleEnvironmentContacts));
+    // auto G                   = g.derived().reshaped(3, g.size() / 3);
+    // auto fAccumulateGradient = [&](auto const& energies) {
+    //     using math::linalg::mini::ToEigen;
+    //     for (auto const& e : energies)
+    //         G(Eigen::placeholders::all, e.stencil).reshaped() += ToEigen(e.gradEf);
+    // };
+    // fAccumulateGradient(mVertexVertexEnergies);
+    // fAccumulateGradient(mVertexEdgeEnergies);
+    // fAccumulateGradient(mVertexTriangleEnergies);
+    // fAccumulateGradient(mEdgeEdgeEnergies);
+    // fAccumulateGradient(mVertexEnvironmentEnergies);
+    // fAccumulateGradient(mEdgeEnvironmentEnergies);
+    // fAccumulateGradient(mTriangleEnvironmentEnergies);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1849,7 +1495,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointDynamicMeshContact(
     //             geometry::OutgoingVertex(mDynamicMeshes.F, he)};
     //         func(einds);
     //     },
-    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
+    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType
+    //     f) {
     //         Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
     //         func(finds);
     //     });
@@ -1881,7 +1528,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointStaticMeshContact(
     //             geometry::OutgoingVertex(mStaticMeshes.F, he)};
     //         func(einds);
     //     },
-    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
+    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType
+    //     f) {
     //         Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
     //         func(finds);
     //     });
@@ -1901,12 +1549,14 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeDynamicMeshContact(
     //     hei,
     //     [this,
     //      &eindsi,
-    //      func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType j) {
+    //      func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType
+    //      j) {
     //         func(eindsi, j);
     //     },
     //     [this,
     //      &eindsi,
-    //      func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
+    //      func =
+    //      std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
     //         IndexType hej) {
     //         Eigen::Vector<IndexType, 2> const eindsj{
     //             geometry::IncomingVertex(mDynamicMeshes.F, hej),
@@ -1931,7 +1581,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContact(
     //         IndexType vj) { func(eindsi, vj); },
     //     [this,
     //      &eindsi,
-    //      func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
+    //      func =
+    //      std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
     //         IndexType hej) {
     //         Eigen::Vector<IndexType, 2> const eindsj{
     //             geometry::IncomingVertex(mStaticMeshes.F, hej),
@@ -1984,7 +1635,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachDynamicPointContactOnTriangle(
 {
     // mOgcState.ForEachDynamicVertexContactOfTriangle(
     //     fi,
-    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType i) {
+    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType
+    //     i) {
     //         func(i);
     //     });
 }
@@ -2060,7 +1712,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshMeshContact(
         auto const i = mDynamicMeshes.V(v);
         // mOgcState.ForEachDynamicContactFaceOfVertex(
         //     v,
-        //     [&, func = std::forward<FOnVertexVertexContact>(fOnVertexVertexContact)](IndexType j) {
+        //     [&, func = std::forward<FOnVertexVertexContact>(fOnVertexVertexContact)](IndexType j)
+        //     {
         //         func(i, j);
         //     },
         //     [&, func = std::forward<FOnVertexEdgeContact>(fOnVertexEdgeContact)](IndexType he) {
@@ -2070,7 +1723,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshMeshContact(
         //         func(i, einds);
         //     },
         //     [&,
-        //      func = std::forward<FOnVertexTriangleContact>(fOnVertexTriangleContact)](IndexType f) {
+        //      func = std::forward<FOnVertexTriangleContact>(fOnVertexTriangleContact)](IndexType
+        //      f) {
         //         Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
         //         func(i, finds);
         //     });
@@ -2119,7 +1773,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
         //      func = std::forward<FOnVertexEnvironmentVertexContact>(
         //          fOnVertexEnvironmentVertexContact)](IndexType j) { func(i, j); },
         //     [&,
-        //      func = std::forward<FOnVertexEnvironmentEdgeContact>(fOnVertexEnvironmentEdgeContact)](
+        //      func =
+        //      std::forward<FOnVertexEnvironmentEdgeContact>(fOnVertexEnvironmentEdgeContact)](
         //         IndexType hej) {
         //         Eigen::Vector<IndexType, 2> const einds{
         //             geometry::IncomingVertex(mStaticMeshes.F, hej),
@@ -2140,9 +1795,11 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
         // mOgcState.ForEachStaticContactFaceOfHalfEdge(
         //     hei,
         //     [&,
-        //      func = std::forward<FOnEdgeEnvironmentVertexContact>(fOnEdgeEnvironmentVertexContact)](
+        //      func =
+        //      std::forward<FOnEdgeEnvironmentVertexContact>(fOnEdgeEnvironmentVertexContact)](
         //         IndexType j) { func(eindsi, j); },
-        //     [&, func = std::forward<FOnEdgeEnvironmentEdgeContact>(fOnEdgeEnvironmentEdgeContact)](
+        //     [&, func =
+        //     std::forward<FOnEdgeEnvironmentEdgeContact>(fOnEdgeEnvironmentEdgeContact)](
         //         IndexType hej) {
         //         Eigen::Vector<IndexType, 2> const eindsj{
         //             geometry::IncomingVertex(mStaticMeshes.F, hej),
@@ -2158,41 +1815,6 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
         //     [&,
         //      func = std::forward<FOnTriangleEnvironmentVertexContact>(
         //          fOnTriangleEnvironmentVertexContact)](IndexType j) { func(findsi, j); });
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnMeshContactEnergy>
-inline void
-MeshDynamics<TScalar, TIndex>::ForEachMeshContactEnergy(FOnMeshContactEnergy&& fOnMeshContactEnergy)
-{
-    for (auto& E : mVertexVertexEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mVertexEdgeEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mVertexTriangleEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mEdgeEdgeEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mVertexEnvironmentEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mEdgeEnvironmentEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mTriangleEnvironmentEnergies)
-    {
-        fOnMeshContactEnergy(E);
     }
 }
 

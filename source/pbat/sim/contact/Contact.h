@@ -18,13 +18,14 @@
 namespace pbat::sim::contact {
 } // namespace pbat::sim::contact
 
+#include "Constraints.h"
 #include "Environment.h"
 #include "Friction.h"
 #include "MeshDynamics.h"
 #include "MeshSdfContact.h"
-#include "MultibodyMeshMixedCcdDcd.h"
 #include "MultiMesh.h"
-#include "OffsetGeometryContact.h"
+#include "MultibodyMeshMixedCcdDcd.h"
 #include "Potentials.h"
+#include "ogc/Ogc.h"
 
 #endif // PBAT_SIM_CONTACT_CONTACT_H
