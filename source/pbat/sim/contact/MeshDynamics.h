@@ -638,13 +638,6 @@ class MeshDynamics
         return mTriangleEnvironmentEnergies;
     }
     /**
-     * @brief Recomputes geometric quantities (triangle, half-edge, and vertex areas) from current
-     * positions
-     * @param X `3 x |# points|` point positions (column-major: one point per column)
-     */
-    void UpdateGeometricQuantities(
-        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
-    /**
      * @brief Get the Params object
      * @return Reference to the parameters
      */
@@ -733,13 +726,6 @@ class MeshDynamics
         mEdgeEnvironmentEnergies; ///< Edge-environment energies
     std::vector<MeshContactEnergy<ScalarType, IndexType, 3>>
         mTriangleEnvironmentEnergies; ///< Triangle-environment energies
-
-    /**
-     * @brief These geometric quantities are generally useful for contact dynamics
-     */
-    Eigen::Vector<ScalarType, Eigen::Dynamic> FA;  ///< `|# triangles| x 1` triangle areas
-    Eigen::Vector<ScalarType, Eigen::Dynamic> HEA; ///< `|# half-edges| x 1` half-edge areas
-    Eigen::Vector<ScalarType, Eigen::Dynamic> VA;  ///< `|# vertices| x 1` vertex areas
 
     /**
      * @brief Resize energy buffers for each contact type
