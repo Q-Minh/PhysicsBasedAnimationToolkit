@@ -226,14 +226,9 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(
 
     ScalarType const q = detB / ScalarType{2};
 
-    // For a symmetric matrix, p >= 0 and the discriminant p^3 - q^2 >= 0
-    // p = ||B||_F^2 / 6, so p ~ normA^2 when matrix is not near scalar multiple of identity.
-    // We check if p is small (matrix is essentially scalar * I).
-    ScalarType const epsSq = eps * eps;
-
     // Clamp the ratio for numerical stability
     ScalarType ratio;
-    if (p <= epsSq)
+    if (p / eps <= eps)
     {
         // Matrix is essentially a multiple of identity
         result.lambda(0) = mean;
@@ -364,7 +359,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(
 
         // Normalize
         ScalarType invNorm;
-        if (normSq > epsSq)
+        if (normSq / eps > eps)
         {
             invNorm = ScalarType{1} / sqrt(normSq);
         }
