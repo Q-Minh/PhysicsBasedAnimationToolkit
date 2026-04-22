@@ -385,11 +385,14 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_)
     mAdjacencies.erase(atail, aend);
     std::size_t mid = mAdjacencies.size(); // keep note of end of (A and B)
     // 3. Add elements from (B \ A)
+    auto nNew = std::distance(bbegin, btail);
+    mAdjacencies.reserve(mid + nNew);
     std::for_each(bbegin, btail, [&](auto&& tup) {
         auto const& [u, v] = fProj(tup);
         AddEdge(u, v);
     });
     // 4. Merge (A and B) with (B \ A)
+    mCpy.reserve(mAdjacencies.size());
     std::ranges::merge(
         std::ranges::subrange(mAdjacencies.begin(), mAdjacencies.begin() + mid),
         std::ranges::subrange(mAdjacencies.begin() + mid, mAdjacencies.end()),
@@ -440,6 +443,8 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Union(TIncomingAdjacencies&& B_)
     while (bhead != bend)
         std::iter_swap(btail++, bhead++);
     // 2. Add elements from (B \ A)
+    auto nNew = std::distance(bbegin, btail);
+    mAdjacencies.reserve(mAdjacencies.size() + nNew);
     std::for_each(bbegin, btail, [&](auto&& tup) {
         auto const& [u, v] = fProj(tup);
         AddEdge(u, v);
@@ -447,6 +452,7 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Union(TIncomingAdjacencies&& B_)
     auto nBnotA = std::distance(bbegin, btail);
     auto mid    = mAdjacencies.size() - nBnotA;
     // 3. Merge (A and B) with (B \ A)
+    mCpy.reserve(mAdjacencies.size());
     std::ranges::merge(
         std::ranges::subrange(mAdjacencies.begin(), mAdjacencies.begin() + mid),
         std::ranges::subrange(mAdjacencies.begin() + mid, mAdjacencies.end()),
