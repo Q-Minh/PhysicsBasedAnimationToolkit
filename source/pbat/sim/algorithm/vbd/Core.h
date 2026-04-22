@@ -28,8 +28,10 @@
 #include "pbat/sim/contact/MeshDynamics.h"
 
 #include <Eigen/Core>
+#include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <fmt/core.h>
 #include <limits>
 #include <tbb/parallel_for.h>
 #include <tuple>
@@ -303,6 +305,22 @@ void Integrate(
 
 namespace detail {
 
+/// @brief Check if any component of a 3-vector is NaN or Inf
+inline bool HasNonFinite(math::linalg::mini::SVector<Scalar, 3> const& v)
+{
+    return not std::isfinite(v(0)) or not std::isfinite(v(1)) or not std::isfinite(v(2));
+}
+
+/// @brief Check if any component of a 3x3 matrix is NaN or Inf
+inline bool HasNonFinite(math::linalg::mini::SMatrix<Scalar, 3, 3> const& M)
+{
+    for (int c = 0; c < 3; ++c)
+        for (int r = 0; r < 3; ++r)
+            if (not std::isfinite(M(r, c)))
+                return true;
+    return false;
+}
+
 /**
  * @brief Accumulate elastic energy derivatives for vertex i
  * @tparam TElasticEnergy Hyper-elastic energy model
@@ -343,6 +361,15 @@ void AccumulateElasticEnergy(
         Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
         kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
         kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
+        if (HasNonFinite(gi) or HasNonFinite(Hi))
+        {
+            fmt::print(
+                stderr,
+                "NaN/Inf in AccumulateElasticEnergy for vertex {}, element {}\n",
+                i,
+                e);
+            throw std::runtime_error("NaN/Inf in AccumulateElasticEnergy");
+        }
     }
 }
 
@@ -403,6 +430,15 @@ inline void AccumulateContactEnergy(
         auto const& gradc = C.Grad();
         kernels::AccumulateAugmentedLagrangianContactNodeDerivatives<
             3>(gradc, ki, dL, kn, Tf, Wf(ki), kf, df, C.Decay(), gi, Hi);
+        if (HasNonFinite(gi) or HasNonFinite(Hi))
+        {
+            fmt::print(
+                stderr,
+                "NaN/Inf in AccumulateContactEnergy for vertex {}, stencil node {}\n",
+                i,
+                ki);
+            throw std::runtime_error("NaN/Inf in AccumulateContactEnergy");
+        }
     };
     contact.ForEachPointPointContact(i, [&](auto C, auto stencil) {
         fAccumulateNodalDerivatives(C, stencil);
@@ -474,13 +510,33 @@ auto BuildVertexEquation(
     mini::SVector<Scalar, 3> gelastici = mini::Zeros<Scalar, 3, 1>();
     AccumulateElasticEnergy<TElasticEnergy>(i, fem, params, gelastici, Hi);
     gelastici *= h2;
+    if (std::isnan(gelastici(0)) || std::isnan(gelastici(1)) || std::isnan(gelastici(2)))
+    {
+        fmt::print(stderr, "NaN detected in elastic gradient for vertex {}\n", i);
+        throw std::runtime_error("NaN detected in elastic gradient");
+    }
     Hi *= h2;
     // Contact energy gradient (augmented Lagrangian)
     mini::SVector<Scalar, 3> gcontacti = mini::Zeros<Scalar, 3, 1>();
     AccumulateContactEnergy(i, params.xb, contact, gcontacti, Hi);
+    if (std::isnan(gcontacti(0)) || std::isnan(gcontacti(1)) || std::isnan(gcontacti(2)))
+    {
+        fmt::print(stderr, "NaN detected in contact gradient for vertex {}\n", i);
+        throw std::runtime_error("NaN detected in contact gradient");
+    }
     // Kinetic energy gradient (+ Rayleigh damping, which couples through the full Hessian)
     mini::SVector<Scalar, 3> gkinetici = mini::Zeros<Scalar, 3, 1>();
     kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gkinetici, Hi);
+    if (HasNonFinite(gkinetici))
+    {
+        fmt::print(stderr, "NaN/Inf detected in kinetic gradient for vertex {}\n", i);
+        throw std::runtime_error("NaN/Inf detected in kinetic gradient");
+    }
+    if (HasNonFinite(Hi))
+    {
+        fmt::print(stderr, "NaN/Inf detected in Hessian for vertex {}\n", i);
+        throw std::runtime_error("NaN/Inf detected in Hessian");
+    }
     return {Hi, gkinetici, gelastici, gcontacti};
 }
 
@@ -513,19 +569,25 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     using mini::Norm;
     using mini::ToEigen;
     // Adapt stencil gradient acceleration parameter using the total gradient
+    Scalar constexpr kSmallEpsilon{1e-10};
     mini::SVector<Scalar, 3> gi = gkinetici + gelastici + gcontacti;
+    if (HasNonFinite(gi))
+    {
+        fmt::print(stderr, "NaN/Inf in total gradient for vertex {} before SGA\n", i);
+        throw std::runtime_error("NaN/Inf in total gradient before SGA");
+    }
     if (params.kp > 0)
     {
         Scalar ngk                    = Norm(gi);
         mini::SVector<Scalar, 3> gkm1 = FromEigen(params.gkinetic.col(i).template head<3>()) +
                                         FromEigen(params.gelastic.col(i).template head<3>()) +
                                         FromEigen(params.gcontact.col(i).template head<3>());
-        Scalar ngkm1  = Norm(gkm1);
-        Scalar ndgkm1 = Norm(gi - gkm1);
-        auto xk       = params.xk.col(i).template head<3>();
-        Scalar ndxkm1 = Norm(xi - FromEigen(xk));
-        Scalar L      = params.Hnk(i) + ngk / ndxkm1;
-        Scalar rho    = ndgkm1 / (L * ndxkm1);
+        Scalar ngkm1                  = Norm(gkm1);
+        Scalar ndgkm1                 = Norm(gi - gkm1);
+        auto xk                       = params.xk.col(i).template head<3>();
+        Scalar ndxkm1                 = std::max(Norm(xi - FromEigen(xk)), kSmallEpsilon);
+        Scalar L                      = params.Hnk(i) + ngk / ndxkm1;
+        Scalar rho                    = ndgkm1 / std::max(L * ndxkm1, kSmallEpsilon);
         if (ngk > ngkm1)
             params.betaG(i) *= params.gammadown;
         else if (rho > params.rhohat)
@@ -546,7 +608,7 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
         gp +=
             params.wkinetic * gkinetici + params.welastic * gelastici + params.wcontact * gcontacti;
     }
-    Scalar lambda = params.betaG(i) * Dot(gi, gp) / Dot(gp, gp);
+    Scalar lambda = params.betaG(i) * Dot(gi, gp) / std::max(Dot(gp, gp), kSmallEpsilon);
     return gi + std::max(lambda, Scalar(0)) * gp;
 }
 
@@ -597,6 +659,15 @@ void Iterate(
                 params);
             // Solve
             kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
+            if (detail::HasNonFinite(xi))
+            {
+                fmt::print(stderr, "NaN/Inf after IntegratePositions for vertex {}\n", i);
+                fmt::print(stderr, "gi: {}, {}, {}\n", gi(0), gi(1), gi(2));
+                fmt::print(stderr, "Hi:\n");
+                for (int r = 0; r < 3; ++r)
+                    fmt::print(stderr, "{}, {}, {}\n", Hi(r, 0), Hi(r, 1), Hi(r, 2));
+                throw std::runtime_error("NaN/Inf after IntegratePositions");
+            }
             fem.x.col(i) = ToEigen(xi);
         });
     }
@@ -616,6 +687,7 @@ void InitializeSolve(
     contact.RestoreFeasibility(fem.x, fem.dmask);
     params.k  = 0;
     params.xk = fem.x;
+    params.betaG.setConstant(params.betaG0);
 }
 
 /**
@@ -683,8 +755,33 @@ void AssembleBlockDiagonalDynamicsHessian(
         // Damping
         kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
         // Store 3x3 block into columns [3*i, 3*i+3)
+        if (detail::HasNonFinite(Hi))
+        {
+            fmt::print(
+                stderr,
+                "NaN/Inf in AssembleBlockDiagonalDynamicsHessian for vertex {}\n",
+                i);
+            throw std::runtime_error("NaN/Inf in AssembleBlockDiagonalDynamicsHessian");
+        }
         params.Hk.template block<3, 3>(0, 3 * i) = ToEigen(Hi);
     });
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedXt>
+void GloballyRestoreFeasibility(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact,
+    Params const& params,
+    Eigen::MatrixBase<TDerivedXt> const& xt)
+{
+    auto const dmax = (fem.x - xt).colwise().norm().maxCoeff();
+    auto const dmin = contact.OgcState().bv.minCoeff();
+    if (dmax > dmin)
+    {
+        fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
+            xt(Eigen::placeholders::all, fem.FreeNodes()) +
+            (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
+    }
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -706,16 +803,19 @@ void Solve(
         // 3. Setup subproblem
         AssembleBlockDiagonalDynamicsHessian(fem, params);
         UpdatePenaltyParameter(contact, params);
-        params.betaG.setConstant(params.betaG0);
+        // params.betaG.setConstant(params.betaG0);
         // 4. VBD solve the linear constraint subproblem
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
         for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
         {
-            contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(fem.x);
-            Iterate<TElasticEnergy>(fem, contact, params);
+            contact.UpdateDual<EDualVariable::Slack>(fem.x);
+            Iterate(fem, contact, params);
         }
+        contact.UpdateDual<
+            EDualVariable::Slack | EDualVariable::LagrangeMultiplier | EDualVariable::Decay>(fem.x);
         // 5. Restore feasibility
         contact.RestoreFeasibility(fem.x, fem.dmask);
+        // GloballyRestoreFeasibility(fem, contact, params, contact.DynamicPointPositions());
         // 6. Update constraint set for next subproblem
         contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
     }
