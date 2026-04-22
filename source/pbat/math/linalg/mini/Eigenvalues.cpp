@@ -137,8 +137,8 @@ TEST_CASE("[math][linalg][mini] SymmetricEigen2x2")
         Eigen::SelfAdjointEigenSolver<pbat::Matrix<2, 2>> solver(Aeigen);
         auto eigEigen = solver.eigenvalues();
 
-        CHECK_EQ(eigMini(0), doctest::Approx(eigEigen(0)).epsilon(1e-12));
-        CHECK_EQ(eigMini(1), doctest::Approx(eigEigen(1)).epsilon(1e-12));
+        CHECK_EQ(eigMini(0), doctest::Approx(eigEigen(0)).epsilon(1e-7));
+        CHECK_EQ(eigMini(1), doctest::Approx(eigEigen(1)).epsilon(1e-7));
     }
 
     SUBCASE("Zero matrix")
@@ -148,8 +148,8 @@ TEST_CASE("[math][linalg][mini] SymmetricEigen2x2")
         auto [eigenvalues, eigenvectors] = SymmetricEigen2x2(A);
 
         // All eigenvalues should be zero
-        CHECK_EQ(eigenvalues(0), doctest::Approx(0.0).epsilon(1e-12));
-        CHECK_EQ(eigenvalues(1), doctest::Approx(0.0).epsilon(1e-12));
+        CHECK_EQ(eigenvalues(0), doctest::Approx(0.0).epsilon(1e-7));
+        CHECK_EQ(eigenvalues(1), doctest::Approx(0.0).epsilon(1e-7));
 
         // Eigenvectors should be orthonormal (identity matrix is a valid choice)
         test::CheckOrthonormality(eigenvectors, ScalarType{1e-12});

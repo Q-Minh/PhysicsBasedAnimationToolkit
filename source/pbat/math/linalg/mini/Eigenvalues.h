@@ -83,9 +83,15 @@ PBAT_HOST_DEVICE auto SymmetricEigen2x2(
     using namespace std;
     ScalarType sqrtDiscr = sqrt(discr);
 
-    // Eigenvalues (ascending order)
-    result.lambda(0) = ScalarType{0.5} * (trace - sqrtDiscr);
+    // Compute the larger eigenvalue first (addition — no cancellation),
+    // then derive the smaller via det/λ_max.  This avoids catastrophic
+    // cancellation when trace ≈ sqrtDiscr (nearly-singular matrix).
+    // For PSD matrices, det = a*c - b*b ≥ 0, guaranteeing λ_min ≥ 0.
     result.lambda(1) = ScalarType{0.5} * (trace + sqrtDiscr);
+    if (result.lambda(1) > eps)
+        result.lambda(0) = det / result.lambda(1);
+    else
+        result.lambda(0) = ScalarType{0.5} * (trace - sqrtDiscr);
 
     // Eigenvectors
     // For numerical stability, we compute the eigenvector for the eigenvalue
@@ -228,7 +234,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(
 
     // Clamp the ratio for numerical stability
     ScalarType ratio;
-    if (p / eps <= eps)
+    if (p <= eps * eps)
     {
         // Matrix is essentially a multiple of identity
         result.lambda(0) = mean;
@@ -301,6 +307,20 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(
         }
     }
 
+    // Refine the smallest eigenvalue using det(A)/(λ₁*λ₂).
+    // The Cardano formula computes it as mean + 2*sqrt(p)*cos(...),
+    // which suffers from catastrophic cancellation when the smallest
+    // eigenvalue is much smaller than the others (both terms are large
+    // and nearly cancel).  Since λ₀*λ₁*λ₂ = det(A), recovering the
+    // smallest via division avoids this entirely.
+    // For PSD matrices, det(A) ≥ 0, guaranteeing the refined λ₀ ≥ 0.
+    if (bSortEigenvalues and abs(eig1) > eps and abs(eig2) > eps)
+    {
+        ScalarType const detA = a11 * (a22 * a33 - a23 * a23) - a12 * (a12 * a33 - a23 * a13) +
+                                a13 * (a12 * a23 - a22 * a13);
+        eig0                  = detA / (eig1 * eig2);
+    }
+
     result.lambda(0) = eig0;
     result.lambda(1) = eig1;
     result.lambda(2) = eig2;
@@ -359,7 +379,7 @@ PBAT_HOST_DEVICE auto SymmetricEigen3x3(
 
         // Normalize
         ScalarType invNorm;
-        if (normSq / eps > eps)
+        if (normSq > eps * eps)
         {
             invNorm = ScalarType{1} / sqrt(normSq);
         }
@@ -830,9 +850,16 @@ PBAT_HOST_DEVICE auto SymmetricEigenvalues2x2(TMatrix&& A, bool bSortEigenvalues
     ScalarType sqrtDiscr = sqrt(discr);
 
     SVector<ScalarType, 2> eigenvalues;
-    // Compute in ascending order by default (trace - sqrt <= trace + sqrt)
-    eigenvalues(0) = ScalarType{0.5} * (trace - sqrtDiscr);
-    eigenvalues(1) = ScalarType{0.5} * (trace + sqrtDiscr);
+    // Compute the larger eigenvalue first (no cancellation), then derive
+    // the smaller via det/λ_max to avoid catastrophic cancellation.
+    eigenvalues(1)          = ScalarType{0.5} * (trace + sqrtDiscr);
+    ScalarType const det2x2 = a * c - b * b;
+    ScalarType const scale  = max(abs(a), max(abs(b), abs(c)));
+    ScalarType const tol    = scale * std::numeric_limits<ScalarType>::epsilon();
+    if (eigenvalues(1) > tol)
+        eigenvalues(0) = det2x2 / eigenvalues(1);
+    else
+        eigenvalues(0) = ScalarType{0.5} * (trace - sqrtDiscr);
 
     // Note: The formula inherently produces ascending order, so bSortEigenvalues
     // doesn't change behavior here but is kept for API consistency
