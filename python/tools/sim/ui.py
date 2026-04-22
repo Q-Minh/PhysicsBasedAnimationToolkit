@@ -3,7 +3,7 @@
 Lightweight GPU VBD simulation UI using Polyscope + imgui.
 
 Usage:
-    python -m python.tools.sim.ui --fem path/to/fem.h5 --vbd-params path/to/params.h5
+    python -m python.tools.sim.ui --fem path/to/fem.h5:hdf5/group/to/fem --vbd-params path/to/params.h5:hdf5/group/to/vbdparams
 """
 
 import argparse
@@ -153,16 +153,24 @@ class SimulationState:
         self.t: int = 0
         self.until_t: int = -1
 
-    def step(self):
-        self.fem.setup_time_integration_optimization(self.init_strategy)
+    def solve(self):
         if self.solver == SolverType.AAAVBD:
-            _, self.capture = vbd.aaasolver.solve(
-                self.fem, self.params, capture=self.capture, request_capture=True
+            _ = vbd.aaasolver.solve(
+                self.fem, self.params
             )
         elif self.solver == SolverType.VBD:
-            _, self.capture = vbd.solver.solve(
-                self.fem, self.params, capture=self.capture, request_capture=True
+            _ = vbd.solver.solve(
+                self.fem, self.params
             )
+
+    def step(self):
+        self.fem.setup_time_integration_optimization(self.init_strategy)
+        if self.capture is None:
+            with wp.ScopedCapture() as capture:
+                self.solve()
+            self.capture = capture
+        else:
+            wp.capture_launch(self.capture.graph)
         self.fem.step()
         self.t += 1
 

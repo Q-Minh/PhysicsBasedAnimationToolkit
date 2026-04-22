@@ -135,9 +135,7 @@ def solve_subproblem(
 def solve(
     fem: FemElastoDynamics,
     params: Params,
-    capture: wp.ScopedCapture | None = None,
-    request_capture: bool = False,
-) -> Tuple[bool, wp.ScopedCapture]:
+) -> bool:
     """Solve the VBD minimization problem.
     Mimics `pbat::sim::algorithm::vbd::Solve`:
     """
@@ -151,16 +149,9 @@ def solve(
             converged = True
             break
         # Solve linearized subproblem
-        if not request_capture:
-            solve_subproblem(fem, params)
-        elif capture is None:
-            with wp.ScopedCapture() as scap:
-                solve_subproblem(fem, params)
-            capture = scap
-        else:
-            wp.capture_launch(capture.graph)  # pyright: ignore[reportArgumentType]
+        solve_subproblem(fem, params)
     fem.back_substitute_velocities()
-    return converged, capture  # pyright: ignore[reportReturnType]
+    return converged
 
 
 def integrate(fem: FemElastoDynamics, params: Params):
