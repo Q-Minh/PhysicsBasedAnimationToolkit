@@ -202,6 +202,7 @@ def iterate(fem: FemElastoDynamics, params: Params):
         p_end = int(Pptr[p + 1])
         n_verts_in_partition = p_end - p_begin
         if n_verts_in_partition > 0:
+            # TODO: Implement CUDA block parallelism for vertex solves
             wp.launch(
                 _vertex_solve_kernel,
                 dim=n_verts_in_partition,
