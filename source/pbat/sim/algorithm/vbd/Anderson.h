@@ -49,8 +49,10 @@ struct AndersonParams
     /**
      * @brief Serialize this to archive
      * @param archive Archive to serialize to
+     * @param bMinimal If true, only serialize stateless configuration parameters (scalars, enums).
+     * If false, also serialize solver state (matrices, vectors).
      */
-    PBAT_API void Serialize(io::Archive& archive) const;
+    PBAT_API void Serialize(io::Archive& archive, bool bMinimal = true) const;
     /**
      * @brief Deserialize this from archive
      * @param archive Archive to deserialize from
@@ -155,7 +157,7 @@ void Iterate(
     {
         anderson.xkm1 = fem.x.reshaped();
         Iterate(fem, contact, params);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
         anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     }
     else
@@ -165,7 +167,7 @@ void Iterate(
         anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
         anderson.xkm1        = fem.x.reshaped();
         Iterate(fem, contact, params);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
         anderson.fk          = fem.x.reshaped() - anderson.xkm1;
         anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
         anderson.fkm1        = anderson.fk;
@@ -195,12 +197,12 @@ void Solve(
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
-    while (params.k < params.nMaxIters)
+    while (params.k < params.nSubproblemMaxIters)
     {
-        if (contact.RequiresBoundsComputation())
-            contact.ComputeDisplacementBounds(fem.x);
+        if (contact.RequiresConstraintSetUpdate())
+            contact.UpdateConstraintSet(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, anderson);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

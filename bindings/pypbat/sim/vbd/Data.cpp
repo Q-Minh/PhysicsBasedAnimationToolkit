@@ -186,7 +186,7 @@ void BindData(nanobind::module_& m)
             "    Data: self")
         .def(
             "with_hessian_determinant_zero",
-            &Data::WithHessianDeterminantZeroUnder,
+            &Data::WithHessianSingularUnder,
             nb::arg("zero"),
             nb::rv_policy::reference_internal,
             "Sets the numerical zero used in 'singular' hessian determinant check.\n\n"
@@ -280,7 +280,7 @@ void BindData(nanobind::module_& m)
         .def_rw("muC", &Data::muC, "Uniform collision penalty")
         .def_rw("muF", &Data::muF, "Uniform friction coefficient")
         .def_rw("epsv", &Data::epsv, "IPC's relative velocity threshold for smooth transition")
-        .def_rw("detH_zero", &Data::detHZero, "Numerical zero for hessian pseudo-singularity check")
+        .def_rw("hess_zero", &Data::hessZero, "Numerical zero for hessian singularity check")
         .def_rw("accelerator", &Data::eAcceleration, "Acceleration strategy")
         .def_rw("rho", &Data::rho, "Chebyshev acceleration estimated spectral radius")
         .def_rw("window_size", &Data::mWindowSize, "Anderson acceleration window size")

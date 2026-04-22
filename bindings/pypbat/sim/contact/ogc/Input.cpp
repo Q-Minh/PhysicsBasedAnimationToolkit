@@ -193,27 +193,36 @@ void BindInput(nanobind::module_& m)
             "    int: Number of bodies.")
         .def(
             "num_vertices",
-            &InputType::NumVertices,
+            [](InputType const& self, IndexType b) {
+                return (b >= 0) ? self.NumVertices(b) : self.NumVertices();
+            },
             nb::arg("b"),
-            "Get number of vertices for a dynamic body.\n\n"
+            "Get number of vertices for a dynamic body if `b` is non-negative, otherwise get total "
+            "number of vertices.\n\n"
             "Args:\n"
             "    b (int): Body index.\n\n"
             "Returns:\n"
             "    int: Number of vertices for the body.")
         .def(
             "num_edges",
-            &InputType::NumEdges,
+            [](InputType const& self, IndexType b) {
+                return (b >= 0) ? self.NumEdges(b) : self.NumEdges();
+            },
             nb::arg("b"),
-            "Get number of edges for a dynamic body.\n\n"
+            "Get number of edges for a dynamic body if `b` is non-negative, otherwise get total "
+            "number of edges.\n\n"
             "Args:\n"
             "    b (int): Body index.\n\n"
             "Returns:\n"
             "    int: Number of edges for the body.")
         .def(
             "num_facets",
-            &InputType::NumFacets,
+            [](InputType const& self, IndexType b) {
+                return (b >= 0) ? self.NumFacets(b) : self.NumFacets();
+            },
             nb::arg("b"),
-            "Get number of facets for a dynamic body.\n\n"
+            "Get number of facets for a dynamic body if `b` is non-negative, otherwise get total "
+            "number of facets.\n\n"
             "Args:\n"
             "    b (int): Body index.\n\n"
             "Returns:\n"

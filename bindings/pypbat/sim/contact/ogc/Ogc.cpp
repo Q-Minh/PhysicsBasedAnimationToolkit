@@ -30,6 +30,23 @@ void Bind(nanobind::module_& m)
     using StateType  = pbat::sim::contact::ogc::State<ScalarType, IndexType>;
 
     m.def(
+        "execute",
+        &pbat::sim::contact::ogc::Execute<ScalarType, IndexType>,
+        nb::arg("input"),
+        nb::arg("params"),
+        nb::arg("state"),
+        "Executes one OGC iteration.\n\n"
+        "Performs vertex-facet and edge-edge contact detection in parallel, then finalizes\n"
+        "contact pairs (via state.collect_contact_pairs()) and updates displacement bounds\n"
+        "in parallel.\n\n"
+        "Args:\n"
+        "    input (Input): OGC's input parameters.\n"
+        "    params (Params): OGC's parameters.\n"
+        "    state (State): OGC's state (modified in-place).\n\n"
+        "Preconditions:\n"
+        "    state.prepare_for_execution() must have been called before this function.");
+
+    m.def(
         "vertex_facet_contact_detection",
         &pbat::sim::contact::ogc::VertexFacetContactDetection<ScalarType, IndexType>,
         nb::arg("input"),

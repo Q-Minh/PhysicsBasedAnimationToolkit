@@ -14,10 +14,12 @@
 #include "Eigen.h"
 #include "pbat/Aliases.h"
 
+#include <array>
 #include <concepts>
 #include <numeric>
 #include <random>
 #include <ranges>
+#include <utility>
 
 namespace pbat {
 namespace common {
@@ -42,6 +44,57 @@ auto CumSum(R&& sizes) -> Eigen::Vector<TIndex, Eigen::Dynamic>
     auto end   = rng::end(sizes);
     std::partial_sum(begin, end, bi);
     return cs;
+}
+
+/**
+ * @brief Compute an exclusive prefix sum from a compile-time parameter pack of values.
+ *
+ * Given N values `s0, s1, ..., s_{N-1}`, returns a `std::array<T, N+1>` containing
+ * `{0, s0, s0+s1, ..., s0+s1+...+s_{N-1}}`.
+ *
+ * @tparam T      Arithmetic result type (deduced from the common type of the arguments).
+ * @tparam Sizes  Pack of arithmetic types, all convertible to T.
+ * @param sizes   The N values to prefix-sum.
+ * @return `std::array<T, sizeof...(Sizes) + 1>` with the exclusive prefix sums.
+ *
+ * Example:
+ * @code
+ *   auto p = ExclusivePrefixSum(3, 5, 2); // -> std::array<int,4>{0, 3, 8, 10}
+ * @endcode
+ */
+template <class... Sizes>
+    requires(sizeof...(Sizes) > 0 and (std::is_arithmetic_v<std::decay_t<Sizes>> and ...))
+constexpr auto ExclusivePrefixSum(Sizes... sizes)
+{
+    using T                 = std::common_type_t<std::decay_t<Sizes>...>;
+    std::size_t constexpr N = sizeof...(Sizes);
+    std::array<T, N + 1> prefix{};
+    T const values[N] = {static_cast<T>(sizes)...};
+    prefix[0]         = T{0};
+    for (std::size_t i = 0; i < N; ++i)
+        prefix[i + 1] = prefix[i] + values[i];
+    return prefix;
+}
+
+/**
+ * @brief Overload that writes the exclusive prefix sum into a pre-existing array (or
+ * array-like container with `operator[]`).
+ *
+ * @tparam TArray  Container type supporting `operator[]` (e.g. `std::array<T, N+1>`).
+ * @tparam Sizes   Pack of arithmetic types.
+ * @param[out] out The output array; must have at least `sizeof...(Sizes) + 1` elements.
+ * @param sizes    The N values to prefix-sum.
+ */
+template <class TArray, class... Sizes>
+    requires(sizeof...(Sizes) > 0 and (std::is_arithmetic_v<std::decay_t<Sizes>> and ...))
+constexpr void ExclusivePrefixSum(TArray& out, Sizes... sizes)
+{
+    using T                 = std::common_type_t<std::decay_t<Sizes>...>;
+    std::size_t constexpr N = sizeof...(Sizes);
+    T const values[N]       = {static_cast<T>(sizes)...};
+    out[0]                  = T{0};
+    for (std::size_t i = 0; i < N; ++i)
+        out[i + 1] = out[i] + values[i];
 }
 
 /**

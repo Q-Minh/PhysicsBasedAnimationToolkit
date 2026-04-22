@@ -78,9 +78,9 @@ void BindIntegrator(nanobind::module_& m)
             [](Integrator& self, Scalar kD) { self.data.kD = kD; },
             "Rayleigh damping coefficient")
         .def_prop_rw(
-            "detH_residual",
-            [](Integrator const& self) { return self.data.detHZero; },
-            [](Integrator& self, Scalar detHZero) { self.data.detHZero = detHZero; },
+            "hess_zero",
+            [](Integrator const& self) { return self.data.hessZero; },
+            [](Integrator& self, Scalar hessZero) { self.data.hessZero = hessZero; },
             "Determinant of the residual Hessian for pseudo singularity check")
         .def_rw("data", &Integrator::data);
 }

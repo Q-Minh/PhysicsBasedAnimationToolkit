@@ -339,7 +339,7 @@ if __name__ == "__main__":
     iterations = 20
     substeps = 1
     rho_chebyshev = 1.0
-    RdetH = 1e-10
+    hess_zero = 1e-10
     kD = 0.0
     animate = False
     export = False
@@ -354,7 +354,7 @@ if __name__ == "__main__":
 
     def callback():
         global dt, iterations, substeps
-        global rho_chebyshev, initialization_strategy, RdetH, kD
+        global rho_chebyshev, initialization_strategy, hess_zero, kD
         global thread_block_size
         global animate, export, t
         global profiler
@@ -363,7 +363,7 @@ if __name__ == "__main__":
         changed, iterations = imgui.InputInt("Iterations", iterations)
         changed, substeps = imgui.InputInt("Substeps", substeps)
         changed, kD = imgui.InputFloat("Damping", kD, format="%.8f")
-        changed, RdetH = imgui.InputFloat("Residual det(H)", RdetH, format="%.15f")
+        changed, hess_zero = imgui.InputFloat("Hessian zero", hess_zero, format="%.15f")
         changed, thread_block_size = imgui.InputInt(
             "Thread block size", thread_block_size
         )
@@ -381,7 +381,7 @@ if __name__ == "__main__":
             imgui.EndCombo()
         vbd.strategy = initialization_strategy
         vbd.kD = kD
-        vbd.detH_residual = RdetH
+        vbd.hess_zero = hess_zero
         changed, animate = imgui.Checkbox("Animate", animate)
         changed, export = imgui.Checkbox("Export", export)
         step = imgui.Button("Step")

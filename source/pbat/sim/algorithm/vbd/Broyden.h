@@ -74,8 +74,10 @@ struct BroydenParams
     /**
      * @brief Serialize this to archive
      * @param archive Archive to serialize to
+     * @param bMinimal If true, only serialize stateless configuration parameters (scalars, enums).
+     * If false, also serialize solver state (matrices, vectors, iteration counters).
      */
-    PBAT_API void Serialize(io::Archive& archive) const;
+    PBAT_API void Serialize(io::Archive& archive, bool bMinimal = true) const;
     /**
      * @brief Deserialize this from archive
      * @param archive Archive to deserialize from
@@ -313,7 +315,7 @@ void Iterate(
         bool const bHasScaledIdentityJacobian =
             broyden.eJacobianEstimate == EBroydenJacobianEstimate::ScaledIdentity;
         // NOTE: At this point, broyden.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
-        contact.ComputeDisplacementBounds(broyden.xkm1);
+        contact.UpdateConstraintSet(broyden.xkm1);
         if (bHasUpdatingDiagonal)
         {
             // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
@@ -334,7 +336,7 @@ void Iterate(
             fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
             fem.x.reshaped() += broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
         }
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
         // Update Jacobian (inverse) estimate
         switch (broyden.eJacobianEstimate)
         {
@@ -413,12 +415,12 @@ void Solve(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
-    while (params.k < params.nMaxIters)
+    while (params.k < params.nSubproblemMaxIters)
     {
-        // if (contact.RequiresBoundsComputation())
-        //     contact.ComputeDisplacementBounds(fem.x);
+        // if (contact.RequiresConstraintSetUpdate())
+        //     contact.UpdateConstraintSet(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, broyden);
-        // contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        // contact.RestoreFeasibility(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

@@ -15,12 +15,19 @@ else()
         $<LINK_LIBRARY:WHOLE_ARCHIVE,PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit>)
 endif()
 
+# Unfortunately, since our tests are defined in PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit,
+# we need to define PBAT_TESTS_INTEGRATION_PATH for that target, not the test executable target, which feels
+# a bit backwards, but it's a small price to pay for not having to define the tests in a separate target.
+target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
+    PRIVATE
+    PBAT_TESTS_INTEGRATION_PATH="${CMAKE_CURRENT_SOURCE_DIR}/integration")
+
 # On Windows, make sure DLL dependencies (i.e. runtime artifacts)
-# end up in runtime output directory. For some reason, many of the 
-# MKL DLLs are not copied to the output directory, so we enforce it. 
-# Only mkl_core.2.dll and mkl_intel_thread.2.dll are copied. 
+# end up in runtime output directory. For some reason, many of the
+# MKL DLLs are not copied to the output directory, so we enforce it.
+# Only mkl_core.2.dll and mkl_intel_thread.2.dll are copied.
 if(WIN32 AND PBAT_USE_INTEL_MKL)
-    if (PBAT_INTERNAL_MKL_DLLS)
+    if(PBAT_INTERNAL_MKL_DLLS)
         add_custom_command(
             TARGET PhysicsBasedAnimationToolkit_Tests
             COMMAND

@@ -1,10 +1,14 @@
 #include "Core.h"
 
+#include "pbat/common/Atomic.h"
 #include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
 
+#include <algorithm>
+#include <atomic>
 #include <exception>
 #include <fmt/core.h>
+#include <thread>
 
 namespace pbat::sim::algorithm::vbd {
 
@@ -37,6 +41,58 @@ void VertexColors(
     colors                 = graph::GreedyColor(GVVp, GVVadj, eOrdering, eSelection);
 }
 
+void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params const& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.UpdatePenaltyParameter");
+    auto nThreads                         = std::thread::hardware_concurrency();
+    auto const& contactParams             = contact.GetParams();
+    auto nDynamicNodes                    = params.xk.cols();
+    auto const fMaxVertexRayleighQuotient = [&]<class TContactSet>(auto C, auto const& stencil) {
+        auto nodes = contact.LoadStencil<TContactSet>(stencil);
+        auto gradc = ToEigen(C.Grad());
+        Scalar maxQc{0};
+        for (auto ki = 0; ki < nodes.size(); ++ki)
+        {
+            auto i = nodes[ki];
+            if (i >= nDynamicNodes)
+                continue;
+            auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
+            auto gradci = gradc.template segment<3>(ki * 3);
+            Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
+            maxQc       = std::max(maxQc, Q);
+        }
+        return maxQc;
+    };
+    switch (params.ePenaltyStiffness)
+    {
+        case ESALPenaltyStiffness::LocalMaxRayleighQuotient: {
+            contact.ForAllContacts(
+                [&]<class TContactSet>(typename TContactSet::AccessorType C, auto const& stencil) {
+                    auto maxQc =
+                        fMaxVertexRayleighQuotient.template operator()<TContactSet>(C, stencil);
+                    auto F      = C.Friction();
+                    C.Penalty() = contactParams.gamma * maxQc;
+                    F.Penalty() = contactParams.gammaf * maxQc;
+                });
+        }
+        break;
+        case ESALPenaltyStiffness::GlobalMaxRayleighQuotient: {
+            Scalar maxQ = contact.TransformReduce(
+                fMaxVertexRayleighQuotient,
+                [](auto a, auto b) { return std::max(a, b); },
+                Scalar(0));
+            contact.ForAllContacts(
+                [&]<class TContactSet>(typename TContactSet::AccessorType C, auto const& stencil) {
+                    auto F      = C.Friction();
+                    C.Penalty() = contactParams.gamma * maxQ;
+                    F.Penalty() = contactParams.gammaf * maxQ;
+                });
+        }
+        break;
+        default: break;
+    }
+}
+
 Params& Params::WithVertexElementAdjacencyGraph(
     Eigen::Ref<IndexVectorX const> const& _GVGp,
     Eigen::Ref<IndexVectorX const> const& _GVGe,
@@ -60,7 +116,7 @@ Params& Params::WithVertexColors(
     return *this;
 }
 
-PBAT_API Params& Params::WithDamping(Scalar _betaR)
+Params& Params::WithDamping(Scalar _betaR)
 {
     this->betaR = _betaR;
     return *this;
@@ -72,29 +128,51 @@ Params& Params::WithMaximumIterations(Index nIters)
     return *this;
 }
 
-PBAT_API Params& Params::WithHomogenization(EHomogenizationStrategy strategy, Scalar _betac)
+Params& Params::WithSubproblemMaximumIterations(Index nIters)
 {
-    this->eHomogenizationStrategy = strategy;
-    this->betac                   = _betac;
+    nSubproblemMaxIters = nIters;
     return *this;
 }
 
-PBAT_API Params& Params::WithStencilGradientAcceleration(
+Params& Params::WithPenaltyParameterUpdateStrategy(ESALPenaltyStiffness strategy)
+{
+    ePenaltyStiffness = strategy;
+    return *this;
+}
+
+Params& Params::WithStencilGradientAcceleration(
     Scalar _betaG0,
     Scalar _rhohat,
     Scalar _gammadown,
-    Scalar _gammaup)
+    Scalar _gammaup,
+    Scalar _rhohatS,
+    Scalar _gammadownS,
+    Scalar _gammaupS,
+    bool _bSurfaceStencilSurfaceNeighboursOnly,
+    EStencilGradientBetaWarmStartMask eWarmStartMask)
 {
-    this->betaG0    = _betaG0;
-    this->rhohat    = _rhohat;
-    this->gammadown = _gammadown;
-    this->gammaup   = _gammaup;
+    this->betaG0                               = _betaG0;
+    this->rhohat                               = _rhohat;
+    this->gammadown                            = _gammadown;
+    this->gammaup                              = _gammaup;
+    this->rhohatS                              = _rhohatS;
+    this->gammadownS                           = _gammadownS;
+    this->gammaupS                             = _gammaupS;
+    this->bSurfaceStencilSurfaceNeighboursOnly = _bSurfaceStencilSurfaceNeighboursOnly;
+    this->eWarmStartMask                       = eWarmStartMask;
     return *this;
 }
 
-Params& Params::WithHessianDeterminantZeroUnder(Scalar zero)
+Params& Params::WithVertexLinearSolver(
+    EVertexIntegrationLinearSolver solver,
+    Scalar zero,
+    Scalar eps,
+    int iters)
 {
-    detHZero = zero;
+    eSolver            = solver;
+    hessZero           = zero;
+    vLinSolverEps      = eps;
+    vLinSolverMaxIters = iters;
     return *this;
 }
 
@@ -137,13 +215,6 @@ Params& Params::Construct(bool bValidate)
                     GVGilocal.size(),
                     nVertexElementAdjacencies));
         }
-        if (betac <= 0)
-        {
-            throw std::invalid_argument(
-                fmt::format(
-                    "Contact homogenization conditioning factor betac {} must be positive",
-                    betac));
-        }
         if (betaG0 < 0 or betaG0 >= 1)
         {
             throw std::invalid_argument(
@@ -152,7 +223,7 @@ Params& Params::Construct(bool bValidate)
                     "betaG0 < 1",
                     betaG0));
         }
-        if (gammadown <= 0 or gammadown >= 1)
+        if (gammadown < 0 or gammadown >= 1 or gammadownS < 0 or gammadownS >= 1)
         {
             throw std::invalid_argument(
                 fmt::format(
@@ -160,7 +231,7 @@ Params& Params::Construct(bool bValidate)
                     "gammadown < 1",
                     gammadown));
         }
-        if (gammaup <= 0 or gammaup >= 1)
+        if (gammaup < 0 or gammaup >= 1 or gammaupS < 0 or gammaupS >= 1)
         {
             throw std::invalid_argument(
                 fmt::format(
@@ -169,38 +240,57 @@ Params& Params::Construct(bool bValidate)
         }
     }
     xb.resize(3, nVerts);
-    log10lame.resize(2, GVGe.size());
     gk.resize(3, nVerts);
     xk.resize(3, nVerts);
     Hnk.resize(nVerts);
     betaG.resize(nVerts);
+    betaG.setConstant(betaG0);
+    Hk.resize(3, 3 * nVerts);
     return *this;
 }
 
-void Params::Serialize(io::Archive& archive) const
+void Params::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
-    group.WriteData("GVGp", GVGp);
-    group.WriteData("GVGe", GVGe);
-    group.WriteData("GVGilocal", GVGilocal);
-    group.WriteData("colors", colors);
-    group.WriteData("Pptr", Pptr);
-    group.WriteData("Padj", Padj);
-    group.WriteMetaData("detHZero", detHZero);
+    group.WriteMetaData("betaR", betaR);
     group.WriteMetaData("nMaxIters", nMaxIters);
-    group.WriteMetaData("eHomogenizationStrategy", static_cast<int>(eHomogenizationStrategy));
-    group.WriteMetaData("betac", betac);
+    group.WriteMetaData("nSubproblemMaxIters", nSubproblemMaxIters);
+    group.WriteMetaData("gtol", gtol);
+    group.WriteMetaData("ePenaltyStiffness", static_cast<int>(ePenaltyStiffness));
+    group.WriteMetaData("eSolver", static_cast<int>(eSolver));
+    group.WriteMetaData("hessZero", hessZero);
+    group.WriteMetaData("vLinSolverEps", vLinSolverEps);
+    group.WriteMetaData("vLinSolverMaxIters", vLinSolverMaxIters);
     group.WriteMetaData("betaG0", betaG0);
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
     group.WriteMetaData("gammaup", gammaup);
-    group.WriteData("xb", xb);
-    group.WriteData("gk", gk);
-    group.WriteData("xk", xk);
-    group.WriteData("Hnk", Hnk);
-    group.WriteData("betaG", betaG);
-    group.WriteData("log10lame", log10lame);
-    group.WriteMetaData("k", k);
+    group.WriteMetaData("rhohatS", rhohatS);
+    group.WriteMetaData("gammadownS", gammadownS);
+    group.WriteMetaData("gammaupS", gammaupS);
+    group.WriteMetaData(
+        "bSurfaceStencilSurfaceNeighboursOnly",
+        static_cast<int>(bSurfaceStencilSurfaceNeighboursOnly));
+    group.WriteMetaData("eWarmStartMask", static_cast<int>(eWarmStartMask));
+    if (not bMinimal)
+    {
+        group.WriteData("GVGp", GVGp);
+        group.WriteData("GVGe", GVGe);
+        group.WriteData("GVGilocal", GVGilocal);
+        group.WriteData("colors", colors);
+        group.WriteData("GVVp", GVVp);
+        group.WriteData("GVVadj", GVVadj);
+        group.WriteData("Pptr", Pptr);
+        group.WriteData("Padj", Padj);
+        group.WriteData("xb", xb);
+        group.WriteData("gk", gk);
+        group.WriteData("xk", xk);
+        group.WriteData("Hnk", Hnk);
+        group.WriteData("betaG", betaG);
+        group.WriteData("Hk", Hk);
+        group.WriteMetaData("k", k);
+        group.WriteMetaData("kp", kp);
+    }
 }
 
 void Params::Deserialize(io::Archive const& archive)
@@ -214,19 +304,34 @@ void Params::Deserialize(io::Archive const& archive)
         GVGilocal = group.ReadData<decltype(GVGilocal)>("GVGilocal");
     if (group.HasData("colors"))
         colors = group.ReadData<decltype(colors)>("colors");
+    if (group.HasData("GVVp"))
+        GVVp = group.ReadData<decltype(GVVp)>("GVVp");
+    if (group.HasData("GVVadj"))
+        GVVadj = group.ReadData<decltype(GVVadj)>("GVVadj");
     if (group.HasData("Pptr"))
         Pptr = group.ReadData<decltype(Pptr)>("Pptr");
     if (group.HasData("Padj"))
         Padj = group.ReadData<decltype(Padj)>("Padj");
-    if (group.HasData("detHZero"))
-        detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
+    if (group.HasMetaData("betaR"))
+        betaR = group.ReadMetaData<decltype(betaR)>("betaR");
     if (group.HasMetaData("nMaxIters"))
         nMaxIters = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
-    if (group.HasMetaData("eHomogenizationStrategy"))
-        eHomogenizationStrategy = static_cast<EHomogenizationStrategy>(
-            group.ReadMetaData<int>("eHomogenizationStrategy"));
-    if (group.HasMetaData("betac"))
-        betac = group.ReadMetaData<decltype(betac)>("betac");
+    if (group.HasMetaData("nSubproblemMaxIters"))
+        nSubproblemMaxIters =
+            group.ReadMetaData<decltype(nSubproblemMaxIters)>("nSubproblemMaxIters");
+    if (group.HasMetaData("gtol"))
+        gtol = group.ReadMetaData<decltype(gtol)>("gtol");
+    if (group.HasMetaData("ePenaltyStiffness"))
+        ePenaltyStiffness =
+            static_cast<decltype(ePenaltyStiffness)>(group.ReadMetaData<int>("ePenaltyStiffness"));
+    if (group.HasMetaData("eSolver"))
+        eSolver = static_cast<decltype(eSolver)>(group.ReadMetaData<int>("eSolver"));
+    if (group.HasMetaData("hessZero"))
+        hessZero = group.ReadMetaData<decltype(hessZero)>("hessZero");
+    if (group.HasMetaData("vLinSolverEps"))
+        vLinSolverEps = group.ReadMetaData<decltype(vLinSolverEps)>("vLinSolverEps");
+    if (group.HasMetaData("vLinSolverMaxIters"))
+        vLinSolverMaxIters = group.ReadMetaData<decltype(vLinSolverMaxIters)>("vLinSolverMaxIters");
     if (group.HasMetaData("betaG0"))
         betaG0 = group.ReadMetaData<decltype(betaG0)>("betaG0");
     if (group.HasMetaData("rhohat"))
@@ -235,6 +340,19 @@ void Params::Deserialize(io::Archive const& archive)
         gammadown = group.ReadMetaData<decltype(gammadown)>("gammadown");
     if (group.HasMetaData("gammaup"))
         gammaup = group.ReadMetaData<decltype(gammaup)>("gammaup");
+    if (group.HasMetaData("rhohatS"))
+        rhohatS = group.ReadMetaData<decltype(rhohatS)>("rhohatS");
+    if (group.HasMetaData("gammadownS"))
+        gammadownS = group.ReadMetaData<decltype(gammadownS)>("gammadownS");
+    if (group.HasMetaData("gammaupS"))
+        gammaupS = group.ReadMetaData<decltype(gammaupS)>("gammaupS");
+    if (group.HasMetaData("bSurfaceStencilSurfaceNeighboursOnly"))
+        bSurfaceStencilSurfaceNeighboursOnly =
+            static_cast<decltype(bSurfaceStencilSurfaceNeighboursOnly)>(
+                group.ReadMetaData<int>("bSurfaceStencilSurfaceNeighboursOnly"));
+    if (group.HasMetaData("eWarmStartMask"))
+        eWarmStartMask =
+            static_cast<decltype(eWarmStartMask)>(group.ReadMetaData<int>("eWarmStartMask"));
     if (group.HasData("xb"))
         xb = group.ReadData<decltype(xb)>("xb");
     if (group.HasData("gk"))
@@ -243,12 +361,14 @@ void Params::Deserialize(io::Archive const& archive)
         xk = group.ReadData<decltype(xk)>("xk");
     if (group.HasData("Hnk"))
         Hnk = group.ReadData<decltype(Hnk)>("Hnk");
-    if (group.HasMetaData("betaG"))
-        betaG = group.ReadMetaData<decltype(betaG)>("betaG");
-    if (group.HasData("log10lame"))
-        log10lame = group.ReadData<decltype(log10lame)>("log10lame");
+    if (group.HasData("betaG"))
+        betaG = group.ReadData<decltype(betaG)>("betaG");
+    if (group.HasData("Hk"))
+        Hk = group.ReadData<decltype(Hk)>("Hk");
     if (group.HasMetaData("k"))
         k = group.ReadMetaData<decltype(k)>("k");
+    if (group.HasMetaData("kp"))
+        kp = group.ReadMetaData<decltype(kp)>("kp");
 }
 
 } // namespace pbat::sim::algorithm::vbd
@@ -318,7 +438,8 @@ VbdTestSetup SetupVbdTest(pbat::Index maxIters = 10)
     setup.vbdParams
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
-        .WithHessianDeterminantZeroUnder(Scalar{1e-6})
+        .WithSubproblemMaximumIterations(maxIters)
+        .WithVertexLinearSolver(sim::algorithm::vbd::EVertexIntegrationLinearSolver::Inverse)
         .Construct();
 
     // Mesh contact dynamics (minimal setup for testing)
@@ -364,22 +485,94 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     CHECK_LT(gnorm, g0norm);
 }
 
-TEST_CASE("[sim][algorithm][vbd] Sandbox")
+TEST_CASE("[type:integration][sim][algorithm][vbd] Cube sliding on plane")
 {
-    // using namespace pbat;
-    // auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
-    // using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    // sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
-    // fem.Deserialize(archive["fem"]);
-    // sim::contact::MeshDynamics<Scalar, Index> contact;
-    // contact.Deserialize(archive["contact"]);
-    // sim::algorithm::vbd::Params params;
-    // params.Deserialize(archive["vbd/params"]);
-    // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
-    // contact.Initialize(device);
-    // contact.GetParams().Construct();
-    // fem.SetupTimeIntegrationOptimization(
-    //     sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
-    // sim::algorithm::vbd::InitializeSolve(fem, contact, params);
-    // sim::algorithm::vbd::Solve(fem, contact, params);
+    using namespace pbat;
+    using namespace pbat::sim::algorithm;
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    using FemElastoDynamics = sim::algorithm::common::FemElastoDynamics<ElasticEnergyType>;
+    using MeshDynamics      = sim::contact::MeshDynamics<Scalar, Index>;
+    // Arrange
+    io::Archive archive(
+        fmt::format("{}/sim/algorithm/CubeFallingOnPlaneFast.h5", PBAT_TESTS_INTEGRATION_PATH),
+        HighFive::File::AccessMode::ReadOnly);
+    FemElastoDynamics fem{};
+    fem.Deserialize(archive["fem"]);
+    MeshDynamics contact{};
+    contact.Deserialize(archive["contact"]);
+    geometry::Device device{geometry::DeviceConfig{}};
+    contact.Initialize(device);
+    contact.GetParams()
+        .WithOgcParams(
+            sim::contact::ogc::Params<Scalar>()
+                .WithDisplacementBoundConfig(0.45, 0.)
+                .WithRadii(1e-2 /*r*/, 1e-2 /*rq*/)
+                .Construct())
+        .Construct();
+    sim::algorithm::vbd::Params params;
+    sim::algorithm::vbd::VertexElementAdjacencyGraph(
+        fem.mesh.E,
+        fem.mesh.X.cols(),
+        params.GVGp,
+        params.GVGe,
+        params.GVGilocal);
+    // Vertex colors
+    auto eOrdering  = graph::EGreedyColorOrderingStrategy::LargestDegree;
+    auto eSelection = graph::EGreedyColorSelectionStrategy::LeastUsed;
+    sim::algorithm::vbd::VertexColors(
+        fem.mesh.E,
+        fem.mesh.X.cols(),
+        eOrdering,
+        eSelection,
+        params.GVVp,
+        params.GVVadj,
+        params.colors);
+    // VBD params
+    params.WithVertexColors(params.GVVp, params.GVVadj, params.colors).Construct();
+    // Act
+    for (auto t = 0; t < 200; ++t)
+    {
+        fem.SetupTimeIntegrationOptimization();
+        sim::algorithm::vbd::InitializeSolve(fem, contact, params);
+        bool const bHasContacts = contact.NumContacts() > 0;
+        sim::algorithm::vbd::Solve(fem, contact, params);
+        fem.Step();
+    }
+}
+
+TEST_CASE("[type:debug][sim][algorithm][vbd] Sandbox")
+{
+    using namespace pbat;
+    auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
+    fem.Deserialize(archive["fem"]);
+    sim::contact::MeshDynamics<Scalar, Index> contact;
+    contact.Deserialize(archive["contact"]);
+    sim::algorithm::vbd::Params params;
+    params.Deserialize(archive["vbd/params"]);
+    auto eOrdering  = graph::EGreedyColorOrderingStrategy::LargestDegree;
+    auto eSelection = graph::EGreedyColorSelectionStrategy::LeastUsed;
+    sim::algorithm::vbd::VertexColors(
+        fem.mesh.E,
+        fem.mesh.X.cols(),
+        eOrdering,
+        eSelection,
+        params.GVVp,
+        params.GVVadj,
+        params.colors);
+    // VBD params
+    params.WithVertexColors(params.GVVp, params.GVVadj, params.colors).Construct();
+    geometry::Device device{geometry::DeviceConfig{}};
+    contact.Initialize(device);
+    contact.GetParams().Construct();
+    auto initStrategy = static_cast<sim::dynamics::EFemElastoDynamicsTimeStepInitialization>(
+        archive.ReadMetaData<int>("initialization_strategy"));
+    for (auto t = 0; t < 2; ++t)
+    {
+        fem.SetupTimeIntegrationOptimization(initStrategy);
+        sim::algorithm::vbd::InitializeSolve(fem, contact, params);
+        sim::algorithm::vbd::Solve(fem, contact, params);
+        fem.Step();
+    }
 }

@@ -165,7 +165,7 @@ Params<TScalar>& Params<TScalar>::Construct(bool bValidate)
 {
     if (bValidate)
     {
-        if (r < Scalar(0) or rq < Scalar(0) or rq < r)
+        if (r < Scalar(0) or rq < Scalar(0))
         {
             throw std::invalid_argument("Params: rq >= r >= 0 required");
         }

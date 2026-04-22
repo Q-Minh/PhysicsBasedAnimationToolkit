@@ -283,7 +283,7 @@ PBAT_HOST_DEVICE auto LineSegments(
     TMatrixQ1 const& Q1,
     TMatrixP2 const& P2,
     TMatrixQ2 const& Q2,
-    TScalar eps = std::numeric_limits<TScalar>::min()) -> mini::SVector<TScalar, 2>;
+    TScalar eps = TScalar(1e-5)) -> mini::SVector<TScalar, 2>;
 
 template <mini::CMatrix TMatrixX, mini::CMatrix TMatrixP, mini::CMatrix TMatrixN>
 PBAT_HOST_DEVICE auto PointOnPlane(TMatrixX const& X, TMatrixP const& P, TMatrixN const& n)
@@ -556,15 +556,16 @@ PBAT_HOST_DEVICE auto LineSegments(
     mini::SVector<TScalar, kDims> const d1 = Q1 - P1; // Direction vector of segment S1
     mini::SVector<TScalar, kDims> const d2 = Q2 - P2; // Direction vector of segment S2
     mini::SVector<TScalar, kDims> const r  = P1 - P2;
-    TScalar a = Dot(d1, d1); // Squared length of segment S1, always nonnegative
-    TScalar e = Dot(d2, d2); // Squared length of segment S2, always nonnegative
-    TScalar f = Dot(d2, r);  // Check if either or both segments degenerate into points
-    if (a <= eps and e <= eps)
+    TScalar a    = Dot(d1, d1); // Squared length of segment S1, always nonnegative
+    TScalar e    = Dot(d2, d2); // Squared length of segment S2, always nonnegative
+    TScalar f    = Dot(d2, r);  // Check if either or both segments degenerate into points
+    TScalar eps2 = eps * eps;
+    if (a <= eps2 and e <= eps2)
     {
         // Both segments degenerate into points
-        return mini::Zeros<TScalar, 2>();
+        return mini::SVector<TScalar, 2>{TScalar(0.5), TScalar(0.5)};
     }
-    if (a <= eps)
+    if (a <= eps2)
     {
         // First segment degenerates into a point
         return mini::SVector<TScalar, 2>{
@@ -574,7 +575,7 @@ PBAT_HOST_DEVICE auto LineSegments(
     else
     {
         TScalar c = Dot(d1, r);
-        if (e <= eps)
+        if (e <= eps2)
         {
             // Second segment degenerates into a point
             // t = 0 => s = (b*t - c) / a = -c / a
@@ -588,12 +589,12 @@ PBAT_HOST_DEVICE auto LineSegments(
             TScalar b     = Dot(d1, d2);
             TScalar denom = a * e - b * b; // Always nonnegative
             // If segments not parallel, compute closest point on L1 to L2 and
-            // clamp to segment S1. Else pick arbitrary s (here 0)
+            // clamp to segment S1. Else pick arbitrary s (here 0.5)
             mini::SVector<TScalar, 2> st;
-            if (denom != TScalar(0))
-                st(0) = std::clamp((b * f - c * e) / denom, TScalar(0), TScalar(1));
+            if (denom < eps * a * e)
+                st(0) = TScalar(0.5);
             else
-                st(0) = TScalar(0);
+                st(0) = std::clamp((b * f - c * e) / denom, TScalar(0), TScalar(1));
             // Compute point on L2 closest to S1(s) using
             // t = Dot((P1 + D1*s) - P2,D2) / Dot(D2,D2) = (b*s + f) / e
             st(1) = (b * st(0) + f) / e;

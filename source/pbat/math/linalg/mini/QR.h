@@ -5,6 +5,7 @@
 #include "Concepts.h"
 #include "Matrix.h"
 #include "Norm.h"
+#include "TriangularSolve.h"
 #include "UnaryOperations.h"
 #include "pbat/HostDevice.h"
 
@@ -149,6 +150,103 @@ PBAT_HOST_DEVICE auto GivensRotation(TScalar a, TScalar b)
         s               = c * t;
     }
     return SVector<TScalar, 2>{c, s};
+}
+
+/**
+ * @brief Solve the upper-triangular system R * x = y by back substitution,
+ *        skipping rows whose diagonal R(i,i) is numerically zero.
+ *
+ * When R(i,i) <= eps, the i-th component of x is set to zero instead of
+ * dividing by a near-zero value. This yields the minimum-norm least-squares
+ * solution for rank-deficient systems obtained from QR decomposition.
+ *
+ * @tparam TMatrixR Upper-triangular matrix type (N x N) satisfying CMatrix
+ * @tparam TMatrixB Right-hand side matrix type (N x K) satisfying CMatrix
+ * @param R Upper-triangular matrix from QR()
+ * @param b Right-hand side vector/matrix (typically Q^T * b)
+ * @param eps Threshold below which a diagonal element is treated as zero.
+ *        Defaults to std::numeric_limits<ScalarType>::epsilon().
+ * @return Solution x; components corresponding to zero diagonals are set to zero.
+ */
+template <class /*CMatrix*/ TMatrixR, class /*CMatrix*/ TMatrixB>
+PBAT_HOST_DEVICE auto
+RankDeficientUpperTriangularSolve(
+    TMatrixR&& R,
+    TMatrixB&& b,
+    typename std::decay_t<TMatrixR>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrixR>::ScalarType>::epsilon())
+{
+    using RType = std::decay_t<TMatrixR>;
+    using BType = std::decay_t<TMatrixB>;
+    PBAT_MINI_CHECK_CMATRIX(RType);
+    PBAT_MINI_CHECK_CMATRIX(BType);
+
+    using ScalarType         = typename RType::ScalarType;
+    static auto constexpr kN = RType::kRows;
+    static auto constexpr kK = BType::kCols;
+    static_assert(RType::kRows == RType::kCols, "R must be square");
+    static_assert(RType::kCols == BType::kRows, "Dimension mismatch between R and b");
+
+    // Scale epsilon by the largest diagonal magnitude for a scale-invariant threshold
+    using namespace std;
+    ScalarType maxDiag{0};
+    for (auto i = 0; i < kN; ++i)
+        maxDiag = max(maxDiag, abs(R(i, i)));
+    eps *= maxDiag;
+
+    SMatrix<ScalarType, kN, kK> x = b;
+
+    for (auto k = 0; k < kK; ++k)
+    {
+        for (auto i = kN - 1; i >= 0; --i)
+        {
+            for (auto j = i + 1; j < kN; ++j)
+            {
+                x(i, k) -= R(i, j) * x(j, k);
+            }
+            // Skip rank-deficient rows: set x_i = 0 instead of dividing by ~0
+            x(i, k) = (abs(R(i, i)) > eps) ? (x(i, k) / R(i, i)) : ScalarType{0};
+        }
+    }
+    return x;
+}
+
+/**
+ * @brief Solve the linear system A * x = b using QR factorization.
+ *
+ * Given A = Q * R, solves:
+ *   1. Compute y = Q^T * b
+ *   2. Solve R * x = y (back substitution, tolerating zero diagonals in R)
+ *
+ * When A is rank-deficient, some diagonal elements of R will be zero (corresponding
+ * to linearly dependent columns detected during QR()). The solve sets the
+ * corresponding components of x to zero, yielding the minimum-norm least-squares
+ * solution. This mirrors the approach used by the EVD solver path, which skips
+ * degenerate eigenvalue directions.
+ *
+ * @tparam TMatrixQ Orthogonal matrix type (M x N) satisfying CMatrix
+ * @tparam TMatrixR Upper-triangular matrix type (N x N) satisfying CMatrix
+ * @tparam TMatrixB Right-hand side matrix type (M x K) satisfying CMatrix
+ * @param Q Orthogonal factor from QR()
+ * @param R Upper-triangular factor from QR()
+ * @param b Right-hand side vector/matrix
+ * @param eps Base epsilon for detecting zero diagonals in R, scaled internally
+ *        by the largest diagonal magnitude. Defaults to
+ *        std::numeric_limits<ScalarType>::epsilon().
+ * @return Solution x such that A * x = b in the least-squares sense
+ */
+template <class /*CMatrix*/ TMatrixQ, class /*CMatrix*/ TMatrixR, class /*CMatrix*/ TMatrixB>
+PBAT_HOST_DEVICE auto QRSolve(
+    TMatrixQ&& Q,
+    TMatrixR&& R,
+    TMatrixB&& b,
+    typename std::decay_t<TMatrixR>::ScalarType eps =
+        std::numeric_limits<typename std::decay_t<TMatrixR>::ScalarType>::epsilon())
+{
+    // Compute y = Q^T * b
+    auto y = Q.Transpose() * b;
+    // Solve R * x = y, skipping rank-deficient rows
+    return RankDeficientUpperTriangularSolve(std::forward<TMatrixR>(R), y, eps);
 }
 
 } // namespace mini

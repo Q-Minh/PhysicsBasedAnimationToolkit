@@ -59,7 +59,7 @@ void BindMesh(nanobind::module_& m)
         nb::arg("n") = Index(-1),
         "Compute the mesh element to vertex adjacency graph (c,v) for c in C and v in [0,n).\n"
         "Args:\n"
-        "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
+        "    C (np.ndarray): |# nodes per element|x|# elements| array of mesh elements\n"
         "    n (int): Number of nodes in the mesh");
     m.def(
         "mesh_primal_graph",
@@ -70,8 +70,10 @@ void BindMesh(nanobind::module_& m)
         nb::arg("n") = Index(-1),
         "Compute the mesh primal graph of adjacent vertices (u,v) where u,v are mesh vertices.\n"
         "Args:\n"
-        "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
-        "    n (int): Number of nodes in the mesh");
+        "    C (np.ndarray): |# nodes per element|x|# elements| array of mesh elements\n"
+        "    n (int): Number of nodes in the mesh"
+        "Returns:\n"
+        "    scipy.sparse.csr_matrix: The |# nodes| x |# nodes| sparse adjacency matrix");
     m.def(
         "mesh_dual_graph",
         [](Eigen::Ref<IndexMatrixX const> const& C, Index nNodes, std::int32_t flags) {
@@ -88,7 +90,9 @@ void BindMesh(nanobind::module_& m)
         "    C (np.ndarray): |#nodes per element|x|#elements| array of mesh elements\n"
         "    n (int): Number of nodes in the mesh\n"
         "    flags (int): VertexAdjacency (0b001) | EdgeAdjacency (0b010) | FaceAdjacency (0b100) "
-        "| All (0b111)\n");
+        "| All (0b111)\n"
+        "Returns:\n"
+        "    scipy.sparse.csr_matrix: The |# elements| x |# elements| sparse adjacency matrix");
     m.def(
         "sorted_connected_component_ordering",
         [](nb::DRef<MatrixX const> const& X, nb::DRef<IndexMatrixX const> const& E) {

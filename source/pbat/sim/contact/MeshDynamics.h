@@ -10,6 +10,7 @@
 #ifndef PBAT_SIM_CONTACT_MESHDYNAMICS_H
 #define PBAT_SIM_CONTACT_MESHDYNAMICS_H
 
+#include "Constraints.h"
 #include "MultiMesh.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
@@ -18,49 +19,33 @@
 #include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/Device.h"
 #include "pbat/geometry/HalfEdges.h"
+#include "pbat/graph/DenseAdjacencySet.h"
 #include "pbat/io/Archive.h"
-#include "pbat/math/linalg/FilterEigenvalues.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/contact/Friction.h"
-#include "pbat/sim/contact/Potentials.h"
 #include "pbat/sim/contact/ogc/Ogc.h"
 
 #include <Eigen/Core>
-#include <array>
+#include <Eigen/SparseCore>
+#include <atomic>
 #include <cmath>
+#include <new>
+#include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_invoke.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/parallel_sort.h>
 #include <type_traits>
 #include <vector>
 
+/**
+ * TODO:
+ * - Check when constraint linearization becomes bad to adaptively re-trigger linearization.
+ */
+
 namespace pbat::sim::contact {
-
-/**
- * @brief Energy computation flags
- */
-enum EMeshEnergyComputationFlags : int {
-    Potential = 1 << 0, ///< Compute potential energy
-    Gradient  = 1 << 1, ///< Compute contact gradients
-    Hessian   = 1 << 2  ///< Compute contact hessians
-};
-
-/**
- * @brief Energy (derivatives)
- * @tparam kStencil Number of vertices involved in the contact
- */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex, int kStencil>
-struct MeshContactEnergy
-{
-    static constexpr int kDofs = 3 * kStencil;                 ///< Degrees of freedom involved
-    TScalar En;                                                ///< Normal contact energy
-    TScalar Ef;                                                ///< Frictional contact energy
-    math::linalg::mini::SVector<TScalar, kDofs> gradEn;        ///< Normal contact energy gradient
-    math::linalg::mini::SMatrix<TScalar, kDofs, kDofs> hessEn; ///< Normal contact energy Hessian
-    math::linalg::mini::SVector<TScalar, kDofs> gradEf; ///< Frictional contact energy gradient
-    math::linalg::mini::SMatrix<TScalar, kDofs, kDofs>
-        hessEf;                           ///< Frictional contact energy Hessian
-    std::array<TIndex, kStencil> stencil; ///< Indices of involved vertices
-};
 
 /**
  * @brief Mesh contact dynamics
@@ -71,9 +56,299 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 class MeshDynamics
 {
   public:
-    using ScalarType = TScalar; ///< Scalar type
-    using IndexType  = TIndex;  ///< Index type
-
+    using SelfType   = MeshDynamics<TScalar, TIndex>; ///< Self type
+    using ScalarType = TScalar;                       ///< Scalar type
+    using IndexType  = TIndex;                        ///< Index type
+    /**
+     * @brief Constraint decay value with default 1-initialization semantics
+     */
+    struct OneInitializedScalar
+    {
+        TScalar gamma{1}; ///< Ensure 1-initialization
+    };
+    /**
+     * @brief Constraint set container
+     * @tparam TDistance Mesh distance function
+     */
+    template <geometry::CMeshDistance TDistance>
+    using ConstraintSet = graph::DenseAdjacencySet<
+        TIndex,
+        /*0*/ TScalar /*lambda*/,
+        /*1*/ TScalar /*s*/,
+        /*2*/ OneInitializedScalar /*gamma*/,
+        /*3*/ TScalar /*chat*/,
+        /*4*/ math::linalg::mini::SVector<TScalar, TDistance::kDofs> /*gradc*/,
+        /*5*/ TScalar /*c(x)*/,
+        /*6*/ math::linalg::mini::SMatrix<TScalar, 3, 2> /*tangent basis*/,
+        /*7*/
+        math::linalg::mini::SVector<TScalar, TDistance::kStencil> /*tangential operator weights*/,
+        /*8*/
+        math::linalg::mini::SVector<TScalar, 2> /*c_f(x) = T^T W (x - xt)*/,
+        /*9*/ math::linalg::mini::SVector<TScalar, 2> /*dhat = T^T W xt*/,
+        /*10*/ math::linalg::mini::SVector<TScalar, 2> /*lambda_f*/,
+        /*11*/ TScalar /*sigma (normal penalty)*/,
+        /*12*/ TScalar /*sigma_f (friction penalty)*/
+        >;
+    /**
+     * @brief Friction data accessor
+     * @tparam TContactSet Contact set type (possibly const)
+     */
+    template <class TContactSet>
+    struct FrictionAccessor
+    {
+        using ContactSetType = std::remove_const_t<TContactSet>; ///< Contact set type
+        using ConstraintFunctionType =
+            typename ContactSetType::ConstraintFunctionType; ///< Constraint function type
+        static auto constexpr kStencil = ConstraintFunctionType::kStencil; ///< Stencil size
+        static auto constexpr kDims    = ConstraintFunctionType::kDims;    ///< Dimension size
+        static auto constexpr kDofs    = ConstraintFunctionType::kDofs; ///< Degree of freedom size
+        TContactSet& set; ///< Reference to the contact set (possibly const)
+        TIndex k;         ///< Constraint data index
+        /**
+         * @brief Tangential basis at the contact point \f$ \mathbf{T} \in \mathbb{R}^{3 \times 2}
+         * \f$
+         * @return math::linalg::mini::SMatrix<TScalar, 3, 2>& or const&
+         */
+        auto& TangentBasis() { return set.template Data<6>(k); }
+        /**
+         * @brief Weights \f$ W \f$ s.t. \f$ u = T^T W v \f$ for stencil
+         * velocity \f$ v \f$ and tangent space (2D) velocity \f$ u \f$.
+         * @return math::linalg::mini::SVector<TScalar, kStencil>& or const&
+         */
+        auto& Weights() { return set.template Data<7>(k); }
+        /**
+         * @brief Friction constraint value \f$ c_f(\mathbf{x}) = \mathbf{T}^T \mathbf{W}
+         * (\mathbf{x} - \mathbf{x}_t) \f$
+         * @return math::linalg::mini::SVector<TScalar, 2>& or const&
+         */
+        auto& Eval() { return set.template Data<8>(k); }
+        /**
+         * @brief Evaluate the friction constraint value
+         * @param xc Stencil point positions
+         * @return math::linalg::mini::SVector<TScalar, 2>
+         * @pre `ComputeLinearization(x, xt)` has been called
+         */
+        auto Eval(auto&& xc) -> math::linalg::mini::SVector<TScalar, 2>
+        {
+            auto Xc       = Reshape<kDims, kStencil>(xc);
+            auto const& T = TangentBasis();
+            auto const& W = Weights();
+            return T.Transpose() * (Xc * W) - Chat();
+        }
+        /**
+         * @brief \f$ \hat{d} = \mathbf{T}^T \mathbf{W} \mathbf{x}_t \f$
+         * @return math::linalg::mini::SVector<TScalar, 2>& or const&
+         */
+        auto& Chat() { return set.template Data<9>(k); }
+        /**
+         * @brief Friction Lagrange multiplier \f$ \boldsymbol{\lambda}_f \f$
+         * @return math::linalg::mini::SVector<TScalar, 2>& or const&
+         */
+        auto& Lambda() { return set.template Data<10>(k); }
+        /**
+         * @brief Friction penalty parameter \f$ \sigma_f \f$
+         * @return TScalar& or TScalar const&
+         */
+        auto& Penalty() { return set.template Data<12>(k); }
+    };
+    /**
+     * @brief Lightweight accessor for constraint data in a contact set.
+     * @tparam TContactSet Contact set type (possibly const)
+     */
+    template <class TContactSet>
+    struct ConstraintAccessor
+    {
+        using ContactSetType = std::remove_const_t<TContactSet>; ///< Contact set type
+        using ConstraintFunctionType =
+            typename ContactSetType::ConstraintFunctionType; ///< Constraint function type
+        static auto constexpr kStencil = ConstraintFunctionType::kStencil; ///< Stencil size
+        static auto constexpr kDims    = ConstraintFunctionType::kDims;    ///< Dimension size
+        static auto constexpr kDofs    = ConstraintFunctionType::kDofs; ///< Degree of freedom size
+        TContactSet& set; ///< Reference to the contact set (possibly const)
+        TIndex k;         ///< Constraint data index
+        /**
+         * @brief Get the constraint function for this contact.
+         * @return ConstraintFunctionType
+         */
+        ConstraintFunctionType Function() const { return ConstraintFunctionType{}; }
+        /**
+         * @brief Compute the linearization of both normal and friction constraints, ensuring
+         * the normal gradient and tangent basis form an orthogonal frame.
+         * @param xc `kDofs x 1` stencil node positions at the linearization point
+         * @param xtc `kDofs x 1` stencil node positions at time t (for friction chat)
+         */
+        void ComputeLinearization(auto&& xc, auto&& xtc)
+        {
+            using namespace math::linalg::mini;
+            auto Xc  = Reshape<kDims, kStencil>(xc);
+            auto Xtc = Reshape<kDims, kStencil>(xtc);
+            auto F   = Friction();
+            auto& W  = F.Weights();
+            SVector<TScalar, kDims> n;
+            TScalar d;
+            // Compute contact normal, distance and operator weights
+            if constexpr (std::is_same_v<ContactSetType, PointPointContactSet>)
+            {
+                SVector<TScalar, kDims> diff = Xc.Col(0) - Xc.Col(1);
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = TScalar(1);
+                W(1)                         = -TScalar(1);
+            }
+            else if constexpr (std::is_same_v<ContactSetType, PointEdgeContactSet>)
+            {
+                auto uv = geometry::ClosestPointQueries::UvPointOnLineSegment(
+                    Xc.Col(0),
+                    Xc.Col(1),
+                    Xc.Col(2));
+                SVector<TScalar, kDims> xcp  = uv(0) * Xc.Col(1) + uv(1) * Xc.Col(2);
+                SVector<TScalar, kDims> diff = Xc.Col(0) - xcp;
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = TScalar(1);
+                W.template Slice<2, 1>(1, 0) = -uv;
+            }
+            else if constexpr (std::is_same_v<ContactSetType, PointTriangleContactSet>)
+            {
+                auto uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
+                    Xc.Col(0),
+                    Xc.Col(1),
+                    Xc.Col(2),
+                    Xc.Col(3));
+                SVector<TScalar, kDims> xcp =
+                    uvw(0) * Xc.Col(1) + uvw(1) * Xc.Col(2) + uvw(2) * Xc.Col(3);
+                SVector<TScalar, kDims> diff = Xc.Col(0) - xcp;
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = TScalar(1);
+                W.template Slice<3, 1>(1, 0) = -uvw;
+            }
+            else if constexpr (std::is_same_v<ContactSetType, EdgeEdgeContactSet>)
+            {
+                auto st = geometry::ClosestPointQueries::LineSegments(
+                    Xc.Col(0),
+                    Xc.Col(1),
+                    Xc.Col(2),
+                    Xc.Col(3));
+                SVector<TScalar, kDims> xc1  = (1 - st(0)) * Xc.Col(0) + st(0) * Xc.Col(1);
+                SVector<TScalar, kDims> xc2  = (1 - st(1)) * Xc.Col(2) + st(1) * Xc.Col(3);
+                SVector<TScalar, kDims> diff = xc1 - xc2;
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = 1 - st(0);
+                W(1)                         = st(0);
+                W(2)                         = -(1 - st(1));
+                W(3)                         = -st(1);
+            }
+            else
+            {
+                static_assert(false, "Unsupported contact set");
+            }
+            // Compute tangent basis, derivatives and linearization constants
+            auto& T = F.TangentBasis();
+            T       = TangentialBasis(n);
+            auto& g = Grad();
+            for (auto i = 0; i < kStencil; ++i)
+                g.template Slice<kDims, 1>(i * kDims, 0) = W(i) * n;
+            Eval()   = d;
+            Grad()   = g;
+            Chat()   = Eval() - Dot(g, xc);
+            F.Chat() = T.Transpose() * (Xtc * W);
+        }
+        /**
+         * @brief Lagrange multiplier
+         * @return TScalar& or TScalar const&
+         */
+        auto& Lambda() { return set.template Data<0>(k); }
+        /**
+         * @brief Inequality slack variable
+         * @return TScalar& or TScalar const&
+         */
+        auto& Slack() { return set.template Data<1>(k); }
+        /**
+         * @brief Lagrangian and penalty augmentation decay factor
+         * @return TScalar& or TScalar const&
+         */
+        auto& Decay() { return set.template Data<2>(k).gamma; }
+        /**
+         * @brief \f$ c(\mathbf{x}_k) - \nabla c(\mathbf{x}_k) \cdot \mathbf{x}_k \f$
+         * @return TScalar& or TScalar const&
+         */
+        auto& Chat() { return set.template Data<3>(k); }
+        /**
+         * @brief Gradient of the constraint at linearized point \f$ \mathbf{x}_k \f$
+         * @return math::linalg::mini::SVector<TScalar, kDofs>& or
+         * math::linalg::mini::SVector<TScalar, kDofs> const&
+         */
+        auto& Grad() { return set.template Data<4>(k); }
+        /**
+         * @brief Last evaluated constraint value
+         * @return TScalar& or TScalar const&
+         */
+        auto& Eval() { return set.template Data<5>(k); }
+        /**
+         * @brief Evaluates the linearized constraint function at `x`
+         * @param x `kDofs x 1` mini::CMatrix
+         * @return auto
+         * @pre `ComputeLinearization(x, xt)` has been called
+         */
+        auto Eval(auto&& x) { return Chat() + Dot(Grad(), x); }
+        /**
+         * @brief Normal contact penalty parameter \f$ \sigma \f$
+         * @return TScalar& or TScalar const&
+         */
+        auto& Penalty() { return set.template Data<11>(k); }
+        /**
+         * @brief Friction data accessor
+         * @return auto
+         */
+        auto Friction() { return FrictionAccessor<TContactSet>{set, k}; }
+    };
+    /**
+     * @brief Point-point contact constraint container
+     */
+    struct PointPointContactSet : public ConstraintSet<geometry::PointPointDistance<TScalar>>
+    {
+        using ConstraintFunctionType = geometry::PointPointDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<PointPointContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<PointPointContactSet const>;
+    };
+    /**
+     * @brief Point-edge contact constraint container
+     */
+    struct PointEdgeContactSet : public ConstraintSet<geometry::PointEdgeDistance<TScalar>>
+    {
+        using ConstraintFunctionType = geometry::PointEdgeDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<PointEdgeContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<PointEdgeContactSet const>;
+    };
+    /**
+     * @brief Point-triangle contact constraint container
+     */
+    struct PointTriangleContactSet : public ConstraintSet<geometry::PointTriangleDistance<TScalar>>
+    {
+        using ConstraintFunctionType = geometry::PointTriangleDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<PointTriangleContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<PointTriangleContactSet const>;
+    };
+    /**
+     * @brief Edge-edge contact constraint container
+     */
+    struct EdgeEdgeContactSet : public ConstraintSet<geometry::EdgeEdgeDistance<TScalar>>
+    {
+        using ConstraintFunctionType = geometry::EdgeEdgeDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<EdgeEdgeContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<EdgeEdgeContactSet const>;
+    };
+    /**
+     * @brief Contact pair stencil
+     */
+    struct Stencil
+    {
+        IndexType u, v; ///< Mesh primitive indices (e.g., vertex index for point, half-edge index
+                        ///< for edge, face index for triangle)
+        int gu, gv;     ///< Geometry type id (e.g. from OgcState::EGeometry)
+    };
     /**
      * @brief Mesh dynamics parameters
      */
@@ -85,12 +360,19 @@ class MeshDynamics
         TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
                             ///< smooth transition
         TScalar kc{1e3};    ///< OGC contact stiffness parameter, `kc > 0`
-        TScalar mu{0.5};    ///< OGC friction coefficient, `mu >= 0`
+        TScalar mu{0.5};    ///< Static friction coefficient, `mu >= 0`
         TScalar rqstart{0}; ///< Base query radius (larger than contact radius `r`) on which we add
                             ///< a linear function of inertial target distance to initialize the
                             ///< actual query radius
         TScalar betarq{1};  ///< Slope of the linear function of inertial target distance to add to
                             ///< `rqstart` to initialize the actual query radius
+        TScalar gamma{1};   ///< Multiple of dynamics hessian curvature in constraint gradient
+                            ///< direction for penalty parameter computation
+        TScalar gammaf{1};  ///< Multiple of dynamics hessian curvature in constraint gradient
+                            ///< direction for frictional contact
+        TScalar dmin{5e-4}; ///< Loose target minimum contact distance
+        TScalar decay{0.9}; ///< Decay factor for constraint deactivation
+        TScalar decaylo{0.01};   ///< Decay threshold under which constraints are deactivated
         bool bDeactivate{false}; ///< Whether to deactivate contacts
 
         /**
@@ -122,6 +404,21 @@ class MeshDynamics
          * @return Reference to this
          */
         SelfType& WithQueryRadiusInitialization(TScalar rqstart, TScalar betarq);
+        /**
+         * @brief Set the sequential augmented Lagrangian parameters
+         * @param gamma_ Multiple of dynamics hessian curvature for penalty parameter computation
+         * @param gammaf_ Same as gamma_ but for frictional contact
+         * @param dmin_ Loose target minimum contact distance, `dmin_ > 0`
+         * @param decay_ Decay factor for constraint deactivation
+         * @param decaylo_ Decay threshold under which constraints are deactivated
+         * @return Reference to this
+         */
+        SelfType& WithSequentialAugmentedLagrangian(
+            TScalar gamma_,
+            TScalar gammaf_,
+            TScalar dmin_,
+            TScalar decay_,
+            TScalar decaylo_);
         /**
          * @brief Construct the Params object
          * @param bValidate Whether to validate parameters
@@ -159,6 +456,14 @@ class MeshDynamics
          */
         TScalar kcp; ///< `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
         TScalar b;   ///< `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
+
+      private:
+        /**
+         * @brief Compute the OGC two-stage activation coefficients `kcp` and `b`
+         * from the current values of `r` and `kc`.
+         * @pre `r > 0`, `kc > 0`
+         */
+        void UpdateOgcTwoStageActivationCoefficients();
     };
 
     /**
@@ -184,16 +489,6 @@ class MeshDynamics
      */
     void Initialize(geometry::Device device);
     /**
-     * @brief Truncate displacements to satisfy the computed displacement bounds
-     * @tparam TDerivedXkp1 Writeable matrix type
-     * @param Xkp1 `3 x |# points|` or `3*|# points| x 1` proposed new point positions
-     * @return Number of truncated points in this call.
-     * @pre `Initialize()` has been called
-     * @post Displacements have been truncated to satisfy the computed displacement bounds
-     */
-    template <class TDerivedXkp1>
-    Eigen::Index TruncateDisplacedPositions(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
-    /**
      * @brief Truncate displacements from positions to satisfy the computed displacement bounds
      * @tparam TDerivedXkp1 Writeable matrix type
      * @tparam TMask Eigen dense base s.t. TMask::Scalar is convertible to bool
@@ -204,9 +499,18 @@ class MeshDynamics
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
     template <class TDerivedXkp1, class TMask>
-    Eigen::Index TruncateDisplacedPositions(
-        Eigen::MatrixBase<TDerivedXkp1>& Xkp1,
-        Eigen::DenseBase<TMask> const& mask);
+    Eigen::Index
+    RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1, Eigen::DenseBase<TMask> const& mask);
+    /**
+     * @brief Truncate displacements to satisfy the computed displacement bounds
+     * @tparam TDerivedXkp1 Writeable matrix type
+     * @param Xkp1 `3 x |# points|` or `3*|# points| x 1` proposed new point positions
+     * @return Number of truncated points in this call.
+     * @pre `Initialize()` has been called
+     * @post Displacements have been truncated to satisfy the computed displacement bounds
+     */
+    template <class TDerivedXkp1>
+    Eigen::Index RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
     /**
      * @brief Truncate displacements to satisfy the computed displacement bounds
      * @tparam TDerivedDxkp1 Writeable matrix type
@@ -218,244 +522,268 @@ class MeshDynamics
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
     template <class TDerivedDxkp1, class TMask>
-    Eigen::Index TruncateDisplacements(
-        Eigen::MatrixBase<TDerivedDxkp1>& Dxkp1,
-        Eigen::DenseBase<TMask> const& mask);
+    Eigen::Index
+    MakeStepFeasible(Eigen::MatrixBase<TDerivedDxkp1>& Dxkp1, Eigen::DenseBase<TMask> const& mask);
     /**
-     * @brief Request computation of displacement bounds
+     * @brief Request constraint set update
      */
-    void RequestDisplacementBoundsComputation();
+    void RequestConstraintSetUpdate();
     /**
-     * @brief Get the number of truncated points from the last `TruncateDisplacedPositions()`
-     * call
-     * @return Number of truncated points
+     * @brief Check if constraint set update is required
+     * @return true if constraint set update is required, false otherwise
      */
-    Eigen::Index NumTruncatedPoints() const;
-    /**
-     * @brief Check if displacement bounds computation is required
-     * @return true if displacement bounds computation is required, false otherwise
-     */
-    bool RequiresBoundsComputation() const;
+    bool RequiresConstraintSetUpdate() const;
     /**
      * @brief Executes a collision detection pass and computes resulting per-point displacement
      * bounds.
      * @tparam TDerivedX Matrix type
      * @param X `3 x |# points|` current point positions (column-major: one point per column)
-     * @pre `TruncateDisplacedPositions()` has been called
+     * @param bComputeReverseContactPairs Store reverse contact pair (j,i) for contact pair (i,j) if
+     * true
+     * @pre `RestoreFeasibility()` has been called
      */
     template <class TDerivedX>
-    void ComputeDisplacementBounds(Eigen::DenseBase<TDerivedX> const& X);
+    void UpdateConstraintSet(
+        Eigen::DenseBase<TDerivedX> const& X,
+        bool bComputeReverseContactPairs = false);
     /**
-     * @brief For each point-(dynamic)face contact of point `i`, invoke the appropriate callback
-     *
-     * @tparam FOnPointPointContact Callable with signature `void(TIndex j)` for point `j`
-     * @tparam FOnPointLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex, 2>
-     * einds)` for edge `einds`
-     * @tparam FOnPointTriangleContact Callable with signature `void(Eigen::Vector<TIndex, 3>
-     * finds)` for triangle `finds`
+     * @brief Linearize all contact constraints, initializing them if necessary.
+     * @tparam TDerivedx Matrix type
+     * @tparam TDerivedxt Matrix type
+     * @param x `3 x |# points|` current point positions (column-major: one point per column)
+     * @param xt `3 x |# points|` current point positions at time t (column-major: one point per
+     * column)
+     * @post `Chat()`, `Grad()` and `Eval()` are populated on each constraint
+     */
+    template <class TDerivedx, class TDerivedxt>
+    void LinearizeConstraints(
+        Eigen::MatrixBase<TDerivedx> const& x,
+        Eigen::MatrixBase<TDerivedxt> const& xt);
+    /**
+     * @brief Update the penalty parameter for the contact constraints.
+     * @tparam TDerived Sparse matrix type
+     * @param H Hessian of objective function
+     */
+    template <class TDerived>
+    void UpdatePenaltyParameter(Eigen::SparseCompressedBase<TDerived> const& H);
+    /**
+     * @brief Enum for dual variable masks
+     */
+    enum EDualVariable : int { Slack = 1 << 0, LagrangeMultiplier = 1 << 1, Decay = 1 << 2 };
+    /**
+     * @brief Update dual variables (slacks, multipliers)
+     * @tparam Mask Bitmask for selecting which dual variable(s) to update
+     * @tparam TDerivedx Input position matrix type
+     * @param x `3 x |# points|` or `3*|# points|` current point positions (column-major: one point
+     * per column)¸
+     * @post `c(x) = c(x_k) + \nabla c(x_k) \cdot (x - x_k)` for each contact
+     */
+    template <int Mask, class TDerivedx>
+    void UpdateDual(Eigen::MatrixBase<TDerivedx> const& x);
+    /**
+     * @brief Iterate over all contacts
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::AccessorType C, Stencil stencil)`
+     * @param fOnContact Callback for each contact
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
+     */
+    template <class FOnContact>
+    void ForAllContacts(FOnContact fOnContact, std::int32_t nThreads = 1);
+    /**
+     * @brief Iterate over all contacts
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param fOnContact Callback for each contact
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
+     */
+    template <class FOnContact>
+    void ForAllContacts(FOnContact fOnContact, std::int32_t nThreads = 1) const;
+    /**
+     * @brief Parallel transform-reduce operation on contact set
+     * @tparam FTransform Callable with signature `template <TContactSet> auto(typename
+     * TContactSet::ConstAccessorType const& c, Stencil const& stencil) -> T`
+     * @tparam FReduce Callable with signature `template <T> auto(T&& a, T&& b) -> T`
+     * @param fTransform
+     * @param fReduce
+     * @return T
+     * @note We don't explicitly enforce compile-time requirements on `FTransform`, because it's a
+     * templated callable.
+     */
+    template <class FTransform, class FReduce, class T>
+        requires std::convertible_to<std::invoke_result_t<FReduce, T, T>, T>
+    T TransformReduce(FTransform fTransform, FReduce fReduce, T identity = {}) const;
+    /**
+     * @brief Iterate over all contacts in the contact set
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::AccessorType C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate over
+     * @param fOnContact Callback for each contact
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
+     */
+    template <class FOnContact, class TContactSet>
+    void
+    ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact, std::int32_t nThreads = 1);
+    /**
+     * @brief Iterate over all contacts in the contact set
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate over
+     * @param fOnContact Callback for each contact
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachContact(
+        TContactSet const& contactSet,
+        FOnContact&& fOnContact,
+        std::int32_t nThreads = 1) const;
+    /**
+     * @brief Visit all point-point contacts involving point `i`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointPointContactSet::AccessorType C, Stencil stencil)`
      * @param i Point index
-     * @param fOnPointPointContact Point-point contact handler
-     * @param fOnPointEdgeContact Point-edge contact handler
-     * @param fOnPointTriangleContact Point-triangle contact handler
+     * @param fOnContact Callback for each contact `(i, j)` and `(j, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <
-        class FOnPointPointContact,
-        class FOnPointLineSegmentContact,
-        class FOnPointTriangleContact>
-    void ForEachPointDynamicMeshContact(
-        IndexType i,
-        FOnPointPointContact&& fOnPointPointContact,
-        FOnPointLineSegmentContact&& fOnPointEdgeContact,
-        FOnPointTriangleContact&& fOnPointTriangleContact);
+    template <class FOnContact>
+    void ForEachPointPointContact(IndexType i, FOnContact&& fOnContact);
     /**
-     * @brief For each point-(static)face contact of point `i`, invoke the appropriate callback
-     *
-     * @tparam FOnPointPointContact Callable with signature `void(TIndex j)` for point `j`
-     * @tparam FOnPointLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex, 2>
-     * einds)` for edge `einds`
-     * @tparam FOnPointTriangleContact Callable with signature `void(Eigen::Vector<TIndex, 3>
-     * finds)` for triangle `finds`
+     * @brief Visit all point-point contacts involving point `i` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointPointContactSet::ConstAccessorType C, Stencil stencil)`
      * @param i Point index
-     * @param fOnPointPointContact Point-point contact handler
-     * @param fOnPointEdgeContact Point-edge contact handler
-     * @param fOnPointTriangleContact Point-triangle contact handler
+     * @param fOnContact Callback for each contact `(i, j)` and `(j, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <
-        class FOnPointPointContact,
-        class FOnPointLineSegmentContact,
-        class FOnPointTriangleContact>
-    void ForEachPointStaticMeshContact(
-        IndexType i,
-        FOnPointPointContact&& fOnPointPointContact,
-        FOnPointLineSegmentContact&& fOnPointEdgeContact,
-        FOnPointTriangleContact&& fOnPointTriangleContact);
+    template <class FOnContact>
+    void ForEachPointPointContact(IndexType i, FOnContact&& fOnContact) const;
     /**
-     * @brief For each edge-face contact of half-edge `hei`, invoke the appropriate callback
-     *
-     * @tparam FOnPointLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex, 2>
-     * eindsi, TIndex j)` for edge `eindsi` and point `j`
-     * @tparam FOnLineSegmentLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex,
-     * 2> eindsi, Eigen::Vector<TIndex, 2> eindsj)` for edge `eindsi` and edge `eindsj`
-     * @param hei Half-edge index
-     * @param fOnPointLineSegmentContact Point-edge contact handler
-     * @param fOnLineSegmentLineSegmentContact Edge-edge contact handler
-     */
-    template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-    void ForEachHalfEdgeDynamicMeshContact(
-        IndexType hei,
-        FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-        FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact);
-    /**
-     * @brief For each edge-(static)face contact of half-edge `hei`, invoke the appropriate callback
-     *
-     * @tparam FOnPointLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex, 2>
-     * eindsi, TIndex j)` for edge `eindsi` and point `j`
-     * @tparam FOnLineSegmentLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex,
-     * 2> eindsi, Eigen::Vector<TIndex, 2> eindsj)` for edge `eindsi` and edge `eindsj`
-     * @param hei Half-edge index
-     * @param fOnPointLineSegmentContact Point-edge contact handler
-     * @param fOnLineSegmentLineSegmentContact Edge-edge contact handler
-     */
-    template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-    void ForEachHalfEdgeStaticMeshContact(
-        IndexType hei,
-        FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-        FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact);
-    /**
-     * @brief For each edge-face contact whose edge is incident on point `i`, invoke the appropriate
-     * callback
-     *
-     * @tparam FOnPointLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex, 2>
-     * eindsi, IndexType j)` for edge `eindsi` and point `j`
-     * @tparam FOnLineSegmentLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex,
-     * 2> eindsi, Eigen::Vector<TIndex, 2> eindsj)` for edges `eindsi` and `eindsj`
+     * @brief Visit all point-edge contacts for point `i`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::AccessorType C, Stencil stencil)`
      * @param i Point index
-     * @param fOnPointLineSegmentContact Point-edge contact handler
-     * @param fOnLineSegmentLineSegmentContact Edge-edge contact handler
-     * @note `eindsi(0) == i`
+     * @param fOnContact Callback for each contact `(i, he)` and `(he, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-    void ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
-        IndexType i,
-        FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-        FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact);
+    template <class FOnContact>
+    void ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact);
     /**
-     * @brief For each edge-(static)face contact whose edge is incident on point `i`, invoke the
-     * appropriate callback
-     *
-     * @tparam FOnPointLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex, 2>
-     * eindsi, IndexType j)` for edge `eindsi` and point `j`
-     * @tparam FOnLineSegmentLineSegmentContact Callable with signature `void(Eigen::Vector<TIndex,
-     * 2> eindsi, Eigen::Vector<TIndex, 2> eindsj)` for edges `eindsi` and `eindsj`
+     * @brief Visit all point-edge contacts for point `i` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::ConstAccessorType C, Stencil stencil)`
      * @param i Point index
-     * @param fOnPointLineSegmentContact Point-edge contact handler
-     * @param fOnLineSegmentLineSegmentContact Edge-edge contact handler
-     * @note `eindsi(0) == i`
+     * @param fOnContact Callback for each contact `(i, he)` and `(he, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-    void ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
-        IndexType i,
-        FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-        FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact);
+    template <class FOnContact>
+    void ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact) const;
     /**
-     * @brief For each triangle-(dynamic)point contact of triangle `fi`, invoke the appropriate
-     * callback
-     * @tparam FOnPointTriangleContact Callable with signature `void(TIndex i)` for point `i`
-     * @param fi Triangle index
-     * @param fOnPointTriangleContact Point-triangle contact handler
+     * @brief Visit all point-edge contacts incident on half-edge `he`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::AccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(i, he)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <class FOnPointTriangleContact>
-    void ForEachDynamicPointContactOnTriangle(
-        IndexType fi,
-        FOnPointTriangleContact&& fOnPointTriangleContact);
+    template <class FOnContact>
+    void ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact);
     /**
-     * @brief For each triangle-(static)point contact of triangle `fi`, invoke the appropriate
-     * callback
-     * @tparam FOnPointTriangleContact Callable with signature `void(TIndex i)` for static point `i`
-     * @param fi Triangle index
-     * @param fOnPointTriangleContact Point-triangle contact handler
+     * @brief Visit all point-edge contacts incident on half-edge `he` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(i, he)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <class FOnPointTriangleContact>
-    void ForEachStaticPointContactOnTriangle(
-        IndexType fi,
-        FOnPointTriangleContact&& fOnPointTriangleContact);
+    template <class FOnContact>
+    void ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact) const;
     /**
-     * @brief For each triangle-face contact whose triangle is incident on point `i`, invoke the
-     * appropriate callback
-     * @tparam FOnPointTriangleContact Callable with signature `void(Eigen::Vector<TIndex, 3> finds,
-     * TIndex j)` for point `j`
+     * @brief Visit all point-triangle contacts for point `i`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::AccessorType C, Stencil stencil)`
      * @param i Point index
-     * @param fOnPointTriangleContact Point-triangle contact handler
+     * @param fOnContact Callback for each contact `(i, f)`
      */
-    template <class FOnPointTriangleContact>
-    void ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
-        IndexType i,
-        FOnPointTriangleContact&& fOnPointTriangleContact);
+    template <class FOnContact>
+    void ForEachPointTriangleContact(IndexType i, FOnContact&& fOnContact);
     /**
-     * @brief For each triangle-(static)point contact whose triangle is incident on static point
-     * `i`, invoke the appropriate callback
-     * @tparam FOnPointTriangleContact Callable with signature `void(Eigen::Vector<TIndex, 3> finds,
-     * TIndex j)` for static point `j`
-     * @param i Dynamic point index
-     * @param fOnPointTriangleContact Point-triangle contact handler
+     * @brief Visit all point-triangle contacts for point `i` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param i Point index
+     * @param fOnContact Callback for each contact `(i, f)`
      */
-    template <class FOnPointTriangleContact>
-    void ForEachStaticPointContactOnTrianglesIncidentOnPoint(
-        IndexType i,
-        FOnPointTriangleContact&& fOnPointTriangleContact);
+    template <class FOnContact>
+    void ForEachPointTriangleContact(IndexType i, FOnContact&& fOnContact) const;
     /**
-     * @brief For each mesh-mesh contact, invoke the appropriate callback
-     *
-     * @tparam FOnVertexVertexContact Callable type with signature `void(TIndex i, TIndex j)` for
-     * points `i` and `j`
-     * @tparam FOnVertexEdgeContact Callable type with signature `void(TIndex i,
-     * Eigen::Vector<TIndex, 2> einds)` for point `i` and edge `einds`
-     * @tparam FOnVertexTriangleContact Callable type with signature `void(TIndex i,
-     * Eigen::Vector<TIndex, 3> finds)` for point `i` and triangle `finds`
-     * @tparam FOnEdgeEdgeContact Callable type with signature `void(Eigen::Vector<TIndex, 2>
-     * eindsi, Eigen::Vector<TIndex, 2> eindsj)` for edges `eindsi` and `eindsj`
-     * @param fOnVertexVertexContact Callback for vertex-vertex contacts
-     * @param fOnVertexEdgeContact Callback for vertex-edge contacts
-     * @param fOnVertexTriangleContact Callback for vertex-triangle contacts
-     * @param fOnEdgeEdgeContact Callback for edge-edge contacts
+     * @brief Visit all point-triangle contacts incident on triangle `f`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::AccessorType C, Stencil stencil)`
+     * @param f Triangle index
+     * @param fOnContact Callback for each contact `(i, f)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <
-        class FOnVertexVertexContact,
-        class FOnVertexEdgeContact,
-        class FOnVertexTriangleContact,
-        class FOnEdgeEdgeContact>
-    void ForEachMeshMeshContact(
-        FOnVertexVertexContact&& fOnVertexVertexContact,
-        FOnVertexEdgeContact&& fOnVertexEdgeContact,
-        FOnVertexTriangleContact&& fOnVertexTriangleContact,
-        FOnEdgeEdgeContact&& fOnEdgeEdgeContact);
+    template <class FOnContact>
+    void ForEachTrianglePointContact(IndexType f, FOnContact&& fOnContact);
     /**
-     * @brief For each mesh-environment contact, invoke the appropriate callback
-     *
-     * @tparam FOnVertexEnvironmentContact Callable type with signature `void(TIndex i)` for point
-     * `i`
-     * @tparam FOnEdgeEnvironmentContact Callable type with signature `void(Eigen::Vector<TIndex, 2>
-     * einds)` for edge `einds`
-     * @tparam FOnTriangleEnvironmentContact Callable type with signature
-     * `void(Eigen::Vector<TIndex, 3> finds)` for triangle `finds`
-     * @param fOnVertexEnvironmentContact Callback for vertex-environment contacts
-     * @param fOnEdgeEnvironmentContact Callback for edge-environment contacts
-     * @param fOnTriangleEnvironmentContact Callback for triangle-environment contacts
+     * @brief Visit all point-triangle contacts incident on triangle `f` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param f Triangle index
+     * @param fOnContact Callback for each contact `(i, f)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
      */
-    template <
-        class FOnVertexEnvironmentVertexContact,
-        class FOnVertexEnvironmentEdgeContact,
-        class FOnVertexEnvironmentTriangleContact,
-        class FOnEdgeEnvironmentVertexContact,
-        class FOnEdgeEnvironmentEdgeContact,
-        class FOnTriangleEnvironmentVertexContact>
-    void ForEachMeshEnvironmentContact(
-        FOnVertexEnvironmentVertexContact&& fOnVertexEnvironmentVertexContact,
-        FOnVertexEnvironmentEdgeContact&& fOnVertexEnvironmentEdgeContact,
-        FOnVertexEnvironmentTriangleContact&& fOnVertexEnvironmentTriangleContact,
-        FOnEdgeEnvironmentVertexContact&& fOnEdgeEnvironmentVertexContact,
-        FOnEdgeEnvironmentEdgeContact&& fOnEdgeEnvironmentEdgeContact,
-        FOnTriangleEnvironmentVertexContact&& fOnTriangleEnvironmentVertexContact);
+    template <class FOnContact>
+    void ForEachTrianglePointContact(IndexType f, FOnContact&& fOnContact) const;
+    /**
+     * @brief Visit all edge-edge contacts for half-edge `he`.
+     * @tparam FOnContact Callable with signature
+     * `void(EdgeEdgeContactSet::AccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(he, he')` and `(he', he)` if reverse contact
+     * pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact);
+    /**
+     * @brief Visit all edge-edge contacts for half-edge `he` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(EdgeEdgeContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(he, he')` and `(he', he)` if reverse contact
+     * pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact) const;
+    /**
+     * @brief Load the stencil for a contact pair
+     * @param u First mesh primitive index
+     * @param v Second mesh primitive index
+     * @param gu First mesh geometry index
+     * @param gv Second mesh geometry index
+     * @return The pair (X, nodes) of stencil (per-column) point matrix and corresponding indices
+     * where `X` is a `math::linalg::mini::SMatrix<TScalar, kDims, kStencil>`
+     */
+    template <class TContactSet, class TDerivedx>
+    auto LoadStencil(Eigen::MatrixBase<TDerivedx> const& x, Stencil const& stencil) const;
+    /**
+     * @brief Load the stencil point indices for a contact pair (index-only, no position loading)
+     * @param stencil Contact stencil
+     * @return The stencil point indices as `std::array<TIndex, kStencil>`
+     */
+    template <class TContactSet>
+    auto LoadStencil(Stencil const& stencil) const;
+    /**
+     * @brief Get the number of truncated points from the last `RestoreFeasibility()`
+     * call
+     * @return Number of truncated points
+     */
+    Eigen::Index NumTruncatedPoints() const;
     /**
      * @brief Set the static geometry
      * @param X `3 x |# points|` point positions (column-major: one point per column)
@@ -473,177 +801,51 @@ class MeshDynamics
         Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X,
         MultiMesh<IndexType> meshes);
     /**
-     * @brief Compute contact energies (potential, gradient, hessian) from current positions
-     * @param x `3 x |# points|` or `3*|# points| x 1` point positions
-     * @param xt `3 x |# points|` or `3*|# points| x 1` point positions s.t. `\Dot{x} = (x - xt) /
-     * h`
-     * @param h Time step size
-     * @param computationFlags Flags indicating which quantities to compute
-     */
-    template <class TDerivedX, class TDerivedXt>
-    void ComputeEnergies(
-        Eigen::MatrixBase<TDerivedX> const& x,
-        Eigen::MatrixBase<TDerivedXt> const& xt,
-        ScalarType h,
-        int computationFlags);
-    /**
-     * @brief For each mesh contact energy (i.e. mesh-mesh and mesh-env), invoke the callback
-     * @tparam FOnMeshContactEnergy Callable type with signature
-     * `template <int K> void(MeshContactEnergy<ScalarType, kStencil>& energy)` for
-     * each mesh contact energy
-     * @param fOnMeshContactEnergy Callback to invoke
-     */
-    template <class FOnMeshContactEnergy>
-    void ForEachMeshContactEnergy(FOnMeshContactEnergy&& fOnMeshContactEnergy);
-    /**
      * @brief Compute the total potential energy from all contacts
+     * @tparam TDerivedx Matrix type
+     * @param x `3 x |# points|` current point positions (column-major: one point per column)
      * @return Total potential energy
-     * @pre `ComputeEnergies()` has been called with the `Potential` flag
      */
-    ScalarType Potential() const;
+    template <class TDerivedx>
+    ScalarType Potential(Eigen::MatrixBase<TDerivedx> const& x) const;
     /**
      * @brief Compute the total contact gradient
+     * @tparam TDerivedx Matrix type
+     * @param x `3 x |# points|` current point positions (column-major: one point per column)
+     * @param bForAugmentedLagrangian Whether to compute the gradient for augmented Lagrangian
+     * (i.e., include the gradient of the penalty term)
      * @return Total contact gradient
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
+     * @pre `LinearizeConstraints(x, xt)` has been called with the same `x` and with `xt` of the
+     * current time step solve.
      */
-    auto Gradient() const -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
+    template <class TDerivedx>
+    auto Gradient(Eigen::MatrixBase<TDerivedx> const& x, bool bForAugmentedLagrangian = false) const
+        -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
     /**
      * @brief Compute the total contact gradient and add it to `g`
+     * @tparam TDerivedx Matrix type
      * @tparam TDerivedg Writeable matrix type
+     * @param x `3 x |# points|` current point positions (column-major: one point per column)
      * @param g `3*|# points| x 1` or `3 x |# points|` total contact gradient
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
+     * @param bForAugmentedLagrangian Whether to compute the gradient for augmented Lagrangian
+     * (i.e., include the gradient of the penalty term)
+     * @pre `LinearizeConstraints(x, xt)` has been called with the same `x` and with `xt` of the
+     * current time step solve.
      */
-    template <class TDerivedg>
-    void ToGradient(Eigen::MatrixBase<TDerivedg>& g) const;
-    /**
-     * @brief Compute the normal contact gradient
-     * @return Normal contact gradient
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
-     */
-    auto NormalGradient() const -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
-    /**
-     * @brief Compute the normal contact gradient and add it to `g`
-     * @tparam TDerivedg Writeable matrix type
-     * @param g `3*|# points| x 1` or `3 x |# points|` normal contact gradient
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
-     */
-    template <class TDerivedg>
-    void ToNormalGradient(Eigen::MatrixBase<TDerivedg>& g) const;
-    /**
-     * @brief Compute the frictional contact gradient
-     * @return Frictional contact gradient
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
-     */
-    auto FrictionalGradient() const -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
-    /**
-     * @brief Compute the frictional contact gradient and add it to `g`
-     * @tparam TDerivedg Writeable matrix type
-     * @param g `3*|# points| x 1` or `3 x |# points|` frictional contact gradient
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
-     */
-    template <class TDerivedg>
-    void ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g) const;
+    template <class TDerivedx, class TDerivedg>
+    void ToGradient(
+        Eigen::MatrixBase<TDerivedx> const& x,
+        Eigen::MatrixBase<TDerivedg>& g,
+        bool bForAugmentedLagrangian = false) const;
     /**
      * @brief Get the total number of contacts
+     * @return Total number of contacts
      */
-    std::size_t NumContacts() const;
-    /**
-     * @brief Get the number of vertex-vertex contacts
-     */
-    std::size_t NumVertexVertexContacts() const;
-    /**
-     * @brief Get the number of vertex-edge contacts
-     */
-    std::size_t NumVertexEdgeContacts() const;
-    /**
-     * @brief Get the number of vertex-triangle contacts
-     */
-    std::size_t NumVertexTriangleContacts() const;
-    /**
-     * @brief Get the number of edge-edge contacts
-     */
-    std::size_t NumEdgeEdgeContacts() const;
-    /**
-     * @brief Get the number of vertex-environment contacts
-     */
-    std::size_t NumVertexEnvironmentContacts() const;
-    /**
-     * @brief Get the number of edge-environment contacts
-     */
-    std::size_t NumEdgeEnvironmentContacts() const;
-    /**
-     * @brief Get the number of triangle-environment contacts
-     */
-    std::size_t NumTriangleEnvironmentContacts() const;
-    /**
-     * @brief Get the vertex-vertex contact energies
-     * @return Vector of vertex-vertex contact energies
-     */
-    auto VertexVertexEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
+    auto NumContacts() const
     {
-        return mVertexVertexEnergies;
+        return mPointPointContacts.Size() + mPointEdgeContacts.Size() +
+               mPointTriangleContacts.Size() + mEdgeEdgeContacts.Size();
     }
-    /**
-     * @brief Get the vertex-edge contact energies
-     * @return Vector of vertex-edge contact energies
-     */
-    auto VertexEdgeEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
-    {
-        return mVertexEdgeEnergies;
-    }
-    /**
-     * @brief Get the vertex-triangle contact energies
-     * @return Vector of vertex-triangle contact energies
-     */
-    auto VertexTriangleEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
-    {
-        return mVertexTriangleEnergies;
-    }
-    /**
-     * @brief Get the edge-edge contact energies
-     * @return Vector of edge-edge contact energies
-     */
-    auto EdgeEdgeEnergies() const -> std::vector<MeshContactEnergy<ScalarType, IndexType, 4>> const&
-    {
-        return mEdgeEdgeEnergies;
-    }
-    /**
-     * @brief Get the vertex-environment contact energies
-     * @return Vector of vertex-environment contact energies
-     */
-    auto VertexEnvironmentEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 1>> const&
-    {
-        return mVertexEnvironmentEnergies;
-    }
-    /**
-     * @brief Get the edge-environment contact energies
-     * @return Vector of edge-environment contact energies
-     */
-    auto EdgeEnvironmentEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 2>> const&
-    {
-        return mEdgeEnvironmentEnergies;
-    }
-    /**
-     * @brief Get the triangle-environment contact energies
-     * @return Vector of triangle-environment contact energies
-     */
-    auto TriangleEnvironmentEnergies() const
-        -> std::vector<MeshContactEnergy<ScalarType, IndexType, 3>> const&
-    {
-        return mTriangleEnvironmentEnergies;
-    }
-    /**
-     * @brief Recomputes geometric quantities (triangle, half-edge, and vertex areas) from current
-     * positions
-     * @param X `3 x |# points|` point positions (column-major: one point per column)
-     */
-    void UpdateGeometricQuantities(
-        Eigen::Ref<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X);
     /**
      * @brief Get the Params object
      * @return Reference to the parameters
@@ -654,6 +856,14 @@ class MeshDynamics
      * @return Reference to the parameters
      */
     Params& GetParams() { return mParams; }
+    /**
+     * @brief Get the dynamic point positions
+     * @return `3 x |# points|` dynamic point positions
+     */
+    auto DynamicPointPositions() const -> Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const&
+    {
+        return mXdynamic;
+    }
     /**
      * @brief Get the static point positions
      * @return `3 x |# points|` static point positions
@@ -692,7 +902,49 @@ class MeshDynamics
      * @return ogc::State<ScalarType, IndexType>&
      */
     auto OgcState() -> ogc::State<ScalarType, IndexType>& { return mOgcState; }
-
+    /**
+     * @brief Get the point-point contact adjacency set
+     * @return Reference to the point-point contact adjacency set
+     */
+    auto PointPointContacts() const -> PointPointContactSet const& { return mPointPointContacts; }
+    /**
+     * @brief Get the point-point contact adjacency set
+     * @return Reference to the point-point contact adjacency set
+     */
+    auto PointPointContacts() -> PointPointContactSet& { return mPointPointContacts; }
+    /**
+     * @brief Get the point-edge contact adjacency set
+     * @return Reference to the point-edge contact adjacency set
+     */
+    auto PointEdgeContacts() const -> PointEdgeContactSet const& { return mPointEdgeContacts; }
+    /**
+     * @brief Get the point-edge contact adjacency set
+     * @return Reference to the point-edge contact adjacency set
+     */
+    auto PointEdgeContacts() -> PointEdgeContactSet& { return mPointEdgeContacts; }
+    /**
+     * @brief Get the point-triangle contact adjacency set
+     * @return Reference to the point-triangle contact adjacency set
+     */
+    auto PointTriangleContacts() const -> PointTriangleContactSet const&
+    {
+        return mPointTriangleContacts;
+    }
+    /**
+     * @brief Get the point-triangle contact adjacency set
+     * @return Reference to the point-triangle contact adjacency set
+     */
+    auto PointTriangleContacts() -> PointTriangleContactSet& { return mPointTriangleContacts; }
+    /**
+     * @brief Get the edge-edge contact adjacency set
+     * @return Reference to the edge-edge contact adjacency set
+     */
+    auto EdgeEdgeContacts() const -> EdgeEdgeContactSet const& { return mEdgeEdgeContacts; }
+    /**
+     * @brief Get the edge-edge contact adjacency set
+     * @return Reference to the edge-edge contact adjacency set
+     */
+    auto EdgeEdgeContacts() -> EdgeEdgeContactSet& { return mEdgeEdgeContacts; }
     /**
      * @brief Serialize to archive
      * @param archive Archive to serialize to
@@ -704,14 +956,236 @@ class MeshDynamics
      */
     void Deserialize(io::Archive const& archive);
 
+  protected:
+    /**
+     * @brief Contact pair reference sorted by `v`.
+     */
+    struct ReverseContactPair
+    {
+        IndexType v; ///< Mesh primitive index
+        IndexType u; ///< Mesh primitive index
+        IndexType k; ///< Contact index
+    };
+    /**
+     * @brief Contact set view sorted by `v` for reverse contact queries
+     */
+    struct ReverseContactSetView
+    {
+        std::vector<ReverseContactPair> contacts; ///< Contact pairs sorted by `v`
+        std::vector<IndexType> prefix;            ///< Prefix array for `v` in `contacts`
+        /**
+         * @brief Clear the reverse contact set
+         */
+        void Clear()
+        {
+            contacts.clear();
+            prefix.clear();
+        }
+        /**
+         * @brief Check if the reverse contact set is empty
+         * @return true if the reverse contact set is empty, false otherwise
+         */
+        bool IsEmpty() const { return prefix.empty(); }
+    };
+
+    /**
+     * @brief Iterate over contacts [cstart, cend) in the contact set
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::AccessorType C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate over
+     * @param fOnContact Callback for each contact
+     * @param cstart Start index for the contact set
+     * @param cend End index for the contact set
+     * @note Use this lower-level contact block visitor for parallel processing
+     */
+    template <class FOnContact, class TContactSet>
+    void
+    ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact, TIndex cstart, TIndex cend);
+    /**
+     * @brief Iterate over contacts [cstart, cend) in the contact set
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate over
+     * @param fOnContact Callback for each contact
+     * @param cstart Start index for the contact set
+     * @param cend End index for the contact set
+     * @note Use this lower-level contact block visitor for parallel processing
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachContact(
+        TContactSet const& contactSet,
+        FOnContact&& fOnContact,
+        TIndex cstart,
+        TIndex cend) const;
+    /**
+     * @brief Visit contacts for source primitive `u` in a contact set.
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate
+     * @param u Source primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachForwardContact(TContactSet& contactSet, IndexType u, FOnContact&& f);
+    /**
+     * @brief Visit contacts for source primitive `u` in a contact set (const).
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet const> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate
+     * @param u Source primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachForwardContact(TContactSet const& contactSet, IndexType u, FOnContact&& f) const;
+    /**
+     * @brief Visit contacts for target primitive `v` in a reverse contact set.
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to access constraint data from
+     * @param reverseSet Reverse contact set view sorted by v
+     * @param v Target primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachReverseContact(
+        TContactSet& contactSet,
+        ReverseContactSetView const& reverseSet,
+        IndexType v,
+        FOnContact&& f);
+    /**
+     * @brief Visit contacts for target primitive `v` in a reverse contact set (const).
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet const> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to access constraint data from
+     * @param reverseSet Reverse contact set view sorted by v
+     * @param v Target primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachReverseContact(
+        TContactSet const& contactSet,
+        ReverseContactSetView const& reverseSet,
+        IndexType v,
+        FOnContact&& f) const;
+    /**
+     * @brief Transfer OGC contact pairs to our contact sets
+     * @param bComputeReversePairs Store reverse contact pair (j,i) for contact pair (i,j) if true
+     */
+    void UpdateContactSetsFromOgcPairs(bool bComputeReversePairs);
+    /**
+     * @brief Serialize a single constraint set to an archive group
+     * @tparam TContactSet Contact set type
+     * @param contactSet The contact set to serialize
+     * @param grp Archive group to write into
+     * @pre `contactSet` has compact IDs
+     */
+    template <class TContactSet>
+    static void SerializeConstraintSet(TContactSet& contactSet, io::Archive& grp);
+    /**
+     * @brief Deserialize a single constraint set from an archive group
+     * @tparam TContactSet Contact set type
+     * @param contactSet The contact set to populate
+     * @param grp Archive group to read from
+     */
+    template <class TContactSet>
+    static void DeserializeConstraintSet(TContactSet& contactSet, io::Archive const& grp);
+    /**
+     * @brief Get the geometry prefix arrays for the contact set
+     * @return The pair (prefu, prefv)
+     */
+    template <class TContactSet>
+    auto GeometryPrefixArrays() const;
+    /**
+     * @brief Load a point's position from the mesh state
+     * @param i Point index
+     * @param g Geometry type
+     * @param xi Output position vector
+     * @return The point index on the corresponding geometry g
+     */
+    template <class TDerivedx>
+    auto LoadPoint(Eigen::MatrixBase<TDerivedx> const& x, TIndex i, int g, auto&& xi) const;
+    /**
+     * @brief Load a half-edge's positions from the mesh state
+     * @param he Half-edge index
+     * @param g Geometry type
+     * @param xi Output position vector for the incoming vertex
+     * @param xj Output position vector for the outgoing vertex
+     * @return The half-edge point indices (i, j) on the corresponding geometry g
+     */
+    template <class TDerivedx>
+    auto LoadHalfEdge(Eigen::MatrixBase<TDerivedx> const& x, TIndex he, int g, auto&& xi, auto&& xj)
+        const;
+    /**
+     * @brief Load a triangle's positions from the mesh state
+     * @param f Triangle index
+     * @param g Geometry type
+     * @param xi Output position vector for the first vertex
+     * @param xj Output position vector for the second vertex
+     * @param xk Output position vector for the third vertex
+     * @return The triangle point indices (i, j, k) on the corresponding geometry g
+     */
+    template <class TDerivedx>
+    auto LoadTriangle(
+        Eigen::MatrixBase<TDerivedx> const& x,
+        TIndex f,
+        int g,
+        auto&& xi,
+        auto&& xj,
+        auto&& xk) const;
+    /**
+     * @brief Load a point's index from the mesh state (index-only, no position loading)
+     * @param i Point index
+     * @param g Geometry type
+     * @return The point index on the corresponding geometry g
+     */
+    auto LoadPoint(TIndex i, int g) const;
+    /**
+     * @brief Load a half-edge's point indices from the mesh state (index-only, no position
+     * loading)
+     * @param he Half-edge index
+     * @param g Geometry type
+     * @return The half-edge point indices (i, j) on the corresponding geometry g
+     */
+    auto LoadHalfEdge(TIndex he, int g) const;
+    /**
+     * @brief Load a triangle's point indices from the mesh state (index-only, no position loading)
+     * @param f Triangle index
+     * @param g Geometry type
+     * @return The triangle point indices (i, j, k) on the corresponding geometry g
+     */
+    auto LoadTriangle(TIndex f, int g) const;
+    /**
+     * @brief Compute the curvature \f$ \nabla c^T H \nabla c \f$ of a sparse matrix H in the
+     * constraint gradient direction.
+     * @tparam TDerivedH Sparse matrix type
+     * @tparam kDims Number of spatial dimensions
+     * @tparam kStencil Number of nodes in the stencil
+     * @param H Sparse matrix
+     * @param gradc Constraint gradient vector of size `kStencil * kDims`
+     * @param nodes Stencil node indices
+     * @return The curvature value \f$ \nabla c^T H \nabla c \f$
+     * @pre `H` is symmetric
+     */
+    template <int kDims, int kStencil, class TDerivedH>
+    TScalar RayleighQuotient(
+        Eigen::SparseCompressedBase<TDerivedH> const& H,
+        math::linalg::mini::SVector<TScalar, kStencil * kDims> const& gradc,
+        std::array<TIndex, kStencil> const& nodes) const;
+
   private:
     Params mParams; ///< Mesh dynamics parameters
 
     /**
      * @brief Contact detection data structures and algorithms
      */
-    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXdynamic; ///< Dynamic point positions
-    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXstatic;  ///< Static point positions
+    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXdynamic; ///< Dynamic point position storage
+    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXstatic;  ///< Static point position storage
     MultiMesh<IndexType> mDynamicMeshes;                    ///< Dynamic geometry
     MultiMesh<IndexType> mStaticMeshes;                     ///< Static geometry
     ogc::Input<ScalarType, IndexType> mOgcInput;            ///< OGC input data structures
@@ -719,300 +1193,19 @@ class MeshDynamics
     Eigen::Index mNumTruncatedPoints{0};         ///< Number of truncated points in last truncation
     bool mRequiresBoundsRecomputation{true};     ///< Whether bounds recomputation is required
 
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 2>>
-        mVertexVertexEnergies; ///< Vertex-vertex energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 3>>
-        mVertexEdgeEnergies; ///< Vertex-edge energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 4>>
-        mVertexTriangleEnergies; ///< Vertex-triangle energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 4>>
-        mEdgeEdgeEnergies; ///< Edge-edge energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 1>>
-        mVertexEnvironmentEnergies; ///< Vertex-environment energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 2>>
-        mEdgeEnvironmentEnergies; ///< Edge-environment energies
-    std::vector<MeshContactEnergy<ScalarType, IndexType, 3>>
-        mTriangleEnvironmentEnergies; ///< Triangle-environment energies
-
     /**
-     * @brief These geometric quantities are generally useful for contact dynamics
+     * @brief Contact constraint sets
      */
-    Eigen::Vector<ScalarType, Eigen::Dynamic> FA;  ///< `|# triangles| x 1` triangle areas
-    Eigen::Vector<ScalarType, Eigen::Dynamic> HEA; ///< `|# half-edges| x 1` half-edge areas
-    Eigen::Vector<ScalarType, Eigen::Dynamic> VA;  ///< `|# vertices| x 1` vertex areas
+    PointPointContactSet mPointPointContacts;       ///< Point-point contact set
+    PointEdgeContactSet mPointEdgeContacts;         ///< Point-edge contact set
+    PointTriangleContactSet mPointTriangleContacts; ///< Point-triangle contact set
+    EdgeEdgeContactSet mEdgeEdgeContacts;           ///< (Half-)Edge-(half-)edge contact set
 
-    /**
-     * @brief Resize energy buffers for each contact type
-     * @param nVertexVertexContacts Number of vertex-vertex dynamic contacts
-     * @param nVertexEdgeContacts Number of vertex-edge dynamic contacts
-     * @param nVertexTriangleContacts Number of vertex-triangle dynamic contacts
-     * @param nEdgeEdgeContacts Number of edge-edge dynamic contacts
-     * @param nVertexEnvironmentContacts Number of vertex-environment static contacts
-     * @param nEdgeEnvironmentContacts Number of edge-environment static contacts
-     * @param nTriangleEnvironmentContacts Number of triangle-environment static contacts
-     */
-    void ReserveContactEnergies(
-        Eigen::Index nVertexVertexContacts,
-        Eigen::Index nVertexEdgeContacts,
-        Eigen::Index nVertexTriangleContacts,
-        Eigen::Index nEdgeEdgeContacts,
-        Eigen::Index nVertexEnvironmentContacts,
-        Eigen::Index nEdgeEnvironmentContacts,
-        Eigen::Index nTriangleEnvironmentContacts);
+    ReverseContactSetView mReversePointPointContacts;    ///< Point-point reverse pairs
+    ReverseContactSetView mReversePointEdgeContacts;     ///< Point-edge reverse pairs
+    ReverseContactSetView mReversePointTriangleContacts; ///< Point-triangle reverse pairs
+    ReverseContactSetView mReverseEdgeEdgeContacts;      ///< Edge-edge reverse pairs
 };
-
-/**
- * @brief Compute vertex-vertex contact energy and its derivatives
- * @tparam TScalar Scalar type
- * @tparam TIndex Index type
- * @tparam TMatrixx Matrix type for x
- * @tparam TMatrixxt Matrix type for xt
- * @param x `6 x 1` contiguous positions of vertices i and j
- * @param xt `6 x 1` contiguous previous positions of vertices i and j
- * @param r Contact radius
- * @param kc Normal contact stiffness
- * @param kcp
- * @param b
- * @param mu Friction coefficient
- * @param epsvh IPC relative velocity threshold scaled by time step (epsv*h)
- * @param eFlags Energy computation flags
- * @return contact energy and its derivatives
- */
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags);
-
-/**
- * @brief Compute vertex-edge contact energy and its derivatives
- * @tparam TScalar Scalar type
- * @tparam TIndex Index type
- * @tparam TMatrixx Matrix type for x
- * @tparam TMatrixxt Matrix type for xt
- * @param x `9 x 1` contiguous positions of vertex i and edge endpoints a, b
- * @param xt `9 x 1` contiguous previous positions of vertex i and edge endpoints a, b
- * @param r Contact radius
- * @param kc Normal contact stiffness
- * @param kcp
- * @param b
- * @param mu Friction coefficient
- * @param epsvh IPC relative velocity threshold scaled by time step (epsv*h)
- * @param eFlags Energy computation flags
- * @return contact energy and its derivatives
- */
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags);
-
-/**
- * @brief Compute vertex-triangle contact energy and its derivatives
- * @tparam TScalar Scalar type
- * @tparam TIndex Index type
- * @tparam TMatrixx Matrix type for x
- * @tparam TMatrixxt Matrix type for xt
- * @param x `12 x 1` contiguous positions of vertex i and triangle vertices a, b, c
- * @param xt `12 x 1` contiguous previous positions of vertex i and triangle vertices a, b, c
- * @param r Contact radius
- * @param kc Normal contact stiffness
- * @param kcp
- * @param b
- * @param mu Friction coefficient
- * @param epsvh IPC relative velocity threshold scaled by time step (epsv*h)
- * @param eFlags Energy computation flags
- * @return contact energy and its derivatives
- */
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags);
-
-/**
- * @brief Compute edge-edge contact energy and its derivatives
- * @tparam TScalar Scalar type
- * @tparam TIndex Index type
- * @tparam TMatrixx Matrix type for x
- * @tparam TMatrixxt Matrix type for xt
- * @param x `12 x 1` contiguous positions of edge 1 endpoints a, b and edge 2 endpoints c, d
- * @param xt `12 x 1` contiguous previous positions of edge 1 endpoints a, b and edge 2 endpoints c,
- * d
- * @param r Contact radius
- * @param kc Normal contact stiffness
- * @param kcp
- * @param b
- * @param mu Friction coefficient
- * @param epsvh IPC relative velocity threshold scaled by time step (epsv*h)
- * @param eFlags Energy computation flags
- * @return contact energy and its derivatives
- */
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags);
-
-/**
- * @brief Compute vertex-environment contact energy and its derivatives
- * @tparam TScalar Scalar type
- * @tparam TIndex Index type
- * @tparam TMatrixx Matrix type for x
- * @tparam TMatrixxt Matrix type for xt
- * @tparam TMatrixxcp Matrix type for xcp
- * @param x `3 x 1` position of vertex i
- * @param xt `3 x 1` previous position of vertex i
- * @param xcp `3 x 1` closest point on environment
- * @param r Contact radius
- * @param kc Normal contact stiffness
- * @param kcp
- * @param b
- * @param mu Friction coefficient
- * @param epsvh IPC relative velocity threshold scaled by time step (epsv*h)
- * @param eFlags Energy computation flags
- * @return contact energy and its derivatives
- */
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt,
-    math::linalg::mini::CMatrix TMatrixxcp>
-MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TMatrixxcp const& xcp,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags);
-
-/**
- * @brief Compute edge-environment contact energy and its derivatives
- * @tparam TScalar Scalar type
- * @tparam TIndex Index type
- * @tparam TMatrixx Matrix type for x
- * @tparam TMatrixxt Matrix type for xt
- * @tparam TMatrixxuv Matrix type for uv
- * @tparam TMatrixxcp Matrix type for xcp
- * @param x `6 x 1` contiguous positions of edge endpoints a, b
- * @param xt `6 x 1` contiguous previous positions of edge endpoints a, b
- * @param uv `2 x 1` barycentric coordinates of closest point on edge
- * @param xcp `3 x 1` closest point on environment
- * @param r Contact radius
- * @param kc Normal contact stiffness
- * @param kcp
- * @param b
- * @param mu Friction coefficient
- * @param epsvh IPC relative velocity threshold scaled by time step (epsv*h)
- * @param eFlags Energy computation flags
- * @return contact energy and its derivatives
- */
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt,
-    math::linalg::mini::CMatrix TMatrixuv,
-    math::linalg::mini::CMatrix TMatrixxcp>
-MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TMatrixuv const& uv,
-    TMatrixxcp const& xcp,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags);
-
-/**
- * @brief Compute triangle-environment contact energy and its derivatives
- *
- * @tparam TScalar Scalar type
- * @tparam TIndex Index type
- * @param TMatrixx Matrix type for x
- * @param TMatrixxt Matrix type for xt
- * @param TMatrixuvw Matrix type for uvw
- * @param TMatrixxcp Matrix type for xcp
- * @param x `9 x 1` contiguous positions of triangle vertices a, b, c
- * @param xt `9 x 1` contiguous previous positions of triangle vertices a, b, c
- * @param uvw `3 x 1` barycentric coordinates of closest point on triangle
- * @param xcp `3 x 1` closest point on environment
- * @param r Contact radius
- * @param kc Normal contact stiffness
- * @param kcp
- * @param b
- * @param mu Friction coefficient
- * @param epsvh IPC relative velocity threshold scaled by time step (epsv*h)
- * @param eFlags Energy computation flags
- * @return contact energy and its derivatives
- */
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt,
-    math::linalg::mini::CMatrix TMatrixuvw,
-    math::linalg::mini::CMatrix TMatrixxcp>
-MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TMatrixuvw const& uvw,
-    TMatrixxcp const& xcp,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags);
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 MeshDynamics<TScalar, TIndex>::Params&
@@ -1051,14 +1244,33 @@ MeshDynamics<TScalar, TIndex>::Params::WithQueryRadiusInitialization(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline MeshDynamics<TScalar, TIndex>::Params&
+MeshDynamics<TScalar, TIndex>::Params::WithSequentialAugmentedLagrangian(
+    TScalar gamma_,
+    TScalar gammaf_,
+    TScalar dmin_,
+    TScalar decay_,
+    TScalar decaylo_)
+{
+    this->gamma   = gamma_;
+    this->gammaf  = gammaf_;
+    this->dmin    = dmin_;
+    this->decay   = decay_;
+    this->decaylo = decaylo_;
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 MeshDynamics<TScalar, TIndex>::Params&
 MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
 {
+    mOgcParams.Construct(bValidate);
     if (bValidate)
     {
-        if (kc <= TScalar(0))
+        if (kc < TScalar(0))
         {
-            throw std::invalid_argument("MeshDynamics::Params::Construct(): kc must be positive.");
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): kc must be non-negative.");
         }
         if (mu < TScalar(0))
         {
@@ -1070,12 +1282,43 @@ MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
             throw std::invalid_argument(
                 "MeshDynamics::Params::Construct(): betarq must be non-negative.");
         }
+        if (gamma <= TScalar(0))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): gamma must be positive.");
+        }
+        if (dmin <= TScalar(0))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): dmin must be positive.");
+        }
+        if (dmin >= mOgcParams.r)
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): dmin must satisfy dmin < r.");
+        }
+        if (decay < TScalar(0) or decay > TScalar(1))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): decay must satisfy 0 <= decay <= 1.");
+        }
+        if (decaylo < TScalar(0) or decaylo > TScalar(1))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): decaylo must satisfy 0 <= decaylo <= 1.");
+        }
     }
+    UpdateOgcTwoStageActivationCoefficients();
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Params::UpdateOgcTwoStageActivationCoefficients()
+{
     auto tau = TScalar(0.5) * mOgcParams.r;
     auto r   = mOgcParams.r;
     kcp      = tau * kc * (tau - r) * (tau - r);
     b        = (TScalar(0.5) * kc) * (r - tau) * (r - tau) + kcp * std::log(tau);
-    return *this;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1110,6 +1353,12 @@ inline void MeshDynamics<TScalar, TIndex>::Params::Serialize(io::Archive& archiv
     grp.WriteMetaData("mu", mu);
     grp.WriteMetaData("rqstart", rqstart);
     grp.WriteMetaData("betarq", betarq);
+    grp.WriteMetaData("gamma", gamma);
+    grp.WriteMetaData("gammaf", gammaf);
+    grp.WriteMetaData("dmin", dmin);
+    grp.WriteMetaData("decay", decay);
+    grp.WriteMetaData("decaylo", decaylo);
+    grp.WriteMetaData("bDeactivate", static_cast<int>(bDeactivate));
     grp.WriteMetaData("kcp", kcp);
     grp.WriteMetaData("b", b);
 }
@@ -1129,6 +1378,18 @@ inline void MeshDynamics<TScalar, TIndex>::Params::Deserialize(io::Archive const
         rqstart = grp.ReadMetaData<TScalar>("rqstart");
     if (grp.HasMetaData("betarq"))
         betarq = grp.ReadMetaData<TScalar>("betarq");
+    if (grp.HasMetaData("gamma"))
+        gamma = grp.ReadMetaData<TScalar>("gamma");
+    if (grp.HasMetaData("gammaf"))
+        gammaf = grp.ReadMetaData<TScalar>("gammaf");
+    if (grp.HasMetaData("dmin"))
+        dmin = grp.ReadMetaData<TScalar>("dmin");
+    if (grp.HasMetaData("decay"))
+        decay = grp.ReadMetaData<TScalar>("decay");
+    if (grp.HasMetaData("decaylo"))
+        decaylo = grp.ReadMetaData<TScalar>("decaylo");
+    if (grp.HasMetaData("bDeactivate"))
+        bDeactivate = static_cast<bool>(grp.ReadMetaData<int>("bDeactivate"));
     if (grp.HasMetaData("kcp"))
         kcp = grp.ReadMetaData<TScalar>("kcp");
     if (grp.HasMetaData("b"))
@@ -1160,24 +1421,19 @@ inline void MeshDynamics<TScalar, TIndex>::Initialize(geometry::Device device)
     mOgcState.Initialize(device, mOgcInput, mParams.mOgcParams);
     mNumTruncatedPoints          = 0;
     mRequiresBoundsRecomputation = true;
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedXkp1>
-inline Eigen::Index
-MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
-{
-    auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
-    return TruncateDisplacedPositions(Xkp1, mask);
+    mPointPointContacts.Clear();
+    mPointEdgeContacts.Clear();
+    mPointTriangleContacts.Clear();
+    mEdgeEdgeContacts.Clear();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedXkp1, class TMask>
-inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::RestoreFeasibility(
     Eigen::MatrixBase<TDerivedXkp1>& _Xkp1,
     Eigen::DenseBase<TMask> const& mask)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacedPositions");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.RestoreFeasibility");
     static_assert(
         std::is_convertible_v<typename TMask::Scalar, bool>,
         "Mask scalar type must be convertible to bool");
@@ -1200,7 +1456,7 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
         xkp1 = xk + d;
-        common::AtomicAdd(nTruncated, Eigen::Index{1});
+        // common::AtomicAdd(nTruncated, Eigen::Index{1});
     });
     mNumTruncatedPoints += nTruncated;
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
@@ -1208,12 +1464,21 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedXkp1>
+inline Eigen::Index
+MeshDynamics<TScalar, TIndex>::RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
+{
+    auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
+    return RestoreFeasibility(Xkp1, mask);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedDxkp1, class TMask>
-inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::MakeStepFeasible(
     Eigen::MatrixBase<TDerivedDxkp1>& _Dxkp1,
     Eigen::DenseBase<TMask> const& mask)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacements");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.MakeStepFeasible");
     static_assert(
         std::is_convertible_v<typename TMask::Scalar, bool>,
         "Mask scalar type must be convertible to bool");
@@ -1233,7 +1498,7 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
             return;
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
-        common::AtomicAdd(nTruncated, Eigen::Index{1});
+        // common::AtomicAdd(nTruncated, Eigen::Index{1});
     });
     mNumTruncatedPoints += nTruncated;
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
@@ -1241,43 +1506,437 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::RequestDisplacementBoundsComputation()
+inline void MeshDynamics<TScalar, TIndex>::RequestConstraintSetUpdate()
 {
     mRequiresBoundsRecomputation = true;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline Eigen::Index MeshDynamics<TScalar, TIndex>::NumTruncatedPoints() const
-{
-    return mNumTruncatedPoints;
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline bool MeshDynamics<TScalar, TIndex>::RequiresBoundsComputation() const
+inline bool MeshDynamics<TScalar, TIndex>::RequiresConstraintSetUpdate() const
 {
     return mRequiresBoundsRecomputation;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedX>
-inline void
-MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds(Eigen::DenseBase<TDerivedX> const& X)
+inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(
+    Eigen::DenseBase<TDerivedX> const& X,
+    bool bComputeReverseContactPairs)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeDisplacementBounds");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateConstraintSet");
     if (mParams.bDeactivate)
     {
         mOgcState.bv.setConstant(std::numeric_limits<ScalarType>::max());
+        mPointPointContacts.Clear();
+        mPointEdgeContacts.Clear();
+        mPointTriangleContacts.Clear();
+        mEdgeEdgeContacts.Clear();
+        mReversePointPointContacts.Clear();
+        mReversePointEdgeContacts.Clear();
+        mReversePointTriangleContacts.Clear();
+        mReverseEdgeEdgeContacts.Clear();
         mRequiresBoundsRecomputation = false;
         mNumTruncatedPoints          = 0;
         return;
     }
     mXdynamic = X.derived();
     mOgcState.PrepareForExecution(mOgcInput, mParams.mOgcParams);
-    ogc::VertexFacetContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
-    ogc::EdgeEdgeContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
-    ogc::UpdateDisplacementBounds(mOgcInput, mParams.mOgcParams, mOgcState);
+    ogc::Execute(mOgcInput, mParams.mOgcParams, mOgcState);
+    UpdateContactSetsFromOgcPairs(bComputeReverseContactPairs);
     mRequiresBoundsRecomputation = false;
     mNumTruncatedPoints          = 0;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedx, class TDerivedxt>
+inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedxt> const& xt)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
+    auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
+    ForAllContacts(
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
+            using ConstraintAccessorType   = decltype(C);
+            static auto constexpr kDims    = ConstraintAccessorType::kDims;
+            static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+            auto const [Xc, _n1]           = LoadStencil<TContactSet>(x, stencil);
+            auto const [Xtc, _n2]          = LoadStencil<TContactSet>(xt, stencil);
+            auto xc                        = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
+            auto xtc                       = Reshape<ConstraintAccessorType::kDofs, 1>(Xtc);
+            C.ComputeLinearization(xc, xtc);
+        },
+        nThreads);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerived>
+inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
+    Eigen::SparseCompressedBase<TDerived> const& H)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdatePenaltyParameter");
+    auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
+    std::atomic<Scalar> maxQ{0};
+    ForAllContacts(
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
+            using ConstraintAccessorType   = decltype(C);
+            static auto constexpr kDims    = ConstraintAccessorType::kDims;
+            static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+            auto nodes                     = LoadStencil<TContactSet>(stencil);
+            TScalar Q                      = RayleighQuotient<kDims, kStencil>(H, C.Grad(), nodes);
+            pbat::common::AtomicMax(maxQ, Q);
+        },
+        nThreads);
+    Scalar maxQv = maxQ.load(std::memory_order_relaxed);
+    ForAllContacts(
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
+            auto F      = C.Friction();
+            C.Penalty() = mParams.gamma * maxQv;
+            F.Penalty() = mParams.gammaf * maxQv;
+        },
+        nThreads);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int Mask, class TDerivedx>
+inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerivedx> const& x)
+{
+    auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
+    ForAllContacts(
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
+            using ConstraintAccessorType = decltype(C);
+            auto const [Xc, nodes]       = LoadStencil<TContactSet>(x, stencil);
+            auto xc                      = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
+            C.Eval()                     = C.Eval(xc);
+            auto F                       = C.Friction();
+            F.Eval()                     = F.Eval(xc);
+            Scalar sk                    = C.Slack();
+            if (static_cast<bool>(Mask & EDualVariable::Slack))
+            {
+                C.Slack() =
+                    std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / C.Penalty());
+            }
+            if (static_cast<bool>(Mask & EDualVariable::Decay))
+            {
+                if (C.Slack() == TScalar(0))
+                    C.Decay() = TScalar(1);
+                else if (C.Slack() > sk) // separating
+                    C.Decay() *= mParams.decay;
+            }
+            if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
+            {
+                if (C.Slack() == TScalar(0))
+                {
+                    C.Lambda() -= C.Penalty() * (C.Eval() - mParams.dmin);
+                    auto muS = mParams.mu;
+                    F.Lambda() -= F.Penalty() * F.Eval();
+                    TScalar frictionLimit = muS * C.Lambda();
+                    TScalar lambdafn2     = SquaredNorm(F.Lambda());
+                    if (lambdafn2 > frictionLimit * frictionLimit)
+                    {
+                        using std::sqrt;
+                        F.Lambda() *= frictionLimit / sqrt(lambdafn2);
+                    }
+                }
+                else
+                {
+                    C.Lambda() = TScalar(0);
+                    F.Lambda().SetZero();
+                }
+            }
+        },
+        nThreads);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact fOnContact, std::int32_t nThreads)
+{
+    // NOTE: We could also call tbb::parallel_invoke to parallelize these 4 calls.
+    auto const fForEachContact = [&](auto& set) {
+        using ContactSetType = std::remove_cvref_t<decltype(set)>;
+        ForEachContact(
+            set,
+            [&](auto C, auto stencil) {
+                fOnContact.template operator()<ContactSetType>(C, stencil);
+            },
+            nThreads);
+    };
+    fForEachContact(mPointPointContacts);
+    fForEachContact(mPointEdgeContacts);
+    fForEachContact(mPointTriangleContacts);
+    fForEachContact(mEdgeEdgeContacts);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact fOnContact, std::int32_t nThreads) const
+{
+    // NOTE: We could also call tbb::parallel_invoke to parallelize these 4 calls.
+    auto const fForEachContact = [&](auto const& set) {
+        using ContactSetType = std::remove_cvref_t<decltype(set)>;
+        ForEachContact(
+            set,
+            [&](auto C, auto stencil) {
+                fOnContact.template operator()<ContactSetType>(C, stencil);
+            },
+            nThreads);
+    };
+    fForEachContact(mPointPointContacts);
+    fForEachContact(mPointEdgeContacts);
+    fForEachContact(mPointTriangleContacts);
+    fForEachContact(mEdgeEdgeContacts);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FTransform, class FReduce, class T>
+    requires std::convertible_to<std::invoke_result_t<FReduce, T, T>, T>
+inline T
+MeshDynamics<TScalar, TIndex>::TransformReduce(FTransform fTransform, FReduce fReduce, T identity)
+    const
+{
+    auto const fParallelReduce = [&]<class TContactSet>(TContactSet const& set) {
+        return tbb::parallel_reduce(
+            tbb::blocked_range<std::size_t>(0, set.Size()),
+            identity,
+            [&](auto range, auto val) {
+                ForEachContact(
+                    set,
+                    [&](typename TContactSet::ConstAccessorType C, Stencil stencil) {
+                        val = fReduce(val, fTransform.template operator()<TContactSet>(C, stencil));
+                    });
+                return val;
+            },
+            fReduce);
+    };
+    std::array<T, 4> results{};
+    tbb::parallel_invoke(
+        [&]() { results[0] = fParallelReduce(mPointPointContacts); },
+        [&]() { results[1] = fParallelReduce(mPointEdgeContacts); },
+        [&]() { results[2] = fParallelReduce(mPointTriangleContacts); },
+        [&]() { results[3] = fParallelReduce(mEdgeEdgeContacts); });
+    return fReduce(results[0], fReduce(results[1], fReduce(results[2], results[3])));
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet& contactSet,
+    FOnContact&& fOnContact,
+    std::int32_t nThreads)
+{
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<std::size_t>(nThreads)};
+    tbb::parallel_for(
+        tbb::blocked_range<std::size_t>(0, contactSet.Size()),
+        [this, &contactSet, f = std::forward<FOnContact>(fOnContact)](auto range) {
+            ForEachContact(contactSet, f, range.begin(), range.end());
+        });
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet const& contactSet,
+    FOnContact&& fOnContact,
+    std::int32_t nThreads) const
+{
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<std::size_t>(nThreads)};
+    tbb::parallel_for(
+        tbb::blocked_range<std::size_t>(0, contactSet.Size()),
+        [this, &contactSet, f = std::forward<FOnContact>(fOnContact)](auto range) {
+            ForEachContact(contactSet, f, range.begin(), range.end());
+        });
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointPointContact(IndexType i, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mPointPointContacts, i, fOnContact);
+    ForEachReverseContact(mPointPointContacts, mReversePointPointContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointPointContact(IndexType i, FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mPointPointContacts, i, fOnContact);
+    ForEachReverseContact(mPointPointContacts, mReversePointPointContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mPointEdgeContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mPointEdgeContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact)
+{
+    ForEachReverseContact(mPointEdgeContacts, mReversePointEdgeContacts, he, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact) const
+{
+    ForEachReverseContact(mPointEdgeContacts, mReversePointEdgeContacts, he, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointTriangleContact(IndexType i, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mPointTriangleContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void MeshDynamics<TScalar, TIndex>::ForEachPointTriangleContact(
+    IndexType i,
+    FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mPointTriangleContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachTrianglePointContact(IndexType f, FOnContact&& fOnContact)
+{
+    ForEachReverseContact(mPointTriangleContacts, mReversePointTriangleContacts, f, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void MeshDynamics<TScalar, TIndex>::ForEachTrianglePointContact(
+    IndexType f,
+    FOnContact&& fOnContact) const
+{
+    ForEachReverseContact(mPointTriangleContacts, mReversePointTriangleContacts, f, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mEdgeEdgeContacts, he, fOnContact);
+    ForEachReverseContact(mEdgeEdgeContacts, mReverseEdgeEdgeContacts, he, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mEdgeEdgeContacts, he, fOnContact);
+    ForEachReverseContact(mEdgeEdgeContacts, mReverseEdgeEdgeContacts, he, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TContactSet, class TDerivedx>
+inline auto MeshDynamics<TScalar, TIndex>::LoadStencil(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Stencil const& stencil) const
+{
+    using ConstraintAccessorType   = typename TContactSet::ConstAccessorType;
+    static auto constexpr kDims    = ConstraintAccessorType::kDims;
+    static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+    using math::linalg::mini::SMatrix;
+    SMatrix<TScalar, kDims, kStencil> X;
+    std::array<TIndex, kStencil> nodes;
+    if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
+    {
+        nodes[0] = LoadPoint(x.derived(), stencil.u, stencil.gu, X.Col(0));
+        nodes[1] = LoadPoint(x.derived(), stencil.v, stencil.gv, X.Col(1));
+    }
+    else if constexpr (std::is_same_v<TContactSet, PointEdgeContactSet>)
+    {
+        nodes[0] = LoadPoint(x.derived(), stencil.u, stencil.gu, X.Col(0));
+        std::tie(nodes[1], nodes[2]) =
+            LoadHalfEdge(x.derived(), stencil.v, stencil.gv, X.Col(1), X.Col(2));
+    }
+    else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
+    {
+        nodes[0] = LoadPoint(x.derived(), stencil.u, stencil.gu, X.Col(0));
+        std::tie(nodes[1], nodes[2], nodes[3]) =
+            LoadTriangle(x.derived(), stencil.v, stencil.gv, X.Col(1), X.Col(2), X.Col(3));
+    }
+    else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
+    {
+        std::tie(nodes[0], nodes[1]) =
+            LoadHalfEdge(x.derived(), stencil.u, stencil.gu, X.Col(0), X.Col(1));
+        std::tie(nodes[2], nodes[3]) =
+            LoadHalfEdge(x.derived(), stencil.v, stencil.gv, X.Col(2), X.Col(3));
+    }
+    else
+    {
+        static_assert(false, "Unsupported contact set");
+    }
+    return std::make_pair(X, nodes);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TContactSet>
+inline auto MeshDynamics<TScalar, TIndex>::LoadStencil(Stencil const& stencil) const
+{
+    using ContactSetType         = std::remove_cvref_t<TContactSet>;
+    using ConstraintAccessorType = typename ContactSetType::ConstAccessorType;
+    std::array<TIndex, ConstraintAccessorType::kStencil> nodes;
+    if constexpr (std::is_same_v<ContactSetType, PointPointContactSet>)
+    {
+        nodes[0] = LoadPoint(stencil.u, stencil.gu);
+        nodes[1] = LoadPoint(stencil.v, stencil.gv);
+    }
+    else if constexpr (std::is_same_v<ContactSetType, PointEdgeContactSet>)
+    {
+        nodes[0]                     = LoadPoint(stencil.u, stencil.gu);
+        std::tie(nodes[1], nodes[2]) = LoadHalfEdge(stencil.v, stencil.gv);
+    }
+    else if constexpr (std::is_same_v<ContactSetType, PointTriangleContactSet>)
+    {
+        nodes[0]                               = LoadPoint(stencil.u, stencil.gu);
+        std::tie(nodes[1], nodes[2], nodes[3]) = LoadTriangle(stencil.v, stencil.gv);
+    }
+    else if constexpr (std::is_same_v<ContactSetType, EdgeEdgeContactSet>)
+    {
+        std::tie(nodes[0], nodes[1]) = LoadHalfEdge(stencil.u, stencil.gu);
+        std::tie(nodes[2], nodes[3]) = LoadHalfEdge(stencil.v, stencil.gv);
+    }
+    else
+    {
+        static_assert(false, "Unsupported contact set");
+    }
+    return nodes;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::NumTruncatedPoints() const
+{
+    return mNumTruncatedPoints;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1319,454 +1978,97 @@ void MeshDynamics<TScalar, TIndex>::SetDynamicGeometry(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedX, class TDerivedXt>
-inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
-    Eigen::MatrixBase<TDerivedX> const& _x,
-    Eigen::MatrixBase<TDerivedXt> const& _xt,
-    ScalarType h,
-    int eFlags)
+template <class TDerivedx>
+inline TScalar MeshDynamics<TScalar, TIndex>::Potential(Eigen::MatrixBase<TDerivedx> const& x) const
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeEnergies");
-    Eigen::Index nVertexVertexContacts{0};
-    Eigen::Index nVertexEdgeContacts{0};
-    Eigen::Index nVertexTriangleContacts{0};
-    Eigen::Index nEdgeEdgeContacts{0};
-    Eigen::Index nVertexEnvironmentContacts{0};
-    Eigen::Index nEdgeEnvironmentContacts{0};
-    Eigen::Index nTriangleEnvironmentContacts{0};
-    ForEachMeshMeshContact(
-        [&](auto /*i*/, auto /*j*/) { ++nVertexVertexContacts; },
-        [&](auto /*i*/, auto /*einds*/) { ++nVertexEdgeContacts; },
-        [&](auto /*i*/, auto /*finds*/) { ++nVertexTriangleContacts; },
-        [&](auto /*eindsi*/, auto /*eindsj*/) { ++nEdgeEdgeContacts; });
-    ForEachMeshEnvironmentContact(
-        [&](auto /*i*/, auto /*j*/) { ++nVertexEnvironmentContacts; },
-        [&](auto /*i*/, auto /*einds*/) { ++nVertexEnvironmentContacts; },
-        [&](auto /*i*/, auto /*finds*/) { ++nVertexEnvironmentContacts; },
-        [&](auto /*eindsi*/, auto /*j*/) { ++nEdgeEnvironmentContacts; },
-        [&](auto /*eindsi*/, auto /*eindsj*/) { ++nEdgeEnvironmentContacts; },
-        [&](auto /*finds*/, auto /*j*/) { ++nTriangleEnvironmentContacts; });
-    ReserveContactEnergies(
-        nVertexVertexContacts,
-        nVertexEdgeContacts,
-        nVertexTriangleContacts,
-        nEdgeEdgeContacts,
-        nVertexEnvironmentContacts,
-        nEdgeEnvironmentContacts,
-        nTriangleEnvironmentContacts);
-    mVertexVertexEnergies.clear();
-    mVertexEdgeEnergies.clear();
-    mVertexTriangleEnergies.clear();
-    mEdgeEdgeEnergies.clear();
-    mVertexEnvironmentEnergies.clear();
-    mEdgeEnvironmentEnergies.clear();
-    mTriangleEnvironmentEnergies.clear();
-    // Compute energies
-    using math::linalg::mini::FromEigen;
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    ScalarType r     = mParams.mOgcParams.r;
-    ScalarType epsv  = mParams.epsv;
-    ScalarType epsvh = epsv * h;
-    ScalarType mu    = mParams.mu;
-    ScalarType kc    = mParams.kc;
-    ScalarType kcp   = mParams.kcp;
-    ScalarType b     = mParams.b;
-    auto const x     = _x.reshaped(3, _x.size() / 3);
-    auto const xt    = _xt.reshaped(3, _xt.size() / 3);
-    ForEachMeshMeshContact(
-        [&](IndexType i, IndexType j) {
-            Eigen::Vector<ScalarType, 6> xvv, xtvv;
-            xvv << x.col(i), x.col(j);
-            xtvv << xt.col(i), xt.col(j);
-            auto E = VertexVertexContactEnergy<ScalarType, IndexType>(
-                FromEigen(xvv),
-                FromEigen(xtvv),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i, j};
-            mVertexVertexEnergies.push_back(std::move(E));
+    TScalar E{0};
+    ForAllContacts(
+        [&]<class TContactSet>(typename TContactSet::ConstAccessorType C, Stencil stencil) {
+            using ConstraintAccessorType   = decltype(C);
+            static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+            static auto constexpr kDims    = ConstraintAccessorType::kDims;
+            static auto constexpr kDofs    = ConstraintAccessorType::kDofs;
+            static_assert(kDims == 3, "Only 3D is supported");
+            auto const [Xc, nodes] = LoadStencil<TContactSet>(x, stencil);
+            auto xc                = Reshape<kDofs, 1>(Xc);
+            TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
+            auto kn                = C.Penalty();
+            E += C.Decay() * (TScalar(0.5) * kn * cs * cs - C.Lambda() * cs);
+            auto F  = C.Friction();
+            auto cf = F.Eval(xc);
+            auto kf = F.Penalty();
+            E += C.Decay() * (TScalar(0.5) * kf * Dot(cf, cf) - Dot(F.Lambda(), cf));
         },
-        [&](IndexType i, Eigen::Vector<IndexType, 2> const& einds) {
-            Eigen::Vector<ScalarType, 9> xve, xtve;
-            xve << x.col(i), x.col(einds(0)), x.col(einds(1));
-            xtve << xt.col(i), xt.col(einds(0)), xt.col(einds(1));
-            auto E = VertexEdgeContactEnergy<ScalarType, IndexType>(
-                FromEigen(xve),
-                FromEigen(xtve),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i, einds(0), einds(1)};
-            mVertexEdgeEnergies.push_back(std::move(E));
-        },
-        [&](IndexType i, Eigen::Vector<IndexType, 3> const& finds) {
-            Eigen::Vector<ScalarType, 12> xvt, xtvt;
-            xvt << x.col(i), x.col(finds(0)), x.col(finds(1)), x.col(finds(2));
-            xtvt << xt.col(i), xt.col(finds(0)), xt.col(finds(1)), xt.col(finds(2));
-            auto E = VertexTriangleContactEnergy<ScalarType, IndexType>(
-                FromEigen(xvt),
-                FromEigen(xtvt),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i, finds(0), finds(1), finds(2)};
-            mVertexTriangleEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 2> const& eindsi, Eigen::Vector<IndexType, 2> const& eindsj) {
-            Eigen::Vector<ScalarType, 12> xee, xtee;
-            xee << x.col(eindsi(0)), x.col(eindsi(1)), x.col(eindsj(0)), x.col(eindsj(1));
-            xtee << xt.col(eindsi(0)), xt.col(eindsi(1)), xt.col(eindsj(0)), xt.col(eindsj(1));
-            auto E = EdgeEdgeContactEnergy<ScalarType, IndexType>(
-                FromEigen(xee),
-                FromEigen(xtee),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {eindsi(0), eindsi(1), eindsj(0), eindsj(1)};
-            mEdgeEdgeEnergies.push_back(std::move(E));
-        });
-    ForEachMeshEnvironmentContact(
-        [&](IndexType i, IndexType j) {
-            Eigen::Vector<ScalarType, 3> const xv  = x.col(i);
-            Eigen::Vector<ScalarType, 3> const xtv = xt.col(i);
-            Eigen::Vector<ScalarType, 3> const yj  = mXstatic.col(j);
-            auto E = VertexEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xv),
-                FromEigen(xtv),
-                FromEigen(yj),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i};
-            mVertexEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](IndexType i, Eigen::Vector<IndexType, 2> const& eindsj) {
-            Eigen::Vector<ScalarType, 3> const xv  = x.col(i);
-            Eigen::Vector<ScalarType, 3> const xtv = xt.col(i);
-            Eigen::Vector<ScalarType, 3> const yc  = mXstatic.col(eindsj(0));
-            Eigen::Vector<ScalarType, 3> const yd  = mXstatic.col(eindsj(1));
-            SVector<ScalarType, 3> const xcp = geometry::ClosestPointQueries::PointOnLineSegment(
-                FromEigen(xv),
-                FromEigen(yc),
-                FromEigen(yd));
-            auto E = VertexEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xv),
-                FromEigen(xtv),
-                xcp,
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i};
-            mVertexEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](IndexType i, Eigen::Vector<IndexType, 3> const& findsj) {
-            Eigen::Vector<ScalarType, 3> const xv  = x.col(i);
-            Eigen::Vector<ScalarType, 3> const xtv = xt.col(i);
-            Eigen::Vector<ScalarType, 3> const ya  = mXstatic.col(findsj(0));
-            Eigen::Vector<ScalarType, 3> const yb  = mXstatic.col(findsj(1));
-            Eigen::Vector<ScalarType, 3> const yc  = mXstatic.col(findsj(2));
-            SVector<ScalarType, 3> const xcp       = geometry::ClosestPointQueries::PointInTriangle(
-                FromEigen(xv),
-                FromEigen(ya),
-                FromEigen(yb),
-                FromEigen(yc));
-            auto E = VertexEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xv),
-                FromEigen(xtv),
-                xcp,
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {i};
-            mVertexEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 2> const& eindsi, IndexType j) {
-            Eigen::Vector<ScalarType, 6> xe, xte;
-            xe << x.col(eindsi(0)), x.col(eindsi(1));
-            xte << xt.col(eindsi(0)), xt.col(eindsi(1));
-            Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
-            // Closest point on dynamic edge to static vertex
-            SVector<ScalarType, 2> const uv = geometry::ClosestPointQueries::UvPointOnLineSegment(
-                FromEigen(yj),
-                FromEigen(xe.template head<3>()),
-                FromEigen(xe.template tail<3>()));
-            auto E = EdgeEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xe),
-                FromEigen(xte),
-                uv,
-                FromEigen(yj),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {eindsi(0), eindsi(1)};
-            mEdgeEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 2> const& eindsi, Eigen::Vector<IndexType, 2> const& eindsj) {
-            Eigen::Vector<ScalarType, 6> xe, xte;
-            xe << x.col(eindsi(0)), x.col(eindsi(1));
-            xte << xt.col(eindsi(0)), xt.col(eindsi(1));
-            Eigen::Vector<ScalarType, 3> const yc = mXstatic.col(eindsj(0));
-            Eigen::Vector<ScalarType, 3> const yd = mXstatic.col(eindsj(1));
-            SVector<ScalarType, 2> const st       = geometry::ClosestPointQueries::LineSegments(
-                FromEigen(xe.template head<3>()),
-                FromEigen(xe.template tail<3>()),
-                FromEigen(yc),
-                FromEigen(yd));
-            SVector<ScalarType, 2> const u{1 - st(0), st(0)};
-            Eigen::Vector<ScalarType, 3> const xcp = (1 - st(1)) * yc + st(1) * yd;
-            auto E = EdgeEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xe),
-                FromEigen(xte),
-                u,
-                FromEigen(xcp),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {eindsi(0), eindsi(1)};
-            mEdgeEnvironmentEnergies.push_back(std::move(E));
-        },
-        [&](Eigen::Vector<IndexType, 3> const& findsi, IndexType j) {
-            Eigen::Vector<ScalarType, 9> xf, xtf;
-            xf << x.col(findsi(0)), x.col(findsi(1)), x.col(findsi(2));
-            xtf << xt.col(findsi(0)), xt.col(findsi(1)), xt.col(findsi(2));
-            Eigen::Vector<ScalarType, 3> const yj = mXstatic.col(j);
-            SVector<ScalarType, 3> const uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
-                FromEigen(yj),
-                FromEigen(xf.template segment<3>(0)),
-                FromEigen(xf.template segment<3>(3)),
-                FromEigen(xf.template segment<3>(6)));
-            auto E = TriangleEnvironmentContactEnergy<ScalarType, IndexType>(
-                FromEigen(xf),
-                FromEigen(xtf),
-                uvw,
-                FromEigen(yj),
-                r,
-                kc,
-                kcp,
-                b,
-                mu,
-                epsvh,
-                static_cast<EMeshEnergyComputationFlags>(eFlags));
-            E.stencil = {findsi(0), findsi(1), findsi(2)};
-            mTriangleEnvironmentEnergies.push_back(std::move(E));
-        });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline TScalar MeshDynamics<TScalar, TIndex>::Potential() const
-{
-    ScalarType E{0};
-    for (auto const& e : mVertexVertexEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mVertexEdgeEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mVertexTriangleEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mEdgeEdgeEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mVertexEnvironmentEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mEdgeEnvironmentEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mTriangleEnvironmentEnergies)
-        E += e.En + e.Ef;
+        1 /*nThreads*/);
     return E;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline auto MeshDynamics<TScalar, TIndex>::Gradient() const
-    -> Eigen::Vector<TScalar, Eigen::Dynamic>
+template <class TDerivedx>
+inline auto MeshDynamics<TScalar, TIndex>::Gradient(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    bool bForAugmentedLagrangian) const -> Eigen::Vector<TScalar, Eigen::Dynamic>
 {
     Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
     grad.setZero();
-    ToGradient(grad);
+    ToGradient(x, grad, bForAugmentedLagrangian);
     return grad;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumContacts() const
+template <class TDerivedx, class TDerivedg>
+inline void MeshDynamics<TScalar, TIndex>::ToGradient(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedg>& g_,
+    bool bForAugmentedLagrangian) const
 {
-    return NumVertexVertexContacts() + NumVertexEdgeContacts() + NumVertexTriangleContacts() +
-           NumEdgeEdgeContacts() + NumVertexEnvironmentContacts() + NumEdgeEnvironmentContacts() +
-           NumTriangleEnvironmentContacts();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexVertexContacts() const
-{
-    return mVertexVertexEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexEdgeContacts() const
-{
-    return mVertexEdgeEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexTriangleContacts() const
-{
-    return mVertexTriangleEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumEdgeEdgeContacts() const
-{
-    return mEdgeEdgeEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumVertexEnvironmentContacts() const
-{
-    return mVertexEnvironmentEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumEdgeEnvironmentContacts() const
-{
-    return mEdgeEnvironmentEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline std::size_t MeshDynamics<TScalar, TIndex>::NumTriangleEnvironmentContacts() const
-{
-    return mTriangleEnvironmentEnergies.size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedg>
-inline void MeshDynamics<TScalar, TIndex>::ToGradient(Eigen::MatrixBase<TDerivedg>& g) const
-{
-    auto G                   = g.derived().reshaped(3, g.size() / 3);
-    auto fAccumulateGradient = [&](auto const& energies) {
-        using math::linalg::mini::ToEigen;
-        for (auto const& e : energies)
-            G(Eigen::placeholders::all, e.stencil).reshaped() +=
-                ToEigen(e.gradEn) + ToEigen(e.gradEf);
-    };
-    fAccumulateGradient(mVertexVertexEnergies);
-    fAccumulateGradient(mVertexEdgeEnergies);
-    fAccumulateGradient(mVertexTriangleEnergies);
-    fAccumulateGradient(mEdgeEdgeEnergies);
-    fAccumulateGradient(mVertexEnvironmentEnergies);
-    fAccumulateGradient(mEdgeEnvironmentEnergies);
-    fAccumulateGradient(mTriangleEnvironmentEnergies);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline auto MeshDynamics<TScalar, TIndex>::NormalGradient() const
-    -> Eigen::Vector<TScalar, Eigen::Dynamic>
-{
-    Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
-    grad.setZero();
-    ToNormalGradient(grad);
-    return grad;
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedg>
-inline void MeshDynamics<TScalar, TIndex>::ToNormalGradient(Eigen::MatrixBase<TDerivedg>& g) const
-{
-    auto G                   = g.derived().reshaped(3, g.size() / 3);
-    auto fAccumulateGradient = [&](auto const& energies) {
-        using math::linalg::mini::ToEigen;
-        for (auto const& e : energies)
-            G(Eigen::placeholders::all, e.stencil).reshaped() += ToEigen(e.gradEn);
-    };
-    fAccumulateGradient(mVertexVertexEnergies);
-    fAccumulateGradient(mVertexEdgeEnergies);
-    fAccumulateGradient(mVertexTriangleEnergies);
-    fAccumulateGradient(mEdgeEdgeEnergies);
-    fAccumulateGradient(mVertexEnvironmentEnergies);
-    fAccumulateGradient(mEdgeEnvironmentEnergies);
-    fAccumulateGradient(mTriangleEnvironmentEnergies);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline auto MeshDynamics<TScalar, TIndex>::FrictionalGradient() const
-    -> Eigen::Vector<TScalar, Eigen::Dynamic>
-{
-    Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
-    grad.setZero();
-    ToFrictionalGradient(grad);
-    return grad;
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedg>
-inline void
-MeshDynamics<TScalar, TIndex>::ToFrictionalGradient(Eigen::MatrixBase<TDerivedg>& g) const
-{
-    auto G                   = g.derived().reshaped(3, g.size() / 3);
-    auto fAccumulateGradient = [&](auto const& energies) {
-        using math::linalg::mini::ToEigen;
-        for (auto const& e : energies)
-            G(Eigen::placeholders::all, e.stencil).reshaped() += ToEigen(e.gradEf);
-    };
-    fAccumulateGradient(mVertexVertexEnergies);
-    fAccumulateGradient(mVertexEdgeEnergies);
-    fAccumulateGradient(mVertexTriangleEnergies);
-    fAccumulateGradient(mEdgeEdgeEnergies);
-    fAccumulateGradient(mVertexEnvironmentEnergies);
-    fAccumulateGradient(mEdgeEnvironmentEnergies);
-    fAccumulateGradient(mTriangleEnvironmentEnergies);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::ReserveContactEnergies(
-    Eigen::Index nVertexVertexContacts,
-    Eigen::Index nVertexEdgeContacts,
-    Eigen::Index nVertexTriangleContacts,
-    Eigen::Index nEdgeEdgeContacts,
-    Eigen::Index nVertexEnvironmentContacts,
-    Eigen::Index nEdgeEnvironmentContacts,
-    Eigen::Index nTriangleEnvironmentContacts)
-{
-    mVertexVertexEnergies.reserve(static_cast<std::size_t>(nVertexVertexContacts));
-    mVertexEdgeEnergies.reserve(static_cast<std::size_t>(nVertexEdgeContacts));
-    mVertexTriangleEnergies.reserve(static_cast<std::size_t>(nVertexTriangleContacts));
-    mEdgeEdgeEnergies.reserve(static_cast<std::size_t>(nEdgeEdgeContacts));
-    mVertexEnvironmentEnergies.reserve(static_cast<std::size_t>(nVertexEnvironmentContacts));
-    mEdgeEnvironmentEnergies.reserve(static_cast<std::size_t>(nEdgeEnvironmentContacts));
-    mTriangleEnvironmentEnergies.reserve(static_cast<std::size_t>(nTriangleEnvironmentContacts));
+    auto g                    = g_.derived().reshaped();
+    Eigen::Index const nNodes = g.size() / 3;
+    ForAllContacts(
+        [&]<class TContactSet>(typename TContactSet::ConstAccessorType C, Stencil stencil) {
+            static auto constexpr kStencil = C.kStencil;
+            static auto constexpr kDims    = C.kDims;
+            static auto constexpr kDofs    = C.kDofs;
+            static_assert(kDims == 3, "Only 3D is supported");
+            auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
+            auto xc                = Reshape<kDofs, 1>(XC);
+            auto F                 = C.Friction();
+            auto const& W          = F.Weights();
+            auto const& T          = F.TangentBasis();
+            using math::linalg::mini::SVector;
+            TScalar dL;
+            SVector<TScalar, 2> df;
+            if (bForAugmentedLagrangian)
+            {
+                auto kn    = C.Penalty();
+                TScalar cs = C.Eval(xc) - mParams.dmin - C.Slack();
+                dL         = kn * cs - C.Lambda();
+                // Friction gradient \nabla_x [ 0.5*kf*||c_f||^2 - lambda_f^T c_f ]
+                // = [ kf * c_f - lambda_f ] \nabla_x c_f where \nabla_xi c_f is W(i)*T
+                auto cf = F.Eval(xc);
+                auto kf = F.Penalty();
+                df      = kf * cf - F.Lambda();
+            }
+            else
+            {
+                dL = -C.Lambda();
+                df = -F.Lambda();
+            }
+            SVector<TScalar, kDims> gf = T * df;
+            using math::linalg::mini::ToEigen;
+            auto gradnc = ToEigen(C.Grad());
+            auto gradfc = ToEigen(gf);
+            for (auto ki = 0; ki < kStencil; ++ki)
+            {
+                if (nodes[ki] < nNodes)
+                {
+                    g.template segment<kDims>(nodes[ki] * kDims) +=
+                        C.Decay() *
+                        (dL * gradnc.template segment<kDims>(ki * kDims) + W(ki) * gradfc);
+                }
+            }
+        },
+        1 /*nThreads*/);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1794,6 +2096,22 @@ inline void MeshDynamics<TScalar, TIndex>::Serialize(io::Archive& archive)
     grp.WriteMetaData(
         "mRequiresBoundsRecomputation",
         static_cast<int>(mRequiresBoundsRecomputation));
+    {
+        auto pointPointContactsGrp = grp["mPointPointContacts"];
+        SerializeConstraintSet(mPointPointContacts, pointPointContactsGrp);
+    }
+    {
+        auto pointEdgeContactsGrp = grp["mPointEdgeContacts"];
+        SerializeConstraintSet(mPointEdgeContacts, pointEdgeContactsGrp);
+    }
+    {
+        auto pointTriangleContactsGrp = grp["mPointTriangleContacts"];
+        SerializeConstraintSet(mPointTriangleContacts, pointTriangleContactsGrp);
+    }
+    {
+        auto edgeEdgeContactsGrp = grp["mEdgeEdgeContacts"];
+        SerializeConstraintSet(mEdgeEdgeContacts, edgeEdgeContactsGrp);
+    }
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1801,26 +2119,33 @@ inline void MeshDynamics<TScalar, TIndex>::Deserialize(io::Archive const& archiv
 {
     auto grp = archive["pbat.sim.contact.MeshDynamics"];
     mParams.Deserialize(grp["mParams"]);
-    mXdynamic =
-        grp.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("mXdynamic");
-    mDynamicMeshes.Deserialize(grp["mDynamicMeshes"]);
     if (grp.HasMetaData("mNumTruncatedPoints"))
+    {
         mNumTruncatedPoints = grp.ReadMetaData<Eigen::Index>("mNumTruncatedPoints");
+    }
     if (grp.HasMetaData("mRequiresBoundsRecomputation"))
+    {
         mRequiresBoundsRecomputation =
             static_cast<bool>(grp.ReadMetaData<int>("mRequiresBoundsRecomputation"));
-    mOgcInput.WithDynamicGeometry(
-        mXdynamic,
-        mDynamicMeshes.V,
-        mDynamicMeshes.F,
-        mDynamicMeshes.E,
-        mDynamicMeshes.VP,
-        mDynamicMeshes.FP,
-        mDynamicMeshes.EP,
-        mDynamicMeshes.GVHEp,
-        mDynamicMeshes.GVHEadj,
-        mDynamicMeshes.GHEF,
-        mDynamicMeshes.EHE);
+    }
+    if (grp.HasData("mXdynamic") and grp.HasGroup("mDynamicMeshes"))
+    {
+        mXdynamic =
+            grp.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("mXdynamic");
+        mDynamicMeshes.Deserialize(grp["mDynamicMeshes"]);
+        mOgcInput.WithDynamicGeometry(
+            mXdynamic,
+            mDynamicMeshes.V,
+            mDynamicMeshes.F,
+            mDynamicMeshes.E,
+            mDynamicMeshes.VP,
+            mDynamicMeshes.FP,
+            mDynamicMeshes.EP,
+            mDynamicMeshes.GVHEp,
+            mDynamicMeshes.GVHEadj,
+            mDynamicMeshes.GHEF,
+            mDynamicMeshes.EHE);
+    }
     if (grp.HasData("mXstatic") and grp.HasGroup("mStaticMeshes"))
     {
         mXstatic =
@@ -1835,832 +2160,684 @@ inline void MeshDynamics<TScalar, TIndex>::Deserialize(io::Archive const& archiv
             mStaticMeshes.GHEF,
             mStaticMeshes.EHE);
     }
+    if (grp.HasGroup("mPointPointContacts"))
+    {
+        DeserializeConstraintSet(mPointPointContacts, grp["mPointPointContacts"]);
+    }
+    if (grp.HasGroup("mPointEdgeContacts"))
+    {
+        DeserializeConstraintSet(mPointEdgeContacts, grp["mPointEdgeContacts"]);
+    }
+    if (grp.HasGroup("mPointTriangleContacts"))
+    {
+        DeserializeConstraintSet(mPointTriangleContacts, grp["mPointTriangleContacts"]);
+    }
+    if (grp.HasGroup("mEdgeEdgeContacts"))
+    {
+        DeserializeConstraintSet(mEdgeEdgeContacts, grp["mEdgeEdgeContacts"]);
+    }
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <
-    class FOnPointPointContact,
-    class FOnPointLineSegmentContact,
-    class FOnPointTriangleContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachPointDynamicMeshContact(
-    IndexType i,
-    FOnPointPointContact&& fOnPointPointContact,
-    FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-    FOnPointTriangleContact&& fOnPointTriangleContact)
+template <class TContactSet>
+void MeshDynamics<TScalar, TIndex>::SerializeConstraintSet(
+    TContactSet& contactSet,
+    io::Archive& grp)
 {
-    auto vi = mDynamicMeshes.GXV(i);
-    if (vi < 0)
+    static constexpr int kDofs    = TContactSet::AccessorType::kDofs;
+    static constexpr int kStencil = TContactSet::AccessorType::kStencil;
+    // NOTE: The contact set should already be compacted.
+    // contactSet.CompactIds();
+    auto const nAdj         = static_cast<Eigen::Index>(contactSet.Size());
+    auto const& adjacencies = contactSet.Adjacencies();
+    auto const& prefix      = contactSet.Prefix();
+    // Adjacencies as 3 x nAdj matrix (source, target, id)
+    Eigen::Matrix<TIndex, 3, Eigen::Dynamic> adj(3, nAdj);
+    for (Eigen::Index i = 0; i < nAdj; ++i)
+    {
+        adj(0, i) = std::get<0>(adjacencies[i]);
+        adj(1, i) = std::get<1>(adjacencies[i]);
+        adj(2, i) = std::get<2>(adjacencies[i]);
+    }
+    grp.WriteData("adjacencies", adj);
+    grp.WriteData("prefix", prefix);
+    // Constraint data
+    auto const& lambdas = contactSet.template Data<0>();
+    auto const& slacks  = contactSet.template Data<1>();
+    auto const& decays  = contactSet.template Data<2>();
+    auto const& chats   = contactSet.template Data<3>();
+    auto const& gradcs  = contactSet.template Data<4>();
+    auto const& evals   = contactSet.template Data<5>();
+    grp.WriteData("lambda", lambdas);
+    grp.WriteData("slack", slacks);
+    grp.WriteData("chat", chats);
+    grp.WriteData("eval", evals);
+    // Decay (extract gamma)
+    {
+        std::vector<TScalar> decayVec(nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            decayVec[i] = decays[i].gamma;
+        grp.WriteData("decay", decayVec);
+    }
+    // Gradient as kDofs x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> gradcsEig(kDofs, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+        {
+            auto const& gradc = gradcs[i];
+            gradcsEig.col(i)  = ToEigen(gradc);
+        }
+        grp.WriteData("gradc", gradcsEig);
+    }
+    // Friction data
+    auto const& tangentBases   = contactSet.template Data<6>();
+    auto const& tangentWeights = contactSet.template Data<7>();
+    auto const& cf             = contactSet.template Data<8>();
+    auto const& dhat           = contactSet.template Data<9>();
+    auto const& lambdaf        = contactSet.template Data<10>();
+    using math::linalg::mini::ToEigen;
+    // Tangent basis as 3 x 2*nAdj matrix
+    {
+        Eigen::Matrix<TScalar, 3, Eigen::Dynamic> Teig(3, 2 * nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+        {
+            auto const& Ti                      = tangentBases[i];
+            Teig.template block<3, 2>(0, 2 * i) = ToEigen(Ti);
+        }
+        grp.WriteData("tangentBasis", Teig);
+    }
+    // Weights as kStencil x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, kStencil, Eigen::Dynamic> Weig(kStencil, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+        {
+            auto const& Wi = tangentWeights[i];
+            Weig.col(i)    = ToEigen(Wi);
+        }
+        grp.WriteData("tangentWeights", Weig);
+    }
+    // Friction constraint value c_f(x) as 2 x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, 2, Eigen::Dynamic> cfEig(2, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            cfEig.col(i) = ToEigen(cf[i]);
+        grp.WriteData("cf", cfEig);
+    }
+    // dhat = T^T W xt as 2 x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, 2, Eigen::Dynamic> dhatEig(2, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            dhatEig.col(i) = ToEigen(dhat[i]);
+        grp.WriteData("dhat", dhatEig);
+    }
+    // Friction Lagrange multiplier lambda_f as 2 x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, 2, Eigen::Dynamic> lfEig(2, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            lfEig.col(i) = ToEigen(lambdaf[i]);
+        grp.WriteData("lambdaf", lfEig);
+    }
+    // Penalty parameters
+    auto const& sigmas  = contactSet.template Data<11>();
+    auto const& sigmasf = contactSet.template Data<12>();
+    grp.WriteData("sigma", sigmas);
+    grp.WriteData("sigmaf", sigmasf);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TContactSet>
+void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
+    TContactSet& contactSet,
+    io::Archive const& grp)
+{
+    static constexpr int kDofs    = TContactSet::AccessorType::kDofs;
+    static constexpr int kStencil = TContactSet::AccessorType::kStencil;
+    // Read adjacencies + prefix
+    auto adj = grp.ReadData<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>("adjacencies");
+    auto const nAdj = adj.cols();
+    std::vector<std::tuple<TIndex, TIndex, TIndex>> adjacencies(nAdj);
+    for (Eigen::Index i = 0; i < nAdj; ++i)
+        adjacencies[i] = {adj(0, i), adj(1, i), adj(2, i)};
+    std::vector<TIndex> prefix = grp.ReadData<std::vector<TIndex>>("prefix");
+    // Read scalar data
+    std::vector<TScalar> lambdas = grp.ReadData<std::vector<TScalar>>("lambda");
+    std::vector<TScalar> slacks  = grp.ReadData<std::vector<TScalar>>("slack");
+    std::vector<TScalar> chats   = grp.ReadData<std::vector<TScalar>>("chat");
+    std::vector<TScalar> evals   = grp.ReadData<std::vector<TScalar>>("eval");
+    std::vector<TScalar> decaysS = grp.ReadData<std::vector<TScalar>>("decay");
+    std::vector<math::linalg::mini::SVector<TScalar, kDofs>> gradcs(nAdj);
+    auto gradcsEig = grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("gradc");
+    // Build data vectors
+    std::vector<OneInitializedScalar> decays(nAdj);
+    for (Eigen::Index i = 0; i < nAdj; ++i)
+    {
+        decays[i].gamma = decaysS[i];
+        auto& gradc     = gradcs[i];
+        for (int d = 0; d < kDofs; ++d)
+            gradc(d) = gradcsEig(d, i);
+    }
+    // Friction data (optional for backward compatibility)
+    using SMatrix32         = math::linalg::mini::SMatrix<TScalar, 3, 2>;
+    using SVector2          = math::linalg::mini::SVector<TScalar, 2>;
+    using WeightsVectorType = math::linalg::mini::SVector<TScalar, kStencil>;
+    std::vector<SMatrix32> tangentBases(nAdj);
+    std::vector<WeightsVectorType> tangentWeights(nAdj);
+    std::vector<SVector2> cf(nAdj);
+    std::vector<SVector2> dhat(nAdj);
+    std::vector<SVector2> lambdaf(nAdj);
+    using math::linalg::mini::FromEigen;
+    if (grp.HasData("tangentBasis"))
+    {
+        auto tbEig =
+            grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("tangentBasis");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            tangentBases[i] = FromEigen(tbEig.template block<3, 2>(0, 2 * i));
+    }
+    if (grp.HasData("tangentWeights"))
+    {
+        auto Weig =
+            grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("tangentWeights");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            tangentWeights[i] = FromEigen(Weig.col(i).template head<kStencil>());
+    }
+    if (grp.HasData("cf"))
+    {
+        auto cfEig = grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("cf");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            cf[i] = FromEigen(cfEig.col(i).template head<2>());
+    }
+    if (grp.HasData("dhat"))
+    {
+        auto dhatEig = grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("dhat");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            dhat[i] = FromEigen(dhatEig.col(i).template head<2>());
+    }
+    if (grp.HasData("lambdaf"))
+    {
+        auto lfEig =
+            grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("lambdaf");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            lambdaf[i] = FromEigen(lfEig.col(i).template head<2>());
+    }
+    // Penalty parameters (optional for backward compatibility)
+    std::vector<TScalar> sigmas(nAdj);
+    std::vector<TScalar> sigmasf(nAdj);
+    if (grp.HasData("sigma"))
+        sigmas = grp.ReadData<std::vector<TScalar>>("sigma");
+    if (grp.HasData("sigmaf"))
+        sigmasf = grp.ReadData<std::vector<TScalar>>("sigmaf");
+    // Construct the contact set from compact state
+    contactSet.Construct(
+        std::move(adjacencies),
+        std::move(prefix),
+        std::make_tuple(
+            std::move(lambdas),
+            std::move(slacks),
+            std::move(decays),
+            std::move(chats),
+            std::move(gradcs),
+            std::move(evals),
+            std::move(tangentBases),
+            std::move(tangentWeights),
+            std::move(cf),
+            std::move(dhat),
+            std::move(lambdaf),
+            std::move(sigmas),
+            std::move(sigmasf)));
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet& set,
+    FOnContact&& fOnContact,
+    TIndex cstart,
+    TIndex cend)
+{
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0}, gv{0};
+    for (TIndex c = cstart, uprev = 0; c < cend; ++c)
+    {
+        auto const [u, v, k] = set.WeightedAdjacency(c);
+        // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
+        // until we find the next u, in which case we reset the gv geometry index for v.
+        if (u > uprev)
+        {
+            gv    = 0;
+            uprev = u;
+        }
+        // Keep track of geometry types for u and v
+        while (u >= prefixu[gu + 1])
+            ++gu;
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        // Visit contact
+        ConstraintAccessor<TContactSet> C{set, k};
+        fOnContact(C, Stencil{u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet const& set,
+    FOnContact&& fOnContact,
+    TIndex cstart,
+    TIndex cend) const
+{
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0}, gv{0};
+    for (TIndex c = cstart, uprev = 0; c < cend; ++c)
+    {
+        auto const [u, v, k] = set.WeightedAdjacency(c);
+        // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
+        // until we find the next u, in which case we reset the gv geometry index for v.
+        if (u > uprev)
+        {
+            gv    = 0;
+            uprev = u;
+        }
+        // Keep track of geometry types for u and v
+        while (u >= prefixu[gu + 1])
+            ++gu;
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        // Visit contact
+        ConstraintAccessor<TContactSet const> C{set, k};
+        fOnContact(C, Stencil{u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachForwardContact(
+    TContactSet& contactSet,
+    IndexType u,
+    FOnContact&& f)
+{
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0};
+    while (u >= prefixu[gu + 1])
+        ++gu;
+    int gv{0};
+    contactSet.ForEach(u, [&](auto cu, auto v, auto k) {
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        ConstraintAccessor<TContactSet const> C{contactSet, k};
+        f(C, Stencil{u, v, gu, gv});
+    });
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachForwardContact(
+    TContactSet const& contactSet,
+    IndexType u,
+    FOnContact&& f) const
+{
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0};
+    while (u >= prefixu[gu + 1])
+        ++gu;
+    int gv{0};
+    contactSet.ForEach(u, [&](auto cu, auto v, auto k) {
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        ConstraintAccessor<TContactSet const> C{contactSet, k};
+        f(C, Stencil{u, v, gu, gv});
+    });
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachReverseContact(
+    TContactSet& contactSet,
+    ReverseContactSetView const& reverseSet,
+    IndexType v,
+    FOnContact&& f)
+{
+    if (reverseSet.IsEmpty() or v >= static_cast<IndexType>(reverseSet.prefix.size() - 1))
         return;
-    mOgcState.ForEachDynamicContactFaceOfVertex(
-        vi,
-        [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType j) {
-            func(j);
-        },
-        [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
-            IndexType he) {
-            Eigen::Vector<IndexType, 2> const einds{
-                geometry::IncomingVertex(mDynamicMeshes.F, he),
-                geometry::OutgoingVertex(mDynamicMeshes.F, he)};
-            func(einds);
-        },
-        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
-            Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
-            func(finds);
-        });
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gv{0};
+    while (v >= prefixv[gv + 1])
+        ++gv;
+    int gu{0};
+    auto cpbegin = reverseSet.prefix[v];
+    auto cpend   = reverseSet.prefix[v + 1];
+    for (TIndex cp = cpbegin; cp < cpend; ++cp)
+    {
+        auto const& rcp = reverseSet.contacts[cp];
+        while (rcp.u >= prefixu[gu + 1])
+            ++gu;
+        ConstraintAccessor<TContactSet> C{contactSet, rcp.k};
+        f(C, Stencil{rcp.u, v, gu, gv});
+    }
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <
-    class FOnPointPointContact,
-    class FOnPointLineSegmentContact,
-    class FOnPointTriangleContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachPointStaticMeshContact(
-    IndexType i,
-    FOnPointPointContact&& fOnPointPointContact,
-    FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-    FOnPointTriangleContact&& fOnPointTriangleContact)
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachReverseContact(
+    TContactSet const& contactSet,
+    ReverseContactSetView const& reverseSet,
+    IndexType v,
+    FOnContact&& f) const
 {
-    auto vi = mDynamicMeshes.GXV(i);
-    if (vi < 0)
+    if (reverseSet.IsEmpty() or v >= static_cast<IndexType>(reverseSet.prefix.size() - 1))
         return;
-    mOgcState.ForEachStaticContactFaceOfVertex(
-        vi,
-        [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType vj) {
-            func(vj);
-        },
-        [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
-            IndexType he) {
-            Eigen::Vector<IndexType, 2> const einds{
-                geometry::IncomingVertex(mStaticMeshes.F, he),
-                geometry::OutgoingVertex(mStaticMeshes.F, he)};
-            func(einds);
-        },
-        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
-            Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
-            func(finds);
-        });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeDynamicMeshContact(
-    IndexType hei,
-    FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-    FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact)
-{
-    Eigen::Vector<IndexType, 2> const eindsi{
-        geometry::IncomingVertex(mDynamicMeshes.F, hei),
-        geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
-    mOgcState.ForEachDynamicContactFaceOfHalfEdge(
-        hei,
-        [this,
-         &eindsi,
-         func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType j) {
-            func(eindsi, j);
-        },
-        [this,
-         &eindsi,
-         func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
-            IndexType hej) {
-            Eigen::Vector<IndexType, 2> const eindsj{
-                geometry::IncomingVertex(mDynamicMeshes.F, hej),
-                geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
-            func(eindsi, eindsj);
-        });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContact(
-    IndexType hei,
-    FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-    FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact)
-{
-    Eigen::Vector<IndexType, 2> const eindsi{
-        geometry::IncomingVertex(mDynamicMeshes.F, hei),
-        geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
-    mOgcState.ForEachStaticContactFaceOfHalfEdge(
-        hei,
-        [&eindsi, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
-            IndexType vj) { func(eindsi, vj); },
-        [this,
-         &eindsi,
-         func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
-            IndexType hej) {
-            Eigen::Vector<IndexType, 2> const eindsj{
-                geometry::IncomingVertex(mStaticMeshes.F, hej),
-                geometry::OutgoingVertex(mStaticMeshes.F, hej)};
-            func(eindsi, eindsj);
-        });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
-    IndexType i,
-    FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-    FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact)
-{
-    auto hebegin = mDynamicMeshes.GVHEp(i);
-    auto heend   = mDynamicMeshes.GVHEp(i + 1);
-    for (IndexType hei : mDynamicMeshes.GVHEadj.segment(hebegin, heend - hebegin))
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gv{0};
+    while (v >= prefixv[gv + 1])
+        ++gv;
+    int gu{0};
+    auto cpbegin = reverseSet.prefix[v];
+    auto cpend   = reverseSet.prefix[v + 1];
+    for (TIndex cp = cpbegin; cp < cpend; ++cp)
     {
-        ForEachHalfEdgeDynamicMeshContact(
-            hei,
-            fOnPointLineSegmentContact,
-            fOnLineSegmentLineSegmentContact);
+        auto const& rcp = reverseSet.contacts[cp];
+        while (rcp.u >= prefixu[gu + 1])
+            ++gu;
+        ConstraintAccessor<TContactSet const> C{contactSet, rcp.k};
+        f(C, Stencil{rcp.u, v, gu, gv});
     }
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointLineSegmentContact, class FOnLineSegmentLineSegmentContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
-    IndexType i,
-    FOnPointLineSegmentContact&& fOnPointLineSegmentContact,
-    FOnLineSegmentLineSegmentContact&& fOnLineSegmentLineSegmentContact)
+inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bComputeReversePairs)
 {
-    auto hebegin = mDynamicMeshes.GVHEp(i);
-    auto heend   = mDynamicMeshes.GVHEp(i + 1);
-    for (IndexType hei : mDynamicMeshes.GVHEadj.segment(hebegin, heend - hebegin))
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateContactSetsFromOgcPairs");
+    auto const fUpdateContactSet = [&](auto& set, auto& newSet, auto nSourcePrimitives) {
+        // set.Union(newSet);
+        // set.RemoveIf([&]([[maybe_unused]] TIndex u, [[maybe_unused]] TIndex v, TIndex k) {
+        //     using ContactSetType = std::remove_cvref_t<decltype(set)>;
+        //     ConstraintAccessor<ContactSetType> C{set, k};
+        //     return C.Decay() < mParams.decaylo;
+        // });
+        set.Assign(newSet);
+        set.Finalize(nSourcePrimitives);
+        set.CompactIds();
+    };
+    using OgcStateType    = decltype(mOgcState);
+    auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
+    auto const nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
+    auto const nTriangles = mOgcState.mTriangleGeometryPrefix[OgcStateType::EGeometry::Count];
+    tbb::parallel_invoke(
+        [&] { fUpdateContactSet(mPointPointContacts, mOgcState.mXX, nPoints); },
+        [&] { fUpdateContactSet(mPointEdgeContacts, mOgcState.mXE, nPoints); },
+        [&] { fUpdateContactSet(mPointTriangleContacts, mOgcState.mXF, nPoints); },
+        [&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
+    if (bComputeReversePairs)
     {
-        ForEachHalfEdgeStaticMeshContact(
-            hei,
-            fOnPointLineSegmentContact,
-            fOnLineSegmentLineSegmentContact);
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointTriangleContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachDynamicPointContactOnTriangle(
-    IndexType fi,
-    FOnPointTriangleContact&& fOnPointTriangleContact)
-{
-    mOgcState.ForEachDynamicVertexContactOfTriangle(
-        fi,
-        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType i) {
-            func(i);
-        });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointTriangleContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachStaticPointContactOnTriangle(
-    IndexType fi,
-    FOnPointTriangleContact&& fOnPointTriangleContact)
-{
-    mOgcState.ForEachStaticVertexContactOfTriangle(
-        fi,
-        [func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType vi) {
-            func(vi);
-        });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointTriangleContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
-    IndexType i,
-    FOnPointTriangleContact&& fOnPointTriangleContact)
-{
-    auto hebegin = mDynamicMeshes.GVHEp(i);
-    auto heend   = mDynamicMeshes.GVHEp(i + 1);
-    for (IndexType hei : mDynamicMeshes.GVHEadj.segment(hebegin, heend - hebegin))
-    {
-        IndexType fi                            = geometry::FaceOfHalfEdge(hei);
-        Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(fi);
-        ForEachDynamicPointContactOnTriangle(
-            fi,
-            [finds, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
-                IndexType j) { func(finds, j); });
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnPointTriangleContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachStaticPointContactOnTrianglesIncidentOnPoint(
-    IndexType i,
-    FOnPointTriangleContact&& fOnPointTriangleContact)
-{
-    auto hebegin = mDynamicMeshes.GVHEp(i);
-    auto heend   = mDynamicMeshes.GVHEp(i + 1);
-    for (IndexType hei : mDynamicMeshes.GVHEadj.segment(hebegin, heend - hebegin))
-    {
-        IndexType fi                            = geometry::FaceOfHalfEdge(hei);
-        Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(fi);
-        ForEachStaticPointContactOnTriangle(
-            fi,
-            [finds, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](
-                IndexType j) { func(finds, j); });
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <
-    class FOnVertexVertexContact,
-    class FOnVertexEdgeContact,
-    class FOnVertexTriangleContact,
-    class FOnEdgeEdgeContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachMeshMeshContact(
-    FOnVertexVertexContact&& fOnVertexVertexContact,
-    FOnVertexEdgeContact&& fOnVertexEdgeContact,
-    FOnVertexTriangleContact&& fOnVertexTriangleContact,
-    FOnEdgeEdgeContact&& fOnEdgeEdgeContact)
-{
-    auto const nVerts = mDynamicMeshes.V.size();
-    auto const nEdges = mDynamicMeshes.E.cols();
-    auto const nFaces = mDynamicMeshes.F.cols();
-    for (auto v = 0; v < nVerts; ++v)
-    {
-        auto const i = mDynamicMeshes.V(v);
-        mOgcState.ForEachDynamicContactFaceOfVertex(
-            v,
-            [&, func = std::forward<FOnVertexVertexContact>(fOnVertexVertexContact)](IndexType j) {
-                func(i, j);
+        auto const fBuildReversePairs =
+            [](auto const& set, auto nTargetNodes, ReverseContactSetView& reverseSet) {
+                auto const n = static_cast<TIndex>(set.Size());
+                reverseSet.contacts.resize(n);
+                reverseSet.prefix.resize(nTargetNodes + 1);
+                std::fill(reverseSet.prefix.begin(), reverseSet.prefix.end(), 0);
+                for (TIndex c = 0; c < n; ++c)
+                {
+                    auto const [u, v, k]   = set.WeightedAdjacency(c);
+                    reverseSet.contacts[c] = ReverseContactPair{v, u, k};
+                    ++reverseSet.prefix[v];
+                }
+                tbb::parallel_sort(
+                    reverseSet.contacts.begin(),
+                    reverseSet.contacts.end(),
+                    [](ReverseContactPair const& a, ReverseContactPair const& b) {
+                        // Technically, we only need to sort by v, but also sorting by u and k
+                        // generally helps with cache locality.
+                        return std::tie(a.v, a.u, a.k) < std::tie(b.v, b.u, b.k);
+                    });
+                std::exclusive_scan(
+                    reverseSet.prefix.begin(),
+                    reverseSet.prefix.end(),
+                    reverseSet.prefix.begin(),
+                    TIndex{0});
+            };
+        tbb::parallel_invoke(
+            [&] { fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts); },
+            [&] { fBuildReversePairs(mPointEdgeContacts, nHalfEdges, mReversePointEdgeContacts); },
+            [&] {
+                fBuildReversePairs(
+                    mPointTriangleContacts,
+                    nTriangles,
+                    mReversePointTriangleContacts);
             },
-            [&, func = std::forward<FOnVertexEdgeContact>(fOnVertexEdgeContact)](IndexType he) {
-                Eigen::Vector<IndexType, 2> const einds{
-                    geometry::IncomingVertex(mDynamicMeshes.F, he),
-                    geometry::OutgoingVertex(mDynamicMeshes.F, he)};
-                func(i, einds);
-            },
-            [&,
-             func = std::forward<FOnVertexTriangleContact>(fOnVertexTriangleContact)](IndexType f) {
-                Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
-                func(i, finds);
-            });
-    }
-    for (auto e = 0; e < nEdges; ++e)
-    {
-        auto hei                                 = mDynamicMeshes.EHE(0, e);
-        Eigen::Vector<IndexType, 2> const eindsi = mDynamicMeshes.E.col(e);
-        mOgcState.ForEachDynamicContactFaceOfHalfEdge(
-            hei,
-            [&]([[maybe_unused]] auto _) { /* no-op */ },
-            [&, func = std::forward<FOnEdgeEdgeContact>(fOnEdgeEdgeContact)](IndexType hej) {
-                Eigen::Vector<IndexType, 2> const eindsj{
-                    geometry::IncomingVertex(mDynamicMeshes.F, hej),
-                    geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
-                func(eindsi, eindsj);
-            });
+            [&] { fBuildReversePairs(mEdgeEdgeContacts, nHalfEdges, mReverseEdgeEdgeContacts); });
     }
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <
-    class FOnVertexEnvironmentVertexContact,
-    class FOnVertexEnvironmentEdgeContact,
-    class FOnVertexEnvironmentTriangleContact,
-    class FOnEdgeEnvironmentVertexContact,
-    class FOnEdgeEnvironmentEdgeContact,
-    class FOnTriangleEnvironmentVertexContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
-    FOnVertexEnvironmentVertexContact&& fOnVertexEnvironmentVertexContact,
-    FOnVertexEnvironmentEdgeContact&& fOnVertexEnvironmentEdgeContact,
-    FOnVertexEnvironmentTriangleContact&& fOnVertexEnvironmentTriangleContact,
-    FOnEdgeEnvironmentVertexContact&& fOnEdgeEnvironmentVertexContact,
-    FOnEdgeEnvironmentEdgeContact&& fOnEdgeEnvironmentEdgeContact,
-    FOnTriangleEnvironmentVertexContact&& fOnTriangleEnvironmentVertexContact)
+template <class TContactSet>
+inline auto MeshDynamics<TScalar, TIndex>::GeometryPrefixArrays() const
 {
-    auto const nVerts = mDynamicMeshes.V.size();
-    auto const nEdges = mDynamicMeshes.E.cols();
-    auto const nFaces = mDynamicMeshes.F.cols();
-    for (auto v = 0; v < nVerts; ++v)
+    using ContactSetType = std::remove_cvref_t<TContactSet>;
+    if constexpr (std::is_same_v<ContactSetType, PointPointContactSet>)
     {
-        IndexType const i = mDynamicMeshes.V(v);
-        mOgcState.ForEachStaticContactFaceOfVertex(
-            v,
-            [&,
-             func = std::forward<FOnVertexEnvironmentVertexContact>(
-                 fOnVertexEnvironmentVertexContact)](IndexType j) { func(i, j); },
-            [&,
-             func = std::forward<FOnVertexEnvironmentEdgeContact>(fOnVertexEnvironmentEdgeContact)](
-                IndexType hej) {
-                Eigen::Vector<IndexType, 2> const einds{
-                    geometry::IncomingVertex(mStaticMeshes.F, hej),
-                    geometry::OutgoingVertex(mStaticMeshes.F, hej)};
-                func(i, einds);
-            },
-            [&,
-             func = std::forward<FOnVertexEnvironmentTriangleContact>(
-                 fOnVertexEnvironmentTriangleContact)](IndexType f) {
-                Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
-                func(i, finds);
-            });
+        return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mPointGeometryPrefix);
     }
-    for (auto e = 0; e < nEdges; ++e)
+    else if constexpr (std::is_same_v<ContactSetType, PointEdgeContactSet>)
     {
-        auto hei                                 = mDynamicMeshes.EHE(0, e);
-        Eigen::Vector<IndexType, 2> const eindsi = mDynamicMeshes.E.col(e);
-        mOgcState.ForEachStaticContactFaceOfHalfEdge(
-            hei,
-            [&,
-             func = std::forward<FOnEdgeEnvironmentVertexContact>(fOnEdgeEnvironmentVertexContact)](
-                IndexType j) { func(eindsi, j); },
-            [&, func = std::forward<FOnEdgeEnvironmentEdgeContact>(fOnEdgeEnvironmentEdgeContact)](
-                IndexType hej) {
-                Eigen::Vector<IndexType, 2> const eindsj{
-                    geometry::IncomingVertex(mStaticMeshes.F, hej),
-                    geometry::OutgoingVertex(mStaticMeshes.F, hej)};
-                func(eindsi, eindsj);
-            });
+        return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mHalfEdgeGeometryPrefix);
     }
-    for (auto f = 0; f < nFaces; ++f)
+    else if constexpr (std::is_same_v<ContactSetType, PointTriangleContactSet>)
     {
-        Eigen::Vector<IndexType, 3> const findsi = mDynamicMeshes.F.col(f);
-        mOgcState.ForEachStaticVertexContactOfTriangle(
-            f,
-            [&,
-             func = std::forward<FOnTriangleEnvironmentVertexContact>(
-                 fOnTriangleEnvironmentVertexContact)](IndexType j) { func(findsi, j); });
+        return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mTriangleGeometryPrefix);
+    }
+    else if constexpr (std::is_same_v<ContactSetType, EdgeEdgeContactSet>)
+    {
+        return std::make_pair(mOgcState.mHalfEdgeGeometryPrefix, mOgcState.mHalfEdgeGeometryPrefix);
+    }
+    else
+    {
+        static_assert(false, "Unsupported contact set");
     }
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnMeshContactEnergy>
-inline void
-MeshDynamics<TScalar, TIndex>::ForEachMeshContactEnergy(FOnMeshContactEnergy&& fOnMeshContactEnergy)
+template <class TDerivedx>
+inline auto MeshDynamics<TScalar, TIndex>::LoadPoint(
+    Eigen::MatrixBase<TDerivedx> const& x_,
+    TIndex i,
+    int g,
+    auto&& xi) const
 {
-    for (auto& E : mVertexVertexEnergies)
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    using math::linalg::mini::FromEigen;
+    static auto constexpr kDims = std::decay_t<decltype(xi)>::kRows;
+    auto x                      = x_.reshaped();
+    i -= mOgcState.mPointGeometryPrefix[g];
+    switch (g)
     {
-        fOnMeshContactEnergy(E);
+        case EGeometry::Dynamic: xi = FromEigen(x.template segment<kDims>(i * kDims)); break;
+        case EGeometry::Static: xi = FromEigen(mXstatic.col(i).template topRows<kDims>()); break;
+        default: break;
     }
-    for (auto& E : mVertexEdgeEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mVertexTriangleEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mEdgeEdgeEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mVertexEnvironmentEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mEdgeEnvironmentEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
-    for (auto& E : mTriangleEnvironmentEnergies)
-    {
-        fOnMeshContactEnergy(E);
-    }
+    return i + mOgcState.mPointGeometryPrefix[g];
 }
 
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 2> VertexVertexContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags)
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedx>
+inline auto MeshDynamics<TScalar, TIndex>::LoadHalfEdge(
+    Eigen::MatrixBase<TDerivedx> const& x_,
+    TIndex he,
+    int g,
+    auto&& xi,
+    auto&& xj) const
 {
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    MeshContactEnergy<TScalar, TIndex, 2> energy{};
-    auto const xi = x.template Slice<3, 1>(0, 0);
-    auto const xj = x.template Slice<3, 1>(3, 0);
-    TScalar d     = Norm(xi - xj);
-    contact::potentials::LaggedFriction friction{};
-    SMatrix<TScalar, 6, 2> const T = contact::PointPointLinearTangentialOperator(xi, xj);
-    SVector<TScalar, 2> const uk   = T.Transpose() * (x - xt);
-    SVector<TScalar, 3> dBdd =
-        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    using math::linalg::mini::FromEigen;
+    static auto constexpr kDims = std::decay_t<decltype(xi)>::kRows;
+    auto x                      = x_.reshaped();
+    he -= mOgcState.mHalfEdgeGeometryPrefix[g];
+    TIndex i, j;
+    switch (g)
     {
-        energy.En = dBdd(0);
-        energy.Ef = friction.Eval(uk, mu, -dBdd(1), epsvh);
+        case EGeometry::Dynamic: {
+            i  = geometry::IncomingVertex(*mOgcInput.F, he);
+            j  = geometry::OutgoingVertex(*mOgcInput.F, he);
+            xi = FromEigen(x.template segment<kDims>(i * kDims));
+            xj = FromEigen(x.template segment<kDims>(j * kDims));
+        }
+        break;
+        case EGeometry::Static: {
+            i  = geometry::IncomingVertex(*mOgcInput.Fenv, he);
+            j  = geometry::OutgoingVertex(*mOgcInput.Fenv, he);
+            xi = FromEigen(mXstatic.col(i).template topRows<kDims>());
+            xj = FromEigen(mXstatic.col(j).template topRows<kDims>());
+        }
+        break;
+        default: break;
     }
-    if (eFlags | EMeshEnergyComputationFlags::Gradient)
-    {
-        energy.gradEn = contact::potentials::GradientWrtClosestPoints(xi, xj, d, dBdd(1));
-        SVector<TScalar, 2> gradEf;
-        friction.Grad(uk, mu, -dBdd(1), epsvh, gradEf);
-        energy.gradEf = T * gradEf;
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Hessian)
-    {
-        energy.hessEn = contact::potentials::HessianWrtClosestPoints(xi, xj, d, dBdd(1), dBdd(2));
-        SMatrix<TScalar, 2, 2> hessEf;
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
-        hessEf =
-            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
-        energy.hessEf = T * hessEf * T.Transpose();
-    }
-    return energy;
+    return std::make_pair(
+        mOgcState.mPointGeometryPrefix[g] + i,
+        mOgcState.mPointGeometryPrefix[g] + j);
 }
 
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 3> VertexEdgeContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags)
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedx>
+inline auto MeshDynamics<TScalar, TIndex>::LoadTriangle(
+    Eigen::MatrixBase<TDerivedx> const& x_,
+    TIndex f,
+    int g,
+    auto&& xi,
+    auto&& xj,
+    auto&& xk) const
 {
-    using math::linalg::mini::Ones;
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    MeshContactEnergy<TScalar, TIndex, 3> energy{};
-    contact::potentials::LaggedFriction friction{};
-    auto const xi = x.template Slice<3, 1>(0, 0);
-    auto const xa = x.template Slice<3, 1>(3, 0);
-    auto const xb = x.template Slice<3, 1>(6, 0);
-    Ones<TScalar, 1, 1> w;
-    SVector<TScalar, 2> const uv  = geometry::ClosestPointQueries::UvPointOnLineSegment(xi, xa, xb);
-    SVector<TScalar, 3> const xcp = uv(0) * xa + uv(1) * xb;
-    TScalar const d               = Norm(xi - xcp);
-    SMatrix<TScalar, 9, 2> const T = contact::PointEdgeLinearTangentialOperator(xi, xcp, uv(1));
-    SVector<TScalar, 2> const uk   = T.Transpose() * (x - xt);
-    SVector<TScalar, 3> const dBdd =
-        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    using math::linalg::mini::FromEigen;
+    static auto constexpr kDims = std::decay_t<decltype(xi)>::kRows;
+    auto x                      = x_.reshaped();
+    f -= mOgcState.mTriangleGeometryPrefix[g];
+    TIndex i, j, k;
+    switch (g)
     {
-        energy.En = dBdd(0);
-        energy.Ef = friction.Eval(uk, mu, -dBdd(1), epsvh);
+        case EGeometry::Dynamic: {
+            auto xinds = mOgcInput.F->col(f);
+            i          = xinds(0);
+            j          = xinds(1);
+            k          = xinds(2);
+            xi         = FromEigen(x.template segment<kDims>(i * kDims));
+            xj         = FromEigen(x.template segment<kDims>(j * kDims));
+            xk         = FromEigen(x.template segment<kDims>(k * kDims));
+        }
+        break;
+        case EGeometry::Static: {
+            auto xinds = mOgcInput.Fenv->col(f);
+            i          = xinds(0);
+            j          = xinds(1);
+            k          = xinds(2);
+            xi         = FromEigen(mXstatic.col(i).template topRows<kDims>());
+            xj         = FromEigen(mXstatic.col(j).template topRows<kDims>());
+            xk         = FromEigen(mXstatic.col(k).template topRows<kDims>());
+        }
+        break;
+        default: break;
     }
-    if (eFlags | EMeshEnergyComputationFlags::Gradient)
-    {
-        energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-            w,
-            uv,
-            xi,
-            xcp,
-            d,
-            dBdd(1));
-        SVector<TScalar, 2> gradEf;
-        friction.Grad(uk, mu, -dBdd(1), epsvh, gradEf);
-        energy.gradEf = T * gradEf;
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Hessian)
-    {
-        energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-            w,
-            uv,
-            xi,
-            xcp,
-            d,
-            dBdd(1),
-            dBdd(2));
-        SMatrix<TScalar, 2, 2> hessEf;
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
-        hessEf =
-            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
-        energy.hessEf = T * hessEf * T.Transpose();
-    }
-    return energy;
+    return std::make_tuple(
+        mOgcState.mPointGeometryPrefix[g] + i,
+        mOgcState.mPointGeometryPrefix[g] + j,
+        mOgcState.mPointGeometryPrefix[g] + k);
 }
 
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 4> VertexTriangleContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags)
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline auto MeshDynamics<TScalar, TIndex>::LoadPoint(TIndex i, [[maybe_unused]] int g) const
 {
-    using math::linalg::mini::Ones;
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    MeshContactEnergy<TScalar, TIndex, 4> energy{};
-    contact::potentials::LaggedFriction friction{};
-    auto const xi = x.template Slice<3, 1>(0, 0);
-    auto const xa = x.template Slice<3, 1>(3, 0);
-    auto const xb = x.template Slice<3, 1>(6, 0);
-    auto const xc = x.template Slice<3, 1>(9, 0);
-    Ones<TScalar, 1, 1> w;
-    SVector<TScalar, 3> const uvw =
-        geometry::ClosestPointQueries::UvwPointInTriangle(xi, xa, xb, xc);
-    SVector<TScalar, 3> const xcp = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
-    TScalar const d               = Norm(xi - xcp);
-    SMatrix<TScalar, 12, 2> const T =
-        contact::PointTriangleLinearTangentialOperator(xa, xb, xc, uvw);
-    SVector<TScalar, 2> const uk = T.Transpose() * (x - xt);
-    SVector<TScalar, 3> const dBdd =
-        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    if (eFlags | EMeshEnergyComputationFlags::Potential)
-    {
-        energy.En = dBdd(0);
-        energy.Ef = friction.Eval(uk, mu, -dBdd(1), epsvh);
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Gradient)
-    {
-        energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-            w,
-            uvw,
-            xi,
-            xcp,
-            d,
-            dBdd(1));
-        SVector<TScalar, 2> gradEf;
-        friction.Grad(uk, mu, -dBdd(1), epsvh, gradEf);
-        energy.gradEf = T * gradEf;
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Hessian)
-    {
-        energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-            w,
-            uvw,
-            xi,
-            xcp,
-            d,
-            dBdd(1),
-            dBdd(2));
-        SMatrix<TScalar, 2, 2> hessEf;
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
-        hessEf =
-            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
-        energy.hessEf = T * hessEf * T.Transpose();
-    }
-    return energy;
+    // This is trivial, but we just keep it for API consistency
+    return i;
 }
 
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt>
-MeshContactEnergy<TScalar, TIndex, 4> EdgeEdgeContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags)
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline auto MeshDynamics<TScalar, TIndex>::LoadHalfEdge(TIndex he, int g) const
 {
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    MeshContactEnergy<TScalar, TIndex, 4> energy{};
-    contact::potentials::LaggedFriction friction{};
-    auto const xa                = x.template Slice<3, 1>(0, 0);
-    auto const xb                = x.template Slice<3, 1>(3, 0);
-    auto const xc                = x.template Slice<3, 1>(6, 0);
-    auto const xd                = x.template Slice<3, 1>(9, 0);
-    SVector<TScalar, 2> const st = geometry::ClosestPointQueries::LineSegments(xa, xb, xc, xd);
-    SVector<TScalar, 2> const u{1 - st(0), st(0)};
-    SVector<TScalar, 2> const v{1 - st(1), st(1)};
-    SVector<TScalar, 3> const xci = u(0) * xa + u(1) * xb;
-    SVector<TScalar, 3> const xcj = v(0) * xc + v(1) * xd;
-    TScalar const d               = Norm(xci - xcj);
-    SMatrix<TScalar, 12, 2> const T =
-        contact::EdgeEdgeLinearTangentialOperator(xci, xcj, u(1), v(1));
-    SVector<TScalar, 2> const uk = T.Transpose() * (x - xt);
-    SVector<TScalar, 3> const dBdd =
-        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    he -= mOgcState.mHalfEdgeGeometryPrefix[g];
+    TIndex i{}, j{};
+    switch (g)
     {
-        energy.En = dBdd(0);
-        energy.Ef = friction.Eval(uk, mu, -dBdd(1), epsvh);
+        case EGeometry::Dynamic: {
+            i = geometry::IncomingVertex(*mOgcInput.F, he);
+            j = geometry::OutgoingVertex(*mOgcInput.F, he);
+        }
+        break;
+        case EGeometry::Static: {
+            i = geometry::IncomingVertex(*mOgcInput.Fenv, he);
+            j = geometry::OutgoingVertex(*mOgcInput.Fenv, he);
+        }
+        break;
+        default: break;
     }
-    if (eFlags | EMeshEnergyComputationFlags::Gradient)
-    {
-        energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-            u,
-            v,
-            xci,
-            xcj,
-            d,
-            dBdd(1));
-        SVector<TScalar, 2> gradEf;
-        friction.Grad(uk, mu, -dBdd(1), epsvh, gradEf);
-        energy.gradEf = T * gradEf;
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Hessian)
-    {
-        energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-            u,
-            v,
-            xci,
-            xcj,
-            d,
-            dBdd(1),
-            dBdd(2));
-        SMatrix<TScalar, 2, 2> hessEf;
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
-        hessEf =
-            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
-        energy.hessEf = T * hessEf * T.Transpose();
-    }
-    return energy;
+    return std::make_pair(
+        mOgcState.mPointGeometryPrefix[g] + i,
+        mOgcState.mPointGeometryPrefix[g] + j);
 }
 
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt,
-    math::linalg::mini::CMatrix TMatrixxcp>
-MeshContactEnergy<TScalar, TIndex, 1> VertexEnvironmentContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TMatrixxcp const& xcp,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags)
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline auto MeshDynamics<TScalar, TIndex>::LoadTriangle(TIndex f, int g) const
 {
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    MeshContactEnergy<TScalar, TIndex, 1> energy{};
-    contact::potentials::LaggedFriction friction{};
-    TScalar const d                = Norm(x - xcp);
-    SMatrix<TScalar, 3, 2> const T = contact::PointPointTangentialBasis(x, xcp);
-    SVector<TScalar, 2> const uk   = T.Transpose() * (x - xt);
-    SVector<TScalar, 3> const dBdd =
-        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    f -= mOgcState.mTriangleGeometryPrefix[g];
+    TIndex i{}, j{}, k{};
+    switch (g)
     {
-        energy.En = dBdd(0);
-        energy.Ef = friction.Eval(uk, mu, -dBdd(1), epsvh);
+        case EGeometry::Dynamic: {
+            auto xinds = mOgcInput.F->col(f);
+            i          = xinds(0);
+            j          = xinds(1);
+            k          = xinds(2);
+        }
+        break;
+        case EGeometry::Static: {
+            auto xinds = mOgcInput.Fenv->col(f);
+            i          = xinds(0);
+            j          = xinds(1);
+            k          = xinds(2);
+        }
+        break;
+        default: break;
     }
-    if (eFlags | EMeshEnergyComputationFlags::Gradient)
-    {
-        energy.gradEn = contact::potentials::GradientSegmentWrtClosestPoints(x, xcp, d, dBdd(1), 0);
-        SVector<TScalar, 2> gradEf;
-        friction.Grad(uk, mu, -dBdd(1), epsvh, gradEf);
-        energy.gradEf = T * gradEf;
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Hessian)
-    {
-        energy.hessEn =
-            contact::potentials::HessianBlockWrtClosestPoints(x, xcp, d, dBdd(1), dBdd(2), 0, 0);
-        SMatrix<TScalar, 2, 2> hessEf;
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
-        hessEf =
-            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
-        energy.hessEf = T * hessEf * T.Transpose();
-    }
-    return energy;
+    return std::make_tuple(
+        mOgcState.mPointGeometryPrefix[g] + i,
+        mOgcState.mPointGeometryPrefix[g] + j,
+        mOgcState.mPointGeometryPrefix[g] + k);
 }
 
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt,
-    math::linalg::mini::CMatrix TMatrixuv,
-    math::linalg::mini::CMatrix TMatrixxcp>
-MeshContactEnergy<TScalar, TIndex, 2> EdgeEnvironmentContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TMatrixuv const& uv,
-    TMatrixxcp const& xcp,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags)
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int kDims, int kStencil, class TDerivedH>
+inline TScalar MeshDynamics<TScalar, TIndex>::RayleighQuotient(
+    Eigen::SparseCompressedBase<TDerivedH> const& H,
+    math::linalg::mini::SVector<TScalar, kStencil * kDims> const& gradc,
+    std::array<TIndex, kStencil> const& nodes) const
 {
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    MeshContactEnergy<TScalar, TIndex, 2> energy{};
-    contact::potentials::LaggedFriction friction{};
-    auto const xa                 = x.template Slice<3, 1>(0, 0);
-    auto const xb                 = x.template Slice<3, 1>(3, 0);
-    SVector<TScalar, 3> const xci = uv(0) * xa + uv(1) * xb;
-    TScalar const d               = Norm(xci - xcp);
-    SMatrix<TScalar, 6, 2> const T =
-        contact::PointEdgeLinearTangentialOperator(xci, xcp, uv(1)).template Slice<6, 2>(3, 0);
-    SVector<TScalar, 2> const uk = T.Transpose() * (x - xt);
-    SVector<TScalar, 3> const dBdd =
-        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    if (eFlags | EMeshEnergyComputationFlags::Potential)
+    TScalar gcTHgc{0};
+    auto const nNodes = static_cast<TIndex>(nodes.size());
+    for (TIndex kni = 0; kni < nNodes; ++kni)
     {
-        energy.En = dBdd(0);
-        energy.Ef = friction.Eval(uk, mu, -dBdd(1), epsvh);
+        TIndex ni = nodes[kni];
+        TIndex ib = kDims * ni;
+        for (TIndex ki = 0; ki < kDims; ++ki)
+        {
+            TIndex i = ib + ki;
+            if (i >= H.outerSize())
+                continue;
+            using InnerIteratorType = typename std::remove_cvref_t<decltype(H)>::InnerIterator;
+            InnerIteratorType it(H, i);
+            for (TIndex knj = 0; knj < nNodes; ++knj)
+            {
+                TIndex j = nodes[knj] * kDims;
+                while (it and it.index() < j)
+                    ++it;
+                auto jend = j + kDims;
+                for (; it and it.index() < jend; ++it)
+                {
+                    TIndex kj = it.index() % kDims;
+                    gcTHgc += gradc(kni * kDims + ki) * it.value() * gradc(knj * kDims + kj);
+                }
+            }
+        }
     }
-    if (eFlags | EMeshEnergyComputationFlags::Gradient)
-    {
-        energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-            uv,
-            xci,
-            xcp,
-            d,
-            dBdd(1));
-        SVector<TScalar, 2> gradEf;
-        friction.Grad(uk, mu, -dBdd(1), epsvh, gradEf);
-        energy.gradEf = T * gradEf;
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Hessian)
-    {
-        energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-            uv,
-            xci,
-            xcp,
-            d,
-            dBdd(1),
-            dBdd(2));
-        SMatrix<TScalar, 2, 2> hessEf;
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
-        hessEf =
-            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
-        energy.hessEf = T * hessEf * T.Transpose();
-    }
-    return energy;
-}
-
-template <
-    common::CFloatingPoint TScalar,
-    common::CIndex TIndex,
-    math::linalg::mini::CMatrix TMatrixx,
-    math::linalg::mini::CMatrix TMatrixxt,
-    math::linalg::mini::CMatrix TMatrixuvw,
-    math::linalg::mini::CMatrix TMatrixxcp>
-MeshContactEnergy<TScalar, TIndex, 3> TriangleEnvironmentContactEnergy(
-    TMatrixx const& x,
-    TMatrixxt const& xt,
-    TMatrixuvw const& uvw,
-    TMatrixxcp const& xcp,
-    TScalar r,
-    TScalar kc,
-    TScalar kcp,
-    TScalar b,
-    TScalar mu,
-    TScalar epsvh,
-    EMeshEnergyComputationFlags eFlags)
-{
-    using math::linalg::mini::SMatrix;
-    using math::linalg::mini::SVector;
-    MeshContactEnergy<TScalar, TIndex, 3> energy{};
-    contact::potentials::LaggedFriction friction{};
-    auto const xa                 = x.template Slice<3, 1>(0, 0);
-    auto const xb                 = x.template Slice<3, 1>(3, 0);
-    auto const xc                 = x.template Slice<3, 1>(6, 0);
-    SVector<TScalar, 3> const xci = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
-    TScalar const d               = Norm(xci - xcp);
-    SMatrix<TScalar, 9, 2> const T =
-        contact::PointTriangleLinearTangentialOperator(xa, xb, xc, uvw).template Slice<9, 2>(3, 0);
-    SVector<TScalar, 2> const uk = T.Transpose() * (x - xt);
-    SVector<TScalar, 3> const dBdd =
-        contact::potentials::QuadraticToLogBarrierTwoStageActivation<2>(d, r, kc, kcp, b);
-    if (eFlags | EMeshEnergyComputationFlags::Potential)
-    {
-        energy.En = dBdd(0);
-        energy.Ef = friction.Eval(uk, mu, -dBdd(1), epsvh);
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Gradient)
-    {
-        energy.gradEn = contact::potentials::GradientWrtLinearlyInterpolatedClosestPoints(
-            uvw,
-            xci,
-            xcp,
-            d,
-            dBdd(1));
-        SVector<TScalar, 2> gradEf;
-        friction.Grad(uk, mu, -dBdd(1), epsvh, gradEf);
-        energy.gradEf = T * gradEf;
-    }
-    if (eFlags | EMeshEnergyComputationFlags::Hessian)
-    {
-        energy.hessEn = contact::potentials::HessianWrtLinearlyInterpolatedClosestPoints(
-            uvw,
-            xci,
-            xcp,
-            d,
-            dBdd(1),
-            dBdd(2));
-        SMatrix<TScalar, 2, 2> hessEf;
-        friction.Hessian(uk, mu, -dBdd(1), epsvh, hessEf);
-        hessEf =
-            math::linalg::FilterEigenvalues(hessEf, math::linalg::EEigenvalueFilter::SpdProjection);
-        energy.hessEf = T * hessEf * T.Transpose();
-    }
-    return energy;
+    TScalar gcTgc = Dot(gradc, gradc);
+    return gcTHgc / gcTgc;
 }
 
 } // namespace pbat::sim::contact

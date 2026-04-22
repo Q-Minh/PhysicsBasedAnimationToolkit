@@ -119,7 +119,7 @@ PBAT_API void Integrator::SolveVertex(Index i, Scalar sdt, Scalar sdt2)
     mini::SVector<Scalar, 3> xi      = FromEigen(data.x.col(i).head<3>());
     kernels::AddDamping(sdt, xti, xi, data.kD, gi, Hi);
     kernels::AddInertiaDerivatives(sdt2, m, xtildei, xi, gi, Hi);
-    kernels::IntegratePositions(gi, Hi, xi, data.detHZero);
+    kernels::IntegratePositions(gi, Hi, xi, data.hessZero);
     data.x.col(i) = ToEigen(xi);
 }
 

@@ -115,32 +115,44 @@ Params& Params::Construct(bool bValidate)
     return *this;
 }
 
-void Params::Serialize(io::Archive& archive) const
+void Params::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.pd.Params"];
-    group.WriteData("GTGp", GTGp);
-    group.WriteData("GTGe", GTGe);
-    group.WriteData("GTGilocal", GTGilocal);
-    group.WriteData("colors", colors);
-    group.WriteData("Pptr", Pptr);
-    group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
-    group.WriteData("xb", xb);
+    if (not bMinimal)
+    {
+        group.WriteData("GTGp", GTGp);
+        group.WriteData("GTGe", GTGe);
+        group.WriteData("GTGilocal", GTGilocal);
+        group.WriteData("colors", colors);
+        group.WriteData("Pptr", Pptr);
+        group.WriteData("Padj", Padj);
+        group.WriteData("xb", xb);
+    }
 }
 
 void Params::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.pd.Params"];
-    GTGp              = group.ReadData<IndexVectorX>("GTGp");
-    GTGe              = group.ReadData<IndexVectorX>("GTGe");
-    GTGilocal         = group.ReadData<IndexVectorX>("GTGilocal");
-    colors            = group.ReadData<IndexVectorX>("colors");
-    Pptr              = group.ReadData<IndexVectorX>("Pptr");
-    Padj              = group.ReadData<IndexVectorX>("Padj");
-    detHZero          = group.ReadMetaData<Scalar>("detHZero");
-    nMaxIters         = group.ReadMetaData<Index>("nMaxIters");
-    xb                = group.ReadData<MatrixX>("xb");
+    if (group.HasData("GTGp"))
+        GTGp = group.ReadData<IndexVectorX>("GTGp");
+    if (group.HasData("GTGe"))
+        GTGe = group.ReadData<IndexVectorX>("GTGe");
+    if (group.HasData("GTGilocal"))
+        GTGilocal = group.ReadData<IndexVectorX>("GTGilocal");
+    if (group.HasData("colors"))
+        colors = group.ReadData<IndexVectorX>("colors");
+    if (group.HasData("Pptr"))
+        Pptr = group.ReadData<IndexVectorX>("Pptr");
+    if (group.HasData("Padj"))
+        Padj = group.ReadData<IndexVectorX>("Padj");
+    if (group.HasMetaData("detHZero"))
+        detHZero = group.ReadMetaData<Scalar>("detHZero");
+    if (group.HasMetaData("nMaxIters"))
+        nMaxIters = group.ReadMetaData<Index>("nMaxIters");
+    if (group.HasData("xb"))
+        xb = group.ReadData<MatrixX>("xb");
 }
 
 } // namespace pbat::sim::algorithm::pd

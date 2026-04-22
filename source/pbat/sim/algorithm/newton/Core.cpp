@@ -67,9 +67,15 @@ Params& Params::WithLinearSolver(ELinearSolver _eLinearSolver, Eigen::Index maxI
     return *this;
 }
 
-PBAT_API Params& Params::WithOgcTruncationStrategy(EOgcTruncationStrategy strategy)
+Params& Params::WithOgcTruncationStrategy(EOgcTruncationStrategy strategy)
 {
     this->eOgcTruncationStrategy = strategy;
+    return *this;
+}
+
+Params& Params::WithMaxIters(std::int32_t n)
+{
+    this->nMaxIters = n;
     return *this;
 }
 
@@ -78,24 +84,41 @@ Params& Params::Construct(bool bValidate)
     return *this;
 }
 
-void Params::Serialize(io::Archive& archive) const
+void Params::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.newton.Params"];
-    newton.Serialize(group);
     group.WriteMetaData("eSpdCorrection", static_cast<int>(eSpdCorrection));
     group.WriteMetaData("eLinearSolver", static_cast<int>(eLinearSolver));
     group.WriteMetaData("eOgcTruncationStrategy", static_cast<int>(eOgcTruncationStrategy));
+    group.WriteMetaData("nMaxIters", nMaxIters);
+    newton.Serialize(group, bMinimal);
 }
 
 void Params::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.newton.Params"];
-    newton.Deserialize(group);
-    eSpdCorrection =
-        static_cast<fem::EHyperElasticSpdCorrection>(group.ReadMetaData<int>("eSpdCorrection"));
-    eLinearSolver = static_cast<ELinearSolver>(group.ReadMetaData<int>("eLinearSolver"));
-    eOgcTruncationStrategy =
-        static_cast<EOgcTruncationStrategy>(group.ReadMetaData<int>("eOgcTruncationStrategy"));
+    if (group.HasMetaData("eSpdCorrection"))
+    {
+        eSpdCorrection =
+            static_cast<fem::EHyperElasticSpdCorrection>(group.ReadMetaData<int>("eSpdCorrection"));
+    }
+    if (group.HasMetaData("eLinearSolver"))
+    {
+        eLinearSolver = static_cast<ELinearSolver>(group.ReadMetaData<int>("eLinearSolver"));
+    }
+    if (group.HasMetaData("eOgcTruncationStrategy"))
+    {
+        eOgcTruncationStrategy =
+            static_cast<EOgcTruncationStrategy>(group.ReadMetaData<int>("eOgcTruncationStrategy"));
+    }
+    if (group.HasMetaData("nMaxIters"))
+    {
+        nMaxIters = group.ReadMetaData<int>("nMaxIters");
+    }
+    if (group.HasGroup("pbat.math.optimization.Newton"))
+    {
+        newton.Deserialize(group);
+    }
     this->WithLinearSolver(eLinearSolver);
 }
 
@@ -176,35 +199,91 @@ TEST_CASE("[sim][algorithm][newton] Core")
 
 #include "pbat/io/Archive.h"
 
+#include <fmt/format.h>
 #include <tbb/global_control.h>
 
-TEST_CASE("[sim][algorithm][newton] Sandbox")
+TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
 {
-    // using namespace pbat;
-    // using namespace pbat::sim::algorithm;
-    // using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    // using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
-    // using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
-    // // Arrange
-    // io::Archive archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
-    // FemElastoDynamics fem{};
-    // fem.Deserialize(archive["fem"]);
-    // MeshDynamics contact{};
-    // contact.Deserialize(archive["contact"]);
-    // newton::Params params{};
-    // params.Deserialize(archive["newton/params"]);
-    // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
-    // contact.Initialize(device);
-    // contact.GetParams().Construct();
-    // auto initStrategy = static_cast<sim::dynamics::EFemElastoDynamicsTimeStepInitialization>(
-    //     archive.ReadMetaData<int>("initialization_strategy"));
-    // // Act
-    // tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
-    // for (auto t = 0; t < 2; ++t)
-    // {
-    //     fem.SetupTimeIntegrationOptimization(initStrategy);
-    //     newton::InitializeSolve(fem, contact, params);
-    //     newton::Solve(fem, contact, params);
-    //     fem.Step();
-    // }
+    using namespace pbat;
+    using namespace pbat::sim::algorithm;
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
+    using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
+    // Arrange
+    io::Archive archive(
+        fmt::format("{}/sim/algorithm/CubeFallingOnPlaneFast.h5", PBAT_TESTS_INTEGRATION_PATH),
+        HighFive::File::AccessMode::ReadOnly);
+    FemElastoDynamics fem{};
+    fem.Deserialize(archive["fem"]);
+    MeshDynamics contact{};
+    contact.Deserialize(archive["contact"]);
+    geometry::Device device{geometry::DeviceConfig{}};
+    contact.Initialize(device);
+    contact.GetParams()
+        .WithOgcParams(
+            sim::contact::ogc::Params<Scalar>()
+                .WithDisplacementBoundConfig(0.45, 0.)
+                .WithRadii(1e-2 /*r*/, 1e-2 /*rq*/)
+                .Construct())
+        .Construct();
+    // Act
+    newton::Params params{};
+    math::optimization::BackTrackingLineSearch<Scalar> lineSearch(
+        20 /*nMaxIters*/,
+        Scalar(0.5) /*tau*/,
+        Scalar(1e-4) /*c*/,
+        Scalar(1) /*alpha0*/,
+        fem.x.size() /*n*/);
+    params.WithLinearSolver(newton::ELinearSolver::LLT)
+        .WithSpdCorrection(fem::EHyperElasticSpdCorrection::Absolute)
+        .WithOptimizer(
+            math::optimization::Newton<Scalar>(
+                /*nMaxIters=*/10,
+                /*gtol=*/Scalar{1e-4},
+                /*n=*/fem.x.size(),
+                /*lineSearchIn=*/lineSearch))
+        .WithOgcTruncationStrategy(newton::EOgcTruncationStrategy::PerVertex)
+        .Construct();
+    tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
+    for (auto t = 0; t < 100; ++t)
+    {
+        fem.SetupTimeIntegrationOptimization();
+        newton::InitializeSolve(fem, contact, params);
+        bool const bHasContacts = contact.NumContacts() > 0;
+        bool const bConverged   = newton::Solve(fem, contact, params);
+        CHECK(bConverged);
+        fem.Step();
+    }
+}
+
+TEST_CASE("[type:debug][sim][algorithm][newton] Sandbox")
+{
+    //     using namespace pbat;
+    //     using namespace pbat::sim::algorithm;
+    //     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    //     using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
+    //     using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
+    //     // Arrange
+    //     io::Archive archive(
+    //         "ContactingHeterogeneousSpaghetti.Frame39.h5",
+    //         HighFive::File::AccessMode::ReadOnly);
+    //     FemElastoDynamics fem{};
+    //     fem.Deserialize(archive["fem"]);
+    //     MeshDynamics contact{};
+    //     contact.Deserialize(archive["contact"]);
+    //     newton::Params params{};
+    //     params.Deserialize(archive["newton/params"]);
+    //     geometry::Device device{geometry::DeviceConfig{}};
+    //     contact.Initialize(device);
+    //     contact.GetParams().Construct();
+    //     auto initStrategy = static_cast<sim::dynamics::EFemElastoDynamicsTimeStepInitialization>(
+    //         archive.ReadMetaData<int>("initialization_strategy"));
+    //     // Act
+    //     for (auto t = 0; t < 2; ++t)
+    //     {
+    //         fem.SetupTimeIntegrationOptimization(initStrategy);
+    //         newton::InitializeSolve(fem, contact, params);
+    //         newton::Solve(fem, contact, params);
+    //         fem.Step();
+    //     }
 }

@@ -41,11 +41,36 @@
             }
         },
         {
+            "name": "benchmarks",
+            "cacheVariables": {
+                "PBAT_BUILD_BENCHMARKS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
+            "name": "cppcheck",
+            "hidden": true,
+            "cacheVariables": {
+                "PBAT_ENABLE_CPPCHECK": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "CMAKE_EXPORT_COMPILE_COMMANDS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
             "name": "dev",
             "inherits": [
                 "default",
                 "profile",
-                "doc"
+                "doc",
+                "benchmarks",
+                "cppcheck"
             ],
             "cacheVariables": {
                 "PBAT_BUILD_TESTS": {

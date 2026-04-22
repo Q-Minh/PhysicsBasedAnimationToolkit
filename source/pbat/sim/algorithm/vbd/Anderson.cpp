@@ -2,32 +2,44 @@
 
 namespace pbat::sim::algorithm::vbd {
 
-void AndersonParams::Serialize(io::Archive& archive) const
+void AndersonParams::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.AndersonParams"];
     group.WriteMetaData("m", m);
     group.WriteMetaData("beta", beta);
     group.WriteMetaData("codNumericalZero", codNumericalZero);
-    group.WriteData("Fk", Fk);
-    group.WriteData("Xk", Xk);
-    group.WriteData("xkm1", xkm1);
-    group.WriteData("fk", fk);
-    group.WriteData("fkm1", fkm1);
-    group.WriteData("gammak", gammak);
+    if (not bMinimal)
+    {
+        group.WriteData("Fk", Fk);
+        group.WriteData("Xk", Xk);
+        group.WriteData("xkm1", xkm1);
+        group.WriteData("fk", fk);
+        group.WriteData("fkm1", fkm1);
+        group.WriteData("gammak", gammak);
+    }
 }
 
 void AndersonParams::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.AndersonParams"];
-    m                 = group.ReadMetaData<Index>("m");
-    beta              = group.ReadMetaData<Scalar>("beta");
-    codNumericalZero  = group.ReadMetaData<Scalar>("codNumericalZero");
-    Fk                = group.ReadData<MatrixX>("Fk");
-    Xk                = group.ReadData<MatrixX>("Xk");
-    xkm1              = group.ReadData<VectorX>("xkm1");
-    fk                = group.ReadData<VectorX>("fk");
-    fkm1              = group.ReadData<VectorX>("fkm1");
-    gammak            = group.ReadData<VectorX>("gammak");
+    if (group.HasMetaData("m"))
+        m = group.ReadMetaData<Index>("m");
+    if (group.HasMetaData("beta"))
+        beta = group.ReadMetaData<Scalar>("beta");
+    if (group.HasMetaData("codNumericalZero"))
+        codNumericalZero = group.ReadMetaData<Scalar>("codNumericalZero");
+    if (group.HasData("Fk"))
+        Fk = group.ReadData<MatrixX>("Fk");
+    if (group.HasData("Xk"))
+        Xk = group.ReadData<MatrixX>("Xk");
+    if (group.HasData("xkm1"))
+        xkm1 = group.ReadData<VectorX>("xkm1");
+    if (group.HasData("fk"))
+        fk = group.ReadData<VectorX>("fk");
+    if (group.HasData("fkm1"))
+        fkm1 = group.ReadData<VectorX>("fkm1");
+    if (group.HasData("gammak"))
+        gammak = group.ReadData<VectorX>("gammak");
 }
 
 void AndersonParams::AllocateIfNeeded(Index n)
@@ -111,7 +123,7 @@ AndersonTestSetup SetupAndersonTest(pbat::Index maxIters = 10)
     setup.vbdParams
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
-        .WithHessianDeterminantZeroUnder(Scalar{1e-6})
+        .WithVertexLinearSolver(sim::algorithm::vbd::EVertexIntegrationLinearSolver::Inverse)
         .Construct();
 
     // Anderson params

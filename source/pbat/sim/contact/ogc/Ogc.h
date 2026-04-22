@@ -22,8 +22,27 @@
 
 #include <algorithm>
 #include <tbb/parallel_for.h>
+#include <vector>
 
 namespace pbat::sim::contact::ogc {
+
+/**
+ * @brief Executes one OGC iteration.
+ * Performs vertex-facet and edge-edge contact detection, finalizes contact pairs and updates
+ * displacement bounds.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param input OGC's input
+ * @param params OGC's parameters
+ * @param state OGC's state
+ * @pre `state.PrepareForExecution()` has been called
+ * @post `state.CollectContactPairs()` has been called and `state.bv` is usable.
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void Execute(
+    Input<TScalar, TIndex> const& input,
+    Params<TScalar> const& params,
+    State<TScalar, TIndex>& state);
 
 /**
  * @brief Performs vertex-facet contact detection.
@@ -172,8 +191,9 @@ bool IsVertexFeasible(
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param GHEF `2 x |# half edges|` half-edge to (adjacent face, opposite face)
  * @param x `3 x 1` query point
- * @param fi Face index of half-edge he
+ * @param fi First face index of half-edge he, i.e. `fi == GHEF(0, he)`
  * @param he Half-edge index
+ * @param bCheckAdjacentFacets Whether to check adjacent facets
  * @return true if in edge feasible region; false otherwise
  */
 template <
@@ -188,7 +208,21 @@ bool IsEdgeFeasible(
     Eigen::DenseBase<TDerivedGHEF> const& GHEF,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex fi,
-    TIndex he);
+    TIndex he,
+    bool bCheckAdjacentFacets = false);
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void Execute(
+    Input<TScalar, TIndex> const& input,
+    Params<TScalar> const& params,
+    State<TScalar, TIndex>& state)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.Execute");
+    VertexFacetContactDetection(input, params, state);
+    EdgeEdgeContactDetection(input, params, state);
+    UpdateDisplacementBounds(input, params, state);
+    state.CollectContactPairs();
+}
 
 namespace detail {
 
@@ -214,25 +248,28 @@ void DynamicVertexFacetRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input                 = data->input;
-    Params<TScalar> const* params                       = data->params;
-    State<TScalar, TIndex>* state                       = data->state;
-    auto const& X                                       = input->X.value();
-    auto const& V                                       = input->V.value();
-    auto const& F                                       = input->F.value();
-    auto const& VP                                      = input->VP.value();
-    auto const& FP                                      = input->FP.value();
-    auto const& GVHEp                                   = input->GVHEp.value();
-    auto const& GVHEadj                                 = input->GVHEadj.value();
-    auto const& GHEF                                    = input->GHEF.value();
-    TScalar const r                                     = params->r;
-    auto& mVertexLocks                                  = state->mVertexLocks;
-    auto& mFacetLocks                                   = state->mFacetLocks;
-    auto& dminv                                         = state->dminv;
-    auto& dminf                                         = state->dminf;
-    std::vector<std::vector<ContactFace<TIndex>>>& FOGC = state->mDynamicContactFacesOfVertex;
-    std::vector<std::vector<TIndex>>& VOGC              = state->mDynamicContactVerticesOfTriangle;
+    auto* data       = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType  = Input<TScalar, TIndex>;
+    using ParamsType = Params<TScalar>;
+    using StateType  = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const FOffset     = state->mTriangleGeometryPrefix[StateType::EGeometry::Dynamic];
+    auto const& X            = input->X.value();
+    auto const& V            = input->V.value();
+    auto const& F            = input->F.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto& dminv              = state->dminv;
+    auto& dminf              = state->dminf;
+    auto& XX                 = state->mXXets.local();
+    auto& XE                 = state->mXEets.local();
+    auto& XF                 = state->mXFets.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -261,8 +298,8 @@ void DynamicVertexFacetRTCCollideFunc(
             (xi - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
         TScalar d2 = dx2f.squaredNorm();
         // Update triangle and vertex displacement bounds
-        common::AtomicMin(dminv(iv), d2);
-        common::AtomicMin(dminf(f), d2);
+        common::AtomicMin(dminv[iv], d2);
+        common::AtomicMin(dminf[f], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -271,40 +308,35 @@ void DynamicVertexFacetRTCCollideFunc(
         auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw(0), uvw(1), uvw(2));
         // Vectorize contact face index a based on its type (triangle | edge | vertex)
         TIndex const a = VertexFacetContactFaceIndex(F, f, alocal, eFace);
-        // Synchronize reads/writes to vertex iv's contact sets
-        common::AtomicExecute(mVertexLocks(iv), [&]() {
-            // Brute-force duplicate search
-            bool const bDuplicateContact = std::any_of(
-                FOGC[iv].begin(),
-                FOGC[iv].end(),
-                [&](ContactFace<TIndex> const& contactFace) {
-                    return contactFace.a == a and contactFace.eFace == eFace;
-                });
-            if (bDuplicateContact)
-                return;
-            // Update contact face sets
-            auto const fUpdateContactSets = [&]() {
-                FOGC[iv].emplace_back(a, eFace);
-                common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
-            };
-            switch (static_cast<EVertexFacetClosestFaceType>(eFace))
-            {
-                case EVertexFacetClosestFaceType::Vertex: {
-                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                case EVertexFacetClosestFaceType::Edge: {
-                    if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                default /* triangle */: {
-                    fUpdateContactSets();
-                    break;
-                }
+        // Add contact pair to the appropriate thread-local adjacency set
+        switch (static_cast<EVertexFacetClosestFaceType>(eFace))
+        {
+            case EVertexFacetClosestFaceType::Vertex: {
+                if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
+                    XX.push_back({XOffset + ix, XOffset + a});
+                break;
             }
-        });
+            case EVertexFacetClosestFaceType::Edge: {
+                if (IsEdgeFeasible(X, F, GHEF, xi, f, a, true /*bCheckAdjacentFacets*/))
+                    XE.push_back(
+                        {XOffset + ix,
+                         // Make sure we always add a unique half-edge index to prevent duplicate
+                         // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
+                         // its opposite will be -1.
+                         HEOffset + std::max(a, geometry::OppositeHalfEdge(F, a, GHEF))});
+                break;
+            }
+            case EVertexFacetClosestFaceType::Facet: {
+                // The projection of `x` onto the triangle plane must be strictly inside the
+                // triangle if its closest point projection is neither a vertex nor an edge,
+                // such that `x` must be triangle feasible.
+                XF.push_back({XOffset + ix, FOffset + a});
+                break;
+            }
+            default: {
+                break;
+            }
+        }
     }
 }
 
@@ -322,22 +354,29 @@ void DynamicVertexStaticFacetRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input                 = data->input;
-    Params<TScalar> const* params                       = data->params;
-    State<TScalar, TIndex>* state                       = data->state;
-    auto const& X                                       = input->X.value();
-    auto const& V                                       = input->V.value();
-    auto const& VP                                      = input->VP.value();
-    auto const& Xenv                                    = input->Venv.value();
-    auto const& Fenv                                    = input->Fenv.value();
-    auto const& GVHEenvp                                = input->GVHEenvp.value();
-    auto const& GVHEenvadj                              = input->GVHEenvadj.value();
-    auto const& GHEFenv                                 = input->GHEFenv.value();
-    TScalar const r                                     = params->r;
-    auto& mVertexLocks                                  = state->mVertexLocks;
-    auto& dminv                                         = state->dminv;
-    std::vector<std::vector<ContactFace<TIndex>>>& FOGC = state->mStaticContactFacesOfVertex;
+    auto* data       = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType  = Input<TScalar, TIndex>;
+    using ParamsType = Params<TScalar>;
+    using StateType  = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const XenvOffset  = state->mPointGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const HEenvOffset = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const FenvOffset  = state->mTriangleGeometryPrefix[StateType::EGeometry::Static];
+    auto const& X            = input->X.value();
+    auto const& V            = input->V.value();
+    auto const& Xenv         = input->Venv.value();
+    auto const& Fenv         = input->Fenv.value();
+    auto const& GVHEenvp     = input->GVHEenvp.value();
+    auto const& GVHEenvadj   = input->GVHEenvadj.value();
+    auto const& GHEFenv      = input->GHEFenv.value();
+    auto& dminv              = state->dminv;
+    auto& XX                 = state->mXXets.local();
+    auto& XE                 = state->mXEets.local();
+    auto& XF                 = state->mXFets.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -361,8 +400,8 @@ void DynamicVertexStaticFacetRTCCollideFunc(
         Eigen::Vector<TScalar, 3> dx2f =
             (xi - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
         TScalar d2 = dx2f.squaredNorm();
-        // Update triangle and vertex displacement bounds
-        common::AtomicMin(dminv(iv), d2);
+        // Update vertex displacement bounds
+        common::AtomicMin(dminv[iv], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -371,39 +410,35 @@ void DynamicVertexStaticFacetRTCCollideFunc(
         auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw(0), uvw(1), uvw(2));
         // Vectorize contact face index a based on its type (triangle | edge | vertex)
         TIndex const a = VertexFacetContactFaceIndex(Fenv, f, alocal, eFace);
-        // Synchronize reads/writes to vertex iv's contact sets
-        common::AtomicExecute(mVertexLocks(iv), [&]() {
-            // Brute-force duplicate search
-            bool const bDuplicateContact = std::any_of(
-                FOGC[iv].begin(),
-                FOGC[iv].end(),
-                [&](ContactFace<TIndex> const& contactFace) {
-                    return contactFace.a == a and contactFace.eFace == eFace;
-                });
-            if (bDuplicateContact)
-                return;
-            // Update contact face sets
-            auto const fUpdateContactSets = [&]() {
-                FOGC[iv].emplace_back(a, eFace);
-            };
-            switch (static_cast<EVertexFacetClosestFaceType>(eFace))
-            {
-                case EVertexFacetClosestFaceType::Vertex: {
-                    if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xi, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                case EVertexFacetClosestFaceType::Edge: {
-                    if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xi, f, a))
-                        fUpdateContactSets();
-                    break;
-                }
-                default /* triangle */: {
-                    fUpdateContactSets();
-                    break;
-                }
+        // Add contact pair to the appropriate thread-local adjacency set
+        switch (static_cast<EVertexFacetClosestFaceType>(eFace))
+        {
+            case EVertexFacetClosestFaceType::Vertex: {
+                if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xi, a))
+                    XX.push_back({XOffset + ix, XenvOffset + a});
+                break;
             }
-        });
+            case EVertexFacetClosestFaceType::Edge: {
+                if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xi, f, a, true /*bCheckAdjacentFacets*/))
+                    XE.push_back(
+                        {XOffset + ix,
+                         // Make sure we always add a unique half-edge index to prevent duplicate
+                         // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
+                         // its opposite will be -1.
+                         HEenvOffset + std::max(a, geometry::OppositeHalfEdge(Fenv, a, GHEFenv))});
+                break;
+            }
+            case EVertexFacetClosestFaceType::Facet: {
+                // The projection of `x` onto the triangle plane must be strictly inside the
+                // triangle if its closest point projection is neither a vertex nor an edge,
+                // such that `x` must be triangle feasible.
+                XF.push_back({XOffset + ix, FenvOffset + a});
+                break;
+            }
+            default: {
+                break;
+            }
+        }
     }
 }
 
@@ -421,20 +456,28 @@ void StaticVertexDynamicFacetRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input    = data->input;
-    Params<TScalar> const* params          = data->params;
-    State<TScalar, TIndex>* state          = data->state;
-    auto const& Xenv                       = input->Venv.value();
-    auto const& X                          = input->X.value();
-    auto const& F                          = input->F.value();
-    auto const& GVHEp                      = input->GVHEp.value();
-    auto const& GVHEadj                    = input->GVHEadj.value();
-    auto const& GHEF                       = input->GHEF.value();
-    TScalar const r                        = params->r;
-    auto& mFacetLocks                      = state->mFacetLocks;
-    auto& dminf                            = state->dminf;
-    std::vector<std::vector<TIndex>>& VOGC = state->mStaticContactVerticesOfTriangle;
+    auto* data       = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType  = Input<TScalar, TIndex>;
+    using ParamsType = Params<TScalar>;
+    using StateType  = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const XenvOffset  = state->mPointGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const FOffset     = state->mTriangleGeometryPrefix[StateType::EGeometry::Dynamic];
+    auto const& Xenv         = input->Venv.value();
+    auto const& X            = input->X.value();
+    auto const& F            = input->F.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto& dminf              = state->dminf;
+    auto& XX                 = state->mXXets.local();
+    auto& XE                 = state->mXEets.local();
+    auto& XF                 = state->mXFets.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -457,8 +500,8 @@ void StaticVertexDynamicFacetRTCCollideFunc(
         Eigen::Vector<TScalar, 3> dx2f =
             (xi - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
         TScalar d2 = dx2f.squaredNorm();
-        // Update triangle and vertex displacement bounds
-        common::AtomicMin(dminf(f), d2);
+        // Update triangle displacement bounds
+        common::AtomicMin(dminf[f], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -467,24 +510,32 @@ void StaticVertexDynamicFacetRTCCollideFunc(
         auto const [alocal, eFace] = ClosestFaceFacetToVertex(uvw(0), uvw(1), uvw(2));
         // Vectorize contact face index a based on its type (triangle | edge | vertex)
         TIndex const a = VertexFacetContactFaceIndex(F, f, alocal, eFace);
-        // Update contact face sets
-        auto const fUpdateContactSets = [&]() {
-            common::AtomicExecute(mFacetLocks(f), [&]() { VOGC[f].emplace_back(ix); });
-        };
+        // Add contact pair to the appropriate thread-local adjacency set
         switch (static_cast<EVertexFacetClosestFaceType>(eFace))
         {
             case EVertexFacetClosestFaceType::Vertex: {
                 if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                    fUpdateContactSets();
+                    XX.push_back({XenvOffset + ix, XOffset + a});
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
-                if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                    fUpdateContactSets();
+                if (IsEdgeFeasible(X, F, GHEF, xi, f, a, true /*bCheckAdjacentFacets*/))
+                    XE.push_back(
+                        {XenvOffset + ix,
+                         // Make sure we always add a unique half-edge index to prevent duplicate
+                         // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
+                         // its opposite will be -1.
+                         HEOffset + std::max(a, geometry::OppositeHalfEdge(F, a, GHEF))});
                 break;
             }
-            default /* triangle */: {
-                fUpdateContactSets();
+            case EVertexFacetClosestFaceType::Facet: {
+                // The projection of `x` onto the triangle plane must be strictly inside the
+                // triangle if its closest point projection is neither a vertex nor an edge,
+                // such that `x` must be triangle feasible.
+                XF.push_back({XenvOffset + ix, FOffset + a});
+                break;
+            }
+            default: {
                 break;
             }
         }
@@ -513,36 +564,44 @@ void DynamicEdgeEdgeRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input                 = data->input;
-    Params<TScalar> const* params                       = data->params;
-    State<TScalar, TIndex>* state                       = data->state;
-    auto const& X                                       = input->X.value();
-    auto const& F                                       = input->F.value();
-    auto const& E                                       = input->E.value();
-    auto const& VP                                      = input->VP.value();
-    auto const& EP                                      = input->EP.value();
-    auto const& GVHEp                                   = input->GVHEp.value();
-    auto const& GVHEadj                                 = input->GVHEadj.value();
-    auto const& EHE                                     = input->EHE.value();
-    auto& mEdgeLocks                                    = state->mEdgeLocks;
-    auto& dmine                                         = state->dmine;
-    TScalar const r                                     = params->r;
-    std::vector<std::vector<ContactFace<TIndex>>>& EOGC = state->mDynamicContactFacesOfHalfEdge;
+    auto* data               = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType          = Input<TScalar, TIndex>;
+    using ParamsType         = Params<TScalar>;
+    using StateType          = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    auto const& X            = input->X.value();
+    auto const& F            = input->F.value();
+    auto const& E            = input->E.value();
+    auto const& EP           = input->EP.value();
+    auto const& EHE          = input->EHE.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
+    auto& dmine              = state->dmine;
+    auto& EE                 = state->mEEets.local();
+    auto& XE                 = state->mXEets.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
-        RTCCollision const& collision      = collisions[ci];
-        TIndex const be1                   = static_cast<TIndex>(collision.geomID0);
-        TIndex const be2                   = static_cast<TIndex>(collision.geomID1);
-        TIndex const e1                    = EP(be1) + static_cast<TIndex>(collision.primID0);
-        TIndex const e2                    = EP(be2) + static_cast<TIndex>(collision.primID1);
+        RTCCollision const& collision = collisions[ci];
+        TIndex const be1              = static_cast<TIndex>(collision.geomID0);
+        TIndex const be2              = static_cast<TIndex>(collision.geomID1);
+        TIndex const e1               = EP(be1) + static_cast<TIndex>(collision.primID0);
+        TIndex const e2               = EP(be2) + static_cast<TIndex>(collision.primID1);
+        // Only process each edge pair once (avoid double counting by symmetry)
+        if (e2 <= e1)
+            continue;
         Eigen::Vector<TIndex, 2> const e1v = E.col(e1);
         Eigen::Vector<TIndex, 2> const e2v = E.col(e2);
         // Avoid contact with same edge or adjacent edge
-        bool const bIsSameEdgeOrAreAdjacent =
+        bool const bAreEdgesAdjacent =
             e1v(0) == e2v(0) or e1v(0) == e2v(1) or e1v(1) == e2v(0) or e1v(1) == e2v(1);
-        if (bIsSameEdgeOrAreAdjacent)
+        if (bAreEdgesAdjacent)
             continue;
         // Compute distance between edges e1 and e2 via closest point projection
         Eigen::Matrix<TScalar, 3, 2> const xe1 = X(Eigen::placeholders::all, e1v);
@@ -555,11 +614,6 @@ void DynamicEdgeEdgeRTCCollideFunc(
             FromEigen(xe1.col(1)),
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
-        // Skip if closest point on edge e1 is a vertex, this will be captured in vertex-facet
-        // contacts
-        bool const bIsE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
-        if (bIsE1Vertex)
-            continue;
         // Closest points on edges e1 and e2
         Eigen::Vector<TScalar, 3> const xc1 =
             (TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1);
@@ -569,72 +623,35 @@ void DynamicEdgeEdgeRTCCollideFunc(
         // Update half-edge displacement bounds
         Eigen::Vector<TIndex, 2> const ehe1 = EHE.col(e1);
         Eigen::Vector<TIndex, 2> const ehe2 = EHE.col(e2);
-        common::AtomicMin(dmine(ehe1(0)), d2);
+        common::AtomicMin(dmine[ehe1(0)], d2);
         if (ehe1(1) >= 0) // Boundary edge has no 2nd half-edge
-            common::AtomicMin(dmine(ehe1(1)), d2);
-        common::AtomicMin(dmine(ehe2(0)), d2);
+            common::AtomicMin(dmine[ehe1(1)], d2);
+        common::AtomicMin(dmine[ehe2(0)], d2);
         if (ehe2(1) >= 0) // Boundary edge has no 2nd half-edge
-            common::AtomicMin(dmine(ehe2(1)), d2);
+            common::AtomicMin(dmine[ehe2(1)], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
-        // Determine faces (vertex or edge) closest to edges e1 and e2, i.e. faces of xc1 and xc2
-        auto const [a1, eFace1, a2, eFace2] =
-            ClosestFaceEdgeToEdge(st(0), st(1), e1, e2, {e1v(0), e1v(1)}, {e2v(0), e2v(1)});
-        // Synchronized updates to edges e1 and e2's contact sets
-        common::AtomicExecute(mEdgeLocks(e1), [&]() {
-            auto const fUpdateContactSets = [&]() {
-                // If we're contacting the interior of edge e2, store the contact pairs (ehe1(0),
-                // ehe2(0)) and (ehe1(1), ehe2(0)). Because we only store vertex-to-half-edge
-                // adjacencies, rather than vertex-(undirected-)edge adjacencies, we store 2 contact
-                // pairs for edge e1 corresponding to both of its half-edges. This way, both
-                // vertices/endpoints of edge e1 can reach half-edge ehe2(0). The vertices do not
-                // need to reach ehe2(1), as it is redundant/unnecessary for computing an edge-edge
-                // contact potential (we only need the 2 pairs of 2 vertices in no particular
-                // order).
-                bool const bIsA2Edge = (eFace2 == 0);
-                TIndex const a       = bIsA2Edge * ehe2(0) + (not bIsA2Edge) * a2;
-                EOGC[ehe1(0)].emplace_back(a, eFace2);
-                if (ehe1(1) >= 0)
-                    EOGC[ehe1(1)].emplace_back(a, eFace2);
-            };
-            switch (static_cast<EEdgeEdgeClosestFaceType>(eFace2))
-            {
-                case EEdgeEdgeClosestFaceType::Vertex: {
-                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc1, a2))
-                        fUpdateContactSets();
-                    break;
-                }
-                default /* edge */: {
-                    fUpdateContactSets();
-                    break;
-                }
-            }
-        });
-        common::AtomicExecute(mEdgeLocks(e2), [&]() {
-            auto const fUpdateContactSets = [&]() {
-                // See comment in edge e1's update above for explanation. We flip the roles of e1
-                // and e2 here.
-                bool const bIsA1Edge = (eFace1 == 0);
-                TIndex const a       = bIsA1Edge * ehe1(0) + (not bIsA1Edge) * a1;
-                EOGC[ehe2(0)].emplace_back(a, eFace1);
-                if (ehe2(1) >= 0)
-                    EOGC[ehe2(1)].emplace_back(a, eFace1);
-            };
-            switch (static_cast<EEdgeEdgeClosestFaceType>(eFace1))
-            {
-                case EEdgeEdgeClosestFaceType::Vertex: {
-                    if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc2, a1))
-                        fUpdateContactSets();
-                    break;
-                }
-                default /* edge */: {
-                    fUpdateContactSets();
-                    break;
-                }
-            }
-        });
+        bool const bIsClosestPointOnE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
+        bool const bIsClosestPointOnE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
+        if (bIsClosestPointOnE1Vertex and not bIsClosestPointOnE2Vertex)
+        {
+            auto i = st(0) == TScalar(0) ? e1v(0) : e1v(1);
+            if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc2, i))
+                XE.push_back({XOffset + i, HEOffset + std::max(ehe2(0), ehe2(1))});
+        }
+        else if (not bIsClosestPointOnE1Vertex and bIsClosestPointOnE2Vertex)
+        {
+            auto i = st(1) == TScalar(0) ? e2v(0) : e2v(1);
+            if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc1, i))
+                XE.push_back({XOffset + i, HEOffset + std::max(ehe1(0), ehe1(1))});
+        }
+        else
+        {
+            EE.push_back(
+                {HEOffset + std::max(ehe1(0), ehe1(1)), HEOffset + std::max(ehe2(0), ehe2(1))});
+        }
     }
 }
 
@@ -652,23 +669,35 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input                 = data->input;
-    Params<TScalar> const* params                       = data->params;
-    State<TScalar, TIndex>* state                       = data->state;
-    auto const& Xenv                                    = input->Venv.value();
-    auto const& Eenv                                    = input->Eenv.value();
-    auto const& Fenv                                    = input->Fenv.value();
-    auto const& GVHEenvp                                = input->GVHEenvp.value();
-    auto const& GVHEenvadj                              = input->GVHEenvadj.value();
-    auto const& EHEenv                                  = input->EHEenv.value();
-    auto const& X                                       = input->X.value();
-    auto const& E                                       = input->E.value();
-    auto const& EHE                                     = input->EHE.value();
-    auto& mEdgeLocks                                    = state->mEdgeLocks;
-    auto& dmine                                         = state->dmine;
-    TScalar const r                                     = params->r;
-    std::vector<std::vector<ContactFace<TIndex>>>& EOGC = state->mStaticContactFacesOfHalfEdge;
+    auto* data               = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType          = Input<TScalar, TIndex>;
+    using ParamsType         = Params<TScalar>;
+    using StateType          = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const HEenvOffset = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const XenvOffset  = state->mPointGeometryPrefix[StateType::EGeometry::Static];
+    auto const& Xenv         = input->Venv.value();
+    auto const& Eenv         = input->Eenv.value();
+    auto const& Fenv         = input->Fenv.value();
+    auto const& EHEenv       = input->EHEenv.value();
+    auto const& GHEFenv      = input->GHEFenv.value();
+    auto const& GVHEenvp     = input->GVHEenvp.value();
+    auto const& GVHEenvadj   = input->GVHEenvadj.value();
+    auto const& X            = input->X.value();
+    auto const& E            = input->E.value();
+    auto const& F            = input->F.value();
+    auto const& EHE          = input->EHE.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
+    auto& dmine              = state->dmine;
+    auto& EE                 = state->mEEets.local();
+    auto& XE                 = state->mXEets.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
@@ -689,11 +718,6 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
             FromEigen(xe1.col(1)),
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
-        // Skip if closest point on edge e1 is a vertex, this will be captured in vertex-facet
-        // contacts
-        bool const bIsE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
-        if (bIsE1Vertex)
-            continue;
         // Closest points on edges e1 and e2
         Eigen::Vector<TScalar, 3> const xc1 =
             (TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1);
@@ -703,46 +727,32 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // Update half-edge displacement bounds
         Eigen::Vector<TIndex, 2> const ehe1 = EHE.col(e1);
         Eigen::Vector<TIndex, 2> const ehe2 = EHEenv.col(e2);
-        common::AtomicMin(dmine(ehe1(0)), d2);
+        common::AtomicMin(dmine[ehe1(0)], d2);
         if (ehe1(1) >= 0) // Boundary edge has no 2nd half-edge
-            common::AtomicMin(dmine(ehe1(1)), d2);
+            common::AtomicMin(dmine[ehe1(1)], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
-        // Determine faces (vertex or edge) closest to edges e1 and e2, i.e. faces of xc1 and xc2
-        auto const [a1, eFace1, a2, eFace2] =
-            ClosestFaceEdgeToEdge(st(0), st(1), e1, e2, {e1v(0), e1v(1)}, {e2v(0), e2v(1)});
-        // Synchronized updates to edges e1's contact sets
-        common::AtomicExecute(mEdgeLocks(e1), [&]() {
-            auto const fUpdateContactSets = [&]() {
-                // If we're contacting the interior of edge e2, store the contact pairs (ehe1(0),
-                // ehe2(0)) and (ehe1(1), ehe2(0)). Because we only store vertex-to-half-edge
-                // adjacencies, rather than vertex-(undirected-)edge adjacencies, we store 2 contact
-                // pairs for edge e1 corresponding to both of its half-edges. This way, both
-                // vertices/endpoints of edge e1 can reach half-edge ehe2(0). The vertices do not
-                // need to reach ehe2(1), as it is redundant/unnecessary for computing an edge-edge
-                // contact potential (we only need the 2 pairs of 2 vertices in no particular
-                // order).
-                bool const bIsA2Edge = (eFace2 == 0);
-                TIndex const a       = bIsA2Edge * ehe2(0) + (not bIsA2Edge) * a2;
-                EOGC[ehe1(0)].emplace_back(a, eFace2);
-                if (ehe1(1) >= 0)
-                    EOGC[ehe1(1)].emplace_back(a, eFace2);
-            };
-            switch (static_cast<EEdgeEdgeClosestFaceType>(eFace2))
-            {
-                case EEdgeEdgeClosestFaceType::Vertex: {
-                    if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xc1, a2))
-                        fUpdateContactSets();
-                    break;
-                }
-                default /* edge */: {
-                    fUpdateContactSets();
-                    break;
-                }
-            }
-        });
+        bool const bIsClosestPointOnE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
+        bool const bIsClosestPointOnE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
+        if (bIsClosestPointOnE1Vertex and not bIsClosestPointOnE2Vertex)
+        {
+            TIndex i = st(0) == TScalar(0) ? e1v(0) : e1v(1);
+            if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc2, i))
+                XE.push_back({XOffset + i, HEenvOffset + std::max(ehe2(0), ehe2(1))});
+        }
+        else if (not bIsClosestPointOnE1Vertex and bIsClosestPointOnE2Vertex)
+        {
+            TIndex i = st(1) == TScalar(0) ? e2v(0) : e2v(1);
+            if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xc1, i))
+                XE.push_back({XenvOffset + i, HEOffset + std::max(ehe1(0), ehe1(1))});
+        }
+        else
+        {
+            EE.push_back(
+                {HEOffset + std::max(ehe1(0), ehe1(1)), HEenvOffset + std::max(ehe2(0), ehe2(1))});
+        }
     }
 }
 
@@ -765,12 +775,6 @@ void VertexFacetContactDetection(
         state.mDynamicFacetScene,
         detail::DynamicVertexFacetRTCCollideFunc<TScalar, TIndex>,
         static_cast<void*>(&rtcCollideFuncParams));
-    // De-duplicate contact vertices of triangles
-    tbb::parallel_for(TIndex(0), TIndex(input.F->cols()), [&](TIndex f) {
-        auto& vogcf = state.mDynamicContactVerticesOfTriangle[f];
-        std::sort(vogcf.begin(), vogcf.end());
-        vogcf.erase(std::unique(vogcf.begin(), vogcf.end()), vogcf.end());
-    });
     if (input.HasStaticGeometry())
     {
         // Compute vertex-facet contact sets (with duplicates) on static geometry
@@ -786,8 +790,16 @@ void VertexFacetContactDetection(
             static_cast<void*>(&rtcCollideFuncParams));
     }
     // Finalize per-vertex and per-face displacement bounds
-    state.dminv.noalias() = state.dminv.cwiseSqrt();
-    state.dminf.noalias() = state.dminf.cwiseSqrt();
+    auto const nDynamicVertices = input.NumVertices();
+    auto const nDynamicFacets   = input.NumFacets();
+    for (auto v = 0; v < nDynamicVertices; ++v)
+        state.dminv[v].store(
+            std::sqrt(state.dminv[v].load(std::memory_order_relaxed)),
+            std::memory_order_relaxed);
+    for (auto f = 0; f < nDynamicFacets; ++f)
+        state.dminf[f].store(
+            std::sqrt(state.dminf[f].load(std::memory_order_relaxed)),
+            std::memory_order_relaxed);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -807,30 +819,21 @@ void EdgeEdgeContactDetection(
         state.mDynamicEdgeScene,
         detail::DynamicEdgeEdgeRTCCollideFunc<TScalar, TIndex>,
         static_cast<void*>(&rtcCollideFuncParams));
-    // De-duplicate contact faces of half-edges on dynamic geometry
-    auto const nHalfEdges = 3 * input.F->cols();
-    tbb::parallel_for(TIndex(0), TIndex(nHalfEdges), [&](TIndex he) {
-        auto& eogc = state.mDynamicContactFacesOfHalfEdge[he];
-        std::sort(eogc.begin(), eogc.end());
-        eogc.erase(std::unique(eogc.begin(), eogc.end()), eogc.end());
-    });
     if (input.HasStaticGeometry())
     {
-        // Compute edge-edge contact sets (with duplicates) on static geometry
+        // Compute edge-edge contact sets on static geometry
         rtcCollide(
             state.mDynamicEdgeScene,
             state.mStaticEdgeScene,
             detail::DynamicEdgeStaticEdgeRTCCollideFunc<TScalar, TIndex>,
             static_cast<void*>(&rtcCollideFuncParams));
-        // De-duplicate contact faces of half-edges on static geometry
-        tbb::parallel_for(TIndex(0), TIndex(nHalfEdges), [&](TIndex he) {
-            auto& eogc = state.mStaticContactFacesOfHalfEdge[he];
-            std::sort(eogc.begin(), eogc.end());
-            eogc.erase(std::unique(eogc.begin(), eogc.end()), eogc.end());
-        });
     }
     // Finalize per-half-edge displacement bounds
-    state.dmine.noalias() = state.dmine.cwiseSqrt();
+    auto const nDynamicHalfEdges = input.NumHalfEdges();
+    for (auto he = 0; he < nDynamicHalfEdges; ++he)
+        state.dmine[he].store(
+            std::sqrt(state.dmine[he].load(std::memory_order_relaxed)),
+            std::memory_order_relaxed);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -849,14 +852,17 @@ void UpdateDisplacementBounds(
     IndexType const nVertices = static_cast<IndexType>(V.size());
     tbb::parallel_for(IndexType{0}, nVertices, [&](IndexType v) {
         IndexType i  = V(v);
-        state.bv(v)  = state.dminv(v);
+        state.bv(v)  = state.dminv[v].load(std::memory_order_relaxed);
         auto hebegin = GVHEp(i);
         auto heend   = GVHEp(i + 1);
         for (IndexType k = hebegin; k < heend; ++k)
         {
             IndexType const he = GVHEadj(k);
             IndexType const f  = geometry::FaceOfHalfEdge(he);
-            state.bv(v)        = std::min({state.bv(v), state.dmine(he), state.dminf(f)});
+            state.bv(v)        = std::min(
+                {state.bv(v),
+                 state.dmine[he].load(std::memory_order_relaxed),
+                 state.dminf[f].load(std::memory_order_relaxed)});
         }
         state.bv(v) *= params.gammap;
     });
@@ -870,7 +876,7 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
     bool const bIsEdge   = (nZeros == 1);
     int eFace            = (bIsVertex * 2) + (bIsEdge * 1);
     int a                = bIsVertex * ((v == TScalar(1)) * 1 + (w == TScalar(1)) * 2) +
-            bIsEdge * ((u == TScalar(0)) * 1 + (v == TScalar(0)) * 2);
+                           bIsEdge * ((u == TScalar(0)) * 1 + (v == TScalar(0)) * 2);
     return {a, eFace};
 }
 
@@ -890,9 +896,9 @@ std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
     int eFace1 = (not bIsEdgeContact1) * 1;
     int eFace2 = (not bIsEdgeContact2) * 1;
     int a1     = bIsEdgeContact1 * e1 +
-             (not bIsEdgeContact1) * ((s == TScalar(0)) * e1v[0] + (s == TScalar(1)) * e1v[1]);
-    int a2 = bIsEdgeContact2 * e2 +
-             (not bIsEdgeContact2) * ((t == TScalar(0)) * e2v[0] + (t == TScalar(1)) * e2v[1]);
+                 (not bIsEdgeContact1) * ((s == TScalar(0)) * e1v[0] + (s == TScalar(1)) * e1v[1]);
+    int a2     = bIsEdgeContact2 * e2 +
+                 (not bIsEdgeContact2) * ((t == TScalar(0)) * e2v[0] + (t == TScalar(1)) * e2v[1]);
     return {a1, eFace1, a2, eFace2};
 }
 
@@ -951,7 +957,8 @@ bool IsEdgeFeasible(
     Eigen::DenseBase<TDerivedGHEF> const& GHEF,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex fi,
-    TIndex he)
+    TIndex he,
+    bool bCheckAdjacentFacets)
 {
     static_assert(
         TDerivedF::RowsAtCompileTime == 3,
@@ -964,25 +971,30 @@ bool IsEdgeFeasible(
     TIndex k = geometry::OutgoingVertex(F, he, 1 /* step */);
     // Get the third vertex l of triangle fj that is not part of undirected edge (i,j).
     // NOTE: Whenever fj == fi (i.e. boundary edge), l == k.
-    TIndex l = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
-               (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
-               (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
-    Eigen::Vector<TScalar, 3> xi  = X.col(i);
-    Eigen::Vector<TScalar, 3> xj  = X.col(j);
-    Eigen::Vector<TScalar, 3> xk  = X.col(k);
-    Eigen::Vector<TScalar, 3> xl  = X.col(l);
-    Eigen::Vector<TScalar, 3> xij = xj - xi;
-    TScalar xijn2                 = xij.squaredNorm();
-    // Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
-    Eigen::Vector<TScalar, 3> pin = (xi - xk) + (xk - xi).dot(xij) / xijn2 * xij;
-    // Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
-    // NOTE: whenever fj == fi (i.e. boundary edge), pjn == pin
-    Eigen::Vector<TScalar, 3> pjn = (xi - xl) + (xl - xi).dot(xij) / xijn2 * xij;
-    bool bInEdgeFeasibleRegion =
-        ((x - xi).dot(xj - xi) >= TScalar(0)) and // within half-plane of vertex i
-        ((x - xj).dot(xi - xj) >= TScalar(0)) and // within half-plane of vertex j
-        ((x - xi).dot(pin) >= TScalar(0)) and     // within half-plane perpendicular to fi
-        ((x - xi).dot(pjn) >= TScalar(0));        // within half-plane perpendicular to fj
+    TIndex l                     = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
+                                   (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
+                                   (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
+    Eigen::Vector<TScalar, 3> xi = X.col(i);
+    Eigen::Vector<TScalar, 3> xj = X.col(j);
+    bool bInEdgeFeasibleRegion{true};
+    bInEdgeFeasibleRegion &= ((x - xi).dot(xj - xi) >= TScalar(0)); // within half-plane of vertex i
+    bInEdgeFeasibleRegion &= ((x - xj).dot(xi - xj) >= TScalar(0)); // within half-plane of vertex j
+    if (bCheckAdjacentFacets)
+    {
+        Eigen::Vector<TScalar, 3> xk  = X.col(k);
+        Eigen::Vector<TScalar, 3> xl  = X.col(l);
+        Eigen::Vector<TScalar, 3> xij = xj - xi;
+        TScalar xijn2                 = xij.squaredNorm();
+        // Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
+        Eigen::Vector<TScalar, 3> pin = (xi - xk) + (xk - xi).dot(xij) / xijn2 * xij;
+        // Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
+        // NOTE: whenever fj == fi (i.e. boundary edge), pjn == pin
+        Eigen::Vector<TScalar, 3> pjn = (xi - xl) + (xl - xi).dot(xij) / xijn2 * xij;
+        bInEdgeFeasibleRegion &=
+            ((x - xi).dot(pin) >= TScalar(0)); // within half-plane perpendicular to fi
+        bInEdgeFeasibleRegion &=
+            ((x - xi).dot(pjn) >= TScalar(0)); // within half-plane perpendicular to fj
+    }
     return bInEdgeFeasibleRegion;
 }
 

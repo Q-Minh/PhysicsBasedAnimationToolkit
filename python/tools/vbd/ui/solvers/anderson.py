@@ -75,22 +75,24 @@ class AndersonSolver(BaseSolver):
         anderson = params.anderson_params
         if callback is None:
             callback = lambda: None
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
         callback()
-        while vbd.k < vbd.n_max_iters:
-            if contact.requires_bounds_computation:
-                contact.compute_displacement_bounds(fem.x)
-            pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)
-            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
-            callback()
-        fem.back_substitute_integrated_positions_into_velocities()
+        # TODO: Update Anderson solver for most recent SAL contact framework
+        # pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
+        # callback()
+        # while vbd.k < vbd.n_max_iters:
+        #     if contact.requires_constraint_set_update:
+        #         contact.update_constraint_set(fem.x)
+        #     pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)
+        #     fem.x = contact.restore_feasibility(fem.x, fem.dmask)
+        #     callback()
+        # fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
         vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
         anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
-        vbd.serialize(archive)
-        anderson.serialize(archive)
+        vbd.serialize(archive, minimal=True)
+        anderson.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
@@ -110,5 +112,5 @@ class AndersonSolver(BaseSolver):
         anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
-        vbd.serialize(archive["vbd/params"])
-        anderson.serialize(archive["vbd/anderson_params"])
+        vbd.serialize(archive["vbd/params"], minimal=False)
+        anderson.serialize(archive["vbd/anderson_params"], minimal=False)

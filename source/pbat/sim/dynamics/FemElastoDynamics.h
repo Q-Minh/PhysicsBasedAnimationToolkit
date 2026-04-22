@@ -881,7 +881,7 @@ FemElastoDynamics<TElement, Dims, THyperElasticEnergy, TScalar, TIndex>::ToMomen
     Eigen::MatrixBase<TDerivedX> const& _x,
     Eigen::DenseBase<TDerivedG>& _g) const
 {
-    _g += M().asDiagonal() * (_x.reshaped() - xtilde.reshaped());
+    _g.reshaped() += M().asDiagonal() * (_x.reshaped() - xtilde.reshaped());
 }
 
 template <

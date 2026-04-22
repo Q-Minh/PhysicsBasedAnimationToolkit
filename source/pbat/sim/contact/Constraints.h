@@ -1,118 +1,272 @@
+/**
+ * @file Constraints.h
+ * @author Quoc-Minh Ton-That (tonthat.quocminh@gmail.com)
+ * @brief Contact constraint types for mesh-based contact mechanics
+ * @version 0.1
+ * @date 2026-02-18
+ * @copyright Copyright (c) 2026
+ */
+
 #ifndef PBAT_SIM_CONTACT_CONSTRAINTS_H
 #define PBAT_SIM_CONTACT_CONSTRAINTS_H
 
 #include "pbat/HostDevice.h"
-#include "pbat/common/ConstexprFor.h"
-#include "pbat/math/linalg/mini/BinaryOperations.h"
-#include "pbat/math/linalg/mini/Matrix.h"
+#include "pbat/common/Concepts.h"
+#include "pbat/geometry/MeshDistance.h"
+#include "pbat/math/linalg/mini/Mini.h"
+
+#include <cmath>
 
 namespace pbat::sim::contact {
-/**
- * @brief Computes the constraint \f$ C(x) = \begin{bmatrix} N & T & B \end{bmatrix}^T
- * (\begin{bmatrix} x_i & x_j & x_k \end{bmatrix} \beta - P) \in \mathbb{R}^3 \f$
- *
- * where \f$ N, T, B \f$ are an orthonormal contact basis, \f$ P \f$ is its origin, \f$ x_i, x_j,
- * x_k \f$ are triangle vertex positions in counter-clockwise order, and \f$ \beta \f$ are
- * barycentric coordinates of the contact point on the triangle.
- *
- * @tparam TMatrixP Matrix type for \f$ P \f$
- * @tparam TMatrixNTB Matrix type for \f$ \begin{bmatrix} N & T & B \end{bmatrix} \f$
- * @tparam TMatrixX1 Matrix type for \f$ x_i \f$
- * @tparam TMatrixX2 Matrix type for \f$ x_j \f$
- * @tparam TMatrixX3 Matrix type for \f$ x_k \f$
- * @tparam TMatrixBary Matrix type for \f$ bary \f$
- * @tparam TMatrixC Matrix type for \f$ C \f$
- * @param P `3 x 1` origin of the contact basis
- * @param NTB `3 x 3` contact basis (normal, tangent, bitangent)
- * @param X1 `3 x 1` vertex position \f$ x_i \f$
- * @param X2 `3 x 1` vertex position \f$ x_j \f$
- * @param X3 `3 x 1` vertex position \f$ x_k \f$
- * @param bary `3 x 1` barycentric coordinates of the contact point on the triangle
- * @param C `3 x 1` constraint (vector) value
- */
-template <
-    math::linalg::mini::CMatrix TMatrixP,
-    math::linalg::mini::CMatrix TMatrixNTB,
-    math::linalg::mini::CMatrix TMatrixX1,
-    math::linalg::mini::CMatrix TMatrixX2,
-    math::linalg::mini::CMatrix TMatrixX3,
-    math::linalg::mini::CMatrix TMatrixBary,
-    math::linalg::mini::CMatrix TMatrixC>
-PBAT_HOST_DEVICE void TriangleEnvironmentConstraint(
-    TMatrixP const& P,
-    TMatrixNTB const& NTB,
-    TMatrixX1 const& X1,
-    TMatrixX2 const& X2,
-    TMatrixX3 const& X3,
-    TMatrixBary const& bary,
-    TMatrixC& C)
-{
-    static_assert(TMatrixP::kRows == 3 and TMatrixP::kCols == 1, "P must be 3x1");
-    static_assert(TMatrixNTB::kRows == 3 and TMatrixNTB::kCols == 3, "NTB must be 3x3");
-    static_assert(TMatrixX1::kRows == 3 and TMatrixX1::kCols == 1, "X1 must be 3x1");
-    static_assert(TMatrixX2::kRows == 3 and TMatrixX2::kCols == 1, "X2 must be 3x1");
-    static_assert(TMatrixX3::kRows == 3 and TMatrixX3::kCols == 1, "X3 must be 3x1");
-    static_assert(TMatrixBary::kRows == 3 and TMatrixBary::kCols == 1, "bary must be 3x1");
-    static_assert(TMatrixC::kRows == 3 and TMatrixC::kCols == 1, "C must be 3x1");
-    using ScalarType = typename TMatrixP::ScalarType;
-    using Vec3       = math::linalg::mini::SVector<ScalarType, 3>;
-    // C(x) = [N T B]^T ([x_i x_j x_k] bary - P)
-    Vec3 X = bary(0) * X1 + bary(1) * X2 + bary(2) * X3;
-    C      = NTB.Transpose() * (X - P);
-}
 
 /**
- * @brief Computes constraint \f$ C(x) = \begin{bmatrix} N & T & B \end{bmatrix}^T
- * (\begin{bmatrix} x_i & x_j & x_k \end{bmatrix} \beta - P) \in \mathbb{R}^3 \f$ and its gradient.
+ * @brief Formulation type for the contact constraint \f$ c(x) \f$.
  *
- * @tparam TMatrixP Matrix type for \f$ P \f$
- * @tparam TMatrixNTB Matrix type for \f$ \begin{bmatrix} N & T & B \end{bmatrix} \f$
- * @tparam TMatrixX1 Matrix type for \f$ x_i \f$
- * @tparam TMatrixX2 Matrix type for \f$ x_j \f$
- * @tparam TMatrixX3 Matrix type for \f$ x_k \f$
- * @tparam TMatrixBary Matrix type for \f$ bary \f$
- * @tparam TMatrixC Matrix type for \f$ C \f$
- * @tparam TMatrixGradCT Matrix type for \f$ \nabla C \f$
- * @param P `3 x 1` origin of the contact basis
- * @param NTB `3 x 3` contact basis (normal, tangent, bitangent)
- * @param X1 `3 x 1` vertex position \f$ x_i \f$
- * @param X2 `3 x 1` vertex position \f$ x_j \f$
- * @param X3 `3 x 1` vertex position \f$ x_k \f$
- * @param bary `3 x 1` barycentric coordinates of the contact point on the triangle
- * @param C `3 x 1` constraint (vector) value
- * @param gradCT `9 x 3` gradient of the constraint w.r.t. triangle vertex positions
+ * Options control the quantity (and its derivatives) evaluated by the constraint
+ * - Constraint evaluates \f$ c(x) \f$ and its derivatives
+ * - Penalty evaluates \f$ 0.5 \mu c(x)^2 \f$ and its derivatives
+ * - AugmentedLagrangian evaluates \f$ 0.5 \mu c(x)^2 - \lambda c(x) \f$ and its derivatives
+ * - InteriorPoint evaluates (the constraint part of) the merit function
+ * \f$ -\mu log(s) + \lambda (c - s) \f$.
+ * For the gradient, it computes
+ * \f$ (\frac{\lambda c - \mu}{s} - \lambda) \nabla c(x) \f$.
+ * For the hessian, it computes
+ * \f$ \frac{\lambda}{s} \nabla c(x) \nabla c(x)^T - \lambda \nabla^2 c(x) \f$.
  */
-template <
-    math::linalg::mini::CMatrix TMatrixP,
-    math::linalg::mini::CMatrix TMatrixNTB,
-    math::linalg::mini::CMatrix TMatrixX1,
-    math::linalg::mini::CMatrix TMatrixX2,
-    math::linalg::mini::CMatrix TMatrixX3,
-    math::linalg::mini::CMatrix TMatrixBary,
-    math::linalg::mini::CMatrix TMatrixC,
-    math::linalg::mini::CMatrix TMatrixGradCT>
-PBAT_HOST_DEVICE void TriangleEnvironmentConstraintAndGradient(
-    TMatrixP const& P,
-    TMatrixNTB const& NTB,
-    TMatrixX1 const& X1,
-    TMatrixX2 const& X2,
-    TMatrixX3 const& X3,
-    TMatrixBary const& bary,
-    TMatrixC& C,
-    TMatrixGradCT& gradCT)
+enum class EConstraintFormulation { Constraint, Penalty, AugmentedLagrangian, InteriorPoint };
+
+/**
+ * @brief Which quantities to compute when evaluating a constraint.
+ * Acts as a bitmask and can be converted to int for masking.
+ */
+enum EConstraintComputationFlags : int { Value = 1 << 0, Gradient = 1 << 1, Hessian = 1 << 2 };
+
+/**
+ * @brief The constraint hessian approximation type to use when evaluating the constraint Hessian.
+ */
+enum class EConstraintHessianApproximation { Full, GaussNewton };
+
+/**
+ * @brief Options for constraint evaluation, including computation flags and Hessian approximation.
+ */
+struct ConstraintComputationOptions
 {
-    static_assert(TMatrixGradCT::kRows == 9 and TMatrixGradCT::kCols == 3, "gradCT must be 9x3");
-    using math::linalg::mini::SMatrix;
-    TriangleEnvironmentConstraint(P, NTB, X1, X2, X3, bary, C);
-    // \nabla_{x_i,x_j,x_k} C_c = \beta \otimes NTB[:,c]
-    common::ForRange<0, 3>(
-        [&]<auto c>() {
-            common::ForRange<0, 3>(
-                [&]<auto i>() {
-                    gradCT.Col(c).template Slice<3, 1>(i * 3, 0) = bary(i) * NTB.Col(c);
-                });
-        });
+    EConstraintComputationFlags eComputeFlags{
+        EConstraintComputationFlags::Value}; ///< Which quantities to compute
+    EConstraintHessianApproximation eHessianApproximation{
+        EConstraintHessianApproximation::Full}; ///< Which Hessian approximation to use
+};
+
+/**
+ * @brief Generic mesh contact constraint struct template parameterized by a distance computation
+ * type.
+ * @tparam TDistance Mesh distance computation type (e.g. PointPointDistance, PointEdgeDistance,
+ * etc.)
+ */
+template <class TDistance>
+struct MeshPairConstraint
+{
+    using DistanceType = TDistance;                      ///< Underlying distance computation type
+    using ScalarType   = typename TDistance::ScalarType; ///< Floating point scalar type
+    static constexpr int kStencil =
+        DistanceType::kStencil; ///< Number of vertices involved in the constraint
+    static constexpr int kDofs =
+        DistanceType::kDofs; ///< Degrees of freedom involved in the constraint
+
+    ScalarType lambda; ///< Lagrange multiplier for the constraint
+    ScalarType mu;     ///< Penalty or complementarity relaxation for the constraint
+    ScalarType s;      ///< Slack variable for interior point formulation
+    ScalarType c;      ///< Constraint value
+    math::linalg::mini::SVector<ScalarType, kDofs>
+        g; ///< Gradient of the constraint with respect to the involved vertices
+    math::linalg::mini::SMatrix<ScalarType, kDofs, kDofs>
+        H; ///< Hessian of the constraint with respect to the involved vertices
+
+    /**
+     * @brief Compute the constraint value, gradient, and Hessian based on the provided options
+     * @tparam TMatrixx Matrix type satisfying CMatrix concept
+     * @param x `kDofs x 1` stacked positions of the involved vertices
+     * @param opts Options for constraint computation, including flags and Hessian approximation
+     */
+    template <math::linalg::mini::CMatrix TMatrixx>
+    PBAT_HOST_DEVICE void Compute(TMatrixx const& x, ConstraintComputationOptions const& opts);
+
+    /**
+     * @brief Evaluate the constraint function
+     * @tparam TMatrixx Matrix type satisfying CMatrix concept
+     * @param x `kDofs x 1`
+     * @param eFormulation Formulation type to determine which Hessian to compute
+     * @return Constraint value
+     */
+    template <math::linalg::mini::CMatrix TMatrixx>
+    PBAT_HOST_DEVICE auto Eval(TMatrixx const& x, EConstraintFormulation eFormulation) const
+        -> ScalarType;
+
+    /**
+     * @brief Compute the gradient of the constraint
+     * @tparam TMatrixx Matrix type satisfying CMatrix concept
+     * @param x `kDofs x 1`
+     * @param eFormulation Formulation type to determine which Hessian to compute
+     * @return `kDofs x 1` gradient vector
+     */
+    template <math::linalg::mini::CMatrix TMatrixx>
+    PBAT_HOST_DEVICE auto Gradient(TMatrixx const& x, EConstraintFormulation eFormulation) const
+        -> math::linalg::mini::SVector<ScalarType, kDofs>;
+
+    /**
+     * @brief Compute the Hessian of the constraint
+     * @tparam TMatrixx Matrix type satisfying CMatrix concept
+     * @param x `kDofs x 1`
+     * @param eFormulation Formulation type to determine which Hessian to compute
+     * @return `kDofs x kDofs` Hessian matrix
+     */
+    template <math::linalg::mini::CMatrix TMatrixx>
+    PBAT_HOST_DEVICE auto Hessian(TMatrixx const& x, EConstraintFormulation eFormulation) const
+        -> math::linalg::mini::SMatrix<ScalarType, kDofs, kDofs>;
+};
+
+/**
+ * @brief Point-point contact constraint for mesh contact mechanics
+ *
+ * Stores constraint data (Lagrange multiplier, penalty parameter, gradient, Hessian)
+ * and provides methods to evaluate the constraint and its derivatives.
+ * Uses geometry::PointPointDistance for distance computation.
+ *
+ * @tparam TScalar Floating point scalar type
+ */
+template <common::CFloatingPoint TScalar>
+struct MeshPointPointConstraint : public MeshPairConstraint<geometry::PointPointDistance<TScalar>>
+{
+    using BaseType =
+        MeshPairConstraint<geometry::PointPointDistance<TScalar>>; ///< Base type for common members
+    using SelfType = MeshPointPointConstraint<TScalar>;            ///< Self type
+};
+
+/**
+ * @brief Point-edge contact constraint for mesh contact mechanics
+ *
+ * Stores constraint data (Lagrange multiplier, penalty parameter, gradient, Hessian)
+ * and provides methods to evaluate the constraint and its derivatives.
+ * Uses geometry::PointEdgeDistance for distance computation.
+ *
+ * @tparam TScalar Floating point scalar type
+ */
+template <common::CFloatingPoint TScalar>
+struct MeshPointEdgeConstraint : public MeshPairConstraint<geometry::PointEdgeDistance<TScalar>>
+{
+    using BaseType =
+        MeshPairConstraint<geometry::PointEdgeDistance<TScalar>>; ///< Base type for common members
+    using SelfType = MeshPointEdgeConstraint<TScalar>;            ///< Self type
+};
+
+/**
+ * @brief Point-triangle contact constraint for mesh contact mechanics
+ *
+ * Stores constraint data (Lagrange multiplier, penalty parameter, gradient, Hessian)
+ * and provides methods to evaluate the constraint and its derivatives.
+ * Uses geometry::PointTriangleDistance for signed distance computation.
+ *
+ * @tparam TScalar Floating point scalar type
+ */
+template <common::CFloatingPoint TScalar>
+struct MeshPointTriangleConstraint
+    : public MeshPairConstraint<geometry::PointTriangleDistance<TScalar>>
+{
+    using BaseType =
+        MeshPairConstraint<geometry::PointTriangleDistance<TScalar>>; ///< Base type for common
+                                                                      ///< members
+    using SelfType = MeshPointTriangleConstraint<TScalar>;            ///< Self type
+};
+
+/**
+ * @brief Edge-edge contact constraint for mesh contact mechanics
+ *
+ * Stores constraint data (Lagrange multiplier, penalty parameter, gradient, Hessian)
+ * and provides methods to evaluate the constraint and its derivatives.
+ * Uses geometry::EdgeEdgeDistance for signed distance computation with mollified norm.
+ *
+ * @tparam TScalar Floating point scalar type
+ */
+template <common::CFloatingPoint TScalar>
+struct MeshEdgeEdgeConstraint : public MeshPairConstraint<geometry::EdgeEdgeDistance<TScalar>>
+{
+    using BaseType =
+        MeshPairConstraint<geometry::EdgeEdgeDistance<TScalar>>; ///< Base type for common members
+    using SelfType = MeshEdgeEdgeConstraint<TScalar>;            ///< Self type
+};
+
+template <class TDistance>
+template <math::linalg::mini::CMatrix TMatrixx>
+inline PBAT_HOST_DEVICE void
+MeshPairConstraint<TDistance>::Compute(TMatrixx const& x, ConstraintComputationOptions const& opts)
+{
+    int mask = static_cast<int>(opts.eComputeFlags);
+    if (mask & static_cast<int>(EConstraintComputationFlags::Value))
+        c = DistanceType{}.Eval(x);
+    if (mask & static_cast<int>(EConstraintComputationFlags::Gradient))
+        g = DistanceType{}.Gradient(x);
+    if (mask & static_cast<int>(EConstraintComputationFlags::Hessian))
+    {
+        switch (opts.eHessianApproximation)
+        {
+            case EConstraintHessianApproximation::Full: H = DistanceType{}.Hessian(x); break;
+            case EConstraintHessianApproximation::GaussNewton: H = g * g.Transpose(); break;
+            default: H = DistanceType{}.Hessian(x); break;
+        }
+    }
 }
+
+template <class TDistance>
+template <math::linalg::mini::CMatrix TMatrixx>
+inline PBAT_HOST_DEVICE auto
+MeshPairConstraint<TDistance>::Eval(TMatrixx const& x, EConstraintFormulation eFormulation) const
+    -> ScalarType
+{
+    switch (eFormulation)
+    {
+        case EConstraintFormulation::Constraint: return c;
+        case EConstraintFormulation::Penalty: return ScalarType(0.5) * mu * c * c;
+        case EConstraintFormulation::AugmentedLagrangian:
+            return (ScalarType(0.5) * mu * c - lambda) * c;
+        case EConstraintFormulation::InteriorPoint: return -mu * std::log(s) + lambda * (c - s);
+        default: return c;
+    }
+}
+
+template <class TDistance>
+template <math::linalg::mini::CMatrix TMatrixx>
+inline PBAT_HOST_DEVICE auto MeshPairConstraint<TDistance>::Gradient(
+    TMatrixx const& x,
+    EConstraintFormulation eFormulation) const -> math::linalg::mini::SVector<ScalarType, kDofs>
+{
+    switch (eFormulation)
+    {
+        case EConstraintFormulation::Constraint: return g;
+        case EConstraintFormulation::Penalty: return mu * c * g;
+        case EConstraintFormulation::AugmentedLagrangian: return (mu * c - lambda) * g;
+        case EConstraintFormulation::InteriorPoint: return ((lambda * c - mu) / s - lambda) * g;
+        default: return g;
+    }
+}
+
+template <class TDistance>
+template <math::linalg::mini::CMatrix TMatrixx>
+inline PBAT_HOST_DEVICE auto
+MeshPairConstraint<TDistance>::Hessian(TMatrixx const& x, EConstraintFormulation eFormulation) const
+    -> math::linalg::mini::SMatrix<ScalarType, kDofs, kDofs>
+{
+    switch (eFormulation)
+    {
+        case EConstraintFormulation::Constraint: return H;
+        case EConstraintFormulation::Penalty: return mu * (g * g.Transpose() + c * H);
+        case EConstraintFormulation::AugmentedLagrangian:
+            return mu * g * g.Transpose() + (mu * c - lambda) * H;
+        case EConstraintFormulation::InteriorPoint:
+            return (lambda / s) * g * g.Transpose() - lambda * H;
+        default: return H;
+    }
+}
+
 } // namespace pbat::sim::contact
 
 #endif // PBAT_SIM_CONTACT_CONSTRAINTS_H

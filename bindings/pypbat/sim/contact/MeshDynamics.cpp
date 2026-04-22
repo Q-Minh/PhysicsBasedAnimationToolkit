@@ -1,15 +1,147 @@
 #include "MeshDynamics.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/eigen/sparse.h>
 #include <nanobind/stl/array.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/vector.h>
 #include <pbat/geometry/Device.h>
 #include <pbat/math/linalg/mini/Eigen.h>
+#include <pbat/math/linalg/mini/Reshape.h>
 #include <pbat/sim/contact/MeshDynamics.h>
 #include <pbat/sim/contact/MultiMesh.h>
+#include <vector>
 
 namespace pbat::py::sim::contact {
+
+namespace debug {
+
+template <int kStencil>
+struct Contact
+{
+    static auto constexpr kDims = 3;
+    static auto constexpr kDofs = kDims * kStencil;
+    using ScalarType            = Scalar;
+    using IndexType             = Index;
+
+    Eigen::Matrix<ScalarType, kDims, kStencil> Xc; ///< kDims x kStencil stencil positions
+    std::array<IndexType, kStencil> nodes;         ///< Stencil node indices
+    IndexType u, v;                                ///< Mesh primitive indices
+    int gu, gv;                                    ///< Geometry type ids
+    ScalarType lambda;                             ///< Lagrange multiplier
+    ScalarType slack;                              ///< Inequality slack variable
+    ScalarType decay;                              ///< Decay factor
+    Eigen::Matrix<ScalarType, kDims, kStencil>
+        grad; ///< Cached/stored gradient (from linearization)
+    Eigen::Matrix<ScalarType, kDims, kStencil> gradx; ///< Computed gradient at current positions x
+    ScalarType c;                       ///< Last evaluated linearized constraint value
+    ScalarType cx;                      ///< Last evaluated constraint value
+    Eigen::Vector2<ScalarType> cf;      ///< Friction constraint value
+    Eigen::Vector2<ScalarType> lambdaf; ///< Friction Lagrange multiplier
+    Eigen::Matrix<ScalarType, kDims, kStencil>
+        ngradf; ///< Negative friction gradient (i.e. friction forces)
+};
+
+struct MeshDynamics
+{
+    using ScalarType       = Scalar;
+    using IndexType        = Index;
+    using MeshDynamicsType = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
+
+    struct PointPointContact : public Contact<2>
+    {
+    };
+    struct PointEdgeContact : public Contact<3>
+    {
+    };
+    struct PointTriangleContact : public Contact<4>
+    {
+    };
+    struct EdgeEdgeContact : public Contact<4>
+    {
+    };
+
+    std::vector<PointPointContact> mPointPointContacts;
+    std::vector<PointEdgeContact> mPointEdgeContacts;
+    std::vector<PointTriangleContact> mPointTriangleContacts;
+    std::vector<EdgeEdgeContact> mEdgeEdgeContacts;
+
+    MeshDynamics(
+        MeshDynamicsType const& cd,
+        Eigen::Ref<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x)
+    {
+        mPointPointContacts.reserve(cd.PointPointContacts().Size());
+        mPointEdgeContacts.reserve(cd.PointEdgeContacts().Size());
+        mPointTriangleContacts.reserve(cd.PointTriangleContacts().Size());
+        mEdgeEdgeContacts.reserve(cd.EdgeEdgeContacts().Size());
+        auto const& params = cd.GetParams();
+        cd.ForAllContacts(
+            [&]<class TContactSet>(
+                typename TContactSet::ConstAccessorType C,
+                typename MeshDynamicsType::Stencil stencil) {
+                using ConstraintAccessorType   = decltype(C);
+                static auto constexpr kDofs    = ConstraintAccessorType::kDofs;
+                static auto constexpr kDims    = ConstraintAccessorType::kDims;
+                static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+                using PPSet                    = typename MeshDynamicsType::PointPointContactSet;
+                using PESet                    = typename MeshDynamicsType::PointEdgeContactSet;
+                using PTSet                    = typename MeshDynamicsType::PointTriangleContactSet;
+                using EESet                    = typename MeshDynamicsType::EdgeEdgeContactSet;
+                auto contact                   = []() {
+                    if constexpr (std::is_same_v<TContactSet, PPSet>)
+                        return PointPointContact{};
+                    else if constexpr (std::is_same_v<TContactSet, PESet>)
+                        return PointEdgeContact{};
+                    else if constexpr (std::is_same_v<TContactSet, PTSet>)
+                        return PointTriangleContact{};
+                    else if constexpr (std::is_same_v<TContactSet, EESet>)
+                        return EdgeEdgeContact{};
+                }();
+                auto const [Xc, nodes] = cd.template LoadStencil<TContactSet>(x, stencil);
+                auto xc                = Reshape<kDofs, 1>(Xc);
+                contact.Xc             = ToEigen(Xc);
+                contact.nodes          = nodes;
+                contact.u              = stencil.u;
+                contact.v              = stencil.v;
+                contact.gu             = stencil.gu;
+                contact.gv             = stencil.gv;
+                contact.lambda         = C.Lambda();
+                contact.slack          = C.Slack();
+                contact.decay          = C.Decay();
+                contact.c              = C.Eval(xc);
+                contact.grad           = ToEigen(C.Grad()).reshaped(kDims, kStencil);
+                auto d                 = C.Function();
+                auto gradx             = d.Gradient(xc);
+                contact.gradx          = ToEigen(gradx).reshaped(kDims, kStencil);
+                contact.cx             = d.Eval(xc);
+                // Friction data (copied from MeshDynamics::ToGradient)
+                auto F          = C.Friction();
+                contact.cf      = ToEigen(F.Eval(xc));
+                contact.lambdaf = ToEigen(F.Lambda());
+                auto cf         = F.Eval(xc);
+                auto kf         = params.kc / params.gamma * params.gammaf;
+                using pbat::math::linalg::mini::SVector;
+                auto const& T              = F.TangentBasis();
+                auto const& W              = F.Weights();
+                SVector<Scalar, kDims> gfc = T * (kf * cf - F.Lambda());
+                auto gradfc                = ToEigen(gfc);
+                for (auto ki = 0; ki < kStencil; ++ki)
+                    contact.ngradf.col(ki) = -W(ki) * gradfc;
+
+                if constexpr (std::is_same_v<TContactSet, PPSet>)
+                    mPointPointContacts.push_back(std::move(contact));
+                else if constexpr (std::is_same_v<TContactSet, PESet>)
+                    mPointEdgeContacts.push_back(std::move(contact));
+                else if constexpr (std::is_same_v<TContactSet, PTSet>)
+                    mPointTriangleContacts.push_back(std::move(contact));
+                else if constexpr (std::is_same_v<TContactSet, EESet>)
+                    mEdgeEdgeContacts.push_back(std::move(contact));
+            },
+            1 /*nThreads*/);
+    }
+};
+
+} // namespace debug
 
 void BindMeshDynamics(nanobind::module_& m)
 {
@@ -19,166 +151,6 @@ void BindMeshDynamics(nanobind::module_& m)
     using MeshDynamicsType       = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
     using MeshDynamicsParamsType = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>::Params;
     using MultiMeshType          = pbat::sim::contact::MultiMesh<IndexType>;
-    using DeviceType             = pbat::geometry::Device;
-    using EMeshEnergyComputationFlags = pbat::sim::contact::EMeshEnergyComputationFlags;
-    using MeshContactEnergy1 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 1>;
-    using MeshContactEnergy2 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 2>;
-    using MeshContactEnergy3 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 3>;
-    using MeshContactEnergy4 = pbat::sim::contact::MeshContactEnergy<ScalarType, IndexType, 4>;
-
-    nb::enum_<EMeshEnergyComputationFlags>(m, "EMeshEnergyComputationFlags", nb::is_arithmetic())
-        .value("Potential", EMeshEnergyComputationFlags::Potential, "Compute potential energy.")
-        .value("Gradient", EMeshEnergyComputationFlags::Gradient, "Compute contact gradients.")
-        .value("Hessian", EMeshEnergyComputationFlags::Hessian, "Compute contact hessians.")
-        .export_values();
-
-    nb::class_<MeshContactEnergy1>(m, "MeshContactEnergy_1NodeStencil")
-        .def(nb::init<>(), "Construct a MeshContactEnergy with 1-node stencil (3 DOFs).")
-        .def_ro("En", &MeshContactEnergy1::En, "(float) Normal contact energy.")
-        .def_ro("Ef", &MeshContactEnergy1::Ef, "(float) Frictional contact energy.")
-        .def_prop_ro(
-            "gradEn",
-            [](MeshContactEnergy1 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy1::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEn);
-            },
-            "(numpy.ndarray) Normal contact energy gradient (3x1).")
-        .def_prop_ro(
-            "hessEn",
-            [](MeshContactEnergy1 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy1::kDofs, MeshContactEnergy1::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEn);
-            },
-            "(numpy.ndarray) Normal contact energy Hessian (3x3).")
-        .def_prop_ro(
-            "gradEf",
-            [](MeshContactEnergy1 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy1::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEf);
-            },
-            "(numpy.ndarray) Frictional contact energy gradient (3x1).")
-        .def_prop_ro(
-            "hessEf",
-            [](MeshContactEnergy1 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy1::kDofs, MeshContactEnergy1::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEf);
-            },
-            "(numpy.ndarray) Frictional contact energy Hessian (3x3).")
-        .def_ro(
-            "stencil",
-            &MeshContactEnergy1::stencil,
-            "(numpy.ndarray) Indices of involved vertices (1x1).");
-
-    nb::class_<MeshContactEnergy2>(m, "MeshContactEnergy_2NodeStencil")
-        .def(nb::init<>(), "Construct a MeshContactEnergy with 2-node stencil (6 DOFs).")
-        .def_ro("En", &MeshContactEnergy2::En, "(float) Normal contact energy.")
-        .def_ro("Ef", &MeshContactEnergy2::Ef, "(float) Frictional contact energy.")
-        .def_prop_ro(
-            "gradEn",
-            [](MeshContactEnergy2 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy2::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEn);
-            },
-            "(numpy.ndarray) Normal contact energy gradient (6x1).")
-        .def_prop_ro(
-            "hessEn",
-            [](MeshContactEnergy2 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy2::kDofs, MeshContactEnergy2::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEn);
-            },
-            "(numpy.ndarray) Normal contact energy Hessian (6x6).")
-        .def_prop_ro(
-            "gradEf",
-            [](MeshContactEnergy2 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy2::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEf);
-            },
-            "(numpy.ndarray) Frictional contact energy gradient (6x1).")
-        .def_prop_ro(
-            "hessEf",
-            [](MeshContactEnergy2 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy2::kDofs, MeshContactEnergy2::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEf);
-            },
-            "(numpy.ndarray) Frictional contact energy Hessian (6x6).")
-        .def_ro(
-            "stencil",
-            &MeshContactEnergy2::stencil,
-            "(numpy.ndarray) Indices of involved vertices (2x1).");
-
-    nb::class_<MeshContactEnergy3>(m, "MeshContactEnergy_3NodeStencil")
-        .def(nb::init<>(), "Construct a MeshContactEnergy with 3-node stencil (9 DOFs).")
-        .def_ro("En", &MeshContactEnergy3::En, "(float) Normal contact energy.")
-        .def_ro("Ef", &MeshContactEnergy3::Ef, "(float) Frictional contact energy.")
-        .def_prop_ro(
-            "gradEn",
-            [](MeshContactEnergy3 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy3::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEn);
-            },
-            "(numpy.ndarray) Normal contact energy gradient (9x1).")
-        .def_prop_ro(
-            "hessEn",
-            [](MeshContactEnergy3 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy3::kDofs, MeshContactEnergy3::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEn);
-            },
-            "(numpy.ndarray) Normal contact energy Hessian (9x9).")
-        .def_prop_ro(
-            "gradEf",
-            [](MeshContactEnergy3 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy3::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEf);
-            },
-            "(numpy.ndarray) Frictional contact energy gradient (9x1).")
-        .def_prop_ro(
-            "hessEf",
-            [](MeshContactEnergy3 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy3::kDofs, MeshContactEnergy3::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEf);
-            },
-            "(numpy.ndarray) Frictional contact energy Hessian (9x9).")
-        .def_ro(
-            "stencil",
-            &MeshContactEnergy3::stencil,
-            "(numpy.ndarray) Indices of involved vertices (3x1).");
-
-    nb::class_<MeshContactEnergy4>(m, "MeshContactEnergy_4NodeStencil")
-        .def(nb::init<>(), "Construct a MeshContactEnergy with 4-node stencil (12 DOFs).")
-        .def_ro("En", &MeshContactEnergy4::En, "(float) Normal contact energy.")
-        .def_ro("Ef", &MeshContactEnergy4::Ef, "(float) Frictional contact energy.")
-        .def_prop_ro(
-            "gradEn",
-            [](MeshContactEnergy4 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy4::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEn);
-            },
-            "(numpy.ndarray) Normal contact energy gradient (12x1).")
-        .def_prop_ro(
-            "hessEn",
-            [](MeshContactEnergy4 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy4::kDofs, MeshContactEnergy4::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEn);
-            },
-            "(numpy.ndarray) Normal contact energy Hessian (12x12).")
-        .def_prop_ro(
-            "gradEf",
-            [](MeshContactEnergy4 const& self)
-                -> Eigen::Vector<ScalarType, MeshContactEnergy4::kDofs> {
-                return math::linalg::mini::ToEigen(self.gradEf);
-            },
-            "(numpy.ndarray) Frictional contact energy gradient (12x1).")
-        .def_prop_ro(
-            "hessEf",
-            [](MeshContactEnergy4 const& self)
-                -> Eigen::Matrix<ScalarType, MeshContactEnergy4::kDofs, MeshContactEnergy4::kDofs> {
-                return math::linalg::mini::ToEigen(self.hessEf);
-            },
-            "(numpy.ndarray) Frictional contact energy Hessian (12x12).")
-        .def_ro(
-            "stencil",
-            &MeshContactEnergy4::stencil,
-            "(numpy.ndarray) Indices of involved vertices (4x1).");
 
     nb::class_<MeshDynamicsParamsType>(m, "MeshDynamicsParams")
         .def(nb::init<>(), "Construct default MeshDynamicsParams.")
@@ -222,6 +194,23 @@ void BindMeshDynamics(nanobind::module_& m)
             "radius.\n"
             "    betarq (float): Slope of the linear function of inertial target distance to add "
             "to `rqstart` to initialize the actual query radius.\n")
+        .def(
+            "with_sequential_augmented_lagrangian",
+            &MeshDynamicsParamsType::WithSequentialAugmentedLagrangian,
+            nb::arg("gamma"),
+            nb::arg("gammaf"),
+            nb::arg("dmin"),
+            nb::arg("decay"),
+            nb::arg("decaylo"),
+            nb::rv_policy::reference_internal,
+            "Set the sequential augmented Lagrangian parameters.\n\n"
+            "Args:\n"
+            "    gamma (float): Multiple of dynamics hessian curvature in constraint gradient "
+            "direction for barrier parameter computation, `gamma > 0`.\n"
+            "    gammaf (float): Same as gamma but for frictional contact, `gammaf > 0`.\n"
+            "    dmin (float): Loose target minimum contact distance, `0 < dmin < r`.\n"
+            "    decay (float): Decay factor for constraint deactivation, `0 < decay < 1`.\n"
+            "    decaylo (float): Lower bound for decay factor, `0 < decaylo < 1`.\n")
         .def(
             "construct",
             &MeshDynamicsParamsType::Construct,
@@ -271,7 +260,28 @@ void BindMeshDynamics(nanobind::module_& m)
             "(bool) Whether to deactivate contacts.")
         .def_rw("kc", &MeshDynamicsParamsType::kc, "(float) OGC contact stiffness parameter.")
         .def_rw("rqstart", &MeshDynamicsParamsType::rqstart, "(float) Initial query radius base.")
-        .def_rw("betarq", &MeshDynamicsParamsType::betarq, "(float) Query radius growth factor.");
+        .def_rw("betarq", &MeshDynamicsParamsType::betarq, "(float) Query radius growth factor.")
+        .def_rw(
+            "gamma",
+            &MeshDynamicsParamsType::gamma,
+            "(float) Multiple of dynamics hessian curvature in constraint gradient direction for "
+            "barrier parameter computation.")
+        .def_rw(
+            "gammaf",
+            &MeshDynamicsParamsType::gammaf,
+            "(float) Same as gamma but for frictional contact, `gammaf > 0`.")
+        .def_rw(
+            "dmin",
+            &MeshDynamicsParamsType::dmin,
+            "(float) Loose target minimum contact distance.")
+        .def_rw(
+            "decay",
+            &MeshDynamicsParamsType::decay,
+            "(float) Decay factor for constraint deactivation.")
+        .def_rw(
+            "decaylo",
+            &MeshDynamicsParamsType::decaylo,
+            "(float) Decay threshold under which constraints are deactivated.");
 
     nb::class_<MeshDynamicsType>(m, "MeshDynamics")
         .def(nb::init<>(), "Construct an empty mesh contact dynamics engine.")
@@ -290,10 +300,10 @@ void BindMeshDynamics(nanobind::module_& m)
             nb::arg("staticMeshes").none(),
             "Construct a MeshDynamics object with contact geometries.\n\n"
             "Args:\n"
-            "    Xdynamic (Eigen.Matrix): `3 x |# points|` dynamic point positions (column-major: "
-            "one point per column).\n"
+            "    Xdynamic (numpy.ndarray): `3 x |# points|` dynamic point positions "
+            "(column-major: one point per column).\n"
             "    dynamicMeshes (MultiMesh): Dynamic mesh contact geometry representation.\n"
-            "    Xstatic (Eigen.Matrix): `3 x |# points|` static point positions (column-major: "
+            "    Xstatic (numpy.ndarray): `3 x |# points|` static point positions (column-major: "
             "one point per column).\n"
             "    staticMeshes (MultiMesh): Static mesh contact geometry representation.\n")
         .def(
@@ -307,8 +317,8 @@ void BindMeshDynamics(nanobind::module_& m)
             nb::arg("dynamicMeshes"),
             "Set the dynamic contact geometry.\n\n"
             "Args:\n"
-            "    Xdynamic (Eigen.Matrix): `3 x |# points|` dynamic point positions (column-major: "
-            "one point per column).\n"
+            "    Xdynamic (numpy.ndarray): `3 x |# points|` dynamic point positions "
+            "(column-major: one point per column).\n"
             "    dynamicMeshes (MultiMesh): Dynamic mesh contact geometry representation.\n")
         .def(
             "set_static_geometry",
@@ -321,7 +331,7 @@ void BindMeshDynamics(nanobind::module_& m)
             nb::arg("staticMeshes"),
             "Set the static contact geometry.\n\n"
             "Args:\n"
-            "    Xstatic (Eigen.Matrix): `3 x |# points|` static point positions (column-major: "
+            "    Xstatic (numpy.ndarray): `3 x |# points|` static point positions (column-major: "
             "one point per column).\n"
             "    staticMeshes (MultiMesh): Static mesh contact geometry representation.\n")
         .def(
@@ -332,105 +342,140 @@ void BindMeshDynamics(nanobind::module_& m)
             "Args:\n"
             "    device (Device): Device to use for acceleration structures.\n")
         .def(
-            "truncate_displaced_positions",
+            "restore_feasibility",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& Xkp1,
                std::optional<Eigen::Vector<bool, Eigen::Dynamic> const> mask) {
                 Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> Xkp1Copy = Xkp1;
                 if (mask)
-                    self.TruncateDisplacedPositions(Xkp1Copy, *mask);
+                    self.RestoreFeasibility(Xkp1Copy, *mask);
                 else
-                    self.TruncateDisplacedPositions(Xkp1Copy);
+                    self.RestoreFeasibility(Xkp1Copy);
                 return Xkp1Copy;
             },
             nb::arg("xkp1"),
             nb::arg("mask").none(),
-            "Truncate the displacements to be within the precomputed bounds.\n\n"
+            "Restore the feasibility of the displaced positions within the precomputed bounds.\n\n"
             "Args:\n"
-            "    xkp1 (Eigen.Matrix): `3 x |# points|` point positions (column-major: one point "
+            "    xkp1 (numpy.ndarray): `3 x |# points|` point positions (column-major: one point "
             "per column).\n"
-            "    mask (Eigen.Matrix, optional): `|# points| x 1` mask of points to ignore (true = "
+            "    mask (numpy.ndarray | None): `|# points| x 1` mask of points to ignore (true = "
             "ignore, false = process).\n\n"
             "Returns:\n"
             "    numpy.ndarray: `3 x |# points|` truncated point positions.\n")
         .def(
-            "truncate_displacements",
+            "make_step_feasible",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& Dxkp1,
                std::optional<Eigen::Vector<bool, Eigen::Dynamic> const> mask) {
                 Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> Dxkp1Copy = Dxkp1;
                 if (mask)
-                    self.TruncateDisplacements(Dxkp1Copy, *mask);
+                    self.MakeStepFeasible(Dxkp1Copy, *mask);
                 else
-                    self.TruncateDisplacements(
+                    self.MakeStepFeasible(
                         Dxkp1Copy,
                         Eigen::Vector<bool, Eigen::Dynamic>::Constant(Dxkp1Copy.cols(), false));
                 return Dxkp1Copy;
             },
             nb::arg("dx"),
             nb::arg("mask").none(),
-            "Truncate the displacements to be within the precomputed bounds.\n\n"
+            "Make the step feasible by truncating the displacements to be within the precomputed "
+            "bounds.\n\n"
             "Args:\n"
             "    dx (numpy.ndarray): `3 x |# points|` point displacements (column-major: "
             "one point per column).\n"
             "    mask (numpy.ndarray | None): `|# points| x 1` mask of points to ignore (true = "
-            "ignore, false = process).\n")
+            "ignore, false = process).\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `3 x |# points|` truncated displacements.\n")
         .def(
-            "request_displacement_bounds_computation",
-            &MeshDynamicsType::RequestDisplacementBoundsComputation,
-            "Request recomputation of displacement bounds.")
+            "request_constraint_set_update",
+            &MeshDynamicsType::RequestConstraintSetUpdate,
+            "Request constraint set update.")
         .def_prop_ro(
-            "requires_bounds_computation",
-            &MeshDynamicsType::RequiresBoundsComputation,
-            "Whether displacement bounds need to be recomputed.")
+            "requires_constraint_set_update",
+            &MeshDynamicsType::RequiresConstraintSetUpdate,
+            "Whether constraint set needs to be recomputed.")
         .def_prop_ro(
             "num_truncated_points",
             &MeshDynamicsType::NumTruncatedPoints,
             "Number of truncated points.")
         .def(
-            "compute_displacement_bounds",
+            "update_constraint_set",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X) {
-                self.ComputeDisplacementBounds(X);
+                self.UpdateConstraintSet(X);
             },
             nb::arg("X"),
-            "Compute the per-point displacement bounds based on current geometry and OGC state.\n\n"
+            "Update the constraint set based on the current point positions.\n\n"
             "Args:\n"
-            "    X (Eigen.Matrix): `3 x |# points|` current point positions (column-major: one "
+            "    X (numpy.ndarray): `3 x |# points|` current point positions (column-major: one "
             "point per column).\n")
         .def(
-            "compute_energies",
+            "linearize_constraints",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& xt,
-               ScalarType h,
-               EMeshEnergyComputationFlags eFlags) { self.ComputeEnergies(x, xt, h, eFlags); },
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const&
+                   xt) { self.LinearizeConstraints(x, xt); },
             nb::arg("x"),
             nb::arg("xt"),
-            nb::arg("h"),
-            nb::arg("computation_flags"),
-            "Compute the contact energies based on current geometry.\n\n"
+            "Linearize all contact constraints at the given positions.\n\n"
             "Args:\n"
-            "    x (Eigen.Matrix): `3*|# points| x 1` or `3 x |# points|` current point positions "
-            "(column-major: one point per column).\n"
-            "    xt (Eigen.Matrix): `3*|# points| x 1` or `3 x |# points|` previous point "
-            "positions (column-major: one point per column).\n"
-            "    h (float): Time step size.\n"
-            "    computation_flags (EMeshEnergyComputationFlags): Flags controlling which energy "
-            "components to compute (e.g., potential, gradient, hessian).\n")
-        .def_prop_ro("potential", &MeshDynamicsType::Potential, "Contact potential energy.")
-        .def_prop_ro(
+            "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` current point "
+            "positions.\n"
+            "    xt (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` target point "
+            "positions at time t.\n")
+        .def(
+            "update_penalty_parameter",
+            [](MeshDynamicsType& self,
+               Eigen::SparseMatrix<ScalarType, Eigen::ColMajor, IndexType> const& H) {
+                self.UpdatePenaltyParameter(H);
+            },
+            nb::arg("H"),
+            "Compute the penalty parameter for the augmented Lagrangian based on an estimate of "
+            "the objective function's curvature.\n\n"
+            "Args:\n"
+            "    H (scipy.sparse.csc_matrix): Symmetric Hessian estimate in CSC format.\n")
+        .def(
+            "update_penalty_parameter",
+            [](MeshDynamicsType& self,
+               Eigen::SparseMatrix<ScalarType, Eigen::RowMajor, IndexType> const& H) {
+                self.UpdatePenaltyParameter(H);
+            },
+            nb::arg("H"),
+            "Compute the penalty parameter for the augmented Lagrangian based on an estimate of "
+            "the objective function's curvature.\n\n"
+            "Args:\n"
+            "    H (scipy.sparse.csc_matrix): Symmetric Hessian estimate in CSR format.\n")
+        .def(
+            "potential",
+            [](MeshDynamicsType const& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x) {
+                return self.Potential(x);
+            },
+            nb::arg("x"),
+            "Compute the total contact potential energy.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` current point "
+            "positions.\n"
+            "Returns:\n"
+            "    float: Total contact potential energy.\n")
+        .def(
             "gradient",
-            &MeshDynamicsType::Gradient,
-            "`3*|# points| x 1` contact energy gradient.")
-        .def_prop_ro(
-            "normal_gradient",
-            &MeshDynamicsType::NormalGradient,
-            "`3*|# points| x 1` normal contact energy gradient.")
-        .def_prop_ro(
-            "frictional_gradient",
-            &MeshDynamicsType::FrictionalGradient,
-            "`3*|# points| x 1` frictional contact energy gradient.")
+            [](MeshDynamicsType const& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
+               bool bForAugmentedLagrangian) { return self.Gradient(x, bForAugmentedLagrangian); },
+            nb::arg("x"),
+            nb::arg("for_augmented_lagrangian") = false,
+            "Compute the total contact gradient.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` current point "
+            "positions.\n"
+            "    for_augmented_lagrangian (bool, optional): Whether the gradient is for use in an "
+            "augmented Lagrangian method, which affects the inclusion of penalty terms. Default is "
+            "False.\n\n"
+            "Returns:\n"
+            "    numpy.ndarray: `3*|# points| x 1` total contact gradient.\n")
         .def(
             "serialize",
             &MeshDynamicsType::Serialize,
@@ -467,35 +512,73 @@ void BindMeshDynamics(nanobind::module_& m)
             "ogc_state",
             [](MeshDynamicsType& self) -> decltype(auto) { return self.OgcState(); },
             "OGC state.")
-        .def_prop_ro(
-            "vertex_vertex_energies",
-            &MeshDynamicsType::VertexVertexEnergies,
-            "List of vertex-vertex contact energies (list of MeshContactEnergy2).")
-        .def_prop_ro(
-            "vertex_edge_energies",
-            &MeshDynamicsType::VertexEdgeEnergies,
-            "List of vertex-edge contact energies (list of MeshContactEnergy3).")
-        .def_prop_ro(
-            "vertex_triangle_energies",
-            &MeshDynamicsType::VertexTriangleEnergies,
-            "List of vertex-triangle contact energies (list of MeshContactEnergy4).")
-        .def_prop_ro(
-            "edge_edge_energies",
-            &MeshDynamicsType::EdgeEdgeEnergies,
-            "List of edge-edge contact energies (list of MeshContactEnergy4).")
-        .def_prop_ro(
-            "vertex_environment_energies",
-            &MeshDynamicsType::VertexEnvironmentEnergies,
-            "List of vertex-environment contact energies (list of MeshContactEnergy1).")
-        .def_prop_ro(
-            "edge_environment_energies",
-            &MeshDynamicsType::EdgeEnvironmentEnergies,
-            "List of edge-environment contact energies (list of MeshContactEnergy2).")
-        .def_prop_ro(
-            "triangle_environment_energies",
-            &MeshDynamicsType::TriangleEnvironmentEnergies,
-            "List of triangle-environment contact energies (list of MeshContactEnergy3).")
-        .def_prop_ro("num_contacts", &MeshDynamicsType::NumContacts, "Number of contacts.");
+        .def_prop_ro("num_contacts", &MeshDynamicsType::NumContacts, "Total number of contacts.");
+
+    using DebugMeshDynamicsType     = debug::MeshDynamics;
+    using DebugPointPointContact    = debug::MeshDynamics::PointPointContact;
+    using DebugPointEdgeContact     = debug::MeshDynamics::PointEdgeContact;
+    using DebugPointTriangleContact = debug::MeshDynamics::PointTriangleContact;
+    using DebugEdgeEdgeContact      = debug::MeshDynamics::EdgeEdgeContact;
+
+    auto const fBindDebugContact = [](auto cls) {
+        using ContactType = typename decltype(cls)::Type;
+        cls.def_ro("Xc", &ContactType::Xc, "Stencil positions (kDims x kStencil).")
+            .def_ro("nodes", &ContactType::nodes, "Stencil node indices.")
+            .def_ro("u", &ContactType::u, "First mesh primitive index.")
+            .def_ro("v", &ContactType::v, "Second mesh primitive index.")
+            .def_ro("gu", &ContactType::gu, "First geometry type id.")
+            .def_ro("gv", &ContactType::gv, "Second geometry type id.")
+            .def_ro("lam", &ContactType::lambda, "Lagrange multiplier.")
+            .def_ro("slack", &ContactType::slack, "Inequality slack variable.")
+            .def_ro("decay", &ContactType::decay, "Decay factor.")
+            .def_ro("c", &ContactType::c, "c(x_k) + grad c(x_k)^T (x - x_k).")
+            .def_ro("grad", &ContactType::grad, "grad c(x_k)")
+            .def_ro("gradx", &ContactType::gradx, "grad c(x)")
+            .def_ro("cx", &ContactType::cx, "c(x).")
+            .def_ro("cf", &ContactType::cf, "Friction constraint value (2D).")
+            .def_ro("lambdaf", &ContactType::lambdaf, "Friction Lagrange multiplier (2D).")
+            .def_ro(
+                "ngradf",
+                &ContactType::ngradf,
+                "Negative friction gradient (i.e. friction forces).");
+    };
+
+    fBindDebugContact(nb::class_<DebugPointPointContact>(m, "DebugPointPointContact"));
+    fBindDebugContact(nb::class_<DebugPointEdgeContact>(m, "DebugPointEdgeContact"));
+    fBindDebugContact(nb::class_<DebugPointTriangleContact>(m, "DebugPointTriangleContact"));
+    fBindDebugContact(nb::class_<DebugEdgeEdgeContact>(m, "DebugEdgeEdgeContact"));
+
+    nb::class_<DebugMeshDynamicsType>(m, "DebugMeshDynamics")
+        .def(
+            "__init__",
+            [](DebugMeshDynamicsType* self,
+               MeshDynamicsType const& cd,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x) {
+                new (self) DebugMeshDynamicsType(cd, x);
+            },
+            nb::arg("cd"),
+            nb::arg("x"),
+            "Construct debug contact data from a MeshDynamics object and positions.\n\n"
+            "Args:\n"
+            "    cd (MeshDynamics): Contact dynamics engine.\n"
+            "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` dynamic node "
+            "positions.\n")
+        .def_ro(
+            "point_point_contacts",
+            &DebugMeshDynamicsType::mPointPointContacts,
+            "List of point-point debug contacts.")
+        .def_ro(
+            "point_edge_contacts",
+            &DebugMeshDynamicsType::mPointEdgeContacts,
+            "List of point-edge debug contacts.")
+        .def_ro(
+            "point_triangle_contacts",
+            &DebugMeshDynamicsType::mPointTriangleContacts,
+            "List of point-triangle debug contacts.")
+        .def_ro(
+            "edge_edge_contacts",
+            &DebugMeshDynamicsType::mEdgeEdgeContacts,
+            "List of edge-edge debug contacts.");
 }
 
 } // namespace pbat::py::sim::contact

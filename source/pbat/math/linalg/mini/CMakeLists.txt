@@ -13,6 +13,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Flatten.h"
     "Geometry.h"
     "Inverse.h"
+    "LLT.h"
     "Matrix.h"
     "Mini.h"
     "Norm.h"
@@ -26,6 +27,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "SubMatrix.h"
     "SVD.h"
     "Transpose.h"
+    "TriangularSolve.h"
     "UnaryOperations.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -38,6 +40,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Flatten.cpp"
     "Geometry.cpp"
     "Inverse.cpp"
+    "LLT.cpp"
     "Matrix.cpp"
     "Norm.cpp"
     "Product.cpp"
@@ -50,5 +53,6 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "SubMatrix.cpp"
     "SVD.cpp"
     "Transpose.cpp"
+    "TriangularSolve.cpp"
     "UnaryOperations.cpp"
 )

@@ -6,6 +6,7 @@
 #include "Norm.h"
 #include "Product.h"
 #include "Transpose.h"
+#include "TriangularSolve.h"
 #include "pbat/Aliases.h"
 
 #include <Eigen/QR>
@@ -189,5 +190,159 @@ TEST_CASE("[math][linalg][mini] Givens rotation")
         ScalarType zero = -s * a + c * b;
         CHECK_EQ(zero, doctest::Approx(0.0).epsilon(1e-14));
         CHECK_EQ(std::abs(r), doctest::Approx(5.0).epsilon(1e-14));
+    }
+}
+
+TEST_CASE("[math][linalg][mini] QRSolve")
+{
+    using namespace pbat::math::linalg::mini;
+    using ScalarType = pbat::Scalar;
+
+    SUBCASE("2x2 square system")
+    {
+        // A = [4 2; 2 5], b = [8, 9]
+        SMatrix<ScalarType, 2, 2> A;
+        A(0, 0) = 4.0;
+        A(0, 1) = 2.0;
+        A(1, 0) = 2.0;
+        A(1, 1) = 5.0;
+
+        SVector<ScalarType, 2> b{8.0, 9.0};
+
+        auto [Q, R] = QR(A);
+        auto x      = QRSolve(Q, R, b);
+
+        // Check A * x = b
+        SVector<ScalarType, 2> Ax = A * x;
+        ScalarType error          = Norm(Ax - b);
+        CHECK_LE(error, ScalarType{1e-5} * Norm(A));
+    }
+
+    SUBCASE("3x3 square system")
+    {
+        SMatrix<ScalarType, 3, 3> A;
+        A(0, 0) = 12.0;
+        A(0, 1) = -51.0;
+        A(0, 2) = 4.0;
+        A(1, 0) = 6.0;
+        A(1, 1) = 167.0;
+        A(1, 2) = -68.0;
+        A(2, 0) = -4.0;
+        A(2, 1) = 24.0;
+        A(2, 2) = -41.0;
+
+        SVector<ScalarType, 3> b{1.0, 2.0, 3.0};
+
+        auto [Q, R] = QR(A);
+        auto x      = QRSolve(Q, R, b);
+
+        // Check A * x = b
+        SVector<ScalarType, 3> Ax = A * x;
+        ScalarType error          = Norm(Ax - b);
+        CHECK_LE(error, ScalarType{1e-5} * Norm(A));
+    }
+
+    SUBCASE("QRSolve with multiple RHS")
+    {
+        SMatrix<ScalarType, 3, 3> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(0, 2) = 3.0;
+        A(1, 0) = 4.0;
+        A(1, 1) = 5.0;
+        A(1, 2) = 6.0;
+        A(2, 0) = 7.0;
+        A(2, 1) = 8.0;
+        A(2, 2) = 10.0;
+
+        SMatrix<ScalarType, 3, 2> B;
+        B(0, 0) = 1.0;
+        B(0, 1) = 4.0;
+        B(1, 0) = 2.0;
+        B(1, 1) = 5.0;
+        B(2, 0) = 3.0;
+        B(2, 1) = 6.0;
+
+        auto [Q, R] = QR(A);
+        auto X      = QRSolve(Q, R, B);
+
+        // Check A * X = B
+        SMatrix<ScalarType, 3, 2> AX = A * X;
+        ScalarType error             = Norm(AX - B);
+        CHECK_LE(error, ScalarType{1e-5} * Norm(A));
+    }
+
+    SUBCASE("Overdetermined least-squares system")
+    {
+        // 3x2 system: A * x ≈ b (least-squares solution)
+        SMatrix<ScalarType, 3, 2> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(1, 0) = 3.0;
+        A(1, 1) = 4.0;
+        A(2, 0) = 5.0;
+        A(2, 1) = 6.0;
+
+        SVector<ScalarType, 3> b{1.0, 2.0, 3.0};
+
+        auto [Q, R] = QR(A);
+        auto x      = QRSolve(Q, R, b);
+
+        // The least-squares solution satisfies A^T * A * x = A^T * b
+        SMatrix<ScalarType, 2, 2> AtA = A.Transpose() * A;
+        SVector<ScalarType, 2> Atb    = A.Transpose() * b;
+        SVector<ScalarType, 2> AtAx   = AtA * x;
+        ScalarType error              = Norm(AtAx - Atb);
+        CHECK_LE(error, ScalarType{1e-5} * Norm(AtA));
+    }
+
+    SUBCASE("Rank-deficient system")
+    {
+        // A has rank 1: col2 = 2*col1, so R(1,1) should be ~0
+        SMatrix<ScalarType, 3, 2> A;
+        A(0, 0) = 1.0;
+        A(0, 1) = 2.0;
+        A(1, 0) = 2.0;
+        A(1, 1) = 4.0;
+        A(2, 0) = 3.0;
+        A(2, 1) = 6.0;
+
+        SVector<ScalarType, 3> b{1.0, 2.0, 3.0};
+
+        auto [Q, R] = QR(A);
+
+        // R(1,1) should be numerically zero since col2 is linearly dependent
+        CHECK_LE(std::abs(R(1, 1)), ScalarType{1e-10});
+
+        // QRSolve should not produce Inf/NaN
+        auto x = QRSolve(Q, R, b);
+        for (auto i = 0; i < 2; ++i)
+        {
+            CHECK(std::isfinite(x(i)));
+        }
+
+        // The solution should still minimize ||A*x - b|| (within the rank-1 subspace)
+        SVector<ScalarType, 3> residual = A * x - b;
+        ScalarType residualNorm         = Norm(residual);
+        // Residual should be reasonable (not Inf/NaN)
+        CHECK(std::isfinite(residualNorm));
+    }
+
+    SUBCASE("Fully zero matrix")
+    {
+        SMatrix<ScalarType, 2, 2> A;
+        A.SetZero();
+
+        SVector<ScalarType, 2> b{1.0, 2.0};
+
+        auto [Q, R] = QR(A);
+        auto x      = QRSolve(Q, R, b);
+
+        // With a zero matrix, all diagonals of R are zero, so x should be zero
+        for (auto i = 0; i < 2; ++i)
+        {
+            CHECK(std::isfinite(x(i)));
+            CHECK_EQ(x(i), doctest::Approx(0.0).epsilon(1e-14));
+        }
     }
 }

@@ -39,7 +39,7 @@ Integrator::Integrator(Data const& data)
       mQuadratureWeights(data.wg.size()),
       mShapeFunctionGradients(data.GP.size()),
       mLameCoefficients(data.lame.size()),
-      mDetHZero(static_cast<GpuScalar>(data.detHZero)),
+      mDetHZero(static_cast<GpuScalar>(data.hessZero)),
       mVertexTetrahedronPrefix(data.GVGp.size()),
       mVertexTetrahedronNeighbours(data.GVGe.size()),
       mVertexTetrahedronLocalVertexIndices(data.GVGilocal.size()),
@@ -296,7 +296,7 @@ kernels::BackwardEulerMinimization Integrator::BdfDeviceParameters(GpuScalar dt,
     bdf.wg        = mQuadratureWeights.Raw();
     bdf.GP        = mShapeFunctionGradients.Raw();
     bdf.lame      = mLameCoefficients.Raw();
-    bdf.detHZero  = mDetHZero;
+    bdf.hessZero  = mDetHZero;
     bdf.GVTp      = mVertexTetrahedronPrefix.Raw();
     bdf.GVTn      = mVertexTetrahedronNeighbours.Raw();
     bdf.GVTilocal = mVertexTetrahedronLocalVertexIndices.Raw();

@@ -106,6 +106,7 @@ if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
     FetchContent_Declare(
         _nanobind
         GIT_REPOSITORY https://github.com/Doekin/nanobind.git
+
         # GIT_REPOSITORY https://github.com/Q-Minh/nanobind
         GIT_TAG stubgen_win_dll
         GIT_PROGRESS TRUE
@@ -127,18 +128,6 @@ if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
         SYSTEM
     )
     FetchContent_MakeAvailable(tracy)
-endif()
-
-if(NOT TARGET cpp-sort::cpp-sort)
-    FetchContent_Declare(
-        _cppsort
-        GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
-        GIT_TAG 2.x.y-stable
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
-        SYSTEM
-    )
-    FetchContent_MakeAvailable(_cppsort)
 endif()
 
 if(PBAT_USE_INTEL_MKL)
@@ -205,4 +194,15 @@ if(PBAT_BUILD_DOC)
         REQUIRED
         OPTIONAL_COMPONENTS dot mscgen dia
     )
+endif()
+
+if(PBAT_BUILD_BENCHMARKS)
+    FetchContent_Declare(
+        nanobench
+        GIT_REPOSITORY https://github.com/martinus/nanobench.git
+        GIT_TAG v4.3.11
+        GIT_SHALLOW TRUE
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(nanobench)
 endif()

@@ -115,7 +115,8 @@ struct MultiMesh
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic>
         GHEF; ///< `2 x |# half edges|` half-edge to face adjacency
     Eigen::Matrix<TIndex, 2, Eigen::Dynamic> EHE; ///< `2 x |# edges|` edge to half-edge adjacency
-    Eigen::Vector<TIndex, Eigen::Dynamic> GXV;    ///< `|# points| x 1` point to vertex mapping
+    Eigen::Vector<TIndex, Eigen::Dynamic>
+        GXV; ///< `|# points| x 1` point to vertex mapping, with `-1` for non-vertices
     /**
      * @brief Default construct a new Multi Mesh object
      */
