@@ -100,47 +100,6 @@ void CountingSort(TRng&& rng, TWork&& work, FProject fProject = {})
     CountingSort(rng, work, fProject(*min), fProject(*max), std::move(fProject));
 }
 
-/**
- * @brief Stable counting sort for integer keys in a random access range, with specified key range.
- * @tparam TInRng Integer random access range of input elements.
- * @tparam TOutRng Random access range of output elements.
- * @tparam FProject Callable that maps elements of `in` to integer keys (default: identity).
- * @tparam TKey Integer type of the keys (deduced from FProject if not specified).
- * @tparam RangeSize Size of the counting array (default: 256).
- * @param in Input range of elements to sort.
- * @param out Output range to store sorted elements.
- * @param fProject Projection function to extract keys from elements of `in` (default: identity).
- * @pre `std::ranges::size(out) >= std::ranges::size(in)` to ensure the output range can hold all
- * sorted elements.
- * @pre `fProject(in[i])` must be in the range [0, RangeSize) for all elements of `in`.
- */
-template <
-    std::ranges::random_access_range TInRng,
-    std::ranges::random_access_range TOutRng,
-    class FProject = std::identity,
-    std::integral TKey =
-        std::decay_t<std::invoke_result_t<FProject, std::ranges::range_value_t<TInRng>>>,
-    int RangeSize = 256>
-void StableCountingSort(TInRng&& in, TOutRng&& out, FProject fProject = {})
-{
-    using SizeType = std::ranges::range_size_t<TInRng>;
-    SizeType n     = std::ranges::size(in);
-    if (n == 0)
-        return;
-    assert(std::ranges::size(out) >= n);
-    std::array<TKey, RangeSize> work{
-        0,
-    };
-    for (SizeType i = 0; i < n; ++i)
-        ++work[fProject(in[i])];
-    std::inclusive_scan(work.begin(), work.end(), work.begin());
-    for (SizeType i = n; i-- > 0;)
-    {
-        auto k         = fProject(in[i]);
-        out[--work[k]] = in[i];
-    }
-}
-
 } // namespace pbat::common
 
 #endif // PBAT_COMMON_COUNTINGSORT_H

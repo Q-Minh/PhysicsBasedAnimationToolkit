@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
+#include <execution>
 #include <fmt/format.h>
 #include <nanobench.h>
 #include <pbat/common/CountingSort.h>
@@ -15,7 +16,7 @@ TEST_CASE("Sorting algorithms")
     std::vector<int32_t> output{};
     std::vector<std::int32_t> cpy{};
     std::vector<std::uint32_t> work{};
-    pbat::common::RadixSortCountArray rwork{};
+    pbat::common::RadixSortWorkspace rwork{};
     auto const fSetupBenchmark = [&](auto range, auto n) {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -49,6 +50,21 @@ TEST_CASE("Sorting algorithms")
                 std::int32_t max = range - 1;
                 pbat::common::RadixSort(output, cpy, rwork, std::identity{}, max);
             });
+            output = input;
+            bench.run("std::sort (parallel)", [&]() {
+                std::sort(std::execution::par, output.begin(), output.end());
+            });
+            auto const nCores = std::thread::hardware_concurrency();
+            std::vector<pbat::common::RadixSortWorkspace<std::size_t>> lwork{};
+            lwork.reserve(nCores);
+            for (auto nThreads = 2; nThreads < nCores; nThreads <<= 1)
+            {
+                lwork.resize(nThreads);
+                bench.run(fmt::format("pbat::common::RadixSort ({} threads)", nThreads), [&]() {
+                    std::int32_t max = range - 1;
+                    pbat::common::RadixSort(output, cpy, lwork, std::identity{}, max);
+                });
+            }
         }
     }
 }
