@@ -139,6 +139,68 @@ struct EmptyVector
     }
 };
 
+/**
+ * @brief Sort adjacencies lexicographically by (u, v) using a two-pass counting sort (radix sort).
+ *
+ * This achieves O(n + nU + nV) time complexity, where n is the number of adjacencies,
+ * nU is the number of source vertices, and nV is the number of target vertices.
+ * This is faster than comparison-based O(n log n) sorting when n >> max(nU, nV).
+ *
+ * The algorithm performs two stable counting sort passes:
+ * 1. First pass: sort by v (least significant key) → adjacencies grouped by v
+ * 2. Second pass: sort by u (most significant key) → adjacencies sorted by (u, v)
+ *
+ * @tparam TAdjacency Adjacency entry type (AdjacencyPair or AdjacencyTriplet)
+ * @param adjacencies Vector of adjacencies to sort in-place
+ * @param temp Temporary buffer (will be resized to adjacencies.size())
+ * @param counts Temporary count array (will be resized to max(nU, nV))
+ * @param nU Number of source vertices (u ∈ [0, nU))
+ * @param nV Number of target vertices (v ∈ [0, nV))
+ */
+template <class TAdjacency, common::CIndex TVertexIndex>
+void CountingSortAdjacencies(
+    std::vector<TAdjacency>& adjacencies,
+    std::vector<TAdjacency>& temp,
+    std::vector<TVertexIndex>& counts,
+    TVertexIndex nU,
+    TVertexIndex nV)
+{
+    std::size_t const n = adjacencies.size();
+    if (n == 0u)
+        return;
+
+    temp.resize(n);
+    counts.resize(static_cast<std::size_t>(std::max(nU, nV)));
+
+    // Pass 1: Sort by v (least significant key)
+    // Count occurrences of each v
+    counts.assign(static_cast<std::size_t>(nV), TVertexIndex{0});
+    for (TAdjacency const& adj : adjacencies)
+        ++counts[adj.v];
+    // Compute prefix sum (exclusive scan)
+    std::exclusive_scan(counts.begin(), counts.end(), counts.begin(), TVertexIndex{0});
+    // Scatter into temp (stable: iterate forward)
+    for (TAdjacency const& adj : adjacencies)
+    {
+        std::size_t const pos = counts[adj.v]++;
+        temp[pos]             = adj;
+    }
+
+    // Pass 2: Sort by u (most significant key)
+    // Count occurrences of each u
+    counts.assign(static_cast<std::size_t>(nU), TVertexIndex{0});
+    for (TAdjacency const& adj : temp)
+        ++counts[adj.u];
+    // Compute prefix sum (exclusive scan)
+    std::exclusive_scan(counts.begin(), counts.end(), counts.begin(), TVertexIndex{0});
+    // Scatter back into adjacencies (stable: iterate forward)
+    for (TAdjacency const& adj : temp)
+    {
+        std::size_t const pos = counts[adj.u]++;
+        adjacencies[pos]      = adj;
+    }
+}
+
 } // namespace detail
 
 /**
@@ -167,6 +229,17 @@ struct AdjacencySetUpdateOptions
                 ///< in sorted order.
     bool bUseParallelSort{
         false}; ///< If true, the sorting step in Update() (if needed) will be parallelized.
+    std::int64_t nSourceVertices{
+        -1}; ///< Number of source vertices (u values). When both nSourceVertices >= 0 and
+             ///< nTargetVertices >= 0, Update() uses a linear-time two-pass counting sort
+             ///< (radix sort: first by v, then by u) instead of comparison-based sorting.
+             ///< This is faster when the number of adjacencies n >> max(nSourceVertices,
+             ///< nTargetVertices). When < 0 (default), comparison-based sorting is used.
+             ///< @note Counting sort requires additional memory: O(n) for a temporary buffer
+             ///< (mCountingSortBuffer) and O(max(nSourceVertices, nTargetVertices)) for the
+             ///< count array (mCountingSortCounts). These buffers are reused across Update() calls.
+    std::int64_t nTargetVertices{
+        -1}; ///< Number of target vertices (v values). See nSourceVertices for details.
 };
 
 /**
@@ -187,22 +260,6 @@ struct AdjacencySetUpdateOptions
  * @tparam TData        POD-like type stored for every live adjacency.
  * @tparam TVertexIndex Integer type for vertex indices u, v (default: uint32_t).
  * @tparam TIdIndex     Integer type for indirection ids     (default: uint32_t).
- *
- * clang-format off
- * ### Memory layout
- *
- * | Array                | Element type       | Purpose                                           |
- * |----------------------|--------------------|---------------------------------------------------|
- * | mAdjacencies         | AdjacencyEntryType | Sorted unique (u,v,id) of the current set         |
- * | mExistingAdjacencies | AdjacencyEntryType | Previous mAdjacencies (swapped in during Update)  |
- * | mData                | TData              | Per-adjacency payload                             |
- * | mIdToData            | TIdIndex           | id -> data index c (mData[c])                     |
- * | mDataToId            | TIdIndex           | data index c -> id                                |
- * | mIncomingAdjacencies | AdjacencyEntryType | Incoming (possibly duplicated) user Add() calls   |
- * | mAdjacenciesToRemove | AdjacencyEntryType | Old \ New (set difference)                        |
- * | mAdjacenciesToAdd    | AdjacencyEntryType | New \ Old (set difference)                        |
- * | mPrefix              | TVertexIndex       | Prefix sum over u for fast AdjacenciesOf()        |
- * clang-format on
  */
 template <
     class TData,
@@ -525,6 +582,8 @@ class DenseAdjacencySet
         mExistingAdjacencies; ///< Previous adjacencies (scratch during Update)
     std::vector<AdjacencyEntryType> mAdjacenciesToAdd;    ///< New \ Old (set difference)
     std::vector<AdjacencyEntryType> mAdjacenciesToRemove; ///< Old \ New (set difference)
+    std::vector<AdjacencyEntryType> mCountingSortBuffer;  ///< Temporary buffer for counting sort
+    std::vector<TVertexIndex> mCountingSortCounts;        ///< Count array for counting sort
 };
 
 /**
@@ -700,10 +759,27 @@ void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     // 2. Sort and deduplicate incoming adjacencies. mExistingAdjacencies is already sorted (it was
     // mAdjacencies which we maintain sorted).
     if (not options.bAssumeSortedIncoming)
-        if (options.bUseParallelSort)
+    {
+        bool const bUseCountingSort =
+            (options.nSourceVertices >= 0) and (options.nTargetVertices >= 0);
+        if (bUseCountingSort)
+        {
+            detail::CountingSortAdjacencies(
+                mIncomingAdjacencies,
+                mCountingSortBuffer,
+                mCountingSortCounts,
+                static_cast<TVertexIndex>(options.nSourceVertices),
+                static_cast<TVertexIndex>(options.nTargetVertices));
+        }
+        else if (options.bUseParallelSort)
+        {
             tbb::parallel_sort(mIncomingAdjacencies);
+        }
         else
+        {
             std::ranges::sort(mIncomingAdjacencies);
+        }
+    }
     if (not options.bAssumeUniqueIncoming)
         mIncomingAdjacencies.erase(
             std::unique(mIncomingAdjacencies.begin(), mIncomingAdjacencies.end()),
@@ -797,6 +873,8 @@ void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
     mExistingAdjacencies.clear();
     mAdjacenciesToAdd.clear();
     mAdjacenciesToRemove.clear();
+    mCountingSortBuffer.clear();
+    mCountingSortCounts.clear();
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -941,24 +1019,19 @@ inline bool DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Has(
     bool bFound{false};
     if (bUseBinarySearch)
     {
-        it = std::lower_bound(
-            begin,
-            end,
-            std::make_pair(u, v),
-            [](AdjacencyEntryType const& adj, std::pair<TVertexIndex, TVertexIndex> const& uv) {
-                return std::make_pair(adj.u, adj.v) < uv;
-            });
-        bFound = it != end and (it->u == u and it->v == v);
+        it = std::lower_bound(begin, end, v, [](AdjacencyEntryType const& adj, TVertexIndex v_) {
+            return adj.v < v_;
+        });
+        bFound = it != end and it->v == v;
     }
     else
     {
-        it     = std::find_if(begin, end, [&](AdjacencyEntryType const& adj) {
-            return adj.u == u and adj.v == v;
-        });
+        it = std::find_if(begin, end, [&](AdjacencyEntryType const& adj) { return adj.v == v; });
         bFound = it != end;
     }
-    if (bFound and c != nullptr)
-        *c = it->id;
+    if constexpr (not std::is_void_v<TData>)
+        if (bFound and c != nullptr)
+            *c = it->id;
     return bFound;
 }
 
@@ -1220,7 +1293,7 @@ void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Update(
     {
         set.ForAll([this](TVertexIndex u, TVertexIndex v) {
             std::size_t const pos = mPrefix[v] + mCounts[v];
-            mAdjacencies[pos]     = AdjacencyEntryType{v, u}; // Store as (v, u) for reverse view
+            mAdjacencies[pos]     = AdjacencyEntryType{u, v};
             ++mCounts[v];
         });
     }
@@ -1235,7 +1308,7 @@ void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Update(
         set.ForAll([this, dataBegin](TVertexIndex u, TVertexIndex v, TData const& w) {
             std::size_t const pos = mPrefix[v] + mCounts[v];
             auto c                = static_cast<TIdIndex>(std::addressof(w) - dataBegin);
-            mAdjacencies[pos]     = AdjacencyEntryType{v, u, c}; // Store (v, u, c)
+            mAdjacencies[pos]     = AdjacencyEntryType{u, v, c};
             ++mCounts[v];
         });
     }
@@ -1257,14 +1330,11 @@ bool DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Has(
     auto end                 = mAdjacencies.begin() + last;
     auto it                  = end;
     bool bFound{false};
-
-    // Note: mAdjacencies stores (v, u, [c]) - the first element is v, second is u
-    // So when searching for (u, v), we look for entries where adj.u == v and adj.v == u
     if (bUseBinarySearch)
     {
-        // Within a bucket for target v, entries are sorted by u (stored in adj.v)
-        it = std::lower_bound(begin, end, u, [](AdjacencyEntryType const& adj, TVertexIndex tu) {
-            return adj.v < tu; // adj.v holds the source u in our reverse view
+        // Within a bucket for target v, entries are sorted by u
+        it = std::lower_bound(begin, end, u, [](AdjacencyEntryType const& adj, TVertexIndex u_) {
+            return adj.u < u_;
         });
         bFound = it != end and (it->v == u); // adj.u is v (the target), adj.v is u (the source)
     }
@@ -1275,10 +1345,8 @@ bool DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Has(
     }
 
     if constexpr (not std::is_void_v<TData>)
-    {
         if (bFound and c != nullptr)
             *c = it->id;
-    }
     return bFound;
 }
 
@@ -1305,13 +1373,11 @@ void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::AdjacenciesOf(
         AdjacencyEntryType const& adj = mAdjacencies[k];
         if constexpr (std::is_void_v<TData>)
         {
-            // adj.u is v (target), adj.v is u (source)
-            fOnAdj(adj.v, adj.u); // Return as (u, v) to caller
+            fOnAdj(adj.u, adj.v);
         }
         else
         {
-            // adj.u is v (target), adj.v is u (source)
-            fOnAdj(adj.v, adj.u, adj.id); // Return as (u, v, c) to caller
+            fOnAdj(adj.u, adj.v, adj.id);
         }
     }
 }
@@ -1325,13 +1391,11 @@ void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::ForAll(
     {
         if constexpr (std::is_void_v<TData>)
         {
-            // adj.u is v (target), adj.v is u (source)
-            fOnAdj(adj.v, adj.u); // Return as (u, v) to caller
+            fOnAdj(adj.u, adj.v);
         }
         else
         {
-            // adj.u is v (target), adj.v is u (source)
-            fOnAdj(adj.v, adj.u, adj.id); // Return as (u, v, c) to caller
+            fOnAdj(adj.u, adj.v, adj.id);
         }
     }
 }
