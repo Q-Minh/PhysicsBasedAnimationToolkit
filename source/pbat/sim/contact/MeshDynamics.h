@@ -618,7 +618,7 @@ class MeshDynamics
      * @return Reference to the point-point contact adjacency set
      */
     auto PointPointContacts() const
-        -> graph::DenseAdjacencySet<PointPointConstraint<ScalarType>, IndexType> const&
+        -> graph::DenseAdjacencySet<MeshPointPointConstraint<ScalarType>, IndexType> const&
     {
         return mPointPointContacts;
     }
@@ -627,7 +627,7 @@ class MeshDynamics
      * @return Reference to the point-edge contact adjacency set
      */
     auto PointEdgeContacts() const
-        -> graph::DenseAdjacencySet<PointEdgeConstraint<ScalarType>, IndexType> const&
+        -> graph::DenseAdjacencySet<MeshPointEdgeConstraint<ScalarType>, IndexType> const&
     {
         return mPointEdgeContacts;
     }
@@ -636,7 +636,7 @@ class MeshDynamics
      * @return Reference to the point-triangle contact adjacency set
      */
     auto PointTriangleContacts() const
-        -> graph::DenseAdjacencySet<PointTriangleConstraint<ScalarType>, IndexType> const&
+        -> graph::DenseAdjacencySet<MeshPointTriangleConstraint<ScalarType>, IndexType> const&
     {
         return mPointTriangleContacts;
     }
@@ -645,7 +645,7 @@ class MeshDynamics
      * @return Reference to the edge-edge contact adjacency set
      */
     auto EdgeEdgeContacts() const
-        -> graph::DenseAdjacencySet<EdgeEdgeConstraint<ScalarType>, IndexType> const&
+        -> graph::DenseAdjacencySet<MeshEdgeEdgeConstraint<ScalarType>, IndexType> const&
     {
         return mEdgeEdgeContacts;
     }
@@ -689,13 +689,13 @@ class MeshDynamics
      * These store the contact pairs along with their associated constraint data.
      * The adjacency sets are populated by reducing the thread-local contact sets from ogc::State.
      */
-    graph::DenseAdjacencySet<PointPointConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<MeshPointPointConstraint<ScalarType>, IndexType>
         mPointPointContacts; ///< Point-point contact pairs with constraint data
-    graph::DenseAdjacencySet<PointEdgeConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<MeshPointEdgeConstraint<ScalarType>, IndexType>
         mPointEdgeContacts; ///< Point-edge contact pairs with constraint data
-    graph::DenseAdjacencySet<PointTriangleConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<MeshPointTriangleConstraint<ScalarType>, IndexType>
         mPointTriangleContacts; ///< Point-triangle contact pairs with constraint data
-    graph::DenseAdjacencySet<EdgeEdgeConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<MeshEdgeEdgeConstraint<ScalarType>, IndexType>
         mEdgeEdgeContacts; ///< Edge-edge contact pairs with constraint data
 };
 
@@ -1260,20 +1260,6 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline TScalar MeshDynamics<TScalar, TIndex>::Potential() const
 {
     ScalarType E{0};
-    for (auto const& e : mVertexVertexEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mVertexEdgeEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mVertexTriangleEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mEdgeEdgeEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mVertexEnvironmentEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mEdgeEnvironmentEnergies)
-        E += e.En + e.Ef;
-    for (auto const& e : mTriangleEnvironmentEnergies)
-        E += e.En + e.Ef;
     return E;
 }
 
@@ -1816,6 +1802,17 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
         //      func = std::forward<FOnTriangleEnvironmentVertexContact>(
         //          fOnTriangleEnvironmentVertexContact)](IndexType j) { func(findsi, j); });
     }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedX, class TDerivedXt>
+inline void MeshDynamics<TScalar, TIndex>::ComputeEnergies(
+    Eigen::MatrixBase<TDerivedX> const& x,
+    Eigen::MatrixBase<TDerivedXt> const& xt,
+    ScalarType h,
+    int computationFlags)
+{
+    // TODO
 }
 
 template <

@@ -292,22 +292,24 @@ void AssembleHessian(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.AssembleHessian");
     // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
-    auto constexpr kVertexVertexStencil   = 2;
-    auto constexpr kVertexEdgeStencil     = 3;
-    auto constexpr kVertexTriangleStencil = 4;
-    auto constexpr kEdgeEdgeStencil       = 4;
-    auto constexpr kVertexEnvStencil      = 1;
-    auto constexpr kEdgeEnvStencil        = 2;
-    auto constexpr kTriangleEnvStencil    = 3;
+    using PointPointContactType =
+        typename std::remove_cvref_t<decltype(contact.PointPointContacts())>::DataType;
+    using PointEdgeContactType =
+        typename std::remove_cvref_t<decltype(contact.PointEdgeContacts())>::DataType;
+    using PointTriangleContactType =
+        typename std::remove_cvref_t<decltype(contact.PointTriangleContacts())>::DataType;
+    using EdgeEdgeContactType =
+        typename std::remove_cvref_t<decltype(contact.EdgeEdgeContacts())>::DataType;
+    auto constexpr kVertexVertexDofs   = PointPointContactType::kDofs;
+    auto constexpr kVertexEdgeDofs     = PointEdgeContactType::kDofs;
+    auto constexpr kVertexTriangleDofs = PointTriangleContactType::kDofs;
+    auto constexpr kEdgeEdgeDofs       = EdgeEdgeContactType::kDofs;
     auto const nTriplets =
         fem.HgU.size() + fem.M().size() +
-        contact.NumVertexVertexContacts() * 9 * kVertexVertexStencil * kVertexVertexStencil +
-        contact.NumVertexEdgeContacts() * 9 * kVertexEdgeStencil * kVertexEdgeStencil +
-        contact.NumVertexTriangleContacts() * 9 * kVertexTriangleStencil * kVertexTriangleStencil +
-        contact.NumEdgeEdgeContacts() * 9 * kEdgeEdgeStencil * kEdgeEdgeStencil +
-        contact.NumVertexEnvironmentContacts() * 9 * kVertexEnvStencil * kVertexEnvStencil +
-        contact.NumEdgeEnvironmentContacts() * 9 * kEdgeEnvStencil * kEdgeEnvStencil +
-        contact.NumTriangleEnvironmentContacts() * 9 * kTriangleEnvStencil * kTriangleEnvStencil;
+        contact.NumVertexVertexContacts() * kVertexVertexDofs * kVertexVertexDofs +
+        contact.NumVertexEdgeContacts() * kVertexEdgeDofs * kVertexEdgeDofs +
+        contact.NumVertexTriangleContacts() * kVertexTriangleDofs * kVertexTriangleDofs +
+        contact.NumEdgeEdgeContacts() * kEdgeEdgeDofs * kEdgeEdgeDofs;
     params.triplets.reserve(nTriplets);
     params.triplets.clear();
     // Assemble
@@ -337,18 +339,18 @@ void AssembleHessian(
                             HUg(il * kDims + id, jl * kDims + jd));
     }
     // Contact Hessian contribution
-    contact.ForEachMeshContactEnergy(
-        [&]<int kStencil>(sim::contact::MeshContactEnergy<Scalar, Index, kStencil> const& E) {
-            for (auto jl = 0; jl < kStencil; ++jl)
-                for (auto jd = 0; jd < kDims; ++jd)
-                    for (auto il = 0; il < kStencil; ++il)
-                        for (auto id = 0; id < kDims; ++id)
-                            params.triplets.emplace_back(
-                                E.stencil[il] * kDims + id,
-                                E.stencil[jl] * kDims + jd,
-                                E.hessEn(il * kDims + id, jl * kDims + jd) +
-                                    E.hessEf(il * kDims + id, jl * kDims + jd));
-        });
+    // contact.ForEachMeshContactEnergy(
+    //     [&]<int kStencil>(sim::contact::MeshContactEnergy<Scalar, Index, kStencil> const& E) {
+    //         for (auto jl = 0; jl < kStencil; ++jl)
+    //             for (auto jd = 0; jd < kDims; ++jd)
+    //                 for (auto il = 0; il < kStencil; ++il)
+    //                     for (auto id = 0; id < kDims; ++id)
+    //                         params.triplets.emplace_back(
+    //                             E.stencil[il] * kDims + id,
+    //                             E.stencil[jl] * kDims + jd,
+    //                             E.hessEn(il * kDims + id, jl * kDims + jd) +
+    //                                 E.hessEf(il * kDims + id, jl * kDims + jd));
+    //     });
     // Assemble
     params.hessian.resize(fem.x.size(), fem.x.size());
     // Remove off-diagonal Dirichlet entries (always) and upper triangular part (when LLT is used)

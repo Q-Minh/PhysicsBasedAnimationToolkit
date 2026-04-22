@@ -11,6 +11,7 @@
 #define PBAT_GEOMETRY_MESHDISTANCE_H
 
 #include "pbat/common/Concepts.h"
+#include "pbat/geometry/DistanceQueries.h"
 #include "pbat/math/linalg/mini/Mini.h"
 
 #include <cmath>
@@ -249,11 +250,16 @@ template <math::linalg::mini::CMatrix TMatrixx>
 inline auto PointPointDistance<TScalar>::Gradient(TMatrixx const& x_)
     -> math::linalg::mini::SVector<TScalar, kDofs>
 {
-    auto x                                    = x_.template Slice<3, 1>(0, 0);
-    auto y                                    = x_.template Slice<3, 1>(3, 0);
+    auto x = x_.template Slice<3, 1>(0, 0);
+    auto y = x_.template Slice<3, 1>(3, 0);
+    math::linalg::mini::SVector<TScalar, 6> g;
+    auto gx                                   = g.template Slice<3, 1>(0, 0);
+    auto gy                                   = g.template Slice<3, 1>(3, 0);
     math::linalg::mini::SVector<TScalar, 3> n = x - y;
     n /= Norm(n);
-    return n;
+    gx = n;
+    gy = -n;
+    return g;
 }
 
 template <common::CFloatingPoint TScalar>
@@ -296,52 +302,22 @@ inline auto PointEdgeDistance<TScalar>::Gradient(TMatrixx const& x_)
     auto a = x_.template Slice<3, 1>(3, 0);
     auto b = x_.template Slice<3, 1>(6, 0);
     using namespace std;
-    TScalar a0  = 2 * a[1];
-    TScalar a1  = 2 * b[1];
-    TScalar a2  = a0 - a1;
-    TScalar a3  = a[0] - b[0];
-    TScalar a4  = -a3;
-    TScalar a5  = -a[1] + x[1];
-    TScalar a6  = a[0] - x[0];
-    TScalar a7  = a[1] - b[1];
-    TScalar a8  = -a7;
-    TScalar a9  = a4 * a5 + a6 * a8;
-    TScalar a10 = (TScalar(1) / TScalar(2)) * a9;
-    TScalar a11 = a[2] - x[2];
-    TScalar a12 = a[2] - b[2];
-    TScalar a13 = a11 * a3 - a12 * a6;
-    TScalar a14 = 2 * a[2];
-    TScalar a15 = 2 * b[2];
-    TScalar a16 = (TScalar(1) / TScalar(2)) * a14 - TScalar(1) / TScalar(2) * a15;
-    TScalar a17 = ((a12) * (a12)) + ((a3) * (a3)) + ((a7) * (a7));
-    TScalar a18 = -a12;
-    TScalar a19 = -a11 * a8 - a18 * a5;
-    TScalar a20 = sqrt(((a13) * (a13)) + ((a19) * (a19)) + ((a9) * (a9)));
-    TScalar a21 = 1 / (sqrt(a17) * a20);
-    TScalar a22 = 2 * a[0];
-    TScalar a23 = 2 * b[0];
-    TScalar a24 = -a22 + a23;
-    TScalar a25 = (TScalar(1) / TScalar(2)) * a13;
-    TScalar a26 = (TScalar(1) / TScalar(2)) * a19;
-    TScalar a27 = a20 / pow(a17, TScalar(3) / TScalar(2));
-    TScalar a28 = -2 * x[1];
-    TScalar a29 = a1 + a28;
-    TScalar a30 = -2 * x[2];
-    TScalar a31 = a15 + a30;
-    TScalar a32 = -2 * x[0];
-    TScalar a33 = -a23 - a32;
-    TScalar a34 = a0 + a28;
-    TScalar a35 = -a14 - a30;
-    TScalar a36 = a22 + a32;
-    grad_d[0]   = a21 * (a10 * a2 + a13 * a16);
-    grad_d[1]   = a21 * (a10 * a24 + a16 * a19);
-    grad_d[2]   = a21 * (-a2 * a26 + a24 * a25);
-    grad_d[3]   = a21 * (a10 * a29 + a25 * a31) + a27 * a4;
-    grad_d[4]   = a21 * (a10 * a33 + a26 * a31) + a27 * a8;
-    grad_d[5]   = a18 * a27 + a21 * (a25 * a33 - a26 * a29);
-    grad_d[6]   = a21 * (-a10 * a34 + a25 * a35) + a27 * a3;
-    grad_d[7]   = a21 * (a10 * a36 + a26 * a35) + a27 * a7;
-    grad_d[8]   = a12 * a27 + a21 * (a25 * a36 + a26 * a34);
+    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
+    math::linalg::mini::SVector<TScalar, 3> ax = x - a;
+    math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ax);
+    TScalar nnorm                              = Norm(n);
+    n /= nnorm;
+    TScalar abnorm        = Norm(ab);
+    TScalar nnorm_abnorm2 = nnorm / (abnorm * abnorm);
+    math::linalg::mini::SVector<TScalar, kDofs> g;
+    auto gx = g.template Slice<3, 1>(0, 0);
+    auto ga = g.template Slice<3, 1>(3, 0);
+    auto gb = g.template Slice<3, 1>(6, 0);
+    gx      = Cross(-ab, n);
+    ga      = Cross(b - x, n) + nnorm_abnorm2 * ab;
+    gb      = Cross(ax, n) - nnorm_abnorm2 * ab;
+    g *= (1 / abnorm);
+    return g;
 }
 
 template <common::CFloatingPoint TScalar>
@@ -538,87 +514,89 @@ inline auto PointEdgeDistance<TScalar>::Hessian(TMatrixx const& x_)
     TScalar a182 = a39 * a90;
     TScalar a183 = (TScalar(1) / TScalar(2)) * a78;
     TScalar a184 = a123 * a5;
-    hess_d[0]    = a36 * (a0 * a4 + a9) + a38 * a40;
-    hess_d[1]    = a4 * a41 + a40 * a46;
-    hess_d[2]    = a40 * a50 + a41 * a8;
-    hess_d[3]    = a36 * (a4 * a51 + a53) + a40 * a65 + a57;
-    hess_d[4]    = a36 * (a22 + a4 * a66) + a40 * a71 + a67;
-    hess_d[5]    = a36 * (a27 + a66 * a8) + a40 * a75 + a72;
-    hess_d[6]    = a36 * (a16 * a4 + a76) + a40 * a82 + a77;
-    hess_d[7]    = a36 * (a19 * a4 + a83) + a40 * a87 + a84;
-    hess_d[8]    = a36 * (a19 * a8 + a88) + a40 * a91 + a89;
-    hess_d[9]    = a0 * a92 + a38 * a93;
-    hess_d[10]   = a36 * (a9 + a94) + a46 * a93;
-    hess_d[11]   = a20 * a36 * a8 + a50 * a93;
-    hess_d[12]   = a36 * (a44 * a51 + a83) + a65 * a93 + a96;
-    hess_d[13]   = a36 * (a53 + a97) + a71 * a93 + a98;
-    hess_d[14]   = a100 + a36 * (a32 + a8 * a99) + a75 * a93;
-    hess_d[15]   = a101 + a36 * (a16 * a44 + a22) + a82 * a93;
-    hess_d[16]   = a103 + a36 * (a102 + a76) + a87 * a93;
-    hess_d[17]   = a105 + a36 * (a104 + a15 * a8) + a91 * a93;
-    hess_d[18]   = a106 * a38 + a5 * a92;
-    hess_d[19]   = a106 * a46 + a107 * a36 * a5;
-    hess_d[20]   = a106 * a50 + a36 * (a107 * a20 + a94);
-    hess_d[21]   = a106 * a65 + a109 + a36 * (a44 * a52 + a88);
-    hess_d[22]   = a106 * a71 + a110 + a36 * (a104 + a107 * a52);
-    hess_d[23]   = a106 * a75 + a111 + a36 * (a107 * a99 + a97);
-    hess_d[24]   = a106 * a82 + a112 + a36 * (a27 + a28 * a44);
-    hess_d[25]   = a106 * a87 + a113 + a36 * (a107 * a28 + a32);
-    hess_d[26]   = a106 * a91 + a114 + a36 * (a102 + a107 * a15);
-    hess_d[27]   = a118 * a38 + a36 * (a0 * a115 + a117) + a57;
-    hess_d[28]   = a118 * a46 + a36 * (a115 * a13 + a83) + a96;
-    hess_d[29]   = a109 + a118 * a50 + a36 * (a116 * a13 + a88);
-    hess_d[30]   = a118 * a65 + a120 + a122 * a124 + 2 * a126 * a64 + a36 * (a115 * a51 + a125);
-    hess_d[31]   = a115 * a129 + a118 * a71 + a124 * a128 + a131;
-    hess_d[32]   = a116 * a129 + a118 * a75 + a124 * a133 + a134;
-    hess_d[33]   = a118 * a82 + a121 * a124 + a136 + a36 * (a115 * a16 + a135);
-    hess_d[34]   = a118 * a87 + a124 * a127 + a137 + a36 * (a115 * a19 + a22);
-    hess_d[35]   = a118 * a91 + a124 * a132 + a138 + a36 * (a116 * a19 + a27);
-    hess_d[36]   = a140 * a38 + a36 * (a0 * a139 + a22) + a67;
-    hess_d[37]   = a140 * a46 + a36 * (a117 + a141) + a98;
-    hess_d[38]   = a110 + a140 * a50 + a36 * (a104 + a116 * a20);
-    hess_d[39]   = a122 * a142 + a131 + a140 * a65 + a143 * a51;
-    hess_d[40]   = a120 + a128 * a142 + a140 * a71 + 2 * a145 * a70 + a36 * (a125 + a144);
-    hess_d[41]   = a116 * a36 * a99 + a133 * a142 + a140 * a75 + a147;
-    hess_d[42]   = a121 * a142 + a140 * a82 + a148 + a36 * (a139 * a16 + a83);
-    hess_d[43]   = a127 * a142 + a140 * a87 + a150 + a36 * (a135 + a149);
-    hess_d[44]   = a132 * a142 + a140 * a91 + a151 + a36 * (a116 * a15 + a32);
-    hess_d[45]   = a152 * a38 + a36 * (a139 * a5 + a27) + a72;
-    hess_d[46]   = a100 + a152 * a46 + a36 * (a153 * a5 + a32);
-    hess_d[47]   = a111 + a152 * a50 + a36 * (a141 + a153 * a20);
-    hess_d[48]   = a122 * a154 + a134 + a143 * a52 + a152 * a65;
-    hess_d[49]   = a128 * a154 + a147 + a152 * a71 + a153 * a36 * a52;
-    hess_d[50]   = a120 + a133 * a154 + a152 * a75 + 2 * a155 * a30 + a36 * (a144 + a153 * a99);
-    hess_d[51]   = a121 * a154 + a152 * a82 + a157 + a36 * (a139 * a28 + a88);
-    hess_d[52]   = a127 * a154 + a152 * a87 + a158 + a36 * (a104 + a153 * a28);
-    hess_d[53]   = a132 * a154 + a152 * a91 + a159 + a36 * (a149 + a15 * a153);
-    hess_d[54]   = a163 * a38 + a36 * (a0 * a160 + a162) + a77;
-    hess_d[55]   = a101 + a163 * a46 + a36 * (a13 * a160 + a22);
-    hess_d[56]   = a112 + a163 * a50 + a36 * (a13 * a161 + a27);
-    hess_d[57]   = a122 * a165 + a136 + a163 * a65 + a36 * (a160 * a51 + a164);
-    hess_d[58]   = a128 * a165 + a148 + a163 * a71 + a36 * (a160 * a66 + a83);
-    hess_d[59]   = a133 * a165 + a157 + a163 * a75 + a36 * (a161 * a66 + a88);
-    hess_d[60]   = a120 + a121 * a165 + a163 * a82 + 2 * a167 * a81 + a36 * (a16 * a160 + a166);
-    hess_d[61]   = a127 * a165 + a160 * a168 + a163 * a87 + a170;
-    hess_d[62]   = a132 * a165 + a161 * a168 + a163 * a91 + a171;
-    hess_d[63]   = a173 * a38 + a36 * (a0 * a172 + a83) + a84;
-    hess_d[64]   = a103 + a173 * a46 + a36 * (a162 + a174);
-    hess_d[65]   = a113 + a173 * a50 + a36 * (a161 * a20 + a32);
-    hess_d[66]   = a122 * a175 + a137 + a173 * a65 + a36 * (a172 * a51 + a22);
-    hess_d[67]   = a128 * a175 + a150 + a173 * a71 + a36 * (a164 + a176);
-    hess_d[68]   = a133 * a175 + a158 + a173 * a75 + a36 * (a104 + a161 * a99);
-    hess_d[69]   = a121 * a175 + a16 * a177 + a170 + a173 * a82;
-    hess_d[70]   = a120 + a127 * a175 + a173 * a87 + 2 * a179 * a86 + a36 * (a166 + a178);
-    hess_d[71]   = a132 * a175 + a15 * a161 * a36 + a173 * a91 + a181;
-    hess_d[72]   = a182 * a38 + a36 * (a172 * a5 + a88) + a89;
-    hess_d[73]   = a105 + a182 * a46 + a36 * (a104 + a183 * a5);
-    hess_d[74]   = a114 + a182 * a50 + a36 * (a174 + a183 * a20);
-    hess_d[75]   = a122 * a184 + a138 + a182 * a65 + a36 * (a172 * a52 + a27);
-    hess_d[76]   = a128 * a184 + a151 + a182 * a71 + a36 * (a183 * a52 + a32);
-    hess_d[77]   = a133 * a184 + a159 + a182 * a75 + a36 * (a176 + a183 * a99);
-    hess_d[78]   = a121 * a184 + a171 + a177 * a28 + a182 * a82;
-    hess_d[79]   = a127 * a184 + a181 + a182 * a87 + a183 * a28 * a36;
-    hess_d[80]   = a120 + a132 * a184 + 2 * a180 * a90 + a182 * a91 + a36 * (a15 * a183 + a178);
+    math::linalg::mini::SMatrix<TScalar, kDofs, kDofs> hess_d;
+    hess_d[0]  = a36 * (a0 * a4 + a9) + a38 * a40;
+    hess_d[1]  = a4 * a41 + a40 * a46;
+    hess_d[2]  = a40 * a50 + a41 * a8;
+    hess_d[3]  = a36 * (a4 * a51 + a53) + a40 * a65 + a57;
+    hess_d[4]  = a36 * (a22 + a4 * a66) + a40 * a71 + a67;
+    hess_d[5]  = a36 * (a27 + a66 * a8) + a40 * a75 + a72;
+    hess_d[6]  = a36 * (a16 * a4 + a76) + a40 * a82 + a77;
+    hess_d[7]  = a36 * (a19 * a4 + a83) + a40 * a87 + a84;
+    hess_d[8]  = a36 * (a19 * a8 + a88) + a40 * a91 + a89;
+    hess_d[9]  = a0 * a92 + a38 * a93;
+    hess_d[10] = a36 * (a9 + a94) + a46 * a93;
+    hess_d[11] = a20 * a36 * a8 + a50 * a93;
+    hess_d[12] = a36 * (a44 * a51 + a83) + a65 * a93 + a96;
+    hess_d[13] = a36 * (a53 + a97) + a71 * a93 + a98;
+    hess_d[14] = a100 + a36 * (a32 + a8 * a99) + a75 * a93;
+    hess_d[15] = a101 + a36 * (a16 * a44 + a22) + a82 * a93;
+    hess_d[16] = a103 + a36 * (a102 + a76) + a87 * a93;
+    hess_d[17] = a105 + a36 * (a104 + a15 * a8) + a91 * a93;
+    hess_d[18] = a106 * a38 + a5 * a92;
+    hess_d[19] = a106 * a46 + a107 * a36 * a5;
+    hess_d[20] = a106 * a50 + a36 * (a107 * a20 + a94);
+    hess_d[21] = a106 * a65 + a109 + a36 * (a44 * a52 + a88);
+    hess_d[22] = a106 * a71 + a110 + a36 * (a104 + a107 * a52);
+    hess_d[23] = a106 * a75 + a111 + a36 * (a107 * a99 + a97);
+    hess_d[24] = a106 * a82 + a112 + a36 * (a27 + a28 * a44);
+    hess_d[25] = a106 * a87 + a113 + a36 * (a107 * a28 + a32);
+    hess_d[26] = a106 * a91 + a114 + a36 * (a102 + a107 * a15);
+    hess_d[27] = a118 * a38 + a36 * (a0 * a115 + a117) + a57;
+    hess_d[28] = a118 * a46 + a36 * (a115 * a13 + a83) + a96;
+    hess_d[29] = a109 + a118 * a50 + a36 * (a116 * a13 + a88);
+    hess_d[30] = a118 * a65 + a120 + a122 * a124 + 2 * a126 * a64 + a36 * (a115 * a51 + a125);
+    hess_d[31] = a115 * a129 + a118 * a71 + a124 * a128 + a131;
+    hess_d[32] = a116 * a129 + a118 * a75 + a124 * a133 + a134;
+    hess_d[33] = a118 * a82 + a121 * a124 + a136 + a36 * (a115 * a16 + a135);
+    hess_d[34] = a118 * a87 + a124 * a127 + a137 + a36 * (a115 * a19 + a22);
+    hess_d[35] = a118 * a91 + a124 * a132 + a138 + a36 * (a116 * a19 + a27);
+    hess_d[36] = a140 * a38 + a36 * (a0 * a139 + a22) + a67;
+    hess_d[37] = a140 * a46 + a36 * (a117 + a141) + a98;
+    hess_d[38] = a110 + a140 * a50 + a36 * (a104 + a116 * a20);
+    hess_d[39] = a122 * a142 + a131 + a140 * a65 + a143 * a51;
+    hess_d[40] = a120 + a128 * a142 + a140 * a71 + 2 * a145 * a70 + a36 * (a125 + a144);
+    hess_d[41] = a116 * a36 * a99 + a133 * a142 + a140 * a75 + a147;
+    hess_d[42] = a121 * a142 + a140 * a82 + a148 + a36 * (a139 * a16 + a83);
+    hess_d[43] = a127 * a142 + a140 * a87 + a150 + a36 * (a135 + a149);
+    hess_d[44] = a132 * a142 + a140 * a91 + a151 + a36 * (a116 * a15 + a32);
+    hess_d[45] = a152 * a38 + a36 * (a139 * a5 + a27) + a72;
+    hess_d[46] = a100 + a152 * a46 + a36 * (a153 * a5 + a32);
+    hess_d[47] = a111 + a152 * a50 + a36 * (a141 + a153 * a20);
+    hess_d[48] = a122 * a154 + a134 + a143 * a52 + a152 * a65;
+    hess_d[49] = a128 * a154 + a147 + a152 * a71 + a153 * a36 * a52;
+    hess_d[50] = a120 + a133 * a154 + a152 * a75 + 2 * a155 * a30 + a36 * (a144 + a153 * a99);
+    hess_d[51] = a121 * a154 + a152 * a82 + a157 + a36 * (a139 * a28 + a88);
+    hess_d[52] = a127 * a154 + a152 * a87 + a158 + a36 * (a104 + a153 * a28);
+    hess_d[53] = a132 * a154 + a152 * a91 + a159 + a36 * (a149 + a15 * a153);
+    hess_d[54] = a163 * a38 + a36 * (a0 * a160 + a162) + a77;
+    hess_d[55] = a101 + a163 * a46 + a36 * (a13 * a160 + a22);
+    hess_d[56] = a112 + a163 * a50 + a36 * (a13 * a161 + a27);
+    hess_d[57] = a122 * a165 + a136 + a163 * a65 + a36 * (a160 * a51 + a164);
+    hess_d[58] = a128 * a165 + a148 + a163 * a71 + a36 * (a160 * a66 + a83);
+    hess_d[59] = a133 * a165 + a157 + a163 * a75 + a36 * (a161 * a66 + a88);
+    hess_d[60] = a120 + a121 * a165 + a163 * a82 + 2 * a167 * a81 + a36 * (a16 * a160 + a166);
+    hess_d[61] = a127 * a165 + a160 * a168 + a163 * a87 + a170;
+    hess_d[62] = a132 * a165 + a161 * a168 + a163 * a91 + a171;
+    hess_d[63] = a173 * a38 + a36 * (a0 * a172 + a83) + a84;
+    hess_d[64] = a103 + a173 * a46 + a36 * (a162 + a174);
+    hess_d[65] = a113 + a173 * a50 + a36 * (a161 * a20 + a32);
+    hess_d[66] = a122 * a175 + a137 + a173 * a65 + a36 * (a172 * a51 + a22);
+    hess_d[67] = a128 * a175 + a150 + a173 * a71 + a36 * (a164 + a176);
+    hess_d[68] = a133 * a175 + a158 + a173 * a75 + a36 * (a104 + a161 * a99);
+    hess_d[69] = a121 * a175 + a16 * a177 + a170 + a173 * a82;
+    hess_d[70] = a120 + a127 * a175 + a173 * a87 + 2 * a179 * a86 + a36 * (a166 + a178);
+    hess_d[71] = a132 * a175 + a15 * a161 * a36 + a173 * a91 + a181;
+    hess_d[72] = a182 * a38 + a36 * (a172 * a5 + a88) + a89;
+    hess_d[73] = a105 + a182 * a46 + a36 * (a104 + a183 * a5);
+    hess_d[74] = a114 + a182 * a50 + a36 * (a174 + a183 * a20);
+    hess_d[75] = a122 * a184 + a138 + a182 * a65 + a36 * (a172 * a52 + a27);
+    hess_d[76] = a128 * a184 + a151 + a182 * a71 + a36 * (a183 * a52 + a32);
+    hess_d[77] = a133 * a184 + a159 + a182 * a75 + a36 * (a176 + a183 * a99);
+    hess_d[78] = a121 * a184 + a171 + a177 * a28 + a182 * a82;
+    hess_d[79] = a127 * a184 + a181 + a182 * a87 + a183 * a28 * a36;
+    hess_d[80] = a120 + a132 * a184 + 2 * a180 * a90 + a182 * a91 + a36 * (a15 * a183 + a178);
+    return hess_d;
 }
 
 template <common::CFloatingPoint TScalar>
@@ -647,85 +625,25 @@ inline auto PointTriangleDistance<TScalar>::Gradient(TMatrixx const& x_)
     auto b = x_.template Slice<3, 1>(6, 0);
     auto c = x_.template Slice<3, 1>(9, 0);
     using namespace std;
-    TScalar a0  = a[1] - b[1];
-    TScalar a1  = -a0;
-    TScalar a2  = -c[2];
-    TScalar a3  = a2 + a[2];
-    TScalar a4  = -a3;
-    TScalar a5  = -c[1];
-    TScalar a6  = a5 + a[1];
-    TScalar a7  = -a6;
-    TScalar a8  = a[2] - b[2];
-    TScalar a9  = -a8;
-    TScalar a10 = a1 * a4 - a7 * a9;
-    TScalar a11 = a[0] - b[0];
-    TScalar a12 = -a11;
-    TScalar a13 = -c[0];
-    TScalar a14 = a13 + a[0];
-    TScalar a15 = -a14;
-    TScalar a16 = -a1 * a15 + a12 * a7;
-    TScalar a17 = a11 * a3 - a14 * a8;
-    TScalar a18 = ((a10) * (a10)) + ((a16) * (a16)) + ((a17) * (a17));
-    TScalar a19 = 1 / sqrt(a18);
-    TScalar a20 = a10 * a19;
-    TScalar a21 = -a12 * a4 + a15 * a9;
-    TScalar a22 = a19 * a21;
-    TScalar a23 = a16 * a19;
-    TScalar a24 = a2 + b[2];
-    TScalar a25 = -a[1] + x[1];
-    TScalar a26 = a19 * a25;
-    TScalar a27 = a5 + b[1];
-    TScalar a28 = -a[2] + x[2];
-    TScalar a29 = a19 * a28;
-    TScalar a30 = pow(a18, -TScalar(3) / TScalar(2));
-    TScalar a31 = 2 * b[1];
-    TScalar a32 = -2 * c[1];
-    TScalar a33 = a31 + a32;
-    TScalar a34 = (TScalar(1) / TScalar(2)) * a16;
-    TScalar a35 = 2 * b[2];
-    TScalar a36 = -2 * c[2];
-    TScalar a37 = (TScalar(1) / TScalar(2)) * a35 + (TScalar(1) / TScalar(2)) * a36;
-    TScalar a38 = a30 * (-a17 * a37 - a33 * a34);
-    TScalar a39 = -a[0] + x[0];
-    TScalar a40 = a10 * a39;
-    TScalar a41 = a21 * a25;
-    TScalar a42 = a16 * a28;
-    TScalar a43 = a19 * a39;
-    TScalar a44 = a13 + b[0];
-    TScalar a45 = 2 * b[0];
-    TScalar a46 = -2 * c[0];
-    TScalar a47 = -a45 - a46;
-    TScalar a48 = a30 * (-a10 * a37 - a34 * a47);
-    TScalar a49 = (TScalar(1) / TScalar(2)) * a17;
-    TScalar a50 = (TScalar(1) / TScalar(2)) * a10;
-    TScalar a51 = a30 * (a33 * a50 - a47 * a49);
-    TScalar a52 = 2 * a[1];
-    TScalar a53 = a32 + a52;
-    TScalar a54 = 2 * a[2];
-    TScalar a55 = -a36 - a54;
-    TScalar a56 = a30 * (a34 * a53 - a49 * a55);
-    TScalar a57 = 2 * a[0];
-    TScalar a58 = a46 + a57;
-    TScalar a59 = a30 * (-a34 * a58 - a50 * a55);
-    TScalar a60 = a30 * (-a49 * a58 - a50 * a53);
-    TScalar a61 = -a31 + a52;
-    TScalar a62 = -a35 + a54;
-    TScalar a63 = a30 * (-a34 * a61 - a49 * a62);
-    TScalar a64 = a45 - a57;
-    TScalar a65 = a30 * (-a34 * a64 - a50 * a62);
-    TScalar a66 = a30 * (-a49 * a64 + a50 * a61);
-    grad_d[0]   = a20;
-    grad_d[1]   = a22;
-    grad_d[2]   = a23;
-    grad_d[3]   = -a20 - a24 * a26 + a27 * a29 + a38 * a40 + a38 * a41 + a38 * a42;
-    grad_d[4]   = -a22 + a24 * a43 - a29 * a44 + a40 * a48 + a41 * a48 + a42 * a48;
-    grad_d[5]   = -a23 + a26 * a44 - a27 * a43 + a40 * a51 + a41 * a51 + a42 * a51;
-    grad_d[6]   = a26 * a3 + a29 * a7 + a40 * a56 + a41 * a56 + a42 * a56;
-    grad_d[7]   = a14 * a29 + a4 * a43 + a40 * a59 + a41 * a59 + a42 * a59;
-    grad_d[8]   = a15 * a26 + a40 * a60 + a41 * a60 + a42 * a60 + a43 * a6;
-    grad_d[9]   = a0 * a29 + a26 * a9 + a40 * a63 + a41 * a63 + a42 * a63;
-    grad_d[10]  = a12 * a29 + a40 * a65 + a41 * a65 + a42 * a65 + a43 * a8;
-    grad_d[11]  = a1 * a43 + a11 * a26 + a40 * a66 + a41 * a66 + a42 * a66;
+    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
+    math::linalg::mini::SVector<TScalar, 3> ac = c - a;
+    math::linalg::mini::SVector<TScalar, 3> ax = x - a;
+    math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ac);
+    TScalar nnorm                              = Norm(n);
+    TScalar nnorminv                           = 1 / nnorm;
+    n *= nnorminv;
+    math::linalg::mini::Identity<TScalar, 3, 3> I;
+    math::linalg::mini::SVector<TScalar, 3> Pnax = ax - Dot(ax, n) * n;
+    math::linalg::mini::SVector<TScalar, kDofs> g;
+    auto gx = g.template Slice<3, 1>(0, 0);
+    auto ga = g.template Slice<3, 1>(3, 0);
+    auto gb = g.template Slice<3, 1>(6, 0);
+    auto gc = g.template Slice<3, 1>(9, 0);
+    gx      = n;
+    ga      = nnorminv * (Cross(b - c, Pnax)) - n;
+    gb      = nnorminv * (Cross(ac, Pnax));
+    gc      = nnorminv * (Cross(-ab, Pnax));
+    return g;
 }
 
 template <common::CFloatingPoint TScalar>
@@ -1187,46 +1105,47 @@ inline auto PointTriangleDistance<TScalar>::Hessian(TMatrixx const& x_)
     TScalar a443 = -a13 * a427 - a416;
     TScalar a444 = 2 * a268;
     TScalar a445 = a193 * a425;
-    hess_d[0]    = 0;
-    hess_d[1]    = 0;
-    hess_d[2]    = 0;
-    hess_d[3]    = a37;
-    hess_d[4]    = a45;
-    hess_d[5]    = a52;
-    hess_d[6]    = a60;
-    hess_d[7]    = a67;
-    hess_d[8]    = a71;
-    hess_d[9]    = a76;
-    hess_d[10]   = a82;
-    hess_d[11]   = a87;
-    hess_d[12]   = 0;
-    hess_d[13]   = 0;
-    hess_d[14]   = 0;
-    hess_d[15]   = a91;
-    hess_d[16]   = a92;
-    hess_d[17]   = a94;
-    hess_d[18]   = a97;
-    hess_d[19]   = a98;
-    hess_d[20]   = a101;
-    hess_d[21]   = a104;
-    hess_d[22]   = a105;
-    hess_d[23]   = a108;
-    hess_d[24]   = 0;
-    hess_d[25]   = 0;
-    hess_d[26]   = 0;
-    hess_d[27]   = a110;
-    hess_d[28]   = a112;
-    hess_d[29]   = a113;
-    hess_d[30]   = a116;
-    hess_d[31]   = a119;
-    hess_d[32]   = a120;
-    hess_d[33]   = a123;
-    hess_d[34]   = a126;
-    hess_d[35]   = a127;
-    hess_d[36]   = a37;
-    hess_d[37]   = a91;
-    hess_d[38]   = a110;
-    hess_d[39]   = a130 * a132 + a130 * a134 + a130 * a136 + 2 * a137 * a138 + 2 * a140 * a28 +
+    math::linalg::mini::SMatrix<TScalar, kDofs, kDofs> hess_d;
+    hess_d[0]  = 0;
+    hess_d[1]  = 0;
+    hess_d[2]  = 0;
+    hess_d[3]  = a37;
+    hess_d[4]  = a45;
+    hess_d[5]  = a52;
+    hess_d[6]  = a60;
+    hess_d[7]  = a67;
+    hess_d[8]  = a71;
+    hess_d[9]  = a76;
+    hess_d[10] = a82;
+    hess_d[11] = a87;
+    hess_d[12] = 0;
+    hess_d[13] = 0;
+    hess_d[14] = 0;
+    hess_d[15] = a91;
+    hess_d[16] = a92;
+    hess_d[17] = a94;
+    hess_d[18] = a97;
+    hess_d[19] = a98;
+    hess_d[20] = a101;
+    hess_d[21] = a104;
+    hess_d[22] = a105;
+    hess_d[23] = a108;
+    hess_d[24] = 0;
+    hess_d[25] = 0;
+    hess_d[26] = 0;
+    hess_d[27] = a110;
+    hess_d[28] = a112;
+    hess_d[29] = a113;
+    hess_d[30] = a116;
+    hess_d[31] = a119;
+    hess_d[32] = a120;
+    hess_d[33] = a123;
+    hess_d[34] = a126;
+    hess_d[35] = a127;
+    hess_d[36] = a37;
+    hess_d[37] = a91;
+    hess_d[38] = a110;
+    hess_d[39] = a130 * a132 + a130 * a134 + a130 * a136 + 2 * a137 * a138 + 2 * a140 * a28 +
                  a146 * a147 + a146 * a148 + a146 * a149 - 2 * a37;
     hess_d[40] = a131 * a144 * a152 * a28 * a33 - a132 * a150 + a133 * a144 * a152 * a28 * a89 -
                  a134 * a150 + a135 * a144 * a15 * a152 * a28 - a151 * a17 - a153;
@@ -1412,23 +1331,21 @@ inline auto PointTriangleDistance<TScalar>::Hessian(TMatrixx const& x_)
                   a16 * a440 * a84 + a423;
     hess_d[143] = a132 * a443 + a134 * a443 + a136 * a443 + a147 * a445 + a148 * a445 +
                   a149 * a445 + a396 * a444 + a422 * a444;
+    return hess_d;
 }
 
 template <common::CFloatingPoint TScalar>
 template <math::linalg::mini::CMatrix TMatrixx>
 inline TScalar EdgeEdgeDistance<TScalar>::Eval(TMatrixx const& x_, ScalarType eps)
 {
-    auto a                                     = x_.template Slice<3, 1>(0, 0);
-    auto b                                     = x_.template Slice<3, 1>(3, 0);
-    auto c                                     = x_.template Slice<3, 1>(6, 0);
-    auto d                                     = x_.template Slice<3, 1>(9, 0);
-    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
-    math::linalg::mini::SVector<TScalar, 3> cd = d - c;
-    math::linalg::mini::SVector<TScalar, 3> ac = c - a;
-    auto n                                     = Cross(ab, cd);
+    auto a = x_.template Slice<3, 1>(0, 0);
+    auto b = x_.template Slice<3, 1>(3, 0);
+    auto c = x_.template Slice<3, 1>(6, 0);
+    auto d = x_.template Slice<3, 1>(9, 0);
     using namespace std;
-    n /= sqrt(SquaredNorm(n) + eps * eps);
-    return Dot(n, ac);
+    // NOTE: We use the geometry::DistanceQueries::LineSegments function, because
+    // it handles degenerate and parallel edges.
+    return sqrt(geometry::DistanceQueries::LineSegments(a, b, c, d, eps * eps));
 }
 
 template <common::CFloatingPoint TScalar>
@@ -1441,80 +1358,31 @@ inline auto EdgeEdgeDistance<TScalar>::Gradient(TMatrixx const& x_, ScalarType e
     auto c = x_.template Slice<3, 1>(6, 0);
     auto d = x_.template Slice<3, 1>(9, 0);
     using namespace std;
-    TScalar a0  = c[2] - d[2];
-    TScalar a1  = -a0;
-    TScalar a2  = a[0] - b[0];
-    TScalar a3  = -a2;
-    TScalar a4  = c[1] - d[1];
-    TScalar a5  = -a4;
-    TScalar a6  = a[1] - b[1];
-    TScalar a7  = -a6;
-    TScalar a8  = c[0] - d[0];
-    TScalar a9  = -a8;
-    TScalar a10 = a3 * a5 - a7 * a9;
-    TScalar a11 = a[2] - b[2];
-    TScalar a12 = -a11;
-    TScalar a13 = -a1 * a3 + a12 * a9;
-    TScalar a14 = a1 * a7 - a12 * a5;
-    TScalar a15 = ((a10) * (a10)) + ((a13) * (a13)) + ((a14) * (a14)) + ((eps) * (eps));
-    TScalar a16 = 1 / sqrt(a15);
-    TScalar a17 = -a[1] + c[1];
-    TScalar a18 = a16 * a17;
-    TScalar a19 = -a[2] + c[2];
-    TScalar a20 = a16 * a19;
-    TScalar a21 = a14 * a16;
-    TScalar a22 = pow(a15, -TScalar(3) / TScalar(2));
-    TScalar a23 = 2 * c[1] - 2 * d[1];
-    TScalar a24 = (TScalar(1) / TScalar(2)) * a10;
-    TScalar a25 = 2 * c[2] - 2 * d[2];
-    TScalar a26 = -a25;
-    TScalar a27 = (TScalar(1) / TScalar(2)) * a13;
-    TScalar a28 = a22 * (-a23 * a24 - a26 * a27);
-    TScalar a29 = -a[0] + c[0];
-    TScalar a30 = a14 * a29;
-    TScalar a31 = a13 * a17;
-    TScalar a32 = a10 * a19;
-    TScalar a33 = a16 * a29;
-    TScalar a34 = a13 * a16;
-    TScalar a35 = 2 * c[0] - 2 * d[0];
-    TScalar a36 = -a35;
-    TScalar a37 = (TScalar(1) / TScalar(2)) * a14;
-    TScalar a38 = a22 * (-a24 * a36 - a25 * a37);
-    TScalar a39 = a10 * a16;
-    TScalar a40 = -a23;
-    TScalar a41 = a22 * (-a27 * a35 - a37 * a40);
-    TScalar a42 = a22 * (-a24 * a40 - a25 * a27);
-    TScalar a43 = a22 * (-a24 * a35 - a26 * a37);
-    TScalar a44 = a22 * (-a23 * a37 - a27 * a36);
-    TScalar a45 = 2 * a[1] - 2 * b[1];
-    TScalar a46 = -a45;
-    TScalar a47 = 2 * a[2] - 2 * b[2];
-    TScalar a48 = a22 * (-a24 * a46 - a27 * a47);
-    TScalar a49 = 2 * a[0] - 2 * b[0];
-    TScalar a50 = -a47;
-    TScalar a51 = a22 * (-a24 * a49 - a37 * a50);
-    TScalar a52 = -a49;
-    TScalar a53 = a22 * (-a27 * a52 - a37 * a45);
-    TScalar a54 = a22 * (-a24 * a45 - a27 * a50);
-    TScalar a55 = a22 * (-a24 * a52 - a37 * a47);
-    TScalar a56 = a22 * (-a27 * a49 - a37 * a46);
-    grad_d[0]   = a1 * a18 + a20 * a4 - a21 + a28 * a30 + a28 * a31 + a28 * a32;
-    grad_d[1]   = a0 * a33 + a20 * a9 + a30 * a38 + a31 * a38 + a32 * a38 - a34;
-    grad_d[2]   = a18 * a8 + a30 * a41 + a31 * a41 + a32 * a41 + a33 * a5 - a39;
-    grad_d[3]   = a0 * a18 + a20 * a5 + a30 * a42 + a31 * a42 + a32 * a42;
-    grad_d[4]   = a1 * a33 + a20 * a8 + a30 * a43 + a31 * a43 + a32 * a43;
-    grad_d[5]   = a18 * a9 + a30 * a44 + a31 * a44 + a32 * a44 + a33 * a4;
-    grad_d[6]   = a11 * a18 + a20 * a7 + a21 + a30 * a48 + a31 * a48 + a32 * a48;
-    grad_d[7]   = a12 * a33 + a2 * a20 + a30 * a51 + a31 * a51 + a32 * a51 + a34;
-    grad_d[8]   = a18 * a3 + a30 * a53 + a31 * a53 + a32 * a53 + a33 * a6 + a39;
-    grad_d[9]   = a12 * a18 + a20 * a6 + a30 * a54 + a31 * a54 + a32 * a54;
-    grad_d[10]  = a11 * a33 + a20 * a3 + a30 * a55 + a31 * a55 + a32 * a55;
-    grad_d[11]  = a18 * a2 + a30 * a56 + a31 * a56 + a32 * a56 + a33 * a7;
+    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
+    math::linalg::mini::SVector<TScalar, 3> cd = d - c;
+    math::linalg::mini::SVector<TScalar, 3> ac = c - a;
+    math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, cd);
+    TScalar nnorm                              = sqrt(SquaredNorm(n) + eps * eps);
+    TScalar nnorminv                           = 1 / nnorm;
+    n *= nnorminv;
+    math::linalg::mini::SVector<TScalar, 3> Pnac = ac - Dot(ac, n) * n;
+    math::linalg::mini::SVector<TScalar, kDofs> g;
+    auto ga = g.template Slice<3, 1>(0, 0);
+    auto gb = g.template Slice<3, 1>(3, 0);
+    auto gc = g.template Slice<3, 1>(6, 0);
+    auto gd = g.template Slice<3, 1>(9, 0);
+    ga      = nnorminv * Cross(-cd, Pnac);
+    gb      = -ga;
+    ga -= n;
+    gc = nnorminv * Cross(ab, Pnac);
+    gd = -gc;
+    gc += n;
+    return g;
 }
 
 template <common::CFloatingPoint TScalar>
 template <math::linalg::mini::CMatrix TMatrixx>
-inline auto EdgeEdgeDistance<TScalar>::Hessian(TMatrixx const& x, ScalarType eps)
+inline auto EdgeEdgeDistance<TScalar>::Hessian(TMatrixx const& x_, ScalarType eps)
     -> math::linalg::mini::SMatrix<TScalar, kDofs, kDofs>
 {
     auto a = x_.template Slice<3, 1>(0, 0);
@@ -2193,7 +2061,8 @@ inline auto EdgeEdgeDistance<TScalar>::Hessian(TMatrixx const& x, ScalarType eps
     TScalar a665 = -a462 - a519;
     TScalar a666 = 2 * a193;
     TScalar a667 = a188 * a645;
-    hess_d[0]    = a10 * a34 + a10 * a37 + a10 * a40 + a41 * a46 + a46 * a47 - 2 * a48 + a54 * a55 +
+    math::linalg::mini::SMatrix<TScalar, kDofs, kDofs> hess_d;
+    hess_d[0] = a10 * a34 + a10 * a37 + a10 * a40 + a41 * a46 + a46 * a47 - 2 * a48 + a54 * a55 +
                 a54 * a56 + a54 * a57;
     hess_d[1] = a11 * a19 * a44 * a52 * a64 + a26 * a38 * a44 * a52 * a64 +
                 a30 * a35 * a44 * a52 * a64 - a34 * a58 - a37 * a58 - a59 * a60 - a74;
@@ -2413,6 +2282,7 @@ inline auto EdgeEdgeDistance<TScalar>::Hessian(TMatrixx const& x, ScalarType eps
         -a15 * a469 - a15 * a660 - a472 * a582 + a55 * a664 + a56 * a664 + a57 * a664 + a643;
     hess_d[143] = a34 * a665 + a37 * a665 + a40 * a665 + a470 * a666 + a55 * a667 + a56 * a667 +
                   a57 * a667 + a642 * a666;
+    return hess_d;
 }
 
 } // namespace pbat::geometry
