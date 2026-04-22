@@ -32,6 +32,7 @@
 #include <cmath>
 #include <limits>
 #include <tbb/parallel_for.h>
+#include <tuple>
 
 namespace pbat::sim::algorithm::vbd {
 
@@ -200,6 +201,7 @@ struct Params
     Eigen::Matrix<Scalar, 3, Eigen::Dynamic> Hk; ///< `3 x 3*|# nodes|` block-diagonal Hessian,
                                                  ///< stored as contiguous 3x3 blocks per vertex
     Index k;                                     ///< Current iteration index
+    Index kp;                                    ///< Current subproblem iteration index
 };
 
 /**
@@ -356,19 +358,19 @@ inline void AccumulateContactEnergy(
     math::linalg::mini::SVector<Scalar, 3>& gi,
     math::linalg::mini::SMatrix<Scalar, 3, 3>& Hi)
 {
-    using namespace math::linalg;
-
     auto const& contactParams = contact.GetParams();
     Scalar const kn           = contactParams.gamma * contactParams.kc;
     Scalar const kf           = contactParams.gammaf * contactParams.kc;
     Scalar const dmin         = contactParams.dmin;
     // Generic per-contact accumulation for a known stencil position ki
-    auto fAccumulateNodalDerivatives = [&](auto C, auto stencil, int ki) {
-        using ConstraintAccessorType = decltype(C);
-        using ContactSetType         = typename ConstraintAccessorType::ContactSetType;
-        static auto constexpr kDofs  = ConstraintAccessorType::kDofs;
-        auto const [Xc, nodes]       = contact.template LoadStencil<ContactSetType>(x, stencil);
-        auto xc                      = mini::Reshape<kDofs, 1>(Xc);
+    auto fAccumulateNodalDerivatives = [&](auto C, auto stencil) {
+        using ConstraintAccessorType   = decltype(C);
+        using ContactSetType           = typename ConstraintAccessorType::ContactSetType;
+        static auto constexpr kDofs    = ConstraintAccessorType::kDofs;
+        static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+        auto const [Xc, nodes]         = contact.template LoadStencil<ContactSetType>(x, stencil);
+        using namespace math::linalg;
+        auto xc = mini::Reshape<kDofs, 1>(Xc);
         // Normal
         Scalar cs         = C.Eval(xc) - dmin - C.Slack();
         Scalar dL         = kn * cs - C.Lambda();
@@ -379,24 +381,21 @@ inline void AccumulateContactEnergy(
         auto const& Tf              = F.TangentBasis();
         auto cf                     = F.Eval(xc);
         mini::SVector<Scalar, 2> df = kf * cf - F.Lambda();
+        // Fetch local node index in the stencil
+        Index ki{0};
+        pbat::common::ForRange<0, kStencil>([&]<auto kj>() { ki += (i == nodes[kj]) * kj; });
+        // Compute node derivatives
         kernels::AccumulateAugmentedLagrangianContactNodeDerivatives<
             3>(gradc, ki, dL, kn, Tf, Wf(ki), kf, df, gi, Hi);
     };
-
-    // TODO: Update these calls so that we set the right local node index `ki`.
-    using ContactMeshDynamics     = contact::MeshDynamics<Scalar, Index>;
-    using PointPointContactSet    = typename ContactMeshDynamics::PointPointContactSet;
-    using PointEdgeContactSet     = typename ContactMeshDynamics::PointEdgeContactSet;
-    using PointTriangleContactSet = typename ContactMeshDynamics::PointTriangleContactSet;
-    using EdgeEdgeContactSet      = typename ContactMeshDynamics::EdgeEdgeContactSet;
     contact.ForEachPointPointContact(i, [&](auto C, auto stencil) {
-        fAccumulateNodalDerivatives(C, stencil, 0);
+        fAccumulateNodalDerivatives(C, stencil);
     });
     contact.ForEachPointEdgeContact(i, [&](auto C, auto stencil) {
-        fAccumulateNodalDerivatives(C, stencil, 0);
+        fAccumulateNodalDerivatives(C, stencil);
     });
     contact.ForEachPointTriangleContact(i, [&](auto C, auto stencil) {
-        fAccumulateNodalDerivatives(C, stencil, 0);
+        fAccumulateNodalDerivatives(C, stencil);
     });
     auto const& dm     = contact.DynamicMeshes();
     auto const hebegin = dm.GVHEp(i);
@@ -406,13 +405,13 @@ inline void AccumulateContactEnergy(
         auto const he = dm.GVHEadj(k);
         auto const f  = geometry::FaceOfHalfEdge(he);
         contact.ForEachEdgePointContact(he, [&](auto C, auto stencil) {
-            fAccumulateNodalDerivatives(C, stencil, 1);
+            fAccumulateNodalDerivatives(C, stencil);
         });
         contact.ForEachTrianglePointContact(f, [&](auto C, auto stencil) {
-            fAccumulateNodalDerivatives(C, stencil, 0);
+            fAccumulateNodalDerivatives(C, stencil);
         });
         contact.ForEachEdgeEdgeContact(he, [&](auto C, auto stencil) {
-            fAccumulateNodalDerivatives(C, stencil, 0);
+            fAccumulateNodalDerivatives(C, stencil);
         });
     }
 }
@@ -494,7 +493,7 @@ inline void AdaptStencilGradientAccelerationParameter(
     using mini::FromEigen;
     using mini::Norm;
     using mini::ToEigen;
-    if (params.k > 0)
+    if (params.kp > 0)
     {
         Scalar ngk       = Norm(gi);
         auto gkm1        = params.gk.col(i).template head<3>();
@@ -585,7 +584,7 @@ void Iterate(
             fem.x.col(i) = ToEigen(xi);
         });
     }
-    ++params.k;
+    ++params.kp;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -631,6 +630,12 @@ bool CheckConvergence(
     return gknorm2 <= params.gtol * params.gtol;
 }
 
+/**
+ * @brief Compute 3x3 dynamics hessian blocks
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param params Solver parameters
+ */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void AssembleBlockDiagonalDynamicsHessian(
     common::FemElastoDynamics<TElasticEnergy>& fem,
@@ -693,7 +698,7 @@ void Solve(
         UpdatePenaltyParameter(contact, params);
         // 4. VBD solve the linear constraint subproblem
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
-        for (auto ki = 0; ki < params.nSubproblemMaxIters; ++ki)
+        for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
         {
             contact.UpdateDual<EDualVariable::Slack>(fem.x);
             Iterate<TElasticEnergy>(fem, contact, params);

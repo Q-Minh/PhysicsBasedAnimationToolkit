@@ -548,7 +548,8 @@ inline void DenseAdjacencySet<TIndex, T...>::Finalize(std::size_t nSourceVertice
         auto max        = *std::ranges::max_element(sources);
         nSourceVertices = static_cast<std::size_t>(max) + 1;
     }
-    mPrefix.resize(nSourceVertices + 1, TIndex(0));
+    mPrefix.resize(nSourceVertices + 1);
+    std::fill(mPrefix.begin(), mPrefix.end(), TIndex(0));
     for (auto const& tup : mAdjacencies)
         ++mPrefix[std::get<0>(tup)];
     std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TIndex(0));

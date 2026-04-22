@@ -2426,24 +2426,17 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachForwardContact(
     IndexType u,
     FOnContact&& f)
 {
-    auto const& prefix = contactSet.Prefix();
-    if (u >= static_cast<IndexType>(prefix.size() - 1))
-        return;
     auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
     int gu{0};
     while (u >= prefixu[gu + 1])
         ++gu;
     int gv{0};
-    auto cbegin = prefix[u];
-    auto cend   = prefix[u + 1];
-    for (TIndex c = cbegin; c < cend; ++c)
-    {
-        auto const [cu, v, k] = contactSet.WeightedAdjacency(c);
+    contactSet.ForEach(u, [&](auto cu, auto v, auto k) {
         while (v >= prefixv[gv + 1])
             ++gv;
-        ConstraintAccessor<TContactSet> C{contactSet, k};
+        ConstraintAccessor<TContactSet const> C{contactSet, k};
         f(C, Stencil{u, v, gu, gv});
-    }
+    });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -2453,24 +2446,17 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachForwardContact(
     IndexType u,
     FOnContact&& f) const
 {
-    auto const& prefix = contactSet.Prefix();
-    if (u >= static_cast<IndexType>(prefix.size() - 1))
-        return;
     auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
     int gu{0};
     while (u >= prefixu[gu + 1])
         ++gu;
     int gv{0};
-    auto cbegin = prefix[u];
-    auto cend   = prefix[u + 1];
-    for (TIndex c = cbegin; c < cend; ++c)
-    {
-        auto const [cu, v, k] = contactSet.WeightedAdjacency(c);
+    contactSet.ForEach(u, [&](auto cu, auto v, auto k) {
         while (v >= prefixv[gv + 1])
             ++gv;
         ConstraintAccessor<TContactSet const> C{contactSet, k};
         f(C, Stencil{u, v, gu, gv});
-    }
+    });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -2488,11 +2474,11 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachReverseContact(
     while (v >= prefixv[gv + 1])
         ++gv;
     int gu{0};
-    auto cbegin = reverseSet.prefix[v];
-    auto cend   = reverseSet.prefix[v + 1];
-    for (TIndex c = cbegin; c < cend; ++c)
+    auto cpbegin = reverseSet.prefix[v];
+    auto cpend   = reverseSet.prefix[v + 1];
+    for (TIndex cp = cpbegin; cp < cpend; ++cp)
     {
-        auto const& rcp = reverseSet.contacts[c];
+        auto const& rcp = reverseSet.contacts[cp];
         while (rcp.u >= prefixu[gu + 1])
             ++gu;
         ConstraintAccessor<TContactSet> C{contactSet, rcp.k};
@@ -2515,11 +2501,11 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachReverseContact(
     while (v >= prefixv[gv + 1])
         ++gv;
     int gu{0};
-    auto cbegin = reverseSet.prefix[v];
-    auto cend   = reverseSet.prefix[v + 1];
-    for (TIndex c = cbegin; c < cend; ++c)
+    auto cpbegin = reverseSet.prefix[v];
+    auto cpend   = reverseSet.prefix[v + 1];
+    for (TIndex cp = cpbegin; cp < cpend; ++cp)
     {
-        auto const& rcp = reverseSet.contacts[c];
+        auto const& rcp = reverseSet.contacts[cp];
         while (rcp.u >= prefixu[gu + 1])
             ++gu;
         ConstraintAccessor<TContactSet const> C{contactSet, rcp.k};

@@ -224,6 +224,7 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("Hnk", Hnk);
     group.WriteData("betaG", betaG);
     group.WriteMetaData("k", k);
+    group.WriteMetaData("kp", kp);
 }
 
 void Params::Deserialize(io::Archive const& archive)
@@ -270,6 +271,8 @@ void Params::Deserialize(io::Archive const& archive)
         betaG = group.ReadMetaData<decltype(betaG)>("betaG");
     if (group.HasMetaData("k"))
         k = group.ReadMetaData<decltype(k)>("k");
+    if (group.HasMetaData("kp"))
+        kp = group.ReadMetaData<decltype(kp)>("kp");
 }
 
 } // namespace pbat::sim::algorithm::vbd
@@ -384,6 +387,61 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     Scalar g0norm = g0.norm();
     Scalar gnorm  = g.norm();
     CHECK_LT(gnorm, g0norm);
+}
+
+TEST_CASE("[type:integration][sim][algorithm][vbd] Cube sliding on plane")
+{
+    using namespace pbat;
+    using namespace pbat::sim::algorithm;
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    using FemElastoDynamics = sim::algorithm::common::FemElastoDynamics<ElasticEnergyType>;
+    using MeshDynamics      = sim::contact::MeshDynamics<Scalar, Index>;
+    // Arrange
+    io::Archive archive(
+        fmt::format("{}/sim/algorithm/CubeFallingOnPlaneFast.h5", PBAT_TESTS_INTEGRATION_PATH),
+        HighFive::File::AccessMode::ReadOnly);
+    FemElastoDynamics fem{};
+    fem.Deserialize(archive["fem"]);
+    MeshDynamics contact{};
+    contact.Deserialize(archive["contact"]);
+    geometry::Device device{geometry::DeviceConfig{}};
+    contact.Initialize(device);
+    contact.GetParams()
+        .WithOgcParams(
+            sim::contact::ogc::Params<Scalar>()
+                .WithDisplacementBoundConfig(0.45, 0.)
+                .WithRadii(1e-2 /*r*/, 1e-2 /*rq*/)
+                .Construct())
+        .Construct();
+    sim::algorithm::vbd::Params params;
+    sim::algorithm::vbd::VertexElementAdjacencyGraph(
+        fem.mesh.E,
+        fem.mesh.X.cols(),
+        params.GVGp,
+        params.GVGe,
+        params.GVGilocal);
+    // Vertex colors
+    auto eOrdering  = graph::EGreedyColorOrderingStrategy::LargestDegree;
+    auto eSelection = graph::EGreedyColorSelectionStrategy::LeastUsed;
+    sim::algorithm::vbd::VertexColors(
+        fem.mesh.E,
+        fem.mesh.X.cols(),
+        eOrdering,
+        eSelection,
+        params.GVVp,
+        params.GVVadj,
+        params.colors);
+    // VBD params
+    params.WithVertexColors(params.GVVp, params.GVVadj, params.colors).Construct();
+    // Act
+    for (auto t = 0; t < 200; ++t)
+    {
+        fem.SetupTimeIntegrationOptimization();
+        sim::algorithm::vbd::InitializeSolve(fem, contact, params);
+        bool const bHasContacts = contact.NumContacts() > 0;
+        sim::algorithm::vbd::Solve(fem, contact, params);
+        fem.Step();
+    }
 }
 
 TEST_CASE("[sim][algorithm][vbd] Sandbox")
