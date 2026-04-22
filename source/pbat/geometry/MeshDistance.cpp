@@ -21,7 +21,7 @@ TEST_CASE("[geometry] Point-point distance can be computed")
         x(4) = 2.;
         x(5) = 3.;
         // Act
-        ScalarType const d = PointPointDistance<ScalarType>::Distance(x);
+        ScalarType const d = PointPointDistance<ScalarType>{}.Eval(x);
         // Assert
         CHECK_EQ(d, doctest::Approx(0.).epsilon(1e-10));
     }
@@ -36,7 +36,7 @@ TEST_CASE("[geometry] Point-point distance can be computed")
         x(4) = 0.;
         x(5) = 0.;
         // Act
-        ScalarType const d = PointPointDistance<ScalarType>::Distance(x);
+        ScalarType const d = PointPointDistance<ScalarType>{}.Eval(x);
         // Assert
         CHECK_EQ(d, doctest::Approx(1.).epsilon(1e-10));
     }
@@ -63,7 +63,7 @@ TEST_CASE("[geometry] Point-edge distance can be computed")
         x(7) = 0.;
         x(8) = 0.; // x
         // Act
-        ScalarType const d = PointEdgeDistance<ScalarType>::Distance(x);
+        ScalarType const d = PointEdgeDistance<ScalarType>{}.Eval(x);
         // Assert
         CHECK_EQ(d, doctest::Approx(0.).epsilon(1e-10));
     }
@@ -82,7 +82,7 @@ TEST_CASE("[geometry] Point-edge distance can be computed")
         x(7) = 1.;
         x(8) = 0.; // x
         // Act
-        ScalarType const d = PointEdgeDistance<ScalarType>::Distance(x);
+        ScalarType const d = PointEdgeDistance<ScalarType>{}.Eval(x);
         // Assert
         CHECK_EQ(d, doctest::Approx(1.).epsilon(1e-10));
     }
@@ -113,7 +113,7 @@ TEST_CASE("[geometry] Point-triangle distance can be computed")
         x(10) = 0.25;
         x(11) = 0.; // x
         // Act
-        ScalarType const d = PointTriangleDistance<ScalarType>::Distance(x);
+        ScalarType const d = PointTriangleDistance<ScalarType>{}.Eval(x);
         // Assert
         CHECK_EQ(d, doctest::Approx(0.).epsilon(1e-10));
     }
@@ -136,7 +136,7 @@ TEST_CASE("[geometry] Point-triangle distance can be computed")
         x(10) = 0.25;
         x(11) = 1.; // x
         // Act
-        ScalarType const d = PointTriangleDistance<ScalarType>::Distance(x);
+        ScalarType const d = PointTriangleDistance<ScalarType>{}.Eval(x);
         // Assert
         CHECK_EQ(d, doctest::Approx(1.).epsilon(1e-10));
     }
@@ -154,21 +154,21 @@ TEST_CASE("[geometry] Edge-edge distance can be computed")
         // Edge 1 from (-1,0,0) to (1,0,0)
         // Edge 2 from (0,-1,0) to (0,1,0)
         SVector<ScalarType, 12> x;
-        x(0)  = -1.;
-        x(1)  = 0.;
-        x(2)  = 0.; // a
-        x(3)  = 1.;
-        x(4)  = 0.;
-        x(5)  = 0.; // b
-        x(6)  = 0.;
-        x(7)  = -1.;
-        x(8)  = 0.; // c
-        x(9)  = 0.;
-        x(10) = 1.;
-        x(11) = 0.; // d
+        x(0)                 = -1.;
+        x(1)                 = 0.;
+        x(2)                 = 0.; // a
+        x(3)                 = 1.;
+        x(4)                 = 0.;
+        x(5)                 = 0.; // b
+        x(6)                 = 0.;
+        x(7)                 = -1.;
+        x(8)                 = 0.; // c
+        x(9)                 = 0.;
+        x(10)                = 1.;
+        x(11)                = 0.; // d
         ScalarType const eps = 1e-6;
         // Act
-        ScalarType const d = EdgeEdgeDistance<ScalarType>::Distance(x, eps);
+        ScalarType const d = EdgeEdgeDistance<ScalarType>{}.Eval(x, eps);
         // Assert
         CHECK_EQ(d, doctest::Approx(0.).epsilon(1e-5));
     }
@@ -178,21 +178,21 @@ TEST_CASE("[geometry] Edge-edge distance can be computed")
         // Edge 1 from (0,0,0) to (1,0,0)
         // Edge 2 from (0,1,0) to (1,1,0)
         SVector<ScalarType, 12> x;
-        x(0)  = 0.;
-        x(1)  = 0.;
-        x(2)  = 0.; // a
-        x(3)  = 1.;
-        x(4)  = 0.;
-        x(5)  = 0.; // b
-        x(6)  = 0.;
-        x(7)  = 1.;
-        x(8)  = 0.; // c
-        x(9)  = 1.;
-        x(10) = 1.;
-        x(11) = 0.; // d
+        x(0)                 = 0.;
+        x(1)                 = 0.;
+        x(2)                 = 0.; // a
+        x(3)                 = 1.;
+        x(4)                 = 0.;
+        x(5)                 = 0.; // b
+        x(6)                 = 0.;
+        x(7)                 = 1.;
+        x(8)                 = 0.; // c
+        x(9)                 = 1.;
+        x(10)                = 1.;
+        x(11)                = 0.; // d
         ScalarType const eps = 1e-6;
         // Act
-        ScalarType const d = EdgeEdgeDistance<ScalarType>::Distance(x, eps);
+        ScalarType const d = EdgeEdgeDistance<ScalarType>{}.Eval(x, eps);
         // Assert
         CHECK_EQ(d, doctest::Approx(1.).epsilon(1e-5));
     }
