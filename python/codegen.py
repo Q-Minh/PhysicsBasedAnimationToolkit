@@ -1,3 +1,4 @@
+# type: ignore
 import sympy as sp
 from sympy.printing.cxx import CXX17CodePrinter
 from sympy.codegen.ast import Assignment
@@ -41,6 +42,10 @@ class CXXPrinter(CXX17CodePrinter):
                                  for i in range(expr.exp)])
             code = f"({expansion})"
             return code
+        elif expr.exp == sp.S.Half:
+            return f"std::sqrt({self._print(expr.base)})"
+        elif expr.exp == -sp.S.Half:
+            return f"1 / std::sqrt({self._print(expr.base)})"
         else:
             return super()._print_Pow(expr)
         
