@@ -10,6 +10,7 @@
 #include <random>
 #include <ranges>
 #include <string_view>
+#include <tbb/parallel_sort.h>
 #include <tuple>
 #include <vector>
 
@@ -88,7 +89,15 @@ static void RunBenchmark(
     });
     for (auto nThreads = 2; nThreads < nCores; nThreads <<= 1)
     {
+        output = input;
+        bench.run(fmt::format("tbb::parallel_sort ({} threads)", nThreads), [&]() {
+            tbb::global_control gc{
+                tbb::global_control::max_allowed_parallelism,
+                static_cast<std::size_t>(nThreads)};
+            tbb::parallel_sort(output);
+        });
         lwork.resize(nThreads);
+        output = input;
         bench.run(fmt::format("pbat::common::RadixSort ({} threads)", nThreads), [&]() {
             std::int32_t max = range - 1;
             if constexpr (pbat::common::CTupleLike<T>)

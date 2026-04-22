@@ -234,9 +234,9 @@ void DynamicVertexFacetRTCCollideFunc(
     auto const& GHEF         = input->GHEF.value();
     auto& dminv              = state->dminv;
     auto& dminf              = state->dminf;
-    auto& XX                 = state->mXX.local();
-    auto& XE                 = state->mXE.local();
-    auto& XF                 = state->mXF.local();
+    auto& XX                 = state->mXXets.local();
+    auto& XE                 = state->mXEets.local();
+    auto& XF                 = state->mXFets.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -280,21 +280,21 @@ void DynamicVertexFacetRTCCollideFunc(
         {
             case EVertexFacetClosestFaceType::Vertex: {
                 if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                    XX.Add(XOffset + ix, XOffset + a);
+                    XX.push_back({XOffset + ix, XOffset + a});
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
                 if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                    XE.Add(
-                        XOffset + ix,
-                        // Make sure we always add a unique half-edge index to prevent duplicate
-                        // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
-                        // its opposite will be -1.
-                        HEOffset + std::max(a, geometry::OppositeHalfEdge(F, a, GHEF)));
+                    XE.push_back(
+                        {XOffset + ix,
+                         // Make sure we always add a unique half-edge index to prevent duplicate
+                         // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
+                         // its opposite will be -1.
+                         HEOffset + std::max(a, geometry::OppositeHalfEdge(F, a, GHEF))});
                 break;
             }
             default /* triangle */: {
-                XF.Add(XOffset + ix, FOffset + a);
+                XF.push_back({XOffset + ix, FOffset + a});
                 break;
             }
         }
@@ -335,9 +335,9 @@ void DynamicVertexStaticFacetRTCCollideFunc(
     auto const& GVHEenvadj   = input->GVHEenvadj.value();
     auto const& GHEFenv      = input->GHEFenv.value();
     auto& dminv              = state->dminv;
-    auto& XX                 = state->mXX.local();
-    auto& XE                 = state->mXE.local();
-    auto& XF                 = state->mXF.local();
+    auto& XX                 = state->mXXets.local();
+    auto& XE                 = state->mXEets.local();
+    auto& XF                 = state->mXFets.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -376,16 +376,16 @@ void DynamicVertexStaticFacetRTCCollideFunc(
         {
             case EVertexFacetClosestFaceType::Vertex: {
                 if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xi, a))
-                    XX.Add(XOffset + ix, XenvOffset + a);
+                    XX.push_back({XOffset + ix, XenvOffset + a});
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
                 if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xi, f, a))
-                    XE.Add(XOffset + ix, HEenvOffset + a);
+                    XE.push_back({XOffset + ix, HEenvOffset + a});
                 break;
             }
             default /* triangle */: {
-                XF.Add(XOffset + ix, FenvOffset + f);
+                XF.push_back({XOffset + ix, FenvOffset + f});
                 break;
             }
         }
@@ -425,9 +425,9 @@ void StaticVertexDynamicFacetRTCCollideFunc(
     auto const& GVHEadj      = input->GVHEadj.value();
     auto const& GHEF         = input->GHEF.value();
     auto& dminf              = state->dminf;
-    auto& XX                 = state->mXX.local();
-    auto& XE                 = state->mXE.local();
-    auto& XF                 = state->mXF.local();
+    auto& XX                 = state->mXXets.local();
+    auto& XE                 = state->mXEets.local();
+    auto& XF                 = state->mXFets.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -465,16 +465,16 @@ void StaticVertexDynamicFacetRTCCollideFunc(
         {
             case EVertexFacetClosestFaceType::Vertex: {
                 if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                    XX.Add(XenvOffset + ix, XOffset + a);
+                    XX.push_back({XenvOffset + ix, XOffset + a});
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
                 if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                    XE.Add(XenvOffset + ix, HEOffset + a);
+                    XE.push_back({XenvOffset + ix, HEOffset + a});
                 break;
             }
             default /* triangle */: {
-                XF.Add(XenvOffset + ix, FOffset + f);
+                XF.push_back({XenvOffset + ix, FOffset + f});
                 break;
             }
         }
@@ -519,7 +519,7 @@ void DynamicEdgeEdgeRTCCollideFunc(
     auto const& EHE          = input->EHE.value();
     auto const& GHEF         = input->GHEF.value();
     auto& dmine              = state->dmine;
-    auto& EE                 = state->mEE.local();
+    auto& EE                 = state->mEEets.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
@@ -580,7 +580,7 @@ void DynamicEdgeEdgeRTCCollideFunc(
         // safety for now until we can rigorously verify this claim.
         if (IsEdgeFeasible(X, F, GHEF, xc1, GHEF(0, ehe2(0)), ehe2(0)) and
             IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            EE.Add(EOffset + e1, EOffset + e2);
+            EE.push_back({EOffset + e1, EOffset + e2});
     }
 }
 
@@ -619,7 +619,7 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
     auto const& EHE          = input->EHE.value();
     auto const& GHEF         = input->GHEF.value();
     auto& dmine              = state->dmine;
-    auto& EE                 = state->mEE.local();
+    auto& EE                 = state->mEEets.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
@@ -668,7 +668,7 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // safety for now until we can rigorously verify this claim.
         if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xc1, GHEFenv(0, ehe2(0)), ehe2(0)) and
             IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            EE.Add(EOffset + e1, EenvOffset + e2);
+            EE.push_back({EOffset + e1, EenvOffset + e2});
     }
 }
 
@@ -705,8 +705,6 @@ void VertexFacetContactDetection(
             detail::StaticVertexDynamicFacetRTCCollideFunc<TScalar, TIndex>,
             static_cast<void*>(&rtcCollideFuncParams));
     }
-    // Update thread-local vertex-face contact sets
-    state.UpdateVertexFacetContactSets();
     // Finalize per-vertex and per-face displacement bounds
     state.dminv.noalias() = state.dminv.cwiseSqrt();
     state.dminf.noalias() = state.dminf.cwiseSqrt();
@@ -738,8 +736,6 @@ void EdgeEdgeContactDetection(
             detail::DynamicEdgeStaticEdgeRTCCollideFunc<TScalar, TIndex>,
             static_cast<void*>(&rtcCollideFuncParams));
     }
-    // Update thread-local edge-edge contact sets
-    state.UpdateEdgeEdgeContactSets();
     // Finalize per-half-edge displacement bounds
     state.dmine.noalias() = state.dmine.cwiseSqrt();
 }

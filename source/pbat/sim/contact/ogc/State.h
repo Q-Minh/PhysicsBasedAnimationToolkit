@@ -23,6 +23,7 @@
 #include <embree4/rtcore.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
+#include <tbb/task_group.h>
 #include <vector>
 
 namespace pbat::sim::contact::ogc {
@@ -114,20 +115,9 @@ class State
     void PrepareForExecution(Input<TScalar, TIndex> const& input, Params<TScalar> const& params);
 
     /**
-     * @brief Update all vertex-facet contact sets (dynamic and static).
-     *
-     * Commits the incoming adjacencies accumulated via Add() in each thread-local set
-     * for DDVV, DDVE, DDVF, DSVV, DSVE, DSVF.
+     * @brief Keep unique sorted contact pairs only
      */
-    void UpdateVertexFacetContactSets();
-
-    /**
-     * @brief Update all edge-edge contact sets (dynamic and static).
-     *
-     * Commits the incoming adjacencies accumulated via Add() in each thread-local set
-     * for DDEE, DSEE.
-     */
-    void UpdateEdgeEdgeContactSets();
+    void CollectContactPairs();
 
     /**
      * @brief Destroy the State object
@@ -177,14 +167,19 @@ class State
     std::array<IndexType, 3> mTriangleGeometryPrefix; ///< Prefix sum over (triangle) facets of each
                                                       ///< geometry type (i.e. dynamic, static)
 
-    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
-        mXX; ///< Point-point contact pairs.
-    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
-        mXE; ///< Point-(half-)edge contact pairs.
-    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
-        mXF; ///< Point-triangle contact pairs.
-    tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, IndexType>>
-        mEE; ///< Edge-edge contact pairs.
+    std::vector<std::pair<IndexType, IndexType>> mXX; ///< Point-point contact pairs.
+    std::vector<std::pair<IndexType, IndexType>> mXE; ///< Point-(half-)edge contact pairs.
+    std::vector<std::pair<IndexType, IndexType>> mXF; ///< Point-triangle contact pairs.
+    std::vector<std::pair<IndexType, IndexType>> mEE; ///< Edge-edge contact pairs.
+
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mXXets; ///< Thread-local point-point contact pairs.
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mXEets; ///< Thread-local point-(half-)edge contact pairs.
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mXFets; ///< Thread-local point-triangle contact pairs.
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mEEets; ///< Thread-local edge-edge contact pairs.
 
     /**
      * @brief Acceleration structure for static geometry
@@ -213,36 +208,11 @@ class State
 namespace detail {
 
 template <common::CIndex TIndex>
-graph::DenseAdjacencySet<void, TIndex> CreateEmptyContactFaceAdjacencySet()
+std::vector<std::pair<TIndex, TIndex>> CreateEmptyContactFaceAdjacencySet()
 {
-    graph::DenseAdjacencySet<void, TIndex> adjSet;
-    adjSet.Reserve(4096, 1024);
+    std::vector<std::pair<TIndex, TIndex>> adjSet;
+    adjSet.reserve(4096);
     return adjSet;
-}
-
-/**
- * @brief Perform a parallel Update() on every thread-local DenseAdjacencySet in @p sets.
- *
- * Deduplicates and commits the incoming adjacencies accumulated via Add() in each
- * thread-local set, using Overwrite policy and assuming unique incoming adjacencies.
- *
- * @tparam TIndex Index type for the adjacency set
- * @param sets Thread-local adjacency sets to update
- */
-template <common::CIndex TIndex>
-void UpdateContactSet(tbb::enumerable_thread_specific<graph::DenseAdjacencySet<void, TIndex>>& sets)
-{
-    graph::AdjacencySetUpdateOptions opts{};
-    opts.bAssumeSortedIncoming = false;
-    opts.bAssumeUniqueIncoming = false;
-    opts.bUseParallelSort      = false;
-    opts.eUpdatePolicy         = graph::AdjacencySetUpdateOptions::EUpdatePolicy::Overwrite;
-    tbb::static_partitioner partitioner{};
-    tbb::parallel_for(
-        std::size_t{0},
-        sets.size(),
-        [begin = sets.begin(), opts](std::size_t t) { (begin + t)->Update(opts); },
-        partitioner);
 }
 
 } // namespace detail
@@ -257,10 +227,14 @@ inline State<TScalar, TIndex>::State()
       mHalfEdgeGeometryPrefix{},
       mEdgeGeometryPrefix{},
       mTriangleGeometryPrefix{},
-      mXX(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mXE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mXF(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mEE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mXX(),
+      mXE(),
+      mXF(),
+      mEE(),
+      mXXets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mXEets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mXFets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mEEets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
       mDynamicVertexScene(nullptr),
       mDynamicEdgeScene(nullptr),
       mDynamicFacetScene(nullptr),
@@ -471,6 +445,10 @@ inline State<TScalar, TIndex>& State<TScalar, TIndex>::operator=(State&& other) 
     mXE                     = std::move(other.mXE);
     mXF                     = std::move(other.mXF);
     mEE                     = std::move(other.mEE);
+    mXXets                  = std::move(other.mXXets);
+    mXEets                  = std::move(other.mXEets);
+    mXFets                  = std::move(other.mXFets);
+    mEEets                  = std::move(other.mEEets);
     mDynamicVertexScene     = std::exchange(other.mDynamicVertexScene, nullptr);
     mDynamicEdgeScene       = std::exchange(other.mDynamicEdgeScene, nullptr);
     mDynamicFacetScene      = std::exchange(other.mDynamicFacetScene, nullptr);
@@ -653,36 +631,24 @@ inline void State<TScalar, TIndex>::Initialize(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void State<TScalar, TIndex>::UpdateVertexFacetContactSets()
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.UpdateVertexFacetContactSets");
-    detail::UpdateContactSet(mXX);
-    detail::UpdateContactSet(mXE);
-    detail::UpdateContactSet(mXF);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void State<TScalar, TIndex>::UpdateEdgeEdgeContactSets()
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.UpdateEdgeEdgeContactSets");
-    detail::UpdateContactSet(mEE);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void State<TScalar, TIndex>::PrepareForExecution(
     Input<TScalar, TIndex> const& input,
     Params<TScalar> const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.PrepareForExecution");
     // 1. Clear contact sets
-    for (graph::DenseAdjacencySet<void, TIndex>& xx : mXX)
-        xx.Clear();
-    for (graph::DenseAdjacencySet<void, TIndex>& xe : mXE)
-        xe.Clear();
-    for (graph::DenseAdjacencySet<void, TIndex>& xf : mXF)
-        xf.Clear();
-    for (graph::DenseAdjacencySet<void, TIndex>& ee : mEE)
-        ee.Clear();
+    for (auto& xx : mXXets)
+        xx.clear();
+    for (auto& xe : mXEets)
+        xe.clear();
+    for (auto& xf : mXFets)
+        xf.clear();
+    for (auto& ee : mEEets)
+        ee.clear();
+    mXX.clear();
+    mXE.clear();
+    mXF.clear();
+    mEE.clear();
     common::ExclusivePrefixSum(
         mPointGeometryPrefix,
         (input.X ? input.X->cols() : 0),
@@ -726,6 +692,35 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
     rtcCommitScene(mDynamicVertexScene);
     rtcCommitScene(mDynamicEdgeScene);
     rtcCommitScene(mDynamicFacetScene);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void State<TScalar, TIndex>::CollectContactPairs()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.CollectContactPairs");
+    tbb::task_group tg;
+    auto const fCopyLocalToGlobal = [](auto& src, auto& dst) {
+        for (auto& buf : src)
+            std::ranges::copy(buf, std::back_inserter(dst));
+    };
+    tg.run([&]() { fCopyLocalToGlobal(mXXets, mXX); });
+    tg.run([&]() { fCopyLocalToGlobal(mXEets, mXE); });
+    tg.run([&]() { fCopyLocalToGlobal(mXFets, mXF); });
+    tg.run([&]() { fCopyLocalToGlobal(mEEets, mEE); });
+    tg.wait();
+    tg.run([&]() { tbb::parallel_sort(mXX); });
+    tg.run([&]() { tbb::parallel_sort(mXE); });
+    tg.run([&]() { tbb::parallel_sort(mXF); });
+    tg.run([&]() { tbb::parallel_sort(mEE); });
+    tg.wait();
+    auto const fRemoveDuplicates = [](auto& vec) {
+        vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+    };
+    tg.run([&]() { fRemoveDuplicates(mXX); });
+    tg.run([&]() { fRemoveDuplicates(mXE); });
+    tg.run([&]() { fRemoveDuplicates(mXF); });
+    tg.run([&]() { fRemoveDuplicates(mEE); });
+    tg.wait();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
