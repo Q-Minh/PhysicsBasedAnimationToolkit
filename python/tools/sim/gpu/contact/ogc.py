@@ -3,7 +3,7 @@ from typing import Tuple
 import warp as wp
 
 from .multimesh import MultiMesh, MultiMeshData
-from .halfedges import face_of_half_edge
+from . import halfedges
 from . import queries
 
 GEOMETRY_DYNAMIC = wp.constant(0)
@@ -155,6 +155,73 @@ def _point_triangle_contact_face_index(
     )
 
 
+@wp.func
+def is_vertex_feasible(
+    x: wp.array[wp.vec3f],  # (N,) points
+    F: wp.array[wp.vec3i],  # (M,) surface (triangle) indices into points
+    GVHEp: wp.array[wp.int32],  # `|# points + 1| x 1` point to half-edge prefix
+    GVHEadj: wp.array[wp.int32],  # `|# half edges| x 1` point to half-edge adjacency
+    i: wp.int32,  # point index
+    y: wp.vec3f,  # query point
+):
+    in_vertex_feasible_region = True
+    he_start = GVHEp[i]
+    he_end = GVHEp[i + 1]
+    xi = x[i]
+    for he in range(he_start, he_end):  # pyright: ignore[reportArgumentType]
+        xj = x[halfedges.outgoing_vertex(F, he)]  # pyright: ignore[reportArgumentType]
+        in_vertex_feasible_region &= wp.dot(  # pyright: ignore[reportCallIssue]
+            y - xi, xi - xj  # pyright: ignore[reportArgumentType]
+        ) >= wp.float32(0)
+    return in_vertex_feasible_region
+
+
+@wp.func
+def is_edge_feasible(
+    x: wp.array[wp.vec3f],  # (N,) points
+    F: wp.array[wp.vec3i],  # (M,) surface (triangle) indices into points
+    GHEF: wp.array[wp.vec2i],  # `2 x |# half edges|` half-edge to face adjacency
+    fi: wp.int32,  # face index
+    he: wp.int32,  # half-edge index
+    y: wp.vec3f,  # query point
+    check_adjacent_facets: bool = True,
+):
+    zero = wp.float32(0)
+    fj = GHEF[he][1]  # pyright: ignore[reportIndexIssue]
+    # Handle boundary edge case: no adjacent face (i.e. fj == -1)
+    fj = (
+        wp.int32(fj < zero) * fi + wp.int32(fj >= zero) * fj
+    )  # pyright: ignore[reportOperatorIssue]
+    i, j = (
+        halfedges.incoming_vertex(F, he),
+        halfedges.outgoing_vertex(F, he),
+    )
+    xi, xj = x[i], x[j]
+    in_edge_feasible_region = True
+    in_edge_feasible_region &= wp.dot(y - xi, xj - xi) >= zero  # type: ignore
+    in_edge_feasible_region &= wp.dot(y - xj, xi - xj) >= zero  # type: ignore
+    if check_adjacent_facets:
+        k = halfedges.next_vertex(F, he, wp.int16(1))
+        # Get the third vertex l of triangle fj that is not part of undirected edge (i,j).
+        # NOTE: Whenever fj == fi (i.e. boundary edge), l == k.
+        l = (
+            wp.int32(F[fj][0] != i and F[fj][0] != j) * F[fj][0]  # type: ignore
+            + wp.int32(F[fj][1] != i and F[fj][1] != j) * F[fj][1]  # type: ignore
+            + wp.int32(F[fj][2] != i and F[fj][2] != j) * F[fj][2]  # type: ignore
+        )
+        xk, xl = x[k], x[l]
+        xij = xj - xi
+        xijn2 = wp.dot(xij, xij)  # type: ignore
+        # Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
+        pin = (xi - xk) + (wp.dot(xk - xi, xij) / xijn2) * xij  # type: ignore
+        # Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
+        # NOTE: whenever fj == fi (i.e. boundary edge), pjn == pin
+        pjn = (xi - xl) + (wp.dot(xl - xi, xij) / xijn2) * xij  # type: ignore
+        in_edge_feasible_region &= wp.dot(y - xi, pin) >= zero  # type: ignore
+        in_edge_feasible_region &= wp.dot(y - xi, pjn) >= zero  # type: ignore
+    return in_edge_feasible_region
+
+
 @wp.kernel
 def _vertex_facet_contact_detection(
     x: wp.array[wp.vec3f],  # (N,) points
@@ -195,11 +262,13 @@ def _vertex_facet_contact_detection(
             a_local, e_face = _closest_face_point_triangle(uvw)
             a = _point_triangle_contact_face_index(meshes.F, f, a_local, e_face)
             # TODO: Update contact set
-            if e_face == VF_E_FACE_TRIANGLE:
-                pass
+            if e_face == VF_E_FACE_VERTEX:
+                if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, a, xi):  # type: ignore
+                    pass
             elif e_face == VF_E_FACE_EDGE:
-                pass
-            elif e_face == VF_E_FACE_VERTEX:
+                if is_edge_feasible(x, meshes.F, meshes.GHEF, f, a, xi, check_adjacent_facets=True):  # type: ignore
+                    pass
+            elif e_face == VF_E_FACE_TRIANGLE:
                 pass
             else:
                 assert False
@@ -267,9 +336,13 @@ def _edge_edge_contact_detection(
             )
             # TODO: Update contact set
             if is_xc1_vertex and not is_xc2_vertex:
-                pass
+                i = einds1[0] if st[0] == zero else einds1[1] # type: ignore
+                if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, i, xc2):
+                    pass
             elif not is_xc1_vertex and is_xc2_vertex:
-                pass
+                i = einds2[0] if st[1] == zero else einds2[1] # type: ignore
+                if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, i, xc1):
+                    pass
             else:
                 pass
 
@@ -284,7 +357,7 @@ def _update_displacement_bounds(
         meshes.GVHEp[v], meshes.GVHEp[v + 1]  # pyright: ignore[reportOperatorIssue]
     ):
         he = meshes.GVHEadj[k]
-        f = face_of_half_edge(he)
+        f = halfedges.face_of_half_edge(he)
         ogc.dminv[v] = wp.min(ogc.dminv[v], ogc.dminf[f])
         ogc.dminv[v] = wp.min(ogc.dminv[v], ogc.dmine[he])
     ogc.dminv[v] *= ogc.gammap
