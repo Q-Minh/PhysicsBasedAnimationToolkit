@@ -48,3 +48,4 @@ data
 .polyscope.ini
 imgui.ini
 bindings/**/gen
+venv
