@@ -611,6 +611,124 @@ class MeshDynamics
         FOnContact&& fOnContact,
         std::int32_t nThreads = 1) const;
     /**
+     * @brief Visit all point-point contacts involving point `i`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointPointContactSet::AccessorType C, Stencil stencil)`
+     * @param i Point index
+     * @param fOnContact Callback for each contact `(i, j)` and `(j, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachPointPointContact(IndexType i, FOnContact&& fOnContact);
+    /**
+     * @brief Visit all point-point contacts involving point `i` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointPointContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param i Point index
+     * @param fOnContact Callback for each contact `(i, j)` and `(j, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachPointPointContact(IndexType i, FOnContact&& fOnContact) const;
+    /**
+     * @brief Visit all point-edge contacts for point `i`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::AccessorType C, Stencil stencil)`
+     * @param i Point index
+     * @param fOnContact Callback for each contact `(i, he)` and `(he, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact);
+    /**
+     * @brief Visit all point-edge contacts for point `i` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param i Point index
+     * @param fOnContact Callback for each contact `(i, he)` and `(he, i)` if reverse contact pairs
+     * have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact) const;
+    /**
+     * @brief Visit all point-edge contacts incident on half-edge `he`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::AccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(i, he)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact);
+    /**
+     * @brief Visit all point-edge contacts incident on half-edge `he` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointEdgeContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(i, he)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact) const;
+    /**
+     * @brief Visit all point-triangle contacts for point `i`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::AccessorType C, Stencil stencil)`
+     * @param i Point index
+     * @param fOnContact Callback for each contact `(i, f)`
+     */
+    template <class FOnContact>
+    void ForEachPointTriangleContact(IndexType i, FOnContact&& fOnContact);
+    /**
+     * @brief Visit all point-triangle contacts for point `i` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param i Point index
+     * @param fOnContact Callback for each contact `(i, f)`
+     */
+    template <class FOnContact>
+    void ForEachPointTriangleContact(IndexType i, FOnContact&& fOnContact) const;
+    /**
+     * @brief Visit all point-triangle contacts incident on triangle `f`.
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::AccessorType C, Stencil stencil)`
+     * @param f Triangle index
+     * @param fOnContact Callback for each contact `(i, f)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachTrianglePointContact(IndexType f, FOnContact&& fOnContact);
+    /**
+     * @brief Visit all point-triangle contacts incident on triangle `f` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(PointTriangleContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param f Triangle index
+     * @param fOnContact Callback for each contact `(i, f)`
+     * @pre Reverse contact pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachTrianglePointContact(IndexType f, FOnContact&& fOnContact) const;
+    /**
+     * @brief Visit all edge-edge contacts for half-edge `he`.
+     * @tparam FOnContact Callable with signature
+     * `void(EdgeEdgeContactSet::AccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(he, he')` and `(he', he)` if reverse contact
+     * pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact);
+    /**
+     * @brief Visit all edge-edge contacts for half-edge `he` (const).
+     * @tparam FOnContact Callable with signature
+     * `void(EdgeEdgeContactSet::ConstAccessorType C, Stencil stencil)`
+     * @param he Half-edge index
+     * @param fOnContact Callback for each contact `(he, he')` and `(he', he)` if reverse contact
+     * pairs have been computed via `UpdateConstraintSet(X, true)`
+     */
+    template <class FOnContact>
+    void ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact) const;
+    /**
      * @brief Load the stencil for a contact pair
      * @param u First mesh primitive index
      * @param v Second mesh primitive index
@@ -797,6 +915,37 @@ class MeshDynamics
 
   protected:
     /**
+     * @brief Contact pair reference sorted by `v`.
+     */
+    struct ReverseContactPair
+    {
+        IndexType v; ///< Mesh primitive index
+        IndexType u; ///< Mesh primitive index
+        IndexType k; ///< Contact index
+    };
+    /**
+     * @brief Contact set view sorted by `v` for reverse contact queries
+     */
+    struct ReverseContactSetView
+    {
+        std::vector<ReverseContactPair> contacts; ///< Contact pairs sorted by `v`
+        std::vector<IndexType> prefix;            ///< Prefix array for `v` in `contacts`
+        /**
+         * @brief Clear the reverse contact set
+         */
+        void Clear()
+        {
+            contacts.clear();
+            prefix.clear();
+        }
+        /**
+         * @brief Check if the reverse contact set is empty
+         * @return true if the reverse contact set is empty, false otherwise
+         */
+        bool IsEmpty() const { return prefix.empty(); }
+    };
+
+    /**
      * @brief Iterate over contacts [cstart, cend) in the contact set
      * @tparam FOnContact Callable type with signature `template <class TContactSet>
      * void(typename TContactSet::AccessorType C, Stencil stencil)`
@@ -857,6 +1006,60 @@ class MeshDynamics
         FOnContact&& fOnContact,
         std::int32_t nThreads,
         tbb::task_group& tg) const;
+    /**
+     * @brief Visit contacts for source primitive `u` in a contact set.
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate
+     * @param u Source primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachForwardContact(TContactSet& contactSet, IndexType u, FOnContact&& f);
+    /**
+     * @brief Visit contacts for source primitive `u` in a contact set (const).
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet const> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate
+     * @param u Source primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachForwardContact(TContactSet const& contactSet, IndexType u, FOnContact&& f) const;
+    /**
+     * @brief Visit contacts for target primitive `v` in a reverse contact set.
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to access constraint data from
+     * @param reverseSet Reverse contact set view sorted by v
+     * @param v Target primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachReverseContact(
+        TContactSet& contactSet,
+        ReverseContactSetView const& reverseSet,
+        IndexType v,
+        FOnContact&& f);
+    /**
+     * @brief Visit contacts for target primitive `v` in a reverse contact set (const).
+     * @tparam FOnContact Callable with signature
+     * `void(ConstraintAccessor<TContactSet const> C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to access constraint data from
+     * @param reverseSet Reverse contact set view sorted by v
+     * @param v Target primitive index
+     * @param f Callback for each contact
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachReverseContact(
+        TContactSet const& contactSet,
+        ReverseContactSetView const& reverseSet,
+        IndexType v,
+        FOnContact&& f) const;
     /**
      * @brief Transfer OGC contact pairs to our contact sets
      * @param bComputeReversePairs Store reverse contact pair (j,i) for contact pair (i,j) if true
@@ -985,19 +1188,10 @@ class MeshDynamics
     PointTriangleContactSet mPointTriangleContacts; ///< Point-triangle contact set
     EdgeEdgeContactSet mEdgeEdgeContacts;           ///< (Half-)Edge-(half-)edge contact set
 
-    /**
-     * @brief Contact pair reference sorted by `v`.
-     */
-    struct ReverseContactPair
-    {
-        IndexType v; ///< Mesh primitive index
-        IndexType u; ///< Mesh primitive index
-        IndexType k; ///< Contact index
-    };
-    std::vector<ReverseContactPair> mReversePointPointContacts;    ///< Point-point reverse pairs
-    std::vector<ReverseContactPair> mReversePointEdgeContacts;     ///< Point-edge reverse pairs
-    std::vector<ReverseContactPair> mReversePointTriangleContacts; ///< Point-triangle reverse pairs
-    std::vector<ReverseContactPair> mReverseEdgeEdgeContacts;      ///< Edge-edge reverse pairs
+    ReverseContactSetView mReversePointPointContacts;    ///< Point-point reverse pairs
+    ReverseContactSetView mReversePointEdgeContacts;     ///< Point-edge reverse pairs
+    ReverseContactSetView mReversePointTriangleContacts; ///< Point-triangle reverse pairs
+    ReverseContactSetView mReverseEdgeEdgeContacts;      ///< Edge-edge reverse pairs
 };
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1324,10 +1518,10 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(
         mPointEdgeContacts.Clear();
         mPointTriangleContacts.Clear();
         mEdgeEdgeContacts.Clear();
-        mReversePointPointContacts.clear();
-        mReversePointEdgeContacts.clear();
-        mReversePointTriangleContacts.clear();
-        mReverseEdgeEdgeContacts.clear();
+        mReversePointPointContacts.Clear();
+        mReversePointEdgeContacts.Clear();
+        mReversePointTriangleContacts.Clear();
+        mReverseEdgeEdgeContacts.Clear();
         mRequiresBoundsRecomputation = false;
         mNumTruncatedPoints          = 0;
         return;
@@ -1492,6 +1686,108 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
     tbb::task_group tg;
     ForEachContact(contactSet, std::forward<FOnContact>(fOnContact), nThreads, tg);
     tg.wait();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointPointContact(IndexType i, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mPointPointContacts, i, fOnContact);
+    ForEachReverseContact(mPointPointContacts, mReversePointPointContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointPointContact(IndexType i, FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mPointPointContacts, i, fOnContact);
+    ForEachReverseContact(mPointPointContacts, mReversePointPointContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mPointEdgeContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointEdgeContact(IndexType i, FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mPointEdgeContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact)
+{
+    ForEachReverseContact(mPointEdgeContacts, mReversePointEdgeContacts, he, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgePointContact(IndexType he, FOnContact&& fOnContact) const
+{
+    ForEachReverseContact(mPointEdgeContacts, mReversePointEdgeContacts, he, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachPointTriangleContact(IndexType i, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mPointTriangleContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void MeshDynamics<TScalar, TIndex>::ForEachPointTriangleContact(
+    IndexType i,
+    FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mPointTriangleContacts, i, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachTrianglePointContact(IndexType f, FOnContact&& fOnContact)
+{
+    ForEachReverseContact(mPointTriangleContacts, mReversePointTriangleContacts, f, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void MeshDynamics<TScalar, TIndex>::ForEachTrianglePointContact(
+    IndexType f,
+    FOnContact&& fOnContact) const
+{
+    ForEachReverseContact(mPointTriangleContacts, mReversePointTriangleContacts, f, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact)
+{
+    ForEachForwardContact(mEdgeEdgeContacts, he, fOnContact);
+    ForEachReverseContact(mEdgeEdgeContacts, mReverseEdgeEdgeContacts, he, fOnContact);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForEachEdgeEdgeContact(IndexType he, FOnContact&& fOnContact) const
+{
+    ForEachForwardContact(mEdgeEdgeContacts, he, fOnContact);
+    ForEachReverseContact(mEdgeEdgeContacts, mReverseEdgeEdgeContacts, he, fOnContact);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -2124,6 +2420,114 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachForwardContact(
+    TContactSet& contactSet,
+    IndexType u,
+    FOnContact&& f)
+{
+    auto const& prefix = contactSet.Prefix();
+    if (u >= static_cast<IndexType>(prefix.size() - 1))
+        return;
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0};
+    while (u >= prefixu[gu + 1])
+        ++gu;
+    int gv{0};
+    auto cbegin = prefix[u];
+    auto cend   = prefix[u + 1];
+    for (TIndex c = cbegin; c < cend; ++c)
+    {
+        auto const [cu, v, k] = contactSet.WeightedAdjacency(c);
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        ConstraintAccessor<TContactSet> C{contactSet, k};
+        f(C, Stencil{u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachForwardContact(
+    TContactSet const& contactSet,
+    IndexType u,
+    FOnContact&& f) const
+{
+    auto const& prefix = contactSet.Prefix();
+    if (u >= static_cast<IndexType>(prefix.size() - 1))
+        return;
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0};
+    while (u >= prefixu[gu + 1])
+        ++gu;
+    int gv{0};
+    auto cbegin = prefix[u];
+    auto cend   = prefix[u + 1];
+    for (TIndex c = cbegin; c < cend; ++c)
+    {
+        auto const [cu, v, k] = contactSet.WeightedAdjacency(c);
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        ConstraintAccessor<TContactSet const> C{contactSet, k};
+        f(C, Stencil{u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachReverseContact(
+    TContactSet& contactSet,
+    ReverseContactSetView const& reverseSet,
+    IndexType v,
+    FOnContact&& f)
+{
+    if (reverseSet.IsEmpty() or v >= static_cast<IndexType>(reverseSet.prefix.size() - 1))
+        return;
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gv{0};
+    while (v >= prefixv[gv + 1])
+        ++gv;
+    int gu{0};
+    auto cbegin = reverseSet.prefix[v];
+    auto cend   = reverseSet.prefix[v + 1];
+    for (TIndex c = cbegin; c < cend; ++c)
+    {
+        auto const& rcp = reverseSet.contacts[c];
+        while (rcp.u >= prefixu[gu + 1])
+            ++gu;
+        ConstraintAccessor<TContactSet> C{contactSet, rcp.k};
+        f(C, Stencil{rcp.u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachReverseContact(
+    TContactSet const& contactSet,
+    ReverseContactSetView const& reverseSet,
+    IndexType v,
+    FOnContact&& f) const
+{
+    if (reverseSet.IsEmpty() or v >= static_cast<IndexType>(reverseSet.prefix.size() - 1))
+        return;
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gv{0};
+    while (v >= prefixv[gv + 1])
+        ++gv;
+    int gu{0};
+    auto cbegin = reverseSet.prefix[v];
+    auto cend   = reverseSet.prefix[v + 1];
+    for (TIndex c = cbegin; c < cend; ++c)
+    {
+        auto const& rcp = reverseSet.contacts[c];
+        while (rcp.u >= prefixu[gu + 1])
+            ++gu;
+        ConstraintAccessor<TContactSet const> C{contactSet, rcp.k};
+        f(C, Stencil{rcp.u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bComputeReversePairs)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateContactSetsFromOgcPairs");
@@ -2140,24 +2544,32 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bC
         set.Finalize(nSourcePrimitives);
         set.CompactIds();
     };
-    auto const fBuildReversePairs = [](auto const& set,
-                                       std::vector<ReverseContactPair>& reversePairs) {
-        auto const n = static_cast<TIndex>(set.Size());
-        reversePairs.resize(n);
-        for (TIndex c = 0; c < n; ++c)
-        {
-            auto const [u, v, k] = set.WeightedAdjacency(c);
-            reversePairs[c]      = ReverseContactPair{v, u, k};
-        }
-        tbb::parallel_sort(
-            reversePairs.begin(),
-            reversePairs.end(),
-            [](ReverseContactPair const& a, ReverseContactPair const& b) {
-                // Technically, we only need to sort by v, but also sorting by u and k generally
-                // helps with cache locality.
-                return std::tie(a.v, a.u, a.k) < std::tie(b.v, b.u, b.k);
-            });
-    };
+    auto const fBuildReversePairs =
+        [](auto const& set, auto nTargetNodes, ReverseContactSetView& reverseSet) {
+            auto const n = static_cast<TIndex>(set.Size());
+            reverseSet.contacts.resize(n);
+            reverseSet.prefix.resize(nTargetNodes + 1);
+            std::fill(reverseSet.prefix.begin(), reverseSet.prefix.end(), 0);
+            for (TIndex c = 0; c < n; ++c)
+            {
+                auto const [u, v, k]   = set.WeightedAdjacency(c);
+                reverseSet.contacts[c] = ReverseContactPair{v, u, k};
+                ++reverseSet.prefix[v];
+            }
+            tbb::parallel_sort(
+                reverseSet.contacts.begin(),
+                reverseSet.contacts.end(),
+                [](ReverseContactPair const& a, ReverseContactPair const& b) {
+                    // Technically, we only need to sort by v, but also sorting by u and k generally
+                    // helps with cache locality.
+                    return std::tie(a.v, a.u, a.k) < std::tie(b.v, b.u, b.k);
+                });
+            std::exclusive_scan(
+                reverseSet.prefix.begin(),
+                reverseSet.prefix.end(),
+                reverseSet.prefix.begin(),
+                TIndex{0});
+        };
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
     auto const nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
     tg.run([&] { fUpdateContactSet(mPointPointContacts, mOgcState.mXX, nPoints); });
@@ -2166,10 +2578,18 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bC
     tg.run([&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
     if (bComputeReversePairs)
     {
-        tg.run([&] { fBuildReversePairs(mPointPointContacts, mReversePointPointContacts); });
-        tg.run([&] { fBuildReversePairs(mPointEdgeContacts, mReversePointEdgeContacts); });
-        tg.run([&] { fBuildReversePairs(mPointTriangleContacts, mReversePointTriangleContacts); });
-        tg.run([&] { fBuildReversePairs(mEdgeEdgeContacts, mReverseEdgeEdgeContacts); });
+        auto nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
+        auto nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
+        auto nTriangles = mOgcState.mTriangleGeometryPrefix[OgcStateType::EGeometry::Count];
+        tg.run(
+            [&] { fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts); });
+        tg.run(
+            [&] { fBuildReversePairs(mPointEdgeContacts, nHalfEdges, mReversePointEdgeContacts); });
+        tg.run([&] {
+            fBuildReversePairs(mPointTriangleContacts, nTriangles, mReversePointTriangleContacts);
+        });
+        tg.run(
+            [&] { fBuildReversePairs(mEdgeEdgeContacts, nHalfEdges, mReverseEdgeEdgeContacts); });
     }
     tg.wait();
 }
