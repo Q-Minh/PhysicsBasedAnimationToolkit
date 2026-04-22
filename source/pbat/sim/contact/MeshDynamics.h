@@ -40,6 +40,12 @@
 #include <type_traits>
 #include <vector>
 
+/**
+ * TODO:
+ * - Check when constraint linearization becomes bad to adaptively re-trigger linearization.
+ * - Try to use actual mesh distance functions in linearization, rather than our approximations.
+ */
+
 namespace pbat::sim::contact {
 
 /**
@@ -1594,6 +1600,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             C.Eval()                     = C.Eval(xc);
             auto F                       = C.Friction();
             F.Eval()                     = F.Eval(xc);
+            Scalar sk                    = C.Slack();
             if (static_cast<bool>(Mask & EDualVariable::Slack))
             {
                 C.Slack() =
@@ -1603,8 +1610,8 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             {
                 if (C.Slack() == TScalar(0))
                     C.Decay() = TScalar(1);
-                else
-                    C.Decay() *= mParams.decaylo;
+                else if (C.Slack() > sk) // separating
+                    C.Decay() *= mParams.decay;
             }
             if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
             {
