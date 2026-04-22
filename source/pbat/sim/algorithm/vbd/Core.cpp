@@ -204,10 +204,11 @@ Params& Params::Construct(bool bValidate)
 void Params::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
-    group.WriteMetaData("detHZero", detHZero);
+    group.WriteMetaData("betaR", betaR);
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("nSubproblemMaxIters", nSubproblemMaxIters);
     group.WriteMetaData("gtol", gtol);
+    group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("betaG0", betaG0);
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
@@ -218,6 +219,8 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
         group.WriteData("GVGe", GVGe);
         group.WriteData("GVGilocal", GVGilocal);
         group.WriteData("colors", colors);
+        group.WriteData("GVVp", GVVp);
+        group.WriteData("GVVadj", GVVadj);
         group.WriteData("Pptr", Pptr);
         group.WriteData("Padj", Padj);
         group.WriteData("xb", xb);
@@ -225,6 +228,7 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
         group.WriteData("xk", xk);
         group.WriteData("Hnk", Hnk);
         group.WriteData("betaG", betaG);
+        group.WriteData("Hk", Hk);
         group.WriteMetaData("k", k);
         group.WriteMetaData("kp", kp);
     }
@@ -241,12 +245,16 @@ void Params::Deserialize(io::Archive const& archive)
         GVGilocal = group.ReadData<decltype(GVGilocal)>("GVGilocal");
     if (group.HasData("colors"))
         colors = group.ReadData<decltype(colors)>("colors");
+    if (group.HasData("GVVp"))
+        GVVp = group.ReadData<decltype(GVVp)>("GVVp");
+    if (group.HasData("GVVadj"))
+        GVVadj = group.ReadData<decltype(GVVadj)>("GVVadj");
     if (group.HasData("Pptr"))
         Pptr = group.ReadData<decltype(Pptr)>("Pptr");
     if (group.HasData("Padj"))
         Padj = group.ReadData<decltype(Padj)>("Padj");
-    if (group.HasMetaData("detHZero"))
-        detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
+    if (group.HasMetaData("betaR"))
+        betaR = group.ReadMetaData<decltype(betaR)>("betaR");
     if (group.HasMetaData("nMaxIters"))
         nMaxIters = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
     if (group.HasMetaData("nSubproblemMaxIters"))
@@ -254,6 +262,8 @@ void Params::Deserialize(io::Archive const& archive)
             group.ReadMetaData<decltype(nSubproblemMaxIters)>("nSubproblemMaxIters");
     if (group.HasMetaData("gtol"))
         gtol = group.ReadMetaData<decltype(gtol)>("gtol");
+    if (group.HasMetaData("detHZero"))
+        detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
     if (group.HasMetaData("betaG0"))
         betaG0 = group.ReadMetaData<decltype(betaG0)>("betaG0");
     if (group.HasMetaData("rhohat"))
@@ -272,6 +282,8 @@ void Params::Deserialize(io::Archive const& archive)
         Hnk = group.ReadData<decltype(Hnk)>("Hnk");
     if (group.HasData("betaG"))
         betaG = group.ReadData<decltype(betaG)>("betaG");
+    if (group.HasData("Hk"))
+        Hk = group.ReadData<decltype(Hk)>("Hk");
     if (group.HasMetaData("k"))
         k = group.ReadMetaData<decltype(k)>("k");
     if (group.HasMetaData("kp"))
@@ -447,22 +459,39 @@ TEST_CASE("[type:integration][sim][algorithm][vbd] Cube sliding on plane")
     }
 }
 
-TEST_CASE("[sim][algorithm][vbd] Sandbox")
+TEST_CASE("[type:debug][sim][algorithm][vbd] Sandbox")
 {
-    // using namespace pbat;
-    // auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
-    // using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-    // sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
-    // fem.Deserialize(archive["fem"]);
-    // sim::contact::MeshDynamics<Scalar, Index> contact;
-    // contact.Deserialize(archive["contact"]);
-    // sim::algorithm::vbd::Params params;
-    // params.Deserialize(archive["vbd/params"]);
-    // geometry::Device device{geometry::DeviceConfig{}.WithVerbosity(4)};
-    // contact.Initialize(device);
-    // contact.GetParams().Construct();
-    // fem.SetupTimeIntegrationOptimization(
-    //     sim::dynamics::EFemElastoDynamicsTimeStepInitialization::TrajectoryWithExternalLoad);
-    // sim::algorithm::vbd::InitializeSolve(fem, contact, params);
-    // sim::algorithm::vbd::Solve(fem, contact, params);
+    using namespace pbat;
+    auto archive            = io::Archive("sandbox.h5", HighFive::File::AccessMode::ReadOnly);
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    sim::algorithm::common::FemElastoDynamics<ElasticEnergyType> fem;
+    fem.Deserialize(archive["fem"]);
+    sim::contact::MeshDynamics<Scalar, Index> contact;
+    contact.Deserialize(archive["contact"]);
+    sim::algorithm::vbd::Params params;
+    params.Deserialize(archive["vbd/params"]);
+    auto eOrdering  = graph::EGreedyColorOrderingStrategy::LargestDegree;
+    auto eSelection = graph::EGreedyColorSelectionStrategy::LeastUsed;
+    sim::algorithm::vbd::VertexColors(
+        fem.mesh.E,
+        fem.mesh.X.cols(),
+        eOrdering,
+        eSelection,
+        params.GVVp,
+        params.GVVadj,
+        params.colors);
+    // VBD params
+    params.WithVertexColors(params.GVVp, params.GVVadj, params.colors).Construct();
+    geometry::Device device{geometry::DeviceConfig{}};
+    contact.Initialize(device);
+    contact.GetParams().Construct();
+    auto initStrategy = static_cast<sim::dynamics::EFemElastoDynamicsTimeStepInitialization>(
+        archive.ReadMetaData<int>("initialization_strategy"));
+    for (auto t = 0; t < 2; ++t)
+    {
+        fem.SetupTimeIntegrationOptimization(initStrategy);
+        sim::algorithm::vbd::InitializeSolve(fem, contact, params);
+        sim::algorithm::vbd::Solve(fem, contact, params);
+        fem.Step();
+    }
 }
