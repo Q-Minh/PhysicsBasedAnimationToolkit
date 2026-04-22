@@ -54,7 +54,7 @@ TEST_CASE("Sorting algorithms")
             bench.run("std::sort (parallel)", [&]() {
                 std::sort(std::execution::par, output.begin(), output.end());
             });
-            auto const nCores = std::thread::hardware_concurrency();
+            auto const nCores = 2 * std::thread::hardware_concurrency();
             std::vector<pbat::common::RadixSortWorkspace<std::size_t>> lwork{};
             lwork.reserve(nCores);
             for (auto nThreads = 2; nThreads < nCores; nThreads <<= 1)
