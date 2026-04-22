@@ -190,8 +190,8 @@ void RadixSort(
             },
             tbb::simple_partitioner{});
         // 2. Compute (global) histogram/counts
+        gwork.SetZero();
         tbb::parallel_for(0, gwork.Radix, [&](int r) {
-            gwork[r] = 0;
             for (SizeType t = 0; t < nThreads; ++t)
                 gwork[r] += lwork[t][r];
         });
@@ -199,12 +199,11 @@ void RadixSort(
         std::exclusive_scan(gwork.begin(), gwork.end(), gwork.begin(), TCount(0));
         // 4. Parallel (local) offset computation
         tbb::parallel_for(0, gwork.Radix, [&](int r) {
-            auto offset = gwork[r];
             for (SizeType t = 0; t < nThreads; ++t)
             {
                 auto lcount = lwork[t][r];
-                lwork[t][r] = offset;
-                offset += lcount;
+                lwork[t][r] = gwork[r];
+                gwork[r] += lcount;
             }
         });
         // 5. Parallel (local) scatter
