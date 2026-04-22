@@ -251,6 +251,8 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("gtol", gtol);
     group.WriteMetaData("eSolver", static_cast<int>(eSolver));
     group.WriteMetaData("hessZero", hessZero);
+    group.WriteMetaData("vLinSolverEps", vLinSolverEps);
+    group.WriteMetaData("vLinSolverMaxIters", vLinSolverMaxIters);
     group.WriteMetaData("betaG0", betaG0);
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
@@ -313,6 +315,10 @@ void Params::Deserialize(io::Archive const& archive)
         eSolver = static_cast<decltype(eSolver)>(group.ReadMetaData<int>("eSolver"));
     if (group.HasMetaData("hessZero"))
         hessZero = group.ReadMetaData<decltype(hessZero)>("hessZero");
+    if (group.HasMetaData("vLinSolverEps"))
+        vLinSolverEps = group.ReadMetaData<decltype(vLinSolverEps)>("vLinSolverEps");
+    if (group.HasMetaData("vLinSolverMaxIters"))
+        vLinSolverMaxIters = group.ReadMetaData<decltype(vLinSolverMaxIters)>("vLinSolverMaxIters");
     if (group.HasMetaData("betaG0"))
         betaG0 = group.ReadMetaData<decltype(betaG0)>("betaG0");
     if (group.HasMetaData("rhohat"))
