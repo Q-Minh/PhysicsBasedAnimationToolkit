@@ -117,12 +117,18 @@ Params& Params::WithStencilGradientAcceleration(
     Scalar _betaG0,
     Scalar _rhohat,
     Scalar _gammadown,
-    Scalar _gammaup)
+    Scalar _gammaup,
+    Scalar _wkinetic,
+    Scalar _welastic,
+    Scalar _wcontact)
 {
     this->betaG0    = _betaG0;
     this->rhohat    = _rhohat;
     this->gammadown = _gammadown;
     this->gammaup   = _gammaup;
+    this->wkinetic  = _wkinetic;
+    this->welastic  = _welastic;
+    this->wcontact  = _wcontact;
     return *this;
 }
 
@@ -194,9 +200,21 @@ Params& Params::Construct(bool bValidate)
                     "Stencil gradient beta increase factor gammaup {} must satisfy 0 < gammaup < 1",
                     gammaup));
         }
+        if (wkinetic < 0 or welastic < 0 or wcontact < 0)
+        {
+            throw std::invalid_argument(
+                fmt::format(
+                    "Weight factors must be non-negative: wkinetic {}, welastic {}, wcontact "
+                    "{}",
+                    wkinetic,
+                    welastic,
+                    wcontact));
+        }
     }
     xb.resize(3, nVerts);
-    gk.resize(3, nVerts);
+    gkinetic.resize(3, nVerts);
+    gelastic.resize(3, nVerts);
+    gcontact.resize(3, nVerts);
     xk.resize(3, nVerts);
     Hnk.resize(nVerts);
     betaG.resize(nVerts);
@@ -216,6 +234,9 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
     group.WriteMetaData("gammaup", gammaup);
+    group.WriteMetaData("wkinetic", wkinetic);
+    group.WriteMetaData("welastic", welastic);
+    group.WriteMetaData("wcontact", wcontact);
     if (not bMinimal)
     {
         group.WriteData("GVGp", GVGp);
@@ -227,7 +248,9 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
         group.WriteData("Pptr", Pptr);
         group.WriteData("Padj", Padj);
         group.WriteData("xb", xb);
-        group.WriteData("gk", gk);
+        group.WriteData("gkinetic", gkinetic);
+        group.WriteData("gelastic", gelastic);
+        group.WriteData("gcontact", gcontact);
         group.WriteData("xk", xk);
         group.WriteData("Hnk", Hnk);
         group.WriteData("betaG", betaG);
@@ -275,10 +298,20 @@ void Params::Deserialize(io::Archive const& archive)
         gammadown = group.ReadMetaData<decltype(gammadown)>("gammadown");
     if (group.HasMetaData("gammaup"))
         gammaup = group.ReadMetaData<decltype(gammaup)>("gammaup");
+    if (group.HasMetaData("wkinetic"))
+        wkinetic = group.ReadMetaData<decltype(wkinetic)>("wkinetic");
+    if (group.HasMetaData("welastic"))
+        welastic = group.ReadMetaData<decltype(welastic)>("welastic");
+    if (group.HasMetaData("wcontact"))
+        wcontact = group.ReadMetaData<decltype(wcontact)>("wcontact");
     if (group.HasData("xb"))
         xb = group.ReadData<decltype(xb)>("xb");
-    if (group.HasData("gk"))
-        gk = group.ReadData<decltype(gk)>("gk");
+    if (group.HasData("gkinetic"))
+        gkinetic = group.ReadData<decltype(gkinetic)>("gkinetic");
+    if (group.HasData("gelastic"))
+        gelastic = group.ReadData<decltype(gelastic)>("gelastic");
+    if (group.HasData("gcontact"))
+        gcontact = group.ReadData<decltype(gcontact)>("gcontact");
     if (group.HasData("xk"))
         xk = group.ReadData<decltype(xk)>("xk");
     if (group.HasData("Hnk"))

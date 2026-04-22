@@ -148,6 +148,28 @@ void BindCore(nanobind::module_& m)
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
+            "with_stencil_gradient_acceleration",
+            &Params::WithStencilGradientAcceleration,
+            nb::arg("betaG0"),
+            nb::arg("rhohat"),
+            nb::arg("gammadown"),
+            nb::arg("gammaup"),
+            nb::arg("wkinetic"),
+            nb::arg("welastic"),
+            nb::arg("wcontact"),
+            nb::rv_policy::reference_internal,
+            "Stencil gradient acceleration parameters.\n\n"
+            "Args:\n"
+            "    betaG0 (float): Initial stencil gradient augmentation coefficient\n"
+            "    rhohat (float): Stencil gradient density factor\n"
+            "    gammadown (float): Stencil gradient beta reduction factor\n"
+            "    gammaup (float): Stencil gradient beta increase factor\n"
+            "    wkinetic (float): Kinetic weight factor\n"
+            "    welastic (float): Elastic weight factor\n"
+            "    wcontact (float): Contact weight factor\n"
+            "Returns:\n"
+            "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
+        .def(
             "with_hessian_determinant_zero",
             &Params::WithHessianDeterminantZeroUnder,
             nb::arg("zero"),
@@ -216,6 +238,9 @@ void BindCore(nanobind::module_& m)
             "Lipschitz-normalized threshold for considering steps small")
         .def_rw("gammadown", &Params::gammadown, "Beta reduction factor")
         .def_rw("gammaup", &Params::gammaup, "Beta increase factor")
+        .def_rw("wkinetic", &Params::wkinetic, "Stencil gradient weight for kinetic energy term")
+        .def_rw("welastic", &Params::welastic, "Stencil gradient weight for elastic energy term")
+        .def_rw("wcontact", &Params::wcontact, "Stencil gradient weight for contact energy term")
         .def_rw("k", &Params::k, "Current iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
