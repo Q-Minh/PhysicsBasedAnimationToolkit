@@ -37,8 +37,10 @@ struct ChebyshevParams
     /**
      * @brief Serialize this to archive
      * @param archive Archive to serialize to
+     * @param bMinimal If true, only serialize stateless configuration parameters (scalars, enums).
+     * If false, also serialize solver state (matrices, vectors).
      */
-    PBAT_API void Serialize(io::Archive& archive) const;
+    PBAT_API void Serialize(io::Archive& archive, bool bMinimal = true) const;
     /**
      * @brief Deserialize this from archive
      * @param archive Archive to deserialize from

@@ -201,15 +201,9 @@ Params& Params::Construct(bool bValidate)
     return *this;
 }
 
-void Params::Serialize(io::Archive& archive) const
+void Params::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.Params"];
-    group.WriteData("GVGp", GVGp);
-    group.WriteData("GVGe", GVGe);
-    group.WriteData("GVGilocal", GVGilocal);
-    group.WriteData("colors", colors);
-    group.WriteData("Pptr", Pptr);
-    group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("nSubproblemMaxIters", nSubproblemMaxIters);
@@ -218,13 +212,22 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
     group.WriteMetaData("gammaup", gammaup);
-    group.WriteData("xb", xb);
-    group.WriteData("gk", gk);
-    group.WriteData("xk", xk);
-    group.WriteData("Hnk", Hnk);
-    group.WriteData("betaG", betaG);
-    group.WriteMetaData("k", k);
-    group.WriteMetaData("kp", kp);
+    if (!bMinimal)
+    {
+        group.WriteData("GVGp", GVGp);
+        group.WriteData("GVGe", GVGe);
+        group.WriteData("GVGilocal", GVGilocal);
+        group.WriteData("colors", colors);
+        group.WriteData("Pptr", Pptr);
+        group.WriteData("Padj", Padj);
+        group.WriteData("xb", xb);
+        group.WriteData("gk", gk);
+        group.WriteData("xk", xk);
+        group.WriteData("Hnk", Hnk);
+        group.WriteData("betaG", betaG);
+        group.WriteMetaData("k", k);
+        group.WriteMetaData("kp", kp);
+    }
 }
 
 void Params::Deserialize(io::Archive const& archive)
@@ -242,7 +245,7 @@ void Params::Deserialize(io::Archive const& archive)
         Pptr = group.ReadData<decltype(Pptr)>("Pptr");
     if (group.HasData("Padj"))
         Padj = group.ReadData<decltype(Padj)>("Padj");
-    if (group.HasData("detHZero"))
+    if (group.HasMetaData("detHZero"))
         detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
     if (group.HasMetaData("nMaxIters"))
         nMaxIters = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
@@ -267,8 +270,8 @@ void Params::Deserialize(io::Archive const& archive)
         xk = group.ReadData<decltype(xk)>("xk");
     if (group.HasData("Hnk"))
         Hnk = group.ReadData<decltype(Hnk)>("Hnk");
-    if (group.HasMetaData("betaG"))
-        betaG = group.ReadMetaData<decltype(betaG)>("betaG");
+    if (group.HasData("betaG"))
+        betaG = group.ReadData<decltype(betaG)>("betaG");
     if (group.HasMetaData("k"))
         k = group.ReadMetaData<decltype(k)>("k");
     if (group.HasMetaData("kp"))

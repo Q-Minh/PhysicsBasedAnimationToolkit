@@ -66,11 +66,12 @@ class VbdSolver(BaseSolver):
 
     def serialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.vbd.Params = self._params.params
-        params.serialize(archive)
+        params.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.vbd.Params = self._params.params
         params.deserialize(archive)
+        params.construct()
 
     def serialize_problem(
         self,
@@ -81,4 +82,4 @@ class VbdSolver(BaseSolver):
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
         params: pbat.sim.algorithm.vbd.Params = self._params.params
-        params.serialize(archive["vbd/params"])
+        params.serialize(archive["vbd/params"], minimal=False)

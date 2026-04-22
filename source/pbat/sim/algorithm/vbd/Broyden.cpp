@@ -2,7 +2,7 @@
 
 namespace pbat::sim::algorithm::vbd {
 
-void BroydenParams::Serialize(io::Archive& archive) const
+void BroydenParams::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.BroydenParams"];
     group.WriteMetaData("m", m);
@@ -13,52 +13,77 @@ void BroydenParams::Serialize(io::Archive& archive) const
     group.WriteMetaData("betaF", betaF);
     group.WriteMetaData("betaB", betaB);
     group.WriteMetaData("nMaxIters", nMaxIters);
-    group.WriteMetaData("k", k);
-    group.WriteData("Fk", Fk);
-    group.WriteData("Xk", Xk);
-    group.WriteData("xkm1", xkm1);
-    group.WriteData("fk", fk);
-    group.WriteData("fkm1", fkm1);
-    group.WriteData("gammak", gammak);
-    group.WriteData("FkRowNorm2", FkRowNorm2);
-    group.WriteData("Gkm", Gkm);
-    group.WriteData("Sigma", Sigma);
-    group.WriteMetaData("sqrtBetaB", sqrtBetaB);
-    group.WriteMetaData("Fknorm2", Fknorm2);
-    group.WriteMetaData("Bknorm2", Bknorm2);
-    group.WriteData("gradL2", gradL2);
-    group.WriteData("FkgradL2", FkgradL2);
+    if (not bMinimal)
+    {
+        group.WriteMetaData("k", k);
+        group.WriteData("Fk", Fk);
+        group.WriteData("Xk", Xk);
+        group.WriteData("xkm1", xkm1);
+        group.WriteData("fk", fk);
+        group.WriteData("fkm1", fkm1);
+        group.WriteData("gammak", gammak);
+        group.WriteData("FkRowNorm2", FkRowNorm2);
+        group.WriteData("Gkm", Gkm);
+        group.WriteData("Sigma", Sigma);
+        group.WriteMetaData("sqrtBetaB", sqrtBetaB);
+        group.WriteMetaData("Fknorm2", Fknorm2);
+        group.WriteMetaData("Bknorm2", Bknorm2);
+        group.WriteData("gradL2", gradL2);
+        group.WriteData("FkgradL2", FkgradL2);
+    }
 }
 
 void BroydenParams::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.BroydenParams"];
-    m                 = group.ReadMetaData<Index>("m");
-    epsL2Solve        = group.ReadMetaData<Scalar>("epsL2Solve");
-    maxL2SolverIters  = group.ReadMetaData<Index>("maxL2SolverIters");
-    eL2Solver = static_cast<EBroydenLeastSquaresSolver>(group.ReadMetaData<int>("eL2Solver"));
-    eJacobianEstimate =
-        static_cast<EBroydenJacobianEstimate>(group.ReadMetaData<int>("eJacobianEstimate"));
-    betaF = group.ReadMetaData<Scalar>("betaF");
-    betaB = group.ReadMetaData<Scalar>("betaB");
+    if (group.HasMetaData("m"))
+        m = group.ReadMetaData<Index>("m");
+    if (group.HasMetaData("epsL2Solve"))
+        epsL2Solve = group.ReadMetaData<Scalar>("epsL2Solve");
+    if (group.HasMetaData("maxL2SolverIters"))
+        maxL2SolverIters = group.ReadMetaData<Index>("maxL2SolverIters");
+    if (group.HasMetaData("eL2Solver"))
+        eL2Solver =
+            static_cast<EBroydenLeastSquaresSolver>(group.ReadMetaData<int>("eL2Solver"));
+    if (group.HasMetaData("eJacobianEstimate"))
+        eJacobianEstimate =
+            static_cast<EBroydenJacobianEstimate>(group.ReadMetaData<int>("eJacobianEstimate"));
+    if (group.HasMetaData("betaF"))
+        betaF = group.ReadMetaData<Scalar>("betaF");
+    if (group.HasMetaData("betaB"))
+        betaB = group.ReadMetaData<Scalar>("betaB");
     if (group.HasMetaData("nMaxIters"))
         nMaxIters = group.ReadMetaData<Index>("nMaxIters");
     if (group.HasMetaData("k"))
         k = group.ReadMetaData<Index>("k");
-    Fk         = group.ReadData<MatrixX>("Fk");
-    Xk         = group.ReadData<MatrixX>("Xk");
-    xkm1       = group.ReadData<VectorX>("xkm1");
-    fk         = group.ReadData<VectorX>("fk");
-    fkm1       = group.ReadData<VectorX>("fkm1");
-    gammak     = group.ReadData<VectorX>("gammak");
-    FkRowNorm2 = group.ReadData<MatrixX>("FkRowNorm2");
-    Gkm        = group.ReadData<MatrixX>("Gkm");
-    Sigma      = group.ReadData<VectorX>("Sigma");
-    sqrtBetaB  = group.ReadMetaData<Scalar>("sqrtBetaB");
-    Fknorm2    = group.ReadMetaData<Scalar>("Fknorm2");
-    Bknorm2    = group.ReadMetaData<Scalar>("Bknorm2");
-    gradL2     = group.ReadData<VectorX>("gradL2");
-    FkgradL2   = group.ReadData<VectorX>("FkgradL2");
+    if (group.HasData("Fk"))
+        Fk = group.ReadData<MatrixX>("Fk");
+    if (group.HasData("Xk"))
+        Xk = group.ReadData<MatrixX>("Xk");
+    if (group.HasData("xkm1"))
+        xkm1 = group.ReadData<VectorX>("xkm1");
+    if (group.HasData("fk"))
+        fk = group.ReadData<VectorX>("fk");
+    if (group.HasData("fkm1"))
+        fkm1 = group.ReadData<VectorX>("fkm1");
+    if (group.HasData("gammak"))
+        gammak = group.ReadData<VectorX>("gammak");
+    if (group.HasData("FkRowNorm2"))
+        FkRowNorm2 = group.ReadData<MatrixX>("FkRowNorm2");
+    if (group.HasData("Gkm"))
+        Gkm = group.ReadData<MatrixX>("Gkm");
+    if (group.HasData("Sigma"))
+        Sigma = group.ReadData<VectorX>("Sigma");
+    if (group.HasMetaData("sqrtBetaB"))
+        sqrtBetaB = group.ReadMetaData<Scalar>("sqrtBetaB");
+    if (group.HasMetaData("Fknorm2"))
+        Fknorm2 = group.ReadMetaData<Scalar>("Fknorm2");
+    if (group.HasMetaData("Bknorm2"))
+        Bknorm2 = group.ReadMetaData<Scalar>("Bknorm2");
+    if (group.HasData("gradL2"))
+        gradL2 = group.ReadData<VectorX>("gradL2");
+    if (group.HasData("FkgradL2"))
+        FkgradL2 = group.ReadData<VectorX>("FkgradL2");
 }
 
 } // namespace pbat::sim::algorithm::vbd

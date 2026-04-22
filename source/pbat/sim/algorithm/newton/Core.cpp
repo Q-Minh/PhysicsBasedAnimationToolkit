@@ -84,20 +84,22 @@ Params& Params::Construct(bool bValidate)
     return *this;
 }
 
-void Params::Serialize(io::Archive& archive) const
+void Params::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.newton.Params"];
-    newton.Serialize(group);
     group.WriteMetaData("eSpdCorrection", static_cast<int>(eSpdCorrection));
     group.WriteMetaData("eLinearSolver", static_cast<int>(eLinearSolver));
     group.WriteMetaData("eOgcTruncationStrategy", static_cast<int>(eOgcTruncationStrategy));
     group.WriteMetaData("nMaxIters", nMaxIters);
+    if (not bMinimal)
+    {
+        newton.Serialize(group);
+    }
 }
 
 void Params::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.newton.Params"];
-    newton.Deserialize(group);
     if (group.HasMetaData("eSpdCorrection"))
     {
         eSpdCorrection =
@@ -115,6 +117,10 @@ void Params::Deserialize(io::Archive const& archive)
     if (group.HasMetaData("nMaxIters"))
     {
         nMaxIters = group.ReadMetaData<int>("nMaxIters");
+    }
+    if (group.HasGroup("pbat.math.optimization.Newton"))
+    {
+        newton.Deserialize(group);
     }
     this->WithLinearSolver(eLinearSolver);
 }

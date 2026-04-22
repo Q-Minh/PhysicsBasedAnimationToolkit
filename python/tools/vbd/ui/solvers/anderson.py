@@ -89,8 +89,8 @@ class AndersonSolver(BaseSolver):
         params: Params = self._params.params
         vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
         anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
-        vbd.serialize(archive)
-        anderson.serialize(archive)
+        vbd.serialize(archive, minimal=True)
+        anderson.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
@@ -110,5 +110,5 @@ class AndersonSolver(BaseSolver):
         anderson: pbat.sim.algorithm.vbd.AndersonParams = params.anderson_params
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
-        vbd.serialize(archive["vbd/params"])
-        anderson.serialize(archive["vbd/anderson_params"])
+        vbd.serialize(archive["vbd/params"], minimal=False)
+        anderson.serialize(archive["vbd/anderson_params"], minimal=False)

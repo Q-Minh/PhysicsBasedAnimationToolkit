@@ -167,7 +167,16 @@ void BindCore(nanobind::module_& m)
             "    validate (bool): Throw on detected ill-formed inputs\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
-        .def("serialize", &Params::Serialize, nb::arg("archive"), "Serialize this to archive.")
+        .def(
+            "serialize",
+            &Params::Serialize,
+            nb::arg("archive"),
+            nb::arg("minimal") = true,
+            "Serialize this to archive.\n\n"
+            "Args:\n"
+            "    archive: Archive to serialize to\n"
+            "    minimal (bool): If True (default), only serialize stateless configuration "
+            "parameters. If False, also serialize solver state and mesh-dependent data.")
         .def(
             "deserialize",
             &Params::Deserialize,

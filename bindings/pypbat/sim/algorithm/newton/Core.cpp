@@ -47,7 +47,16 @@ void BindCore(nanobind::module_& m)
 
     nb::class_<Params>(m, "Params")
         .def(nb::init<>(), "Newton solver parameters and buffers.")
-        .def("serialize", &Params::Serialize, nb::arg("archive"), "Serialize this to archive.")
+        .def(
+            "serialize",
+            &Params::Serialize,
+            nb::arg("archive"),
+            nb::arg("minimal") = true,
+            "Serialize this to archive.\n\n"
+            "Args:\n"
+            "    archive: Archive to serialize to\n"
+            "    minimal (bool): If True (default), only serialize stateless configuration "
+            "parameters. If False, also serialize the Newton optimizer state.")
         .def(
             "deserialize",
             &Params::Deserialize,
@@ -105,7 +114,12 @@ void BindCore(nanobind::module_& m)
             "serialize",
             &Params::Serialize,
             nb::arg("archive"),
-            "Serialize parameters to an archive")
+            nb::arg("minimal") = true,
+            "Serialize parameters to an archive.\n\n"
+            "Args:\n"
+            "    archive: Archive to serialize to\n"
+            "    minimal (bool): If True (default), only serialize stateless configuration "
+            "parameters. If False, also serialize the Newton optimizer state.")
         .def(
             "deserialize",
             &Params::Deserialize,

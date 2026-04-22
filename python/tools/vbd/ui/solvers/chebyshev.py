@@ -88,8 +88,8 @@ class ChebyshevSolver(BaseSolver):
         params: Params = self._params.params
         vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
         chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
-        vbd.serialize(archive)
-        chebyshev.serialize(archive)
+        vbd.serialize(archive, minimal=True)
+        chebyshev.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
@@ -109,5 +109,5 @@ class ChebyshevSolver(BaseSolver):
         chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
-        vbd.serialize(archive["vbd/params"])
-        chebyshev.serialize(archive["vbd/chebyshev_params"])
+        vbd.serialize(archive["vbd/params"], minimal=False)
+        chebyshev.serialize(archive["vbd/chebyshev_params"], minimal=False)

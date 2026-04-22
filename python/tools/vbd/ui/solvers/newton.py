@@ -97,11 +97,12 @@ class NewtonSolver(BaseSolver):
 
     def serialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.newton.Params = self._params.params
-        params.serialize(archive)
+        params.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.newton.Params = self._params.params
         params.deserialize(archive)
+        params.construct()
 
     def serialize_problem(
         self,
@@ -112,4 +113,4 @@ class NewtonSolver(BaseSolver):
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
         params: pbat.sim.algorithm.newton.Params = self._params.params
-        params.serialize(archive["newton/params"])
+        params.serialize(archive["newton/params"], minimal=False)

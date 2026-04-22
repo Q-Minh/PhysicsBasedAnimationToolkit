@@ -25,7 +25,12 @@ void BindAnderson(nanobind::module_& m)
             "serialize",
             &AndersonParams::Serialize,
             nb::arg("archive"),
-            "Serialize this to archive.")
+            nb::arg("minimal") = true,
+            "Serialize this to archive.\n\n"
+            "Args:\n"
+            "    archive: Archive to serialize to\n"
+            "    minimal (bool): If True (default), only serialize stateless configuration "
+            "parameters. If False, also serialize solver state.")
         .def(
             "deserialize",
             &AndersonParams::Deserialize,

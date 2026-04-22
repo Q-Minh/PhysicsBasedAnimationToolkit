@@ -86,8 +86,8 @@ class BroydenSolver(BaseSolver):
         params: Params = self._params.params
         vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
         broyden: pbat.sim.algorithm.vbd.BroydenParams = params.broyden_params
-        vbd.serialize(archive)
-        broyden.serialize(archive)
+        vbd.serialize(archive, minimal=True)
+        broyden.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
@@ -107,5 +107,5 @@ class BroydenSolver(BaseSolver):
         broyden: pbat.sim.algorithm.vbd.BroydenParams = params.broyden_params
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
-        vbd.serialize(archive["vbd/params"])
-        broyden.serialize(archive["vbd/broyden_params"])
+        vbd.serialize(archive["vbd/params"], minimal=False)
+        broyden.serialize(archive["vbd/broyden_params"], minimal=False)
