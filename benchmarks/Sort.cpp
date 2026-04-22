@@ -46,6 +46,12 @@ TEST_CASE("Sorting algorithms")
                 pbat::common::CountingSort(output, work, min, max);
             });
             output = input;
+            bench.run("pbat::common::StableCountingSort", [&]() {
+                std::int32_t min{0};
+                std::int32_t max = range - 1;
+                pbat::common::StableCountingSort(output, cpy, work, min, max);
+            });
+            output = input;
             bench.run("pbat::common::RadixSort", [&]() {
                 std::int32_t max = range - 1;
                 pbat::common::RadixSort(output, cpy, rwork, std::identity{}, max);

@@ -30,7 +30,7 @@ TEST_CASE("[common] CountingSort")
     SUBCASE("Sort an empty list")
     {
         std::vector<Object> objects;
-        pbat::common::CountingSort(objects, workspace, fKey);
+        pbat::common::CountingSort(objects, workspace, 0, 0, fKey);
         CHECK(objects.empty());
     }
 
@@ -38,7 +38,7 @@ TEST_CASE("[common] CountingSort")
     {
         std::vector<Object> objects = {{5, "single"}};
         auto min                    = fAllocateWorkspace(objects);
-        pbat::common::CountingSort(objects, workspace, fKey);
+        pbat::common::CountingSort(objects, workspace, 5, 5, fKey);
         CHECK(std::is_sorted(objects.begin(), objects.end()));
     }
 
@@ -49,7 +49,7 @@ TEST_CASE("[common] CountingSort")
         auto min = fAllocateWorkspace(objects);
         std::vector<Object> expected =
             {{1, "one"}, {2, "two"}, {3, "three"}, {4, "four"}, {5, "five"}};
-        pbat::common::CountingSort(objects, workspace, fKey);
+        pbat::common::CountingSort(objects, workspace, 1, 5, fKey);
         CHECK(std::is_sorted(objects.begin(), objects.end()));
     }
 
@@ -60,7 +60,7 @@ TEST_CASE("[common] CountingSort")
         std::vector<Object> expected =
             {{1, "one"}, {1, "one-again"}, {2, "two"}, {3, "three"}, {3, "three-again"}};
         auto min = fAllocateWorkspace(objects);
-        pbat::common::CountingSort(objects, workspace, fKey);
+        pbat::common::CountingSort(objects, workspace, 1, 3, fKey);
         CHECK(std::is_sorted(objects.begin(), objects.end()));
     }
 
@@ -69,7 +69,7 @@ TEST_CASE("[common] CountingSort")
         std::vector<Object> objects  = {{1, "one"}, {1, "one-again"}, {1, "one-more"}};
         std::vector<Object> expected = {{1, "one"}, {1, "one-again"}, {1, "one-more"}};
         auto min                     = fAllocateWorkspace(objects);
-        pbat::common::CountingSort(objects, workspace, fKey);
+        pbat::common::CountingSort(objects, workspace, 1, 1, fKey);
         CHECK(std::is_sorted(objects.begin(), objects.end()));
     }
 
@@ -83,10 +83,8 @@ TEST_CASE("[common] CountingSort")
             for (int i = 0; i < 1000; ++i)
                 objects.push_back(dist(rng));
             std::vector<int> workspace{};
-            workspace.resize(
-                static_cast<std::size_t>(
-                    *std::ranges::max_element(objects) - *std::ranges::min_element(objects) + 1));
-            pbat::common::CountingSort(objects, workspace);
+            workspace.resize(201);
+            pbat::common::CountingSort(objects, workspace, -100, 100);
             CHECK(std::is_sorted(objects.begin(), objects.end()));
         }
         SUBCASE("unsigned integer")
@@ -97,10 +95,8 @@ TEST_CASE("[common] CountingSort")
             for (int i = 0; i < 1000; ++i)
                 objects.push_back(dist(rng));
             std::vector<unsigned int> workspace{};
-            workspace.resize(
-                static_cast<std::size_t>(
-                    *std::ranges::max_element(objects) - *std::ranges::min_element(objects) + 1));
-            pbat::common::CountingSort(objects, workspace);
+            workspace.resize(201);
+            pbat::common::CountingSort(objects, workspace, 0, 200);
             CHECK(std::is_sorted(objects.begin(), objects.end()));
         }
     }
