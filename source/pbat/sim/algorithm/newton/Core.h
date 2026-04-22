@@ -308,7 +308,9 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
  * @pre `PrepareSubproblemDerivatives()` has been called
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-Scalar MeritFunction(FemElastoDynamics<TElasticEnergy> const& fem, MeshDynamics const& contact)
+Scalar MeritFunctionFromPrecomputedPotentials(
+    FemElastoDynamics<TElasticEnergy> const& fem,
+    MeshDynamics const& contact)
 {
     Scalar bt  = fem.bdf.BetaTilde();
     Scalar bt2 = bt * bt;
@@ -664,7 +666,7 @@ void PrepareNextIteration(
         [&]([[maybe_unused]] auto const& _xk) {
             if (bAreSubproblemDerivativesDirty)
                 PrepareSubproblemDerivatives<TElasticEnergy>(fem, contact, params);
-            return MeritFunction(fem, contact);
+            return MeritFunctionFromPrecomputedPotentials(fem, contact);
         } /* fPrepareDerivatives */,
         [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient(fem, contact, gk, true /*bForSubproblem*/);
@@ -679,7 +681,7 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
     auto xk = fem.x.reshaped();
     return params.newton.Iterate(
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            return MeritFunction(fem, contact);
+            return fem.Objective(xk) + contact.Potential(xk, true /*bForLinearSubproblem*/);
         } /* f */,
         [&]([[maybe_unused]] auto const& _xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
@@ -726,7 +728,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             [&]([[maybe_unused]] auto const& xk) {
                 if (params.newton.k > 0)
                     PrepareSubproblemDerivatives<TElasticEnergy>(fem, contact, params);
-                return MeritFunction(fem, contact);
+                return MeritFunctionFromPrecomputedPotentials(fem, contact);
             } /* fPrepareDerivatives */,
             [&](auto const& xk) {
                 Scalar Edyn = fem.Objective(xk);
@@ -739,7 +741,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             [&]([[maybe_unused]] auto const& _xk,
                 Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
                 Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
-                AssembleHessian<TElasticEnergy>(fem, contact, params);
+                AssembleHessian<TElasticEnergy>(fem, contact, params, true /*bWithContacts*/);
                 HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
             } /* Hinv */,
             xk /* x0 */);

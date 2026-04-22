@@ -1124,10 +1124,10 @@ MeshDynamics<TScalar, TIndex>::LinearizeConstraints(Eigen::MatrixBase<TDerivedx>
             TConstraintData& C,
             Stencil const& stencil,
             std::int32_t /*t*/) {
-            auto const [X, _] = LoadStencil<TContactSet>(x, stencil);
-            auto x            = Reshape<TConstraintData::kDofs, 1>(X);
-            C.gradc           = C.Gradient(x);
-            C.chat            = C.Eval(x) - Dot(C.gradc, x);
+            auto const [Xc, _] = LoadStencil<TContactSet>(x, stencil);
+            auto xc            = Reshape<TConstraintData::kDofs, 1>(Xc);
+            C.gradc            = C.Gradient(xc);
+            C.chat             = C.Eval(xc) - Dot(C.gradc, xc);
         },
         nThreads);
 }

@@ -160,7 +160,7 @@ void BindCore(nanobind::module_& m)
     m.def(
         "linearize_constraints",
         [](ElastoDynamics& fem, MeshDynamics& contact) {
-            pbat::sim::algorithm::newton::LinearizeConstraints<ElasticEnergyType>(fem, contact);
+            pbat::sim::algorithm::newton::LinearizeConstraints(fem, contact);
         },
         nb::arg("fem"),
         nb::arg("contact"),
@@ -173,10 +173,7 @@ void BindCore(nanobind::module_& m)
     m.def(
         "check_convergence",
         [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
-            return pbat::sim::algorithm::newton::CheckConvergence<ElasticEnergyType>(
-                fem,
-                contact,
-                params);
+            return pbat::sim::algorithm::newton::CheckConvergence(fem, contact, params);
         },
         nb::arg("fem"),
         nb::arg("contact"),
@@ -211,7 +208,7 @@ void BindCore(nanobind::module_& m)
            MeshDynamics& contact,
            Params& params,
            bool bAreSubproblemDerivativesDirty) {
-            pbat::sim::algorithm::newton::PrepareNextIteration<ElasticEnergyType>(
+            pbat::sim::algorithm::newton::PrepareNextIteration(
                 fem,
                 contact,
                 params,
@@ -233,7 +230,7 @@ void BindCore(nanobind::module_& m)
     m.def(
         "iterate",
         [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
-            return pbat::sim::algorithm::newton::Iterate<ElasticEnergyType>(fem, contact, params);
+            return pbat::sim::algorithm::newton::Iterate(fem, contact, params);
         },
         nb::arg("fem"),
         nb::arg("contact"),
@@ -250,10 +247,7 @@ void BindCore(nanobind::module_& m)
     m.def(
         "finalize_subproblem",
         [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
-            pbat::sim::algorithm::newton::FinalizeSubproblem<ElasticEnergyType>(
-                fem,
-                contact,
-                params);
+            pbat::sim::algorithm::newton::FinalizeSubproblem(fem, contact, params);
         },
         nb::arg("fem"),
         nb::arg("contact"),
@@ -268,7 +262,7 @@ void BindCore(nanobind::module_& m)
     m.def(
         "solve",
         [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
-            return pbat::sim::algorithm::newton::Solve<ElasticEnergyType>(fem, contact, params);
+            return pbat::sim::algorithm::newton::Solve(fem, contact, params);
         },
         nb::arg("fem"),
         nb::arg("contact"),
@@ -280,6 +274,7 @@ void BindCore(nanobind::module_& m)
         "      linearize_constraints(fem, contact)\n"
         "      if check_convergence(fem, contact, params): break\n"
         "      prepare_subproblem(fem, contact, params)\n"
+        "      prepare_next_iteration(fem, contact, params)\n"
         "      while params.newton.k < params.newton.n_max_iters:\n"
         "          if params.newton.gknorm2 <= params.newton.gtol2: break\n"
         "          if not iterate(fem, contact, params): break\n"
