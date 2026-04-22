@@ -261,8 +261,8 @@ inline void Newton<TScalar>::PrepareNextIteration(
     FGradient const& g,
     Eigen::MatrixBase<TDerivedX> const& xk)
 {
-    mk = fPrepareDerivatives(xk);
-    g(xk, gk);
+    mk = fPrepareDerivatives(xk.derived());
+    g(xk.derived(), gk);
     gknorm2 = gk.squaredNorm();
 }
 
@@ -275,7 +275,7 @@ inline bool Newton<TScalar>::Iterate(
     FHessianInverseProduct const& Hinv,
     Eigen::MatrixBase<TDerivedX>& xk)
 {
-    Hinv(xk, gk, dxk);
+    Hinv(xk.derived(), gk, dxk);
     bool bStepped{false};
     std::visit(
         [&](auto&& lineSearch) {
@@ -289,8 +289,8 @@ inline bool Newton<TScalar>::Iterate(
             else
             {
                 dxk         = -dxk;
-                TScalar Dm0 = Dmerit(xk, gk, dxk);
-                bStepped    = lineSearch.Solve(merit, mk, Dm0, dxk, xk);
+                TScalar Dm0 = Dmerit(xk.derived(), gk, dxk);
+                bStepped    = lineSearch.Solve(merit, mk, Dm0, dxk, xk.derived());
                 if (bStepped)
                     xk += lineSearch.alphaj * dxk;
             }
@@ -310,7 +310,7 @@ inline bool Newton<TScalar>::Iterate(
     auto const Dmerit = [](auto const& /*xk*/, auto const& gk, auto const& dx) {
         return gk.dot(dx);
     };
-    return Iterate(f, mk, Dmerit, Hinv, xk);
+    return Iterate(f, mk, Dmerit, Hinv, xk.derived());
 }
 
 template <class TScalar>
@@ -337,9 +337,9 @@ inline bool Newton<TScalar>::Solve(
         // If a step could not be taken, further Newton iterations will similarly not yield any
         // step, since both the gradient and Hessian will remain the same. We can thus terminate
         // early without convergence.
-        if (not Iterate(merit, mk, Dmerit, Hinv, xk))
+        if (not Iterate(merit, mk, Dmerit, Hinv, xk.derived()))
             return false;
-        PrepareNextIteration(fPrepareDerivatives, g, xk);
+        PrepareNextIteration(fPrepareDerivatives, g, xk.derived());
     }
     return gknorm2 < gtol2;
 }
@@ -361,7 +361,7 @@ inline bool Newton<TScalar>::Solve(
     auto const Dmerit = [](auto const& /*xk*/, auto const& gk, auto const& dx) {
         return gk.dot(dx);
     };
-    return Solve(fPrepareDerivatives, f, Dmerit, g, Hinv, xk);
+    return Solve(fPrepareDerivatives, f, Dmerit, g, Hinv, xk.derived());
 }
 
 template <class TScalar>

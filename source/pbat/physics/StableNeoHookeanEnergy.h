@@ -752,12 +752,12 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::Eval(
     [[maybe_unused]] typename TMatrix::ScalarType mu,
     [[maybe_unused]] typename TMatrix::ScalarType lambda) const
 {
-    using ScalarType      = typename TMatrix::ScalarType;
-    ScalarType I3         = TMatrix::kRows == 3 ? Determinant(F) : Determinant(Reshape<3, 3>(F));
-    ScalarType I2         = Dot(F, F);
-    ScalarType I3minAlpha = I3 - 1 - mu / lambda;
+    using ScalarType  = typename TMatrix::ScalarType;
+    ScalarType I3     = TMatrix::kRows == 3 ? Determinant(F) : Determinant(Reshape<3, 3>(F));
+    ScalarType I2     = Dot(F, F);
+    ScalarType I3min1 = I3 - 1;
     ScalarType psi =
-        ScalarType(0.5) * mu * (I2 - 3) + ScalarType(0.5) * lambda * (I3minAlpha * I3minAlpha);
+        ScalarType(0.5) * mu * (I2 - 3) - mu * I3min1 + ScalarType(0.5) * lambda * I3min1 * I3min1;
     return psi;
 }
 
@@ -860,9 +860,10 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::EvalWit
     using ScalarType      = typename TMatrix::ScalarType;
     ScalarType I3         = TMatrix::kRows == 3 ? Determinant(F) : Determinant(Reshape<3, 3>(F));
     ScalarType I2         = Dot(F, F);
-    ScalarType I3minAlpha = I3 - 1 - mu / lambda;
+    ScalarType I3min1     = I3 - 1;
+    ScalarType I3minAlpha = I3min1 - mu / lambda;
     ScalarType psi =
-        ScalarType(0.5) * mu * (I2 - 3) + ScalarType(0.5) * lambda * (I3minAlpha * I3minAlpha);
+        ScalarType(0.5) * mu * (I2 - 3) - mu * I3min1 + ScalarType(0.5) * lambda * I3min1 * I3min1;
     SMatrix<ScalarType, 3, 3> Fcross;
     Fcross.Col(0) = Cross(F.Col(1), F.Col(2));
     Fcross.Col(1) = Cross(F.Col(2), F.Col(0));
@@ -891,9 +892,10 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<3>::EvalWit
     using ScalarType      = typename TMatrix::ScalarType;
     ScalarType I3         = TMatrix::kRows == 3 ? Determinant(F) : Determinant(Reshape<3, 3>(F));
     ScalarType I2         = Dot(F, F);
-    ScalarType I3minAlpha = I3 - 1 - mu / lambda;
+    ScalarType I3min1     = I3 - 1;
+    ScalarType I3minAlpha = I3min1 - mu / lambda;
     ScalarType psi =
-        ScalarType(0.5) * mu * (I2 - 3) + ScalarType(0.5) * lambda * (I3minAlpha * I3minAlpha);
+        ScalarType(0.5) * mu * (I2 - 3) - mu * I3min1 + ScalarType(0.5) * lambda * I3min1 * I3min1;
     SMatrix<ScalarType, 3, 3> Fcross;
     auto f0       = F.Col(0);
     auto f1       = F.Col(1);

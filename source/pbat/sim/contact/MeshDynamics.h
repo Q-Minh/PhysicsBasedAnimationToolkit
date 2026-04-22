@@ -64,6 +64,24 @@ class MeshDynamics
         TScalar mu{0};                                        ///< Complementarity slack relaxation
         TScalar chat;                                         ///< \f$ c(x_k) - gradc(x_k)^T x_k \f$
         math::linalg::mini::SVector<TScalar, kDofs> gradc;    ///< \f$ \nabla c(x_k) \f$
+        /**
+         * @brief Evaluate the constraint function
+         * @param x `kDofs x 1` vector satisfying `math::linalg::mini::CMatrix`
+         * @return The constraint value
+         */
+        auto Eval(auto&& x) const { return DistanceType{}.Eval(x); }
+        /**
+         * @brief Evaluate the constraint gradient
+         * @param x `kDofs x 1` vector satisfying `math::linalg::mini::CMatrix`
+         * @return The constraint gradient
+         */
+        auto Gradient(auto&& x) const { return DistanceType{}.Gradient(x); }
+        /**
+         * @brief Evaluate the constraint Hessian
+         * @param x `kDofs x 1` vector satisfying `math::linalg::mini::CMatrix`
+         * @return The constraint Hessian
+         */
+        auto Hessian(auto&& x) const { return DistanceType{}.Hessian(x); }
     };
     /**
      * @brief Evaluate the constraint barrier anti-derivative \f$ a(c) \f$.
@@ -176,9 +194,10 @@ class MeshDynamics
                             ///< `rqstart` to initialize the actual query radius
         TScalar gamma{1};   ///< Multiple of dynamics hessian curvature in constraint gradient
                             ///< direction for barrier parameter computation
-        TScalar dmin{2e-3}; ///< Loose target minimum contact distance
-        TScalar epsP;       ///< Size of smooth transition region for our polynomial step function
-                      ///< approximation \f$ P(c(x)) \f$, where `\eps_P < r, dmin < r - \eps_P`
+        TScalar dmin{2e-4}; ///< Loose target minimum contact distance
+        TScalar epsP{
+            5e-4}; ///< Size of smooth transition region for our polynomial step function
+                   ///< approximation \f$ P(c(x)) \f$, where `\eps_P < r, dmin < r - \eps_P`
         bool bDeactivate{false}; ///< Whether to deactivate contacts
 
         /**
@@ -370,9 +389,10 @@ class MeshDynamics
      * @tparam TDerivedH Matrix type for the hessian estimate
      * @param H Hessian estimate at the desired minimal contact separation, used to compute a
      * heuristic barrier parameter.
+     * @pre `H` is symmetric
      */
     template <class TDerivedH>
-    void ComputeBarrierParameters(Eigen::SparseCompressedBase<TDerivedH> const& H);
+    void UpdateBarrierParameters(Eigen::SparseCompressedBase<TDerivedH> const& H);
     /**
      * @brief Iterate over contacts [cstart, cend) in the contact set
      * @tparam FOnContact Callable type with signature `template <class TConstraintData>
@@ -673,6 +693,7 @@ class MeshDynamics
      * @param gradc Constraint gradient vector of size `kStencil * kDims`
      * @param nodes Stencil node indices
      * @return The curvature value \f$ \nabla c^T H \nabla c \f$
+     * @pre `H` is symmetric
      */
     template <class TDerivedH, int kDims, int kStencil>
     TScalar RayleighQuotient(
@@ -714,14 +735,11 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Barrier(
     TScalar C2)
 {
     TScalar constexpr zero = std::numeric_limits<TScalar>::epsilon();
-    // NOTE:
-    // The predicates c < r - epsP and c <= r are important. Do not change the strictness of these
-    // inequalities. See MeshDynamics<TScalar, TIndex>::Params::UpdateSmoothedBarrierCoefficients().
     if (c <= zero)
         return -std::numeric_limits<TScalar>::infinity();
-    else if (c < r - epsP)
+    else if (c <= r - epsP)
         return std::log(c) + C1;
-    else if (c <= r)
+    else if (c < r)
         return APC[0] * std::log(c) + APC[1] * c + APC[2] * c * c + APC[3] * c * c * c;
     else
         return C2;
@@ -881,7 +899,7 @@ inline void MeshDynamics<TScalar, TIndex>::Params::UpdateSmoothedBarrierCoeffici
     for (auto& coeff : APC)
         coeff /= epsP3;
     auto const a = [&](TScalar c) {
-        return MeshDynamics<TScalar, TIndex>::Barrier(c, r, epsP, APC, TScalar(0), TScalar(0));
+        return APC[0] * std::log(c) + APC[1] * c + APC[2] * c * c + APC[3] * c * c * c;
     };
     C1 = a(r - epsP) - std::log(r - epsP);
     C2 = a(r);
@@ -1097,22 +1115,20 @@ MeshDynamics<TScalar, TIndex>::LinearizeConstraints(Eigen::MatrixBase<TDerivedx>
             TConstraintData& C,
             Stencil const& stencil,
             std::int32_t /*t*/) {
-            using DistanceType = typename TConstraintData::DistanceType;
-            DistanceType d{};
             auto const [X, _] = LoadStencil<TContactSet>(x, stencil);
             auto x            = Reshape<TConstraintData::kDofs, 1>(X);
-            C.gradc           = d.Gradient(x);
-            C.c               = d.Eval(x) - Dot(C.gradc, x);
+            C.gradc           = C.Gradient(x);
+            C.chat            = C.Eval(x) - Dot(C.gradc, x);
         },
         nThreads);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedH>
-inline void MeshDynamics<TScalar, TIndex>::ComputeBarrierParameters(
+inline void MeshDynamics<TScalar, TIndex>::UpdateBarrierParameters(
     Eigen::SparseCompressedBase<TDerivedH> const& H)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeBarrierParameters");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateBarrierParameters");
     TScalar gamma       = mParams.gamma;
     TScalar d2          = mParams.dmin * mParams.dmin;
     auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
@@ -1225,12 +1241,12 @@ MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int3
                 tg.run([f, t]() { f(t); });
         };
         auto const fLaunchKernel = [&]<class TConstraintSet>(TConstraintSet& set) {
-            TIndex const nConstraints          = static_cast<TIndex>(set.Size());
-            TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
             fForEachThread([&](std::int32_t t) {
-                TIndex const cstart = t * nConstraintsPerThread;
-                TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-                auto const fWrap    = [&fOnContact, t = t]<class TContactSet, class TConstraint>(
+                TIndex const nConstraints          = static_cast<TIndex>(set.Size());
+                TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+                TIndex const cstart                = t * nConstraintsPerThread;
+                TIndex const cend = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+                auto const fWrap  = [&fOnContact, t = t]<class TContactSet, class TConstraint>(
                                        TConstraint& C,
                                        Stencil const& stencil) {
                     fOnContact.template operator()<TContactSet, TConstraint>(C, stencil, t);
@@ -1369,7 +1385,6 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
     Eigen::MatrixBase<TDerivedx> const& x,
     bool bForLinearSubproblem) const
 {
-    auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     TScalar E{0};
     const_cast<SelfType*>(this)->ForAllContacts(
         [&]<class TContactSet, class TConstraintData>(
@@ -1387,10 +1402,10 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
             TScalar const c =
                 bForLinearSubproblem ? C.chat + Dot(C.gradc, xc) : DistanceType{}.Eval(xc);
             TScalar const a =
-                Barrier(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC, mParams.kcp, mParams.b);
+                Barrier(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC, mParams.C1, mParams.C2);
             E -= C.mu * a;
         },
-        nThreads);
+        1 /*nThreads*/);
     return E;
 }
 
@@ -1413,7 +1428,6 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
     Eigen::MatrixBase<TDerivedg>& g,
     bool bForLinearSubproblem) const
 {
-    auto const nThreads       = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     Eigen::Index const nNodes = g.size() / 3;
     const_cast<SelfType*>(this)->ForAllContacts(
         [&]<class TContactSet, class TConstraintData>(
@@ -1445,10 +1459,8 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             else
             {
                 using math::linalg::mini::SVector;
-                using DistanceType = typename TConstraintData::DistanceType;
-                DistanceType d{};
-                TScalar const c                           = d.Eval(xc);
-                Eigen::Vector<TScalar, kDofs> const gradc = ToEigen(d.Gradient(xc));
+                TScalar const c                           = C.Eval(xc);
+                Eigen::Vector<TScalar, kDofs> const gradc = ToEigen(C.Gradient(xc));
                 TScalar const dadc =
                     BarrierGradient(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC);
                 for (auto ki = 0; ki < kStencil; ++ki)
@@ -1461,7 +1473,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
                 }
             }
         },
-        nThreads);
+        1 /*nThreads*/);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1581,7 +1593,7 @@ inline auto MeshDynamics<TScalar, TIndex>::GeometryPrefixArrays()
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx>
 inline auto MeshDynamics<TScalar, TIndex>::LoadPoint(
-    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedx> const& x_,
     TIndex i,
     int g,
     auto&& xi) const
@@ -1589,10 +1601,11 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadPoint(
     using EGeometry = decltype(mOgcState)::EGeometry;
     using math::linalg::mini::FromEigen;
     static auto constexpr kDims = std::decay_t<decltype(xi)>::kRows;
+    auto x                      = x_.reshaped();
     i -= mOgcState.mPointGeometryPrefix[g];
     switch (g)
     {
-        case EGeometry::Dynamic: xi = FromEigen(x.col(i).template topRows<kDims>()); break;
+        case EGeometry::Dynamic: xi = FromEigen(x.template segment<kDims>(i * kDims)); break;
         case EGeometry::Static: xi = FromEigen(mXstatic.col(i).template topRows<kDims>()); break;
         default: break;
     }
@@ -1602,7 +1615,7 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadPoint(
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx>
 inline auto MeshDynamics<TScalar, TIndex>::LoadHalfEdge(
-    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedx> const& x_,
     TIndex he,
     int g,
     auto&& xi,
@@ -1611,6 +1624,7 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadHalfEdge(
     using EGeometry = decltype(mOgcState)::EGeometry;
     using math::linalg::mini::FromEigen;
     static auto constexpr kDims = std::decay_t<decltype(xi)>::kRows;
+    auto x                      = x_.reshaped();
     he -= mOgcState.mHalfEdgeGeometryPrefix[g];
     TIndex i, j;
     switch (g)
@@ -1618,8 +1632,8 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadHalfEdge(
         case EGeometry::Dynamic: {
             i  = geometry::IncomingVertex(*mOgcInput.F, he);
             j  = geometry::OutgoingVertex(*mOgcInput.F, he);
-            xi = FromEigen(x.col(i).template topRows<kDims>());
-            xj = FromEigen(x.col(j).template topRows<kDims>());
+            xi = FromEigen(x.template segment<kDims>(i * kDims));
+            xj = FromEigen(x.template segment<kDims>(j * kDims));
         }
         break;
         case EGeometry::Static: {
@@ -1639,7 +1653,7 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadHalfEdge(
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx>
 inline auto MeshDynamics<TScalar, TIndex>::LoadTriangle(
-    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedx> const& x_,
     TIndex f,
     int g,
     auto&& xi,
@@ -1649,6 +1663,7 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadTriangle(
     using EGeometry = decltype(mOgcState)::EGeometry;
     using math::linalg::mini::FromEigen;
     static auto constexpr kDims = std::decay_t<decltype(xi)>::kRows;
+    auto x                      = x_.reshaped();
     f -= mOgcState.mTriangleGeometryPrefix[g];
     TIndex i, j, k;
     switch (g)
@@ -1658,9 +1673,9 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadTriangle(
             i          = xinds(0);
             j          = xinds(1);
             k          = xinds(2);
-            xi         = FromEigen(x.col(i).template topRows<kDims>());
-            xj         = FromEigen(x.col(j).template topRows<kDims>());
-            xk         = FromEigen(x.col(k).template topRows<kDims>());
+            xi         = FromEigen(x.template segment<kDims>(i * kDims));
+            xj         = FromEigen(x.template segment<kDims>(j * kDims));
+            xk         = FromEigen(x.template segment<kDims>(k * kDims));
         }
         break;
         case EGeometry::Static: {
@@ -1761,15 +1776,15 @@ inline TScalar MeshDynamics<TScalar, TIndex>::RayleighQuotient(
             TIndex i = ib + ki;
             if (i >= H.outerSize())
                 continue;
-            TIndex knj{0};
             using InnerIteratorType = typename std::remove_cvref_t<decltype(H)>::InnerIterator;
-            for (InnerIteratorType it(H, i); it; ++it)
+            InnerIteratorType it(H, i);
+            for (TIndex knj = 0; knj < nNodes; ++knj)
             {
-                TIndex nk = it.index() / kDims;
-                while (nk >= nodes[knj])
-                    ++knj;
-                TIndex nj = nodes[knj];
-                if (nk == nj)
+                TIndex j = nodes[knj] * kDims;
+                while (it.index() < j)
+                    ++it;
+                auto jend = j + kDims;
+                for (; it.index() < jend; ++it)
                 {
                     TIndex kj = it.index() % kDims;
                     gcTHgc += gradc(kni * kDims + ki) * it.value() * gradc(knj * kDims + kj);

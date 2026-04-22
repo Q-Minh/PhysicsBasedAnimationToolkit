@@ -208,18 +208,24 @@ TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
                 .WithDisplacementBoundConfig(0.45, 0.)
                 .WithRadii(1e-2 /*r*/, 1e-2 /*rq*/)
                 .Construct())
-        .WithSequentialPrimalInteriorPoint(1., 2e-3, 5e-3)
+        .WithSequentialPrimalInteriorPoint(1. /*gamma*/, 2e-3 /*dmin*/, 5e-3 /*epsP*/)
         .Construct();
     // Act
     newton::Params params{};
+    math::optimization::BackTrackingLineSearch<Scalar> lineSearch(
+        20 /*nMaxIters*/,
+        Scalar(0.5) /*tau*/,
+        Scalar(1e-4) /*c*/,
+        Scalar(1) /*alpha0*/,
+        fem.x.size() /*n*/);
     params.WithLinearSolver(newton::ELinearSolver::LLT)
         .WithSpdCorrection(fem::EHyperElasticSpdCorrection::Absolute)
         .WithOptimizer(
             math::optimization::Newton<Scalar>(
-                /*nMaxIters=*/20,
-                /*gtol=*/Scalar{1e-8},
+                /*nMaxIters=*/10,
+                /*gtol=*/Scalar{1e-4},
                 /*n=*/fem.x.size(),
-                /*lineSearchIn=*/math::optimization::BackTrackingLineSearch<Scalar>{}))
+                /*lineSearchIn=*/lineSearch))
         .WithOgcTruncationStrategy(newton::EOgcTruncationStrategy::PerVertex)
         .Construct();
     tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
@@ -227,7 +233,8 @@ TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
     {
         fem.SetupTimeIntegrationOptimization();
         newton::InitializeSolve(fem, contact, params);
-        newton::Solve(fem, contact, params);
+        bool const bConverged = newton::Solve(fem, contact, params);
+        CHECK(bConverged);
         fem.Step();
     }
 }
