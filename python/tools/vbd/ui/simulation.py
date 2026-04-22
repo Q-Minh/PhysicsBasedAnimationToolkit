@@ -24,6 +24,7 @@ class Simulation:
         pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
     )
     _t: int
+    _until_t: int
     _profiler: pypbat.profiling.Profiler
     _device: pbat.geometry.Device
 
@@ -65,6 +66,7 @@ class Simulation:
         self._dt = 1e-2
         self._bdf_scheme = 1
         self._t = 0
+        self._until_t = -1
         self._fem_dynamics_init_strategy = (
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
         )
@@ -246,7 +248,7 @@ class Simulation:
             )
             self._fem_dynamics_vm.add_scalar_quantity(
                 "h2||grad U||",
-                bt*bt*np.linalg.norm(gradU, axis=0),
+                bt * bt * np.linalg.norm(gradU, axis=0),
                 defined_on="vertices",
                 cmap="turbo",
             )
@@ -258,10 +260,10 @@ class Simulation:
                     defined_on="vertices",
                     cmap="turbo",
                 )
-                grad = gradK + bt*bt*gradU
+                grad = gradK + bt * bt * gradU
                 gnorms = np.linalg.norm(grad, axis=0)
                 self._fem_dynamics_vm.add_vector_quantity(
-                    "residual", 
+                    "residual",
                     grad.T / gnorms[:, np.newaxis],
                     defined_on="vertices",
                 )
@@ -304,7 +306,7 @@ class Simulation:
         )
         self._bdf_scheme = max(1, min(6, self._bdf_scheme))
         if dt_changed and not bdf_changed:
-            # We should never changed the bdf scheme in the draw loop alone, 
+            # We should never changed the bdf scheme in the draw loop alone,
             # only in the reset to make sure it is called before fem.set_initial_conditions
             self._fem_dynamics.set_time_integration_scheme(
                 dt=self._dt, s=self._bdf_scheme
@@ -323,6 +325,11 @@ class Simulation:
             else:
                 self._fem_dynamics.m = self._masscpy
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
+        imgui.SameLine()
+        imgui.SetNextItemWidth(100)
+        _, self._until_t = imgui.InputInt("Until", self._until_t)
+        if self._t == self._until_t:
+            self._simulate = False
         step = imgui.Button("Step", button_size)
         reset = imgui.Button("Reset", button_size)
         if imgui.Button("Dump", button_size):

@@ -165,10 +165,10 @@ class Contact:
             # Point-Point: 2 points
             self._stencil_pc = ps.register_point_cloud("Contact Stencil", pts)
             self._stencil_pc.add_vector_quantity(
-                "grad (cached)", grad.T, vectortype="standard", enabled=True
+                "grad (cached)", grad.T, vectortype="standard"
             )
             self._stencil_pc.add_vector_quantity(
-                "grad (at x)", gradx.T, vectortype="standard", enabled=False
+                "grad (at x)", gradx.T, vectortype="standard"
             )
             # Also show the edge connecting them
             self._stencil_cn = ps.register_curve_network(
@@ -181,19 +181,19 @@ class Contact:
                 "Contact Point", pts[0:1]
             )
             self._stencil_pc.add_vector_quantity(
-                "grad (cached)", grad[:, 0:1].T, vectortype="standard", enabled=True
+                "grad (cached)", grad[:, 0:1].T, vectortype="standard"
             )
             self._stencil_pc.add_vector_quantity(
-                "grad (at x)", gradx[:, 0:1].T, vectortype="standard", enabled=False
+                "grad (at x)", gradx[:, 0:1].T, vectortype="standard"
             )
             self._stencil_cn = ps.register_curve_network(
                 "Contact Edge", pts[1:3], np.array([[0, 1]])
             )
             self._stencil_cn.add_vector_quantity(
-                "grad (cached)", grad[:, 1:3].T, vectortype="standard", enabled=True
+                "grad (cached)", grad[:, 1:3].T, vectortype="standard"
             )
             self._stencil_cn.add_vector_quantity(
-                "grad (at x)", gradx[:, 1:3].T, vectortype="standard", enabled=False
+                "grad (at x)", gradx[:, 1:3].T, vectortype="standard"
             )
 
         elif self._selected_type == 2:
@@ -202,21 +202,21 @@ class Contact:
                 "Contact Point", pts[0:1]
             )
             self._stencil_pc.add_vector_quantity(
-                "grad (cached)", grad[:, 0:1].T, vectortype="standard", enabled=True
+                "grad (cached)", grad[:, 0:1].T, vectortype="standard"
             )
             self._stencil_pc.add_vector_quantity(
-                "grad (at x)", gradx[:, 0:1].T, vectortype="standard", enabled=False
+                "grad (at x)", gradx[:, 0:1].T, vectortype="standard"
             )
             self._stencil_sm = ps.register_surface_mesh(
                 "Contact Triangle", pts[1:4], np.array([[0, 1, 2]])
             )
             self._stencil_sm.add_vector_quantity(
                 "grad (cached)", grad[:, 1:4].T, vectortype="standard",
-                defined_on="vertices", enabled=True
+                defined_on="vertices"
             )
             self._stencil_sm.add_vector_quantity(
                 "grad (at x)", gradx[:, 1:4].T, vectortype="standard",
-                defined_on="vertices", enabled=False
+                defined_on="vertices"
             )
 
         elif self._selected_type == 3:
@@ -227,10 +227,10 @@ class Contact:
                 "Contact Edges", edge_pts, edges
             )
             self._stencil_cn.add_vector_quantity(
-                "grad (cached)", grad.T, vectortype="standard", enabled=True
+                "grad (cached)", grad.T, vectortype="standard"
             )
             self._stencil_cn.add_vector_quantity(
-                "grad (at x)", gradx.T, vectortype="standard", enabled=False
+                "grad (at x)", gradx.T, vectortype="standard"
             )
 
     @staticmethod
