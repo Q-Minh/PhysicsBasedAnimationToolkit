@@ -1029,13 +1029,9 @@ inline void AdaptStencilGradientAccelerationParameter(
         Scalar L         = params.Hnk(i) + ngk / ndxkm1;
         Scalar rho       = ndgkm1 / (L * ndxkm1);
         if (ngk > ngkm1)
-        {
             params.betaG(i) *= params.gammadown;
-        }
         else if (rho > params.rhohat)
-        {
             params.betaG(i) += (1 - params.betaG(i)) * params.gammaup;
-        }
     }
     params.gk.col(i) = ToEigen(gi);
     params.xk.col(i) = ToEigen(xi);
