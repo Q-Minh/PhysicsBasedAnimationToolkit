@@ -346,14 +346,17 @@ class DenseAdjacencySet
      *
      * @post @p other is left empty (Size() == 0) but retains its allocated capacity.
      *
+     * @tparam FOnAdded       Callable with signature `TData(TVertexIndex u, TVertexIndex v)` if
+     * TData is not void and TOtherData is void.
      * @tparam TOtherData    Data type of the other set, not necessarily the same as this's TData.
      * @param other          The adjacency set whose entries are merged into this (consumed)
      * @param bAssumeDisjoint If true, skip duplicate detection (caller guarantees no overlap)
      */
-    template <class TOtherData>
+    template <class FOnAdded, class TOtherData>
     void Merge(
         DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
-        bool bAssumeDisjoint = false);
+        bool bAssumeDisjoint = false,
+        FOnAdded fOnAdded    = [](auto&&...) {});
 
     /**
      * @brief Reduce a collection of AdjacencySets into a single set via parallel tree reduction.
@@ -365,6 +368,8 @@ class DenseAdjacencySet
      *
      * @post All input sets in [begin, end) are left in an empty state.
      *
+     * @tparam FOnAdded       Callable with signature `TData(TVertexIndex u, TVertexIndex v)` if
+     * TData is not void and TOtherData is void.
      * @tparam TRandomIt     Random-access iterator over DenseAdjacencySet elements, not necessarily
      * of same data type.
      * @param begin          Iterator to the first DenseAdjacencySet
@@ -374,12 +379,13 @@ class DenseAdjacencySet
      * output set in final merge
      * @return The merged DenseAdjacencySet
      */
-    template <std::random_access_iterator TRandomIt>
+    template <class FOnAdded, std::random_access_iterator TRandomIt>
     void Reduce(
         TRandomIt begin,
         TRandomIt end,
         bool bAssumeInputDisjoint  = false,
-        bool bAssumeOutputDisjoint = false);
+        bool bAssumeOutputDisjoint = false,
+        FOnAdded fOnAdded          = [](auto&&...) {});
 
     /**
      * @brief Finalize the adjacency set by recomputing the prefix-sum array.
@@ -536,11 +542,16 @@ class DenseAdjacencySet
      * Called by Merge() after the set-difference step has populated mAdjacenciesToAdd.
      * Specialise or branch on TData/TOtherData to control how data is moved.
      *
+     * @tparam FOnAdded Callback type for initialising data of newly added adjacencies. When TData
+     * is not void and TOtherData is void, the callback should have signature `TData(TVertexIndex u,
+     * TVertexIndex v)`.
      * @tparam TOtherData Data type of the source set
      * @param other       The source set being merged from
      */
-    template <class TOtherData>
-    void AddAdjacencyDataFrom(DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other);
+    template <class FOnAdded, class TOtherData>
+    void AddAdjacencyDataFrom(
+        DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
+        FOnAdded fOnAdded = [](auto&&...) {});
 
     /**
      * @brief Release ids and invoke @p fOnRemoved for each adjacency in mAdjacenciesToRemove.
@@ -878,10 +889,11 @@ void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-template <class TOtherData>
+template <class FOnAdded, class TOtherData>
 inline void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
     DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
-    bool bAssumeDisjoint)
+    bool bAssumeDisjoint,
+    FOnAdded fOnAdded)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.Merge");
 
@@ -916,7 +928,7 @@ inline void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
     }
 
     // 2. Allocate ids and transfer data from other for each new adjacency.
-    AddAdjacencyDataFrom(other);
+    AddAdjacencyDataFrom(other, fOnAdded);
 
     // 3. Merge sorted arrays
     if (not mAdjacenciesToAdd.empty())
@@ -941,12 +953,13 @@ inline void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-template <std::random_access_iterator TRandomIt>
+template <class FOnAdded, std::random_access_iterator TRandomIt>
 void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
     TRandomIt begin,
     TRandomIt end,
     bool bAssumeInputDisjoint,
-    bool bAssumeOutputDisjoint)
+    bool bAssumeOutputDisjoint,
+    FOnAdded fOnAdded)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.Reduce");
 
@@ -979,7 +992,7 @@ void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
             },
             tbb::static_partitioner());
     }
-    this->Merge(begin[0], bAssumeOutputDisjoint);
+    this->Merge(begin[0], bAssumeOutputDisjoint, fOnAdded);
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
@@ -1179,9 +1192,10 @@ void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::ReleaseId(TIdIndex id)
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-template <class TOtherData>
+template <class FOnAdded, class TOtherData>
 void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::AddAdjacencyDataFrom(
-    DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other)
+    DenseAdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
+    FOnAdded fOnAdded)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.DenseAdjacencySet.AddAdjacencyDataFrom");
     // No-op when either this has void data, since ids and data are unused.
@@ -1202,6 +1216,16 @@ void DenseAdjacencySet<TData, TVertexIndex, TIdIndex>::AddAdjacencyDataFrom(
                     TIdIndex otherC = other.mIdToData[adj.id];
                     TIdIndex c      = mIdToData[aid];
                     mData[c]        = std::move(other.mData[otherC]);
+                }
+            }
+            else
+            {
+                if constexpr (std::is_convertible_v<
+                                  std::invoke_result_t<FOnAdded, TVertexIndex, TVertexIndex>,
+                                  TData>)
+                {
+                    TIdIndex c = mIdToData[aid];
+                    mData[c]   = fOnAdded(adj.u, adj.v);
                 }
             }
             adj.id = aid;
