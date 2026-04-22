@@ -62,19 +62,20 @@ void BindMeshDynamics(nanobind::module_& m)
             "    betarq (float): Slope of the linear function of inertial target distance to add "
             "to `rqstart` to initialize the actual query radius.\n")
         .def(
-            "with_sequential_primal_interior_point",
+            "with_sequential_augmented_lagrangian",
             &MeshDynamicsParamsType::WithSequentialAugmentedLagrangian,
             nb::arg("gamma"),
             nb::arg("dmin"),
-            nb::arg("epsP"),
+            nb::arg("decay"),
+            nb::arg("decaylo"),
             nb::rv_policy::reference_internal,
-            "Set the sequential primal interior point parameters.\n\n"
+            "Set the sequential augmented Lagrangian parameters.\n\n"
             "Args:\n"
             "    gamma (float): Multiple of dynamics hessian curvature in constraint gradient "
             "direction for barrier parameter computation, `gamma > 0`.\n"
-            "    dmin (float): Loose target minimum contact distance, `dmin > 0`.\n"
-            "    epsP (float): Size of the smooth transition region, `0 < epsP < r` and "
-            "`dmin < r - epsP`.\n")
+            "    dmin (float): Loose target minimum contact distance, `0 < dmin < r`.\n"
+            "    decay (float): Decay factor for constraint deactivation, `0 < decay < 1`.\n"
+            "    decaylo (float): Lower bound for decay factor, `0 < decaylo < 1`.\n")
         .def(
             "construct",
             &MeshDynamicsParamsType::Construct,
@@ -135,10 +136,13 @@ void BindMeshDynamics(nanobind::module_& m)
             &MeshDynamicsParamsType::dmin,
             "(float) Loose target minimum contact distance.")
         .def_rw(
-            "epsP",
-            &MeshDynamicsParamsType::epsP,
-            "(float) Size of smooth transition region for the polynomial step function "
-            "approximation.");
+            "decay",
+            &MeshDynamicsParamsType::decay,
+            "(float) Decay factor for constraint deactivation.")
+        .def_rw(
+            "decaylo",
+            &MeshDynamicsParamsType::decaylo,
+            "(float) Decay threshold under which constraints are deactivated.");
 
     nb::class_<MeshDynamicsType>(m, "MeshDynamics")
         .def(nb::init<>(), "Construct an empty mesh contact dynamics engine.")
@@ -280,25 +284,25 @@ void BindMeshDynamics(nanobind::module_& m)
             "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` current point "
             "positions.\n")
         .def(
-            "update_barrier_parameters",
+            "update_penalty_parameter",
             [](MeshDynamicsType& self,
                Eigen::SparseMatrix<ScalarType, Eigen::ColMajor, IndexType> const& H) {
-                self.UpdateBarrierParameters(H);
+                self.UpdatePenaltyParameter(H);
             },
             nb::arg("H"),
-            "Compute barrier parameters for all constraints based on an estimate of the "
-            "objective function's Hessian.\n\n"
+            "Compute the penalty parameter for the augmented Lagrangian based on an estimate of "
+            "the objective function's curvature.\n\n"
             "Args:\n"
             "    H (scipy.sparse.csc_matrix): Symmetric Hessian estimate in CSC format.\n")
         .def(
-            "update_barrier_parameters",
+            "update_penalty_parameter",
             [](MeshDynamicsType& self,
                Eigen::SparseMatrix<ScalarType, Eigen::RowMajor, IndexType> const& H) {
-                self.UpdateBarrierParameters(H);
+                self.UpdatePenaltyParameter(H);
             },
             nb::arg("H"),
-            "Compute barrier parameters for all constraints based on an estimate of the "
-            "objective function's Hessian.\n\n"
+            "Compute the penalty parameter for the augmented Lagrangian based on an estimate of "
+            "the objective function's curvature.\n\n"
             "Args:\n"
             "    H (scipy.sparse.csc_matrix): Symmetric Hessian estimate in CSR format.\n")
         .def(
