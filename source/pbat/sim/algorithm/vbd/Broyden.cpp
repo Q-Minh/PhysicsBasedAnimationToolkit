@@ -43,8 +43,7 @@ void BroydenParams::Deserialize(io::Archive const& archive)
     if (group.HasMetaData("maxL2SolverIters"))
         maxL2SolverIters = group.ReadMetaData<Index>("maxL2SolverIters");
     if (group.HasMetaData("eL2Solver"))
-        eL2Solver =
-            static_cast<EBroydenLeastSquaresSolver>(group.ReadMetaData<int>("eL2Solver"));
+        eL2Solver = static_cast<EBroydenLeastSquaresSolver>(group.ReadMetaData<int>("eL2Solver"));
     if (group.HasMetaData("eJacobianEstimate"))
         eJacobianEstimate =
             static_cast<EBroydenJacobianEstimate>(group.ReadMetaData<int>("eJacobianEstimate"));
@@ -158,7 +157,7 @@ BroydenTestSetup SetupBroydenTest(pbat::Index maxIters = 10)
     setup.vbdParams
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
-        .WithHessianSingularUnder(Scalar{1e-6})
+        .WithVertexLinearSolver(sim::algorithm::vbd::EVertexIntegrationLinearSolver::Inverse)
         .Construct();
 
     // Broyden params

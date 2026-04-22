@@ -123,7 +123,7 @@ AndersonTestSetup SetupAndersonTest(pbat::Index maxIters = 10)
     setup.vbdParams
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
-        .WithHessianSingularUnder(Scalar{1e-6})
+        .WithVertexLinearSolver(sim::algorithm::vbd::EVertexIntegrationLinearSolver::Inverse)
         .Construct();
 
     // Anderson params

@@ -15,14 +15,13 @@
 namespace pbat::sim::algorithm::vbd {
 
 /**
- * @brief Initialization strategies for the VBD time step minimization
+ * @brief Vertex integration linear solvers
  */
-enum class EInitializationStrategy {
-    Position,             ///< \f$ x_0 = x(t) \f$
-    Inertia,              ///< \f$ x_0 = x(t) + h v(t) \f$
-    KineticEnergyMinimum, ///< \f$ x_0 = x(t) + h v(t) + h^2 M^{-1} f_\text{ext} \f$
-    AdaptiveVbd,          ///< Adaptive VBD initialization strategy
-    AdaptivePbat          ///< Adaptive PBAT initialization strategy
+enum class EVertexIntegrationLinearSolver {
+    Inverse, ///< Compute explicit 3x3 inverse
+    LLT,     ///< Cholesky factorize
+    QR,      ///< MGS QR factorization
+    EVD      ///< Eigenvalue decomposition
 };
 
 /**

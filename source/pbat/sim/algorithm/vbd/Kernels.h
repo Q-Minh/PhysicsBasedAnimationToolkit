@@ -47,63 +47,6 @@ PBAT_HOST_DEVICE mini::SVector<ScalarType, TMatrixXT::kRows> InertialTarget(
     return xt + dt * vt + dt2 * aext;
 }
 
-template <
-    mini::CMatrix TMatrixXT,
-    mini::CMatrix TMatrixVTM1,
-    mini::CMatrix TMatrixVT,
-    mini::CMatrix TMatrixA,
-    class ScalarType = typename TMatrixXT::ScalarType>
-PBAT_HOST_DEVICE mini::SVector<ScalarType, TMatrixXT::kRows> InitialPositionsForSolve(
-    TMatrixXT const& xt,
-    TMatrixVTM1 const& vtm1,
-    TMatrixVT const& vt,
-    TMatrixA const& aext,
-    ScalarType dt,
-    ScalarType dt2,
-    EInitializationStrategy strategy)
-{
-    using namespace mini;
-    if (strategy == EInitializationStrategy::Position)
-    {
-        return xt;
-    }
-    else if (strategy == EInitializationStrategy::Inertia)
-    {
-        return xt + dt * vt;
-    }
-    else if (strategy == EInitializationStrategy::KineticEnergyMinimum)
-    {
-        return xt + dt * vt + dt2 * aext;
-    }
-    else // (strategy == EInitializationStrategy::AdaptiveVbd)
-    {
-        ScalarType const aextn2                 = SquaredNorm(aext);
-        bool const bHasZeroExternalAcceleration = (aextn2 == ScalarType(0));
-        ScalarType atilde{0};
-        if (not bHasZeroExternalAcceleration)
-        {
-            using namespace std;
-            auto constexpr kRows = TMatrixXT::kRows;
-            if (strategy == EInitializationStrategy::AdaptiveVbd)
-            {
-                SVector<ScalarType, kRows> const ati = (vt - vtm1) / dt;
-                atilde                               = Dot(ati, aext) / aextn2;
-                atilde = min(max(atilde, ScalarType(0)), ScalarType(1));
-            }
-            if (strategy == EInitializationStrategy::AdaptivePbat)
-            {
-                SVector<ScalarType, kRows> const dti =
-                    vt / (Norm(vt) + std::numeric_limits<ScalarType>::min());
-                atilde = Dot(dti, aext) / aextn2;
-                // Discard the sign of atilde, because motion that goes against
-                // gravity should "feel" gravity, rather than ignore it (i.e. clamping).
-                atilde = min(abs(atilde), ScalarType(1));
-            }
-        }
-        return xt + dt * vt + dt2 * atilde * aext;
-    }
-}
-
 template <class ScalarType, class IndexType>
 PBAT_HOST [[maybe_unused]] ScalarType ChebyshevOmega(IndexType k, ScalarType rho2, ScalarType omega)
 {
@@ -618,21 +561,71 @@ PBAT_HOST_DEVICE void AddInertiaDerivatives(
     g += K * (x - xtilde);
 }
 
+/**
+ * @brief Solve local vertex equation
+ * @tparam TMatrixX
+ * @tparam TMatrixG
+ * @tparam TMatrixH
+ * @tparam TMatrixX::ScalarType
+ * @param g `3 x 1` gradient
+ * @param H `3 x 3` hessian
+ * @param x `3 x 1` vertex position
+ * @param eSolver Linear solver to use
+ * @param hessZero Numerical zero for hessian eigen values if `eSolver` is
+ * `EVertexIntegrationLinearSolver::EVD`
+ * @param eps Numerical zero for decompositions
+ * @param nMaxIters Maximum number of iterations for iterative linear solver
+ * @return true if the integration was successful, false otherwise
+ */
 template <
     mini::CMatrix TMatrixX,
     mini::CMatrix TMatrixG,
     mini::CMatrix TMatrixH,
     class ScalarType = typename TMatrixX::ScalarType>
-PBAT_HOST_DEVICE void IntegratePositions(
+PBAT_HOST_DEVICE bool IntegratePositions(
     TMatrixG const& g,
     TMatrixH const& H,
     TMatrixX& x,
-    ScalarType hessZero = ScalarType(1e-7))
+    EVertexIntegrationLinearSolver eSolver,
+    ScalarType hessZero = std::numeric_limits<ScalarType>::epsilon(),
+    ScalarType eps      = std::numeric_limits<ScalarType>::epsilon(),
+    int nMaxIters       = -1)
 {
     // 3. Newton step
-    if (abs(Determinant(H)) <= hessZero) // Skip nearly rank-deficient hessian
-        return;
-    x -= (Inverse(H) * g);
+    switch (eSolver)
+    {
+        case EVertexIntegrationLinearSolver::Inverse: {
+            if (abs(Determinant(H)) <= hessZero) // Skip nearly rank-deficient hessian
+                return false;
+            x -= (Inverse(H) * g);
+        }
+        break;
+        case EVertexIntegrationLinearSolver::LLT: {
+            auto llt = LLT(H, eps);
+            if (not llt.success)
+                return false;
+            x -= LLTSolve(llt.L, g);
+        }
+        break;
+        case EVertexIntegrationLinearSolver::QR: {
+            auto qr = QR(H, eps);
+            x -= QRSolve(qr.Q, qr.R, g);
+        }
+        break;
+        case EVertexIntegrationLinearSolver::EVD: {
+            auto eigs = math::linalg::mini::SymmetricEigenNxN(H, false, nMaxIters, eps);
+            mini::SVector<ScalarType, TMatrixX::kRows> di = eigs.V.Transpose() * g;
+            for (auto d = 0; d < TMatrixX::kRows; ++d)
+            {
+                ScalarType lambdad = std::abs(eigs.lambda(d));
+                di(d)              = (lambdad > hessZero) ? di(d) / lambdad : di(d);
+            }
+            x -= eigs.V * di;
+        }
+        break;
+        default: break;
+    }
+    return true;
 }
 
 /**

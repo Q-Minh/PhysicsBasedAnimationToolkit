@@ -19,8 +19,15 @@ void BindCore(nanobind::module_& m)
     using ScalarType = Scalar;
     using IndexType  = Index;
     using pbat::sim::algorithm::common::FemElastoDynamics;
-    using pbat::sim::algorithm::vbd::EInitializationStrategy;
+    using pbat::sim::algorithm::vbd::EVertexIntegrationLinearSolver;
     using pbat::sim::algorithm::vbd::Params;
+
+    nb::enum_<EVertexIntegrationLinearSolver>(m, "VertexIntegrationLinearSolver")
+        .value("Inverse", EVertexIntegrationLinearSolver::Inverse)
+        .value("LLT", EVertexIntegrationLinearSolver::LLT)
+        .value("QR", EVertexIntegrationLinearSolver::QR)
+        .value("EVD", EVertexIntegrationLinearSolver::EVD)
+        .export_values();
 
     m.def(
         "vertex_element_adjacency_graph",
@@ -170,13 +177,20 @@ void BindCore(nanobind::module_& m)
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
-            "with_hessian_singular_under",
-            &Params::WithHessianSingularUnder,
-            nb::arg("zero"),
+            "with_vertex_linear_solver",
+            &Params::WithVertexLinearSolver,
+            nb::arg("solver"),
+            nb::arg("zero")  = std::numeric_limits<Scalar>::epsilon(),
+            nb::arg("eps")   = std::numeric_limits<Scalar>::epsilon(),
+            nb::arg("iters") = -1,
             nb::rv_policy::reference_internal,
             "Numerical zero for hessian singularity check.\n\n"
             "Args:\n"
+            "    solver (pbat.sim.algorithm.vbd.EVertexIntegrationLinearSolver): Vertex "
+            "integration linear solver\n"
             "    zero (float): Numerical zero\n"
+            "    eps (float): Vertex integration linear solver epsilon\n"
+            "    iters (int): Maximum number of vertex integration linear solver iterations\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
@@ -229,7 +243,13 @@ void BindCore(nanobind::module_& m)
             &Params::nSubproblemMaxIters,
             "Maximum number of VBD iterations per subproblem")
         .def_rw("gtol", &Params::gtol, "Gradient norm convergence threshold")
+        .def_rw("vlinsolve", &Params::eSolver, "Vertex integration linear solver")
         .def_rw("hess_zero", &Params::hessZero, "Determinant of Hessian zero threshold")
+        .def_rw("vls_eps", &Params::vLinSolverEps, "Vertex integration linear solver epsilon")
+        .def_rw(
+            "vls_max_iters",
+            &Params::vLinSolverMaxIters,
+            "Maximum number of vertex integration linear solver iterations")
         .def_rw("betaG", &Params::betaG, "Per-vertex stencil gradient augmentation scale")
         .def_rw("betaG0", &Params::betaG0, "Initial stencil gradient augmentation scale")
         .def_rw(

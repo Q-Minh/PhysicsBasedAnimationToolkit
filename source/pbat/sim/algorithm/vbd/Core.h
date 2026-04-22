@@ -148,11 +148,18 @@ struct Params
         Scalar welastic = Scalar(1),
         Scalar wcontact = Scalar(1));
     /**
-     * @brief Numerical zero for hessian singularity check
-     * @param zero Numerical zero
+     * @brief Vertex linear solver
+     * @param solver Vertex integration linear solver
+     * @param zero Numerical zero for hessian singularity check
+     * @param eps Vertex integration linear solver epsilon
+     * @param iters Maximum number of vertex integration linear solver iterations
      * @return Reference to this
      */
-    PBAT_API Params& WithHessianSingularUnder(Scalar zero);
+    PBAT_API Params& WithVertexLinearSolver(
+        EVertexIntegrationLinearSolver solver,
+        Scalar zero = std::numeric_limits<Scalar>::epsilon(),
+        Scalar eps  = std::numeric_limits<Scalar>::epsilon(),
+        int iters   = -1);
     /**
      * @brief Construct the simulation data
      * @param bValidate Throw on detected ill-formed inputs
@@ -189,11 +196,20 @@ struct Params
                          ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj;   ///< `|# verts|` partition vertices
     Scalar betaR{0};     ///< Rayleigh damping coefficient
-    Index nMaxIters{20}; ///< Maximum number of outer augmented Lagrangian iterations
+
+    // Convergence
+    Index nMaxIters{20};           ///< Maximum number of outer augmented Lagrangian iterations
     Index nSubproblemMaxIters{25}; ///< Maximum number of VBD iterations per subproblem
     Scalar gtol{1e-3};             ///< Gradient norm convergence threshold
+
+    // Vertex solve
     Scalar hessZero{
         std::numeric_limits<Scalar>::epsilon()}; ///< Numerical zero for hessian singularity check
+    EVertexIntegrationLinearSolver eSolver{
+        EVertexIntegrationLinearSolver::Inverse}; ///< Vertex integration linear solver
+    Scalar vLinSolverEps{
+        std::numeric_limits<Scalar>::epsilon()}; ///< Vertex integration linear solver epsilon
+    int vLinSolverMaxIters{25}; ///< Maximum number of vertex integration linear solver iterations
 
     // Stencil gradient acceleration
     Scalar betaG0{0.5};   ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
@@ -616,15 +632,14 @@ void Iterate(
                 gcontacti,
                 params);
             // Solve
-            // kernels::IntegratePositions(gi, Hi, xi, params.hessZero);
-            auto eigs = math::linalg::mini::SymmetricEigenNxN(Hi, false, -1, Scalar(1e-4));
-            mini::SVector<Scalar, 3> di = eigs.V.Transpose() * gi;
-            for (auto d = 0; d < 3; ++d)
-            {
-                Scalar lambdad = std::abs(eigs.lambda(d));
-                di(d)          = (lambdad > params.hessZero) ? di(d) / lambdad : di(d);
-            }
-            xi -= eigs.V * di;
+            kernels::IntegratePositions(
+                gi,
+                Hi,
+                xi,
+                params.eSolver,
+                params.hessZero,
+                params.vLinSolverEps,
+                params.vLinSolverMaxIters);
             if (detail::HasNonFinite(xi))
             {
                 fmt::print(stderr, "NaN/Inf after IntegratePositions for vertex {}\n", i);
@@ -786,7 +801,7 @@ void Integrate(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
-    Solve<TElasticEnergy>(fem, contact, params);
+    Solve(fem, contact, params);
     fem.Step();
 }
 

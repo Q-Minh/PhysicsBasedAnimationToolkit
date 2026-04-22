@@ -145,9 +145,16 @@ Params& Params::WithStencilGradientAcceleration(
     return *this;
 }
 
-Params& Params::WithHessianSingularUnder(Scalar zero)
+Params& Params::WithVertexLinearSolver(
+    EVertexIntegrationLinearSolver solver,
+    Scalar zero,
+    Scalar eps,
+    int iters)
 {
-    hessZero = zero;
+    eSolver            = solver;
+    hessZero           = zero;
+    vLinSolverEps      = eps;
+    vLinSolverMaxIters = iters;
     return *this;
 }
 
@@ -242,6 +249,7 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("nSubproblemMaxIters", nSubproblemMaxIters);
     group.WriteMetaData("gtol", gtol);
+    group.WriteMetaData("eSolver", static_cast<int>(eSolver));
     group.WriteMetaData("hessZero", hessZero);
     group.WriteMetaData("betaG0", betaG0);
     group.WriteMetaData("rhohat", rhohat);
@@ -301,6 +309,8 @@ void Params::Deserialize(io::Archive const& archive)
             group.ReadMetaData<decltype(nSubproblemMaxIters)>("nSubproblemMaxIters");
     if (group.HasMetaData("gtol"))
         gtol = group.ReadMetaData<decltype(gtol)>("gtol");
+    if (group.HasMetaData("eSolver"))
+        eSolver = static_cast<decltype(eSolver)>(group.ReadMetaData<int>("eSolver"));
     if (group.HasMetaData("hessZero"))
         hessZero = group.ReadMetaData<decltype(hessZero)>("hessZero");
     if (group.HasMetaData("betaG0"))
@@ -407,7 +417,7 @@ VbdTestSetup SetupVbdTest(pbat::Index maxIters = 10)
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
         .WithSubproblemMaximumIterations(maxIters)
-        .WithHessianSingularUnder(Scalar{1e-6})
+        .WithVertexLinearSolver(sim::algorithm::vbd::EVertexIntegrationLinearSolver::Inverse)
         .Construct();
 
     // Mesh contact dynamics (minimal setup for testing)
