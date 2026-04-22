@@ -58,16 +58,6 @@ void EdgeEdgeContactDetection(
     State<TScalar, TIndex>& state);
 
 /**
- * @brief Updates the contact sets based on the current state.
- *
- * @tparam TScalar Type of scalar
- * @tparam TIndex Type of index
- * @param state OGC's state
- */
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-void UpdateContactSets(State<TScalar, TIndex>& state);
-
-/**
  * @brief Updates displacement bounds.
  *
  * @tparam TScalar Type of scalar
