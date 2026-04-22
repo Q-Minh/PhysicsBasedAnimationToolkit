@@ -812,10 +812,14 @@ class MeshDynamics
      * @brief Compute the total contact gradient
      * @tparam TDerivedx Matrix type
      * @param x `3 x |# points|` current point positions (column-major: one point per column)
+     * @param bForAugmentedLagrangian Whether to compute the gradient for augmented Lagrangian
+     * (i.e., include the gradient of the penalty term)
      * @return Total contact gradient
+     * @pre `LinearizeConstraints(x, xt)` has been called with the same `x` and with `xt` of the
+     * current time step solve.
      */
     template <class TDerivedx>
-    auto Gradient(Eigen::MatrixBase<TDerivedx> const& x) const
+    auto Gradient(Eigen::MatrixBase<TDerivedx> const& x, bool bForAugmentedLagrangian = false) const
         -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
     /**
      * @brief Compute the total contact gradient and add it to `g`
@@ -823,9 +827,16 @@ class MeshDynamics
      * @tparam TDerivedg Writeable matrix type
      * @param x `3 x |# points|` current point positions (column-major: one point per column)
      * @param g `3*|# points| x 1` or `3 x |# points|` total contact gradient
+     * @param bForAugmentedLagrangian Whether to compute the gradient for augmented Lagrangian
+     * (i.e., include the gradient of the penalty term)
+     * @pre `LinearizeConstraints(x, xt)` has been called with the same `x` and with `xt` of the
+     * current time step solve.
      */
     template <class TDerivedx, class TDerivedg>
-    void ToGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDerivedg>& g) const;
+    void ToGradient(
+        Eigen::MatrixBase<TDerivedx> const& x,
+        Eigen::MatrixBase<TDerivedg>& g,
+        bool bForAugmentedLagrangian = false) const;
     /**
      * @brief Get the total number of contacts
      * @return Total number of contacts
@@ -1994,12 +2005,13 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(Eigen::MatrixBase<TDeriv
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx>
-inline auto MeshDynamics<TScalar, TIndex>::Gradient(Eigen::MatrixBase<TDerivedx> const& x) const
-    -> Eigen::Vector<TScalar, Eigen::Dynamic>
+inline auto MeshDynamics<TScalar, TIndex>::Gradient(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    bool bForAugmentedLagrangian) const -> Eigen::Vector<TScalar, Eigen::Dynamic>
 {
     Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
     grad.setZero();
-    ToGradient(x, grad);
+    ToGradient(x, grad, bForAugmentedLagrangian);
     return grad;
 }
 
@@ -2007,7 +2019,8 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx, class TDerivedg>
 inline void MeshDynamics<TScalar, TIndex>::ToGradient(
     Eigen::MatrixBase<TDerivedx> const& x,
-    Eigen::MatrixBase<TDerivedg>& g_) const
+    Eigen::MatrixBase<TDerivedg>& g_,
+    bool bForAugmentedLagrangian) const
 {
     auto g                    = g_.derived().reshaped();
     Eigen::Index const nNodes = g.size() / 3;
@@ -2019,18 +2032,28 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             static_assert(kDims == 3, "Only 3D is supported");
             auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
             auto xc                = Reshape<kDofs, 1>(XC);
-            auto kn                = C.Penalty();
-            TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
-            TScalar dL             = kn * cs - C.Lambda();
-            // Friction gradient \nabla_x [ 0.5*kf*||c_f||^2 - lambda_f^T c_f ]
-            // = [ kf * c_f - lambda_f ] \nabla_x c_f where \nabla_xi c_f is W(i)*T
-            auto F        = C.Friction();
-            auto const& W = F.Weights();
-            auto const& T = F.TangentBasis();
-            auto cf       = F.Eval(xc);
-            auto kf       = F.Penalty();
+            auto F                 = C.Friction();
+            auto const& W          = F.Weights();
+            auto const& T          = F.TangentBasis();
             using math::linalg::mini::SVector;
-            SVector<TScalar, 2> df     = kf * cf - F.Lambda();
+            TScalar dL;
+            SVector<TScalar, 2> df;
+            if (bForAugmentedLagrangian)
+            {
+                auto kn    = C.Penalty();
+                TScalar cs = C.Eval(xc) - mParams.dmin - C.Slack();
+                dL         = kn * cs - C.Lambda();
+                // Friction gradient \nabla_x [ 0.5*kf*||c_f||^2 - lambda_f^T c_f ]
+                // = [ kf * c_f - lambda_f ] \nabla_x c_f where \nabla_xi c_f is W(i)*T
+                auto cf = F.Eval(xc);
+                auto kf = F.Penalty();
+                df      = kf * cf - F.Lambda();
+            }
+            else
+            {
+                dL = -C.Lambda();
+                df = -F.Lambda();
+            }
             SVector<TScalar, kDims> gf = T * df;
             using math::linalg::mini::ToEigen;
             auto gradnc = ToEigen(C.Grad());

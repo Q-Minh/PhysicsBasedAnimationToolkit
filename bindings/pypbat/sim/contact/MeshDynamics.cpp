@@ -463,14 +463,17 @@ void BindMeshDynamics(nanobind::module_& m)
         .def(
             "gradient",
             [](MeshDynamicsType const& self,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x) {
-                return self.Gradient(x);
-            },
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
+               bool bForAugmentedLagrangian) { return self.Gradient(x, bForAugmentedLagrangian); },
             nb::arg("x"),
+            nb::arg("for_augmented_lagrangian") = false,
             "Compute the total contact gradient.\n\n"
             "Args:\n"
             "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` current point "
             "positions.\n"
+            "    for_augmented_lagrangian (bool, optional): Whether the gradient is for use in an "
+            "augmented Lagrangian method, which affects the inclusion of penalty terms. Default is "
+            "False.\n\n"
             "Returns:\n"
             "    numpy.ndarray: `3*|# points| x 1` total contact gradient.\n")
         .def(

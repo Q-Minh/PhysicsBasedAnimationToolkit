@@ -373,7 +373,7 @@ void ToGradient(
     // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
     gk.setZero();
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
-    contact.ToGradient(fem.x, gk);
+    contact.ToGradient(fem.x, gk, bForSubproblem);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
     gk(fem.DirichletDofs()).setZero();
 }
@@ -728,7 +728,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         contact.LinearizeConstraints(xk, xt);
         // 2. Check KKT conditions and exit if converged
         ComputeElasticDerivatives(fem, contact, params);
-        ToGradient(fem, contact, params.newton.gk);
+        ToGradient(fem, contact, params.newton.gk, false /*bForSubproblem*/);
         params.newton.gknorm2 = params.newton.gk.squaredNorm();
         if (params.newton.gknorm2 <= params.newton.gtol2)
             break;
@@ -749,7 +749,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
                 return Edyn + Econ;
             } /* f */,
             [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
-                ToGradient(fem, contact, gk);
+                ToGradient(fem, contact, gk, true /*bForSubproblem*/);
             } /* g */,
             [&]([[maybe_unused]] auto const& _xk,
                 Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,

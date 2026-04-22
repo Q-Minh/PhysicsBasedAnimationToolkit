@@ -706,7 +706,7 @@ bool CheckConvergence(
     fem.ToElasticGradient(fem.x, gk);
     gk *= bt2;
     fem.ToMomentumGradient(fem.x, gk);
-    contact.ToGradient(fem.x, gk);
+    contact.ToGradient(fem.x, gk, false /*bForAugmentedLagrangian*/);
     auto gknorm2 = gk.squaredNorm();
     return gknorm2 <= params.gtol * params.gtol;
 }
