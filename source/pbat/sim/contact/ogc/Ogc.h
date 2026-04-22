@@ -183,7 +183,7 @@ bool IsVertexFeasible(
  * @param F `3 x |# triangles|` triangle vertex indices
  * @param GHEF `2 x |# half edges|` half-edge to (adjacent face, opposite face)
  * @param x `3 x 1` query point
- * @param fi Face index of half-edge he
+ * @param fi First face index of half-edge he, i.e. `fi == GHEF(0, he)`
  * @param he Half-edge index
  * @return true if in edge feasible region; false otherwise
  */
@@ -497,6 +497,7 @@ void DynamicEdgeEdgeRTCCollideFunc(
     auto const& E                       = input->E.value();
     auto const& EP                      = input->EP.value();
     auto const& EHE                     = input->EHE.value();
+    auto const& GHEF                    = input->GHEF.value();
     auto& dmine                         = state->dmine;
     TScalar const r                     = params->r;
     auto& DDEE                          = state->mDDEE.local();
@@ -553,8 +554,14 @@ void DynamicEdgeEdgeRTCCollideFunc(
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
-        // Add contact pair
-        DDEE.Add(e1, e2);
+        // Add contact pair. I'm pretty sure that if xc1 is in the edge
+        // feasible region of e2, then xc2 must also be in the edge
+        // feasible region of e1, so that we could remove the redundant
+        // check for xc2 in the edge feasible region of e1. But I'll keep both checks for
+        // safety for now until we can rigorously verify this claim.
+        if (IsEdgeFeasible(X, F, GHEF, xc1, GHEF(0, ehe2(0)), ehe2(0)) and
+            IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
+            DDEE.Add(e1, e2);
     }
 }
 
@@ -578,10 +585,14 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
     State<TScalar, TIndex>* state       = data->state;
     auto const& Xenv                    = input->Venv.value();
     auto const& Eenv                    = input->Eenv.value();
+    auto const& Fenv                    = input->Fenv.value();
     auto const& EHEenv                  = input->EHEenv.value();
+    auto const& GHEFenv                 = input->GHEFenv.value();
     auto const& X                       = input->X.value();
     auto const& E                       = input->E.value();
+    auto const& F                       = input->F.value();
     auto const& EHE                     = input->EHE.value();
+    auto const& GHEF                    = input->GHEF.value();
     auto& dmine                         = state->dmine;
     TScalar const r                     = params->r;
     auto& DSEE                          = state->mDSEE.local();
@@ -606,9 +617,9 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
         // Skip if contact pair degenerates to either vertex-edge, edge-vertex or vertex-vertex.
-        bool const bIsE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
-        bool const bIsE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
-        if (bIsE1Vertex or bIsE2Vertex)
+        bool const bIsClosestPointOnE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
+        bool const bIsClosestPointOnE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
+        if (bIsClosestPointOnE1Vertex or bIsClosestPointOnE2Vertex)
             continue;
         // Closest points on edges e1 and e2
         Eigen::Vector<TScalar, 3> const xc1 =
@@ -626,8 +637,14 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
-        // Add contact pair
-        DSEE.Add(e1, e2);
+        // Add contact pair. I'm pretty sure that if xc1 is in the edge
+        // feasible region of e2, then xc2 must also be in the edge
+        // feasible region of e1, so that we could remove the redundant
+        // check for xc2 in the edge feasible region of e1. But I'll keep both checks for
+        // safety for now until we can rigorously verify this claim.
+        if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xc1, GHEFenv(0, ehe2(0)), ehe2(0)) and
+            IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
+            DSEE.Add(e1, e2);
     }
 }
 
