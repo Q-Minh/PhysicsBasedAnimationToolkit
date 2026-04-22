@@ -73,29 +73,24 @@ class NewtonSolver(BaseSolver):
         newton: pbat.math.optimization.Newton = params.newton
         pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
         callback()
-        pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
-
-        global iteration_stop
-        iteration_stop = False
-
-        def iterate():
-            global iteration_stop
-            if newton.gknorm2 < newton.gtol2:
-                iteration_stop = True
-                return
-            if not pbat.sim.algorithm.newton.iterate(fem, contact, params):
-                iteration_stop = True
-                return
-            callback()
-            pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
-            iteration_stop = False
-
-        while newton.k < newton.n_max_iters and not iteration_stop:
-            if self.profiler is not None:
-                self.profiler.profile("Newton", iterate)
-            else:
-                iterate()
-
+        while params.k < params.n_max_iters:
+            pbat.sim.algorithm.newton.linearize_constraints(fem, contact)
+            if pbat.sim.algorithm.newton.check_convergence(fem, contact, params):
+                break
+            pbat.sim.algorithm.newton.prepare_subproblem(fem, contact, params)
+            pbat.sim.algorithm.newton.prepare_next_iteration(
+                fem, contact, params, are_subproblem_derivatives_dirty=False
+            )
+            while newton.k < newton.n_max_iters:
+                if newton.gknorm2 < newton.gtol2:
+                    break
+                if not pbat.sim.algorithm.newton.iterate(fem, contact, params):
+                    break
+                callback()
+                pbat.sim.algorithm.newton.prepare_next_iteration(
+                    fem, contact, params, are_subproblem_derivatives_dirty=True
+                )
+            pbat.sim.algorithm.newton.finalize_subproblem(fem, contact, params)
         fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):

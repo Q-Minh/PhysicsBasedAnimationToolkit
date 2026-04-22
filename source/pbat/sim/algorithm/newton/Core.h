@@ -177,8 +177,71 @@ void TruncateDisplacement(
     Eigen::MatrixBase<TDerivedDxk>& dxk);
 
 /**
- * @brief Prepare next iteration for the given finite element elasto dynamics problem.
+ * @brief Initialize the solve process for the given finite element elasto dynamics contact problem.
  *
+ * Computes OGC query radius, updates the constraint set, restores feasibility, and resets
+ * the outer iteration counter `params.k = 0`.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact problem
+ * @param params Solver parameters
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params);
+
+/**
+ * @brief Linearize constraints at the current iterate.
+ *
+ * Calls `contact.LinearizeConstraints(x)` to compute the linearized constraint data
+ * (chat, gradc) for the current iterate.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact problem
+ * @pre `InitializeSolve` has been called
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void LinearizeConstraints(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact);
+
+/**
+ * @brief Check KKT convergence of the outer (nonlinear) problem.
+ *
+ * Computes the full gradient (elastic + momentum + contact) into params.newton.gk and checks if the
+ * squared gradient norm is below the convergence threshold `params.newton.gtol2`.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact problem
+ * @param params Solver parameters
+ * @return true if KKT conditions are satisfied (converged), false otherwise
+ * @pre `LinearizeConstraints` has been called
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+bool CheckConvergence(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params);
+
+/**
+ * @brief Prepare a linearized constraint subproblem.
+ *
+ * Precomputes elastic energy derivatives, assembles the Hessian (without contact contributions),
+ * updates barrier parameters, and initializes the inner Newton solver for the current subproblem.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact problem
+ * @param params Solver parameters
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void PrepareSubproblem(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params);
+
+/**
+ * @brief Prepare next iteration of the current linearized constraint subproblem.
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact problem
@@ -193,7 +256,22 @@ void PrepareNextIteration(
     bool bAreSubproblemDerivativesDirty = true);
 
 /**
- * @brief Initialize the solve process for the given finite element elasto dynamics problem.
+ * @brief One Newton iteration of the current linearized constraint subproblem.
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param contact Mesh contact dynamics problem (in/out parameter)
+ * @param params Solver parameters
+ * @return true if step was taken, false otherwise
+ * @pre `PrepareSubproblem` or `PrepareNextIteration` has been called
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params);
+
+/**
+ * @brief Finalize the current linearized constraint subproblem.
+ *
+ * Restores feasibility, updates the constraint set, and increments the outer iteration counter
+ * `params.k`.
  *
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem
@@ -201,19 +279,10 @@ void PrepareNextIteration(
  * @param params Solver parameters
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params);
-
-/**
- * @brief One Newton minimization step
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param contact Mesh contact dynamics problem (in/out parameter)
- * @param params Solver parameters
- * @return true if step was taken, false otherwise
- * @pre `TElasticEnergy::kDims == 3`
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params const& params);
+void FinalizeSubproblem(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params);
 
 /**
  * @brief Solve FEM elasto dynamics time integration minimization problem using Newton's method
@@ -225,7 +294,7 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params const& params);
+bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params);
 
 /**
  * @brief Compute the merit function value for the Newton optimization.
@@ -290,13 +359,14 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void ToGradient(
     FemElastoDynamics<TElasticEnergy> const& fem,
     MeshDynamics const& contact,
-    Eigen::Vector<Scalar, Eigen::Dynamic>& gk)
+    Eigen::Vector<Scalar, Eigen::Dynamic>& gk,
+    bool bForSubproblem = false)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ToGradient");
     // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
     gk.setZero();
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
-    contact.ToGradient(fem.x, gk, true /*bForLinearSubproblem*/);
+    contact.ToGradient(fem.x, gk, bForSubproblem);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
     gk(fem.DirichletDofs()).setZero();
 }
@@ -475,27 +545,6 @@ void HessianInverseProduct(
         params.Hinv);
 }
 
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void PrepareNextIteration(
-    FemElastoDynamics<TElasticEnergy>& fem,
-    MeshDynamics& contact,
-    Params& params,
-    bool bAreSubproblemDerivativesDirty)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareNextIteration");
-    auto xk = fem.x.reshaped();
-    params.newton.PrepareNextIteration(
-        [&]([[maybe_unused]] auto const& _xk) {
-            if (bAreSubproblemDerivativesDirty)
-                PrepareSubproblemDerivatives<TElasticEnergy>(fem, contact, params);
-            return MeritFunction(fem, contact);
-        } /* fPrepareDerivatives */,
-        [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
-            ToGradient<TElasticEnergy>(fem, contact, gk);
-        } /* g */,
-        xk /* xk */);
-}
-
 template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedDxk>
 void TruncateDisplacement(
     FemElastoDynamics<TElasticEnergy>& fem,
@@ -572,28 +621,84 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& conta
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
+void LinearizeConstraints(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.LinearizeConstraints");
+    contact.LinearizeConstraints(fem.x);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+bool CheckConvergence(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.CheckConvergence");
+    ToGradient(fem, contact, params.newton.gk);
+    params.newton.gknorm2 = params.newton.gk.squaredNorm();
+    bool const bConverged = params.newton.gknorm2 <= params.newton.gtol2;
+    return bConverged;
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void PrepareSubproblem(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareSubproblem");
+    PrepareSubproblemDerivatives(fem, contact, params);
+    AssembleHessian(fem, contact, params, false /*bWithContacts*/);
+    contact.UpdateBarrierParameters(params.hessian);
+    params.newton.InitializeSolve(fem.x);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void PrepareNextIteration(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params,
+    bool bAreSubproblemDerivativesDirty)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareNextIteration");
+    auto xk = fem.x.reshaped();
+    params.newton.PrepareNextIteration(
+        [&]([[maybe_unused]] auto const& _xk) {
+            if (bAreSubproblemDerivativesDirty)
+                PrepareSubproblemDerivatives<TElasticEnergy>(fem, contact, params);
+            return MeritFunction(fem, contact);
+        } /* fPrepareDerivatives */,
+        [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
+            ToGradient(fem, contact, gk, true /*bForSubproblem*/);
+        } /* g */,
+        xk /* xk */);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
 bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Iterate");
     auto xk = fem.x.reshaped();
     return params.newton.Iterate(
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            // auto const bt = fem.bdf.BetaTilde();
-            // contact.ComputeEnergies(
-            //     xk,
-            //     -fem.bdf.Inertia(0),
-            //     bt,
-            //     sim::contact::EMeshEnergyComputationFlags::Potential);
-            return fem.Objective(xk) + contact.Potential();
+            return MeritFunction(fem, contact);
         } /* f */,
         [&]([[maybe_unused]] auto const& _xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
             Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
-            AssembleHessian<TElasticEnergy>(fem, contact, params);
+            AssembleHessian<TElasticEnergy>(fem, contact, params, true /*bWithContacts*/);
             HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-            TruncateDisplacement(fem, contact, params, dxk);
         } /* Hinv */,
         xk /* xk */);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void FinalizeSubproblem(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.FinalizeSubproblem");
+    contact.RestoreFeasibility(fem.x, fem.dmask);
+    contact.UpdateConstraintSet(fem.x);
+    ++params.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -628,14 +733,13 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
                 return Edyn + Econ;
             } /* f */,
             [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
-                ToGradient<TElasticEnergy>(fem, contact, gk);
+                ToGradient(fem, contact, gk, true /*bForSubproblem*/);
             } /* g */,
             [&]([[maybe_unused]] auto const& _xk,
                 Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
                 Eigen::Vector<Scalar, Eigen::Dynamic>& dxk) {
                 AssembleHessian<TElasticEnergy>(fem, contact, params);
                 HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
-                // TruncateDisplacement(fem, contact, params, dxk);
             } /* Hinv */,
             xk /* x0 */);
         // 5. Restore feasibility

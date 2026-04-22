@@ -1,6 +1,8 @@
 #include "State.h"
 
 #include <nanobind/eigen/dense.h>
+#include <nanobind/stl/array.h>
+#include <nanobind/stl/pair.h>
 #include <nanobind/stl/vector.h>
 #include <pbat/geometry/Device.h>
 #include <pbat/sim/contact/ogc/Input.h>
@@ -17,14 +19,13 @@ void BindState(nanobind::module_& m)
     using StateType  = pbat::sim::contact::ogc::State<ScalarType, IndexType>;
     using InputType  = pbat::sim::contact::ogc::Input<ScalarType, IndexType>;
     using ParamsType = pbat::sim::contact::ogc::Params<ScalarType>;
-    using DeviceType = pbat::geometry::Device;
 
     nb::class_<StateType>(m, "State")
         .def(nb::init<>(), "Construct an empty OGC state.")
         .def(
             "__init__",
             [](StateType* self,
-               DeviceType device,
+               pbat::geometry::Device device,
                InputType const& input,
                ParamsType const& params) { new (self) StateType(device, input, params); },
             nb::arg("device"),
@@ -55,34 +56,15 @@ void BindState(nanobind::module_& m)
             "Args:\n"
             "    input (Input): OGC's input parameters.\n"
             "    params (Params): OGC's parameters.")
-        .def_ro(
-            "dynamic_contact_faces_of_vertex",
-            &StateType::mDynamicContactFacesOfVertex,
-            "(list[list[ContactFace]]) `|# vertices|` per-vertex dynamic contact face sets. The "
-            "ContactFace stores vertex, half-edge or triangle.")
-        .def_ro(
-            "dynamic_contact_vertices_of_triangle",
-            &StateType::mDynamicContactVerticesOfTriangle,
-            "(list[list[int]]) `|# triangles|` per-triangle dynamic contact vertex sets.")
-        .def_ro(
-            "dynamic_contact_faces_of_half_edge",
-            &StateType::mDynamicContactFacesOfHalfEdge,
-            "(list[list[ContactFace]]) `|# half-edges|` per-half-edge dynamic contact face sets. "
-            "The ContactFace stores vertex or half-edge.")
-        .def_ro(
-            "static_contact_faces_of_vertex",
-            &StateType::mStaticContactFacesOfVertex,
-            "(list[list[ContactFace]]) `|# vertices|` per-vertex static contact face sets. The "
-            "ContactFace stores environment vertex, half-edge or triangle.")
-        .def_ro(
-            "static_contact_vertices_of_triangle",
-            &StateType::mStaticContactVerticesOfTriangle,
-            "(list[list[int]]) `|# triangles|` per-triangle static contact vertex sets.")
-        .def_ro(
-            "static_contact_faces_of_half_edge",
-            &StateType::mStaticContactFacesOfHalfEdge,
-            "(list[list[ContactFace]]) `|# half-edges|` per-half-edge static contact face sets. "
-            "The ContactFace stores environment vertex or edge.")
+        .def(
+            "collect_contact_pairs",
+            &StateType::CollectContactPairs,
+            "Collect and deduplicate contact pairs from thread-local storage into the global "
+            "contact pair lists (mXX, mXE, mXF, mEE). Contact pairs are lexicographically sorted.")
+        .def(
+            "clear_contact_pairs",
+            &StateType::ClearContactPairs,
+            "Clear all contact pairs (both thread-local and global).")
         .def_rw(
             "bv",
             &StateType::bv,
@@ -98,7 +80,29 @@ void BindState(nanobind::module_& m)
         .def_rw(
             "dmine",
             &StateType::dmine,
-            "(numpy.ndarray) `|# half-edges|` array of half-edge local displacement bounds.");
+            "(numpy.ndarray) `|# half-edges|` array of half-edge local displacement bounds.")
+        .def_ro(
+            "point_geometry_prefix",
+            &StateType::mPointGeometryPrefix,
+            "(list[int]) Prefix sum over points of each geometry type (dynamic, static). "
+            "Array of size 3: [0, |# dynamic points|, |# dynamic points| + |# static points|].")
+        .def_ro(
+            "half_edge_geometry_prefix",
+            &StateType::mHalfEdgeGeometryPrefix,
+            "(list[int]) Prefix sum over half-edges of each geometry type (dynamic, static). "
+            "Array of size 3.")
+        .def_ro(
+            "triangle_geometry_prefix",
+            &StateType::mTriangleGeometryPrefix,
+            "(list[int]) Prefix sum over triangles of each geometry type (dynamic, static). "
+            "Array of size 3.")
+        .def_ro("XX", &StateType::mXX, "(list[tuple[int, int]]) Point-point contact pairs.")
+        .def_ro("XE", &StateType::mXE, "(list[tuple[int, int]]) Point-(half-)edge contact pairs.")
+        .def_ro("XF", &StateType::mXF, "(list[tuple[int, int]]) Point-triangle contact pairs.")
+        .def_ro(
+            "EE",
+            &StateType::mEE,
+            "(list[tuple[int, int]]) (Half-)edge-(half-)edge contact pairs.");
 }
 
 } // namespace pbat::py::sim::contact::ogc
