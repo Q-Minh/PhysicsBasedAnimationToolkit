@@ -3,7 +3,7 @@ import warp as wp
 
 @wp.struct
 class Params:
-    """GPU params for Anderson-accelerated VBD solver (mirrors full CPU vbd::Params)."""
+    """From `source/pbat/sim/algorithm/vbd/Core.h`"""
 
     # --- Vertex-element adjacency graph ---
     GVGp: wp.array[wp.int32]  # (N+1,) prefix sums into GVGe

@@ -6,7 +6,7 @@ import numpy as np
 
 @wp.struct
 class Params:
-    """From `source/pbat/sim/newton/Core.h`"""
+    """From `source/pbat/sim/algorithm/newton/Core.h`"""
 
     # --- Iteration control ---
     n_max_iters: wp.int32  # max outer (linearized constraint subproblem) iterations
