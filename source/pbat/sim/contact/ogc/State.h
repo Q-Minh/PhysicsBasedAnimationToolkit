@@ -702,8 +702,17 @@ inline void State<TScalar, TIndex>::CollectContactPairs()
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.CollectContactPairs");
     tbb::task_group tg;
     auto const fCopyLocalToGlobal = [](auto& src, auto& dst) {
+        auto n = std::accumulate(
+            src.begin(), src.end(), static_cast<std::size_t>(0), [](std::size_t acc, auto& vec) {
+                return acc + vec.size();
+            });
+        dst.resize(n);
+        auto it = dst.begin();
         for (auto& buf : src)
-            std::ranges::copy(buf, std::back_inserter(dst));
+        {
+            std::ranges::copy(buf, it);
+            it += buf.size();
+        }
     };
     tg.run([&]() { fCopyLocalToGlobal(mXXets, mXX); });
     tg.run([&]() { fCopyLocalToGlobal(mXEets, mXE); });
