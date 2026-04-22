@@ -17,6 +17,37 @@ from .solver import (
 
 
 @wp.func
+def adapt_stencil_gradient_acceleration_parameter(
+    kp: wp.int32,
+    i: wp.int32,
+    xi: wp.vec3f,
+    gi: wp.vec3f,
+    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    grp: wp.int32,
+    betaG: wp.float32,
+    eps: wp.float32,
+) -> wp.float32:
+    rhohat = params.rhohat[grp]
+    gammaup = params.gammaup[grp]
+    gammadown = params.gammadown[grp]
+    ngk = wp.norm_l2(gi)
+    gkm1 = params.gk[i]  # Previous gradient
+    ngkm1 = wp.norm_l2(gkm1)
+    ndgkm1 = wp.norm_l2(gi - gkm1)
+    xk = params.xk[i]  # Previous position
+    ndxkm1 = wp.max(
+        wp.norm_l2(xi - xk), eps  # pyright: ignore[reportCallIssue, reportArgumentType]
+    )
+    L = params.Hnk[i] + ngk / ndxkm1
+    rho = ndgkm1 / wp.max(L * ndxkm1, eps)
+    if ngk > ngkm1:
+        betaG *= gammadown
+    elif rho > rhohat:
+        betaG += (wp.float32(1) - betaG) * gammaup
+    return betaG
+
+
+@wp.func
 def compute_stencil_gradient_augmentation(
     k: wp.int32,
     kp: wp.int32,
@@ -30,31 +61,16 @@ def compute_stencil_gradient_augmentation(
     """Compute stencil gradient augmentation for vertex i."""
     # TODO: Check if the node is a surface node
     is_surface_node = False  # fem.dynamic_meshes[i] >= 0
-    ii = 1 if is_surface_node else 0
+    ii = wp.int32(1) if is_surface_node else wp.int32(0)
     betaG = params.betaG[i, ii]  # Stencil gradient coefficient
-    eps = 1e-10
+    eps = wp.float32(1e-10) # pyright: ignore[reportArgumentType]
 
     # Adapt stencil gradient acceleration parameter using the total gradient
     if kp > 0:
-        rhohat = params.rhohat[ii]
-        gammaup = params.gammaup[ii]
-        gammadown = params.gammadown[ii]
-        ngk = wp.norm_l2(gi)
-        gkm1 = params.gk[i]  # Previous gradient
-        ngkm1 = wp.norm_l2(gkm1)
-        ndgkm1 = wp.norm_l2(gi - gkm1)
-
-        xk = params.xk[i]  # Previous position
-        ndxkm1 = wp.max(wp.norm_l2(xi - xk), eps)
-
-        L = params.Hnk[i] + ngk / ndxkm1
-        rho = ndgkm1 / wp.max(L * ndxkm1, eps)
-
-        if ngk > ngkm1:
-            betaG *= gammadown
-        elif rho > rhohat:
-            betaG += (wp.float32(1) - betaG) * gammaup
-
+        betaG = adapt_stencil_gradient_acceleration_parameter(
+            kp, i, xi, gi, params, ii, betaG, eps
+        )
+        
     params.betaG[i, ii] = betaG  # Update the parameter
     params.gk[i] = gi  # Store current gradient
     params.xk[i] = xi  # Store current position
