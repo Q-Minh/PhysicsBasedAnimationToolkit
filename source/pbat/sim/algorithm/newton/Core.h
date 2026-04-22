@@ -566,6 +566,23 @@ void TruncateDisplacement(
     }
 }
 
+template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedXt>
+void GloballyRestoreFeasibility(
+    FemElastoDynamics<TElasticEnergy>& fem,
+    MeshDynamics& contact,
+    Params const& params,
+    Eigen::MatrixBase<TDerivedXt> const& xt)
+{
+    auto const dmax = (fem.x - xt).colwise().norm().maxCoeff();
+    auto const dmin = contact.OgcState().bv.minCoeff();
+    if (dmax > dmin)
+    {
+        fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
+            xt(Eigen::placeholders::all, fem.FreeNodes()) +
+            (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
+    }
+}
+
 /**
  * @brief Truncate displaced positions based on OGC truncation strategy for solve initialization
  *
@@ -589,14 +606,7 @@ void RestoreFeasibility(
             break;
         }
         case EOgcTruncationStrategy::Global: {
-            auto const dmax = (fem.x - xt).colwise().norm().maxCoeff();
-            auto const dmin = contact.OgcState().bv.minCoeff();
-            if (dmax > dmin)
-            {
-                fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
-                    xt(Eigen::placeholders::all, fem.FreeNodes()) +
-                    (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
-            }
+            GloballyRestoreFeasibility(fem, contact, params, xt.derived());
             break;
         }
     }
@@ -742,9 +752,9 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         // 5. Dual update
         using EDualVariable = typename MeshDynamics::EDualVariable;
         contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(xk);
-        // 5. Restore feasibility
-        contact.RestoreFeasibility(fem.x, fem.dmask);
-        // 6. Update constraint set
+        // 5. Restore feasibility.
+        GloballyRestoreFeasibility(fem, contact, params, contact.DynamicPointPositions());
+        // 6. Update constraint set using the subproblem solution for ahead-of-time exploration.
         contact.UpdateConstraintSet(fem.x);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
