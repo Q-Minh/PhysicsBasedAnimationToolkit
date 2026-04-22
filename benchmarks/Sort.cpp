@@ -14,7 +14,7 @@
 
 namespace {
 
-template <class T, class TCount, class FProject>
+template <int KeyTupleSize, class T, class TCount, class FProject>
 static void RunBenchmark(
     std::vector<T>& input,
     std::vector<T>& output,
@@ -50,11 +50,11 @@ static void RunBenchmark(
         std::int32_t max = range - 1;
         if constexpr (pbat::common::CTupleLike<T>)
         {
-            std::array<std::int32_t, std::tuple_size_v<T>> mins;
+            std::array<std::int32_t, KeyTupleSize> mins;
             mins.fill(min);
-            std::array<std::int32_t, std::tuple_size_v<T>> maxs;
+            std::array<std::int32_t, KeyTupleSize> maxs;
             maxs.fill(max);
-            std::array<FProject, std::tuple_size_v<T>> fProjects;
+            std::array<FProject, KeyTupleSize> fProjects;
             fProjects.fill(fProject);
             pbat::common::StableCountingSort(output, cpy, work, mins, maxs, fProjects);
         }
@@ -68,9 +68,9 @@ static void RunBenchmark(
         std::int32_t max = range - 1;
         if constexpr (pbat::common::CTupleLike<T>)
         {
-            std::array<std::int32_t, std::tuple_size_v<T>> maxs;
+            std::array<std::int32_t, KeyTupleSize> maxs;
             maxs.fill(max);
-            std::array<FProject, std::tuple_size_v<T>> fProjects;
+            std::array<FProject, KeyTupleSize> fProjects;
             fProjects.fill(fProject);
             pbat::common::RadixSort(output, cpy, rwork, fProjects, maxs);
         }
@@ -90,9 +90,9 @@ static void RunBenchmark(
             std::int32_t max = range - 1;
             if constexpr (pbat::common::CTupleLike<T>)
             {
-                std::array<std::int32_t, std::tuple_size_v<T>> maxs;
+                std::array<std::int32_t, KeyTupleSize> maxs;
                 maxs.fill(max);
-                std::array<FProject, std::tuple_size_v<T>> fProjects;
+                std::array<FProject, KeyTupleSize> fProjects;
                 fProjects.fill(fProject);
                 pbat::common::RadixSort(output, cpy, lwork, fProjects, maxs);
             }
@@ -133,7 +133,7 @@ TEST_CASE("Sorting algorithms")
                 output.resize(input.size());
                 cpy = input;
                 work.resize(range);
-                RunBenchmark(
+                RunBenchmark<1>(
                     input,
                     output,
                     cpy,
@@ -166,7 +166,7 @@ TEST_CASE("Sorting algorithms")
                 output.resize(input.size());
                 cpy = input;
                 work.resize(range);
-                RunBenchmark(
+                RunBenchmark<2>(
                     input,
                     output,
                     cpy,
@@ -183,6 +183,38 @@ TEST_CASE("Sorting algorithms")
                 for (auto n : ns)
                     fSetupAndRunBenchmark("Uniform integer pair distribution", range, n);
         }
-        SUBCASE("int triplet") {}
+        SUBCASE("int triplet sorted by first 2 elements")
+        {
+            using T = std::tuple<std::int32_t, std::int32_t, std::int32_t>;
+            std::vector<T> input{};
+            std::vector<T> output{};
+            std::vector<T> cpy{};
+            auto const fSetupAndRunBenchmark = [&](std::string_view test, auto range, auto n) {
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_int_distribution<int32_t> dis(0, range - 1);
+                input.resize(n);
+                for (size_t i = 0; i < n; ++i)
+                    input[i] = {dis(gen), dis(gen), dis(gen)};
+                output.resize(input.size());
+                cpy = input;
+                work.resize(range);
+                RunBenchmark<2>(
+                    input,
+                    output,
+                    cpy,
+                    work,
+                    rwork,
+                    lwork,
+                    std::identity{},
+                    nCores,
+                    range,
+                    n,
+                    test);
+            };
+            for (auto range : ranges)
+                for (auto n : ns)
+                    fSetupAndRunBenchmark("Uniform integer triplet distribution", range, n);
+        }
     }
 }

@@ -256,7 +256,7 @@ void RadixSort(
         std::tuple_size_v<FProjects> == std::tuple_size_v<TKeys>,
         "Mismatched tuple sizes");
     static_assert(
-        std::tuple_size_v<FProjects> >= std::tuple_size_v<ValueType>,
+        std::tuple_size_v<FProjects> <= std::tuple_size_v<ValueType>,
         "Mismatched tuple sizes");
     auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         std::size_t constexpr N = sizeof...(Is);
@@ -303,7 +303,7 @@ void RadixSort(
         std::tuple_size_v<FProjects> == std::tuple_size_v<TKeys>,
         "Mismatched tuple sizes");
     static_assert(
-        std::tuple_size_v<FProjects> >= std::tuple_size_v<ValueType>,
+        std::tuple_size_v<FProjects> <= std::tuple_size_v<ValueType>,
         "Mismatched tuple sizes");
     auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         std::size_t constexpr N = sizeof...(Is);
