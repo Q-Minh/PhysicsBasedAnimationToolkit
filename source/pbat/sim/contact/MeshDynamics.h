@@ -153,6 +153,7 @@ class MeshDynamics
             static_assert(TT::kRows == 3 and TT::kCols == 2, "Invalid tangent basis matrix shape");
             static_assert(TW::kRows == kStencil and TW::kCols == 1, "Invalid weights vector shape");
             auto Xc = Reshape<kDims, kStencil>(xc);
+            using math::linalg::mini::SVector;
             if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
             {
                 T    = PointPointTangentialBasis(Xc.Col(0), Xc.Col(1));
@@ -165,8 +166,9 @@ class MeshDynamics
                     Xc.Col(0),
                     Xc.Col(1),
                     Xc.Col(2));
-                T    = PointEdgeTangentialBasis(Xc.Col(0), Xc.Col(1), Xc.Col(2));
-                W(0) = TScalar(1);
+                SVector<TScalar, 3> xc       = uv(0) * Xc.Col(1) + uv(1) * Xc.Col(2);
+                T                            = PointPointTangentialBasis(Xc.Col(0), xc);
+                W(0)                         = TScalar(1);
                 W.template Slice<2, 1>(1, 0) = -uv;
             }
             else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
@@ -176,8 +178,10 @@ class MeshDynamics
                     Xc.Col(1),
                     Xc.Col(2),
                     Xc.Col(3));
-                T    = PointTriangleTangentialBasis(Xc.Col(1), Xc.Col(2), Xc.Col(3));
-                W(0) = TScalar(1);
+                SVector<TScalar, 3> xc =
+                    uvw(0) * Xc.Col(1) + uvw(1) * Xc.Col(2) + uvw(2) * Xc.Col(3);
+                T                            = PointPointTangentialBasis(Xc.Col(0), xc);
+                W(0)                         = TScalar(1);
                 W.template Slice<3, 1>(1, 0) = -uvw;
             }
             else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
@@ -187,11 +191,13 @@ class MeshDynamics
                     Xc.Col(1),
                     Xc.Col(2),
                     Xc.Col(3));
-                T    = EdgeEdgeTangentialBasis(Xc.Col(0), Xc.Col(1), Xc.Col(2), Xc.Col(3));
-                W(0) = TScalar(1) - st(0);
-                W(1) = st(0);
-                W(2) = -(TScalar(1) - st(1));
-                W(3) = -(st(1));
+                SVector<TScalar, 3> xc1 = st(0) * Xc.Col(0) + (1 - st(0)) * Xc.Col(1);
+                SVector<TScalar, 3> xc2 = st(1) * Xc.Col(2) + (1 - st(1)) * Xc.Col(3);
+                T                       = PointPointTangentialBasis(xc1, xc2);
+                W(0)                    = TScalar(1) - st(0);
+                W(1)                    = st(0);
+                W(2)                    = -(TScalar(1) - st(1));
+                W(3)                    = -(st(1));
             }
             else
             {
