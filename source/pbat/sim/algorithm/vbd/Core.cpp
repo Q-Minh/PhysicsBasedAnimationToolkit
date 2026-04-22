@@ -4,6 +4,7 @@
 #include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
 
+#include <algorithm>
 #include <exception>
 #include <fmt/core.h>
 #include <thread>
@@ -39,22 +40,21 @@ void VertexColors(
     colors                 = graph::GreedyColor(GVVp, GVVadj, eOrdering, eSelection);
 }
 
-void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params& params)
+void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.UpdatePenaltyParameter");
-    auto nThreads       = std::thread::hardware_concurrency();
-    auto& contactParams = contact.GetParams();
-    auto nDynamicNodes  = params.xk.cols();
-    Scalar& kc          = contactParams.kc;
-    kc                  = 0;
+    auto nThreads             = std::thread::hardware_concurrency();
+    auto const& contactParams = contact.GetParams();
+    auto nDynamicNodes        = params.xk.cols();
     contact.ForAllContacts(
         [&]<class TContactSet>(
-            auto&& C,
+            typename TContactSet::AccessorType C,
             auto&& stencil,
             std::int32_t /*t*/
         ) {
             auto nodes = contact.LoadStencil<TContactSet>(stencil);
             auto gradc = ToEigen(C.Grad());
+            Scalar maxQ{0};
             for (auto ki = 0; ki < nodes.size(); ++ki)
             {
                 auto i = nodes[ki];
@@ -63,8 +63,11 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
                 auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
                 auto gradci = gradc.template segment<3>(ki * 3);
                 Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
-                pbat::common::AtomicMax(kc, Q);
+                maxQ        = std::max(maxQ, Q);
             }
+            C.Penalty() = contactParams.gamma * maxQ;
+            auto F      = C.Friction();
+            F.Penalty() = contactParams.gammaf * maxQ;
         },
         nThreads);
 }

@@ -263,7 +263,7 @@ void AssembleBlockDiagonalDynamicsHessian(
  * @param contact Mesh contact dynamics
  * @param params Solver parameters
  */
-void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params& params);
+void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params const& params);
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(

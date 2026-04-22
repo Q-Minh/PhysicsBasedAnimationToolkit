@@ -77,7 +77,9 @@ class MeshDynamics
         /*8*/
         math::linalg::mini::SVector<TScalar, 2> /*c_f(x) = T^T W (x - xt)*/,
         /*9*/ math::linalg::mini::SVector<TScalar, 2> /*dhat = T^T W xt*/,
-        /*10*/ math::linalg::mini::SVector<TScalar, 2> /*lambda_f*/
+        /*10*/ math::linalg::mini::SVector<TScalar, 2> /*lambda_f*/,
+        /*11*/ TScalar /*sigma (normal penalty)*/,
+        /*12*/ TScalar /*sigma_f (friction penalty)*/
         >;
     /**
      * @brief Friction data accessor
@@ -134,6 +136,11 @@ class MeshDynamics
          * @return math::linalg::mini::SVector<TScalar, 2>& or const&
          */
         auto& Lambda() { return set.template Data<10>(k); }
+        /**
+         * @brief Friction penalty parameter \f$ \sigma_f \f$
+         * @return TScalar& or TScalar const&
+         */
+        auto& Penalty() { return set.template Data<12>(k); }
         /**
          * @brief Compute and store tangent basis and weights from stencil positions.
          * @tparam TDerivedXtc A mini matrix type
@@ -286,6 +293,11 @@ class MeshDynamics
          * @return auto
          */
         auto Eval(auto&& x) { return Chat() + Dot(Grad(), x); }
+        /**
+         * @brief Normal contact penalty parameter \f$ \sigma \f$
+         * @return TScalar& or TScalar const&
+         */
+        auto& Penalty() { return set.template Data<11>(k); }
         /**
          * @brief Friction data accessor
          * @return auto
@@ -1585,7 +1597,9 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
             static auto constexpr kStencil = ConstraintAccessorType::kStencil;
             auto nodes                     = LoadStencil<TContactSet>(stencil);
             TScalar Q                      = RayleighQuotient<kDims, kStencil>(H, C.Grad(), nodes);
-            common::AtomicMax(mParams.kc, Q);
+            C.Penalty()                    = mParams.gamma * Q;
+            auto F                         = C.Friction();
+            F.Penalty()                    = mParams.gammaf * Q;
         },
         nThreads);
 }
@@ -1606,18 +1620,17 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             C.Eval()                     = C.Eval(xc);
             auto F                       = C.Friction();
             F.Eval()                     = F.Eval(xc);
-            auto kn                      = mParams.gamma * mParams.kc;
             if (static_cast<bool>(Mask & EDualVariable::Slack))
-                C.Slack() = std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / kn);
+                C.Slack() =
+                    std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / C.Penalty());
             if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
             {
                 if (C.Slack() == TScalar(0))
                 {
-                    C.Lambda() -= kn * (C.Eval() - mParams.dmin);
+                    C.Lambda() -= C.Penalty() * (C.Eval() - mParams.dmin);
                     C.Decay() = TScalar(1);
                     auto muS  = mParams.mu;
-                    auto kf   = mParams.gammaf * mParams.kc;
-                    F.Lambda() -= kf * F.Eval();
+                    F.Lambda() -= F.Penalty() * F.Eval();
                     TScalar frictionLimit = muS * C.Lambda();
                     TScalar lambdafn2     = SquaredNorm(F.Lambda());
                     if (lambdafn2 > frictionLimit * frictionLimit)
@@ -1934,11 +1947,11 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(Eigen::MatrixBase<TDeriv
             auto const [Xc, nodes] = LoadStencil<TContactSet>(x, stencil);
             auto xc                = Reshape<kDofs, 1>(Xc);
             TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
-            auto kn                = mParams.gamma * mParams.kc;
+            auto kn                = C.Penalty();
             E += /*C.Decay() **/ (TScalar(0.5) * kn * cs * cs - C.Lambda() * cs);
             auto F  = C.Friction();
             auto cf = F.Eval(xc);
-            auto kf = mParams.gammaf * mParams.kc;
+            auto kf = F.Penalty();
             E += TScalar(0.5) * kf * Dot(cf, cf) - Dot(F.Lambda(), cf);
         },
         1 /*nThreads*/);
@@ -1975,7 +1988,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             static_assert(kDims == 3, "Only 3D is supported");
             auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
             auto xc                = Reshape<kDofs, 1>(XC);
-            auto kn                = mParams.gamma * mParams.kc;
+            auto kn                = C.Penalty();
             TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
             TScalar dL             = /*C.Decay() **/ (kn * cs - C.Lambda());
             // Friction gradient \nabla_x [ 0.5*kf*||c_f||^2 - lambda_f^T c_f ]
@@ -1984,7 +1997,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             auto const& W = F.Weights();
             auto const& T = F.TangentBasis();
             auto cf       = F.Eval(xc);
-            auto kf       = mParams.gammaf * mParams.kc;
+            auto kf       = F.Penalty();
             using math::linalg::mini::SVector;
             SVector<TScalar, 2> df     = kf * cf - F.Lambda();
             SVector<TScalar, kDims> gf = T * df;
@@ -2209,6 +2222,11 @@ void MeshDynamics<TScalar, TIndex>::SerializeConstraintSet(
             lfEig.col(i) = ToEigen(lambdaf[i]);
         grp.WriteData("lambdaf", lfEig);
     }
+    // Penalty parameters
+    auto const& sigmas  = contactSet.template Data<11>();
+    auto const& sigmasf = contactSet.template Data<12>();
+    grp.WriteData("sigma", sigmas);
+    grp.WriteData("sigmaf", sigmasf);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -2286,6 +2304,13 @@ void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
         for (Eigen::Index i = 0; i < nAdj; ++i)
             lambdaf[i] = FromEigen(lfEig.col(i).template head<2>());
     }
+    // Penalty parameters (optional for backward compatibility)
+    std::vector<TScalar> sigmas(nAdj);
+    std::vector<TScalar> sigmasf(nAdj);
+    if (grp.HasData("sigma"))
+        sigmas = grp.ReadData<std::vector<TScalar>>("sigma");
+    if (grp.HasData("sigmaf"))
+        sigmasf = grp.ReadData<std::vector<TScalar>>("sigmaf");
     // Construct the contact set from compact state
     contactSet.Construct(
         std::move(adjacencies),
@@ -2301,7 +2326,9 @@ void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
             std::move(tangentWeights),
             std::move(cf),
             std::move(dhat),
-            std::move(lambdaf)));
+            std::move(lambdaf),
+            std::move(sigmas),
+            std::move(sigmasf)));
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
