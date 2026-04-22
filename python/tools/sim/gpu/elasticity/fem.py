@@ -6,14 +6,22 @@ from ..integration.bdf import Bdf
 from pbatoolkit import pbat
 
 # --- Strategy constants ---
-STRATEGY_POSITION = wp.constant(0)
-STRATEGY_FREE_TRAJECTORY = wp.constant(1)
-STRATEGY_TRAJECTORY_WITH_EXTERNAL_LOAD = wp.constant(2)
+STRATEGY_POSITION = wp.constant(
+    int(pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position.value)
+)
+STRATEGY_FREE_TRAJECTORY = wp.constant(
+    int(pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.FreeTrajectory.value)
+)
+STRATEGY_TRAJECTORY_WITH_EXTERNAL_LOAD = wp.constant(
+    int(
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad.value
+    )
+)
 
 _STRATEGY_MAP = {
-    "position": 0,
-    "free_trajectory": 1,
-    "trajectory_with_external_load": 2,
+    pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position: STRATEGY_POSITION,
+    pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.FreeTrajectory: STRATEGY_FREE_TRAJECTORY,
+    pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad: STRATEGY_TRAJECTORY_WITH_EXTERNAL_LOAD,
 }
 
 
@@ -169,7 +177,10 @@ class FemElastoDynamics:
         """Set initial conditions. x0, v0 are (N, 3) or (3*N,) arrays."""
         self.bdf.set_initial_conditions(cp.asarray(x0).ravel(), cp.asarray(v0).ravel())
 
-    def setup_time_integration_optimization(self, strategy: str = "position"):
+    def setup_time_integration_optimization(
+        self,
+        strategy: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization = pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position,
+    ):
         """Compute xtilde and initialize x for the time step.
 
         Strategies: "position", "free_trajectory", "trajectory_with_external_load"
