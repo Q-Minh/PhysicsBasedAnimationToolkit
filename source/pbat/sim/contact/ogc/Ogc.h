@@ -672,19 +672,7 @@ void VertexFacetContactDetection(
             static_cast<void*>(&rtcCollideFuncParams));
     }
     // Update thread-local vertex-face contact sets
-    auto const fUpdateSet = [](auto& sets) {
-        tbb::static_partitioner partitioner{};
-        tbb::parallel_for(
-            sets,
-            [](graph::AdjacencySet<void, TIndex>& set) { set.Update(); },
-            partitioner);
-    };
-    fUpdateSet(state.mDDVV);
-    fUpdateSet(state.mDDVE);
-    fUpdateSet(state.mDDVF);
-    fUpdateSet(state.mDSVV);
-    fUpdateSet(state.mDSVE);
-    fUpdateSet(state.mDSVF);
+    state.UpdateVertexFacetContactSets();
     // Finalize per-vertex and per-face displacement bounds
     state.dminv.noalias() = state.dminv.cwiseSqrt();
     state.dminf.noalias() = state.dminf.cwiseSqrt();
@@ -716,16 +704,8 @@ void EdgeEdgeContactDetection(
             detail::DynamicEdgeStaticEdgeRTCCollideFunc<TScalar, TIndex>,
             static_cast<void*>(&rtcCollideFuncParams));
     }
-    // Update thread-local vertex-face contact sets
-    auto const fUpdateSet = [](auto& sets) {
-        tbb::static_partitioner partitioner{};
-        tbb::parallel_for(
-            sets,
-            [](graph::AdjacencySet<void, TIndex>& set) { set.Update(); },
-            partitioner);
-    };
-    fUpdateSet(state.mDDEE);
-    fUpdateSet(state.mDSEE);
+    // Update thread-local edge-edge contact sets
+    state.UpdateEdgeEdgeContactSets();
     // Finalize per-half-edge displacement bounds
     state.dmine.noalias() = state.dmine.cwiseSqrt();
 }

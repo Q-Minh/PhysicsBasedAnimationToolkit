@@ -262,6 +262,16 @@ class AdjacencySet
     Update(FOnAdded&& fOnAdded, FOnRemoved&& fOnRemoved, AdjacencySetUpdateOptions options = {});
 
     /**
+     * @brief Reconcile the incoming adjacencies accumulated via Add() with the existing set, using
+     * default callbacks that do nothing (for added adjacencies) or simply discard removed
+     * adjacencies.
+     *
+     * @param options Update options (default: Overwrite policy, no assumptions about incoming
+     * adjacencies)
+     */
+    void Update(AdjacencySetUpdateOptions options = {});
+
+    /**
      * @brief Merge all adjacencies from @p other into this set, consuming @p other.
      *
      * Adjacencies present in @p other but not in this are added, moving their associated data
@@ -588,6 +598,12 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     mIncomingAdjacencies.clear();
     mAdjacenciesToRemove.clear();
     mAdjacenciesToAdd.clear();
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(AdjacencySetUpdateOptions options)
+{
+    this->Update([](auto&&...) {}, [](auto&&...) {}, options);
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>

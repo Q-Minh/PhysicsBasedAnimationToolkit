@@ -20,6 +20,7 @@
 #include <Eigen/Core>
 #include <embree4/rtcore.h>
 #include <tbb/enumerable_thread_specific.h>
+#include <tbb/parallel_for.h>
 #include <vector>
 
 namespace pbat::sim::contact::ogc {
@@ -109,6 +110,23 @@ class State
      * @pre Initialize() has been called
      */
     void PrepareForExecution(Input<TScalar, TIndex> const& input, Params<TScalar> const& params);
+
+    /**
+     * @brief Update all vertex-facet contact sets (dynamic and static).
+     *
+     * Commits the incoming adjacencies accumulated via Add() in each thread-local set
+     * for DDVV, DDVE, DDVF, DSVV, DSVE, DSVF.
+     */
+    void UpdateVertexFacetContactSets();
+
+    /**
+     * @brief Update all edge-edge contact sets (dynamic and static).
+     *
+     * Commits the incoming adjacencies accumulated via Add() in each thread-local set
+     * for DDEE, DSEE.
+     */
+    void UpdateEdgeEdgeContactSets();
+
     /**
      * @brief Destroy the State object
      */
@@ -184,11 +202,34 @@ class State
 namespace detail {
 
 template <common::CIndex TIndex>
-graph::AdjacencySet<ContactFace<TIndex>, TIndex, TIndex> CreateEmptyContactFaceAdjacencySet()
+graph::AdjacencySet<void, TIndex> CreateEmptyContactFaceAdjacencySet()
 {
-    graph::AdjacencySet<ContactFace<TIndex>, TIndex, TIndex> adjSet;
+    graph::AdjacencySet<void, TIndex> adjSet;
     adjSet.Reserve(4096, 1024);
     return adjSet;
+}
+
+/**
+ * @brief Perform a parallel Update() on every thread-local AdjacencySet in @p sets.
+ *
+ * Deduplicates and commits the incoming adjacencies accumulated via Add() in each
+ * thread-local set, using Overwrite policy and assuming unique incoming adjacencies.
+ *
+ * @tparam TIndex Index type for the adjacency set
+ * @param sets Thread-local adjacency sets to update
+ */
+template <common::CIndex TIndex>
+void UpdateContactSet(tbb::enumerable_thread_specific<graph::AdjacencySet<void, TIndex>>& sets)
+{
+    graph::AdjacencySetUpdateOptions opts{};
+    opts.bAssumeUniqueIncoming = true;
+    opts.eUpdatePolicy         = graph::AdjacencySetUpdateOptions::EUpdatePolicy::Overwrite;
+    tbb::static_partitioner partitioner{};
+    tbb::parallel_for(
+        std::size_t{0},
+        sets.size(),
+        [begin = sets.begin(), opts](std::size_t t) { (begin + t)->Update(opts); },
+        partitioner);
 }
 
 } // namespace detail
@@ -411,7 +452,7 @@ inline State<TScalar, TIndex>& State<TScalar, TIndex>::operator=(State&& other) 
     dmine                   = std::move(other.dmine);
     mDDVV                   = std::move(other.mDDVV);
     mDDVE                   = std::move(other.mDDVE);
-    mDDVF                   = std::move(other.mDDFE);
+    mDDVF                   = std::move(other.mDDVF);
     mDDEE                   = std::move(other.mDDEE);
     mDSVV                   = std::move(other.mDSVV);
     mDSVE                   = std::move(other.mDSVE);
@@ -596,6 +637,26 @@ inline void State<TScalar, TIndex>::Initialize(
         rtcCommitScene(mStaticEdgeScene);
         rtcCommitScene(mStaticFacetScene);
     }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void State<TScalar, TIndex>::UpdateVertexFacetContactSets()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.UpdateVertexFacetContactSets");
+    detail::UpdateContactSet(mDDVV);
+    detail::UpdateContactSet(mDDVE);
+    detail::UpdateContactSet(mDDVF);
+    detail::UpdateContactSet(mDSVV);
+    detail::UpdateContactSet(mDSVE);
+    detail::UpdateContactSet(mDSVF);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void State<TScalar, TIndex>::UpdateEdgeEdgeContactSets()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.UpdateEdgeEdgeContactSets");
+    detail::UpdateContactSet(mDDEE);
+    detail::UpdateContactSet(mDSEE);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
