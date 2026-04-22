@@ -1537,9 +1537,9 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
-    using OgcStateType    = decltype(mOgcState);
-    using PrefixType      = std::array<TIndex, OgcStateType::EGeometry::Count + 1>;
-    auto const fLoadPoint = [&](TIndex i, OgcStateType::EGeometry g, auto&& xi) {
+    using OgcStateType       = decltype(mOgcState);
+    using GeometryPrefixType = typename OgcStateType::GeometryPrefixArrayType;
+    auto const fLoadPoint    = [&](TIndex i, OgcStateType::EGeometry g, auto&& xi) {
         i -= mOgcState.mPointGeometryPrefix[g];
         switch (g)
         {
@@ -1600,37 +1600,37 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
     auto const fKernel =
         [&]<class FDistance, class FLoadStencil, int kStencil = FDistance::kStencil>(
             ConstraintSet<kStencil>& set,
-            PrefixType const& prefixu,
-            PrefixType const& prefixv,
+            GeometryPrefixType const& prefixu,
+            GeometryPrefixType const& prefixv,
             FLoadStencil const& fLoadStencil) {
             TIndex const nConstraints          = static_cast<TIndex>(set.Size());
             TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
             fForEachThread([&](TIndex t) {
                 TIndex const cstart = t * nConstraintsPerThread;
                 TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-                int g1{0}, g2{0};
+                int gu{0}, gv{0};
                 for (TIndex c = cstart, uprev = 0; c < cend; ++c)
                 {
                     auto const [u, v, k] = set.WeightedAdjacency(c);
                     // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
-                    // until we find the next u, in which case we reset the g2 geometry index for v.
+                    // until we find the next u, in which case we reset the gv geometry index for v.
                     if (u > uprev)
                     {
-                        g2    = 0;
+                        gv    = 0;
                         uprev = u;
                     }
                     // Keep track of geometry types for u and v
-                    while (u >= prefixu[g1 + 1])
-                        ++g1;
-                    while (v >= prefixv[g2 + 1])
-                        ++g2;
+                    while (u >= prefixu[gu + 1])
+                        ++gu;
+                    while (v >= prefixv[gv + 1])
+                        ++gv;
                     // Load constraint variables
                     Eigen::Matrix<TScalar, kDims, kStencil> X;
                     fLoadStencil(
                         u,
                         v,
-                        static_cast<OgcStateType::EGeometry>(g1),
-                        static_cast<OgcStateType::EGeometry>(g2),
+                        static_cast<OgcStateType::EGeometry>(gu),
+                        static_cast<OgcStateType::EGeometry>(gv),
                         X);
                     // Evaluate constraint and its derivatives
                     using ConstraintType = ConstraintData<kStencil>;
@@ -1659,9 +1659,9 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
             mPointPointContacts,
             mOgcState.mPointGeometryPrefix,
             mOgcState.mPointGeometryPrefix,
-            [&](auto u, auto v, auto g1, auto g2, auto& X) {
-                fLoadPoint(u, g1, X.col(0));
-                fLoadPoint(v, g2, X.col(1));
+            [&](auto u, auto v, auto gu, auto gv, auto& X) {
+                fLoadPoint(u, gu, X.col(0));
+                fLoadPoint(v, gv, X.col(1));
             });
     });
     tg.run([&]() {
@@ -1669,9 +1669,9 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
             mPointEdgeContacts,
             mOgcState.mPointGeometryPrefix,
             mOgcState.mHalfEdgeGeometryPrefix,
-            [&](auto u, auto v, auto g1, auto g2, auto& X) {
-                fLoadPoint(u, g1, X.col(0));
-                fLoadHalfEdge(v, g2, X.col(1), X.col(2));
+            [&](auto u, auto v, auto gu, auto gv, auto& X) {
+                fLoadPoint(u, gu, X.col(0));
+                fLoadHalfEdge(v, gv, X.col(1), X.col(2));
             });
     });
     tg.run([&]() {
@@ -1679,19 +1679,9 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
             mPointTriangleContacts,
             mOgcState.mPointGeometryPrefix,
             mOgcState.mTriangleGeometryPrefix,
-            [&](auto u, auto v, auto g1, auto g2, auto& X) {
-                fLoadPoint(u, g1, X.col(0));
-                fLoadTriangle(v, g2, X.col(1), X.col(2), X.col(3));
-            });
-    });
-    tg.run([&]() {
-        fKernel.template operator()<geometry::PointTriangleDistance<TScalar>>(
-            mPointTriangleContacts,
-            mOgcState.mPointGeometryPrefix,
-            mOgcState.mTriangleGeometryPrefix,
-            [&](auto u, auto v, auto g1, auto g2, auto& X) {
-                fLoadPoint(u, g1, X.col(0));
-                fLoadTriangle(v, g2, X.col(1), X.col(2), X.col(3));
+            [&](auto u, auto v, auto gu, auto gv, auto& X) {
+                fLoadPoint(u, gu, X.col(0));
+                fLoadTriangle(v, gv, X.col(1), X.col(2), X.col(3));
             });
     });
     tg.run([&]() {
@@ -1699,9 +1689,9 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
             mEdgeEdgeContacts,
             mOgcState.mHalfEdgeGeometryPrefix,
             mOgcState.mHalfEdgeGeometryPrefix,
-            [&](auto u, auto v, auto g1, auto g2, auto& X) {
-                fLoadHalfEdge(u, g1, X.col(0), X.col(1));
-                fLoadHalfEdge(v, g2, X.col(2), X.col(3));
+            [&](auto u, auto v, auto gu, auto gv, auto& X) {
+                fLoadHalfEdge(u, gu, X.col(0), X.col(1));
+                fLoadHalfEdge(v, gv, X.col(2), X.col(3));
             });
     });
     tg.wait();

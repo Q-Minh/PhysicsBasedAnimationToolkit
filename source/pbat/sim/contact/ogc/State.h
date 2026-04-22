@@ -168,12 +168,13 @@ class State
         Static  = 1, ///< Static geometry
         Count   = 2  ///< Number of geometry types (dynamic + static)
     };
-    std::array<IndexType, 3> mPointGeometryPrefix; ///< Prefix sum over points of each geometry type
-                                                   ///< (i.e. dynamic, static)
-    std::array<IndexType, 3> mHalfEdgeGeometryPrefix; ///< Prefix sum over half-edges of each
-                                                      ///< geometry type (i.e. dynamic, static)
-    std::array<IndexType, 3> mTriangleGeometryPrefix; ///< Prefix sum over (triangle) facets of each
-                                                      ///< geometry type (i.e. dynamic, static)
+    using GeometryPrefixArrayType = std::array<IndexType, EGeometry::Count + 1>;
+    GeometryPrefixArrayType mPointGeometryPrefix; ///< Prefix sum over points of each geometry type
+                                                  ///< (i.e. dynamic, static)
+    GeometryPrefixArrayType mHalfEdgeGeometryPrefix; ///< Prefix sum over half-edges of each
+                                                     ///< geometry type (i.e. dynamic, static)
+    GeometryPrefixArrayType mTriangleGeometryPrefix; ///< Prefix sum over (triangle) facets of each
+                                                     ///< geometry type (i.e. dynamic, static)
 
     std::vector<std::pair<IndexType, IndexType>> mXX; ///< Point-point contact pairs.
     std::vector<std::pair<IndexType, IndexType>> mXE; ///< Point-(half-)edge contact pairs.
