@@ -75,12 +75,14 @@ class BroydenSolver(BaseSolver):
         broyden = params.broyden_params
         if callback is None:
             callback = lambda: None
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
         callback()
-        while broyden.k < broyden.n_max_iters:
-            pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
-            callback()
-        fem.back_substitute_integrated_positions_into_velocities()
+        # TODO: Update Broyden solver for most recent SAL contact framework
+        # pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, broyden)
+        # callback()
+        # while broyden.k < broyden.n_max_iters:
+        #     pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, broyden)
+        #     callback()
+        # fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params

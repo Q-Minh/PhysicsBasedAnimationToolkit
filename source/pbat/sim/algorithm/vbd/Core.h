@@ -289,13 +289,40 @@ void Iterate(
     Params& params);
 
 /**
- * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
+ * @brief Linearize contact constraints at the current iterate.
+ *
+ * Calls `contact.LinearizeConstraints(x, xt)` to compute the linearized constraint data
+ * for the current positions.
+ *
  * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem (in/out parameter)
- * @param contact Mesh contact dynamics (in/out parameter)
- * @param params Solver parameters
- * @pre `TElasticEnergy::kDims == 3`
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact dynamics
+ * @pre `InitializeSolve` has been called
  */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void LinearizeConstraints(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact);
+
+/**
+ * @brief Check convergence of VBD solve
+ *
+ * Computes the full gradient (elastic + momentum + contact) and checks if its norm is below
+ * the convergence threshold `params.gtol`.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact dynamics
+ * @param params Solver parameters
+ * @return `true` if converged, `false` otherwise
+ * @pre `LinearizeConstraints` has been called
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+bool CheckConvergence(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index> const& contact,
+    Params& params);
+
 /**
  * @brief Assemble a block-diagonal approximation of the dynamics Hessian (elastic + momentum +
  * damping, without contacts) into `params.Hk`.
@@ -321,14 +348,68 @@ void AssembleBlockDiagonalDynamicsHessian(
 void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params const& params);
 
 /**
- * @brief
- * @tparam TElasticEnergy
- * @param fem
- * @param contact
- * @param params
+ * @brief Prepare a linearized constraint subproblem.
+ *
+ * Assembles the block-diagonal dynamics Hessian, updates the penalty parameter, and
+ * optionally resets the stencil gradient acceleration coefficients.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact dynamics
+ * @param params Solver parameters
+ * @pre `CheckConvergence` has been called and returned `false`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+void PrepareSubproblem(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact,
+    Params& params);
+
+/**
+ * @brief Finalize the current linearized constraint subproblem.
+ *
+ * Updates dual variables (slack, Lagrange multiplier, decay), restores feasibility,
+ * and updates the constraint set for the next subproblem.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact dynamics
+ * @param params Solver parameters
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void FinalizeSubproblem(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact,
+    Params& params);
+
+/**
+ * @brief Solve FEM elasto dynamics time integration minimization problem using VBD
+ *
+ * The equivalent low-level loop is:
+ * @code
+ *   for (params.k = 0; params.k < params.nMaxIters; ++params.k) {
+ *       LinearizeConstraints(fem, contact);
+ *       if (CheckConvergence(fem, contact, params)) break;
+ *       PrepareSubproblem(fem, contact, params);
+ *       for (params.kp = 0; params.kp < params.nSubproblemMaxIters;) {
+ *           contact.UpdateDual<EDualVariable::Slack>(fem.x);
+ *           Iterate(fem, contact, params);
+ *       }
+ *       FinalizeSubproblem(fem, contact, params);
+ *   }
+ *   fem.BackSubstituteIntegratedPositionsIntoVelocities();
+ * @endcode
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem (in/out parameter)
+ * @param contact Mesh contact dynamics (in/out parameter)
+ * @param params Solver parameters
+ * @return
+ * @pre `InitializeSolve` has been called
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params);
@@ -614,6 +695,10 @@ void Iterate(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Iterate");
+    // 1. Solve for slacks
+    using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
+    contact.UpdateDual<EDualVariable::Slack>(fem.x);
+    // 2. Solve for primal variables
     auto h                 = fem.bdf.BetaTilde();
     auto h2                = h * h;
     auto xtildeBdf         = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
@@ -685,6 +770,16 @@ void InitializeSolve(
         params.betaG.setConstant(params.betaG0);
 }
 
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void LinearizeConstraints(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.LinearizeConstraints");
+    auto xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+    contact.LinearizeConstraints(fem.x, xt);
+}
+
 /**
  * @brief Check convergence of VBD solve
  * @tparam TElasticEnergy Hyper-elastic energy model
@@ -752,60 +847,61 @@ void AssembleBlockDiagonalDynamicsHessian(
     });
 }
 
-template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedXt>
-void GloballyRestoreFeasibility(
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void PrepareSubproblem(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
-    Params const& params,
-    Eigen::MatrixBase<TDerivedXt> const& xt)
+    Params& params)
 {
-    auto const dmax = (fem.x - xt).colwise().norm().maxCoeff();
-    auto const dmin = contact.OgcState().bv.minCoeff();
-    if (dmax > dmin)
-    {
-        fem.x(Eigen::placeholders::all, fem.FreeNodes()) =
-            xt(Eigen::placeholders::all, fem.FreeNodes()) +
-            (dmin / dmax) * (fem.x - xt)(Eigen::placeholders::all, fem.FreeNodes());
-    }
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.PrepareSubproblem");
+    AssembleBlockDiagonalDynamicsHessian(fem, params);
+    UpdatePenaltyParameter(contact, params);
+    if (static_cast<int>(params.eWarmStartMask) <
+        static_cast<int>(EStencilGradientBetaWarmStartMask::Subproblem))
+        params.betaG.setConstant(params.betaG0);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+void FinalizeSubproblem(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index>& contact,
+    Params& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.FinalizeSubproblem");
+    using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
+    contact.UpdateDual<
+        EDualVariable::Slack | EDualVariable::LagrangeMultiplier | EDualVariable::Decay>(fem.x);
+    contact.RestoreFeasibility(fem.x, fem.dmask);
+    contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
+    bool bConverged{false};
     for (params.k = 0; params.k < params.nMaxIters; ++params.k)
     {
-        // 1. Linearize constraints
-        auto xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
-        contact.LinearizeConstraints(fem.x, xt);
-        // 2. Convergence check
-        bool const bConverged = CheckConvergence(fem, contact, params);
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
         if (bConverged)
             break;
-        // 3. Setup subproblem
-        AssembleBlockDiagonalDynamicsHessian(fem, params);
-        UpdatePenaltyParameter(contact, params);
-        if (static_cast<int>(params.eWarmStartMask) <
-            static_cast<int>(EStencilGradientBetaWarmStartMask::Subproblem))
-            params.betaG.setConstant(params.betaG0);
-        // 4. VBD solve the linear constraint subproblem
+        PrepareSubproblem(fem, contact, params);
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
         for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
-        {
-            contact.UpdateDual<EDualVariable::Slack>(fem.x);
             Iterate(fem, contact, params);
-        }
-        contact.UpdateDual<
-            EDualVariable::Slack | EDualVariable::LagrangeMultiplier | EDualVariable::Decay>(fem.x);
-        // 5. Restore feasibility
-        contact.RestoreFeasibility(fem.x, fem.dmask);
-        // 6. Update constraint set for next subproblem
-        contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
+        FinalizeSubproblem(fem, contact, params);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
+    if (not bConverged)
+    {
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+    }
+    return bConverged;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -815,6 +911,7 @@ void Integrate(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Integrate");
+    InitializeSolve(fem, contact, params);
     Solve(fem, contact, params);
     fem.Step();
 }

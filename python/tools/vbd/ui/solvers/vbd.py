@@ -52,17 +52,19 @@ class VbdSolver(BaseSolver):
         if callback is None:
             callback = lambda: None
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
-        pbat.sim.algorithm.vbd.solve(fem, contact, params)
-        # callback()
-        # for k in range(params.n_max_iters):
-        #     if contact.requires_constraint_set_update:
-        #         contact.update_constraint_set(fem.x)
-        #     xk = fem.x.copy()
-        #     pbat.sim.algorithm.vbd.iterate(fem, contact, params)
-        #     fem.x = xk + self._step_size * (fem.x - xk)
-        #     fem.x = contact.restore_feasibility(fem.x, fem.dmask)
-        #     callback()
-        # fem.back_substitute_integrated_positions_into_velocities()
+        for k in range(params.n_max_iters):
+            params.k = k
+            callback()
+            pbat.sim.algorithm.vbd.linearize_constraints(fem, contact)
+            converged = pbat.sim.algorithm.vbd.check_convergence(fem, contact, params)
+            if converged:
+                break
+            pbat.sim.algorithm.vbd.prepare_subproblem(fem, contact, params)
+            for kp in range(params.n_subproblem_max_iters):
+                pbat.sim.algorithm.vbd.iterate(fem, contact, params)
+            pbat.sim.algorithm.vbd.finalize_subproblem(fem, contact, params)
+        callback()
+        fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.vbd.Params = self._params.params

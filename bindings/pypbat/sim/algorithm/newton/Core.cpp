@@ -149,7 +149,7 @@ void BindCore(nanobind::module_& m)
             "n_max_iters",
             &Params::nMaxIters,
             "Maximum number of outer (linearized constraint subproblem) iterations")
-        .def_ro("k", &Params::k, "Current outer iteration index");
+        .def_rw("k", &Params::k, "Current outer iteration index");
 
     // Bind algorithm functions for a concrete energy model (3D stable neo-Hookean)
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
@@ -193,8 +193,9 @@ void BindCore(nanobind::module_& m)
         nb::arg("contact"),
         nb::arg("params"),
         "Check KKT convergence of the outer (nonlinear) problem.\n\n"
-        "Computes the full gradient and checks if the squared gradient norm is below\n"
-        "the convergence threshold params.newton.gtol2.\n\n"
+        "Precomputes elastic energy derivatives, then computes the full gradient and\n"
+        "checks if the squared gradient norm is below the convergence threshold\n"
+        "params.newton.gtol2.\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
         "    contact (MeshDynamics): Contact dynamics problem.\n"
@@ -203,44 +204,56 @@ void BindCore(nanobind::module_& m)
         "    bool: True if KKT conditions are satisfied (converged), False otherwise.");
     m.def(
         "prepare_subproblem",
-        [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
-            pbat::sim::algorithm::newton::PrepareSubproblem(fem, contact, params);
+        [](ElastoDynamics& fem,
+           MeshDynamics& contact,
+           Params& params,
+           bool bAssumePostConvergenceCheck) {
+            pbat::sim::algorithm::newton::PrepareSubproblem(
+                fem,
+                contact,
+                params,
+                bAssumePostConvergenceCheck);
         },
         nb::arg("fem"),
         nb::arg("contact"),
         nb::arg("params"),
+        nb::arg("assume_post_convergence_check") = true,
         "Prepare a linearized constraint subproblem.\n\n"
-        "Precomputes elastic energy derivatives, updates barrier parameters, and initializes the "
-        "inner Newton solver.\n\n"
+        "Assembles the Hessian (without contact contributions), updates barrier parameters,\n"
+        "and initializes the inner Newton solver. If assume_post_convergence_check is True,\n"
+        "assumes that check_convergence() has already computed elastic derivatives.\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
         "    contact (MeshDynamics): Contact dynamics problem.\n"
-        "    params (Params): Newton solver parameters.\n");
+        "    params (Params): Newton solver parameters.\n"
+        "    assume_post_convergence_check (bool): If True (default), skips elastic\n"
+        "        derivative computation (assumes check_convergence was called prior).\n");
     m.def(
         "prepare_next_iteration",
         [](ElastoDynamics& fem,
            MeshDynamics& contact,
            Params& params,
-           bool bAreSubproblemDerivativesDirty) {
+           bool bAssumePostConvergenceCheck) {
             pbat::sim::algorithm::newton::PrepareNextIteration(
                 fem,
                 contact,
                 params,
-                bAreSubproblemDerivativesDirty);
+                bAssumePostConvergenceCheck);
         },
         nb::arg("fem"),
         nb::arg("contact"),
         nb::arg("params"),
-        nb::arg("are_subproblem_derivatives_dirty") = true,
+        nb::arg("assume_post_convergence_check") = true,
         "Prepare next iteration of the current linearized constraint subproblem.\n\n"
-        "Recomputes elastic energy derivatives and evaluates the merit function and gradient\n"
-        "for the inner Newton solver. Call this after each iterate() within a subproblem.\n\n"
+        "Evaluates the merit function and gradient for the inner Newton solver.\n"
+        "If assume_post_convergence_check is False, also recomputes elastic energy\n"
+        "derivatives before evaluating the merit function.\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
         "    contact (MeshDynamics): Contact dynamics problem.\n"
         "    params (Params): Newton solver parameters.\n"
-        "    bAreSubproblemDerivativesDirty (bool): Whether to compute subproblem "
-        "derivatives.\n\n");
+        "    assume_post_convergence_check (bool): If True (default), skips elastic\n"
+        "        derivative computation. Set to False after iterate() moves positions.\n");
     m.def(
         "iterate",
         [](ElastoDynamics& fem, MeshDynamics& contact, Params& params) {
@@ -267,8 +280,8 @@ void BindCore(nanobind::module_& m)
         nb::arg("contact"),
         nb::arg("params"),
         "Finalize the current linearized constraint subproblem.\n\n"
-        "Restores feasibility, updates the constraint set, and increments the outer\n"
-        "iteration counter params.k.\n\n"
+        "Updates dual variables (slack, Lagrange multiplier, decay), restores feasibility, and "
+        "updates the constraint set.\n\n"
         "Args:\n"
         "    fem (FemElastoDynamics): Finite element elasto dynamics problem.\n"
         "    contact (MeshDynamics): Contact dynamics problem.\n"
@@ -284,13 +297,13 @@ void BindCore(nanobind::module_& m)
         "Run the full Newton solver to convergence (or until max iterations).\n\n"
         "High-level convenience function. The equivalent low-level loop is:\n"
         "  initialize_solve(fem, contact, params)\n"
-        "  while params.k < params.n_max_iters:\n"
+        "  for params.k in range(params.n_max_iters):\n"
         "      linearize_constraints(fem, contact)\n"
-        "      if check_convergence(fem, contact, params): break\n"
+        "      converged = check_convergence(fem, contact, params)\n"
+        "      if converged: break\n"
         "      prepare_subproblem(fem, contact, params)\n"
-        "      prepare_next_iteration(fem, contact, params)\n"
-        "      while params.newton.k < params.newton.n_max_iters:\n"
-        "          if params.newton.gknorm2 <= params.newton.gtol2: break\n"
+        "      prepare_next_iteration(fem, contact, params, True)\n"
+        "      while not converged:\n"
         "          if not iterate(fem, contact, params): break\n"
         "          prepare_next_iteration(fem, contact, params)\n"
         "      finalize_subproblem(fem, contact, params)\n"

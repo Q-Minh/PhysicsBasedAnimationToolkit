@@ -303,19 +303,6 @@ void BindCore(nanobind::module_& m)
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
 
     m.def(
-        "iterate",
-        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
-            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, contact, params);
-        },
-        nb::arg("fem"),
-        nb::arg("contact"),
-        nb::arg("params"),
-        "Perform one VBD minimization iteration.\n\n"
-        "Args:\n"
-        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
-        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n");
-    m.def(
         "initialize_solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
             pbat::sim::algorithm::vbd::InitializeSolve<ElasticEnergyType>(fem, contact, params);
@@ -323,7 +310,85 @@ void BindCore(nanobind::module_& m)
         nb::arg("fem"),
         nb::arg("contact"),
         nb::arg("params"),
-        "Initialize the VBD minimization solve.\n\n"
+        "Computes OGC query radius, updates the constraint set, restores feasibility,\n"
+        "and resets solver state.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n");
+    m.def(
+        "linearize_constraints",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact) {
+            pbat::sim::algorithm::vbd::LinearizeConstraints<ElasticEnergyType>(fem, contact);
+        },
+        nb::arg("fem"),
+        nb::arg("contact"),
+        "Linearize contact constraints at the current iterate.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n");
+    m.def(
+        "check_convergence",
+        [](FemElastoDynamics<ElasticEnergyType>& fem,
+           MeshDynamicsType const& contact,
+           Params& params) {
+            return pbat::sim::algorithm::vbd::CheckConvergence<ElasticEnergyType>(
+                fem,
+                contact,
+                params);
+        },
+        nb::arg("fem"),
+        nb::arg("contact"),
+        nb::arg("params"),
+        "Check convergence of VBD solve.\n\n"
+        "Computes the full gradient (elastic + momentum + contact) and checks if its norm\n"
+        "is below the convergence threshold params.gtol.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n\n"
+        "Returns:\n"
+        "    bool: True if converged, False otherwise.");
+    m.def(
+        "prepare_subproblem",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
+            pbat::sim::algorithm::vbd::PrepareSubproblem<ElasticEnergyType>(fem, contact, params);
+        },
+        nb::arg("fem"),
+        nb::arg("contact"),
+        nb::arg("params"),
+        "Prepare a linearized constraint subproblem.\n\n"
+        "Assembles the block-diagonal dynamics Hessian, updates the penalty parameter,\n"
+        "and optionally resets the stencil gradient acceleration coefficients.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n");
+    m.def(
+        "iterate",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
+            pbat::sim::algorithm::vbd::Iterate<ElasticEnergyType>(fem, contact, params);
+        },
+        nb::arg("fem"),
+        nb::arg("contact"),
+        nb::arg("params"),
+        "Perform one alternate slack and position update on the augmented Lagrangian subproblem "
+        "using VBD.\n\n"
+        "Args:\n"
+        "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
+        "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n");
+    m.def(
+        "finalize_subproblem",
+        [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
+            pbat::sim::algorithm::vbd::FinalizeSubproblem<ElasticEnergyType>(fem, contact, params);
+        },
+        nb::arg("fem"),
+        nb::arg("contact"),
+        nb::arg("params"),
+        "Finalize the current linearized constraint subproblem.\n\n"
+        "Updates dual variables (slack, Lagrange multiplier, decay), restores feasibility,\n"
+        "and updates the constraint set for the next subproblem.\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
@@ -331,16 +396,29 @@ void BindCore(nanobind::module_& m)
     m.def(
         "solve",
         [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {
-            pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, contact, params);
+            return pbat::sim::algorithm::vbd::Solve<ElasticEnergyType>(fem, contact, params);
         },
         nb::arg("fem"),
         nb::arg("contact"),
         nb::arg("params"),
         "Solve the VBD minimization.\n\n"
+        "High-level convenience function. The equivalent low-level loop is:\n"
+        "  initialize_solve(fem, contact, params)\n"
+        "  for params.k in range(params.n_max_iters):\n"
+        "      linearize_constraints(fem, contact)\n"
+        "      if check_convergence(fem, contact, params): break\n"
+        "      prepare_subproblem(fem, contact, params)\n"
+        "      params.kp = 0\n"
+        "      while params.kp < params.n_subproblem_max_iters:\n"
+        "          iterate(fem, contact, params)\n"
+        "      finalize_subproblem(fem, contact, params)\n"
+        "  fem.back_substitute_integrated_positions_into_velocities()\n\n"
         "Args:\n"
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
-        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters");
+        "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
+        "Returns:\n"
+        "    bool: True if the solver converged, False otherwise\n");
     m.def(
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem, MeshDynamicsType& contact, Params& params) {

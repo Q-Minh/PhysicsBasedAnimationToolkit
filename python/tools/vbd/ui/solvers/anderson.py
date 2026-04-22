@@ -75,15 +75,17 @@ class AndersonSolver(BaseSolver):
         anderson = params.anderson_params
         if callback is None:
             callback = lambda: None
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
         callback()
-        while vbd.k < vbd.n_max_iters:
-            if contact.requires_constraint_set_update:
-                contact.update_constraint_set(fem.x)
-            pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)
-            fem.x = contact.restore_feasibility(fem.x, fem.dmask)
-            callback()
-        fem.back_substitute_integrated_positions_into_velocities()
+        # TODO: Update Anderson solver for most recent SAL contact framework
+        # pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, anderson)
+        # callback()
+        # while vbd.k < vbd.n_max_iters:
+        #     if contact.requires_constraint_set_update:
+        #         contact.update_constraint_set(fem.x)
+        #     pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, anderson)
+        #     fem.x = contact.restore_feasibility(fem.x, fem.dmask)
+        #     callback()
+        # fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params

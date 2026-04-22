@@ -236,12 +236,15 @@ bool CheckConvergence(
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact problem
  * @param params Solver parameters
+ * @param bAssumePostConvergenceCheck If true, assumes that `CheckConvergence()` has been called
+ * prior in the current iteration
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void PrepareSubproblem(
     FemElastoDynamics<TElasticEnergy>& fem,
     MeshDynamics& contact,
-    Params& params);
+    Params& params,
+    bool bAssumePostConvergenceCheck = true);
 
 /**
  * @brief Prepare next iteration of the current linearized constraint subproblem.
@@ -249,14 +252,15 @@ void PrepareSubproblem(
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact problem
  * @param params Solver parameters
- * @param bAreSubproblemDerivativesDirty Whether to compute subproblem derivatives
+ * @param bAssumePostConvergenceCheck If true, assumes that `CheckConvergence()` has been called
+ * prior in the current iteration
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void PrepareNextIteration(
     FemElastoDynamics<TElasticEnergy>& fem,
     MeshDynamics& contact,
     Params& params,
-    bool bAreSubproblemDerivativesDirty = true);
+    bool bAssumePostConvergenceCheck = true);
 
 /**
  * @brief One Newton iteration of the current linearized constraint subproblem.
@@ -273,8 +277,8 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
 /**
  * @brief Finalize the current linearized constraint subproblem.
  *
- * Restores feasibility, updates the constraint set, and increments the outer iteration counter
- * `params.k`.
+ * Updates dual variables (slack, Lagrange multiplier), globally restores feasibility,
+ * and updates the constraint set.
  *
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem
@@ -644,7 +648,8 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 bool CheckConvergence(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.CheckConvergence");
-    ToGradient(fem, contact, params.newton.gk);
+    ComputeElasticDerivatives(fem, contact, params);
+    ToGradient(fem, contact, params.newton.gk, false /*bForSubproblem*/);
     params.newton.gknorm2 = params.newton.gk.squaredNorm();
     bool const bConverged = params.newton.gknorm2 <= params.newton.gtol2;
     return bConverged;
@@ -654,10 +659,12 @@ template <physics::CHyperElasticEnergy TElasticEnergy>
 void PrepareSubproblem(
     FemElastoDynamics<TElasticEnergy>& fem,
     MeshDynamics& contact,
-    Params& params)
+    Params& params,
+    bool bAssumePostConvergenceCheck)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareSubproblem");
-    ComputeElasticDerivatives(fem, contact, params);
+    if (not bAssumePostConvergenceCheck)
+        ComputeElasticDerivatives(fem, contact, params);
     AssembleHessian(fem, contact, params, false /*bWithContacts*/);
     contact.UpdatePenaltyParameter(params.hessian);
     params.newton.InitializeSolve(fem.x);
@@ -668,18 +675,18 @@ void PrepareNextIteration(
     FemElastoDynamics<TElasticEnergy>& fem,
     MeshDynamics& contact,
     Params& params,
-    bool bAreSubproblemDerivativesDirty)
+    bool bAssumePostConvergenceCheck)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareNextIteration");
     auto xk = fem.x.reshaped();
     params.newton.PrepareNextIteration(
         [&]([[maybe_unused]] auto const& _xk) {
-            if (bAreSubproblemDerivativesDirty)
+            if (not bAssumePostConvergenceCheck)
                 ComputeElasticDerivatives<TElasticEnergy>(fem, contact, params);
             return MeritFunctionFromPrecomputedPotentials(fem, contact);
         } /* fPrepareDerivatives */,
         [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
-            ToGradient(fem, contact, gk);
+            ToGradient(fem, contact, gk, true /*bForSubproblem*/);
         } /* g */,
         xk /* xk */);
 }
@@ -710,10 +717,10 @@ void FinalizeSubproblem(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.FinalizeSubproblem");
     using EDualVariable = MeshDynamics::EDualVariable;
-    contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(fem.x);
-    contact.RestoreFeasibility(fem.x, fem.dmask);
+    contact.UpdateDual<
+        EDualVariable::Slack | EDualVariable::LagrangeMultiplier | EDualVariable::Decay>(fem.x);
+    RestoreFeasibility(fem, contact, params, contact.DynamicPointPositions());
     contact.UpdateConstraintSet(fem.x);
-    ++params.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -721,22 +728,14 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.Solve");
     auto xk = fem.x.reshaped();
+    bool bConverged{false};
     for (; params.k < params.nMaxIters; ++params.k)
     {
-        // 1. Linearize constraints
-        auto xt = fem.bdf.CurrentState();
-        contact.LinearizeConstraints(xk, xt);
-        // 2. Check KKT conditions and exit if converged
-        ComputeElasticDerivatives(fem, contact, params);
-        ToGradient(fem, contact, params.newton.gk, false /*bForSubproblem*/);
-        params.newton.gknorm2 = params.newton.gk.squaredNorm();
-        if (params.newton.gknorm2 <= params.newton.gtol2)
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+        if (bConverged)
             break;
-        // 3. Update barrier parameters
-        AssembleHessian(fem, contact, params, false /*bWithContacts*/);
-        contact.UpdatePenaltyParameter(params.hessian);
-        // 4. Newton solve the linear constraint subproblem
-        params.newton.InitializeSolve(fem.x);
+        PrepareSubproblem(fem, contact, params);
         [[maybe_unused]] bool const bSubproblemConverged = params.newton.Solve(
             [&]([[maybe_unused]] auto const& xk) {
                 if (params.newton.k > 0)
@@ -758,16 +757,14 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
                 HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
             } /* Hinv */,
             xk /* x0 */);
-        // 5. Dual update
-        using EDualVariable = typename MeshDynamics::EDualVariable;
-        contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(xk);
-        // 5. Restore feasibility.
-        GloballyRestoreFeasibility(fem, contact, params, contact.DynamicPointPositions());
-        // 6. Update constraint set using the subproblem solution for ahead-of-time exploration.
-        contact.UpdateConstraintSet(fem.x);
+        FinalizeSubproblem(fem, contact, params);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
-    bool const bConverged = params.newton.gknorm2 <= params.newton.gtol2;
+    if (not bConverged)
+    {
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+    }
     return bConverged;
 }
 

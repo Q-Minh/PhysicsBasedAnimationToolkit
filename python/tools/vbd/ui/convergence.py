@@ -86,13 +86,7 @@ class Convergence:
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
     ):
-        xt = -fem.bdf.inertia().reshape((3, -1), order="F")
-        bt = fem.bdf.beta_tilde
-        contact.update_constraint_set(x)
-        contact.compute_energies(
-            x, xt, bt, pbat.sim.contact.EMeshEnergyComputationFlags.Potential
-        )
-        return fem.objective(x) + contact.potential
+        return fem.objective(x) + contact.potential(x)
 
     def gradient(
         self,
@@ -100,13 +94,9 @@ class Convergence:
         fem: pbat.sim.dynamics.FemElastoDynamics,
         contact: pbat.sim.contact.MeshDynamics,
     ):
-        xt = -fem.bdf.inertia().reshape((3, -1), order="F")
-        bt = fem.bdf.beta_tilde
-        contact.update_constraint_set(x)
-        contact.compute_energies(
-            x, xt, bt, pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
-        )
-        return fem.gradient(x) + contact.gradient
+        gc = contact.gradient(x, for_augmented_lagrangian=False)
+        gd = fem.gradient(x)
+        return gd + gc
 
     def analyze_convergence(
         self,
@@ -167,6 +157,8 @@ class Convergence:
         contact: pbat.sim.contact.MeshDynamics,
         xs: list[list[np.ndarray]],
     ):
+        xt = -fem.bdf.inertia().reshape((3, -1), order="F")
+        contact.linearize_constraints(fem.x, xt)
         fs = self.objective(fem.x, fem, contact)
         gs = self.gradient(fem.x, fem, contact)
         gsnorm2 = np.dot(gs, gs)
