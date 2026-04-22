@@ -178,7 +178,7 @@ class Contact:
 
         # Compute contact energies
         flags = pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
-        self._contact_dynamics.compute_displacement_bounds(x)
+        self._contact_dynamics.update_constraint_set(x)
         self._contact_dynamics.compute_energies(x, xt, h, flags)
 
         # Get the gradients (3*|# points| x 1) and reshape to (|# points| x 3)
@@ -298,7 +298,7 @@ class Contact:
 
         # Compute contact energies
         flags = pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
-        self._contact_dynamics.compute_displacement_bounds(x)
+        self._contact_dynamics.update_constraint_set(x)
         self._contact_dynamics.compute_energies(x, xt, h, flags)
 
         # Mesh-mesh contacts

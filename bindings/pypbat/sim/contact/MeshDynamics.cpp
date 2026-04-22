@@ -367,7 +367,8 @@ void BindMeshDynamics(nanobind::module_& m)
         .def_prop_ro(
             "ogc_state",
             [](MeshDynamicsType& self) -> decltype(auto) { return self.OgcState(); },
-            "OGC state.");
+            "OGC state.")
+        .def_prop_ro("num_contacts", &MeshDynamicsType::NumContacts, "Total number of contacts.");
 }
 
 } // namespace pbat::py::sim::contact

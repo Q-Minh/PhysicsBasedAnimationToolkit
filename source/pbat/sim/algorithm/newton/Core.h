@@ -23,7 +23,6 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <algorithm>
 #include <exception>
-#include <fmt/core.h>
 #include <variant>
 
 namespace pbat::sim::algorithm::newton {
@@ -617,6 +616,8 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& conta
     contact.GetParams().ComputeQueryRadius((fem.xtilde - xt).colwise().norm().maxCoeff());
     contact.UpdateConstraintSet(xt);
     RestoreFeasibility(fem, contact, params, xt);
+    params.newton.gk.resize(fem.x.size()); // Resize Newton optimizer's gradient buffer, because we
+                                           // use it doubly for checking KKT conditions
     params.k = 0;
 }
 

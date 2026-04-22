@@ -88,7 +88,7 @@ class Convergence:
     ):
         xt = -fem.bdf.inertia().reshape((3, -1), order="F")
         bt = fem.bdf.beta_tilde
-        contact.compute_displacement_bounds(x)
+        contact.update_constraint_set(x)
         contact.compute_energies(
             x, xt, bt, pbat.sim.contact.EMeshEnergyComputationFlags.Potential
         )
@@ -102,7 +102,7 @@ class Convergence:
     ):
         xt = -fem.bdf.inertia().reshape((3, -1), order="F")
         bt = fem.bdf.beta_tilde
-        contact.compute_displacement_bounds(x)
+        contact.update_constraint_set(x)
         contact.compute_energies(
             x, xt, bt, pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
         )

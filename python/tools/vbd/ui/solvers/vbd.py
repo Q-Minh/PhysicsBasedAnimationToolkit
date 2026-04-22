@@ -56,11 +56,11 @@ class VbdSolver(BaseSolver):
 
         def iterate():
             if contact.requires_bounds_computation:
-                contact.compute_displacement_bounds(fem.x)
+                contact.update_constraint_set(fem.x)
             xk = fem.x.copy()
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
             fem.x = xk + self._step_size * (fem.x - xk)
-            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
+            fem.x = contact.make_feasible(fem.x, fem.dmask)
             callback()
 
         for k in range(params.n_max_iters):

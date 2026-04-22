@@ -164,7 +164,7 @@ class Simulation:
             self._constrain()
             self._update_visuals_after_position_change()
             if self._contact.contact_dynamics is not None:
-                self._contact.contact_dynamics.compute_displacement_bounds(
+                self._contact.contact_dynamics.update_constraint_set(
                     self._fem_dynamics.X
                 )
             # self._energy_history_kinetic = []
@@ -175,6 +175,7 @@ class Simulation:
         if self._fem_dynamics is None:
             ps.error("No simulation scenario loaded!")
             return
+        self._contact.contact_dynamics.params.construct()
         self._apply_procedural_constraints()
         self._profiler.begin_frame("Physics")
         self._fem_dynamics.setup_time_integration_optimization(

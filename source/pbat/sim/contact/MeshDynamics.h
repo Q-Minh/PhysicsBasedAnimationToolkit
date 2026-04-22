@@ -512,6 +512,15 @@ class MeshDynamics
         Eigen::MatrixBase<TDerivedg>& g,
         bool bForLinearSubproblem = false) const;
     /**
+     * @brief Get the total number of contacts
+     * @return Total number of contacts
+     */
+    auto NumContacts() const
+    {
+        return mPointPointContacts.Size() + mPointEdgeContacts.Size() +
+               mPointTriangleContacts.Size() + mEdgeEdgeContacts.Size();
+    }
+    /**
      * @brief Get the Params object
      * @return Reference to the parameters
      */

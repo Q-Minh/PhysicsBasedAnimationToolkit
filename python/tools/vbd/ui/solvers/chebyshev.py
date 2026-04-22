@@ -78,9 +78,9 @@ class ChebyshevSolver(BaseSolver):
         callback()
         while vbd.k < vbd.n_max_iters:
             if contact.requires_bounds_computation:
-                contact.compute_displacement_bounds(fem.x)
+                contact.update_constraint_set(fem.x)
             pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
-            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
+            fem.x = contact.make_feasible(fem.x, fem.dmask)
             callback()
         fem.back_substitute_integrated_positions_into_velocities()
 
