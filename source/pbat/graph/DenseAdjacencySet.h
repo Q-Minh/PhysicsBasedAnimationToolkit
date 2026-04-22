@@ -98,6 +98,15 @@ class DenseAdjacencySet
         requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
     TIndex Subtract(TIncomingAdjacencies&& B);
     /**
+     * @brief Remove edges satisfying a predicate.
+     * @tparam FPredicate Callable with signature `bool(TIndex u, TIndex v, TIndex k)` where `k`
+     * indexes into Data<TData>(). Return `true` to remove the edge.
+     * @param f Predicate
+     * @return Number of edges removed
+     */
+    template <class FPredicate>
+    TIndex RemoveIf(FPredicate&& f);
+    /**
      * @brief Finalize the adjacency set by computing its prefix sum over edge source vertices.
      * @param nSourceVertices Number of source vertices
      */
@@ -238,33 +247,6 @@ class DenseAdjacencySet
     std::vector<TIndex> mDataToId;       ///< index into mData -> id
     std::tuple<std::vector<T>...> mData; ///< Per-edge associated data
 };
-
-template <common::CIndex TIndex, class... T>
-inline void DenseAdjacencySet<TIndex, T...>::AddEdge(TIndex u, TIndex v)
-{
-    auto id = static_cast<TIndex>(mIdToData.size());
-    auto c  = static_cast<TIndex>(mDataToId.size());
-    mIdToData.push_back(c);
-    mDataToId.push_back(id);
-    mAdjacencies.push_back(std::make_tuple(u, v, id));
-    std::apply([](auto&&... data) { (data.emplace_back(), ...); }, mData);
-}
-
-template <common::CIndex TIndex, class... T>
-inline void DenseAdjacencySet<TIndex, T...>::RemoveEdgeData(TIndex id)
-{
-    auto c    = mIdToData[id];
-    auto last = static_cast<TIndex>(mDataToId.size() - 1);
-    using std::swap;
-    std::apply([&](auto&&... data) { (swap(data[c], data[last]), ...); }, mData);
-    // Update indirection for the element that was at 'last'
-    auto movedId       = mDataToId[last];
-    mIdToData[movedId] = c;
-    mDataToId[c]       = movedId;
-    // Shrink the data array
-    mDataToId.pop_back();
-    std::apply([](auto&&... data) { (data.pop_back(), ...); }, mData);
-}
 
 template <common::CIndex TIndex, class... T>
 inline void
@@ -438,6 +420,33 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Subtract(TIncomingAdjacencies&& B
 }
 
 template <common::CIndex TIndex, class... T>
+template <class FPredicate>
+inline TIndex DenseAdjacencySet<TIndex, T...>::RemoveIf(FPredicate&& f)
+{
+    auto write = mAdjacencies.begin();
+    auto read  = mAdjacencies.begin();
+    auto end   = mAdjacencies.end();
+    while (read != end)
+    {
+        auto const& [u, v, id] = *read;
+        if (f(u, v, mIdToData[id]))
+        {
+            RemoveEdgeData(id);
+        }
+        else
+        {
+            if (write != read)
+                *write = *read;
+            ++write;
+        }
+        ++read;
+    }
+    auto nRemoved = static_cast<TIndex>(std::distance(write, end));
+    mAdjacencies.erase(write, end);
+    return nRemoved;
+}
+
+template <common::CIndex TIndex, class... T>
 inline void DenseAdjacencySet<TIndex, T...>::Finalize(std::size_t nSourceVertices)
 {
     if (nSourceVertices == 0)
@@ -545,6 +554,33 @@ inline void DenseAdjacencySet<TIndex, T...>::ForEach(FOnAdjacency&& f) const
             f(u, v);
         }
     }
+}
+
+template <common::CIndex TIndex, class... T>
+inline void DenseAdjacencySet<TIndex, T...>::AddEdge(TIndex u, TIndex v)
+{
+    auto id = static_cast<TIndex>(mIdToData.size());
+    auto c  = static_cast<TIndex>(mDataToId.size());
+    mIdToData.push_back(c);
+    mDataToId.push_back(id);
+    mAdjacencies.push_back(std::make_tuple(u, v, id));
+    std::apply([](auto&&... data) { (data.emplace_back(), ...); }, mData);
+}
+
+template <common::CIndex TIndex, class... T>
+inline void DenseAdjacencySet<TIndex, T...>::RemoveEdgeData(TIndex id)
+{
+    auto c    = mIdToData[id];
+    auto last = static_cast<TIndex>(mDataToId.size() - 1);
+    using std::swap;
+    std::apply([&](auto&&... data) { (swap(data[c], data[last]), ...); }, mData);
+    // Update indirection for the element that was at 'last'
+    auto movedId       = mDataToId[last];
+    mIdToData[movedId] = c;
+    mDataToId[c]       = movedId;
+    // Shrink the data array
+    mDataToId.pop_back();
+    std::apply([](auto&&... data) { (data.pop_back(), ...); }, mData);
 }
 
 } // namespace graph

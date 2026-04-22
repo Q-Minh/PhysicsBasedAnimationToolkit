@@ -469,6 +469,144 @@ TEST_CASE("[graph] DenseAdjacencySet")
         }
     }
 
+    SUBCASE("RemoveIf on empty set is a no-op")
+    {
+        DenseAdjacencySet<int, EdgeData> adj;
+        auto nRemoved = adj.RemoveIf([](int, int, int) { return true; });
+        CHECK(nRemoved == 0);
+        CHECK(adj.Size() == 0u);
+    }
+
+    SUBCASE("RemoveIf with always-false predicate removes nothing")
+    {
+        DenseAdjacencySet<int, EdgeData> adj;
+        std::vector<std::pair<int, int>> edges{{0, 1}, {1, 2}, {2, 3}};
+        adj.Assign(edges);
+        adj.ForEach([&](int u, int v, int k) { adj.Data<EdgeData>(k).tag = u * 100 + v; });
+        auto nRemoved = adj.RemoveIf([](int, int, int) { return false; });
+        CHECK(nRemoved == 0);
+        CHECK(adj.Size() == 3u);
+        adj.ForEach(
+            [&](int u, int v, int k) { CHECK(adj.Data<EdgeData>(k).tag == u * 100 + v); });
+    }
+
+    SUBCASE("RemoveIf with always-true predicate removes everything")
+    {
+        DenseAdjacencySet<int, EdgeData> adj;
+        std::vector<std::pair<int, int>> edges{{0, 1}, {1, 2}, {2, 3}};
+        adj.Assign(edges);
+        auto nRemoved = adj.RemoveIf([](int, int, int) { return true; });
+        CHECK(nRemoved == 3);
+        CHECK(adj.Size() == 0u);
+        CHECK(adj.Data<EdgeData>().empty());
+    }
+
+    SUBCASE("RemoveIf removes edges matching a predicate on endpoints")
+    {
+        DenseAdjacencySet<int, EdgeData> adj;
+        std::vector<std::pair<int, int>> edges{{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}};
+        adj.Assign(edges);
+        adj.ForEach([&](int u, int v, int k) { adj.Data<EdgeData>(k).weight = 1.f; });
+        // Remove edges whose source vertex is even
+        auto nRemoved = adj.RemoveIf([](int u, int, int) { return u % 2 == 0; });
+        adj.Finalize();
+        CHECK(nRemoved == 3); // (0,1), (2,3), (4,5) removed
+        CHECK(adj.Size() == 2u);
+        // Remaining edges kept their data
+        int k12 = adj.Has(1, 2);
+        CHECK(k12 >= 0);
+        CHECK(adj.Data<EdgeData>(k12).weight == 1.f);
+        int k34 = adj.Has(3, 4);
+        CHECK(k34 >= 0);
+        CHECK(adj.Data<EdgeData>(k34).weight == 1.f);
+        // Removed edges are gone
+        CHECK(adj.Has(0, 1) < 0);
+        CHECK(adj.Has(2, 3) < 0);
+        CHECK(adj.Has(4, 5) < 0);
+    }
+
+    SUBCASE("RemoveIf removes edges matching a predicate on data")
+    {
+        DenseAdjacencySet<int, EdgeData> adj;
+        std::vector<std::pair<int, int>> edges{{0, 1}, {1, 2}, {2, 3}, {3, 4}};
+        adj.Assign(edges);
+        // Tag specific edges for removal
+        adj.ForEach([&](int u, int v, int k) {
+            adj.Data<EdgeData>(k).tag   = u * 100 + v;
+            adj.Data<EdgeData>(k).weight = (u == 1 || u == 3) ? -1.f : 1.f;
+        });
+        // Remove edges with negative weight
+        auto nRemoved =
+            adj.RemoveIf([&](int, int, int k) { return adj.Data<EdgeData>(k).weight < 0.f; });
+        adj.Finalize();
+        CHECK(nRemoved == 2); // (1,2), (3,4) removed
+        CHECK(adj.Size() == 2u);
+        int k01 = adj.Has(0, 1);
+        CHECK(k01 >= 0);
+        CHECK(adj.Data<EdgeData>(k01).tag == 0 * 100 + 1);
+        int k23 = adj.Has(2, 3);
+        CHECK(k23 >= 0);
+        CHECK(adj.Data<EdgeData>(k23).tag == 2 * 100 + 3);
+    }
+
+    SUBCASE("RemoveIf preserves sorted order")
+    {
+        DenseAdjacencySet<int, EdgeData> adj;
+        std::vector<std::pair<int, int>> edges{
+            {0, 1}, {0, 2}, {1, 0}, {1, 3}, {2, 1}, {2, 4}, {3, 0}, {3, 2}};
+        adj.Assign(edges);
+        // Remove every other edge by index
+        int idx = 0;
+        adj.RemoveIf([&](int, int, int) { return (idx++) % 2 == 0; });
+        // Verify remaining edges are still sorted
+        std::vector<std::pair<int, int>> remaining;
+        adj.ForEach([&](int u, int v) { remaining.push_back({u, v}); });
+        CHECK(std::ranges::is_sorted(remaining));
+        CHECK(remaining.size() == 4u);
+    }
+
+    SUBCASE("Multiple RemoveIf operations converge correctly")
+    {
+        DenseAdjacencySet<int, EdgeData> adj;
+        std::set<std::pair<int, int>> expected;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, 7);
+
+        // Build initial set
+        std::vector<std::pair<int, int>> edges;
+        for (int i = 0; i < 30; ++i)
+            edges.push_back({dis(gen), dis(gen)});
+        std::ranges::sort(edges);
+        edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+        adj.Assign(edges);
+        for (auto const& e : edges)
+            expected.insert(e);
+        adj.ForEach([&](int u, int v, int k) { adj.Data<EdgeData>(k).tag = u * 100 + v; });
+
+        // Round 1: remove edges with source vertex == 0
+        adj.RemoveIf([](int u, int, int) { return u == 0; });
+        std::erase_if(expected, [](auto const& e) { return e.first == 0; });
+        CHECK(adj.Size() == expected.size());
+
+        // Round 2: remove edges with target vertex > 5
+        adj.RemoveIf([](int, int v, int) { return v > 5; });
+        std::erase_if(expected, [](auto const& e) { return e.second > 5; });
+        CHECK(adj.Size() == expected.size());
+
+        // Verify surviving edges kept their data
+        adj.ForEach(
+            [&](int u, int v, int k) { CHECK(adj.Data<EdgeData>(k).tag == u * 100 + v); });
+        // Verify all expected edges exist
+        adj.Finalize();
+        for (auto const& [u, v] : expected)
+        {
+            int k = adj.Has(u, v);
+            CHECK(k >= 0);
+            CHECK(adj.Data<EdgeData>(k).tag == u * 100 + v);
+        }
+    }
+
     SUBCASE("CompactIds shrinks indirection tables")
     {
         DenseAdjacencySet<int, EdgeData> adj;
