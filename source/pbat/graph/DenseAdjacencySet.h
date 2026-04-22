@@ -157,6 +157,8 @@ class DenseAdjacencySet
 
   private:
     std::vector<std::tuple<TIndex, TIndex, TIndex>> mAdjacencies; ///< (source, target, id) tuples
+    std::vector<std::tuple<TIndex, TIndex, TIndex>>
+        mCpy;                            ///< Copy of the adjacency list for std::merge
     std::vector<TIndex> mPrefix;         ///< Prefix sums for efficient range queries
     std::vector<TIndex> mIdToData;       ///< id -> index into mData
     std::vector<TIndex> mDataToId;       ///< index into mData -> id
@@ -168,6 +170,7 @@ inline void
 DenseAdjacencySet<TIndex, T...>::Reserve(std::size_t nAdjacencies, std::size_t nSourceVertices)
 {
     mAdjacencies.reserve(nAdjacencies);
+    mCpy.reserve(nAdjacencies);
     mPrefix.reserve(nSourceVertices + 1);
     mIdToData.reserve(nAdjacencies);
     mDataToId.reserve(nAdjacencies);
@@ -263,11 +266,16 @@ inline void DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_, b
         }
     });
     // 4. Merge (A and B) with (B \ A)
-    std::ranges::inplace_merge(
-        mAdjacencies,
-        mAdjacencies.begin() + mid,
+    std::ranges::merge(
+        std::ranges::subrange(mAdjacencies.begin(), mAdjacencies.begin() + mid),
+        std::ranges::subrange(mAdjacencies.begin() + mid, mAdjacencies.end()),
+        std::back_inserter(mCpy),
         std::ranges::less{},
+        fProj,
         fProj);
+    using std::swap;
+    swap(mAdjacencies, mCpy);
+    mCpy.clear();
     // 5. If keys are signed, then restore B_ via the relation u' = -u - 1 <=> u = -u' - 1
     if (bAreKeysSigned and bTryRestoreB)
         std::ranges::for_each(B_, [&](auto&& tup) {
