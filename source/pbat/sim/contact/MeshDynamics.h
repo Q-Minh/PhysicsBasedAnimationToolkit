@@ -54,7 +54,7 @@ class MeshDynamics
     /**
      * @brief Constraint decay value with default 1-initialization semantics
      */
-    struct Decay
+    struct OneInitializedScalar
     {
         TScalar gamma{1}; ///< Ensure 1-initialization
     };
@@ -67,7 +67,7 @@ class MeshDynamics
         TIndex,
         /*0*/ TScalar /*lambda*/,
         /*1*/ TScalar /*s*/,
-        /*2*/ Decay /*gamma*/,
+        /*2*/ OneInitializedScalar /*gamma*/,
         /*3*/ TScalar /*chat*/,
         /*4*/ math::linalg::mini::SVector<TScalar, TDistance::kDofs> /*gradc*/,
         /*5*/ TScalar /*c(x)*/,
@@ -569,7 +569,7 @@ class MeshDynamics
     /**
      * @brief Enum for dual variable masks
      */
-    enum EDualVariable : int { Slack = 1 << 0, LagrangeMultiplier = 1 << 1 };
+    enum EDualVariable : int { Slack = 1 << 0, LagrangeMultiplier = 1 << 1, Decay = 1 << 2 };
     /**
      * @brief Update dual variables (slacks, multipliers)
      * @tparam Mask Bitmask for selecting which dual variable(s) to update
@@ -1461,7 +1461,7 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::RestoreFeasibility(
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
         xkp1 = xk + d;
-        common::AtomicAdd(nTruncated, Eigen::Index{1});
+        // common::AtomicAdd(nTruncated, Eigen::Index{1});
     });
     mNumTruncatedPoints += nTruncated;
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
@@ -1503,7 +1503,7 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::MakeStepFeasible(
             return;
         // x^{k+1} = x^k + (d/|d|)*b = x^k + d * (b/|d|)
         d *= (b / dnorm);
-        common::AtomicAdd(nTruncated, Eigen::Index{1});
+        // common::AtomicAdd(nTruncated, Eigen::Index{1});
     });
     mNumTruncatedPoints += nTruncated;
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
@@ -1586,7 +1586,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdatePenaltyParameter");
     auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
-    mParams.kc    = 0;
+    Scalar maxQ{0};
     ForAllContacts(
         [&]<class TContactSet>(
             typename TContactSet::AccessorType C,
@@ -1597,9 +1597,17 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
             static auto constexpr kStencil = ConstraintAccessorType::kStencil;
             auto nodes                     = LoadStencil<TContactSet>(stencil);
             TScalar Q                      = RayleighQuotient<kDims, kStencil>(H, C.Grad(), nodes);
-            C.Penalty()                    = mParams.gamma * Q;
-            auto F                         = C.Friction();
-            F.Penalty()                    = mParams.gammaf * Q;
+            pbat::common::AtomicMax(maxQ, Q);
+        },
+        nThreads);
+    ForAllContacts(
+        [&]<class TContactSet>(
+            typename TContactSet::AccessorType C,
+            Stencil stencil,
+            std::int32_t /*t*/) {
+            auto F      = C.Friction();
+            C.Penalty() = mParams.gamma * maxQ;
+            F.Penalty() = mParams.gammaf * maxQ;
         },
         nThreads);
 }
@@ -1624,14 +1632,13 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             {
                 C.Slack() =
                     std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / C.Penalty());
+            }
+            if (static_cast<bool>(Mask & EDualVariable::Decay))
+            {
                 if (C.Slack() == TScalar(0))
-                {
                     C.Decay() = TScalar(1);
-                }
                 else
-                {
-                    C.Decay() *= mParams.decay;
-                }
+                    C.Decay() *= mParams.decaylo;
             }
             if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
             {
@@ -2262,7 +2269,7 @@ void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
     std::vector<math::linalg::mini::SVector<TScalar, kDofs>> gradcs(nAdj);
     auto gradcsEig = grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("gradc");
     // Build data vectors
-    std::vector<Decay> decays(nAdj);
+    std::vector<OneInitializedScalar> decays(nAdj);
     for (Eigen::Index i = 0; i < nAdj; ++i)
     {
         decays[i].gamma = decaysS[i];
