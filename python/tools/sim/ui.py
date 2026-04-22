@@ -300,7 +300,7 @@ def main():
         "lambdag", fem_cpu.lamegU[1, :], defined_on="cells", enabled=False, cmap="blues"
     )
     vm.add_scalar_quantity(
-        "lumped mass", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
+        "m(i)", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
     )
     ps.set_user_callback(make_callback(state, UIState(), mesh_name))
     ps.show()
