@@ -28,6 +28,7 @@ namespace pbat::geometry {
 #include "IntersectionQueries.h"
 #include "KdTree.h"
 #include "MeshBoundary.h"
+#include "MeshDistance.h"
 #include "Morton.h"
 #include "OverlapQueries.h"
 #include "PointTriangleCcd.h"
