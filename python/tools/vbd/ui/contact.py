@@ -28,6 +28,13 @@ class Contact:
         "Edge-Edge",
     ]
 
+    _SORT_KEYS = [
+        ("None", None),
+        ("c(x)", lambda c: c.cx),
+        ("lambda", lambda c: c.lam),
+        ("slack", lambda c: c.slack),
+    ]
+
     def __init__(self):
         self._contact_dynamics = None
         self._contact_params = None
@@ -40,6 +47,9 @@ class Contact:
         self._stencil_cn = None
         self._stencil_sm = None
         self._normalize_gradients = False
+        # Sort order state: index into _SORT_KEYS and cached permutation per type
+        self._sort_key_idx = 0
+        self._sort_orders: dict[int, list[int]] = {0: [], 1: [], 2: [], 3: []}
         self.on_new_contact_dynamics(
             pbat.sim.contact.MeshDynamics(),
         )
@@ -53,9 +63,7 @@ class Contact:
                 params.mu, params.epsv
             )
             imgui.TreePop()
-        changed, self._show_debug = imgui.Checkbox(
-            "Debug Contacts", self._show_debug
-        )
+        changed, self._show_debug = imgui.Checkbox("Debug Contacts", self._show_debug)
         if changed and not self._show_debug:
             self._clear_stencil_visualization()
         if self._show_debug:
@@ -78,12 +86,24 @@ class Contact:
         ]
         total = sum(counts)
         imgui.Text(f"Total contacts: {total}")
+
+        # Sort order selector
+        sort_names = [name for name, _ in self._SORT_KEYS]
+        imgui.SetNextItemWidth(200)
+        sort_changed, self._sort_key_idx = imgui.Combo(
+            "Sort by##contact_sort", self._sort_key_idx, sort_names
+        )
+        if sort_changed:
+            self._rebuild_all_sort_orders()
+            # Reset browsing indices when sort changes
+            for k in self._selected_idx:
+                self._selected_idx[k] = 0
+            self._visualize_current_contact()
+
         imgui.Separator()
 
         # Contact type selector
-        for i, (name, count) in enumerate(
-            zip(self._CONTACT_TYPE_NAMES, counts)
-        ):
+        for i, (name, count) in enumerate(zip(self._CONTACT_TYPE_NAMES, counts)):
             selected = self._selected_type == i
             if imgui.Selectable(f"{name} ({count})##type{i}", selected)[0]:
                 self._selected_type = i
@@ -92,7 +112,8 @@ class Contact:
         imgui.Separator()
 
         contact_list = self._get_contact_list(self._selected_type)
-        n = len(contact_list)
+        order = self._sort_orders.get(self._selected_type, [])
+        n = len(order)
         if n == 0:
             imgui.Text("No contacts of this type.")
             return
@@ -105,9 +126,7 @@ class Contact:
             idx = max(0, idx - 1)
         imgui.SameLine()
         imgui.SetNextItemWidth(50)
-        _, idx = imgui.InputInt(
-            f"##idx{self._selected_type}", idx
-        )
+        _, idx = imgui.InputInt(f"##idx{self._selected_type}", idx)
         idx = max(0, min(idx, n - 1))
         imgui.SameLine()
         if imgui.Button(">##next"):
@@ -120,8 +139,8 @@ class Contact:
         if idx != old_idx:
             self._visualize_current_contact()
 
-        # Show scalar data for current contact
-        c = contact_list[idx]
+        # Show scalar data for current contact (via sorted indirection)
+        c = contact_list[order[idx]]
         if imgui.TreeNode("Details##contact_details"):
             imgui.Text(f"c(x) = {c.cx:.6g}")
             imgui.Text(f"lambda = {c.lam:.6g}")
@@ -143,23 +162,41 @@ class Contact:
         ]
         return lists[type_idx]
 
+    def _build_sort_order(self, type_idx: int) -> list[int]:
+        """Return a permutation (list of original indices) for the given contact type."""
+        contact_list = self._get_contact_list(type_idx)
+        n = len(contact_list)
+        if n == 0:
+            return []
+        _, key_fn = self._SORT_KEYS[self._sort_key_idx]
+        indices = list(range(n))
+        if key_fn is not None:
+            indices.sort(key=lambda i: key_fn(contact_list[i]))
+        return indices
+
+    def _rebuild_all_sort_orders(self):
+        """Recompute cached sort permutations for every contact type."""
+        for t in range(4):
+            self._sort_orders[t] = self._build_sort_order(t)
+
     def _visualize_current_contact(self):
         self._clear_stencil_visualization()
         contact_list = self._get_contact_list(self._selected_type)
-        if len(contact_list) == 0:
+        order = self._sort_orders.get(self._selected_type, [])
+        if len(order) == 0:
             return
         idx = self._selected_idx.get(self._selected_type, 0)
-        idx = max(0, min(idx, len(contact_list) - 1))
-        c = contact_list[idx]
+        idx = max(0, min(idx, len(order) - 1))
+        c = contact_list[order[idx]]
 
         # Xc is kDims x kStencil (3 x N), grad/gradx same shape
-        Xc = np.array(c.Xc)       # 3 x kStencil
-        grad = np.array(c.grad)    # 3 x kStencil
+        Xc = np.array(c.Xc)  # 3 x kStencil
+        grad = np.array(c.grad)  # 3 x kStencil
         gradx = np.array(c.gradx)  # 3 x kStencil
         if self._normalize_gradients:
             grad = self._normalized(grad)
             gradx = self._normalized(gradx)
-        pts = Xc.T                 # kStencil x 3
+        pts = Xc.T  # kStencil x 3
 
         if self._selected_type == 0:
             # Point-Point: 2 points
@@ -177,9 +214,7 @@ class Contact:
 
         elif self._selected_type == 1:
             # Point-Edge: point (0) + edge (1,2)
-            self._stencil_pc = ps.register_point_cloud(
-                "Contact Point", pts[0:1]
-            )
+            self._stencil_pc = ps.register_point_cloud("Contact Point", pts[0:1])
             self._stencil_pc.add_vector_quantity(
                 "grad (cached)", grad[:, 0:1].T, vectortype="standard"
             )
@@ -198,9 +233,7 @@ class Contact:
 
         elif self._selected_type == 2:
             # Point-Triangle: point (0) + triangle (1,2,3)
-            self._stencil_pc = ps.register_point_cloud(
-                "Contact Point", pts[0:1]
-            )
+            self._stencil_pc = ps.register_point_cloud("Contact Point", pts[0:1])
             self._stencil_pc.add_vector_quantity(
                 "grad (cached)", grad[:, 0:1].T, vectortype="standard"
             )
@@ -211,12 +244,16 @@ class Contact:
                 "Contact Triangle", pts[1:4], np.array([[0, 1, 2]])
             )
             self._stencil_sm.add_vector_quantity(
-                "grad (cached)", grad[:, 1:4].T, vectortype="standard",
-                defined_on="vertices"
+                "grad (cached)",
+                grad[:, 1:4].T,
+                vectortype="standard",
+                defined_on="vertices",
             )
             self._stencil_sm.add_vector_quantity(
-                "grad (at x)", gradx[:, 1:4].T, vectortype="standard",
-                defined_on="vertices"
+                "grad (at x)",
+                gradx[:, 1:4].T,
+                vectortype="standard",
+                defined_on="vertices",
             )
 
         elif self._selected_type == 3:
@@ -292,9 +329,8 @@ class Contact:
         """
         if self._contact_dynamics is None:
             return
-        self._debug_data = pbat.sim.contact.DebugMeshDynamics(
-            self._contact_dynamics, x
-        )
+        self._debug_data = pbat.sim.contact.DebugMeshDynamics(self._contact_dynamics, x)
+        self._rebuild_all_sort_orders()
         self._visualize_current_contact()
 
     @property

@@ -31,7 +31,6 @@ struct Contact
     ScalarType lambda;                             ///< Lagrange multiplier
     ScalarType slack;                              ///< Inequality slack variable
     ScalarType decay;                              ///< Decay factor
-    ScalarType chat;                               ///< c(x_k) - grad c(x_k) . x_k
     Eigen::Matrix<ScalarType, kDims, kStencil>
         grad; ///< Cached/stored gradient (from linearization)
     Eigen::Matrix<ScalarType, kDims, kStencil> gradx; ///< Computed gradient at current positions x
@@ -111,7 +110,6 @@ struct MeshDynamics
                 auto gradx             = C.Grad(xc);
                 contact.gradx          = ToEigen(gradx).reshaped(kDims, kStencil);
                 contact.cx             = C.Eval(xc);
-
                 if constexpr (std::is_same_v<TContactSet, PPSet>)
                     mPointPointContacts.push_back(std::move(contact));
                 else if constexpr (std::is_same_v<TContactSet, PESet>)
@@ -260,6 +258,18 @@ void BindMeshDynamics(nanobind::module_& m)
             "decaylo",
             &MeshDynamicsParamsType::decaylo,
             "(float) Decay threshold under which constraints are deactivated.");
+
+    nb::enum_<MeshDynamicsType::EComputeFlag>(m, "EComputeFlag", nb::is_arithmetic())
+        .value(
+            "Potential",
+            MeshDynamicsType::EComputeFlag::kPotential,
+            "Compute friction potential.")
+        .value("Gradient", MeshDynamicsType::EComputeFlag::kGradient, "Compute friction gradient.")
+        .value("Hessian", MeshDynamicsType::EComputeFlag::kHessian, "Compute friction hessian.")
+        .value(
+            "TangentBasis",
+            MeshDynamicsType::EComputeFlag::kTangentBasis,
+            "Update tangential basis.");
 
     nb::class_<MeshDynamicsType>(m, "MeshDynamics")
         .def(nb::init<>(), "Construct an empty mesh contact dynamics engine.")
@@ -454,6 +464,34 @@ void BindMeshDynamics(nanobind::module_& m)
             "Returns:\n"
             "    numpy.ndarray: `3*|# points| x 1` total contact gradient.\n")
         .def(
+            "compute_energy",
+            [](MeshDynamicsType& self,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& xt,
+               ScalarType h,
+               int computeFlags,
+               int eigFilterFlags) {
+                self.ComputeEnergy(
+                    x,
+                    xt,
+                    h,
+                    computeFlags,
+                    static_cast<pbat::math::linalg::EEigenvalueFilter>(eigFilterFlags));
+            },
+            nb::arg("x"),
+            nb::arg("xt"),
+            nb::arg("h"),
+            nb::arg("compute_flags"),
+            nb::arg("eigen_filter_flags") = 0,
+            "Compute friction energy data (tangent basis, gradient, hessian) for all contacts.\n\n"
+            "Args:\n"
+            "    x (numpy.ndarray): Current point positions.\n"
+            "    xt (numpy.ndarray): Point positions at the beginning of the time step.\n"
+            "    h (float): Time step size.\n"
+            "    compute_flags (int): Bitmask of EComputeFlag values.\n"
+            "    eigen_filter_flags (int, optional): Eigenvalue filtering strategy (0=None, "
+            "1=SpdProjection, 2=FlipNegative). Default is 0.\n")
+        .def(
             "serialize",
             &MeshDynamicsType::Serialize,
             nb::arg("archive"),
@@ -508,10 +546,10 @@ void BindMeshDynamics(nanobind::module_& m)
             .def_ro("lam", &ContactType::lambda, "Lagrange multiplier.")
             .def_ro("slack", &ContactType::slack, "Inequality slack variable.")
             .def_ro("decay", &ContactType::decay, "Decay factor.")
-            .def_ro("c", &ContactType::chat, "c(x_k) + grad c(x_k)^T (x - x_k).")
+            .def_ro("c", &ContactType::c, "c(x_k) + grad c(x_k)^T (x - x_k).")
             .def_ro("grad", &ContactType::grad, "grad c(x_k)")
             .def_ro("gradx", &ContactType::gradx, "grad c(x)")
-            .def_ro("cx", &ContactType::c, "c(x).");
+            .def_ro("cx", &ContactType::cx, "c(x).");
     };
 
     fBindDebugContact(nb::class_<DebugPointPointContact>(m, "DebugPointPointContact"));
