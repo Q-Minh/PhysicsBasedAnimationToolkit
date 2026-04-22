@@ -34,18 +34,17 @@ endif()
 
 message(STATUS "PBAT -- cppcheck project file: ${_pbat_cppcheck_project}")
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cppcheck)
 add_custom_target(PhysicsBasedAnimationToolkit_Cppcheck
     COMMAND ${CPPCHECK_EXECUTABLE}
         --project=${_pbat_cppcheck_project}
-        --enable=warning,performance,portability
+        --cppcheck-build-dir=${CMAKE_CURRENT_BINARY_DIR}/cppcheck
+        -i ${CMAKE_BINARY_DIR}
         --std=c++20
-        --suppress=missingIncludeSystem
-        --suppress=unmatchedSuppression
-        --inline-suppr
         --quiet
-        --template="{file}:{line}: [{severity}/{id}] {message}"
+        # --template="{file}:{line}: [{severity}/{id}] {message}"
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    COMMENT "PBAT -- Running cppcheck static analysis (${_pbat_cppcheck_project})..."
+    COMMENT "PBAT -- Running cppcheck static analysis on ${_pbat_cppcheck_project}"
     VERBATIM
 )
 set_target_properties(PhysicsBasedAnimationToolkit_Cppcheck PROPERTIES FOLDER "PhysicsBasedAnimationToolkit/analysis")
