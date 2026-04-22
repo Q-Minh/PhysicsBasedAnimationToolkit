@@ -22,16 +22,16 @@ from .kernels import (
 
 @wp.kernel
 def _vertex_solve_kernel(
+    pbegin: int,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
-    pbegin: int,
     h2: float,
 ):
     """Process one vertex in the current color partition."""
-    k = wp.tid()
+    tid = wp.tid()
     block_dims = wp.block_dim()
-    block_id = k / block_dims  # pyright: ignore[reportOperatorIssue]
-    local_tid = k % block_dims  # pyright: ignore[reportOperatorIssue]
+    block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
     i = params.Padj[
         pbegin + block_id  # pyright: ignore[reportOperatorIssue, reportIndexIssue]
     ]
@@ -112,9 +112,9 @@ def iterate(fem: FemElastoDynamics, params: Params):
         if n_verts_in_partition > 0:
             block_dim = 32
             wp.launch(
-                _vertex_solve_kernel,
+                kernel=_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[fem.data, params.data, p_begin, h2],
+                inputs=[p_begin, fem.data, params.data, h2],
                 block_dim=block_dim,
             )
 

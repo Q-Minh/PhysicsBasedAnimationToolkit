@@ -1,2 +1,2 @@
-from . import solver
+from . import solver, aaasolver
 from . import params

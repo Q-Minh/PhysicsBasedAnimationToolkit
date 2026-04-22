@@ -76,7 +76,7 @@ class ParamsData:
     gk: wp.array[wp.vec3f]  # (N,) vertex gradients
     xk: wp.array[wp.vec3f]  # (N,) vertex past iteration
     Hnk: wp.array[wp.float32]  # (N,) vertex Hessian norms
-    betaG: wp.array[wp.float32]  # (N,) vertex stencil gradient augmentation scales
+    betaG: wp.array2d[wp.float32]  # (N,2) vertex stencil gradient augmentation scales
     Hk: wp.array[wp.mat33f]  # (N,) (3x3) block-diagonal Hessian
 
 
@@ -117,7 +117,6 @@ class Params:
         self._data.vls_max_iters = int(params.vls_max_iters)
         self._data.vls_solver = int(_VLS_SOLVER_MAP[params.vlinsolve])
         # Stencil gradient acceleration
-        self._data.betaG0 = (float(params.betaG0), float(params.rhohatS))
         self._data.betaG0 = (float(params.betaG0), float(params.betaG0))
         self._data.rhohat = (float(params.rhohat), float(params.rhohatS))
         self._data.gammadown = (float(params.gammadown), float(params.gammadownS))
@@ -130,9 +129,7 @@ class Params:
         self._data.Hnk = wp.zeros(
             (n_nodes,), dtype=wp.float32
         )  # (N,) vertex Hessian norms
-        self._data.betaG = wp.zeros(
-            (n_nodes,), dtype=wp.float32
-        )  # (N,) vertex stencil gradient augmentation scales
+        self._data.betaG = wp.full((n_nodes, 2), params.betaG0, dtype=wp.float32)
         self._data.Hk = wp.zeros(
             (n_nodes,), dtype=wp.mat33f
         )  # (N,) (3x3) block-diagonal Hessian

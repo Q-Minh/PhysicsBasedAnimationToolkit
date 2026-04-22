@@ -20,9 +20,6 @@ from .gpu.vbd.params import Params
 from .gpu import vbd
 
 
-# --- Parameter UI utilities (from vbd/ui/params.py pattern) ---
-
-
 def try_draw_tooltip(obj, name):
     if imgui.IsItemHovered():
         imgui.BeginTooltip()
@@ -111,6 +108,11 @@ def load_vbd_params(
 # --- Simulation state ---
 
 
+class SolverType(enum.Enum):
+    VBD = 0
+    AAAVBD = 1
+
+
 class SimulationState:
     def __init__(
         self,
@@ -126,6 +128,9 @@ class SimulationState:
         self.init_strategy = (
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad
         )
+
+        # Solver selection
+        self.solver: SolverType = SolverType.AAAVBD
 
         # Configure time integration
         self.fem_cpu.set_time_integration_scheme(self.dt, self.bdf_scheme)
@@ -143,9 +148,14 @@ class SimulationState:
 
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
-        _, self.capture = vbd.solver.solve(
-            self.fem, self.params, capture=self.capture, request_capture=True
-        )
+        if self.solver == SolverType.AAAVBD:
+            _, self.capture = vbd.aaasolver.solve(
+                self.fem, self.params, capture=self.capture, request_capture=True
+            )
+        elif self.solver == SolverType.VBD:
+            _, self.capture = vbd.solver.solve(
+                self.fem, self.params, capture=self.capture, request_capture=True
+            )
         self.fem.step()
         self.t += 1
 
@@ -160,6 +170,8 @@ class SimulationState:
 
 def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
     def callback():
+        request_reset = False
+
         imgui.PushItemWidth(150)
         imgui.Text(f"Step: {state.t}  Time: {state.t * state.dt:.4f}s")
         imgui.Separator()
@@ -177,6 +189,20 @@ def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
                 "Init Strategy", idx, [s.name for s in init_strategies]
             )
             state.init_strategy = init_strategies[idx]
+            imgui.TreePop()
+
+        # --- Solver selection ---
+        if imgui.TreeNode("Solver"):
+            solvers = list(SolverType)
+            solver_idx = solvers.index(state.solver)
+            _, solver_idx = imgui.Combo(
+                "Solver", solver_idx, [s.name for s in solvers]
+            )
+            new_solver = solvers[solver_idx]
+            if new_solver != state.solver:
+                state.solver = new_solver
+                state.reset()
+                request_reset = True
             imgui.TreePop()
 
         # --- Solver params ---
@@ -198,7 +224,7 @@ def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
             _update_mesh(state, mesh_name)
 
         imgui.SameLine()
-        if imgui.Button("Reset"):
+        if imgui.Button("Reset") or request_reset:
             state.reset()
             _update_mesh(state, mesh_name)
 
