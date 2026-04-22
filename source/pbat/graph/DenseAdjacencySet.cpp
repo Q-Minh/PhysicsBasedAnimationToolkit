@@ -166,12 +166,14 @@ TEST_CASE("[graph] DenseAdjacencySet")
         adj.ForEach([&](int u, int v, int k) { adj.Data<EdgeData>(k).tag = u; });
 
         // Rebuild same set
+        std::ranges::sort(edges);
         adj.Assign(edges);
         CHECK(adj.Size() == n);
         adj.ForEach([&](int u, int v, int k) { CHECK_EQ(adj.Data<EdgeData>(k).tag, u); });
 
         // Rebuild half the set
         edges.erase(edges.begin() + n / 2, edges.end());
+        std::ranges::sort(edges);
         adj.Assign(edges);
         CHECK(adj.Size() == n / 2);
         adj.ForEach([&](int u, int v, int k) { CHECK_EQ(adj.Data<EdgeData>(k).tag, u); });

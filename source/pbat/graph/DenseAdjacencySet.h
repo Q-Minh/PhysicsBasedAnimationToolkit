@@ -52,17 +52,14 @@ class DenseAdjacencySet
      *
      * @tparam TIncomingAdjacencies Random access range over integer pair-like values
      * @param B Right operand
-     * @param bTryRestoreB Whether to attempt restoring B's elements after modification. Only
-     * applies if `std::is_signed_v<TIndex>`
      * @return Size of (A and B)
      * @pre `B` is sorted, contains no duplicates and has all values non-negative
-     * @post `B`'s elements that are already in A have their first tuple-element modified if `B` has
-     * elements of unsigned integer type or `bTryRestoreB` is false.
+     * @post `B`'s elements that are already in A are swapped to the back of B.
      * @post If `k >= |A and B|` then `Data<TData>(k)` is a new (default-constructed) data entry
      */
     template <std::ranges::random_access_range TIncomingAdjacencies>
         requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
-    TIndex Assign(TIncomingAdjacencies&& B, bool bTryRestoreB = true);
+    TIndex Assign(TIncomingAdjacencies&& B);
     /**
      * @brief Finalize the adjacency set by computing its prefix sum over edge source vertices.
      * @param nSourceVertices Number of source vertices
@@ -203,7 +200,7 @@ DenseAdjacencySet<TIndex, T...>::Reserve(std::size_t nAdjacencies, std::size_t n
 template <common::CIndex TIndex, class... T>
 template <std::ranges::random_access_range TIncomingAdjacencies>
     requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
-inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_, bool bTryRestoreB)
+inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_)
 {
     // Let A = *this
     bool constexpr bAreKeysSigned = std::is_signed_v<TIndex>;
@@ -226,67 +223,60 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_,
     auto B = std::views::transform(B_, fProj);
     assert(std::ranges::is_sorted(B));
     assert(std::ranges::adjacent_find(B) == std::ranges::end(B));
-    // 1. Mark elements in A to remove and elements in B that are already in A
-    auto ait  = std::ranges::begin(A);
-    auto bit  = std::ranges::begin(B);
-    auto aend = std::ranges::end(A);
-    auto bend = std::ranges::end(B);
-    while (ait != aend and bit != bend)
+    // 1. Swap elements of (A and B) to the front of A, and elements of (B \ A) to the front of B.
+    auto abegin = std::ranges::begin(mAdjacencies);
+    auto bbegin = std::ranges::begin(B_);
+    auto aend   = std::ranges::end(mAdjacencies);
+    auto bend   = std::ranges::end(B_);
+    auto ahead = abegin, atail = abegin;
+    auto bhead = bbegin, btail = bbegin;
+    while (ahead != aend and bhead != bend)
     {
-        auto cmp = *ait <=> *bit;
+        auto cmp = fProj(*ahead) <=> fProj(*bhead);
         if (cmp == 0)
         {
-            fSetNone(*bit);
-            ++ait;
-            ++bit;
+            ++bhead;
+            std::iter_swap(atail++, ahead++);
         }
         else if (cmp < 0)
         {
-            fSetNone(*ait);
-            ++ait;
+            ++ahead;
         }
         else // (cmp > 0)
         {
-            ++bit;
+            std::iter_swap(btail++, bhead++);
         }
     }
-    for (; ait != aend; ++ait)
-        fSetNone(*ait);
-    // 2. Remove elements from A while preserving sorted order
-    std::erase_if(mAdjacencies, [&](auto&& tup) {
-        bool const bRemove = fIsNone(tup);
-        if (bRemove)
-        {
-            // Remove data entries associated with adjacency i via swap/remove
-            auto const id = std::get<2>(tup);
-            auto c        = mIdToData[id];
-            auto last     = mDataToId.size() - 1;
-            using std::swap;
-            std::apply([&](auto&&... data) { (swap(data[c], data[last]), ...); }, mData);
-            // Update indirection for the element that was at 'last'
-            auto movedId       = mDataToId[last];
-            mIdToData[movedId] = c;
-            mDataToId[c]       = movedId;
-            // Shrink the data array
-            mDataToId.pop_back();
-            std::apply([](auto&&... data) { (data.pop_back(), ...); }, mData);
-        }
-        return bRemove;
+    while (bhead != bend)
+        std::iter_swap(btail++, bhead++);
+    // 2. Remove elements from (A \ B)
+    std::for_each(atail, aend, [&](auto&& tup) {
+        // Remove data entries associated with adjacency via swap/remove
+        auto const id = std::get<2>(tup);
+        auto c        = mIdToData[id];
+        auto last     = mDataToId.size() - 1;
+        using std::swap;
+        std::apply([&](auto&&... data) { (swap(data[c], data[last]), ...); }, mData);
+        // Update indirection for the element that was at 'last'
+        auto movedId       = mDataToId[last];
+        mIdToData[movedId] = c;
+        mDataToId[c]       = movedId;
+        // Shrink the data array
+        mDataToId.pop_back();
+        std::apply([](auto&&... data) { (data.pop_back(), ...); }, mData);
     });
-    auto mid = mAdjacencies.size(); // keep note of end of (A and B)
-    // 3. Stack (B \ A) contiguously after (A and B)
-    std::ranges::for_each(B, [&](auto&& tup) {
-        if (not fIsNone(tup))
-        {
-            // Append a new data entry and create its indirection
-            auto const& [u, v] = tup;
-            auto id            = mIdToData.size();
-            auto c             = mDataToId.size();
-            mIdToData.push_back(static_cast<TIndex>(c));
-            mDataToId.push_back(static_cast<TIndex>(id));
-            mAdjacencies.push_back(std::make_tuple(u, v, id));
-            std::apply([](auto&&... data) { (data.emplace_back(), ...); }, mData);
-        }
+    mAdjacencies.erase(atail, aend);
+    std::size_t mid = mAdjacencies.size(); // keep note of end of (A and B)
+    // 3. Add elements from (B \ A)
+    std::for_each(bbegin, btail, [&](auto&& tup) {
+        // Append a new data entry and create its indirection
+        auto const& [u, v] = fProj(tup);
+        auto id            = mIdToData.size();
+        auto c             = mDataToId.size();
+        mIdToData.push_back(static_cast<TIndex>(c));
+        mDataToId.push_back(static_cast<TIndex>(id));
+        mAdjacencies.push_back(std::make_tuple(u, v, id));
+        std::apply([](auto&&... data) { (data.emplace_back(), ...); }, mData);
     });
     // 4. Merge (A and B) with (B \ A)
     std::ranges::merge(
@@ -299,12 +289,6 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_,
     using std::swap;
     swap(mAdjacencies, mCpy);
     mCpy.clear();
-    // 5. If keys are signed, then restore B_ via the relation u' = -u - 1 <=> u = -u' - 1
-    if (bAreKeysSigned and bTryRestoreB)
-        std::ranges::for_each(B_, [&](auto&& tup) {
-            if (fIsNone(tup))
-                std::get<0>(tup) = -std::get<0>(tup) - 1;
-        });
     return mid;
 }
 

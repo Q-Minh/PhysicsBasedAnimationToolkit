@@ -1535,8 +1535,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
     using OgcStateType = decltype(mOgcState);
     tbb::task_group tg;
     auto const fUpdateContactSet = [&](auto& set, auto& newSet, auto nSourcePrimitives) {
-        bool constexpr bKeepNewSetAfterAssignment{false};
-        set.Assign(newSet, bKeepNewSetAfterAssignment);
+        set.Assign(newSet);
         set.Finalize(nSourcePrimitives);
     };
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
