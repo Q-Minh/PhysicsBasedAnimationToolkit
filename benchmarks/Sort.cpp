@@ -34,6 +34,8 @@ static void RunBenchmark(
         .performanceCounters(true);
     output = input;
     bench.run("std::sort", [&]() { std::ranges::sort(output); });
+    output = input;
+    bench.run("std::stable_sort", [&]() { std::ranges::stable_sort(output); });
     // Counting sort is not applicable to ranges of tuples
     if constexpr (not pbat::common::CTupleLike<T>)
     {
