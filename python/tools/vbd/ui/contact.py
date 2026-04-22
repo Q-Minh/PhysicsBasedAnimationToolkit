@@ -33,6 +33,7 @@ class Contact:
         ("c(x)", lambda c: c.cx),
         ("lambda", lambda c: c.lam),
         ("slack", lambda c: c.slack),
+        ("friction potential", lambda c: c.Ef),
     ]
 
     def __init__(self):
@@ -147,6 +148,7 @@ class Contact:
             imgui.Text(f"slack = {c.slack:.6g}")
             imgui.Text(f"decay = {c.decay:.6g}")
             imgui.Text(f"c = {c.c:.6g}")
+            imgui.Text(f"Ef = {c.Ef:.6g}")
             imgui.Text(f"u={c.u}, v={c.v} (gu={c.gu}, gv={c.gv})")
             imgui.Text(f"nodes = {list(c.nodes)}")
             imgui.TreePop()
@@ -193,9 +195,11 @@ class Contact:
         Xc = np.array(c.Xc)  # 3 x kStencil
         grad = np.array(c.grad)  # 3 x kStencil
         gradx = np.array(c.gradx)  # 3 x kStencil
+        fgrad = np.array(c.gradf)  # 3 x kStencil
         if self._normalize_gradients:
             grad = self._normalized(grad)
             gradx = self._normalized(gradx)
+            fgrad = self._normalized(fgrad)
         pts = Xc.T  # kStencil x 3
 
         if self._selected_type == 0:
@@ -206,6 +210,9 @@ class Contact:
             )
             self._stencil_pc.add_vector_quantity(
                 "grad (at x)", gradx.T, vectortype="standard"
+            )
+            self._stencil_pc.add_vector_quantity(
+                "friction grad", fgrad.T, vectortype="standard"
             )
             # Also show the edge connecting them
             self._stencil_cn = ps.register_curve_network(
@@ -221,6 +228,9 @@ class Contact:
             self._stencil_pc.add_vector_quantity(
                 "grad (at x)", gradx[:, 0:1].T, vectortype="standard"
             )
+            self._stencil_pc.add_vector_quantity(
+                "friction grad", fgrad[:, 0:1].T, vectortype="standard"
+            )
             self._stencil_cn = ps.register_curve_network(
                 "Contact Edge", pts[1:3], np.array([[0, 1]])
             )
@@ -229,6 +239,9 @@ class Contact:
             )
             self._stencil_cn.add_vector_quantity(
                 "grad (at x)", gradx[:, 1:3].T, vectortype="standard"
+            )
+            self._stencil_cn.add_vector_quantity(
+                "friction grad", fgrad[:, 1:3].T, vectortype="standard"
             )
 
         elif self._selected_type == 2:
@@ -239,6 +252,9 @@ class Contact:
             )
             self._stencil_pc.add_vector_quantity(
                 "grad (at x)", gradx[:, 0:1].T, vectortype="standard"
+            )
+            self._stencil_pc.add_vector_quantity(
+                "friction grad", fgrad[:, 0:1].T, vectortype="standard"
             )
             self._stencil_sm = ps.register_surface_mesh(
                 "Contact Triangle", pts[1:4], np.array([[0, 1, 2]])
@@ -255,6 +271,12 @@ class Contact:
                 vectortype="standard",
                 defined_on="vertices",
             )
+            self._stencil_sm.add_vector_quantity(
+                "friction grad",
+                fgrad[:, 1:4].T,
+                vectortype="standard",
+                defined_on="vertices",
+            )
 
         elif self._selected_type == 3:
             # Edge-Edge: edge (0,1) + edge (2,3)
@@ -268,6 +290,9 @@ class Contact:
             )
             self._stencil_cn.add_vector_quantity(
                 "grad (at x)", gradx.T, vectortype="standard"
+            )
+            self._stencil_cn.add_vector_quantity(
+                "friction grad", fgrad.T, vectortype="standard"
             )
 
     @staticmethod

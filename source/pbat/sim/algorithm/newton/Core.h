@@ -318,7 +318,7 @@ Scalar MeritFunctionFromPrecomputedPotentials(
     Scalar bt2 = bt * bt;
     Scalar U   = fem::HyperElasticPotential(fem.UgU);
     Scalar K   = fem.MomentumEnergy(fem.x);
-    Scalar C   = contact.Potential(fem.x, true /*bForLinearSubproblem*/);
+    Scalar C   = contact.Potential(fem.x);
     return K + bt2 * U + C;
 }
 
@@ -352,6 +352,27 @@ void ComputeElasticDerivatives(
 
 /**
  * @brief Derivative precomputation for the given finite element elasto dynamics problem.
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact problem
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void ComputeFrictionDerivatives(FemElastoDynamics<TElasticEnergy> const& fem, MeshDynamics& contact)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ComputeFrictionDerivatives");
+    // Precompute friction energy and its derivatives
+    auto xt = -fem.bdf.Inertia(0);
+    auto bt = fem.bdf.BetaTilde();
+    contact.ComputeEnergy(
+        fem.x,
+        xt,
+        bt,
+        MeshDynamics::EComputeFlags::Hessian,
+        math::linalg::EEigenvalueFilter::SpdProjection);
+}
+
+/**
+ * @brief Derivative precomputation for the given finite element elasto dynamics problem.
  *
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem
@@ -371,7 +392,7 @@ void ToGradient(
     // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
     gk.setZero();
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
-    contact.ToGradient(fem.x, gk, bForSubproblem);
+    contact.ToGradient(fem.x, gk);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
     gk(fem.DirichletDofs()).setZero();
 }
@@ -465,6 +486,12 @@ void AssembleHessian(
                 auto gamma                     = /*C.Decay()*/ 1;
                 auto mu                        = contactParams.kc;
                 Scalar dH                      = gamma * mu;
+                auto F                         = C.Friction();
+                auto const& Hfu                = F.Hessian();
+                auto const& Tf                 = F.TangentBasis();
+                auto const& Wf                 = F.Weights();
+                using SMatrixDD                = math::linalg::mini::SMatrix<Scalar, kDims, kDims>;
+                SMatrixDD Hf                   = Tf * Hfu * Tf.Transpose();
                 static auto constexpr kStencil = ConstraintAccessorType::kStencil;
                 for (auto jl = 0; jl < kStencil; ++jl)
                 {
@@ -474,12 +501,14 @@ void AssembleHessian(
                     {
                         if (nodes[il] >= nDynamicNodes)
                             continue;
+                        Scalar wf = Wf(jl) * Wf(il);
                         for (auto jd = 0; jd < kDims; ++jd)
                             for (auto id = 0; id < kDims; ++id)
                                 params.triplets.emplace_back(
                                     nodes[il] * kDims + id,
                                     nodes[jl] * kDims + jd,
-                                    dH * gradc(il * kDims + id) * gradc(jl * kDims + jd));
+                                    dH * gradc(il * kDims + id) * gradc(jl * kDims + jd) +
+                                        wf * Hf(id, jd));
                     }
                 }
             },
@@ -671,7 +700,7 @@ void PrepareNextIteration(
             return MeritFunctionFromPrecomputedPotentials(fem, contact);
         } /* fPrepareDerivatives */,
         [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
-            ToGradient(fem, contact, gk, true /*bForSubproblem*/);
+            ToGradient(fem, contact, gk);
         } /* g */,
         xk /* xk */);
 }
@@ -683,7 +712,7 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
     auto xk = fem.x.reshaped();
     return params.newton.Iterate(
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            return fem.Objective(xk) + contact.Potential(xk, true /*bForLinearSubproblem*/);
+            return fem.Objective(xk) + contact.Potential(xk);
         } /* f */,
         [&]([[maybe_unused]] auto const& _xk,
             Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,
@@ -719,6 +748,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         contact.LinearizeConstraints(xk);
         // 2. Check KKT conditions and exit if converged
         ComputeElasticDerivatives(fem, contact, params);
+        ComputeFrictionDerivatives(fem, contact);
         ToGradient(fem, contact, params.newton.gk);
         params.newton.gknorm2 = params.newton.gk.squaredNorm();
         if (params.newton.gknorm2 <= params.newton.gtol2)
@@ -732,15 +762,21 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             [&]([[maybe_unused]] auto const& xk) {
                 if (params.newton.k > 0)
                     ComputeElasticDerivatives<TElasticEnergy>(fem, contact, params);
+                ComputeFrictionDerivatives(fem, contact);
                 return MeritFunctionFromPrecomputedPotentials(fem, contact);
             } /* fPrepareDerivatives */,
             [&](auto const& xk) {
                 Scalar Edyn = fem.Objective(xk);
-                Scalar Econ = contact.Potential(xk, true /*bForLinearSubproblem*/);
+                contact.ComputeEnergy(
+                    xk,
+                    -fem.bdf.Inertia(0),
+                    fem.bdf.BetaTilde(),
+                    MeshDynamics::EComputeFlags::Potential);
+                Scalar Econ = contact.Potential(xk);
                 return Edyn + Econ;
             } /* f */,
             [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
-                ToGradient(fem, contact, gk, true /*bForSubproblem*/);
+                ToGradient(fem, contact, gk);
             } /* g */,
             [&]([[maybe_unused]] auto const& _xk,
                 Eigen::Vector<Scalar, Eigen::Dynamic> const& gk,

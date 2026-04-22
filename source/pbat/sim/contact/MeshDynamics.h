@@ -22,6 +22,7 @@
 #include "pbat/graph/DenseAdjacencySet.h"
 #include "pbat/io/Archive.h"
 #include "pbat/math/linalg/FilterEigenvalues.h"
+#include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/math/linalg/mini/Matrix.h"
 #include "pbat/profiling/Profiling.h"
 #include "pbat/sim/contact/Friction.h"
@@ -65,13 +66,186 @@ class MeshDynamics
     template <geometry::CMeshDistance TDistance>
     using ConstraintSet = graph::DenseAdjacencySet<
         TIndex,
-        TScalar /*lambda*/,
-        TScalar /*s*/,
-        Decay /*gamma*/,
-        TScalar /*chat*/,
-        math::linalg::mini::SVector<TScalar, TDistance::kDofs> /*gradc*/,
-        TScalar /*c(x)*/
+        /*0*/ TScalar /*lambda*/,
+        /*1*/ TScalar /*s*/,
+        /*2*/ Decay /*gamma*/,
+        /*3*/ TScalar /*chat*/,
+        /*4*/ math::linalg::mini::SVector<TScalar, TDistance::kDofs> /*gradc*/,
+        /*5*/ TScalar /*c(x)*/,
+        /*6*/ math::linalg::mini::SMatrix<TScalar, 3, 2> /*tangent basis*/,
+        /*7*/
+        math::linalg::mini::SVector<TScalar, TDistance::kStencil> /*tangential operator weights*/,
+        /*8*/ TScalar /*friction potential*/,
+        /*9*/ math::linalg::mini::SVector<TScalar, 2> /*friction grad*/,
+        /*10*/ math::linalg::mini::SMatrix<TScalar, 2, 2> /*friction hess*/
         >;
+    /**
+     * @brief Compute flags for the MeshDynamics
+     */
+    enum class EComputeFlags : int {
+        Potential = 1 << 0, ///< Compute potential
+        Gradient  = 1 << 1, ///< Compute potential and gradient
+        Hessian   = 1 << 2  ///< Compute potential, gradient and hessian
+    };
+    /**
+     * @brief Friction data accessor
+     * @tparam TContactSet Contact set type (possibly const)
+     */
+    template <class TContactSet>
+    struct FrictionAccessor
+    {
+        using ContactSetType = TContactSet; ///< Contact set type
+        using ConstraintFunctionType =
+            typename TContactSet::ConstraintFunctionType; ///< Constraint function type
+        static auto constexpr kStencil = ConstraintFunctionType::kStencil; ///< Stencil size
+        static auto constexpr kDims    = ConstraintFunctionType::kDims;    ///< Dimension size
+        static auto constexpr kDofs    = ConstraintFunctionType::kDofs; ///< Degree of freedom size
+        ContactSetType& set; ///< Reference to the contact set (possibly const)
+        TIndex k;            ///< Constraint data index
+        /**
+         * @brief Tangential basis at the contact point \f$ \mathbf{T} \in \mathbb{R}^{3 \times 2}
+         * \f$
+         * @return math::linalg::mini::SMatrix<TScalar, 3, 2>& or const&
+         */
+        auto& TangentBasis() { return set.template Data<6>(k); }
+        /**
+         * @brief Weights \f$ W \f$ s.t. \f$ u = T^T W v \f$ for stencil
+         * velocity \f$ v \f$ and tangent space (2D) velocity \f$ u \f$.
+         * @return math::linalg::mini::SVector<TScalar, kStencil>& or const&
+         */
+        auto& Weights() { return set.template Data<7>(k); }
+        /**
+         * @brief Friction potential
+         * @return TScalar& or const&
+         */
+        auto& Eval() { return set.template Data<8>(k); }
+        /**
+         * @brief Smooth friction potential's gradient w.r.t. tangent plane
+         * @return math::linalg::mini::SVector<TScalar, 2>& or const&
+         */
+        auto& Grad() { return set.template Data<9>(k); }
+        /**
+         * @brief Smooth friction potential's hessian w.r.t. tangent plane
+         * @return math::linalg::mini::SMatrix<TScalar, 2, 2>& or const&
+         */
+        auto& Hessian() { return set.template Data<10>(k); }
+        /**
+         * @brief Computes the potential and its derivatives and stores them
+         * @param xc `kDofs x 1` mini::CMatrix stencil positions
+         * @param xtc `kDofs x 1` mini::CMatrix stencil positions at time t
+         * @param muS Static friction coefficient
+         * @param lambdan Normal contact force magnitude
+         * @param epsvh Epsilon for velocity hardening
+         * @param eComputeFlags Compute flags
+         * @param eFilter Eigenvalue filter
+         */
+        void Compute(
+            auto&& xc,
+            auto&& xtc,
+            TScalar muS,
+            TScalar lambdan,
+            TScalar epsvh,
+            EComputeFlags eComputeFlags,
+            math::linalg::EEigenvalueFilter eFilter =
+                math::linalg::EEigenvalueFilter::SpdProjection)
+        {
+            using namespace math::linalg::mini;
+            SVector<TScalar, 3> dxk = Zeros<TScalar, 3>();
+            auto const& W           = Weights();
+            auto const& T           = TangentBasis();
+            auto Xc                 = Reshape<kDims, kStencil>(xc);
+            auto Xtc                = Reshape<kDims, kStencil>(xtc);
+            common::ForRange<0, kStencil>(
+                [&]<auto i>() { dxk += W(i) * (Xc.Col(i) - Xtc.Col(i)); });
+            SVector<TScalar, 2> uk = T.Transpose() * dxk;
+            potentials::LaggedFriction F;
+            switch (eComputeFlags)
+            {
+                case EComputeFlags::Hessian: {
+                    auto& gk = Grad();
+                    auto& Hk = Hessian();
+                    Eval()   = F.EvalWithGradAndHessian(uk, muS, lambdan, epsvh, gk, Hk);
+                    Hk       = math::linalg::FilterEigenvalues(Hk, eFilter);
+                }
+                break;
+                case EComputeFlags::Gradient: {
+                    auto& gk = Grad();
+                    Eval()   = F.EvalWithGrad(uk, muS, lambdan, epsvh, gk);
+                }
+                break;
+                case EComputeFlags::Potential: {
+                    Eval() = F.Eval(uk, muS, lambdan, epsvh);
+                }
+                break;
+                default: break;
+            }
+        }
+        /**
+         * @brief Compute and store tangent basis and weights from stencil positions.
+         * @tparam TDerivedXtc A mini matrix type
+         * @tparam TDerivedT A mini matrix type
+         * @tparam TDerivedW A mini matrix type
+         * @param Xtc `kDims x kStencil` stencil point positions
+         * @param T `3 x 2` tangent basis matrix
+         * @param W `kStencil x 1` weights vector
+         */
+        template <
+            math::linalg::mini::CMatrix TXtc,
+            math::linalg::mini::CMatrix TT,
+            math::linalg::mini::CMatrix TW>
+        void ComputeTangentBasisAndWeights(TXtc const& Xtc, TT& T, TW& W)
+        {
+            static_assert(
+                TXtc::kRows == kDims and TXtc::kCols == kStencil,
+                "Invalid stencil matrix shape");
+            static_assert(TT::kRows == 3 and TT::kCols == 2, "Invalid tangent basis matrix shape");
+            static_assert(TW::kRows == kStencil and TW::kCols == 1, "Invalid weights vector shape");
+            if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
+            {
+                T    = PointPointTangentialBasis(Xtc.Col(0), Xtc.Col(1));
+                W(0) = TScalar(1);
+                W(1) = -TScalar(1);
+            }
+            else if constexpr (std::is_same_v<TContactSet, PointEdgeContactSet>)
+            {
+                auto uv = geometry::ClosestPointQueries::UvPointOnLineSegment(
+                    Xtc.Col(0),
+                    Xtc.Col(1),
+                    Xtc.Col(2));
+                T    = PointEdgeTangentialBasis(Xtc.Col(0), Xtc.Col(1), Xtc.Col(2));
+                W(0) = TScalar(1);
+                W.template Slice<2, 1>(1, 0) = -uv;
+            }
+            else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
+            {
+                auto uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
+                    Xtc.Col(0),
+                    Xtc.Col(1),
+                    Xtc.Col(2),
+                    Xtc.Col(3));
+                T    = PointTriangleTangentialBasis(Xtc.Col(1), Xtc.Col(2), Xtc.Col(3));
+                W(0) = TScalar(1);
+                W.template Slice<3, 1>(1, 0) = -uvw;
+            }
+            else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
+            {
+                auto st = geometry::ClosestPointQueries::LineSegments(
+                    Xtc.Col(0),
+                    Xtc.Col(1),
+                    Xtc.Col(2),
+                    Xtc.Col(3));
+                T    = EdgeEdgeTangentialBasis(Xtc.Col(0), Xtc.Col(1), Xtc.Col(2), Xtc.Col(3));
+                W(0) = TScalar(1) - st(0);
+                W(1) = st(0);
+                W(2) = -(TScalar(1) - st(1));
+                W(3) = -(st(1));
+            }
+            else
+            {
+                static_assert(false, "Unsupported contact set");
+            }
+        }
+    };
     /**
      * @brief Lightweight accessor for constraint data in a contact set.
      * @tparam TContactSet Contact set type (possibly const)
@@ -87,6 +261,22 @@ class MeshDynamics
         static auto constexpr kDofs    = ConstraintFunctionType::kDofs; ///< Degree of freedom size
         ContactSetType& set; ///< Reference to the contact set (possibly const)
         TIndex k;            ///< Constraint data index
+        /**
+         * @brief Get the constraint function for this contact.
+         * @return ConstraintFunctionType 
+         */
+        ConstraintFunctionType Function() const { return ConstraintFunctionType{}; }
+        /**
+         * @brief Compute the linearization of the constraint at the given point.
+         * @param xc `kDims x kStencil` stencil node positions
+         */
+        void ComputeLinearization(auto&& xc)
+        {
+            ConstraintFunctionType d{};
+            Eval() = d.Eval(xc);
+            Grad() = d.Gradient(xc);
+            Chat() = Eval() - Dot(Grad(), xc);
+        }
         /**
          * @brief Lagrange multiplier
          * @return TScalar& or TScalar const&
@@ -119,26 +309,16 @@ class MeshDynamics
          */
         auto& Eval() { return set.template Data<5>(k); }
         /**
-         * @brief Evaluates the constraint function at `x`
+         * @brief Evaluates the linearized constraint function at `x`
          * @param x `kDofs x 1` mini::CMatrix
          * @return auto
          */
-        auto Eval(auto&& x, bool bLinearized = false)
-        {
-            return bLinearized ? Chat() + Dot(Grad(), x) : ConstraintFunctionType{}.Eval(x);
-        }
+        auto Eval(auto&& x) { return Chat() + Dot(Grad(), x); }
         /**
-         * @brief Evaluates the gradient of the constraint function at `x`
-         * @param x `kDofs x 1` mini::CMatrix
+         * @brief Friction data accessor
          * @return auto
          */
-        auto Grad(auto&& x) { return ConstraintFunctionType{}.Gradient(x); }
-        /**
-         * @brief Evaluates the hessian of the constraint function at `x`
-         * @param x `kDofs x 1` mini::CMatrix
-         * @return auto
-         */
-        auto Hessian(auto&& x) { return ConstraintFunctionType{}.Hessian(x); }
+        auto Friction() { return FrictionAccessor<TContactSet>{set, k}; }
     };
     /**
      * @brief Point-point contact constraint container
@@ -196,7 +376,7 @@ class MeshDynamics
         TScalar epsv{1e-3}; ///< IPC's relative velocity threshold for static to dynamic friction's
                             ///< smooth transition
         TScalar kc{1e3};    ///< OGC contact stiffness parameter, `kc > 0`
-        TScalar mu{0.5};    ///< OGC friction coefficient, `mu >= 0`
+        TScalar mu{0.5};    ///< Static friction coefficient, `mu >= 0`
         TScalar rqstart{0}; ///< Base query radius (larger than contact radius `r`) on which we add
                             ///< a linear function of inertial target distance to initialize the
                             ///< actual query radius
@@ -404,6 +584,23 @@ class MeshDynamics
     template <int Mask, class TDerivedx>
     void UpdateDual(Eigen::MatrixBase<TDerivedx> const& x);
     /**
+     * @brief Compute friction energy, gradient and/or hessian for all contacts.
+     * @tparam TDerivedx Position matrix type
+     * @tparam TDerivedxt Previous time step position matrix type
+     * @param x `3 x |# points|` or `3*|# points|` current point positions
+     * @param xt `3 x |# points|` or `3*|# points|` positions at the beginning of the time step
+     * @param h Time step size
+     * @param eComputeFlags Computation options for friction potential
+     * @param eFilter Eigenvalue filtering strategy for the friction hessian
+     */
+    template <class TDerivedx, class TDerivedxt>
+    void ComputeEnergy(
+        Eigen::MatrixBase<TDerivedx> const& x,
+        Eigen::MatrixBase<TDerivedxt> const& xt,
+        TScalar h,
+        EComputeFlags eComputeFlags,
+        math::linalg::EEigenvalueFilter eFilter = math::linalg::EEigenvalueFilter::SpdProjection);
+    /**
      * @brief Iterate over all contacts
      * @tparam FOnContact Callable type with signature `template <class TContactSet>
      * void(typename TContactSet::AccessorType C, Stencil stencil, std::int32_t threadId)`
@@ -495,23 +692,18 @@ class MeshDynamics
      * @brief Compute the total potential energy from all contacts
      * @tparam TDerivedx Matrix type
      * @param x `3 x |# points|` current point positions (column-major: one point per column)
-     * @param bForLinearSubproblem Whether the energy is being computed for a linear subproblem
-     * (from last `LinearizeConstraints()` call)
      * @return Total potential energy
      */
     template <class TDerivedx>
-    ScalarType
-    Potential(Eigen::MatrixBase<TDerivedx> const& x, bool bForLinearSubproblem = false) const;
+    ScalarType Potential(Eigen::MatrixBase<TDerivedx> const& x) const;
     /**
      * @brief Compute the total contact gradient
      * @tparam TDerivedx Matrix type
      * @param x `3 x |# points|` current point positions (column-major: one point per column)
-     * @param bForLinearSubproblem Whether the gradient is being computed for a linear subproblem
-     * (from last `LinearizeConstraints()` call)
      * @return Total contact gradient
      */
     template <class TDerivedx>
-    auto Gradient(Eigen::MatrixBase<TDerivedx> const& x, bool bForLinearSubproblem = false) const
+    auto Gradient(Eigen::MatrixBase<TDerivedx> const& x) const
         -> Eigen::Vector<ScalarType, Eigen::Dynamic>;
     /**
      * @brief Compute the total contact gradient and add it to `g`
@@ -519,14 +711,9 @@ class MeshDynamics
      * @tparam TDerivedg Writeable matrix type
      * @param x `3 x |# points|` current point positions (column-major: one point per column)
      * @param g `3*|# points| x 1` or `3 x |# points|` total contact gradient
-     * @param bForLinearSubproblem Whether the gradient is being computed for a linear subproblem
-     * (from last `LinearizeConstraints()` call)
      */
     template <class TDerivedx, class TDerivedg>
-    void ToGradient(
-        Eigen::MatrixBase<TDerivedx> const& x,
-        Eigen::MatrixBase<TDerivedg>& g,
-        bool bForLinearSubproblem = false) const;
+    void ToGradient(Eigen::MatrixBase<TDerivedx> const& x, Eigen::MatrixBase<TDerivedg>& g) const;
     /**
      * @brief Get the total number of contacts
      * @return Total number of contacts
@@ -546,6 +733,14 @@ class MeshDynamics
      * @return Reference to the parameters
      */
     Params& GetParams() { return mParams; }
+    /**
+     * @brief Get the dynamic point positions
+     * @return `3 x |# points|` dynamic point positions
+     */
+    auto DynamicPointPositions() const -> Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const&
+    {
+        return mXdynamic;
+    }
     /**
      * @brief Get the static point positions
      * @return `3 x |# points|` static point positions
@@ -1172,9 +1367,12 @@ MeshDynamics<TScalar, TIndex>::LinearizeConstraints(Eigen::MatrixBase<TDerivedx>
             using ConstraintAccessorType = decltype(C);
             auto const [Xc, _]           = LoadStencil<TContactSet>(x, stencil);
             auto xc                      = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
-            C.Eval()                     = C.Eval(xc);
-            C.Grad()                     = C.Grad(xc);
-            C.Chat()                     = C.Eval() - Dot(C.Grad(), xc);
+            C.ComputeLinearization(xc);
+            using FrictionAccessorType = decltype(C.Friction());
+            FrictionAccessorType F     = C.Friction();
+            auto& T                    = F.TangentBasis();
+            auto& W                    = F.Weights();
+            F.ComputeTangentBasisAndWeights(Xc, T, W);
         },
         nThreads);
 }
@@ -1216,7 +1414,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             using ConstraintAccessorType = decltype(C);
             auto const [Xc, nodes]       = LoadStencil<TContactSet>(x, stencil);
             auto xc                      = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
-            C.Eval()                     = C.Eval(xc, true /*bLinearized*/);
+            C.Eval()                     = C.Eval(xc);
             auto mu                      = mParams.kc;
             if (static_cast<bool>(Mask & EDualVariable::Slack))
                 C.Slack() = std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / mu);
@@ -1233,6 +1431,44 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
                     C.Decay() *= mParams.decay;
                 }
             }
+        },
+        nThreads);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedx, class TDerivedxt>
+inline void MeshDynamics<TScalar, TIndex>::ComputeEnergy(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    Eigen::MatrixBase<TDerivedxt> const& xt,
+    TScalar h,
+    EComputeFlags eComputeFlags,
+    math::linalg::EEigenvalueFilter eFilter)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeEnergy");
+    auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
+    ForAllContacts(
+        [&]<class TContactSet>(
+            typename TContactSet::AccessorType C,
+            Stencil stencil,
+            std::int32_t /*t*/) {
+            using ConstraintAccessorType   = decltype(C);
+            static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+            static auto constexpr kDims    = ConstraintAccessorType::kDims;
+            static auto constexpr kDofs    = ConstraintAccessorType::kDofs;
+            static_assert(kDims == 3, "Only 3D is supported");
+            // Load current and previous stencil positions
+            auto const [Xc, nodes]     = LoadStencil<TContactSet>(x, stencil);
+            auto const [Xtc, _]        = LoadStencil<TContactSet>(xt, stencil);
+            auto xc                    = Reshape<kDofs, 1>(Xc);
+            auto xtc                   = Reshape<kDofs, 1>(Xtc);
+            using FrictionAccessorType = decltype(C.Friction());
+            FrictionAccessorType F     = C.Friction();
+            // Compute the lagged normal force magnitude
+            TScalar cs = C.Eval(xc) - mParams.dmin - C.Slack();
+            // Force is negative gradient of potential
+            TScalar lambdan = std::max(TScalar(0), C.Lambda() - mParams.kc * cs);
+            TScalar epsvh   = mParams.epsv * h;
+            F.Compute(xc, xtc, mParams.mu, lambdan, epsvh, eComputeFlags, eFilter);
         },
         nThreads);
 }
@@ -1416,9 +1652,7 @@ void MeshDynamics<TScalar, TIndex>::SetDynamicGeometry(
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx>
-inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
-    Eigen::MatrixBase<TDerivedx> const& x,
-    bool bForLinearSubproblem) const
+inline TScalar MeshDynamics<TScalar, TIndex>::Potential(Eigen::MatrixBase<TDerivedx> const& x) const
 {
     TScalar E{0};
     ForAllContacts(
@@ -1433,9 +1667,11 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
             static_assert(kDims == 3, "Only 3D is supported");
             auto const [Xc, nodes] = LoadStencil<TContactSet>(x, stencil);
             auto xc                = Reshape<kDofs, 1>(Xc);
-            TScalar cs             = C.Eval(xc, bForLinearSubproblem) - mParams.dmin - C.Slack();
+            TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
             auto mu                = mParams.kc;
             E += /*C.Decay() **/ (TScalar(0.5) * mu * cs * cs - C.Lambda() * cs);
+            auto F = C.Friction();
+            E += F.Eval();
         },
         1 /*nThreads*/);
     return E;
@@ -1443,13 +1679,12 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx>
-inline auto MeshDynamics<TScalar, TIndex>::Gradient(
-    Eigen::MatrixBase<TDerivedx> const& x,
-    bool bForLinearSubproblem) const -> Eigen::Vector<TScalar, Eigen::Dynamic>
+inline auto MeshDynamics<TScalar, TIndex>::Gradient(Eigen::MatrixBase<TDerivedx> const& x) const
+    -> Eigen::Vector<TScalar, Eigen::Dynamic>
 {
     Eigen::Vector<TScalar, Eigen::Dynamic> grad(mXdynamic.size());
     grad.setZero();
-    ToGradient(x, grad, bForLinearSubproblem);
+    ToGradient(x, grad);
     return grad;
 }
 
@@ -1457,8 +1692,7 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx, class TDerivedg>
 inline void MeshDynamics<TScalar, TIndex>::ToGradient(
     Eigen::MatrixBase<TDerivedx> const& x,
-    Eigen::MatrixBase<TDerivedg>& g_,
-    bool bForLinearSubproblem) const
+    Eigen::MatrixBase<TDerivedg>& g_) const
 {
     auto g                    = g_.derived().reshaped();
     Eigen::Index const nNodes = g.size() / 3;
@@ -1474,20 +1708,23 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
             auto xc                = Reshape<kDofs, 1>(XC);
             auto mu                = mParams.kc;
-            TScalar cs             = C.Eval(xc, bForLinearSubproblem) - mParams.dmin - C.Slack();
+            TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
             TScalar dL             = /*C.Decay() **/ (mu * cs - C.Lambda());
-            auto const fAddGrad    = [&](auto&& gradc_) {
-                using math::linalg::mini::ToEigen;
-                auto gradc = ToEigen(gradc_);
-                for (auto ki = 0; ki < kStencil; ++ki)
-                    if (nodes[ki] < nNodes)
-                        g.template segment<kDims>(nodes[ki] * kDims) +=
-                            dL * gradc.template segment<kDims>(ki * kDims);
-            };
-            if (bForLinearSubproblem)
-                fAddGrad(C.Grad());
-            else
-                fAddGrad(C.Grad(xc));
+            auto F                 = C.Friction();
+            auto const& W          = F.Weights();
+            auto const& T          = F.TangentBasis();
+            math::linalg::mini::SVector<TScalar, 3> gf;
+            using math::linalg::mini::ToEigen;
+            auto gradc = ToEigen(C.Grad());
+            for (auto ki = 0; ki < kStencil; ++ki)
+            {
+                if (nodes[ki] < nNodes)
+                {
+                    gf = T * W(ki) * F.Grad();
+                    g.template segment<kDims>(nodes[ki] * kDims) +=
+                        dL * gradc.template segment<kDims>(ki * kDims) + ToEigen(gf);
+                }
+            }
         },
         1 /*nThreads*/);
 }
@@ -1605,7 +1842,8 @@ void MeshDynamics<TScalar, TIndex>::SerializeConstraintSet(
     TContactSet& contactSet,
     io::Archive& grp)
 {
-    static constexpr int kDofs = TContactSet::AccessorType::kDofs;
+    static constexpr int kDofs    = TContactSet::AccessorType::kDofs;
+    static constexpr int kStencil = TContactSet::AccessorType::kStencil;
     // NOTE: The contact set should already be compacted.
     // contactSet.CompactIds();
     auto const nAdj         = static_cast<Eigen::Index>(contactSet.Size());
@@ -1645,10 +1883,57 @@ void MeshDynamics<TScalar, TIndex>::SerializeConstraintSet(
         for (Eigen::Index i = 0; i < nAdj; ++i)
         {
             auto const& gradc = gradcs[i];
-            for (int d = 0; d < kDofs; ++d)
-                gradcsEig(d, i) = gradc(d);
+            gradcsEig.col(i)  = ToEigen(gradc);
         }
         grp.WriteData("gradc", gradcsEig);
+    }
+    // Friction data
+    auto const& tangentBases       = contactSet.template Data<6>();
+    auto const& tangentWeights     = contactSet.template Data<7>();
+    auto const& frictionPotentials = contactSet.template Data<8>();
+    auto const& frictionGrads      = contactSet.template Data<9>();
+    auto const& frictionHessians   = contactSet.template Data<10>();
+    using math::linalg::mini::ToEigen;
+    // Tangent basis as 3 x 2*nAdj matrix
+    {
+        Eigen::Matrix<TScalar, 3, Eigen::Dynamic> Teig(3, 2 * nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+        {
+            auto const& Ti                      = tangentBases[i];
+            Teig.template block<3, 2>(0, 2 * i) = ToEigen(Ti);
+        }
+        grp.WriteData("tangentBasis", Teig);
+    }
+    // Weights as kStencil x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, kStencil, Eigen::Dynamic> Weig(kStencil, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+        {
+            auto const& Wi = tangentWeights[i];
+            Weig.col(i)    = ToEigen(Wi);
+        }
+        grp.WriteData("tangentWeights", Weig);
+    }
+    // Friction potentials as nAdj vector
+    {
+        grp.WriteData("frictionPotential", frictionPotentials);
+    }
+    // Friction gradient as 2 x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, 2, Eigen::Dynamic> fgEig(2, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            fgEig.col(i) = ToEigen(frictionGrads[i]);
+        grp.WriteData("frictionGrad", fgEig);
+    }
+    // Friction hessian as 2 x 2*nAdj matrix
+    {
+        Eigen::Matrix<TScalar, 2, Eigen::Dynamic> fhEig(2, 2 * nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+        {
+            auto const& fhi                      = frictionHessians[i];
+            fhEig.template block<2, 2>(0, 2 * i) = ToEigen(fhi);
+        }
+        grp.WriteData("frictionHessian", fhEig);
     }
 }
 
@@ -1658,7 +1943,8 @@ void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
     TContactSet& contactSet,
     io::Archive const& grp)
 {
-    static constexpr int kDofs = TContactSet::AccessorType::kDofs;
+    static constexpr int kDofs    = TContactSet::AccessorType::kDofs;
+    static constexpr int kStencil = TContactSet::AccessorType::kStencil;
     // Read adjacencies + prefix
     auto adj = grp.ReadData<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>("adjacencies");
     auto const nAdj = adj.cols();
@@ -1683,6 +1969,49 @@ void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
         for (int d = 0; d < kDofs; ++d)
             gradc(d) = gradcsEig(d, i);
     }
+    // Friction data (optional for backward compatibility)
+    using SMatrix32         = math::linalg::mini::SMatrix<TScalar, 3, 2>;
+    using SVector2          = math::linalg::mini::SVector<TScalar, 2>;
+    using SMatrix22         = math::linalg::mini::SMatrix<TScalar, 2, 2>;
+    using WeightsVectorType = math::linalg::mini::SVector<TScalar, kStencil>;
+    std::vector<SMatrix32> tangentBases(nAdj);
+    std::vector<WeightsVectorType> tangentWeights(nAdj);
+    std::vector<TScalar> frictionPotentials(nAdj);
+    std::vector<SVector2> frictionGrads(nAdj);
+    std::vector<SMatrix22> frictionHessians(nAdj);
+    using math::linalg::mini::FromEigen;
+    if (grp.HasData("tangentBasis"))
+    {
+        auto tbEig =
+            grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("tangentBasis");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            tangentBases[i] = FromEigen(tbEig.template block<3, 2>(0, 2 * i));
+    }
+    if (grp.HasData("tangentWeights"))
+    {
+        auto Weig =
+            grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("tangentWeights");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            tangentWeights[i] = FromEigen(Weig.col(i).template head<kStencil>());
+    }
+    if (grp.HasData("frictionPotential"))
+    {
+        frictionPotentials = grp.ReadData<decltype(frictionPotentials)>("frictionPotential");
+    }
+    if (grp.HasData("frictionGrad"))
+    {
+        auto fgEig =
+            grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("frictionGrad");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            frictionGrads[i] = FromEigen(fgEig.col(i).template head<2>());
+    }
+    if (grp.HasData("frictionHessian"))
+    {
+        auto fhEig =
+            grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("frictionHessian");
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            frictionHessians[i] = FromEigen(fhEig.template block<2, 2>(0, 2 * i));
+    }
     // Construct the contact set from compact state
     contactSet.Construct(
         std::move(adjacencies),
@@ -1693,7 +2022,12 @@ void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
             std::move(decays),
             std::move(chats),
             std::move(gradcs),
-            std::move(evals)));
+            std::move(evals),
+            std::move(tangentBases),
+            std::move(tangentWeights),
+            std::move(frictionPotentials),
+            std::move(frictionGrads),
+            std::move(frictionHessians)));
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>

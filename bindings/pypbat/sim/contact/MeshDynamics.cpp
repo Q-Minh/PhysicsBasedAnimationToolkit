@@ -36,6 +36,9 @@ struct Contact
     Eigen::Matrix<ScalarType, kDims, kStencil> gradx; ///< Computed gradient at current positions x
     ScalarType c;  ///< Last evaluated linearized constraint value
     ScalarType cx; ///< Last evaluated constraint value
+    ScalarType Ef; ///< Friction potential (from last ComputeEnergy)
+    Eigen::Matrix<ScalarType, kDims, kStencil>
+        gradf; ///< Friction gradient in 3D (per stencil node)
 };
 
 struct MeshDynamics
@@ -105,11 +108,23 @@ struct MeshDynamics
                 contact.lambda         = C.Lambda();
                 contact.slack          = C.Slack();
                 contact.decay          = C.Decay();
-                contact.c              = C.Eval(xc, true /*bLinearized*/);
+                contact.c              = C.Eval(xc);
                 contact.grad           = ToEigen(C.Grad()).reshaped(kDims, kStencil);
-                auto gradx             = C.Grad(xc);
+                auto d                 = C.Function();
+                auto gradx             = d.Gradient(xc);
                 contact.gradx          = ToEigen(gradx).reshaped(kDims, kStencil);
-                contact.cx             = C.Eval(xc);
+                contact.cx             = d.Eval(xc);
+                // Friction data (stored from last ComputeEnergy call)
+                auto F          = C.Friction();
+                contact.Ef      = F.Eval();
+                auto const& W   = F.Weights();
+                auto const& T   = F.TangentBasis();
+                auto const& gfu = F.Grad(); // SVector<TScalar, 2>
+                for (int ki = 0; ki < kStencil; ++ki)
+                {
+                    SVector<ScalarType, kDims> gf = T * (W(ki) * gfu);
+                    contact.gradf.col(ki)         = ToEigen(gf);
+                }
                 if constexpr (std::is_same_v<TContactSet, PPSet>)
                     mPointPointContacts.push_back(std::move(contact));
                 else if constexpr (std::is_same_v<TContactSet, PESet>)
@@ -259,17 +274,19 @@ void BindMeshDynamics(nanobind::module_& m)
             &MeshDynamicsParamsType::decaylo,
             "(float) Decay threshold under which constraints are deactivated.");
 
-    nb::enum_<MeshDynamicsType::EComputeFlag>(m, "EComputeFlag", nb::is_arithmetic())
+    nb::enum_<MeshDynamicsType::EComputeFlags>(m, "EComputeFlags")
         .value(
             "Potential",
-            MeshDynamicsType::EComputeFlag::kPotential,
+            MeshDynamicsType::EComputeFlags::Potential,
             "Compute friction potential.")
-        .value("Gradient", MeshDynamicsType::EComputeFlag::kGradient, "Compute friction gradient.")
-        .value("Hessian", MeshDynamicsType::EComputeFlag::kHessian, "Compute friction hessian.")
         .value(
-            "TangentBasis",
-            MeshDynamicsType::EComputeFlag::kTangentBasis,
-            "Update tangential basis.");
+            "Gradient",
+            MeshDynamicsType::EComputeFlags::Gradient,
+            "Compute friction potential and gradient.")
+        .value(
+            "Hessian",
+            MeshDynamicsType::EComputeFlags::Hessian,
+            "Compute friction potential, gradient and hessian.");
 
     nb::class_<MeshDynamicsType>(m, "MeshDynamics")
         .def(nb::init<>(), "Construct an empty mesh contact dynamics engine.")
@@ -435,32 +452,27 @@ void BindMeshDynamics(nanobind::module_& m)
         .def(
             "potential",
             [](MeshDynamicsType const& self,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
-               bool bForLinearSubproblem) { return self.Potential(x, bForLinearSubproblem); },
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x) {
+                return self.Potential(x);
+            },
             nb::arg("x"),
-            nb::arg("for_linear_subproblem") = false,
             "Compute the total contact potential energy.\n\n"
             "Args:\n"
             "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` current point "
             "positions.\n"
-            "    for_linear_subproblem (bool, optional): Whether the energy is being computed for "
-            "a linear subproblem (from last `linearize_constraints()` call). Default is False.\n\n"
             "Returns:\n"
             "    float: Total contact potential energy.\n")
         .def(
             "gradient",
             [](MeshDynamicsType const& self,
-               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
-               bool bForLinearSubproblem) { return self.Gradient(x, bForLinearSubproblem); },
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x) {
+                return self.Gradient(x);
+            },
             nb::arg("x"),
-            nb::arg("for_linear_subproblem") = false,
             "Compute the total contact gradient.\n\n"
             "Args:\n"
             "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` current point "
             "positions.\n"
-            "    for_linear_subproblem (bool, optional): Whether the gradient is being computed "
-            "for a linear subproblem (from last `linearize_constraints()` call). Default is "
-            "False.\n\n"
             "Returns:\n"
             "    numpy.ndarray: `3*|# points| x 1` total contact gradient.\n")
         .def(
@@ -469,27 +481,23 @@ void BindMeshDynamics(nanobind::module_& m)
                nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x,
                nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& xt,
                ScalarType h,
-               int computeFlags,
-               int eigFilterFlags) {
-                self.ComputeEnergy(
-                    x,
-                    xt,
-                    h,
-                    computeFlags,
-                    static_cast<pbat::math::linalg::EEigenvalueFilter>(eigFilterFlags));
+               MeshDynamicsType::EComputeFlags computeFlags,
+               math::linalg::EEigenvalueFilter eigFilterFlags) {
+                self.ComputeEnergy(x, xt, h, computeFlags, eigFilterFlags);
             },
             nb::arg("x"),
             nb::arg("xt"),
             nb::arg("h"),
             nb::arg("compute_flags"),
-            nb::arg("eigen_filter_flags") = 0,
+            nb::arg("eigen_filter_flags") = math::linalg::EEigenvalueFilter::SpdProjection,
             "Compute friction energy data (tangent basis, gradient, hessian) for all contacts.\n\n"
             "Args:\n"
             "    x (numpy.ndarray): Current point positions.\n"
             "    xt (numpy.ndarray): Point positions at the beginning of the time step.\n"
             "    h (float): Time step size.\n"
-            "    compute_flags (int): Bitmask of EComputeFlag values.\n"
-            "    eigen_filter_flags (int, optional): Eigenvalue filtering strategy (0=None, "
+            "    compute_flags (MeshDynamics.ComputeFlags): Bitmask of EComputeFlag values.\n"
+            "    eigen_filter_flags (math.linalg.EigenvalueFilter, optional): Eigenvalue "
+            "filtering strategy (0=None, "
             "1=SpdProjection, 2=FlipNegative). Default is 0.\n")
         .def(
             "serialize",
@@ -549,7 +557,12 @@ void BindMeshDynamics(nanobind::module_& m)
             .def_ro("c", &ContactType::c, "c(x_k) + grad c(x_k)^T (x - x_k).")
             .def_ro("grad", &ContactType::grad, "grad c(x_k)")
             .def_ro("gradx", &ContactType::gradx, "grad c(x)")
-            .def_ro("cx", &ContactType::cx, "c(x).");
+            .def_ro("cx", &ContactType::cx, "c(x).")
+            .def_ro("Ef", &ContactType::Ef, "Friction potential (from last compute_energy call).")
+            .def_ro(
+                "gradf",
+                &ContactType::gradf,
+                "Friction gradient in 3D (from last compute_energy call).");
     };
 
     fBindDebugContact(nb::class_<DebugPointPointContact>(m, "DebugPointPointContact"));
