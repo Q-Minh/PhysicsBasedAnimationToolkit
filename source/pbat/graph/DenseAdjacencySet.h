@@ -29,6 +29,19 @@
 namespace pbat {
 namespace graph {
 
+/**
+ * @brief Stateful adjacency set with per-edge associated data
+ *
+ * - This set is stateful in that any edge present in the set before and after a set operation
+ * retains its associated data.
+ * - It preserves unique edges only.
+ * - Edges are stored in sorted order.
+ * - Edge data is stored contiguously in memory (in order of insertion). After many edge removals
+ * and insertions, no total order is guaranteed.
+ *
+ * @tparam TIndex Index type
+ * @tparam T Data type to store per-edge
+ */
 template <common::CIndex TIndex, class... T>
 class DenseAdjacencySet
 {
@@ -60,6 +73,30 @@ class DenseAdjacencySet
     template <std::ranges::random_access_range TIncomingAdjacencies>
         requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
     TIndex Assign(TIncomingAdjacencies&& B);
+    /**
+     * @brief Computes C <- (A or B), where A is *this pre-assignment, and C is *this
+     * post-assignment.
+     * @tparam TIncomingAdjacencies Random access range over integer pair-like values
+     * @param B Right operand
+     * @return Size of (B \ A)
+     * @pre `B` is sorted, contains no duplicates and has all values non-negative
+     * @post `B`'s elements that are already in A are swapped to the back of B.
+     * @post If `k >= |A and B|` then `Data<TData>(k)` is a new (default-constructed) data entry
+     */
+    template <std::ranges::random_access_range TIncomingAdjacencies>
+        requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
+    TIndex Union(TIncomingAdjacencies&& B);
+    /**
+     * @brief Computes C <- (A \ B), where A is *this pre-assignment, and C is *this
+     * post-assignment.
+     * @tparam TIncomingAdjacencies Random access range over integer pair-like values
+     * @param B Right operand
+     * @return Size of (A and B)
+     * @pre `B` is sorted, contains no duplicates and has all values non-negative
+     */
+    template <std::ranges::random_access_range TIncomingAdjacencies>
+        requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
+    TIndex Subtract(TIncomingAdjacencies&& B);
     /**
      * @brief Finalize the adjacency set by computing its prefix sum over edge source vertices.
      * @param nSourceVertices Number of source vertices
@@ -179,6 +216,19 @@ class DenseAdjacencySet
             mIdToData[std::get<2>(mAdjacencies[i])]);
     }
 
+  protected:
+    /**
+     * @brief Add a new edge (u,v) with default-constructed data.
+     * @param u Source vertex
+     * @param v Target vertex
+     */
+    void AddEdge(TIndex u, TIndex v);
+    /**
+     * @brief Remove an edge by its internal id, using swap-and-pop on the data arrays.
+     * @param id Internal id stored in the adjacency triplet
+     */
+    void RemoveEdgeData(TIndex id);
+
   private:
     std::vector<std::tuple<TIndex, TIndex, TIndex>> mAdjacencies; ///< (source, target, id) tuples
     std::vector<std::tuple<TIndex, TIndex, TIndex>>
@@ -188,6 +238,33 @@ class DenseAdjacencySet
     std::vector<TIndex> mDataToId;       ///< index into mData -> id
     std::tuple<std::vector<T>...> mData; ///< Per-edge associated data
 };
+
+template <common::CIndex TIndex, class... T>
+inline void DenseAdjacencySet<TIndex, T...>::AddEdge(TIndex u, TIndex v)
+{
+    auto id = static_cast<TIndex>(mIdToData.size());
+    auto c  = static_cast<TIndex>(mDataToId.size());
+    mIdToData.push_back(c);
+    mDataToId.push_back(id);
+    mAdjacencies.push_back(std::make_tuple(u, v, id));
+    std::apply([](auto&&... data) { (data.emplace_back(), ...); }, mData);
+}
+
+template <common::CIndex TIndex, class... T>
+inline void DenseAdjacencySet<TIndex, T...>::RemoveEdgeData(TIndex id)
+{
+    auto c    = mIdToData[id];
+    auto last = static_cast<TIndex>(mDataToId.size() - 1);
+    using std::swap;
+    std::apply([&](auto&&... data) { (swap(data[c], data[last]), ...); }, mData);
+    // Update indirection for the element that was at 'last'
+    auto movedId       = mDataToId[last];
+    mIdToData[movedId] = c;
+    mDataToId[c]       = movedId;
+    // Shrink the data array
+    mDataToId.pop_back();
+    std::apply([](auto&&... data) { (data.pop_back(), ...); }, mData);
+}
 
 template <common::CIndex TIndex, class... T>
 inline void
@@ -238,33 +315,13 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_)
     while (bhead != bend)
         std::iter_swap(btail++, bhead++);
     // 2. Remove elements from (A \ B)
-    std::for_each(atail, aend, [&](auto&& tup) {
-        // Remove data entries associated with adjacency via swap/remove
-        auto const id = std::get<2>(tup);
-        auto c        = mIdToData[id];
-        auto last     = mDataToId.size() - 1;
-        using std::swap;
-        std::apply([&](auto&&... data) { (swap(data[c], data[last]), ...); }, mData);
-        // Update indirection for the element that was at 'last'
-        auto movedId       = mDataToId[last];
-        mIdToData[movedId] = c;
-        mDataToId[c]       = movedId;
-        // Shrink the data array
-        mDataToId.pop_back();
-        std::apply([](auto&&... data) { (data.pop_back(), ...); }, mData);
-    });
+    std::for_each(atail, aend, [&](auto&& tup) { RemoveEdgeData(std::get<2>(tup)); });
     mAdjacencies.erase(atail, aend);
     std::size_t mid = mAdjacencies.size(); // keep note of end of (A and B)
     // 3. Add elements from (B \ A)
     std::for_each(bbegin, btail, [&](auto&& tup) {
-        // Append a new data entry and create its indirection
         auto const& [u, v] = fProj(tup);
-        auto id            = mIdToData.size();
-        auto c             = mDataToId.size();
-        mIdToData.push_back(static_cast<TIndex>(c));
-        mDataToId.push_back(static_cast<TIndex>(id));
-        mAdjacencies.push_back(std::make_tuple(u, v, id));
-        std::apply([](auto&&... data) { (data.emplace_back(), ...); }, mData);
+        AddEdge(u, v);
     });
     // 4. Merge (A and B) with (B \ A)
     std::ranges::merge(
@@ -278,6 +335,106 @@ inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_)
     swap(mAdjacencies, mCpy);
     mCpy.clear();
     return mid;
+}
+
+template <common::CIndex TIndex, class... T>
+template <std::ranges::random_access_range TIncomingAdjacencies>
+    requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
+inline TIndex DenseAdjacencySet<TIndex, T...>::Union(TIncomingAdjacencies&& B_)
+{
+    auto const fProj = [](auto&& tup) {
+        return std::tie(std::get<0>(tup), std::get<1>(tup));
+    };
+    assert(std::ranges::is_sorted(B_, std::ranges::less{}, fProj));
+    assert(std::ranges::adjacent_find(B_, std::ranges::equal_to{}, fProj) == std::ranges::end(B_));
+    // 1. Swap the elements from (B \ A) to the front of B
+    auto abegin = std::ranges::begin(mAdjacencies);
+    auto aend   = std::ranges::end(mAdjacencies);
+    auto bbegin = std::ranges::begin(B_);
+    auto bend   = std::ranges::end(B_);
+    auto ahead  = abegin;
+    auto bhead = bbegin, btail = bbegin;
+    while (ahead != aend and bhead != bend)
+    {
+        auto cmp = fProj(*ahead) <=> fProj(*bhead);
+        if (cmp == 0)
+        {
+            ++bhead;
+            ++ahead;
+        }
+        else if (cmp < 0)
+        {
+            ++ahead;
+        }
+        else // (cmp > 0)
+        {
+            std::iter_swap(btail++, bhead++);
+        }
+    }
+    while (bhead != bend)
+        std::iter_swap(btail++, bhead++);
+    // 2. Add elements from (B \ A)
+    std::for_each(bbegin, btail, [&](auto&& tup) {
+        auto const& [u, v] = fProj(tup);
+        AddEdge(u, v);
+    });
+    auto nBnotA = std::distance(bbegin, btail);
+    auto mid    = mAdjacencies.size() - nBnotA;
+    // 3. Merge (A and B) with (B \ A)
+    std::ranges::merge(
+        std::ranges::subrange(mAdjacencies.begin(), mAdjacencies.begin() + mid),
+        std::ranges::subrange(mAdjacencies.begin() + mid, mAdjacencies.end()),
+        std::back_inserter(mCpy),
+        std::ranges::less{},
+        fProj,
+        fProj);
+    using std::swap;
+    swap(mAdjacencies, mCpy);
+    mCpy.clear();
+    return static_cast<TIndex>(nBnotA);
+}
+
+template <common::CIndex TIndex, class... T>
+template <std::ranges::random_access_range TIncomingAdjacencies>
+    requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
+inline TIndex DenseAdjacencySet<TIndex, T...>::Subtract(TIncomingAdjacencies&& B_)
+{
+    auto const fProj = [](auto&& tup) {
+        return std::tie(std::get<0>(tup), std::get<1>(tup));
+    };
+    assert(std::ranges::is_sorted(B_, std::ranges::less{}, fProj));
+    assert(std::ranges::adjacent_find(B_, std::ranges::equal_to{}, fProj) == std::ranges::end(B_));
+    // 1. Swap elements of (A and not B) to the front of A.
+    auto abegin = std::ranges::begin(mAdjacencies);
+    auto bbegin = std::ranges::begin(B_);
+    auto aend   = std::ranges::end(mAdjacencies);
+    auto bend   = std::ranges::end(B_);
+    auto ahead = abegin, atail = abegin;
+    auto bhead = bbegin;
+    while (ahead != aend and bhead != bend)
+    {
+        auto cmp = fProj(*ahead) <=> fProj(*bhead);
+        if (cmp == 0)
+        {
+            ++bhead;
+            ++ahead;
+        }
+        else if (cmp < 0)
+        {
+            std::iter_swap(atail++, ahead++);
+        }
+        else // (cmp > 0)
+        {
+            ++bhead;
+        }
+    }
+    while (ahead != aend)
+        std::iter_swap(atail++, ahead++);
+    // 2. Remove elements from (A and B)
+    auto nAandB = std::distance(atail, aend);
+    std::for_each(atail, aend, [&](auto&& tup) { RemoveEdgeData(std::get<2>(tup)); });
+    mAdjacencies.erase(atail, aend);
+    return nAandB;
 }
 
 template <common::CIndex TIndex, class... T>
