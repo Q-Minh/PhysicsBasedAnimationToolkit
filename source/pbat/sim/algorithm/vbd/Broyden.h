@@ -313,7 +313,7 @@ void Iterate(
         bool const bHasScaledIdentityJacobian =
             broyden.eJacobianEstimate == EBroydenJacobianEstimate::ScaledIdentity;
         // NOTE: At this point, broyden.xkm1 contains x_k, while fem.x.reshaped() contains x_k + f_k
-        contact.ComputeDisplacementBounds(broyden.xkm1);
+        contact.UpdateConstraintSet(broyden.xkm1);
         if (bHasUpdatingDiagonal)
         {
             // x_{k+1} = x_k - G_{k-m} VBD(f_k) - (X_k - G_{k-m} VBD(F_k)) \gamma_k
@@ -334,7 +334,7 @@ void Iterate(
             fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
             fem.x.reshaped() += broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
         }
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
         // Update Jacobian (inverse) estimate
         switch (broyden.eJacobianEstimate)
         {
@@ -415,10 +415,10 @@ void Solve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
     while (params.k < params.nMaxIters)
     {
-        // if (contact.RequiresBoundsComputation())
-        //     contact.ComputeDisplacementBounds(fem.x);
+        // if (contact.RequiresConstraintSetUpdate())
+        //     contact.UpdateConstraintSet(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, broyden);
-        // contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        // contact.RestoreFeasibility(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

@@ -46,8 +46,36 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 class MeshDynamics
 {
   public:
-    using ScalarType = TScalar; ///< Scalar type
-    using IndexType  = TIndex;  ///< Index type
+    using ScalarType            = TScalar; ///< Scalar type
+    using IndexType             = TIndex;  ///< Index type
+    static auto constexpr kDims = 3;       ///< Dimension
+    /**
+     * @brief Per constraint quantities
+     * @tparam kStencil Number of nodes the constraint depends on
+     */
+    template <int kStencil>
+    struct ConstraintData
+    {
+        TScalar lambda;                                               ///< Lagrange multiplier
+        TScalar s;                                                    ///< Slack variable
+        TScalar mu;                                                   ///< Complementarity slack
+        TScalar c;                                                    ///< Constraint value
+        math::linalg::mini::SVector<TScalar, kStencil * kDims> gradc; ///< Constraint gradient
+    };
+    /**
+     * @brief Constraint set container
+     * @tparam kStencil Number of nodes the constraint depends on
+     */
+    template <int kStencil>
+    using ConstraintSet =
+        graph::DenseAdjacencySet<TIndex, bool /* bActivated */, ConstraintData<kStencil>>;
+
+    using PointPointContactSet = ConstraintSet<2>; ///< Point-point contact constraint container
+    using PointEdgeContactSet  = ConstraintSet<3>; ///< Point-edge contact constraint container
+    using PointTriangleContactSet =
+        ConstraintSet<3>; ///< Point-triangle contact constraint container
+    using EdgeEdgeContactSet =
+        ConstraintSet<4>; ///< (Half-)Edge-(half-)edge contact constraint container
 
     /**
      * @brief Mesh dynamics parameters
@@ -167,7 +195,7 @@ class MeshDynamics
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
     template <class TDerivedXkp1>
-    Eigen::Index TruncateDisplacedPositions(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
+    Eigen::Index RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
     /**
      * @brief Truncate displacements from positions to satisfy the computed displacement bounds
      * @tparam TDerivedXkp1 Writeable matrix type
@@ -179,9 +207,8 @@ class MeshDynamics
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
     template <class TDerivedXkp1, class TMask>
-    Eigen::Index TruncateDisplacedPositions(
-        Eigen::MatrixBase<TDerivedXkp1>& Xkp1,
-        Eigen::DenseBase<TMask> const& mask);
+    Eigen::Index
+    RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1, Eigen::DenseBase<TMask> const& mask);
     /**
      * @brief Truncate displacements to satisfy the computed displacement bounds
      * @tparam TDerivedDxkp1 Writeable matrix type
@@ -193,33 +220,32 @@ class MeshDynamics
      * @post Displacements have been truncated to satisfy the computed displacement bounds
      */
     template <class TDerivedDxkp1, class TMask>
-    Eigen::Index TruncateDisplacements(
-        Eigen::MatrixBase<TDerivedDxkp1>& Dxkp1,
-        Eigen::DenseBase<TMask> const& mask);
+    Eigen::Index
+    MakeStepFeasible(Eigen::MatrixBase<TDerivedDxkp1>& Dxkp1, Eigen::DenseBase<TMask> const& mask);
     /**
-     * @brief Request computation of displacement bounds
+     * @brief Request constraint set update
      */
-    void RequestDisplacementBoundsComputation();
+    void RequestConstraintSetUpdate();
     /**
-     * @brief Get the number of truncated points from the last `TruncateDisplacedPositions()`
+     * @brief Get the number of truncated points from the last `RestoreFeasibility()`
      * call
      * @return Number of truncated points
      */
     Eigen::Index NumTruncatedPoints() const;
     /**
-     * @brief Check if displacement bounds computation is required
-     * @return true if displacement bounds computation is required, false otherwise
+     * @brief Check if constraint set update is required
+     * @return true if constraint set update is required, false otherwise
      */
-    bool RequiresBoundsComputation() const;
+    bool RequiresConstraintSetUpdate() const;
     /**
      * @brief Executes a collision detection pass and computes resulting per-point displacement
      * bounds.
      * @tparam TDerivedX Matrix type
      * @param X `3 x |# points|` current point positions (column-major: one point per column)
-     * @pre `TruncateDisplacedPositions()` has been called
+     * @pre `RestoreFeasibility()` has been called
      */
     template <class TDerivedX>
-    void ComputeDisplacementBounds(Eigen::DenseBase<TDerivedX> const& X);
+    void UpdateConstraintSet(Eigen::DenseBase<TDerivedX> const& X);
     /**
      * @brief For each point-(dynamic)face contact of point `i`, invoke the appropriate callback
      *
@@ -590,22 +616,25 @@ class MeshDynamics
      * @brief Get the point-point contact adjacency set
      * @return Reference to the point-point contact adjacency set
      */
-    auto PointPointContacts() const { return mPointPointContacts; }
+    auto PointPointContacts() const -> PointPointContactSet { return mPointPointContacts; }
     /**
      * @brief Get the point-edge contact adjacency set
      * @return Reference to the point-edge contact adjacency set
      */
-    auto PointEdgeContacts() const { return mPointEdgeContacts; }
+    auto PointEdgeContacts() const -> PointEdgeContactSet { return mPointEdgeContacts; }
     /**
      * @brief Get the point-triangle contact adjacency set
      * @return Reference to the point-triangle contact adjacency set
      */
-    auto PointTriangleContacts() const { return mPointTriangleContacts; }
+    auto PointTriangleContacts() const -> PointTriangleContactSet const&
+    {
+        return mPointTriangleContacts;
+    }
     /**
      * @brief Get the edge-edge contact adjacency set
      * @return Reference to the edge-edge contact adjacency set
      */
-    auto EdgeEdgeContacts() const { return mEdgeEdgeContacts; }
+    auto EdgeEdgeContacts() const -> EdgeEdgeContactSet const& { return mEdgeEdgeContacts; }
     /**
      * @brief Reduce the thread-local contact sets from ogc::State into the contact adjacency sets
      *
@@ -641,19 +670,12 @@ class MeshDynamics
     bool mRequiresBoundsRecomputation{true};     ///< Whether bounds recomputation is required
 
     /**
-     * @brief Contact constraint adjacency sets
-     *
-     * These store the contact pairs along with their associated constraint data.
-     * The adjacency sets are populated by reducing the thread-local contact sets from ogc::State.
+     * @brief Contact constraint sets
      */
-    graph::DenseAdjacencySet<IndexType, MeshPointPointConstraint<ScalarType>, bool>
-        mPointPointContacts; ///< Point-point contact pairs with constraint data
-    graph::DenseAdjacencySet<IndexType, MeshPointEdgeConstraint<ScalarType>, bool>
-        mPointEdgeContacts; ///< Point-edge contact pairs with constraint data
-    graph::DenseAdjacencySet<IndexType, MeshPointTriangleConstraint<ScalarType>, bool>
-        mPointTriangleContacts; ///< Point-triangle contact pairs with constraint data
-    graph::DenseAdjacencySet<IndexType, MeshEdgeEdgeConstraint<ScalarType>, bool>
-        mEdgeEdgeContacts; ///< Edge-edge contact pairs with constraint data
+    PointPointContactSet mPointPointContacts;       ///< Point-point contact set
+    PointEdgeContactSet mPointEdgeContacts;         ///< Point-edge contact set
+    PointTriangleContactSet mPointTriangleContacts; ///< Point-triangle contact set
+    EdgeEdgeContactSet mEdgeEdgeContacts;           ///< (Half-)Edge-(half-)edge contact set
 };
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -807,19 +829,19 @@ inline void MeshDynamics<TScalar, TIndex>::Initialize(geometry::Device device)
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedXkp1>
 inline Eigen::Index
-MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
+MeshDynamics<TScalar, TIndex>::RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
 {
     auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
-    return TruncateDisplacedPositions(Xkp1, mask);
+    return RestoreFeasibility(Xkp1, mask);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedXkp1, class TMask>
-inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::RestoreFeasibility(
     Eigen::MatrixBase<TDerivedXkp1>& _Xkp1,
     Eigen::DenseBase<TMask> const& mask)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacedPositions");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.RestoreFeasibility");
     static_assert(
         std::is_convertible_v<typename TMask::Scalar, bool>,
         "Mask scalar type must be convertible to bool");
@@ -851,11 +873,11 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacedPositions(
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedDxkp1, class TMask>
-inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::MakeStepFeasible(
     Eigen::MatrixBase<TDerivedDxkp1>& _Dxkp1,
     Eigen::DenseBase<TMask> const& mask)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.TruncateDisplacements");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.MakeStepFeasible");
     static_assert(
         std::is_convertible_v<typename TMask::Scalar, bool>,
         "Mask scalar type must be convertible to bool");
@@ -883,7 +905,7 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::TruncateDisplacements(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::RequestDisplacementBoundsComputation()
+inline void MeshDynamics<TScalar, TIndex>::RequestConstraintSetUpdate()
 {
     mRequiresBoundsRecomputation = true;
 }
@@ -895,17 +917,16 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::NumTruncatedPoints() const
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline bool MeshDynamics<TScalar, TIndex>::RequiresBoundsComputation() const
+inline bool MeshDynamics<TScalar, TIndex>::RequiresConstraintSetUpdate() const
 {
     return mRequiresBoundsRecomputation;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedX>
-inline void
-MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds(Eigen::DenseBase<TDerivedX> const& X)
+inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(Eigen::DenseBase<TDerivedX> const& X)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeDisplacementBounds");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateConstraintSet");
     if (mParams.bDeactivate)
     {
         mOgcState.bv.setConstant(std::numeric_limits<ScalarType>::max());
@@ -915,9 +936,7 @@ MeshDynamics<TScalar, TIndex>::ComputeDisplacementBounds(Eigen::DenseBase<TDeriv
     }
     mXdynamic = X.derived();
     mOgcState.PrepareForExecution(mOgcInput, mParams.mOgcParams);
-    ogc::VertexFacetContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
-    ogc::EdgeEdgeContactDetection(mOgcInput, mParams.mOgcParams, mOgcState);
-    ogc::UpdateDisplacementBounds(mOgcInput, mParams.mOgcParams, mOgcState);
+    ogc::Execute(mOgcInput, mParams.mOgcParams, mOgcState);
     mRequiresBoundsRecomputation = false;
     mNumTruncatedPoints          = 0;
 }

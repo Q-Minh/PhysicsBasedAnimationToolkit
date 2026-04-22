@@ -155,7 +155,7 @@ void Iterate(
     {
         anderson.xkm1 = fem.x.reshaped();
         Iterate(fem, contact, params);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
         anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     }
     else
@@ -165,7 +165,7 @@ void Iterate(
         anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
         anderson.xkm1        = fem.x.reshaped();
         Iterate(fem, contact, params);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
         anderson.fk          = fem.x.reshaped() - anderson.xkm1;
         anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
         anderson.fkm1        = anderson.fk;
@@ -197,10 +197,10 @@ void Solve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
     while (params.k < params.nMaxIters)
     {
-        if (contact.RequiresBoundsComputation())
-            contact.ComputeDisplacementBounds(fem.x);
+        if (contact.RequiresConstraintSetUpdate())
+            contact.UpdateConstraintSet(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, anderson);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

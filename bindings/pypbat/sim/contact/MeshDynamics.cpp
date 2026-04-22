@@ -338,9 +338,9 @@ void BindMeshDynamics(nanobind::module_& m)
                std::optional<Eigen::Vector<bool, Eigen::Dynamic> const> mask) {
                 Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> Xkp1Copy = Xkp1;
                 if (mask)
-                    self.TruncateDisplacedPositions(Xkp1Copy, *mask);
+                    self.RestoreFeasibility(Xkp1Copy, *mask);
                 else
-                    self.TruncateDisplacedPositions(Xkp1Copy);
+                    self.RestoreFeasibility(Xkp1Copy);
                 return Xkp1Copy;
             },
             nb::arg("xkp1"),
@@ -360,9 +360,9 @@ void BindMeshDynamics(nanobind::module_& m)
                std::optional<Eigen::Vector<bool, Eigen::Dynamic> const> mask) {
                 Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> Dxkp1Copy = Dxkp1;
                 if (mask)
-                    self.TruncateDisplacements(Dxkp1Copy, *mask);
+                    self.MakeStepFeasible(Dxkp1Copy, *mask);
                 else
-                    self.TruncateDisplacements(
+                    self.MakeStepFeasible(
                         Dxkp1Copy,
                         Eigen::Vector<bool, Eigen::Dynamic>::Constant(Dxkp1Copy.cols(), false));
                 return Dxkp1Copy;
@@ -377,11 +377,11 @@ void BindMeshDynamics(nanobind::module_& m)
             "ignore, false = process).\n")
         .def(
             "request_displacement_bounds_computation",
-            &MeshDynamicsType::RequestDisplacementBoundsComputation,
+            &MeshDynamicsType::RequestConstraintSetUpdate,
             "Request recomputation of displacement bounds.")
         .def_prop_ro(
             "requires_bounds_computation",
-            &MeshDynamicsType::RequiresBoundsComputation,
+            &MeshDynamicsType::RequiresConstraintSetUpdate,
             "Whether displacement bounds need to be recomputed.")
         .def_prop_ro(
             "num_truncated_points",
@@ -391,7 +391,7 @@ void BindMeshDynamics(nanobind::module_& m)
             "compute_displacement_bounds",
             [](MeshDynamicsType& self,
                nb::DRef<Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> const> const& X) {
-                self.ComputeDisplacementBounds(X);
+                self.UpdateConstraintSet(X);
             },
             nb::arg("X"),
             "Compute the per-point displacement bounds based on current geometry and OGC state.\n\n"

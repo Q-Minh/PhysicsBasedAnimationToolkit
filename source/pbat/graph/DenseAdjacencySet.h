@@ -54,13 +54,15 @@ class DenseAdjacencySet
      * @param B Right operand
      * @param bTryRestoreB Whether to attempt restoring B's elements after modification. Only
      * applies if `std::is_signed_v<TIndex>`
+     * @return Size of (A and B)
      * @pre `B` is sorted, contains no duplicates and has all values non-negative
      * @post `B`'s elements that are already in A have their first tuple-element modified if `B` has
      * elements of unsigned integer type or `bTryRestoreB` is false.
+     * @post If `k >= |A and B|` then `Data<TData>(k)` is a new (default-constructed) data entry
      */
     template <std::ranges::random_access_range TIncomingAdjacencies>
         requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
-    void Assign(TIncomingAdjacencies&& B, bool bTryRestoreB = true);
+    TIndex Assign(TIncomingAdjacencies&& B, bool bTryRestoreB = true);
     /**
      * @brief Finalize the adjacency set by computing its prefix sum over edge source vertices.
      * @param nSourceVertices Number of source vertices
@@ -180,7 +182,7 @@ DenseAdjacencySet<TIndex, T...>::Reserve(std::size_t nAdjacencies, std::size_t n
 template <common::CIndex TIndex, class... T>
 template <std::ranges::random_access_range TIncomingAdjacencies>
     requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
-inline void DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_, bool bTryRestoreB)
+inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_, bool bTryRestoreB)
 {
     // Let A = *this
     bool constexpr bAreKeysSigned = std::is_signed_v<TIndex>;
@@ -282,6 +284,7 @@ inline void DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_, b
             if (fIsNone(tup))
                 std::get<0>(tup) = -std::get<0>(tup) - 1;
         });
+    return mid;
 }
 
 template <common::CIndex TIndex, class... T>

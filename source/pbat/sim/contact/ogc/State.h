@@ -115,7 +115,17 @@ class State
     void PrepareForExecution(Input<TScalar, TIndex> const& input, Params<TScalar> const& params);
 
     /**
-     * @brief Keep unique sorted contact pairs only
+     * @brief Keep unique (lexicographically) sorted contact pairs only.
+     * @note Contact pairs being sorted means that elements of a given geometry (see EGeometry) are
+     * stored contiguously together, enabling efficient traversal without needing binary search to
+     * figure out which geometry a given contact pair element belongs to. For instance, given some
+     * generic contact pair `(i,j)`, figuring out which geometries i and j belong to amounts to
+     * binary searching their corresponding prefix arrays `(pi, pj)`. However, if we know in advance
+     * which geometry `i` belongs to (which we do in many cases), and we need to iterate over all
+     * of its incident pairs `(i,j)` (which we do in most cases), then we avoid binary search on
+     * `pj`, because the sequence `(i,j)` is sorted in `j`, so we can just keep track of an index
+     * `k` into `pj` starting at 0 and increment it every time `j >= prefix[k+1]`. Here `k` maps
+     * to enum values in EGeometry.
      */
     void CollectContactPairs();
 
@@ -162,15 +172,19 @@ class State
                                                    ///< (i.e. dynamic, static)
     std::array<IndexType, 3> mHalfEdgeGeometryPrefix; ///< Prefix sum over half-edges of each
                                                       ///< geometry type (i.e. dynamic, static)
-    std::array<IndexType, 3>
-        mEdgeGeometryPrefix; ///< Prefix sum over edges of each geometry type (i.e. dynamic, static)
     std::array<IndexType, 3> mTriangleGeometryPrefix; ///< Prefix sum over (triangle) facets of each
                                                       ///< geometry type (i.e. dynamic, static)
 
     std::vector<std::pair<IndexType, IndexType>> mXX; ///< Point-point contact pairs.
     std::vector<std::pair<IndexType, IndexType>> mXE; ///< Point-(half-)edge contact pairs.
     std::vector<std::pair<IndexType, IndexType>> mXF; ///< Point-triangle contact pairs.
-    std::vector<std::pair<IndexType, IndexType>> mEE; ///< Edge-edge contact pairs.
+    std::vector<std::pair<IndexType, IndexType>>
+        mEE; ///< (Half-)edge-(half-)edge contact pairs. For each edge-edge contact (e1,e2), note
+             ///< that there are 4 different redundant (half-edge, half-edge) pairs
+             ///< (he1(e1), he1(e2)), (he1(e1), he2(e2)), (he2(e1), he1(e2)), (he2(e1), he2(e2)).
+             ///< We only store one representative pair for each edge-edge contact. This means that
+             ///< visiting all contact pairs starting with edge e1 requires visiting all pairs with
+             ///< starting endpoints he1(e1) or he2(e1).
 
     tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
         mXXets; ///< Thread-local point-point contact pairs.
@@ -179,7 +193,7 @@ class State
     tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
         mXFets; ///< Thread-local point-triangle contact pairs.
     tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
-        mEEets; ///< Thread-local edge-edge contact pairs.
+        mEEets; ///< Thread-local (half-)edge-(half-)edge contact pairs.
 
     /**
      * @brief Acceleration structure for static geometry
@@ -225,7 +239,6 @@ inline State<TScalar, TIndex>::State()
       dmine(),
       mPointGeometryPrefix{},
       mHalfEdgeGeometryPrefix{},
-      mEdgeGeometryPrefix{},
       mTriangleGeometryPrefix{},
       mXX(),
       mXE(),
@@ -439,7 +452,6 @@ inline State<TScalar, TIndex>& State<TScalar, TIndex>::operator=(State&& other) 
     dmine                   = std::move(other.dmine);
     mPointGeometryPrefix    = std::move(other.mPointGeometryPrefix);
     mHalfEdgeGeometryPrefix = std::move(other.mHalfEdgeGeometryPrefix);
-    mEdgeGeometryPrefix     = std::move(other.mEdgeGeometryPrefix);
     mTriangleGeometryPrefix = std::move(other.mTriangleGeometryPrefix);
     mXX                     = std::move(other.mXX);
     mXE                     = std::move(other.mXE);
@@ -657,10 +669,6 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
         mHalfEdgeGeometryPrefix,
         (input.F ? 3 * input.F->cols() : 0),
         (input.Fenv ? 3 * input.Fenv->cols() : 0));
-    common::ExclusivePrefixSum(
-        mEdgeGeometryPrefix,
-        (input.E ? input.E->cols() : 0),
-        (input.Eenv ? input.Eenv->cols() : 0));
     common::ExclusivePrefixSum(
         mTriangleGeometryPrefix,
         (input.F ? input.F->cols() : 0),

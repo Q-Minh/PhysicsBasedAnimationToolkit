@@ -144,7 +144,7 @@ void Iterate(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Iterate");
     Index k = params.k;
     Iterate(fem, contact, params);
-    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+    contact.RestoreFeasibility(fem.x, fem.dmask);
     // Chebyshev Update
     cheb.omega = kernels::ChebyshevOmega(k, cheb.rho2, cheb.omega);
     auto& xk   = fem.x;
@@ -164,10 +164,10 @@ void Solve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Solve");
     while (params.k < params.nMaxIters)
     {
-        if (contact.RequiresBoundsComputation())
-            contact.ComputeDisplacementBounds(fem.x);
+        if (contact.RequiresConstraintSetUpdate())
+            contact.UpdateConstraintSet(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params, cheb);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

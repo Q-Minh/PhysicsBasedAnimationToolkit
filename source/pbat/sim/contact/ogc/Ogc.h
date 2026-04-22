@@ -22,9 +22,28 @@
 
 #include <algorithm>
 #include <tbb/parallel_for.h>
+#include <tbb/task_group.h>
 #include <vector>
 
 namespace pbat::sim::contact::ogc {
+
+/**
+ * @brief Executes one OGC iteration.
+ * Performs vertex-facet and edge-edge contact detection, finalizes contact pairs and updates
+ * displacement bounds.
+ * @tparam TScalar Type of scalar
+ * @tparam TIndex Type of index
+ * @param input OGC's input
+ * @param params OGC's parameters
+ * @param state OGC's state
+ * @pre `state.PrepareForExecution()` has been called
+ * @post `state.CollectContactPairs()` has been called and `state.bv` is usable.
+ */
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void Execute(
+    Input<TScalar, TIndex> const& input,
+    Params<TScalar> const& params,
+    State<TScalar, TIndex>& state);
 
 /**
  * @brief Performs vertex-facet contact detection.
@@ -190,6 +209,22 @@ bool IsEdgeFeasible(
     Eigen::Vector<TScalar, 3> const& x,
     TIndex fi,
     TIndex he);
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+void Execute(
+    Input<TScalar, TIndex> const& input,
+    Params<TScalar> const& params,
+    State<TScalar, TIndex>& state)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.Execute");
+    tbb::task_group tg;
+    tg.run([&] { VertexFacetContactDetection(input, params, state); });
+    tg.run([&] { EdgeEdgeContactDetection(input, params, state); });
+    tg.wait();
+    tg.run([&] { UpdateDisplacementBounds(input, params, state); });
+    tg.run([&] { state.CollectContactPairs(); });
+    tg.wait();
+}
 
 namespace detail {
 
@@ -511,7 +546,7 @@ void DynamicEdgeEdgeRTCCollideFunc(
     ParamsType const* params = data->params;
     StateType* state         = data->state;
     TScalar const r          = params->r;
-    TIndex const EOffset     = state->mEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
     auto const& X            = input->X.value();
     auto const& F            = input->F.value();
     auto const& E            = input->E.value();
@@ -573,14 +608,15 @@ void DynamicEdgeEdgeRTCCollideFunc(
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
-        // Add contact pair. I'm pretty sure that if xc1 is in the edge
+        // Add contact pair (e1,e2) via its one of their half-edges (he_1(e1), he_1(e2)).
+        // NOTE: I'm pretty sure that if xc1 is in the edge
         // feasible region of e2, then xc2 must also be in the edge
         // feasible region of e1, so that we could remove the redundant
         // check for xc2 in the edge feasible region of e1. But I'll keep both checks for
         // safety for now until we can rigorously verify this claim.
         if (IsEdgeFeasible(X, F, GHEF, xc1, GHEF(0, ehe2(0)), ehe2(0)) and
             IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            EE.push_back({EOffset + e1, EOffset + e2});
+            EE.push_back({HEOffset + ehe1(0), HEOffset + ehe2(0)});
     }
 }
 
@@ -606,8 +642,8 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
     ParamsType const* params = data->params;
     StateType* state         = data->state;
     TScalar const r          = params->r;
-    TIndex const EOffset     = state->mEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
-    TIndex const EenvOffset  = state->mEdgeGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const HEenvOffset = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Static];
     auto const& Xenv         = input->Venv.value();
     auto const& Eenv         = input->Eenv.value();
     auto const& Fenv         = input->Fenv.value();
@@ -668,7 +704,7 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // safety for now until we can rigorously verify this claim.
         if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xc1, GHEFenv(0, ehe2(0)), ehe2(0)) and
             IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            EE.push_back({EOffset + e1, EenvOffset + e2});
+            EE.push_back({HEOffset + ehe1(0), HEenvOffset + ehe2(0)});
     }
 }
 

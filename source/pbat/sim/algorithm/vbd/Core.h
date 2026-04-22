@@ -1166,8 +1166,8 @@ void InitializeSolve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     auto const xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
     contact.GetParams().ComputeQueryRadius((fem.xtilde - xt).colwise().norm().maxCoeff());
-    contact.ComputeDisplacementBounds(xt);
-    contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+    contact.UpdateConstraintSet(xt);
+    contact.RestoreFeasibility(fem.x, fem.dmask);
     InitializeHomogenization<TElasticEnergy>(fem, contact, params);
     params.k = 0;
     params.gk.setZero();
@@ -1185,10 +1185,10 @@ void Solve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
     while (params.k < params.nMaxIters)
     {
-        if (contact.RequiresBoundsComputation())
-            contact.ComputeDisplacementBounds(fem.x);
+        if (contact.RequiresConstraintSetUpdate())
+            contact.UpdateConstraintSet(fem.x);
         Iterate<TElasticEnergy>(fem, contact, params);
-        contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+        contact.RestoreFeasibility(fem.x, fem.dmask);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

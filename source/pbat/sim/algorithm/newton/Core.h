@@ -410,9 +410,9 @@ void PrepareNextIteration(
     auto xk = fem.x.reshaped();
     params.newton.PrepareNextIteration(
         [&]([[maybe_unused]] auto const& _xk) {
-            if (contact.RequiresBoundsComputation())
+            if (contact.RequiresConstraintSetUpdate())
             {
-                contact.ComputeDisplacementBounds(fem.x);
+                contact.UpdateConstraintSet(fem.x);
             }
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
@@ -433,7 +433,7 @@ void TruncateDisplacement(
     {
         case EOgcTruncationStrategy::PerVertex: {
             // Per-vertex truncation
-            contact.TruncateDisplacements(dxk, fem.dmask);
+            contact.MakeStepFeasible(dxk, fem.dmask);
             break;
         }
         case EOgcTruncationStrategy::Global: {
@@ -443,7 +443,7 @@ void TruncateDisplacement(
             if (dmax > dmin)
             {
                 dxk *= (dmin / dmax);
-                contact.RequestDisplacementBoundsComputation();
+                contact.RequestConstraintSetUpdate();
             }
             break;
         }
@@ -460,7 +460,7 @@ void TruncateDisplacement(
  * @param xt The current state
  */
 template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedXt>
-void TruncateDisplacedPositions(
+void RestoreFeasibility(
     FemElastoDynamics<TElasticEnergy>& fem,
     MeshDynamics& contact,
     Params const& params,
@@ -469,7 +469,7 @@ void TruncateDisplacedPositions(
     switch (params.eOgcTruncationStrategy)
     {
         case EOgcTruncationStrategy::PerVertex: {
-            contact.TruncateDisplacedPositions(fem.x, fem.dmask);
+            contact.RestoreFeasibility(fem.x, fem.dmask);
             break;
         }
         case EOgcTruncationStrategy::Global: {
@@ -493,8 +493,8 @@ void InitializeSolve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& conta
     params.newton.InitializeSolve(fem.x.reshaped());
     auto const xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
     contact.GetParams().ComputeQueryRadius((fem.xtilde - xt).colwise().norm().maxCoeff());
-    contact.ComputeDisplacementBounds(xt);
-    TruncateDisplacedPositions(fem, contact, params, xt);
+    contact.UpdateConstraintSet(xt);
+    RestoreFeasibility(fem, contact, params, xt);
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -529,9 +529,9 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
     auto x0         = fem.x.reshaped();
     bool bConverged = params.newton.Solve(
         [&]([[maybe_unused]] auto const& xk) {
-            if (contact.RequiresBoundsComputation())
+            if (contact.RequiresConstraintSetUpdate())
             {
-                contact.ComputeDisplacementBounds(fem.x);
+                contact.UpdateConstraintSet(fem.x);
             }
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
