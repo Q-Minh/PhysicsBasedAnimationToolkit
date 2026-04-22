@@ -5,6 +5,7 @@
 #include "pbat/graph/Mesh.h"
 
 #include <algorithm>
+#include <atomic>
 #include <exception>
 #include <fmt/core.h>
 #include <thread>
@@ -46,7 +47,7 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
     auto nThreads             = std::thread::hardware_concurrency();
     auto const& contactParams = contact.GetParams();
     auto nDynamicNodes        = params.xk.cols();
-    Scalar maxQ{0};
+    std::atomic<Scalar> maxQ{0};
     contact.ForAllContacts(
         [&]<class TContactSet>(
             typename TContactSet::AccessorType C,
@@ -72,6 +73,7 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
             pbat::common::AtomicMax(maxQ, maxQc);
         },
         nThreads);
+    Scalar maxQv = maxQ.load(std::memory_order_relaxed);
     contact.ForAllContacts(
         [&]<class TContactSet>(
             typename TContactSet::AccessorType C,
@@ -79,8 +81,8 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
             std::int32_t /*t*/
         ) {
             auto F      = C.Friction();
-            C.Penalty() = contactParams.gamma * maxQ;
-            F.Penalty() = contactParams.gammaf * maxQ;
+            C.Penalty() = contactParams.gamma * maxQv;
+            F.Penalty() = contactParams.gammaf * maxQv;
         },
         nThreads);
 }

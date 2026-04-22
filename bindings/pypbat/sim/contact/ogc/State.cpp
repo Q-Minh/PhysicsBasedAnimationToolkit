@@ -69,18 +69,6 @@ void BindState(nanobind::module_& m)
             "bv",
             &StateType::bv,
             "(numpy.ndarray) `|# vertices|` array of total vertex displacement bounds.")
-        .def_rw(
-            "dminv",
-            &StateType::dminv,
-            "(numpy.ndarray) `|# vertices|` array of vertex local displacement bounds.")
-        .def_rw(
-            "dminf",
-            &StateType::dminf,
-            "(numpy.ndarray) `|# facets|` array of face local displacement bounds.")
-        .def_rw(
-            "dmine",
-            &StateType::dmine,
-            "(numpy.ndarray) `|# half-edges|` array of half-edge local displacement bounds.")
         .def_ro(
             "point_geometry_prefix",
             &StateType::mPointGeometryPrefix,

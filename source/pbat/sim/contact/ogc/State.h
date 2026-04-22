@@ -20,6 +20,7 @@
 
 #include <Eigen/Core>
 #include <array>
+#include <atomic>
 #include <embree4/rtcore.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_sort.h>
@@ -113,7 +114,6 @@ class State
      * @pre Initialize() has been called
      */
     void PrepareForExecution(Input<TScalar, TIndex> const& input, Params<TScalar> const& params);
-
     /**
      * @brief Keep unique (lexicographically) sorted contact pairs only.
      * @note Contact pairs being sorted means that elements of a given geometry (see EGeometry) are
@@ -132,7 +132,6 @@ class State
      * @brief Clear contact pairs
      */
     void ClearContactPairs();
-
     /**
      * @brief Destroy the State object
      */
@@ -150,11 +149,11 @@ class State
      */
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         bv; ///< `|# vertices|` array of total vertex displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
+    std::unique_ptr<std::atomic<ScalarType>[]>
         dminv; ///< `|# vertices|` array of vertex local displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
+    std::unique_ptr<std::atomic<ScalarType>[]>
         dminf; ///< `|# facets|` array of face local displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
+    std::unique_ptr<std::atomic<ScalarType>[]>
         dmine; ///< `|# half-edges|` array of half-edge local displacement bounds
 
     /**
@@ -485,14 +484,13 @@ inline void State<TScalar, TIndex>::Initialize(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.Initialize");
     // 1. Allocate contact sets and bounds
     auto const nDynamicVertices  = input.V->size();
-    auto const nDynamicEdges     = input.E->cols();
     auto const nDynamicFacets    = input.F->cols();
     auto const nDynamicHalfEdges = 3 * nDynamicFacets;
     // TODO:
     // Implement mechanism to reserve memory for thread-local contact sets up-front.
-    dminv.resize(nDynamicVertices);
-    dminf.resize(nDynamicFacets);
-    dmine.resize(nDynamicHalfEdges);
+    dminv = std::make_unique<std::atomic<ScalarType>[]>(nDynamicVertices);
+    dminf = std::make_unique<std::atomic<ScalarType>[]>(nDynamicFacets);
+    dmine = std::make_unique<std::atomic<ScalarType>[]>(nDynamicHalfEdges);
     bv.resize(nDynamicVertices);
     // 2. Compute BVHs
     DestroyAccelerationStructures();
@@ -668,9 +666,15 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
         (input.F ? input.F->cols() : 0),
         (input.Fenv ? input.Fenv->cols() : 0));
     // 2. Reset bounds
-    dminv.setConstant(params.rq * params.rq);
-    dminf.setConstant(params.rq * params.rq);
-    dmine.setConstant(params.rq * params.rq);
+    auto const nDynamicVertices  = input.V->size();
+    auto const nDynamicFacets    = input.F->cols();
+    auto const nDynamicHalfEdges = 3 * nDynamicFacets;
+    for (Eigen::Index i = 0; i < nDynamicVertices; ++i)
+        dminv[i].store(params.rq * params.rq);
+    for (Eigen::Index i = 0; i < nDynamicFacets; ++i)
+        dminf[i].store(params.rq * params.rq);
+    for (Eigen::Index i = 0; i < nDynamicHalfEdges; ++i)
+        dmine[i].store(params.rq * params.rq);
     // 3. Recompute dynamic BVHs
     PreparePerBodyRtcBoundsParams(input, params);
     Eigen::Index nBodies = input.NumBodies();
@@ -703,9 +707,10 @@ inline void State<TScalar, TIndex>::CollectContactPairs()
     tbb::task_group tg;
     auto const fCopyLocalToGlobal = [](auto& src, auto& dst) {
         auto n = std::accumulate(
-            src.begin(), src.end(), static_cast<std::size_t>(0), [](std::size_t acc, auto& vec) {
-                return acc + vec.size();
-            });
+            src.begin(),
+            src.end(),
+            static_cast<std::size_t>(0),
+            [](std::size_t acc, auto& vec) { return acc + vec.size(); });
         dst.resize(n);
         auto it = dst.begin();
         for (auto& buf : src)

@@ -299,8 +299,8 @@ void DynamicVertexFacetRTCCollideFunc(
             (xi - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
         TScalar d2 = dx2f.squaredNorm();
         // Update triangle and vertex displacement bounds
-        common::AtomicMin(dminv(iv), d2);
-        common::AtomicMin(dminf(f), d2);
+        common::AtomicMin(dminv[iv], d2);
+        common::AtomicMin(dminf[f], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -402,7 +402,7 @@ void DynamicVertexStaticFacetRTCCollideFunc(
             (xi - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
         TScalar d2 = dx2f.squaredNorm();
         // Update vertex displacement bounds
-        common::AtomicMin(dminv(iv), d2);
+        common::AtomicMin(dminv[iv], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -502,7 +502,7 @@ void StaticVertexDynamicFacetRTCCollideFunc(
             (xi - (uvw(0) * xf.col(0) + uvw(1) * xf.col(1) + uvw(2) * xf.col(2)));
         TScalar d2 = dx2f.squaredNorm();
         // Update triangle displacement bounds
-        common::AtomicMin(dminf(f), d2);
+        common::AtomicMin(dminf[f], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -624,12 +624,12 @@ void DynamicEdgeEdgeRTCCollideFunc(
         // Update half-edge displacement bounds
         Eigen::Vector<TIndex, 2> const ehe1 = EHE.col(e1);
         Eigen::Vector<TIndex, 2> const ehe2 = EHE.col(e2);
-        common::AtomicMin(dmine(ehe1(0)), d2);
+        common::AtomicMin(dmine[ehe1(0)], d2);
         if (ehe1(1) >= 0) // Boundary edge has no 2nd half-edge
-            common::AtomicMin(dmine(ehe1(1)), d2);
-        common::AtomicMin(dmine(ehe2(0)), d2);
+            common::AtomicMin(dmine[ehe1(1)], d2);
+        common::AtomicMin(dmine[ehe2(0)], d2);
         if (ehe2(1) >= 0) // Boundary edge has no 2nd half-edge
-            common::AtomicMin(dmine(ehe2(1)), d2);
+            common::AtomicMin(dmine[ehe2(1)], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -728,9 +728,9 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // Update half-edge displacement bounds
         Eigen::Vector<TIndex, 2> const ehe1 = EHE.col(e1);
         Eigen::Vector<TIndex, 2> const ehe2 = EHEenv.col(e2);
-        common::AtomicMin(dmine(ehe1(0)), d2);
+        common::AtomicMin(dmine[ehe1(0)], d2);
         if (ehe1(1) >= 0) // Boundary edge has no 2nd half-edge
-            common::AtomicMin(dmine(ehe1(1)), d2);
+            common::AtomicMin(dmine[ehe1(1)], d2);
         // No contact if outside contact radius
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
@@ -791,8 +791,16 @@ void VertexFacetContactDetection(
             static_cast<void*>(&rtcCollideFuncParams));
     }
     // Finalize per-vertex and per-face displacement bounds
-    state.dminv.noalias() = state.dminv.cwiseSqrt();
-    state.dminf.noalias() = state.dminf.cwiseSqrt();
+    auto const nDynamicVertices = input.NumVertices();
+    auto const nDynamicFacets   = input.NumFacets();
+    for (auto v = 0; v < nDynamicVertices; ++v)
+        state.dminv[v].store(
+            std::sqrt(state.dminv[v].load(std::memory_order_relaxed)),
+            std::memory_order_relaxed);
+    for (auto f = 0; f < nDynamicFacets; ++f)
+        state.dminf[f].store(
+            std::sqrt(state.dminf[f].load(std::memory_order_relaxed)),
+            std::memory_order_relaxed);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -822,7 +830,11 @@ void EdgeEdgeContactDetection(
             static_cast<void*>(&rtcCollideFuncParams));
     }
     // Finalize per-half-edge displacement bounds
-    state.dmine.noalias() = state.dmine.cwiseSqrt();
+    auto const nDynamicHalfEdges = input.NumHalfEdges();
+    for (auto he = 0; he < nDynamicHalfEdges; ++he)
+        state.dmine[he].store(
+            std::sqrt(state.dmine[he].load(std::memory_order_relaxed)),
+            std::memory_order_relaxed);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -841,14 +853,17 @@ void UpdateDisplacementBounds(
     IndexType const nVertices = static_cast<IndexType>(V.size());
     tbb::parallel_for(IndexType{0}, nVertices, [&](IndexType v) {
         IndexType i  = V(v);
-        state.bv(v)  = state.dminv(v);
+        state.bv(v)  = state.dminv[v].load(std::memory_order_relaxed);
         auto hebegin = GVHEp(i);
         auto heend   = GVHEp(i + 1);
         for (IndexType k = hebegin; k < heend; ++k)
         {
             IndexType const he = GVHEadj(k);
             IndexType const f  = geometry::FaceOfHalfEdge(he);
-            state.bv(v)        = std::min({state.bv(v), state.dmine(he), state.dminf(f)});
+            state.bv(v)        = std::min(
+                {state.bv(v),
+                 state.dmine[he].load(std::memory_order_relaxed),
+                 state.dminf[f].load(std::memory_order_relaxed)});
         }
         state.bv(v) *= params.gammap;
     });
@@ -862,7 +877,7 @@ std::pair<int, int> ClosestFaceFacetToVertex(TScalar u, TScalar v, TScalar w)
     bool const bIsEdge   = (nZeros == 1);
     int eFace            = (bIsVertex * 2) + (bIsEdge * 1);
     int a                = bIsVertex * ((v == TScalar(1)) * 1 + (w == TScalar(1)) * 2) +
-            bIsEdge * ((u == TScalar(0)) * 1 + (v == TScalar(0)) * 2);
+                           bIsEdge * ((u == TScalar(0)) * 1 + (v == TScalar(0)) * 2);
     return {a, eFace};
 }
 
@@ -882,9 +897,9 @@ std::tuple<int, int, int, int> ClosestFaceEdgeToEdge(
     int eFace1 = (not bIsEdgeContact1) * 1;
     int eFace2 = (not bIsEdgeContact2) * 1;
     int a1     = bIsEdgeContact1 * e1 +
-             (not bIsEdgeContact1) * ((s == TScalar(0)) * e1v[0] + (s == TScalar(1)) * e1v[1]);
-    int a2 = bIsEdgeContact2 * e2 +
-             (not bIsEdgeContact2) * ((t == TScalar(0)) * e2v[0] + (t == TScalar(1)) * e2v[1]);
+                 (not bIsEdgeContact1) * ((s == TScalar(0)) * e1v[0] + (s == TScalar(1)) * e1v[1]);
+    int a2     = bIsEdgeContact2 * e2 +
+                 (not bIsEdgeContact2) * ((t == TScalar(0)) * e2v[0] + (t == TScalar(1)) * e2v[1]);
     return {a1, eFace1, a2, eFace2};
 }
 
@@ -957,9 +972,9 @@ bool IsEdgeFeasible(
     TIndex k = geometry::OutgoingVertex(F, he, 1 /* step */);
     // Get the third vertex l of triangle fj that is not part of undirected edge (i,j).
     // NOTE: Whenever fj == fi (i.e. boundary edge), l == k.
-    TIndex l = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
-               (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
-               (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
+    TIndex l                     = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
+                                   (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
+                                   (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
     Eigen::Vector<TScalar, 3> xi = X.col(i);
     Eigen::Vector<TScalar, 3> xj = X.col(j);
     bool bInEdgeFeasibleRegion{true};

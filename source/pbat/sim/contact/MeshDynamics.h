@@ -29,6 +29,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
+#include <atomic>
 #include <cmath>
 #include <new>
 #include <tbb/global_control.h>
@@ -1576,7 +1577,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdatePenaltyParameter");
     auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
-    Scalar maxQ{0};
+    std::atomic<Scalar> maxQ{0};
     ForAllContacts(
         [&]<class TContactSet>(
             typename TContactSet::AccessorType C,
@@ -1590,14 +1591,15 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
             pbat::common::AtomicMax(maxQ, Q);
         },
         nThreads);
+    Scalar maxQv = maxQ.load(std::memory_order_relaxed);
     ForAllContacts(
         [&]<class TContactSet>(
             typename TContactSet::AccessorType C,
             Stencil stencil,
             std::int32_t /*t*/) {
             auto F      = C.Friction();
-            C.Penalty() = mParams.gamma * maxQ;
-            F.Penalty() = mParams.gammaf * maxQ;
+            C.Penalty() = mParams.gamma * maxQv;
+            F.Penalty() = mParams.gammaf * maxQv;
         },
         nThreads);
 }
