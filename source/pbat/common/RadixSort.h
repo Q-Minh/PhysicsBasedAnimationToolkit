@@ -101,7 +101,8 @@ void RadixSort(
     if (n == 0)
         return;
     assert(std::ranges::size(cpy) >= n);
-    auto nKeyBits       = sizeof(TKey) * 8 - std::countl_zero(max);
+    auto nKeyBits =
+        sizeof(TKey) * 8 - std::countl_zero(static_cast<std::make_unsigned_t<TKey>>(max));
     auto nPasses        = (nKeyBits + work.kBits - 1) / work.kBits;
     auto constexpr mask = (work.Radix - 1);
     using std::swap;

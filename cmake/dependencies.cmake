@@ -106,6 +106,7 @@ if(PBAT_BUILD_PYTHON_BINDINGS AND NOT TARGET nanobind::headers)
     FetchContent_Declare(
         _nanobind
         GIT_REPOSITORY https://github.com/Doekin/nanobind.git
+
         # GIT_REPOSITORY https://github.com/Q-Minh/nanobind
         GIT_TAG stubgen_win_dll
         GIT_PROGRESS TRUE
@@ -205,4 +206,13 @@ if(PBAT_BUILD_DOC)
         REQUIRED
         OPTIONAL_COMPONENTS dot mscgen dia
     )
+endif()
+
+if(PBAT_BUILD_BENCHMARKS)
+    FetchContent_Declare(
+        nanobench
+        GIT_REPOSITORY https://github.com/martinus/nanobench.git
+        GIT_TAG v4.3.11
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(nanobench)
 endif()

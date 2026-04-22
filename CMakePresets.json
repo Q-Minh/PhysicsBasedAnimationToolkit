@@ -41,11 +41,21 @@
             }
         },
         {
+            "name": "benchmarks",
+            "cacheVariables": {
+                "PBAT_BUILD_BENCHMARKS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
             "name": "dev",
             "inherits": [
                 "default",
                 "profile",
-                "doc"
+                "doc",
+                "benchmarks"
             ],
             "cacheVariables": {
                 "PBAT_BUILD_TESTS": {
