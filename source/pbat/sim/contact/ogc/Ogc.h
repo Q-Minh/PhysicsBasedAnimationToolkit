@@ -285,7 +285,12 @@ void DynamicVertexFacetRTCCollideFunc(
             }
             case EVertexFacetClosestFaceType::Edge: {
                 if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                    XE.Add(XOffset + ix, HEOffset + a);
+                    XE.Add(
+                        XOffset + ix,
+                        // Make sure we always add a unique half-edge index to prevent duplicate
+                        // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
+                        // its opposite will be -1.
+                        HEOffset + std::max(a, geometry::OppositeHalfEdge(F, a, GHEF)));
                 break;
             }
             default /* triangle */: {

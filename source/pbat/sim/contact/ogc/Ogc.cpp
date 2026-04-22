@@ -276,21 +276,12 @@ TEST_CASE("[sim][contact][ogc] Ogc")
         XX.Finalize(X.cols());
         XE.Finalize(X.cols());
         XF.Finalize(X.cols());
-        auto const nVerticesWithVertexContacts =
-            std::ranges::count_if(std::views::iota(0, X.cols()), [&](Index i) {
-                return XX.Degree(i) > 0;
-            });
-        auto const nVerticesWithEdgeContacts =
-            std::ranges::count_if(std::views::iota(0, X.cols()), [&](Index i) {
-                return XE.Degree(i) > 0;
-            });
-        auto const nVerticesWithTriangleContacts =
-            std::ranges::count_if(std::views::iota(0, X.cols()), [&](Index i) {
-                return XF.Degree(i) > 0;
-            });
-        CHECK_EQ(nVerticesWithTriangleContacts, 1);
-        CHECK_EQ(nVerticesWithEdgeContacts, 5);
-        CHECK_EQ(nVerticesWithVertexContacts, 2);
+        auto const nVertexVertexContacts   = XX.Size();
+        auto const nVertexEdgeContacts     = XE.Size();
+        auto const nVertexTriangleContacts = XF.Size();
+        CHECK_EQ(nVertexTriangleContacts, 1);
+        CHECK_EQ(nVertexEdgeContacts, 5);
+        CHECK_EQ(nVertexVertexContacts, 2);
     }
     SUBCASE("Edge-Edge Contact Detection")
     {
