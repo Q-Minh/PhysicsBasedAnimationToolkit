@@ -67,9 +67,15 @@ Params& Params::WithLinearSolver(ELinearSolver _eLinearSolver, Eigen::Index maxI
     return *this;
 }
 
-PBAT_API Params& Params::WithOgcTruncationStrategy(EOgcTruncationStrategy strategy)
+Params& Params::WithOgcTruncationStrategy(EOgcTruncationStrategy strategy)
 {
     this->eOgcTruncationStrategy = strategy;
+    return *this;
+}
+
+Params& Params::WithMaxIters(std::int32_t n)
+{
+    this->nMaxIters = n;
     return *this;
 }
 

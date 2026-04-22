@@ -5,6 +5,8 @@
 #include "pbat/Aliases.h"
 #include "pbat/fem/Tetrahedron.h"
 #include "pbat/io/Archive.h"
+#include "pbat/math/linalg/mini/Reductions.h"
+#include "pbat/math/linalg/mini/Reshape.h"
 #include "pbat/math/optimization/Newton.h"
 #include "pbat/physics/HyperElasticity.h"
 #include "pbat/profiling/Profiling.h"
@@ -79,6 +81,12 @@ struct Params
      */
     PBAT_API Params& WithOgcTruncationStrategy(EOgcTruncationStrategy strategy);
     /**
+     * @brief Set the maximum number of iterations for the Newton solver.
+     * @param n Maximum number of iterations
+     * @return Reference to this
+     */
+    PBAT_API Params& WithMaxIters(std::int32_t n);
+    /**
      * @brief Construct the parameters
      * @param bValidate Throw on detected ill-formed inputs
      * @return Reference to this
@@ -95,7 +103,8 @@ struct Params
      */
     PBAT_API void Deserialize(io::Archive const& archive);
 
-    math::optimization::Newton<Scalar> newton;           ///< Newton optimizer
+    std::int32_t nMaxIters{5};                 ///< Maximum number of linear constraint subproblems
+    math::optimization::Newton<Scalar> newton; ///< Newton optimizer
     std::vector<Eigen::Triplet<Scalar, Index>> triplets; ///< Triplets for assembling the Hessian
     Eigen::SparseMatrix<Scalar, Eigen::ColMajor, Index> hessian; ///< Hessian matrix
     fem::EHyperElasticSpdCorrection
@@ -133,7 +142,8 @@ struct Params
             decltype(hessian),
             Eigen::Lower | Eigen::Upper,
             fem::LaplacianPreconditioner<Scalar>>*/>;
-    SolverType Hinv; ///< Hessian inverse
+    SolverType Hinv;   ///< Hessian inverse
+    std::int32_t k{0}; ///< Current iteration number
 };
 
 /**
@@ -278,19 +288,27 @@ void ToGradient(
 /**
  * @brief Assemble the Hessian for the given finite element elasto dynamics problem.
  *
+ * Assembles the Hessian consisting of mass + hyper-elastic contributions. When
+ * `bWithConstraints` is true, also adds the linearized contact barrier Hessian
+ * contribution, which is a sum of rank-1 outer products
+ * \f$ -\mu_i a''(\hat{c}_i + \nabla c_i^T x) \nabla c_i \nabla c_i^T \f$ per constraint.
+ *
  * @tparam TElasticEnergy Hyper-elastic energy model
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact problem
  * @param params Solver parameters
+ * @param bWithConstraints Whether to include linearized contact barrier Hessian contribution
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void AssembleHessian(
     FemElastoDynamics<TElasticEnergy> const& fem,
     MeshDynamics& contact,
-    Params& params)
+    Params& params,
+    bool bWithConstraints = false)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.AssembleHessian");
-    // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
+    // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) [+ bt^2 C(x)]
+    auto constexpr kDims = std::decay_t<decltype(fem)>::kDims;
     using PointPointConstraint =
         typename std::decay_t<decltype(contact.PointPointContacts())>::ConstraintDataType;
     using PointEdgeConstraint =
@@ -303,17 +321,17 @@ void AssembleHessian(
     auto constexpr kPointEdgeDofs     = PointEdgeConstraint::kDofs;
     auto constexpr kPointTriangleDofs = PointTriangleConstraint::kDofs;
     auto constexpr kEdgeEdgeDofs      = EdgeEdgeConstraint::kDofs;
-    auto const nTriplets =
-        fem.HgU.size() + fem.M().size() +
-        contact.PointPointContacts().Size() * kPointPointDofs * kPointPointDofs +
-        contact.PointEdgeContacts().Size() * kPointEdgeDofs * kPointEdgeDofs +
-        contact.PointTriangleContacts().Size() * kPointTriangleDofs * kPointTriangleDofs +
-        contact.EdgeEdgeContacts().Size() * kEdgeEdgeDofs * kEdgeEdgeDofs;
+    auto nTriplets                    = fem.HgU.size() + fem.M().size();
+    if (bWithConstraints)
+    {
+        nTriplets +=
+            contact.PointPointContacts().Size() * kPointPointDofs * kPointPointDofs +
+            contact.PointEdgeContacts().Size() * kPointEdgeDofs * kPointEdgeDofs +
+            contact.PointTriangleContacts().Size() * kPointTriangleDofs * kPointTriangleDofs +
+            contact.EdgeEdgeContacts().Size() * kEdgeEdgeDofs * kEdgeEdgeDofs;
+    }
     params.triplets.reserve(nTriplets);
     params.triplets.clear();
-    // Assemble
-    std::size_t k{0};
-    auto constexpr kDims = std::decay_t<decltype(fem)>::kDims;
     // Mass matrix contribution
     for (Eigen::Index i = 0; i < fem.m.size(); ++i)
         for (auto d = 0; d < kDims; ++d)
@@ -337,19 +355,54 @@ void AssembleHessian(
                             nodes(jl) * kDims + jd,
                             HUg(il * kDims + id, jl * kDims + jd));
     }
-    // Contact Hessian contribution
-    // contact.ForEachMeshContactEnergy(
-    //     [&]<int kStencil>(sim::contact::MeshContactEnergy<Scalar, Index, kStencil> const& E) {
-    //         for (auto jl = 0; jl < kStencil; ++jl)
-    //             for (auto jd = 0; jd < kDims; ++jd)
-    //                 for (auto il = 0; il < kStencil; ++il)
-    //                     for (auto id = 0; id < kDims; ++id)
-    //                         params.triplets.emplace_back(
-    //                             E.stencil[il] * kDims + id,
-    //                             E.stencil[jl] * kDims + jd,
-    //                             E.hessEn(il * kDims + id, jl * kDims + jd) +
-    //                                 E.hessEf(il * kDims + id, jl * kDims + jd));
-    //     });
+    // Linearized contact barrier Hessian contribution:
+    //   -mu_i * a''(chat_i + gradc_i^T x) * gradc_i * gradc_i^T
+    if (bWithConstraints)
+    {
+        using math::linalg::mini::Dot;
+        using math::linalg::mini::Reshape;
+        using math::linalg::mini::ToEigen;
+        auto const& contactParams        = contact.GetParams();
+        Eigen::Index const nDynamicNodes = fem.x.size() / kDims;
+        contact.ForAllContacts(
+            [&]<class TContactSet, class TConstraintData>(
+                TConstraintData const& C,
+                auto const& stencil,
+                std::int32_t /*t*/) {
+                static auto constexpr kStencil        = TConstraintData::kStencil;
+                static auto constexpr kConstraintDims = TConstraintData::kDims;
+                static auto constexpr kDofs           = TConstraintData::kDofs;
+                static_assert(
+                    kConstraintDims == kDims,
+                    "Constraint dimension must match problem dimension");
+                auto const [XC, nodes] = contact.template LoadStencil<TContactSet>(fem.x, stencil);
+                auto xc                = Reshape<kDofs, 1>(XC);
+                auto c                 = C.chat + Dot(C.gradc, xc);
+                auto a2                = MeshDynamics::BarrierHessian(
+                    c,
+                    contactParams.mOgcParams.r,
+                    contactParams.epsP,
+                    contactParams.APC);
+                auto gradc = ToEigen(C.gradc);
+                for (auto jl = 0; jl < kStencil; ++jl)
+                {
+                    if (nodes[jl] >= nDynamicNodes)
+                        continue;
+                    for (auto il = 0; il < kStencil; ++il)
+                    {
+                        if (nodes[il] >= nDynamicNodes)
+                            continue;
+                        for (auto jd = 0; jd < kDims; ++jd)
+                            for (auto id = 0; id < kDims; ++id)
+                                params.triplets.emplace_back(
+                                    nodes[il] * kDims + id,
+                                    nodes[jl] * kDims + jd,
+                                    -C.mu * a2 * gradc(il * kDims + id) * gradc(jl * kDims + jd));
+                    }
+                }
+            },
+            1 /*nThreads*/);
+    }
     // Assemble
     params.hessian.resize(fem.x.size(), fem.x.size());
     // Remove off-diagonal Dirichlet entries (always) and upper triangular part (when LLT is used)
