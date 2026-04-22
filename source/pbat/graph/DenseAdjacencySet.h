@@ -182,6 +182,26 @@ class DenseAdjacencySet
         return std::get<std::vector<TData>>(mData);
     }
     /**
+     * @brief Get a const reference to the D^{th} edge data.
+     * @tparam D Index of edge data
+     * @return D^{th} data vector
+     */
+    template <std::size_t D>
+    auto const& Data() const
+    {
+        return std::get<D>(mData);
+    }
+    /**
+     * @brief Get a mutable reference to the edge data of type TData.
+     * @tparam D Index of edge data
+     * @return D^{th} data vector
+     */
+    template <std::size_t D>
+    auto& Data()
+    {
+        return std::get<D>(mData);
+    }
+    /**
      * @brief Get a const reference to the edge data of type TData.
      * @tparam TData Type of the edge data
      * @param k Index of the edge
@@ -202,6 +222,28 @@ class DenseAdjacencySet
     TData& Data(TIndex k)
     {
         return Data<TData>()[k];
+    }
+    /**
+     * @brief Get a const reference to the edge data of type TData.
+     * @tparam D Index of edge data
+     * @param k Index of the edge
+     * @return D^{th} data vector
+     */
+    template <std::size_t D>
+    auto const& Data(TIndex k) const
+    {
+        return Data<D>()[k];
+    }
+    /**
+     * @brief Get a mutable reference to the edge data of type TData.
+     * @tparam D Index of edge data
+     * @param k Index of the edge
+     * @return D^{th} data vector
+     */
+    template <std::size_t D>
+    auto& Data(TIndex k)
+    {
+        return Data<D>()[k];
     }
     /**
      * @brief Get the i^{th} adjacency (u,v)
