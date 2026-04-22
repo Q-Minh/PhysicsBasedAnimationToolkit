@@ -53,22 +53,14 @@ class VbdSolver(BaseSolver):
             callback = lambda: None
         pbat.sim.algorithm.vbd.initialize_solve(fem, contact, params)
         callback()
-
-        def iterate():
-            if contact.requires_bounds_computation:
+        for k in range(params.n_max_iters):
+            if contact.requires_constraint_set_update:
                 contact.update_constraint_set(fem.x)
             xk = fem.x.copy()
             pbat.sim.algorithm.vbd.iterate(fem, contact, params)
             fem.x = xk + self._step_size * (fem.x - xk)
-            fem.x = contact.make_feasible(fem.x, fem.dmask)
+            fem.x = contact.restore_feasibility(fem.x, fem.dmask)
             callback()
-
-        for k in range(params.n_max_iters):
-            if self.profiler is not None:
-                self.profiler.profile("VBD", iterate)
-            else:
-                iterate()
-
         fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):

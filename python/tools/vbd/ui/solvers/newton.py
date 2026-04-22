@@ -76,12 +76,12 @@ class NewtonSolver(BaseSolver):
         callback()
         while params.k < params.n_max_iters:
             pbat.sim.algorithm.newton.linearize_constraints(fem, contact)
-            if pbat.sim.algorithm.newton.check_convergence(fem, contact, params):
-                break
             pbat.sim.algorithm.newton.prepare_subproblem(fem, contact, params)
             pbat.sim.algorithm.newton.prepare_next_iteration(
                 fem, contact, params, are_subproblem_derivatives_dirty=False
             )
+            if pbat.sim.algorithm.newton.check_convergence(fem, contact, params):
+                break
             while newton.k < newton.n_max_iters:
                 if newton.gknorm2 < newton.gtol2:
                     break

@@ -277,7 +277,7 @@ def load_time_integration(path: str):
                 )
             )
     except Exception as e:
-        raise RuntimeError(f"Failed to load time integration from '{arg}': {e}") from e
+        raise RuntimeError(f"Failed to load time integration from '{path}': {e}") from e
     return dt, bdf_scheme, fem_dynamics_init_strategy
 
 
