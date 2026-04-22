@@ -287,7 +287,7 @@ def _edge_edge_contact_detection(
     e1 = block_id
     einds1 = meshes.E[e1]
     xi1, xj1 = x[einds1[0]], x[einds1[1]]
-    ehe1 = meshes.EHE[e1]
+    hei, hej = meshes.EHE[e1][0], meshes.EHE[e1][1]
     query = wp.tile_bvh_query_aabb(
         ogc.e_bvh_id,
         ogc.e_lowers[e1],
@@ -297,8 +297,6 @@ def _edge_edge_contact_detection(
     while candidates[local_tid] >= 0:  # pyright: ignore[reportIndexIssue]
         e2 = candidates[local_tid]  # pyright: ignore[reportIndexIssue]
         candidates = wp.tile_bvh_query_next(query)
-        if e1 >= e2:
-            continue  # Avoid duplicate edge-edge tests
         einds2 = meshes.E[e2]
         xi2, xj2 = x[einds2[0]], x[einds2[1]]
         are_adjacent = (
@@ -309,7 +307,6 @@ def _edge_edge_contact_detection(
         )
         if are_adjacent:
             continue
-        # TODO:
         zero = wp.float32(0)
         one = wp.float32(1)
         # 1. Compute closest point projection and distance
@@ -319,13 +316,15 @@ def _edge_edge_contact_detection(
         xc1 = (one - st[0]) * xi1 + st[0] * xj1  # pyright: ignore[reportIndexIssue]
         xc2 = (one - st[1]) * xi2 + st[1] * xj2  # pyright: ignore[reportIndexIssue]
         d = wp.norm_l2(xc1 - xc2)
-        ehe2 = meshes.EHE[e1]
-        wp.atomic_min(ogc.dmine, ehe1[0], d)
-        if ehe1[1] >= 0:
-            wp.atomic_min(ogc.dmine, ehe1[1], d)
-        wp.atomic_min(ogc.dmine, ehe2[0], d)
-        if ehe2[1] >= 0:
-            wp.atomic_min(ogc.dmine, ehe2[1], d)
+        ogc.dmine[hei] = wp.min(ogc.dmine[hei], d)
+        if hej >= 0:
+            ogc.dmine[hej] = wp.min(ogc.dmine[hej], d)
+        # NOTE:
+        # We only exit after updating the displacement bounds, because we launch a thread per edge, so that
+        # this pair (e1,e2) will be encountered as (e2,e1), so we allow both e1 and e2 to update their displacement bounds
+        # without requiring global synchronization (i.e. atomic min).
+        if e1 >= e2:
+            continue  # Avoid duplicate edge-edge tests
         # 2. If distance < ogc.r, update contact set
         if d < ogc.r:
             is_xc1_vertex = (
@@ -336,12 +335,16 @@ def _edge_edge_contact_detection(
             )
             # TODO: Update contact set
             if is_xc1_vertex and not is_xc2_vertex:
-                i = einds1[0] if st[0] == zero else einds1[1] # type: ignore
-                if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, i, xc2):
+                i = einds1[0] if st[0] == zero else einds1[1]  # type: ignore
+                if is_vertex_feasible(
+                    x, meshes.F, meshes.GVHEp, meshes.GVHEadj, i, xc2
+                ):
                     pass
             elif not is_xc1_vertex and is_xc2_vertex:
-                i = einds2[0] if st[1] == zero else einds2[1] # type: ignore
-                if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, i, xc1):
+                i = einds2[0] if st[1] == zero else einds2[1]  # type: ignore
+                if is_vertex_feasible(
+                    x, meshes.F, meshes.GVHEp, meshes.GVHEadj, i, xc1
+                ):
                     pass
             else:
                 pass
