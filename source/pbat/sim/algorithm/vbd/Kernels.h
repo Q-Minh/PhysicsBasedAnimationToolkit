@@ -635,6 +635,57 @@ PBAT_HOST_DEVICE void IntegratePositions(
     x -= (Inverse(H) * g);
 }
 
+/**
+ * @brief Accumulate augmented Lagrangian contact gradient and Hessian for a single stencil node.
+ *
+ * Given a linearized contact constraint with gradient `gradc` (kDofs x 1), tangent basis `T` (3x2),
+ * friction weights, and augmented Lagrangian parameters, accumulates the per-vertex (3x1 gradient,
+ * 3x3 Hessian) contribution for stencil node `ki`.
+ *
+ * Normal:   gi += dL * gradc_i,   Hi += kn * gradc_i * gradc_i^T
+ * Friction: gi += Wki * T * df,   Hi += kf * Wki^2 * T * T^T
+ *
+ * @tparam kDims Spatial dimensions (typically 3)
+ * @param gradc Full stencil constraint gradient (kDofs x 1)
+ * @param ki Local stencil index of the vertex
+ * @param dL Normal contact multiplier: kn*cs - lambda
+ * @param kn Normal penalty parameter: gamma*kc
+ * @param T Tangent basis at contact point (kDims x 2)
+ * @param Wki Friction weight for stencil node ki
+ * @param kf Friction penalty parameter: gammaf*kc
+ * @param df Friction dual residual: kf*cf - lambdaf (2 x 1)
+ * @param gi Per-vertex gradient accumulator (kDims x 1)
+ * @param Hi Per-vertex Hessian accumulator (kDims x kDims)
+ */
+template <
+    int kDims,
+    mini::CMatrix TGradC,
+    mini::CMatrix TMatrixT,
+    mini::CMatrix TDf,
+    mini::CMatrix TMatrixG,
+    mini::CMatrix TMatrixH,
+    class ScalarType = typename TGradC::ScalarType>
+PBAT_HOST_DEVICE void AccumulateAugmentedLagrangianContactNodeDerivatives(
+    TGradC const& gradc,
+    int ki,
+    ScalarType dL,
+    ScalarType kn,
+    TMatrixT const& T,
+    ScalarType Wki,
+    ScalarType kf,
+    TDf const& df,
+    TMatrixG& gi,
+    TMatrixH& Hi)
+{
+    auto gradc_i = gradc.template Slice<kDims, 1>(ki * kDims, 0);
+    // Normal contact
+    gi += dL * gradc_i;
+    Hi += kn * (gradc_i * gradc_i.Transpose());
+    // Friction contact
+    gi += Wki * (T * df);
+    Hi += (kf * Wki * Wki) * (T * T.Transpose());
+}
+
 } // namespace pbat::sim::algorithm::vbd::kernels
 
 #endif // PBAT_SIM_ALGORITHM_VBD_KERNELS_H

@@ -86,14 +86,14 @@ class MeshDynamics
     template <class TContactSet>
     struct FrictionAccessor
     {
-        using ContactSetType = TContactSet; ///< Contact set type
+        using ContactSetType = std::remove_const_t<TContactSet>; ///< Contact set type
         using ConstraintFunctionType =
-            typename TContactSet::ConstraintFunctionType; ///< Constraint function type
+            typename ContactSetType::ConstraintFunctionType; ///< Constraint function type
         static auto constexpr kStencil = ConstraintFunctionType::kStencil; ///< Stencil size
         static auto constexpr kDims    = ConstraintFunctionType::kDims;    ///< Dimension size
         static auto constexpr kDofs    = ConstraintFunctionType::kDofs; ///< Degree of freedom size
-        ContactSetType& set; ///< Reference to the contact set (possibly const)
-        TIndex k;            ///< Constraint data index
+        TContactSet& set; ///< Reference to the contact set (possibly const)
+        TIndex k;         ///< Constraint data index
         /**
          * @brief Tangential basis at the contact point \f$ \mathbf{T} \in \mathbb{R}^{3 \times 2}
          * \f$
@@ -219,14 +219,14 @@ class MeshDynamics
     template <class TContactSet>
     struct ConstraintAccessor
     {
-        using ContactSetType = TContactSet; ///< Contact set type
+        using ContactSetType = std::remove_const_t<TContactSet>; ///< Contact set type
         using ConstraintFunctionType =
-            typename TContactSet::ConstraintFunctionType; ///< Constraint function type
+            typename ContactSetType::ConstraintFunctionType; ///< Constraint function type
         static auto constexpr kStencil = ConstraintFunctionType::kStencil; ///< Stencil size
         static auto constexpr kDims    = ConstraintFunctionType::kDims;    ///< Dimension size
         static auto constexpr kDofs    = ConstraintFunctionType::kDofs; ///< Degree of freedom size
-        ContactSetType& set; ///< Reference to the contact set (possibly const)
-        TIndex k;            ///< Constraint data index
+        TContactSet& set; ///< Reference to the contact set (possibly const)
+        TIndex k;         ///< Constraint data index
         /**
          * @brief Get the constraint function for this contact.
          * @return ConstraintFunctionType

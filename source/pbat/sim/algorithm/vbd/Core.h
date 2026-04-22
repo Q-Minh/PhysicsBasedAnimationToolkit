@@ -15,7 +15,7 @@
 #include "Enums.h"
 #include "PhysicsBasedAnimationToolkitExport.h"
 #include "pbat/Aliases.h"
-#include "pbat/geometry/ClosestPointQueries.h"
+#include "pbat/geometry/HalfEdges.h"
 #include "pbat/graph/Adjacency.h"
 #include "pbat/graph/Enums.h"
 #include "pbat/io/Archive.h"
@@ -328,456 +328,93 @@ void AccumulateElasticEnergy(
 }
 
 /**
- * @brief Accumulate contact energy derivatives for vertex i
- * @tparam FOnEnergyDerivativesComputed Callable with signature `void(mini::SVector<Scalar,3> const&
- * gi, mini::SMatrix<Scalar,3,3> const& Hi)`
+ * @brief Accumulate augmented Lagrangian contact energy derivatives for vertex i.
+ *
+ * Iterates over all contact stencils involving vertex `i`:
+ *   - Forward point contacts (PointPoint, PointEdge, PointTriangle) where `i` is the source
+ *   - Reverse edge/triangle contacts via incident half-edges of `i` on the dynamic mesh
+ *   - Edge-edge contacts on half-edges incident on `i`
+ *
+ * For each stencil node position `ki` where vertex `i` appears, accumulates:
+ *   - Normal gradient:  `(kn*cs - lambda) * gradc_i`
+ *   - Normal Hessian:   `kn * gradc_i * gradc_i^T`
+ *   - Friction gradient: `W(ki) * T * (kf*cf - lambdaf)`
+ *   - Friction Hessian:  `kf * W(ki)^2 * T * T^T`
+ *
  * @tparam TDerivedx Type of position matrix
- * @tparam TDerivedxt Type of position matrix at time t
  * @param i Vertex index
- * @param xi Position of vertex i
- * @param xti Position of vertex i at time t
- * @param x Position matrix
- * @param xt Previous position matrix
- * @param contact Mesh contact dynamics
- * @param params Solver parameters
- * @param rB Contact radius
- * @param kcB Contact stiffness
- * @param kcpB Contact stiffness for penalty
- * @param bB Contact barrier parameter
- * @param mu Contact friction coefficient
- * @param epsvh Relative velocity threshold for static to dynamic friction transition
- * @param h2inv Inverse time step size squared
- * @param fOnEnergyDerivativesComputed Callback invoked when energy derivatives are computed
+ * @param x `3 x |# nodes|` current position matrix
+ * @param contact Mesh contact dynamics (with linearized constraints)
+ * @param gi Per-vertex gradient accumulator (3 x 1)
+ * @param Hi Per-vertex Hessian accumulator (3 x 3)
  */
-template <class FOnEnergyDerivativesComputed, class TDerivedx, class TDerivedxt>
+template <class TDerivedx>
 inline void AccumulateContactEnergy(
     Index i,
-    math::linalg::mini::SVector<Scalar, 3> const& xi,
-    math::linalg::mini::SVector<Scalar, 3> const& xti,
     Eigen::MatrixBase<TDerivedx> const& x,
-    Eigen::MatrixBase<TDerivedxt> const& xt,
-    contact::MeshDynamics<Scalar, Index>& contact,
-    Params& params,
-    Scalar rB,
-    Scalar kcB,
-    Scalar kcpB,
-    Scalar bB,
-    Scalar mu,
-    Scalar epsvh,
-    Scalar h2inv,
-    FOnEnergyDerivativesComputed&& fOnEnergyDerivativesComputed)
+    contact::MeshDynamics<Scalar, Index> const& contact,
+    math::linalg::mini::SVector<Scalar, 3>& gi,
+    math::linalg::mini::SMatrix<Scalar, 3, 3>& Hi)
 {
     using namespace math::linalg;
-    using mini::FromEigen;
-    using mini::ToEigen;
-    // auto const& Xenv = contact.StaticPointPositions();
-    // contact.ForEachPointDynamicMeshContact(
-    //     i,
-    //     // Vertex-vertex contact
-    //     [&](Index j) {
-    //         mini::SVector<Scalar, 3> xcp    = FromEigen(params.xb.col(j).template head<3>());
-    //         mini::SVector<Scalar, 3> xtcp   = FromEigen(xt.col(j).template head<3>());
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateVertexClosestPointContactDerivatives(
-    //             xi,
-    //             xti,
-    //             xcp,
-    //             xtcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     },
-    //     // Vertex-edge contact
-    //     [&](Eigen::Vector<Index, 2> const& einds) {
-    //         mini::SVector<Scalar, 3> xe1 = FromEigen(params.xb.col(einds(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xe2 = FromEigen(params.xb.col(einds(1)).template head<3>());
-    //         mini::SVector<Scalar, 2> uv =
-    //             geometry::ClosestPointQueries::UvPointOnLineSegment(xi, xe1, xe2);
-    //         mini::SVector<Scalar, 3> xcp    = uv(0) * xe1 + uv(1) * xe2;
-    //         mini::SVector<Scalar, 3> xte1   = FromEigen(xt.col(einds(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xte2   = FromEigen(xt.col(einds(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtcp   = uv(0) * xte1 + uv(1) * xte2;
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateVertexClosestPointContactDerivatives(
-    //             xi,
-    //             xti,
-    //             xcp,
-    //             xtcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     },
-    //     // Vertex-triangle contact
-    //     [&](Eigen::Vector<Index, 3> const& finds) {
-    //         mini::SVector<Scalar, 3> xa = FromEigen(params.xb.col(finds(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xb = FromEigen(params.xb.col(finds(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xc = FromEigen(params.xb.col(finds(2)).template head<3>());
-    //         mini::SVector<Scalar, 3> uvw =
-    //             geometry::ClosestPointQueries::UvwPointInTriangle(xi, xa, xb, xc);
-    //         mini::SVector<Scalar, 3> xcp    = uvw(0) * xa + uvw(1) * xb + uvw(2) * xc;
-    //         mini::SVector<Scalar, 3> xta    = FromEigen(xt.col(finds(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtb    = FromEigen(xt.col(finds(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtc    = FromEigen(xt.col(finds(2)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtcp   = uvw(0) * xta + uvw(1) * xtb + uvw(2) * xtc;
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateVertexClosestPointContactDerivatives(
-    //             xi,
-    //             xti,
-    //             xcp,
-    //             xtcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     });
-    // contact.ForEachPointStaticMeshContact(
-    //     i,
-    //     // Vertex-vertex contact
-    //     [&](Index j) {
-    //         mini::SVector<Scalar, 3> xcp    = FromEigen(Xenv.col(j).template head<3>());
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateVertexClosestPointContactDerivatives(
-    //             xi,
-    //             xti,
-    //             xcp,
-    //             xcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     },
-    //     // Vertex-edge contact
-    //     [&](Eigen::Vector<Index, 2> const& einds) {
-    //         mini::SVector<Scalar, 3> xe1 = FromEigen(Xenv.col(einds(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xe2 = FromEigen(Xenv.col(einds(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xcp =
-    //             geometry::ClosestPointQueries::PointOnLineSegment(xi, xe1, xe2);
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateVertexClosestPointContactDerivatives(
-    //             xi,
-    //             xti,
-    //             xcp,
-    //             xcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     },
-    //     // Vertex-triangle contact
-    //     [&](Eigen::Vector<Index, 3> const& finds) {
-    //         mini::SVector<Scalar, 3> xf1 = FromEigen(Xenv.col(finds(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xf2 = FromEigen(Xenv.col(finds(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xf3 = FromEigen(Xenv.col(finds(2)).template head<3>());
-    //         mini::SVector<Scalar, 3> xcp =
-    //             geometry::ClosestPointQueries::PointInTriangle(xi, xf1, xf2, xf3);
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateVertexClosestPointContactDerivatives(
-    //             xi,
-    //             xti,
-    //             xcp,
-    //             xcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     });
-    // contact.ForEachHalfEdgeDynamicMeshContactIncidentOnPoint(
-    //     i,
-    //     // Edge-vertex contact
-    //     [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
-    //         // NOTE: xi1 should be xi
-    //         // mini::SVector<Scalar, 3> xi1 =
-    //         //     FromEigen(fem.x.col(eindsi(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xcp  = FromEigen(params.xb.col(j).template
-    //         head<3>()); mini::SVector<Scalar, 3> xtcp = FromEigen(xt.col(j).template head<3>());
-    //         mini::SVector<Scalar, 2> uv =
-    //             geometry::ClosestPointQueries::UvPointOnLineSegment(xcp, xi, xi2);
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
-    //             xi,
-    //             xi2,
-    //             xti,
-    //             xti2,
-    //             uv,
-    //             0 /*ilocal == 0 because i == eindsi(0)*/,
-    //             xcp,
-    //             xtcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     },
-    //     // Edge-edge contact
-    //     [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
-    //         mini::SVector<Scalar, 3> xi2 = FromEigen(params.xb.col(eindsi(1)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xj1 =
-    //         FromEigen(params.xb.col(eindsj(0)).template head<3>()); mini::SVector<Scalar, 3> xj2
-    //         = FromEigen(params.xb.col(eindsj(1)).template head<3>()); mini::SVector<Scalar, 2> st
-    //         =
-    //             geometry::ClosestPointQueries::LineSegments(xi, xi2, xj1, xj2);
-    //         mini::SVector<Scalar, 3> xcp  = (1 - st(1)) * xj1 + st(1) * xj2;
-    //         mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtj1 = FromEigen(xt.col(eindsj(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtj2 = FromEigen(xt.col(eindsj(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtcp = (1 - st(1)) * xtj1 + st(1) * xtj2;
-    //         mini::SVector<Scalar, 2> uv1{1 - st(0), st(0)};
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
-    //             xi,
-    //             xi2,
-    //             xti,
-    //             xti2,
-    //             uv1,
-    //             0 /*ilocal == 0 because i == eindsi(0)*/,
-    //             xcp,
-    //             xtcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     });
-    // contact.ForEachHalfEdgeStaticMeshContactIncidentOnPoint(
-    //     i,
-    //     // Edge-vertex contact
-    //     [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
-    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xcp  = FromEigen(Xenv.col(j).template
-    //         head<3>()); mini::SVector<Scalar, 2> uv =
-    //             geometry::ClosestPointQueries::UvPointOnLineSegment(xcp, xi, xi2);
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
-    //             xi,
-    //             xi2,
-    //             xti,
-    //             xti2,
-    //             uv,
-    //             0 /*ilocal == 0 because i == eindsi(0)*/,
-    //             xcp,
-    //             xcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     },
-    //     // Edge-edge contact
-    //     [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
-    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xj1  = FromEigen(Xenv.col(eindsj(0)).template
-    //         head<3>()); mini::SVector<Scalar, 3> xj2  = FromEigen(Xenv.col(eindsj(1)).template
-    //         head<3>()); mini::SVector<Scalar, 2> st =
-    //             geometry::ClosestPointQueries::LineSegments(xi, xi2, xj1, xj2);
-    //         mini::SVector<Scalar, 3> xcp = (1 - st(1)) * xj1 + st(1) * xj2;
-    //         mini::SVector<Scalar, 2> uv1{1 - st(0), st(0)};
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateHalfEdgeVertexToClosestPointContactDerivatives(
-    //             xi,
-    //             xi2,
-    //             xti,
-    //             xti2,
-    //             uv1,
-    //             0 /*ilocal == 0 because i == eindsi(0)*/,
-    //             xcp,
-    //             xcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     });
-    // contact.ForEachDynamicPointContactOnTrianglesIncidentOnPoint(
-    //     i,
-    //     // Triangle-vertex contact
-    //     [&](Eigen::Vector<Index, 3> const& finds, Index j) {
-    //         int ilocal =
-    //             /*(finds(0) == i) * 0 + */ (finds(1) == i) * 1 + (finds(2) == i) * 2;
-    //         int jlocal = (ilocal + 1) % 3;
-    //         int klocal = (ilocal + 2) % 3;
-    //         mini::SVector<Scalar, 3> xb =
-    //             FromEigen(params.xb.col(finds(jlocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xc =
-    //             FromEigen(params.xb.col(finds(klocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtb  = FromEigen(xt.col(finds(jlocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtc  = FromEigen(xt.col(finds(klocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xcp  = FromEigen(params.xb.col(j).template head<3>());
-    //         mini::SVector<Scalar, 3> xtcp = FromEigen(xt.col(j).template head<3>());
-    //         mini::SVector<Scalar, 3> uvw =
-    //             geometry::ClosestPointQueries::UvwPointInTriangle(xcp, xi, xb, xc);
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateTriangleVertexToClosestPointContactDerivatives(
-    //             xi,
-    //             xb,
-    //             xc,
-    //             xti,
-    //             xtb,
-    //             xtc,
-    //             uvw,
-    //             0 /*ilocal == 0, because finds(ilocal) == i*/,
-    //             xcp,
-    //             xtcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     });
-    // contact.ForEachStaticPointContactOnTrianglesIncidentOnPoint(
-    //     i,
-    //     // Triangle-vertex contact
-    //     [&](Eigen::Vector<Index, 3> const& finds, Index j) {
-    //         int ilocal =
-    //             /*(finds(0) == i) * 0 + */ (finds(1) == i) * 1 + (finds(2) == i) * 2;
-    //         int jlocal = (ilocal + 1) % 3;
-    //         int klocal = (ilocal + 2) % 3;
-    //         mini::SVector<Scalar, 3> xb =
-    //             FromEigen(params.xb.col(finds(jlocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xc =
-    //             FromEigen(params.xb.col(finds(klocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtb = FromEigen(xt.col(finds(jlocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xtc = FromEigen(xt.col(finds(klocal)).template head<3>());
-    //         mini::SVector<Scalar, 3> xcp = FromEigen(Xenv.col(j).template head<3>());
-    //         mini::SVector<Scalar, 3> uvw =
-    //             geometry::ClosestPointQueries::UvwPointInTriangle(xcp, xi, xb, xc);
-    //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
-    //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
-    //         Scalar dc = kernels::AccumulateTriangleVertexToClosestPointContactDerivatives(
-    //             xi,
-    //             xb,
-    //             xc,
-    //             xti,
-    //             xtb,
-    //             xtc,
-    //             uvw,
-    //             0 /*ilocal == 0, because finds(ilocal) == i*/,
-    //             xcp,
-    //             xcp,
-    //             rB,
-    //             kcB,
-    //             kcpB,
-    //             bB,
-    //             mu,
-    //             epsvh,
-    //             h2inv,
-    //             gic,
-    //             Hic);
-    //         assert(
-    //             not ToEigen(gic).hasNaN() and not ToEigen(Hic).hasNaN() and
-    //             ToEigen(gic).allFinite() and ToEigen(Hic).allFinite());
-    //         fOnEnergyDerivativesComputed(dc, gic, Hic);
-    //     });
+
+    auto const& contactParams = contact.GetParams();
+    Scalar const kn           = contactParams.gamma * contactParams.kc;
+    Scalar const kf           = contactParams.gammaf * contactParams.kc;
+    Scalar const dmin         = contactParams.dmin;
+    // Generic per-contact accumulation for a known stencil position ki
+    auto fAccumulateNodalDerivatives = [&](auto C, auto stencil, int ki) {
+        using ConstraintAccessorType = decltype(C);
+        using ContactSetType         = typename ConstraintAccessorType::ContactSetType;
+        static auto constexpr kDofs  = ConstraintAccessorType::kDofs;
+        auto const [Xc, nodes]       = contact.template LoadStencil<ContactSetType>(x, stencil);
+        auto xc                      = mini::Reshape<kDofs, 1>(Xc);
+        // Normal
+        Scalar cs         = C.Eval(xc) - dmin - C.Slack();
+        Scalar dL         = kn * cs - C.Lambda();
+        auto const& gradc = C.Grad();
+        // Friction
+        auto F                      = C.Friction();
+        auto const& Wf              = F.Weights();
+        auto const& Tf              = F.TangentBasis();
+        auto cf                     = F.Eval(xc);
+        mini::SVector<Scalar, 2> df = kf * cf - F.Lambda();
+        kernels::AccumulateAugmentedLagrangianContactNodeDerivatives<
+            3>(gradc, ki, dL, kn, Tf, Wf(ki), kf, df, gi, Hi);
+    };
+
+    // TODO: Update these calls so that we set the right local node index `ki`.
+    using ContactMeshDynamics     = contact::MeshDynamics<Scalar, Index>;
+    using PointPointContactSet    = typename ContactMeshDynamics::PointPointContactSet;
+    using PointEdgeContactSet     = typename ContactMeshDynamics::PointEdgeContactSet;
+    using PointTriangleContactSet = typename ContactMeshDynamics::PointTriangleContactSet;
+    using EdgeEdgeContactSet      = typename ContactMeshDynamics::EdgeEdgeContactSet;
+    contact.ForEachPointPointContact(i, [&](auto C, auto stencil) {
+        fAccumulateNodalDerivatives(C, stencil, 0);
+    });
+    contact.ForEachPointEdgeContact(i, [&](auto C, auto stencil) {
+        fAccumulateNodalDerivatives(C, stencil, 0);
+    });
+    contact.ForEachPointTriangleContact(i, [&](auto C, auto stencil) {
+        fAccumulateNodalDerivatives(C, stencil, 0);
+    });
+    auto const& dm     = contact.DynamicMeshes();
+    auto const hebegin = dm.GVHEp(i);
+    auto const heend   = dm.GVHEp(i + 1);
+    for (auto k = hebegin; k < heend; ++k)
+    {
+        auto const he = dm.GVHEadj(k);
+        auto const f  = geometry::FaceOfHalfEdge(he);
+        contact.ForEachEdgePointContact(he, [&](auto C, auto stencil) {
+            fAccumulateNodalDerivatives(C, stencil, 1);
+        });
+        contact.ForEachTrianglePointContact(f, [&](auto C, auto stencil) {
+            fAccumulateNodalDerivatives(C, stencil, 0);
+        });
+        contact.ForEachEdgeEdgeContact(he, [&](auto C, auto stencil) {
+            fAccumulateNodalDerivatives(C, stencil, 0);
+        });
+    }
 }
 
 /**
@@ -816,15 +453,6 @@ auto BuildVertexEquation(
     -> std::pair<math::linalg::mini::SMatrix<Scalar, 3, 3>, math::linalg::mini::SVector<Scalar, 3>>
 {
     using namespace math::linalg;
-    using namespace std;
-    auto const& contactParams      = contact.GetParams();
-    Scalar h2inv                   = 1 / h2;
-    Scalar rB                      = contactParams.mOgcParams.r;
-    Scalar kcB                     = contactParams.kc;
-    Scalar kcpB                    = contactParams.kcp;
-    Scalar bB                      = contactParams.b;
-    Scalar epsvh                   = contactParams.epsv * h;
-    Scalar mu                      = contactParams.mu;
     mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
     mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
     // Elastic energy
@@ -838,28 +466,8 @@ auto BuildVertexEquation(
         });
     gi *= h2;
     Hi *= h2;
-    // Contact energy
-    AccumulateContactEnergy(
-        i,
-        xi,
-        xti,
-        x,
-        xt,
-        contact,
-        params,
-        rB,
-        kcB,
-        kcpB,
-        bB,
-        mu,
-        epsvh,
-        Scalar(1) /*h2inv*/,
-        [&]([[maybe_unused]] Scalar dc,
-            mini::SVector<Scalar, 3> const& gic,
-            mini::SMatrix<Scalar, 3, 3> const& Hic) {
-            gi += gic;
-            Hi += Hic;
-        });
+    // Contact energy (augmented Lagrangian)
+    AccumulateContactEnergy(i, x, contact, gi, Hi);
     // Kinetic energy
     kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
     // Damping
