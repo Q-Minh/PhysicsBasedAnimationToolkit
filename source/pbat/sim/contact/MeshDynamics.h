@@ -118,6 +118,7 @@ class MeshDynamics
          * @brief Evaluate the friction constraint value
          * @param xc Stencil point positions
          * @return math::linalg::mini::SVector<TScalar, 2>
+         * @pre `ComputeLinearization(x, xt)` has been called
          */
         auto Eval(auto&& xc) -> math::linalg::mini::SVector<TScalar, 2>
         {
@@ -281,6 +282,7 @@ class MeshDynamics
          * @brief Evaluates the linearized constraint function at `x`
          * @param x `kDofs x 1` mini::CMatrix
          * @return auto
+         * @pre `ComputeLinearization(x, xt)` has been called
          */
         auto Eval(auto&& x) { return Chat() + Dot(Grad(), x); }
         /**
