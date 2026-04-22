@@ -140,6 +140,8 @@ struct Params
      * solver progress is slow)
      * @param gammadown Beta reduction factor
      * @param gammaup Beta increase factor
+     * @param bWarmStartBeta If true, initialize beta for the first iteration of each subproblem
+     * using the final beta from the previous subproblem
      * @param wkinetic Weight factor for kinetic energy
      * @param welastic Weight factor for elastic energy
      * @param wcontact Weight factor for contact energy
@@ -150,9 +152,10 @@ struct Params
         Scalar rhohat,
         Scalar gammadown,
         Scalar gammaup,
-        Scalar wkinetic = Scalar(1),
-        Scalar welastic = Scalar(1),
-        Scalar wcontact = Scalar(1));
+        bool bWarmStartBeta = true,
+        Scalar wkinetic     = Scalar(1),
+        Scalar welastic     = Scalar(1),
+        Scalar wcontact     = Scalar(1));
     /**
      * @brief Vertex linear solver
      * @param solver Vertex integration linear solver
@@ -226,11 +229,13 @@ struct Params
     Scalar betaG0{0.5};   ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
     Scalar rhohat{0.005}; ///< Lipschitz-normalized threshold above which steps are considered small
                           ///< (i.e. solver progress is slow)
-    Scalar gammadown{0.95}; ///< Beta reduction factor
-    Scalar gammaup{0.5};    ///< Beta increase factor
-    Scalar wkinetic{1};     ///< Stencil gradient weight for kinetic energy term
-    Scalar welastic{1};     ///< Stencil gradient weight for elastic energy term
-    Scalar wcontact{1};     ///< Stencil gradient weight for contact energy term
+    bool bWarmStartBeta{true}; ///< If true, initialize beta for the first iteration of each
+                               ///< subproblem using the final beta from the previous subproblem
+    Scalar gammadown{0.95};    ///< Beta reduction factor
+    Scalar gammaup{0.5};       ///< Beta increase factor
+    Scalar wkinetic{1};        ///< Stencil gradient weight for kinetic energy term
+    Scalar welastic{1};        ///< Stencil gradient weight for elastic energy term
+    Scalar wcontact{1};        ///< Stencil gradient weight for contact energy term
 
     /**
      * @brief Read-write
@@ -786,7 +791,8 @@ void Solve(
         // 3. Setup subproblem
         AssembleBlockDiagonalDynamicsHessian(fem, params);
         UpdatePenaltyParameter(contact, params);
-        params.betaG.setConstant(params.betaG0);
+        if (not params.bWarmStartBeta)
+            params.betaG.setConstant(params.betaG0);
         // 4. VBD solve the linear constraint subproblem
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
         for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)

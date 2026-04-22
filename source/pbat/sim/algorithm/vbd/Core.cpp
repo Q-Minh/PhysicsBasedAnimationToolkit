@@ -152,17 +152,19 @@ Params& Params::WithStencilGradientAcceleration(
     Scalar _rhohat,
     Scalar _gammadown,
     Scalar _gammaup,
+    bool _bWarmStartBeta,
     Scalar _wkinetic,
     Scalar _welastic,
     Scalar _wcontact)
 {
-    this->betaG0    = _betaG0;
-    this->rhohat    = _rhohat;
-    this->gammadown = _gammadown;
-    this->gammaup   = _gammaup;
-    this->wkinetic  = _wkinetic;
-    this->welastic  = _welastic;
-    this->wcontact  = _wcontact;
+    this->betaG0         = _betaG0;
+    this->rhohat         = _rhohat;
+    this->gammadown      = _gammadown;
+    this->gammaup        = _gammaup;
+    this->bWarmStartBeta = _bWarmStartBeta;
+    this->wkinetic       = _wkinetic;
+    this->welastic       = _welastic;
+    this->wcontact       = _wcontact;
     return *this;
 }
 
@@ -279,6 +281,7 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
     group.WriteMetaData("gammaup", gammaup);
+    group.WriteMetaData("bWarmStartBeta", static_cast<int>(bWarmStartBeta));
     group.WriteMetaData("wkinetic", wkinetic);
     group.WriteMetaData("welastic", welastic);
     group.WriteMetaData("wcontact", wcontact);
@@ -352,6 +355,8 @@ void Params::Deserialize(io::Archive const& archive)
         gammadown = group.ReadMetaData<decltype(gammadown)>("gammadown");
     if (group.HasMetaData("gammaup"))
         gammaup = group.ReadMetaData<decltype(gammaup)>("gammaup");
+    if (group.HasMetaData("bWarmStartBeta"))
+        bWarmStartBeta = static_cast<bool>(group.ReadMetaData<int>("bWarmStartBeta"));
     if (group.HasMetaData("wkinetic"))
         wkinetic = group.ReadMetaData<decltype(wkinetic)>("wkinetic");
     if (group.HasMetaData("welastic"))

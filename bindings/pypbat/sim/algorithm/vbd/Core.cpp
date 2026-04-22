@@ -165,11 +165,12 @@ void BindCore(nanobind::module_& m)
             &Params::WithStencilGradientAcceleration,
             nb::arg("betaG0"),
             nb::arg("rhohat"),
-            nb::arg("gammadown"),
-            nb::arg("gammaup"),
-            nb::arg("wkinetic"),
-            nb::arg("welastic"),
-            nb::arg("wcontact"),
+            nb::arg("gammadown")       = Scalar(0.5),
+            nb::arg("gammaup")         = Scalar(0.5),
+            nb::arg("warm_start_beta") = false,
+            nb::arg("wkinetic")        = Scalar(1),
+            nb::arg("welastic")        = Scalar(1),
+            nb::arg("wcontact")        = Scalar(1),
             nb::rv_policy::reference_internal,
             "Stencil gradient acceleration parameters.\n\n"
             "Args:\n"
@@ -177,6 +178,8 @@ void BindCore(nanobind::module_& m)
             "    rhohat (float): Stencil gradient density factor\n"
             "    gammadown (float): Stencil gradient beta reduction factor\n"
             "    gammaup (float): Stencil gradient beta increase factor\n"
+            "    warm_start_beta (bool): If true, initialize beta for the first iteration of each "
+            "subproblem to the final beta from the previous subproblem (default: False)\n"
             "    wkinetic (float): Kinetic weight factor\n"
             "    welastic (float): Elastic weight factor\n"
             "    wcontact (float): Contact weight factor\n"
@@ -268,6 +271,11 @@ void BindCore(nanobind::module_& m)
             "Lipschitz-normalized threshold for considering steps small")
         .def_rw("gammadown", &Params::gammadown, "Beta reduction factor")
         .def_rw("gammaup", &Params::gammaup, "Beta increase factor")
+        .def_rw(
+            "warm_start_beta",
+            &Params::bWarmStartBeta,
+            "If true, initialize beta for the first iteration of each subproblem to the final beta "
+            "from the previous subproblem")
         .def_rw("wkinetic", &Params::wkinetic, "Stencil gradient weight for kinetic energy term")
         .def_rw("welastic", &Params::welastic, "Stencil gradient weight for elastic energy term")
         .def_rw("wcontact", &Params::wcontact, "Stencil gradient weight for contact energy term")
