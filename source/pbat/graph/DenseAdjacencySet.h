@@ -10,16 +10,13 @@
 #ifndef PBAT_GRAPH_ADJACENCYSET_H
 #define PBAT_GRAPH_ADJACENCYSET_H
 
-#include "pbat/Aliases.h"
 #include "pbat/common/Concepts.h"
-#include "pbat/profiling/Profiling.h"
 
 #include <algorithm>
 #include <cassert>
 #include <compare>
 #include <concepts>
 #include <cstdint>
-#include <numeric>
 #include <ranges>
 #include <tuple>
 #include <type_traits>
