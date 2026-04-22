@@ -201,6 +201,8 @@ if(PBAT_BUILD_BENCHMARKS)
         nanobench
         GIT_REPOSITORY https://github.com/martinus/nanobench.git
         GIT_TAG v4.3.11
-        GIT_SHALLOW TRUE)
+        GIT_SHALLOW TRUE
+        SYSTEM
+    )
     FetchContent_MakeAvailable(nanobench)
 endif()
