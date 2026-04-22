@@ -35,7 +35,7 @@ namespace pbat::common {
  * @tparam nBits Number of bits to use for each bucket
  */
 template <std::integral TCount = std::size_t, int nBits = 8>
-struct alignas(std::hardware_destructive_interference_size) RadixSortWorkspace
+struct alignas(64) RadixSortWorkspace
 {
     static int constexpr Radix = 1 << nBits; ///< Radix
     static int constexpr kBits = nBits;      ///< Number of bits in a digit

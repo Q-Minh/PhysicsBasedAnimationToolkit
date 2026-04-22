@@ -328,22 +328,19 @@ PBAT_HOST_DEVICE auto operator+=(TLhsMatrix&& A, TRhsMatrix&& B)
     return A;
 }
 
-template <class /*CMatrix*/ TLhsMatrix, class /*CMatrix*/ TRhsMatrix>
-PBAT_HOST_DEVICE auto operator-(TLhsMatrix&& A, TRhsMatrix&& B)
+template <CMatrix TLhsMatrix, class TRhsMatrix>
+    requires CMatrix<TRhsMatrix> || std::is_arithmetic_v<TRhsMatrix>
+PBAT_HOST_DEVICE auto operator-(TLhsMatrix const& A, TRhsMatrix const& B)
 {
     using LhsMatrixType = std::remove_cvref_t<TLhsMatrix>;
     using RhsMatrixType = std::remove_cvref_t<TRhsMatrix>;
     if constexpr (std::is_arithmetic_v<RhsMatrixType>)
     {
-        return SubtractionScalar<LhsMatrixType>(
-            std::forward<TLhsMatrix>(A),
-            std::forward<TRhsMatrix>(B));
+        return SubtractionScalar<LhsMatrixType>(A, B);
     }
     else
     {
-        return Subtraction<LhsMatrixType, RhsMatrixType>(
-            std::forward<TLhsMatrix>(A),
-            std::forward<TRhsMatrix>(B));
+        return Subtraction<LhsMatrixType, RhsMatrixType>(A, B);
     }
 }
 
