@@ -321,7 +321,7 @@ class MeshDynamics
      * @param bParallel Whether to visit all contacts in parallel
      */
     template <class FOnContact>
-    void ForEachContact(FOnContact& fOnContact, bool bParallel = false);
+    void ForAllContacts(FOnContact&& fOnContact, bool bParallel = false);
     /**
      * @brief Get the number of truncated points from the last `RestoreFeasibility()`
      * call
@@ -831,6 +831,10 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(Eigen::DenseBase<
     if (mParams.bDeactivate)
     {
         mOgcState.bv.setConstant(std::numeric_limits<ScalarType>::max());
+        mPointPointContacts.Clear();
+        mPointEdgeContacts.Clear();
+        mPointTriangleContacts.Clear();
+        mEdgeEdgeContacts.Clear();
         mRequiresBoundsRecomputation = false;
         mNumTruncatedPoints          = 0;
         return;
@@ -849,7 +853,7 @@ template <class TDerivedx>
 inline void MeshDynamics<TScalar, TIndex>::UpdateDualVariables(Eigen::DenseBase<TDerivedx> const& x)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateDualVariables");
-    ForEachContact(
+    ForAllContacts(
         [&]<class TConstraintData>(
             TConstraintData& C,
             std::array<TIndex, TConstraintData::kStencil> const& /*nodes*/,
@@ -921,12 +925,12 @@ template <class FOnContact, class TContactSet>
 inline void
 MeshDynamics<TScalar, TIndex>::ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact)
 {
-    ForEachContact(contactSet, fOnContact, TIndex(0), static_cast<TIndex>(contactSet.Size()));
+    ForEachContact(contactSet, std::forward<FOnContact>(fOnContact), TIndex(0), static_cast<TIndex>(contactSet.Size()));
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class FOnContact>
-inline void MeshDynamics<TScalar, TIndex>::ForEachContact(FOnContact& fOnContact, bool bParallel)
+inline void MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, bool bParallel)
 {
     if (not bParallel)
     {
@@ -1185,7 +1189,7 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
-    ForEachContact(
+    ForAllContacts(
         [&]<class TConstraintData>(
             TConstraintData& C,
             std::array<TIndex, TConstraintData::kStencil> const& /*nodes*/,

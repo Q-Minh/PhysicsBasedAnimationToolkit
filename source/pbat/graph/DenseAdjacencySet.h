@@ -70,6 +70,10 @@ class DenseAdjacencySet
      */
     void CompactIds();
     /**
+     * @brief Clear the adjacency set.
+     */
+    void Clear();
+    /**
      * @brief Get the number of edges in the adjacency set.
      * @return std::size_t
      */
@@ -309,6 +313,17 @@ inline void DenseAdjacencySet<TIndex, T...>::CompactIds()
         mIdToData[i] = static_cast<TIndex>(i);
         mDataToId[i] = static_cast<TIndex>(i);
     }
+}
+
+template <common::CIndex TIndex, class... T>
+inline void DenseAdjacencySet<TIndex, T...>::Clear()
+{
+    mAdjacencies.clear();
+    mCpy.clear();
+    mIdToData.clear();
+    mDataToId.clear();
+    mPrefix.clear();
+    std::apply([](auto&&... data) { (data.clear(), ...); }, mData);
 }
 
 template <common::CIndex TIndex, class... T>
