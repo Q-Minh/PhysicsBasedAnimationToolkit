@@ -451,9 +451,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
 
         adj.Add(0u, 1u);
         adj.Add(1u, 2u);
-        adj.Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        adj.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
         CHECK(adj.Size() == 2u);
 
         // Keep (0,1), drop (1,2), add (2,3)
@@ -480,9 +478,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
         adj.Add(1u, 2u);
         adj.Add(1u, 4u);
         adj.Add(3u, 4u);
-        adj.Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        adj.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
         adj.Finalize();
 
         std::vector<std::uint32_t> neighbours;
@@ -501,18 +497,14 @@ TEST_CASE("[graph] AdjacencySet<void>")
         AdjacencySet<void> a;
         a.Add(0u, 1u);
         a.Add(1u, 2u);
-        a.Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        a.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
         AdjacencySet<void> b;
         b.Add(1u, 2u);
         b.Add(2u, 3u);
-        b.Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        b.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
-        a.Merge(std::move(b));
+        a.Merge(b);
         CHECK(a.Size() == 3u); // (0,1), (1,2), (2,3)
         CHECK(b.Size() == 0u);
 
@@ -528,9 +520,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
     {
         AdjacencySet<void> a;
         a.Add(0u, 1u);
-        a.Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        a.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
         struct EdgeData
         {
@@ -544,7 +534,7 @@ TEST_CASE("[graph] AdjacencySet<void>")
             },
             [](std::uint32_t, std::uint32_t, EdgeData&) {});
 
-        a.Merge(std::move(b));
+        a.Merge(b);
         CHECK(a.Size() == 2u);
         CHECK(b.Size() == 0u);
 
@@ -572,11 +562,9 @@ TEST_CASE("[graph] AdjacencySet<void>")
 
         AdjacencySet<void> b;
         b.Add(1u, 2u);
-        b.Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        b.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
-        a.Merge(std::move(b));
+        a.Merge(b);
         CHECK(a.Size() == 2u);
         CHECK(b.Size() == 0u);
 
@@ -602,25 +590,17 @@ TEST_CASE("[graph] AdjacencySet<void>")
         std::vector<AdjacencySet<void>> sets(4);
         // Thread 0: (0,1)
         sets[0].Add(0u, 1u);
-        sets[0].Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        sets[0].Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
         // Thread 1: (1,2)
         sets[1].Add(1u, 2u);
-        sets[1].Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        sets[1].Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
         // Thread 2: (2,3)
         sets[2].Add(2u, 3u);
-        sets[2].Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        sets[2].Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
         // Thread 3: (3,4), (0,1) duplicate
         sets[3].Add(3u, 4u);
         sets[3].Add(0u, 1u);
-        sets[3].Update(
-            [](std::uint32_t, std::uint32_t) {},
-            [](std::uint32_t, std::uint32_t) {});
+        sets[3].Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
 
         AdjacencySet<void> result;
         result.Reduce(sets.begin(), sets.end());

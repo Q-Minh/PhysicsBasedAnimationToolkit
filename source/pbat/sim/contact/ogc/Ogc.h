@@ -215,22 +215,28 @@ void DynamicVertexFacetRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input = data->input;
-    Params<TScalar> const* params       = data->params;
-    State<TScalar, TIndex>* state       = data->state;
-    auto const& X                       = input->X.value();
-    auto const& V                       = input->V.value();
-    auto const& F                       = input->F.value();
-    auto const& GVHEp                   = input->GVHEp.value();
-    auto const& GVHEadj                 = input->GVHEadj.value();
-    auto const& GHEF                    = input->GHEF.value();
-    TScalar const r                     = params->r;
-    auto& dminv                         = state->dminv;
-    auto& dminf                         = state->dminf;
-    auto& DDVV                          = state->mDDVV.local();
-    auto& DDVE                          = state->mDDVE.local();
-    auto& DDVF                          = state->mDDVF.local();
+    auto* data       = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType  = Input<TScalar, TIndex>;
+    using ParamsType = Params<TScalar>;
+    using StateType  = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const FOffset     = state->mTriangleGeometryPrefix[StateType::EGeometry::Dynamic];
+    auto const& X            = input->X.value();
+    auto const& V            = input->V.value();
+    auto const& F            = input->F.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto& dminv              = state->dminv;
+    auto& dminf              = state->dminf;
+    auto& XX                 = state->mXX.local();
+    auto& XE                 = state->mXE.local();
+    auto& XF                 = state->mXF.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -274,16 +280,16 @@ void DynamicVertexFacetRTCCollideFunc(
         {
             case EVertexFacetClosestFaceType::Vertex: {
                 if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                    DDVV.Add(iv, a);
+                    XX.Add(XOffset + ix, XOffset + a);
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
                 if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                    DDVE.Add(iv, a);
+                    XE.Add(XOffset + ix, HEOffset + a);
                 break;
             }
             default /* triangle */: {
-                DDVF.Add(iv, f);
+                XF.Add(XOffset + ix, FOffset + a);
                 break;
             }
         }
@@ -304,22 +310,29 @@ void DynamicVertexStaticFacetRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input = data->input;
-    Params<TScalar> const* params       = data->params;
-    State<TScalar, TIndex>* state       = data->state;
-    auto const& X                       = input->X.value();
-    auto const& V                       = input->V.value();
-    auto const& Xenv                    = input->Venv.value();
-    auto const& Fenv                    = input->Fenv.value();
-    auto const& GVHEenvp                = input->GVHEenvp.value();
-    auto const& GVHEenvadj              = input->GVHEenvadj.value();
-    auto const& GHEFenv                 = input->GHEFenv.value();
-    TScalar const r                     = params->r;
-    auto& dminv                         = state->dminv;
-    auto& DSVV                          = state->mDSVV.local();
-    auto& DSVE                          = state->mDSVE.local();
-    auto& DSVF                          = state->mDSVF.local();
+    auto* data       = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType  = Input<TScalar, TIndex>;
+    using ParamsType = Params<TScalar>;
+    using StateType  = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const XenvOffset  = state->mPointGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const HEenvOffset = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const FenvOffset  = state->mTriangleGeometryPrefix[StateType::EGeometry::Static];
+    auto const& X            = input->X.value();
+    auto const& V            = input->V.value();
+    auto const& Xenv         = input->Venv.value();
+    auto const& Fenv         = input->Fenv.value();
+    auto const& GVHEenvp     = input->GVHEenvp.value();
+    auto const& GVHEenvadj   = input->GVHEenvadj.value();
+    auto const& GHEFenv      = input->GHEFenv.value();
+    auto& dminv              = state->dminv;
+    auto& XX                 = state->mXX.local();
+    auto& XE                 = state->mXE.local();
+    auto& XF                 = state->mXF.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -358,16 +371,16 @@ void DynamicVertexStaticFacetRTCCollideFunc(
         {
             case EVertexFacetClosestFaceType::Vertex: {
                 if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xi, a))
-                    DSVV.Add(iv, a);
+                    XX.Add(XOffset + ix, XenvOffset + a);
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
                 if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xi, f, a))
-                    DSVE.Add(iv, a);
+                    XE.Add(XOffset + ix, HEenvOffset + a);
                 break;
             }
             default /* triangle */: {
-                DSVF.Add(iv, f);
+                XF.Add(XOffset + ix, FenvOffset + f);
                 break;
             }
         }
@@ -388,21 +401,28 @@ void StaticVertexDynamicFacetRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input = data->input;
-    Params<TScalar> const* params       = data->params;
-    State<TScalar, TIndex>* state       = data->state;
-    auto const& Xenv                    = input->Venv.value();
-    auto const& X                       = input->X.value();
-    auto const& F                       = input->F.value();
-    auto const& GVHEp                   = input->GVHEp.value();
-    auto const& GVHEadj                 = input->GVHEadj.value();
-    auto const& GHEF                    = input->GHEF.value();
-    TScalar const r                     = params->r;
-    auto& dminf                         = state->dminf;
-    auto& DSVV                          = state->mDSVV.local();
-    auto& DSVE                          = state->mDSVE.local();
-    auto& DSVF                          = state->mDSVF.local();
+    auto* data       = static_cast<VertexFacetRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType  = Input<TScalar, TIndex>;
+    using ParamsType = Params<TScalar>;
+    using StateType  = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const XenvOffset  = state->mPointGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const FOffset     = state->mTriangleGeometryPrefix[StateType::EGeometry::Dynamic];
+    auto const& Xenv         = input->Venv.value();
+    auto const& X            = input->X.value();
+    auto const& F            = input->F.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto& dminf              = state->dminf;
+    auto& XX                 = state->mXX.local();
+    auto& XE                 = state->mXE.local();
+    auto& XF                 = state->mXF.local();
     // For each potential contact pair (v,f)
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
@@ -440,16 +460,16 @@ void StaticVertexDynamicFacetRTCCollideFunc(
         {
             case EVertexFacetClosestFaceType::Vertex: {
                 if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xi, a))
-                    DSVV.Add(ix, a);
+                    XX.Add(XenvOffset + ix, XOffset + a);
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
                 if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                    DSVE.Add(ix, a);
+                    XE.Add(XenvOffset + ix, HEOffset + a);
                 break;
             }
             default /* triangle */: {
-                DSVF.Add(ix, f);
+                XF.Add(XenvOffset + ix, FOffset + f);
                 break;
             }
         }
@@ -478,19 +498,23 @@ void DynamicEdgeEdgeRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input = data->input;
-    Params<TScalar> const* params       = data->params;
-    State<TScalar, TIndex>* state       = data->state;
-    auto const& X                       = input->X.value();
-    auto const& F                       = input->F.value();
-    auto const& E                       = input->E.value();
-    auto const& EP                      = input->EP.value();
-    auto const& EHE                     = input->EHE.value();
-    auto const& GHEF                    = input->GHEF.value();
-    auto& dmine                         = state->dmine;
-    TScalar const r                     = params->r;
-    auto& DDEE                          = state->mDDEE.local();
+    auto* data               = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType          = Input<TScalar, TIndex>;
+    using ParamsType         = Params<TScalar>;
+    using StateType          = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const EOffset     = state->mEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    auto const& X            = input->X.value();
+    auto const& F            = input->F.value();
+    auto const& E            = input->E.value();
+    auto const& EP           = input->EP.value();
+    auto const& EHE          = input->EHE.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto& dmine              = state->dmine;
+    auto& EE                 = state->mEE.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
@@ -551,7 +575,7 @@ void DynamicEdgeEdgeRTCCollideFunc(
         // safety for now until we can rigorously verify this claim.
         if (IsEdgeFeasible(X, F, GHEF, xc1, GHEF(0, ehe2(0)), ehe2(0)) and
             IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            DDEE.Add(e1, e2);
+            EE.Add(EOffset + e1, EOffset + e2);
     }
 }
 
@@ -569,23 +593,28 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
     struct RTCCollision* collisions,
     unsigned int nCollisions)
 {
-    auto* data = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
-    Input<TScalar, TIndex> const* input = data->input;
-    Params<TScalar> const* params       = data->params;
-    State<TScalar, TIndex>* state       = data->state;
-    auto const& Xenv                    = input->Venv.value();
-    auto const& Eenv                    = input->Eenv.value();
-    auto const& Fenv                    = input->Fenv.value();
-    auto const& EHEenv                  = input->EHEenv.value();
-    auto const& GHEFenv                 = input->GHEFenv.value();
-    auto const& X                       = input->X.value();
-    auto const& E                       = input->E.value();
-    auto const& F                       = input->F.value();
-    auto const& EHE                     = input->EHE.value();
-    auto const& GHEF                    = input->GHEF.value();
-    auto& dmine                         = state->dmine;
-    TScalar const r                     = params->r;
-    auto& DSEE                          = state->mDSEE.local();
+    auto* data               = static_cast<EdgeEdgeRTCCollideFuncParams<TScalar, TIndex>*>(userPtr);
+    using InputType          = Input<TScalar, TIndex>;
+    using ParamsType         = Params<TScalar>;
+    using StateType          = State<TScalar, TIndex>;
+    InputType const* input   = data->input;
+    ParamsType const* params = data->params;
+    StateType* state         = data->state;
+    TScalar const r          = params->r;
+    TIndex const EOffset     = state->mEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const EenvOffset  = state->mEdgeGeometryPrefix[StateType::EGeometry::Static];
+    auto const& Xenv         = input->Venv.value();
+    auto const& Eenv         = input->Eenv.value();
+    auto const& Fenv         = input->Fenv.value();
+    auto const& EHEenv       = input->EHEenv.value();
+    auto const& GHEFenv      = input->GHEFenv.value();
+    auto const& X            = input->X.value();
+    auto const& E            = input->E.value();
+    auto const& F            = input->F.value();
+    auto const& EHE          = input->EHE.value();
+    auto const& GHEF         = input->GHEF.value();
+    auto& dmine              = state->dmine;
+    auto& EE                 = state->mEE.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
@@ -634,7 +663,7 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // safety for now until we can rigorously verify this claim.
         if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xc1, GHEFenv(0, ehe2(0)), ehe2(0)) and
             IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            DSEE.Add(e1, e2);
+            EE.Add(EOffset + e1, EenvOffset + e2);
     }
 }
 

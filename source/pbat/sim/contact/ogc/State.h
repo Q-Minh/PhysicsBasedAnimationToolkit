@@ -13,11 +13,13 @@
 #include "Input.h"
 #include "Params.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/common/Indexing.h"
 #include "pbat/geometry/Device.h"
 #include "pbat/graph/AdjacencySet.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
+#include <array>
 #include <embree4/rtcore.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
@@ -154,26 +156,35 @@ class State
     /**
      * @brief Contact sets (thread-local).
      *
-     * API users can use the graph::AdjacencySet::Reduce function to merge these thread-local
+     * API users can use the graph::AdjacencySet::Reduce function to merge the thread-local
      * contact sets into a single set for each contact type after parallel contact generation.
      */
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDDVV; ///< Dynamic-dynamic vertex-vertex contact pairs.
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDDVE; ///< Dynamic-dynamic vertex-(half-)edge contact pairs.
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDDVF; ///< Dynamic-dynamic vertex-triangle contact pairs.
-    tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDDEE; ///< Dynamic-dynamic edge-edge contact pairs.
+
+    /**
+     * @brief Geometry type enumeration for contact set prefix sums
+     */
+    enum EGeometry {
+        Dynamic = 0, ///< Dynamic geometry
+        Static  = 1, ///< Static geometry
+        Count   = 2  ///< Number of geometry types (dynamic + static)
+    };
+    std::array<IndexType, 3> mPointGeometryPrefix; ///< Prefix sum over points of each geometry type
+                                                   ///< (i.e. dynamic, static)
+    std::array<IndexType, 3> mHalfEdgeGeometryPrefix; ///< Prefix sum over half-edges of each
+                                                      ///< geometry type (i.e. dynamic, static)
+    std::array<IndexType, 3>
+        mEdgeGeometryPrefix; ///< Prefix sum over edges of each geometry type (i.e. dynamic, static)
+    std::array<IndexType, 3> mTriangleGeometryPrefix; ///< Prefix sum over (triangle) facets of each
+                                                      ///< geometry type (i.e. dynamic, static)
 
     tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDSVV; ///< Dynamic-static vertex-vertex contact pairs.
+        mXX; ///< Point-point contact pairs.
     tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDSVE; ///< Dynamic-static vertex-(half-)edge contact pairs.
+        mXE; ///< Point-(half-)edge contact pairs.
     tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDSVF; ///< Dynamic-static vertex-triangle contact pairs.
+        mXF; ///< Point-triangle contact pairs.
     tbb::enumerable_thread_specific<graph::AdjacencySet<void, IndexType>>
-        mDSEE; ///< Dynamic-static edge-edge contact pairs.
+        mEE; ///< Edge-edge contact pairs.
 
     /**
      * @brief Acceleration structure for static geometry
@@ -240,14 +251,14 @@ inline State<TScalar, TIndex>::State()
       dminv(),
       dminf(),
       dmine(),
-      mDDVV(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mDDVE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mDDVF(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mDDEE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mDSVV(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mDSVE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mDSVF(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
-      mDSEE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mPointGeometryPrefix{},
+      mHalfEdgeGeometryPrefix{},
+      mEdgeGeometryPrefix{},
+      mTriangleGeometryPrefix{},
+      mXX(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mXE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mXF(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mEE(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
       mDynamicVertexScene(nullptr),
       mDynamicEdgeScene(nullptr),
       mDynamicFacetScene(nullptr),
@@ -450,14 +461,14 @@ inline State<TScalar, TIndex>& State<TScalar, TIndex>::operator=(State&& other) 
     dminv                   = std::move(other.dminv);
     dminf                   = std::move(other.dminf);
     dmine                   = std::move(other.dmine);
-    mDDVV                   = std::move(other.mDDVV);
-    mDDVE                   = std::move(other.mDDVE);
-    mDDVF                   = std::move(other.mDDVF);
-    mDDEE                   = std::move(other.mDDEE);
-    mDSVV                   = std::move(other.mDSVV);
-    mDSVE                   = std::move(other.mDSVE);
-    mDSVF                   = std::move(other.mDSVF);
-    mDSEE                   = std::move(other.mDSEE);
+    mPointGeometryPrefix    = std::move(other.mPointGeometryPrefix);
+    mHalfEdgeGeometryPrefix = std::move(other.mHalfEdgeGeometryPrefix);
+    mEdgeGeometryPrefix     = std::move(other.mEdgeGeometryPrefix);
+    mTriangleGeometryPrefix = std::move(other.mTriangleGeometryPrefix);
+    mXX                     = std::move(other.mXX);
+    mXE                     = std::move(other.mXE);
+    mXF                     = std::move(other.mXF);
+    mEE                     = std::move(other.mEE);
     mDynamicVertexScene     = std::exchange(other.mDynamicVertexScene, nullptr);
     mDynamicEdgeScene       = std::exchange(other.mDynamicEdgeScene, nullptr);
     mDynamicFacetScene      = std::exchange(other.mDynamicFacetScene, nullptr);
@@ -643,20 +654,16 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void State<TScalar, TIndex>::UpdateVertexFacetContactSets()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.UpdateVertexFacetContactSets");
-    detail::UpdateContactSet(mDDVV);
-    detail::UpdateContactSet(mDDVE);
-    detail::UpdateContactSet(mDDVF);
-    detail::UpdateContactSet(mDSVV);
-    detail::UpdateContactSet(mDSVE);
-    detail::UpdateContactSet(mDSVF);
+    detail::UpdateContactSet(mXX);
+    detail::UpdateContactSet(mXE);
+    detail::UpdateContactSet(mXF);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void State<TScalar, TIndex>::UpdateEdgeEdgeContactSets()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.UpdateEdgeEdgeContactSets");
-    detail::UpdateContactSet(mDDEE);
-    detail::UpdateContactSet(mDSEE);
+    detail::UpdateContactSet(mEE);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -666,22 +673,30 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.PrepareForExecution");
     // 1. Clear contact sets
-    for (graph::AdjacencySet<void, TIndex>& vv : mDDVV)
-        vv.Clear();
-    for (graph::AdjacencySet<void, TIndex>& ve : mDDVE)
-        ve.Clear();
-    for (graph::AdjacencySet<void, TIndex>& vf : mDDVF)
-        vf.Clear();
-    for (graph::AdjacencySet<void, TIndex>& ee : mDDEE)
+    for (graph::AdjacencySet<void, TIndex>& xx : mXX)
+        xx.Clear();
+    for (graph::AdjacencySet<void, TIndex>& xe : mXE)
+        xe.Clear();
+    for (graph::AdjacencySet<void, TIndex>& xf : mXF)
+        xf.Clear();
+    for (graph::AdjacencySet<void, TIndex>& ee : mEE)
         ee.Clear();
-    for (graph::AdjacencySet<void, TIndex>& vv : mDSVV)
-        vv.Clear();
-    for (graph::AdjacencySet<void, TIndex>& ve : mDSVE)
-        ve.Clear();
-    for (graph::AdjacencySet<void, TIndex>& vf : mDSVF)
-        vf.Clear();
-    for (graph::AdjacencySet<void, TIndex>& ee : mDSEE)
-        ee.Clear();
+    common::ExclusivePrefixSum(
+        mPointGeometryPrefix,
+        (input.X ? input.X->cols() : 0),
+        (input.Venv ? input.Venv->cols() : 0));
+    common::ExclusivePrefixSum(
+        mHalfEdgeGeometryPrefix,
+        (input.F ? 3 * input.F->cols() : 0),
+        (input.Fenv ? 3 * input.Fenv->cols() : 0));
+    common::ExclusivePrefixSum(
+        mEdgeGeometryPrefix,
+        (input.E ? input.E->cols() : 0),
+        (input.Eenv ? input.Eenv->cols() : 0));
+    common::ExclusivePrefixSum(
+        mTriangleGeometryPrefix,
+        (input.F ? input.F->cols() : 0),
+        (input.Fenv ? input.Fenv->cols() : 0));
     // 2. Reset bounds
     dminv.setConstant(params.rq * params.rq);
     dminf.setConstant(params.rq * params.rq);
