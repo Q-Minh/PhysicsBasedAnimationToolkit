@@ -202,27 +202,11 @@ template <std::ranges::random_access_range TIncomingAdjacencies>
     requires common::CTupleLike<std::ranges::range_value_t<TIncomingAdjacencies>>
 inline TIndex DenseAdjacencySet<TIndex, T...>::Assign(TIncomingAdjacencies&& B_)
 {
-    // Let A = *this
-    bool constexpr bAreKeysSigned = std::is_signed_v<TIndex>;
-    auto const fSetNone           = [](auto&& tup) {
-        if constexpr (bAreKeysSigned)
-            std::get<0>(tup) = -std::get<0>(tup) - 1;
-        else
-            std::get<0>(tup) = std::numeric_limits<TIndex>::max();
-    };
-    auto const fIsNone = [](auto&& tup) {
-        if constexpr (bAreKeysSigned)
-            return std::get<0>(tup) < 0;
-        else
-            return std::get<0>(tup) == std::numeric_limits<TIndex>::max();
-    };
     auto const fProj = [](auto&& tup) {
         return std::tie(std::get<0>(tup), std::get<1>(tup));
     };
-    auto A = std::views::transform(mAdjacencies, fProj);
-    auto B = std::views::transform(B_, fProj);
-    assert(std::ranges::is_sorted(B));
-    assert(std::ranges::adjacent_find(B) == std::ranges::end(B));
+    assert(std::ranges::is_sorted(B_, std::ranges::less{}, fProj));
+    assert(std::ranges::adjacent_find(B_, std::ranges::equal_to{}, fProj) == std::ranges::end(B_));
     // 1. Swap elements of (A and B) to the front of A, and elements of (B \ A) to the front of B.
     auto abegin = std::ranges::begin(mAdjacencies);
     auto bbegin = std::ranges::begin(B_);
