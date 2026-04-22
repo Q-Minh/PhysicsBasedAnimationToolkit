@@ -630,9 +630,17 @@ PBAT_HOST_DEVICE void IntegratePositions(
     ScalarType detHZero = ScalarType(1e-7))
 {
     // 3. Newton step
-    if (abs(Determinant(H)) <= detHZero) // Skip nearly rank-deficient hessian
-        return;
-    x -= (Inverse(H) * g);
+    // if (abs(Determinant(H)) <= detHZero) // Skip nearly rank-deficient hessian
+    //     return;
+    // x -= (Inverse(H) * g);
+    auto eigs = math::linalg::mini::SymmetricEigen3x3(H, false);
+    for (auto d = 0; d < TMatrixH::kRows; ++d)
+        eigs.lambda(d) =
+            std::max({eigs.lambda(d), -eigs.lambda(d), std::numeric_limits<ScalarType>::epsilon()});
+    mini::SVector<ScalarType, TMatrixG::kRows> dx = eigs.V.Transpose() * g;
+    for (auto d = 0; d < TMatrixH::kRows; ++d)
+        dx(d) /= eigs.lambda(d);
+    x -= eigs.V * dx;
 }
 
 /**
