@@ -307,7 +307,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact problem
  * @return Merit function value
- * @pre `PrepareSubproblemDerivatives()` has been called
+ * @pre `ComputeElasticDerivatives()` has been called
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 Scalar MeritFunctionFromPrecomputedPotentials(
@@ -331,12 +331,12 @@ Scalar MeritFunctionFromPrecomputedPotentials(
  * @param params Solver parameters
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void PrepareSubproblemDerivatives(
+void ComputeElasticDerivatives(
     FemElastoDynamics<TElasticEnergy>& fem,
     MeshDynamics& contact,
     Params& params)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareSubproblemDerivatives");
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ComputeElasticDerivatives");
     // Precompute elastic energy and its derivatives
     Scalar bt  = fem.bdf.BetaTilde();
     Scalar bt2 = bt * bt;
@@ -639,7 +639,7 @@ void PrepareSubproblem(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareSubproblem");
-    PrepareSubproblemDerivatives(fem, contact, params);
+    ComputeElasticDerivatives(fem, contact, params);
     AssembleHessian(fem, contact, params, false /*bWithContacts*/);
     contact.UpdatePenaltyParameter(params.hessian);
     params.newton.InitializeSolve(fem.x);
@@ -657,7 +657,7 @@ void PrepareNextIteration(
     params.newton.PrepareNextIteration(
         [&]([[maybe_unused]] auto const& _xk) {
             if (bAreSubproblemDerivativesDirty)
-                PrepareSubproblemDerivatives<TElasticEnergy>(fem, contact, params);
+                ComputeElasticDerivatives<TElasticEnergy>(fem, contact, params);
             return MeritFunctionFromPrecomputedPotentials(fem, contact);
         } /* fPrepareDerivatives */,
         [&]([[maybe_unused]] auto const& _xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
@@ -691,6 +691,8 @@ void FinalizeSubproblem(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.FinalizeSubproblem");
+    using EDualVariable = MeshDynamics::EDualVariable;
+    contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(fem.x);
     contact.RestoreFeasibility(fem.x, fem.dmask);
     contact.UpdateConstraintSet(fem.x);
     ++params.k;
@@ -706,7 +708,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         // 1. Linearize constraints
         contact.LinearizeConstraints(xk);
         // 2. Check KKT conditions and exit if converged
-        PrepareSubproblemDerivatives(fem, contact, params);
+        ComputeElasticDerivatives(fem, contact, params);
         ToGradient(fem, contact, params.newton.gk);
         params.newton.gknorm2 = params.newton.gk.squaredNorm();
         if (params.newton.gknorm2 <= params.newton.gtol2)
@@ -719,7 +721,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         [[maybe_unused]] bool const bSubproblemConverged = params.newton.Solve(
             [&]([[maybe_unused]] auto const& xk) {
                 if (params.newton.k > 0)
-                    PrepareSubproblemDerivatives<TElasticEnergy>(fem, contact, params);
+                    ComputeElasticDerivatives<TElasticEnergy>(fem, contact, params);
                 return MeritFunctionFromPrecomputedPotentials(fem, contact);
             } /* fPrepareDerivatives */,
             [&](auto const& xk) {
