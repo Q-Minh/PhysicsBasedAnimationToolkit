@@ -671,39 +671,39 @@ void Solve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
     for (params.k = 0; params.k < params.nMaxIters; ++params.k)
     {
-        fmt::print("out iter={}\n", params.k);
+        // fmt::print("out iter={}\n", params.k);
         // 1. Linearize constraints
-        fmt::print("1 - Linearizing constraints\n");
+        // fmt::print("1 - Linearizing constraints\n");
         auto xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
         contact.LinearizeConstraints(fem.x, xt);
         // 2. Convergence check
-        fmt::print("2 - Checking convergence\n");
+        // fmt::print("2 - Checking convergence\n");
         bool const bConverged = CheckConvergence(fem, contact, params);
         if (bConverged)
             break;
         // 3. Setup subproblem
-        fmt::print("3 - Setting up subproblem\n");
+        // fmt::print("3 - Setting up subproblem\n");
         AssembleBlockDiagonalDynamicsHessian(fem, params);
         UpdatePenaltyParameter(contact, params);
         // 4. VBD solve the linear constraint subproblem
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
-        fmt::print("4 - Solving linear constraint subproblem\n");
+        // fmt::print("4 - Solving linear constraint subproblem\n");
         for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
         {
             contact.UpdateDual<EDualVariable::Slack>(fem.x);
             Iterate<TElasticEnergy>(fem, contact, params);
         }
         // 5. Dual update
-        fmt::print("5 - Updating dual variables\n");
+        // fmt::print("5 - Updating dual variables\n");
         contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(fem.x);
         // 6. Restore feasibility
-        fmt::print("6 - Restoring feasibility\n");
+        // fmt::print("6 - Restoring feasibility\n");
         contact.RestoreFeasibility(fem.x, fem.dmask);
         // 7. Update constraint set for next subproblem
-        fmt::print("7 - Updating constraint set for next subproblem\n");
+        // fmt::print("7 - Updating constraint set for next subproblem\n");
         contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
     }
-    fmt::print(" - Completed VBD solve\n");
+    // fmt::print(" --- Completed VBD solve\n");
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }
 

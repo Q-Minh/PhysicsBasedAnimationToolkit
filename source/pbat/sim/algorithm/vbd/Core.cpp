@@ -41,7 +41,7 @@ void VertexColors(
 void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.UpdatePenaltyParameter");
-    auto nThreads       = std::thread::hardware_concurrency();
+    // auto nThreads       = std::thread::hardware_concurrency();
     auto& contactParams = contact.GetParams();
     auto nDynamicNodes  = params.xk.cols();
     Scalar& kc          = contactParams.kc;
@@ -62,11 +62,12 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
                 auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
                 auto gradci = gradc.template segment<3>(ki * 3);
                 Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
-                pbat::common::AtomicMin(kc, -Q);
+                // pbat::common::AtomicMin(kc, -Q);
+                kc = std::max(kc, Q);
             }
         },
-        nThreads);
-    kc = -kc;
+        /*nThreads*/ 1);
+    // kc = -kc;
 }
 
 Params& Params::WithVertexElementAdjacencyGraph(
@@ -213,7 +214,7 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
     group.WriteMetaData("gammaup", gammaup);
-    if (!bMinimal)
+    if (not bMinimal)
     {
         group.WriteData("GVGp", GVGp);
         group.WriteData("GVGe", GVGe);
