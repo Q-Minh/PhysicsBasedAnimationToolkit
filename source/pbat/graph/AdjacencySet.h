@@ -23,6 +23,7 @@
 #include <numeric>
 #include <ranges>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_sort.h>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -164,6 +165,8 @@ struct AdjacencySetUpdateOptions
                 ///< already sorted lexicographically by (u, v). This can be set to true to skip
                 ///< the sorting step in Update() when the user can guarantee that Add() is called
                 ///< in sorted order.
+    bool bUseParallelSort{
+        false}; ///< If true, the sorting step in Update() (if needed) will be parallelized.
 };
 
 /**
@@ -326,8 +329,29 @@ class AdjacencySet
      * Must be called once after any sequence of Update() and/or Merge() calls, before
      * using AdjacenciesOf(). Grows the prefix array if adjacencies reference source
      * vertices beyond the range established by Construct().
+     *
+     * @params n Number of source vertices (optional). If `n < 0`, it is inferred from the maximum
+     * vertex index in mAdjacencies. If `n >= 0`, it is used to size the prefix array, and all
+     * adjacencies with source vertex `u >= n` are considered invalid and ignored in
+     * AdjacenciesOf().
      */
-    void Finalize();
+    void Finalize(std::make_signed_t<TVertexIndex> n = -1);
+
+    /**
+     * @brief Check if the adjacency (u, v) exists in the set, optionally retrieving its associated
+     * data id.
+     *
+     * @param u Source vertex
+     * @param v Target vertex
+     * @param c Optional pointer to store the associated data id (if TData is not void)
+     * @param bUseBinarySearch If true, use binary search over the sorted mAdjacencies. Otherwise,
+     * perform a linear search. Prefer linear search when expected degree of u is small.
+     * @return true if the adjacency exists, false otherwise
+     * @pre Finalize() has been called to establish the prefix array for AdjacenciesOf() and enable
+     * binary search.
+     */
+    bool
+    Has(TVertexIndex u, TVertexIndex v, TIdIndex* c = nullptr, bool bUseBinarySearch = true) const;
 
     /**
      * @brief Iterate over all adjacencies (u, v, w) where u is fixed.
@@ -528,7 +552,10 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Update(
     // 2. Sort and deduplicate incoming adjacencies. mExistingAdjacencies is already sorted (it was
     // mAdjacencies which we maintain sorted).
     if (not options.bAssumeSortedIncoming)
-        std::ranges::sort(mIncomingAdjacencies);
+        if (options.bUseParallelSort)
+            tbb::parallel_sort(mIncomingAdjacencies);
+        else
+            std::ranges::sort(mIncomingAdjacencies);
     if (not options.bAssumeUniqueIncoming)
         mIncomingAdjacencies.erase(
             std::unique(mIncomingAdjacencies.begin(), mIncomingAdjacencies.end()),
@@ -729,16 +756,17 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
-void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize()
+void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize(std::make_signed_t<TVertexIndex> n)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Finalize");
     // Grow mPrefix if any adjacency source vertex exceeds the current range
     // (can happen after Merge with a larger set).
     if (not mAdjacencies.empty())
     {
-        auto maxU = mAdjacencies.back().u; // mAdjacencies is sorted by u
-        if (static_cast<std::size_t>(maxU) + 1u >= mPrefix.size())
-            mPrefix.resize(static_cast<std::size_t>(maxU) + 2u);
+        if (n < 0)
+            n = static_cast<decltype(n)>(mAdjacencies.back().u) + 1;
+        if (n >= mPrefix.size())
+            mPrefix.resize(static_cast<std::size_t>(n) + 1u);
     }
     // Reset all counts to zero
     std::fill(mPrefix.begin(), mPrefix.end(), TVertexIndex{0});
@@ -747,6 +775,42 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Finalize()
         ++mPrefix[static_cast<std::size_t>(adj.u)];
     // Exclusive prefix sum: mPrefix[i] = sum of counts for vertices [0, i)
     std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TVertexIndex{0});
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+inline bool AdjacencySet<TData, TVertexIndex, TIdIndex>::Has(
+    TVertexIndex u,
+    TVertexIndex v,
+    TIdIndex* c,
+    bool bUseBinarySearch) const
+{
+    TVertexIndex const first = mPrefix[u];
+    TVertexIndex const last  = mPrefix[static_cast<std::size_t>(u) + 1u];
+    auto begin               = mAdjacencies.begin() + first;
+    auto end                 = mAdjacencies.begin() + last;
+    auto it                  = end;
+    bool bFound{false};
+    if (bUseBinarySearch)
+    {
+        it = std::lower_bound(
+            begin,
+            end,
+            std::make_pair(u, v),
+            [](AdjacencyEntryType const& adj, std::pair<TVertexIndex, TVertexIndex> const& uv) {
+                return std::make_pair(adj.u, adj.v) < uv;
+            });
+        bFound = it != end and (it->u == u and it->v == v);
+    }
+    else
+    {
+        it     = std::find_if(begin, end, [&](AdjacencyEntryType const& adj) {
+            return adj.u == u and adj.v == v;
+        });
+        bFound = it != end;
+    }
+    if (bFound and c != nullptr)
+        *c = it->id;
+    return bFound;
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>

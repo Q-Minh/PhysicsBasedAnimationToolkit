@@ -132,6 +132,16 @@ TEST_CASE("[graph] AdjacencySet")
             [](std::uint32_t, std::uint32_t, EdgeData&) {});
         adj.Finalize();
 
+        // Has() interface
+        {
+            CHECK(adj.Has(1u, 0u));
+            CHECK(adj.Has(1u, 2u));
+            CHECK(adj.Has(1u, 4u));
+            CHECK(adj.Has(3u, 4u));
+            CHECK_FALSE(adj.Has(2u, 1u));
+            CHECK_FALSE(adj.Has(0u, 1u));
+        }
+
         // Edges are directed: Add(1,0) stores (1,0).
         // Adjacencies with first endpoint 0: none
         {
