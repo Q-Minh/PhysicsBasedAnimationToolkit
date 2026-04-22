@@ -711,14 +711,12 @@ void Solve(
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
         for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
         {
-            contact.UpdateDual<EDualVariable::Slack>(fem.x);
+            contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(fem.x);
             Iterate<TElasticEnergy>(fem, contact, params);
         }
-        // 5. Dual update
-        contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(fem.x);
-        // 6. Restore feasibility
+        // 5. Restore feasibility
         contact.RestoreFeasibility(fem.x, fem.dmask);
-        // 7. Update constraint set for next subproblem
+        // 6. Update constraint set for next subproblem
         contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
