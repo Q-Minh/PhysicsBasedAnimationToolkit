@@ -332,17 +332,29 @@ inline auto PointEdgeDistance<TScalar>::Gradient(TMatrixx const& x_)
     auto ga = g.template Slice<3, 1>(3, 0);
     auto gb = g.template Slice<3, 1>(6, 0);
     using namespace std;
-    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
-    math::linalg::mini::SVector<TScalar, 3> ax = x - a;
-    math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ax);
-    TScalar nnorm                              = Norm(n);
-    n /= nnorm;
-    TScalar abnorm        = Norm(ab);
-    TScalar nnorm_abnorm2 = nnorm / (abnorm * abnorm);
-    gx                    = Cross(-ab, n);
-    ga                    = Cross(b - x, n) + nnorm_abnorm2 * ab;
-    gb                    = Cross(ax, n) - nnorm_abnorm2 * ab;
-    g *= (1 / abnorm);
+    // NOTE: This is the actual point-edge distance function, but it's not accurate away from
+    // the triangle.
+    // math::linalg::mini::SVector<TScalar, 3> ab = b - a;
+    // math::linalg::mini::SVector<TScalar, 3> ax = x - a;
+    // math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ax);
+    // TScalar nnorm                              = Norm(n);
+    // n /= nnorm;
+    // TScalar abnorm        = Norm(ab);
+    // TScalar nnorm_abnorm2 = nnorm / (abnorm * abnorm);
+    // gx                    = Cross(-ab, n);
+    // ga                    = Cross(b - x, n) + nnorm_abnorm2 * ab;
+    // gb                    = Cross(ax, n) - nnorm_abnorm2 * ab;
+    // g *= (1 / abnorm);
+
+    // NOTE: This is stabler, but translation-only.
+    auto uv                                   = ClosestPointQueries::UvPointOnLineSegment(x, a, b);
+    math::linalg::mini::SVector<TScalar, 3> n = x - (uv(0) * a + uv(1) * b);
+    TScalar nnorm                             = Norm(n);
+    TScalar invnnorm                          = 1 / nnorm;
+    n *= invnnorm;
+    gx = n;
+    ga = -uv(0) * n;
+    gb = -uv(1) * n;
     return g;
 }
 
