@@ -158,7 +158,7 @@ BroydenTestSetup SetupBroydenTest(pbat::Index maxIters = 10)
     setup.vbdParams
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
-        .WithHessianDeterminantZeroUnder(Scalar{1e-6})
+        .WithHessianSingularUnder(Scalar{1e-6})
         .Construct();
 
     // Broyden params

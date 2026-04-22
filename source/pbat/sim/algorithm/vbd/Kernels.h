@@ -627,10 +627,10 @@ PBAT_HOST_DEVICE void IntegratePositions(
     TMatrixG const& g,
     TMatrixH const& H,
     TMatrixX& x,
-    ScalarType detHZero = ScalarType(1e-7))
+    ScalarType hessZero = ScalarType(1e-7))
 {
     // 3. Newton step
-    if (abs(Determinant(H)) <= detHZero) // Skip nearly rank-deficient hessian
+    if (abs(Determinant(H)) <= hessZero) // Skip nearly rank-deficient hessian
         return;
     x -= (Inverse(H) * g);
 }

@@ -170,11 +170,11 @@ void BindCore(nanobind::module_& m)
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
-            "with_hessian_determinant_zero",
-            &Params::WithHessianDeterminantZeroUnder,
+            "with_hessian_singular_under",
+            &Params::WithHessianSingularUnder,
             nb::arg("zero"),
             nb::rv_policy::reference_internal,
-            "Numerical zero for hessian pseudo-singularity check.\n\n"
+            "Numerical zero for hessian singularity check.\n\n"
             "Args:\n"
             "    zero (float): Numerical zero\n"
             "Returns:\n"
@@ -229,7 +229,7 @@ void BindCore(nanobind::module_& m)
             &Params::nSubproblemMaxIters,
             "Maximum number of VBD iterations per subproblem")
         .def_rw("gtol", &Params::gtol, "Gradient norm convergence threshold")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
+        .def_rw("hess_zero", &Params::hessZero, "Determinant of Hessian zero threshold")
         .def_rw("betaG", &Params::betaG, "Per-vertex stencil gradient augmentation scale")
         .def_rw("betaG0", &Params::betaG0, "Initial stencil gradient augmentation scale")
         .def_rw(

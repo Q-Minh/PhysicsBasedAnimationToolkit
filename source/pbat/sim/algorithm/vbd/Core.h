@@ -148,11 +148,11 @@ struct Params
         Scalar welastic = Scalar(1),
         Scalar wcontact = Scalar(1));
     /**
-     * @brief Numerical zero for hessian pseudo-singularity check
+     * @brief Numerical zero for hessian singularity check
      * @param zero Numerical zero
      * @return Reference to this
      */
-    PBAT_API Params& WithHessianDeterminantZeroUnder(Scalar zero);
+    PBAT_API Params& WithHessianSingularUnder(Scalar zero);
     /**
      * @brief Construct the simulation data
      * @param bValidate Throw on detected ill-formed inputs
@@ -192,7 +192,8 @@ struct Params
     Index nMaxIters{20}; ///< Maximum number of outer augmented Lagrangian iterations
     Index nSubproblemMaxIters{25}; ///< Maximum number of VBD iterations per subproblem
     Scalar gtol{1e-3};             ///< Gradient norm convergence threshold
-    Scalar detHZero{0};            ///< Numerical zero for hessian pseudo-singularity check
+    Scalar hessZero{
+        std::numeric_limits<Scalar>::epsilon()}; ///< Numerical zero for hessian singularity check
 
     // Stencil gradient acceleration
     Scalar betaG0{0.5};   ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
@@ -361,15 +362,6 @@ void AccumulateElasticEnergy(
         Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
         kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
         kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
-        if (HasNonFinite(gi) or HasNonFinite(Hi))
-        {
-            fmt::print(
-                stderr,
-                "NaN/Inf in AccumulateElasticEnergy for vertex {}, element {}\n",
-                i,
-                e);
-            throw std::runtime_error("NaN/Inf in AccumulateElasticEnergy");
-        }
     }
 }
 
@@ -430,15 +422,6 @@ inline void AccumulateContactEnergy(
         auto const& gradc = C.Grad();
         kernels::AccumulateAugmentedLagrangianContactNodeDerivatives<
             3>(gradc, ki, dL, kn, Tf, Wf(ki), kf, df, C.Decay(), gi, Hi);
-        if (HasNonFinite(gi) or HasNonFinite(Hi))
-        {
-            fmt::print(
-                stderr,
-                "NaN/Inf in AccumulateContactEnergy for vertex {}, stencil node {}\n",
-                i,
-                ki);
-            throw std::runtime_error("NaN/Inf in AccumulateContactEnergy");
-        }
     };
     contact.ForEachPointPointContact(i, [&](auto C, auto stencil) {
         fAccumulateNodalDerivatives(C, stencil);
@@ -510,33 +493,13 @@ auto BuildVertexEquation(
     mini::SVector<Scalar, 3> gelastici = mini::Zeros<Scalar, 3, 1>();
     AccumulateElasticEnergy<TElasticEnergy>(i, fem, params, gelastici, Hi);
     gelastici *= h2;
-    if (std::isnan(gelastici(0)) || std::isnan(gelastici(1)) || std::isnan(gelastici(2)))
-    {
-        fmt::print(stderr, "NaN detected in elastic gradient for vertex {}\n", i);
-        throw std::runtime_error("NaN detected in elastic gradient");
-    }
     Hi *= h2;
     // Contact energy gradient (augmented Lagrangian)
     mini::SVector<Scalar, 3> gcontacti = mini::Zeros<Scalar, 3, 1>();
     AccumulateContactEnergy(i, params.xb, contact, gcontacti, Hi);
-    if (std::isnan(gcontacti(0)) || std::isnan(gcontacti(1)) || std::isnan(gcontacti(2)))
-    {
-        fmt::print(stderr, "NaN detected in contact gradient for vertex {}\n", i);
-        throw std::runtime_error("NaN detected in contact gradient");
-    }
     // Kinetic energy gradient (+ Rayleigh damping, which couples through the full Hessian)
     mini::SVector<Scalar, 3> gkinetici = mini::Zeros<Scalar, 3, 1>();
     kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gkinetici, Hi);
-    if (HasNonFinite(gkinetici))
-    {
-        fmt::print(stderr, "NaN/Inf detected in kinetic gradient for vertex {}\n", i);
-        throw std::runtime_error("NaN/Inf detected in kinetic gradient");
-    }
-    if (HasNonFinite(Hi))
-    {
-        fmt::print(stderr, "NaN/Inf detected in Hessian for vertex {}\n", i);
-        throw std::runtime_error("NaN/Inf detected in Hessian");
-    }
     return {Hi, gkinetici, gelastici, gcontacti};
 }
 
@@ -571,11 +534,6 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     // Adapt stencil gradient acceleration parameter using the total gradient
     Scalar constexpr kSmallEpsilon{1e-10};
     mini::SVector<Scalar, 3> gi = gkinetici + gelastici + gcontacti;
-    if (HasNonFinite(gi))
-    {
-        fmt::print(stderr, "NaN/Inf in total gradient for vertex {} before SGA\n", i);
-        throw std::runtime_error("NaN/Inf in total gradient before SGA");
-    }
     if (params.kp > 0)
     {
         Scalar ngk                    = Norm(gi);
@@ -658,7 +616,15 @@ void Iterate(
                 gcontacti,
                 params);
             // Solve
-            kernels::IntegratePositions(gi, Hi, xi, params.detHZero);
+            // kernels::IntegratePositions(gi, Hi, xi, params.hessZero);
+            auto eigs = math::linalg::mini::SymmetricEigenNxN(Hi, false, -1, Scalar(1e-4));
+            mini::SVector<Scalar, 3> di = eigs.V.Transpose() * gi;
+            for (auto d = 0; d < 3; ++d)
+            {
+                Scalar lambdad = std::abs(eigs.lambda(d));
+                di(d)          = (lambdad > params.hessZero) ? di(d) / lambdad : di(d);
+            }
+            xi -= eigs.V * di;
             if (detail::HasNonFinite(xi))
             {
                 fmt::print(stderr, "NaN/Inf after IntegratePositions for vertex {}\n", i);
@@ -754,15 +720,6 @@ void AssembleBlockDiagonalDynamicsHessian(
         kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
         // Damping
         kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
-        // Store 3x3 block into columns [3*i, 3*i+3)
-        if (detail::HasNonFinite(Hi))
-        {
-            fmt::print(
-                stderr,
-                "NaN/Inf in AssembleBlockDiagonalDynamicsHessian for vertex {}\n",
-                i);
-            throw std::runtime_error("NaN/Inf in AssembleBlockDiagonalDynamicsHessian");
-        }
         params.Hk.template block<3, 3>(0, 3 * i) = ToEigen(Hi);
     });
 }

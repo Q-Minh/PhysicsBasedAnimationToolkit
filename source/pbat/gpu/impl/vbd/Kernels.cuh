@@ -49,7 +49,7 @@ struct BackwardEulerMinimization
     GpuScalar* wg;              ///< `|# elements|` array of quadrature weights
     GpuScalar* GP;              ///< `4x3x|# elements|` array of shape function gradients
     GpuScalar* lame;            ///< `2x|# elements|` of 1st and 2nd Lame coefficients
-    GpuScalar detHZero;         ///< Numerical zero for hessian determinant check
+    GpuScalar hessZero;         ///< Numerical zero for hessian determinant check
     // GpuScalar const* kD;                  ///< |#elements| array of damping coefficients
 
     GpuIndex* GVTp;      ///< Vertex-tetrahedron adjacency list's prefix sum
@@ -227,7 +227,7 @@ __global__ void VbdIteration(BackwardEulerMinimization BDF)
 
     // 5. Integrate positions
     using pbat::sim::vbd::kernels::IntegratePositions;
-    IntegratePositions(gi, Hi, xi, BDF.detHZero);
+    IntegratePositions(gi, Hi, xi, BDF.hessZero);
     ToBuffers(xi, BDF.xb, i);
 }
 
