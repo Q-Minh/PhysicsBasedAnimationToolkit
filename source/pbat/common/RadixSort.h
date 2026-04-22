@@ -14,7 +14,9 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <concepts>
+#include <limits>
 #include <new>
 #include <numeric>
 #include <ranges>
@@ -77,28 +79,31 @@ struct alignas(std::hardware_destructive_interference_size) RadixSortCountArray
  * @param cpy Copy buffer
  * @param work Working memory
  * @param fProject Projection function
+ * @param max Upper bound for the keys
+ * @pre `0 <= fProject(inout[i]) <= max` for all `0 <= i < inout.size()`
  */
 template <
     std::ranges::random_access_range TInOutRng,
     std::ranges::random_access_range TCpyRng,
     std::integral TCount = std::size_t,
     class FProject       = std::identity,
-    std::integral TKey =
-        std::decay_t<std::invoke_result_t<FProject, std::ranges::range_value_t<TInOutRng>>>>
+    std::integral TKey   = std::make_unsigned_t<
+          std::decay_t<std::invoke_result_t<FProject, std::ranges::range_value_t<TInOutRng>>>>>
 void RadixSort(
     TInOutRng&& inout,
     TCpyRng&& cpy,
     RadixSortCountArray<TCount>& work,
-    FProject fProject = {})
+    FProject fProject = {},
+    TKey max          = std::numeric_limits<TKey>::max())
 {
     using SizeType = std::ranges::range_size_t<TInOutRng>;
     SizeType n     = std::ranges::size(inout);
     if (n == 0)
         return;
     assert(std::ranges::size(cpy) >= n);
-    auto constexpr nKeyBits = sizeof(TKey) * 8;
-    auto constexpr nPasses  = (nKeyBits + work.kBits - 1) / work.kBits;
-    auto constexpr mask     = (work.Radix - 1);
+    auto nKeyBits       = sizeof(TKey) * 8 - std::countl_zero(max);
+    auto nPasses        = (nKeyBits + work.kBits - 1) / work.kBits;
+    auto constexpr mask = (work.Radix - 1);
     using std::swap;
     for (auto d = 0; d < nPasses; ++d)
     {
@@ -115,8 +120,6 @@ void RadixSort(
         swap(inout, cpy);
     }
 }
-
-
 
 } // namespace pbat::common
 
