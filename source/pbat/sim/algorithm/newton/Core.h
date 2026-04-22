@@ -248,7 +248,7 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
     fem.GgU *= bt2;
     Scalar U = fem::HyperElasticPotential(fem.UgU);
     Scalar K = fem.MomentumEnergy(fem.x);
-    Scalar C = contact.Potential();
+    Scalar C = contact.Potential(fem.x, true /*bForLinearSubproblem*/);
     return K + bt2 * U + C;
 }
 
@@ -545,7 +545,7 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             //     -fem.bdf.Inertia(0),
             //     bt,
             //     sim::contact::EMeshEnergyComputationFlags::Potential);
-            return fem.Objective(xk) + contact.Potential();
+            return fem.Objective(xk) + contact.Potential(xk, true /*bForLinearSubproblem*/);
         } /* f */,
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
             ToGradient<TElasticEnergy>(fem, contact, gk);

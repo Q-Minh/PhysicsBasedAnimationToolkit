@@ -376,24 +376,28 @@ class MeshDynamics
     /**
      * @brief Iterate over all contacts in the contact set
      * @tparam FOnContact Callable type with signature `template <class TConstraintData>
-     * void(TConstraintData& C, Stencil stencil)` where
+     * void(TConstraintData& C, Stencil stencil, std::int32_t threadId)` where
      * `std::is_same_v<TConstraintData, typename TContactSet::ConstraintDataType>`
      * @tparam TContactSet Contact set type
      * @param contactSet Contact set to iterate over
      * @param fOnContact Callback for each contact
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
      */
     template <class FOnContact, class TContactSet>
-    void ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact);
+    void
+    ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact, std::int32_t nThreads = 1);
     /**
      * @brief Iterate over all contacts
      * @tparam FOnContact Callable type with signature `template <class TConstraintData>
-     * void(TConstraintData& C, Stencil const& stencil)` where
+     * void(TConstraintData& C, Stencil const& stencil, std::int32_t threadId)` where
      * `std::is_same_v<TConstraintData, typename TContactSet::ConstraintDataType>`
      * @param fOnContact Callback for each contact
-     * @param bParallel Whether to visit all contacts in parallel
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
      */
     template <class FOnContact>
-    void ForAllContacts(FOnContact&& fOnContact, bool bParallel = false);
+    void ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads = 1);
     /**
      * @brief Load the stencil for a contact pair
      * @param u First mesh primitive index
@@ -436,10 +440,15 @@ class MeshDynamics
         MultiMesh<IndexType> meshes);
     /**
      * @brief Compute the total potential energy from all contacts
+     * @tparam TDerivedx Matrix type
+     * @param x `3 x |# points|` current point positions (column-major: one point per column)
+     * @param bForLinearSubproblem Whether the energy is being computed for a linear subproblem
+     * (from last `LinearizeConstraints()` call)
      * @return Total potential energy
-     * @pre `ComputeEnergies()` has been called with the `Potential` flag
      */
-    ScalarType Potential() const;
+    template <class TDerivedx>
+    ScalarType
+    Potential(Eigen::MatrixBase<TDerivedx> const& x, bool bForLinearSubproblem = false) const;
     /**
      * @brief Compute the total contact gradient
      * @tparam TDerivedx Matrix type
@@ -1016,8 +1025,12 @@ inline void
 MeshDynamics<TScalar, TIndex>::LinearizeConstraints(Eigen::MatrixBase<TDerivedx> const& x)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
+    auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     ForAllContacts(
-        [&]<class TContactSet, class TConstraintData>(TConstraintData& C, Stencil const& stencil) {
+        [&]<class TContactSet, class TConstraintData>(
+            TConstraintData& C,
+            Stencil const& stencil,
+            std::int32_t /*t*/) {
             using DistanceType = typename TConstraintData::DistanceType;
             DistanceType d{};
             auto const [X, _] = LoadStencil<TContactSet>(x, stencil);
@@ -1025,7 +1038,7 @@ MeshDynamics<TScalar, TIndex>::LinearizeConstraints(Eigen::MatrixBase<TDerivedx>
             C.gradc           = d.Gradient(x);
             C.c               = d.Eval(x) - Dot(C.gradc, x);
         },
-        true /*bParallel*/);
+        nThreads);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1034,10 +1047,14 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeBarrierParameters(
     Eigen::SparseCompressedBase<TDerivedH> const& H)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ComputeBarrierParameters");
-    TScalar gamma = mParams.gamma;
-    TScalar d2    = mParams.dmin * mParams.dmin;
+    TScalar gamma       = mParams.gamma;
+    TScalar d2          = mParams.dmin * mParams.dmin;
+    auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     ForAllContacts(
-        [&]<class TContactSet, class TConstraintData>(TConstraintData& C, Stencil const& stencil) {
+        [&]<class TContactSet, class TConstraintData>(
+            TConstraintData& C,
+            Stencil const& stencil,
+            std::int32_t /*t*/) {
             using DistanceType = typename TConstraintData::DistanceType;
             std::array<TIndex, TConstraintData::kStencil> nodes = LoadStencil<TContactSet>(stencil);
             TScalar const Q =
@@ -1047,7 +1064,7 @@ inline void MeshDynamics<TScalar, TIndex>::ComputeBarrierParameters(
                     nodes);
             C.mu = gamma * d2 * Q;
         },
-        true /*bParallel*/);
+        nThreads);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1084,42 +1101,75 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class FOnContact, class TContactSet>
-inline void
-MeshDynamics<TScalar, TIndex>::ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact)
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet& contactSet,
+    FOnContact&& fOnContact,
+    std::int32_t nThreads)
 {
-    ForEachContact(
-        contactSet,
-        std::forward<FOnContact>(fOnContact),
-        TIndex(0),
-        static_cast<TIndex>(contactSet.Size()));
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnContact>
-inline void MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, bool bParallel)
-{
-    if (not bParallel)
+    if (nThreads <= 1)
     {
-        ForEachContact(mPointPointContacts, fOnContact);
-        ForEachContact(mPointEdgeContacts, fOnContact);
-        ForEachContact(mPointTriangleContacts, fOnContact);
-        ForEachContact(mEdgeEdgeContacts, fOnContact);
+        auto const fWrap = [fOnContact = std::forward<FOnContact>(
+                                fOnContact)]<class TContactSet, class TConstraint>(
+                               TConstraint& C,
+                               Stencil const& stencil) {
+            fOnContact.template operator()<TContactSet, TConstraint>(C, stencil, std::int32_t{0});
+        };
+        ForEachContact(contactSet, fWrap, TIndex(0), static_cast<TIndex>(contactSet.Size()));
     }
     else
     {
         tbb::task_group tg;
-        unsigned int const nThreads = std::thread::hardware_concurrency();
-        auto const fForEachThread   = [&tg, nThreads](auto&& f) {
-            for (unsigned int t = 0; t < nThreads; ++t)
+        auto const fForEachThread = [&tg, nThreads](auto&& f) {
+            for (std::int32_t t = 0; t < nThreads; ++t)
+                tg.run([f, t]() { f(t); });
+        };
+        TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
+        TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+        fForEachThread([&](std::int32_t t) {
+            TIndex const cstart = t * nConstraintsPerThread;
+            TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+            auto const fWrap    = [&fOnContact, t = t]<class TContactSet, class TConstraint>(
+                                   TConstraint& C,
+                                   Stencil const& stencil) {
+                fOnContact.template operator()<TContactSet, TConstraint>(C, stencil, t);
+            };
+            ForEachContact(contactSet, fWrap, cstart, cend);
+        });
+        tg.wait();
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads)
+{
+    if (nThreads <= 1)
+    {
+        ForEachContact(mPointPointContacts, fOnContact, nThreads);
+        ForEachContact(mPointEdgeContacts, fOnContact, nThreads);
+        ForEachContact(mPointTriangleContacts, fOnContact, nThreads);
+        ForEachContact(mEdgeEdgeContacts, fOnContact, nThreads);
+    }
+    else
+    {
+        tbb::task_group tg;
+        auto const fForEachThread = [&tg, nThreads](auto&& f) {
+            for (std::int32_t t = 0; t < nThreads; ++t)
                 tg.run([f, t]() { f(t); });
         };
         auto const fLaunchKernel = [&]<class TConstraintSet>(TConstraintSet& set) {
             TIndex const nConstraints          = static_cast<TIndex>(set.Size());
             TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
-            fForEachThread([&](unsigned int t) {
+            fForEachThread([&](std::int32_t t) {
                 TIndex const cstart = t * nConstraintsPerThread;
                 TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-                ForEachContact(set, fOnContact, cstart, cend);
+                auto const fWrap    = [&fOnContact, t = t]<class TContactSet, class TConstraint>(
+                                       TConstraint& C,
+                                       Stencil const& stencil) {
+                    fOnContact.template operator()<TContactSet, TConstraint>(C, stencil, t);
+                };
+                ForEachContact(set, fWrap, cstart, cend);
             });
         };
         fLaunchKernel(mPointPointContacts);
@@ -1248,9 +1298,38 @@ void MeshDynamics<TScalar, TIndex>::SetDynamicGeometry(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline TScalar MeshDynamics<TScalar, TIndex>::Potential() const
+template <class TDerivedx>
+inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
+    Eigen::MatrixBase<TDerivedx> const& x,
+    bool bForLinearSubproblem) const
 {
-    ScalarType E{0};
+    auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
+    TScalar E{0};
+    const_cast<SelfType*>(this)->ForAllContacts(
+        [&]<class TContactSet, class TConstraintData>(
+            TConstraintData const& C,
+            Stencil const& stencil,
+            std::int32_t /*t*/) {
+            static auto constexpr kStencil = TConstraintData::kStencil;
+            static auto constexpr kDims    = TConstraintData::kDims;
+            static auto constexpr kDofs    = TConstraintData::kDofs;
+            static_assert(kDims == 3, "Only 3D is supported");
+            auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
+            auto xc                = Reshape<TConstraintData::kDofs, 1>(XC);
+            using math::linalg::mini::ToEigen;
+            using DistanceType = typename TConstraintData::DistanceType;
+            TScalar const c =
+                bForLinearSubproblem ? C.chat + Dot(C.gradc, xc) : DistanceType{}.Eval(xc);
+            TScalar const a = C.Barrier(
+                c,
+                mParams.mOgcParams.r,
+                mParams.epsP,
+                mParams.APC,
+                mParams.kcp,
+                mParams.b);
+            E -= C.mu * a;
+        },
+        nThreads);
     return E;
 }
 
@@ -1273,11 +1352,13 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
     Eigen::MatrixBase<TDerivedg>& g,
     bool bForLinearSubproblem) const
 {
+    auto const nThreads       = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     Eigen::Index const nNodes = g.size() / 3;
     const_cast<SelfType*>(this)->ForAllContacts(
         [&]<class TContactSet, class TConstraintData>(
             TConstraintData const& C,
-            Stencil const& stencil) {
+            Stencil const& stencil,
+            std::int32_t /*t*/) {
             static auto constexpr kStencil = TConstraintData::kStencil;
             static auto constexpr kDims    = TConstraintData::kDims;
             static auto constexpr kDofs    = TConstraintData::kDofs;
@@ -1319,7 +1400,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
                 }
             }
         },
-        false /*bParallel*/);
+        nThreads);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
