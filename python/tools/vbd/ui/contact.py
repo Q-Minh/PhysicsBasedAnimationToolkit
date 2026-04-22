@@ -11,49 +11,35 @@ class Contact:
     _contact_dynamics: pbat.sim.contact.MeshDynamics
     _contact_params: ParameterObject
     _environment_mesh: ps.SurfaceMesh
-    _contact_forces_pc: ps.PointCloud
-    _show_forces: bool
-    _show_stencils: bool
-    # Individual visibility flags for each contact type
-    _show_vv: bool  # Vertex-vertex
-    _show_ve: bool  # Vertex-edge
-    _show_vt: bool  # Vertex-triangle
-    _show_ee: bool  # Edge-edge
-    _show_ven: bool  # Vertex-environment
-    _show_een: bool  # Edge-environment
-    _show_ten: bool  # Triangle-environment
-    # Stencil point clouds for each contact type
-    _vv_stencil_pc: ps.PointCloud  # Vertex-vertex (2-node stencil)
-    _ve_stencil_pc: ps.PointCloud  # Vertex-edge (3-node stencil)
-    _vt_stencil_pc: ps.PointCloud  # Vertex-triangle (4-node stencil)
-    _ee_stencil_pc: ps.PointCloud  # Edge-edge (4-node stencil)
-    _ven_stencil_pc: ps.PointCloud  # Vertex-environment (1-node stencil)
-    _een_stencil_pc: ps.PointCloud  # Edge-environment (2-node stencil)
-    _ten_stencil_pc: ps.PointCloud  # Triangle-environment (3-node stencil)
+    _show_debug: bool
+    _debug_data: pbat.sim.contact.DebugMeshDynamics
+    _selected_type: int
+    _selected_idx: dict
+
+    # Polyscope structures for the currently visualized contact stencil
+    _stencil_pc: ps.PointCloud
+    _stencil_cn: ps.CurveNetwork
+    _stencil_sm: ps.SurfaceMesh
+
+    _CONTACT_TYPE_NAMES = [
+        "Point-Point",
+        "Point-Edge",
+        "Point-Triangle",
+        "Edge-Edge",
+    ]
 
     def __init__(self):
         self._contact_dynamics = None
         self._contact_params = None
         self._environment_mesh = None
-        self._contact_forces_pc = None
-        self._show_forces = False
-        self._show_stencils = False
-        # Initialize individual visibility flags (all enabled by default when stencils are shown)
-        self._show_vv = True
-        self._show_ve = True
-        self._show_vt = True
-        self._show_ee = True
-        self._show_ven = True
-        self._show_een = True
-        self._show_ten = True
-        # Initialize stencil point clouds
-        self._vv_stencil_pc = None
-        self._ve_stencil_pc = None
-        self._vt_stencil_pc = None
-        self._ee_stencil_pc = None
-        self._ven_stencil_pc = None
-        self._een_stencil_pc = None
-        self._ten_stencil_pc = None
+        self._show_debug = False
+        self._debug_data = None
+        self._selected_type = 0
+        self._selected_idx = {0: 0, 1: 0, 2: 0, 3: 0}
+        self._stencil_pc = None
+        self._stencil_cn = None
+        self._stencil_sm = None
+        self._normalize_gradients = False
         self.on_new_contact_dynamics(
             pbat.sim.contact.MeshDynamics(),
         )
@@ -67,82 +53,209 @@ class Contact:
                 params.mu, params.epsv
             )
             imgui.TreePop()
-        changed, self._show_forces = imgui.Checkbox(
-            "Show Contact Forces", self._show_forces
+        changed, self._show_debug = imgui.Checkbox(
+            "Debug Contacts", self._show_debug
         )
-        if changed and self._contact_forces_pc is not None:
-            self._contact_forces_pc.set_enabled(self._show_forces)
-        stencil_changed, self._show_stencils = imgui.Checkbox(
-            "Show Contact Stencils", self._show_stencils
-        )
-        if stencil_changed:
-            self._update_all_stencil_visibility()
-        # Individual contact type checkboxes (only shown when stencils are enabled)
-        if self._show_stencils:
-            imgui.Indent()
-            if imgui.TreeNode("Contact Types"):
-                # Mesh-mesh contacts
-                changed_vv, self._show_vv = imgui.Checkbox(
-                    "Vertex-Vertex", self._show_vv
-                )
-                if changed_vv and self._vv_stencil_pc is not None:
-                    self._vv_stencil_pc.set_enabled(self._show_vv)
-                changed_ve, self._show_ve = imgui.Checkbox("Vertex-Edge", self._show_ve)
-                if changed_ve and self._ve_stencil_pc is not None:
-                    self._ve_stencil_pc.set_enabled(self._show_ve)
-                changed_vt, self._show_vt = imgui.Checkbox(
-                    "Vertex-Triangle", self._show_vt
-                )
-                if changed_vt and self._vt_stencil_pc is not None:
-                    self._vt_stencil_pc.set_enabled(self._show_vt)
-                changed_ee, self._show_ee = imgui.Checkbox("Edge-Edge", self._show_ee)
-                if changed_ee and self._ee_stencil_pc is not None:
-                    self._ee_stencil_pc.set_enabled(self._show_ee)
-                # Mesh-environment contacts
-                imgui.Separator()
-                changed_ven, self._show_ven = imgui.Checkbox(
-                    "Vertex-Environment", self._show_ven
-                )
-                if changed_ven and self._ven_stencil_pc is not None:
-                    self._ven_stencil_pc.set_enabled(self._show_ven)
-                changed_een, self._show_een = imgui.Checkbox(
-                    "Edge-Environment", self._show_een
-                )
-                if changed_een and self._een_stencil_pc is not None:
-                    self._een_stencil_pc.set_enabled(self._show_een)
-                changed_ten, self._show_ten = imgui.Checkbox(
-                    "Triangle-Environment", self._show_ten
-                )
-                if changed_ten and self._ten_stencil_pc is not None:
-                    self._ten_stencil_pc.set_enabled(self._show_ten)
-                imgui.TreePop()
-            imgui.Unindent()
+        if changed and not self._show_debug:
+            self._clear_stencil_visualization()
+        if self._show_debug:
+            norm_changed, self._normalize_gradients = imgui.Checkbox(
+                "Normalize Gradients", self._normalize_gradients
+            )
+            if self._debug_data is not None:
+                if norm_changed:
+                    self._visualize_current_contact()
+                self._draw_debug_browser()
         imgui.PopID()
+
+    def _draw_debug_browser(self):
+        dd = self._debug_data
+        counts = [
+            len(dd.point_point_contacts),
+            len(dd.point_edge_contacts),
+            len(dd.point_triangle_contacts),
+            len(dd.edge_edge_contacts),
+        ]
+        total = sum(counts)
+        imgui.Text(f"Total contacts: {total}")
+        imgui.Separator()
+
+        # Contact type selector
+        for i, (name, count) in enumerate(
+            zip(self._CONTACT_TYPE_NAMES, counts)
+        ):
+            selected = self._selected_type == i
+            if imgui.Selectable(f"{name} ({count})##type{i}", selected)[0]:
+                self._selected_type = i
+                self._visualize_current_contact()
+
+        imgui.Separator()
+
+        contact_list = self._get_contact_list(self._selected_type)
+        n = len(contact_list)
+        if n == 0:
+            imgui.Text("No contacts of this type.")
+            return
+
+        # Index browser with arrow buttons
+        idx = self._selected_idx.get(self._selected_type, 0)
+        idx = max(0, min(idx, n - 1))
+
+        if imgui.Button("<##prev"):
+            idx = max(0, idx - 1)
+        imgui.SameLine()
+        _, idx = imgui.InputInt(
+            f"##idx{self._selected_type}", idx
+        )
+        idx = max(0, min(idx, n - 1))
+        imgui.SameLine()
+        if imgui.Button(">##next"):
+            idx = min(n - 1, idx + 1)
+        imgui.SameLine()
+        imgui.Text(f"/ {n - 1}")
+
+        old_idx = self._selected_idx.get(self._selected_type, -1)
+        self._selected_idx[self._selected_type] = idx
+        if idx != old_idx:
+            self._visualize_current_contact()
+
+        # Show scalar data for current contact
+        c = contact_list[idx]
+        if imgui.TreeNode("Details##contact_details"):
+            imgui.Text(f"c(x) = {c.c:.6g}")
+            imgui.Text(f"lambda = {c.lam:.6g}")
+            imgui.Text(f"slack = {c.slack:.6g}")
+            imgui.Text(f"decay = {c.decay:.6g}")
+            imgui.Text(f"chat = {c.chat:.6g}")
+            imgui.Text(f"u={c.u}, v={c.v} (gu={c.gu}, gv={c.gv})")
+            imgui.Text(f"nodes = {list(c.nodes)}")
+            imgui.TreePop()
+
+    def _get_contact_list(self, type_idx: int):
+        if self._debug_data is None:
+            return []
+        lists = [
+            self._debug_data.point_point_contacts,
+            self._debug_data.point_edge_contacts,
+            self._debug_data.point_triangle_contacts,
+            self._debug_data.edge_edge_contacts,
+        ]
+        return lists[type_idx]
+
+    def _visualize_current_contact(self):
+        self._clear_stencil_visualization()
+        contact_list = self._get_contact_list(self._selected_type)
+        if len(contact_list) == 0:
+            return
+        idx = self._selected_idx.get(self._selected_type, 0)
+        idx = max(0, min(idx, len(contact_list) - 1))
+        c = contact_list[idx]
+
+        # Xc is kDims x kStencil (3 x N), grad/gradx same shape
+        Xc = np.array(c.Xc)       # 3 x kStencil
+        grad = np.array(c.grad)    # 3 x kStencil
+        gradx = np.array(c.gradx)  # 3 x kStencil
+        if self._normalize_gradients:
+            grad = self._normalized(grad)
+            gradx = self._normalized(gradx)
+        pts = Xc.T                 # kStencil x 3
+
+        if self._selected_type == 0:
+            # Point-Point: 2 points
+            self._stencil_pc = ps.register_point_cloud("Contact Stencil", pts)
+            self._stencil_pc.add_vector_quantity(
+                "grad (cached)", grad.T, vectortype="standard", enabled=True
+            )
+            self._stencil_pc.add_vector_quantity(
+                "grad (at x)", gradx.T, vectortype="standard", enabled=False
+            )
+            # Also show the edge connecting them
+            self._stencil_cn = ps.register_curve_network(
+                "Contact Edge", pts, np.array([[0, 1]])
+            )
+
+        elif self._selected_type == 1:
+            # Point-Edge: point (0) + edge (1,2)
+            self._stencil_pc = ps.register_point_cloud(
+                "Contact Point", pts[0:1]
+            )
+            self._stencil_pc.add_vector_quantity(
+                "grad (cached)", grad[:, 0:1].T, vectortype="standard", enabled=True
+            )
+            self._stencil_pc.add_vector_quantity(
+                "grad (at x)", gradx[:, 0:1].T, vectortype="standard", enabled=False
+            )
+            self._stencil_cn = ps.register_curve_network(
+                "Contact Edge", pts[1:3], np.array([[0, 1]])
+            )
+            self._stencil_cn.add_vector_quantity(
+                "grad (cached)", grad[:, 1:3].T, vectortype="standard", enabled=True
+            )
+            self._stencil_cn.add_vector_quantity(
+                "grad (at x)", gradx[:, 1:3].T, vectortype="standard", enabled=False
+            )
+
+        elif self._selected_type == 2:
+            # Point-Triangle: point (0) + triangle (1,2,3)
+            self._stencil_pc = ps.register_point_cloud(
+                "Contact Point", pts[0:1]
+            )
+            self._stencil_pc.add_vector_quantity(
+                "grad (cached)", grad[:, 0:1].T, vectortype="standard", enabled=True
+            )
+            self._stencil_pc.add_vector_quantity(
+                "grad (at x)", gradx[:, 0:1].T, vectortype="standard", enabled=False
+            )
+            self._stencil_sm = ps.register_surface_mesh(
+                "Contact Triangle", pts[1:4], np.array([[0, 1, 2]])
+            )
+            self._stencil_sm.add_vector_quantity(
+                "grad (cached)", grad[:, 1:4].T, vectortype="standard",
+                defined_on="vertices", enabled=True
+            )
+            self._stencil_sm.add_vector_quantity(
+                "grad (at x)", gradx[:, 1:4].T, vectortype="standard",
+                defined_on="vertices", enabled=False
+            )
+
+        elif self._selected_type == 3:
+            # Edge-Edge: edge (0,1) + edge (2,3)
+            edge_pts = pts  # 4 x 3
+            edges = np.array([[0, 1], [2, 3]])
+            self._stencil_cn = ps.register_curve_network(
+                "Contact Edges", edge_pts, edges
+            )
+            self._stencil_cn.add_vector_quantity(
+                "grad (cached)", grad.T, vectortype="standard", enabled=True
+            )
+            self._stencil_cn.add_vector_quantity(
+                "grad (at x)", gradx.T, vectortype="standard", enabled=False
+            )
+
+    @staticmethod
+    def _normalized(g: np.ndarray) -> np.ndarray:
+        """Column-wise normalize a 3 x N gradient matrix."""
+        norms = np.linalg.norm(g, axis=0, keepdims=True)
+        norms = np.where(norms > 0, norms, 1.0)
+        return g / norms
+
+    def _clear_stencil_visualization(self):
+        if self._stencil_pc is not None:
+            ps.remove_point_cloud(self._stencil_pc.get_name())
+            self._stencil_pc = None
+        if self._stencil_cn is not None:
+            ps.remove_curve_network(self._stencil_cn.get_name())
+            self._stencil_cn = None
+        if self._stencil_sm is not None:
+            ps.remove_surface_mesh(self._stencil_sm.get_name())
+            self._stencil_sm = None
 
     def set_visible(self, visible: bool):
         if self._environment_mesh is not None:
             self._environment_mesh.set_enabled(visible)
-        if self._contact_forces_pc is not None:
-            self._show_forces = self._show_forces and visible
-            self._contact_forces_pc.set_enabled(self._show_forces)
         if not visible:
-            self._show_stencils = False
-        self._update_all_stencil_visibility()
-
-    def _update_all_stencil_visibility(self):
-        """Update visibility for all stencil point clouds based on individual flags."""
-        stencil_data = [
-            (self._vv_stencil_pc, self._show_vv),
-            (self._ve_stencil_pc, self._show_ve),
-            (self._vt_stencil_pc, self._show_vt),
-            (self._ee_stencil_pc, self._show_ee),
-            (self._ven_stencil_pc, self._show_ven),
-            (self._een_stencil_pc, self._show_een),
-            (self._ten_stencil_pc, self._show_ten),
-        ]
-        for pc, show_type in stencil_data:
-            if pc is not None:
-                pc.set_enabled(self._show_stencils and show_type)
+            self._show_debug = False
+            self._clear_stencil_visualization()
 
     def on_new_contact_dynamics(self, contact_dynamics: pbat.sim.contact.MeshDynamics):
         self._contact_dynamics = contact_dynamics
@@ -170,186 +283,23 @@ class Contact:
     def deserialize(self, archive: pbat.io.Archive):
         self._contact_dynamics.params.deserialize(archive)
 
-    def on_contact_force_display_requested(
-        self, x: np.ndarray, xt: np.ndarray, h: float
-    ):
+    def on_debug_display_requested(self, x: np.ndarray):
+        """Update debug contact data from current positions.
+
+        Args:
+            x: Current vertex positions (3 x |# points|) or (3*|# points| x 1).
+        """
         if self._contact_dynamics is None:
             return
-
-        # Compute contact energies
-        flags = pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
-        self._contact_dynamics.update_constraint_set(x)
-        self._contact_dynamics.compute_energies(x, xt, h, flags)
-
-        # Get the gradients (3*|# points| x 1) and reshape to (|# points| x 3)
-        n_points = x.shape[1]
-        normal_gradient = self._contact_dynamics.normal_gradient
-        normal_forces = -normal_gradient.reshape((3, n_points), order="F").T
-        frictional_gradient = self._contact_dynamics.frictional_gradient
-        frictional_forces = -frictional_gradient.reshape((3, n_points), order="F").T
-
-        # Register or update the point cloud for contact forces visualization
-        if self._contact_forces_pc is None:
-            self._contact_forces_pc = ps.register_point_cloud("Contact dynamics", x.T)
-        else:
-            self._contact_forces_pc.update_point_positions(x.T)
-
-        # Add/update the vector quantities for contact forces (negative gradient = force)
-        self._contact_forces_pc.add_vector_quantity(
-            "normal",
-            normal_forces,
-            enabled=self._show_forces,
-            vectortype="standard",
+        self._debug_data = pbat.sim.contact.DebugMeshDynamics(
+            self._contact_dynamics, x
         )
-        self._contact_forces_pc.add_vector_quantity(
-            "frictional",
-            frictional_forces,
-            enabled=self._show_forces,
-            vectortype="standard",
-        )
+        self._visualize_current_contact()
 
     @property
     def contact_dynamics(self):
         return self._contact_dynamics
 
     @property
-    def requires_force_display(self) -> bool:
-        return self._show_forces
-
-    @property
-    def requires_stencil_display(self) -> bool:
-        return self._show_stencils
-
-    def _update_stencil_point_cloud(
-        self,
-        name: str,
-        energies: list,
-        x: np.ndarray,
-        stencil_size: int,
-        show_type: bool,
-    ) -> ps.PointCloud:
-        """
-        Update or create a point cloud for contact stencils.
-
-        Args:
-            name: Name for the point cloud
-            energies: List of MeshContactEnergy objects
-            x: Current vertex positions (3 x |# points|)
-            stencil_size: Number of nodes in the stencil (1, 2, 3, or 4)
-            show_type: Whether this contact type should be visible
-
-        Returns:
-            The updated or created point cloud, or None if no contacts
-        """
-        if len(energies) == 0:
-            return ps.register_point_cloud(name, np.empty((0, 3), dtype=x.dtype))
-
-        n_contacts = len(energies)
-        n_stencil_points = n_contacts * stencil_size
-
-        # Collect stencil positions and forces
-        positions = np.zeros((n_stencil_points, 3), dtype=x.dtype)
-        normal_forces = np.zeros((n_stencil_points, 3), dtype=x.dtype)
-        frictional_forces = np.zeros((n_stencil_points, 3), dtype=x.dtype)
-
-        for i, energy in enumerate(energies):
-            stencil = energy.stencil
-            grad_n = -energy.gradEn  # Negative gradient = force
-            grad_f = -energy.gradEf
-            positions[i * stencil_size : (i + 1) * stencil_size, :] = x[:, stencil].T
-            normal_forces[i * stencil_size : (i + 1) * stencil_size, :] = (
-                grad_n.reshape((3, stencil_size), order="F").T
-            )
-            frictional_forces[i * stencil_size : (i + 1) * stencil_size, :] = (
-                grad_f.reshape((3, stencil_size), order="F").T
-            )
-
-        # Determine effective visibility
-        is_visible = self._show_stencils and show_type
-
-        # Register or update point cloud
-        pc = ps.register_point_cloud(name, positions)
-        pc.add_vector_quantity(
-            "normal",
-            normal_forces,
-            enabled=is_visible,
-            vectortype="standard",
-        )
-        pc.add_vector_quantity(
-            "frictional",
-            frictional_forces,
-            enabled=is_visible,
-            vectortype="standard",
-        )
-        pc.set_enabled(is_visible)
-        return pc
-
-    def on_stencil_display_requested(self, x: np.ndarray, xt: np.ndarray, h: float):
-        """
-        Update all contact stencil point clouds.
-
-        Args:
-            x: Current vertex positions (3 x |# points|)
-            xt: Reference vertex positions (3 x |# points|)
-            h: Time step size
-        """
-        if self._contact_dynamics is None:
-            return
-
-        # Compute contact energies
-        flags = pbat.sim.contact.EMeshEnergyComputationFlags.Gradient
-        self._contact_dynamics.update_constraint_set(x)
-        self._contact_dynamics.compute_energies(x, xt, h, flags)
-
-        # Mesh-mesh contacts
-        self._vv_stencil_pc = self._update_stencil_point_cloud(
-            "VV Stencils",
-            self._contact_dynamics.vertex_vertex_energies,
-            x,
-            stencil_size=2,
-            show_type=self._show_vv,
-        )
-        self._ve_stencil_pc = self._update_stencil_point_cloud(
-            "VE Stencils",
-            self._contact_dynamics.vertex_edge_energies,
-            x,
-            stencil_size=3,
-            show_type=self._show_ve,
-        )
-        self._vt_stencil_pc = self._update_stencil_point_cloud(
-            "VT Stencils",
-            self._contact_dynamics.vertex_triangle_energies,
-            x,
-            stencil_size=4,
-            show_type=self._show_vt,
-        )
-        self._ee_stencil_pc = self._update_stencil_point_cloud(
-            "EE Stencils",
-            self._contact_dynamics.edge_edge_energies,
-            x,
-            stencil_size=4,
-            show_type=self._show_ee,
-        )
-
-        # Mesh-environment contacts
-        self._ven_stencil_pc = self._update_stencil_point_cloud(
-            "V-Env Stencils",
-            self._contact_dynamics.vertex_environment_energies,
-            x,
-            stencil_size=1,
-            show_type=self._show_ven,
-        )
-        self._een_stencil_pc = self._update_stencil_point_cloud(
-            "E-Env Stencils",
-            self._contact_dynamics.edge_environment_energies,
-            x,
-            stencil_size=2,
-            show_type=self._show_een,
-        )
-        self._ten_stencil_pc = self._update_stencil_point_cloud(
-            "T-Env Stencils",
-            self._contact_dynamics.triangle_environment_energies,
-            x,
-            stencil_size=3,
-            show_type=self._show_ten,
-        )
+    def requires_debug_display(self) -> bool:
+        return self._show_debug

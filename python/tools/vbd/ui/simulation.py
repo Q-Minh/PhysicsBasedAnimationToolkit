@@ -269,15 +269,8 @@ class Simulation:
                     defined_on="vertices",
                     cmap="turbo",
                 )
-            xt = -bdf.inertia().reshape((3, -1), order="F")
-            if self._contact.requires_force_display:
-                self._contact.on_contact_force_display_requested(
-                    x,
-                    xt,
-                    bt,
-                )
-            if self._contact.requires_stencil_display:
-                self._contact.on_stencil_display_requested(x, xt, bt)
+            if self._contact.requires_debug_display:
+                self._contact.on_debug_display_requested(x)
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes
             if d_nodes.shape[0] != self._fem_dynamics_dirichlet_pc.n_points():

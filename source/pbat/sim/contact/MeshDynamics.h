@@ -868,9 +868,9 @@ MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
     mOgcParams.Construct(bValidate);
     if (bValidate)
     {
-        if (kc <= TScalar(0))
+        if (kc < TScalar(0))
         {
-            throw std::invalid_argument("MeshDynamics::Params::Construct(): kc must be positive.");
+            throw std::invalid_argument("MeshDynamics::Params::Construct(): kc must be non-negative.");
         }
         if (mu < TScalar(0))
         {
@@ -1586,11 +1586,11 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
         for (std::int32_t t = 0; t < nThreads; ++t)
             tg.run([f, t]() { f(t); });
     };
-    TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
-    TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
     fForEachThread([&](std::int32_t t) {
-        TIndex const cstart = t * nConstraintsPerThread;
-        TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+        TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
+        TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+        TIndex const cstart                = t * nConstraintsPerThread;
+        TIndex const cend = std::min((t + 1) * nConstraintsPerThread, nConstraints);
         auto const fWrap =
             [&fOnContact,
              t = t]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
@@ -1612,11 +1612,11 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
         for (std::int32_t t = 0; t < nThreads; ++t)
             tg.run([f, t]() { f(t); });
     };
-    TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
-    TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
     fForEachThread([&](std::int32_t t) {
-        TIndex const cstart = t * nConstraintsPerThread;
-        TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+        TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
+        TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+        TIndex const cstart                = t * nConstraintsPerThread;
+        TIndex const cend = std::min((t + 1) * nConstraintsPerThread, nConstraints);
         auto const fWrap =
             [&fOnContact,
              t = t]<class TContactSet>(typename TContactSet::ConstAccessorType C, Stencil stencil) {

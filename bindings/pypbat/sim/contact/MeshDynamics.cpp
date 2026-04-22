@@ -4,11 +4,127 @@
 #include <nanobind/eigen/sparse.h>
 #include <nanobind/stl/array.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/vector.h>
 #include <pbat/geometry/Device.h>
+#include <pbat/math/linalg/mini/Eigen.h>
+#include <pbat/math/linalg/mini/Reshape.h>
 #include <pbat/sim/contact/MeshDynamics.h>
 #include <pbat/sim/contact/MultiMesh.h>
+#include <vector>
 
 namespace pbat::py::sim::contact {
+
+namespace debug {
+
+template <int kStencil>
+struct Contact
+{
+    static auto constexpr kDims = 3;
+    static auto constexpr kDofs = kDims * kStencil;
+    using ScalarType            = Scalar;
+    using IndexType             = Index;
+
+    Eigen::Matrix<ScalarType, kDims, kStencil> Xc; ///< kDims x kStencil stencil positions
+    std::array<IndexType, kStencil> nodes;         ///< Stencil node indices
+    IndexType u, v;                                ///< Mesh primitive indices
+    int gu, gv;                                    ///< Geometry type ids
+    ScalarType lambda;                             ///< Lagrange multiplier
+    ScalarType slack;                              ///< Inequality slack variable
+    ScalarType decay;                              ///< Decay factor
+    ScalarType chat;                               ///< c(x_k) - grad c(x_k) . x_k
+    Eigen::Matrix<ScalarType, kDims, kStencil>
+        grad; ///< Cached/stored gradient (from linearization)
+    Eigen::Matrix<ScalarType, kDims, kStencil> gradx; ///< Computed gradient at current positions x
+    ScalarType c;                                     ///< Last evaluated constraint value
+};
+
+struct MeshDynamics
+{
+    using ScalarType       = Scalar;
+    using IndexType        = Index;
+    using MeshDynamicsType = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;
+
+    struct PointPointContact : public Contact<2>
+    {
+    };
+    struct PointEdgeContact : public Contact<3>
+    {
+    };
+    struct PointTriangleContact : public Contact<4>
+    {
+    };
+    struct EdgeEdgeContact : public Contact<4>
+    {
+    };
+
+    std::vector<PointPointContact> mPointPointContacts;
+    std::vector<PointEdgeContact> mPointEdgeContacts;
+    std::vector<PointTriangleContact> mPointTriangleContacts;
+    std::vector<EdgeEdgeContact> mEdgeEdgeContacts;
+
+    MeshDynamics(
+        MeshDynamicsType const& cd,
+        Eigen::Ref<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x)
+    {
+        mPointPointContacts.reserve(cd.PointPointContacts().Size());
+        mPointEdgeContacts.reserve(cd.PointEdgeContacts().Size());
+        mPointTriangleContacts.reserve(cd.PointTriangleContacts().Size());
+        mEdgeEdgeContacts.reserve(cd.EdgeEdgeContacts().Size());
+        cd.ForAllContacts(
+            [&]<class TContactSet>(
+                typename TContactSet::ConstAccessorType C,
+                typename MeshDynamicsType::Stencil stencil,
+                std::int32_t /*t*/) {
+                using ConstraintAccessorType   = decltype(C);
+                static auto constexpr kDofs    = ConstraintAccessorType::kDofs;
+                static auto constexpr kDims    = ConstraintAccessorType::kDims;
+                static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+                using PPSet                    = typename MeshDynamicsType::PointPointContactSet;
+                using PESet                    = typename MeshDynamicsType::PointEdgeContactSet;
+                using PTSet                    = typename MeshDynamicsType::PointTriangleContactSet;
+                using EESet                    = typename MeshDynamicsType::EdgeEdgeContactSet;
+                auto contact                   = []() {
+                    if constexpr (std::is_same_v<TContactSet, PPSet>)
+                        return PointPointContact{};
+                    else if constexpr (std::is_same_v<TContactSet, PESet>)
+                        return PointEdgeContact{};
+                    else if constexpr (std::is_same_v<TContactSet, PTSet>)
+                        return PointTriangleContact{};
+                    else if constexpr (std::is_same_v<TContactSet, EESet>)
+                        return EdgeEdgeContact{};
+                }();
+                using namespace pbat::math::linalg::mini;
+                auto const [Xc, nodes] = cd.template LoadStencil<TContactSet>(x, stencil);
+                auto xc                = Reshape<kDofs, 1>(Xc);
+                contact.Xc             = ToEigen(Xc);
+                contact.nodes          = nodes;
+                contact.u              = stencil.u;
+                contact.v              = stencil.v;
+                contact.gu             = stencil.gu;
+                contact.gv             = stencil.gv;
+                contact.lambda         = C.Lambda();
+                contact.slack          = C.Slack();
+                contact.decay          = C.Decay();
+                contact.chat           = C.Chat();
+                contact.grad           = ToEigen(C.Grad()).reshaped(kDims, kStencil);
+                auto gradx             = C.Grad(xc);
+                contact.gradx          = ToEigen(gradx).reshaped(kDims, kStencil);
+                contact.c              = C.Eval();
+
+                if constexpr (std::is_same_v<TContactSet, PPSet>)
+                    mPointPointContacts.push_back(std::move(contact));
+                else if constexpr (std::is_same_v<TContactSet, PESet>)
+                    mPointEdgeContacts.push_back(std::move(contact));
+                else if constexpr (std::is_same_v<TContactSet, PTSet>)
+                    mPointTriangleContacts.push_back(std::move(contact));
+                else if constexpr (std::is_same_v<TContactSet, EESet>)
+                    mEdgeEdgeContacts.push_back(std::move(contact));
+            },
+            1 /*nThreads*/);
+    }
+};
+
+} // namespace debug
 
 void BindMeshDynamics(nanobind::module_& m)
 {
@@ -373,6 +489,66 @@ void BindMeshDynamics(nanobind::module_& m)
             [](MeshDynamicsType& self) -> decltype(auto) { return self.OgcState(); },
             "OGC state.")
         .def_prop_ro("num_contacts", &MeshDynamicsType::NumContacts, "Total number of contacts.");
+
+    using DebugMeshDynamicsType     = debug::MeshDynamics;
+    using DebugPointPointContact    = debug::MeshDynamics::PointPointContact;
+    using DebugPointEdgeContact     = debug::MeshDynamics::PointEdgeContact;
+    using DebugPointTriangleContact = debug::MeshDynamics::PointTriangleContact;
+    using DebugEdgeEdgeContact      = debug::MeshDynamics::EdgeEdgeContact;
+
+    auto const fBindDebugContact = [](auto cls) {
+        using ContactType = typename decltype(cls)::Type;
+        cls.def_ro("Xc", &ContactType::Xc, "Stencil positions (kDims x kStencil).")
+            .def_ro("nodes", &ContactType::nodes, "Stencil node indices.")
+            .def_ro("u", &ContactType::u, "First mesh primitive index.")
+            .def_ro("v", &ContactType::v, "Second mesh primitive index.")
+            .def_ro("gu", &ContactType::gu, "First geometry type id.")
+            .def_ro("gv", &ContactType::gv, "Second geometry type id.")
+            .def_ro("lam", &ContactType::lambda, "Lagrange multiplier.")
+            .def_ro("slack", &ContactType::slack, "Inequality slack variable.")
+            .def_ro("decay", &ContactType::decay, "Decay factor.")
+            .def_ro("chat", &ContactType::chat, "c(x_k) - grad c(x_k) . x_k.")
+            .def_ro("grad", &ContactType::grad, "Cached/stored gradient (from linearization).")
+            .def_ro("gradx", &ContactType::gradx, "Computed gradient at current positions x.")
+            .def_ro("c", &ContactType::c, "Last evaluated constraint value.");
+    };
+
+    fBindDebugContact(nb::class_<DebugPointPointContact>(m, "DebugPointPointContact"));
+    fBindDebugContact(nb::class_<DebugPointEdgeContact>(m, "DebugPointEdgeContact"));
+    fBindDebugContact(nb::class_<DebugPointTriangleContact>(m, "DebugPointTriangleContact"));
+    fBindDebugContact(nb::class_<DebugEdgeEdgeContact>(m, "DebugEdgeEdgeContact"));
+
+    nb::class_<DebugMeshDynamicsType>(m, "DebugMeshDynamics")
+        .def(
+            "__init__",
+            [](DebugMeshDynamicsType* self,
+               MeshDynamicsType const& cd,
+               nb::DRef<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic> const> const& x) {
+                new (self) DebugMeshDynamicsType(cd, x);
+            },
+            nb::arg("cd"),
+            nb::arg("x"),
+            "Construct debug contact data from a MeshDynamics object and positions.\n\n"
+            "Args:\n"
+            "    cd (MeshDynamics): Contact dynamics engine.\n"
+            "    x (numpy.ndarray): `3 x |# points|` or `3*|# points| x 1` dynamic node "
+            "positions.\n")
+        .def_ro(
+            "point_point_contacts",
+            &DebugMeshDynamicsType::mPointPointContacts,
+            "List of point-point debug contacts.")
+        .def_ro(
+            "point_edge_contacts",
+            &DebugMeshDynamicsType::mPointEdgeContacts,
+            "List of point-edge debug contacts.")
+        .def_ro(
+            "point_triangle_contacts",
+            &DebugMeshDynamicsType::mPointTriangleContacts,
+            "List of point-triangle debug contacts.")
+        .def_ro(
+            "edge_edge_contacts",
+            &DebugMeshDynamicsType::mEdgeEdgeContacts,
+            "List of edge-edge debug contacts.");
 }
 
 } // namespace pbat::py::sim::contact
