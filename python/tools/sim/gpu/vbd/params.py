@@ -71,6 +71,14 @@ class ParamsData:
     gammadown: wp.vec2f  # beta reduction factors (0: interior, 1: surface)
     gammaup: wp.vec2f  # beta increase factors (0: interior, 1: surface)
 
+    # --- Read-write ---
+    xb: wp.array[wp.vec3f]  # (N,) vertex positions
+    gk: wp.array[wp.vec3f]  # (N,) vertex gradients
+    xk: wp.array[wp.vec3f]  # (N,) vertex past iteration
+    Hnk: wp.array[wp.float32]  # (N,) vertex Hessian norms
+    betaG: wp.array[wp.float32]  # (N,) vertex stencil gradient augmentation scales
+    Hk: wp.array[wp.mat33f]  # (N,) (3x3) block-diagonal Hessian
+
 
 class Params:
     """VBD solver parameters, wrapping a C++ pbat.sim.algorithm.vbd.Params object for GPU execution.
@@ -114,6 +122,20 @@ class Params:
         self._data.rhohat = (float(params.rhohat), float(params.rhohatS))
         self._data.gammadown = (float(params.gammadown), float(params.gammadownS))
         self._data.gammaup = (float(params.gammaup), float(params.gammaupS))
+        # Read-write
+        n_nodes = params.colors.shape[0]
+        self._data.xb = wp.zeros((n_nodes,), dtype=wp.vec3f)  # (N,) vertex positions
+        self._data.gk = wp.zeros((n_nodes,), dtype=wp.vec3f)  # (N,) vertex gradients
+        self._data.xk = wp.zeros((n_nodes,), dtype=wp.vec3f)  # (N,) vertex past iterate
+        self._data.Hnk = wp.zeros(
+            (n_nodes,), dtype=wp.float32
+        )  # (N,) vertex Hessian norms
+        self._data.betaG = wp.zeros(
+            (n_nodes,), dtype=wp.float32
+        )  # (N,) vertex stencil gradient augmentation scales
+        self._data.Hk = wp.zeros(
+            (n_nodes,), dtype=wp.mat33f
+        )  # (N,) (3x3) block-diagonal Hessian
 
     @property
     def data(self) -> ParamsData:  # pyright: ignore[reportGeneralTypeIssues]
