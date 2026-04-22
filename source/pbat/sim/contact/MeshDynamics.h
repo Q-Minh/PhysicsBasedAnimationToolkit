@@ -870,7 +870,8 @@ MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
     {
         if (kc < TScalar(0))
         {
-            throw std::invalid_argument("MeshDynamics::Params::Construct(): kc must be non-negative.");
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): kc must be non-negative.");
         }
         if (mu < TScalar(0))
         {
@@ -1003,6 +1004,10 @@ inline void MeshDynamics<TScalar, TIndex>::Initialize(geometry::Device device)
     mOgcState.Initialize(device, mOgcInput, mParams.mOgcParams);
     mNumTruncatedPoints          = 0;
     mRequiresBoundsRecomputation = true;
+    mPointPointContacts.Clear();
+    mPointEdgeContacts.Clear();
+    mPointTriangleContacts.Clear();
+    mEdgeEdgeContacts.Clear();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1177,12 +1182,12 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             C.Eval()                     = C.Eval(xc, true /*bLinearized*/);
             auto mu                      = mParams.kc;
             if (static_cast<bool>(Mask & EDualVariable::Slack))
-                C.Slack() = std::max(TScalar(0), C.Eval() - C.Lambda() / mu);
+                C.Slack() = std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / mu);
             if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
             {
                 if (C.Slack() == TScalar(0))
                 {
-                    C.Lambda() -= mu * C.Eval();
+                    C.Lambda() -= mu * (C.Eval() - mParams.dmin);
                     C.Decay() = TScalar(1);
                 }
                 else
@@ -1868,10 +1873,10 @@ inline TScalar MeshDynamics<TScalar, TIndex>::RayleighQuotient(
             for (TIndex knj = 0; knj < nNodes; ++knj)
             {
                 TIndex j = nodes[knj] * kDims;
-                while (it.index() < j)
+                while (it and it.index() < j)
                     ++it;
                 auto jend = j + kDims;
-                for (; it.index() < jend; ++it)
+                for (; it and it.index() < jend; ++it)
                 {
                     TIndex kj = it.index() % kDims;
                     gcTHgc += gradc(kni * kDims + ki) * it.value() * gradc(knj * kDims + kj);

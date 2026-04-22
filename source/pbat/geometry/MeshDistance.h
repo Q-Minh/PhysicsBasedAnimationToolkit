@@ -11,6 +11,7 @@
 #define PBAT_GEOMETRY_MESHDISTANCE_H
 
 #include "pbat/common/Concepts.h"
+#include "pbat/geometry/ClosestPointQueries.h"
 #include "pbat/geometry/DistanceQueries.h"
 #include "pbat/math/linalg/mini/Mini.h"
 
@@ -229,7 +230,7 @@ struct EdgeEdgeDistance
      * @return Signed distance value
      */
     template <math::linalg::mini::CMatrix TMatrixx>
-    TScalar Eval(TMatrixx const& x, ScalarType eps = ScalarType(0));
+    TScalar Eval(TMatrixx const& x, ScalarType eps = ScalarType(1e-5));
 
     /**
      * @brief Compute the gradient of edge-edge signed distance
@@ -243,7 +244,7 @@ struct EdgeEdgeDistance
      * @return `12 x 1` gradient vector \f$ \nabla d \f$
      */
     template <math::linalg::mini::CMatrix TMatrixx>
-    auto Gradient(TMatrixx const& x, ScalarType eps = ScalarType(0))
+    auto Gradient(TMatrixx const& x, ScalarType eps = ScalarType(1e-5))
         -> math::linalg::mini::SVector<TScalar, kDofs>;
 
     /**
@@ -258,7 +259,7 @@ struct EdgeEdgeDistance
      * @return `12 x 12` Hessian matrix \f$ \nabla^2 d \f$
      */
     template <math::linalg::mini::CMatrix TMatrixx>
-    auto Hessian(TMatrixx const& x, ScalarType eps = ScalarType(0))
+    auto Hessian(TMatrixx const& x, ScalarType eps = ScalarType(1e-5))
         -> math::linalg::mini::SMatrix<TScalar, kDofs, kDofs>;
 };
 
@@ -311,12 +312,11 @@ template <common::CFloatingPoint TScalar>
 template <math::linalg::mini::CMatrix TMatrixx>
 inline TScalar PointEdgeDistance<TScalar>::Eval(TMatrixx const& x_)
 {
-    auto x                                     = x_.template Slice<3, 1>(0, 0);
-    auto a                                     = x_.template Slice<3, 1>(3, 0);
-    auto b                                     = x_.template Slice<3, 1>(6, 0);
-    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
-    math::linalg::mini::SVector<TScalar, 3> ax = x - a;
-    return Norm(Cross(ab, ax)) / Norm(ab);
+    auto x = x_.template Slice<3, 1>(0, 0);
+    auto a = x_.template Slice<3, 1>(3, 0);
+    auto b = x_.template Slice<3, 1>(6, 0);
+    using namespace std;
+    return sqrt(DistanceQueries::PointLineSegment(x, a, b));
 }
 
 template <common::CFloatingPoint TScalar>
@@ -327,6 +327,10 @@ inline auto PointEdgeDistance<TScalar>::Gradient(TMatrixx const& x_)
     auto x = x_.template Slice<3, 1>(0, 0);
     auto a = x_.template Slice<3, 1>(3, 0);
     auto b = x_.template Slice<3, 1>(6, 0);
+    math::linalg::mini::SVector<TScalar, kDofs> g;
+    auto gx = g.template Slice<3, 1>(0, 0);
+    auto ga = g.template Slice<3, 1>(3, 0);
+    auto gb = g.template Slice<3, 1>(6, 0);
     using namespace std;
     math::linalg::mini::SVector<TScalar, 3> ab = b - a;
     math::linalg::mini::SVector<TScalar, 3> ax = x - a;
@@ -335,13 +339,9 @@ inline auto PointEdgeDistance<TScalar>::Gradient(TMatrixx const& x_)
     n /= nnorm;
     TScalar abnorm        = Norm(ab);
     TScalar nnorm_abnorm2 = nnorm / (abnorm * abnorm);
-    math::linalg::mini::SVector<TScalar, kDofs> g;
-    auto gx = g.template Slice<3, 1>(0, 0);
-    auto ga = g.template Slice<3, 1>(3, 0);
-    auto gb = g.template Slice<3, 1>(6, 0);
-    gx      = Cross(-ab, n);
-    ga      = Cross(b - x, n) + nnorm_abnorm2 * ab;
-    gb      = Cross(ax, n) - nnorm_abnorm2 * ab;
+    gx                    = Cross(-ab, n);
+    ga                    = Cross(b - x, n) + nnorm_abnorm2 * ab;
+    gb                    = Cross(ax, n) - nnorm_abnorm2 * ab;
     g *= (1 / abnorm);
     return g;
 }
@@ -629,16 +629,12 @@ template <common::CFloatingPoint TScalar>
 template <math::linalg::mini::CMatrix TMatrixx>
 inline TScalar PointTriangleDistance<TScalar>::Eval(TMatrixx const& x_)
 {
-    auto x                                     = x_.template Slice<3, 1>(0, 0);
-    auto a                                     = x_.template Slice<3, 1>(3, 0);
-    auto b                                     = x_.template Slice<3, 1>(6, 0);
-    auto c                                     = x_.template Slice<3, 1>(9, 0);
-    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
-    math::linalg::mini::SVector<TScalar, 3> ac = c - a;
-    math::linalg::mini::SVector<TScalar, 3> ax = x - a;
-    math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ac);
-    n /= Norm(n);
-    return Dot(n, ax);
+    auto x = x_.template Slice<3, 1>(0, 0);
+    auto a = x_.template Slice<3, 1>(3, 0);
+    auto b = x_.template Slice<3, 1>(6, 0);
+    auto c = x_.template Slice<3, 1>(9, 0);
+    using namespace std;
+    return sqrt(DistanceQueries::PointTriangle(x, a, b, c));
 }
 
 template <common::CFloatingPoint TScalar>
@@ -650,7 +646,14 @@ inline auto PointTriangleDistance<TScalar>::Gradient(TMatrixx const& x_)
     auto a = x_.template Slice<3, 1>(3, 0);
     auto b = x_.template Slice<3, 1>(6, 0);
     auto c = x_.template Slice<3, 1>(9, 0);
+    math::linalg::mini::SVector<TScalar, kDofs> g;
+    auto gx = g.template Slice<3, 1>(0, 0);
+    auto ga = g.template Slice<3, 1>(3, 0);
+    auto gb = g.template Slice<3, 1>(6, 0);
+    auto gc = g.template Slice<3, 1>(9, 0);
     using namespace std;
+    // NOTE: This is the actual point-triangle distance function, but it's not accurate away from
+    // the triangle.
     math::linalg::mini::SVector<TScalar, 3> ab = b - a;
     math::linalg::mini::SVector<TScalar, 3> ac = c - a;
     math::linalg::mini::SVector<TScalar, 3> ax = x - a;
@@ -660,15 +663,22 @@ inline auto PointTriangleDistance<TScalar>::Gradient(TMatrixx const& x_)
     n *= nnorminv;
     math::linalg::mini::Identity<TScalar, 3, 3> I;
     math::linalg::mini::SVector<TScalar, 3> Pnax = ax - Dot(ax, n) * n;
-    math::linalg::mini::SVector<TScalar, kDofs> g;
-    auto gx = g.template Slice<3, 1>(0, 0);
-    auto ga = g.template Slice<3, 1>(3, 0);
-    auto gb = g.template Slice<3, 1>(6, 0);
-    auto gc = g.template Slice<3, 1>(9, 0);
-    gx      = n;
-    ga      = nnorminv * (Cross(b - c, Pnax)) - n;
-    gb      = nnorminv * (Cross(ac, Pnax));
-    gc      = nnorminv * (Cross(-ab, Pnax));
+    gx                                           = n;
+    ga                                           = nnorminv * (Cross(b - c, Pnax)) - n;
+    gb                                           = nnorminv * (Cross(ac, Pnax));
+    gc                                           = nnorminv * (Cross(-ab, Pnax));
+
+    // NOTE: Use a translation-only point-triangle distance query
+    // auto uvw = ClosestPointQueries::PointInTriangle(x, a, b, c);
+    // math::linalg::mini::SVector<TScalar, 3> xc = uvw(0)*a + uvw(1)*b + uvw(2)*c;
+    // math::linalg::mini::SVector<TScalar, 3> n = x - xc;
+    // TScalar nnorm = Norm(n);
+    // TScalar nnorminv = 1 / nnorm;
+    // n *= nnorminv;
+    // gx = n;
+    // ga = -uvw(0)*n;
+    // gb = -uvw(1)*n;
+    // gc = -uvw(2)*n;
     return g;
 }
 
@@ -1371,7 +1381,7 @@ inline TScalar EdgeEdgeDistance<TScalar>::Eval(TMatrixx const& x_, ScalarType ep
     using namespace std;
     // NOTE: We use the geometry::DistanceQueries::LineSegments function, because
     // it handles degenerate and parallel edges.
-    return sqrt(geometry::DistanceQueries::LineSegments(a, b, c, d, eps * eps));
+    return sqrt(geometry::DistanceQueries::LineSegments(a, b, c, d, eps));
 }
 
 template <common::CFloatingPoint TScalar>
@@ -1383,26 +1393,40 @@ inline auto EdgeEdgeDistance<TScalar>::Gradient(TMatrixx const& x_, ScalarType e
     auto b = x_.template Slice<3, 1>(3, 0);
     auto c = x_.template Slice<3, 1>(6, 0);
     auto d = x_.template Slice<3, 1>(9, 0);
-    using namespace std;
-    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
-    math::linalg::mini::SVector<TScalar, 3> cd = d - c;
-    math::linalg::mini::SVector<TScalar, 3> ac = c - a;
-    math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, cd);
-    TScalar nnorm                              = sqrt(SquaredNorm(n) + eps * eps);
-    TScalar nnorminv                           = 1 / nnorm;
-    n *= nnorminv;
-    math::linalg::mini::SVector<TScalar, 3> Pnac = ac - Dot(ac, n) * n;
     math::linalg::mini::SVector<TScalar, kDofs> g;
     auto ga = g.template Slice<3, 1>(0, 0);
     auto gb = g.template Slice<3, 1>(3, 0);
     auto gc = g.template Slice<3, 1>(6, 0);
     auto gd = g.template Slice<3, 1>(9, 0);
-    ga      = nnorminv * Cross(-cd, Pnac);
-    gb      = -ga;
-    ga -= n;
-    gc = nnorminv * Cross(ab, Pnac);
-    gd = -gc;
-    gc += n;
+    using namespace std;
+    // NOTE: This is the actual edge-edge distance function, but it's too unstable
+    // math::linalg::mini::SVector<TScalar, 3> ab = b - a;
+    // math::linalg::mini::SVector<TScalar, 3> cd = d - c;
+    // math::linalg::mini::SVector<TScalar, 3> ac = c - a;
+    // math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, cd);
+    // TScalar nnorm                              = sqrt(SquaredNorm(n) + eps * eps);
+    // TScalar nnorminv                           = 1 / nnorm;
+    // n *= nnorminv;
+    // math::linalg::mini::SVector<TScalar, 3> Pnac = ac - Dot(ac, n) * n;
+    // ga      = nnorminv * Cross(-cd, Pnac);
+    // gb      = -ga;
+    // ga -= n;
+    // gc = nnorminv * Cross(ab, Pnac);
+    // gd = -gc;
+    // gc += n;
+
+    // NOTE: This is a fake edge-edge distance function that only takes into account linear
+    // displacements
+    math::linalg::mini::SVector<TScalar, 2> st = ClosestPointQueries::LineSegments(a, b, c, d);
+    math::linalg::mini::SVector<TScalar, 3> n =
+        ((1 - st(1)) * c + st(1) * d) - ((1 - st(0)) * a + st(0) * b);
+    TScalar nnorm    = Norm(n);
+    TScalar invnnorm = 1 / nnorm;
+    n *= invnnorm;
+    ga = -(1 - st(0)) * n;
+    gb = -st(0) * n;
+    gc = (1 - st(1)) * n;
+    gd = st(1) * n;
     return g;
 }
 

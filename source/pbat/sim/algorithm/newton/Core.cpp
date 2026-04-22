@@ -194,7 +194,7 @@ TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
     using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
     // Arrange
     io::Archive archive(
-        fmt::format("{}/sim/algorithm/CubeFallingOnPlane.h5", PBAT_TESTS_INTEGRATION_PATH),
+        fmt::format("{}/sim/algorithm/CubeFallingOnPlaneFast.h5", PBAT_TESTS_INTEGRATION_PATH),
         HighFive::File::AccessMode::ReadOnly);
     FemElastoDynamics fem{};
     fem.Deserialize(archive["fem"]);
@@ -232,7 +232,8 @@ TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
     {
         fem.SetupTimeIntegrationOptimization();
         newton::InitializeSolve(fem, contact, params);
-        bool const bConverged = newton::Solve(fem, contact, params);
+        bool const bHasContacts = contact.NumContacts() > 0;
+        bool const bConverged   = newton::Solve(fem, contact, params);
         CHECK(bConverged);
         fem.Step();
     }

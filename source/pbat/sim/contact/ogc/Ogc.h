@@ -194,6 +194,7 @@ bool IsVertexFeasible(
  * @param x `3 x 1` query point
  * @param fi First face index of half-edge he, i.e. `fi == GHEF(0, he)`
  * @param he Half-edge index
+ * @param bCheckAdjacentFacets Whether to check adjacent facets
  * @return true if in edge feasible region; false otherwise
  */
 template <
@@ -208,7 +209,8 @@ bool IsEdgeFeasible(
     Eigen::DenseBase<TDerivedGHEF> const& GHEF,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex fi,
-    TIndex he);
+    TIndex he,
+    bool bCheckAdjacentFacets = false);
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 void Execute(
@@ -319,7 +321,7 @@ void DynamicVertexFacetRTCCollideFunc(
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
-                if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
+                if (IsEdgeFeasible(X, F, GHEF, xi, f, a, true /*bCheckAdjacentFacets*/))
                     XE.push_back(
                         {XOffset + ix,
                          // Make sure we always add a unique half-edge index to prevent duplicate
@@ -328,8 +330,14 @@ void DynamicVertexFacetRTCCollideFunc(
                          HEOffset + std::max(a, geometry::OppositeHalfEdge(F, a, GHEF))});
                 break;
             }
-            default /* triangle */: {
+            case EVertexFacetClosestFaceType::Facet: {
+                // The projection of `x` onto the triangle plane must be strictly inside the
+                // triangle if its closest point projection is neither a vertex nor an edge,
+                // such that `x` must be triangle feasible.
                 XF.push_back({XOffset + ix, FOffset + a});
+                break;
+            }
+            default: {
                 break;
             }
         }
@@ -415,12 +423,23 @@ void DynamicVertexStaticFacetRTCCollideFunc(
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
-                if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xi, f, a))
-                    XE.push_back({XOffset + ix, HEenvOffset + a});
+                if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xi, f, a, true /*bCheckAdjacentFacets*/))
+                    XE.push_back(
+                        {XOffset + ix,
+                         // Make sure we always add a unique half-edge index to prevent duplicate
+                         // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
+                         // its opposite will be -1.
+                         HEenvOffset + std::max(a, geometry::OppositeHalfEdge(Fenv, a, GHEFenv))});
                 break;
             }
-            default /* triangle */: {
-                XF.push_back({XOffset + ix, FenvOffset + f});
+            case EVertexFacetClosestFaceType::Facet: {
+                // The projection of `x` onto the triangle plane must be strictly inside the
+                // triangle if its closest point projection is neither a vertex nor an edge,
+                // such that `x` must be triangle feasible.
+                XF.push_back({XOffset + ix, FenvOffset + a});
+                break;
+            }
+            default: {
                 break;
             }
         }
@@ -504,12 +523,23 @@ void StaticVertexDynamicFacetRTCCollideFunc(
                 break;
             }
             case EVertexFacetClosestFaceType::Edge: {
-                if (IsEdgeFeasible(X, F, GHEF, xi, f, a))
-                    XE.push_back({XenvOffset + ix, HEOffset + a});
+                if (IsEdgeFeasible(X, F, GHEF, xi, f, a, true /*bCheckAdjacentFacets*/))
+                    XE.push_back(
+                        {XenvOffset + ix,
+                         // Make sure we always add a unique half-edge index to prevent duplicate
+                         // vertex-edge pairs. We use the max, because if a is a boundary half-edge,
+                         // its opposite will be -1.
+                         HEOffset + std::max(a, geometry::OppositeHalfEdge(F, a, GHEF))});
                 break;
             }
-            default /* triangle */: {
-                XF.push_back({XenvOffset + ix, FOffset + f});
+            case EVertexFacetClosestFaceType::Facet: {
+                // The projection of `x` onto the triangle plane must be strictly inside the
+                // triangle if its closest point projection is neither a vertex nor an edge,
+                // such that `x` must be triangle feasible.
+                XF.push_back({XenvOffset + ix, FOffset + a});
+                break;
+            }
+            default: {
                 break;
             }
         }
@@ -614,9 +644,25 @@ void DynamicEdgeEdgeRTCCollideFunc(
         // feasible region of e1, so that we could remove the redundant
         // check for xc2 in the edge feasible region of e1. But I'll keep both checks for
         // safety for now until we can rigorously verify this claim.
-        if (IsEdgeFeasible(X, F, GHEF, xc1, GHEF(0, ehe2(0)), ehe2(0)) and
-            IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            EE.push_back({HEOffset + ehe1(0), HEOffset + ehe2(0)});
+        bool const bIsEdgeFeasible = IsEdgeFeasible(
+                                         X,
+                                         F,
+                                         GHEF,
+                                         xc1,
+                                         GHEF(0, ehe2(0)),
+                                         ehe2(0),
+                                         true /*bCheckAdjacentFacets*/) and
+                                     IsEdgeFeasible(
+                                         X,
+                                         F,
+                                         GHEF,
+                                         xc2,
+                                         GHEF(0, ehe1(0)),
+                                         ehe1(0),
+                                         true /*bCheckAdjacentFacets*/);
+        if (bIsEdgeFeasible)
+            EE.push_back(
+                {HEOffset + std::max(ehe1(0), ehe1(1)), HEOffset + std::max(ehe2(0), ehe2(1))});
     }
 }
 
@@ -702,9 +748,25 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         // feasible region of e1, so that we could remove the redundant
         // check for xc2 in the edge feasible region of e1. But I'll keep both checks for
         // safety for now until we can rigorously verify this claim.
-        if (IsEdgeFeasible(Xenv, Fenv, GHEFenv, xc1, GHEFenv(0, ehe2(0)), ehe2(0)) and
-            IsEdgeFeasible(X, F, GHEF, xc2, GHEF(0, ehe1(0)), ehe1(0)))
-            EE.push_back({HEOffset + ehe1(0), HEenvOffset + ehe2(0)});
+        bool const bIsEdgeFeasible = IsEdgeFeasible(
+                                         Xenv,
+                                         Fenv,
+                                         GHEFenv,
+                                         xc1,
+                                         GHEFenv(0, ehe2(0)),
+                                         ehe2(0),
+                                         true /*bCheckAdjacentFacets*/) and
+                                     IsEdgeFeasible(
+                                         X,
+                                         F,
+                                         GHEF,
+                                         xc2,
+                                         GHEF(0, ehe1(0)),
+                                         ehe1(0),
+                                         true /*bCheckAdjacentFacets*/);
+        if (bIsEdgeFeasible)
+            EE.push_back(
+                {HEOffset + std::max(ehe1(0), ehe1(1)), HEenvOffset + std::max(ehe2(0), ehe2(1))});
     }
 }
 
@@ -894,7 +956,8 @@ bool IsEdgeFeasible(
     Eigen::DenseBase<TDerivedGHEF> const& GHEF,
     Eigen::Vector<TScalar, 3> const& x,
     TIndex fi,
-    TIndex he)
+    TIndex he,
+    bool bCheckAdjacentFacets)
 {
     static_assert(
         TDerivedF::RowsAtCompileTime == 3,
@@ -910,22 +973,27 @@ bool IsEdgeFeasible(
     TIndex l = (F(0, fj) != i and F(0, fj) != j) * F(0, fj) +
                (F(1, fj) != i and F(1, fj) != j) * F(1, fj) +
                (F(2, fj) != i and F(2, fj) != j) * F(2, fj);
-    Eigen::Vector<TScalar, 3> xi  = X.col(i);
-    Eigen::Vector<TScalar, 3> xj  = X.col(j);
-    Eigen::Vector<TScalar, 3> xk  = X.col(k);
-    Eigen::Vector<TScalar, 3> xl  = X.col(l);
-    Eigen::Vector<TScalar, 3> xij = xj - xi;
-    TScalar xijn2                 = xij.squaredNorm();
-    // Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
-    Eigen::Vector<TScalar, 3> pin = (xi - xk) + (xk - xi).dot(xij) / xijn2 * xij;
-    // Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
-    // NOTE: whenever fj == fi (i.e. boundary edge), pjn == pin
-    Eigen::Vector<TScalar, 3> pjn = (xi - xl) + (xl - xi).dot(xij) / xijn2 * xij;
-    bool bInEdgeFeasibleRegion =
-        ((x - xi).dot(xj - xi) >= TScalar(0)) and // within half-plane of vertex i
-        ((x - xj).dot(xi - xj) >= TScalar(0)) and // within half-plane of vertex j
-        ((x - xi).dot(pin) >= TScalar(0)) and     // within half-plane perpendicular to fi
-        ((x - xi).dot(pjn) >= TScalar(0));        // within half-plane perpendicular to fj
+    Eigen::Vector<TScalar, 3> xi = X.col(i);
+    Eigen::Vector<TScalar, 3> xj = X.col(j);
+    bool bInEdgeFeasibleRegion{true};
+    bInEdgeFeasibleRegion &= ((x - xi).dot(xj - xi) >= TScalar(0)); // within half-plane of vertex i
+    bInEdgeFeasibleRegion &= ((x - xj).dot(xi - xj) >= TScalar(0)); // within half-plane of vertex j
+    if (bCheckAdjacentFacets)
+    {
+        Eigen::Vector<TScalar, 3> xk  = X.col(k);
+        Eigen::Vector<TScalar, 3> xl  = X.col(l);
+        Eigen::Vector<TScalar, 3> xij = xj - xi;
+        TScalar xijn2                 = xij.squaredNorm();
+        // Tangent to the plane spanned by triangle fi, perpendicular to edge (i,j)
+        Eigen::Vector<TScalar, 3> pin = (xi - xk) + (xk - xi).dot(xij) / xijn2 * xij;
+        // Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
+        // NOTE: whenever fj == fi (i.e. boundary edge), pjn == pin
+        Eigen::Vector<TScalar, 3> pjn = (xi - xl) + (xl - xi).dot(xij) / xijn2 * xij;
+        bInEdgeFeasibleRegion &=
+            ((x - xi).dot(pin) >= TScalar(0)); // within half-plane perpendicular to fi
+        bInEdgeFeasibleRegion &=
+            ((x - xi).dot(pjn) >= TScalar(0)); // within half-plane perpendicular to fj
+    }
     return bInEdgeFeasibleRegion;
 }
 

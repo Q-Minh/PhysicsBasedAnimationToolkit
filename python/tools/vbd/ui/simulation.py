@@ -25,6 +25,7 @@ class Simulation:
     )
     _t: int
     _profiler: pypbat.profiling.Profiler
+    _device: pbat.geometry.Device
 
     _fem_dynamics_vm: ps.VolumeMesh
     _fem_dynamics_dirichlet_pc: ps.PointCloud
@@ -47,6 +48,8 @@ class Simulation:
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
         self._profiler = pypbat.profiling.Profiler()
+        device_config = pbat.geometry.DeviceConfig()
+        self._device = pbat.geometry.Device(device_config)
         self._fem_dynamics_vm = None
         self._fem_dynamics_dirichlet_pc = None
         self._simulate = False
@@ -115,9 +118,7 @@ class Simulation:
         self._fem_dynamics = fem_dynamics
         self._v0 = self._fem_dynamics.v.copy()  # store initial velocity for reset
         self._xD = self._fem_dynamics.x.copy()  # store initial position for reset
-        device_config = pbat.geometry.DeviceConfig()
-        device = pbat.geometry.Device(device_config)
-        contact_dynamics.initialize(device)
+        contact_dynamics.initialize(self._device)
         self._contact.on_new_contact_dynamics(contact_dynamics)
         self._transform_library = transform_library
         self._tet_elastic_body_names = tet_elastic_body_names
@@ -164,6 +165,7 @@ class Simulation:
             self._constrain()
             self._update_visuals_after_position_change()
             if self._contact.contact_dynamics is not None:
+                self._contact.contact_dynamics.initialize(self._device)
                 self._contact.contact_dynamics.update_constraint_set(
                     self._fem_dynamics.X
                 )

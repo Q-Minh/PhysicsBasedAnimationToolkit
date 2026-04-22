@@ -35,7 +35,8 @@ struct Contact
     Eigen::Matrix<ScalarType, kDims, kStencil>
         grad; ///< Cached/stored gradient (from linearization)
     Eigen::Matrix<ScalarType, kDims, kStencil> gradx; ///< Computed gradient at current positions x
-    ScalarType c;                                     ///< Last evaluated constraint value
+    ScalarType c;  ///< Last evaluated linearized constraint value
+    ScalarType cx; ///< Last evaluated constraint value
 };
 
 struct MeshDynamics
@@ -105,11 +106,11 @@ struct MeshDynamics
                 contact.lambda         = C.Lambda();
                 contact.slack          = C.Slack();
                 contact.decay          = C.Decay();
-                contact.chat           = C.Chat();
+                contact.c              = C.Eval(xc, true /*bLinearized*/);
                 contact.grad           = ToEigen(C.Grad()).reshaped(kDims, kStencil);
                 auto gradx             = C.Grad(xc);
                 contact.gradx          = ToEigen(gradx).reshaped(kDims, kStencil);
-                contact.c              = C.Eval();
+                contact.cx             = C.Eval(xc);
 
                 if constexpr (std::is_same_v<TContactSet, PPSet>)
                     mPointPointContacts.push_back(std::move(contact));
@@ -507,10 +508,10 @@ void BindMeshDynamics(nanobind::module_& m)
             .def_ro("lam", &ContactType::lambda, "Lagrange multiplier.")
             .def_ro("slack", &ContactType::slack, "Inequality slack variable.")
             .def_ro("decay", &ContactType::decay, "Decay factor.")
-            .def_ro("chat", &ContactType::chat, "c(x_k) - grad c(x_k) . x_k.")
-            .def_ro("grad", &ContactType::grad, "Cached/stored gradient (from linearization).")
-            .def_ro("gradx", &ContactType::gradx, "Computed gradient at current positions x.")
-            .def_ro("c", &ContactType::c, "Last evaluated constraint value.");
+            .def_ro("c", &ContactType::chat, "c(x_k) + grad c(x_k)^T (x - x_k).")
+            .def_ro("grad", &ContactType::grad, "grad c(x_k)")
+            .def_ro("gradx", &ContactType::gradx, "grad c(x)")
+            .def_ro("cx", &ContactType::c, "c(x).");
     };
 
     fBindDebugContact(nb::class_<DebugPointPointContact>(m, "DebugPointPointContact"));

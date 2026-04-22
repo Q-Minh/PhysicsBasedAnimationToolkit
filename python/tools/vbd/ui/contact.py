@@ -104,6 +104,7 @@ class Contact:
         if imgui.Button("<##prev"):
             idx = max(0, idx - 1)
         imgui.SameLine()
+        imgui.SetNextItemWidth(50)
         _, idx = imgui.InputInt(
             f"##idx{self._selected_type}", idx
         )
@@ -122,11 +123,11 @@ class Contact:
         # Show scalar data for current contact
         c = contact_list[idx]
         if imgui.TreeNode("Details##contact_details"):
-            imgui.Text(f"c(x) = {c.c:.6g}")
+            imgui.Text(f"c(x) = {c.cx:.6g}")
             imgui.Text(f"lambda = {c.lam:.6g}")
             imgui.Text(f"slack = {c.slack:.6g}")
             imgui.Text(f"decay = {c.decay:.6g}")
-            imgui.Text(f"chat = {c.chat:.6g}")
+            imgui.Text(f"c = {c.c:.6g}")
             imgui.Text(f"u={c.u}, v={c.v} (gu={c.gu}, gv={c.gv})")
             imgui.Text(f"nodes = {list(c.nodes)}")
             imgui.TreePop()
