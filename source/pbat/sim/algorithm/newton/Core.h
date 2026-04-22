@@ -485,8 +485,9 @@ void AssembleHessian(
                                 params.triplets.emplace_back(
                                     nodes[il] * kDims + id,
                                     nodes[jl] * kDims + jd,
-                                    dH * gradc(il * kDims + id) * gradc(jl * kDims + jd) +
-                                        wf * Hf(id, jd));
+                                    C.Decay() *
+                                        (dH * gradc(il * kDims + id) * gradc(jl * kDims + jd) +
+                                         wf * Hf(id, jd)));
                     }
                 }
             },

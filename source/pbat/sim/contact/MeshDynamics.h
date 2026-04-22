@@ -1621,15 +1621,24 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             auto F                       = C.Friction();
             F.Eval()                     = F.Eval(xc);
             if (static_cast<bool>(Mask & EDualVariable::Slack))
+            {
                 C.Slack() =
                     std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / C.Penalty());
+                if (C.Slack() == TScalar(0))
+                {
+                    C.Decay() = TScalar(1);
+                }
+                else
+                {
+                    C.Decay() *= mParams.decay;
+                }
+            }
             if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
             {
                 if (C.Slack() == TScalar(0))
                 {
                     C.Lambda() -= C.Penalty() * (C.Eval() - mParams.dmin);
-                    C.Decay() = TScalar(1);
-                    auto muS  = mParams.mu;
+                    auto muS = mParams.mu;
                     F.Lambda() -= F.Penalty() * F.Eval();
                     TScalar frictionLimit = muS * C.Lambda();
                     TScalar lambdafn2     = SquaredNorm(F.Lambda());
@@ -1643,7 +1652,6 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
                 {
                     C.Lambda() = TScalar(0);
                     F.Lambda().SetZero();
-                    C.Decay() *= mParams.decay;
                 }
             }
         },
@@ -1948,11 +1956,11 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(Eigen::MatrixBase<TDeriv
             auto xc                = Reshape<kDofs, 1>(Xc);
             TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
             auto kn                = C.Penalty();
-            E += /*C.Decay() **/ (TScalar(0.5) * kn * cs * cs - C.Lambda() * cs);
+            E += C.Decay() * (TScalar(0.5) * kn * cs * cs - C.Lambda() * cs);
             auto F  = C.Friction();
             auto cf = F.Eval(xc);
             auto kf = F.Penalty();
-            E += TScalar(0.5) * kf * Dot(cf, cf) - Dot(F.Lambda(), cf);
+            E += C.Decay() * (TScalar(0.5) * kf * Dot(cf, cf) - Dot(F.Lambda(), cf));
         },
         1 /*nThreads*/);
     return E;
@@ -1990,7 +1998,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             auto xc                = Reshape<kDofs, 1>(XC);
             auto kn                = C.Penalty();
             TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
-            TScalar dL             = /*C.Decay() **/ (kn * cs - C.Lambda());
+            TScalar dL             = kn * cs - C.Lambda();
             // Friction gradient \nabla_x [ 0.5*kf*||c_f||^2 - lambda_f^T c_f ]
             // = [ kf * c_f - lambda_f ] \nabla_x c_f where \nabla_xi c_f is W(i)*T
             auto F        = C.Friction();
@@ -2009,7 +2017,8 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
                 if (nodes[ki] < nNodes)
                 {
                     g.template segment<kDims>(nodes[ki] * kDims) +=
-                        dL * gradnc.template segment<kDims>(ki * kDims) + W(ki) * gradfc;
+                        C.Decay() *
+                        (dL * gradnc.template segment<kDims>(ki * kDims) + W(ki) * gradfc);
                 }
             }
         },

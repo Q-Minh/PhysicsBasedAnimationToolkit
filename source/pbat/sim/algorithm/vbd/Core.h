@@ -402,7 +402,7 @@ inline void AccumulateContactEnergy(
         // Compute node derivatives
         auto const& gradc = C.Grad();
         kernels::AccumulateAugmentedLagrangianContactNodeDerivatives<
-            3>(gradc, ki, dL, kn, Tf, Wf(ki), kf, df, gi, Hi);
+            3>(gradc, ki, dL, kn, Tf, Wf(ki), kf, df, C.Decay(), gi, Hi);
     };
     contact.ForEachPointPointContact(i, [&](auto C, auto stencil) {
         fAccumulateNodalDerivatives(C, stencil);

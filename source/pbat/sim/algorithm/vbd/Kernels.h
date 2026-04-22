@@ -674,16 +674,17 @@ PBAT_HOST_DEVICE void AccumulateAugmentedLagrangianContactNodeDerivatives(
     ScalarType Wki,
     ScalarType kf,
     TDf const& df,
+    ScalarType decay,
     TMatrixG& gi,
     TMatrixH& Hi)
 {
     auto gradci = gradc.template Slice<kDims, 1>(ki * kDims, 0);
     // Normal contact
-    gi += dL * gradci;
-    Hi += kn * (gradci * gradci.Transpose());
+    gi += decay * dL * gradci;
+    Hi += decay * kn * (gradci * gradci.Transpose());
     // Friction contact
-    gi += Wki * (T * df);
-    Hi += (kf * Wki * Wki) * (T * T.Transpose());
+    gi += decay * Wki * (T * df);
+    Hi += decay * (kf * Wki * Wki) * (T * T.Transpose());
 }
 
 } // namespace pbat::sim::algorithm::vbd::kernels
