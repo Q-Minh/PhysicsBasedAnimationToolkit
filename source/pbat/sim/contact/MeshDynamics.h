@@ -590,38 +590,22 @@ class MeshDynamics
      * @brief Get the point-point contact adjacency set
      * @return Reference to the point-point contact adjacency set
      */
-    auto PointPointContacts() const
-        -> graph::DenseAdjacencySet<MeshPointPointConstraint<ScalarType>, IndexType> const&
-    {
-        return mPointPointContacts;
-    }
+    auto PointPointContacts() const { return mPointPointContacts; }
     /**
      * @brief Get the point-edge contact adjacency set
      * @return Reference to the point-edge contact adjacency set
      */
-    auto PointEdgeContacts() const
-        -> graph::DenseAdjacencySet<MeshPointEdgeConstraint<ScalarType>, IndexType> const&
-    {
-        return mPointEdgeContacts;
-    }
+    auto PointEdgeContacts() const { return mPointEdgeContacts; }
     /**
      * @brief Get the point-triangle contact adjacency set
      * @return Reference to the point-triangle contact adjacency set
      */
-    auto PointTriangleContacts() const
-        -> graph::DenseAdjacencySet<MeshPointTriangleConstraint<ScalarType>, IndexType> const&
-    {
-        return mPointTriangleContacts;
-    }
+    auto PointTriangleContacts() const { return mPointTriangleContacts; }
     /**
      * @brief Get the edge-edge contact adjacency set
      * @return Reference to the edge-edge contact adjacency set
      */
-    auto EdgeEdgeContacts() const
-        -> graph::DenseAdjacencySet<MeshEdgeEdgeConstraint<ScalarType>, IndexType> const&
-    {
-        return mEdgeEdgeContacts;
-    }
+    auto EdgeEdgeContacts() const { return mEdgeEdgeContacts; }
     /**
      * @brief Reduce the thread-local contact sets from ogc::State into the contact adjacency sets
      *
@@ -662,13 +646,13 @@ class MeshDynamics
      * These store the contact pairs along with their associated constraint data.
      * The adjacency sets are populated by reducing the thread-local contact sets from ogc::State.
      */
-    graph::DenseAdjacencySet<MeshPointPointConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<IndexType, MeshPointPointConstraint<ScalarType>, bool>
         mPointPointContacts; ///< Point-point contact pairs with constraint data
-    graph::DenseAdjacencySet<MeshPointEdgeConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<IndexType, MeshPointEdgeConstraint<ScalarType>, bool>
         mPointEdgeContacts; ///< Point-edge contact pairs with constraint data
-    graph::DenseAdjacencySet<MeshPointTriangleConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<IndexType, MeshPointTriangleConstraint<ScalarType>, bool>
         mPointTriangleContacts; ///< Point-triangle contact pairs with constraint data
-    graph::DenseAdjacencySet<MeshEdgeEdgeConstraint<ScalarType>, IndexType>
+    graph::DenseAdjacencySet<IndexType, MeshEdgeEdgeConstraint<ScalarType>, bool>
         mEdgeEdgeContacts; ///< Edge-edge contact pairs with constraint data
 };
 

@@ -292,14 +292,10 @@ void AssembleHessian(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.AssembleHessian");
     // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
-    using PointPointContactType =
-        typename std::remove_cvref_t<decltype(contact.PointPointContacts())>::DataType;
-    using PointEdgeContactType =
-        typename std::remove_cvref_t<decltype(contact.PointEdgeContacts())>::DataType;
-    using PointTriangleContactType =
-        typename std::remove_cvref_t<decltype(contact.PointTriangleContacts())>::DataType;
-    using EdgeEdgeContactType =
-        typename std::remove_cvref_t<decltype(contact.EdgeEdgeContacts())>::DataType;
+    using PointPointContactType = contact::MeshPointPointConstraint<Scalar>;
+    using PointEdgeContactType = contact::MeshPointEdgeConstraint<Scalar>;
+    using PointTriangleContactType = contact::MeshPointTriangleConstraint<Scalar>;
+    using EdgeEdgeContactType = contact::MeshEdgeEdgeConstraint<Scalar>;
     auto constexpr kVertexVertexDofs   = PointPointContactType::kDofs;
     auto constexpr kVertexEdgeDofs     = PointEdgeContactType::kDofs;
     auto constexpr kVertexTriangleDofs = PointTriangleContactType::kDofs;

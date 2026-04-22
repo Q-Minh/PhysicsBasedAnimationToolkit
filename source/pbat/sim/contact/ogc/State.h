@@ -22,7 +22,7 @@
 #include <array>
 #include <embree4/rtcore.h>
 #include <tbb/enumerable_thread_specific.h>
-#include <tbb/parallel_for.h>
+#include <tbb/parallel_sort.h>
 #include <tbb/task_group.h>
 #include <vector>
 
