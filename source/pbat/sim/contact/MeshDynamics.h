@@ -1604,12 +1604,11 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
-    using GeometryPrefixType = typename decltype(mOgcState)::GeometryPrefixArrayType;
     // Parallel execution setup
     tbb::task_group tg;
-    TIndex const nThreads     = static_cast<TIndex>(std::thread::hardware_concurrency());
-    auto const fForEachThread = [&tg, nThreads](auto&& f) {
-        for (auto t = 0; t < nThreads; ++t)
+    unsigned int const nThreads = std::thread::hardware_concurrency();
+    auto const fForEachThread   = [&tg, nThreads](auto&& f) {
+        for (unsigned int t = 0; t < nThreads; ++t)
             tg.run([f, t]() { f(t); });
     };
     auto const fLaunchKernel = [&]<class TConstraintSet>(TConstraintSet& set) {
@@ -1618,7 +1617,7 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
         auto const& [prefixu, prefixv]     = GeometryPrefixArrays<TConstraintSet>();
         TIndex const nConstraints          = static_cast<TIndex>(set.Size());
         TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
-        fForEachThread([&](TIndex t) {
+        fForEachThread([&](unsigned int t) {
             TIndex const cstart = t * nConstraintsPerThread;
             TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
             int gu{0}, gv{0};
