@@ -354,6 +354,14 @@ class AdjacencySet
     Has(TVertexIndex u, TVertexIndex v, TIdIndex* c = nullptr, bool bUseBinarySearch = true) const;
 
     /**
+     * @brief Return the degree of vertex u (number of outgoing adjacencies from u).
+     * @param u Source vertex
+     * @return Number of outgoing adjacencies from u
+     * @pre Finalize() has been called to establish the prefix array
+     */
+    TVertexIndex Degree(TVertexIndex u) const;
+
+    /**
      * @brief Iterate over all adjacencies (u, v, w) where u is fixed.
      *
      * @tparam FOnAdjacency Callable with signature `void(TVertexIndex u, TVertexIndex v, TData& w)`
@@ -419,6 +427,12 @@ class AdjacencySet
      * @return Number of adjacencies
      */
     std::size_t Size() const noexcept { return mAdjacencies.size(); }
+
+    /**
+     * @brief Check if the set is empty (contains no adjacencies)
+     * @return true if empty, false otherwise
+     */
+    bool Empty() const noexcept { return mAdjacencies.empty(); }
 
     /**
      * @brief Number of source vertices inferred from the prefix array
@@ -811,6 +825,12 @@ inline bool AdjacencySet<TData, TVertexIndex, TIdIndex>::Has(
     if (bFound and c != nullptr)
         *c = it->id;
     return bFound;
+}
+
+template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
+inline TVertexIndex AdjacencySet<TData, TVertexIndex, TIdIndex>::Degree(TVertexIndex u) const
+{
+    return mPrefix[static_cast<std::size_t>(u) + 1u] - mPrefix[u];
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>

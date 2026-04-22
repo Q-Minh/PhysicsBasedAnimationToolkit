@@ -233,7 +233,9 @@ template <common::CIndex TIndex>
 void UpdateContactSet(tbb::enumerable_thread_specific<graph::AdjacencySet<void, TIndex>>& sets)
 {
     graph::AdjacencySetUpdateOptions opts{};
-    opts.bAssumeUniqueIncoming = true;
+    opts.bAssumeSortedIncoming = false;
+    opts.bAssumeUniqueIncoming = false;
+    opts.bUseParallelSort      = false;
     opts.eUpdatePolicy         = graph::AdjacencySetUpdateOptions::EUpdatePolicy::Overwrite;
     tbb::static_partitioner partitioner{};
     tbb::parallel_for(

@@ -1837,22 +1837,22 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointDynamicMeshContact(
     auto vi = mDynamicMeshes.GXV(i);
     if (vi < 0)
         return;
-    mOgcState.ForEachDynamicContactFaceOfVertex(
-        vi,
-        [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType j) {
-            func(j);
-        },
-        [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
-            IndexType he) {
-            Eigen::Vector<IndexType, 2> const einds{
-                geometry::IncomingVertex(mDynamicMeshes.F, he),
-                geometry::OutgoingVertex(mDynamicMeshes.F, he)};
-            func(einds);
-        },
-        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
-            Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
-            func(finds);
-        });
+    // mOgcState.ForEachDynamicContactFaceOfVertex(
+    //     vi,
+    //     [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType j) {
+    //         func(j);
+    //     },
+    //     [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
+    //         IndexType he) {
+    //         Eigen::Vector<IndexType, 2> const einds{
+    //             geometry::IncomingVertex(mDynamicMeshes.F, he),
+    //             geometry::OutgoingVertex(mDynamicMeshes.F, he)};
+    //         func(einds);
+    //     },
+    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
+    //         Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
+    //         func(finds);
+    //     });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1869,22 +1869,22 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachPointStaticMeshContact(
     auto vi = mDynamicMeshes.GXV(i);
     if (vi < 0)
         return;
-    mOgcState.ForEachStaticContactFaceOfVertex(
-        vi,
-        [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType vj) {
-            func(vj);
-        },
-        [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
-            IndexType he) {
-            Eigen::Vector<IndexType, 2> const einds{
-                geometry::IncomingVertex(mStaticMeshes.F, he),
-                geometry::OutgoingVertex(mStaticMeshes.F, he)};
-            func(einds);
-        },
-        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
-            Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
-            func(finds);
-        });
+    // mOgcState.ForEachStaticContactFaceOfVertex(
+    //     vi,
+    //     [this, func = std::forward<FOnPointPointContact>(fOnPointPointContact)](IndexType vj) {
+    //         func(vj);
+    //     },
+    //     [this, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
+    //         IndexType he) {
+    //         Eigen::Vector<IndexType, 2> const einds{
+    //             geometry::IncomingVertex(mStaticMeshes.F, he),
+    //             geometry::OutgoingVertex(mStaticMeshes.F, he)};
+    //         func(einds);
+    //     },
+    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType f) {
+    //         Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
+    //         func(finds);
+    //     });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1897,22 +1897,22 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeDynamicMeshContact(
     Eigen::Vector<IndexType, 2> const eindsi{
         geometry::IncomingVertex(mDynamicMeshes.F, hei),
         geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
-    mOgcState.ForEachDynamicContactFaceOfHalfEdge(
-        hei,
-        [this,
-         &eindsi,
-         func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType j) {
-            func(eindsi, j);
-        },
-        [this,
-         &eindsi,
-         func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
-            IndexType hej) {
-            Eigen::Vector<IndexType, 2> const eindsj{
-                geometry::IncomingVertex(mDynamicMeshes.F, hej),
-                geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
-            func(eindsi, eindsj);
-        });
+    // mOgcState.ForEachDynamicContactFaceOfHalfEdge(
+    //     hei,
+    //     [this,
+    //      &eindsi,
+    //      func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](IndexType j) {
+    //         func(eindsi, j);
+    //     },
+    //     [this,
+    //      &eindsi,
+    //      func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
+    //         IndexType hej) {
+    //         Eigen::Vector<IndexType, 2> const eindsj{
+    //             geometry::IncomingVertex(mDynamicMeshes.F, hej),
+    //             geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
+    //         func(eindsi, eindsj);
+    //     });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1925,19 +1925,19 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachHalfEdgeStaticMeshContact(
     Eigen::Vector<IndexType, 2> const eindsi{
         geometry::IncomingVertex(mDynamicMeshes.F, hei),
         geometry::OutgoingVertex(mDynamicMeshes.F, hei)};
-    mOgcState.ForEachStaticContactFaceOfHalfEdge(
-        hei,
-        [&eindsi, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
-            IndexType vj) { func(eindsi, vj); },
-        [this,
-         &eindsi,
-         func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
-            IndexType hej) {
-            Eigen::Vector<IndexType, 2> const eindsj{
-                geometry::IncomingVertex(mStaticMeshes.F, hej),
-                geometry::OutgoingVertex(mStaticMeshes.F, hej)};
-            func(eindsi, eindsj);
-        });
+    // mOgcState.ForEachStaticContactFaceOfHalfEdge(
+    //     hei,
+    //     [&eindsi, func = std::forward<FOnPointLineSegmentContact>(fOnPointLineSegmentContact)](
+    //         IndexType vj) { func(eindsi, vj); },
+    //     [this,
+    //      &eindsi,
+    //      func = std::forward<FOnLineSegmentLineSegmentContact>(fOnLineSegmentLineSegmentContact)](
+    //         IndexType hej) {
+    //         Eigen::Vector<IndexType, 2> const eindsj{
+    //             geometry::IncomingVertex(mStaticMeshes.F, hej),
+    //             geometry::OutgoingVertex(mStaticMeshes.F, hej)};
+    //         func(eindsi, eindsj);
+    //     });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1982,11 +1982,11 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachDynamicPointContactOnTriangle(
     IndexType fi,
     FOnPointTriangleContact&& fOnPointTriangleContact)
 {
-    mOgcState.ForEachDynamicVertexContactOfTriangle(
-        fi,
-        [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType i) {
-            func(i);
-        });
+    // mOgcState.ForEachDynamicVertexContactOfTriangle(
+    //     fi,
+    //     [this, func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType i) {
+    //         func(i);
+    //     });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1995,11 +1995,11 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachStaticPointContactOnTriangle(
     IndexType fi,
     FOnPointTriangleContact&& fOnPointTriangleContact)
 {
-    mOgcState.ForEachStaticVertexContactOfTriangle(
-        fi,
-        [func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType vi) {
-            func(vi);
-        });
+    // mOgcState.ForEachStaticVertexContactOfTriangle(
+    //     fi,
+    //     [func = std::forward<FOnPointTriangleContact>(fOnPointTriangleContact)](IndexType vi) {
+    //         func(vi);
+    //     });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -2058,36 +2058,36 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshMeshContact(
     for (auto v = 0; v < nVerts; ++v)
     {
         auto const i = mDynamicMeshes.V(v);
-        mOgcState.ForEachDynamicContactFaceOfVertex(
-            v,
-            [&, func = std::forward<FOnVertexVertexContact>(fOnVertexVertexContact)](IndexType j) {
-                func(i, j);
-            },
-            [&, func = std::forward<FOnVertexEdgeContact>(fOnVertexEdgeContact)](IndexType he) {
-                Eigen::Vector<IndexType, 2> const einds{
-                    geometry::IncomingVertex(mDynamicMeshes.F, he),
-                    geometry::OutgoingVertex(mDynamicMeshes.F, he)};
-                func(i, einds);
-            },
-            [&,
-             func = std::forward<FOnVertexTriangleContact>(fOnVertexTriangleContact)](IndexType f) {
-                Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
-                func(i, finds);
-            });
+        // mOgcState.ForEachDynamicContactFaceOfVertex(
+        //     v,
+        //     [&, func = std::forward<FOnVertexVertexContact>(fOnVertexVertexContact)](IndexType j) {
+        //         func(i, j);
+        //     },
+        //     [&, func = std::forward<FOnVertexEdgeContact>(fOnVertexEdgeContact)](IndexType he) {
+        //         Eigen::Vector<IndexType, 2> const einds{
+        //             geometry::IncomingVertex(mDynamicMeshes.F, he),
+        //             geometry::OutgoingVertex(mDynamicMeshes.F, he)};
+        //         func(i, einds);
+        //     },
+        //     [&,
+        //      func = std::forward<FOnVertexTriangleContact>(fOnVertexTriangleContact)](IndexType f) {
+        //         Eigen::Vector<IndexType, 3> const finds = mDynamicMeshes.F.col(f);
+        //         func(i, finds);
+        //     });
     }
     for (auto e = 0; e < nEdges; ++e)
     {
         auto hei                                 = mDynamicMeshes.EHE(0, e);
         Eigen::Vector<IndexType, 2> const eindsi = mDynamicMeshes.E.col(e);
-        mOgcState.ForEachDynamicContactFaceOfHalfEdge(
-            hei,
-            [&]([[maybe_unused]] auto _) { /* no-op */ },
-            [&, func = std::forward<FOnEdgeEdgeContact>(fOnEdgeEdgeContact)](IndexType hej) {
-                Eigen::Vector<IndexType, 2> const eindsj{
-                    geometry::IncomingVertex(mDynamicMeshes.F, hej),
-                    geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
-                func(eindsi, eindsj);
-            });
+        // mOgcState.ForEachDynamicContactFaceOfHalfEdge(
+        //     hei,
+        //     [&]([[maybe_unused]] auto _) { /* no-op */ },
+        //     [&, func = std::forward<FOnEdgeEdgeContact>(fOnEdgeEdgeContact)](IndexType hej) {
+        //         Eigen::Vector<IndexType, 2> const eindsj{
+        //             geometry::IncomingVertex(mDynamicMeshes.F, hej),
+        //             geometry::OutgoingVertex(mDynamicMeshes.F, hej)};
+        //         func(eindsi, eindsj);
+        //     });
     }
 }
 
@@ -2113,51 +2113,51 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
     for (auto v = 0; v < nVerts; ++v)
     {
         IndexType const i = mDynamicMeshes.V(v);
-        mOgcState.ForEachStaticContactFaceOfVertex(
-            v,
-            [&,
-             func = std::forward<FOnVertexEnvironmentVertexContact>(
-                 fOnVertexEnvironmentVertexContact)](IndexType j) { func(i, j); },
-            [&,
-             func = std::forward<FOnVertexEnvironmentEdgeContact>(fOnVertexEnvironmentEdgeContact)](
-                IndexType hej) {
-                Eigen::Vector<IndexType, 2> const einds{
-                    geometry::IncomingVertex(mStaticMeshes.F, hej),
-                    geometry::OutgoingVertex(mStaticMeshes.F, hej)};
-                func(i, einds);
-            },
-            [&,
-             func = std::forward<FOnVertexEnvironmentTriangleContact>(
-                 fOnVertexEnvironmentTriangleContact)](IndexType f) {
-                Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
-                func(i, finds);
-            });
+        // mOgcState.ForEachStaticContactFaceOfVertex(
+        //     v,
+        //     [&,
+        //      func = std::forward<FOnVertexEnvironmentVertexContact>(
+        //          fOnVertexEnvironmentVertexContact)](IndexType j) { func(i, j); },
+        //     [&,
+        //      func = std::forward<FOnVertexEnvironmentEdgeContact>(fOnVertexEnvironmentEdgeContact)](
+        //         IndexType hej) {
+        //         Eigen::Vector<IndexType, 2> const einds{
+        //             geometry::IncomingVertex(mStaticMeshes.F, hej),
+        //             geometry::OutgoingVertex(mStaticMeshes.F, hej)};
+        //         func(i, einds);
+        //     },
+        //     [&,
+        //      func = std::forward<FOnVertexEnvironmentTriangleContact>(
+        //          fOnVertexEnvironmentTriangleContact)](IndexType f) {
+        //         Eigen::Vector<IndexType, 3> const finds = mStaticMeshes.F.col(f);
+        //         func(i, finds);
+        //     });
     }
     for (auto e = 0; e < nEdges; ++e)
     {
         auto hei                                 = mDynamicMeshes.EHE(0, e);
         Eigen::Vector<IndexType, 2> const eindsi = mDynamicMeshes.E.col(e);
-        mOgcState.ForEachStaticContactFaceOfHalfEdge(
-            hei,
-            [&,
-             func = std::forward<FOnEdgeEnvironmentVertexContact>(fOnEdgeEnvironmentVertexContact)](
-                IndexType j) { func(eindsi, j); },
-            [&, func = std::forward<FOnEdgeEnvironmentEdgeContact>(fOnEdgeEnvironmentEdgeContact)](
-                IndexType hej) {
-                Eigen::Vector<IndexType, 2> const eindsj{
-                    geometry::IncomingVertex(mStaticMeshes.F, hej),
-                    geometry::OutgoingVertex(mStaticMeshes.F, hej)};
-                func(eindsi, eindsj);
-            });
+        // mOgcState.ForEachStaticContactFaceOfHalfEdge(
+        //     hei,
+        //     [&,
+        //      func = std::forward<FOnEdgeEnvironmentVertexContact>(fOnEdgeEnvironmentVertexContact)](
+        //         IndexType j) { func(eindsi, j); },
+        //     [&, func = std::forward<FOnEdgeEnvironmentEdgeContact>(fOnEdgeEnvironmentEdgeContact)](
+        //         IndexType hej) {
+        //         Eigen::Vector<IndexType, 2> const eindsj{
+        //             geometry::IncomingVertex(mStaticMeshes.F, hej),
+        //             geometry::OutgoingVertex(mStaticMeshes.F, hej)};
+        //         func(eindsi, eindsj);
+        //     });
     }
     for (auto f = 0; f < nFaces; ++f)
     {
         Eigen::Vector<IndexType, 3> const findsi = mDynamicMeshes.F.col(f);
-        mOgcState.ForEachStaticVertexContactOfTriangle(
-            f,
-            [&,
-             func = std::forward<FOnTriangleEnvironmentVertexContact>(
-                 fOnTriangleEnvironmentVertexContact)](IndexType j) { func(findsi, j); });
+        // mOgcState.ForEachStaticVertexContactOfTriangle(
+        //     f,
+        //     [&,
+        //      func = std::forward<FOnTriangleEnvironmentVertexContact>(
+        //          fOnTriangleEnvironmentVertexContact)](IndexType j) { func(findsi, j); });
     }
 }
 

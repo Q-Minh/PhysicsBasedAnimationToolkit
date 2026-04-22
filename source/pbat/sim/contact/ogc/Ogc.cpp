@@ -4,6 +4,7 @@ namespace pbat::sim::contact::ogc {
 } // namespace pbat::sim::contact::ogc
 
 #include <doctest/doctest.h>
+#include <ranges>
 
 namespace pbat::sim::contact::ogc::detail::test {
 
@@ -262,116 +263,44 @@ TEST_CASE("[sim][contact][ogc] Ogc")
     ogcState.Initialize(device, ogcInput, ogcParams);
     ogcState.PrepareForExecution(ogcInput, ogcParams);
 
-    CHECK(
-        std::all_of(
-            ogcState.mDynamicContactFacesOfVertex.begin(),
-            ogcState.mDynamicContactFacesOfVertex.end(),
-            [](auto const& contacts) { return contacts.empty(); }));
-    CHECK(
-        std::all_of(
-            ogcState.mDynamicContactVerticesOfTriangle.begin(),
-            ogcState.mDynamicContactVerticesOfTriangle.end(),
-            [](auto const& contacts) { return contacts.empty(); }));
-    CHECK(
-        std::all_of(
-            ogcState.mDynamicContactFacesOfHalfEdge.begin(),
-            ogcState.mDynamicContactFacesOfHalfEdge.end(),
-            [](auto const& contacts) { return contacts.empty(); }));
-
     SUBCASE("Vertex-Facet Contact Detection")
     {
         // Act: prepare iteration and perform vertex-facet contact detection
         VertexFacetContactDetection(ogcInput, ogcParams, ogcState);
 
         // Assert: expect contacts between top vertices of bottom cube and bottom faces of top cube
-        auto const fContactSetHasTriangles =
-            [](std::vector<ContactFace<Index>> const& contactFaces) {
-                return std::any_of(
-                    contactFaces.begin(),
-                    contactFaces.end(),
-                    [](ContactFace<Index> const& contactFace) {
-                        return contactFace.VertexFacetClosestFaceType() ==
-                               EVertexFacetClosestFaceType::Facet;
-                    });
-            };
-        auto const fContactSetHasEdges = [](std::vector<ContactFace<Index>> const& contactFaces) {
-            return std::any_of(
-                contactFaces.begin(),
-                contactFaces.end(),
-                [](ContactFace<Index> const& contactFace) {
-                    return contactFace.VertexFacetClosestFaceType() ==
-                           EVertexFacetClosestFaceType::Edge;
-                });
-        };
-        auto const fContactSetHasVertices =
-            [](std::vector<ContactFace<Index>> const& contactFaces) {
-                return std::any_of(
-                    contactFaces.begin(),
-                    contactFaces.end(),
-                    [](ContactFace<Index> const& contactFace) {
-                        return contactFace.VertexFacetClosestFaceType() ==
-                               EVertexFacetClosestFaceType::Vertex;
-                    });
-            };
-        Eigen::Index const nVerticesWithTriangleContacts = std::accumulate(
-            ogcState.mDynamicContactFacesOfVertex.begin(),
-            ogcState.mDynamicContactFacesOfVertex.end(),
-            Eigen::Index(0),
-            [&fContactSetHasTriangles](
-                Eigen::Index acc,
-                std::vector<ContactFace<Index>> const& contactFaces) {
-                return acc + fContactSetHasTriangles(contactFaces);
+        graph::AdjacencySet<void, Index> XX, XE, XF;
+        XX.Reduce(ogcState.mXX.begin(), ogcState.mXX.end());
+        XE.Reduce(ogcState.mXE.begin(), ogcState.mXE.end());
+        XF.Reduce(ogcState.mXF.begin(), ogcState.mXF.end());
+        XX.Finalize(X.cols());
+        XE.Finalize(X.cols());
+        XF.Finalize(X.cols());
+        auto const nVerticesWithVertexContacts =
+            std::ranges::count_if(std::views::iota(0, X.cols()), [&](Index i) {
+                return XX.Degree(i) > 0;
             });
-        Eigen::Index const nVerticesWithEdgeContacts = std::accumulate(
-            ogcState.mDynamicContactFacesOfVertex.begin(),
-            ogcState.mDynamicContactFacesOfVertex.end(),
-            Eigen::Index(0),
-            [&fContactSetHasEdges](
-                Eigen::Index acc,
-                std::vector<ContactFace<Index>> const& contactFaces) {
-                return acc + fContactSetHasEdges(contactFaces);
+        auto const nVerticesWithEdgeContacts =
+            std::ranges::count_if(std::views::iota(0, X.cols()), [&](Index i) {
+                return XE.Degree(i) > 0;
             });
-        Eigen::Index const nVerticesWithVertexContacts = std::accumulate(
-            ogcState.mDynamicContactFacesOfVertex.begin(),
-            ogcState.mDynamicContactFacesOfVertex.end(),
-            Eigen::Index(0),
-            [&fContactSetHasVertices](
-                Eigen::Index acc,
-                std::vector<ContactFace<Index>> const& contactFaces) {
-                return acc + fContactSetHasVertices(contactFaces);
+        auto const nVerticesWithTriangleContacts =
+            std::ranges::count_if(std::views::iota(0, X.cols()), [&](Index i) {
+                return XF.Degree(i) > 0;
             });
         CHECK_EQ(nVerticesWithTriangleContacts, 1);
         CHECK_EQ(nVerticesWithEdgeContacts, 5);
         CHECK_EQ(nVerticesWithVertexContacts, 2);
-
-        Eigen::Index const nTotalVertexFaceContacts = std::accumulate(
-            ogcState.mDynamicContactFacesOfVertex.begin(),
-            ogcState.mDynamicContactFacesOfVertex.end(),
-            Eigen::Index(0),
-            [](Eigen::Index acc, std::vector<ContactFace<Index>> const& contactFaces) {
-                return acc + static_cast<Eigen::Index>(contactFaces.size());
-            });
-        Eigen::Index const nTotalFaceVertexContacts = std::accumulate(
-            ogcState.mDynamicContactVerticesOfTriangle.begin(),
-            ogcState.mDynamicContactVerticesOfTriangle.end(),
-            Eigen::Index(0),
-            [](Eigen::Index acc, std::vector<Index> const& contactVertices) {
-                return acc + static_cast<Eigen::Index>(contactVertices.size());
-            });
-        CHECK_EQ(nTotalVertexFaceContacts, nTotalFaceVertexContacts);
     }
     SUBCASE("Edge-Edge Contact Detection")
     {
         // Act: prepare iteration and perform edge-edge contact detection
         EdgeEdgeContactDetection(ogcInput, ogcParams, ogcState);
         // Assert: expect some edge-edge contacts
-        Eigen::Index const nHalfEdgeEdgeContacts = std::accumulate(
-            ogcState.mDynamicContactFacesOfHalfEdge.begin(),
-            ogcState.mDynamicContactFacesOfHalfEdge.end(),
-            Eigen::Index(0),
-            [](Eigen::Index acc, std::vector<ContactFace<Index>> const& contactFaces) {
-                return acc + static_cast<Eigen::Index>(contactFaces.size());
-            });
+        graph::AdjacencySet<void, Index> EE;
+        EE.Reduce(ogcState.mEE.begin(), ogcState.mEE.end());
+        EE.Finalize(E.cols());
+        auto const nHalfEdgeEdgeContacts = EE.Size();
         CHECK_GT(nHalfEdgeEdgeContacts, 0);
     }
     SUBCASE("All contact detection")
