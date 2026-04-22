@@ -170,10 +170,14 @@ void BindCore(nanobind::module_& m)
         .def(
             "with_stencil_gradient_acceleration",
             &Params::WithStencilGradientAcceleration,
-            nb::arg("betaG0"),
-            nb::arg("rhohat"),
-            nb::arg("gammadown")       = Scalar(0.5),
-            nb::arg("gammaup")         = Scalar(0.5),
+            nb::arg("betaG0")                                  = Scalar(0.5),
+            nb::arg("rhohat")                                  = Scalar(0.005),
+            nb::arg("gammadown")                               = Scalar(0.5),
+            nb::arg("gammaup")                                 = Scalar(0.5),
+            nb::arg("rhohatS")                                 = Scalar(0.005),
+            nb::arg("gammadownS")                              = Scalar(0.5),
+            nb::arg("gammaupS")                                = Scalar(0.5),
+            nb::arg("surface_stencil_surface_neighbours_only") = true,
             nb::arg("warm_start_beta") = EStencilGradientBetaWarmStartMask::Subproblem,
             nb::rv_policy::reference_internal,
             "Stencil gradient acceleration parameters.\n\n"
@@ -182,6 +186,11 @@ void BindCore(nanobind::module_& m)
             "    rhohat (float): Stencil gradient density factor\n"
             "    gammadown (float): Stencil gradient beta reduction factor\n"
             "    gammaup (float): Stencil gradient beta increase factor\n"
+            "    rhohatS (float): Stencil gradient density factor (surface)\n"
+            "    gammadownS (float): Stencil gradient beta reduction factor (surface)\n"
+            "    gammaupS (float): Stencil gradient beta increase factor (surface)\n"
+            "    surface_stencil_surface_neighbours_only (bool): If true, only consider surface "
+            "nodes in stencil gradient acceleration\n"
             "    warm_start_beta (StencilGradientBetaWarmStartMask): If Subproblem, initialize "
             "beta for the first iteration of each subproblem to the final beta from the previous "
             "subproblem (default: Subproblem)\n"
@@ -273,6 +282,17 @@ void BindCore(nanobind::module_& m)
             "Lipschitz-normalized threshold for considering steps small")
         .def_rw("gammadown", &Params::gammadown, "Beta reduction factor")
         .def_rw("gammaup", &Params::gammaup, "Beta increase factor")
+        .def_rw(
+            "rhohatS",
+            &Params::rhohatS,
+            "Lipschitz-normalized threshold for considering steps small (surface)")
+        .def_rw("gammadownS", &Params::gammadownS, "Beta reduction factor (surface)")
+        .def_rw("gammaupS", &Params::gammaupS, "Beta increase factor (surface)")
+        .def_rw(
+            "surface_stencil_surface_neighbours_only",
+            &Params::bSurfaceStencilSurfaceNeighboursOnly,
+            "Whether to only consider surface neighbors for surface nodes in stencil gradient "
+            "acceleration")
         .def_rw(
             "warm_start_beta",
             &Params::eWarmStartMask,

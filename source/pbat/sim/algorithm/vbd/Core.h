@@ -36,13 +36,6 @@
 #include <tbb/parallel_for.h>
 #include <tuple>
 
-/**
- * TODO: Things to try out
- * - Use different stencil gradient acceleration parameters for surface vs interior nodes.
- * - Warm-start next SAL subproblem with solution of previous subproblem, instead of the
- * OGC-truncated step.
- */
-
 namespace pbat::sim::algorithm::vbd {
 
 /**
@@ -147,6 +140,12 @@ struct Params
      * solver progress is slow)
      * @param gammadown Beta reduction factor
      * @param gammaup Beta increase factor
+     * @param rhohatS Lipschitz-normalized threshold above which steps are considered small (i.e.
+     * solver progress is slow) for surface nodes
+     * @param gammadownS Beta reduction factor for surface nodes
+     * @param gammaupS Beta increase factor for surface nodes
+     * @param bSurfaceStencilSurfaceNeighboursOnly Whether to only consider surface neighbors for
+     * surface nodes in stencil gradient acceleration
      * @param eWarmStartMask Warm start mask for beta initialization
      * @return Reference to this
      */
@@ -155,6 +154,10 @@ struct Params
         Scalar rhohat,
         Scalar gammadown,
         Scalar gammaup,
+        Scalar rhohatS,
+        Scalar gammadownS,
+        Scalar gammaupS,
+        bool bSurfaceStencilSurfaceNeighboursOnly = true,
         EStencilGradientBetaWarmStartMask eWarmStartMask =
             EStencilGradientBetaWarmStartMask::Subproblem);
     /**
@@ -230,10 +233,18 @@ struct Params
     Scalar betaG0{0.5};   ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
     Scalar rhohat{0.005}; ///< Lipschitz-normalized threshold above which steps are considered small
                           ///< (i.e. solver progress is slow)
+    Scalar gammadown{0.5}; ///< Beta reduction factor
+    Scalar gammaup{0.5};   ///< Beta increase factor
+    Scalar rhohatS{
+        0.005}; ///< Lipschitz-normalized threshold above which steps are considered small
+    ///< (i.e. solver progress is slow) for surface nodes
+    Scalar gammadownS{0.5}; ///< Beta reduction factor for surface nodes
+    Scalar gammaupS{0.5};   ///< Beta increase factor for surface nodes
+    bool bSurfaceStencilSurfaceNeighboursOnly{
+        false}; ///< Whether to only consider surface neighbors for surface nodes in stencil
+                ///< gradient acceleration
     EStencilGradientBetaWarmStartMask eWarmStartMask{
         EStencilGradientBetaWarmStartMask::Subproblem}; ///< Warm start mask for beta initialization
-    Scalar gammadown{0.95};                             ///< Beta reduction factor
-    Scalar gammaup{0.5};                                ///< Beta increase factor
 
     /**
      * @brief Read-write
@@ -309,6 +320,13 @@ void AssembleBlockDiagonalDynamicsHessian(
  */
 void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params const& params);
 
+/**
+ * @brief
+ * @tparam TElasticEnergy
+ * @param fem
+ * @param contact
+ * @param params
+ */
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
@@ -544,10 +562,15 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     using mini::FromEigen;
     using mini::Norm;
     using mini::ToEigen;
+    auto const& dm            = contact.DynamicMeshes();
+    bool const bIsSurfaceNode = dm.GXV(i) >= 0;
     // Adapt stencil gradient acceleration parameter using the total gradient
     Scalar constexpr kSmallEpsilon{1e-10};
     if (params.kp > 0)
     {
+        auto& rhohat                  = bIsSurfaceNode ? params.rhohatS : params.rhohat;
+        auto& gammaup                 = bIsSurfaceNode ? params.gammaupS : params.gammaup;
+        auto& gammadown               = bIsSurfaceNode ? params.gammadownS : params.gammadown;
         Scalar ngk                    = Norm(gi);
         mini::SVector<Scalar, 3> gkm1 = FromEigen(params.gk.col(i).template head<3>());
         Scalar ngkm1                  = Norm(gkm1);
@@ -557,9 +580,9 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
         Scalar L                      = params.Hnk(i) + ngk / ndxkm1;
         Scalar rho                    = ndgkm1 / std::max(L * ndxkm1, kSmallEpsilon);
         if (ngk > ngkm1)
-            params.betaG(i) *= params.gammadown;
-        else if (rho > params.rhohat)
-            params.betaG(i) += (1 - params.betaG(i)) * params.gammaup;
+            params.betaG(i) *= gammadown;
+        else if (rho > rhohat)
+            params.betaG(i) += (1 - params.betaG(i)) * gammaup;
     }
     params.gk.col(i) = ToEigen(gi);
     params.xk.col(i) = ToEigen(xi);
@@ -573,33 +596,10 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     for (auto n = nbegin; n < nend; ++n)
     {
         auto j = params.GVVadj(n);
+        if (bIsSurfaceNode and params.bSurfaceStencilSurfaceNeighboursOnly and dm.GXV(j) < 0)
+            continue;
         ai += FromEigen(params.gk.col(j).template head<3>());
     }
-    // auto const fAddToExpectedFromContacts = [&](auto C, auto stencil) {
-    //     using ConstraintAccessorType = decltype(C);
-    //     using ContactSetType         = typename ConstraintAccessorType::ContactSetType;
-    //     auto const nodes             = contact.template LoadStencil<ContactSetType>(stencil);
-    //     for (auto j : nodes)
-    //         if (j != i)
-    //             if (params.colors(j) != params.colors(i))
-    //                 ai += FromEigen(params.gk.col(j).template head<3>());
-    //             else
-    //                 ai += FromEigen(params.gb.col(j).template head<3>());
-    // };
-    // contact.ForEachPointPointContact(i, fAddToExpectedFromContacts);
-    // contact.ForEachPointEdgeContact(i, fAddToExpectedFromContacts);
-    // contact.ForEachPointTriangleContact(i, fAddToExpectedFromContacts);
-    // auto const& dm     = contact.DynamicMeshes();
-    // auto const hebegin = dm.GVHEp(i);
-    // auto const heend   = dm.GVHEp(i + 1);
-    // for (auto k = hebegin; k < heend; ++k)
-    // {
-    //     auto const he = dm.GVHEadj(k);
-    //     auto const f  = geometry::FaceOfHalfEdge(he);
-    //     contact.ForEachEdgePointContact(he, fAddToExpectedFromContacts);
-    //     contact.ForEachTrianglePointContact(f, fAddToExpectedFromContacts);
-    //     contact.ForEachEdgeEdgeContact(he, fAddToExpectedFromContacts);
-    // }
     // Add augmentation
     Scalar lambda = params.betaG(i) * Dot(gi, ai) / std::max(Dot(ai, ai), kSmallEpsilon);
     return std::max(lambda, Scalar(0)) * ai;
@@ -802,7 +802,6 @@ void Solve(
             EDualVariable::Slack | EDualVariable::LagrangeMultiplier | EDualVariable::Decay>(fem.x);
         // 5. Restore feasibility
         contact.RestoreFeasibility(fem.x, fem.dmask);
-        // GloballyRestoreFeasibility(fem, contact, params, contact.DynamicPointPositions());
         // 6. Update constraint set for next subproblem
         contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
     }

@@ -145,13 +145,21 @@ Params& Params::WithStencilGradientAcceleration(
     Scalar _rhohat,
     Scalar _gammadown,
     Scalar _gammaup,
+    Scalar _rhohatS,
+    Scalar _gammadownS,
+    Scalar _gammaupS,
+    bool _bSurfaceStencilSurfaceNeighboursOnly,
     EStencilGradientBetaWarmStartMask eWarmStartMask)
 {
-    this->betaG0         = _betaG0;
-    this->rhohat         = _rhohat;
-    this->gammadown      = _gammadown;
-    this->gammaup        = _gammaup;
-    this->eWarmStartMask = eWarmStartMask;
+    this->betaG0                               = _betaG0;
+    this->rhohat                               = _rhohat;
+    this->gammadown                            = _gammadown;
+    this->gammaup                              = _gammaup;
+    this->rhohatS                              = _rhohatS;
+    this->gammadownS                           = _gammadownS;
+    this->gammaupS                             = _gammaupS;
+    this->bSurfaceStencilSurfaceNeighboursOnly = _bSurfaceStencilSurfaceNeighboursOnly;
+    this->eWarmStartMask                       = eWarmStartMask;
     return *this;
 }
 
@@ -215,7 +223,7 @@ Params& Params::Construct(bool bValidate)
                     "betaG0 < 1",
                     betaG0));
         }
-        if (gammadown < 0 or gammadown >= 1)
+        if (gammadown < 0 or gammadown >= 1 or gammadownS < 0 or gammadownS >= 1)
         {
             throw std::invalid_argument(
                 fmt::format(
@@ -223,7 +231,7 @@ Params& Params::Construct(bool bValidate)
                     "gammadown < 1",
                     gammadown));
         }
-        if (gammaup < 0 or gammaup >= 1)
+        if (gammaup < 0 or gammaup >= 1 or gammaupS < 0 or gammaupS >= 1)
         {
             throw std::invalid_argument(
                 fmt::format(
@@ -257,6 +265,12 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
     group.WriteMetaData("gammaup", gammaup);
+    group.WriteMetaData("rhohatS", rhohatS);
+    group.WriteMetaData("gammadownS", gammadownS);
+    group.WriteMetaData("gammaupS", gammaupS);
+    group.WriteMetaData(
+        "bSurfaceStencilSurfaceNeighboursOnly",
+        static_cast<int>(bSurfaceStencilSurfaceNeighboursOnly));
     group.WriteMetaData("eWarmStartMask", static_cast<int>(eWarmStartMask));
     if (not bMinimal)
     {
@@ -326,6 +340,16 @@ void Params::Deserialize(io::Archive const& archive)
         gammadown = group.ReadMetaData<decltype(gammadown)>("gammadown");
     if (group.HasMetaData("gammaup"))
         gammaup = group.ReadMetaData<decltype(gammaup)>("gammaup");
+    if (group.HasMetaData("rhohatS"))
+        rhohatS = group.ReadMetaData<decltype(rhohatS)>("rhohatS");
+    if (group.HasMetaData("gammadownS"))
+        gammadownS = group.ReadMetaData<decltype(gammadownS)>("gammadownS");
+    if (group.HasMetaData("gammaupS"))
+        gammaupS = group.ReadMetaData<decltype(gammaupS)>("gammaupS");
+    if (group.HasMetaData("bSurfaceStencilSurfaceNeighboursOnly"))
+        bSurfaceStencilSurfaceNeighboursOnly =
+            static_cast<decltype(bSurfaceStencilSurfaceNeighboursOnly)>(
+                group.ReadMetaData<int>("bSurfaceStencilSurfaceNeighboursOnly"));
     if (group.HasMetaData("eWarmStartMask"))
         eWarmStartMask =
             static_cast<decltype(eWarmStartMask)>(group.ReadMetaData<int>("eWarmStartMask"));
