@@ -45,8 +45,6 @@ def _vertex_solve_kernel(
     gil, Hil = local_elastic_derivatives(
         i, fem, params, local_tid, block_dims  # pyright: ignore[reportArgumentType]
     )
-    gil *= h2  # pyright: ignore[reportOperatorIssue]
-    Hil *= h2  # pyright: ignore[reportOperatorIssue]
     gs, Hs = (
         wp.tile(gil, preserve_type=True),  # pyright: ignore[reportArgumentType]
         wp.tile(Hil, preserve_type=True),  # pyright: ignore[reportArgumentType]
@@ -55,6 +53,8 @@ def _vertex_solve_kernel(
         wp.tile_reduce(wp.add, gs)[0],  # pyright: ignore[reportIndexIssue]
         wp.tile_reduce(wp.add, Hs)[0],  # pyright: ignore[reportIndexIssue]
     )
+    gi *= h2  # pyright: ignore[reportOperatorIssue]
+    Hi *= h2  # pyright: ignore[reportOperatorIssue]
     # TODO: AccumulateContactEnergy(i, params.xb, contact, gi, Hi)
     if local_tid > 0:
         return
