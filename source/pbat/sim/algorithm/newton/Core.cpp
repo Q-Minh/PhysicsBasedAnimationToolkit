@@ -208,7 +208,6 @@ TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
                 .WithDisplacementBoundConfig(0.45, 0.)
                 .WithRadii(1e-2 /*r*/, 1e-2 /*rq*/)
                 .Construct())
-        .WithSequentialPrimalInteriorPoint(1. /*gamma*/, 2e-3 /*dmin*/, 5e-3 /*epsP*/)
         .Construct();
     // Act
     newton::Params params{};

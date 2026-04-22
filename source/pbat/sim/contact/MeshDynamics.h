@@ -51,120 +51,129 @@ class MeshDynamics
     using ScalarType = TScalar;                       ///< Scalar type
     using IndexType  = TIndex;                        ///< Index type
     /**
-     * @brief Per constraint quantities
+     * @brief Constraint decay value with default 1-initialization semantics
+     */
+    struct Decay
+    {
+        TScalar gamma{1}; ///< Ensure 1-initialization
+    };
+    /**
+     * @brief Constraint set container
      * @tparam TDistance Mesh distance function
      */
     template <geometry::CMeshDistance TDistance>
-    struct alignas(std::hardware_constructive_interference_size) ConstraintData
+    using ConstraintSet = graph::DenseAdjacencySet<
+        TIndex,
+        TScalar /*lambda*/,
+        TScalar /*s*/,
+        Decay /*gamma*/,
+        TScalar /*chat*/,
+        math::linalg::mini::SVector<TScalar, TDistance::kDofs> /*gradc*/,
+        TScalar /*c(x)*/
+        >;
+    /**
+     * @brief Lightweight accessor for constraint data in a contact set.
+     * @tparam TContactSet Contact set type (possibly const)
+     */
+    template <class TContactSet>
+    struct ConstraintAccessor
     {
-        using DistanceType             = TDistance;           ///< Distance function type
-        static auto constexpr kStencil = TDistance::kStencil; ///< Number of vertices in the stencil
-        static auto constexpr kDims    = TDistance::kDims;    ///< Number of dimensions
-        static auto constexpr kDofs    = TDistance::kDofs;    ///< Total degrees of freedom
-        TScalar mu{0};                                        ///< Complementarity slack relaxation
-        TScalar chat;                                         ///< \f$ c(x_k) - gradc(x_k)^T x_k \f$
-        math::linalg::mini::SVector<TScalar, kDofs> gradc;    ///< \f$ \nabla c(x_k) \f$
+        using ContactSetType = TContactSet; ///< Contact set type
+        using ConstraintFunctionType =
+            typename TContactSet::ConstraintFunctionType; ///< Constraint function type
+        static auto constexpr kStencil = ConstraintFunctionType::kStencil; ///< Stencil size
+        static auto constexpr kDims    = ConstraintFunctionType::kDims;    ///< Dimension size
+        static auto constexpr kDofs    = ConstraintFunctionType::kDofs; ///< Degree of freedom size
+        ContactSetType& set; ///< Reference to the contact set (possibly const)
+        TIndex k;            ///< Constraint data index
         /**
-         * @brief Evaluate the constraint function
-         * @param x `kDofs x 1` vector satisfying `math::linalg::mini::CMatrix`
-         * @return The constraint value
+         * @brief Lagrange multiplier
+         * @return TScalar& or TScalar const&
          */
-        auto Eval(auto&& x) const { return DistanceType{}.Eval(x); }
+        auto& Lambda() { return set.template Data<0>(k); }
         /**
-         * @brief Evaluate the constraint gradient
-         * @param x `kDofs x 1` vector satisfying `math::linalg::mini::CMatrix`
-         * @return The constraint gradient
+         * @brief Inequality slack variable
+         * @return TScalar& or TScalar const&
          */
-        auto Gradient(auto&& x) const { return DistanceType{}.Gradient(x); }
+        auto& Slack() { return set.template Data<1>(k); }
         /**
-         * @brief Evaluate the constraint Hessian
-         * @param x `kDofs x 1` vector satisfying `math::linalg::mini::CMatrix`
-         * @return The constraint Hessian
+         * @brief Lagrangian and penalty augmentation decay factor
+         * @return TScalar& or TScalar const&
          */
-        auto Hessian(auto&& x) const { return DistanceType{}.Hessian(x); }
+        auto& Decay() { return set.template Data<2>(k).gamma; }
+        /**
+         * @brief \f$ c(\mathbf{x}_k) - \nabla c(\mathbf{x}_k) \cdot \mathbf{x}_k \f$
+         * @return TScalar& or TScalar const&
+         */
+        auto& Chat() { return set.template Data<3>(k); }
+        /**
+         * @brief Gradient of the constraint at linearized point \f$ \mathbf{x}_k \f$
+         * @return math::linalg::mini::SVector<TScalar, kDofs>& or
+         * math::linalg::mini::SVector<TScalar, kDofs> const&
+         */
+        auto& Grad() { return set.template Data<4>(k); }
+        /**
+         * @brief Last evaluated constraint value
+         * @return TScalar& or TScalar const&
+         */
+        auto& Eval() { return set.template Data<5>(k); }
+        /**
+         * @brief Evaluates the constraint function at `x`
+         * @param x `kDofs x 1` mini::CMatrix
+         * @return auto
+         */
+        auto Eval(auto&& x, bool bLinearized = false)
+        {
+            return bLinearized ? Chat() + Dot(Grad(), x) : ConstraintFunctionType{}.Eval(x);
+        }
+        /**
+         * @brief Evaluates the gradient of the constraint function at `x`
+         * @param x `kDofs x 1` mini::CMatrix
+         * @return auto
+         */
+        auto Grad(auto&& x) { return ConstraintFunctionType{}.Gradient(x); }
+        /**
+         * @brief Evaluates the hessian of the constraint function at `x`
+         * @param x `kDofs x 1` mini::CMatrix
+         * @return auto
+         */
+        auto Hessian(auto&& x) { return ConstraintFunctionType{}.Hessian(x); }
     };
-    /**
-     * @brief Evaluate the constraint barrier anti-derivative \f$ a(c) \f$.
-     *
-     * The piecewise definition is:
-     * - \f$ a(c) = -\infty \f$ for \f$ c \leq 0 \f$
-     * - \f$ a(c) = \ln(c) + C_1 \f$ for \f$ 0 < c \leq r - \varepsilon_P \f$
-     * - \f$ a(c) = A_0 \ln(c) + A_1 c + A_2 c^2 + A_3 c^3 \f$ for
-     *   \f$ r - \varepsilon_P < c < r \f$
-     * - \f$ a(c) = C_2 \f$ for \f$ c \geq r \f$
-     *
-     * @param c Constraint function value
-     * @param r Contact radius
-     * @param epsP Size of the smooth transition region, `epsP < r`
-     * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
-     * @param C1 Constant ensuring continuity at `c = r - epsP`
-     * @param C2 Saturation value at `c = r`
-     * @return The barrier value \f$ a(c) \f$
-     */
-    static TScalar Barrier(
-        TScalar c,
-        TScalar r,
-        TScalar epsP,
-        std::array<TScalar, 4> const& APC,
-        TScalar C1,
-        TScalar C2);
-    /**
-     * @brief Evaluate the first derivative \f$ a'(c) \f$ of the constraint barrier.
-     * @param c Constraint function value
-     * @param r Contact radius
-     * @param epsP Size of the smooth transition region, `epsP < r`
-     * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
-     * @return The first derivative \f$ a'(c) \f$
-     */
-    static TScalar
-    BarrierGradient(TScalar c, TScalar r, TScalar epsP, std::array<TScalar, 4> const& APC);
-    /**
-     * @brief Evaluate the second derivative \f$ a''(c) \f$ of the constraint barrier.
-     * @param c Constraint function value
-     * @param r Contact radius
-     * @param epsP Size of the smooth transition region, `epsP < r`
-     * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
-     * @return The second derivative \f$ a''(c) \f$
-     */
-    static TScalar
-    BarrierHessian(TScalar c, TScalar r, TScalar epsP, std::array<TScalar, 4> const& APC);
-    /**
-     * @brief Constraint set container
-     * @tparam kStencil Number of nodes the constraint depends on
-     */
-    template <geometry::CMeshDistance TDistance>
-    using ConstraintSet = graph::DenseAdjacencySet<TIndex, ConstraintData<TDistance>>;
     /**
      * @brief Point-point contact constraint container
      */
     struct PointPointContactSet : public ConstraintSet<geometry::PointPointDistance<TScalar>>
     {
-        using ConstraintDataType     = ConstraintData<geometry::PointPointDistance<TScalar>>;
         using ConstraintFunctionType = geometry::PointPointDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<PointPointContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<PointPointContactSet const>;
     };
     /**
      * @brief Point-edge contact constraint container
      */
     struct PointEdgeContactSet : public ConstraintSet<geometry::PointEdgeDistance<TScalar>>
     {
-        using ConstraintDataType     = ConstraintData<geometry::PointEdgeDistance<TScalar>>;
         using ConstraintFunctionType = geometry::PointEdgeDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<PointEdgeContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<PointEdgeContactSet const>;
     };
     /**
      * @brief Point-triangle contact constraint container
      */
     struct PointTriangleContactSet : public ConstraintSet<geometry::PointTriangleDistance<TScalar>>
     {
-        using ConstraintDataType     = ConstraintData<geometry::PointTriangleDistance<TScalar>>;
         using ConstraintFunctionType = geometry::PointTriangleDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<PointTriangleContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<PointTriangleContactSet const>;
     };
     /**
      * @brief Edge-edge contact constraint container
      */
     struct EdgeEdgeContactSet : public ConstraintSet<geometry::EdgeEdgeDistance<TScalar>>
     {
-        using ConstraintDataType     = ConstraintData<geometry::EdgeEdgeDistance<TScalar>>;
         using ConstraintFunctionType = geometry::EdgeEdgeDistance<TScalar>;
+        using AccessorType           = ConstraintAccessor<EdgeEdgeContactSet>;
+        using ConstAccessorType      = ConstraintAccessor<EdgeEdgeContactSet const>;
     };
     /**
      * @brief Contact pair stencil
@@ -193,11 +202,10 @@ class MeshDynamics
         TScalar betarq{1};  ///< Slope of the linear function of inertial target distance to add to
                             ///< `rqstart` to initialize the actual query radius
         TScalar gamma{1};   ///< Multiple of dynamics hessian curvature in constraint gradient
-                            ///< direction for barrier parameter computation
-        TScalar dmin{2e-4}; ///< Loose target minimum contact distance
-        TScalar epsP{
-            5e-4}; ///< Size of smooth transition region for our polynomial step function
-                   ///< approximation \f$ P(c(x)) \f$, where `\eps_P < r, dmin < r - \eps_P`
+                            ///< direction for penalty parameter computation
+        TScalar dmin{5e-4}; ///< Loose target minimum contact distance
+        TScalar decay{0.9}; ///< Decay factor for constraint deactivation
+        TScalar decaylo{0.01};   ///< Decay threshold under which constraints are deactivated
         bool bDeactivate{false}; ///< Whether to deactivate contacts
 
         /**
@@ -230,14 +238,18 @@ class MeshDynamics
          */
         SelfType& WithQueryRadiusInitialization(TScalar rqstart, TScalar betarq);
         /**
-         * @brief Set the sequential primal interior point parameters
-         * @param gamma_ Multiple of dynamics hessian curvature for barrier parameter computation
+         * @brief Set the sequential augmented Lagrangian parameters
+         * @param gamma_ Multiple of dynamics hessian curvature for penalty parameter computation
          * @param dmin_ Loose target minimum contact distance, `dmin_ > 0`
-         * @param epsP_ Size of the smooth transition region, `0 < epsP_ < r` and
-         *              `dmin_ < r - epsP_`
+         * @param decay_ Decay factor for constraint deactivation
+         * @param decaylo_ Decay threshold under which constraints are deactivated
          * @return Reference to this
          */
-        SelfType& WithSequentialPrimalInteriorPoint(TScalar gamma_, TScalar dmin_, TScalar epsP_);
+        SelfType& WithSequentialAugmentedLagrangian(
+            TScalar gamma_,
+            TScalar dmin_,
+            TScalar decay_,
+            TScalar decaylo_);
         /**
          * @brief Construct the Params object
          * @param bValidate Whether to validate parameters
@@ -276,21 +288,7 @@ class MeshDynamics
         TScalar kcp; ///< `kcp = tau*kc*(tau - r)^2`, where `tau = r/2`
         TScalar b;   ///< `b = kc/2*(r - tau)^2 + kcp*log(tau)`, where `tau = r/2`
 
-        std::array<TScalar, 4>
-            APC;    ///< Polynomial coefficients for the anti-derivative `a(c) = a_0 ln(c) + a_1 c
-                    ///< + a_2 c^2 + a_3 c^3` s.t. `a'(c) = P(c)/c` in the transition region `r -
-                    ///< \eps_P < c < r`
-        TScalar C1; ///< `C1 = a(r-\eps_P) - ln(r-\eps_P)` s.t. `a(c) = ln(c) + C1` for `0 < c <= r
-                    ///< - \eps_P`
-        TScalar C2; ///< `C2 = a(r)` s.t. `a(c) = C2` for `c >= r`
-
       private:
-        /**
-         * @brief Compute the smoothed barrier polynomial coefficients APC, C1 and C2
-         * from the current values of `r` and `epsP`.
-         * @pre `r > 0`, `0 < epsP < r`
-         */
-        void UpdateSmoothedBarrierCoefficients();
         /**
          * @brief Compute the OGC two-stage activation coefficients `kcp` and `b`
          * from the current values of `r` and `kc`.
@@ -379,40 +377,55 @@ class MeshDynamics
      * @brief Linearize all contact constraints, initializing them if necessary.
      * ­@tparam TDerivedx Matrix type
      * @param x `3 x |# points|` current point positions (column-major: one point per column)
+     * @post `Chat()`, `Grad()` and `Eval()` are populated on each constraint
      */
     template <class TDerivedx>
     void LinearizeConstraints(Eigen::MatrixBase<TDerivedx> const& x);
     /**
-     * @brief Compute barrier parameters for all constraints based on an estimate of the objective
-     * function's hessian at the specified (through Params) desired minimal contact separation.
-     *
-     * @tparam TDerivedH Matrix type for the hessian estimate
-     * @param H Hessian estimate at the desired minimal contact separation, used to compute a
-     * heuristic barrier parameter.
-     * @pre `H` is symmetric
+     * @brief Update the penalty parameter for the contact constraints.
+     * @tparam TDerived Sparse matrix type
+     * @param H Hessian of objective function
      */
-    template <class TDerivedH>
-    void UpdateBarrierParameters(Eigen::SparseCompressedBase<TDerivedH> const& H);
+    template <class TDerived>
+    void UpdatePenaltyParameter(Eigen::SparseCompressedBase<TDerived> const& H);
     /**
-     * @brief Iterate over contacts [cstart, cend) in the contact set
-     * @tparam FOnContact Callable type with signature `template <class TConstraintData>
-     * void(TConstraintData& C, Stencil const& stencil)` where
-     * `std::is_same_v<TConstraintData, typename TContactSet::ConstraintDataType>`
-     * @tparam TContactSet Contact set type
-     * @param contactSet Contact set to iterate over
-     * @param fOnContact Callback for each contact
-     * @param cstart Start index for the contact set
-     * @param cend End index for the contact set
-     * @note Use this lower-level contact block visitor for parallel processing
+     * @brief Enum for dual variable masks
      */
-    template <class FOnContact, class TContactSet>
-    void
-    ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact, TIndex cstart, TIndex cend);
+    enum EDualVariable : int { Slack = 1 << 0, LagrangeMultiplier = 1 << 1 };
+    /**
+     * @brief Update dual variables (slacks, multipliers)
+     * @tparam Mask Bitmask for selecting which dual variable(s) to update
+     * @tparam TDerivedx Input position matrix type
+     * @param x `3 x |# points|` or `3*|# points|` current point positions (column-major: one point
+     * per column)¸
+     * @post `c(x) = c(x_k) + \nabla c(x_k) \cdot (x - x_k)` for each contact
+     */
+    template <int Mask, class TDerivedx>
+    void UpdateDual(Eigen::MatrixBase<TDerivedx> const& x);
+    /**
+     * @brief Iterate over all contacts
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::AccessorType C, Stencil stencil, std::int32_t threadId)`
+     * @param fOnContact Callback for each contact
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
+     */
+    template <class FOnContact>
+    void ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads = 1);
+    /**
+     * @brief Iterate over all contacts
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil, std::int32_t threadId)`
+     * @param fOnContact Callback for each contact
+     * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
+     * contacts will be processed sequentially.
+     */
+    template <class FOnContact>
+    void ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads = 1) const;
     /**
      * @brief Iterate over all contacts in the contact set
-     * @tparam FOnContact Callable type with signature `template <class TConstraintData>
-     * void(TConstraintData& C, Stencil stencil, std::int32_t threadId)` where
-     * `std::is_same_v<TConstraintData, typename TContactSet::ConstraintDataType>`
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::AccessorType C, Stencil stencil, std::int32_t threadId)`
      * @tparam TContactSet Contact set type
      * @param contactSet Contact set to iterate over
      * @param fOnContact Callback for each contact
@@ -423,16 +436,20 @@ class MeshDynamics
     void
     ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact, std::int32_t nThreads = 1);
     /**
-     * @brief Iterate over all contacts
-     * @tparam FOnContact Callable type with signature `template <class TConstraintData>
-     * void(TConstraintData& C, Stencil const& stencil, std::int32_t threadId)` where
-     * `std::is_same_v<TConstraintData, typename TContactSet::ConstraintDataType>`
+     * @brief Iterate over all contacts in the contact set
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil, std::int32_t threadId)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate over
      * @param fOnContact Callback for each contact
      * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
      * contacts will be processed sequentially.
      */
-    template <class FOnContact>
-    void ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads = 1);
+    template <class FOnContact, class TContactSet>
+    void ForEachContact(
+        TContactSet const& contactSet,
+        FOnContact&& fOnContact,
+        std::int32_t nThreads = 1) const;
     /**
      * @brief Load the stencil for a contact pair
      * @param u First mesh primitive index
@@ -491,7 +508,6 @@ class MeshDynamics
      * @param bForLinearSubproblem Whether the gradient is being computed for a linear subproblem
      * (from last `LinearizeConstraints()` call)
      * @return Total contact gradient
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
      */
     template <class TDerivedx>
     auto Gradient(Eigen::MatrixBase<TDerivedx> const& x, bool bForLinearSubproblem = false) const
@@ -504,7 +520,6 @@ class MeshDynamics
      * @param g `3*|# points| x 1` or `3 x |# points|` total contact gradient
      * @param bForLinearSubproblem Whether the gradient is being computed for a linear subproblem
      * (from last `LinearizeConstraints()` call)
-     * @pre `ComputeEnergies()` has been called with the `Gradient` flag
      */
     template <class TDerivedx, class TDerivedg>
     void ToGradient(
@@ -624,6 +639,67 @@ class MeshDynamics
 
   protected:
     /**
+     * @brief Iterate over contacts [cstart, cend) in the contact set
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::AccessorType C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate over
+     * @param fOnContact Callback for each contact
+     * @param cstart Start index for the contact set
+     * @param cend End index for the contact set
+     * @note Use this lower-level contact block visitor for parallel processing
+     */
+    template <class FOnContact, class TContactSet>
+    void
+    ForEachContact(TContactSet& contactSet, FOnContact&& fOnContact, TIndex cstart, TIndex cend);
+    /**
+     * @brief Iterate over contacts [cstart, cend) in the contact set
+     * @tparam FOnContact Callable type with signature `template <class TContactSet>
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil)`
+     * @tparam TContactSet Contact set type
+     * @param contactSet Contact set to iterate over
+     * @param fOnContact Callback for each contact
+     * @param cstart Start index for the contact set
+     * @param cend End index for the contact set
+     * @note Use this lower-level contact block visitor for parallel processing
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachContact(
+        TContactSet const& contactSet,
+        FOnContact&& fOnContact,
+        TIndex cstart,
+        TIndex cend) const;
+    /**
+     * @brief Multi-threaded contact visitor
+     * @tparam FOnContact
+     * @tparam TContactSet
+     * @param contactSet
+     * @param fOnContact
+     * @param nThreads
+     * @param tg
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachContact(
+        TContactSet& contactSet,
+        FOnContact&& fOnContact,
+        std::int32_t nThreads,
+        tbb::task_group& tg);
+    /**
+     * @brief Multi-threaded contact visitor
+     * @tparam FOnContact
+     * @tparam TContactSet
+     * @param contactSet
+     * @param fOnContact
+     * @param nThreads
+     * @param tg
+     */
+    template <class FOnContact, class TContactSet>
+    void ForEachContact(
+        TContactSet const& contactSet,
+        FOnContact&& fOnContact,
+        std::int32_t nThreads,
+        tbb::task_group& tg) const;
+    /**
      * @brief Transfer OGC contact pairs to our contact sets
      */
     void UpdateContactSetsFromOgcPairs();
@@ -632,7 +708,7 @@ class MeshDynamics
      * @return The pair (prefu, prefv)
      */
     template <class TContactSet>
-    auto GeometryPrefixArrays();
+    auto GeometryPrefixArrays() const;
     /**
      * @brief Load a point's position from the mesh state
      * @param i Point index
@@ -704,11 +780,11 @@ class MeshDynamics
      * @return The curvature value \f$ \nabla c^T H \nabla c \f$
      * @pre `H` is symmetric
      */
-    template <class TDerivedH, int kDims, int kStencil>
+    template <int kDims, int kStencil, class TDerivedH>
     TScalar RayleighQuotient(
         Eigen::SparseCompressedBase<TDerivedH> const& H,
         math::linalg::mini::SVector<TScalar, kStencil * kDims> const& gradc,
-        std::array<TIndex, kStencil> const& nodes);
+        std::array<TIndex, kStencil> const& nodes) const;
 
   private:
     Params mParams; ///< Mesh dynamics parameters
@@ -733,62 +809,6 @@ class MeshDynamics
     PointTriangleContactSet mPointTriangleContacts; ///< Point-triangle contact set
     EdgeEdgeContactSet mEdgeEdgeContacts;           ///< (Half-)Edge-(half-)edge contact set
 };
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline TScalar MeshDynamics<TScalar, TIndex>::Barrier(
-    TScalar c,
-    TScalar r,
-    TScalar epsP,
-    std::array<TScalar, 4> const& APC,
-    TScalar C1,
-    TScalar C2)
-{
-    TScalar constexpr zero = std::numeric_limits<TScalar>::epsilon();
-    if (c <= zero)
-        return -std::numeric_limits<TScalar>::infinity();
-    else if (c <= r - epsP)
-        return std::log(c) + C1;
-    else if (c < r)
-        return APC[0] * std::log(c) + APC[1] * c + APC[2] * c * c + APC[3] * c * c * c;
-    else
-        return C2;
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline TScalar MeshDynamics<TScalar, TIndex>::BarrierGradient(
-    TScalar c,
-    TScalar r,
-    TScalar epsP,
-    std::array<TScalar, 4> const& APC)
-{
-    TScalar constexpr zero = std::numeric_limits<TScalar>::epsilon();
-    if (c <= zero)
-        return -std::numeric_limits<TScalar>::infinity();
-    else if (c <= r - epsP)
-        return TScalar(1) / c;
-    else if (c < r)
-        return APC[0] / c + APC[1] + TScalar(2) * APC[2] * c + TScalar(3) * APC[3] * c * c;
-    else
-        return TScalar(0);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline TScalar MeshDynamics<TScalar, TIndex>::BarrierHessian(
-    TScalar c,
-    TScalar r,
-    TScalar epsP,
-    std::array<TScalar, 4> const& APC)
-{
-    TScalar constexpr zero = std::numeric_limits<TScalar>::epsilon();
-    if (c <= zero)
-        return -std::numeric_limits<TScalar>::infinity();
-    else if (c <= r - epsP)
-        return TScalar(-1) / (c * c);
-    else if (c < r)
-        return -APC[0] / (c * c) + TScalar(2) * APC[2] + TScalar(6) * APC[3] * c;
-    else
-        return TScalar(0);
-}
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 MeshDynamics<TScalar, TIndex>::Params&
@@ -828,14 +848,16 @@ MeshDynamics<TScalar, TIndex>::Params::WithQueryRadiusInitialization(
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline MeshDynamics<TScalar, TIndex>::Params&
-MeshDynamics<TScalar, TIndex>::Params::WithSequentialPrimalInteriorPoint(
+MeshDynamics<TScalar, TIndex>::Params::WithSequentialAugmentedLagrangian(
     TScalar gamma_,
     TScalar dmin_,
-    TScalar epsP_)
+    TScalar decay_,
+    TScalar decaylo_)
 {
-    this->gamma = gamma_;
-    this->dmin  = dmin_;
-    this->epsP  = epsP_;
+    this->gamma   = gamma_;
+    this->dmin    = dmin_;
+    this->decay   = decay_;
+    this->decaylo = decaylo_;
     return *this;
 }
 
@@ -843,6 +865,7 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 MeshDynamics<TScalar, TIndex>::Params&
 MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
 {
+    mOgcParams.Construct(bValidate);
     if (bValidate)
     {
         if (kc <= TScalar(0))
@@ -869,19 +892,23 @@ MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
             throw std::invalid_argument(
                 "MeshDynamics::Params::Construct(): dmin must be positive.");
         }
-        if (epsP <= TScalar(0) || epsP >= mOgcParams.r)
+        if (dmin >= mOgcParams.r)
         {
             throw std::invalid_argument(
-                "MeshDynamics::Params::Construct(): epsP must satisfy 0 < epsP < r.");
+                "MeshDynamics::Params::Construct(): dmin must satisfy dmin < r.");
         }
-        if (dmin >= mOgcParams.r - epsP)
+        if (decay < TScalar(0) or decay > TScalar(1))
         {
             throw std::invalid_argument(
-                "MeshDynamics::Params::Construct(): dmin must satisfy dmin < r - epsP.");
+                "MeshDynamics::Params::Construct(): decay must satisfy 0 <= decay <= 1.");
+        }
+        if (decaylo < TScalar(0) or decaylo > TScalar(1))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): decaylo must satisfy 0 <= decaylo <= 1.");
         }
     }
     UpdateOgcTwoStageActivationCoefficients();
-    UpdateSmoothedBarrierCoefficients();
     return *this;
 }
 
@@ -892,26 +919,6 @@ inline void MeshDynamics<TScalar, TIndex>::Params::UpdateOgcTwoStageActivationCo
     auto r   = mOgcParams.r;
     kcp      = tau * kc * (tau - r) * (tau - r);
     b        = (TScalar(0.5) * kc) * (r - tau) * (r - tau) + kcp * std::log(tau);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::Params::UpdateSmoothedBarrierCoefficients()
-{
-    auto r     = mOgcParams.r;
-    auto r2    = r * r;
-    auto epsP2 = epsP * epsP;
-    auto epsP3 = epsP * epsP2;
-    APC[0]     = -r2 * (2 * r - 3 * epsP);
-    APC[1]     = 6 * r2 - 6 * r * epsP;
-    APC[2]     = 3 * epsP / TScalar(2) - 3 * r;
-    APC[3]     = 2 / TScalar(3);
-    for (auto& coeff : APC)
-        coeff /= epsP3;
-    auto const a = [&](TScalar c) {
-        return APC[0] * std::log(c) + APC[1] * c + APC[2] * c * c + APC[3] * c * c * c;
-    };
-    C1 = a(r - epsP) - std::log(r - epsP);
-    C2 = a(r);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1120,74 +1127,98 @@ MeshDynamics<TScalar, TIndex>::LinearizeConstraints(Eigen::MatrixBase<TDerivedx>
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
     auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     ForAllContacts(
-        [&]<class TContactSet, class TConstraintData>(
-            TConstraintData& C,
-            Stencil const& stencil,
+        [&]<class TContactSet>(
+            typename TContactSet::AccessorType C,
+            Stencil stencil,
             std::int32_t /*t*/) {
-            auto const [Xc, _] = LoadStencil<TContactSet>(x, stencil);
-            auto xc            = Reshape<TConstraintData::kDofs, 1>(Xc);
-            C.gradc            = C.Gradient(xc);
-            C.chat             = C.Eval(xc) - Dot(C.gradc, xc);
+            using ConstraintAccessorType = decltype(C);
+            auto const [Xc, _]           = LoadStencil<TContactSet>(x, stencil);
+            auto xc                      = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
+            C.Eval()                     = C.Eval(xc);
+            C.Grad()                     = C.Grad(xc);
+            C.Chat()                     = C.Eval() - Dot(C.Grad(), xc);
         },
         nThreads);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedH>
-inline void MeshDynamics<TScalar, TIndex>::UpdateBarrierParameters(
-    Eigen::SparseCompressedBase<TDerivedH> const& H)
+template <class TDerived>
+inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
+    Eigen::SparseCompressedBase<TDerived> const& H)
 {
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateBarrierParameters");
-    TScalar gamma       = mParams.gamma;
-    TScalar d2          = mParams.dmin * mParams.dmin;
-    auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdatePenaltyParameter");
+    mParams.kc = 0;
+    ForAllContacts([&]<class TContactSet>(
+                       typename TContactSet::AccessorType C,
+                       Stencil stencil,
+                       std::int32_t /*t*/) {
+        using ConstraintAccessorType   = decltype(C);
+        static auto constexpr kDims    = ConstraintAccessorType::kDims;
+        static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+        auto nodes                     = LoadStencil<TContactSet>(stencil);
+        TScalar Q                      = RayleighQuotient<kDims, kStencil>(H, C.Grad(), nodes);
+        mParams.kc                     = std::max(mParams.kc, mParams.gamma * Q);
+    });
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <int Mask, class TDerivedx>
+inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerivedx> const& x)
+{
+    auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     ForAllContacts(
-        [&]<class TContactSet, class TConstraintData>(
-            TConstraintData& C,
-            Stencil const& stencil,
+        [&]<class TContactSet>(
+            typename TContactSet::AccessorType C,
+            Stencil stencil,
             std::int32_t /*t*/) {
-            using DistanceType = typename TConstraintData::DistanceType;
-            std::array<TIndex, TConstraintData::kStencil> nodes = LoadStencil<TContactSet>(stencil);
-            TScalar const Q =
-                RayleighQuotient<TDerivedH, TConstraintData::kDims, TConstraintData::kStencil>(
-                    H,
-                    C.gradc,
-                    nodes);
-            C.mu = gamma * d2 * Q;
+            using ConstraintAccessorType = decltype(C);
+            auto const [Xc, nodes]       = LoadStencil<TContactSet>(x, stencil);
+            auto xc                      = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
+            C.Eval()                     = C.Eval(xc, true /*bLinearized*/);
+            auto mu                      = mParams.kc;
+            if (static_cast<bool>(Mask & EDualVariable::Slack))
+                C.Slack() = std::max(TScalar(0), C.Eval() - C.Lambda() / mu);
+            if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
+            {
+                if (C.Slack() == TScalar(0))
+                {
+                    C.Lambda() -= mu * C.Eval();
+                    C.Decay() = TScalar(1);
+                }
+                else
+                {
+                    C.Lambda() = TScalar(0);
+                    C.Decay() *= mParams.decay;
+                }
+            }
         },
         nThreads);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnContact, class TContactSet>
-inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
-    TContactSet& set,
-    FOnContact&& fOnContact,
-    TIndex cstart,
-    TIndex cend)
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads)
 {
-    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
-    int gu{0}, gv{0};
-    for (TIndex c = cstart, uprev = 0; c < cend; ++c)
-    {
-        auto const [u, v, k] = set.WeightedAdjacency(c);
-        // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
-        // until we find the next u, in which case we reset the gv geometry index for v.
-        if (u > uprev)
-        {
-            gv    = 0;
-            uprev = u;
-        }
-        // Keep track of geometry types for u and v
-        while (u >= prefixu[gu + 1])
-            ++gu;
-        while (v >= prefixv[gv + 1])
-            ++gv;
-        // Visit contact
-        using ConstraintDataType = typename TContactSet::ConstraintDataType;
-        ConstraintDataType& C    = set.template Data<ConstraintDataType>(k);
-        fOnContact.template operator()<TContactSet, ConstraintDataType>(C, Stencil{u, v, gu, gv});
-    }
+    tbb::task_group tg;
+    ForEachContact(mPointPointContacts, fOnContact, nThreads, tg);
+    ForEachContact(mPointEdgeContacts, fOnContact, nThreads, tg);
+    ForEachContact(mPointTriangleContacts, fOnContact, nThreads, tg);
+    ForEachContact(mEdgeEdgeContacts, fOnContact, nThreads, tg);
+    tg.wait();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact>
+inline void
+MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads) const
+{
+    tbb::task_group tg;
+    ForEachContact(mPointPointContacts, fOnContact, nThreads, tg);
+    ForEachContact(mPointEdgeContacts, fOnContact, nThreads, tg);
+    ForEachContact(mPointTriangleContacts, fOnContact, nThreads, tg);
+    ForEachContact(mEdgeEdgeContacts, fOnContact, nThreads, tg);
+    tg.wait();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1197,78 +1228,21 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
     FOnContact&& fOnContact,
     std::int32_t nThreads)
 {
-    if (nThreads <= 1)
-    {
-        auto const fWrap = [fOnContact = std::forward<FOnContact>(
-                                fOnContact)]<class TContactSet, class TConstraint>(
-                               TConstraint& C,
-                               Stencil const& stencil) {
-            fOnContact.template operator()<TContactSet, TConstraint>(C, stencil, std::int32_t{0});
-        };
-        ForEachContact(contactSet, fWrap, TIndex(0), static_cast<TIndex>(contactSet.Size()));
-    }
-    else
-    {
-        tbb::task_group tg;
-        auto const fForEachThread = [&tg, nThreads](auto&& f) {
-            for (std::int32_t t = 0; t < nThreads; ++t)
-                tg.run([f, t]() { f(t); });
-        };
-        TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
-        TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
-        fForEachThread([&](std::int32_t t) {
-            TIndex const cstart = t * nConstraintsPerThread;
-            TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-            auto const fWrap    = [&fOnContact, t = t]<class TContactSet, class TConstraint>(
-                                   TConstraint& C,
-                                   Stencil const& stencil) {
-                fOnContact.template operator()<TContactSet, TConstraint>(C, stencil, t);
-            };
-            ForEachContact(contactSet, fWrap, cstart, cend);
-        });
-        tg.wait();
-    }
+    tbb::task_group tg;
+    ForEachContact(contactSet, std::forward<FOnContact>(fOnContact), nThreads, tg);
+    tg.wait();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnContact>
-inline void
-MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads)
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet const& contactSet,
+    FOnContact&& fOnContact,
+    std::int32_t nThreads) const
 {
-    if (nThreads <= 1)
-    {
-        ForEachContact(mPointPointContacts, fOnContact, nThreads);
-        ForEachContact(mPointEdgeContacts, fOnContact, nThreads);
-        ForEachContact(mPointTriangleContacts, fOnContact, nThreads);
-        ForEachContact(mEdgeEdgeContacts, fOnContact, nThreads);
-    }
-    else
-    {
-        tbb::task_group tg;
-        auto const fForEachThread = [&tg, nThreads](auto&& f) {
-            for (std::int32_t t = 0; t < nThreads; ++t)
-                tg.run([f, t]() { f(t); });
-        };
-        auto const fLaunchKernel = [&]<class TConstraintSet>(TConstraintSet& set) {
-            fForEachThread([&](std::int32_t t) {
-                TIndex const nConstraints          = static_cast<TIndex>(set.Size());
-                TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
-                TIndex const cstart                = t * nConstraintsPerThread;
-                TIndex const cend = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-                auto const fWrap  = [&fOnContact, t = t]<class TContactSet, class TConstraint>(
-                                       TConstraint& C,
-                                       Stencil const& stencil) {
-                    fOnContact.template operator()<TContactSet, TConstraint>(C, stencil, t);
-                };
-                ForEachContact(set, fWrap, cstart, cend);
-            });
-        };
-        fLaunchKernel(mPointPointContacts);
-        fLaunchKernel(mPointEdgeContacts);
-        fLaunchKernel(mPointTriangleContacts);
-        fLaunchKernel(mEdgeEdgeContacts);
-        tg.wait();
-    }
+    tbb::task_group tg;
+    ForEachContact(contactSet, std::forward<FOnContact>(fOnContact), nThreads, tg);
+    tg.wait();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1277,9 +1251,12 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadStencil(
     Eigen::MatrixBase<TDerivedx> const& x,
     Stencil const& stencil) const
 {
-    using ConstraintDataType = typename TContactSet::ConstraintDataType;
-    math::linalg::mini::SMatrix<TScalar, ConstraintDataType::kDims, ConstraintDataType::kStencil> X;
-    std::array<TIndex, ConstraintDataType::kStencil> nodes;
+    using ConstraintAccessorType   = typename TContactSet::ConstAccessorType;
+    static auto constexpr kDims    = ConstraintAccessorType::kDims;
+    static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+    using math::linalg::mini::SMatrix;
+    SMatrix<TScalar, kDims, kStencil> X;
+    std::array<TIndex, kStencil> nodes;
     if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
     {
         nodes[0] = LoadPoint(x.derived(), stencil.u, stencil.gu, X.Col(0));
@@ -1315,24 +1292,25 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TContactSet>
 inline auto MeshDynamics<TScalar, TIndex>::LoadStencil(Stencil const& stencil) const
 {
-    using ConstraintDataType = typename TContactSet::ConstraintDataType;
-    std::array<TIndex, ConstraintDataType::kStencil> nodes;
-    if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
+    using ContactSetType         = std::remove_cvref_t<TContactSet>;
+    using ConstraintAccessorType = typename ContactSetType::ConstAccessorType;
+    std::array<TIndex, ConstraintAccessorType::kStencil> nodes;
+    if constexpr (std::is_same_v<ContactSetType, PointPointContactSet>)
     {
         nodes[0] = LoadPoint(stencil.u, stencil.gu);
         nodes[1] = LoadPoint(stencil.v, stencil.gv);
     }
-    else if constexpr (std::is_same_v<TContactSet, PointEdgeContactSet>)
+    else if constexpr (std::is_same_v<ContactSetType, PointEdgeContactSet>)
     {
         nodes[0]                     = LoadPoint(stencil.u, stencil.gu);
         std::tie(nodes[1], nodes[2]) = LoadHalfEdge(stencil.v, stencil.gv);
     }
-    else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
+    else if constexpr (std::is_same_v<ContactSetType, PointTriangleContactSet>)
     {
         nodes[0]                               = LoadPoint(stencil.u, stencil.gu);
         std::tie(nodes[1], nodes[2], nodes[3]) = LoadTriangle(stencil.v, stencil.gv);
     }
-    else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
+    else if constexpr (std::is_same_v<ContactSetType, EdgeEdgeContactSet>)
     {
         std::tie(nodes[0], nodes[1]) = LoadHalfEdge(stencil.u, stencil.gu);
         std::tie(nodes[2], nodes[3]) = LoadHalfEdge(stencil.v, stencil.gv);
@@ -1395,24 +1373,21 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
     bool bForLinearSubproblem) const
 {
     TScalar E{0};
-    const_cast<SelfType*>(this)->ForAllContacts(
-        [&]<class TContactSet, class TConstraintData>(
-            TConstraintData const& C,
-            Stencil const& stencil,
+    ForAllContacts(
+        [&]<class TContactSet>(
+            typename TContactSet::ConstAccessorType C,
+            Stencil stencil,
             std::int32_t /*t*/) {
-            static auto constexpr kStencil = TConstraintData::kStencil;
-            static auto constexpr kDims    = TConstraintData::kDims;
-            static auto constexpr kDofs    = TConstraintData::kDofs;
+            using ConstraintAccessorType   = decltype(C);
+            static auto constexpr kStencil = ConstraintAccessorType::kStencil;
+            static auto constexpr kDims    = ConstraintAccessorType::kDims;
+            static auto constexpr kDofs    = ConstraintAccessorType::kDofs;
             static_assert(kDims == 3, "Only 3D is supported");
-            auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
-            auto xc                = Reshape<TConstraintData::kDofs, 1>(XC);
-            using math::linalg::mini::ToEigen;
-            using DistanceType = typename TConstraintData::DistanceType;
-            TScalar const c =
-                bForLinearSubproblem ? C.chat + Dot(C.gradc, xc) : DistanceType{}.Eval(xc);
-            TScalar const a =
-                Barrier(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC, mParams.C1, mParams.C2);
-            E -= C.mu * a;
+            auto const [Xc, nodes] = LoadStencil<TContactSet>(x, stencil);
+            auto xc                = Reshape<kDofs, 1>(Xc);
+            TScalar cs             = C.Eval(xc, bForLinearSubproblem) - mParams.dmin - C.Slack();
+            auto mu                = mParams.kc;
+            E += C.Decay() * (TScalar(0.5) * mu * cs * cs - C.Lambda() * cs);
         },
         1 /*nThreads*/);
     return E;
@@ -1434,53 +1409,37 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedx, class TDerivedg>
 inline void MeshDynamics<TScalar, TIndex>::ToGradient(
     Eigen::MatrixBase<TDerivedx> const& x,
-    Eigen::MatrixBase<TDerivedg>& g,
+    Eigen::MatrixBase<TDerivedg>& g_,
     bool bForLinearSubproblem) const
 {
+    auto g                    = g_.derived().reshaped();
     Eigen::Index const nNodes = g.size() / 3;
-    const_cast<SelfType*>(this)->ForAllContacts(
-        [&]<class TContactSet, class TConstraintData>(
-            TConstraintData const& C,
-            Stencil const& stencil,
+    ForAllContacts(
+        [&]<class TContactSet>(
+            typename TContactSet::ConstAccessorType C,
+            Stencil stencil,
             std::int32_t /*t*/) {
-            static auto constexpr kStencil = TConstraintData::kStencil;
-            static auto constexpr kDims    = TConstraintData::kDims;
-            static auto constexpr kDofs    = TConstraintData::kDofs;
+            static auto constexpr kStencil = C.kStencil;
+            static auto constexpr kDims    = C.kDims;
+            static auto constexpr kDofs    = C.kDofs;
             static_assert(kDims == 3, "Only 3D is supported");
             auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
-            auto xc                = Reshape<TConstraintData::kDofs, 1>(XC);
-            using math::linalg::mini::ToEigen;
+            auto xc                = Reshape<kDofs, 1>(XC);
+            auto mu                = mParams.kc;
+            TScalar cs             = C.Eval(xc, bForLinearSubproblem) - mParams.dmin - C.Slack();
+            TScalar dL             = C.Decay() * (mu * cs - C.Lambda());
+            auto const fAddGrad    = [&](auto&& gradc_) {
+                using math::linalg::mini::ToEigen;
+                auto gradc = ToEigen(gradc_);
+                for (auto ki = 0; ki < kStencil; ++ki)
+                    if (nodes[ki] < nNodes)
+                        g.template segment<kDims>(nodes[ki] * kDims) +=
+                            dL * gradc.template segment<kDims>(ki * kDims);
+            };
             if (bForLinearSubproblem)
-            {
-                TScalar c  = C.chat + Dot(C.gradc, xc);
-                auto gradc = ToEigen(C.gradc);
-                TScalar const dadc =
-                    BarrierGradient(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC);
-                for (auto ki = 0; ki < kStencil; ++ki)
-                {
-                    if (nodes[ki] >= nNodes)
-                        continue;
-                    auto gi     = g.template segment<kDims>(nodes[ki] * kDims);
-                    auto gradci = gradc.template segment<kDims>(ki * kDims);
-                    gi -= C.mu * dadc * gradci;
-                }
-            }
+                fAddGrad(C.Grad());
             else
-            {
-                using math::linalg::mini::SVector;
-                TScalar const c                           = C.Eval(xc);
-                Eigen::Vector<TScalar, kDofs> const gradc = ToEigen(C.Gradient(xc));
-                TScalar const dadc =
-                    BarrierGradient(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC);
-                for (auto ki = 0; ki < kStencil; ++ki)
-                {
-                    if (nodes[ki] >= nNodes)
-                        continue;
-                    auto gi     = g.template segment<kDims>(nodes[ki] * kDims);
-                    auto gradci = gradc.template segment<kDims>(ki * kDims);
-                    gi -= C.mu * dadc * gradci;
-                }
-            }
+                fAddGrad(C.Grad(xc));
         },
         1 /*nThreads*/);
 }
@@ -1554,13 +1513,132 @@ inline void MeshDynamics<TScalar, TIndex>::Deserialize(io::Archive const& archiv
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet& set,
+    FOnContact&& fOnContact,
+    TIndex cstart,
+    TIndex cend)
+{
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0}, gv{0};
+    for (TIndex c = cstart, uprev = 0; c < cend; ++c)
+    {
+        auto const [u, v, k] = set.WeightedAdjacency(c);
+        // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
+        // until we find the next u, in which case we reset the gv geometry index for v.
+        if (u > uprev)
+        {
+            gv    = 0;
+            uprev = u;
+        }
+        // Keep track of geometry types for u and v
+        while (u >= prefixu[gu + 1])
+            ++gu;
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        // Visit contact
+        ConstraintAccessor<TContactSet> C{set, k};
+        fOnContact.template operator()<TContactSet>(C, Stencil{u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet const& set,
+    FOnContact&& fOnContact,
+    TIndex cstart,
+    TIndex cend) const
+{
+    auto const [prefixu, prefixv] = GeometryPrefixArrays<TContactSet>();
+    int gu{0}, gv{0};
+    for (TIndex c = cstart, uprev = 0; c < cend; ++c)
+    {
+        auto const [u, v, k] = set.WeightedAdjacency(c);
+        // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
+        // until we find the next u, in which case we reset the gv geometry index for v.
+        if (u > uprev)
+        {
+            gv    = 0;
+            uprev = u;
+        }
+        // Keep track of geometry types for u and v
+        while (u >= prefixu[gu + 1])
+            ++gu;
+        while (v >= prefixv[gv + 1])
+            ++gv;
+        // Visit contact
+        ConstraintAccessor<TContactSet const> C{set, k};
+        fOnContact.template operator()<TContactSet>(C, Stencil{u, v, gu, gv});
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet& contactSet,
+    FOnContact&& fOnContact,
+    std::int32_t nThreads,
+    tbb::task_group& tg)
+{
+    auto const fForEachThread = [&tg, nThreads](auto&& f) {
+        for (std::int32_t t = 0; t < nThreads; ++t)
+            tg.run([f, t]() { f(t); });
+    };
+    TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
+    TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+    fForEachThread([&](std::int32_t t) {
+        TIndex const cstart = t * nConstraintsPerThread;
+        TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+        auto const fWrap =
+            [&fOnContact,
+             t = t]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
+                fOnContact.template operator()<TContactSet>(C, std::move(stencil), t);
+            };
+        ForEachContact(contactSet, fWrap, cstart, cend);
+    });
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FOnContact, class TContactSet>
+inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
+    TContactSet const& contactSet,
+    FOnContact&& fOnContact,
+    std::int32_t nThreads,
+    tbb::task_group& tg) const
+{
+    auto const fForEachThread = [&tg, nThreads](auto&& f) {
+        for (std::int32_t t = 0; t < nThreads; ++t)
+            tg.run([f, t]() { f(t); });
+    };
+    TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
+    TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+    fForEachThread([&](std::int32_t t) {
+        TIndex const cstart = t * nConstraintsPerThread;
+        TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+        auto const fWrap =
+            [&fOnContact,
+             t = t]<class TContactSet>(typename TContactSet::ConstAccessorType C, Stencil stencil) {
+                fOnContact.template operator()<TContactSet>(C, std::move(stencil), t);
+            };
+        ForEachContact(contactSet, fWrap, cstart, cend);
+    });
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateContactSetsFromOgcPairs");
     using OgcStateType = decltype(mOgcState);
     tbb::task_group tg;
     auto const fUpdateContactSet = [&](auto& set, auto& newSet, auto nSourcePrimitives) {
-        set.Assign(newSet);
+        set.Union(newSet);
+        set.RemoveIf([&]([[maybe_unused]] TIndex u, [[maybe_unused]] TIndex v, TIndex k) {
+            using ContactSetType = std::remove_cvref_t<decltype(set)>;
+            ConstraintAccessor<ContactSetType> C{set, k};
+            return C.Decay() < mParams.decaylo;
+        });
         set.Finalize(nSourcePrimitives);
     };
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
@@ -1574,22 +1652,22 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TContactSet>
-inline auto MeshDynamics<TScalar, TIndex>::GeometryPrefixArrays()
+inline auto MeshDynamics<TScalar, TIndex>::GeometryPrefixArrays() const
 {
-    using ConstraintDataType = typename TContactSet::ConstraintDataType;
-    if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
+    using ContactSetType = std::remove_cvref_t<TContactSet>;
+    if constexpr (std::is_same_v<ContactSetType, PointPointContactSet>)
     {
         return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mPointGeometryPrefix);
     }
-    else if constexpr (std::is_same_v<TContactSet, PointEdgeContactSet>)
+    else if constexpr (std::is_same_v<ContactSetType, PointEdgeContactSet>)
     {
         return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mHalfEdgeGeometryPrefix);
     }
-    else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
+    else if constexpr (std::is_same_v<ContactSetType, PointTriangleContactSet>)
     {
         return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mTriangleGeometryPrefix);
     }
-    else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
+    else if constexpr (std::is_same_v<ContactSetType, EdgeEdgeContactSet>)
     {
         return std::make_pair(mOgcState.mHalfEdgeGeometryPrefix, mOgcState.mHalfEdgeGeometryPrefix);
     }
@@ -1768,11 +1846,11 @@ inline auto MeshDynamics<TScalar, TIndex>::LoadTriangle(TIndex f, int g) const
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedH, int kDims, int kStencil>
+template <int kDims, int kStencil, class TDerivedH>
 inline TScalar MeshDynamics<TScalar, TIndex>::RayleighQuotient(
     Eigen::SparseCompressedBase<TDerivedH> const& H,
     math::linalg::mini::SVector<TScalar, kStencil * kDims> const& gradc,
-    std::array<TIndex, kStencil> const& nodes)
+    std::array<TIndex, kStencil> const& nodes) const
 {
     TScalar gcTHgc{0};
     auto const nNodes = static_cast<TIndex>(nodes.size());

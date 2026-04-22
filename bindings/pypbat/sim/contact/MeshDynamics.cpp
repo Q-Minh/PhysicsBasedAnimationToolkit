@@ -63,7 +63,7 @@ void BindMeshDynamics(nanobind::module_& m)
             "to `rqstart` to initialize the actual query radius.\n")
         .def(
             "with_sequential_primal_interior_point",
-            &MeshDynamicsParamsType::WithSequentialPrimalInteriorPoint,
+            &MeshDynamicsParamsType::WithSequentialAugmentedLagrangian,
             nb::arg("gamma"),
             nb::arg("dmin"),
             nb::arg("epsP"),

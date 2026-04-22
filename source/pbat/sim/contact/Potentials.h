@@ -90,8 +90,13 @@ QuadraticToLogBarrierTwoStageActivation(TScalar d, TScalar r, TScalar kc, TScala
 {
     static_assert(nDerivs >= 0 and nDerivs <= 2, "Number of derivatives must be 0, 1, or 2.");
     mini::SVector<TScalar, nDerivs + 1> dE;
+    dE.SetZero();
+    if (d >= r)
+    {
+        return dE;
+    }
     // d >= tau -> d >= r/2 -> 2d >= r
-    if (2 * d >= r)
+    else if (2 * d >= r)
     {
         TScalar rd   = r - d;
         TScalar kcrd = kc * rd;

@@ -102,14 +102,16 @@ struct Params
      */
     PBAT_API void Deserialize(io::Archive const& archive);
 
-    std::int32_t nMaxIters{5};                 ///< Maximum number of linear constraint subproblems
+    std::int32_t nMaxIters{20};                ///< Maximum number of linear constraint subproblems
     math::optimization::Newton<Scalar> newton; ///< Newton optimizer
     std::vector<Eigen::Triplet<Scalar, Index>> triplets; ///< Triplets for assembling the Hessian
     Eigen::SparseMatrix<Scalar, Eigen::ColMajor, Index> hessian; ///< Hessian matrix
-    fem::EHyperElasticSpdCorrection
-        eSpdCorrection;          ///< SPD correction method for hyper-elastic Hessians
-    ELinearSolver eLinearSolver; ///< Linear solver type for Newton step
-    EOgcTruncationStrategy eOgcTruncationStrategy; ///< OGC truncation strategy
+    fem::EHyperElasticSpdCorrection eSpdCorrection{
+        fem::EHyperElasticSpdCorrection::Absolute};  ///< SPD correction method for hyper-elastic
+                                                     ///< Hessians
+    ELinearSolver eLinearSolver{ELinearSolver::LLT}; ///< Linear solver type for Newton step
+    EOgcTruncationStrategy eOgcTruncationStrategy{
+        EOgcTruncationStrategy::PerVertex}; ///< OGC truncation strategy
 
 #ifdef PBAT_USE_SUITESPARSE
     using DecompositionType =
@@ -359,11 +361,13 @@ void PrepareSubproblemDerivatives(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void ToGradient(
     FemElastoDynamics<TElasticEnergy> const& fem,
-    MeshDynamics const& contact,
+    MeshDynamics& contact,
     Eigen::Vector<Scalar, Eigen::Dynamic>& gk,
     bool bForSubproblem = false)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.ToGradient");
+    if (bForSubproblem)
+        contact.UpdateDual<MeshDynamics::EDualVariable::Slack>(fem.x);
     // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
     gk.setZero();
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
@@ -389,28 +393,24 @@ void ToGradient(
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void AssembleHessian(
     FemElastoDynamics<TElasticEnergy> const& fem,
-    MeshDynamics& contact,
+    MeshDynamics const& contact,
     Params& params,
     bool bWithContacts = true)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.AssembleHessian");
     // Hessian of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) [+ bt^2 C(x)]
-    auto constexpr kDims = std::decay_t<decltype(fem)>::kDims;
-    using PointPointConstraint =
-        typename std::decay_t<decltype(contact.PointPointContacts())>::ConstraintDataType;
-    using PointEdgeConstraint =
-        typename std::decay_t<decltype(contact.PointEdgeContacts())>::ConstraintDataType;
-    using PointTriangleConstraint =
-        typename std::decay_t<decltype(contact.PointTriangleContacts())>::ConstraintDataType;
-    using EdgeEdgeConstraint =
-        typename std::decay_t<decltype(contact.EdgeEdgeContacts())>::ConstraintDataType;
-    auto nTriplets = fem.HgU.size() + fem.M().size();
+    auto constexpr kDims = std::remove_cvref_t<decltype(fem)>::kDims;
+    auto nTriplets       = fem.HgU.size() + fem.M().size();
     if (bWithContacts)
     {
-        auto constexpr kPointPointDofs    = PointPointConstraint::kDofs;
-        auto constexpr kPointEdgeDofs     = PointEdgeConstraint::kDofs;
-        auto constexpr kPointTriangleDofs = PointTriangleConstraint::kDofs;
-        auto constexpr kEdgeEdgeDofs      = EdgeEdgeConstraint::kDofs;
+        auto constexpr kPointPointDofs =
+            std::decay_t<decltype(contact.PointPointContacts())>::AccessorType::kDofs;
+        auto constexpr kPointEdgeDofs =
+            std::decay_t<decltype(contact.PointEdgeContacts())>::AccessorType::kDofs;
+        auto constexpr kPointTriangleDofs =
+            std::decay_t<decltype(contact.PointTriangleContacts())>::AccessorType::kDofs;
+        auto constexpr kEdgeEdgeDofs =
+            std::decay_t<decltype(contact.EdgeEdgeContacts())>::AccessorType::kDofs;
         auto const nPointPointContacts    = contact.PointPointContacts().Size();
         auto const nPointEdgeContacts     = contact.PointEdgeContacts().Size();
         auto const nPointTriangleContacts = contact.PointTriangleContacts().Size();
@@ -446,7 +446,7 @@ void AssembleHessian(
                             HUg(il * kDims + id, jl * kDims + jd));
     }
     // Linearized contact barrier Hessian contribution:
-    //   -mu_i * a''(chat_i + gradc_i^T x) * gradc_i * gradc_i^T
+    // \f$ \sum_c \gamma_c \mu \nabla c \nabla c^T \f$
     if (bWithContacts)
     {
         using math::linalg::mini::Dot;
@@ -455,25 +455,17 @@ void AssembleHessian(
         auto const& contactParams        = contact.GetParams();
         Eigen::Index const nDynamicNodes = fem.x.size() / kDims;
         contact.ForAllContacts(
-            [&]<class TContactSet, class TConstraintData>(
-                TConstraintData const& C,
-                auto const& stencil,
+            [&]<class TContactSet>(
+                typename TContactSet::ConstAccessorType C,
+                typename MeshDynamics::Stencil stencil,
                 std::int32_t /*t*/) {
-                static auto constexpr kStencil        = TConstraintData::kStencil;
-                static auto constexpr kConstraintDims = TConstraintData::kDims;
-                static auto constexpr kDofs           = TConstraintData::kDofs;
-                static_assert(
-                    kConstraintDims == kDims,
-                    "Constraint dimension must match problem dimension");
-                auto const [XC, nodes] = contact.template LoadStencil<TContactSet>(fem.x, stencil);
-                auto xc                = Reshape<kDofs, 1>(XC);
-                auto c                 = C.chat + Dot(C.gradc, xc);
-                auto a2                = MeshDynamics::BarrierHessian(
-                    c,
-                    contactParams.mOgcParams.r,
-                    contactParams.epsP,
-                    contactParams.APC);
-                auto gradc = ToEigen(C.gradc);
+                using ConstraintAccessorType   = decltype(C);
+                auto nodes                     = contact.LoadStencil<TContactSet>(stencil);
+                auto gradc                     = C.Grad();
+                auto gamma                     = C.Decay();
+                auto mu                        = contactParams.kc;
+                Scalar dH                      = gamma * mu;
+                static auto constexpr kStencil = ConstraintAccessorType::kStencil;
                 for (auto jl = 0; jl < kStencil; ++jl)
                 {
                     if (nodes[jl] >= nDynamicNodes)
@@ -487,7 +479,7 @@ void AssembleHessian(
                                 params.triplets.emplace_back(
                                     nodes[il] * kDims + id,
                                     nodes[jl] * kDims + jd,
-                                    -C.mu * a2 * gradc(il * kDims + id) * gradc(jl * kDims + jd));
+                                    dH * gradc(il * kDims + id) * gradc(jl * kDims + jd));
                     }
                 }
             },
@@ -649,7 +641,7 @@ void PrepareSubproblem(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.newton.PrepareSubproblem");
     PrepareSubproblemDerivatives(fem, contact, params);
     AssembleHessian(fem, contact, params, false /*bWithContacts*/);
-    contact.UpdateBarrierParameters(params.hessian);
+    contact.UpdatePenaltyParameter(params.hessian);
     params.newton.InitializeSolve(fem.x);
 }
 
@@ -714,14 +706,14 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
         // 1. Linearize constraints
         contact.LinearizeConstraints(xk);
         // 2. Check KKT conditions and exit if converged
+        PrepareSubproblemDerivatives(fem, contact, params);
         ToGradient(fem, contact, params.newton.gk);
         params.newton.gknorm2 = params.newton.gk.squaredNorm();
         if (params.newton.gknorm2 <= params.newton.gtol2)
             break;
         // 3. Update barrier parameters
-        PrepareSubproblemDerivatives(fem, contact, params);
         AssembleHessian(fem, contact, params, false /*bWithContacts*/);
-        contact.UpdateBarrierParameters(params.hessian);
+        contact.UpdatePenaltyParameter(params.hessian);
         // 4. Newton solve the linear constraint subproblem
         params.newton.InitializeSolve(fem.x);
         [[maybe_unused]] bool const bSubproblemConverged = params.newton.Solve(
@@ -745,6 +737,9 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
                 HessianInverseProduct<TElasticEnergy>(gk, dxk, params);
             } /* Hinv */,
             xk /* x0 */);
+        // 5. Dual update
+        using EDualVariable = typename MeshDynamics::EDualVariable;
+        contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(xk);
         // 5. Restore feasibility
         contact.RestoreFeasibility(fem.x, fem.dmask);
         // 6. Update constraint set
