@@ -22,7 +22,6 @@
 
 #include <algorithm>
 #include <tbb/parallel_for.h>
-#include <tbb/task_group.h>
 #include <vector>
 
 namespace pbat::sim::contact::ogc {
