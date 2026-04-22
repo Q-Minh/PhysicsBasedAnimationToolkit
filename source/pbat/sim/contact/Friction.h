@@ -21,6 +21,7 @@ namespace pbat::sim::contact {
  * @param n Contact normal
  * @param eps Epsilon for colinearity check
  * @return math::linalg::mini::SMatrix<TScalar, TMatrixN::kRows, 2>
+ * @pre `n` is normalized
  */
 template <math::linalg::mini::CMatrix TMatrixN, class TScalar = typename TMatrixN::ScalarType>
 PBAT_HOST_DEVICE auto
@@ -31,29 +32,27 @@ TangentialBasis(TMatrixN const& n, TScalar eps = std::numeric_limits<TScalar>::e
     static_assert(TMatrixN::kRows >= 2, "n must have at least 2 rows.");
     auto constexpr kDims = TMatrixN::kRows;
     using namespace std;
-    bool bIsColinearWithX = abs(n(0)) >= TScalar(1) - eps;
-    // NOTE: We vectorize the following code for `t = cross(n, e)`
-    // if (bIsColinearWithX)
-    // {
-    //     // e = (0,1,0)
-    //     t(0) = n(1)*0 - n(2)*1;
-    //     t(1) = n(2)*0 - n(0)*0;
-    //     t(2) = n(0)*1 - n(1)*0;
-    // }
-    // else
-    // {
-    //     // e = (1,0,0)
-    //     t(0) = n(1)*0 - n(2)*0;
-    //     t(1) = n(2)*1 - n(0)*0;
-    //     t(2) = n(0)*0 - n(1)*1;
-    // }
     SMatrix<TScalar, kDims, 2> T;
-    auto t = T.Col(0);
-    t(0)   = (bIsColinearWithX) * (-n(2));
-    t(1)   = (not bIsColinearWithX) * (n(2));
-    t(2)   = (bIsColinearWithX) * (n(0)) + (not bIsColinearWithX) * (-n(1));
-    t /= Norm(t);
-    T.Col(1) = Cross(n, t);
+    bool bIsColinearWithX = abs(n(0)) >= TScalar(1) - eps;
+    if (bIsColinearWithX)
+    {
+        auto e   = Unit<TScalar, kDims>(1); // e = (0,1,0)
+        T.Col(0) = Cross(n, e);
+    }
+    else
+    {
+        auto e   = Unit<TScalar, kDims>(0); // e = (1,0,0)
+        T.Col(0) = Cross(n, e);
+    }
+    T.Col(0) /= Norm(T.Col(0));
+    T.Col(1) = Cross(n, T.Col(0));
+    // NOTE: Vectorized version
+    // auto t = T.Col(0);
+    // t(0)   = (bIsColinearWithX) * (-n(2));
+    // t(1)   = (not bIsColinearWithX) * (n(2));
+    // t(2)   = (bIsColinearWithX) * (n(0)) + (not bIsColinearWithX) * (-n(1));
+    // t /= Norm(t);
+    // T.Col(1) = Cross(n, t);
     return T;
 }
 

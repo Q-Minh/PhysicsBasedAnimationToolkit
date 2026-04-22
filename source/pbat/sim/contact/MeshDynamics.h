@@ -141,89 +141,6 @@ class MeshDynamics
          * @return TScalar& or TScalar const&
          */
         auto& Penalty() { return set.template Data<12>(k); }
-        /**
-         * @brief Compute and store tangent basis and weights from stencil positions.
-         * @tparam TDerivedXtc A mini matrix type
-         * @tparam TDerivedT A mini matrix type
-         * @tparam TDerivedW A mini matrix type
-         * @param Xc `kDims x kStencil` stencil point positions
-         * @param T `3 x 2` tangent basis matrix
-         * @param W `kStencil x 1` weights vector
-         */
-        template <
-            math::linalg::mini::CMatrix Txc,
-            math::linalg::mini::CMatrix TT,
-            math::linalg::mini::CMatrix TW>
-        void ComputeTangentBasisAndWeights(Txc const& xc, TT& T, TW& W)
-        {
-            static_assert(Txc::kRows == kDofs and Txc::kCols == 1, "Invalid stencil matrix shape");
-            static_assert(TT::kRows == 3 and TT::kCols == 2, "Invalid tangent basis matrix shape");
-            static_assert(TW::kRows == kStencil and TW::kCols == 1, "Invalid weights vector shape");
-            auto Xc = Reshape<kDims, kStencil>(xc);
-            using math::linalg::mini::SVector;
-            if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
-            {
-                T    = PointPointTangentialBasis(Xc.Col(0), Xc.Col(1));
-                W(0) = TScalar(1);
-                W(1) = -TScalar(1);
-            }
-            else if constexpr (std::is_same_v<TContactSet, PointEdgeContactSet>)
-            {
-                auto uv = geometry::ClosestPointQueries::UvPointOnLineSegment(
-                    Xc.Col(0),
-                    Xc.Col(1),
-                    Xc.Col(2));
-                SVector<TScalar, 3> xc       = uv(0) * Xc.Col(1) + uv(1) * Xc.Col(2);
-                T                            = PointPointTangentialBasis(Xc.Col(0), xc);
-                W(0)                         = TScalar(1);
-                W.template Slice<2, 1>(1, 0) = -uv;
-            }
-            else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
-            {
-                auto uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
-                    Xc.Col(0),
-                    Xc.Col(1),
-                    Xc.Col(2),
-                    Xc.Col(3));
-                SVector<TScalar, 3> xc =
-                    uvw(0) * Xc.Col(1) + uvw(1) * Xc.Col(2) + uvw(2) * Xc.Col(3);
-                T                            = PointPointTangentialBasis(Xc.Col(0), xc);
-                W(0)                         = TScalar(1);
-                W.template Slice<3, 1>(1, 0) = -uvw;
-            }
-            else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
-            {
-                auto st = geometry::ClosestPointQueries::LineSegments(
-                    Xc.Col(0),
-                    Xc.Col(1),
-                    Xc.Col(2),
-                    Xc.Col(3));
-                SVector<TScalar, 3> xc1 = st(0) * Xc.Col(0) + (1 - st(0)) * Xc.Col(1);
-                SVector<TScalar, 3> xc2 = st(1) * Xc.Col(2) + (1 - st(1)) * Xc.Col(3);
-                T                       = PointPointTangentialBasis(xc1, xc2);
-                W(0)                    = TScalar(1) - st(0);
-                W(1)                    = st(0);
-                W(2)                    = -(TScalar(1) - st(1));
-                W(3)                    = -(st(1));
-            }
-            else
-            {
-                static_assert(false, "Unsupported contact set");
-            }
-        }
-        /**
-         * @brief Compute the linearization of the constraint at the given point.
-         * @param xc `kDofs x 1` stencil node positions
-         * @param xtc `kDofs x 1` stencil node positions at time t
-         */
-        void ComputeLinearization(auto&& xc, auto&& xtc)
-        {
-            auto& T = TangentBasis();
-            auto& W = Weights();
-            ComputeTangentBasisAndWeights(xc, T, W);
-            auto Xtc = Reshape<kDims, kStencil>(xtc);
-            Chat()   = T.Transpose() * Xtc * W;
-        }
     };
     /**
      * @brief Lightweight accessor for constraint data in a contact set.
@@ -246,15 +163,88 @@ class MeshDynamics
          */
         ConstraintFunctionType Function() const { return ConstraintFunctionType{}; }
         /**
-         * @brief Compute the linearization of the constraint at the given point.
-         * @param xc `kDims x kStencil` stencil node positions
+         * @brief Compute the linearization of both normal and friction constraints, ensuring
+         * the normal gradient and tangent basis form an orthogonal frame.
+         * @param xc `kDofs x 1` stencil node positions at the linearization point
+         * @param xtc `kDofs x 1` stencil node positions at time t (for friction chat)
          */
-        void ComputeLinearization(auto&& xc)
+        void ComputeLinearization(auto&& xc, auto&& xtc)
         {
-            ConstraintFunctionType d{};
-            Eval() = d.Eval(xc);
-            Grad() = d.Gradient(xc);
-            Chat() = Eval() - Dot(Grad(), xc);
+            using namespace math::linalg::mini;
+            auto Xc  = Reshape<kDims, kStencil>(xc);
+            auto Xtc = Reshape<kDims, kStencil>(xtc);
+            auto F   = Friction();
+            auto& W  = F.Weights();
+            SVector<TScalar, kDims> n;
+            TScalar d;
+            // Compute contact normal, distance and operator weights
+            if constexpr (std::is_same_v<ContactSetType, PointPointContactSet>)
+            {
+                SVector<TScalar, kDims> diff = Xc.Col(0) - Xc.Col(1);
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = TScalar(1);
+                W(1)                         = -TScalar(1);
+            }
+            else if constexpr (std::is_same_v<ContactSetType, PointEdgeContactSet>)
+            {
+                auto uv = geometry::ClosestPointQueries::UvPointOnLineSegment(
+                    Xc.Col(0),
+                    Xc.Col(1),
+                    Xc.Col(2));
+                SVector<TScalar, kDims> xcp  = uv(0) * Xc.Col(1) + uv(1) * Xc.Col(2);
+                SVector<TScalar, kDims> diff = Xc.Col(0) - xcp;
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = TScalar(1);
+                W.template Slice<2, 1>(1, 0) = -uv;
+            }
+            else if constexpr (std::is_same_v<ContactSetType, PointTriangleContactSet>)
+            {
+                auto uvw = geometry::ClosestPointQueries::UvwPointInTriangle(
+                    Xc.Col(0),
+                    Xc.Col(1),
+                    Xc.Col(2),
+                    Xc.Col(3));
+                SVector<TScalar, kDims> xcp =
+                    uvw(0) * Xc.Col(1) + uvw(1) * Xc.Col(2) + uvw(2) * Xc.Col(3);
+                SVector<TScalar, kDims> diff = Xc.Col(0) - xcp;
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = TScalar(1);
+                W.template Slice<3, 1>(1, 0) = -uvw;
+            }
+            else if constexpr (std::is_same_v<ContactSetType, EdgeEdgeContactSet>)
+            {
+                auto st = geometry::ClosestPointQueries::LineSegments(
+                    Xc.Col(0),
+                    Xc.Col(1),
+                    Xc.Col(2),
+                    Xc.Col(3));
+                SVector<TScalar, kDims> xc1  = (1 - st(0)) * Xc.Col(0) + st(0) * Xc.Col(1);
+                SVector<TScalar, kDims> xc2  = (1 - st(1)) * Xc.Col(2) + st(1) * Xc.Col(3);
+                SVector<TScalar, kDims> diff = xc1 - xc2;
+                d                            = Norm(diff);
+                n                            = diff / d;
+                W(0)                         = 1 - st(0);
+                W(1)                         = st(0);
+                W(2)                         = -(1 - st(1));
+                W(3)                         = -st(1);
+            }
+            else
+            {
+                static_assert(false, "Unsupported contact set");
+            }
+            // Compute tangent basis, derivatives and linearization constants
+            auto& T = F.TangentBasis();
+            T       = TangentialBasis(n);
+            auto& g = Grad();
+            for (auto i = 0; i < kStencil; ++i)
+                g.template Slice<kDims, 1>(i * kDims, 0) = W(i) * n;
+            Eval()   = d;
+            Grad()   = g;
+            Chat()   = Eval() - Dot(g, xc);
+            F.Chat() = T.Transpose() * (Xtc * W);
         }
         /**
          * @brief Lagrange multiplier
@@ -1572,9 +1562,7 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints(
             auto const [Xtc, _n2]          = LoadStencil<TContactSet>(xt, stencil);
             auto xc                        = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
             auto xtc                       = Reshape<ConstraintAccessorType::kDofs, 1>(Xtc);
-            C.ComputeLinearization(xc);
-            auto F = C.Friction();
-            F.ComputeLinearization(xc, xtc);
+            C.ComputeLinearization(xc, xtc);
         },
         nThreads);
 }
