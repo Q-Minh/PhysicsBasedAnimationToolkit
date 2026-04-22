@@ -508,9 +508,9 @@ PBAT_HOST_DEVICE typename TMatrix::ScalarType StableNeoHookeanEnergy<2>::EvalWit
     ScalarType psi;
     ScalarType const a0 = F[0] * F[3] - F[1] * F[2] - 1 - mu / lambda;
     ScalarType const a1 = a0 * lambda;
-    psi                 = (1.0 / 2.0) * ((a0) * (a0)) * lambda +
-          (1.0 / 2.0) * mu *
-              (((F[0]) * (F[0])) + ((F[1]) * (F[1])) + ((F[2]) * (F[2])) + ((F[3]) * (F[3])) - 2);
+    psi   = (1.0 / 2.0) * ((a0) * (a0)) * lambda +
+            (1.0 / 2.0) * mu *
+                (((F[0]) * (F[0])) + ((F[1]) * (F[1])) + ((F[2]) * (F[2])) + ((F[3]) * (F[3])) - 2);
     gF[0] = a1 * F[3] + mu * F[0];
     gF[1] = -a1 * F[2] + mu * F[1];
     gF[2] = -a1 * F[1] + mu * F[2];
@@ -951,7 +951,8 @@ PBAT_HOST_DEVICE void StableNeoHookeanEnergy<3>::GradAndHessian(
         "Hessian w.r.t. F must have dimensions 9x9");
     using ScalarType      = typename TMatrix::ScalarType;
     ScalarType I3         = TMatrix::kRows == 3 ? Determinant(F) : Determinant(Reshape<3, 3>(F));
-    ScalarType I3minAlpha = I3 - 1 - mu / lambda;
+    ScalarType I3min1     = I3 - 1;
+    ScalarType I3minAlpha = I3min1 - mu / lambda;
     SMatrix<ScalarType, 3, 3> Fcross;
     auto f0       = F.Col(0);
     auto f1       = F.Col(1);
