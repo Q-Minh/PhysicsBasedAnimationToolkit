@@ -270,7 +270,7 @@ void ToGradient(
     // Gradient of 1/2 |x - \Tilde{x}|_M^2 + bt^2 U(x) + bt^2 C(x)
     gk.setZero();
     fem::ToHyperElasticGradient(fem.mesh, fem.egU, fem.GgU, gk);
-    contact.ToGradient(gk);
+    contact.ToGradient(fem.x, gk, true /*bForLinearSubproblem*/);
     gk += ((fem.x - fem.xtilde) * fem.m.asDiagonal()).reshaped();
     gk(fem.DirichletDofs()).setZero();
 }
