@@ -95,8 +95,7 @@ struct Params
      */
     PBAT_API void Deserialize(io::Archive const& archive);
 
-    math::optimization::Newton<Scalar> newton;     ///< Newton optimizer
-    Eigen::Vector<Index, Eigen::Dynamic> ordering; ///< Triplet ordering for sparse hessian assembly
+    math::optimization::Newton<Scalar> newton;           ///< Newton optimizer
     std::vector<Eigen::Triplet<Scalar, Index>> triplets; ///< Triplets for assembling the Hessian
     Eigen::SparseMatrix<Scalar, Eigen::ColMajor, Index> hessian; ///< Hessian matrix
     fem::EHyperElasticSpdCorrection
