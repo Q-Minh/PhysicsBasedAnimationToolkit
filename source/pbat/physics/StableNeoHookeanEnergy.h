@@ -780,7 +780,6 @@ StableNeoHookeanEnergy<3>::Grad(
     using ScalarType = typename TMatrix::ScalarType;
     SVector<ScalarType, 9> G;
     ScalarType I3         = TMatrix::kRows == 3 ? Determinant(F) : Determinant(Reshape<3, 3>(F));
-    ScalarType I2         = Dot(F, F);
     ScalarType I3minAlpha = I3 - 1 - mu / lambda;
     SMatrix<ScalarType, 3, 3> Fcross;
     Fcross.Col(0) = Cross(F.Col(1), F.Col(2));
