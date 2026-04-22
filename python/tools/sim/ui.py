@@ -260,7 +260,6 @@ def _update_mesh(state: SimulationState, mesh_name: str):
 def parse_args():
     parser = argparse.ArgumentParser(description="GPU VBD Simulation UI")
     parser.add_argument(
-        "--fem",
         "--fem-elasto-dynamics",
         type=str,
         required=True,
