@@ -141,7 +141,7 @@ Params& Params::WithSubproblemMaximumIterations(Index nIters)
     return *this;
 }
 
-PBAT_API Params& Params::WithPenaltyParameterUpdateStrategy(ESALPenaltyStiffness strategy)
+Params& Params::WithPenaltyParameterUpdateStrategy(ESALPenaltyStiffness strategy)
 {
     ePenaltyStiffness = strategy;
     return *this;
