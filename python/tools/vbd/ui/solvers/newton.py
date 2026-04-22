@@ -72,39 +72,33 @@ class NewtonSolver(BaseSolver):
         params: pbat.sim.algorithm.newton.Params = self._params.params
         newton: pbat.math.optimization.Newton = params.newton
         pbat.sim.algorithm.newton.initialize_solve(fem, contact, params)
-        callback()
-        pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
-
-        global iteration_stop
-        iteration_stop = False
-
-        def iterate():
-            global iteration_stop
-            if newton.gknorm2 < newton.gtol2:
-                iteration_stop = True
-                return
-            if not pbat.sim.algorithm.newton.iterate(fem, contact, params):
-                iteration_stop = True
-                return
+        for k in range(params.n_max_iters):
             callback()
-            pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
-            iteration_stop = False
-
-        while newton.k < newton.n_max_iters and not iteration_stop:
-            if self.profiler is not None:
-                self.profiler.profile("Newton", iterate)
-            else:
-                iterate()
-
+            params.k = k
+            pbat.sim.algorithm.newton.linearize_constraints(fem, contact)
+            converged = pbat.sim.algorithm.newton.check_convergence(fem, contact, params)
+            if converged:
+                break
+            pbat.sim.algorithm.newton.prepare_subproblem(fem, contact, params, assume_post_convergence_check=True)
+            pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params, assume_post_convergence_check=True)
+            for kp in range(newton.n_max_iters):
+                if newton.gknorm2 <= newton.gtol2:
+                    break
+                if not pbat.sim.algorithm.newton.iterate(fem, contact, params):
+                    break
+                pbat.sim.algorithm.newton.prepare_next_iteration(fem, contact, params)
+            pbat.sim.algorithm.newton.finalize_subproblem(fem, contact, params)
+        callback()
         fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.newton.Params = self._params.params
-        params.serialize(archive)
+        params.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: pbat.sim.algorithm.newton.Params = self._params.params
         params.deserialize(archive)
+        params.construct()
 
     def serialize_problem(
         self,
@@ -115,4 +109,4 @@ class NewtonSolver(BaseSolver):
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
         params: pbat.sim.algorithm.newton.Params = self._params.params
-        params.serialize(archive["newton/params"])
+        params.serialize(archive["newton/params"], minimal=False)

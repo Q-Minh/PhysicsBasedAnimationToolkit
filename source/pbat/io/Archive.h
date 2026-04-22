@@ -210,7 +210,7 @@ inline T Archive::ReadData(std::string const& path) const
             }
         },
         mHdf5Object);
-    return std::move(data);
+    return data;
 }
 
 template <class T>

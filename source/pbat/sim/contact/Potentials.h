@@ -90,8 +90,13 @@ QuadraticToLogBarrierTwoStageActivation(TScalar d, TScalar r, TScalar kc, TScala
 {
     static_assert(nDerivs >= 0 and nDerivs <= 2, "Number of derivatives must be 0, 1, or 2.");
     mini::SVector<TScalar, nDerivs + 1> dE;
+    dE.SetZero();
+    if (d >= r)
+    {
+        return dE;
+    }
     // d >= tau -> d >= r/2 -> 2d >= r
-    if (2 * d >= r)
+    else if (2 * d >= r)
     {
         TScalar rd   = r - d;
         TScalar kcrd = kc * rd;
@@ -198,11 +203,11 @@ class LaggedFriction
 
   public:
     /**
-     * @brief Evaluate the lagged friction potential w.r.t. sliding velocity \f$ u_k \f$.
+     * @brief Evaluate the lagged friction potential w.r.t. sliding displacement \f$ u_k \f$.
      *
-     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixUk Matrix type for tangential relative displacement
      * @tparam TScalar Scalar type
-     * @param uk `2 x 1` tangential relative velocity
+     * @param uk `2 x 1` tangential relative displacement
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
      * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
@@ -218,13 +223,13 @@ class LaggedFriction
         return mu * lambdakn * f0(ukn, epsvh);
     }
     /**
-     * @brief Evaluate the lagged friction potential w.r.t. sliding velocity \f$ u_k \f$ and its
+     * @brief Evaluate the lagged friction potential w.r.t. sliding displacement \f$ u_k \f$ and its
      * gradient.
      *
-     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixUk Matrix type for tangential relative displacement
      * @tparam TMatrixGk Gradient matrix type
      * @tparam TScalar Scalar type
-     * @param uk `2 x 1` tangential relative velocity
+     * @param uk `2 x 1` tangential relative displacement
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
      * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
@@ -245,12 +250,12 @@ class LaggedFriction
         return mulambda * f0(ukn, epsvh);
     }
     /**
-     * @brief Compute the gradient w.r.t. sliding velocity \f$ u_k \f$.
+     * @brief Compute the gradient w.r.t. sliding displacement \f$ u_k \f$.
      *
-     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixUk Matrix type for tangential relative displacement
      * @tparam TMatrixGk Gradient matrix type
      * @tparam TScalar Scalar type
-     * @param uk `2 x 1` tangential relative velocity
+     * @param uk `2 x 1` tangential relative displacement
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
      * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
@@ -268,13 +273,13 @@ class LaggedFriction
         gk          = (mu * lambdakn * f1_over_x(ukn, epsvh)) * uk;
     }
     /**
-     * @brief Compute the gradient and Hessian w.r.t. sliding velocity \f$ u_k \f$.
+     * @brief Compute the gradient and Hessian w.r.t. sliding displacement \f$ u_k \f$.
      *
-     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixUk Matrix type for tangential relative displacement
      * @tparam TMatrixGk Gradient matrix type
      * @tparam TMatrixHk Hessian matrix type
      * @tparam TScalar Scalar type
-     * @param uk `2 x 1` tangential relative velocity
+     * @param uk `2 x 1` tangential relative displacement
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
      * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
@@ -303,12 +308,12 @@ class LaggedFriction
         Hk = mulambda * (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1overx * I);
     }
     /**
-     * @brief Compute the Hessian w.r.t. sliding velocity \f$ u_k \f$.
+     * @brief Compute the Hessian w.r.t. sliding displacement \f$ u_k \f$.
      *
-     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixUk Matrix type for tangential relative displacement
      * @tparam TMatrixHk Hessian matrix type
      * @tparam TScalar Scalar type
-     * @param uk `2 x 1` Tangential relative velocity
+     * @param uk `2 x 1` Tangential relative displacement
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
      * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity
@@ -328,13 +333,13 @@ class LaggedFriction
              (f2_x_minus_f1_over_x3(ukn, epsvh) * uk * uk.Transpose() + f1_over_x(ukn, epsvh) * I);
     }
     /**
-     * @brief Compute the gradient and Hessian w.r.t. sliding velocity \f$ u_k \f$.
+     * @brief Compute the gradient and Hessian w.r.t. sliding displacement \f$ u_k \f$.
      *
-     * @tparam TMatrixUk Matrix type for tangential relative velocity
+     * @tparam TMatrixUk Matrix type for tangential relative displacement
      * @tparam TMatrixGk Gradient matrix type
      * @tparam TMatrixHk Hessian matrix type
      * @tparam TScalar Scalar type
-     * @param uk `2 x 1` tangential relative velocity
+     * @param uk `2 x 1` tangential relative displacement
      * @param mu Friction coefficient
      * @param lambdakn Normal contact force magnitude
      * @param epsvh \f$ \epsilon_v h \f$ where \f$ \epsilon_v \f$ is IPC's relative velocity

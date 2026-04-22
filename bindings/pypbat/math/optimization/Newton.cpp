@@ -36,7 +36,7 @@ void BindNewton(nanobind::module_& m)
         .def_rw("gtol2", &NewtonType::gtol2, "Squared gradient norm tolerance")
         .def_rw("dxk", &NewtonType::dxk, "Step direction (internal work vector)")
         .def_rw("gk", &NewtonType::gk, "Gradient at current iterate (internal work vector)")
-        .def_rw("fk", &NewtonType::fk, "Objective value at current iterate")
+        .def_rw("mk", &NewtonType::mk, "Merit function value at current iterate")
         .def_rw("gknorm2", &NewtonType::gknorm2, "Squared gradient norm at current iterate")
         .def_rw("k", &NewtonType::k, "Current iteration")
         .def_rw("line_search", &NewtonType::lineSearch, "Line search instance")
@@ -44,9 +44,12 @@ void BindNewton(nanobind::module_& m)
             "serialize",
             &NewtonType::Serialize,
             nb::arg("archive"),
+            nb::arg("minimal") = true,
             "Serialize the Newton optimizer.\n\n"
             "Args:\n"
-            "    archive (pbat.io.Archive): Archive to serialize to.")
+            "    archive (pbat.io.Archive): Archive to serialize to.\n"
+            "    minimal (bool, optional): If true, only serialize essential data. Defaults to "
+            "true.\n")
         .def(
             "deserialize",
             &NewtonType::Deserialize,

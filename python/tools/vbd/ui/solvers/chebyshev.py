@@ -74,22 +74,24 @@ class ChebyshevSolver(BaseSolver):
         chebyshev = params.chebyshev_params
         if callback is None:
             callback = lambda: None
-        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
         callback()
-        while vbd.k < vbd.n_max_iters:
-            if contact.requires_bounds_computation:
-                contact.compute_displacement_bounds(fem.x)
-            pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
-            fem.x = contact.truncate_displaced_positions(fem.x, fem.dmask)
-            callback()
-        fem.back_substitute_integrated_positions_into_velocities()
+        # TODO: Update Chebyshev solver for most recent SAL contact framework
+        # pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
+        # callback()
+        # while vbd.k < vbd.n_max_iters:
+        #     if contact.requires_constraint_set_update:
+        #         contact.update_constraint_set(fem.x)
+        #     pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
+        #     fem.x = contact.restore_feasibility(fem.x, fem.dmask)
+        #     callback()
+        # fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
         vbd: pbat.sim.algorithm.vbd.Params = params.vbd_params
         chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
-        vbd.serialize(archive)
-        chebyshev.serialize(archive)
+        vbd.serialize(archive, minimal=True)
+        chebyshev.serialize(archive, minimal=True)
 
     def deserialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params
@@ -109,5 +111,5 @@ class ChebyshevSolver(BaseSolver):
         chebyshev: pbat.sim.algorithm.vbd.ChebyshevParams = params.chebyshev_params
         fem.serialize(archive["fem"])
         contact.serialize(archive["contact"])
-        vbd.serialize(archive["vbd/params"])
-        chebyshev.serialize(archive["vbd/chebyshev_params"])
+        vbd.serialize(archive["vbd/params"], minimal=False)
+        chebyshev.serialize(archive["vbd/chebyshev_params"], minimal=False)

@@ -125,10 +125,9 @@ auto FilterEigenvalues(
     using ScalarType = typename TMatrixA::ScalarType;
     if (mode == EEigenvalueFilter::None)
         return A;
-    eps = TMatrixA::kRows * eps;
     mini::SMatrix<ScalarType, TMatrixA::kRows, TMatrixA::kCols> B{};
     B.SetZero();
-    auto eigs     = mini::SymmetricEigen(A, false /*bSortEigenvalues*/, nMaxIters);
+    auto eigs     = mini::SymmetricEigen(A, false /*bSortEigenvalues*/, nMaxIters, eps);
     auto const& D = eigs.lambda;
     auto const& V = eigs.V;
     switch (mode)

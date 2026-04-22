@@ -132,9 +132,9 @@ Data& Data::WithActiveSetUpdateFrequency(Index activeSetUpdateFrequency)
     return *this;
 }
 
-Data& Data::WithHessianDeterminantZeroUnder(Scalar zero)
+Data& Data::WithHessianSingularUnder(Scalar zero)
 {
-    this->detHZero = zero;
+    this->hessZero = zero;
     return *this;
 }
 

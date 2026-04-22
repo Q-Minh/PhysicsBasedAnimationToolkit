@@ -24,7 +24,9 @@ class Simulation:
         pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
     )
     _t: int
+    _until_t: int
     _profiler: pypbat.profiling.Profiler
+    _device: pbat.geometry.Device
 
     _fem_dynamics_vm: ps.VolumeMesh
     _fem_dynamics_dirichlet_pc: ps.PointCloud
@@ -39,14 +41,14 @@ class Simulation:
     _v0: np.ndarray[float]
     _xD: np.ndarray[float]
     _dmin: float = float("inf")
-    _energy_history_kinetic: list[float]
-    _energy_history_potential: list[float]
     _masscpy: np.ndarray[float]
     _static_elasticity: bool
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
         self._profiler = pypbat.profiling.Profiler()
+        device_config = pbat.geometry.DeviceConfig()
+        self._device = pbat.geometry.Device(device_config)
         self._fem_dynamics_vm = None
         self._fem_dynamics_dirichlet_pc = None
         self._simulate = False
@@ -62,6 +64,7 @@ class Simulation:
         self._dt = 1e-2
         self._bdf_scheme = 1
         self._t = 0
+        self._until_t = -1
         self._fem_dynamics_init_strategy = (
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
         )
@@ -115,9 +118,7 @@ class Simulation:
         self._fem_dynamics = fem_dynamics
         self._v0 = self._fem_dynamics.v.copy()  # store initial velocity for reset
         self._xD = self._fem_dynamics.x.copy()  # store initial position for reset
-        device_config = pbat.geometry.DeviceConfig()
-        device = pbat.geometry.Device(device_config)
-        contact_dynamics.initialize(device)
+        contact_dynamics.initialize(self._device)
         self._contact.on_new_contact_dynamics(contact_dynamics)
         self._transform_library = transform_library
         self._tet_elastic_body_names = tet_elastic_body_names
@@ -164,7 +165,8 @@ class Simulation:
             self._constrain()
             self._update_visuals_after_position_change()
             if self._contact.contact_dynamics is not None:
-                self._contact.contact_dynamics.compute_displacement_bounds(
+                self._contact.contact_dynamics.initialize(self._device)
+                self._contact.contact_dynamics.update_constraint_set(
                     self._fem_dynamics.X
                 )
             # self._energy_history_kinetic = []
@@ -175,6 +177,7 @@ class Simulation:
         if self._fem_dynamics is None:
             ps.error("No simulation scenario loaded!")
             return
+        self._contact.contact_dynamics.params.construct()
         self._apply_procedural_constraints()
         self._profiler.begin_frame("Physics")
         self._fem_dynamics.setup_time_integration_optimization(
@@ -243,7 +246,7 @@ class Simulation:
             )
             self._fem_dynamics_vm.add_scalar_quantity(
                 "h2||grad U||",
-                bt*bt*np.linalg.norm(gradU, axis=0),
+                bt * bt * np.linalg.norm(gradU, axis=0),
                 defined_on="vertices",
                 cmap="turbo",
             )
@@ -255,10 +258,10 @@ class Simulation:
                     defined_on="vertices",
                     cmap="turbo",
                 )
-                grad = gradK + bt*bt*gradU
+                grad = gradK + bt * bt * gradU
                 gnorms = np.linalg.norm(grad, axis=0)
                 self._fem_dynamics_vm.add_vector_quantity(
-                    "residual", 
+                    "residual",
                     grad.T / gnorms[:, np.newaxis],
                     defined_on="vertices",
                 )
@@ -268,15 +271,8 @@ class Simulation:
                     defined_on="vertices",
                     cmap="turbo",
                 )
-            xt = -bdf.inertia().reshape((3, -1), order="F")
-            if self._contact.requires_force_display:
-                self._contact.on_contact_force_display_requested(
-                    x,
-                    xt,
-                    bt,
-                )
-            if self._contact.requires_stencil_display:
-                self._contact.on_stencil_display_requested(x, xt, bt)
+            if self._contact.requires_debug_display:
+                self._contact.on_debug_display_requested(x)
         if self._fem_dynamics_dirichlet_pc is not None:
             d_nodes = self._fem_dynamics.dirichlet_nodes
             if d_nodes.shape[0] != self._fem_dynamics_dirichlet_pc.n_points():
@@ -308,7 +304,7 @@ class Simulation:
         )
         self._bdf_scheme = max(1, min(6, self._bdf_scheme))
         if dt_changed and not bdf_changed:
-            # We should never changed the bdf scheme in the draw loop alone, 
+            # We should never changed the bdf scheme in the draw loop alone,
             # only in the reset to make sure it is called before fem.set_initial_conditions
             self._fem_dynamics.set_time_integration_scheme(
                 dt=self._dt, s=self._bdf_scheme
@@ -327,6 +323,11 @@ class Simulation:
             else:
                 self._fem_dynamics.m = self._masscpy
         _, self._simulate = imgui.Checkbox("Simulate", self._simulate)
+        imgui.SameLine()
+        imgui.SetNextItemWidth(100)
+        _, self._until_t = imgui.InputInt("Until", self._until_t)
+        if self._t == self._until_t:
+            self._simulate = False
         step = imgui.Button("Step", button_size)
         reset = imgui.Button("Reset", button_size)
         if imgui.Button("Dump", button_size):

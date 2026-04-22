@@ -1,3 +1,4 @@
+# type: ignore
 import sympy as sp
 from sympy.printing.cxx import CXX17CodePrinter
 from sympy.codegen.ast import Assignment
@@ -41,6 +42,10 @@ class CXXPrinter(CXX17CodePrinter):
                                  for i in range(expr.exp)])
             code = f"({expansion})"
             return code
+        elif expr.exp == sp.S.Half:
+            return f"std::sqrt({self._print(expr.base)})"
+        elif expr.exp == -sp.S.Half:
+            return f"1 / std::sqrt({self._print(expr.base)})"
         else:
             return super()._print_Pow(expr)
         
@@ -48,6 +53,13 @@ class CXXPrinter(CXX17CodePrinter):
     def _print_Abs(self, expr):
         arg = self._print(expr.args[0])
         return f"std::abs({arg})"
+    
+
+    def _print_not_supported(self, expr):
+        print(f"Warning: Expression {expr} of type {type(expr)} is not supported by CXXPrinter.")
+        raise NotImplementedError(
+            f"Expression {expr} of type {type(expr)} is not supported by CXXPrinter."
+        )
 
 
 def codegen(exprs, lhs=None, use_cse=True, csesymbol="a", scalar_type="Scalar"):
@@ -61,7 +73,7 @@ def codegen(exprs, lhs=None, use_cse=True, csesymbol="a", scalar_type="Scalar"):
         for var, subexpr in subexprs:
             assignment = cppgen.doprint(Assignment(var, subexpr))
             lines.append(
-                f"{scalar_type} const {assignment}")
+                f"{scalar_type} {assignment}")
         vars = "\n".join(lines)
         outputs = cppgen.doprint(exprs if len(
             exprs) > 1 else exprs[0], assign_to=lhs)

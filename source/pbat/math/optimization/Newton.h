@@ -54,7 +54,7 @@ struct Newton
     Eigen::Vector<TScalar, Eigen::Dynamic> gk;  ///< Gradient at current iteration
     LineSearchType lineSearch;                  ///< Line search object
 
-    TScalar fk;      ///< Objective function value at current iteration
+    TScalar mk;      ///< Merit function value at current iteration
     TScalar gknorm2; ///< Squared norm of the gradient at current iteration
     int k;           ///< Current iteration
 
@@ -80,7 +80,7 @@ struct Newton
     template <class TDerivedX>
     void InitializeSolve(Eigen::MatrixBase<TDerivedX> const& xk);
     /**
-     * @brief Calls fPrepareDerivatives and evaluates the objective function and gradient at `xk`
+     * @brief Calls fPrepareDerivatives and evaluates the gradient at `xk`
      *
      * @tparam FPrepareDerivatives Callable type with signature
      * `fPrepareDerivatives(xk) -> TScalar`
@@ -88,8 +88,8 @@ struct Newton
      * at `xk` and stores it in `gk`
      * @tparam TDerivedX Derived type for the input iterate
      * @param fPrepareDerivatives Callback to compute any quantities necessary prior to evaluating
-     * the objective function gradient and hessian. It must also return the objective function value
-     * at `xk`.
+     * the objective function gradient and hessian. It must also return the merit function value
+     * at `xk` (for standard unconstrained optimization, this is just the objective value).
      * @param g Gradient function
      * @param xk Current iterate
      */
@@ -99,10 +99,43 @@ struct Newton
         FGradient const& g,
         Eigen::MatrixBase<TDerivedX> const& xk);
     /**
+     * @brief Perform a single Newton iteration with a custom merit function
+     *
+     * This overload allows specifying a custom merit function for line search, which is useful
+     * for constrained optimization (e.g., using L1 penalty merit functions).
+     *
+     * @tparam FMerit Callable type for the merit function with signature `merit(xk) -> TScalar`
+     * @tparam FDirectionalDerivative Callable type for the directional derivative with signature
+     * `Dmerit(xk, gk, dx) -> TScalar` that computes the directional derivative of the merit
+     * function at `xk` in direction `dx`, given the gradient `gk`.
+     * @tparam FHessianInverseProduct Callable type for the Hessian inverse product with signature
+     * `Hinv(xk, gk, dxk) -> void` which computes the product of the inverse Hessian at `xk` with
+     * the gradient `gk` and stores the result in `dxk`.
+     * @tparam TDerivedX Derived type for the input iterate
+     * @param merit Merit function for line search
+     * @param mk Merit function value at xk
+     * @param Dmerit Directional derivative of merit function
+     * @param Hinv Hessian inverse product function
+     * @param xk Current iterate
+     * @return true if step was taken, false otherwise
+     */
+    template <
+        class FMerit,
+        class FDirectionalDerivative,
+        class FHessianInverseProduct,
+        class TDerivedX>
+    bool Iterate(
+        FMerit const& merit,
+        TScalar mk,
+        FDirectionalDerivative const& Dmerit,
+        FHessianInverseProduct const& Hinv,
+        Eigen::MatrixBase<TDerivedX>& xk);
+    /**
      * @brief Perform a single Newton iteration
      *
      * The objective function is not called if no line search is specified, otherwise it
-     * is called at least once.
+     * is called at least once. Uses the objective function as the merit function with
+     * directional derivative gk.dot(dx).
      *
      * @tparam FObjective Callable type for the objective function with signature `f(xk) -> TScalar`
      * @tparam FHessianInverseProduct Callable type for the Hessian inverse product with signature
@@ -120,7 +153,45 @@ struct Newton
         FHessianInverseProduct const& Hinv,
         Eigen::MatrixBase<TDerivedX>& xk);
     /**
+     * @brief Solve the optimization problem using Newton's method with a custom merit function
+     *
+     * This overload allows specifying a custom merit function for line search, which is useful
+     * for constrained optimization (e.g., using L1 penalty merit functions).
+     *
+     * @tparam FPrepareDerivatives Callable type with signature `fPrepareDerivatives(xk) -> TScalar`
+     * that computes derivatives and returns the merit function value at `xk`.
+     * @tparam FMerit Callable type for the merit function with signature `merit(xk) -> TScalar`
+     * @tparam FDirectionalDerivative Callable type for the directional derivative with signature
+     * `Dmerit(xk, gk, dx) -> TScalar`
+     * @tparam FGradient Callable type for the gradient with signature `g(xk, gk) -> void`
+     * @tparam FHessianInverseProduct Callable type for the Hessian inverse product
+     * @tparam TDerivedX Derived type for the input iterate
+     * @param fPrepareDerivatives Derivative (pre)computation function, returns merit value
+     * @param merit Merit function for line search
+     * @param Dmerit Directional derivative of merit function
+     * @param g Gradient function
+     * @param Hinv Hessian inverse product function
+     * @param xk Current iterate
+     * @return true if converged, false otherwise
+     */
+    template <
+        class FPrepareDerivatives,
+        class FMerit,
+        class FDirectionalDerivative,
+        class FGradient,
+        class FHessianInverseProduct,
+        class TDerivedX>
+    bool Solve(
+        FPrepareDerivatives const& fPrepareDerivatives,
+        FMerit const& merit,
+        FDirectionalDerivative const& Dmerit,
+        FGradient const& g,
+        FHessianInverseProduct const& Hinv,
+        Eigen::MatrixBase<TDerivedX>& xk);
+    /**
      * @brief Solve the optimization problem using Newton's method
+     *
+     * Uses the objective function as the merit function with directional derivative gk.dot(dx).
      *
      * @tparam FPrepareDerivatives Callable type with signature
      * `fPrepareDerivatives(xk) -> void`
@@ -154,8 +225,9 @@ struct Newton
     /**
      * @brief Serialize this
      * @param archive Archive to serialize to
+     * @param bMinimal If true, only serialize essential data
      */
-    void Serialize(io::Archive& archive) const;
+    void Serialize(io::Archive& archive, bool bMinimal = true) const;
     /**
      * @brief Deserialize this
      * @param archive Archive to deserialize from
@@ -171,7 +243,7 @@ inline Newton<TScalar>::Newton(int nMaxItersIn, TScalar gtol, Index n, LineSearc
       gk(n),
       lineSearch(std::move(lineSearchIn)),
       gknorm2(),
-      fk()
+      mk()
 {
 }
 
@@ -190,19 +262,21 @@ inline void Newton<TScalar>::PrepareNextIteration(
     FGradient const& g,
     Eigen::MatrixBase<TDerivedX> const& xk)
 {
-    fk = fPrepareDerivatives(xk);
-    g(xk, gk);
+    mk = fPrepareDerivatives(xk.derived());
+    g(xk.derived(), gk);
     gknorm2 = gk.squaredNorm();
 }
 
 template <class TScalar>
-template <class FObjective, class FHessianInverseProduct, class TDerivedX>
+template <class FMerit, class FDirectionalDerivative, class FHessianInverseProduct, class TDerivedX>
 inline bool Newton<TScalar>::Iterate(
-    FObjective const& f,
+    FMerit const& merit,
+    TScalar mk,
+    FDirectionalDerivative const& Dmerit,
     FHessianInverseProduct const& Hinv,
     Eigen::MatrixBase<TDerivedX>& xk)
 {
-    Hinv(xk, gk, dxk);
+    Hinv(xk.derived(), gk, dxk);
     bool bStepped{false};
     std::visit(
         [&](auto&& lineSearch) {
@@ -215,8 +289,9 @@ inline bool Newton<TScalar>::Iterate(
             }
             else
             {
-                dxk      = -dxk;
-                bStepped = lineSearch.Solve(f, fk, gk, dxk, xk);
+                dxk         = -dxk;
+                TScalar Dm0 = Dmerit(xk.derived(), gk, dxk);
+                bStepped    = lineSearch.Solve(merit, mk, Dm0, dxk, xk.derived());
                 if (bStepped)
                     xk += lineSearch.alphaj * dxk;
             }
@@ -224,6 +299,50 @@ inline bool Newton<TScalar>::Iterate(
         lineSearch);
     ++k;
     return bStepped;
+}
+
+template <class TScalar>
+template <class FObjective, class FHessianInverseProduct, class TDerivedX>
+inline bool Newton<TScalar>::Iterate(
+    FObjective const& f,
+    FHessianInverseProduct const& Hinv,
+    Eigen::MatrixBase<TDerivedX>& xk)
+{
+    auto const Dmerit = [](auto const& /*xk*/, auto const& gk, auto const& dx) {
+        return gk.dot(dx);
+    };
+    return Iterate(f, mk, Dmerit, Hinv, xk.derived());
+}
+
+template <class TScalar>
+template <
+    class FPrepareDerivatives,
+    class FMerit,
+    class FDirectionalDerivative,
+    class FGradient,
+    class FHessianInverseProduct,
+    class TDerivedX>
+inline bool Newton<TScalar>::Solve(
+    FPrepareDerivatives const& fPrepareDerivatives,
+    FMerit const& merit,
+    FDirectionalDerivative const& Dmerit,
+    FGradient const& g,
+    FHessianInverseProduct const& Hinv,
+    Eigen::MatrixBase<TDerivedX>& xk)
+{
+    PrepareNextIteration(fPrepareDerivatives, g, xk.derived());
+    for (; k < nMaxIters;)
+    {
+        if (gknorm2 < gtol2)
+            return true;
+        // If a step could not be taken, further Newton iterations will similarly not yield any
+        // step, since both the gradient and Hessian will remain the same. We can thus terminate
+        // early without convergence.
+        if (not Iterate(merit, mk, Dmerit, Hinv, xk.derived()))
+            return false;
+        PrepareNextIteration(fPrepareDerivatives, g, xk.derived());
+    }
+    return gknorm2 < gtol2;
 }
 
 template <class TScalar>
@@ -240,39 +359,33 @@ inline bool Newton<TScalar>::Solve(
     FHessianInverseProduct Hinv,
     Eigen::MatrixBase<TDerivedX>& xk)
 {
-    PrepareNextIteration(fPrepareDerivatives, g, xk.derived());
-    for (; k < nMaxIters;)
-    {
-        if (gknorm2 < gtol2)
-            return true;
-        // If a step could not be taken, further Newton iterations will similarly not yield any
-        // step, since both the gradient and Hessian will remain the same. We can thus terminate
-        // early without convergence.
-        if (not Iterate(f, Hinv, xk))
-            return false;
-        PrepareNextIteration(fPrepareDerivatives, g, xk);
-    }
-    return gknorm2 < gtol2;
+    auto const Dmerit = [](auto const& /*xk*/, auto const& gk, auto const& dx) {
+        return gk.dot(dx);
+    };
+    return Solve(fPrepareDerivatives, f, Dmerit, g, Hinv, xk.derived());
 }
 
 template <class TScalar>
-inline void Newton<TScalar>::Serialize(io::Archive& archive) const
+inline void Newton<TScalar>::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.math.optimization.Newton"];
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("gtol2", gtol2);
-    group.WriteData("dxk", dxk);
-    group.WriteData("gk", gk);
+    if (not bMinimal)
+    {
+        group.WriteData("dxk", dxk);
+        group.WriteData("gk", gk);
+    }
     std::visit(
         [&](auto&& lineSearch) {
             using U = std::decay_t<decltype(lineSearch)>;
             if constexpr (not std::is_same_v<U, std::monostate>)
             {
-                lineSearch.Serialize(group);
+                lineSearch.Serialize(group, bMinimal);
             }
         },
         lineSearch);
-    group.WriteMetaData("fk", fk);
+    group.WriteMetaData("mk", mk);
     group.WriteMetaData("gknorm2", gknorm2);
     group.WriteMetaData("k", k);
 }
@@ -281,10 +394,14 @@ template <class TScalar>
 inline void Newton<TScalar>::Deserialize(io::Archive& archive)
 {
     io::Archive group = archive["pbat.math.optimization.Newton"];
-    nMaxIters         = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
-    gtol2             = group.ReadMetaData<std::decay_t<decltype(gtol2)>>("gtol2");
-    dxk               = group.ReadData<std::decay_t<decltype(dxk)>>("dxk");
-    gk                = group.ReadData<std::decay_t<decltype(gk)>>("gk");
+    if (group.HasMetaData("nMaxIters"))
+        nMaxIters = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
+    if (group.HasMetaData("gtol2"))
+        gtol2 = group.ReadMetaData<std::decay_t<decltype(gtol2)>>("gtol2");
+    if (group.HasData("dxk"))
+        dxk = group.ReadData<std::decay_t<decltype(dxk)>>("dxk");
+    if (group.HasData("gk"))
+        gk = group.ReadData<std::decay_t<decltype(gk)>>("gk");
     std::visit(
         [&](auto&& lineSearch) {
             using U = std::decay_t<decltype(lineSearch)>;
@@ -294,9 +411,12 @@ inline void Newton<TScalar>::Deserialize(io::Archive& archive)
             }
         },
         lineSearch);
-    fk      = group.ReadMetaData<std::decay_t<decltype(fk)>>("fk");
-    gknorm2 = group.ReadMetaData<std::decay_t<decltype(gknorm2)>>("gknorm2");
-    k       = group.ReadMetaData<std::decay_t<decltype(k)>>("k");
+    if (group.HasMetaData("mk"))
+        mk = group.ReadMetaData<std::decay_t<decltype(mk)>>("mk");
+    if (group.HasMetaData("gknorm2"))
+        gknorm2 = group.ReadMetaData<std::decay_t<decltype(gknorm2)>>("gknorm2");
+    if (group.HasMetaData("k"))
+        k = group.ReadMetaData<std::decay_t<decltype(k)>>("k");
 }
 
 } // namespace pbat::math::optimization

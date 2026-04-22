@@ -134,6 +134,26 @@ struct Input
      */
     Eigen::Index NumFacets(Eigen::Index b) const;
     /**
+     * @brief Get total number of (non-static) vertices
+     * @return Eigen::Index
+     */
+    Eigen::Index NumVertices() const;
+    /**
+     * @brief Get total number of (non-static) edges
+     * @return Eigen::Index
+     */
+    Eigen::Index NumEdges() const;
+    /**
+     * @brief Get total number of (non-static) half-edges
+     * @return Eigen::Index
+     */
+    Eigen::Index NumHalfEdges() const;
+    /**
+     * @brief Get total number of (non-static) facets
+     * @return Eigen::Index
+     */
+    Eigen::Index NumFacets() const;
+    /**
      * @brief Get number of static vertices
      * @return Eigen::Index Number of static vertices
      */
@@ -307,6 +327,30 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline Eigen::Index Input<TScalar, TIndex>::NumFacets(Eigen::Index b) const
 {
     return FP.value()(b + 1) - FP.value()(b);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline Eigen::Index Input<TScalar, TIndex>::NumVertices() const
+{
+    return V->size();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline Eigen::Index Input<TScalar, TIndex>::NumEdges() const
+{
+    return E->cols();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline Eigen::Index Input<TScalar, TIndex>::NumHalfEdges() const
+{
+    return 3 * NumFacets();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline Eigen::Index Input<TScalar, TIndex>::NumFacets() const
+{
+    return F->cols();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>

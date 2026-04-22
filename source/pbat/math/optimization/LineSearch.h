@@ -31,9 +31,9 @@ struct BackTrackingLineSearch
     TScalar alpha{1};  ///< Initial step size
 
     TScalar alphaj;                            ///< Current step size
-    TScalar fj;                                ///< Current objective function value
-    TScalar flinearj;                          ///< Current linearized objective function value
-    TScalar Dfk;                               ///< Directional derivative at current step
+    TScalar mj;                                ///< Current merit function value
+    TScalar mlinearj;                          ///< Current linearized merit function value
+    TScalar Dm0;                               ///< Directional derivative of merit at alpha=0
     Eigen::Vector<TScalar, Eigen::Dynamic> xj; ///< Current candidate iterate
     int niters;                                ///< Current iteration
 
@@ -53,31 +53,33 @@ struct BackTrackingLineSearch
         TScalar alpha  = TScalar(1),
         Eigen::Index n = 0);
     /**
-     * @brief Perform a backtracking line search
+     * @brief Perform a backtracking line search using a general merit function
      *
-     * @tparam FObjective Callable type for the objective function with signature `f(xk) -> fk`
-     * @tparam TDerivedG Derived type for the gradient
+     * The Armijo condition is: merit(xk + alpha*dx) <= mk + c*alpha*Dm0
+     *
+     * @tparam FMerit Callable type for the merit function with signature `merit(x) -> TScalar`
      * @tparam TDerivedDX Derived type for the step direction
      * @tparam TDerivedX Derived type for the current iterate
-     * @param f Objective function
-     * @param fk Objective function value at the current iterate
-     * @param gk Gradient at the initial iterate
+     * @param merit Merit function (e.g., objective, or objective + penalty)
+     * @param mk Merit function value at the current iterate
+     * @param Dm0In Directional derivative of merit at xk in direction dx
      * @param dx Step direction
      * @param xk Current iterate
      * @return true if the line search succeeded, false otherwise
      */
-    template <class FObjective, class TDerivedG, class TDerivedDX, class TDerivedX>
+    template <class FMerit, class TDerivedDX, class TDerivedX>
     bool Solve(
-        FObjective const& f,
-        TScalar fk,
-        Eigen::MatrixBase<TDerivedG> const& gk,
+        FMerit const& merit,
+        TScalar mk,
+        TScalar Dm0In,
         Eigen::MatrixBase<TDerivedDX> const& dx,
         Eigen::MatrixBase<TDerivedX> const& xk);
     /**
      * @brief Serialize the line search parameters and state
      * @param archive Archive to serialize to
+     * @param bMinimal If true, only serialize essential data
      */
-    void Serialize(io::Archive& archive) const;
+    void Serialize(io::Archive& archive, bool bMinimal = true) const;
     /**
      * @brief Deserialize the line search parameters and state
      * @param archive Archive to deserialize from
@@ -97,40 +99,40 @@ inline BackTrackingLineSearch<TScalar>::BackTrackingLineSearch(
       c(cIn),
       alpha(alphaIn),
       alphaj(alphaIn),
-      fj(),
+      mj(),
       niters(0),
       xj(n)
 {
 }
 
 template <class TScalar>
-template <class FObjective, class TDerivedG, class TDerivedDX, class TDerivedX>
+template <class FMerit, class TDerivedDX, class TDerivedX>
 inline bool BackTrackingLineSearch<TScalar>::Solve(
-    FObjective const& f,
-    TScalar fk,
-    Eigen::MatrixBase<TDerivedG> const& gk,
+    FMerit const& merit,
+    TScalar mk,
+    TScalar Dm0In,
     Eigen::MatrixBase<TDerivedDX> const& dx,
     Eigen::MatrixBase<TDerivedX> const& xk)
 {
     alphaj   = alpha;
-    Dfk      = gk.dot(dx);
-    flinearj = fk + (c * alphaj) * Dfk;
+    Dm0      = Dm0In;
+    mlinearj = mk + (c * alphaj) * Dm0;
     xj       = xk + alphaj * dx;
-    fj       = f(xj);
+    mj       = merit(xj);
     for (niters = 0; niters < nMaxIters; ++niters)
     {
-        if (fj <= flinearj)
+        if (mj <= mlinearj)
             break;
         alphaj *= tau;
-        flinearj = fk + (c * alphaj) * Dfk;
+        mlinearj = mk + (c * alphaj) * Dm0;
         xj       = xk + alphaj * dx;
-        fj       = f(xj);
+        mj       = merit(xj);
     }
-    return fj <= flinearj;
+    return mj <= mlinearj;
 }
 
 template <class TScalar>
-inline void BackTrackingLineSearch<TScalar>::Serialize(io::Archive& archive) const
+inline void BackTrackingLineSearch<TScalar>::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.math.optimization.BackTrackingLineSearch"];
     group.WriteMetaData("nMaxIters", nMaxIters);
@@ -138,10 +140,13 @@ inline void BackTrackingLineSearch<TScalar>::Serialize(io::Archive& archive) con
     group.WriteMetaData("c", c);
     group.WriteMetaData("alpha", alpha);
     group.WriteMetaData("alphaj", alphaj);
-    group.WriteMetaData("fj", fj);
-    group.WriteMetaData("flinearj", flinearj);
-    group.WriteMetaData("Dfk", Dfk);
-    group.WriteData("xj", xj);
+    group.WriteMetaData("mj", mj);
+    group.WriteMetaData("mlinearj", mlinearj);
+    group.WriteMetaData("Dm0", Dm0);
+    if (not bMinimal)
+    {
+        group.WriteData("xj", xj);
+    }
     group.WriteMetaData("niters", niters);
 }
 
@@ -149,16 +154,26 @@ template <class TScalar>
 inline void BackTrackingLineSearch<TScalar>::Deserialize(io::Archive& archive)
 {
     io::Archive group = archive["pbat.math.optimization.BackTrackingLineSearch"];
-    nMaxIters         = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
-    tau               = group.ReadMetaData<std::decay_t<decltype(tau)>>("tau");
-    c                 = group.ReadMetaData<std::decay_t<decltype(c)>>("c");
-    alpha             = group.ReadMetaData<std::decay_t<decltype(alpha)>>("alpha");
-    alphaj            = group.ReadMetaData<std::decay_t<decltype(alphaj)>>("alphaj");
-    fj                = group.ReadMetaData<std::decay_t<decltype(fj)>>("fj");
-    flinearj          = group.ReadMetaData<std::decay_t<decltype(flinearj)>>("flinearj");
-    Dfk               = group.ReadMetaData<std::decay_t<decltype(Dfk)>>("Dfk");
-    xj                = group.ReadData<std::decay_t<decltype(xj)>>("xj");
-    niters            = group.ReadMetaData<std::decay_t<decltype(niters)>>("niters");
+    if (group.HasMetaData("nMaxIters"))
+        nMaxIters = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
+    if (group.HasMetaData("tau"))
+        tau = group.ReadMetaData<std::decay_t<decltype(tau)>>("tau");
+    if (group.HasMetaData("c"))
+        c = group.ReadMetaData<std::decay_t<decltype(c)>>("c");
+    if (group.HasMetaData("alpha"))
+        alpha = group.ReadMetaData<std::decay_t<decltype(alpha)>>("alpha");
+    if (group.HasMetaData("alphaj"))
+        alphaj = group.ReadMetaData<std::decay_t<decltype(alphaj)>>("alphaj");
+    if (group.HasMetaData("mj"))
+        mj = group.ReadMetaData<std::decay_t<decltype(mj)>>("mj");
+    if (group.HasMetaData("mlinearj"))
+        mlinearj = group.ReadMetaData<std::decay_t<decltype(mlinearj)>>("mlinearj");
+    if (group.HasMetaData("Dm0"))
+        Dm0 = group.ReadMetaData<std::decay_t<decltype(Dm0)>>("Dm0");
+    if (group.HasData("xj"))
+        xj = group.ReadData<std::decay_t<decltype(xj)>>("xj");
+    if (group.HasMetaData("niters"))
+        niters = group.ReadMetaData<std::decay_t<decltype(niters)>>("niters");
 }
 
 } // namespace pbat::math::optimization

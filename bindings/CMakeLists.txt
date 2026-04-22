@@ -133,6 +133,11 @@ nanobind_add_stub(
     OUTPUT_PATH "$<TARGET_FILE_DIR:PhysicsBasedAnimationToolkit_Python>"
     VERBOSE
 )
+set_target_properties(PhysicsBasedAnimationToolkit_PythonStub
+    PROPERTIES
+    FOLDER "PhysicsBasedAnimationToolkit/bindings"
+    EXPORT_NAME "PythonStub"
+)
 
 if(WIN32)
     # NOTE: Ideally, I could use $<TARGET_RUNTIME_DLLS:PhysicsBasedAnimationToolkit_Python> instead of manually listing

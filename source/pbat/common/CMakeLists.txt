@@ -19,6 +19,7 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Overloaded.h"
     "Permute.h"
     "Queue.h"
+    "RadixSort.h"
     "Stack.h"
 )
 target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
@@ -31,10 +32,11 @@ target_sources(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     "Eigen.cpp"
     "Heap.cpp"
     "Indexing.cpp"
-    "Queue.cpp"
     "Modulo.cpp"
+    "NAryTreeTraversal.cpp"
     "Overloaded.cpp"
     "Permute.cpp"
-    "NAryTreeTraversal.cpp"
+    "Queue.cpp"
+    "RadixSort.cpp"
     "Stack.cpp"
 )

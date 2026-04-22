@@ -2,24 +2,32 @@
 
 namespace pbat::sim::algorithm::vbd {
 
-void ChebyshevParams::Serialize(io::Archive& archive) const
+void ChebyshevParams::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.ChebyshevParams"];
     group.WriteMetaData("rho", rho);
-    group.WriteMetaData("rho2", rho2);
-    group.WriteMetaData("omega", omega);
-    group.WriteData("xkm1", xkm1);
-    group.WriteData("xkm2", xkm2);
+    if (not bMinimal)
+    {
+        group.WriteMetaData("rho2", rho2);
+        group.WriteMetaData("omega", omega);
+        group.WriteData("xkm1", xkm1);
+        group.WriteData("xkm2", xkm2);
+    }
 }
 
 void ChebyshevParams::Deserialize(io::Archive const& archive)
 {
     io::Archive group = archive["pbat.sim.algorithm.vbd.ChebyshevParams"];
-    rho               = group.ReadMetaData<Scalar>("rho");
-    rho2              = group.ReadMetaData<Scalar>("rho2");
-    omega             = group.ReadMetaData<Scalar>("omega");
-    xkm1              = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm1");
-    xkm2              = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm2");
+    if (group.HasMetaData("rho"))
+        rho = group.ReadMetaData<Scalar>("rho");
+    if (group.HasMetaData("rho2"))
+        rho2 = group.ReadMetaData<Scalar>("rho2");
+    if (group.HasMetaData("omega"))
+        omega = group.ReadMetaData<Scalar>("omega");
+    if (group.HasData("xkm1"))
+        xkm1 = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm1");
+    if (group.HasData("xkm2"))
+        xkm2 = group.ReadData<Eigen::Matrix<Scalar, 3, Eigen::Dynamic>>("xkm2");
 }
 
 } // namespace pbat::sim::algorithm::vbd
@@ -93,7 +101,7 @@ ChebyshevTestSetup SetupChebyshevTest(pbat::Index maxIters = 20)
     setup.vbdParams
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
-        .WithHessianDeterminantZeroUnder(Scalar{1e-6})
+        .WithVertexLinearSolver(sim::algorithm::vbd::EVertexIntegrationLinearSolver::Inverse)
         .Construct();
 
     // Chebyshev params

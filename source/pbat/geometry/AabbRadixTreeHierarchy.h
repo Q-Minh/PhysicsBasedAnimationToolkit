@@ -13,7 +13,7 @@
 #include "pbat/math/linalg/mini/Eigen.h"
 #include "pbat/profiling/Profiling.h"
 
-#include <cpp-sort/sorters/ska_sorter.h>
+#include <algorithm>
 #include <numeric>
 
 namespace pbat::geometry {
@@ -33,9 +33,9 @@ namespace pbat::geometry {
 template <auto Dims>
 class AabbRadixTreeHierarchy
 {
-public:
-    using IndexType = Index; ///< Type of the indices
-    static auto constexpr kDims = Dims; ///< Number of spatial dimensions
+  public:
+    using IndexType             = Index;            ///< Type of the indices
+    static auto constexpr kDims = Dims;             ///< Number of spatial dimensions
     using SelfType = AabbRadixTreeHierarchy<kDims>; ///< Type of this template instantiation
 
     AabbRadixTreeHierarchy() = default;
@@ -92,11 +92,8 @@ public:
      */
     template <class FNodeOverlaps, class FObjectOverlaps, class FOnOverlap>
     void
-    Overlaps(
-        FNodeOverlaps fNodeOverlaps,
-        FObjectOverlaps fObjectOverlaps,
-        FOnOverlap fOnOverlap)
-    const;
+    Overlaps(FNodeOverlaps fNodeOverlaps, FObjectOverlaps fObjectOverlaps, FOnOverlap fOnOverlap)
+        const;
     /**
      * @brief Find the nearest neighbour to some user-defined query. If there are multiple nearest
      * neighbours, we may return a certain number > 1 of them.
@@ -176,7 +173,7 @@ public:
      */
     auto Tree() const -> common::BinaryRadixTree<IndexType> const& { return tree; }
 
-protected:
+  protected:
     /**
      * @brief Compute Morton codes for the AABBs
      *
@@ -194,14 +191,13 @@ protected:
      */
     void SortMortonCodes();
 
-private:
+  private:
     Eigen::Vector<MortonCodeType, Eigen::Dynamic> codes; ///< Morton codes of the AABBs
     Eigen::Vector<IndexType, Eigen::Dynamic> inds;       ///< |# codes| sorted ordering
-    Matrix<2 * kDims, Eigen::Dynamic>
-    IB;
+    Matrix<2 * kDims, Eigen::Dynamic> IB;
     ///< 2*kDims x |# internal nodes| matrix of AABBs, such that
-               ///< for a node node, IB.col(node).head<kDims>() is the lower
-               ///< bound and IB.col(node).tail<kDims>() is the upper bound.
+    ///< for a node node, IB.col(node).head<kDims>() is the lower
+    ///< bound and IB.col(node).tail<kDims>() is the upper bound.
     common::BinaryRadixTree<IndexType> tree; ///< KdTree over the AABBs
 };
 
@@ -518,7 +514,9 @@ inline void AabbRadixTreeHierarchy<Dims>::SortMortonCodes()
     // exploit cache locality of iterating through B's columns. This is a trade-off that
     // should be considered if performance is critical.
     std::iota(inds.begin(), inds.end(), 0);
-    cppsort::ska_sort(inds.begin(), inds.end(), [&](IndexType i) { return codes(i); });
+    std::sort(inds.begin(), inds.end(), [&](IndexType i, IndexType j) {
+        return codes(i) < codes(j);
+    });
     common::Permute(codes.begin(), codes.end(), inds.begin());
 }
 } // namespace pbat::geometry

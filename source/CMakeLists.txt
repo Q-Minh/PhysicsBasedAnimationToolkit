@@ -25,7 +25,6 @@ endif()
 target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
     $<$<BOOL:${PBAT_BUILD_TESTS}>:PBAT_HAS_DOCTEST>
-    $<$<NOT:$<BOOL:${PBAT_BUILD_TESTS}>>:DOCTEST_CONFIG_DISABLE>
     $<$<BOOL:${PBAT_ENABLE_PROFILER}>:PBAT_HAS_TRACY_PROFILER>
     $<$<BOOL:${PBAT_USE_INTEL_MKL}>:EIGEN_USE_MKL_ALL>
     $<$<BOOL:${PBAT_USE_INTEL_MKL}>:PBAT_USE_INTEL_MKL>
@@ -34,6 +33,8 @@ target_compile_definitions(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToo
     $<$<BOOL:${PBAT_USE_CUDA}>:PBAT_USE_CUDA>
     $<$<BOOL:${PBAT_USE_CUDA}>:EIGEN_NO_CUDA>
     PBAT_ROOT="${PROJECT_SOURCE_DIR}"
+    PRIVATE
+    $<$<NOT:$<BOOL:${PBAT_BUILD_TESTS}>>:DOCTEST_CONFIG_DISABLE>
 )
 
 # Define header file sets
@@ -72,7 +73,6 @@ source_group(
 # Link to every dependency
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
-    cpp-sort::cpp-sort
     doctest::doctest
     Eigen3::Eigen
     embree

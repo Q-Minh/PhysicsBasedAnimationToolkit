@@ -190,11 +190,11 @@ void BindFemElastoDynamics([[maybe_unused]] nanobind::module_& m)
                 self.SetElasticEnergy(mu, lambda);
             },
             nb::arg("mu"),
-            nb::arg("lambda"),
-            "Set homogeneous elastic material (Lame parameters mu, lambda).\n\n"
+            nb::arg("llambda"),
+            "Set homogeneous elastic material (Lame parameters mu, llambda).\n\n"
             "Args:\n"
             "    mu (float): First Lame parameter.\n"
-            "    lambda (float): Second Lame parameter.\n")
+            "    llambda (float): Second Lame parameter.\n")
         .def(
             "set_elastic_energy",
             [](ElastoDynamics& self,

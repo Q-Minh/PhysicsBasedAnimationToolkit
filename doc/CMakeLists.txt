@@ -85,6 +85,11 @@ doxygen_add_docs(
     ALL
     COMMENT "Generating docs"
 )
+set_target_properties(PhysicsBasedAnimationToolkit_Docs
+    PROPERTIES
+    FOLDER "PhysicsBasedAnimationToolkit/docs"
+    EXPORT_NAME "Docs"
+)
 
 # See https://cmake.org/cmake/help/latest/module/FindDoxygen.html#variable:DOXYGEN_OUTPUT_DIRECTORY
 install(

@@ -120,7 +120,7 @@ struct Data
      * @param zero Numerical zero
      * @return Reference to this
      */
-    PBAT_API Data& WithHessianDeterminantZeroUnder(Scalar zero);
+    PBAT_API Data& WithHessianSingularUnder(Scalar zero);
     /**
      * @brief Use Chebyshev acceleration
      * @param rho Chebyshev acceleration estimated spectral radius
@@ -228,7 +228,7 @@ struct Data
     Scalar epsv{1e-3}; ///< IPC \cite li2020ipc 's relative velocity threshold for static to dynamic
                        ///< friction's smooth transition
     Index mActiveSetUpdateFrequency{1}; ///< Active set update frequency
-    Scalar detHZero{1e-7};              ///< Numerical zero for hessian pseudo-singularity check
+    Scalar hessZero{1e-7};              ///< Numerical zero for hessian pseudo-singularity check
     EAccelerationStrategy eAcceleration{EAccelerationStrategy::None}; ///< Acceleration strategy
 
     // Chebyshev acceleration

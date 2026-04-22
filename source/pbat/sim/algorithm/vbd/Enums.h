@@ -15,14 +15,32 @@
 namespace pbat::sim::algorithm::vbd {
 
 /**
- * @brief Initialization strategies for the VBD time step minimization
+ * @brief Vertex integration linear solvers
  */
-enum class EInitializationStrategy {
-    Position,             ///< \f$ x_0 = x(t) \f$
-    Inertia,              ///< \f$ x_0 = x(t) + h v(t) \f$
-    KineticEnergyMinimum, ///< \f$ x_0 = x(t) + h v(t) + h^2 M^{-1} f_\text{ext} \f$
-    AdaptiveVbd,          ///< Adaptive VBD initialization strategy
-    AdaptivePbat          ///< Adaptive PBAT initialization strategy
+enum class EVertexIntegrationLinearSolver {
+    Inverse, ///< Compute explicit 3x3 inverse
+    LLT,     ///< Cholesky factorize
+    QR,      ///< MGS QR factorization
+    EVD      ///< Eigenvalue decomposition
+};
+
+/**
+ * @brief Stencil gradient beta warm start masks
+ */
+enum class EStencilGradientBetaWarmStartMask : int {
+    None       = 0,
+    Subproblem = 1 << 0, ///< Warm start beta for each subproblem using the final beta from the
+                         ///< previous subproblem
+    TimeStep = 1 << 1,   ///< Warm start beta for each time step using the final beta from the
+                         ///< previous time step
+};
+
+/**
+ * @brief Strategies for updating the augmented Lagrangian penalty parameter
+ */
+enum class ESALPenaltyStiffness {
+    GlobalMaxRayleighQuotient, ///< Global maximum Rayleigh quotient across all contacts
+    LocalMaxRayleighQuotient,  ///< Local maximum Rayleigh quotient per contact
 };
 
 /**
@@ -47,18 +65,6 @@ enum class EBroydenJacobianEstimate {
     DiagonalCauchySchwarz ///< Ours
 };
 // clang-format on
-
-/**
- * @brief Homogenization strategy
- */
-enum class EHomogenizationStrategy {
-    None,                                                      ///< No homogenization
-    HomogeneousElasticityWithDynamicsMatchingContactStiffness, ///< Homogenize elastic material and
-                                                               ///< ensure dynamics matching contact
-                                                               ///< stiffness in the spirit of \cite
-                                                               ///< ando_cubic_2024
-    Conditioning, ///< Conditioning homogenization
-};
 
 } // namespace pbat::sim::algorithm::vbd
 

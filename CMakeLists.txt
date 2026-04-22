@@ -21,6 +21,8 @@ option(PBAT_BUILD_SHARED_LIBS "Build as shared library" OFF)
 option(PBAT_USE_CUDA "Link to CUDA Toolkit for GPU API" OFF)
 option(PBAT_PRECOMPILE_LARGE_MODELS "Precompile large 3d models in geometry/model" OFF)
 option(PBAT_BUILD_DOC "Build documentation" OFF)
+option(PBAT_BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(PBAT_ENABLE_CPPCHECK "Enable cppcheck static analysis target" OFF)
 
 # Global settings
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -57,6 +59,10 @@ include(dependencies)
 # Sources
 add_subdirectory(source)
 
+if(PBAT_ENABLE_CPPCHECK)
+    include(cppcheck)
+endif()
+
 if(PBAT_BUILD_PYTHON_BINDINGS)
     add_subdirectory(bindings)
 endif()
@@ -67,6 +73,10 @@ endif()
 
 if (PBAT_BUILD_DOC)
     add_subdirectory(doc)
+endif()
+
+if(PBAT_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif()
 
 # Install

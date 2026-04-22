@@ -34,18 +34,21 @@ void BindLineSearch(nanobind::module_& m)
         .def_rw("c", &BackTracking::c, "Armijo slope scale")
         .def_rw("alpha", &BackTracking::alpha, "Initial step size")
         .def_ro("alphaj", &BackTracking::alphaj, "Current step size")
-        .def_ro("fj", &BackTracking::fj, "Current objective value")
-        .def_ro("flinearj", &BackTracking::flinearj, "Current linearized objective value")
-        .def_ro("Dfk", &BackTracking::Dfk, "Directional derivative at current step")
+        .def_ro("mj", &BackTracking::mj, "Current merit function value")
+        .def_ro("mlinearj", &BackTracking::mlinearj, "Current linearized merit function value")
+        .def_ro("Dm0", &BackTracking::Dm0, "Directional derivative at current step")
         .def_ro("xj", &BackTracking::xj, "Current candidate iterate")
         .def_ro("niters", &BackTracking::niters, "Current iteration count")
         .def(
             "serialize",
             &BackTracking::Serialize,
             nb::arg("archive"),
+            nb::arg("minimal") = true,
             "Serialize the line search.\n\n"
             "Args:\n"
-            "    archive (pbat.io.Archive): Archive to serialize to.")
+            "    archive (pbat.io.Archive): Archive to serialize to.\n"
+            "    minimal (bool, optional): If true, only serialize essential data. Defaults to "
+            "true.\n")
         .def(
             "deserialize",
             &BackTracking::Deserialize,

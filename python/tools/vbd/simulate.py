@@ -25,10 +25,10 @@ def vbd_prepare(
     GVGp, GVGe, GVGilocal = pbat.sim.algorithm.vbd.vertex_element_adjacency_graph(
         fem.E, n_nodes
     )
-    colors = pbat.sim.algorithm.vbd.vertex_colors(fem.E, n_nodes)
+    GVVp, GVVadj, colors = pbat.sim.algorithm.vbd.vertex_colors(fem.E, n_nodes)
     params.with_vertex_element_adjacency_graph(
         GVGp, GVGe, GVGilocal
-    ).with_vertex_colors(colors).construct()
+    ).with_vertex_colors(GVVp, GVVadj, colors).construct()
 
 
 _archive_solver_groups = {
@@ -277,7 +277,7 @@ def load_time_integration(path: str):
                 )
             )
     except Exception as e:
-        raise RuntimeError(f"Failed to load time integration from '{arg}': {e}") from e
+        raise RuntimeError(f"Failed to load time integration from '{path}': {e}") from e
     return dt, bdf_scheme, fem_dynamics_init_strategy
 
 
@@ -499,7 +499,6 @@ def main():
     args.overrides = args.overrides or []
     if len(args.overrides) > 0:
         apply_overrides(all_params, args.overrides)
-    contact_dynamics.params = contact_dynamics_params.construct()
 
     out_file, out_group = args.output.split(":")[:2]
     # Prepare elasto dynamics problem
@@ -513,6 +512,7 @@ def main():
     device_config.start_threads = 1
     device = pbat.geometry.Device(device_config)
     contact_dynamics.initialize(device)
+    contact_dynamics.params = contact_dynamics_params.construct()
     # Prepare solver
     prepare = _solver_params[args.solver]["prepare"]
     prepare(fem_elasto_dynamics, contact_dynamics, solver_params)
@@ -521,15 +521,38 @@ def main():
     t = 0
     previous_checkpoint_file = None
 
+    def serialize_frame(archive: pbat.io.Archive, with_solver_params: bool = False):
+        try:
+            fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+            contact_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+            if with_solver_params:
+                for param_name in solver_params:
+                    solver_params[param_name].serialize(
+                        archive[
+                            f"{out_group}/{t:08d}/{_archive_solver_groups[args.solver]}"
+                        ],
+                        minimal=False,
+                    )
+            archive.flush()
+        except Exception as e:
+            raise RuntimeError(f"Failed to serialize frame {t} to archive: {e}") from e
+
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
     if args.start_from > 0:
         t = args.start_from
         archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.ReadWrite)
-        fem_elasto_dynamics.deserialize(archive[f"{out_group}/{t:08d}"])
+        frame_group = f"{out_group}/{t:08d}"
+        fem_elasto_dynamics.deserialize(archive[frame_group])
+        contact_dynamics.deserialize(archive[frame_group])
+        # solver_group = f"{frame_group}/{_archive_solver_groups[args.solver]}"
+        # for param_name in solver_params:
+        #     solver_params[param_name].deserialize(archive[solver_group])
+        #     solver_params[param_name].construct()
         pbar.update(t)
     else:
         archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
-        fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+    contact_dynamics.params.construct()
+    serialize_frame(archive, with_solver_params=True)
 
     #################
     #  RUN THE SIM  #
@@ -539,6 +562,8 @@ def main():
     initialize_solve = _solver_params[args.solver]["initialize_solve"]
 
     if not args.convergence:
+        param_objs = _solver_params[args.solver]["params"]
+        param_objs = {name: cls() for name, cls in param_objs.items()}
         while t * dt < args.duration:
             # Apply procedural constraints
             apply_procedural_constraints(
@@ -566,6 +591,12 @@ def main():
             t += 1
             # Write output
             fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+            contact_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+            for param_name in param_objs:
+                param_objs[param_name].serialize(
+                    archive[f"{out_group}/{t:08d}/{_archive_solver_groups[args.solver]}"],
+                    minimal=False,
+                )
             # Checkpoint if requested
             if args.checkpoint > 0 and t % args.checkpoint == 0:
                 archive = None

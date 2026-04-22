@@ -11,134 +11,170 @@
 #ifndef PBAT_COMMON_COUNTINGSORT_H
 #define PBAT_COMMON_COUNTINGSORT_H
 
+#include "Concepts.h"
+#include "ConstexprFor.h"
+
 #include <algorithm>
+#include <array>
+#include <cassert>
 #include <concepts>
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <ranges>
+#include <tuple>
 #include <type_traits>
 
 namespace pbat::common {
 
 /**
- * @brief Counting sort
- * @tparam TWorkBegin Iterator type to the beginning of the work array
- * @tparam TWorkEnd Iterator type to the end of the work array
- * @tparam TValuesBegin Iterator type to the beginning of the values
- * @tparam TValuesEnd Iterator type to the end of the values
- * @tparam FKey Key accessor callable with signature `TKey(T)`
- * @tparam T Value type
- * @tparam TKey Key type
- * @param wb Iterator to the beginning of the work array
- * @param we Iterator to the end of the work array
- * @param vb Iterator to the beginning of values
- * @param ve Iterator to the end of values
- * @param keyMin Minimum key value
- * @param fKey Key accessor callable
- * @pre `*(wb+i) == 0` for all `i in [0, std::distance(wb,we))`
+ * @brief In-place counting sort for integer keys in a random access range, with specified key
+ * range.
+ * @note The range is modified in-place, and the order of equal keys is not guaranteed to be stable.
+ * @tparam TRng Integer random access range.
+ * @tparam TWork Integer random access range.
+ * @tparam FProject Callable that maps elements of `rng` to integer keys (default: identity).
+ * @tparam TKey Integer type of the keys (deduced from FProject if not specified).
+ * @param rng Range of integer keys to sort
+ * @param work Temporary buffer for counting occurrences.
+ * @param min Minimum key value
+ * @param max Maximum key value
+ * @param fProject Projection function to extract keys from elements of `rng` (default: identity)
+ * @pre `std::ranges::size(work) > (max(rng) - min(rng))` to ensure the count array can accommodate
+ * all keys.
  */
 template <
-    std::random_access_iterator TWorkBegin,
-    std::random_access_iterator TWorkEnd,
-    std::random_access_iterator TValuesBegin,
-    std::random_access_iterator TValuesEnd,
-    class FKey,
-    class T    = typename std::iterator_traits<TValuesBegin>::value_type,
-    class TKey = typename std::invoke_result_t<FKey, T>>
-void CountingSort(
-    TWorkBegin wb,
-    TWorkEnd we,
-    TValuesBegin vb,
-    TValuesEnd ve,
-    TKey keyMin = std::numeric_limits<TKey>::max(),
-    FKey fKey   = [](T const& key) { return key; })
+    std::ranges::random_access_range TRng,
+    std::ranges::random_access_range TWork,
+    class FProject = std::identity,
+    std::integral TKey =
+        std::decay_t<std::invoke_result_t<FProject, std::ranges::range_value_t<TRng>>>>
+    requires std::integral<TKey> and std::integral<std::ranges::range_value_t<TWork>>
+void CountingSort(TRng&& rng, TWork&& work, TKey min, TKey max, FProject fProject = {})
 {
-    using IndexType = std::iterator_traits<TWorkBegin>::value_type;
-    static_assert(
-        std::is_integral_v<IndexType> and not std::is_same_v<IndexType, bool>,
-        "Work index must be range over integers");
-    using KeyType = std::invoke_result_t<FKey, T>;
-    static_assert(std::is_integral_v<KeyType>, "Key type must be integral");
-    auto const n = std::distance(vb, ve);
+    using SizeType = std::ranges::range_size_t<TRng>;
+    SizeType n     = std::ranges::size(rng);
     if (n == 0)
         return;
-    // Find key offset
-    if (keyMin == std::numeric_limits<KeyType>::max())
-        for (auto it = vb; it != ve; ++it)
-            keyMin = std::min(keyMin, fKey(*it));
-    // Count occurrences
-    for (auto it = vb; it != ve; ++it)
+    auto wb         = std::ranges::begin(work);
+    auto we         = wb + (max - min + 1);
+    using CountType = std::ranges::range_value_t<TWork>;
+    std::fill(wb, we, CountType(0));
+    for (SizeType i = 0; i < n; ++i)
+        ++work[fProject(rng[i]) - min];
+    std::inclusive_scan(wb, we, wb);
+    for (SizeType i = 0; i < n; ++i)
     {
-        KeyType key = fKey(*it);
-        KeyType j   = key - keyMin;
-        ++(*(wb + j));
-    }
-    // Compute prefix sum
-    std::exclusive_scan(wb, we, wb, IndexType(0));
-    // Sort in place.
-    // NOTE: Taken from
-    // [SO](https://stackoverflow.com/questions/15682100/sorting-in-linear-time-and-in-place)
-    for (auto i = n - 1; i >= 0; --i)
-    {
-        T val       = *(vb + i);
-        KeyType key = fKey(val) - keyMin;
-        IndexType j = *(wb + key); // counts[key]
-        if (j < i)
+        auto k = fProject(rng[i]) - min;
+        while (i < work[k] - 1)
         {
-            do
-            {
-                ++(*(wb + key));           // ++counts[key]
-                std::swap(val, *(vb + j)); // swap(val, a[j])
-                key = fKey(val) - keyMin;
-                j   = *(wb + key); // j <- counts[key]
-            } while (j < i);
-            // Move final value into place.
-            *(vb + i) = val;
+            auto j = --work[k];
+            using std::swap;
+            swap(rng[i], rng[j]);
+            k = fProject(rng[i]) - min;
         }
     }
 }
 
 /**
- * @brief
- * @tparam FKey
- * @tparam TValuesBegin
- * @tparam TValuesEnd
- * @tparam TWorkBegin
- * @param vb
- * @param ve
- * @param wb
- * @param fKey
+ * @brief Stable (out-of-place) counting sort for integer keys in a random access range, with
+ * specified key range.
+ * @tparam TRng Input range type
+ * @tparam TWork Working range type
+ * @tparam FProject Projection function type with signature `(T const& ) -> TKey` where `T` is the
+ * range value type.
+ * @tparam TKey Key type
+ * @param rng Input range
+ * @param cpy Copy range
+ * @param work Working range
+ * @param min Minimum key value
+ * @param max Maximum key value
+ * @param fProject Projection function to extract keys from elements of `rng` (default: identity)
+ * @post The unsorted elements in `rng` are in `cpy`.
  */
 template <
-    std::random_access_iterator TValuesBegin,
-    std::random_access_iterator TValuesEnd,
-    std::random_access_iterator TWorkBegin,
-    class FKey>
-void PrefixSumFromSortedKeys(TValuesBegin vb, TValuesEnd ve, TWorkBegin wb, FKey fKey)
+    std::ranges::random_access_range TRng,
+    std::ranges::random_access_range TWork,
+    class FProject = std::identity,
+    std::integral TKey =
+        std::decay_t<std::invoke_result_t<FProject, std::ranges::range_value_t<TRng>>>>
+    requires std::integral<TKey> and std::integral<std::ranges::range_value_t<TWork>>
+void StableCountingSort(
+    TRng&& rng,
+    TRng&& cpy,
+    TWork&& work,
+    TKey min,
+    TKey max,
+    FProject fProject = {})
 {
-    using KeyType =
-        std::invoke_result_t<FKey, typename std::iterator_traits<TValuesBegin>::value_type>;
-    static_assert(std::is_integral_v<KeyType>, "Key type must be integral");
-    using IndexType = std::iterator_traits<TWorkBegin>::value_type;
-    static_assert(
-        std::is_integral_v<IndexType> and not std::is_same_v<IndexType, bool>,
-        "Work index must be range over integers");
-    if (vb == ve)
+    using SizeType = std::ranges::range_size_t<TRng>;
+    SizeType n     = std::ranges::size(rng);
+    if (n == 0)
         return;
-    KeyType key = fKey(*vb);
-    *wb         = IndexType(0);
-    auto wit    = wb;
-    for (auto it = vb; it != ve; ++it)
-    {
-        auto keyNext = fKey(*it);
-        if (key != keyNext)
-        {
-            key        = keyNext;
-            *(wit + 1) = *wit;
-            ++wit;
-        }
-        ++(*wit);
-    }
+    assert(std::ranges::size(cpy) >= n);
+    auto wb         = std::ranges::begin(work);
+    auto we         = wb + (max - min + 1);
+    using CountType = std::ranges::range_value_t<TWork>;
+    std::fill(wb, we, CountType(0));
+    for (SizeType i = 0; i < n; ++i)
+        ++work[fProject(rng[i]) - min];
+    std::exclusive_scan(wb, we, wb, CountType(0));
+    for (SizeType i = 0; i < n; ++i)
+        cpy[work[fProject(rng[i]) - min]++] = rng[i];
+    using std::swap;
+    swap(cpy, rng);
+}
+
+/**
+ * @brief Stable (out-of-place) counting sort for tuples of integer keys in a random access range,
+ * with specified key range (per tuple element).
+ * @tparam TRng Input range type
+ * @tparam TWork Working range type
+ * @tparam FProject Projection function type with signature `(T const& ) -> TKey` where `T` is the
+ * range value type.
+ * @tparam TKey Key type
+ * @param rng Input range
+ * @param cpy Copy range
+ * @param work Working range
+ * @param min Minimum key values per tuple element
+ * @param max Maximum key values per tuple element
+ * @param fProject Projection functions to extract keys from elements of `rng`
+ * @post The unsorted elements in `rng` are in `cpy`.
+ */
+template <
+    std::ranges::random_access_range TRng,
+    std::ranges::random_access_range TWork,
+    CTupleLike FProjects,
+    CTupleLike TKeys>
+void StableCountingSort(
+    TRng&& rng,
+    TRng&& cpy,
+    TWork&& work,
+    TKeys mins,
+    TKeys maxs,
+    FProjects fProjects)
+{
+    using ValueType = std::ranges::range_value_t<TRng>;
+    static_assert(
+        std::tuple_size_v<FProjects> == std::tuple_size_v<TKeys>,
+        "Mismatched tuple sizes");
+    static_assert(
+        std::tuple_size_v<TKeys> <= std::tuple_size_v<ValueType>,
+        "Mismatched tuple sizes");
+    auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        static std::size_t constexpr N = sizeof...(Is);
+        (StableCountingSort(
+             rng,
+             cpy,
+             work,
+             std::get<N - 1 - Is>(mins),
+             std::get<N - 1 - Is>(maxs),
+             [&](auto&& tup) {
+                 return std::get<N - 1 - Is>(fProjects)(std::get<N - 1 - Is>(tup));
+             }),
+         ...);
+    };
+    fReverseForEach(std::make_index_sequence<std::tuple_size_v<TKeys>>{});
 }
 
 } // namespace pbat::common

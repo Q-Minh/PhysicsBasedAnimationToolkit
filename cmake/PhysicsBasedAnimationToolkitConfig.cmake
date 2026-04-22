@@ -1,9 +1,9 @@
 include(CMakeFindDependencyMacro)
 
-find_dependency(cpp-sort)
 find_dependency(doctest)
 find_dependency(Eigen3)
 find_dependency(fmt)
+find_dependency(HDF5)
 find_dependency(range-v3)
 find_dependency(TBB)
 find_dependency(OpenMP)
@@ -27,8 +27,12 @@ if(PBAT_USE_INTEL_MKL)
     find_dependency(MKL)
 endif()
 
+if(PBAT_USE_METIS)
+    find_dependency(metis)
+endif()
+
 if(PBAT_USE_SUITESPARSE)
-    find_dependency(suitesparse)
+    find_dependency(CHOLMOD)
 endif()
 
 if(PBAT_USE_CUDA)

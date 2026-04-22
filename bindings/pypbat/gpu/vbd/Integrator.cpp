@@ -55,7 +55,7 @@ void BindIntegrator([[maybe_unused]] nanobind::module_& m)
             &Integrator::SetExternalAcceleration,
             "|#dims|x|#vertices| vertex external accelerations")
         .def_prop_rw(
-            "detH_residual",
+            "hess_zero",
             nullptr,
             &Integrator::SetNumericalZeroForHessianDeterminant,
             "Numerical zero used in Hessian determinant check for approximate singularity "

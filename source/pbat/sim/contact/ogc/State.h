@@ -13,11 +13,18 @@
 #include "Input.h"
 #include "Params.h"
 #include "pbat/common/Concepts.h"
+#include "pbat/common/Indexing.h"
 #include "pbat/geometry/Device.h"
+#include "pbat/graph/DenseAdjacencySet.h"
 #include "pbat/profiling/Profiling.h"
 
 #include <Eigen/Core>
+#include <array>
+#include <atomic>
 #include <embree4/rtcore.h>
+#include <tbb/enumerable_thread_specific.h>
+#include <tbb/parallel_sort.h>
+#include <tbb/task_group.h>
 #include <vector>
 
 namespace pbat::sim::contact::ogc {
@@ -63,7 +70,7 @@ class State
     /**
      * @brief Construct a new Ogc State object
      */
-    State() = default;
+    State();
     /**
      * @brief Construct and initialize a new Ogc State object
      * @param device Device to use for acceleration structures
@@ -108,102 +115,23 @@ class State
      */
     void PrepareForExecution(Input<TScalar, TIndex> const& input, Params<TScalar> const& params);
     /**
-     * @brief Iterate over dynamic contact faces of a vertex and invoke appropriate callbacks
-     * @tparam FOnVertexVertexContact Callable type for vertex-vertex contacts with signature
-     * `void(IndexType vj)`
-     * @tparam FOnVertexHalfEdgeContact Callable type for vertex-(half-)edge contacts with signature
-     * `void(IndexType he)`
-     * @tparam FOnVertexFacetContact Callable type for vertex-facet contacts with signature
-     * `void(IndexType f)`
-     * @param vi Vertex index
-     * @param fOnVertexVertexContact Callback invoked for each vertex-vertex contact face
-     * @param fOnVertexHalfEdgeContact Callback invoked for each vertex-(half-)edge contact face
-     * @param fOnVertexFacetContact Callback invoked for each vertex-facet contact face
+     * @brief Keep unique (lexicographically) sorted contact pairs only.
+     * @note Contact pairs being sorted means that elements of a given geometry (see EGeometry) are
+     * stored contiguously together, enabling efficient traversal without needing binary search to
+     * figure out which geometry a given contact pair element belongs to. For instance, given some
+     * generic contact pair `(i,j)`, figuring out which geometries i and j belong to amounts to
+     * binary searching their corresponding prefix arrays `(pi, pj)`. However, if we know in advance
+     * which geometry `i` belongs to (which we do in many cases), and we need to iterate over all
+     * of its incident pairs `(i,j)` (which we do in most cases), then we avoid binary search on
+     * `pj`, because the sequence `(i,j)` is sorted in `j`, so we can just keep track of an index
+     * `k` into `pj` starting at 0 and increment it every time `j >= prefix[k+1]`. Here `k` maps
+     * to enum values in EGeometry.
      */
-    template <
-        class FOnVertexVertexContact,
-        class FOnVertexHalfEdgeContact,
-        class FOnVertexFacetContact>
-    void ForEachDynamicContactFaceOfVertex(
-        IndexType vi,
-        FOnVertexVertexContact&& fOnVertexVertexContact,
-        FOnVertexHalfEdgeContact&& fOnVertexHalfEdgeContact,
-        FOnVertexFacetContact&& fOnVertexFacetContact) const;
+    void CollectContactPairs();
     /**
-     * @brief Iterate over static contact faces of a vertex and invoke appropriate callbacks
-     * @tparam FOnVertexVertexContact Callable type for vertex-vertex contacts with signature
-     * `void(IndexType vj)`
-     * @tparam FOnVertexEdgeContact Callable type for vertex-edge contacts with signature
-     * `void(IndexType he)`
-     * @tparam FOnVertexFacetContact Callable type for vertex-facet contacts with signature
-     * `void(IndexType f)`
-     * @param vi Vertex index
-     * @param fOnVertexVertexContact Callback invoked for each vertex-vertex contact face
-     * @param fOnVertexEdgeContact Callback invoked for each vertex-edge contact face
-     * @param fOnVertexFacetContact Callback invoked for each vertex-facet contact face
+     * @brief Clear contact pairs
      */
-    template <class FOnVertexVertexContact, class FOnVertexEdgeContact, class FOnVertexFacetContact>
-    void ForEachStaticContactFaceOfVertex(
-        IndexType vi,
-        FOnVertexVertexContact&& fOnVertexVertexContact,
-        FOnVertexEdgeContact&& fOnVertexEdgeContact,
-        FOnVertexFacetContact&& fOnVertexFacetContact) const;
-    /**
-     * @brief Iterate over dynamic contact faces of a half-edge and invoke appropriate callbacks
-     *
-     * @tparam FOnHalfEdgeVertexContact Callable type for half-edge-vertex contacts with signature
-     * `void(IndexType vj)`
-     * @tparam FOnHalfEdgeHalfEdgeContact Callable type for half-edge-half-edge contacts with
-     * signature `void(IndexType hej)`
-     * @param hei Half-edge index
-     * @param fOnHalfEdgeVertexContact Callback invoked for each half-edge-vertex contact face
-     * @param fOnHalfEdgeHalfEdgeContact Callback invoked for each half-edge-half-edge contact face
-     */
-    template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeHalfEdgeContact>
-    void ForEachDynamicContactFaceOfHalfEdge(
-        IndexType hei,
-        FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
-        FOnHalfEdgeHalfEdgeContact&& fOnHalfEdgeHalfEdgeContact) const;
-    /**
-     * @brief Iterate over static contact faces of a half-edge and invoke appropriate callbacks
-     * @tparam FOnHalfEdgeVertexContact Callable type for half-edge-vertex contacts with signature
-     * `void(IndexType vj)`
-     * @tparam FOnHalfEdgeEdgeContact Callable type for half-edge-edge contacts with signature
-     * `void(IndexType hej)`
-     * @param hei Half-edge index
-     * @param fOnHalfEdgeVertexContact Callback invoked for each half-edge-vertex contact face
-     * @param fOnHalfEdgeEdgeContact Callback invoked for each half-edge-edge contact face
-     */
-    template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeEdgeContact>
-    void ForEachStaticContactFaceOfHalfEdge(
-        IndexType he,
-        FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
-        FOnHalfEdgeEdgeContact&& fOnHalfEdgeEdgeContact) const;
-    /**
-     * @brief Iterate over dynamic vertex contacts of a triangle and invoke appropriate callbacks
-     *
-     * @tparam FOnTriangleVertexContact Callable type for triangle-vertex contacts with signature
-     * `void(IndexType i)`
-     * @param fi Triangle index
-     * @param fOnTriangleVertexContact Callback invoked for each triangle-vertex contact
-     */
-    template <class FOnTriangleVertexContact>
-    void ForEachDynamicVertexContactOfTriangle(
-        IndexType fi,
-        FOnTriangleVertexContact&& fOnTriangleVertexContact) const;
-    /**
-     * @brief Iterate over static vertex contacts of a dynamic triangle and invoke appropriate
-     * callbacks
-     *
-     * @tparam FOnTriangleVertexContact Callable type for triangle-vertex contacts with signature
-     * `void(IndexType i)`
-     * @param fi Triangle index
-     * @param fOnTriangleVertexContact Callback invoked for each triangle-vertex contact
-     */
-    template <class FOnTriangleVertexContact>
-    void ForEachStaticVertexContactOfTriangle(
-        IndexType fi,
-        FOnTriangleVertexContact&& fOnTriangleVertexContact) const;
+    void ClearContactPairs();
     /**
      * @brief Destroy the State object
      */
@@ -217,40 +145,59 @@ class State
 
   public:
     /**
-     * @brief Contact sets
-     * @note We should try custom allocators on the contact sets to see if we can boost performance
-     */
-    std::vector<std::vector<ContactFace<IndexType>>>
-        mDynamicContactFacesOfVertex; ///< `|# vertices|` per-vertex dynamic contact face sets. The
-                                      ///< ContactFace stores point, half-edge or triangle index.
-    std::vector<std::vector<IndexType>>
-        mDynamicContactVerticesOfTriangle; ///< `|# triangles|` per-triangle dynamic contact vertex
-                                           ///< sets. Stores point indices only.
-    std::vector<std::vector<ContactFace<IndexType>>>
-        mDynamicContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge dynamic contact face
-                                        ///< sets. The ContactFace stores point or half-edge.
-    std::vector<std::vector<ContactFace<IndexType>>>
-        mStaticContactFacesOfVertex; ///< `|# vertices|` per-vertex static contact face sets. The
-                                     ///< ContactFace stores environment vertex, half-edge or
-                                     ///< triangle.
-    std::vector<std::vector<IndexType>>
-        mStaticContactVerticesOfTriangle; ///< `|# triangles|` per-triangle static contact vertex
-                                          ///< sets. Stores vertex indices only.
-    std::vector<std::vector<ContactFace<IndexType>>>
-        mStaticContactFacesOfHalfEdge; ///< `|# half-edges|` per-half-edge static contact face sets.
-                                       ///< The ContactFace stores environment vertex or edge.
-
-    /**
      * @brief Displacement bounds
      */
     Eigen::Vector<ScalarType, Eigen::Dynamic>
         bv; ///< `|# vertices|` array of total vertex displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
+    std::unique_ptr<std::atomic<ScalarType>[]>
         dminv; ///< `|# vertices|` array of vertex local displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
+    std::unique_ptr<std::atomic<ScalarType>[]>
         dminf; ///< `|# facets|` array of face local displacement bounds
-    Eigen::Vector<ScalarType, Eigen::Dynamic>
+    std::unique_ptr<std::atomic<ScalarType>[]>
         dmine; ///< `|# half-edges|` array of half-edge local displacement bounds
+
+    /**
+     * @brief Contact sets (thread-local).
+     *
+     * API users can use the graph::DenseAdjacencySet::Reduce function to merge the thread-local
+     * contact sets into a single set for each contact type after parallel contact generation.
+     */
+
+    /**
+     * @brief Geometry type enumeration for contact set prefix sums
+     */
+    enum EGeometry : int {
+        Dynamic = 0, ///< Dynamic geometry
+        Static  = 1, ///< Static geometry
+        Count   = 2  ///< Number of geometry types (dynamic + static)
+    };
+    using GeometryPrefixArrayType = std::array<IndexType, EGeometry::Count + 1>;
+    GeometryPrefixArrayType mPointGeometryPrefix; ///< Prefix sum over points of each geometry type
+                                                  ///< (i.e. dynamic, static)
+    GeometryPrefixArrayType mHalfEdgeGeometryPrefix; ///< Prefix sum over half-edges of each
+                                                     ///< geometry type (i.e. dynamic, static)
+    GeometryPrefixArrayType mTriangleGeometryPrefix; ///< Prefix sum over (triangle) facets of each
+                                                     ///< geometry type (i.e. dynamic, static)
+
+    std::vector<std::pair<IndexType, IndexType>> mXX; ///< Point-point contact pairs.
+    std::vector<std::pair<IndexType, IndexType>> mXE; ///< Point-(half-)edge contact pairs.
+    std::vector<std::pair<IndexType, IndexType>> mXF; ///< Point-triangle contact pairs.
+    std::vector<std::pair<IndexType, IndexType>>
+        mEE; ///< (Half-)edge-(half-)edge contact pairs. For each edge-edge contact (e1,e2), note
+             ///< that there are 4 different redundant (half-edge, half-edge) pairs
+             ///< (he1(e1), he1(e2)), (he1(e1), he2(e2)), (he2(e1), he1(e2)), (he2(e1), he2(e2)).
+             ///< We only store one representative pair for each edge-edge contact. This means that
+             ///< visiting all contact pairs starting with edge e1 requires visiting all pairs with
+             ///< starting endpoints he1(e1) or he2(e1).
+
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mXXets; ///< Thread-local point-point contact pairs.
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mXEets; ///< Thread-local point-(half-)edge contact pairs.
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mXFets; ///< Thread-local point-triangle contact pairs.
+    tbb::enumerable_thread_specific<std::vector<std::pair<IndexType, IndexType>>>
+        mEEets; ///< Thread-local (half-)edge-(half-)edge contact pairs.
 
     /**
      * @brief Acceleration structure for static geometry
@@ -261,13 +208,6 @@ class State
     RTCScene mStaticVertexScene{nullptr};  ///< BVH over static vertices
     RTCScene mStaticEdgeScene{nullptr};    ///< BVH over static edges
     RTCScene mStaticFacetScene{nullptr};   ///< BVH over static facets
-
-    /**
-     * @brief Synchronization primitives
-     */
-    Eigen::Vector<bool, Eigen::Dynamic> mVertexLocks; ///< `|# verts|` vertex locks
-    Eigen::Vector<bool, Eigen::Dynamic> mEdgeLocks;   ///< `|# edges|` edge locks
-    Eigen::Vector<bool, Eigen::Dynamic> mFacetLocks;  ///< `|# facets|` facet locks
 
   private:
     std::vector<detail::DynamicRTCBoundsFunctionParams<ScalarType, IndexType>>
@@ -282,6 +222,45 @@ class State
         Input<TScalar, TIndex> const& input,
         Params<TScalar> const& params);
 };
+
+namespace detail {
+
+template <common::CIndex TIndex>
+std::vector<std::pair<TIndex, TIndex>> CreateEmptyContactFaceAdjacencySet()
+{
+    std::vector<std::pair<TIndex, TIndex>> adjSet;
+    adjSet.reserve(4096);
+    return adjSet;
+}
+
+} // namespace detail
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline State<TScalar, TIndex>::State()
+    : bv(),
+      dminv(),
+      dminf(),
+      dmine(),
+      mPointGeometryPrefix{},
+      mHalfEdgeGeometryPrefix{},
+      mTriangleGeometryPrefix{},
+      mXX(),
+      mXE(),
+      mXF(),
+      mEE(),
+      mXXets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mXEets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mXFets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mEEets(&detail::CreateEmptyContactFaceAdjacencySet<TIndex>),
+      mDynamicVertexScene(nullptr),
+      mDynamicEdgeScene(nullptr),
+      mDynamicFacetScene(nullptr),
+      mStaticVertexScene(nullptr),
+      mStaticEdgeScene(nullptr),
+      mStaticFacetScene(nullptr),
+      mPerBodyRtcBoundsParams()
+{
+}
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline State<TScalar, TIndex>::State(
@@ -471,26 +450,28 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline State<TScalar, TIndex>& State<TScalar, TIndex>::operator=(State&& other) noexcept
 {
     DestroyAccelerationStructures();
-    mDynamicContactFacesOfVertex      = std::move(other.mDynamicContactFacesOfVertex);
-    mDynamicContactVerticesOfTriangle = std::move(other.mDynamicContactVerticesOfTriangle);
-    mDynamicContactFacesOfHalfEdge    = std::move(other.mDynamicContactFacesOfHalfEdge);
-    mStaticContactFacesOfVertex       = std::move(other.mStaticContactFacesOfVertex);
-    mStaticContactVerticesOfTriangle  = std::move(other.mStaticContactVerticesOfTriangle);
-    mStaticContactFacesOfHalfEdge     = std::move(other.mStaticContactFacesOfHalfEdge);
-    bv                                = std::move(other.bv);
-    dminv                             = std::move(other.dminv);
-    dminf                             = std::move(other.dminf);
-    dmine                             = std::move(other.dmine);
-    mDynamicVertexScene               = std::exchange(other.mDynamicVertexScene, nullptr);
-    mDynamicEdgeScene                 = std::exchange(other.mDynamicEdgeScene, nullptr);
-    mDynamicFacetScene                = std::exchange(other.mDynamicFacetScene, nullptr);
-    mStaticVertexScene                = std::exchange(other.mStaticVertexScene, nullptr);
-    mStaticEdgeScene                  = std::exchange(other.mStaticEdgeScene, nullptr);
-    mStaticFacetScene                 = std::exchange(other.mStaticFacetScene, nullptr);
-    mVertexLocks                      = std::move(other.mVertexLocks);
-    mEdgeLocks                        = std::move(other.mEdgeLocks);
-    mFacetLocks                       = std::move(other.mFacetLocks);
-    mPerBodyRtcBoundsParams           = std::move(other.mPerBodyRtcBoundsParams);
+    bv                      = std::move(other.bv);
+    dminv                   = std::move(other.dminv);
+    dminf                   = std::move(other.dminf);
+    dmine                   = std::move(other.dmine);
+    mPointGeometryPrefix    = std::move(other.mPointGeometryPrefix);
+    mHalfEdgeGeometryPrefix = std::move(other.mHalfEdgeGeometryPrefix);
+    mTriangleGeometryPrefix = std::move(other.mTriangleGeometryPrefix);
+    mXX                     = std::move(other.mXX);
+    mXE                     = std::move(other.mXE);
+    mXF                     = std::move(other.mXF);
+    mEE                     = std::move(other.mEE);
+    mXXets                  = std::move(other.mXXets);
+    mXEets                  = std::move(other.mXEets);
+    mXFets                  = std::move(other.mXFets);
+    mEEets                  = std::move(other.mEEets);
+    mDynamicVertexScene     = std::exchange(other.mDynamicVertexScene, nullptr);
+    mDynamicEdgeScene       = std::exchange(other.mDynamicEdgeScene, nullptr);
+    mDynamicFacetScene      = std::exchange(other.mDynamicFacetScene, nullptr);
+    mStaticVertexScene      = std::exchange(other.mStaticVertexScene, nullptr);
+    mStaticEdgeScene        = std::exchange(other.mStaticEdgeScene, nullptr);
+    mStaticFacetScene       = std::exchange(other.mStaticFacetScene, nullptr);
+    mPerBodyRtcBoundsParams = std::move(other.mPerBodyRtcBoundsParams);
     return *this;
 }
 
@@ -503,30 +484,13 @@ inline void State<TScalar, TIndex>::Initialize(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.Initialize");
     // 1. Allocate contact sets and bounds
     auto const nDynamicVertices  = input.V->size();
-    auto const nDynamicEdges     = input.E->cols();
     auto const nDynamicFacets    = input.F->cols();
     auto const nDynamicHalfEdges = 3 * nDynamicFacets;
-    mDynamicContactFacesOfVertex.resize(nDynamicVertices);
-    for (auto& vfogc : mDynamicContactFacesOfVertex)
-        vfogc.reserve(params.nMaxVertexFaceContactsEstimate);
-    mDynamicContactVerticesOfTriangle.resize(nDynamicFacets);
-    for (auto& fvogc : mDynamicContactVerticesOfTriangle)
-        fvogc.reserve(params.nMaxFaceVertexContactsEstimate);
-    mDynamicContactFacesOfHalfEdge.resize(nDynamicHalfEdges);
-    for (auto& eogc : mDynamicContactFacesOfHalfEdge)
-        eogc.reserve(params.nMaxEdgeFaceContactsEstimate);
-    mStaticContactFacesOfVertex.resize(nDynamicVertices);
-    for (auto& vfogc : mStaticContactFacesOfVertex)
-        vfogc.reserve(params.nMaxVertexFaceContactsEstimate);
-    mStaticContactVerticesOfTriangle.resize(nDynamicFacets);
-    for (auto& fvogc : mStaticContactVerticesOfTriangle)
-        fvogc.reserve(params.nMaxFaceVertexContactsEstimate);
-    mStaticContactFacesOfHalfEdge.resize(nDynamicHalfEdges);
-    for (auto& eogc : mStaticContactFacesOfHalfEdge)
-        eogc.reserve(params.nMaxEdgeFaceContactsEstimate);
-    dminv.resize(nDynamicVertices);
-    dminf.resize(nDynamicFacets);
-    dmine.resize(nDynamicHalfEdges);
+    // TODO:
+    // Implement mechanism to reserve memory for thread-local contact sets up-front.
+    dminv = std::make_unique<std::atomic<ScalarType>[]>(nDynamicVertices);
+    dminf = std::make_unique<std::atomic<ScalarType>[]>(nDynamicFacets);
+    dmine = std::make_unique<std::atomic<ScalarType>[]>(nDynamicHalfEdges);
     bv.resize(nDynamicVertices);
     // 2. Compute BVHs
     DestroyAccelerationStructures();
@@ -679,10 +643,6 @@ inline void State<TScalar, TIndex>::Initialize(
         rtcCommitScene(mStaticEdgeScene);
         rtcCommitScene(mStaticFacetScene);
     }
-    // 3. Allocate synchronization primitives
-    mVertexLocks.resize(nDynamicVertices);
-    mEdgeLocks.resize(nDynamicEdges);
-    mFacetLocks.resize(nDynamicFacets);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -692,27 +652,30 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.PrepareForExecution");
     // 1. Clear contact sets
-    for (auto& vfogc : mDynamicContactFacesOfVertex)
-        vfogc.clear();
-    for (auto& fvogc : mDynamicContactVerticesOfTriangle)
-        fvogc.clear();
-    for (auto& eogc : mDynamicContactFacesOfHalfEdge)
-        eogc.clear();
-    for (auto& vfogc : mStaticContactFacesOfVertex)
-        vfogc.clear();
-    for (auto& fvogc : mStaticContactVerticesOfTriangle)
-        fvogc.clear();
-    for (auto& eogc : mStaticContactFacesOfHalfEdge)
-        eogc.clear();
-    // 2. Clear locks
-    mVertexLocks.setConstant(false);
-    mEdgeLocks.setConstant(false);
-    mFacetLocks.setConstant(false);
-    // 3. Reset bounds
-    dminv.setConstant(params.rq * params.rq);
-    dminf.setConstant(params.rq * params.rq);
-    dmine.setConstant(params.rq * params.rq);
-    // 4. Recompute dynamic BVHs
+    ClearContactPairs();
+    common::ExclusivePrefixSum(
+        mPointGeometryPrefix,
+        (input.X ? input.X->cols() : 0),
+        (input.Venv ? input.Venv->cols() : 0));
+    common::ExclusivePrefixSum(
+        mHalfEdgeGeometryPrefix,
+        (input.F ? 3 * input.F->cols() : 0),
+        (input.Fenv ? 3 * input.Fenv->cols() : 0));
+    common::ExclusivePrefixSum(
+        mTriangleGeometryPrefix,
+        (input.F ? input.F->cols() : 0),
+        (input.Fenv ? input.Fenv->cols() : 0));
+    // 2. Reset bounds
+    auto const nDynamicVertices  = input.V->size();
+    auto const nDynamicFacets    = input.F->cols();
+    auto const nDynamicHalfEdges = 3 * nDynamicFacets;
+    for (Eigen::Index i = 0; i < nDynamicVertices; ++i)
+        dminv[i].store(params.rq * params.rq);
+    for (Eigen::Index i = 0; i < nDynamicFacets; ++i)
+        dminf[i].store(params.rq * params.rq);
+    for (Eigen::Index i = 0; i < nDynamicHalfEdges; ++i)
+        dmine[i].store(params.rq * params.rq);
+    // 3. Recompute dynamic BVHs
     PreparePerBodyRtcBoundsParams(input, params);
     Eigen::Index nBodies = input.NumBodies();
     for (Eigen::Index b = 0; b < nBodies; ++b)
@@ -735,6 +698,62 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
     rtcCommitScene(mDynamicVertexScene);
     rtcCommitScene(mDynamicEdgeScene);
     rtcCommitScene(mDynamicFacetScene);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void State<TScalar, TIndex>::CollectContactPairs()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.CollectContactPairs");
+    tbb::task_group tg;
+    auto const fCopyLocalToGlobal = [](auto& src, auto& dst) {
+        auto n = std::accumulate(
+            src.begin(),
+            src.end(),
+            static_cast<std::size_t>(0),
+            [](std::size_t acc, auto& vec) { return acc + vec.size(); });
+        dst.resize(n);
+        auto it = dst.begin();
+        for (auto& buf : src)
+        {
+            std::ranges::copy(buf, it);
+            it += buf.size();
+        }
+    };
+    tg.run([&]() { fCopyLocalToGlobal(mXXets, mXX); });
+    tg.run([&]() { fCopyLocalToGlobal(mXEets, mXE); });
+    tg.run([&]() { fCopyLocalToGlobal(mXFets, mXF); });
+    tg.run([&]() { fCopyLocalToGlobal(mEEets, mEE); });
+    tg.wait();
+    tg.run([&]() { tbb::parallel_sort(mXX); });
+    tg.run([&]() { tbb::parallel_sort(mXE); });
+    tg.run([&]() { tbb::parallel_sort(mXF); });
+    tg.run([&]() { tbb::parallel_sort(mEE); });
+    tg.wait();
+    auto const fRemoveDuplicates = [](auto& vec) {
+        vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+    };
+    tg.run([&]() { fRemoveDuplicates(mXX); });
+    tg.run([&]() { fRemoveDuplicates(mXE); });
+    tg.run([&]() { fRemoveDuplicates(mXF); });
+    tg.run([&]() { fRemoveDuplicates(mEE); });
+    tg.wait();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void State<TScalar, TIndex>::ClearContactPairs()
+{
+    for (auto& xx : mXXets)
+        xx.clear();
+    for (auto& xe : mXEets)
+        xe.clear();
+    for (auto& xf : mXFets)
+        xf.clear();
+    for (auto& ee : mEEets)
+        ee.clear();
+    mXX.clear();
+    mXE.clear();
+    mXF.clear();
+    mEE.clear();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -791,98 +810,6 @@ inline void State<TScalar, TIndex>::PreparePerBodyRtcBoundsParams(
         mPerBodyRtcBoundsParams[b].params = std::addressof(params);
         mPerBodyRtcBoundsParams[b].b      = b;
     }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnVertexVertexContact, class FOnVertexHalfEdgeContact, class FOnVertexFacetContact>
-inline void State<TScalar, TIndex>::ForEachDynamicContactFaceOfVertex(
-    IndexType v,
-    FOnVertexVertexContact&& fOnVertexVertexContact,
-    FOnVertexHalfEdgeContact&& fOnVertexHalfEdgeContact,
-    FOnVertexFacetContact&& fOnVertexFacetContact) const
-{
-    for (ContactFace<TIndex> const& contactFace : mDynamicContactFacesOfVertex[v])
-    {
-        switch (static_cast<EVertexFacetClosestFaceType>(contactFace.eFace))
-        {
-            case EVertexFacetClosestFaceType::Vertex: fOnVertexVertexContact(contactFace.a); break;
-            case EVertexFacetClosestFaceType::Edge: fOnVertexHalfEdgeContact(contactFace.a); break;
-            case EVertexFacetClosestFaceType::Facet: fOnVertexFacetContact(contactFace.a); break;
-        }
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnVertexVertexContact, class FOnVertexEdgeContact, class FOnVertexFacetContact>
-inline void State<TScalar, TIndex>::ForEachStaticContactFaceOfVertex(
-    IndexType v,
-    FOnVertexVertexContact&& fOnVertexVertexContact,
-    FOnVertexEdgeContact&& fOnVertexEdgeContact,
-    FOnVertexFacetContact&& fOnVertexFacetContact) const
-{
-    for (ContactFace<TIndex> const& contactFace : mStaticContactFacesOfVertex[v])
-    {
-        switch (static_cast<EVertexFacetClosestFaceType>(contactFace.eFace))
-        {
-            case EVertexFacetClosestFaceType::Vertex: fOnVertexVertexContact(contactFace.a); break;
-            case EVertexFacetClosestFaceType::Edge: fOnVertexEdgeContact(contactFace.a); break;
-            case EVertexFacetClosestFaceType::Facet: fOnVertexFacetContact(contactFace.a); break;
-        }
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeHalfEdgeContact>
-inline void State<TScalar, TIndex>::ForEachDynamicContactFaceOfHalfEdge(
-    IndexType he,
-    FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
-    FOnHalfEdgeHalfEdgeContact&& fOnHalfEdgeHalfEdgeContact) const
-{
-    for (ContactFace<TIndex> const& contactFace : mDynamicContactFacesOfHalfEdge[he])
-    {
-        switch (static_cast<EEdgeEdgeClosestFaceType>(contactFace.eFace))
-        {
-            case EEdgeEdgeClosestFaceType::Vertex: fOnHalfEdgeVertexContact(contactFace.a); break;
-            case EEdgeEdgeClosestFaceType::Edge: fOnHalfEdgeHalfEdgeContact(contactFace.a); break;
-        }
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnHalfEdgeVertexContact, class FOnHalfEdgeEdgeContact>
-inline void State<TScalar, TIndex>::ForEachStaticContactFaceOfHalfEdge(
-    IndexType he,
-    FOnHalfEdgeVertexContact&& fOnHalfEdgeVertexContact,
-    FOnHalfEdgeEdgeContact&& fOnHalfEdgeEdgeContact) const
-{
-    for (ContactFace<TIndex> const& contactFace : mStaticContactFacesOfHalfEdge[he])
-    {
-        switch (static_cast<EEdgeEdgeClosestFaceType>(contactFace.eFace))
-        {
-            case EEdgeEdgeClosestFaceType::Vertex: fOnHalfEdgeVertexContact(contactFace.a); break;
-            case EEdgeEdgeClosestFaceType::Edge: fOnHalfEdgeEdgeContact(contactFace.a); break;
-        }
-    }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnTriangleVertexContact>
-inline void State<TScalar, TIndex>::ForEachDynamicVertexContactOfTriangle(
-    IndexType fi,
-    FOnTriangleVertexContact&& fOnTriangleVertexContact) const
-{
-    for (IndexType i : mDynamicContactVerticesOfTriangle[fi])
-        fOnTriangleVertexContact(i);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnTriangleVertexContact>
-inline void State<TScalar, TIndex>::ForEachStaticVertexContactOfTriangle(
-    IndexType fi,
-    FOnTriangleVertexContact&& fOnTriangleVertexContact) const
-{
-    for (IndexType v : mStaticContactVerticesOfTriangle[fi])
-        fOnTriangleVertexContact(v);
 }
 
 } // namespace pbat::sim::contact::ogc
