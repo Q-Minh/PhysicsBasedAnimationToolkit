@@ -17,7 +17,7 @@ from pbatoolkit import pbat
 
 from .gpu.elasticity.fem import FemElastoDynamics
 from .gpu.vbd.params import Params
-from .gpu.vbd.solver import integrate
+from .gpu import vbd
 
 
 # --- Parameter UI utilities (from vbd/ui/params.py pattern) ---
@@ -141,7 +141,9 @@ class SimulationState:
         self.until_t: int = -1
 
     def step(self):
-        integrate(self.fem, self.params)
+        self.fem.setup_time_integration_optimization(self.init_strategy)
+        vbd.solver.solve(self.fem, self.params)
+        self.fem.step()
         self.t += 1
 
     def reset(self):
@@ -150,9 +152,6 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = FemElastoDynamics(self.fem_cpu)
         self.params = Params(self.params_cpu)
-
-
-# --- UI callback ---
 
 
 def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
@@ -254,7 +253,10 @@ def main():
     ps.set_program_name("Simulator")
     ps.init()
     mesh_name = "Mesh"
-    ps.register_volume_mesh(mesh_name, fem_cpu.X.T, fem_cpu.E.T)
+    vm = ps.register_volume_mesh(mesh_name, fem_cpu.X.T, fem_cpu.E.T)
+    vm.add_scalar_quantity("mug", fem_cpu.lamegU[0,:], defined_on="cells", enabled=True, cmap="blues")
+    vm.add_scalar_quantity("lambdag", fem_cpu.lamegU[1,:], defined_on="cells", enabled=False, cmap="blues")
+    vm.add_scalar_quantity("lumped mass", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds")
     ps.set_user_callback(make_callback(state, mesh_name))
     ps.show()
 
