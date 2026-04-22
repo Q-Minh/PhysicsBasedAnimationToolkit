@@ -130,18 +130,6 @@ if(PBAT_ENABLE_PROFILER AND NOT TARGET Tracy::TracyClient)
     FetchContent_MakeAvailable(tracy)
 endif()
 
-if(NOT TARGET cpp-sort::cpp-sort)
-    FetchContent_Declare(
-        _cppsort
-        GIT_REPOSITORY https://github.com/Morwenn/cpp-sort.git
-        GIT_TAG 2.x.y-stable
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
-        SYSTEM
-    )
-    FetchContent_MakeAvailable(_cppsort)
-endif()
-
 if(PBAT_USE_INTEL_MKL)
     find_package(MKL CONFIG REQUIRED)
 

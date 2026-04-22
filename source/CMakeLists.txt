@@ -73,7 +73,6 @@ source_group(
 # Link to every dependency
 target_link_libraries(PhysicsBasedAnimationToolkit_PhysicsBasedAnimationToolkit
     PUBLIC
-    cpp-sort::cpp-sort
     doctest::doctest
     Eigen3::Eigen
     embree
