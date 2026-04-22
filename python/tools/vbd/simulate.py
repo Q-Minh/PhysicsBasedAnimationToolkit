@@ -522,13 +522,18 @@ def main():
     previous_checkpoint_file = None
 
     def serialize_frame(archive: pbat.io.Archive):
-        fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
-        contact_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
-        for param_name in solver_params:
-            solver_params[param_name].serialize(
-                archive[f"{out_group}/{t:08d}/{_archive_solver_groups[args.solver]}"],
-                minimal=False,
-            )
+        try:
+            fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+            contact_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+            for param_name in solver_params:
+                solver_params[param_name].serialize(
+                    archive[
+                        f"{out_group}/{t:08d}/{_archive_solver_groups[args.solver]}"
+                    ],
+                    minimal=False,
+                )
+        except Exception as e:
+            raise RuntimeError(f"Failed to serialize frame {t} to archive: {e}") from e
 
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
     if args.start_from > 0:
