@@ -870,8 +870,8 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDualVariables(Eigen::DenseBase<
             C.lambda   = std::max(zkp1, TScalar(0));
             // Update complementarity slack
             TScalar r            = mParams.mOgcParams.r;
-            TScalar dfeasibility = (C.s - delta);
-            TScalar svel         = C.s / r;
+            TScalar dfeasibility = (skp1 - delta);
+            TScalar svel         = dsk / r;
             auto gammaup         = mParams.gammaup;
             auto gammadown       = mParams.gammadown;
             if (dfeasibility < 0)
