@@ -120,3 +120,8 @@ Tool scripts are located in the `python/tools` directory. Some tools required `p
 7. Run clang-format before committing
 8. Ensure all demo scripts are tested and working correctly, or reflect new API changes if execution is disallowed.
 
+## Additional Guidelines
+1. Please do not bloat code by implementing things that I did not explicitly request, as this can lead to unnecessary complexity and maintenance challenges. Ask if unsure. Always check if existing 
+functionality can be reused before adding new code, or check 
+APIs of our dependencies for most appropriate usage before 
+hand-rolling our own custom logic.
