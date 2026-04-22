@@ -78,8 +78,7 @@ struct MeshDynamics
         cd.ForAllContacts(
             [&]<class TContactSet>(
                 typename TContactSet::ConstAccessorType C,
-                typename MeshDynamicsType::Stencil stencil,
-                std::int32_t /*t*/) {
+                typename MeshDynamicsType::Stencil stencil) {
                 using ConstraintAccessorType   = decltype(C);
                 static auto constexpr kDofs    = ConstraintAccessorType::kDofs;
                 static auto constexpr kDims    = ConstraintAccessorType::kDims;

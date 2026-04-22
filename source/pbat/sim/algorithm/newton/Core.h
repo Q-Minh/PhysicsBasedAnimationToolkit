@@ -456,8 +456,7 @@ void AssembleHessian(
         contact.ForAllContacts(
             [&]<class TContactSet>(
                 typename TContactSet::ConstAccessorType C,
-                typename MeshDynamics::Stencil stencil,
-                std::int32_t /*t*/) {
+                typename MeshDynamics::Stencil stencil) {
                 using ConstraintAccessorType = decltype(C);
                 auto nodes                   = contact.LoadStencil<TContactSet>(stencil);
                 auto const& gradc            = C.Grad();

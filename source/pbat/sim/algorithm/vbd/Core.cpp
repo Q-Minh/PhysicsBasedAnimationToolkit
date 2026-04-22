@@ -47,13 +47,8 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
     auto nThreads             = std::thread::hardware_concurrency();
     auto const& contactParams = contact.GetParams();
     auto nDynamicNodes        = params.xk.cols();
-    std::atomic<Scalar> maxQ{0};
-    contact.ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::AccessorType C,
-            auto&& stencil,
-            std::int32_t /*t*/
-        ) {
+    auto const fMaxVertexRayleighQuotient =
+        [&]<class TContactSet>(auto C, auto const& stencil) {
             auto nodes = contact.LoadStencil<TContactSet>(stencil);
             auto gradc = ToEigen(C.Grad());
             Scalar maxQc{0};
@@ -67,36 +62,35 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
                 Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
                 maxQc       = std::max(maxQc, Q);
             }
-            switch (params.ePenaltyStiffness)
-            {
-                case ESALPenaltyStiffness::LocalMaxRayleighQuotient: {
+            return maxQc;
+        };
+    switch (params.ePenaltyStiffness)
+    {
+        case ESALPenaltyStiffness::LocalMaxRayleighQuotient: {
+            contact.ForAllContacts(
+                [&]<class TContactSet>(typename TContactSet::AccessorType C, auto const& stencil) {
+                    auto maxQc =
+                        fMaxVertexRayleighQuotient.template operator()<TContactSet>(C, stencil);
                     auto F      = C.Friction();
                     C.Penalty() = contactParams.gamma * maxQc;
                     F.Penalty() = contactParams.gammaf * maxQc;
-                }
-                break;
-                case ESALPenaltyStiffness::GlobalMaxRayleighQuotient: {
-                    pbat::common::AtomicMax(maxQ, maxQc);
-                }
-                break;
-                default: break;
-            }
-        },
-        nThreads);
-    if (params.ePenaltyStiffness == ESALPenaltyStiffness::GlobalMaxRayleighQuotient)
-    {
-        Scalar maxQv = maxQ.load(std::memory_order_relaxed);
-        contact.ForAllContacts(
-            [&]<class TContactSet>(
-                typename TContactSet::AccessorType C,
-                auto&& stencil,
-                std::int32_t /*t*/
-            ) {
-                auto F      = C.Friction();
-                C.Penalty() = contactParams.gamma * maxQv;
-                F.Penalty() = contactParams.gammaf * maxQv;
-            },
-            nThreads);
+                });
+        }
+        break;
+        case ESALPenaltyStiffness::GlobalMaxRayleighQuotient: {
+            Scalar maxQ = contact.TransformReduce(
+                fMaxVertexRayleighQuotient,
+                [](auto a, auto b) { return std::min(a, b); },
+                Scalar(0));
+            contact.ForAllContacts(
+                [&]<class TContactSet>(typename TContactSet::AccessorType C, auto const& stencil) {
+                    auto F      = C.Friction();
+                    C.Penalty() = contactParams.gamma * maxQ;
+                    F.Penalty() = contactParams.gammaf * maxQ;
+                });
+        }
+        break;
+        default: break;
     }
 }
 

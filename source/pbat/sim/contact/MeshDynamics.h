@@ -34,6 +34,8 @@
 #include <new>
 #include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_invoke.h>
+#include <tbb/parallel_reduce.h>
 #include <tbb/parallel_sort.h>
 #include <type_traits>
 #include <vector>
@@ -576,27 +578,41 @@ class MeshDynamics
     /**
      * @brief Iterate over all contacts
      * @tparam FOnContact Callable type with signature `template <class TContactSet>
-     * void(typename TContactSet::AccessorType C, Stencil stencil, std::int32_t threadId)`
+     * void(typename TContactSet::AccessorType C, Stencil stencil)`
      * @param fOnContact Callback for each contact
      * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
      * contacts will be processed sequentially.
      */
     template <class FOnContact>
-    void ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads = 1);
+    void ForAllContacts(FOnContact fOnContact, std::int32_t nThreads = 1);
     /**
      * @brief Iterate over all contacts
      * @tparam FOnContact Callable type with signature `template <class TContactSet>
-     * void(typename TContactSet::ConstAccessorType C, Stencil stencil, std::int32_t threadId)`
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil)`
      * @param fOnContact Callback for each contact
      * @param nThreads Number of threads to use for parallel processing. If `nThreads <= 1`,
      * contacts will be processed sequentially.
      */
     template <class FOnContact>
-    void ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads = 1) const;
+    void ForAllContacts(FOnContact fOnContact, std::int32_t nThreads = 1) const;
+    /**
+     * @brief Parallel transform-reduce operation on contact set
+     * @tparam FTransform Callable with signature `template <TContactSet> auto(typename
+     * TContactSet::ConstAccessorType const& c, Stencil const& stencil) -> T`
+     * @tparam FReduce Callable with signature `template <T> auto(T&& a, T&& b) -> T`
+     * @param fTransform
+     * @param fReduce
+     * @return T
+     * @note We don't explicitly enforce compile-time requirements on `FTransform`, because it's a
+     * templated callable.
+     */
+    template <class FTransform, class FReduce, class T>
+        requires std::convertible_to<std::invoke_result_t<FReduce, T, T>, T>
+    T TransformReduce(FTransform fTransform, FReduce fReduce, T identity = {}) const;
     /**
      * @brief Iterate over all contacts in the contact set
      * @tparam FOnContact Callable type with signature `template <class TContactSet>
-     * void(typename TContactSet::AccessorType C, Stencil stencil, std::int32_t threadId)`
+     * void(typename TContactSet::AccessorType C, Stencil stencil)`
      * @tparam TContactSet Contact set type
      * @param contactSet Contact set to iterate over
      * @param fOnContact Callback for each contact
@@ -609,7 +625,7 @@ class MeshDynamics
     /**
      * @brief Iterate over all contacts in the contact set
      * @tparam FOnContact Callable type with signature `template <class TContactSet>
-     * void(typename TContactSet::ConstAccessorType C, Stencil stencil, std::int32_t threadId)`
+     * void(typename TContactSet::ConstAccessorType C, Stencil stencil)`
      * @tparam TContactSet Contact set type
      * @param contactSet Contact set to iterate over
      * @param fOnContact Callback for each contact
@@ -987,36 +1003,6 @@ class MeshDynamics
         FOnContact&& fOnContact,
         TIndex cstart,
         TIndex cend) const;
-    /**
-     * @brief Multi-threaded contact visitor
-     * @tparam FOnContact
-     * @tparam TContactSet
-     * @param contactSet
-     * @param fOnContact
-     * @param nThreads
-     * @param tg
-     */
-    template <class FOnContact, class TContactSet>
-    void ForEachContact(
-        TContactSet& contactSet,
-        FOnContact&& fOnContact,
-        std::int32_t nThreads,
-        tbb::task_group& tg);
-    /**
-     * @brief Multi-threaded contact visitor
-     * @tparam FOnContact
-     * @tparam TContactSet
-     * @param contactSet
-     * @param fOnContact
-     * @param nThreads
-     * @param tg
-     */
-    template <class FOnContact, class TContactSet>
-    void ForEachContact(
-        TContactSet const& contactSet,
-        FOnContact&& fOnContact,
-        std::int32_t nThreads,
-        tbb::task_group& tg) const;
     /**
      * @brief Visit contacts for source primitive `u` in a contact set.
      * @tparam FOnContact Callable with signature
@@ -1554,10 +1540,7 @@ inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
     auto const nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::AccessorType C,
-            Stencil stencil,
-            std::int32_t /*t*/) {
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
             using ConstraintAccessorType   = decltype(C);
             static auto constexpr kDims    = ConstraintAccessorType::kDims;
             static auto constexpr kStencil = ConstraintAccessorType::kStencil;
@@ -1579,10 +1562,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
     auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     std::atomic<Scalar> maxQ{0};
     ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::AccessorType C,
-            Stencil stencil,
-            std::int32_t /*t*/) {
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
             using ConstraintAccessorType   = decltype(C);
             static auto constexpr kDims    = ConstraintAccessorType::kDims;
             static auto constexpr kStencil = ConstraintAccessorType::kStencil;
@@ -1593,10 +1573,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
         nThreads);
     Scalar maxQv = maxQ.load(std::memory_order_relaxed);
     ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::AccessorType C,
-            Stencil stencil,
-            std::int32_t /*t*/) {
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
             auto F      = C.Friction();
             C.Penalty() = mParams.gamma * maxQv;
             F.Penalty() = mParams.gammaf * maxQv;
@@ -1610,10 +1587,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
 {
     auto nThreads = static_cast<std::int32_t>(std::thread::hardware_concurrency());
     ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::AccessorType C,
-            Stencil stencil,
-            std::int32_t /*t*/) {
+        [&]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
             using ConstraintAccessorType = decltype(C);
             auto const [Xc, nodes]       = LoadStencil<TContactSet>(x, stencil);
             auto xc                      = Reshape<ConstraintAccessorType::kDofs, 1>(Xc);
@@ -1660,33 +1634,73 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class FOnContact>
 inline void
-MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads)
+MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact fOnContact, std::int32_t nThreads)
 {
-    tbb::global_control gc{
-        tbb::global_control::max_allowed_parallelism,
-        static_cast<std::size_t>(nThreads)};
-    tbb::task_group tg;
-    ForEachContact(mPointPointContacts, fOnContact, nThreads, tg);
-    ForEachContact(mPointEdgeContacts, fOnContact, nThreads, tg);
-    ForEachContact(mPointTriangleContacts, fOnContact, nThreads, tg);
-    ForEachContact(mEdgeEdgeContacts, fOnContact, nThreads, tg);
-    tg.wait();
+    // NOTE: We could also call tbb::parallel_invoke to parallelize these 4 calls.
+    auto const fForEachContact = [&](auto& set) {
+        using ContactSetType = std::remove_cvref_t<decltype(set)>;
+        ForEachContact(
+            set,
+            [&](auto C, auto stencil) {
+                fOnContact.template operator()<ContactSetType>(C, stencil);
+            },
+            nThreads);
+    };
+    fForEachContact(mPointPointContacts);
+    fForEachContact(mPointEdgeContacts);
+    fForEachContact(mPointTriangleContacts);
+    fForEachContact(mEdgeEdgeContacts);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class FOnContact>
 inline void
-MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact&& fOnContact, std::int32_t nThreads) const
+MeshDynamics<TScalar, TIndex>::ForAllContacts(FOnContact fOnContact, std::int32_t nThreads) const
 {
-    tbb::global_control gc{
-        tbb::global_control::max_allowed_parallelism,
-        static_cast<std::size_t>(nThreads)};
-    tbb::task_group tg;
-    ForEachContact(mPointPointContacts, fOnContact, nThreads, tg);
-    ForEachContact(mPointEdgeContacts, fOnContact, nThreads, tg);
-    ForEachContact(mPointTriangleContacts, fOnContact, nThreads, tg);
-    ForEachContact(mEdgeEdgeContacts, fOnContact, nThreads, tg);
-    tg.wait();
+    // NOTE: We could also call tbb::parallel_invoke to parallelize these 4 calls.
+    auto const fForEachContact = [&](auto const& set) {
+        using ContactSetType = std::remove_cvref_t<decltype(set)>;
+        ForEachContact(
+            set,
+            [&](auto C, auto stencil) {
+                fOnContact.template operator()<ContactSetType>(C, stencil);
+            },
+            nThreads);
+    };
+    fForEachContact(mPointPointContacts);
+    fForEachContact(mPointEdgeContacts);
+    fForEachContact(mPointTriangleContacts);
+    fForEachContact(mEdgeEdgeContacts);
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class FTransform, class FReduce, class T>
+    requires std::convertible_to<std::invoke_result_t<FReduce, T, T>, T>
+inline T
+MeshDynamics<TScalar, TIndex>::TransformReduce(FTransform fTransform, FReduce fReduce, T identity)
+    const
+{
+    auto const fParallelReduce = [&]<class TContactSet>(TContactSet const& set) {
+        return tbb::parallel_reduce(
+            tbb::blocked_range<std::size_t>(0, set.Size()),
+            identity,
+            [&](auto range, auto val) {
+                ForEachContact(
+                    set,
+                    [&](typename TContactSet::ConstAccessorType C, Stencil stencil) {
+                        val = fReduce(val, fTransform.template operator()<TContactSet>(C, stencil));
+                    });
+                return val;
+            },
+            fReduce);
+    };
+    std::array<T, 4> results{};
+    tbb::parallel_invoke(
+        [&]() { results[0] = fParallelReduce(mPointPointContacts); },
+        [&]() { results[1] = fParallelReduce(mPointEdgeContacts); },
+        [&]() { results[2] = fParallelReduce(mPointTriangleContacts); },
+        [&]() { results[3] = fParallelReduce(mEdgeEdgeContacts); });
+    return fReduce(results[0], fReduce(results[1], fReduce(results[2], results[3])));
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1696,9 +1710,14 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
     FOnContact&& fOnContact,
     std::int32_t nThreads)
 {
-    tbb::task_group tg;
-    ForEachContact(contactSet, std::forward<FOnContact>(fOnContact), nThreads, tg);
-    tg.wait();
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<std::size_t>(nThreads)};
+    tbb::parallel_for(
+        tbb::blocked_range<std::size_t>(0, contactSet.Size()),
+        [this, &contactSet, f = std::forward<FOnContact>(fOnContact)](auto range) {
+            ForEachContact(contactSet, f, range.begin(), range.end());
+        });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1708,9 +1727,14 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
     FOnContact&& fOnContact,
     std::int32_t nThreads) const
 {
-    tbb::task_group tg;
-    ForEachContact(contactSet, std::forward<FOnContact>(fOnContact), nThreads, tg);
-    tg.wait();
+    tbb::global_control gc{
+        tbb::global_control::max_allowed_parallelism,
+        static_cast<std::size_t>(nThreads)};
+    tbb::parallel_for(
+        tbb::blocked_range<std::size_t>(0, contactSet.Size()),
+        [this, &contactSet, f = std::forward<FOnContact>(fOnContact)](auto range) {
+            ForEachContact(contactSet, f, range.begin(), range.end());
+        });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1942,10 +1966,7 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(Eigen::MatrixBase<TDeriv
 {
     TScalar E{0};
     ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::ConstAccessorType C,
-            Stencil stencil,
-            std::int32_t /*t*/) {
+        [&]<class TContactSet>(typename TContactSet::ConstAccessorType C, Stencil stencil) {
             using ConstraintAccessorType   = decltype(C);
             static auto constexpr kStencil = ConstraintAccessorType::kStencil;
             static auto constexpr kDims    = ConstraintAccessorType::kDims;
@@ -1985,10 +2006,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
     auto g                    = g_.derived().reshaped();
     Eigen::Index const nNodes = g.size() / 3;
     ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::ConstAccessorType C,
-            Stencil stencil,
-            std::int32_t /*t*/) {
+        [&]<class TContactSet>(typename TContactSet::ConstAccessorType C, Stencil stencil) {
             static auto constexpr kStencil = C.kStencil;
             static auto constexpr kDims    = C.kDims;
             static auto constexpr kDofs    = C.kDofs;
@@ -2366,7 +2384,7 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
             ++gv;
         // Visit contact
         ConstraintAccessor<TContactSet> C{set, k};
-        fOnContact.template operator()<TContactSet>(C, Stencil{u, v, gu, gv});
+        fOnContact(C, Stencil{u, v, gu, gv});
     }
 }
 
@@ -2397,66 +2415,8 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
             ++gv;
         // Visit contact
         ConstraintAccessor<TContactSet const> C{set, k};
-        fOnContact.template operator()<TContactSet>(C, Stencil{u, v, gu, gv});
+        fOnContact(C, Stencil{u, v, gu, gv});
     }
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnContact, class TContactSet>
-inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
-    TContactSet& contactSet,
-    FOnContact&& fOnContact,
-    std::int32_t nThreads,
-    tbb::task_group& tg)
-{
-    tbb::global_control gc{
-        tbb::global_control::max_allowed_parallelism,
-        static_cast<size_t>(nThreads)};
-    auto const fForEachThread = [&tg, nThreads](auto&& f) {
-        for (std::int32_t t = 0; t < nThreads; ++t)
-            tg.run([f, t]() { f(t); });
-    };
-    fForEachThread([&](std::int32_t t) {
-        TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
-        TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
-        TIndex const cstart                = t * nConstraintsPerThread;
-        TIndex const cend = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-        auto const fWrap =
-            [&fOnContact,
-             t = t]<class TContactSet>(typename TContactSet::AccessorType C, Stencil stencil) {
-                fOnContact.template operator()<TContactSet>(C, std::move(stencil), t);
-            };
-        ForEachContact(contactSet, fWrap, cstart, cend);
-    });
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class FOnContact, class TContactSet>
-inline void MeshDynamics<TScalar, TIndex>::ForEachContact(
-    TContactSet const& contactSet,
-    FOnContact&& fOnContact,
-    std::int32_t nThreads,
-    tbb::task_group& tg) const
-{
-    tbb::global_control gc{
-        tbb::global_control::max_allowed_parallelism,
-        static_cast<size_t>(nThreads)};
-    auto const fForEachThread = [&tg, nThreads](auto&& f) {
-        for (std::int32_t t = 0; t < nThreads; ++t)
-            tg.run([f, t]() { f(t); });
-    };
-    fForEachThread([&](std::int32_t t) {
-        TIndex const nConstraints          = static_cast<TIndex>(contactSet.Size());
-        TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
-        TIndex const cstart                = t * nConstraintsPerThread;
-        TIndex const cend = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-        auto const fWrap =
-            [&fOnContact,
-             t = t]<class TContactSet>(typename TContactSet::ConstAccessorType C, Stencil stencil) {
-                fOnContact.template operator()<TContactSet>(C, std::move(stencil), t);
-            };
-        ForEachContact(contactSet, fWrap, cstart, cend);
-    });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -2557,8 +2517,6 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bComputeReversePairs)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateContactSetsFromOgcPairs");
-    using OgcStateType = decltype(mOgcState);
-    tbb::task_group tg;
     auto const fUpdateContactSet = [&](auto& set, auto& newSet, auto nSourcePrimitives) {
         // set.Union(newSet);
         // set.RemoveIf([&]([[maybe_unused]] TIndex u, [[maybe_unused]] TIndex v, TIndex k) {
@@ -2570,52 +2528,53 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bC
         set.Finalize(nSourcePrimitives);
         set.CompactIds();
     };
-    auto const fBuildReversePairs =
-        [](auto const& set, auto nTargetNodes, ReverseContactSetView& reverseSet) {
-            auto const n = static_cast<TIndex>(set.Size());
-            reverseSet.contacts.resize(n);
-            reverseSet.prefix.resize(nTargetNodes + 1);
-            std::fill(reverseSet.prefix.begin(), reverseSet.prefix.end(), 0);
-            for (TIndex c = 0; c < n; ++c)
-            {
-                auto const [u, v, k]   = set.WeightedAdjacency(c);
-                reverseSet.contacts[c] = ReverseContactPair{v, u, k};
-                ++reverseSet.prefix[v];
-            }
-            tbb::parallel_sort(
-                reverseSet.contacts.begin(),
-                reverseSet.contacts.end(),
-                [](ReverseContactPair const& a, ReverseContactPair const& b) {
-                    // Technically, we only need to sort by v, but also sorting by u and k generally
-                    // helps with cache locality.
-                    return std::tie(a.v, a.u, a.k) < std::tie(b.v, b.u, b.k);
-                });
-            std::exclusive_scan(
-                reverseSet.prefix.begin(),
-                reverseSet.prefix.end(),
-                reverseSet.prefix.begin(),
-                TIndex{0});
-        };
+    using OgcStateType    = decltype(mOgcState);
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
     auto const nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
     auto const nTriangles = mOgcState.mTriangleGeometryPrefix[OgcStateType::EGeometry::Count];
-    tg.run([&] { fUpdateContactSet(mPointPointContacts, mOgcState.mXX, nPoints); });
-    tg.run([&] { fUpdateContactSet(mPointEdgeContacts, mOgcState.mXE, nPoints); });
-    tg.run([&] { fUpdateContactSet(mPointTriangleContacts, mOgcState.mXF, nPoints); });
-    tg.run([&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
-    tg.wait();
+    tbb::parallel_invoke(
+        [&] { fUpdateContactSet(mPointPointContacts, mOgcState.mXX, nPoints); },
+        [&] { fUpdateContactSet(mPointEdgeContacts, mOgcState.mXE, nPoints); },
+        [&] { fUpdateContactSet(mPointTriangleContacts, mOgcState.mXF, nPoints); },
+        [&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
     if (bComputeReversePairs)
     {
-        tg.run(
-            [&] { fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts); });
-        tg.run(
-            [&] { fBuildReversePairs(mPointEdgeContacts, nHalfEdges, mReversePointEdgeContacts); });
-        tg.run([&] {
-            fBuildReversePairs(mPointTriangleContacts, nTriangles, mReversePointTriangleContacts);
-        });
-        tg.run(
+        auto const fBuildReversePairs =
+            [](auto const& set, auto nTargetNodes, ReverseContactSetView& reverseSet) {
+                auto const n = static_cast<TIndex>(set.Size());
+                reverseSet.contacts.resize(n);
+                reverseSet.prefix.resize(nTargetNodes + 1);
+                std::fill(reverseSet.prefix.begin(), reverseSet.prefix.end(), 0);
+                for (TIndex c = 0; c < n; ++c)
+                {
+                    auto const [u, v, k]   = set.WeightedAdjacency(c);
+                    reverseSet.contacts[c] = ReverseContactPair{v, u, k};
+                    ++reverseSet.prefix[v];
+                }
+                tbb::parallel_sort(
+                    reverseSet.contacts.begin(),
+                    reverseSet.contacts.end(),
+                    [](ReverseContactPair const& a, ReverseContactPair const& b) {
+                        // Technically, we only need to sort by v, but also sorting by u and k
+                        // generally helps with cache locality.
+                        return std::tie(a.v, a.u, a.k) < std::tie(b.v, b.u, b.k);
+                    });
+                std::exclusive_scan(
+                    reverseSet.prefix.begin(),
+                    reverseSet.prefix.end(),
+                    reverseSet.prefix.begin(),
+                    TIndex{0});
+            };
+        tbb::parallel_invoke(
+            [&] { fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts); },
+            [&] { fBuildReversePairs(mPointEdgeContacts, nHalfEdges, mReversePointEdgeContacts); },
+            [&] {
+                fBuildReversePairs(
+                    mPointTriangleContacts,
+                    nTriangles,
+                    mReversePointTriangleContacts);
+            },
             [&] { fBuildReversePairs(mEdgeEdgeContacts, nHalfEdges, mReverseEdgeEdgeContacts); });
-        tg.wait();
     }
 }
 
