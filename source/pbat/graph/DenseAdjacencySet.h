@@ -174,7 +174,7 @@ void CountingSortAdjacencies(
 
     // Pass 1: Sort by v (least significant key)
     // Count occurrences of each v
-    counts.assign(static_cast<std::size_t>(nV), TVertexIndex{0});
+    std::fill(counts.begin(), counts.begin() + nV, TVertexIndex{0});
     for (TAdjacency const& adj : adjacencies)
         ++counts[adj.v];
     // Compute prefix sum (exclusive scan)
@@ -188,7 +188,7 @@ void CountingSortAdjacencies(
 
     // Pass 2: Sort by u (most significant key)
     // Count occurrences of each u
-    counts.assign(static_cast<std::size_t>(nU), TVertexIndex{0});
+    std::fill(counts.begin(), counts.begin() + nU, TVertexIndex{0});
     for (TAdjacency const& adj : temp)
         ++counts[adj.u];
     // Compute prefix sum (exclusive scan)
@@ -1277,8 +1277,8 @@ void DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Update(
     mCounts.resize(nV);
 
     // 3. Count occurrences of each v (first pass)
-    std::fill(mCounts.begin(), mCounts.end(), TVertexIndex{0});
-    set.ForAll([this](TVertexIndex /*u*/, TVertexIndex v) { ++mCounts[v]; });
+    std::fill(mPrefix.begin(), mPrefix.end(), TVertexIndex{0});
+    set.ForAll([this](TVertexIndex /*u*/, TVertexIndex v) { ++mPrefix[v]; });
 
     // 4. Build prefix sum over v
     std::exclusive_scan(mPrefix.begin(), mPrefix.end(), mPrefix.begin(), TVertexIndex{0});
@@ -1336,11 +1336,11 @@ bool DenseReverseAdjacencySetView<TData, TVertexIndex, TIdIndex>::Has(
         it = std::lower_bound(begin, end, u, [](AdjacencyEntryType const& adj, TVertexIndex u_) {
             return adj.u < u_;
         });
-        bFound = it != end and (it->v == u); // adj.u is v (the target), adj.v is u (the source)
+        bFound = it != end and (it->u == u);
     }
     else
     {
-        it = std::find_if(begin, end, [u](AdjacencyEntryType const& adj) { return adj.v == u; });
+        it = std::find_if(begin, end, [u](AdjacencyEntryType const& adj) { return adj.u == u; });
         bFound = it != end;
     }
 

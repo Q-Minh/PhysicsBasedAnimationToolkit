@@ -628,4 +628,293 @@ TEST_CASE("[graph] DenseAdjacencySet<void>")
         for (auto const& s : sets)
             CHECK(s.Size() == 0u);
     }
+
+    SUBCASE("Counting sort in Update")
+    {
+        using Options = AdjacencySetUpdateOptions;
+
+        DenseAdjacencySet<void> adj;
+
+        // Add edges in reverse order (worst case for comparison sort, but counting sort is O(n))
+        adj.Add(3u, 2u);
+        adj.Add(3u, 1u);
+        adj.Add(2u, 3u);
+        adj.Add(1u, 0u);
+        adj.Add(0u, 2u);
+        adj.Add(0u, 1u);
+        adj.Add(2u, 0u);
+
+        // Use counting sort by specifying nSourceVertices and nTargetVertices
+        Options opts;
+        opts.nSourceVertices = 4;
+        opts.nTargetVertices = 4;
+
+        int addedCount = 0;
+        adj.Update(
+            [&](std::uint32_t, std::uint32_t) { ++addedCount; },
+            [](std::uint32_t, std::uint32_t) {},
+            opts);
+
+        CHECK(addedCount == 7);
+        CHECK(adj.Size() == 7u);
+        adj.Finalize();
+
+        // Verify adjacencies are sorted lexicographically by (u, v)
+        std::vector<std::pair<std::uint32_t, std::uint32_t>> sorted;
+        adj.ForAll([&](std::uint32_t u, std::uint32_t v) { sorted.emplace_back(u, v); });
+
+        REQUIRE(sorted.size() == 7u);
+        // Expected order: (0,1), (0,2), (1,0), (2,0), (2,3), (3,1), (3,2)
+        CHECK(sorted[0] == std::pair{0u, 1u});
+        CHECK(sorted[1] == std::pair{0u, 2u});
+        CHECK(sorted[2] == std::pair{1u, 0u});
+        CHECK(sorted[3] == std::pair{2u, 0u});
+        CHECK(sorted[4] == std::pair{2u, 3u});
+        CHECK(sorted[5] == std::pair{3u, 1u});
+        CHECK(sorted[6] == std::pair{3u, 2u});
+
+        // Verify AdjacenciesOf works correctly
+        std::vector<std::uint32_t> neighbours;
+        adj.AdjacenciesOf(0u, [&](std::uint32_t, std::uint32_t v) { neighbours.push_back(v); });
+        REQUIRE(neighbours.size() == 2u);
+        CHECK(neighbours[0] == 1u);
+        CHECK(neighbours[1] == 2u);
+
+        neighbours.clear();
+        adj.AdjacenciesOf(3u, [&](std::uint32_t, std::uint32_t v) { neighbours.push_back(v); });
+        REQUIRE(neighbours.size() == 2u);
+        CHECK(neighbours[0] == 1u);
+        CHECK(neighbours[1] == 2u);
+    }
 }
+
+TEST_CASE("[graph] DenseReverseAdjacencySetView")
+{
+    using namespace pbat::graph;
+
+    SUBCASE("Default-constructed view is empty")
+    {
+        DenseReverseAdjacencySetView<void> view;
+        CHECK(view.Size() == 0u);
+        CHECK(view.NumVertices() == 0u);
+        CHECK(view.Empty());
+    }
+
+    SUBCASE("Update from void DenseAdjacencySet")
+    {
+        DenseAdjacencySet<void> adj;
+        adj.Add(0u, 1u);
+        adj.Add(0u, 2u);
+        adj.Add(1u, 2u);
+        adj.Add(2u, 0u);
+        adj.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<void> view;
+        view.Update(adj);
+
+        CHECK(view.Size() == adj.Size());
+        CHECK(view.NumVertices() == 3u);
+
+        // Degree checks
+        CHECK(view.Degree(0u) == 1u); // (2,0) → one source pointing to 0
+        CHECK(view.Degree(1u) == 1u); // (0,1) → one source pointing to 1
+        CHECK(view.Degree(2u) == 2u); // (0,2), (1,2) → two sources pointing to 2
+    }
+
+    SUBCASE("AdjacenciesOf iterates reverse neighbours")
+    {
+        DenseAdjacencySet<void> adj;
+        // Edges: 0→1, 0→2, 1→2, 2→0, 3→2
+        adj.Add(0u, 1u);
+        adj.Add(0u, 2u);
+        adj.Add(1u, 2u);
+        adj.Add(2u, 0u);
+        adj.Add(3u, 2u);
+        adj.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<void> view;
+        view.Update(adj);
+
+        // Sources pointing to target 2: 0, 1, 3
+        std::vector<std::uint32_t> sources;
+        view.AdjacenciesOf(2u, [&](std::uint32_t u, std::uint32_t v) {
+            CHECK(v == 2u);
+            sources.push_back(u);
+        });
+        REQUIRE(sources.size() == 3u);
+        // Should be sorted by u within each target bucket
+        CHECK(sources[0] == 0u);
+        CHECK(sources[1] == 1u);
+        CHECK(sources[2] == 3u);
+
+        // Sources pointing to target 0: 2
+        sources.clear();
+        view.AdjacenciesOf(0u, [&](std::uint32_t u, std::uint32_t v) {
+            CHECK(v == 0u);
+            sources.push_back(u);
+        });
+        REQUIRE(sources.size() == 1u);
+        CHECK(sources[0] == 2u);
+
+        // Sources pointing to target 1: 0
+        sources.clear();
+        view.AdjacenciesOf(1u, [&](std::uint32_t u, std::uint32_t v) {
+            CHECK(v == 1u);
+            sources.push_back(u);
+        });
+        REQUIRE(sources.size() == 1u);
+        CHECK(sources[0] == 0u);
+    }
+
+    SUBCASE("Has checks existence")
+    {
+        DenseAdjacencySet<void> adj;
+        adj.Add(0u, 1u);
+        adj.Add(1u, 2u);
+        adj.Add(2u, 0u);
+        adj.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<void> view;
+        view.Update(adj);
+
+        // Original edges exist in the view
+        CHECK(view.Has(0u, 1u));
+        CHECK(view.Has(1u, 2u));
+        CHECK(view.Has(2u, 0u));
+
+        // Non-existent edges
+        CHECK_FALSE(view.Has(1u, 0u)); // reverse of (0,1) doesn't exist
+        CHECK_FALSE(view.Has(0u, 2u));
+        CHECK_FALSE(view.Has(3u, 0u)); // vertex 3 doesn't exist
+    }
+
+    SUBCASE("ForAll iterates all adjacencies")
+    {
+        DenseAdjacencySet<void> adj;
+        adj.Add(0u, 1u);
+        adj.Add(1u, 2u);
+        adj.Add(2u, 0u);
+        adj.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<void> view;
+        view.Update(adj);
+
+        std::set<std::pair<std::uint32_t, std::uint32_t>> edges;
+        view.ForAll([&](std::uint32_t u, std::uint32_t v) { edges.emplace(u, v); });
+
+        CHECK(edges.size() == 3u);
+        CHECK(edges.count({0u, 1u}) == 1u);
+        CHECK(edges.count({1u, 2u}) == 1u);
+        CHECK(edges.count({2u, 0u}) == 1u);
+    }
+
+    SUBCASE("Clear resets the view")
+    {
+        DenseAdjacencySet<void> adj;
+        adj.Add(0u, 1u);
+        adj.Update([](std::uint32_t, std::uint32_t) {}, [](std::uint32_t, std::uint32_t) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<void> view;
+        view.Update(adj);
+        CHECK(view.Size() == 1u);
+
+        view.Clear();
+        CHECK(view.Size() == 0u);
+        CHECK(view.NumVertices() == 0u);
+        CHECK(view.Empty());
+    }
+}
+
+TEST_CASE("[graph] DenseReverseAdjacencySetView with data")
+{
+    using namespace pbat::graph;
+
+    struct EdgeData
+    {
+        float weight{0.f};
+        int tag{-1};
+    };
+
+    SUBCASE("Update from data-carrying DenseAdjacencySet")
+    {
+        DenseAdjacencySet<EdgeData> adj;
+        adj.Add(0u, 1u);
+        adj.Add(0u, 2u);
+        adj.Add(1u, 2u);
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u * 10 + v), static_cast<int>(u + v)};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<EdgeData> view;
+        view.Update(adj);
+
+        CHECK(view.Size() == 3u);
+        CHECK(view.NumVertices() == 3u);
+
+        // Verify data indices are correct
+        view.AdjacenciesOf(2u, [&](std::uint32_t u, std::uint32_t v, std::uint32_t c) {
+            CHECK(v == 2u);
+            EdgeData const& data = adj.Data()[c];
+            CHECK(data.weight == doctest::Approx(static_cast<float>(u * 10 + v)));
+            CHECK(data.tag == static_cast<int>(u + v));
+        });
+    }
+
+    SUBCASE("Has with data index")
+    {
+        DenseAdjacencySet<EdgeData> adj;
+        adj.Add(0u, 1u);
+        adj.Add(1u, 2u);
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u + v), 0};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<EdgeData> view;
+        view.Update(adj);
+
+        std::uint32_t c{};
+        CHECK(view.Has(0u, 1u, &c));
+        CHECK(adj.Data()[c].weight == doctest::Approx(1.f));
+
+        CHECK(view.Has(1u, 2u, &c));
+        CHECK(adj.Data()[c].weight == doctest::Approx(3.f));
+    }
+
+    SUBCASE("ForAll with data index")
+    {
+        DenseAdjacencySet<EdgeData> adj;
+        adj.Add(0u, 1u);
+        adj.Add(1u, 2u);
+        adj.Add(2u, 0u);
+        adj.Update(
+            [](std::uint32_t u, std::uint32_t v) -> EdgeData {
+                return {static_cast<float>(u * 100 + v), static_cast<int>(u + v)};
+            },
+            [](std::uint32_t, std::uint32_t, EdgeData&) {});
+        adj.Finalize();
+
+        DenseReverseAdjacencySetView<EdgeData> view;
+        view.Update(adj);
+
+        int count = 0;
+        view.ForAll([&](std::uint32_t u, std::uint32_t v, std::uint32_t c) {
+            EdgeData const& data = adj.Data()[c];
+            CHECK(data.weight == doctest::Approx(static_cast<float>(u * 100 + v)));
+            CHECK(data.tag == static_cast<int>(u + v));
+            ++count;
+        });
+        CHECK(count == 3);
+    }
+}
+
