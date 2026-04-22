@@ -44,26 +44,25 @@ void VertexColors(
 void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params const& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.UpdatePenaltyParameter");
-    auto nThreads             = std::thread::hardware_concurrency();
-    auto const& contactParams = contact.GetParams();
-    auto nDynamicNodes        = params.xk.cols();
-    auto const fMaxVertexRayleighQuotient =
-        [&]<class TContactSet>(auto C, auto const& stencil) {
-            auto nodes = contact.LoadStencil<TContactSet>(stencil);
-            auto gradc = ToEigen(C.Grad());
-            Scalar maxQc{0};
-            for (auto ki = 0; ki < nodes.size(); ++ki)
-            {
-                auto i = nodes[ki];
-                if (i >= nDynamicNodes)
-                    continue;
-                auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
-                auto gradci = gradc.template segment<3>(ki * 3);
-                Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
-                maxQc       = std::max(maxQc, Q);
-            }
-            return maxQc;
-        };
+    auto nThreads                         = std::thread::hardware_concurrency();
+    auto const& contactParams             = contact.GetParams();
+    auto nDynamicNodes                    = params.xk.cols();
+    auto const fMaxVertexRayleighQuotient = [&]<class TContactSet>(auto C, auto const& stencil) {
+        auto nodes = contact.LoadStencil<TContactSet>(stencil);
+        auto gradc = ToEigen(C.Grad());
+        Scalar maxQc{0};
+        for (auto ki = 0; ki < nodes.size(); ++ki)
+        {
+            auto i = nodes[ki];
+            if (i >= nDynamicNodes)
+                continue;
+            auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
+            auto gradci = gradc.template segment<3>(ki * 3);
+            Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
+            maxQc       = std::max(maxQc, Q);
+        }
+        return maxQc;
+    };
     switch (params.ePenaltyStiffness)
     {
         case ESALPenaltyStiffness::LocalMaxRayleighQuotient: {
@@ -80,7 +79,7 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
         case ESALPenaltyStiffness::GlobalMaxRayleighQuotient: {
             Scalar maxQ = contact.TransformReduce(
                 fMaxVertexRayleighQuotient,
-                [](auto a, auto b) { return std::min(a, b); },
+                [](auto a, auto b) { return std::max(a, b); },
                 Scalar(0));
             contact.ForAllContacts(
                 [&]<class TContactSet>(typename TContactSet::AccessorType C, auto const& stencil) {
