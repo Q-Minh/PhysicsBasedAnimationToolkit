@@ -1,5 +1,6 @@
 #include "Core.h"
 
+#include "pbat/common/Atomic.h"
 #include "pbat/graph/Color.h"
 #include "pbat/graph/Mesh.h"
 
@@ -37,6 +38,37 @@ void VertexColors(
     colors                 = graph::GreedyColor(GVVp, GVVadj, eOrdering, eSelection);
 }
 
+void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Core.UpdatePenaltyParameter");
+    auto nThreads       = std::thread::hardware_concurrency();
+    auto& contactParams = contact.GetParams();
+    auto nDynamicNodes  = params.xk.cols();
+    Scalar& kc          = contactParams.kc;
+    kc                  = 0;
+    contact.ForAllContacts(
+        [&]<class TContactSet>(
+            auto&& C,
+            auto&& stencil,
+            std::int32_t /*t*/
+        ) {
+            auto nodes = contact.LoadStencil<TContactSet>(stencil);
+            auto gradc = ToEigen(C.Grad());
+            for (auto ki = 0; ki < nodes.size(); ++ki)
+            {
+                auto i = nodes[ki];
+                if (i >= nDynamicNodes)
+                    continue;
+                auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
+                auto gradci = gradc.template segment<3>(ki * 3);
+                Scalar Q    = gradci.dot(Hii * gradci);
+                pbat::common::AtomicMin(kc, -Q);
+            }
+        },
+        nThreads);
+    kc = -kc;
+}
+
 Params& Params::WithVertexElementAdjacencyGraph(
     Eigen::Ref<IndexVectorX const> const& _GVGp,
     Eigen::Ref<IndexVectorX const> const& _GVGe,
@@ -60,7 +92,7 @@ Params& Params::WithVertexColors(
     return *this;
 }
 
-PBAT_API Params& Params::WithDamping(Scalar _betaR)
+Params& Params::WithDamping(Scalar _betaR)
 {
     this->betaR = _betaR;
     return *this;
@@ -72,14 +104,13 @@ Params& Params::WithMaximumIterations(Index nIters)
     return *this;
 }
 
-PBAT_API Params& Params::WithHomogenization(EHomogenizationStrategy strategy, Scalar _betac)
+Params& Params::WithSubproblemMaximumIterations(Index nIters)
 {
-    this->eHomogenizationStrategy = strategy;
-    this->betac                   = _betac;
+    nSubproblemMaxIters = nIters;
     return *this;
 }
 
-PBAT_API Params& Params::WithStencilGradientAcceleration(
+Params& Params::WithStencilGradientAcceleration(
     Scalar _betaG0,
     Scalar _rhohat,
     Scalar _gammadown,
@@ -137,13 +168,6 @@ Params& Params::Construct(bool bValidate)
                     GVGilocal.size(),
                     nVertexElementAdjacencies));
         }
-        if (betac <= 0)
-        {
-            throw std::invalid_argument(
-                fmt::format(
-                    "Contact homogenization conditioning factor betac {} must be positive",
-                    betac));
-        }
         if (betaG0 < 0 or betaG0 >= 1)
         {
             throw std::invalid_argument(
@@ -169,11 +193,11 @@ Params& Params::Construct(bool bValidate)
         }
     }
     xb.resize(3, nVerts);
-    log10lame.resize(2, GVGe.size());
     gk.resize(3, nVerts);
     xk.resize(3, nVerts);
     Hnk.resize(nVerts);
     betaG.resize(nVerts);
+    Hk.resize(3, 3 * nVerts);
     return *this;
 }
 
@@ -188,8 +212,8 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("Padj", Padj);
     group.WriteMetaData("detHZero", detHZero);
     group.WriteMetaData("nMaxIters", nMaxIters);
-    group.WriteMetaData("eHomogenizationStrategy", static_cast<int>(eHomogenizationStrategy));
-    group.WriteMetaData("betac", betac);
+    group.WriteMetaData("nSubproblemMaxIters", nSubproblemMaxIters);
+    group.WriteMetaData("gtol", gtol);
     group.WriteMetaData("betaG0", betaG0);
     group.WriteMetaData("rhohat", rhohat);
     group.WriteMetaData("gammadown", gammadown);
@@ -199,7 +223,6 @@ void Params::Serialize(io::Archive& archive) const
     group.WriteData("xk", xk);
     group.WriteData("Hnk", Hnk);
     group.WriteData("betaG", betaG);
-    group.WriteData("log10lame", log10lame);
     group.WriteMetaData("k", k);
 }
 
@@ -222,11 +245,11 @@ void Params::Deserialize(io::Archive const& archive)
         detHZero = group.ReadMetaData<decltype(detHZero)>("detHZero");
     if (group.HasMetaData("nMaxIters"))
         nMaxIters = group.ReadMetaData<decltype(nMaxIters)>("nMaxIters");
-    if (group.HasMetaData("eHomogenizationStrategy"))
-        eHomogenizationStrategy = static_cast<EHomogenizationStrategy>(
-            group.ReadMetaData<int>("eHomogenizationStrategy"));
-    if (group.HasMetaData("betac"))
-        betac = group.ReadMetaData<decltype(betac)>("betac");
+    if (group.HasMetaData("nSubproblemMaxIters"))
+        nSubproblemMaxIters =
+            group.ReadMetaData<decltype(nSubproblemMaxIters)>("nSubproblemMaxIters");
+    if (group.HasMetaData("gtol"))
+        gtol = group.ReadMetaData<decltype(gtol)>("gtol");
     if (group.HasMetaData("betaG0"))
         betaG0 = group.ReadMetaData<decltype(betaG0)>("betaG0");
     if (group.HasMetaData("rhohat"))
@@ -245,8 +268,6 @@ void Params::Deserialize(io::Archive const& archive)
         Hnk = group.ReadData<decltype(Hnk)>("Hnk");
     if (group.HasMetaData("betaG"))
         betaG = group.ReadMetaData<decltype(betaG)>("betaG");
-    if (group.HasData("log10lame"))
-        log10lame = group.ReadData<decltype(log10lame)>("log10lame");
     if (group.HasMetaData("k"))
         k = group.ReadMetaData<decltype(k)>("k");
 }
@@ -318,6 +339,7 @@ VbdTestSetup SetupVbdTest(pbat::Index maxIters = 10)
     setup.vbdParams
         .WithVertexColors(setup.vbdParams.GVVp, setup.vbdParams.GVVadj, setup.vbdParams.colors)
         .WithMaximumIterations(maxIters)
+        .WithSubproblemMaximumIterations(maxIters)
         .WithHessianDeterminantZeroUnder(Scalar{1e-6})
         .Construct();
 

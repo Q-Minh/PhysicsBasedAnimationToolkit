@@ -413,7 +413,7 @@ void Solve(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
-    while (params.k < params.nMaxIters)
+    while (params.k < params.nSubproblemMaxIters)
     {
         // if (contact.RequiresConstraintSetUpdate())
         //     contact.UpdateConstraintSet(fem.x);

@@ -195,7 +195,7 @@ void Solve(
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
-    while (params.k < params.nMaxIters)
+    while (params.k < params.nSubproblemMaxIters)
     {
         if (contact.RequiresConstraintSetUpdate())
             contact.UpdateConstraintSet(fem.x);

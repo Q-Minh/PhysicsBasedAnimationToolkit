@@ -162,7 +162,7 @@ void Solve(
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Solve");
-    while (params.k < params.nMaxIters)
+    while (params.k < params.nSubproblemMaxIters)
     {
         if (contact.RequiresConstraintSetUpdate())
             contact.UpdateConstraintSet(fem.x);

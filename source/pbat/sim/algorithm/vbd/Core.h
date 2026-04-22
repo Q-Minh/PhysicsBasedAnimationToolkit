@@ -113,18 +113,17 @@ struct Params
      */
     PBAT_API Params& WithDamping(Scalar _betaR);
     /**
-     * @brief Maximum number of VBD iterations
-     * @param nIters Maximum number of iterations
+     * @brief Maximum number of outer iterations
+     * @param nIters Maximum number of outer iterations
      * @return Reference to this
      */
     PBAT_API Params& WithMaximumIterations(Index nIters);
     /**
-     * @brief Homogenization strategy
-     * @param strategy Homogenization strategy
-     * @param betac Contact homogenization conditioning factor for stiffness matching strategy
+     * @brief Maximum number of VBD iterations per subproblem
+     * @param nIters Maximum number of VBD iterations
      * @return Reference to this
      */
-    PBAT_API Params& WithHomogenization(EHomogenizationStrategy strategy, Scalar betac = 0.5);
+    PBAT_API Params& WithSubproblemMaximumIterations(Index nIters);
     /**
      * @brief Stencil gradient acceleration parameters
      * @param betaG0 Initial augmentation coefficient `0 < betaG0 < 1`
@@ -176,14 +175,10 @@ struct Params
                          ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj;   ///< `|# verts|` partition vertices
     Scalar betaR{0};     ///< Rayleigh damping coefficient
-    Index nMaxIters{25}; ///< Maximum number of VBD iterations
-    Scalar detHZero{0};  ///< Numerical zero for hessian pseudo-singularity check
-
-    // Homogenization
-    EHomogenizationStrategy eHomogenizationStrategy{
-        EHomogenizationStrategy::None}; ///< Homogenization strategy
-    Scalar betac{
-        10}; ///< Contact homogenization conditioning factor for stiffness matching strategy
+    Index nMaxIters{20}; ///< Maximum number of outer augmented Lagrangian iterations
+    Index nSubproblemMaxIters{25}; ///< Maximum number of VBD iterations per subproblem
+    Scalar gtol{1e-3};             ///< Gradient norm convergence threshold
+    Scalar detHZero{0};            ///< Numerical zero for hessian pseudo-singularity check
 
     // Stencil gradient acceleration
     Scalar betaG0{0.5};   ///< Initial stencil gradient augmentation coefficient `0 < betaG0 < 1`
@@ -202,10 +197,9 @@ struct Params
     Eigen::Vector<Scalar, Eigen::Dynamic> Hnk;   ///< Hessian norms at iteration k
     Eigen::Vector<Scalar, Eigen::Dynamic>
         betaG; ///< Per-vertex stencil gradient augmentation scale coefficient `0 < betaG < 1`
-    Eigen::Matrix<Scalar, 2, Eigen::Dynamic>
-        log10lame; ///< `2 x |# vertex-element adj.|` matrix of \f$ \log_{10}(\min \mu_{g'} /
-                   ///< \mu_{g}) \f$
-    Index k;       ///< Current iteration index
+    Eigen::Matrix<Scalar, 3, Eigen::Dynamic> Hk; ///< `3 x 3*|# nodes|` block-diagonal Hessian,
+                                                 ///< stored as contiguous 3x3 blocks per vertex
+    Index k;                                     ///< Current iteration index
 };
 
 /**
@@ -243,6 +237,30 @@ void Iterate(
  * @param params Solver parameters
  * @pre `TElasticEnergy::kDims == 3`
  */
+/**
+ * @brief Assemble a block-diagonal approximation of the dynamics Hessian (elastic + momentum +
+ * damping, without contacts) into `params.Hk`.
+ *
+ * `params.Hk` is a `3 x 3*nNodes` matrix where the 3x3 block for vertex `i` is stored in
+ * columns `[3*i, 3*i+3)`.
+ *
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param params Solver parameters
+ * @pre `TElasticEnergy::kDims == 3`
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void AssembleBlockDiagonalDynamicsHessian(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    Params& params);
+
+/**
+ * @brief Compute the penalty parameter for the current subproblem
+ * @param contact Mesh contact dynamics
+ * @param params Solver parameters
+ */
+void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Params& params);
+
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
@@ -284,9 +302,8 @@ void AccumulateElasticEnergy(
 {
     using namespace math::linalg;
     using mini::FromEigen;
-    Scalar kbudget = (1 - Scalar(params.k) / (params.nMaxIters - 1));
-    auto begin     = params.GVGp(i);
-    auto end       = params.GVGp(i + 1);
+    auto begin = params.GVGp(i);
+    auto end   = params.GVGp(i + 1);
     for (auto n = begin; n < end; ++n)
     {
         auto ilocal                     = params.GVGilocal(n);
@@ -301,17 +318,7 @@ void AccumulateElasticEnergy(
         TElasticEnergy Psi{};
         mini::SVector<Scalar, 9> gF;
         mini::SMatrix<Scalar, 9, 9> HF;
-        if (params.eHomogenizationStrategy ==
-            EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness)
-        {
-            auto gammaMu     = std::pow(Scalar(10), kbudget * params.log10lame(0, n));
-            auto gammaLambda = std::pow(Scalar(10), kbudget * params.log10lame(1, n));
-            Psi.GradAndHessian(Fe, gammaMu * lamee(0), gammaLambda * lamee(1), gF, HF);
-        }
-        else
-        {
-            Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
-        }
+        Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
         mini::SMatrix<Scalar, 3, 3> Hie = mini::Zeros<Scalar, 3, 3>();
         mini::SVector<Scalar, 3> gie    = mini::Zeros<Scalar, 3, 1>();
         kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hie);
@@ -543,10 +550,10 @@ inline void AccumulateContactEnergy(
     //         // NOTE: xi1 should be xi
     //         // mini::SVector<Scalar, 3> xi1 =
     //         //     FromEigen(fem.x.col(eindsi(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xcp  = FromEigen(params.xb.col(j).template head<3>());
-    //         mini::SVector<Scalar, 3> xtcp = FromEigen(xt.col(j).template head<3>());
+    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xcp  = FromEigen(params.xb.col(j).template
+    //         head<3>()); mini::SVector<Scalar, 3> xtcp = FromEigen(xt.col(j).template head<3>());
     //         mini::SVector<Scalar, 2> uv =
     //             geometry::ClosestPointQueries::UvPointOnLineSegment(xcp, xi, xi2);
     //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
@@ -576,10 +583,11 @@ inline void AccumulateContactEnergy(
     //     },
     //     // Edge-edge contact
     //     [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
-    //         mini::SVector<Scalar, 3> xi2 = FromEigen(params.xb.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xj1 = FromEigen(params.xb.col(eindsj(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xj2 = FromEigen(params.xb.col(eindsj(1)).template head<3>());
-    //         mini::SVector<Scalar, 2> st =
+    //         mini::SVector<Scalar, 3> xi2 = FromEigen(params.xb.col(eindsi(1)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xj1 =
+    //         FromEigen(params.xb.col(eindsj(0)).template head<3>()); mini::SVector<Scalar, 3> xj2
+    //         = FromEigen(params.xb.col(eindsj(1)).template head<3>()); mini::SVector<Scalar, 2> st
+    //         =
     //             geometry::ClosestPointQueries::LineSegments(xi, xi2, xj1, xj2);
     //         mini::SVector<Scalar, 3> xcp  = (1 - st(1)) * xj1 + st(1) * xj2;
     //         mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template head<3>());
@@ -616,10 +624,10 @@ inline void AccumulateContactEnergy(
     //     i,
     //     // Edge-vertex contact
     //     [&](Eigen::Vector<Index, 2> const& eindsi, Index j) {
-    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xcp  = FromEigen(Xenv.col(j).template head<3>());
-    //         mini::SVector<Scalar, 2> uv =
+    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xcp  = FromEigen(Xenv.col(j).template
+    //         head<3>()); mini::SVector<Scalar, 2> uv =
     //             geometry::ClosestPointQueries::UvPointOnLineSegment(xcp, xi, xi2);
     //         mini::SVector<Scalar, 3> gic    = mini::Zeros<Scalar, 3, 1>();
     //         mini::SMatrix<Scalar, 3, 3> Hic = mini::Zeros<Scalar, 3, 3>();
@@ -648,11 +656,11 @@ inline void AccumulateContactEnergy(
     //     },
     //     // Edge-edge contact
     //     [&](Eigen::Vector<Index, 2> const& eindsi, Eigen::Vector<Index, 2> const& eindsj) {
-    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template head<3>());
-    //         mini::SVector<Scalar, 3> xj1  = FromEigen(Xenv.col(eindsj(0)).template head<3>());
-    //         mini::SVector<Scalar, 3> xj2  = FromEigen(Xenv.col(eindsj(1)).template head<3>());
-    //         mini::SVector<Scalar, 2> st =
+    //         mini::SVector<Scalar, 3> xi2  = FromEigen(params.xb.col(eindsi(1)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xti2 = FromEigen(xt.col(eindsi(1)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xj1  = FromEigen(Xenv.col(eindsj(0)).template
+    //         head<3>()); mini::SVector<Scalar, 3> xj2  = FromEigen(Xenv.col(eindsj(1)).template
+    //         head<3>()); mini::SVector<Scalar, 2> st =
     //             geometry::ClosestPointQueries::LineSegments(xi, xi2, xj1, xj2);
     //         mini::SVector<Scalar, 3> xcp = (1 - st(1)) * xj1 + st(1) * xj2;
     //         mini::SVector<Scalar, 2> uv1{1 - st(0), st(0)};
@@ -819,182 +827,43 @@ auto BuildVertexEquation(
     Scalar mu                      = contactParams.mu;
     mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
     mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
-    switch (params.eHomogenizationStrategy)
-    {
-        case EHomogenizationStrategy::None: {
-            // Elastic energy
-            AccumulateElasticEnergy<TElasticEnergy>(
-                i,
-                fem,
-                params,
-                [&](mini::SVector<Scalar, 3> const& gie, mini::SMatrix<Scalar, 3, 3> const& Hie) {
-                    gi += gie;
-                    Hi += Hie;
-                });
-            gi *= h2;
-            Hi *= h2;
-            // Contact energy
-            AccumulateContactEnergy(
-                i,
-                xi,
-                xti,
-                x,
-                xt,
-                contact,
-                params,
-                rB,
-                kcB,
-                kcpB,
-                bB,
-                mu,
-                epsvh,
-                Scalar(1) /*h2inv*/,
-                [&]([[maybe_unused]] Scalar dc,
-                    mini::SVector<Scalar, 3> const& gic,
-                    mini::SMatrix<Scalar, 3, 3> const& Hic) {
-                    gi += gic;
-                    Hi += Hic;
-                });
-            // Kinetic energy
-            kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
-            // Damping
-            kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
-            break;
-        }
-        case EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness: {
-            // Approximate sub-stepping
-            auto K = static_cast<Scalar>(params.nMaxIters);
-            auto k = static_cast<Scalar>(params.k);
-            // Linear interpolation:
-            // h *= ((k + 1) < 0.8 * K) ? (k + 1) / K / 0.8 : 1;
-            // Exponential interpolation:
-            // h     = h * exp(-log(K) * (1 - k / (K - 1)));
-            // Log interpolation
-            Scalar regime{0.2};
-            h     = ((k + 1) < regime * K) ?
-                        math::LogInterpolate(h / K, h, Scalar(1), K * regime, k + 1) :
-                        h;
-            h2    = h * h;
-            h2inv = 1 / h2;
-            // Elastic energy
-            mini::SMatrix<Scalar, 3, 3> HiU = mini::Zeros<Scalar, 3, 3>();
-            mini::SVector<Scalar, 3> giU    = mini::Zeros<Scalar, 3, 1>();
-            AccumulateElasticEnergy<TElasticEnergy>(
-                i,
-                fem,
-                params,
-                [&](mini::SVector<Scalar, 3> const& gie, mini::SMatrix<Scalar, 3, 3> const& Hie) {
-                    giU += gie;
-                    HiU += Hie;
-                });
-            giU *= h2;
-            HiU *= h2;
-            // Contact energy with dynamics-matching stiffness
-            Scalar gammacK                  = m * sqrt(3);
-            Scalar gammacU                  = Norm(HiU);
-            mini::SVector<Scalar, 3> giC    = mini::Zeros<Scalar, 3, 1>();
-            mini::SMatrix<Scalar, 3, 3> HiC = mini::Zeros<Scalar, 3, 3>();
-            AccumulateContactEnergy(
-                i,
-                xi,
-                xti,
-                x,
-                xt,
-                contact,
-                params,
-                rB,
-                kcB,
-                kcpB,
-                bB,
-                mu,
-                epsvh,
-                Scalar(1) /*h2inv*/,
-                [&]([[maybe_unused]] Scalar dc,
-                    mini::SVector<Scalar, 3> const& gic,
-                    mini::SMatrix<Scalar, 3, 3> const& Hic) {
-                    giC += (gammacK / dc + gammacU) * gic;
-                    HiC += (gammacK / dc + gammacU) * Hic;
-                });
-            giC *= params.betac;
-            HiC *= params.betac;
-            // Kinetic energy
-            mini::SVector<Scalar, 3> giK    = mini::Zeros<Scalar, 3, 1>();
-            mini::SMatrix<Scalar, 3, 3> HiK = mini::Zeros<Scalar, 3, 3>();
-            kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, giK, HiK);
-            // Assemble
-            gi = giU + giC + giK;
-            Hi = HiU + HiC + HiK;
-            kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
-            break;
-        }
-        case EHomogenizationStrategy::Conditioning: {
-            // Elastic energy
-            mini::SMatrix<Scalar, 3, 3> HiU = mini::Zeros<Scalar, 3, 3>();
-            mini::SVector<Scalar, 3> giU    = mini::Zeros<Scalar, 3, 1>();
-            AccumulateElasticEnergy<TElasticEnergy>(
-                i,
-                fem,
-                params,
-                [&](mini::SVector<Scalar, 3> const& gie, mini::SMatrix<Scalar, 3, 3> const& Hie) {
-                    giU += gie;
-                    HiU += Hie;
-                });
-            giU *= h2;
-            HiU *= h2;
-            // Contact energy
-            mini::SMatrix<Scalar, 3, 3> HiC = mini::Zeros<Scalar, 3, 3>();
-            mini::SVector<Scalar, 3> giC    = mini::Zeros<Scalar, 3, 1>();
-            AccumulateContactEnergy(
-                i,
-                xi,
-                xti,
-                x,
-                xt,
-                contact,
-                params,
-                rB,
-                kcB,
-                kcpB,
-                bB,
-                mu,
-                epsvh,
-                Scalar(1) /*h2inv*/,
-                [&]([[maybe_unused]] Scalar dc,
-                    mini::SVector<Scalar, 3> const& gic,
-                    mini::SMatrix<Scalar, 3, 3> const& Hic) {
-                    giC += gic;
-                    HiC += Hic;
-                });
-            // Kinetic energy
-            mini::SMatrix<Scalar, 3, 3> HiK = mini::Zeros<Scalar, 3, 3>();
-            mini::SVector<Scalar, 3> giK    = mini::Zeros<Scalar, 3, 1>();
-            kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, giK, HiK);
-            // Assemble
-            Scalar gammaK = math::LogInterpolate(
-                Scalar(1) / max(SquaredNorm(HiK), numeric_limits<Scalar>::epsilon()),
-                Scalar(1),
-                Scalar(1),
-                static_cast<Scalar>(params.nMaxIters),
-                static_cast<Scalar>(params.k + 1));
-            Scalar gammaU = math::LogInterpolate(
-                Scalar(1) / max(Norm(HiU), numeric_limits<Scalar>::epsilon()),
-                Scalar(1),
-                Scalar(1),
-                static_cast<Scalar>(params.nMaxIters),
-                static_cast<Scalar>(params.k + 1));
-            Scalar gammaC = math::LogInterpolate(
-                Scalar(1) / max(Norm(HiC), numeric_limits<Scalar>::epsilon()),
-                Scalar(1),
-                Scalar(1),
-                static_cast<Scalar>(params.nMaxIters),
-                static_cast<Scalar>(params.k + 1));
-            gi = gammaU * giU + gammaC * giC + gammaK * giK;
-            Hi = gammaU * HiU + gammaC * HiC + gammaK * HiK;
-            // Damping
-            kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
-            break;
-        }
-    }
+    // Elastic energy
+    AccumulateElasticEnergy<TElasticEnergy>(
+        i,
+        fem,
+        params,
+        [&](mini::SVector<Scalar, 3> const& gie, mini::SMatrix<Scalar, 3, 3> const& Hie) {
+            gi += gie;
+            Hi += Hie;
+        });
+    gi *= h2;
+    Hi *= h2;
+    // Contact energy
+    AccumulateContactEnergy(
+        i,
+        xi,
+        xti,
+        x,
+        xt,
+        contact,
+        params,
+        rB,
+        kcB,
+        kcpB,
+        bB,
+        mu,
+        epsvh,
+        Scalar(1) /*h2inv*/,
+        [&]([[maybe_unused]] Scalar dc,
+            mini::SVector<Scalar, 3> const& gic,
+            mini::SMatrix<Scalar, 3, 3> const& Hic) {
+            gi += gic;
+            Hi += Hic;
+        });
+    // Kinetic energy
+    kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
+    // Damping
+    kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
     return {Hi, gi};
 }
 
@@ -1111,48 +980,6 @@ void Iterate(
     ++params.k;
 }
 
-/**
- * @brief Initialize homogenization for VBD solve
- * @tparam TElasticEnergy Hyper-elastic energy model
- * @param fem Finite element elasto dynamics problem
- * @param contact Mesh contact dynamics
- * @param params Solver parameters
- * @pre `TElasticEnergy::kDims == 3`
- */
-template <physics::CHyperElasticEnergy TElasticEnergy>
-void InitializeHomogenization(
-    common::FemElastoDynamics<TElasticEnergy>& fem,
-    [[maybe_unused]] contact::MeshDynamics<Scalar, Index>& contact,
-    Params& params)
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeHomogenization");
-    switch (params.eHomogenizationStrategy)
-    {
-        case EHomogenizationStrategy::None: break;
-        case EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness: {
-            // Elasticity
-            tbb::parallel_for(Index(0), fem.x.cols(), [&](Index i) {
-                auto begin             = params.GVGp(i);
-                auto end               = params.GVGp(i + 1);
-                auto nAdjacentElements = end - begin;
-                auto e                 = params.GVGe(Eigen::seqN(begin, nAdjacentElements));
-                auto lamee             = fem.lamegU(Eigen::placeholders::all, e);
-                auto minMu             = lamee.row(0).minCoeff();
-                auto minLambda         = lamee.row(1).minCoeff();
-                for (auto k = 0; k < nAdjacentElements; ++k)
-                {
-                    params.log10lame(0, begin + k) = std::log10(minMu / lamee(0, k));
-                    params.log10lame(1, begin + k) = std::log10(minLambda / lamee(1, k));
-                }
-            });
-            break;
-        }
-        case EHomogenizationStrategy::Conditioning: {
-            break;
-        }
-    }
-}
-
 template <physics::CHyperElasticEnergy TElasticEnergy>
 void InitializeSolve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
@@ -1162,14 +989,79 @@ void InitializeSolve(
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.InitializeSolve");
     auto const xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
     contact.GetParams().ComputeQueryRadius((fem.xtilde - xt).colwise().norm().maxCoeff());
-    contact.UpdateConstraintSet(xt);
+    contact.UpdateConstraintSet(xt, true /*bComputeReverseContactPairs*/);
     contact.RestoreFeasibility(fem.x, fem.dmask);
-    InitializeHomogenization<TElasticEnergy>(fem, contact, params);
     params.k = 0;
     params.gk.setZero();
     params.xk = fem.x;
     params.betaG.setConstant(params.betaG0);
     params.Hnk.setZero();
+}
+
+/**
+ * @brief Check convergence of VBD solve
+ * @tparam TElasticEnergy Hyper-elastic energy model
+ * @param fem Finite element elasto dynamics problem
+ * @param contact Mesh contact dynamics
+ * @param params Solver parameters
+ * @return `true` if converged, `false` otherwise
+ */
+template <physics::CHyperElasticEnergy TElasticEnergy>
+bool CheckConvergence(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    contact::MeshDynamics<Scalar, Index> const& contact,
+    Params& params)
+{
+    auto bt  = fem.bdf.BetaTilde();
+    auto bt2 = bt * bt;
+    params.gk.setZero();
+    fem.ToElasticGradient(fem.x, params.gk);
+    params.gk *= bt2;
+    fem.ToMomentumGradient(fem.x, params.gk);
+    contact.ToGradient(fem.x, params.gk);
+    auto gknorm2 = params.gk.squaredNorm();
+    return gknorm2 <= params.gtol * params.gtol;
+}
+
+template <physics::CHyperElasticEnergy TElasticEnergy>
+void AssembleBlockDiagonalDynamicsHessian(
+    common::FemElastoDynamics<TElasticEnergy>& fem,
+    Params& params)
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.AssembleBlockDiagonalDynamicsHessian");
+    using namespace math::linalg;
+    using mini::FromEigen;
+    using mini::ToEigen;
+    auto const nNodes = fem.x.cols();
+    params.Hk.setZero();
+    auto h         = fem.bdf.BetaTilde();
+    auto h2        = h * h;
+    auto xtildeBdf = fem.bdf.Inertia(0).reshaped(fem.x.rows(), fem.x.cols());
+    auto xt        = -xtildeBdf;
+    tbb::parallel_for(Index{0}, nNodes, [&](Index i) {
+        if (fem.IsDirichletNode(i))
+            return;
+        mini::SVector<Scalar, 3> xi      = FromEigen(fem.x.col(i).template head<3>());
+        mini::SVector<Scalar, 3> xti     = FromEigen(xt.col(i).template head<3>());
+        Scalar m                         = fem.m(i);
+        mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
+        mini::SMatrix<Scalar, 3, 3> Hi   = mini::Zeros<Scalar, 3, 3>();
+        mini::SVector<Scalar, 3> gi      = mini::Zeros<Scalar, 3, 1>();
+        // Elastic energy
+        detail::AccumulateElasticEnergy<TElasticEnergy>(
+            i,
+            fem,
+            params,
+            [&]([[maybe_unused]] mini::SVector<Scalar, 3> const& gie,
+                mini::SMatrix<Scalar, 3, 3> const& Hie) { Hi += Hie; });
+        Hi *= h2;
+        // Kinetic energy
+        kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
+        // Damping
+        kernels::AddDamping(Scalar(1) / h, xti, xi, params.betaR, gi, Hi);
+        // Store 3x3 block into columns [3*i, 3*i+3)
+        params.Hk.template block<3, 3>(0, 3 * i) = ToEigen(Hi);
+    });
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -1179,12 +1071,31 @@ void Solve(
     Params& params)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Solve");
-    while (params.k < params.nMaxIters)
+    for (params.k = 0; params.k < params.nMaxIters; ++params.k)
     {
-        if (contact.RequiresConstraintSetUpdate())
-            contact.UpdateConstraintSet(fem.x);
-        Iterate<TElasticEnergy>(fem, contact, params);
+        // 1. Linearize constraints
+        auto xt = fem.bdf.CurrentState().reshaped(fem.x.rows(), fem.x.cols());
+        contact.LinearizeConstraints(fem.x, xt);
+        // 2. Convergence check
+        bool const bConverged = CheckConvergence(fem, contact, params);
+        if (bConverged)
+            break;
+        // 3. Setup subproblem
+        AssembleBlockDiagonalDynamicsHessian(fem, params);
+        UpdatePenaltyParameter(contact, params);
+        // 4. VBD solve the linear constraint subproblem
+        using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
+        for (auto ki = 0; ki < params.nSubproblemMaxIters; ++ki)
+        {
+            contact.UpdateDual<EDualVariable::Slack>(fem.x);
+            Iterate<TElasticEnergy>(fem, contact, params);
+        }
+        // 5. Dual update
+        contact.UpdateDual<EDualVariable::Slack | EDualVariable::LagrangeMultiplier>(fem.x);
+        // 6. Restore feasibility
         contact.RestoreFeasibility(fem.x, fem.dmask);
+        // 7. Update constraint set for next subproblem
+        contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
 }

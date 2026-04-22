@@ -19,7 +19,6 @@ void BindCore(nanobind::module_& m)
     using ScalarType = Scalar;
     using IndexType  = Index;
     using pbat::sim::algorithm::common::FemElastoDynamics;
-    using pbat::sim::algorithm::vbd::EHomogenizationStrategy;
     using pbat::sim::algorithm::vbd::EInitializationStrategy;
     using pbat::sim::algorithm::vbd::Params;
 
@@ -87,19 +86,6 @@ void BindCore(nanobind::module_& m)
         "vertex-vertex adjacencies| x 1` array of adjacent vertex indices, and `colors` is a `|# "
         "verts| x 1` array of vertex colors");
 
-    nb::enum_<EHomogenizationStrategy>(m, "EHomogenizationStrategy")
-        .value("Off", EHomogenizationStrategy::None, "No homogenization")
-        .value(
-            "HomogeneousElasticityWithDynamicsMatchingContactStiffness",
-            EHomogenizationStrategy::HomogeneousElasticityWithDynamicsMatchingContactStiffness,
-            "Homogenize elastic material and ensure dynamics matching contact stiffness in the "
-            "spirit of "
-            "@cite ando_cubic_2024")
-        .value(
-            "Conditioning",
-            EHomogenizationStrategy::Conditioning,
-            "Homogenize using conditioning histogram");
-
     nb::class_<Params>(m, "Params")
         .def(nb::init<>())
         .def(
@@ -146,23 +132,19 @@ void BindCore(nanobind::module_& m)
             &Params::WithMaximumIterations,
             nb::arg("n_iters"),
             nb::rv_policy::reference_internal,
-            "Maximum number of VBD iterations.\n\n"
+            "Maximum number of outer iterations.\n\n"
             "Args:\n"
-            "    n_iters (int): Maximum number of iterations\n"
+            "    n_iters (int): Maximum number of outer iterations\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
-            "with_homogenization",
-            &Params::WithHomogenization,
-            nb::arg("strategy"),
-            nb::arg("betac") = 0.5,
+            "with_subproblem_maximum_iterations",
+            &Params::WithSubproblemMaximumIterations,
+            nb::arg("n_iters"),
             nb::rv_policy::reference_internal,
-            "Homogenization strategy.\n\n"
+            "Maximum number of VBD iterations per subproblem.\n\n"
             "Args:\n"
-            "    strategy (pbat.sim.algorithm.vbd.EHomogenizationStrategy): Homogenization "
-            "strategy\n"
-            "    betac (float): Contact homogenization conditioning factor for stiffness "
-            "matching strategy\n"
+            "    n_iters (int): Maximum number of VBD iterations per subproblem\n"
             "Returns:\n"
             "    self (pbat.sim.algorithm.vbd.Params): Reference to this")
         .def(
@@ -210,13 +192,13 @@ void BindCore(nanobind::module_& m)
             "into Padj from partition `p`")
         .def_rw("Padj", &Params::Padj, "`|# verts|` partition vertices")
         .def_rw("betaR", &Params::betaR, "Rayleigh damping coefficient")
-        .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of iterations")
-        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
+        .def_rw("n_max_iters", &Params::nMaxIters, "Maximum number of outer iterations")
         .def_rw(
-            "homogenization_strategy",
-            &Params::eHomogenizationStrategy,
-            "Homogenization strategy")
-        .def_rw("betac", &Params::betac, "Contact homogenization conditioning factor")
+            "n_subproblem_max_iters",
+            &Params::nSubproblemMaxIters,
+            "Maximum number of VBD iterations per subproblem")
+        .def_rw("gtol", &Params::gtol, "Gradient norm convergence threshold")
+        .def_rw("detH_zero", &Params::detHZero, "Determinant of Hessian zero threshold")
         .def_rw("betaG", &Params::betaG, "Per-vertex stencil gradient augmentation scale")
         .def_rw("betaG0", &Params::betaG0, "Initial stencil gradient augmentation scale")
         .def_rw(
