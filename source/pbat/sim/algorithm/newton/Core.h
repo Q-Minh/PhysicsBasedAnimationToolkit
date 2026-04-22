@@ -238,13 +238,13 @@ PrepareDerivatives(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact
             fem::EElementElasticityComputationFlags::Gradient |
             fem::EElementElasticityComputationFlags::Hessian,
         params.eSpdCorrection);
-    contact.ComputeEnergies(
-        fem.x,
-        -fem.bdf.Inertia(0),
-        bt,
-        sim::contact::EMeshEnergyComputationFlags::Potential |
-            sim::contact::EMeshEnergyComputationFlags::Gradient |
-            sim::contact::EMeshEnergyComputationFlags::Hessian);
+    // contact.ComputeEnergies(
+    //     fem.x,
+    //     -fem.bdf.Inertia(0),
+    //     bt,
+    //     sim::contact::EMeshEnergyComputationFlags::Potential |
+    //         sim::contact::EMeshEnergyComputationFlags::Gradient |
+    //         sim::contact::EMeshEnergyComputationFlags::Hessian);
     fem.HgU *= bt2;
     fem.GgU *= bt2;
     Scalar U = fem::HyperElasticPotential(fem.UgU);
@@ -508,12 +508,12 @@ bool Iterate(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Para
     auto xk = fem.x.reshaped();
     return params.newton.Iterate(
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            auto const bt = fem.bdf.BetaTilde();
-            contact.ComputeEnergies(
-                xk,
-                -fem.bdf.Inertia(0),
-                bt,
-                sim::contact::EMeshEnergyComputationFlags::Potential);
+            // auto const bt = fem.bdf.BetaTilde();
+            // contact.ComputeEnergies(
+            //     xk,
+            //     -fem.bdf.Inertia(0),
+            //     bt,
+            //     sim::contact::EMeshEnergyComputationFlags::Potential);
             return fem.Objective(xk) + contact.Potential();
         } /* f */,
         [&]([[maybe_unused]] auto const& _xk,
@@ -540,12 +540,12 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
             return PrepareDerivatives<TElasticEnergy>(fem, contact, params);
         } /* fPrepareDerivatives */,
         [&]<class TDerivedX>(Eigen::MatrixBase<TDerivedX> const& xk) {
-            auto const bt = fem.bdf.BetaTilde();
-            contact.ComputeEnergies(
-                xk,
-                -fem.bdf.Inertia(0),
-                bt,
-                sim::contact::EMeshEnergyComputationFlags::Potential);
+            // auto const bt = fem.bdf.BetaTilde();
+            // contact.ComputeEnergies(
+            //     xk,
+            //     -fem.bdf.Inertia(0),
+            //     bt,
+            //     sim::contact::EMeshEnergyComputationFlags::Potential);
             return fem.Objective(xk) + contact.Potential();
         } /* f */,
         [&]([[maybe_unused]] auto const& xk, Eigen::Vector<Scalar, Eigen::Dynamic>& gk) {
