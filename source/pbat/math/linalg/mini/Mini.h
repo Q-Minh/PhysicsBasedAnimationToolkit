@@ -28,6 +28,7 @@ namespace pbat::math::linalg::mini {
 #include "Flatten.h"
 #include "Geometry.h"
 #include "Inverse.h"
+#include "LLT.h"
 #include "Matrix.h"
 #include "Norm.h"
 #include "Product.h"
@@ -40,6 +41,7 @@ namespace pbat::math::linalg::mini {
 #include "SubMatrix.h"
 #include "SVD.h"
 #include "Transpose.h"
+#include "TriangularSolve.h"
 #include "UnaryOperations.h"
 
 #endif // PBAT_MATH_LINALG_MINI_MINI_H
