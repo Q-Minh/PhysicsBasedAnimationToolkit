@@ -41,8 +41,6 @@ class Simulation:
     _v0: np.ndarray[float]
     _xD: np.ndarray[float]
     _dmin: float = float("inf")
-    _energy_history_kinetic: list[float]
-    _energy_history_potential: list[float]
     _masscpy: np.ndarray[float]
     _static_elasticity: bool
 
