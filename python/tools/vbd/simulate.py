@@ -521,6 +521,18 @@ def main():
     t = 0
     previous_checkpoint_file = None
 
+    param_objs = _solver_params[args.solver]["params"]
+    param_objs = {name: cls() for name, cls in param_objs.items()}
+
+    def serialize_frame(archive: pbat.io.Archive):
+        fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+        contact_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+        for param_name in param_objs:
+            param_objs[param_name].serialize(
+                archive[f"{out_group}/{t:08d}/{_archive_solver_groups[args.solver]}"],
+                minimal=False,
+            )
+
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
     if args.start_from > 0:
         t = args.start_from
@@ -535,7 +547,7 @@ def main():
         pbar.update(t)
     else:
         archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.Overwrite)
-        fem_elasto_dynamics.serialize(archive[f"{out_group}/{t:08d}"])
+        serialize_frame(archive)
     contact_dynamics.params.construct()
 
     #################
