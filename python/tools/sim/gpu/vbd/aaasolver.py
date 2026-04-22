@@ -22,86 +22,62 @@ def adapt_stencil_gradient_acceleration_parameter(
     i: wp.int32,
     xi: wp.vec3f,
     gi: wp.vec3f,
+    Hi: wp.mat33f,
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
-    grp: wp.int32,
-    betaG: wp.float32,
+    is_surface_node: bool,
     eps: wp.float32,
 ) -> wp.float32:
-    rhohat = params.rhohat[grp]
-    gammaup = params.gammaup[grp]
-    gammadown = params.gammadown[grp]
-    ngk = wp.norm_l2(gi)
-    gkm1 = params.gk[i]  # Previous gradient
-    ngkm1 = wp.norm_l2(gkm1)
-    ndgkm1 = wp.norm_l2(gi - gkm1)
-    xk = params.xk[i]  # Previous position
-    ndxkm1 = wp.max(
-        wp.norm_l2(xi - xk), eps  # pyright: ignore[reportCallIssue, reportArgumentType]
-    )
-    L = params.Hnk[i] + ngk / ndxkm1
-    rho = ndgkm1 / wp.max(L * ndxkm1, eps)
-    if ngk > ngkm1:
-        betaG *= gammadown
-    elif rho > rhohat:
-        betaG += (wp.float32(1) - betaG) * gammaup
-    return betaG
-
-
-@wp.func
-def compute_stencil_gradient_augmentation(
-    k: wp.int32,
-    kp: wp.int32,
-    i: wp.int32,
-    xi: wp.vec3f,
-    gi: wp.vec3f,
-    Hi: wp.mat33f,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
-):
-    """Compute stencil gradient augmentation for vertex i."""
     # TODO: Check if the node is a surface node
-    is_surface_node = False  # fem.dynamic_meshes[i] >= 0
-    ii = wp.int32(1) if is_surface_node else wp.int32(0)
-    betaG = params.betaG[i, ii]  # Stencil gradient coefficient
-    eps = wp.float32(1e-10) # pyright: ignore[reportArgumentType]
-
-    # Adapt stencil gradient acceleration parameter using the total gradient
+    grp = wp.int32(1) if is_surface_node else wp.int32(0)
+    betaG = params.betaG[i, grp]
     if kp > 0:
-        betaG = adapt_stencil_gradient_acceleration_parameter(
-            kp, i, xi, gi, params, ii, betaG, eps
+        rhohat = params.rhohat[grp]
+        gammaup = params.gammaup[grp]
+        gammadown = params.gammadown[grp]
+        ngk = wp.norm_l2(gi)
+        gkm1 = params.gk[i]  # Previous gradient
+        ngkm1 = wp.norm_l2(gkm1)
+        ndgkm1 = wp.norm_l2(gi - gkm1)
+        xk = params.xk[i]  # Previous position
+        ndxkm1 = wp.max(
+            wp.norm_l2(xi - xk),
+            eps,  # pyright: ignore[reportCallIssue, reportArgumentType]
         )
-        
-    params.betaG[i, ii] = betaG  # Update the parameter
+        L = params.Hnk[i] + ngk / ndxkm1
+        rho = ndgkm1 / wp.max(L * ndxkm1, eps)
+        if ngk > ngkm1:
+            betaG *= gammadown
+        elif rho > rhohat:
+            betaG += (wp.float32(1) - betaG) * gammaup
+        params.betaG[i, grp] = betaG
     params.gk[i] = gi  # Store current gradient
     params.xk[i] = xi  # Store current position
     params.Hnk[i] = wp.sqrt(
         wp.ddot(Hi, Hi)  # pyright: ignore[reportArgumentType]
     )  # Store Hessian norm
+    return betaG
 
-    # Compute weighted stencil gradient augmentation
+
+@wp.func
+def compute_thread_local_stencil_gradient_augmentation(
+    local_tid: wp.int32,
+    block_dims: wp.int32,
+    i: wp.int32,
+    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    is_surface_node: bool,
+):
+    """Compute thread-local stencil gradient augmentation for vertex i."""
     ai = wp.vec3f()
-    if kp == 0 and k == 0:
-        return ai
-
     nbegin = params.GVVp[i]
     nend = params.GVVp[i + 1]
-    for n in range(nbegin, nend):
-        j = params.GVVadj[n]
+    n_neighbours = nend - nbegin
+    for jlocal in range(local_tid, n_neighbours, block_dims):
+        j = params.GVVadj[nbegin + jlocal]
         # TODO: Handle surface node's surface stencil
         # if is_surface_node and params.bSurfaceStencilSurfaceNeighboursOnly and fem.dynamic_meshes[j] < 0:
         #     continue
         ai += params.gk[j]
-
-    # Add augmentation
-    lam = (
-        betaG
-        * wp.dot(gi, ai)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        / wp.max(
-            wp.dot(ai, ai), eps  # pyright: ignore[reportArgumentType, reportCallIssue]
-        )
-    )
-    lam = wp.max(lam, wp.float32(0))
-    return lam * ai  # pyright: ignore[reportOperatorIssue]
+    return ai
 
 
 @wp.kernel
@@ -133,34 +109,65 @@ def _accelerated_vertex_solve_kernel(
     )
     gil *= h2  # pyright: ignore[reportOperatorIssue]
     Hil *= h2  # pyright: ignore[reportOperatorIssue]
-    gs, Hs = (
+    gis, His = (
         wp.tile(gil, preserve_type=True),  # pyright: ignore[reportArgumentType]
         wp.tile(Hil, preserve_type=True),  # pyright: ignore[reportArgumentType]
     )
     gi, Hi = (
-        wp.tile_reduce(wp.add, gs)[0],  # pyright: ignore[reportIndexIssue]
-        wp.tile_reduce(wp.add, Hs)[0],  # pyright: ignore[reportIndexIssue]
+        wp.tile_reduce(wp.add, gis)[0],  # pyright: ignore[reportIndexIssue]
+        wp.tile_reduce(wp.add, His)[0],  # pyright: ignore[reportIndexIssue]
     )
     # TODO: AccumulateContactEnergy(i, params.xb, contact, gi, Hi)
-    if local_tid > 0:
-        return
-    # Add inertia derivatives (K = m, already in position space)
-    gi, Hi = add_inertia_derivatives(
-        mi, xtildei, xi, gi, Hi
-    )  # pyright: ignore[reportArgumentType]
-    gi += compute_stencil_gradient_augmentation(
-        k, kp, i, xi, gi, Hi, fem, params
-    )  # pyright: ignore[reportOperatorIssue]
-    # Solve local system: x -= H^{-1} g
-    dxi = integrate_positions(
-        gi,
-        Hi,
-        params.vls_solver,
-        params.vls_max_iters,
-        params.vls_eps,
-        params.hess_zero,
-    )  # pyright: ignore[reportArgumentType]
-    fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
+    eps = wp.float32(1e-10)  # pyright: ignore[reportArgumentType]
+    # Augment residual
+    is_surface_node = False  # multi_mesh.GXV[i] >= 0
+    ai = wp.vec3f()
+    if k > 0 or kp > 0:
+        ail = compute_thread_local_stencil_gradient_augmentation(
+            local_tid=local_tid,  # pyright: ignore[reportArgumentType]
+            block_dims=block_dims,  # pyright: ignore[reportArgumentType]
+            i=i,
+            params=params,
+            is_surface_node=is_surface_node,
+        )
+        ais = wp.tile(ail, preserve_type=True)  # pyright: ignore[reportArgumentType]
+        ai = wp.tile_reduce(wp.add, ais)[0]  # pyright: ignore[reportIndexIssue]
+    if local_tid == 0:
+        # Add inertia derivatives (K = m, already in position space)
+        gi, Hi = add_inertia_derivatives(
+            mi, xtildei, xi, gi, Hi
+        )  # pyright: ignore[reportArgumentType]
+        # Adapt stencil gradient acceleration parameter using the total gradient
+        betaG = adapt_stencil_gradient_acceleration_parameter(
+            kp=kp,
+            i=i,
+            xi=xi,
+            gi=gi,
+            Hi=Hi,
+            params=params,
+            eps=eps,
+            is_surface_node=is_surface_node,
+        )
+        lam = (
+            betaG
+            * wp.dot(gi, ai)  # pyright: ignore[reportArgumentType, reportCallIssue]
+            / wp.max(
+                wp.dot(ai, ai),  # pyright: ignore[reportCallIssue, reportArgumentType]
+                eps,
+            )
+        )
+        lam = wp.max(lam, wp.float32(0))
+        gi += lam * ai  # pyright: ignore[reportOperatorIssue]
+        # Solve local system: x -= H^{-1} g
+        dxi = integrate_positions(
+            gi,
+            Hi,
+            params.vls_solver,
+            params.vls_max_iters,
+            params.vls_eps,
+            params.hess_zero,
+        )  # pyright: ignore[reportArgumentType]
+        fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
 def initialize_solve(
@@ -192,6 +199,10 @@ def iterate(
         p_end = int(Pptr[p + 1])
         n_verts_in_partition = p_end - p_begin
         if n_verts_in_partition > 0:
+            # Important, we want blocks to be as large as warps,
+            # so that different warp threads execute in lock step
+            # after branch conditions. This is because there is
+            # no __syncthreads() in warp, as there is in CUDA.
             block_dim = 32
             wp.launch(
                 kernel=_accelerated_vertex_solve_kernel,
