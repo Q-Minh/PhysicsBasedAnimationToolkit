@@ -259,7 +259,7 @@ void RadixSort(
         std::tuple_size_v<FProjects> <= std::tuple_size_v<ValueType>,
         "Mismatched tuple sizes");
     auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-        std::size_t constexpr N = sizeof...(Is);
+        static std::size_t constexpr N = sizeof...(Is);
         (RadixSort(
              inout,
              cpy,
@@ -306,7 +306,7 @@ void RadixSort(
         std::tuple_size_v<FProjects> <= std::tuple_size_v<ValueType>,
         "Mismatched tuple sizes");
     auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-        std::size_t constexpr N = sizeof...(Is);
+        static std::size_t constexpr N = sizeof...(Is);
         (RadixSort(
              inout,
              cpy,
