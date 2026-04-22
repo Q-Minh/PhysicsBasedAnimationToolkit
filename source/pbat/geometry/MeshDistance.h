@@ -332,8 +332,7 @@ inline auto PointEdgeDistance<TScalar>::Gradient(TMatrixx const& x_)
     auto ga = g.template Slice<3, 1>(3, 0);
     auto gb = g.template Slice<3, 1>(6, 0);
     using namespace std;
-    // NOTE: This is the actual point-edge distance function, but it's not accurate away from
-    // the triangle.
+    // NOTE: This is the actual point-edge distance function.
     // math::linalg::mini::SVector<TScalar, 3> ab = b - a;
     // math::linalg::mini::SVector<TScalar, 3> ax = x - a;
     // math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ax);
@@ -666,31 +665,32 @@ inline auto PointTriangleDistance<TScalar>::Gradient(TMatrixx const& x_)
     using namespace std;
     // NOTE: This is the actual point-triangle distance function, but it's not accurate away from
     // the triangle.
-    math::linalg::mini::SVector<TScalar, 3> ab = b - a;
-    math::linalg::mini::SVector<TScalar, 3> ac = c - a;
-    math::linalg::mini::SVector<TScalar, 3> ax = x - a;
-    math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ac);
+    // math::linalg::mini::SVector<TScalar, 3> ab = b - a;
+    // math::linalg::mini::SVector<TScalar, 3> ac = c - a;
+    // math::linalg::mini::SVector<TScalar, 3> ax = x - a;
+    // math::linalg::mini::SVector<TScalar, 3> n  = Cross(ab, ac);
+    // TScalar nnorm                              = Norm(n);
+    // TScalar nnorminv                           = 1 / nnorm;
+    // n *= nnorminv;
+    // math::linalg::mini::Identity<TScalar, 3, 3> I;
+    // math::linalg::mini::SVector<TScalar, 3> Pnax = ax - Dot(ax, n) * n;
+    // auto uvw = ClosestPointQueries::UvwPointInTriangle(x, a, b, c);
+    // gx       = n;
+    // ga       = nnorminv * (Cross(b - c, Pnax)) - uvw(0) * n;
+    // gb       = nnorminv * (Cross(ac, Pnax)) - uvw(1) * n;
+    // gc       = nnorminv * (Cross(-ab, Pnax)) - uvw(2) * n;
+
+    // NOTE: Use a translation-only point-triangle distance query
+    auto uvw = ClosestPointQueries::UvwPointInTriangle(x, a, b, c);
+    math::linalg::mini::SVector<TScalar, 3> xc = uvw(0) * a + uvw(1) * b + uvw(2) * c;
+    math::linalg::mini::SVector<TScalar, 3> n  = x - xc;
     TScalar nnorm                              = Norm(n);
     TScalar nnorminv                           = 1 / nnorm;
     n *= nnorminv;
-    math::linalg::mini::Identity<TScalar, 3, 3> I;
-    math::linalg::mini::SVector<TScalar, 3> Pnax = ax - Dot(ax, n) * n;
-    gx                                           = n;
-    ga                                           = nnorminv * (Cross(b - c, Pnax)) - n;
-    gb                                           = nnorminv * (Cross(ac, Pnax));
-    gc                                           = nnorminv * (Cross(-ab, Pnax));
-
-    // NOTE: Use a translation-only point-triangle distance query
-    // auto uvw = ClosestPointQueries::PointInTriangle(x, a, b, c);
-    // math::linalg::mini::SVector<TScalar, 3> xc = uvw(0)*a + uvw(1)*b + uvw(2)*c;
-    // math::linalg::mini::SVector<TScalar, 3> n = x - xc;
-    // TScalar nnorm = Norm(n);
-    // TScalar nnorminv = 1 / nnorm;
-    // n *= nnorminv;
-    // gx = n;
-    // ga = -uvw(0)*n;
-    // gb = -uvw(1)*n;
-    // gc = -uvw(2)*n;
+    gx = n;
+    ga = -uvw(0) * n;
+    gb = -uvw(1) * n;
+    gc = -uvw(2) * n;
     return g;
 }
 
