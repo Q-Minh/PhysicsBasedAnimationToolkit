@@ -201,14 +201,19 @@ struct Params
     IndexVectorX GVGilocal; ///< `|# of vertex-elems adjacencies|` local vertex indices s.t.
                             ///< `GVGilocal[k] for GVGp[i] <= k < GVGp[i+1]` gives the local vertex
                             ///< index of vertex `i` in element `e=GVGe[k]`
-    // Parallelization
-    IndexVectorX colors; ///< `|# vertices|` map of vertex colors
+
+    // Vertex-vertex adjacency graph
     IndexVectorX GVVp;   ///< `|# verts+1|` prefixes into GVVadj
     IndexVectorX GVVadj; ///< `|# vertex-vertex adjacencies|` adjacent vertex indices
+
+    // Parallelization
+    IndexVectorX colors; ///< `|# vertices|` map of vertex colors
     IndexVectorX Pptr;   ///< `|# partitions+1|` partition pointers, s.t. the range `[Pptr[p],
-                         ///< Pptr[p+1])` indexes into Padj from partition `p`
-    IndexVectorX Padj;   ///< `|# verts|` partition vertices
-    Scalar betaR{0};     ///< Rayleigh damping coefficient
+    ///< Pptr[p+1])` indexes into Padj from partition `p`
+    IndexVectorX Padj; ///< `|# verts|` partition vertices
+
+    // Damping
+    Scalar betaR{0}; ///< Rayleigh damping coefficient
 
     // Contact
     ESALPenaltyStiffness ePenaltyStiffness{
