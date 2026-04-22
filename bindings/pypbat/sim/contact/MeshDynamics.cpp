@@ -39,7 +39,7 @@ struct Contact
     Eigen::Vector2<ScalarType> cf;      ///< Friction constraint value
     Eigen::Vector2<ScalarType> lambdaf; ///< Friction Lagrange multiplier
     Eigen::Matrix<ScalarType, kDims, kStencil>
-        gradf; ///< Friction gradient in 3D (per stencil node)
+        ngradf; ///< Negative friction gradient (i.e. friction forces)
 };
 
 struct MeshDynamics
@@ -74,6 +74,7 @@ struct MeshDynamics
         mPointEdgeContacts.reserve(cd.PointEdgeContacts().Size());
         mPointTriangleContacts.reserve(cd.PointTriangleContacts().Size());
         mEdgeEdgeContacts.reserve(cd.EdgeEdgeContacts().Size());
+        auto const& params = cd.GetParams();
         cd.ForAllContacts(
             [&]<class TContactSet>(
                 typename TContactSet::ConstAccessorType C,
@@ -97,7 +98,6 @@ struct MeshDynamics
                     else if constexpr (std::is_same_v<TContactSet, EESet>)
                         return EdgeEdgeContact{};
                 }();
-                using namespace pbat::math::linalg::mini;
                 auto const [Xc, nodes] = cd.template LoadStencil<TContactSet>(x, stencil);
                 auto xc                = Reshape<kDofs, 1>(Xc);
                 contact.Xc             = ToEigen(Xc);
@@ -115,10 +115,19 @@ struct MeshDynamics
                 auto gradx             = d.Gradient(xc);
                 contact.gradx          = ToEigen(gradx).reshaped(kDims, kStencil);
                 contact.cx             = d.Eval(xc);
-                // Friction data
+                // Friction data (copied from MeshDynamics::ToGradient)
                 auto F          = C.Friction();
                 contact.cf      = ToEigen(F.Eval(xc));
                 contact.lambdaf = ToEigen(F.Lambda());
+                auto cf         = F.Eval(xc);
+                auto kf         = params.kc / params.gamma * params.gammaf;
+                using pbat::math::linalg::mini::SVector;
+                auto const& T              = F.TangentBasis();
+                auto const& W              = F.Weights();
+                SVector<Scalar, kDims> gfc = T * (kf * cf - F.Lambda());
+                auto gradfc                = ToEigen(gfc);
+                for (auto ki = 0; ki < kStencil; ++ki)
+                    contact.ngradf.col(ki) = -W(ki) * gradfc;
 
                 if constexpr (std::is_same_v<TContactSet, PPSet>)
                     mPointPointContacts.push_back(std::move(contact));
@@ -526,7 +535,10 @@ void BindMeshDynamics(nanobind::module_& m)
             .def_ro("cx", &ContactType::cx, "c(x).")
             .def_ro("cf", &ContactType::cf, "Friction constraint value (2D).")
             .def_ro("lambdaf", &ContactType::lambdaf, "Friction Lagrange multiplier (2D).")
-            .def_ro("gradf", &ContactType::gradf, "Friction gradient in 3D (per stencil node).");
+            .def_ro(
+                "ngradf",
+                &ContactType::ngradf,
+                "Negative friction gradient (i.e. friction forces).");
     };
 
     fBindDebugContact(nb::class_<DebugPointPointContact>(m, "DebugPointPointContact"));
