@@ -358,11 +358,10 @@ inline void AccumulateContactEnergy(
     math::linalg::mini::SVector<Scalar, 3>& gi,
     math::linalg::mini::SMatrix<Scalar, 3, 3>& Hi)
 {
-    auto const& contactParams = contact.GetParams();
-    Scalar const kn           = contactParams.gamma * contactParams.kc;
-    Scalar const kf           = contactParams.gammaf * contactParams.kc;
-    Scalar const dmin         = contactParams.dmin;
-    // Generic per-contact accumulation for a known stencil position ki
+    auto const& contactParams        = contact.GetParams();
+    Scalar const kn                  = contactParams.gamma * contactParams.kc;
+    Scalar const kf                  = contactParams.gammaf * contactParams.kc;
+    Scalar const dmin                = contactParams.dmin;
     auto fAccumulateNodalDerivatives = [&](auto C, auto stencil) {
         using ConstraintAccessorType   = decltype(C);
         using ContactSetType           = typename ConstraintAccessorType::ContactSetType;
@@ -372,9 +371,8 @@ inline void AccumulateContactEnergy(
         using namespace math::linalg;
         auto xc = mini::Reshape<kDofs, 1>(Xc);
         // Normal
-        Scalar cs         = C.Eval(xc) - dmin - C.Slack();
-        Scalar dL         = kn * cs - C.Lambda();
-        auto const& gradc = C.Grad();
+        Scalar cs = C.Eval(xc) - dmin - C.Slack();
+        Scalar dL = kn * cs - C.Lambda();
         // Friction
         auto F                      = C.Friction();
         auto const& Wf              = F.Weights();
@@ -385,6 +383,7 @@ inline void AccumulateContactEnergy(
         Index ki{0};
         pbat::common::ForRange<0, kStencil>([&]<auto kj>() { ki += (i == nodes[kj]) * kj; });
         // Compute node derivatives
+        auto const& gradc = C.Grad();
         kernels::AccumulateAugmentedLagrangianContactNodeDerivatives<
             3>(gradc, ki, dL, kn, Tf, Wf(ki), kf, df, gi, Hi);
     };
