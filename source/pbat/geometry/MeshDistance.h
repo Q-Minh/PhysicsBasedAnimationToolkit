@@ -29,9 +29,9 @@ namespace pbat::geometry {
 template <common::CFloatingPoint TScalar>
 struct PointPointDistance
 {
-    using ScalarType                  = TScalar;
-    static constexpr int kStencilSize = 2;                ///< Number of vertices in the stencil
-    static constexpr int kDofs        = 3 * kStencilSize; ///< Total degrees of freedom
+    using ScalarType              = TScalar;
+    static constexpr int kStencil = 2;            ///< Number of vertices in the stencil
+    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the point-point distance \f$ d = \|x - y\| \f$
@@ -78,9 +78,9 @@ struct PointPointDistance
 template <common::CFloatingPoint TScalar>
 struct PointEdgeDistance
 {
-    using ScalarType                  = TScalar;
-    static constexpr int kStencilSize = 3;                ///< Number of vertices in the stencil
-    static constexpr int kDofs        = 3 * kStencilSize; ///< Total degrees of freedom
+    using ScalarType              = TScalar;
+    static constexpr int kStencil = 3;            ///< Number of vertices in the stencil
+    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the point-edge distance
@@ -133,9 +133,9 @@ struct PointEdgeDistance
 template <common::CFloatingPoint TScalar>
 struct PointTriangleDistance
 {
-    using ScalarType                  = TScalar;
-    static constexpr int kStencilSize = 4;                ///< Number of vertices in the stencil
-    static constexpr int kDofs        = 3 * kStencilSize; ///< Total degrees of freedom
+    using ScalarType              = TScalar;
+    static constexpr int kStencil = 4;            ///< Number of vertices in the stencil
+    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the point-triangle signed distance
@@ -189,9 +189,9 @@ struct PointTriangleDistance
 template <common::CFloatingPoint TScalar>
 struct EdgeEdgeDistance
 {
-    using ScalarType                  = TScalar;
-    static constexpr int kStencilSize = 4;                ///< Number of vertices in the stencil
-    static constexpr int kDofs        = 3 * kStencilSize; ///< Total degrees of freedom
+    using ScalarType              = TScalar;
+    static constexpr int kStencil = 4;            ///< Number of vertices in the stencil
+    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the edge-edge signed distance with mollified norm

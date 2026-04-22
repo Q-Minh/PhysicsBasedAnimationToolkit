@@ -53,14 +53,16 @@ class MeshDynamics
      * @brief Per constraint quantities
      * @tparam kStencil Number of nodes the constraint depends on
      */
-    template <int kStencil>
+    template <int StencilSize>
     struct ConstraintData
     {
-        TScalar lambda;                                               ///< Lagrange multiplier
-        TScalar s;                                                    ///< Slack variable
-        TScalar mu;                                                   ///< Complementarity slack
-        TScalar c;                                                    ///< Constraint value
-        math::linalg::mini::SVector<TScalar, kStencil * kDims> gradc; ///< Constraint gradient
+        static auto constexpr kStencil = StencilSize;
+        static auto constexpr kDofs    = kStencil * kDims;
+        TScalar lambda;                                    ///< Lagrange multiplier
+        TScalar s;                                         ///< Slack variable
+        TScalar mu;                                        ///< Complementarity slack
+        TScalar c;                                         ///< Constraint value
+        math::linalg::mini::SVector<TScalar, kDofs> gradc; ///< Constraint gradient
     };
     /**
      * @brief Constraint set container
@@ -69,11 +71,10 @@ class MeshDynamics
     template <int kStencil>
     using ConstraintSet =
         graph::DenseAdjacencySet<TIndex, bool /* bActivated */, ConstraintData<kStencil>>;
-
     using PointPointContactSet = ConstraintSet<2>; ///< Point-point contact constraint container
     using PointEdgeContactSet  = ConstraintSet<3>; ///< Point-edge contact constraint container
     using PointTriangleContactSet =
-        ConstraintSet<3>; ///< Point-triangle contact constraint container
+        ConstraintSet<4>; ///< Point-triangle contact constraint container
     using EdgeEdgeContactSet =
         ConstraintSet<4>; ///< (Half-)Edge-(half-)edge contact constraint container
 
@@ -187,16 +188,6 @@ class MeshDynamics
      */
     void Initialize(geometry::Device device);
     /**
-     * @brief Truncate displacements to satisfy the computed displacement bounds
-     * @tparam TDerivedXkp1 Writeable matrix type
-     * @param Xkp1 `3 x |# points|` or `3*|# points| x 1` proposed new point positions
-     * @return Number of truncated points in this call.
-     * @pre `Initialize()` has been called
-     * @post Displacements have been truncated to satisfy the computed displacement bounds
-     */
-    template <class TDerivedXkp1>
-    Eigen::Index RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
-    /**
      * @brief Truncate displacements from positions to satisfy the computed displacement bounds
      * @tparam TDerivedXkp1 Writeable matrix type
      * @tparam TMask Eigen dense base s.t. TMask::Scalar is convertible to bool
@@ -209,6 +200,16 @@ class MeshDynamics
     template <class TDerivedXkp1, class TMask>
     Eigen::Index
     RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1, Eigen::DenseBase<TMask> const& mask);
+    /**
+     * @brief Truncate displacements to satisfy the computed displacement bounds
+     * @tparam TDerivedXkp1 Writeable matrix type
+     * @param Xkp1 `3 x |# points|` or `3*|# points| x 1` proposed new point positions
+     * @return Number of truncated points in this call.
+     * @pre `Initialize()` has been called
+     * @post Displacements have been truncated to satisfy the computed displacement bounds
+     */
+    template <class TDerivedXkp1>
+    Eigen::Index RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1);
     /**
      * @brief Truncate displacements to satisfy the computed displacement bounds
      * @tparam TDerivedDxkp1 Writeable matrix type
@@ -227,12 +228,6 @@ class MeshDynamics
      */
     void RequestConstraintSetUpdate();
     /**
-     * @brief Get the number of truncated points from the last `RestoreFeasibility()`
-     * call
-     * @return Number of truncated points
-     */
-    Eigen::Index NumTruncatedPoints() const;
-    /**
      * @brief Check if constraint set update is required
      * @return true if constraint set update is required, false otherwise
      */
@@ -246,6 +241,12 @@ class MeshDynamics
      */
     template <class TDerivedX>
     void UpdateConstraintSet(Eigen::DenseBase<TDerivedX> const& X);
+    /**
+     * @brief Get the number of truncated points from the last `RestoreFeasibility()`
+     * call
+     * @return Number of truncated points
+     */
+    Eigen::Index NumTruncatedPoints() const;
     /**
      * @brief For each point-(dynamic)face contact of point `i`, invoke the appropriate callback
      *
@@ -488,15 +489,6 @@ class MeshDynamics
         ScalarType h,
         int computationFlags);
     /**
-     * @brief For each mesh contact energy (i.e. mesh-mesh and mesh-env), invoke the callback
-     * @tparam FOnMeshContactEnergy Callable type with signature
-     * `template <int K> void(MeshContactEnergy<ScalarType, kStencil>& energy)` for
-     * each mesh contact energy
-     * @param fOnMeshContactEnergy Callback to invoke
-     */
-    template <class FOnMeshContactEnergy>
-    void ForEachMeshContactEnergy(FOnMeshContactEnergy&& fOnMeshContactEnergy);
-    /**
      * @brief Compute the total potential energy from all contacts
      * @return Total potential energy
      * @pre `ComputeEnergies()` has been called with the `Potential` flag
@@ -636,14 +628,6 @@ class MeshDynamics
      */
     auto EdgeEdgeContacts() const -> EdgeEdgeContactSet const& { return mEdgeEdgeContacts; }
     /**
-     * @brief Reduce the thread-local contact sets from ogc::State into the contact adjacency sets
-     *
-     * This method merges all thread-local contact pairs from mOgcState into the
-     * mPointPointContacts, mPointEdgeContacts, mPointTriangleContacts, and mEdgeEdgeContacts
-     * adjacency sets.
-     */
-    void ReduceContactSets();
-    /**
      * @brief Serialize to archive
      * @param archive Archive to serialize to
      */
@@ -654,14 +638,24 @@ class MeshDynamics
      */
     void Deserialize(io::Archive const& archive);
 
+  protected:
+    /**
+     * @brief Transfer OGC contact pairs to our contact sets
+     */
+    void UpdateContactSetsFromOgcPairs();
+    /**
+     * @brief Linearize all contact constraints, initializing them if necessary.
+     */
+    void LinearizeConstraints();
+
   private:
     Params mParams; ///< Mesh dynamics parameters
 
     /**
      * @brief Contact detection data structures and algorithms
      */
-    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXdynamic; ///< Dynamic point positions
-    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXstatic;  ///< Static point positions
+    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXdynamic; ///< Dynamic point position storage
+    Eigen::Matrix<ScalarType, 3, Eigen::Dynamic> mXstatic;  ///< Static point position storage
     MultiMesh<IndexType> mDynamicMeshes;                    ///< Dynamic geometry
     MultiMesh<IndexType> mStaticMeshes;                     ///< Static geometry
     ogc::Input<ScalarType, IndexType> mOgcInput;            ///< OGC input data structures
@@ -827,15 +821,6 @@ inline void MeshDynamics<TScalar, TIndex>::Initialize(geometry::Device device)
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <class TDerivedXkp1>
-inline Eigen::Index
-MeshDynamics<TScalar, TIndex>::RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
-{
-    auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
-    return RestoreFeasibility(Xkp1, mask);
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 template <class TDerivedXkp1, class TMask>
 inline Eigen::Index MeshDynamics<TScalar, TIndex>::RestoreFeasibility(
     Eigen::MatrixBase<TDerivedXkp1>& _Xkp1,
@@ -869,6 +854,15 @@ inline Eigen::Index MeshDynamics<TScalar, TIndex>::RestoreFeasibility(
     mNumTruncatedPoints += nTruncated;
     mRequiresBoundsRecomputation = mNumTruncatedPoints >= mParams.mOgcParams.gammae * nVertices;
     return nTruncated;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TDerivedXkp1>
+inline Eigen::Index
+MeshDynamics<TScalar, TIndex>::RestoreFeasibility(Eigen::MatrixBase<TDerivedXkp1>& Xkp1)
+{
+    auto mask = Eigen::Vector<bool, Eigen::Dynamic>::Constant(Xkp1.cols(), false);
+    return RestoreFeasibility(Xkp1, mask);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -911,12 +905,6 @@ inline void MeshDynamics<TScalar, TIndex>::RequestConstraintSetUpdate()
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline Eigen::Index MeshDynamics<TScalar, TIndex>::NumTruncatedPoints() const
-{
-    return mNumTruncatedPoints;
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline bool MeshDynamics<TScalar, TIndex>::RequiresConstraintSetUpdate() const
 {
     return mRequiresBoundsRecomputation;
@@ -937,8 +925,16 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateConstraintSet(Eigen::DenseBase<
     mXdynamic = X.derived();
     mOgcState.PrepareForExecution(mOgcInput, mParams.mOgcParams);
     ogc::Execute(mOgcInput, mParams.mOgcParams, mOgcState);
+    UpdateContactSetsFromOgcPairs();
+    LinearizeConstraints();
     mRequiresBoundsRecomputation = false;
     mNumTruncatedPoints          = 0;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline Eigen::Index MeshDynamics<TScalar, TIndex>::NumTruncatedPoints() const
+{
+    return mNumTruncatedPoints;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1025,60 +1021,6 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline std::size_t MeshDynamics<TScalar, TIndex>::NumEdgeEdgeContacts() const
 {
     return mEdgeEdgeContacts.Size();
-}
-
-template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-inline void MeshDynamics<TScalar, TIndex>::ReduceContactSets()
-{
-    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ReduceContactSets");
-    bool const bAssumeThreadLocalSetsAreDisjoint{false};
-    bool const bAssumeGlobalSetIsDisjointFromThreadLocalSets{false};
-    namespace mini = math::linalg::mini;
-    using mini::FromEigen;
-    mPointPointContacts.Reduce(
-        mOgcState.mXX.begin(),
-        mOgcState.mXX.end(),
-        bAssumeThreadLocalSetsAreDisjoint,
-        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
-        [](IndexType i, IndexType j) {
-            MeshPointPointConstraint<ScalarType> C;
-            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
-            // relaxation mu
-            return C;
-        });
-    mPointEdgeContacts.Reduce(
-        mOgcState.mXE.begin(),
-        mOgcState.mXE.end(),
-        bAssumeThreadLocalSetsAreDisjoint,
-        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
-        [](IndexType i, IndexType j) {
-            MeshPointEdgeConstraint<ScalarType> C;
-            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
-            // relaxation mu
-            return C;
-        });
-    mPointTriangleContacts.Reduce(
-        mOgcState.mXF.begin(),
-        mOgcState.mXF.end(),
-        bAssumeThreadLocalSetsAreDisjoint,
-        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
-        [](IndexType i, IndexType j) {
-            MeshPointTriangleConstraint<ScalarType> C;
-            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
-            // relaxation mu
-            return C;
-        });
-    mEdgeEdgeContacts.Reduce(
-        mOgcState.mEE.begin(),
-        mOgcState.mEE.end(),
-        bAssumeThreadLocalSetsAreDisjoint,
-        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
-        [](IndexType i, IndexType j) {
-            MeshEdgeEdgeConstraint<ScalarType> C;
-            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
-            // relaxation mu
-            return C;
-        });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1569,6 +1511,200 @@ inline void MeshDynamics<TScalar, TIndex>::ForEachMeshEnvironmentContact(
         //      func = std::forward<FOnTriangleEnvironmentVertexContact>(
         //          fOnTriangleEnvironmentVertexContact)](IndexType j) { func(findsi, j); });
     }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.UpdateContactSetsFromOgcPairs");
+    using OgcStateType = decltype(mOgcState);
+    tbb::task_group tg;
+    auto const fUpdateContactSet = [&](auto& set, auto& newSet, auto nSourcePrimitives) {
+        bool const bKeepNewSetAfterAssignment{false};
+        set.Assign(newSet, bKeepNewSetAfterAssignment);
+        set.Finalize(nSourcePrimitives);
+    };
+    auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
+    auto const nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
+    tg.run([&] { fUpdateContactSet(mPointPointContacts, mOgcState.mXX, nPoints); });
+    tg.run([&] { fUpdateContactSet(mPointEdgeContacts, mOgcState.mXE, nPoints); });
+    tg.run([&] { fUpdateContactSet(mPointTriangleContacts, mOgcState.mXF, nPoints); });
+    tg.run([&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
+    tg.wait();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
+{
+    PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
+    using OgcStateType    = decltype(mOgcState);
+    using PrefixType      = std::array<TIndex, OgcStateType::EGeometry::Count + 1>;
+    auto const fLoadPoint = [&](TIndex i, OgcStateType::EGeometry g, auto&& xi) {
+        i -= mOgcState.mPointGeometryPrefix[g];
+        switch (g)
+        {
+            case OgcStateType::EGeometry::Dynamic: xi = mXdynamic.col(i); break;
+            case OgcStateType::EGeometry::Static: xi = mXstatic.col(i); break;
+            default: break;
+        }
+    };
+    auto const fLoadHalfEdge = [&](TIndex he, OgcStateType::EGeometry g, auto&& xi, auto&& xj) {
+        he -= mOgcState.mHalfEdgeGeometryPrefix[g];
+        switch (g)
+        {
+            case OgcStateType::EGeometry::Dynamic: {
+                xi = mXdynamic.col(geometry::IncomingVertex(*mOgcInput.F, he));
+                xj = mXdynamic.col(geometry::OutgoingVertex(*mOgcInput.F, he));
+            }
+            break;
+            case OgcStateType::EGeometry::Static: {
+                xi = mXstatic.col(geometry::IncomingVertex(*mOgcInput.Fenv, he));
+                xj = mXstatic.col(geometry::OutgoingVertex(*mOgcInput.Fenv, he));
+            }
+            break;
+            default: break;
+        }
+    };
+    auto const fLoadTriangle =
+        [&](TIndex f, OgcStateType::EGeometry g, auto&& xi, auto&& xj, auto&& xk) {
+            f -= mOgcState.mTriangleGeometryPrefix[g];
+            switch (g)
+            {
+                case OgcStateType::EGeometry::Dynamic: {
+                    auto xinds = mOgcInput.F->col(f);
+                    xi         = mXdynamic.col(xinds(0));
+                    xj         = mXdynamic.col(xinds(1));
+                    xk         = mXdynamic.col(xinds(2));
+                }
+                break;
+                case OgcStateType::EGeometry::Static: {
+                    auto xinds = mOgcInput.Fenv->col(f);
+                    xi         = mXstatic.col(xinds(0));
+                    xj         = mXstatic.col(xinds(1));
+                    xk         = mXstatic.col(xinds(2));
+                }
+                break;
+                default: break;
+            }
+        };
+    TIndex const nThreads     = static_cast<TIndex>(std::thread::hardware_concurrency());
+    auto const fForEachThread = [nThreads](auto&& f) {
+        tbb::parallel_for(
+            tbb::blocked_range<TIndex>(0, nThreads),
+            [&](const tbb::blocked_range<TIndex>& r) {
+                for (TIndex i = r.begin(); i != r.end(); ++i)
+                    f(i);
+            },
+            tbb::simple_partitioner{});
+    };
+    auto const fKernel =
+        [&]<class FDistance, class FLoadStencil, int kStencil = FDistance::kStencil>(
+            ConstraintSet<kStencil>& set,
+            PrefixType const& prefixu,
+            PrefixType const& prefixv,
+            FLoadStencil const& fLoadStencil) {
+            TIndex const nConstraints          = static_cast<TIndex>(set.Size());
+            TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+            fForEachThread([&](TIndex t) {
+                TIndex const cstart = t * nConstraintsPerThread;
+                TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+                int g1{0}, g2{0};
+                for (TIndex c = cstart, uprev = 0; c < cend; ++c)
+                {
+                    auto const [u, v, k] = set.WeightedAdjacency(c);
+                    // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
+                    // until we find the next u, in which case we reset the g2 geometry index for v.
+                    if (u > uprev)
+                    {
+                        g2    = 0;
+                        uprev = u;
+                    }
+                    // Keep track of geometry types for u and v
+                    while (u >= prefixu[g1 + 1])
+                        ++g1;
+                    while (v >= prefixv[g2 + 1])
+                        ++g2;
+                    // Load constraint variables
+                    Eigen::Matrix<TScalar, kDims, kStencil> X;
+                    fLoadStencil(
+                        u,
+                        v,
+                        static_cast<OgcStateType::EGeometry>(g1),
+                        static_cast<OgcStateType::EGeometry>(g2),
+                        X);
+                    // Evaluate constraint and its derivatives
+                    using ConstraintType = ConstraintData<kStencil>;
+                    ConstraintType& C    = set.template Data<ConstraintType>(k);
+                    using math::linalg::mini::FromEigen;
+                    auto x = Reshape<ConstraintType::kDofs, 1>(FromEigen(X));
+                    FDistance d{};
+                    C.c     = d.Eval(x);
+                    C.gradc = d.Gradient(x);
+                    // Initialize constraint if it's new.
+                    std::vector<bool>& bActivated = set.Data<bool>();
+                    if (not bActivated[k])
+                    {
+                        C.s = C.c;
+                        // TODO: Find smarter way to initialize complementarity slack
+                        C.mu          = TScalar{1e-1};
+                        C.lambda      = C.mu / C.s;
+                        bActivated[k] = true;
+                    }
+                }
+            });
+        };
+    tbb::task_group tg;
+    tg.run([&]() {
+        fKernel.template operator()<geometry::PointPointDistance<TScalar>>(
+            mPointPointContacts,
+            mOgcState.mPointGeometryPrefix,
+            mOgcState.mPointGeometryPrefix,
+            [&](auto u, auto v, auto g1, auto g2, auto& X) {
+                fLoadPoint(u, g1, X.col(0));
+                fLoadPoint(v, g2, X.col(1));
+            });
+    });
+    tg.run([&]() {
+        fKernel.template operator()<geometry::PointEdgeDistance<TScalar>>(
+            mPointEdgeContacts,
+            mOgcState.mPointGeometryPrefix,
+            mOgcState.mHalfEdgeGeometryPrefix,
+            [&](auto u, auto v, auto g1, auto g2, auto& X) {
+                fLoadPoint(u, g1, X.col(0));
+                fLoadHalfEdge(v, g2, X.col(1), X.col(2));
+            });
+    });
+    tg.run([&]() {
+        fKernel.template operator()<geometry::PointTriangleDistance<TScalar>>(
+            mPointTriangleContacts,
+            mOgcState.mPointGeometryPrefix,
+            mOgcState.mTriangleGeometryPrefix,
+            [&](auto u, auto v, auto g1, auto g2, auto& X) {
+                fLoadPoint(u, g1, X.col(0));
+                fLoadTriangle(v, g2, X.col(1), X.col(2), X.col(3));
+            });
+    });
+    tg.run([&]() {
+        fKernel.template operator()<geometry::PointTriangleDistance<TScalar>>(
+            mPointTriangleContacts,
+            mOgcState.mPointGeometryPrefix,
+            mOgcState.mTriangleGeometryPrefix,
+            [&](auto u, auto v, auto g1, auto g2, auto& X) {
+                fLoadPoint(u, g1, X.col(0));
+                fLoadTriangle(v, g2, X.col(1), X.col(2), X.col(3));
+            });
+    });
+    tg.run([&]() {
+        fKernel.template operator()<geometry::EdgeEdgeDistance<TScalar>>(
+            mEdgeEdgeContacts,
+            mOgcState.mHalfEdgeGeometryPrefix,
+            mOgcState.mHalfEdgeGeometryPrefix,
+            [&](auto u, auto v, auto g1, auto g2, auto& X) {
+                fLoadHalfEdge(u, g1, X.col(0), X.col(1));
+                fLoadHalfEdge(v, g2, X.col(2), X.col(3));
+            });
+    });
+    tg.wait();
 }
 
 } // namespace pbat::sim::contact

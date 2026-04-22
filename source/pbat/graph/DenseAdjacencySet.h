@@ -156,6 +156,27 @@ class DenseAdjacencySet
     {
         return Data<TData>()[k];
     }
+    /**
+     * @brief Get the i^{th} adjacency (u,v)
+     * @param i Index of adjacency
+     * @return Tuple-like (u,v)
+     */
+    auto Adjacency(TIndex i) const
+    {
+        return std::tie(std::get<0>(mAdjacencies[i]), std::get<1>(mAdjacencies[i]));
+    }
+    /**
+     * @brief Get the i^{th} weighted adjacency (u,v,k)
+     * @param i Index of weighted adjacency
+     * @return Tuple-like (u,v,k)
+     */
+    auto WeightedAdjacency(TIndex i) const
+    {
+        return std::tie(
+            std::get<0>(mAdjacencies[i]),
+            std::get<1>(mAdjacencies[i]),
+            mIdToData[std::get<2>(mAdjacencies[i])]);
+    }
 
   private:
     std::vector<std::tuple<TIndex, TIndex, TIndex>> mAdjacencies; ///< (source, target, id) tuples

@@ -68,8 +68,8 @@ struct MeshPairConstraint
 {
     using DistanceType = TDistance;                      ///< Underlying distance computation type
     using ScalarType   = typename TDistance::ScalarType; ///< Floating point scalar type
-    static constexpr int kStencilSize =
-        DistanceType::kStencilSize; ///< Number of vertices involved in the constraint
+    static constexpr int kStencil =
+        DistanceType::kStencil; ///< Number of vertices involved in the constraint
     static constexpr int kDofs =
         DistanceType::kDofs; ///< Degrees of freedom involved in the constraint
 
