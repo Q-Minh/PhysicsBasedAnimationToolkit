@@ -241,8 +241,8 @@ struct Params
     Scalar gammadownS{0.5}; ///< Beta reduction factor for surface nodes
     Scalar gammaupS{0.5};   ///< Beta increase factor for surface nodes
     bool bSurfaceStencilSurfaceNeighboursOnly{
-        false}; ///< Whether to only consider surface neighbors for surface nodes in stencil
-                ///< gradient acceleration
+        true}; ///< Whether to only consider surface neighbors for surface nodes in stencil
+               ///< gradient acceleration
     EStencilGradientBetaWarmStartMask eWarmStartMask{
         EStencilGradientBetaWarmStartMask::Subproblem}; ///< Warm start mask for beta initialization
 
