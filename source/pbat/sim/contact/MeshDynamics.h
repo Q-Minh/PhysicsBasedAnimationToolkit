@@ -72,52 +72,52 @@ class MeshDynamics
          * @return Lagrange multiplier value
          */
         TScalar LagrangeMultiplier(auto&& x, TScalar cstep = TScalar(1)) const;
-        /**
-         * @brief Evaluate the constraint barrier anti-derivative \f$ a(c) \f$.
-         *
-         * The piecewise definition is:
-         * - \f$ a(c) = -\infty \f$ for \f$ c \leq 0 \f$
-         * - \f$ a(c) = \ln(c) + C_1 \f$ for \f$ 0 < c \leq r - \varepsilon_P \f$
-         * - \f$ a(c) = A_0 \ln(c) + A_1 c + A_2 c^2 + A_3 c^3 \f$ for
-         *   \f$ r - \varepsilon_P < c < r \f$
-         * - \f$ a(c) = C_2 \f$ for \f$ c \geq r \f$
-         *
-         * @param c Constraint function value
-         * @param r Contact radius
-         * @param epsP Size of the smooth transition region, `epsP < r`
-         * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
-         * @param C1 Constant ensuring continuity at `c = r - epsP`
-         * @param C2 Saturation value at `c = r`
-         * @return The barrier value \f$ a(c) \f$
-         */
-        static TScalar Barrier(
-            TScalar c,
-            TScalar r,
-            TScalar epsP,
-            std::array<TScalar, 4> const& APC,
-            TScalar C1,
-            TScalar C2);
-        /**
-         * @brief Evaluate the first derivative \f$ a'(c) \f$ of the constraint barrier.
-         * @param c Constraint function value
-         * @param r Contact radius
-         * @param epsP Size of the smooth transition region, `epsP < r`
-         * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
-         * @return The first derivative \f$ a'(c) \f$
-         */
-        static TScalar
-        BarrierGradient(TScalar c, TScalar r, TScalar epsP, std::array<TScalar, 4> const& APC);
-        /**
-         * @brief Evaluate the second derivative \f$ a''(c) \f$ of the constraint barrier.
-         * @param c Constraint function value
-         * @param r Contact radius
-         * @param epsP Size of the smooth transition region, `epsP < r`
-         * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
-         * @return The second derivative \f$ a''(c) \f$
-         */
-        static TScalar
-        BarrierHessian(TScalar c, TScalar r, TScalar epsP, std::array<TScalar, 4> const& APC);
     };
+    /**
+     * @brief Evaluate the constraint barrier anti-derivative \f$ a(c) \f$.
+     *
+     * The piecewise definition is:
+     * - \f$ a(c) = -\infty \f$ for \f$ c \leq 0 \f$
+     * - \f$ a(c) = \ln(c) + C_1 \f$ for \f$ 0 < c \leq r - \varepsilon_P \f$
+     * - \f$ a(c) = A_0 \ln(c) + A_1 c + A_2 c^2 + A_3 c^3 \f$ for
+     *   \f$ r - \varepsilon_P < c < r \f$
+     * - \f$ a(c) = C_2 \f$ for \f$ c \geq r \f$
+     *
+     * @param c Constraint function value
+     * @param r Contact radius
+     * @param epsP Size of the smooth transition region, `epsP < r`
+     * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
+     * @param C1 Constant ensuring continuity at `c = r - epsP`
+     * @param C2 Saturation value at `c = r`
+     * @return The barrier value \f$ a(c) \f$
+     */
+    static TScalar Barrier(
+        TScalar c,
+        TScalar r,
+        TScalar epsP,
+        std::array<TScalar, 4> const& APC,
+        TScalar C1,
+        TScalar C2);
+    /**
+     * @brief Evaluate the first derivative \f$ a'(c) \f$ of the constraint barrier.
+     * @param c Constraint function value
+     * @param r Contact radius
+     * @param epsP Size of the smooth transition region, `epsP < r`
+     * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
+     * @return The first derivative \f$ a'(c) \f$
+     */
+    static TScalar
+    BarrierGradient(TScalar c, TScalar r, TScalar epsP, std::array<TScalar, 4> const& APC);
+    /**
+     * @brief Evaluate the second derivative \f$ a''(c) \f$ of the constraint barrier.
+     * @param c Constraint function value
+     * @param r Contact radius
+     * @param epsP Size of the smooth transition region, `epsP < r`
+     * @param APC Anti-derivative polynomial coefficients `{A_0, A_1, A_2, A_3}`
+     * @return The second derivative \f$ a''(c) \f$
+     */
+    static TScalar
+    BarrierHessian(TScalar c, TScalar r, TScalar epsP, std::array<TScalar, 4> const& APC);
     /**
      * @brief Constraint set container
      * @tparam kStencil Number of nodes the constraint depends on
@@ -219,6 +219,15 @@ class MeshDynamics
          */
         SelfType& WithQueryRadiusInitialization(TScalar rqstart, TScalar betarq);
         /**
+         * @brief Set the sequential primal interior point parameters
+         * @param gamma_ Multiple of dynamics hessian curvature for barrier parameter computation
+         * @param dmin_ Loose target minimum contact distance, `dmin_ > 0`
+         * @param epsP_ Size of the smooth transition region, `0 < epsP_ < r` and
+         *              `dmin_ < r - epsP_`
+         * @return Reference to this
+         */
+        SelfType& WithSequentialPrimalInteriorPoint(TScalar gamma_, TScalar dmin_, TScalar epsP_);
+        /**
          * @brief Construct the Params object
          * @param bValidate Whether to validate parameters
          * @return Reference to this
@@ -263,6 +272,20 @@ class MeshDynamics
         TScalar C1; ///< `C1 = a(r-\eps_P) - ln(r-\eps_P)` s.t. `a(c) = ln(c) + C1` for `0 < c <= r
                     ///< - \eps_P`
         TScalar C2; ///< `C2 = a(r)` s.t. `a(c) = C2` for `c >= r`
+
+      private:
+        /**
+         * @brief Compute the smoothed barrier polynomial coefficients APC, C1 and C2
+         * from the current values of `r` and `epsP`.
+         * @pre `r > 0`, `0 < epsP < r`
+         */
+        void UpdateSmoothedBarrierCoefficients();
+        /**
+         * @brief Compute the OGC two-stage activation coefficients `kcp` and `b`
+         * from the current values of `r` and `kc`.
+         * @pre `r > 0`, `kc > 0`
+         */
+        void UpdateOgcTwoStageActivationCoefficients();
     };
 
     /**
@@ -699,8 +722,7 @@ inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::Lagrang
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <geometry::CMeshDistance TDistance>
-inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::Barrier(
+inline TScalar MeshDynamics<TScalar, TIndex>::Barrier(
     TScalar c,
     TScalar r,
     TScalar epsP,
@@ -709,19 +731,21 @@ inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::Barrier
     TScalar C2)
 {
     TScalar constexpr zero = std::numeric_limits<TScalar>::epsilon();
+    // NOTE:
+    // The predicates c < r - epsP and c <= r are important. Do not change the strictness of these
+    // inequalities. See MeshDynamics<TScalar, TIndex>::Params::UpdateSmoothedBarrierCoefficients().
     if (c <= zero)
         return -std::numeric_limits<TScalar>::infinity();
-    else if (c <= r - epsP)
+    else if (c < r - epsP)
         return std::log(c) + C1;
-    else if (c < r)
+    else if (c <= r)
         return APC[0] * std::log(c) + APC[1] * c + APC[2] * c * c + APC[3] * c * c * c;
     else
         return C2;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <geometry::CMeshDistance TDistance>
-inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::BarrierGradient(
+inline TScalar MeshDynamics<TScalar, TIndex>::BarrierGradient(
     TScalar c,
     TScalar r,
     TScalar epsP,
@@ -739,8 +763,7 @@ inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::Barrier
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
-template <geometry::CMeshDistance TDistance>
-inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::BarrierHessian(
+inline TScalar MeshDynamics<TScalar, TIndex>::BarrierHessian(
     TScalar c,
     TScalar r,
     TScalar epsP,
@@ -748,7 +771,7 @@ inline TScalar MeshDynamics<TScalar, TIndex>::ConstraintData<TDistance>::Barrier
 {
     TScalar constexpr zero = std::numeric_limits<TScalar>::epsilon();
     if (c <= zero)
-        return std::numeric_limits<TScalar>::infinity();
+        return -std::numeric_limits<TScalar>::infinity();
     else if (c <= r - epsP)
         return TScalar(-1) / (c * c);
     else if (c < r)
@@ -794,6 +817,19 @@ MeshDynamics<TScalar, TIndex>::Params::WithQueryRadiusInitialization(
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline MeshDynamics<TScalar, TIndex>::Params&
+MeshDynamics<TScalar, TIndex>::Params::WithSequentialPrimalInteriorPoint(
+    TScalar gamma_,
+    TScalar dmin_,
+    TScalar epsP_)
+{
+    this->gamma = gamma_;
+    this->dmin  = dmin_;
+    this->epsP  = epsP_;
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 MeshDynamics<TScalar, TIndex>::Params&
 MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
 {
@@ -813,12 +849,59 @@ MeshDynamics<TScalar, TIndex>::Params::Construct(bool bValidate)
             throw std::invalid_argument(
                 "MeshDynamics::Params::Construct(): betarq must be non-negative.");
         }
+        if (gamma <= TScalar(0))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): gamma must be positive.");
+        }
+        if (dmin <= TScalar(0))
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): dmin must be positive.");
+        }
+        if (epsP <= TScalar(0) || epsP >= mOgcParams.r)
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): epsP must satisfy 0 < epsP < r.");
+        }
+        if (dmin >= mOgcParams.r - epsP)
+        {
+            throw std::invalid_argument(
+                "MeshDynamics::Params::Construct(): dmin must satisfy dmin < r - epsP.");
+        }
     }
+    UpdateOgcTwoStageActivationCoefficients();
+    UpdateSmoothedBarrierCoefficients();
+    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Params::UpdateOgcTwoStageActivationCoefficients()
+{
     auto tau = TScalar(0.5) * mOgcParams.r;
     auto r   = mOgcParams.r;
     kcp      = tau * kc * (tau - r) * (tau - r);
     b        = (TScalar(0.5) * kc) * (r - tau) * (r - tau) + kcp * std::log(tau);
-    return *this;
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::Params::UpdateSmoothedBarrierCoefficients()
+{
+    auto r     = mOgcParams.r;
+    auto r2    = r * r;
+    auto epsP2 = epsP * epsP;
+    auto epsP3 = epsP * epsP2;
+    APC[0]     = -r2 * (2 * r - 3 * epsP);
+    APC[1]     = 6 * r2 - 6 * r * epsP;
+    APC[2]     = 3 * epsP / TScalar(2) - 3 * r;
+    APC[3]     = 2 / TScalar(3);
+    for (auto& coeff : APC)
+        coeff /= epsP3;
+    auto const a = [&](TScalar c) {
+        return MeshDynamics<TScalar, TIndex>::Barrier(c, r, epsP, APC, TScalar(0), TScalar(0));
+    };
+    C1 = a(r - epsP) - std::log(r - epsP);
+    C2 = a(r);
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1320,13 +1403,8 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
             using DistanceType = typename TConstraintData::DistanceType;
             TScalar const c =
                 bForLinearSubproblem ? C.chat + Dot(C.gradc, xc) : DistanceType{}.Eval(xc);
-            TScalar const a = C.Barrier(
-                c,
-                mParams.mOgcParams.r,
-                mParams.epsP,
-                mParams.APC,
-                mParams.kcp,
-                mParams.b);
+            TScalar const a =
+                Barrier(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC, mParams.kcp, mParams.b);
             E -= C.mu * a;
         },
         nThreads);
@@ -1371,7 +1449,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
                 TScalar c  = C.chat + Dot(C.gradc, xc);
                 auto gradc = ToEigen(C.gradc);
                 TScalar const dadc =
-                    C.BarrierGradient(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC);
+                    BarrierGradient(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC);
                 for (auto ki = 0; ki < kStencil; ++ki)
                 {
                     if (nodes[ki] >= nNodes)
@@ -1389,7 +1467,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
                 TScalar const c                           = d.Eval(xc);
                 Eigen::Vector<TScalar, kDofs> const gradc = ToEigen(d.Gradient(xc));
                 TScalar const dadc =
-                    C.BarrierGradient(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC);
+                    BarrierGradient(c, mParams.mOgcParams.r, mParams.epsP, mParams.APC);
                 for (auto ki = 0; ki < kStencil; ++ki)
                 {
                     if (nodes[ki] >= nNodes)

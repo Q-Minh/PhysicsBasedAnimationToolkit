@@ -176,7 +176,55 @@ TEST_CASE("[sim][algorithm][newton] Core")
 
 #include "pbat/io/Archive.h"
 
+#include <fmt/format.h>
 #include <tbb/global_control.h>
+
+TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
+{
+    using namespace pbat;
+    using namespace pbat::sim::algorithm;
+    using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
+    using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
+    // Arrange
+    io::Archive archive(
+        fmt::format("{}/sim/algorithm/CubeFallingOnPlane.h5", PBAT_TESTS_INTEGRATION_PATH),
+        HighFive::File::AccessMode::ReadOnly);
+    FemElastoDynamics fem{};
+    fem.Deserialize(archive["fem"]);
+    MeshDynamics contact{};
+    contact.Deserialize(archive["contact"]);
+    geometry::Device device{geometry::DeviceConfig{}};
+    contact.Initialize(device);
+    contact.GetParams()
+        .WithOgcParams(
+            sim::contact::ogc::Params<Scalar>()
+                .WithDisplacementBoundConfig(0.45, 0.)
+                .WithRadii(1e-2 /*r*/, 1e-2 /*rq*/)
+                .Construct())
+        .WithSequentialPrimalInteriorPoint(1., 2e-3, 5e-3)
+        .Construct();
+    // Act
+    newton::Params params{};
+    params.WithLinearSolver(newton::ELinearSolver::LLT)
+        .WithSpdCorrection(fem::EHyperElasticSpdCorrection::Absolute)
+        .WithOptimizer(
+            math::optimization::Newton<Scalar>(
+                /*nMaxIters=*/20,
+                /*gtol=*/Scalar{1e-8},
+                /*n=*/fem.x.size(),
+                /*lineSearchIn=*/math::optimization::BackTrackingLineSearch<Scalar>{}))
+        .WithOgcTruncationStrategy(newton::EOgcTruncationStrategy::PerVertex)
+        .Construct();
+    tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
+    for (auto t = 0; t < 100; ++t)
+    {
+        fem.SetupTimeIntegrationOptimization();
+        newton::InitializeSolve(fem, contact, params);
+        newton::Solve(fem, contact, params);
+        fem.Step();
+    }
+}
 
 TEST_CASE("[sim][algorithm][newton] Sandbox")
 {
