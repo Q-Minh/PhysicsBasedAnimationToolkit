@@ -589,7 +589,7 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     params.Hnk(i)    = Norm(Hi);
     // Compute weighted stencil gradient augmentation
     mini::SVector<Scalar, 3> ai = mini::Zeros<Scalar, 3, 1>();
-    if (params.kp == 0)
+    if (params.kp == 0 and params.k == 0)
         return ai;
     auto nbegin = params.GVVp(i);
     auto nend   = params.GVVp(i + 1);
