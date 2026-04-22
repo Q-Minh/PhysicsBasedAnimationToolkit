@@ -177,7 +177,7 @@ Params& Params::Construct(bool bValidate)
                     "betaG0 < 1",
                     betaG0));
         }
-        if (gammadown <= 0 or gammadown >= 1)
+        if (gammadown < 0 or gammadown >= 1)
         {
             throw std::invalid_argument(
                 fmt::format(
@@ -185,7 +185,7 @@ Params& Params::Construct(bool bValidate)
                     "gammadown < 1",
                     gammadown));
         }
-        if (gammaup <= 0 or gammaup >= 1)
+        if (gammaup < 0 or gammaup >= 1)
         {
             throw std::invalid_argument(
                 fmt::format(
