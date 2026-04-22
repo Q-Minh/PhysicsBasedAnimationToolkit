@@ -19,6 +19,7 @@ void BindCore(nanobind::module_& m)
     using ScalarType = Scalar;
     using IndexType  = Index;
     using pbat::sim::algorithm::common::FemElastoDynamics;
+    using pbat::sim::algorithm::vbd::ESALPenaltyStiffness;
     using pbat::sim::algorithm::vbd::EVertexIntegrationLinearSolver;
     using pbat::sim::algorithm::vbd::Params;
 
@@ -27,6 +28,11 @@ void BindCore(nanobind::module_& m)
         .value("LLT", EVertexIntegrationLinearSolver::LLT)
         .value("QR", EVertexIntegrationLinearSolver::QR)
         .value("EVD", EVertexIntegrationLinearSolver::EVD)
+        .export_values();
+
+    nb::enum_<ESALPenaltyStiffness>(m, "SALPenaltyStiffness")
+        .value("LocalMaxRayleighQuotient", ESALPenaltyStiffness::LocalMaxRayleighQuotient)
+        .value("GlobalMaxRayleighQuotient", ESALPenaltyStiffness::GlobalMaxRayleighQuotient)
         .export_values();
 
     m.def(
@@ -243,6 +249,10 @@ void BindCore(nanobind::module_& m)
             &Params::nSubproblemMaxIters,
             "Maximum number of VBD iterations per subproblem")
         .def_rw("gtol", &Params::gtol, "Gradient norm convergence threshold")
+        .def_rw(
+            "e_penalty_stiffness",
+            &Params::ePenaltyStiffness,
+            "Strategy for updating the augmented Lagrangian penalty parameter")
         .def_rw("vlinsolve", &Params::eSolver, "Vertex integration linear solver")
         .def_rw("hess_zero", &Params::hessZero, "Determinant of Hessian zero threshold")
         .def_rw("vls_eps", &Params::vLinSolverEps, "Vertex integration linear solver epsilon")

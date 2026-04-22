@@ -128,6 +128,12 @@ struct Params
      */
     PBAT_API Params& WithSubproblemMaximumIterations(Index nIters);
     /**
+     * @brief Contact penalty stiffness determination strategy
+     * @param strategy Contact penalty stiffness determination strategy
+     * @return PBAT_API&
+     */
+    PBAT_API Params& WithPenaltyParameterUpdateStrategy(ESALPenaltyStiffness strategy);
+    /**
      * @brief Stencil gradient acceleration parameters
      * @param betaG0 Initial augmentation coefficient `0 < betaG0 < 1`
      * @param rhohat Lipschitz-normalized threshold above which steps are considered small (i.e.
@@ -196,6 +202,11 @@ struct Params
                          ///< Pptr[p+1])` indexes into Padj from partition `p`
     IndexVectorX Padj;   ///< `|# verts|` partition vertices
     Scalar betaR{0};     ///< Rayleigh damping coefficient
+
+    // Contact
+    ESALPenaltyStiffness ePenaltyStiffness{
+        ESALPenaltyStiffness::GlobalMaxRayleighQuotient}; ///< Contact penalty stiffness
+                                                          ///< determination strategy
 
     // Convergence
     Index nMaxIters{20};           ///< Maximum number of outer augmented Lagrangian iterations

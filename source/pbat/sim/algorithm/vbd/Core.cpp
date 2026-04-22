@@ -67,24 +67,37 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
                 Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
                 maxQc       = std::max(maxQc, Q);
             }
-            // auto F      = C.Friction();
-            // C.Penalty() = contactParams.gamma * maxQc;
-            // F.Penalty() = contactParams.gammaf * maxQc;
-            pbat::common::AtomicMax(maxQ, maxQc);
+            switch (params.ePenaltyStiffness)
+            {
+                case ESALPenaltyStiffness::LocalMaxRayleighQuotient: {
+                    auto F      = C.Friction();
+                    C.Penalty() = contactParams.gamma * maxQc;
+                    F.Penalty() = contactParams.gammaf * maxQc;
+                }
+                break;
+                case ESALPenaltyStiffness::GlobalMaxRayleighQuotient: {
+                    pbat::common::AtomicMax(maxQ, maxQc);
+                }
+                break;
+                default: break;
+            }
         },
         nThreads);
-    Scalar maxQv = maxQ.load(std::memory_order_relaxed);
-    contact.ForAllContacts(
-        [&]<class TContactSet>(
-            typename TContactSet::AccessorType C,
-            auto&& stencil,
-            std::int32_t /*t*/
-        ) {
-            auto F      = C.Friction();
-            C.Penalty() = contactParams.gamma * maxQv;
-            F.Penalty() = contactParams.gammaf * maxQv;
-        },
-        nThreads);
+    if (params.ePenaltyStiffness == ESALPenaltyStiffness::GlobalMaxRayleighQuotient)
+    {
+        Scalar maxQv = maxQ.load(std::memory_order_relaxed);
+        contact.ForAllContacts(
+            [&]<class TContactSet>(
+                typename TContactSet::AccessorType C,
+                auto&& stencil,
+                std::int32_t /*t*/
+            ) {
+                auto F      = C.Friction();
+                C.Penalty() = contactParams.gamma * maxQv;
+                F.Penalty() = contactParams.gammaf * maxQv;
+            },
+            nThreads);
+    }
 }
 
 Params& Params::WithVertexElementAdjacencyGraph(
@@ -125,6 +138,12 @@ Params& Params::WithMaximumIterations(Index nIters)
 Params& Params::WithSubproblemMaximumIterations(Index nIters)
 {
     nSubproblemMaxIters = nIters;
+    return *this;
+}
+
+PBAT_API Params& Params::WithPenaltyParameterUpdateStrategy(ESALPenaltyStiffness strategy)
+{
+    ePenaltyStiffness = strategy;
     return *this;
 }
 
@@ -251,6 +270,7 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("nSubproblemMaxIters", nSubproblemMaxIters);
     group.WriteMetaData("gtol", gtol);
+    group.WriteMetaData("ePenaltyStiffness", static_cast<int>(ePenaltyStiffness));
     group.WriteMetaData("eSolver", static_cast<int>(eSolver));
     group.WriteMetaData("hessZero", hessZero);
     group.WriteMetaData("vLinSolverEps", vLinSolverEps);
@@ -313,6 +333,9 @@ void Params::Deserialize(io::Archive const& archive)
             group.ReadMetaData<decltype(nSubproblemMaxIters)>("nSubproblemMaxIters");
     if (group.HasMetaData("gtol"))
         gtol = group.ReadMetaData<decltype(gtol)>("gtol");
+    if (group.HasMetaData("ePenaltyStiffness"))
+        ePenaltyStiffness =
+            static_cast<decltype(ePenaltyStiffness)>(group.ReadMetaData<int>("ePenaltyStiffness"));
     if (group.HasMetaData("eSolver"))
         eSolver = static_cast<decltype(eSolver)>(group.ReadMetaData<int>("eSolver"));
     if (group.HasMetaData("hessZero"))

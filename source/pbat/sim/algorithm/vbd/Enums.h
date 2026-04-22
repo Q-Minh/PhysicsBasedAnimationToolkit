@@ -25,6 +25,14 @@ enum class EVertexIntegrationLinearSolver {
 };
 
 /**
+ * @brief Strategies for updating the augmented Lagrangian penalty parameter
+ */
+enum class ESALPenaltyStiffness {
+    GlobalMaxRayleighQuotient, ///< Global maximum Rayleigh quotient across all contacts
+    LocalMaxRayleighQuotient,  ///< Local maximum Rayleigh quotient per contact
+};
+
+/**
  * @brief Solver for the Broyden least-squares problem
  */
 enum class EBroydenLeastSquaresSolver {
