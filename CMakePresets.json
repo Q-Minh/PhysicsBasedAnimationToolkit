@@ -50,12 +50,27 @@
             }
         },
         {
+            "name": "cppcheck",
+            "hidden": true,
+            "cacheVariables": {
+                "PBAT_ENABLE_CPPCHECK": {
+                    "type": "BOOL",
+                    "value": "ON"
+                },
+                "CMAKE_EXPORT_COMPILE_COMMANDS": {
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+            }
+        },
+        {
             "name": "dev",
             "inherits": [
                 "default",
                 "profile",
                 "doc",
-                "benchmarks"
+                "benchmarks",
+                "cppcheck"
             ],
             "cacheVariables": {
                 "PBAT_BUILD_TESTS": {
