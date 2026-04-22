@@ -2558,15 +2558,13 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs(bool bC
         };
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
     auto const nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
+    auto const nTriangles = mOgcState.mTriangleGeometryPrefix[OgcStateType::EGeometry::Count];
     tg.run([&] { fUpdateContactSet(mPointPointContacts, mOgcState.mXX, nPoints); });
     tg.run([&] { fUpdateContactSet(mPointEdgeContacts, mOgcState.mXE, nPoints); });
     tg.run([&] { fUpdateContactSet(mPointTriangleContacts, mOgcState.mXF, nPoints); });
     tg.run([&] { fUpdateContactSet(mEdgeEdgeContacts, mOgcState.mEE, nHalfEdges); });
     if (bComputeReversePairs)
     {
-        auto nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
-        auto nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
-        auto nTriangles = mOgcState.mTriangleGeometryPrefix[OgcStateType::EGeometry::Count];
         tg.run(
             [&] { fBuildReversePairs(mPointPointContacts, nPoints, mReversePointPointContacts); });
         tg.run(
