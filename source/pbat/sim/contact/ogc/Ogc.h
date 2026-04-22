@@ -219,10 +219,9 @@ void Execute(
     State<TScalar, TIndex>& state)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.Execute");
+    VertexFacetContactDetection(input, params, state);
+    EdgeEdgeContactDetection(input, params, state);
     tbb::task_group tg;
-    tg.run([&] { VertexFacetContactDetection(input, params, state); });
-    tg.run([&] { EdgeEdgeContactDetection(input, params, state); });
-    tg.wait();
     tg.run([&] { UpdateDisplacementBounds(input, params, state); });
     tg.run([&] { state.CollectContactPairs(); });
     tg.wait();
@@ -577,14 +576,18 @@ void DynamicEdgeEdgeRTCCollideFunc(
     StateType* state         = data->state;
     TScalar const r          = params->r;
     TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
     auto const& X            = input->X.value();
     auto const& F            = input->F.value();
     auto const& E            = input->E.value();
     auto const& EP           = input->EP.value();
     auto const& EHE          = input->EHE.value();
     auto const& GHEF         = input->GHEF.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
     auto& dmine              = state->dmine;
     auto& EE                 = state->mEEets.local();
+    auto& XE                 = state->mXEets.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
@@ -614,11 +617,6 @@ void DynamicEdgeEdgeRTCCollideFunc(
             FromEigen(xe1.col(1)),
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
-        // Skip if contact pair degenerates to either vertex-edge, edge-vertex or vertex-vertex.
-        bool const bIsClosestPointOnE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
-        bool const bIsClosestPointOnE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
-        if (bIsClosestPointOnE1Vertex or bIsClosestPointOnE2Vertex)
-            continue;
         // Closest points on edges e1 and e2
         Eigen::Vector<TScalar, 3> const xc1 =
             (TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1);
@@ -638,31 +636,25 @@ void DynamicEdgeEdgeRTCCollideFunc(
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
-        // Add contact pair (e1,e2) via its one of their half-edges (he_1(e1), he_1(e2)).
-        // NOTE: I'm pretty sure that if xc1 is in the edge
-        // feasible region of e2, then xc2 must also be in the edge
-        // feasible region of e1, so that we could remove the redundant
-        // check for xc2 in the edge feasible region of e1. But I'll keep both checks for
-        // safety for now until we can rigorously verify this claim.
-        bool const bIsEdgeFeasible = IsEdgeFeasible(
-                                         X,
-                                         F,
-                                         GHEF,
-                                         xc1,
-                                         GHEF(0, ehe2(0)),
-                                         ehe2(0),
-                                         true /*bCheckAdjacentFacets*/) and
-                                     IsEdgeFeasible(
-                                         X,
-                                         F,
-                                         GHEF,
-                                         xc2,
-                                         GHEF(0, ehe1(0)),
-                                         ehe1(0),
-                                         true /*bCheckAdjacentFacets*/);
-        if (bIsEdgeFeasible)
+        bool const bIsClosestPointOnE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
+        bool const bIsClosestPointOnE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
+        if (bIsClosestPointOnE1Vertex and not bIsClosestPointOnE2Vertex)
+        {
+            auto i = st(0) == TScalar(0) ? e1v(0) : e1v(1);
+            if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc2, i))
+                XE.push_back({XOffset + i, HEOffset + std::max(ehe2(0), ehe2(1))});
+        }
+        else if (not bIsClosestPointOnE1Vertex and bIsClosestPointOnE2Vertex)
+        {
+            auto i = st(1) == TScalar(0) ? e2v(0) : e2v(1);
+            if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc1, i))
+                XE.push_back({XOffset + i, HEOffset + std::max(ehe1(0), ehe1(1))});
+        }
+        else
+        {
             EE.push_back(
                 {HEOffset + std::max(ehe1(0), ehe1(1)), HEOffset + std::max(ehe2(0), ehe2(1))});
+        }
     }
 }
 
@@ -689,19 +681,26 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
     StateType* state         = data->state;
     TScalar const r          = params->r;
     TIndex const HEOffset    = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Dynamic];
+    TIndex const XOffset     = state->mPointGeometryPrefix[StateType::EGeometry::Dynamic];
     TIndex const HEenvOffset = state->mHalfEdgeGeometryPrefix[StateType::EGeometry::Static];
+    TIndex const XenvOffset  = state->mPointGeometryPrefix[StateType::EGeometry::Static];
     auto const& Xenv         = input->Venv.value();
     auto const& Eenv         = input->Eenv.value();
     auto const& Fenv         = input->Fenv.value();
     auto const& EHEenv       = input->EHEenv.value();
     auto const& GHEFenv      = input->GHEFenv.value();
+    auto const& GVHEenvp     = input->GVHEenvp.value();
+    auto const& GVHEenvadj   = input->GVHEenvadj.value();
     auto const& X            = input->X.value();
     auto const& E            = input->E.value();
     auto const& F            = input->F.value();
     auto const& EHE          = input->EHE.value();
     auto const& GHEF         = input->GHEF.value();
+    auto const& GVHEp        = input->GVHEp.value();
+    auto const& GVHEadj      = input->GVHEadj.value();
     auto& dmine              = state->dmine;
     auto& EE                 = state->mEEets.local();
+    auto& XE                 = state->mXEets.local();
     for (unsigned int ci = 0; ci < nCollisions; ++ci)
     {
         // Get edge-edge pair (e1, e2)
@@ -722,11 +721,6 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
             FromEigen(xe1.col(1)),
             FromEigen(xe2.col(0)),
             FromEigen(xe2.col(1)));
-        // Skip if contact pair degenerates to either vertex-edge, edge-vertex or vertex-vertex.
-        bool const bIsClosestPointOnE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
-        bool const bIsClosestPointOnE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
-        if (bIsClosestPointOnE1Vertex or bIsClosestPointOnE2Vertex)
-            continue;
         // Closest points on edges e1 and e2
         Eigen::Vector<TScalar, 3> const xc1 =
             (TScalar(1) - st(0)) * xe1.col(0) + st(0) * xe1.col(1);
@@ -743,30 +737,25 @@ void DynamicEdgeStaticEdgeRTCCollideFunc(
         bool const bInContactRadius = (d2 < r * r);
         if (not bInContactRadius)
             continue;
-        // Add contact pair. I'm pretty sure that if xc1 is in the edge
-        // feasible region of e2, then xc2 must also be in the edge
-        // feasible region of e1, so that we could remove the redundant
-        // check for xc2 in the edge feasible region of e1. But I'll keep both checks for
-        // safety for now until we can rigorously verify this claim.
-        bool const bIsEdgeFeasible = IsEdgeFeasible(
-                                         Xenv,
-                                         Fenv,
-                                         GHEFenv,
-                                         xc1,
-                                         GHEFenv(0, ehe2(0)),
-                                         ehe2(0),
-                                         true /*bCheckAdjacentFacets*/) and
-                                     IsEdgeFeasible(
-                                         X,
-                                         F,
-                                         GHEF,
-                                         xc2,
-                                         GHEF(0, ehe1(0)),
-                                         ehe1(0),
-                                         true /*bCheckAdjacentFacets*/);
-        if (bIsEdgeFeasible)
+        bool const bIsClosestPointOnE1Vertex = (st(0) <= TScalar(0) or st(0) >= TScalar(1));
+        bool const bIsClosestPointOnE2Vertex = (st(1) <= TScalar(0) or st(1) >= TScalar(1));
+        if (bIsClosestPointOnE1Vertex and not bIsClosestPointOnE2Vertex)
+        {
+            TIndex i = st(0) == TScalar(0) ? e1v(0) : e1v(1);
+            if (IsVertexFeasible(X, F, GVHEp, GVHEadj, xc2, i))
+                XE.push_back({XOffset + i, HEenvOffset + std::max(ehe2(0), ehe2(1))});
+        }
+        else if (not bIsClosestPointOnE1Vertex and bIsClosestPointOnE2Vertex)
+        {
+            TIndex i = st(1) == TScalar(0) ? e2v(0) : e2v(1);
+            if (IsVertexFeasible(Xenv, Fenv, GVHEenvp, GVHEenvadj, xc1, i))
+                XE.push_back({XenvOffset + i, HEOffset + std::max(ehe1(0), ehe1(1))});
+        }
+        else
+        {
             EE.push_back(
                 {HEOffset + std::max(ehe1(0), ehe1(1)), HEenvOffset + std::max(ehe2(0), ehe2(1))});
+        }
     }
 }
 
