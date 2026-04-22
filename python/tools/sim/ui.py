@@ -113,6 +113,13 @@ class SolverType(enum.Enum):
     AAAVBD = 1
 
 
+class UIState:
+    def __init__(self):
+        self.request_reset: bool = False
+        self.item_width: int = 150
+        self.screenshot_after_step: bool = False
+
+
 class SimulationState:
     def __init__(
         self,
@@ -141,7 +148,7 @@ class SimulationState:
         self.params = Params(params_cpu)
         self.capture = None
 
-        # UI state
+        # Simulation state
         self.simulate: bool = False
         self.t: int = 0
         self.until_t: int = -1
@@ -168,11 +175,13 @@ class SimulationState:
         self.capture = None
 
 
-def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
+def make_callback(
+    state: SimulationState, ui_state: UIState, mesh_name: str = "FEM Mesh"
+):
     def callback():
-        request_reset = False
+        ui_state.request_reset = False
 
-        imgui.PushItemWidth(150)
+        imgui.PushItemWidth(ui_state.item_width)
         imgui.Text(f"Step: {state.t}  Time: {state.t * state.dt:.4f}s")
         imgui.Separator()
 
@@ -195,14 +204,12 @@ def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
         if imgui.TreeNode("Solver"):
             solvers = list(SolverType)
             solver_idx = solvers.index(state.solver)
-            _, solver_idx = imgui.Combo(
-                "Solver", solver_idx, [s.name for s in solvers]
-            )
+            _, solver_idx = imgui.Combo("Solver", solver_idx, [s.name for s in solvers])
             new_solver = solvers[solver_idx]
             if new_solver != state.solver:
                 state.solver = new_solver
                 state.reset()
-                request_reset = True
+                ui_state.request_reset = True
             imgui.TreePop()
 
         # --- Solver params ---
@@ -213,25 +220,28 @@ def make_callback(state: SimulationState, mesh_name: str = "FEM Mesh"):
         imgui.Separator()
 
         # --- Simulation controls ---
+        _, ui_state.screenshot_after_step = imgui.Checkbox(
+            "Screenshot", ui_state.screenshot_after_step
+        )
         _, state.simulate = imgui.Checkbox("Simulate", state.simulate)
         imgui.SameLine()
-        _, state.until_t = imgui.InputInt("Until step", state.until_t)
+        _, state.until_t = imgui.InputInt("Until", state.until_t)
         if state.t == state.until_t:
             state.simulate = False
 
-        if imgui.Button("Step"):
-            state.step()
-            _update_mesh(state, mesh_name)
-
-        imgui.SameLine()
-        if imgui.Button("Reset") or request_reset:
+        if imgui.Button("Reset") or ui_state.request_reset:
             state.reset()
             _update_mesh(state, mesh_name)
 
         # --- Continuous simulation ---
-        if state.simulate:
+        request_step = state.simulate or imgui.Button("Step")
+        if request_step:
+            if ui_state.screenshot_after_step and state.t == 0:
+                ps.screenshot("{:08d}.png".format(state.t))
             state.step()
             _update_mesh(state, mesh_name)
+            if ui_state.screenshot_after_step:
+                ps.screenshot("{:08d}.png".format(state.t))
 
         imgui.PopItemWidth()
 
@@ -293,7 +303,7 @@ def main():
     vm.add_scalar_quantity(
         "lumped mass", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
     )
-    ps.set_user_callback(make_callback(state, mesh_name))
+    ps.set_user_callback(make_callback(state, UIState(), mesh_name))
     ps.show()
 
 
