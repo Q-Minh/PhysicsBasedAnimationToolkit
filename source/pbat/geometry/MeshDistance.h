@@ -19,6 +19,28 @@
 namespace pbat::geometry {
 
 /**
+ * @brief Concept for mesh distance computations
+ * @tparam T
+ */
+template <class T>
+concept CMeshDistance = requires(T t) {
+    { T::kStencil } -> std::convertible_to<int>;
+    { T::kDims } -> std::convertible_to<int>;
+    { T::kDofs } -> std::convertible_to<int>;
+    requires common::CFloatingPoint<typename T::ScalarType>;
+    {
+        t.Eval(std::declval<math::linalg::mini::SVector<typename T::ScalarType, T::kDofs>>())
+    } -> std::convertible_to<typename T::ScalarType>;
+    {
+        t.Gradient(std::declval<math::linalg::mini::SVector<typename T::ScalarType, T::kDofs>>())
+    } -> std::convertible_to<math::linalg::mini::SVector<typename T::ScalarType, T::kDofs>>;
+    {
+        t.Hessian(std::declval<math::linalg::mini::SVector<typename T::ScalarType, T::kDofs>>())
+    }
+    -> std::convertible_to<math::linalg::mini::SMatrix<typename T::ScalarType, T::kDofs, T::kDofs>>;
+};
+
+/**
  * @brief Point-point distance computation
  *
  * Computes the Euclidean distance \f$ d = \|x - y\| \f$ and its derivatives
@@ -30,8 +52,9 @@ template <common::CFloatingPoint TScalar>
 struct PointPointDistance
 {
     using ScalarType              = TScalar;
-    static constexpr int kStencil = 2;            ///< Number of vertices in the stencil
-    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
+    static constexpr int kStencil = 2;                ///< Number of vertices in the stencil
+    static constexpr int kDims    = 3;                ///< Number of dimensions
+    static constexpr int kDofs    = kDims * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the point-point distance \f$ d = \|x - y\| \f$
@@ -79,8 +102,9 @@ template <common::CFloatingPoint TScalar>
 struct PointEdgeDistance
 {
     using ScalarType              = TScalar;
-    static constexpr int kStencil = 3;            ///< Number of vertices in the stencil
-    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
+    static constexpr int kStencil = 3;                ///< Number of vertices in the stencil
+    static constexpr int kDims    = 3;                ///< Number of dimensions
+    static constexpr int kDofs    = kDims * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the point-edge distance
@@ -134,8 +158,9 @@ template <common::CFloatingPoint TScalar>
 struct PointTriangleDistance
 {
     using ScalarType              = TScalar;
-    static constexpr int kStencil = 4;            ///< Number of vertices in the stencil
-    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
+    static constexpr int kStencil = 4;                ///< Number of vertices in the stencil
+    static constexpr int kDims    = 3;                ///< Number of dimensions
+    static constexpr int kDofs    = kDims * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the point-triangle signed distance
@@ -190,8 +215,9 @@ template <common::CFloatingPoint TScalar>
 struct EdgeEdgeDistance
 {
     using ScalarType              = TScalar;
-    static constexpr int kStencil = 4;            ///< Number of vertices in the stencil
-    static constexpr int kDofs    = 3 * kStencil; ///< Total degrees of freedom
+    static constexpr int kStencil = 4;                ///< Number of vertices in the stencil
+    static constexpr int kDims    = 3;                ///< Number of dimensions
+    static constexpr int kDofs    = kDims * kStencil; ///< Total degrees of freedom
 
     /**
      * @brief Compute the edge-edge signed distance with mollified norm

@@ -46,37 +46,64 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 class MeshDynamics
 {
   public:
-    using ScalarType            = TScalar; ///< Scalar type
-    using IndexType             = TIndex;  ///< Index type
-    static auto constexpr kDims = 3;       ///< Dimension
+    using ScalarType = TScalar; ///< Scalar type
+    using IndexType  = TIndex;  ///< Index type
     /**
      * @brief Per constraint quantities
-     * @tparam kStencil Number of nodes the constraint depends on
+     * @tparam TDistance Mesh distance function
      */
-    template <int StencilSize>
+    template <geometry::CMeshDistance TDistance>
     struct ConstraintData
     {
-        static auto constexpr kStencil = StencilSize;
-        static auto constexpr kDofs    = kStencil * kDims;
-        TScalar lambda;                                    ///< Lagrange multiplier
-        TScalar s;                                         ///< Slack variable
-        TScalar mu;                                        ///< Complementarity slack
-        TScalar c;                                         ///< Constraint value
-        math::linalg::mini::SVector<TScalar, kDofs> gradc; ///< Constraint gradient
+        using DistanceType             = TDistance;           ///< Distance function type
+        static auto constexpr kStencil = TDistance::kStencil; ///< Number of vertices in the stencil
+        static auto constexpr kDims    = TDistance::kDims;    ///< Number of dimensions
+        static auto constexpr kDofs    = TDistance::kDofs;    ///< Total degrees of freedom
+        TScalar lambda;                                       ///< Lagrange multiplier
+        TScalar s;                                            ///< Slack variable
+        TScalar mu;                                           ///< Complementarity slack
+        TScalar c;                                            ///< Constraint value
+        math::linalg::mini::SVector<TScalar, kDofs> gradc;    ///< Constraint gradient
     };
     /**
      * @brief Constraint set container
      * @tparam kStencil Number of nodes the constraint depends on
      */
-    template <int kStencil>
+    template <geometry::CMeshDistance TDistance>
     using ConstraintSet =
-        graph::DenseAdjacencySet<TIndex, bool /* bActivated */, ConstraintData<kStencil>>;
-    using PointPointContactSet = ConstraintSet<2>; ///< Point-point contact constraint container
-    using PointEdgeContactSet  = ConstraintSet<3>; ///< Point-edge contact constraint container
-    using PointTriangleContactSet =
-        ConstraintSet<4>; ///< Point-triangle contact constraint container
-    using EdgeEdgeContactSet =
-        ConstraintSet<4>; ///< (Half-)Edge-(half-)edge contact constraint container
+        graph::DenseAdjacencySet<TIndex, bool /* bActivated */, ConstraintData<TDistance>>;
+    /**
+     * @brief Point-point contact constraint container
+     */
+    struct PointPointContactSet : public ConstraintSet<geometry::PointPointDistance<TScalar>>
+    {
+        using ConstraintDataType     = ConstraintData<geometry::PointPointDistance<TScalar>>;
+        using ConstraintFunctionType = geometry::PointPointDistance<TScalar>;
+    };
+    /**
+     * @brief Point-edge contact constraint container
+     */
+    struct PointEdgeContactSet : public ConstraintSet<geometry::PointEdgeDistance<TScalar>>
+    {
+        using ConstraintDataType     = ConstraintData<geometry::PointEdgeDistance<TScalar>>;
+        using ConstraintFunctionType = geometry::PointEdgeDistance<TScalar>;
+    };
+    /**
+     * @brief Point-triangle contact constraint container
+     */
+    struct PointTriangleContactSet : public ConstraintSet<geometry::PointTriangleDistance<TScalar>>
+    {
+        using ConstraintDataType     = ConstraintData<geometry::PointTriangleDistance<TScalar>>;
+        using ConstraintFunctionType = geometry::PointTriangleDistance<TScalar>;
+    };
+    /**
+     * @brief Edge-edge contact constraint container
+     */
+    struct EdgeEdgeContactSet : public ConstraintSet<geometry::EdgeEdgeDistance<TScalar>>
+    {
+        using ConstraintDataType     = ConstraintData<geometry::EdgeEdgeDistance<TScalar>>;
+        using ConstraintFunctionType = geometry::EdgeEdgeDistance<TScalar>;
+    };
 
     /**
      * @brief Mesh dynamics parameters
@@ -647,6 +674,46 @@ class MeshDynamics
      * @brief Linearize all contact constraints, initializing them if necessary.
      */
     void LinearizeConstraints();
+    template <class TContactSet>
+    /**
+     * @brief Get the geometry prefix arrays for the contact set
+     * @return The pair (prefu, prefv)
+     */
+    auto GeometryPrefixArrays();
+    /**
+     * @brief Load a point's position from the mesh state
+     * @param i Point index
+     * @param g Geometry type
+     * @param xi Output position vector
+     */
+    void LoadPoint(TIndex i, int g, auto&& xi);
+    /**
+     * @brief Load a half-edge's positions from the mesh state
+     * @param he Half-edge index
+     * @param g Geometry type
+     * @param xi Output position vector for the incoming vertex
+     * @param xj Output position vector for the outgoing vertex
+     */
+    void LoadHalfEdge(TIndex he, int g, auto&& xi, auto&& xj);
+    /**
+     * @brief Load a triangle's positions from the mesh state
+     * @param f Triangle index
+     * @param g Geometry type
+     * @param xi Output position vector for the first vertex
+     * @param xj Output position vector for the second vertex
+     * @param xk Output position vector for the third vertex
+     */
+    void LoadTriangle(TIndex f, int g, auto&& xi, auto&& xj, auto&& xk);
+    /**
+     * @brief Load the stencil for a contact pair
+     * @param u First mesh primitive index
+     * @param v Second mesh primitive index
+     * @param gu First mesh geometry index
+     * @param gv Second mesh geometry index
+     * @return Matrix of stencil points
+     */
+    template <class TContactSet>
+    auto LoadStencil(TIndex u, TIndex v, int gu, int gv);
 
   private:
     Params mParams; ///< Mesh dynamics parameters
@@ -1537,164 +1604,186 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::LinearizeConstraints()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.LinearizeConstraints");
-    using OgcStateType       = decltype(mOgcState);
-    using GeometryPrefixType = typename OgcStateType::GeometryPrefixArrayType;
-    auto const fLoadPoint    = [&](TIndex i, OgcStateType::EGeometry g, auto&& xi) {
-        i -= mOgcState.mPointGeometryPrefix[g];
-        switch (g)
-        {
-            case OgcStateType::EGeometry::Dynamic: xi = mXdynamic.col(i); break;
-            case OgcStateType::EGeometry::Static: xi = mXstatic.col(i); break;
-            default: break;
-        }
-    };
-    auto const fLoadHalfEdge = [&](TIndex he, OgcStateType::EGeometry g, auto&& xi, auto&& xj) {
-        he -= mOgcState.mHalfEdgeGeometryPrefix[g];
-        switch (g)
-        {
-            case OgcStateType::EGeometry::Dynamic: {
-                xi = mXdynamic.col(geometry::IncomingVertex(*mOgcInput.F, he));
-                xj = mXdynamic.col(geometry::OutgoingVertex(*mOgcInput.F, he));
-            }
-            break;
-            case OgcStateType::EGeometry::Static: {
-                xi = mXstatic.col(geometry::IncomingVertex(*mOgcInput.Fenv, he));
-                xj = mXstatic.col(geometry::OutgoingVertex(*mOgcInput.Fenv, he));
-            }
-            break;
-            default: break;
-        }
-    };
-    auto const fLoadTriangle =
-        [&](TIndex f, OgcStateType::EGeometry g, auto&& xi, auto&& xj, auto&& xk) {
-            f -= mOgcState.mTriangleGeometryPrefix[g];
-            switch (g)
-            {
-                case OgcStateType::EGeometry::Dynamic: {
-                    auto xinds = mOgcInput.F->col(f);
-                    xi         = mXdynamic.col(xinds(0));
-                    xj         = mXdynamic.col(xinds(1));
-                    xk         = mXdynamic.col(xinds(2));
-                }
-                break;
-                case OgcStateType::EGeometry::Static: {
-                    auto xinds = mOgcInput.Fenv->col(f);
-                    xi         = mXstatic.col(xinds(0));
-                    xj         = mXstatic.col(xinds(1));
-                    xk         = mXstatic.col(xinds(2));
-                }
-                break;
-                default: break;
-            }
-        };
-    TIndex const nThreads     = static_cast<TIndex>(std::thread::hardware_concurrency());
-    auto const fForEachThread = [nThreads](auto&& f) {
-        tbb::parallel_for(
-            tbb::blocked_range<TIndex>(0, nThreads),
-            [&](const tbb::blocked_range<TIndex>& r) {
-                for (TIndex i = r.begin(); i != r.end(); ++i)
-                    f(i);
-            },
-            tbb::simple_partitioner{});
-    };
-    auto const fKernel =
-        [&]<class FDistance, class FLoadStencil, int kStencil = FDistance::kStencil>(
-            ConstraintSet<kStencil>& set,
-            GeometryPrefixType const& prefixu,
-            GeometryPrefixType const& prefixv,
-            FLoadStencil const& fLoadStencil) {
-            TIndex const nConstraints          = static_cast<TIndex>(set.Size());
-            TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
-            fForEachThread([&](TIndex t) {
-                TIndex const cstart = t * nConstraintsPerThread;
-                TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
-                int gu{0}, gv{0};
-                for (TIndex c = cstart, uprev = 0; c < cend; ++c)
-                {
-                    auto const [u, v, k] = set.WeightedAdjacency(c);
-                    // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
-                    // until we find the next u, in which case we reset the gv geometry index for v.
-                    if (u > uprev)
-                    {
-                        gv    = 0;
-                        uprev = u;
-                    }
-                    // Keep track of geometry types for u and v
-                    while (u >= prefixu[gu + 1])
-                        ++gu;
-                    while (v >= prefixv[gv + 1])
-                        ++gv;
-                    // Load constraint variables
-                    Eigen::Matrix<TScalar, kDims, kStencil> X;
-                    fLoadStencil(
-                        u,
-                        v,
-                        static_cast<OgcStateType::EGeometry>(gu),
-                        static_cast<OgcStateType::EGeometry>(gv),
-                        X);
-                    // Evaluate constraint and its derivatives
-                    using ConstraintType = ConstraintData<kStencil>;
-                    ConstraintType& C    = set.template Data<ConstraintType>(k);
-                    using math::linalg::mini::FromEigen;
-                    auto x = Reshape<ConstraintType::kDofs, 1>(FromEigen(X));
-                    FDistance d{};
-                    C.c     = d.Eval(x);
-                    C.gradc = d.Gradient(x);
-                    // Initialize constraint if it's new.
-                    std::vector<bool>& bActivated = set.Data<bool>();
-                    if (not bActivated[k])
-                    {
-                        C.s = C.c;
-                        // TODO: Find smarter way to initialize complementarity slack
-                        C.mu          = TScalar{1e-1};
-                        C.lambda      = C.mu / C.s;
-                        bActivated[k] = true;
-                    }
-                }
-            });
-        };
+    using GeometryPrefixType = typename decltype(mOgcState)::GeometryPrefixArrayType;
+    // Parallel execution setup
     tbb::task_group tg;
-    tg.run([&]() {
-        fKernel.template operator()<geometry::PointPointDistance<TScalar>>(
-            mPointPointContacts,
-            mOgcState.mPointGeometryPrefix,
-            mOgcState.mPointGeometryPrefix,
-            [&](auto u, auto v, auto gu, auto gv, auto& X) {
-                fLoadPoint(u, gu, X.col(0));
-                fLoadPoint(v, gv, X.col(1));
-            });
-    });
-    tg.run([&]() {
-        fKernel.template operator()<geometry::PointEdgeDistance<TScalar>>(
-            mPointEdgeContacts,
-            mOgcState.mPointGeometryPrefix,
-            mOgcState.mHalfEdgeGeometryPrefix,
-            [&](auto u, auto v, auto gu, auto gv, auto& X) {
-                fLoadPoint(u, gu, X.col(0));
-                fLoadHalfEdge(v, gv, X.col(1), X.col(2));
-            });
-    });
-    tg.run([&]() {
-        fKernel.template operator()<geometry::PointTriangleDistance<TScalar>>(
-            mPointTriangleContacts,
-            mOgcState.mPointGeometryPrefix,
-            mOgcState.mTriangleGeometryPrefix,
-            [&](auto u, auto v, auto gu, auto gv, auto& X) {
-                fLoadPoint(u, gu, X.col(0));
-                fLoadTriangle(v, gv, X.col(1), X.col(2), X.col(3));
-            });
-    });
-    tg.run([&]() {
-        fKernel.template operator()<geometry::EdgeEdgeDistance<TScalar>>(
-            mEdgeEdgeContacts,
-            mOgcState.mHalfEdgeGeometryPrefix,
-            mOgcState.mHalfEdgeGeometryPrefix,
-            [&](auto u, auto v, auto gu, auto gv, auto& X) {
-                fLoadHalfEdge(u, gu, X.col(0), X.col(1));
-                fLoadHalfEdge(v, gv, X.col(2), X.col(3));
-            });
-    });
+    TIndex const nThreads     = static_cast<TIndex>(std::thread::hardware_concurrency());
+    auto const fForEachThread = [&tg, nThreads](auto&& f) {
+        for (auto t = 0; t < nThreads; ++t)
+            tg.run([f, t]() { f(t); });
+    };
+    auto const fLaunchKernel = [&]<class TConstraintSet>(TConstraintSet& set) {
+        using ConstraintDataType           = typename TConstraintSet::ConstraintDataType;
+        using ConstraintFunctionType       = typename TConstraintSet::ConstraintFunctionType;
+        auto const& [prefixu, prefixv]     = GeometryPrefixArrays<TConstraintSet>();
+        TIndex const nConstraints          = static_cast<TIndex>(set.Size());
+        TIndex const nConstraintsPerThread = (nConstraints + nThreads - 1) / nThreads;
+        fForEachThread([&](TIndex t) {
+            TIndex const cstart = t * nConstraintsPerThread;
+            TIndex const cend   = std::min((t + 1) * nConstraintsPerThread, nConstraints);
+            int gu{0}, gv{0};
+            for (TIndex c = cstart, uprev = 0; c < cend; ++c)
+            {
+                auto const [u, v, k] = set.WeightedAdjacency(c);
+                // Adjacencies are sorted by (u,v), so we always loop over all v incident on u,
+                // until we find the next u, in which case we reset the gv geometry index for v.
+                if (u > uprev)
+                {
+                    gv    = 0;
+                    uprev = u;
+                }
+                // Keep track of geometry types for u and v
+                while (u >= prefixu[gu + 1])
+                    ++gu;
+                while (v >= prefixv[gv + 1])
+                    ++gv;
+                // Load constraint variables
+                auto X = LoadStencil<TConstraintSet>(u, v, gu, gv);
+                // Evaluate constraint and its derivatives
+                ConstraintDataType& C = set.template Data<ConstraintDataType>(k);
+                using math::linalg::mini::FromEigen;
+                auto x = Reshape<ConstraintDataType::kDofs, 1>(FromEigen(X));
+                ConstraintFunctionType d{};
+                C.c     = d.Eval(x);
+                C.gradc = d.Gradient(x);
+                // Initialize constraint if it's new.
+                std::vector<bool>& bActivated = set.Data<bool>();
+                if (not bActivated[k])
+                {
+                    C.s = C.c;
+                    // TODO: Find smarter way to initialize complementarity slack
+                    C.mu          = TScalar{1e-1};
+                    C.lambda      = C.mu / C.s;
+                    bActivated[k] = true;
+                }
+            }
+        });
+    };
+    fLaunchKernel(mPointPointContacts);
+    fLaunchKernel(mPointEdgeContacts);
+    fLaunchKernel(mPointTriangleContacts);
+    fLaunchKernel(mEdgeEdgeContacts);
     tg.wait();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TContactSet>
+inline auto MeshDynamics<TScalar, TIndex>::GeometryPrefixArrays()
+{
+    using ConstraintDataType = typename TContactSet::ConstraintDataType;
+    if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
+    {
+        return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mPointGeometryPrefix);
+    }
+    else if constexpr (std::is_same_v<TContactSet, PointEdgeContactSet>)
+    {
+        return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mHalfEdgeGeometryPrefix);
+    }
+    else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
+    {
+        return std::make_pair(mOgcState.mPointGeometryPrefix, mOgcState.mTriangleGeometryPrefix);
+    }
+    else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
+    {
+        return std::make_pair(mOgcState.mHalfEdgeGeometryPrefix, mOgcState.mHalfEdgeGeometryPrefix);
+    }
+    else
+    {
+        static_assert(false, "Unsupported contact set");
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::LoadPoint(TIndex i, int g, auto&& xi)
+{
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    i -= mOgcState.mPointGeometryPrefix[g];
+    switch (g)
+    {
+        case EGeometry::Dynamic: xi = mXdynamic.col(i); break;
+        case EGeometry::Static: xi = mXstatic.col(i); break;
+        default: break;
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void MeshDynamics<TScalar, TIndex>::LoadHalfEdge(TIndex he, int g, auto&& xi, auto&& xj)
+{
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    he -= mOgcState.mHalfEdgeGeometryPrefix[g];
+    switch (g)
+    {
+        case EGeometry::Dynamic: {
+            xi = mXdynamic.col(geometry::IncomingVertex(*mOgcInput.F, he));
+            xj = mXdynamic.col(geometry::OutgoingVertex(*mOgcInput.F, he));
+        }
+        break;
+        case EGeometry::Static: {
+            xi = mXstatic.col(geometry::IncomingVertex(*mOgcInput.Fenv, he));
+            xj = mXstatic.col(geometry::OutgoingVertex(*mOgcInput.Fenv, he));
+        }
+        break;
+        default: break;
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void
+MeshDynamics<TScalar, TIndex>::LoadTriangle(TIndex f, int g, auto&& xi, auto&& xj, auto&& xk)
+{
+    using EGeometry = decltype(mOgcState)::EGeometry;
+    f -= mOgcState.mTriangleGeometryPrefix[g];
+    switch (g)
+    {
+        case EGeometry::Dynamic: {
+            auto xinds = mOgcInput.F->col(f);
+            xi         = mXdynamic.col(xinds(0));
+            xj         = mXdynamic.col(xinds(1));
+            xk         = mXdynamic.col(xinds(2));
+        }
+        break;
+        case EGeometry::Static: {
+            auto xinds = mOgcInput.Fenv->col(f);
+            xi         = mXstatic.col(xinds(0));
+            xj         = mXstatic.col(xinds(1));
+            xk         = mXstatic.col(xinds(2));
+        }
+        break;
+        default: break;
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TContactSet>
+inline auto MeshDynamics<TScalar, TIndex>::LoadStencil(TIndex u, TIndex v, int gu, int gv)
+{
+    using ConstraintDataType = typename TContactSet::ConstraintDataType;
+    Eigen::Matrix<TScalar, ConstraintDataType::kDims, ConstraintDataType::kStencil> X;
+    if constexpr (std::is_same_v<TContactSet, PointPointContactSet>)
+    {
+        LoadPoint(u, gu, X.col(0));
+        LoadPoint(v, gv, X.col(1));
+    }
+    else if constexpr (std::is_same_v<TContactSet, PointEdgeContactSet>)
+    {
+        LoadPoint(u, gu, X.col(0));
+        LoadHalfEdge(v, gv, X.col(1), X.col(2));
+    }
+    else if constexpr (std::is_same_v<TContactSet, PointTriangleContactSet>)
+    {
+        LoadPoint(u, gu, X.col(0));
+        LoadTriangle(v, gv, X.col(1), X.col(2), X.col(3));
+    }
+    else if constexpr (std::is_same_v<TContactSet, EdgeEdgeContactSet>)
+    {
+        LoadHalfEdge(u, gu, X.col(0), X.col(1));
+        LoadHalfEdge(v, gv, X.col(2), X.col(3));
+    }
+    else
+    {
+        static_assert(false, "Unsupported contact set");
+    }
+    return X;
 }
 
 } // namespace pbat::sim::contact
