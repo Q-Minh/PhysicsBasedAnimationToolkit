@@ -1028,10 +1028,54 @@ template <common::CFloatingPoint TScalar, common::CIndex TIndex>
 inline void MeshDynamics<TScalar, TIndex>::ReduceContactSets()
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.MeshDynamics.ReduceContactSets");
-    mPointPointContacts.Reduce(mOgcState.mXX.begin(), mOgcState.mXX.end());
-    mPointEdgeContacts.Reduce(mOgcState.mXE.begin(), mOgcState.mXE.end());
-    mPointTriangleContacts.Reduce(mOgcState.mXF.begin(), mOgcState.mXF.end());
-    mEdgeEdgeContacts.Reduce(mOgcState.mEE.begin(), mOgcState.mEE.end());
+    bool const bAssumeThreadLocalSetsAreDisjoint{false};
+    bool const bAssumeGlobalSetIsDisjointFromThreadLocalSets{false};
+    namespace mini = math::linalg::mini;
+    using mini::FromEigen;
+    mPointPointContacts.Reduce(
+        mOgcState.mXX.begin(),
+        mOgcState.mXX.end(),
+        bAssumeThreadLocalSetsAreDisjoint,
+        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
+        [](IndexType i, IndexType j) {
+            MeshPointPointConstraint<ScalarType> C;
+            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
+            // relaxation mu
+            return C;
+        });
+    mPointEdgeContacts.Reduce(
+        mOgcState.mXE.begin(),
+        mOgcState.mXE.end(),
+        bAssumeThreadLocalSetsAreDisjoint,
+        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
+        [](IndexType i, IndexType j) {
+            MeshPointEdgeConstraint<ScalarType> C;
+            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
+            // relaxation mu
+            return C;
+        });
+    mPointTriangleContacts.Reduce(
+        mOgcState.mXF.begin(),
+        mOgcState.mXF.end(),
+        bAssumeThreadLocalSetsAreDisjoint,
+        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
+        [](IndexType i, IndexType j) {
+            MeshPointTriangleConstraint<ScalarType> C;
+            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
+            // relaxation mu
+            return C;
+        });
+    mEdgeEdgeContacts.Reduce(
+        mOgcState.mEE.begin(),
+        mOgcState.mEE.end(),
+        bAssumeThreadLocalSetsAreDisjoint,
+        bAssumeGlobalSetIsDisjointFromThreadLocalSets,
+        [](IndexType i, IndexType j) {
+            MeshEdgeEdgeConstraint<ScalarType> C;
+            // TODO: Initialize Lagrange multiplier lambda, slack variable s, and complementarity
+            // relaxation mu
+            return C;
+        });
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>

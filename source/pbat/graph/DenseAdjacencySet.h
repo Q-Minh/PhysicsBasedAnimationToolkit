@@ -354,6 +354,8 @@ class DenseAdjacencySet
      * @tparam TOtherData    Data type of the other set, not necessarily the same as this's TData.
      * @param other          The adjacency set whose entries are merged into this (consumed)
      * @param bAssumeDisjoint If true, skip duplicate detection (caller guarantees no overlap)
+     * @note `fOnAdded` is guaranteed to be called in sorted order for every new adjacency coming
+     * from other.
      */
     template <class TOtherData, class FOnAdded = decltype(fNoOp)>
     void Merge(
@@ -380,6 +382,8 @@ class DenseAdjacencySet
      * @param bAssumeOutputDisjoint If true, skip duplicate detection of all inputs against the
      * output set in final merge
      * @return The merged DenseAdjacencySet
+     * @note `fOnAdded` is guaranteed to be called in sorted order for every new adjacency coming
+     * from other.
      */
     template <std::random_access_iterator TRandomIt, class FOnAdded = decltype(fNoOp)>
     void Reduce(
@@ -549,6 +553,8 @@ class DenseAdjacencySet
      * TVertexIndex v)`.
      * @tparam TOtherData Data type of the source set
      * @param other       The source set being merged from
+     * @note `fOnAdded` is guaranteed to be called in sorted order for every new adjacency coming
+     * from other.
      */
     template <class TOtherData, class FOnAdded = decltype(fNoOp)>
     void AddAdjacencyDataFrom(

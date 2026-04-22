@@ -163,7 +163,7 @@ class State
     /**
      * @brief Geometry type enumeration for contact set prefix sums
      */
-    enum EGeometry {
+    enum EGeometry : int {
         Dynamic = 0, ///< Dynamic geometry
         Static  = 1, ///< Static geometry
         Count   = 2  ///< Number of geometry types (dynamic + static)
