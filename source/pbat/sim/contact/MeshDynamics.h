@@ -43,7 +43,6 @@
 /**
  * TODO:
  * - Check when constraint linearization becomes bad to adaptively re-trigger linearization.
- * - Try to use actual mesh distance functions in linearization, rather than our approximations.
  */
 
 namespace pbat::sim::contact {
