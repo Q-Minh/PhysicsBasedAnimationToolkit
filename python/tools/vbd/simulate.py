@@ -532,6 +532,7 @@ def main():
             #         ],
             #         minimal=False,
             #     )
+            archive.flush()
         except Exception as e:
             raise RuntimeError(f"Failed to serialize frame {t} to archive: {e}") from e
 
