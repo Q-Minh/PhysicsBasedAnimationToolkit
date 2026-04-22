@@ -459,16 +459,15 @@ void AssembleHessian(
                 using ConstraintAccessorType = decltype(C);
                 auto nodes                   = contact.LoadStencil<TContactSet>(stencil);
                 auto const& gradc            = C.Grad();
-                auto gamma                   = /*C.Decay()*/ 1;
-                auto kn                      = contactParams.kc;
-                Scalar dH                    = gamma * kn;
+                auto kn                      = contactParams.gamma * contactParams.kc;
+                Scalar dH                    = kn;
                 auto F                       = C.Friction();
                 auto const& Tf               = F.TangentBasis();
                 auto const& Wf               = F.Weights();
                 // Friction Hessian: kf * W_i * W_j * T * T^T
-                Scalar kf       = contactParams.kc / contactParams.gamma * contactParams.gammaf;
-                using SMatrixDD = math::linalg::mini::SMatrix<Scalar, kDims, kDims>;
-                SMatrixDD Hf    = kf * Tf * Tf.Transpose();
+                Scalar kf                      = contactParams.gammaf * contactParams.kc;
+                using SMatrixDD                = math::linalg::mini::SMatrix<Scalar, kDims, kDims>;
+                SMatrixDD Hf                   = kf * Tf * Tf.Transpose();
                 static auto constexpr kStencil = ConstraintAccessorType::kStencil;
                 for (auto jl = 0; jl < kStencil; ++jl)
                 {

@@ -1362,7 +1362,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdatePenaltyParameter(
             common::AtomicMin(mParams.kc, -Q);
         },
         nThreads);
-    mParams.kc *= -mParams.gamma;
+    mParams.kc = -mParams.kc;
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1381,7 +1381,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             C.Eval()                     = C.Eval(xc);
             auto F                       = C.Friction();
             F.Eval()                     = F.Eval(xc);
-            auto kn                      = mParams.kc;
+            auto kn                      = mParams.gamma * mParams.kc;
             if (static_cast<bool>(Mask & EDualVariable::Slack))
                 C.Slack() = std::max(TScalar(0), C.Eval() - mParams.dmin - C.Lambda() / kn);
             if (static_cast<bool>(Mask & EDualVariable::LagrangeMultiplier))
@@ -1391,7 +1391,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
                     C.Lambda() -= kn * (C.Eval() - mParams.dmin);
                     C.Decay() = TScalar(1);
                     auto muS  = mParams.mu;
-                    auto kf   = mParams.kc / mParams.gamma * mParams.gammaf;
+                    auto kf   = mParams.gammaf * mParams.kc;
                     F.Lambda() -= kf * F.Eval();
                     TScalar frictionLimit = muS * C.Lambda();
                     TScalar lambdafn2     = SquaredNorm(F.Lambda());
@@ -1607,11 +1607,11 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(Eigen::MatrixBase<TDeriv
             auto const [Xc, nodes] = LoadStencil<TContactSet>(x, stencil);
             auto xc                = Reshape<kDofs, 1>(Xc);
             TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
-            auto kn                = mParams.kc;
+            auto kn                = mParams.gamma * mParams.kc;
             E += /*C.Decay() **/ (TScalar(0.5) * kn * cs * cs - C.Lambda() * cs);
             auto F  = C.Friction();
             auto cf = F.Eval(xc);
-            auto kf = mParams.kc / mParams.gamma * mParams.gammaf;
+            auto kf = mParams.gammaf * mParams.kc;
             E += TScalar(0.5) * kf * Dot(cf, cf) - Dot(F.Lambda(), cf);
         },
         1 /*nThreads*/);
@@ -1648,7 +1648,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             static_assert(kDims == 3, "Only 3D is supported");
             auto const [XC, nodes] = LoadStencil<TContactSet>(x, stencil);
             auto xc                = Reshape<kDofs, 1>(XC);
-            auto kn                = mParams.kc;
+            auto kn                = mParams.gamma * mParams.kc;
             TScalar cs             = C.Eval(xc) - mParams.dmin - C.Slack();
             TScalar dL             = /*C.Decay() **/ (kn * cs - C.Lambda());
             // Friction gradient \nabla_x [ 0.5*kf*||c_f||^2 - lambda_f^T c_f ]
@@ -1657,7 +1657,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             auto const& W = F.Weights();
             auto const& T = F.TangentBasis();
             auto cf       = F.Eval(xc);
-            auto kf       = mParams.kc / mParams.gamma * mParams.gammaf;
+            auto kf       = mParams.gammaf * mParams.kc;
             using math::linalg::mini::SVector;
             SVector<TScalar, 2> df     = kf * cf - F.Lambda();
             SVector<TScalar, kDims> gf = T * df;
