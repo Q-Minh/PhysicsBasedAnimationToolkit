@@ -61,7 +61,7 @@ void UpdatePenaltyParameter(contact::MeshDynamics<Scalar, Index>& contact, Param
                     continue;
                 auto Hii    = params.Hk.template block<3, 3>(0, 3 * i);
                 auto gradci = gradc.template segment<3>(ki * 3);
-                Scalar Q    = gradci.dot(Hii * gradci);
+                Scalar Q    = gradci.dot(Hii * gradci) / gradci.squaredNorm();
                 pbat::common::AtomicMin(kc, -Q);
             }
         },
