@@ -295,14 +295,16 @@ namespace detail {
  * @param i Vertex index
  * @param fem Finite element elasto dynamics problem
  * @param params Solver parameters
- * @param fOnEnergyDerivativesComputed Callback invoked when energy derivatives are computed
+ * @param gi `3 x 1` gradient accumulator for vertex `i`
+ * @param Hi `3 x 3` Hessian accumulator for vertex `i`
  */
-template <physics::CHyperElasticEnergy TElasticEnergy, class FOnEnergyDerivativesComputed>
+template <physics::CHyperElasticEnergy TElasticEnergy>
 void AccumulateElasticEnergy(
     Index i,
     common::FemElastoDynamics<TElasticEnergy>& fem,
     Params& params,
-    FOnEnergyDerivativesComputed&& fOnEnergyDerivativesComputed)
+    math::linalg::mini::SVector<Scalar, 3>& gi,
+    math::linalg::mini::SMatrix<Scalar, 3, 3>& Hi)
 {
     using namespace math::linalg;
     using mini::FromEigen;
@@ -323,11 +325,8 @@ void AccumulateElasticEnergy(
         mini::SVector<Scalar, 9> gF;
         mini::SMatrix<Scalar, 9, 9> HF;
         Psi.GradAndHessian(Fe, lamee(0), lamee(1), gF, HF);
-        mini::SMatrix<Scalar, 3, 3> Hie = mini::Zeros<Scalar, 3, 3>();
-        mini::SVector<Scalar, 3> gie    = mini::Zeros<Scalar, 3, 1>();
-        kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hie);
-        kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gie);
-        fOnEnergyDerivativesComputed(gie, Hie);
+        kernels::AccumulateElasticHessian(ilocal, wg, GPe, HF, Hi);
+        kernels::AccumulateElasticGradient(ilocal, wg, GPe, gF, gi);
     }
 }
 
@@ -429,14 +428,12 @@ inline void AccumulateContactEnergy(
  * @param m Mass of vertex i
  * @param h Time step size
  * @param h2 Time step size squared
- * @param x Position matrix
- * @param xt Previous position matrix
  * @param fem Finite element elasto dynamics problem
  * @param contact Mesh contact dynamics
  * @param params Solver parameters
  * @return (Hi, gi) where Hi is the Hessian and gi is the gradient for vertex i
  */
-template <physics::CHyperElasticEnergy TElasticEnergy, class TDerivedx, class TDerivedxt>
+template <physics::CHyperElasticEnergy TElasticEnergy>
 auto BuildVertexEquation(
     Index i,
     math::linalg::mini::SVector<Scalar, 3> const& xi,
@@ -445,8 +442,6 @@ auto BuildVertexEquation(
     Scalar m,
     Scalar h,
     Scalar h2,
-    Eigen::MatrixBase<TDerivedx> const& x,
-    Eigen::MatrixBase<TDerivedxt> const& xt,
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params)
@@ -456,18 +451,11 @@ auto BuildVertexEquation(
     mini::SMatrix<Scalar, 3, 3> Hi = mini::Zeros<Scalar, 3, 3>();
     mini::SVector<Scalar, 3> gi    = mini::Zeros<Scalar, 3, 1>();
     // Elastic energy
-    AccumulateElasticEnergy<TElasticEnergy>(
-        i,
-        fem,
-        params,
-        [&](mini::SVector<Scalar, 3> const& gie, mini::SMatrix<Scalar, 3, 3> const& Hie) {
-            gi += gie;
-            Hi += Hie;
-        });
+    AccumulateElasticEnergy<TElasticEnergy>(i, fem, params, gi, Hi);
     gi *= h2;
     Hi *= h2;
     // Contact energy (augmented Lagrangian)
-    AccumulateContactEnergy(i, x, contact, gi, Hi);
+    AccumulateContactEnergy(i, params.xb, contact, gi, Hi);
     // Kinetic energy
     kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
     // Damping
@@ -575,7 +563,7 @@ void Iterate(
             mini::SVector<Scalar, 3> xtildei = FromEigen(fem.xtilde.col(i).template head<3>());
             // Build and solve the vertex equation
             auto [Hi, gi] = detail::BuildVertexEquation<
-                TElasticEnergy>(i, xi, xti, xtildei, m, h, h2, fem.x, xt, fem, contact, params);
+                TElasticEnergy>(i, xi, xti, xtildei, m, h, h2, fem, contact, params);
             // Adapt stencil gradient acceleration parameter
             detail::AdaptStencilGradientAccelerationParameter(i, xi, gi, Hi, params);
             // Augment gradient
@@ -662,12 +650,7 @@ void AssembleBlockDiagonalDynamicsHessian(
         mini::SMatrix<Scalar, 3, 3> Hi   = mini::Zeros<Scalar, 3, 3>();
         mini::SVector<Scalar, 3> gi      = mini::Zeros<Scalar, 3, 1>();
         // Elastic energy
-        detail::AccumulateElasticEnergy<TElasticEnergy>(
-            i,
-            fem,
-            params,
-            [&]([[maybe_unused]] mini::SVector<Scalar, 3> const& gie,
-                mini::SMatrix<Scalar, 3, 3> const& Hie) { Hi += Hie; });
+        detail::AccumulateElasticEnergy<TElasticEnergy>(i, fem, params, gi, Hi);
         Hi *= h2;
         // Kinetic energy
         kernels::AddInertiaDerivatives(Scalar(1) /*h2*/, m, xtildei, xi, gi, Hi);
