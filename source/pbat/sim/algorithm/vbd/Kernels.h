@@ -591,7 +591,6 @@ PBAT_HOST_DEVICE bool IntegratePositions(
     ScalarType eps      = std::numeric_limits<ScalarType>::epsilon(),
     int nMaxIters       = -1)
 {
-    // 3. Newton step
     switch (eSolver)
     {
         case EVertexIntegrationLinearSolver::Inverse: {
@@ -601,9 +600,16 @@ PBAT_HOST_DEVICE bool IntegratePositions(
         }
         break;
         case EVertexIntegrationLinearSolver::LLT: {
-            auto llt = LLT(H, eps);
-            if (not llt.success)
-                return false;
+            using HessMatrixType = mini::SMatrix<ScalarType, TMatrixH::kRows, TMatrixH::kCols>;
+            auto llt             = LLT(H, eps);
+            HessMatrixType Hmod  = H;
+            ScalarType sigma     = hessZero;
+            for (auto i = 1; i < nMaxIters and not llt.success; ++i, sigma *= 10)
+            {
+                auto ones  = mini::Ones<ScalarType, TMatrixH::kRows>();
+                Diag(Hmod) = Diag(H) + sigma * ones;
+                llt        = LLT(Hmod, eps);
+            }
             x -= LLTSolve(llt.L, g);
         }
         break;
