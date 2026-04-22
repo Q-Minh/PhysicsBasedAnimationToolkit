@@ -225,8 +225,9 @@ struct Newton
     /**
      * @brief Serialize this
      * @param archive Archive to serialize to
+     * @param bMinimal If true, only serialize essential data
      */
-    void Serialize(io::Archive& archive) const;
+    void Serialize(io::Archive& archive, bool bMinimal = true) const;
     /**
      * @brief Deserialize this
      * @param archive Archive to deserialize from
@@ -365,19 +366,22 @@ inline bool Newton<TScalar>::Solve(
 }
 
 template <class TScalar>
-inline void Newton<TScalar>::Serialize(io::Archive& archive) const
+inline void Newton<TScalar>::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.math.optimization.Newton"];
     group.WriteMetaData("nMaxIters", nMaxIters);
     group.WriteMetaData("gtol2", gtol2);
-    group.WriteData("dxk", dxk);
-    group.WriteData("gk", gk);
+    if (not bMinimal)
+    {
+        group.WriteData("dxk", dxk);
+        group.WriteData("gk", gk);
+    }
     std::visit(
         [&](auto&& lineSearch) {
             using U = std::decay_t<decltype(lineSearch)>;
             if constexpr (not std::is_same_v<U, std::monostate>)
             {
-                lineSearch.Serialize(group);
+                lineSearch.Serialize(group, bMinimal);
             }
         },
         lineSearch);
@@ -390,10 +394,14 @@ template <class TScalar>
 inline void Newton<TScalar>::Deserialize(io::Archive& archive)
 {
     io::Archive group = archive["pbat.math.optimization.Newton"];
-    nMaxIters         = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
-    gtol2             = group.ReadMetaData<std::decay_t<decltype(gtol2)>>("gtol2");
-    dxk               = group.ReadData<std::decay_t<decltype(dxk)>>("dxk");
-    gk                = group.ReadData<std::decay_t<decltype(gk)>>("gk");
+    if (group.HasMetaData("nMaxIters"))
+        nMaxIters = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
+    if (group.HasMetaData("gtol2"))
+        gtol2 = group.ReadMetaData<std::decay_t<decltype(gtol2)>>("gtol2");
+    if (group.HasData("dxk"))
+        dxk = group.ReadData<std::decay_t<decltype(dxk)>>("dxk");
+    if (group.HasData("gk"))
+        gk = group.ReadData<std::decay_t<decltype(gk)>>("gk");
     std::visit(
         [&](auto&& lineSearch) {
             using U = std::decay_t<decltype(lineSearch)>;
@@ -403,9 +411,12 @@ inline void Newton<TScalar>::Deserialize(io::Archive& archive)
             }
         },
         lineSearch);
-    mk      = group.ReadMetaData<std::decay_t<decltype(mk)>>("mk");
-    gknorm2 = group.ReadMetaData<std::decay_t<decltype(gknorm2)>>("gknorm2");
-    k       = group.ReadMetaData<std::decay_t<decltype(k)>>("k");
+    if (group.HasMetaData("mk"))
+        mk = group.ReadMetaData<std::decay_t<decltype(mk)>>("mk");
+    if (group.HasMetaData("gknorm2"))
+        gknorm2 = group.ReadMetaData<std::decay_t<decltype(gknorm2)>>("gknorm2");
+    if (group.HasMetaData("k"))
+        k = group.ReadMetaData<std::decay_t<decltype(k)>>("k");
 }
 
 } // namespace pbat::math::optimization

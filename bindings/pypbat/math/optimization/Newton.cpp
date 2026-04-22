@@ -44,9 +44,12 @@ void BindNewton(nanobind::module_& m)
             "serialize",
             &NewtonType::Serialize,
             nb::arg("archive"),
+            nb::arg("minimal") = true,
             "Serialize the Newton optimizer.\n\n"
             "Args:\n"
-            "    archive (pbat.io.Archive): Archive to serialize to.")
+            "    archive (pbat.io.Archive): Archive to serialize to.\n"
+            "    minimal (bool, optional): If true, only serialize essential data. Defaults to "
+            "true.\n")
         .def(
             "deserialize",
             &NewtonType::Deserialize,

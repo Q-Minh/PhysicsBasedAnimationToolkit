@@ -77,8 +77,9 @@ struct BackTrackingLineSearch
     /**
      * @brief Serialize the line search parameters and state
      * @param archive Archive to serialize to
+     * @param bMinimal If true, only serialize essential data
      */
-    void Serialize(io::Archive& archive) const;
+    void Serialize(io::Archive& archive, bool bMinimal = true) const;
     /**
      * @brief Deserialize the line search parameters and state
      * @param archive Archive to deserialize from
@@ -131,7 +132,7 @@ inline bool BackTrackingLineSearch<TScalar>::Solve(
 }
 
 template <class TScalar>
-inline void BackTrackingLineSearch<TScalar>::Serialize(io::Archive& archive) const
+inline void BackTrackingLineSearch<TScalar>::Serialize(io::Archive& archive, bool bMinimal) const
 {
     io::Archive group = archive["pbat.math.optimization.BackTrackingLineSearch"];
     group.WriteMetaData("nMaxIters", nMaxIters);
@@ -142,7 +143,10 @@ inline void BackTrackingLineSearch<TScalar>::Serialize(io::Archive& archive) con
     group.WriteMetaData("mj", mj);
     group.WriteMetaData("mlinearj", mlinearj);
     group.WriteMetaData("Dm0", Dm0);
-    group.WriteData("xj", xj);
+    if (not bMinimal)
+    {
+        group.WriteData("xj", xj);
+    }
     group.WriteMetaData("niters", niters);
 }
 
@@ -150,16 +154,26 @@ template <class TScalar>
 inline void BackTrackingLineSearch<TScalar>::Deserialize(io::Archive& archive)
 {
     io::Archive group = archive["pbat.math.optimization.BackTrackingLineSearch"];
-    nMaxIters         = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
-    tau               = group.ReadMetaData<std::decay_t<decltype(tau)>>("tau");
-    c                 = group.ReadMetaData<std::decay_t<decltype(c)>>("c");
-    alpha             = group.ReadMetaData<std::decay_t<decltype(alpha)>>("alpha");
-    alphaj            = group.ReadMetaData<std::decay_t<decltype(alphaj)>>("alphaj");
-    mj                = group.ReadMetaData<std::decay_t<decltype(mj)>>("mj");
-    mlinearj          = group.ReadMetaData<std::decay_t<decltype(mlinearj)>>("mlinearj");
-    Dm0               = group.ReadMetaData<std::decay_t<decltype(Dm0)>>("Dm0");
-    xj                = group.ReadData<std::decay_t<decltype(xj)>>("xj");
-    niters            = group.ReadMetaData<std::decay_t<decltype(niters)>>("niters");
+    if (group.HasMetaData("nMaxIters"))
+        nMaxIters = group.ReadMetaData<std::decay_t<decltype(nMaxIters)>>("nMaxIters");
+    if (group.HasMetaData("tau"))
+        tau = group.ReadMetaData<std::decay_t<decltype(tau)>>("tau");
+    if (group.HasMetaData("c"))
+        c = group.ReadMetaData<std::decay_t<decltype(c)>>("c");
+    if (group.HasMetaData("alpha"))
+        alpha = group.ReadMetaData<std::decay_t<decltype(alpha)>>("alpha");
+    if (group.HasMetaData("alphaj"))
+        alphaj = group.ReadMetaData<std::decay_t<decltype(alphaj)>>("alphaj");
+    if (group.HasMetaData("mj"))
+        mj = group.ReadMetaData<std::decay_t<decltype(mj)>>("mj");
+    if (group.HasMetaData("mlinearj"))
+        mlinearj = group.ReadMetaData<std::decay_t<decltype(mlinearj)>>("mlinearj");
+    if (group.HasMetaData("Dm0"))
+        Dm0 = group.ReadMetaData<std::decay_t<decltype(Dm0)>>("Dm0");
+    if (group.HasData("xj"))
+        xj = group.ReadData<std::decay_t<decltype(xj)>>("xj");
+    if (group.HasMetaData("niters"))
+        niters = group.ReadMetaData<std::decay_t<decltype(niters)>>("niters");
 }
 
 } // namespace pbat::math::optimization

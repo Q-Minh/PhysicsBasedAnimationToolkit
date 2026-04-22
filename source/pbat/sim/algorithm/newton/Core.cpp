@@ -91,10 +91,7 @@ void Params::Serialize(io::Archive& archive, bool bMinimal) const
     group.WriteMetaData("eLinearSolver", static_cast<int>(eLinearSolver));
     group.WriteMetaData("eOgcTruncationStrategy", static_cast<int>(eOgcTruncationStrategy));
     group.WriteMetaData("nMaxIters", nMaxIters);
-    if (not bMinimal)
-    {
-        newton.Serialize(group);
-    }
+    newton.Serialize(group, bMinimal);
 }
 
 void Params::Deserialize(io::Archive const& archive)
@@ -261,32 +258,32 @@ TEST_CASE("[type:integration][sim][algorithm][newton] Cube falling on plane")
 
 TEST_CASE("[type:debug][sim][algorithm][newton] Sandbox")
 {
-//     using namespace pbat;
-//     using namespace pbat::sim::algorithm;
-//     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
-//     using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
-//     using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
-//     // Arrange
-//     io::Archive archive(
-//         "ContactingHeterogeneousSpaghetti.Frame39.h5",
-//         HighFive::File::AccessMode::ReadOnly);
-//     FemElastoDynamics fem{};
-//     fem.Deserialize(archive["fem"]);
-//     MeshDynamics contact{};
-//     contact.Deserialize(archive["contact"]);
-//     newton::Params params{};
-//     params.Deserialize(archive["newton/params"]);
-//     geometry::Device device{geometry::DeviceConfig{}};
-//     contact.Initialize(device);
-//     contact.GetParams().Construct();
-//     auto initStrategy = static_cast<sim::dynamics::EFemElastoDynamicsTimeStepInitialization>(
-//         archive.ReadMetaData<int>("initialization_strategy"));
-//     // Act
-//     for (auto t = 0; t < 2; ++t)
-//     {
-//         fem.SetupTimeIntegrationOptimization(initStrategy);
-//         newton::InitializeSolve(fem, contact, params);
-//         newton::Solve(fem, contact, params);
-//         fem.Step();
-//     }
+    //     using namespace pbat;
+    //     using namespace pbat::sim::algorithm;
+    //     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
+    //     using FemElastoDynamics = newton::FemElastoDynamics<ElasticEnergyType>;
+    //     using MeshDynamics      = sim::algorithm::newton::MeshDynamics;
+    //     // Arrange
+    //     io::Archive archive(
+    //         "ContactingHeterogeneousSpaghetti.Frame39.h5",
+    //         HighFive::File::AccessMode::ReadOnly);
+    //     FemElastoDynamics fem{};
+    //     fem.Deserialize(archive["fem"]);
+    //     MeshDynamics contact{};
+    //     contact.Deserialize(archive["contact"]);
+    //     newton::Params params{};
+    //     params.Deserialize(archive["newton/params"]);
+    //     geometry::Device device{geometry::DeviceConfig{}};
+    //     contact.Initialize(device);
+    //     contact.GetParams().Construct();
+    //     auto initStrategy = static_cast<sim::dynamics::EFemElastoDynamicsTimeStepInitialization>(
+    //         archive.ReadMetaData<int>("initialization_strategy"));
+    //     // Act
+    //     for (auto t = 0; t < 2; ++t)
+    //     {
+    //         fem.SetupTimeIntegrationOptimization(initStrategy);
+    //         newton::InitializeSolve(fem, contact, params);
+    //         newton::Solve(fem, contact, params);
+    //         fem.Step();
+    //     }
 }
