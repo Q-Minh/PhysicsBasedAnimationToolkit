@@ -263,6 +263,31 @@ class DenseAdjacencySet
             std::get<1>(mAdjacencies[i]),
             mIdToData[std::get<2>(mAdjacencies[i])]);
     }
+    /**
+     * @brief Get read-only access to the adjacency list.
+     * @return const reference to the internal (source, target, id) tuple vector
+     */
+    auto const& Adjacencies() const { return mAdjacencies; }
+    /**
+     * @brief Get read-only access to the prefix sums.
+     * @return const reference to the prefix sums vector
+     * @pre `Finalize()` has been called
+     */
+    auto const& Prefix() const { return mPrefix; }
+    /**
+     * @brief Construct the adjacency set from pre-built compact state.
+     *
+     * Assumes identity indirection (i.e. the id stored in each adjacency tuple equals the data
+     * index). This is the state produced by `CompactIds()`.
+     *
+     * @param adjacencies Sorted (source, target, id) tuples where id == data index
+     * @param prefix Prefix sums over source vertices
+     * @param data Per-edge associated data, each vector of size `adjacencies.size()`
+     */
+    void Construct(
+        std::vector<std::tuple<TIndex, TIndex, TIndex>> adjacencies,
+        std::vector<TIndex> prefix,
+        std::tuple<std::vector<T>...> data);
 
   protected:
     /**
@@ -297,6 +322,26 @@ DenseAdjacencySet<TIndex, T...>::Reserve(std::size_t nAdjacencies, std::size_t n
     mIdToData.reserve(nAdjacencies);
     mDataToId.reserve(nAdjacencies);
     std::apply([&](auto&&... data) { (data.reserve(nAdjacencies), ...); }, mData);
+}
+
+template <common::CIndex TIndex, class... T>
+inline void DenseAdjacencySet<TIndex, T...>::Construct(
+    std::vector<std::tuple<TIndex, TIndex, TIndex>> adjacencies,
+    std::vector<TIndex> prefix,
+    std::tuple<std::vector<T>...> data)
+{
+    mAdjacencies = std::move(adjacencies);
+    mPrefix      = std::move(prefix);
+    mData        = std::move(data);
+    mCpy.clear();
+    auto const n = mAdjacencies.size();
+    mIdToData.resize(n);
+    mDataToId.resize(n);
+    for (std::size_t i = 0u; i < n; ++i)
+    {
+        mIdToData[i] = static_cast<TIndex>(i);
+        mDataToId[i] = static_cast<TIndex>(i);
+    }
 }
 
 template <common::CIndex TIndex, class... T>

@@ -462,7 +462,7 @@ void AssembleHessian(
                 using ConstraintAccessorType   = decltype(C);
                 auto nodes                     = contact.LoadStencil<TContactSet>(stencil);
                 auto gradc                     = C.Grad();
-                auto gamma                     = C.Decay();
+                auto gamma                     = /*C.Decay()*/1;
                 auto mu                        = contactParams.kc;
                 Scalar dH                      = gamma * mu;
                 static auto constexpr kStencil = ConstraintAccessorType::kStencil;

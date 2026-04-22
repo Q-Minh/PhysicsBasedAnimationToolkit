@@ -704,6 +704,23 @@ class MeshDynamics
      */
     void UpdateContactSetsFromOgcPairs();
     /**
+     * @brief Serialize a single constraint set to an archive group
+     * @tparam TContactSet Contact set type
+     * @param contactSet The contact set to serialize
+     * @param grp Archive group to write into
+     * @pre `contactSet` has compact IDs
+     */
+    template <class TContactSet>
+    static void SerializeConstraintSet(TContactSet& contactSet, io::Archive& grp);
+    /**
+     * @brief Deserialize a single constraint set from an archive group
+     * @tparam TContactSet Contact set type
+     * @param contactSet The contact set to populate
+     * @param grp Archive group to read from
+     */
+    template <class TContactSet>
+    static void DeserializeConstraintSet(TContactSet& contactSet, io::Archive const& grp);
+    /**
      * @brief Get the geometry prefix arrays for the contact set
      * @return The pair (prefu, prefv)
      */
@@ -954,6 +971,11 @@ inline void MeshDynamics<TScalar, TIndex>::Params::Serialize(io::Archive& archiv
     grp.WriteMetaData("mu", mu);
     grp.WriteMetaData("rqstart", rqstart);
     grp.WriteMetaData("betarq", betarq);
+    grp.WriteMetaData("gamma", gamma);
+    grp.WriteMetaData("dmin", dmin);
+    grp.WriteMetaData("decay", decay);
+    grp.WriteMetaData("decaylo", decaylo);
+    grp.WriteMetaData("bDeactivate", static_cast<int>(bDeactivate));
     grp.WriteMetaData("kcp", kcp);
     grp.WriteMetaData("b", b);
 }
@@ -973,6 +995,16 @@ inline void MeshDynamics<TScalar, TIndex>::Params::Deserialize(io::Archive const
         rqstart = grp.ReadMetaData<TScalar>("rqstart");
     if (grp.HasMetaData("betarq"))
         betarq = grp.ReadMetaData<TScalar>("betarq");
+    if (grp.HasMetaData("gamma"))
+        gamma = grp.ReadMetaData<TScalar>("gamma");
+    if (grp.HasMetaData("dmin"))
+        dmin = grp.ReadMetaData<TScalar>("dmin");
+    if (grp.HasMetaData("decay"))
+        decay = grp.ReadMetaData<TScalar>("decay");
+    if (grp.HasMetaData("decaylo"))
+        decaylo = grp.ReadMetaData<TScalar>("decaylo");
+    if (grp.HasMetaData("bDeactivate"))
+        bDeactivate = static_cast<bool>(grp.ReadMetaData<int>("bDeactivate"));
     if (grp.HasMetaData("kcp"))
         kcp = grp.ReadMetaData<TScalar>("kcp");
     if (grp.HasMetaData("b"))
@@ -1392,7 +1424,7 @@ inline TScalar MeshDynamics<TScalar, TIndex>::Potential(
             auto xc                = Reshape<kDofs, 1>(Xc);
             TScalar cs             = C.Eval(xc, bForLinearSubproblem) - mParams.dmin - C.Slack();
             auto mu                = mParams.kc;
-            E += C.Decay() * (TScalar(0.5) * mu * cs * cs - C.Lambda() * cs);
+            E += /*C.Decay() **/ (TScalar(0.5) * mu * cs * cs - C.Lambda() * cs);
         },
         1 /*nThreads*/);
     return E;
@@ -1432,7 +1464,7 @@ inline void MeshDynamics<TScalar, TIndex>::ToGradient(
             auto xc                = Reshape<kDofs, 1>(XC);
             auto mu                = mParams.kc;
             TScalar cs             = C.Eval(xc, bForLinearSubproblem) - mParams.dmin - C.Slack();
-            TScalar dL             = C.Decay() * (mu * cs - C.Lambda());
+            TScalar dL             = /*C.Decay() **/ (mu * cs - C.Lambda());
             auto const fAddGrad    = [&](auto&& gradc_) {
                 using math::linalg::mini::ToEigen;
                 auto gradc = ToEigen(gradc_);
@@ -1474,6 +1506,22 @@ inline void MeshDynamics<TScalar, TIndex>::Serialize(io::Archive& archive)
     grp.WriteMetaData(
         "mRequiresBoundsRecomputation",
         static_cast<int>(mRequiresBoundsRecomputation));
+    {
+        auto pointPointContactsGrp = grp["mPointPointContacts"];
+        SerializeConstraintSet(mPointPointContacts, pointPointContactsGrp);
+    }
+    {
+        auto pointEdgeContactsGrp = grp["mPointEdgeContacts"];
+        SerializeConstraintSet(mPointEdgeContacts, pointEdgeContactsGrp);
+    }
+    {
+        auto pointTriangleContactsGrp = grp["mPointTriangleContacts"];
+        SerializeConstraintSet(mPointTriangleContacts, pointTriangleContactsGrp);
+    }
+    {
+        auto edgeEdgeContactsGrp = grp["mEdgeEdgeContacts"];
+        SerializeConstraintSet(mEdgeEdgeContacts, edgeEdgeContactsGrp);
+    }
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1481,26 +1529,33 @@ inline void MeshDynamics<TScalar, TIndex>::Deserialize(io::Archive const& archiv
 {
     auto grp = archive["pbat.sim.contact.MeshDynamics"];
     mParams.Deserialize(grp["mParams"]);
-    mXdynamic =
-        grp.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("mXdynamic");
-    mDynamicMeshes.Deserialize(grp["mDynamicMeshes"]);
     if (grp.HasMetaData("mNumTruncatedPoints"))
+    {
         mNumTruncatedPoints = grp.ReadMetaData<Eigen::Index>("mNumTruncatedPoints");
+    }
     if (grp.HasMetaData("mRequiresBoundsRecomputation"))
+    {
         mRequiresBoundsRecomputation =
             static_cast<bool>(grp.ReadMetaData<int>("mRequiresBoundsRecomputation"));
-    mOgcInput.WithDynamicGeometry(
-        mXdynamic,
-        mDynamicMeshes.V,
-        mDynamicMeshes.F,
-        mDynamicMeshes.E,
-        mDynamicMeshes.VP,
-        mDynamicMeshes.FP,
-        mDynamicMeshes.EP,
-        mDynamicMeshes.GVHEp,
-        mDynamicMeshes.GVHEadj,
-        mDynamicMeshes.GHEF,
-        mDynamicMeshes.EHE);
+    }
+    if (grp.HasData("mXdynamic") and grp.HasGroup("mDynamicMeshes"))
+    {
+        mXdynamic =
+            grp.ReadData<Eigen::Matrix<ScalarType, Eigen::Dynamic, Eigen::Dynamic>>("mXdynamic");
+        mDynamicMeshes.Deserialize(grp["mDynamicMeshes"]);
+        mOgcInput.WithDynamicGeometry(
+            mXdynamic,
+            mDynamicMeshes.V,
+            mDynamicMeshes.F,
+            mDynamicMeshes.E,
+            mDynamicMeshes.VP,
+            mDynamicMeshes.FP,
+            mDynamicMeshes.EP,
+            mDynamicMeshes.GVHEp,
+            mDynamicMeshes.GVHEadj,
+            mDynamicMeshes.GHEF,
+            mDynamicMeshes.EHE);
+    }
     if (grp.HasData("mXstatic") and grp.HasGroup("mStaticMeshes"))
     {
         mXstatic =
@@ -1515,6 +1570,119 @@ inline void MeshDynamics<TScalar, TIndex>::Deserialize(io::Archive const& archiv
             mStaticMeshes.GHEF,
             mStaticMeshes.EHE);
     }
+    if (grp.HasGroup("mPointPointContacts"))
+    {
+        DeserializeConstraintSet(mPointPointContacts, grp["mPointPointContacts"]);
+    }
+    if (grp.HasGroup("mPointEdgeContacts"))
+    {
+        DeserializeConstraintSet(mPointEdgeContacts, grp["mPointEdgeContacts"]);
+    }
+    if (grp.HasGroup("mPointTriangleContacts"))
+    {
+        DeserializeConstraintSet(mPointTriangleContacts, grp["mPointTriangleContacts"]);
+    }
+    if (grp.HasGroup("mEdgeEdgeContacts"))
+    {
+        DeserializeConstraintSet(mEdgeEdgeContacts, grp["mEdgeEdgeContacts"]);
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TContactSet>
+void MeshDynamics<TScalar, TIndex>::SerializeConstraintSet(
+    TContactSet& contactSet,
+    io::Archive& grp)
+{
+    static constexpr int kDofs = TContactSet::AccessorType::kDofs;
+    // NOTE: The contact set should already be compacted.
+    // contactSet.CompactIds();
+    auto const nAdj         = static_cast<Eigen::Index>(contactSet.Size());
+    auto const& adjacencies = contactSet.Adjacencies();
+    auto const& prefix      = contactSet.Prefix();
+    // Adjacencies as 3 x nAdj matrix (source, target, id)
+    Eigen::Matrix<TIndex, 3, Eigen::Dynamic> adj(3, nAdj);
+    for (Eigen::Index i = 0; i < nAdj; ++i)
+    {
+        adj(0, i) = std::get<0>(adjacencies[i]);
+        adj(1, i) = std::get<1>(adjacencies[i]);
+        adj(2, i) = std::get<2>(adjacencies[i]);
+    }
+    grp.WriteData("adjacencies", adj);
+    grp.WriteData("prefix", prefix);
+    // Constraint data
+    auto const& lambdas = contactSet.template Data<0>();
+    auto const& slacks  = contactSet.template Data<1>();
+    auto const& decays  = contactSet.template Data<2>();
+    auto const& chats   = contactSet.template Data<3>();
+    auto const& gradcs  = contactSet.template Data<4>();
+    auto const& evals   = contactSet.template Data<5>();
+    grp.WriteData("lambda", lambdas);
+    grp.WriteData("slack", slacks);
+    grp.WriteData("chat", chats);
+    grp.WriteData("eval", evals);
+    // Decay (extract gamma)
+    {
+        std::vector<TScalar> decayVec(nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+            decayVec[i] = decays[i].gamma;
+        grp.WriteData("decay", decayVec);
+    }
+    // Gradient as kDofs x nAdj matrix
+    {
+        Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> gradcsEig(kDofs, nAdj);
+        for (Eigen::Index i = 0; i < nAdj; ++i)
+        {
+            auto const& gradc = gradcs[i];
+            for (int d = 0; d < kDofs; ++d)
+                gradcsEig(d, i) = gradc(d);
+        }
+        grp.WriteData("gradc", gradcsEig);
+    }
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+template <class TContactSet>
+void MeshDynamics<TScalar, TIndex>::DeserializeConstraintSet(
+    TContactSet& contactSet,
+    io::Archive const& grp)
+{
+    static constexpr int kDofs = TContactSet::AccessorType::kDofs;
+    // Read adjacencies + prefix
+    auto adj = grp.ReadData<Eigen::Matrix<TIndex, Eigen::Dynamic, Eigen::Dynamic>>("adjacencies");
+    auto const nAdj = adj.cols();
+    std::vector<std::tuple<TIndex, TIndex, TIndex>> adjacencies(nAdj);
+    for (Eigen::Index i = 0; i < nAdj; ++i)
+        adjacencies[i] = {adj(0, i), adj(1, i), adj(2, i)};
+    std::vector<TIndex> prefix = grp.ReadData<std::vector<TIndex>>("prefix");
+    // Read scalar data
+    std::vector<TScalar> lambdas = grp.ReadData<std::vector<TScalar>>("lambda");
+    std::vector<TScalar> slacks  = grp.ReadData<std::vector<TScalar>>("slack");
+    std::vector<TScalar> chats   = grp.ReadData<std::vector<TScalar>>("chat");
+    std::vector<TScalar> evals   = grp.ReadData<std::vector<TScalar>>("eval");
+    std::vector<TScalar> decaysS = grp.ReadData<std::vector<TScalar>>("decay");
+    std::vector<math::linalg::mini::SVector<TScalar, kDofs>> gradcs(nAdj);
+    auto gradcsEig = grp.ReadData<Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>>("gradc");
+    // Build data vectors
+    std::vector<Decay> decays(nAdj);
+    for (Eigen::Index i = 0; i < nAdj; ++i)
+    {
+        decays[i].gamma = decaysS[i];
+        auto& gradc     = gradcs[i];
+        for (int d = 0; d < kDofs; ++d)
+            gradc(d) = gradcsEig(d, i);
+    }
+    // Construct the contact set from compact state
+    contactSet.Construct(
+        std::move(adjacencies),
+        std::move(prefix),
+        std::make_tuple(
+            std::move(lambdas),
+            std::move(slacks),
+            std::move(decays),
+            std::move(chats),
+            std::move(gradcs),
+            std::move(evals)));
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
@@ -1646,6 +1814,7 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateContactSetsFromOgcPairs()
         // });
         set.Assign(newSet);
         set.Finalize(nSourcePrimitives);
+        set.CompactIds();
     };
     auto const nPoints    = mOgcState.mPointGeometryPrefix[OgcStateType::EGeometry::Count];
     auto const nHalfEdges = mOgcState.mHalfEdgeGeometryPrefix[OgcStateType::EGeometry::Count];
