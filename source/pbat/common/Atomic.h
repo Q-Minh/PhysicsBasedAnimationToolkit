@@ -65,17 +65,18 @@ void AtomicMin(std::atomic_ref<T>& a, T b) noexcept
 }
 
 /**
- * @brief Order-independent atomic minimum operation for integral types.
+ * @brief Order-independent atomic minimum operation for arithmetic types.
  *
  * @pre `std::atomic_ref<T>` is lock-free, which guarantees that temporary `std::atomic_ref`
  * instances are safe even with non-overlapping lifetimes across threads (no internal lock-table
  * bookkeeping).
  *
- * @tparam T Integral type
+ * @tparam T Arithmetic type
  * @param a Left operand
  * @param b Right operand
  */
-template <std::integral T>
+template <class T>
+    requires std::is_arithmetic_v<T>
 void AtomicMin(T& a, T b) noexcept
 {
     static_assert(
@@ -117,17 +118,18 @@ void AtomicMax(std::atomic_ref<T>& a, T b) noexcept
 }
 
 /**
- * @brief Order-independent atomic maximum operation for integral types.
+ * @brief Order-independent atomic maximum operation for arithmetic types.
  *
  * @pre `std::atomic_ref<T>` is lock-free, which guarantees that temporary `std::atomic_ref`
  * instances are safe even with non-overlapping lifetimes across threads (no internal lock-table
  * bookkeeping).
  *
- * @tparam T Integral type
+ * @tparam T Arithmetic type
  * @param a Left operand
  * @param b Right operand
  */
-template <std::integral T>
+template <class T>
+    requires std::is_arithmetic_v<T>
 void AtomicMax(T& a, T b) noexcept
 {
     static_assert(
