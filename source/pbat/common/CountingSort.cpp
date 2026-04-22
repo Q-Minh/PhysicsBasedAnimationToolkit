@@ -4,6 +4,7 @@
 #include <doctest/doctest.h>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 TEST_CASE("[common] CountingSort")
@@ -84,7 +85,15 @@ TEST_CASE("[common] CountingSort")
                 objects.push_back(dist(rng));
             std::vector<int> workspace{};
             workspace.resize(201);
-            pbat::common::CountingSort(objects, workspace, -100, 100);
+            SUBCASE("in-place")
+            {
+                pbat::common::CountingSort(objects, workspace, -100, 100);
+            }
+            SUBCASE("stable")
+            {
+                auto cpy = objects;
+                pbat::common::StableCountingSort(objects, cpy, workspace, -100, 100);
+            }
             CHECK(std::is_sorted(objects.begin(), objects.end()));
         }
         SUBCASE("unsigned integer")
@@ -96,8 +105,38 @@ TEST_CASE("[common] CountingSort")
                 objects.push_back(dist(rng));
             std::vector<unsigned int> workspace{};
             workspace.resize(201);
-            pbat::common::CountingSort(objects, workspace, 0, 200);
+            SUBCASE("in-place")
+            {
+                pbat::common::CountingSort(objects, workspace, 0, 200);
+            }
+            SUBCASE("stable")
+            {
+                auto cpy = objects;
+                pbat::common::StableCountingSort(objects, cpy, workspace, 0, 200);
+            }
             CHECK(std::is_sorted(objects.begin(), objects.end()));
+        }
+        SUBCASE("integer pair")
+        {
+            SUBCASE("stable")
+            {
+                std::vector<std::pair<unsigned int, unsigned int>> objects{};
+                std::mt19937 rng(123);
+                std::uniform_int_distribution<unsigned int> dist(0, 200);
+                for (int i = 0; i < 1000; ++i)
+                    objects.push_back({dist(rng), dist(rng)});
+                std::vector<unsigned int> workspace{};
+                workspace.resize(201);
+                auto cpy = objects;
+                pbat::common::StableCountingSort(
+                    objects,
+                    cpy,
+                    workspace,
+                    std::make_tuple(0, 0),
+                    std::make_tuple(200, 200),
+                    std::make_tuple(std::identity{}, std::identity{}));
+                CHECK(std::is_sorted(objects.begin(), objects.end()));
+            }
         }
     }
 }

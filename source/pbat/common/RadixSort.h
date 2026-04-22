@@ -10,9 +10,12 @@
 #ifndef PBAT_COMMON_RADIXSORT_H
 #define PBAT_COMMON_RADIXSORT_H
 
+#include "Concepts.h"
+
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cassert>
 #include <concepts>
 #include <limits>
 #include <new>
@@ -20,14 +23,11 @@
 #include <ranges>
 #include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
 namespace pbat::common {
-
-namespace detail {
-
-} // namespace detail
 
 /**
  * @brief Histogram for radix sort
@@ -123,7 +123,7 @@ void RadixSort(
 }
 
 /**
- * @brief Radix sort (single threaded)
+ * @brief Radix sort (multi-threaded)
  * @tparam TInOutRng Range type to sort
  * @tparam TCpyRng Range type for the copy buffer
  * @tparam TCount Type of integer to use for the histogram bucket counts
@@ -223,6 +223,99 @@ void RadixSort(
         // 6. Swap input and output buffers
         swap(cpy, inout);
     }
+}
+
+/**
+ * @brief Radix sort (single threaded) specialization for ranges of tuples
+ * @tparam TInOutRng Input/output range type
+ * @tparam TCpyRng Copy range type
+ * @tparam TCount Type of integer to use for the histogram bucket counts
+ * @tparam FProjects Projection function types
+ * @tparam TKeys Key types
+ * @param inout Input/output range
+ * @param cpy Copy range
+ * @param work Working memory
+ * @param fProjects Projection functions
+ * @param maxes Upper bounds for the keys
+ */
+template <
+    std::ranges::random_access_range TInOutRng,
+    std::ranges::random_access_range TCpyRng,
+    std::integral TCount,
+    CTupleLike FProjects,
+    CTupleLike TKeys>
+void RadixSort(
+    TInOutRng&& inout,
+    TCpyRng&& cpy,
+    RadixSortWorkspace<TCount>& work,
+    FProjects fProjects,
+    TKeys maxes)
+{
+    using ValueType = std::ranges::range_value_t<TInOutRng>;
+    static_assert(
+        std::tuple_size_v<FProjects> == std::tuple_size_v<TKeys>,
+        "Mismatched tuple sizes");
+    static_assert(
+        std::tuple_size_v<FProjects> >= std::tuple_size_v<ValueType>,
+        "Mismatched tuple sizes");
+    auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        std::size_t constexpr N = sizeof...(Is);
+        (RadixSort(
+             inout,
+             cpy,
+             work,
+             [&](auto&& tup) { return std::get<N - 1 - Is>(fProjects)(std::get<N - 1 - Is>(tup)); },
+             std::get<N - 1 - Is>(maxes)),
+         ...);
+    };
+    fReverseForEach(std::make_index_sequence<std::tuple_size_v<FProjects>>{});
+}
+
+/**
+ * @brief Radix sort (multi-threaded) specialized for ranges of tuple-like elements
+ * @tparam TInOutRng Range type to sort
+ * @tparam TCpyRng Range type for the copy buffer
+ * @tparam TCount Type of integer to use for the histogram bucket counts
+ * @tparam FProject Projection function type
+ * @tparam TKey Type of key to sort on
+ * @param inout Input range to sort
+ * @param cpy Copy buffer
+ * @param work Working memory per-thread
+ * @param fProject Projection functions
+ * @param maxes Upper bounds for the keys
+ * @pre `0 <= fProject(inout[i]) <= max` for all `0 <= i < inout.size()`
+ */
+template <
+    std::ranges::random_access_range TInOutRng,
+    std::ranges::random_access_range TCpyRng,
+    std::integral TCount,
+    CTupleLike FProjects,
+    CTupleLike TKeys>
+void RadixSort(
+    TInOutRng&& inout,
+    TCpyRng&& cpy,
+    std::vector<RadixSortWorkspace<TCount>>& lwork,
+    FProjects fProjects,
+    TKeys maxes)
+{
+    using ValueType = std::ranges::range_value_t<TInOutRng>;
+    static_assert(
+        std::tuple_size_v<FProjects> == std::tuple_size_v<TKeys>,
+        "Mismatched tuple sizes");
+    static_assert(
+        std::tuple_size_v<FProjects> >= std::tuple_size_v<ValueType>,
+        "Mismatched tuple sizes");
+    auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        std::size_t constexpr N = sizeof...(Is);
+        (RadixSort(
+             inout,
+             cpy,
+             lwork,
+             [&](auto&& tup) { return std::get<N - 1 - Is>(fProjects)(std::get<N - 1 - Is>(tup)); },
+             std::get<N - 1 - Is>(maxes)),
+         ...);
+    };
+    fReverseForEach(std::make_index_sequence<std::tuple_size_v<TKeys>>{});
 }
 
 } // namespace pbat::common

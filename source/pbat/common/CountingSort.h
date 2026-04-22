@@ -11,6 +11,9 @@
 #ifndef PBAT_COMMON_COUNTINGSORT_H
 #define PBAT_COMMON_COUNTINGSORT_H
 
+#include "Concepts.h"
+#include "ConstexprFor.h"
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -19,6 +22,7 @@
 #include <limits>
 #include <numeric>
 #include <ranges>
+#include <tuple>
 #include <type_traits>
 
 namespace pbat::common {
@@ -119,6 +123,58 @@ void StableCountingSort(
         cpy[work[fProject(rng[i]) - min]++] = rng[i];
     using std::swap;
     swap(cpy, rng);
+}
+
+/**
+ * @brief Stable (out-of-place) counting sort for tuples of integer keys in a random access range,
+ * with specified key range (per tuple element).
+ * @tparam TRng Input range type
+ * @tparam TWork Working range type
+ * @tparam FProject Projection function type with signature `(T const& ) -> TKey` where `T` is the
+ * range value type.
+ * @tparam TKey Key type
+ * @param rng Input range
+ * @param cpy Copy range
+ * @param work Working range
+ * @param min Minimum key values per tuple element
+ * @param max Maximum key values per tuple element
+ * @param fProject Projection functions to extract keys from elements of `rng`
+ * @post The unsorted elements in `rng` are in `cpy`.
+ */
+template <
+    std::ranges::random_access_range TRng,
+    std::ranges::random_access_range TWork,
+    CTupleLike FProjects,
+    CTupleLike TKeys>
+void StableCountingSort(
+    TRng&& rng,
+    TRng&& cpy,
+    TWork&& work,
+    TKeys mins,
+    TKeys maxs,
+    FProjects fProjects)
+{
+    using ValueType = std::ranges::range_value_t<TRng>;
+    static_assert(
+        std::tuple_size_v<FProjects> == std::tuple_size_v<TKeys>,
+        "Mismatched tuple sizes");
+    static_assert(
+        std::tuple_size_v<TKeys> >= std::tuple_size_v<ValueType>,
+        "Mismatched tuple sizes");
+    auto const fReverseForEach = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        std::size_t constexpr N = sizeof...(Is);
+        (StableCountingSort(
+             rng,
+             cpy,
+             work,
+             std::get<N - 1 - Is>(mins),
+             std::get<N - 1 - Is>(maxs),
+             [&](auto&& tup) {
+                 return std::get<N - 1 - Is>(fProjects)(std::get<N - 1 - Is>(tup));
+             }),
+         ...);
+    };
+    fReverseForEach(std::make_index_sequence<std::tuple_size_v<TKeys>>{});
 }
 
 } // namespace pbat::common

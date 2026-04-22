@@ -97,15 +97,27 @@ concept CContiguousArithmeticRange =
  * @tparam R
  */
 template <class R>
-concept CContiguousArithmeticMatrixRange = requires(R r)
-{
+concept CContiguousArithmeticMatrixRange = requires(R r) {
     requires std::ranges::range<R>;
     requires std::ranges::sized_range<R>;
     requires std::ranges::contiguous_range<R>;
-    {std::ranges::range_value_t<R>::RowsAtCompileTime}->std::convertible_to<int>;
-    {std::ranges::range_value_t<R>::ColsAtCompileTime}->std::convertible_to<int>;
+    { std::ranges::range_value_t<R>::RowsAtCompileTime } -> std::convertible_to<int>;
+    { std::ranges::range_value_t<R>::ColsAtCompileTime } -> std::convertible_to<int>;
     requires std::is_arithmetic_v<typename std::ranges::range_value_t<R>::Scalar>;
-    {std::ranges::range_value_t<R>::Flags};
+    { std::ranges::range_value_t<R>::Flags };
+};
+
+/**
+ * @brief Concept for tuple-like types
+ * @tparam T
+ */
+template <class T>
+concept CTupleLike = requires(T t) {
+    { std::tuple_size<std::remove_cvref_t<T>>::value } -> std::convertible_to<std::size_t>;
+    requires std::tuple_size_v<std::remove_cvref_t<T>> > 0;
+    {
+        std::get<0>(t)
+    } -> std::convertible_to<std::tuple_element_t<0, std::remove_cvref_t<T>> const&>;
 };
 
 } // namespace common

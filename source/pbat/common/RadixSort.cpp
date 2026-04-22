@@ -78,4 +78,38 @@ TEST_CASE("[common] RadixSort")
             CHECK(std::is_sorted(sorted.begin(), sorted.end()));
         }
     }
+    SUBCASE("Sort random initialized unsigned integer pair array")
+    {
+        std::mt19937 rng(123);
+        std::uniform_int_distribution<std::uint32_t> dist(0, 1000);
+        RadixSortWorkspace work;
+        std::vector<std::pair<std::uint32_t, std::uint32_t>> sorted(100);
+        for (auto& [x, y] : sorted)
+        {
+            x = dist(rng);
+            y = dist(rng);
+        }
+        auto cpy = sorted;
+        SUBCASE("Single-threaded")
+        {
+            RadixSort(
+                sorted,
+                cpy,
+                work,
+                std::make_tuple(std::identity{}, std::identity{}),
+                std::make_tuple(dist.b(), dist.b()));
+            CHECK(std::is_sorted(sorted.begin(), sorted.end()));
+        }
+        SUBCASE("Multi-threaded")
+        {
+            std::vector<RadixSortWorkspace<>> threadWorkspaces(2);
+            RadixSort(
+                sorted,
+                cpy,
+                threadWorkspaces,
+                std::make_tuple(std::identity{}, std::identity{}),
+                std::make_tuple(dist.b(), dist.b()));
+            CHECK(std::is_sorted(sorted.begin(), sorted.end()));
+        }
+    }
 }
