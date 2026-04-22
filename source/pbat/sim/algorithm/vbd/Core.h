@@ -514,7 +514,7 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     using mini::ToEigen;
     // Adapt stencil gradient acceleration parameter using the total gradient
     mini::SVector<Scalar, 3> gi = gkinetici + gelastici + gcontacti;
-    if (params.k > 0 or params.kp > 0)
+    if (params.kp > 0)
     {
         Scalar ngk                    = Norm(gi);
         mini::SVector<Scalar, 3> gkm1 = FromEigen(params.gkinetic.col(i).template head<3>()) +
@@ -614,13 +614,8 @@ void InitializeSolve(
     contact.GetParams().ComputeQueryRadius((fem.xtilde - xt).colwise().norm().maxCoeff());
     contact.UpdateConstraintSet(xt, true /*bComputeReverseContactPairs*/);
     contact.RestoreFeasibility(fem.x, fem.dmask);
-    params.k = 0;
-    params.gkinetic.setZero();
-    params.gelastic.setZero();
-    params.gcontact.setZero();
+    params.k  = 0;
     params.xk = fem.x;
-    params.betaG.setConstant(params.betaG0);
-    params.Hnk.setZero();
 }
 
 /**
@@ -711,6 +706,7 @@ void Solve(
         // 3. Setup subproblem
         AssembleBlockDiagonalDynamicsHessian(fem, params);
         UpdatePenaltyParameter(contact, params);
+        params.betaG.setConstant(params.betaG0);
         // 4. VBD solve the linear constraint subproblem
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
         for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
