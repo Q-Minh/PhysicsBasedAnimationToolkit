@@ -292,7 +292,7 @@ class AdjacencySet
      */
     template <class TOtherData>
     void Merge(
-        AdjacencySet<TOtherData, VertexIndexType, IdIndexType>&& other,
+        AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
         bool bAssumeDisjoint = false);
 
     /**
@@ -626,7 +626,7 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Clear()
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
 template <class TOtherData>
 inline void AdjacencySet<TData, TVertexIndex, TIdIndex>::Merge(
-    AdjacencySet<TOtherData, VertexIndexType, IdIndexType>&& other,
+    AdjacencySet<TOtherData, VertexIndexType, IdIndexType>& other,
     bool bAssumeDisjoint)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.graph.AdjacencySet.Merge");
@@ -721,11 +721,11 @@ void AdjacencySet<TData, TVertexIndex, TIdIndex>::Reduce(
                 std::size_t dst = k * step;
                 std::size_t src = dst + stride;
                 if (src < n)
-                    begin[dst].Merge(std::move(begin[src]), bAssumeInputDisjoint);
+                    begin[dst].Merge(begin[src], bAssumeInputDisjoint);
             },
             tbb::static_partitioner());
     }
-    this->Merge(std::move(begin[0]), bAssumeOutputDisjoint);
+    this->Merge(begin[0], bAssumeOutputDisjoint);
 }
 
 template <class TData, common::CIndex TVertexIndex, common::CIndex TIdIndex>
