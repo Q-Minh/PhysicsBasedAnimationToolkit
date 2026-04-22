@@ -128,6 +128,10 @@ class State
      * to enum values in EGeometry.
      */
     void CollectContactPairs();
+    /**
+     * @brief Clear contact pairs
+     */
+    void ClearContactPairs();
 
     /**
      * @brief Destroy the State object
@@ -650,18 +654,7 @@ inline void State<TScalar, TIndex>::PrepareForExecution(
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.contact.ogc.State.PrepareForExecution");
     // 1. Clear contact sets
-    for (auto& xx : mXXets)
-        xx.clear();
-    for (auto& xe : mXEets)
-        xe.clear();
-    for (auto& xf : mXFets)
-        xf.clear();
-    for (auto& ee : mEEets)
-        ee.clear();
-    mXX.clear();
-    mXE.clear();
-    mXF.clear();
-    mEE.clear();
+    ClearContactPairs();
     common::ExclusivePrefixSum(
         mPointGeometryPrefix,
         (input.X ? input.X->cols() : 0),
@@ -730,6 +723,23 @@ inline void State<TScalar, TIndex>::CollectContactPairs()
     tg.run([&]() { fRemoveDuplicates(mXF); });
     tg.run([&]() { fRemoveDuplicates(mEE); });
     tg.wait();
+}
+
+template <common::CFloatingPoint TScalar, common::CIndex TIndex>
+inline void State<TScalar, TIndex>::ClearContactPairs()
+{
+    for (auto& xx : mXXets)
+        xx.clear();
+    for (auto& xe : mXEets)
+        xe.clear();
+    for (auto& xf : mXFets)
+        xf.clear();
+    for (auto& ee : mEEets)
+        ee.clear();
+    mXX.clear();
+    mXE.clear();
+    mXF.clear();
+    mEE.clear();
 }
 
 template <common::CFloatingPoint TScalar, common::CIndex TIndex>
