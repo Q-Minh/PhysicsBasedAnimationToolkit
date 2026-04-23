@@ -80,7 +80,7 @@ def compute_thread_local_stencil_gradient_augmentation(
     return ai
 
 
-@wp.kernel(launch_bounds=32)
+@wp.kernel
 def _accelerated_vertex_solve_kernel(
     pbegin: int,
     k: wp.int32,
@@ -131,7 +131,7 @@ def _accelerated_vertex_solve_kernel(
             is_surface_node=is_surface_node,
         )
         ais = wp.tile(ail, preserve_type=True)  # pyright: ignore[reportArgumentType]
-        ai = wp.tile_reduce(wp.add, ais)[0]  # pyright: ignore[reportIndexIssue]
+        ai = wp.tile_sum(ais)[0]  # pyright: ignore[reportIndexIssue]
     if local_tid == 0:
         # Add inertia derivatives (K = m, already in position space)
         gi, Hi = add_inertia_derivatives(
@@ -199,10 +199,6 @@ def iterate(
         p_end = int(Pptr[p + 1])
         n_verts_in_partition = p_end - p_begin
         if n_verts_in_partition > 0:
-            # Important, we want blocks to be as large as warps,
-            # so that different warp threads execute in lock step
-            # after branch conditions. This is because there is
-            # no __syncthreads() in warp, as there is in CUDA.
             block_dim = 32
             wp.launch(
                 kernel=_accelerated_vertex_solve_kernel,

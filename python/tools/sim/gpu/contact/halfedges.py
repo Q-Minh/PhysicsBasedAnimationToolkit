@@ -56,6 +56,13 @@ def first_half_edge_of_face(f: wp.int32) -> wp.int32:
 
 
 @wp.func
+def half_edge_of_face(f: wp.int32, helocal: wp.int32) -> wp.int32:
+    """Return the half-edge index of face `f` and local half-edge index `helocal`."""
+    three = wp.int32(3)
+    return f * three + helocal  # pyright: ignore[reportOperatorIssue]
+
+
+@wp.func
 def are_opposite_half_edges(
     F: wp.array[wp.vec3i], hei: wp.int32, hej: wp.int32
 ) -> bool:

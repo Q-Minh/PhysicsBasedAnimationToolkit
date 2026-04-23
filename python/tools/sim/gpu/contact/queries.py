@@ -114,3 +114,13 @@ def closest_points_line_segments(
                     (b - c) / a, zero, one
                 )  # pyright: ignore[reportIndexIssue]
             return st
+
+
+@wp.func
+def closest_point_on_line_segment(X: wp.vec3f, P: wp.vec3f, Q: wp.vec3f) -> wp.vec2f:
+    zero = wp.float32(0)
+    one = wp.float32(1)
+    PQ = Q - P  # pyright: ignore[reportOperatorIssue]
+    t = wp.dot(X - P, PQ) / wp.dot(PQ, PQ)  # pyright: ignore[reportOperatorIssue]
+    t = wp.min(wp.max(t, zero), one)
+    return wp.vec2f(one - t, t)
