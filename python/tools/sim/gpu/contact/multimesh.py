@@ -15,7 +15,9 @@ class MultiMeshData:
     GVHEp: wp.array[wp.int32]  # `|# points + 1| x 1` point to half-edge prefix
     GVHEadj: wp.array[wp.int32]  # `|# half edges| x 1` point to half-edge adjacency
     GHEF: wp.array[wp.vec2i]  # `2 x |# half edges|` half-edge to face adjacency
-    EHE: wp.array[wp.vec2i]  # `2 x |# edges|` edge to half-edge adjacency, -1 indicates no half-edge
+    EHE: wp.array[
+        wp.vec2i
+    ]  # `2 x |# edges|` edge to half-edge adjacency, -1 indicates no half-edge
     GXV: wp.array[
         wp.int32
     ]  # `|# points| x 1` point to vertex mapping, with `-1` for non-vertices
@@ -27,6 +29,7 @@ class MultiMesh:
     _data: MultiMeshData  # pyright: ignore[reportGeneralTypeIssues]
 
     def __init__(self, mesh: pbat.sim.contact.MultiMesh):
+        self._data = MultiMeshData()
         self._data.V = wp.array(mesh.V, dtype=wp.int32)
         self._data.F = wp.array(mesh.F.T, dtype=wp.vec3i)
         self._data.E = wp.array(mesh.E.T, dtype=wp.vec2i)

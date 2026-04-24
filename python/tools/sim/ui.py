@@ -14,10 +14,8 @@ import warp as wp
 import polyscope as ps
 import polyscope.imgui as imgui
 from pbatoolkit import pbat
-
-from .gpu.elasticity.fem import FemElastoDynamics
-from .gpu.vbd.params import Params
-from .gpu import vbd
+import numpy as np
+from . import gpu
 
 
 def try_draw_tooltip(obj, name):
@@ -144,9 +142,22 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(fem_cpu.x, fem_cpu.v)
 
         # Build GPU mirrors
-        self.fem = FemElastoDynamics(fem_cpu)
-        self.params = Params(params_cpu)
+        self.fem = gpu.elasticity.fem.FemElastoDynamics(fem_cpu)
+        self.params = gpu.vbd.params.Params(params_cpu)
         self.capture = None
+
+        # Build collision geometry
+        n_nodes = fem_cpu.X.shape[1]
+        multimesh_cpu = pbat.sim.contact.MultiMesh()
+        multimesh_cpu.construct_from_tetrahedral_mesh(
+            fem_cpu.E, np.full(n_nodes, 0, dtype=np.int64), n_components=1
+        )
+        self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
+        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.005)
+        n_verts, n_edges, n_tris, n_half_edges = self.ogc.n_primitives
+        self.contacts = gpu.contact.set.ContactSet(
+            n_points=n_nodes, n_faces=n_tris, max_contact_pairs=self.ogc.capacity
+        )
 
         # Simulation state
         self.simulate: bool = False
@@ -155,16 +166,16 @@ class SimulationState:
 
     def solve(self):
         if self.solver == SolverType.AAAVBD:
-            _ = vbd.aaasolver.solve(
-                self.fem, self.params
-            )
+            _ = gpu.vbd.aaasolver.solve(self.fem, self.params)
         elif self.solver == SolverType.VBD:
-            _ = vbd.solver.solve(
-                self.fem, self.params
-            )
+            _ = gpu.vbd.solver.solve(self.fem, self.params)
 
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
+        # NOTE: This is just a test
+        self.ogc.prepare_for_execution()
+        self.ogc.detect_contacts(self.contacts)
+        self.ogc.update_displacement_bounds()
         if self.capture is None:
             with wp.ScopedCapture() as capture:
                 self.solve()
@@ -178,8 +189,8 @@ class SimulationState:
         self.t = 0
         self.fem_cpu.set_time_integration_scheme(self.dt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
-        self.fem = FemElastoDynamics(self.fem_cpu)
-        self.params = Params(self.params_cpu)
+        self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
+        self.params = gpu.vbd.params.Params(self.params_cpu)
         self.capture = None
 
 

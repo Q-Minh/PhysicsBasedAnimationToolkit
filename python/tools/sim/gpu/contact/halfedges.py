@@ -18,25 +18,19 @@ def incoming_vertex(F: wp.array[wp.vec3i], he: wp.int32) -> wp.int32:
     Returns:
         wp.int32: Source vertex index of half-edge `he`
     """
-    return F[
-        he % wp.int32(3), face_of_half_edge(he)
-    ]  # pyright: ignore[reportReturnType]
+    return F[face_of_half_edge(he)][he % wp.int32(3)]  # type: ignore
 
 
 @wp.func
 def outgoing_vertex(F: wp.array[wp.vec3i], he: wp.int32) -> wp.int32:
     """Return the outgoing vertex index of half-edge `he`."""
-    return F[
-        (he + wp.int32(1)) % wp.int32(3), face_of_half_edge(he)
-    ]  # pyright: ignore[reportReturnType]
+    return F[face_of_half_edge(he)][(he + wp.int32(1)) % wp.int32(3)]  # type: ignore
 
 
 @wp.func
-def next_vertex(F: wp.array[wp.vec3i], he: wp.int32, step: wp.int16) -> wp.int32:
+def next_vertex(F: wp.array[wp.vec3i], he: wp.int32, step: wp.int32) -> wp.int32:
     """Return the outgoing vertex index of half-edge `he`."""
-    return F[
-        (he + step + wp.int32(1)) % wp.int32(3), face_of_half_edge(he)
-    ]  # pyright: ignore[reportReturnType]
+    return F[face_of_half_edge(he)][(he + step + wp.int32(1)) % wp.int32(3)]  # type: ignore
 
 
 @wp.func
