@@ -95,7 +95,7 @@ def _compute_triangle_bounding_volume(
 
 
 @wp.kernel
-def _compute_bounding_volumes(
+def _compute_bounding_volumes_kernel(
     x: wp.array[wp.vec3f],  # (N,) points
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -417,13 +417,11 @@ def _fused_contact_detection(
     x: wp.array[wp.vec3f],  # (N,) points
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
-    nxx: wp.array[
-        wp.uint32
-    ],  # (# points + 1,) number of point-point contacts per point
-    nxe: wp.array[wp.uint32],  # (# points + 1,) number of point-edge contacts per point
-    nxf: wp.array[wp.uint32],  # (# points + 1,) number of point-face contacts per point
+    nxx: wp.array[wp.int32],  # (# points + 1,) number of point-point contacts per point
+    nxe: wp.array[wp.int32],  # (# points + 1,) number of point-edge contacts per point
+    nxf: wp.array[wp.int32],  # (# points + 1,) number of point-face contacts per point
     nee: wp.array[
-        wp.uint32
+        wp.int32
     ],  # (# half-edges + 1,) number of edge-edge contacts per half-edge
 ):
     """Use block-parallelism to compute vv,ve,vf,ee contact pairs
@@ -723,13 +721,10 @@ class Ogc:
         self._ogc.xfv = wp.zeros((n_vf_contact_capacity * n_verts,), dtype=wp.int32)
         self._ogc.eeu = wp.zeros((n_ee_contact_capacity * n_edges,), dtype=wp.int32)
         self._ogc.eev = wp.zeros((n_ee_contact_capacity * n_edges,), dtype=wp.int32)
+        dim = max(n_verts, n_edges, n_tris)
         wp.launch(
-            _compute_bounding_volumes,
-            dim=max(
-                n_verts,
-                n_edges,
-                n_tris,
-            ),
+            kernel=_compute_bounding_volumes_kernel,
+            dim=dim,
             inputs=[self._points, self._meshes.data, self._ogc],
         )
         # NOTE: We could use the groups to distinguish between bodies, which MultiMesh stores as prefix sums in VP, EP, FP.
@@ -770,7 +765,7 @@ class Ogc:
     def prepare_for_execution(self, request_rebuild: bool = True):
         n_verts, n_edges, n_tris, _ = self.n_primitives
         wp.launch(
-            _compute_bounding_volumes,
+            _compute_bounding_volumes_kernel,
             dim=max(
                 n_verts,
                 n_edges,
@@ -787,9 +782,10 @@ class Ogc:
     def detect_contacts(self, contacts: ContactSet):  # type: ignore
         n_verts, n_edges, n_tris, n_half_edges = self.n_primitives
         contacts.clear()
+        dim = max(n_verts, n_edges)
         wp.launch(
             _fused_contact_detection,
-            dim=max(n_verts, n_edges),
+            dim=dim * _FUSED_CONTACT_DETECTION_BLOCK_SIZE,
             inputs=[
                 self._points,
                 self._meshes.data,
