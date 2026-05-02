@@ -1,5 +1,8 @@
 from typing import Any, Tuple
 
+import numpy as np
+import cupy as cp
+
 import warp as wp
 import cuda.compute
 
@@ -8,14 +11,20 @@ from .set import ContactSet, ContactSetData
 from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
 from . import queries
-from .. import common
 
-GEOMETRY_DYNAMIC = wp.constant(0)
-GEOMETRY_STATIC = wp.constant(1)
-GEOMETRY_COUNT = wp.constant(2)
 
-GeometryPrefix = wp.types.vector(length=GEOMETRY_COUNT + 1, dtype=wp.uint32)
-BvhIdArray = wp.types.vector(length=GEOMETRY_COUNT, dtype=wp.uint64)
+VF_E_FACE_TRIANGLE = wp.constant(0)
+VF_E_FACE_EDGE = wp.constant(1)
+VF_E_FACE_VERTEX = wp.constant(2)
+MAX_VV_PER_THREAD = wp.constant(2)
+MAX_VE_PER_THREAD = wp.constant(2)
+MAX_VF_PER_THREAD = wp.constant(4)
+MAX_EE_PER_THREAD = wp.constant(4)
+_FUSED_CONTACT_DETECTION_BLOCK_SIZE = wp.constant(64)
+tvvlist = wp.types.vector(length=MAX_VV_PER_THREAD, dtype=wp.int32)
+tvelist = wp.types.vector(length=MAX_VE_PER_THREAD, dtype=wp.int32)
+tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
+teelist = wp.types.vector(length=MAX_EE_PER_THREAD, dtype=wp.int32)
 
 
 @wp.struct
@@ -39,9 +48,15 @@ class OgcData:
     dmine: wp.array[wp.float32]  # (# half-edges,) half-edge minimum displacement bounds
     dminf: wp.array[wp.float32]  # (# triangles,) face minimum displacement bounds
 
+    nvv: wp.array[
+        wp.int32
+    ]  # (# verts + 1,) array of vertex-vertex contact counts per vertex and the total count at the array's tail
     vv_u: wp.array[wp.int32]  # (# vertex-vertex contacts capacity,) u from pairs (u,v)
     vv_v: wp.array[wp.int32]  # (# vertex-vertex contacts capacity,) v from pairs (u,v)
 
+    nve: wp.array[
+        wp.int32
+    ]  # (# verts + 1,) array of vertex-edge contact counts per vertex and the total count at the array's tail
     ve_u: wp.array[
         wp.int32
     ]  # (# vertex-(half-)edge contacts capacity,) u from pairs (u,v)
@@ -49,6 +64,9 @@ class OgcData:
         wp.int32
     ]  # (# vertex-(half-)edge contacts capacity,) v from pairs (u,v)
 
+    nvf: wp.array[
+        wp.int32
+    ]  # (# verts + 1,) array of vertex-triangle contact counts per vertex and the total count at the array's tail
     vf_u: wp.array[
         wp.int32
     ]  # (# vertex-triangle contacts capacity,) u from pairs (u,v)
@@ -56,6 +74,9 @@ class OgcData:
         wp.int32
     ]  # (# vertex-triangle contacts capacity,) v from pairs (u,v)
 
+    nee: wp.array[
+        wp.int32
+    ]  # (# half-edges + 1,) array of (half-)edge-(half-)edge contact counts per half-edge and the total count at the array's tail
     ee_u: wp.array[
         wp.int32
     ]  # (# (half-)edge-(half-)edge contacts capacity,) u from pairs (u,v)
@@ -88,7 +109,6 @@ def _compute_triangle_bounding_volume(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     f: wp.int32,
 ):
-    ogc.dminf[f] = ogc.rq
     finds = meshes.F[f]
     xi, xj, xk = x[finds[0]], x[finds[1]], x[finds[2]]
     xmin = wp.min(
@@ -115,16 +135,16 @@ def _compute_bounding_volumes_kernel(
         v = tid
         ogc.dminv[v] = ogc.rq
     if tid < n_edges:
-        f = tid
-        _compute_edge_bounding_volume(x, meshes, ogc, f)  # type: ignore
-    if tid < n_triangles:
         e = tid
-        _compute_triangle_bounding_volume(x, meshes, ogc, e)  # type: ignore
-
-
-VF_E_FACE_TRIANGLE = wp.constant(0)
-VF_E_FACE_EDGE = wp.constant(1)
-VF_E_FACE_VERTEX = wp.constant(2)
+        he = meshes.EHE[e]
+        ogc.dmine[he[0]] = ogc.rq
+        if he[1] >= 0:
+            ogc.dmine[he[1]] = ogc.rq
+        _compute_edge_bounding_volume(x, meshes, ogc, e)  # type: ignore
+    if tid < n_triangles:
+        f = tid
+        ogc.dminf[f] = ogc.rq
+        _compute_triangle_bounding_volume(x, meshes, ogc, f)  # type: ignore
 
 
 @wp.func
@@ -133,42 +153,34 @@ def _closest_face_point_triangle(uvw: wp.vec3f) -> Tuple[wp.int32, wp.int32]:
     fone = wp.float32(1)
     one = wp.int32(1)
     two = wp.int32(2)
-    u, v, w = uvw[0], uvw[1], uvw[2]  # pyright: ignore[reportIndexIssue]
-    n_zeros = (
-        int(u == fzero)  # pyright: ignore[reportIndexIssue]
-        + int(v == fzero)  # pyright: ignore[reportIndexIssue]
-        + int(w == fzero)  # pyright: ignore[reportIndexIssue]
-    )
+    u, v, w = uvw[0], uvw[1], uvw[2]  # type: ignore
+    n_zeros = int(u == fzero) + int(v == fzero) + int(w == fzero)
     is_vertex, is_edge = (n_zeros == two), (n_zeros == one)
-    e_face = (wp.int32(is_edge) * 1) + (
-        wp.int32(is_vertex) * 2
-    )  # pyright: ignore[reportOperatorIssue]
-    a = wp.int32(is_vertex) * (
-        wp.int32(v == fone) * one
-        + (wp.int32(w == fone) * two)  # pyright: ignore[reportOperatorIssue]
+    e_face = (wp.int32(is_edge) * 1) + (wp.int32(is_vertex) * 2)  # type: ignore
+    a_local = wp.int32(is_vertex) * (
+        wp.int32(v == fone) * one + (wp.int32(w == fone) * two)  # type: ignore
     ) + wp.int32(is_edge) * (
         wp.int32(u == fzero) * one + wp.int32(v == fzero) * two
-    )  # pyright: ignore[reportOperatorIssue]
-    return a, e_face
+    )  # type: ignore
+    return a_local, e_face
 
 
 @wp.func
-def _point_triangle_contact_face_index(
+def _vertex_triangle_contact_face_index(
     F: wp.array[wp.vec3i],
+    GXV: wp.array[wp.int32],
     f: wp.int32,
     a_local: wp.int32,
     e_face: wp.int32,
 ) -> wp.int32:
     """Determine the contact face index for a point-triangle contact based on the barycentric coordinates `uvw`."""
-    three = wp.int32(3)
     return (
         # face contact, return face index
         wp.int32(e_face == VF_E_FACE_TRIANGLE) * f
         # edge contact, return half-edge index
-        + wp.int32(e_face == VF_E_FACE_EDGE) * (three * f + a_local)
-        # vertex contact, return global point index
-        + wp.int32(e_face == VF_E_FACE_VERTEX)
-        * F[f][a_local]  # pyright: ignore[reportIndexIssue]
+        + wp.int32(e_face == VF_E_FACE_EDGE) * (wp.int32(3) * f + a_local)
+        # vertex contact, return global vertex index
+        + wp.int32(e_face == VF_E_FACE_VERTEX) * GXV[F[f][a_local]]  # type: ignore
     )
 
 
@@ -182,11 +194,10 @@ def is_vertex_feasible(
     y: wp.vec3f,  # query point
 ):
     in_vertex_feasible_region = wp.bool(True)
-    he_start = GVHEp[i]
-    he_end = GVHEp[i + 1]
     xi = x[i]
-    for he in range(he_start, he_end):  # pyright: ignore[reportArgumentType]
-        xj = x[halfedges.outgoing_vertex(F, he)]  # pyright: ignore[reportArgumentType]
+    for k in range(GVHEp[i], GVHEp[i + 1]):  # type: ignore
+        he = GVHEadj[k]
+        xj = x[halfedges.outgoing_vertex(F, he)]  # type: ignore
         in_vertex_feasible_region = in_vertex_feasible_region and (
             wp.dot(y - xi, xi - xj) >= wp.float32(0)  # type: ignore
         )
@@ -201,30 +212,31 @@ def is_edge_feasible(
     fi: wp.int32,  # face index
     he: wp.int32,  # half-edge index
     y: wp.vec3f,  # query point
-    check_adjacent_facets: bool = True,
+    check_adjacent_facets: wp.bool = wp.bool(True),
 ):
-    zero = wp.float32(0)
-    fj = GHEF[he][1]  # pyright: ignore[reportIndexIssue]
+    fzero = wp.float32(0)
+    zero = wp.int32(0)
+    hef = GHEF[he]
+    fj = hef[1]  # type: ignore
     # Handle boundary edge case: no adjacent face (i.e. fj == -1)
-    fj = (
-        wp.int32(fj < zero) * fi + wp.int32(fj >= zero) * fj
-    )  # pyright: ignore[reportOperatorIssue]
+    fj = wp.int32(fj < zero) * fi + wp.int32(fj >= zero) * fj  # type: ignore
     i, j = (
         halfedges.incoming_vertex(F, he),
         halfedges.outgoing_vertex(F, he),
     )
     xi, xj = x[i], x[j]
     in_edge_feasible_region = wp.bool(True)
-    in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, xj - xi) >= zero)  # type: ignore
-    in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xj, xi - xj) >= zero)  # type: ignore
+    in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, xj - xi) >= fzero)  # type: ignore
+    in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xj, xi - xj) >= fzero)  # type: ignore
     if check_adjacent_facets:
-        k = halfedges.next_vertex(F, he, wp.int32(1))
         # Get the third vertex l of triangle fj that is not part of undirected edge (i,j).
         # NOTE: Whenever fj == fi (i.e. boundary edge), l == k.
+        k = halfedges.next_vertex(F, he, wp.int32(2))
+        fjinds = F[fj]
         l = (
-            wp.int32(F[fj][0] != i and F[fj][0] != j) * F[fj][0]  # type: ignore
-            + wp.int32(F[fj][1] != i and F[fj][1] != j) * F[fj][1]  # type: ignore
-            + wp.int32(F[fj][2] != i and F[fj][2] != j) * F[fj][2]  # type: ignore
+            wp.int32(fjinds[0] != i and fjinds[0] != j) * fjinds[0]  # type: ignore
+            + wp.int32(fjinds[1] != i and fjinds[1] != j) * fjinds[1]  # type: ignore
+            + wp.int32(fjinds[2] != i and fjinds[2] != j) * fjinds[2]  # type: ignore
         )
         xk, xl = x[k], x[l]
         xij = xj - xi
@@ -234,237 +246,69 @@ def is_edge_feasible(
         # Tangent to the plane spanned by triangle fj, perpendicular to edge (i,j)
         # NOTE: whenever fj == fi (i.e. boundary edge), pjn == pin
         pjn = (xi - xl) + (wp.dot(xl - xi, xij) / xijn2) * xij  # type: ignore
-        in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, pin) >= zero)  # type: ignore
-        in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, pjn) >= zero)  # type: ignore
+        in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, pin) >= fzero)  # type: ignore
+        in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, pjn) >= fzero)  # type: ignore
     return in_edge_feasible_region
 
 
-MAX_VV_PER_THREAD = wp.constant(4)
-MAX_VE_PER_THREAD = wp.constant(4)
-MAX_VF_PER_THREAD = wp.constant(2)
-MAX_EE_PER_THREAD = wp.constant(2)
-_FUSED_CONTACT_DETECTION_BLOCK_SIZE = wp.constant(64)
-
-
-@wp.func
-def _vertex_facet_contact_detection(
-    x: wp.array[wp.vec3f],  # (N,) points
-    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
-    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
-    i: wp.int32,
-    v: wp.int32,
-    xi: wp.vec3f,
-    f: wp.int32,
-    vv: wp.tile[wp.int32, _VV_BLOCK_CAPACITY],  # type: ignore
-    ve: wp.tile[wp.int32, _VE_BLOCK_CAPACITY],  # type: ignore
-    vf: wp.tile[wp.int32, _VF_BLOCK_CAPACITY],  # type: ignore
-    vv_offset: wp.int32,
-    ve_offset: wp.int32,
-    vf_offset: wp.int32,
-    vv_count: wp.int32,
-    ve_count: wp.int32,
-    vf_count: wp.int32,
-) -> Tuple[wp.int32, wp.int32, wp.int32]:
-    finds = meshes.F[f]
-    are_adjacent = (i == finds[0]) or (i == finds[1]) or (i == finds[2])
-    if are_adjacent:
-        return vv_count, ve_count, vf_count
-    xj = x[finds[0]]
-    xk = x[finds[1]]
-    xl = x[finds[2]]
-    # 1. Compute closest point projection and distance
-    uvw = queries.closest_point_triangle(
-        xi, xj, xk, xl  # pyright: ignore[reportArgumentType]
-    )
-    xc = (
-        uvw[0] * xj  # pyright: ignore[reportIndexIssue]
-        + uvw[1] * xk  # pyright: ignore[reportIndexIssue]
-        + uvw[2] * xl  # pyright: ignore[reportIndexIssue]
-    )
-    d = wp.norm_l2(xi - xc)
-    ogc.dminv[v] = wp.min(ogc.dminv[v], d)
-    wp.atomic_min(ogc.dminf, f, d)
-    # 2. If distance < ogc.r, update contact set
-    if d < ogc.r:
-        # a. Handle vv,ve,vf cases for vertex-triangle contact detection
-        a_local, e_face = _closest_face_point_triangle(uvw)
-        a = _point_triangle_contact_face_index(meshes.F, f, a_local, e_face)
-        if e_face == VF_E_FACE_VERTEX:
-            if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, a, xi):  # type: ignore
-                # Add VV contact
-                vv[vv_offset + vv_count] = a  # type: ignore
-                vv_count += wp.int32(1)
-        elif e_face == VF_E_FACE_EDGE:
-            if is_edge_feasible(
-                x, meshes.F, meshes.GHEF, f, a, xi, check_adjacent_facets=True
-            ):  # type: ignore
-                # Add VE contact
-                ve[ve_offset + ve_count] = a  # type: ignore
-                ve_count += wp.int32(1)
-        elif e_face == VF_E_FACE_TRIANGLE:
-            # Add VF contact
-            vf[vf_offset + vf_count] = a  # type: ignore
-            vf_count += wp.int32(1)
-        else:
-            assert False
-        # b. Handle ve cases for edge-edge contact detection
-        for helocal in range(3):
-            # Skip if this ve pair was already added from vertex-triangle contact detection
-            if helocal == a_local and e_face == VF_E_FACE_EDGE:
-                continue
-            he = halfedges.half_edge_of_face(
-                f, helocal  # pyright: ignore[reportArgumentType]
-            )
-            j, k = halfedges.incoming_vertex(meshes.F, he), halfedges.outgoing_vertex(
-                meshes.F, he
-            )
-            xj = x[j]
-            xk = x[k]
-            uv = queries.closest_point_on_line_segment(xi, xj, xk)  # type: ignore
-            xce = (wp.float32(1) - uv[1]) * xj + uv[1] * xk  # type: ignore
-            de = wp.norm_l2(xi - xce)
-            is_vertex = uv[0] == wp.float32(0) or uv[1] == wp.float32(0)  # type: ignore
-            # If this is a vertex-edge pair that is within the contact radius
-            if de < ogc.r and not is_vertex:
-                if is_vertex_feasible(
-                    x, meshes.F, meshes.GVHEp, meshes.GVHEadj, i, xce
-                ):
-                    # Create VE pair
-                    ve[ve_offset + ve_count] = he  # type: ignore
-                    ve_count += wp.int32(1)
-    return vv_count, ve_count, vf_count
-
-
-@wp.func
-def _edge_edge_contact_detection(
-    x: wp.array[wp.vec3f],  # (N,) points
-    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
-    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
-    e1: wp.int32,
-    e2: wp.int32,
-    einds1: wp.vec2i,
-    xi1: wp.vec3f,
-    xj1: wp.vec3f,
-    hei: wp.int32,
-    hej: wp.int32,
-    ee: wp.tile[wp.int32, _EE_BLOCK_CAPACITY],  # type: ignore
-    ee_offset: wp.int32,
-    ee_count: wp.int32,
-) -> wp.int32:
-    einds2 = meshes.E[e2]
-    xi2, xj2 = x[einds2[0]], x[einds2[1]]
-    are_adjacent = (
-        (einds1[0] == einds2[0])  # type: ignore
-        or (einds1[0] == einds2[1])  # type: ignore
-        or (einds1[1] == einds2[0])  # type: ignore
-        or (einds1[1] == einds2[1])  # type: ignore
-    )
-    if are_adjacent:
-        return ee_count
-    zero = wp.float32(0)
-    one = wp.float32(1)
-    # 1. Compute closest point projection and distance
-    st = queries.closest_points_line_segments(
-        xi1, xj1, xi2, xj2  # pyright: ignore[reportArgumentType]
-    )
-    xc1 = (one - st[0]) * xi1 + st[0] * xj1  # pyright: ignore[reportIndexIssue]
-    xc2 = (one - st[1]) * xi2 + st[1] * xj2  # pyright: ignore[reportIndexIssue]
-    d = wp.norm_l2(xc1 - xc2)
-    ogc.dmine[hei] = wp.min(ogc.dmine[hei], d)
-    if hej >= 0:
-        ogc.dmine[hej] = wp.min(ogc.dmine[hej], d)
-    # NOTE:
-    # We only exit after updating the displacement bounds, because we launch a thread per edge, so that
-    # this pair (e1,e2) will be encountered as (e2,e1), so we allow both e1 and e2 to update their displacement bounds
-    # without requiring global synchronization (i.e. atomic min).
-    if e1 >= e2:
-        return ee_count  # Avoid duplicate edge-edge tests
-    # 2. If distance < ogc.r, update contact set
-    if d < ogc.r:
-        is_xc1_vertex = (
-            st[0] == zero or st[0] == one  # pyright: ignore[reportIndexIssue]
-        )
-        is_xc2_vertex = (
-            st[1] == zero or st[1] == one  # pyright: ignore[reportIndexIssue]
-        )
-        if not (is_xc1_vertex or is_xc2_vertex):
-            # Create EE pair
-            ee[ee_offset + ee_count] = (e1, e2)  # type: ignore
-            ee_count += wp.int32(1)
-    return ee_count
-
-
-tvvlist = wp.types.vector(length=MAX_VV_PER_THREAD, dtype=wp.int32)
-tvelist = wp.types.vector(length=MAX_VE_PER_THREAD, dtype=wp.int32)
-tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
-teelist = wp.types.vector(length=MAX_EE_PER_THREAD, dtype=wp.int32)
-
-
-# TODO: Review and modify this function.
 @wp.func
 def _classify_vertex_facet_contacts(
     x: wp.array[wp.vec3f],  # (N,) points
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
-    i: wp.int32,
     v: wp.int32,
+    i: wp.int32,
     xi: wp.vec3f,
     tvf: tvflist,  # type: ignore
-    n_tris: wp.int32,
     n_verts: wp.int32,
     n_half_edges: wp.int32,
+    n_tris: wp.int32,
 ) -> Tuple[tvvlist, tvelist, tvflist, wp.int32, wp.int32, wp.int32]:  # type: ignore
-    tvv = tvvlist(n_verts)
-    tve = tvelist(n_half_edges)
-    n_vv = wp.int32(0)
-    n_ve = wp.int32(0)
-    n_vf = wp.int32(0)
+    tvv, tve = tvvlist(n_verts), tvelist(n_half_edges)
+    n_vv, n_ve, n_vf = wp.int32(0), wp.int32(0), wp.int32(0)
     for brow in range(MAX_VF_PER_THREAD):
-        f = tvf[brow]  # pyright: ignore[reportIndexIssue]
+        f = tvf[brow]
         if f >= n_tris:
-            continue
+            break
         finds = meshes.F[f]
         are_adjacent = (i == finds[0]) or (i == finds[1]) or (i == finds[2])
         if are_adjacent:
-            tvf[brow] = n_tris  # pyright: ignore[reportIndexIssue]
+            tvf[brow] = n_tris
             continue
-        xj = x[finds[0]]
-        xk = x[finds[1]]
-        xl = x[finds[2]]
+        xj, xk, xl = x[finds[0]], x[finds[1]], x[finds[2]]
         uvw = queries.closest_point_triangle(
             xi, xj, xk, xl  # pyright: ignore[reportArgumentType]
         )
-        xc = (
-            uvw[0] * xj  # pyright: ignore[reportIndexIssue]
-            + uvw[1] * xk  # pyright: ignore[reportIndexIssue]
-            + uvw[2] * xl  # pyright: ignore[reportIndexIssue]
-        )
+        xc = uvw[0] * xj + uvw[1] * xk + uvw[2] * xl  # type: ignore
         d = wp.norm_l2(xi - xc)
         ogc.dminv[v] = wp.min(ogc.dminv[v], d)
         wp.atomic_min(ogc.dminf, f, d)
         if d >= ogc.r:
-            tvf[brow] = n_tris  # pyright: ignore[reportIndexIssue]
+            tvf[brow] = n_tris
             continue
         a_local, e_face = _closest_face_point_triangle(uvw)
-        a = _point_triangle_contact_face_index(meshes.F, f, a_local, e_face)
+        a = _vertex_triangle_contact_face_index(
+            meshes.F, meshes.GXV, f, a_local, e_face
+        )
         if e_face == VF_E_FACE_VERTEX:
-            if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, a, xi):  # type: ignore
-                tvv[brow] = a  # pyright: ignore[reportIndexIssue]
+            if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, a, xi):
+                tvv[brow] = a
                 n_vv += wp.int32(1)
-            tvf[brow] = n_tris  # pyright: ignore[reportIndexIssue]
+            tvf[brow] = n_tris
         elif e_face == VF_E_FACE_EDGE:
             if is_edge_feasible(
-                x, meshes.F, meshes.GHEF, f, a, xi, check_adjacent_facets=True
+                x, meshes.F, meshes.GHEF, f, a, xi, check_adjacent_facets=wp.bool(True)
             ):  # type: ignore
-                tve[brow] = a  # pyright: ignore[reportIndexIssue]
+                tve[brow] = (
+                    a  # NOTE: Should we use the largest of opposite half-edge indices?
+                )
                 n_ve += wp.int32(1)
-            tvf[brow] = n_tris  # pyright: ignore[reportIndexIssue]
+            tvf[brow] = n_tris
         else:  # VF_E_FACE_TRIANGLE
             n_vf += wp.int32(1)
     return tvv, tve, tvf, n_vv, n_ve, n_vf
 
 
-# TODO: Review and modify this function.
 @wp.func
 def _classify_edge_edge_contacts(
     x: wp.array[wp.vec3f],  # (N,) points
@@ -474,18 +318,18 @@ def _classify_edge_edge_contacts(
     einds1: wp.vec2i,
     xi1: wp.vec3f,
     xj1: wp.vec3f,
-    hei: wp.int32,
-    hej: wp.int32,
-    ee: teelist,  # type: ignore
+    hei1: wp.int32,
+    hej1: wp.int32,
+    tee: teelist,  # type: ignore
     n_half_edges: wp.int32,
 ) -> Tuple[teelist, wp.int32]:  # type: ignore
-    zero = wp.float32(0)
-    one = wp.float32(1)
+    fzero = wp.float32(0)
+    fone = wp.float32(1)
     n_ee = wp.int32(0)
     for brow in range(MAX_EE_PER_THREAD):
-        e2 = ee[brow]  # pyright: ignore[reportIndexIssue]
+        e2 = tee[brow]  # pyright: ignore[reportIndexIssue]
         if e2 >= n_half_edges:
-            continue
+            break
         einds2 = meshes.E[e2]
         xi2, xj2 = x[einds2[0]], x[einds2[1]]
         are_adjacent = (
@@ -495,37 +339,34 @@ def _classify_edge_edge_contacts(
             or (einds1[1] == einds2[1])  # type: ignore
         )
         if are_adjacent:
-            ee[brow] = n_half_edges  # pyright: ignore[reportIndexIssue]
+            tee[brow] = n_half_edges  # type: ignore
             continue
-        st = queries.closest_points_line_segments(
-            xi1, xj1, xi2, xj2  # pyright: ignore[reportArgumentType]
-        )
-        xc1 = (one - st[0]) * xi1 + st[0] * xj1  # pyright: ignore[reportIndexIssue]
-        xc2 = (one - st[1]) * xi2 + st[1] * xj2  # pyright: ignore[reportIndexIssue]
+        st = queries.closest_points_line_segments(xi1, xj1, xi2, xj2)  # type: ignore
+        xc1 = (fone - st[0]) * xi1 + st[0] * xj1  # type: ignore
+        xc2 = (fone - st[1]) * xi2 + st[1] * xj2  # type: ignore
         d = wp.norm_l2(xc1 - xc2)
         # Update displacement bounds before the deduplication guard so that both edges in a pair
         # update their own bounds when they each encounter the symmetric (e1,e2)/(e2,e1) pair.
-        wp.atomic_min(ogc.dmine, hei, d)
-        if hej >= wp.int32(0):
-            wp.atomic_min(ogc.dmine, hej, d)
-        # Only store each unordered pair once
+        ogc.dmine[hei1] = wp.min(ogc.dmine[hei1], d)
+        if hej1 >= wp.int32(0):
+            ogc.dmine[hej1] = wp.min(ogc.dmine[hej1], d)
+        # Only store each unordered pair once (deduplication guard)
         if e1 >= e2:
-            ee[brow] = n_half_edges  # pyright: ignore[reportIndexIssue]
+            tee[brow] = n_half_edges
             continue
         if d >= ogc.r:
-            ee[brow] = n_half_edges  # pyright: ignore[reportIndexIssue]
+            tee[brow] = n_half_edges
             continue
-        is_xc1_vertex = (
-            st[0] == zero or st[0] == one  # pyright: ignore[reportIndexIssue]
-        )
-        is_xc2_vertex = (
-            st[1] == zero or st[1] == one  # pyright: ignore[reportIndexIssue]
-        )
+        is_xc1_vertex = st[0] == fzero or st[0] == fone  # type: ignore
+        is_xc2_vertex = st[1] == fzero or st[1] == fone  # type: ignore
         if is_xc1_vertex or is_xc2_vertex:
-            ee[brow] = n_half_edges  # pyright: ignore[reportIndexIssue]
+            tee[brow] = n_half_edges
             continue
+        he2 = meshes.EHE[e2]
+        hei2, hej2 = he2[0], he2[1]
+        tee[n_ee] = wp.max(hei2, hej2)
         n_ee += wp.int32(1)
-    return ee, n_ee
+    return tee, n_ee
 
 
 @wp.kernel(launch_bounds=_FUSED_CONTACT_DETECTION_BLOCK_SIZE)
@@ -533,14 +374,6 @@ def _fused_contact_detection(
     x: wp.array[wp.vec3f],  # (N,) points
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
-    nvv: wp.array[
-        wp.int32
-    ],  # (# verts + 1,) number of vertex-vertex contacts per vertex
-    nve: wp.array[wp.int32],  # (# verts + 1,) number of vertex-edge contacts per vertex
-    nvf: wp.array[wp.int32],  # (# verts + 1,) number of vertex-face contacts per vertex
-    nee: wp.array[
-        wp.int32
-    ],  # (# half-edges + 1,) number of edge-edge contacts per half-edge
 ):
     """Use block-parallelism to compute vv,ve,vf,ee contact pairs"""
     tid = wp.tid()
@@ -555,7 +388,7 @@ def _fused_contact_detection(
     # Location of this thread within the block for cooperative execution
     bcol = local_tid
     next_col = (local_tid + 1) % block_dims
-    is_last_column = local_tid == block_dims - wp.int32(1)
+    last_col = block_dims - wp.int32(1)
 
     # VV,VE,VF contact detection
     if block_id < n_verts:
@@ -569,97 +402,137 @@ def _fused_contact_detection(
         )
         for brow in range(MAX_VF_PER_THREAD):
             candidates = wp.tile_bvh_query_next(query)
-            f = candidates[local_tid]  # pyright: ignore[reportIndexIssue]
-            if f < 0:
+            f = candidates[local_tid]  # type: ignore
+            if f >= 0:
+                tvf[brow] = f
+            no_more_candidates = candidates[last_col] < int(0)  # type: ignore
+            if no_more_candidates:
                 break
-            tvf[brow] = f
         # 2. Classify and store vv,ve,vf contacts
         tvv, tve, tvf, tnvv, tnve, tnvf = _classify_vertex_facet_contacts(
-            x, meshes, ogc, i, v, xi, tvf, n_tris, n_verts, n_half_edges
+            x, meshes, ogc, v, i, xi, tvf, n_verts, n_half_edges, n_tris  # type: ignore
         )
         # 2.a Count contacts (including duplicates) for early exit opportunity
-        bnvv, bnve, bnvf = (
-            wp.tile_sum(wp.tile(tnvv)),  # type: ignore
-            wp.tile_sum(wp.tile(tnve)),  # type: ignore
-            wp.tile_sum(wp.tile(tnvf)),  # type: ignore
+        tnvv, tnve, tnvf = (
+            wp.tile_sum(wp.tile(tnvv))[0],  # type: ignore
+            wp.tile_sum(wp.tile(tnve))[0],  # type: ignore
+            wp.tile_sum(wp.tile(tnvf))[0],  # type: ignore
         )
         has_vv_contacts, has_ve_contacts, has_vf_contacts = (
-            bnvv[0] > int(0),  # type: ignore
-            bnve[0] > int(0),  # type: ignore
-            bnvf[0] > int(0),  # type: ignore
+            tnvv > int(0),
+            tnve > int(0),
+            tnvf > int(0),
         )
-        # TODO: Implement early exit when no contacts are detected!
-        # ...
-        # 3. Keep unique contacts (duplicates exist for vv,ve) via
-        # adjacent difference and (exclusive) prefix sum
-        # 3.a Sort
-        bvv, bve, bvf = wp.tile(tvv), wp.tile(tve), wp.tile(tvf)  # type: ignore
-        wp.tile_sort(bvv, bvv), wp.tile_sort(bve, bve), wp.tile_sort(bvf, bvf)  # type: ignore
-        # 3.b Adjacent diff/sum for vv,ve duplicates
-        vv_adj_diff, ve_adj_diff = tvvlist(), tvelist()
-        for brow in range(MAX_VV_PER_THREAD):
-            next_row = (brow + wp.int32(is_last_column)) % MAX_VV_PER_THREAD
-            are_different = bvv[brow, bcol] != bvv[next_row, next_col]
-            vv_adj_diff[brow] = wp.int32(are_different)
-        for brow in range(MAX_VE_PER_THREAD):
-            next_row = (brow + wp.int32(is_last_column)) % MAX_VE_PER_THREAD
-            are_different = bve[brow, bcol] != bve[next_row, next_col]
-            ve_adj_diff[brow] = wp.int32(are_different)
-        bvv_adj_diff, bve_adj_diff = wp.tile(vv_adj_diff), wp.tile(ve_adj_diff)  # type: ignore
-        bvv_prefix, bve_prefix = wp.tile_scan_exclusive(bvv_adj_diff), wp.tile_scan_exclusive(bve_adj_diff)  # type: ignore
-        # 4. Determine global write offset via atomic add
-        tvv_offset, tve_offset, tvf_offset = wp.int32(0), wp.int32(0), wp.int32(0)
-        if is_last_column:
-            tvv_offset = wp.atomic_add(nvv, n_verts, bvv_prefix[MAX_VV_PER_THREAD - 1, bcol])  # type: ignore
-            tve_offset = wp.atomic_add(nve, n_verts, bve_prefix[MAX_VE_PER_THREAD - 1, bcol])  # type: ignore
-            tvf_offset = wp.atomic_add(nvf, n_verts, bnvf[0])  # type: ignore
-        bvv_offset = wp.tile_from_thread(
-            shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
-            value=tvv_offset,
-            thread_idx=local_tid,
-        )  # type: ignore
-        bve_offset = wp.tile_from_thread(
-            shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
-            value=tve_offset,
-            thread_idx=local_tid,
-        )  # type: ignore
-        tvf_offset = wp.tile_from_thread(
-            shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
-            value=tvf_offset,
-            thread_idx=local_tid,
-        )  # type: ignore
-        # 5. Write unique contacts to global contact set
-        for brow in range(MAX_VV_PER_THREAD):
-            is_marked_unique = bvv_adj_diff[brow, bcol] == int(1)
-            is_last_row = brow == MAX_VV_PER_THREAD - wp.int32(1)
-            is_last_element = is_last_row and is_last_column
-            if is_marked_unique and not is_last_element:
-                k = bvv_offset[bcol] + bvv_prefix[brow, bcol]  # type: ignore
-                ogc.vv_u[k] = v
-                ogc.vv_v[k] = bvv[brow, bcol]
-        for brow in range(MAX_VE_PER_THREAD):
-            is_marked_unique = bve_adj_diff[brow, bcol] == int(1)
-            is_last_row = brow == MAX_VE_PER_THREAD - wp.int32(1)
-            is_last_element = is_last_row and is_last_column
-            if is_marked_unique and not is_last_element:
-                k = bve_offset[bcol] + bve_prefix[brow, bcol]  # type: ignore
-                ogc.ve_u[k] = v
-                ogc.ve_v[k] = bve[brow, bcol]
-        for brow in range(MAX_VF_PER_THREAD):
-            if bvf[brow, bcol] < n_tris:
-                k = tvf_offset[bcol] + brow * block_dims + bcol
-                ogc.vf_u[k] = v
-                ogc.vf_v[k] = bvf[brow, bcol]
+        if has_vv_contacts:
+            # 1. Sort contacts
+            bvv = wp.tile(tvv)  # type: ignore
+            wp.tile_sort(keys=bvv, values=bvv)
+            last_row = MAX_VV_PER_THREAD - wp.int32(1)
+            assert bvv[last_row, last_col] == n_verts
+            # 2. Compute adjacent differences
+            tvv_adj_diff = tvvlist()
+            for brow in range(MAX_VV_PER_THREAD):
+                is_neighbour_on_next_row = local_tid == last_col
+                next_row = (
+                    brow + wp.int32(is_neighbour_on_next_row)
+                ) % MAX_VV_PER_THREAD
+                are_different = bvv[brow, bcol] != bvv[next_row, next_col]
+                tvv_adj_diff[brow] = wp.int32(are_different)
+            bvv_adj_diff = wp.tile(tvv_adj_diff)  # type: ignore
+            # 3. Compute exclusive prefix sum (unique contact count is last element of prefix sum)
+            bvv_prefix = wp.tile_scan_exclusive(bvv_adj_diff)
+            # 4. Determine global write offset via atomic add
+            tvv_offset = wp.int32(0)
+            tnvv = bvv_prefix[last_row, last_col]  # type: ignore
+            if local_tid == last_col:
+                tvv_offset = wp.atomic_add(ogc.nvv, n_verts, tnvv)  # type: ignore
+            bvv_offset = wp.tile_from_thread(
+                shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
+                value=tvv_offset,
+                thread_idx=last_col,
+            )  # type: ignore
+            # 5. Write unique contacts to global contact list
+            for brow in range(MAX_VV_PER_THREAD):
+                is_marked_unique = bvv_adj_diff[brow, bcol] == wp.int32(1)
+                is_last_element = (brow == last_row) and (bcol == last_col)
+                if is_marked_unique and not is_last_element:
+                    k = bvv_offset[bcol] + bvv_prefix[brow, bcol]  # type: ignore
+                    ogc.vv_u[k] = v
+                    ogc.vv_v[k] = bvv[brow, bcol]
+            ogc.nvv[v] = tnvv  # type: ignore
+
+        if has_ve_contacts:
+            # 1. Sort contacts
+            bve = wp.tile(tve)  # type: ignore
+            wp.tile_sort(keys=bve, values=bve)
+            last_row = MAX_VE_PER_THREAD - wp.int32(1)
+            assert bve[last_row, last_col] == n_half_edges
+            # 2. Compute adjacent differences
+            tve_adj_diff = tvelist()
+            for brow in range(MAX_VE_PER_THREAD):
+                is_neighbour_on_next_row = local_tid == last_col
+                next_row = (
+                    brow + wp.int32(is_neighbour_on_next_row)
+                ) % MAX_VE_PER_THREAD
+                are_different = bve[brow, bcol] != bve[next_row, next_col]
+                tve_adj_diff[brow] = wp.int32(are_different)
+            bve_adj_diff = wp.tile(tve_adj_diff)  # type: ignore
+            # 3. Compute exclusive prefix sum (unique contact count is last element of prefix sum)
+            bve_prefix = wp.tile_scan_exclusive(bve_adj_diff)
+            # 4. Determine global write offset via atomic add
+            tve_offset = wp.int32(0)
+            tnve = bve_prefix[last_row, last_col]  # type: ignore
+            if local_tid == last_col:
+                tve_offset = wp.atomic_add(ogc.nve, n_verts, tnve)  # type: ignore
+            bve_offset = wp.tile_from_thread(
+                shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
+                value=tve_offset,
+                thread_idx=last_col,
+            )  # type: ignore
+            # 5. Write unique contacts to global contact list
+            for brow in range(MAX_VE_PER_THREAD):
+                is_marked_unique = bve_adj_diff[brow, bcol] == wp.int32(1)
+                is_last_element = (brow == last_row) and (bcol == last_col)
+                if is_marked_unique and not is_last_element:
+                    k = bve_offset[bcol] + bve_prefix[brow, bcol]  # type: ignore
+                    ogc.ve_u[k] = v
+                    ogc.ve_v[k] = bve[brow, bcol]
+            ogc.nve[v] = tnve  # type: ignore
+
+        if has_vf_contacts:
+            # 1. Sort contacts
+            bvf = wp.tile(tvf)  # type: ignore
+            wp.tile_sort(keys=bvf, values=bvf)
+            last_row = MAX_VF_PER_THREAD - wp.int32(1)
+            assert bvf[last_row, last_col] == n_tris
+            # 2. Determine global write offset (vf contacts are already unique, count=tnvf)
+            tvf_offset = wp.int32(0)
+            if local_tid == last_col:
+                tvf_offset = wp.atomic_add(ogc.nvf, n_verts, tnvf)  # type: ignore
+            bvf_offset = wp.tile_from_thread(
+                shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
+                value=tvf_offset,
+                thread_idx=last_col,
+            )  # type: ignore
+            # 3. Write unique contacts to global contact list
+            for brow in range(MAX_VF_PER_THREAD):
+                if bvf[brow, bcol] < n_tris:
+                    k = bvf_offset[bcol] + brow * block_dims + bcol
+                    ogc.vf_u[k] = v
+                    ogc.vf_v[k] = bvf[brow, bcol]
+            ogc.nvf[v] = tnvf  # type: ignore
 
     # EE contact detection
     if block_id < n_edges:
         e = block_id
         hei, hej = meshes.EHE[e][0], meshes.EHE[e][1]
+        # Store the larger half-edge index to handle boundary edges
+        he_min, he_max = wp.min(hei, hej), wp.max(hei, hej)
         e1 = e
         einds1 = meshes.E[e1]
         xi1, xj1 = x[einds1[0]], x[einds1[1]]
         # 1. Query all nearby edges
-        ee = teelist(n_half_edges)
+        tee = teelist(n_half_edges)
         query = wp.tile_bvh_query_aabb(
             ogc.e_bvh_id,
             ogc.e_lowers[e],
@@ -668,37 +541,43 @@ def _fused_contact_detection(
         for brow in range(MAX_EE_PER_THREAD):
             candidates = wp.tile_bvh_query_next(query)
             e2 = candidates[local_tid]  # pyright: ignore[reportIndexIssue]
-            if e2 < 0:
+            if e2 >= 0:
+                tee[brow] = e2
+            no_more_candidates = candidates[last_col] < int(0)  # type: ignore
+            if no_more_candidates:
                 break
-            ee[brow] = e2
         # 2. Classify and store ee contacts
-        ee, tnee = _classify_edge_edge_contacts(
-            x, meshes, ogc, e1, einds1, xi1, xj1, hei, hej, ee, n_half_edges
-        )  # type: ignore
-        # 3. Sort contacts (already unique)
-        bee = wp.tile(ee)  # type: ignore
-        wp.tile_sort(bee, bee)
-        # 3.a Sum per-thread ee counts across the block
-        bnee = wp.tile_sum(wp.tile(tnee))  # type: ignore
-        # TODO: Implement early exit when no contacts are detected!
-        # ...
-        # 4. Determine global write offset via atomic add
-        tee_offset = wp.int32(0)
-        if is_last_column:
-            tee_offset = wp.atomic_add(nee, n_half_edges, bnee[0])  # type: ignore
-        bee_offset = wp.tile_from_thread(
-            shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
-            value=tee_offset,
-            thread_idx=local_tid,
-        )  # type: ignore
-        # 5. Write contacts to global contact set
-        for brow in range(MAX_EE_PER_THREAD):
-            if bee[brow, bcol] < n_half_edges:
-                k = bee_offset[bcol] + brow * block_dims + bcol  # type: ignore
-                ogc.ee_u[k] = wp.max(
-                    hei, hej
-                )  # Store the larger half-edge index to handle boundary edges
-                ogc.ee_v[k] = bee[brow, bcol]
+        tee, tnee = _classify_edge_edge_contacts(
+            x, meshes, ogc, e1, einds1, xi1, xj1, hei, hej, tee, n_half_edges  # type: ignore
+        )
+        # 3. Count contacts
+        tnee = wp.tile_sum(wp.tile(tnee))[0]  # type: ignore
+        has_ee_contacts = tnee > wp.int32(0)
+        if has_ee_contacts:
+            # 1. Sort contacts (already unique)
+            bee = wp.tile(tee)  # type: ignore
+            wp.tile_sort(keys=bee, values=bee)
+            last_row = MAX_EE_PER_THREAD - wp.int32(1)
+            assert bee[last_row, last_col] == n_half_edges
+            # 2. Determine global write offset via atomic add
+            tee_offset = wp.int32(0)
+            if local_tid == last_col:
+                tee_offset = wp.atomic_add(ogc.nee, n_half_edges, tnee)  # type: ignore
+            bee_offset = wp.tile_from_thread(
+                shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
+                value=tee_offset,
+                thread_idx=last_col,
+            )  # type: ignore
+            # 3. Write contacts to global contact set
+            for brow in range(MAX_EE_PER_THREAD):
+                if bee[brow, bcol] < n_half_edges:
+                    k = bee_offset[bcol] + brow * block_dims + bcol  # type: ignore
+                    ogc.ee_u[k] = he_max
+                    ogc.ee_v[k] = bee[brow, bcol]
+            # 4. Write unique contact counts to global count arrays
+            ogc.nee[he_max] = tnee  # type: ignore
+            if he_min >= wp.int32(0):
+                ogc.nee[he_min] = wp.int32(0)  # type: ignore
 
 
 @wp.kernel
@@ -707,9 +586,8 @@ def _update_displacement_bounds(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
 ):
     v = wp.tid()
-    for k in range(
-        meshes.GVHEp[v], meshes.GVHEp[v + 1]  # pyright: ignore[reportOperatorIssue]
-    ):
+    i = meshes.V[v]
+    for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):  # type: ignore
         he = meshes.GVHEadj[k]
         f = halfedges.face_of_half_edge(he)
         ogc.dminv[v] = wp.min(ogc.dminv[v], ogc.dminf[f])
@@ -732,10 +610,10 @@ class Ogc:
         meshes: MultiMesh,  # type: ignore
         r: float = 0.002,
         gammap: float = 0.45,
-        n_vv_contact_capacity: int = 1,
-        n_ve_contact_capacity: int = 1,
-        n_vf_contact_capacity: int = 1,
-        n_ee_contact_capacity: int = 1,
+        n_vv_contact_capacity: float = float(1),
+        n_ve_contact_capacity: float = float(1),
+        n_vf_contact_capacity: float = float(1),
+        n_ee_contact_capacity: float = float(1),
     ):
         """Construct ogc data
 
@@ -755,32 +633,54 @@ class Ogc:
         self._points = points
         self._meshes = meshes
         self._ogc = OgcData()
-        n_verts, n_edges, n_tris, n_half_edges = self.n_primitives
-        self._ogc.e_lowers = wp.zeros((n_edges,), dtype=wp.vec3f)
-        self._ogc.e_uppers = wp.zeros((n_edges,), dtype=wp.vec3f)
-        self._ogc.f_lowers = wp.zeros((n_tris,), dtype=wp.vec3f)
-        self._ogc.f_uppers = wp.zeros((n_tris,), dtype=wp.vec3f)
-        self._ogc.rq = r
+        self._ogc.e_lowers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
+        self._ogc.e_uppers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
+        self._ogc.f_lowers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
+        self._ogc.f_uppers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
+        self._ogc.rq = 2 * r
         self._ogc.r = r
         self._ogc.gammap = gammap
-        self._ogc.dminv = wp.zeros((n_verts,), dtype=wp.float32)
-        self._ogc.dmine = wp.zeros((n_half_edges,), dtype=wp.float32)
-        self._ogc.dminf = wp.zeros((n_tris,), dtype=wp.float32)
-        self._ogc.vv_u = wp.zeros((n_vv_contact_capacity * n_verts,), dtype=wp.int32)
-        self._ogc.vv_v = wp.zeros((n_vv_contact_capacity * n_verts,), dtype=wp.int32)
-        self._ogc.ve_u = wp.zeros((n_ve_contact_capacity * n_verts,), dtype=wp.int32)
-        self._ogc.ve_v = wp.zeros((n_ve_contact_capacity * n_verts,), dtype=wp.int32)
-        self._ogc.vf_u = wp.zeros((n_vf_contact_capacity * n_verts,), dtype=wp.int32)
-        self._ogc.vf_v = wp.zeros((n_vf_contact_capacity * n_verts,), dtype=wp.int32)
-        self._ogc.ee_u = wp.zeros((n_ee_contact_capacity * n_edges,), dtype=wp.int32)
-        self._ogc.ee_v = wp.zeros((n_ee_contact_capacity * n_edges,), dtype=wp.int32)
-        dim = max(n_verts, n_edges, n_tris)
+        self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
+        self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
+        self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
+        self._ogc.nvv = wp.zeros((meshes.n_verts + 1,), dtype=wp.int32)
+        self._ogc.nve = wp.zeros((meshes.n_verts + 1,), dtype=wp.int32)
+        self._ogc.nvf = wp.zeros((meshes.n_verts + 1,), dtype=wp.int32)
+        self._ogc.nee = wp.zeros((meshes.n_half_edges + 1,), dtype=wp.int32)
+        vv_capacity = int(n_vv_contact_capacity * meshes.n_verts)
+        ve_capacity = int(n_ve_contact_capacity * meshes.n_verts)
+        vf_capacity = int(n_vf_contact_capacity * meshes.n_verts)
+        ee_capacity = int(n_ee_contact_capacity * meshes.n_edges)
+        self._ogc.vv_u = wp.full(
+            shape=(2 * vv_capacity,), value=meshes.n_verts, dtype=wp.int32
+        )
+        self._ogc.vv_v = wp.full(
+            shape=(2 * vv_capacity,), value=meshes.n_verts, dtype=wp.int32
+        )
+        self._ogc.ve_u = wp.full(
+            shape=(2 * ve_capacity,), value=meshes.n_verts, dtype=wp.int32
+        )
+        self._ogc.ve_v = wp.full(
+            shape=(2 * ve_capacity,), value=meshes.n_half_edges, dtype=wp.int32
+        )
+        self._ogc.vf_u = wp.full(
+            shape=(2 * vf_capacity,), value=meshes.n_verts, dtype=wp.int32
+        )
+        self._ogc.vf_v = wp.full(
+            shape=(2 * vf_capacity,), value=meshes.n_triangles, dtype=wp.int32
+        )
+        self._ogc.ee_u = wp.full(
+            shape=(2 * ee_capacity,), value=meshes.n_half_edges, dtype=wp.int32
+        )
+        self._ogc.ee_v = wp.full(
+            shape=(2 * ee_capacity,), value=meshes.n_half_edges, dtype=wp.int32
+        )
+        dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
         wp.launch(
             kernel=_compute_bounding_volumes_kernel,
             dim=dim,
             inputs=[self._points, self._meshes.data, self._ogc],
         )
-        # NOTE: We could use the groups to distinguish between bodies, which MultiMesh stores as prefix sums in VP, EP, FP.
         self._e_bvh, self._f_bvh = (
             wp.Bvh(
                 self._ogc.e_lowers,
@@ -802,27 +702,13 @@ class Ogc:
             self._f_bvh.id,
         )
 
-    @property
-    def n_primitives(self):
-        """
-        Returns:
-            Tuple[int, int, int, int]: Number of vertices, edges, faces, and half-edges
-        """
-        return (
-            self._meshes.data.V.shape[0],
-            self._meshes.data.E.shape[0],
-            self._meshes.data.F.shape[0],
-            3 * self._meshes.data.F.shape[0],
-        )
-
     def prepare_for_execution(self, request_rebuild: bool = True):
-        n_verts, n_edges, n_tris, _ = self.n_primitives
         wp.launch(
             _compute_bounding_volumes_kernel,
             dim=max(
-                n_verts,
-                n_edges,
-                n_tris,
+                self._meshes.n_verts,
+                self._meshes.n_edges,
+                self._meshes.n_triangles,
             ),
             inputs=[self._points, self._meshes.data, self._ogc],
         )
@@ -831,11 +717,22 @@ class Ogc:
                 bvh.rebuild()
             else:
                 bvh.refit()
+        # Reset contact pairs
+        self._ogc.nvv.fill_(wp.int32(0))
+        self._ogc.nve.fill_(wp.int32(0))
+        self._ogc.nvf.fill_(wp.int32(0))
+        self._ogc.nee.fill_(wp.int32(0))
+        self._ogc.vv_u.fill_(self._meshes.n_verts)
+        self._ogc.vv_v.fill_(self._meshes.n_verts)
+        self._ogc.ve_u.fill_(self._meshes.n_verts)
+        self._ogc.ve_v.fill_(self._meshes.n_half_edges)
+        self._ogc.vf_u.fill_(self._meshes.n_verts)
+        self._ogc.vf_v.fill_(self._meshes.n_triangles)
+        self._ogc.ee_u.fill_(self._meshes.n_half_edges)
+        self._ogc.ee_v.fill_(self._meshes.n_half_edges)
 
-    def detect_contacts(self, contacts: ContactSet):  # type: ignore
-        n_verts, n_edges, n_tris, n_half_edges = self.n_primitives
-        contacts.clear()
-        dim = max(n_verts, n_edges)
+    def detect_contacts(self):  # type: ignore
+        dim = max(self._meshes.n_verts, self._meshes.n_edges)
         wp.launch(
             _fused_contact_detection,
             dim=dim * _FUSED_CONTACT_DETECTION_BLOCK_SIZE,
@@ -843,27 +740,42 @@ class Ogc:
                 self._points,
                 self._meshes.data,
                 self._ogc,
-                contacts.data.nxx,
-                contacts.data.nxe,
-                contacts.data.nxf,
-                contacts.data.nee,
             ],
             block_dim=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
         )
-        print(self._ogc.xxu)
-        print(self._ogc.xxv)
-        print(self._ogc.xeu)
-        print(self._ogc.xev)
-        print(self._ogc.xfu)
-        print(self._ogc.xfv)
-        print(self._ogc.eeu)
-        print(self._ogc.eev)
+        vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.capacity
+        wp.utils.radix_sort_pairs(
+            keys=self._ogc.vv_u, values=self._ogc.vv_v, count=vv_capacity
+        )
+        wp.utils.radix_sort_pairs(
+            keys=self._ogc.ve_u, values=self._ogc.ve_v, count=ve_capacity
+        )
+        wp.utils.radix_sort_pairs(
+            keys=self._ogc.vf_u, values=self._ogc.vf_v, count=vf_capacity
+        )
+        wp.utils.radix_sort_pairs(
+            keys=self._ogc.ee_u, values=self._ogc.ee_v, count=ee_capacity
+        )
+        n_vv, n_ve, n_vf, n_ee = (
+            cp.asarray(self._ogc.nvv)[-1].get(),
+            cp.asarray(self._ogc.nve)[-1].get(),
+            cp.asarray(self._ogc.nvf)[-1].get(),
+            cp.asarray(self._ogc.nee)[-1].get(),
+        )
+        vv_u, vv_v = self._ogc.vv_u.numpy()[:n_vv], self._ogc.vv_v.numpy()[:n_vv]
+        ve_u, ve_v = self._ogc.ve_u.numpy()[:n_ve], self._ogc.ve_v.numpy()[:n_ve]
+        vf_u, vf_v = self._ogc.vf_u.numpy()[:n_vf], self._ogc.vf_v.numpy()[:n_vf]
+        ee_u, ee_v = self._ogc.ee_u.numpy()[:n_ee], self._ogc.ee_v.numpy()[:n_ee]
+        print("NVV=\n{}\nVV=\n{}\n{}\n".format(self._ogc.nvv, vv_u, vv_v))
+        print("NVE=\n{}\nVE=\n{}\n{}\n".format(self._ogc.nve, ve_u, ve_v))
+        print("NVF=\n{}\nVF=\n{}\n{}\n".format(self._ogc.nvf, vf_u, vf_v))
+        print("NEE=\n{}\nEE=\n{}\n{}\n".format(self._ogc.nee, ee_u, ee_v))
         # TODO: Use cuda.compute to sort the contact pairs only w.r.t. the first 32 bits.
 
     def update_displacement_bounds(self):
         wp.launch(
             _update_displacement_bounds,
-            dim=self._meshes.data.V.shape[0],
+            dim=self._meshes.n_verts,
             inputs=[self._meshes.data, self._ogc],
         )
 
@@ -874,8 +786,8 @@ class Ogc:
     @property
     def capacity(self) -> Tuple[int, int, int, int]:
         return (
-            self._ogc.vv_u.shape[0],
-            self._ogc.ve_u.shape[0],
-            self._ogc.vf_u.shape[0],
-            self._ogc.ee_u.shape[0],
+            self._ogc.vv_u.shape[0] // 2,
+            self._ogc.ve_u.shape[0] // 2,
+            self._ogc.vf_u.shape[0] // 2,
+            self._ogc.ee_u.shape[0] // 2,
         )

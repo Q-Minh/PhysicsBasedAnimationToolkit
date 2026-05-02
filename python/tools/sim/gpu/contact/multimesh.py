@@ -45,3 +45,19 @@ class MultiMesh:
     @property
     def data(self) -> MultiMeshData:  # pyright: ignore[reportGeneralTypeIssues]
         return self._data
+
+    @property
+    def n_verts(self) -> int:
+        return self._data.V.shape[0]
+
+    @property
+    def n_edges(self) -> int:
+        return self._data.E.shape[0]
+
+    @property
+    def n_triangles(self) -> int:
+        return self._data.F.shape[0]
+
+    @property
+    def n_half_edges(self) -> int:
+        return 3 * self.n_triangles
