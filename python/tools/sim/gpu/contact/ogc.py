@@ -284,7 +284,7 @@ def _classify_vertex_facet_contacts(
         d = wp.norm_l2(xi - xc)
         ogc.dminv[v] = wp.min(ogc.dminv[v], d)
         wp.atomic_min(ogc.dminf, f, d)
-        if d >= ogc.r:
+        if d > ogc.r:
             tvf[brow] = n_tris
             continue
         a_local, e_face = _closest_face_point_triangle(uvw)
@@ -300,9 +300,8 @@ def _classify_vertex_facet_contacts(
             if is_edge_feasible(
                 x, meshes.F, meshes.GHEF, f, a, xi, check_adjacent_facets=wp.bool(True)
             ):  # type: ignore
-                tve[brow] = (
-                    a  # NOTE: Should we use the largest of opposite half-edge indices?
-                )
+                hei, hej = a, halfedges.opposite_half_edge(meshes.F, a, meshes.GHEF)
+                tve[brow] = wp.max(hei, hej)
                 n_ve += wp.int32(1)
             tvf[brow] = n_tris
         else:  # VF_E_FACE_TRIANGLE
@@ -355,7 +354,7 @@ def _classify_edge_edge_contacts(
         if e1 >= e2:
             tee[brow] = n_half_edges
             continue
-        if d >= ogc.r:
+        if d > ogc.r:
             tee[brow] = n_half_edges
             continue
         is_xc1_vertex = st[0] == fzero or st[0] == fone  # type: ignore
@@ -839,7 +838,9 @@ class OgcContactBrowser:
         imgui.Text(f"# Vertex-Triangle Contacts: {len(self._ogc.vf_contacts[0])}")  # type: ignore
         imgui.Text(f"# Edge-Edge Contacts: {len(self._ogc.ee_contacts[0])}")  # type: ignore
 
-        _, self._kind_idx = imgui.Combo("Kind", self._kind_idx, self._CONTACT_KINDS)  # type: ignore
+        changed, self._kind_idx = imgui.Combo("Kind", self._kind_idx, self._CONTACT_KINDS)  # type: ignore
+        if changed:
+            self._contact_idx = 0
 
         contacts = self._get_selected_contacts()
         n = len(contacts[0])
