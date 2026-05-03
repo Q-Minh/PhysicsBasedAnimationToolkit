@@ -28,6 +28,7 @@ class MultiMesh:
 
     _data: MultiMeshData  # pyright: ignore[reportGeneralTypeIssues]
 
+
     def __init__(self, mesh: pbat.sim.contact.MultiMesh):
         self._data = MultiMeshData()
         self._data.V = wp.array(mesh.V, dtype=wp.int32)
@@ -41,6 +42,7 @@ class MultiMesh:
         self._data.GHEF = wp.array(mesh.GHEF.T, dtype=wp.vec2i)
         self._data.EHE = wp.array(mesh.EHE.T, dtype=wp.vec2i)
         self._data.GXV = wp.array(mesh.GXV, dtype=wp.int32)
+
 
     @property
     def data(self) -> MultiMeshData:  # pyright: ignore[reportGeneralTypeIssues]
@@ -61,3 +63,4 @@ class MultiMesh:
     @property
     def n_half_edges(self) -> int:
         return 3 * self.n_triangles
+

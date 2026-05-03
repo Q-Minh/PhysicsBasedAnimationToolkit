@@ -153,11 +153,8 @@ class SimulationState:
             fem_cpu.E, np.full(n_nodes, 0, dtype=np.int64), n_components=1
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.005)
-        n_verts, n_edges, n_tris, n_half_edges = self.ogc.n_primitives
-        self.contacts = gpu.contact.set.ContactSet(
-            n_points=n_nodes, n_faces=n_tris, max_contact_pairs=self.ogc.capacity
-        )
+        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.05)
+        self.ogc_browser = gpu.contact.ogc.OgcContactBrowser(self.ogc)
 
         # Simulation state
         self.simulate: bool = False
@@ -172,16 +169,19 @@ class SimulationState:
 
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
+        self.solve()
+        # if self.capture is None:
+        #     with wp.ScopedCapture() as capture:
+        # self.solve()
+        #     self.capture = capture
+        # else:
+        #     wp.capture_launch(self.capture.graph)
         # NOTE: This is just a test
         self.ogc.prepare_for_execution()
-        self.ogc.detect_contacts(self.contacts)
+        self.ogc.detect_contacts()
+        self.ogc_browser.clear()
+        self.ogc_browser = gpu.contact.ogc.OgcContactBrowser(self.ogc)
         self.ogc.update_displacement_bounds()
-        if self.capture is None:
-            with wp.ScopedCapture() as capture:
-                self.solve()
-            self.capture = capture
-        else:
-            wp.capture_launch(self.capture.graph)
         self.fem.step()
         self.t += 1
 
@@ -191,6 +191,8 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = gpu.vbd.params.Params(self.params_cpu)
+        self.ogc_browser.clear()
+        self.ogc_browser = gpu.contact.ogc.OgcContactBrowser(self.ogc)
         self.capture = None
 
 
@@ -262,6 +264,11 @@ def make_callback(
             if ui_state.screenshot_after_step:
                 ps.screenshot("{:08d}.png".format(state.t))
 
+        imgui.Separator()
+        if imgui.TreeNode("OGC Contact Browser"):
+            state.ogc_browser.draw()
+            imgui.TreePop()
+
         imgui.PopItemWidth()
 
     return callback
@@ -296,12 +303,13 @@ def parse_args():
 
 
 def main():
+    wp.config.mode = "debug"
+    wp.config.verify_cuda = True
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
     params_cpu = load_vbd_params(fem_cpu, args.vbd_params)
     state = SimulationState(fem_cpu, params_cpu)
-
     # Setup polyscope
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
