@@ -29,6 +29,50 @@ teelist = wp.types.vector(length=MAX_EE_PER_THREAD, dtype=wp.int32)
 
 
 @wp.struct
+class ContactPairsData:
+    """Data structure for contact pairs."""
+
+    counts: wp.array[wp.int32]  # (# u + 1,) contact counts per u primitive
+    prefix: wp.array[wp.int32]  # (# u + 1,) contact prefix sums per u primitive
+    u: wp.array[wp.int32]  # (2*capacity,) u indices
+    v: wp.array[wp.int32]  # (2*capacity,) v indices
+
+
+class ContactPairs:
+    """Data structure for contact pairs."""
+
+    nu: int
+    nv: int
+    capacity: int
+    data: ContactPairsData  # type: ignore
+
+    def __init__(self, nu: int, nv: int, capacity: int):
+        self.nu = nu
+        self.nv = nv
+        self.capacity = capacity
+        self.data = ContactPairsData()
+        self.data.counts = wp.zeros((nu + 1,), dtype=wp.int32)
+        self.data.prefix = wp.zeros((nu + 1,), dtype=wp.int32)
+        self.data.u = wp.full(shape=(2 * capacity,), value=nu, dtype=wp.int32)
+        self.data.v = wp.full(shape=(2 * capacity,), value=nv, dtype=wp.int32)
+
+    def clear(self):
+        self.data.counts.fill_(wp.int32(0))
+        self.data.u.fill_(self.nu)
+        self.data.v.fill_(self.nv)
+
+    def uv(self):
+        """Get the pairs (u,v) on CPU
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: (u, v) pairs
+        """
+        nuv = cp.asarray(self.data.counts)[-1].get()
+        u, v = self.data.u.numpy()[:nuv], self.data.v.numpy()[:nuv]
+        return u, v
+
+
+@wp.struct
 class OgcData:
     """Data structure for OGC."""
 
@@ -49,41 +93,15 @@ class OgcData:
     dmine: wp.array[wp.float32]  # (# half-edges,) half-edge minimum displacement bounds
     dminf: wp.array[wp.float32]  # (# triangles,) face minimum displacement bounds
 
-    nvv: wp.array[
-        wp.int32
-    ]  # (# verts + 1,) array of vertex-vertex contact counts per vertex and the total count at the array's tail
-    vv_u: wp.array[wp.int32]  # (# vertex-vertex contacts capacity,) u from pairs (u,v)
-    vv_v: wp.array[wp.int32]  # (# vertex-vertex contacts capacity,) v from pairs (u,v)
+    vv: ContactPairsData  # vertex-vertex contact pairs # type: ignore
+    ve: ContactPairsData  # vertex-edge contact pairs # type: ignore
+    vf: ContactPairsData  # vertex-face contact pairs # type: ignore
+    ee: ContactPairsData  # edge-edge contact pairs # type: ignore
 
-    nve: wp.array[
-        wp.int32
-    ]  # (# verts + 1,) array of vertex-edge contact counts per vertex and the total count at the array's tail
-    ve_u: wp.array[
-        wp.int32
-    ]  # (# vertex-(half-)edge contacts capacity,) u from pairs (u,v)
-    ve_v: wp.array[
-        wp.int32
-    ]  # (# vertex-(half-)edge contacts capacity,) v from pairs (u,v)
-
-    nvf: wp.array[
-        wp.int32
-    ]  # (# verts + 1,) array of vertex-triangle contact counts per vertex and the total count at the array's tail
-    vf_u: wp.array[
-        wp.int32
-    ]  # (# vertex-triangle contacts capacity,) u from pairs (u,v)
-    vf_v: wp.array[
-        wp.int32
-    ]  # (# vertex-triangle contacts capacity,) v from pairs (u,v)
-
-    nee: wp.array[
-        wp.int32
-    ]  # (# half-edges + 1,) array of (half-)edge-(half-)edge contact counts per half-edge and the total count at the array's tail
-    ee_u: wp.array[
-        wp.int32
-    ]  # (# (half-)edge-(half-)edge contacts capacity,) u from pairs (u,v)
-    ee_v: wp.array[
-        wp.int32
-    ]  # (# (half-)edge-(half-)edge contacts capacity,) v from pairs (u,v)
+    rvv: ContactPairsData  # vertex-vertex reverse contact pairs # type: ignore
+    rve: ContactPairsData  # vertex-edge reverse contact pairs # type: ignore
+    rvf: ContactPairsData  # vertex-face reverse contact pairs # type: ignore
+    ree: ContactPairsData  # edge-edge reverse contact pairs # type: ignore
 
 
 @wp.func
@@ -445,7 +463,7 @@ def _fused_contact_detection(
             tvv_offset = wp.int32(0)
             tnvv = bvv_prefix[last_row, last_col]  # type: ignore
             if local_tid == last_col:
-                tvv_offset = wp.atomic_add(ogc.nvv, n_verts, tnvv)  # type: ignore
+                tvv_offset = wp.atomic_add(ogc.vv.counts, n_verts, tnvv)  # type: ignore
             bvv_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvv_offset,
@@ -457,9 +475,9 @@ def _fused_contact_detection(
                 is_last_element = (brow == last_row) and (bcol == last_col)
                 if is_marked_unique and not is_last_element:
                     k = bvv_offset[bcol] + bvv_prefix[brow, bcol]  # type: ignore
-                    ogc.vv_u[k] = v
-                    ogc.vv_v[k] = bvv[brow, bcol]
-            ogc.nvv[v] = tnvv  # type: ignore
+                    ogc.vv.u[k] = v
+                    ogc.vv.v[k] = bvv[brow, bcol]
+            ogc.vv.counts[v] = tnvv  # type: ignore
 
         if has_ve_contacts:
             # 1. Sort contacts
@@ -483,7 +501,7 @@ def _fused_contact_detection(
             tve_offset = wp.int32(0)
             tnve = bve_prefix[last_row, last_col]  # type: ignore
             if local_tid == last_col:
-                tve_offset = wp.atomic_add(ogc.nve, n_verts, tnve)  # type: ignore
+                tve_offset = wp.atomic_add(ogc.ve.counts, n_verts, tnve)  # type: ignore
             bve_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tve_offset,
@@ -495,9 +513,9 @@ def _fused_contact_detection(
                 is_last_element = (brow == last_row) and (bcol == last_col)
                 if is_marked_unique and not is_last_element:
                     k = bve_offset[bcol] + bve_prefix[brow, bcol]  # type: ignore
-                    ogc.ve_u[k] = v
-                    ogc.ve_v[k] = bve[brow, bcol]
-            ogc.nve[v] = tnve  # type: ignore
+                    ogc.ve.u[k] = v
+                    ogc.ve.v[k] = bve[brow, bcol]
+            ogc.ve.counts[v] = tnve  # type: ignore
 
         if has_vf_contacts:
             # 1. Sort contacts
@@ -508,7 +526,7 @@ def _fused_contact_detection(
             # 2. Determine global write offset (vf contacts are already unique, count=tnvf)
             tvf_offset = wp.int32(0)
             if local_tid == last_col:
-                tvf_offset = wp.atomic_add(ogc.nvf, n_verts, tnvf)  # type: ignore
+                tvf_offset = wp.atomic_add(ogc.vf.counts, n_verts, tnvf)  # type: ignore
             bvf_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvf_offset,
@@ -518,9 +536,9 @@ def _fused_contact_detection(
             for brow in range(MAX_VF_PER_THREAD):
                 if bvf[brow, bcol] < n_tris:
                     k = bvf_offset[bcol] + brow * block_dims + bcol
-                    ogc.vf_u[k] = v
-                    ogc.vf_v[k] = bvf[brow, bcol]
-            ogc.nvf[v] = tnvf  # type: ignore
+                    ogc.vf.u[k] = v
+                    ogc.vf.v[k] = bvf[brow, bcol]
+            ogc.vf.counts[v] = tnvf  # type: ignore
 
     # EE contact detection
     if block_id < n_edges:
@@ -562,7 +580,7 @@ def _fused_contact_detection(
             # 2. Determine global write offset via atomic add
             tee_offset = wp.int32(0)
             if local_tid == last_col:
-                tee_offset = wp.atomic_add(ogc.nee, n_half_edges, tnee)  # type: ignore
+                tee_offset = wp.atomic_add(ogc.ee.counts, n_half_edges, tnee)  # type: ignore
             bee_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tee_offset,
@@ -572,12 +590,10 @@ def _fused_contact_detection(
             for brow in range(MAX_EE_PER_THREAD):
                 if bee[brow, bcol] < n_half_edges:
                     k = bee_offset[bcol] + brow * block_dims + bcol  # type: ignore
-                    ogc.ee_u[k] = he_max
-                    ogc.ee_v[k] = bee[brow, bcol]
+                    ogc.ee.u[k] = he_max
+                    ogc.ee.v[k] = bee[brow, bcol]
             # 4. Write unique contact counts to global count arrays
-            ogc.nee[he_max] = tnee  # type: ignore
-            if he_min >= wp.int32(0):
-                ogc.nee[he_min] = wp.int32(0)  # type: ignore
+            ogc.ee.counts[he_max] = tnee  # type: ignore
 
 
 @wp.kernel
@@ -598,6 +614,14 @@ def _update_displacement_bounds(
 class Ogc:
     """Offset Geometric Contact"""
 
+    vv: ContactPairs
+    rvv: ContactPairs
+    ve: ContactPairs
+    rve: ContactPairs
+    vf: ContactPairs
+    rvf: ContactPairs
+    ee: ContactPairs
+    ree: ContactPairs
     _ogc: OgcData  # pyright: ignore[reportGeneralTypeIssues]
     _e_bvh: wp.Bvh  # BVH over edges
     _f_bvh: wp.Bvh  # BVH over faces
@@ -643,38 +667,31 @@ class Ogc:
         self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
         self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
         self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
-        self._ogc.nvv = wp.zeros((meshes.n_verts + 1,), dtype=wp.int32)
-        self._ogc.nve = wp.zeros((meshes.n_verts + 1,), dtype=wp.int32)
-        self._ogc.nvf = wp.zeros((meshes.n_verts + 1,), dtype=wp.int32)
-        self._ogc.nee = wp.zeros((meshes.n_half_edges + 1,), dtype=wp.int32)
         vv_capacity = int(n_vv_contact_capacity * meshes.n_verts)
         ve_capacity = int(n_ve_contact_capacity * meshes.n_verts)
         vf_capacity = int(n_vf_contact_capacity * meshes.n_verts)
         ee_capacity = int(n_ee_contact_capacity * meshes.n_edges)
-        self._ogc.vv_u = wp.full(
-            shape=(2 * vv_capacity,), value=meshes.n_verts, dtype=wp.int32
-        )
-        self._ogc.vv_v = wp.full(
-            shape=(2 * vv_capacity,), value=meshes.n_verts, dtype=wp.int32
-        )
-        self._ogc.ve_u = wp.full(
-            shape=(2 * ve_capacity,), value=meshes.n_verts, dtype=wp.int32
-        )
-        self._ogc.ve_v = wp.full(
-            shape=(2 * ve_capacity,), value=meshes.n_half_edges, dtype=wp.int32
-        )
-        self._ogc.vf_u = wp.full(
-            shape=(2 * vf_capacity,), value=meshes.n_verts, dtype=wp.int32
-        )
-        self._ogc.vf_v = wp.full(
-            shape=(2 * vf_capacity,), value=meshes.n_triangles, dtype=wp.int32
-        )
-        self._ogc.ee_u = wp.full(
-            shape=(2 * ee_capacity,), value=meshes.n_half_edges, dtype=wp.int32
-        )
-        self._ogc.ee_v = wp.full(
-            shape=(2 * ee_capacity,), value=meshes.n_half_edges, dtype=wp.int32
-        )
+
+        self.vv, self.rvv = ContactPairs(
+            meshes.n_verts, meshes.n_verts, vv_capacity
+        ), ContactPairs(meshes.n_verts, meshes.n_verts, vv_capacity)
+        self._ogc.vv, self._ogc.rvv = self.vv.data, self.rvv.data
+
+        self.ve, self.rve = ContactPairs(
+            meshes.n_verts, meshes.n_half_edges, ve_capacity
+        ), ContactPairs(meshes.n_half_edges, meshes.n_verts, ve_capacity)
+        self._ogc.ve, self._ogc.rve = self.ve.data, self.rve.data
+
+        self.vf, self.rvf = ContactPairs(
+            meshes.n_verts, meshes.n_triangles, vf_capacity
+        ), ContactPairs(meshes.n_triangles, meshes.n_verts, vf_capacity)
+        self._ogc.vf, self._ogc.rvf = self.vf.data, self.rvf.data
+
+        self.ee, self.ree = ContactPairs(
+            meshes.n_half_edges, meshes.n_half_edges, ee_capacity
+        ), ContactPairs(meshes.n_half_edges, meshes.n_half_edges, ee_capacity)
+        self._ogc.ee, self._ogc.ree = self.ee.data, self.ree.data
+
         dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
         wp.launch(
             kernel=_compute_bounding_volumes_kernel,
@@ -718,21 +735,18 @@ class Ogc:
             else:
                 bvh.refit()
         # Reset contact pairs
-        self._ogc.nvv.fill_(wp.int32(0))
-        self._ogc.nve.fill_(wp.int32(0))
-        self._ogc.nvf.fill_(wp.int32(0))
-        self._ogc.nee.fill_(wp.int32(0))
-        self._ogc.vv_u.fill_(self._meshes.n_verts)
-        self._ogc.vv_v.fill_(self._meshes.n_verts)
-        self._ogc.ve_u.fill_(self._meshes.n_verts)
-        self._ogc.ve_v.fill_(self._meshes.n_half_edges)
-        self._ogc.vf_u.fill_(self._meshes.n_verts)
-        self._ogc.vf_v.fill_(self._meshes.n_triangles)
-        self._ogc.ee_u.fill_(self._meshes.n_half_edges)
-        self._ogc.ee_v.fill_(self._meshes.n_half_edges)
+        self.vv.clear()
+        self.rvv.clear()
+        self.ve.clear()
+        self.rve.clear()
+        self.vf.clear()
+        self.rvf.clear()
+        self.ee.clear()
+        self.ree.clear()
 
     def detect_contacts(self):  # type: ignore
         dim = max(self._meshes.n_verts, self._meshes.n_edges)
+        # 1. Compute contact set
         wp.launch(
             _fused_contact_detection,
             dim=dim * _FUSED_CONTACT_DETECTION_BLOCK_SIZE,
@@ -743,18 +757,52 @@ class Ogc:
             ],
             block_dim=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
         )
+        # TODO: Use stream-parallelism for each contact pair list, and independent operations.
+
+        # 2. Construct CSR representation of forward contacts
+        # Each pair (u,v) for a given u is stored contiguously and sorted by v after
+        # the fused contact detection. We only need to (stable-)sort by u. The counts
+        # for each u are stored in counts, so the CSR prefix is an exclusive scan.
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.capacity
+        wp.utils.array_scan(self.vv.data.counts, self.vv.data.prefix, inclusive=False)
         wp.utils.radix_sort_pairs(
-            keys=self._ogc.vv_u, values=self._ogc.vv_v, count=vv_capacity
+            keys=self.vv.data.u, values=self.vv.data.v, count=vv_capacity
+        )
+        wp.utils.array_scan(self.ve.data.counts, self.ve.data.prefix, inclusive=False)
+        wp.utils.radix_sort_pairs(
+            keys=self.ve.data.u, values=self.ve.data.v, count=ve_capacity
+        )
+        wp.utils.array_scan(self.vf.data.counts, self.vf.data.prefix, inclusive=False)
+        wp.utils.radix_sort_pairs(
+            keys=self.vf.data.u, values=self.vf.data.v, count=vf_capacity
+        )
+        wp.utils.array_scan(self.ee.data.counts, self.ee.data.prefix, inclusive=False)
+        wp.utils.radix_sort_pairs(
+            keys=self.ee.data.u, values=self.ee.data.v, count=ee_capacity
+        )
+        # 3. Construct CSR representation of backward contacts
+        # We need to store pairs (v,u) for each (u,v) for reverse contacts via mem copy.
+        # Then, we sort by v (named u in reverse ContactPairs).
+        # TODO: Compute the counts via binary search for each v (named u).
+        wp.copy(self.rvv.data.u, self.vv.data.v, count=vv_capacity)
+        wp.copy(self.rvv.data.v, self.vv.data.u, count=vv_capacity)
+        wp.copy(self.rve.data.u, self.ve.data.v, count=ve_capacity)
+        wp.copy(self.rve.data.v, self.ve.data.u, count=ve_capacity)
+        wp.copy(self.rvf.data.u, self.vf.data.v, count=vf_capacity)
+        wp.copy(self.rvf.data.v, self.vf.data.u, count=vf_capacity)
+        wp.copy(self.ree.data.u, self.ee.data.v, count=ee_capacity)
+        wp.copy(self.ree.data.v, self.ee.data.u, count=ee_capacity)
+        wp.utils.radix_sort_pairs(
+            keys=self.rvv.data.u, values=self.rvv.data.v, count=vv_capacity
         )
         wp.utils.radix_sort_pairs(
-            keys=self._ogc.ve_u, values=self._ogc.ve_v, count=ve_capacity
+            keys=self.rve.data.u, values=self.rve.data.v, count=ve_capacity
         )
         wp.utils.radix_sort_pairs(
-            keys=self._ogc.vf_u, values=self._ogc.vf_v, count=vf_capacity
+            keys=self.rvf.data.u, values=self.rvf.data.v, count=vf_capacity
         )
         wp.utils.radix_sort_pairs(
-            keys=self._ogc.ee_u, values=self._ogc.ee_v, count=ee_capacity
+            keys=self.ree.data.u, values=self.ree.data.v, count=ee_capacity
         )
 
     def update_displacement_bounds(self):
@@ -771,35 +819,27 @@ class Ogc:
     @property
     def capacity(self) -> Tuple[int, int, int, int]:
         return (
-            self._ogc.vv_u.shape[0] // 2,
-            self._ogc.ve_u.shape[0] // 2,
-            self._ogc.vf_u.shape[0] // 2,
-            self._ogc.ee_u.shape[0] // 2,
+            self.vv.capacity,
+            self.ve.capacity,
+            self.vf.capacity,
+            self.ee.capacity,
         )
 
     @property
     def vv_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        n_vv = cp.asarray(self._ogc.nvv)[-1].get()
-        vv_u, vv_v = self._ogc.vv_u.numpy()[:n_vv], self._ogc.vv_v.numpy()[:n_vv]
-        return vv_u, vv_v
+        return self.vv.uv()
 
     @property
     def ve_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        n_ve = cp.asarray(self._ogc.nve)[-1].get()
-        ve_u, ve_v = self._ogc.ve_u.numpy()[:n_ve], self._ogc.ve_v.numpy()[:n_ve]
-        return ve_u, ve_v
+        return self.ve.uv()
 
     @property
     def vf_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        n_vf = cp.asarray(self._ogc.nvf)[-1].get()
-        vf_u, vf_v = self._ogc.vf_u.numpy()[:n_vf], self._ogc.vf_v.numpy()[:n_vf]
-        return vf_u, vf_v
+        return self.vf.uv()
 
     @property
     def ee_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        n_ee = cp.asarray(self._ogc.nee)[-1].get()
-        ee_u, ee_v = self._ogc.ee_u.numpy()[:n_ee], self._ogc.ee_v.numpy()[:n_ee]
-        return ee_u, ee_v
+        return self.ee.uv()
 
 
 class OgcContactBrowser:
