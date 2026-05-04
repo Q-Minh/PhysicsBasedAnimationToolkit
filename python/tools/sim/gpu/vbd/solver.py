@@ -161,13 +161,13 @@ def solve(
     return converged
 
 
-def integrate(fem: FemElastoDynamics, params: Params):
+def integrate(fem: FemElastoDynamics, params: Params, ogc: Ogc):
     """Integrate one time step: setup + solve + step.
 
     Mimics `pbat::sim::algorithm::vbd::Integrate`.
     """
     fem.setup_time_integration_optimization()
-    solve(fem, params)
+    solve(fem, params, ogc)
     fem.step()
 
 
@@ -179,6 +179,7 @@ class TestVbdSolver(unittest.TestCase):
     def test_single_iterate(self):
         """Test that a single VBD iterate modifies free node positions."""
         from pbatoolkit import pbat, pypbat
+        from ..contact.multimesh import MultiMesh as GpuMultiMesh
 
         V = np.array(
             [
@@ -241,6 +242,8 @@ class TestVbdSolver(unittest.TestCase):
     def test_integrate_step(self):
         """Test that integrate advances the simulation by one time step."""
         from pbatoolkit import pbat, pypbat
+        from ..contact.multimesh import MultiMesh as GpuMultiMesh
+        from ..contact.ogc import Ogc
 
         V = np.array(
             [
@@ -286,10 +289,19 @@ class TestVbdSolver(unittest.TestCase):
         params_cpu.n_subproblem_max_iters = 5
         params_cpu.construct()
         params = Params(params_cpu)
+        # Setup OGC
+        multimesh_cpu = pbat.sim.contact.MultiMesh()
+        multimesh_cpu.construct_from_tetrahedral_mesh(
+            fem_cpu.E, np.full(n_nodes, 0, dtype=np.int64), n_components=1
+        )
+        multimesh = GpuMultiMesh(multimesh_cpu)
+        ogc = Ogc(fem.data.x, multimesh)
         x_before = fem.data.x.numpy().copy()
         # Run some number of steps
         for t in range(10):
-            integrate(fem, params)
+            fem.setup_time_integration_optimization()
+            solve(fem, params, ogc)
+            fem.back_substitute_velocities()
         wp.synchronize()
         x_after = fem.data.x.numpy()
         # Free nodes should have moved
