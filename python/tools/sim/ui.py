@@ -164,25 +164,21 @@ class SimulationState:
 
     def solve(self):
         if self.solver == SolverType.AAAVBD:
-            _ = gpu.vbd.aaasolver.solve(self.fem, self.params)
+            _ = gpu.vbd.aaasolver.solve(self.fem, self.params, self.ogc)
         elif self.solver == SolverType.VBD:
-            _ = gpu.vbd.solver.solve(self.fem, self.params)
+            _ = gpu.vbd.solver.solve(self.fem, self.params, self.ogc)
 
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
         if self.capture is None:
             with wp.ScopedCapture() as capture:
                 self.solve()
-                # NOTE: This is just a test
-                self.ogc.prepare_for_execution()
-                self.ogc.detect_contacts()
-                self.ogc.update_displacement_bounds()
             self.capture = capture
         else:
             wp.capture_launch(self.capture.graph)
         self.fem.step()
         self.t += 1
-        
+
         if self.contact_browser is not None:
             self.contact_browser.clear()
             self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
@@ -195,7 +191,7 @@ class SimulationState:
         self.params = gpu.vbd.params.Params(self.params_cpu)
         if self.contact_browser is not None:
             self.contact_browser.clear()
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.05)
+        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.003)
         self.contact_browser = None
         self.capture = None
 

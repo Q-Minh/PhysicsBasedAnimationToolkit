@@ -14,6 +14,7 @@ from .solver import (
     prepare_subproblem,
     finalize_subproblem,
 )
+from ..contact.ogc import Ogc
 
 
 @wp.func
@@ -225,6 +226,7 @@ def solve_subproblem(
 def solve(
     fem: FemElastoDynamics,
     params: Params,
+    ogc: Ogc,
 ) -> bool:
     """Solve the VBD minimization problem.
     Mimics `pbat::sim::algorithm::vbd::Solve`:
@@ -232,6 +234,11 @@ def solve(
     converged = False
     n_max_iters = params.data.n_max_iters
     for k in range(n_max_iters):
+        # TODO: Replace these OGC calls with a proper
+        # contact.MeshDynamics class that uses OGC internally
+        ogc.prepare_for_execution()
+        ogc.detect_contacts()
+        ogc.update_displacement_bounds()
         # TODO: linearize_constraints(fem, params)
         linearize_constraints(fem, params)
         # TODO: if check_convergence(fem, params): break
