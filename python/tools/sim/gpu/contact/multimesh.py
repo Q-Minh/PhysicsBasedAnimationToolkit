@@ -14,7 +14,9 @@ class MultiMeshData:
     EP: wp.array[wp.int32]  # `|# connected components + 1| x 1` edge prefix
     GVHEp: wp.array[wp.int32]  # `|# points + 1| x 1` point to half-edge prefix
     GVHEadj: wp.array[wp.int32]  # `|# half edges| x 1` point to half-edge adjacency
-    GHEF: wp.array[wp.vec2i]  # `2 x |# half edges|` half-edge to face adjacency
+    GHEF: wp.array[
+        wp.vec2i
+    ]  # `2 x |# half edges|` half-edge to face adjacency, with -1 on 2nd row for boundary half-edges.
     EHE: wp.array[
         wp.vec2i
     ]  # `2 x |# edges|` edge to half-edge adjacency, -1 indicates no half-edge
@@ -27,7 +29,6 @@ class MultiMesh:
     """Wrapper for multi-mesh contact handling."""
 
     _data: MultiMeshData  # pyright: ignore[reportGeneralTypeIssues]
-
 
     def __init__(self, mesh: pbat.sim.contact.MultiMesh):
         self._data = MultiMeshData()
@@ -42,7 +43,6 @@ class MultiMesh:
         self._data.GHEF = wp.array(mesh.GHEF.T, dtype=wp.vec2i)
         self._data.EHE = wp.array(mesh.EHE.T, dtype=wp.vec2i)
         self._data.GXV = wp.array(mesh.GXV, dtype=wp.int32)
-
 
     @property
     def data(self) -> MultiMeshData:  # pyright: ignore[reportGeneralTypeIssues]
@@ -63,4 +63,3 @@ class MultiMesh:
     @property
     def n_half_edges(self) -> int:
         return 3 * self.n_triangles
-

@@ -14,7 +14,6 @@ from . import halfedges
 from . import queries
 from .. import common
 
-
 VF_E_FACE_TRIANGLE = wp.constant(0)
 VF_E_FACE_EDGE = wp.constant(1)
 VF_E_FACE_VERTEX = wp.constant(2)
@@ -112,7 +111,6 @@ def _compute_edge_bounding_volume(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     e: wp.int32,
 ):
-    ogc.dmine[e] = ogc.rq
     einds = meshes.E[e]
     xi, xj = x[einds[0]], x[einds[1]]
     xmid = float(0.5) * (xi + xj)
@@ -229,17 +227,12 @@ def is_edge_feasible(
     x: wp.array[wp.vec3f],  # (N,) points
     F: wp.array[wp.vec3i],  # (M,) surface (triangle) indices into points
     GHEF: wp.array[wp.vec2i],  # `2 x |# half edges|` half-edge to face adjacency
-    fi: wp.int32,  # face index
     he: wp.int32,  # half-edge index
     y: wp.vec3f,  # query point
     check_adjacent_facets: wp.bool = wp.bool(True),
 ):
     fzero = wp.float32(0)
     zero = wp.int32(0)
-    hef = GHEF[he]
-    fj = hef[1]  # type: ignore
-    # Handle boundary edge case: no adjacent face (i.e. fj == -1)
-    fj = wp.int32(fj < zero) * fi + wp.int32(fj >= zero) * fj  # type: ignore
     i, j = (
         halfedges.incoming_vertex(F, he),
         halfedges.outgoing_vertex(F, he),
@@ -249,9 +242,14 @@ def is_edge_feasible(
     in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, xj - xi) >= fzero)  # type: ignore
     in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xj, xi - xj) >= fzero)  # type: ignore
     if check_adjacent_facets:
+        hef = GHEF[he]
+        k = halfedges.next_vertex(F, he, wp.int32(2))
+        fi = hef[0]  # type: ignore
+        fj = hef[1]  # type: ignore
+        # Handle boundary edge case: no adjacent face (i.e. fj == -1)
+        fj = wp.int32(fj < zero) * fi + wp.int32(fj >= zero) * fj  # type: ignore
         # Get the third vertex l of triangle fj that is not part of undirected edge (i,j).
         # NOTE: Whenever fj == fi (i.e. boundary edge), l == k.
-        k = halfedges.next_vertex(F, he, wp.int32(2))
         fjinds = F[fj]
         l = (
             wp.int32(fjinds[0] != i and fjinds[0] != j) * fjinds[0]  # type: ignore
@@ -269,6 +267,18 @@ def is_edge_feasible(
         in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, pin) >= fzero)  # type: ignore
         in_edge_feasible_region = in_edge_feasible_region and (wp.dot(y - xi, pjn) >= fzero)  # type: ignore
     return in_edge_feasible_region
+
+
+@wp.func
+def is_triangle_feasible(
+    xi: wp.vec3f,  # triangle vertex position 1
+    xj: wp.vec3f,  # triangle vertex position 2
+    xk: wp.vec3f,  # triangle vertex position 3
+    y: wp.vec3f,  # query point
+):
+    n = wp.cross(xj - xi, xk - xi)  # type: ignore
+    in_face_feasible_region = wp.dot(y - xi, n) >= wp.float32(0)  # type: ignore
+    return in_face_feasible_region
 
 
 @wp.func
@@ -317,14 +327,15 @@ def _classify_vertex_facet_contacts(
             tvf[brow] = n_tris
         elif e_face == VF_E_FACE_EDGE:
             if is_edge_feasible(
-                x, meshes.F, meshes.GHEF, f, a, xi, check_adjacent_facets=wp.bool(True)
+                x, meshes.F, meshes.GHEF, a, xi, check_adjacent_facets=wp.bool(True)
             ):  # type: ignore
                 hei, hej = a, halfedges.opposite_half_edge(meshes.F, a, meshes.GHEF)
                 tve[brow] = wp.max(hei, hej)
                 n_ve += wp.int32(1)
             tvf[brow] = n_tris
         else:  # VF_E_FACE_TRIANGLE
-            n_vf += wp.int32(1)
+            if is_triangle_feasible(xj, xk, xl, xi):  # type: ignore
+                n_vf += wp.int32(1)
     return tvv, tve, tvf, n_vv, n_ve, n_vf
 
 
@@ -381,10 +392,16 @@ def _classify_edge_edge_contacts(
         if is_xc1_vertex or is_xc2_vertex:
             tee[brow] = n_half_edges
             continue
-        he2 = meshes.EHE[e2]
-        hei2, hej2 = he2[0], he2[1]
-        tee[n_ee] = wp.max(hei2, hej2)
-        n_ee += wp.int32(1)
+        ehe2 = meshes.EHE[e2]
+        hei2, hej2 = ehe2[0], ehe2[1]
+        he2 = wp.max(hei2, hej2)
+        if is_edge_feasible(
+            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(True)  # type: ignore
+        ) and is_edge_feasible(
+            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(True)  # type: ignore
+        ):  # type: ignore
+            tee[n_ee] = he2
+            n_ee += wp.int32(1)
     return tee, n_ee
 
 
@@ -815,14 +832,12 @@ class Ogc:
                 self._ogc.e_uppers,
                 constructor="lbvh",
                 groups=None,
-                leaf_size=4,
             ),
             wp.Bvh(
                 self._ogc.f_lowers,
                 self._ogc.f_uppers,
                 constructor="lbvh",
                 groups=None,
-                leaf_size=4,
             ),
         )
         self._ogc.e_bvh_id, self._ogc.f_bvh_id = (
@@ -1067,170 +1082,3 @@ class Ogc:
     @property
     def ree_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
         return self._ree.uv()
-
-
-class OgcContactBrowser:
-    """Simple Polyscope/imgui browser for OGC contact pairs."""
-
-    _CONTACT_KINDS = ["VV", "VE", "VF", "EE"]
-
-    def __init__(self, ogc: Ogc):
-        self._ogc = ogc
-        self._x = ogc._points.numpy()
-        self._V = ogc._meshes.data.V.numpy()
-        self._F = ogc._meshes.data.F.numpy()
-        self._kind_idx: int = 0
-        self._contact_idx: int = 0
-        self._show_reverse: bool = False
-        self._stencil_pc = None
-        self._stencil_cn = None
-        self._stencil_sm = None
-        self._last_visualized: tuple[int, int, int, bool] | None = None
-
-    def clear(self):
-        if self._stencil_pc is not None:
-            ps.remove_point_cloud(self._stencil_pc.get_name())
-            self._stencil_pc = None
-        if self._stencil_cn is not None:
-            ps.remove_curve_network(self._stencil_cn.get_name())
-            self._stencil_cn = None
-        if self._stencil_sm is not None:
-            ps.remove_surface_mesh(self._stencil_sm.get_name())
-            self._stencil_sm = None
-
-    def draw(self):
-        imgui.PushID("OgcContactBrowser")  # type: ignore
-
-        imgui.Text(f"# Vertex-Vertex Contacts: {len(self._ogc.vv_contacts[0])}")  # type: ignore
-        imgui.Text(f"# Vertex-Edge Contacts: {len(self._ogc.ve_contacts[0])}")  # type: ignore
-        imgui.Text(f"# Vertex-Triangle Contacts: {len(self._ogc.vf_contacts[0])}")  # type: ignore
-        imgui.Text(f"# Edge-Edge Contacts: {len(self._ogc.ee_contacts[0])}")  # type: ignore
-
-        changed, self._show_reverse = imgui.Checkbox("Show Reverse", self._show_reverse)  # type: ignore
-        if changed:
-            self._contact_idx = 0
-
-        changed, self._kind_idx = imgui.Combo("Kind", self._kind_idx, self._CONTACT_KINDS)  # type: ignore
-        if changed:
-            self._contact_idx = 0
-
-        contacts = self._get_selected_contacts()
-        n = len(contacts[0])
-        if n == 0:
-            self._contact_idx = 0
-            self.clear()
-            self._last_visualized = None
-            imgui.Text("No contacts of selected kind.")  # type: ignore
-            imgui.PopID()  # type: ignore
-            return
-
-        self._contact_idx = max(0, min(self._contact_idx, n - 1))
-
-        if imgui.Button("<##ogc_prev"):  # type: ignore
-            self._contact_idx = max(0, self._contact_idx - 1)
-        imgui.SameLine()  # type: ignore
-        imgui.SetNextItemWidth(80)  # type: ignore
-        _, self._contact_idx = imgui.InputInt("Index", self._contact_idx)  # type: ignore
-        self._contact_idx = max(0, min(self._contact_idx, n - 1))
-        imgui.SameLine()  # type: ignore
-        if imgui.Button(">##ogc_next"):  # type: ignore
-            self._contact_idx = min(n - 1, self._contact_idx + 1)
-        imgui.SameLine()  # type: ignore
-        imgui.Text(f"/ {n - 1}")  # type: ignore
-
-        signature = (self._kind_idx, self._contact_idx, n, self._show_reverse)
-        if signature != self._last_visualized:
-            self._visualize_current_contact()
-            self._last_visualized = signature
-
-        u = int(contacts[0][self._contact_idx])
-        v = int(contacts[1][self._contact_idx])
-        imgui.Text(f"pair = ({u}, {v})")  # type: ignore
-
-        imgui.PopID()  # type: ignore
-
-    def _get_selected_contacts(self) -> tuple[np.ndarray, np.ndarray]:
-        if self._show_reverse:
-            if self._kind_idx == 0:
-                return self._ogc.rvv_contacts
-            if self._kind_idx == 1:
-                return self._ogc.rve_contacts
-            if self._kind_idx == 2:
-                return self._ogc.rvf_contacts
-            return self._ogc.ree_contacts
-        else:
-            if self._kind_idx == 0:
-                return self._ogc.vv_contacts
-            if self._kind_idx == 1:
-                return self._ogc.ve_contacts
-            if self._kind_idx == 2:
-                return self._ogc.vf_contacts
-            return self._ogc.ee_contacts
-
-    def _visualize_current_contact(self):
-        self.clear()
-
-        contacts = self._get_selected_contacts()
-        if len(contacts[0]) == 0:
-            return
-
-        x = self._x
-        V = self._V
-        F = self._F
-        k = self._contact_idx
-
-        if self._kind_idx == 0:
-            u, v = int(contacts[0][k]), int(contacts[1][k])
-            iu = int(V[u])
-            iv = int(V[v])
-            self._stencil_pc = ps.register_point_cloud("OGC VV Contact", x[[iu, iv], :])
-
-        elif self._kind_idx == 1:
-            v, he = (
-                (int(contacts[0][k]), int(contacts[1][k]))
-                if not self._show_reverse
-                else (int(contacts[1][k]), int(contacts[0][k]))
-            )
-            iv = int(V[v])
-            f = he // 3
-            e_local = he % 3
-            i = int(F[f, e_local])
-            j = int(F[f, (e_local + 1) % 3])
-            self._stencil_pc = ps.register_point_cloud("OGC VE Vertex", x[[iv], :])
-            self._stencil_cn = ps.register_curve_network(
-                "OGC VE Edge",
-                x[[i, j], :],
-                np.array([[0, 1]], dtype=np.int32),
-            )
-
-        elif self._kind_idx == 2:
-            v, f = (
-                (int(contacts[0][k]), int(contacts[1][k]))
-                if not self._show_reverse
-                else (int(contacts[1][k]), int(contacts[0][k]))
-            )
-            iv = int(V[v])
-            tri = F[f, :]
-            self._stencil_pc = ps.register_point_cloud("OGC VF Vertex", x[[iv], :])
-            self._stencil_sm = ps.register_surface_mesh(
-                "OGC VF Triangle",
-                x[tri, :],
-                np.array([[0, 1, 2]], dtype=np.int32),
-            )
-
-        elif self._kind_idx == 3:
-            he0, he1 = int(contacts[0][k]), int(contacts[1][k])
-            f0, e0 = he0 // 3, he0 % 3
-            f1, e1 = he1 // 3, he1 % 3
-            i0 = int(F[f0, e0])
-            i1 = int(F[f0, (e0 + 1) % 3])
-            j0 = int(F[f1, e1])
-            j1 = int(F[f1, (e1 + 1) % 3])
-            self._stencil_cn = ps.register_curve_network(
-                "OGC EE Edges",
-                x[[i0, i1, j0, j1], :],
-                np.array([[0, 1], [2, 3]], dtype=np.int32),
-            )
-
-        else:
-            raise NotImplementedError(f"Contact kind {self._kind_idx} not supported")

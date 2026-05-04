@@ -153,8 +153,8 @@ class SimulationState:
             fem_cpu.E, np.full(n_nodes, 0, dtype=np.int64), n_components=1
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.05)
-        self.contact_browser = gpu.contact.ogc.OgcContactBrowser(self.ogc)
+        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.01)
+        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
 
         # Simulation state
         self.simulate: bool = False
@@ -183,7 +183,7 @@ class SimulationState:
         self.t += 1
         # NOTE: Make this optional
         self.contact_browser.clear()
-        self.contact_browser = gpu.contact.ogc.OgcContactBrowser(self.ogc)
+        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
 
     def reset(self):
         self.t = 0
@@ -192,7 +192,8 @@ class SimulationState:
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = gpu.vbd.params.Params(self.params_cpu)
         self.contact_browser.clear()
-        self.contact_browser = gpu.contact.ogc.OgcContactBrowser(self.ogc)
+        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.05)
+        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
         self.capture = None
 
 
@@ -275,9 +276,9 @@ def make_callback(
 
 
 def _update_mesh(state: SimulationState, mesh_name: str):
-    wp.synchronize()
     x = state.fem.data.x.numpy()  # (N, 3)
     ps.get_volume_mesh(mesh_name).update_vertex_positions(x)
+    ps.get_surface_mesh(mesh_name).update_vertex_positions(x)
 
 
 # --- Entry point ---
@@ -328,6 +329,9 @@ def main():
     )
     vm.add_scalar_quantity(
         "m(i)", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
+    )
+    sm = ps.register_surface_mesh(
+        mesh_name, fem_cpu.X.T, state.multimesh.data.F.numpy()
     )
     ps.set_user_callback(make_callback(state, UIState(), mesh_name))
     ps.show()
