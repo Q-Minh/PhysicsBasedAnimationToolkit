@@ -116,6 +116,7 @@ class UIState:
         self.request_reset: bool = False
         self.item_width: int = 250
         self.screenshot_after_step: bool = False
+        self.debug_tab_active: bool = False
 
 
 class SimulationState:
@@ -154,7 +155,7 @@ class SimulationState:
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.01)
-        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
+        self.contact_browser = None
 
         # Simulation state
         self.simulate: bool = False
@@ -181,9 +182,10 @@ class SimulationState:
             wp.capture_launch(self.capture.graph)
         self.fem.step()
         self.t += 1
-        # NOTE: Make this optional
-        self.contact_browser.clear()
-        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
+        
+        if self.contact_browser is not None:
+            self.contact_browser.clear()
+            self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
 
     def reset(self):
         self.t = 0
@@ -191,9 +193,10 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = gpu.vbd.params.Params(self.params_cpu)
-        self.contact_browser.clear()
+        if self.contact_browser is not None:
+            self.contact_browser.clear()
         self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.05)
-        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
+        self.contact_browser = None
         self.capture = None
 
 
@@ -204,71 +207,87 @@ def make_callback(
         ui_state.request_reset = False
 
         imgui.PushItemWidth(ui_state.item_width)
-        imgui.Text(f"Step: {state.t}  Time: {state.t * state.dt:.4f}s")
-        imgui.Separator()
 
-        # --- Integration controls ---
-        if imgui.TreeNode("Integration"):
-            _, state.dt = imgui.InputFloat("dt", state.dt, format="%.5f")
-            _, state.bdf_scheme = imgui.InputInt("BDF order", state.bdf_scheme)
-            state.bdf_scheme = max(1, min(6, state.bdf_scheme))
-            init_strategies = list(
-                pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
-            )
-            idx = init_strategies.index(state.init_strategy)
-            _, idx = imgui.Combo(
-                "Init Strategy", idx, [s.name for s in init_strategies]
-            )
-            state.init_strategy = init_strategies[idx]
-            imgui.TreePop()
+        if imgui.BeginTabBar("MainTabs"):
+            if imgui.BeginTabItem("Simulation", True)[0]:
+                imgui.Text(f"Step: {state.t}  Time: {state.t * state.dt:.4f}s")
+                imgui.Separator()
 
-        # --- Solver selection ---
-        if imgui.TreeNode("Solver"):
-            solvers = list(SolverType)
-            solver_idx = solvers.index(state.solver)
-            _, solver_idx = imgui.Combo("Solver", solver_idx, [s.name for s in solvers])
-            new_solver = solvers[solver_idx]
-            if new_solver != state.solver:
-                state.solver = new_solver
-                state.reset()
-                ui_state.request_reset = True
-            imgui.TreePop()
+                # --- Integration controls ---
+                if imgui.TreeNode("Integration"):
+                    _, state.dt = imgui.InputFloat("dt", state.dt, format="%.5f")
+                    _, state.bdf_scheme = imgui.InputInt("BDF order", state.bdf_scheme)
+                    state.bdf_scheme = max(1, min(6, state.bdf_scheme))
+                    init_strategies = list(
+                        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
+                    )
+                    idx = init_strategies.index(state.init_strategy)
+                    _, idx = imgui.Combo(
+                        "Init Strategy", idx, [s.name for s in init_strategies]
+                    )
+                    state.init_strategy = init_strategies[idx]
+                    imgui.TreePop()
 
-        # --- Solver params ---
-        if imgui.TreeNode("VBD Params"):
-            draw_params(state.params_cpu)
-            imgui.TreePop()
+                # --- Solver selection ---
+                if imgui.TreeNode("Solver"):
+                    solvers = list(SolverType)
+                    solver_idx = solvers.index(state.solver)
+                    _, solver_idx = imgui.Combo(
+                        "Solver", solver_idx, [s.name for s in solvers]
+                    )
+                    new_solver = solvers[solver_idx]
+                    if new_solver != state.solver:
+                        state.solver = new_solver
+                        state.reset()
+                        ui_state.request_reset = True
+                    imgui.TreePop()
 
-        imgui.Separator()
+                # --- Solver params ---
+                if imgui.TreeNode("VBD Params"):
+                    draw_params(state.params_cpu)
+                    imgui.TreePop()
 
-        # --- Simulation controls ---
-        _, ui_state.screenshot_after_step = imgui.Checkbox(
-            "Screenshot", ui_state.screenshot_after_step
-        )
-        _, state.simulate = imgui.Checkbox("Simulate", state.simulate)
-        imgui.SameLine()
-        _, state.until_t = imgui.InputInt("Until", state.until_t)
-        if state.t == state.until_t:
-            state.simulate = False
+                imgui.Separator()
 
-        if imgui.Button("Reset") or ui_state.request_reset:
-            state.reset()
-            _update_mesh(state, mesh_name)
+                # --- Simulation controls ---
+                _, ui_state.screenshot_after_step = imgui.Checkbox(
+                    "Screenshot", ui_state.screenshot_after_step
+                )
+                _, state.simulate = imgui.Checkbox("Simulate", state.simulate)
+                imgui.SameLine()
+                _, state.until_t = imgui.InputInt("Until", state.until_t)
+                if state.t == state.until_t:
+                    state.simulate = False
 
-        # --- Continuous simulation ---
-        request_step = state.simulate or imgui.Button("Step")
-        if request_step:
-            if ui_state.screenshot_after_step and state.t == 0:
-                ps.screenshot("{:08d}.png".format(state.t))
-            state.step()
-            _update_mesh(state, mesh_name)
-            if ui_state.screenshot_after_step:
-                ps.screenshot("{:08d}.png".format(state.t))
+                if imgui.Button("Reset") or ui_state.request_reset:
+                    state.reset()
+                    _update_mesh(state, mesh_name)
 
-        imgui.Separator()
-        if imgui.TreeNode("OGC Contact Browser"):
-            state.contact_browser.draw()
-            imgui.TreePop()
+                # --- Continuous simulation ---
+                request_step = state.simulate or imgui.Button("Step")
+                if request_step:
+                    if ui_state.screenshot_after_step and state.t == 0:
+                        ps.screenshot("{:08d}.png".format(state.t))
+                    state.step()
+                    _update_mesh(state, mesh_name)
+                    if ui_state.screenshot_after_step:
+                        ps.screenshot("{:08d}.png".format(state.t))
+
+                ui_state.debug_tab_active = False
+                imgui.EndTabItem()
+
+            if imgui.BeginTabItem("Debug", True)[0]:
+                if not ui_state.debug_tab_active or state.contact_browser is None:
+                    if state.contact_browser is not None:
+                        state.contact_browser.clear()
+                    state.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(
+                        state.ogc
+                    )
+                ui_state.debug_tab_active = True
+                state.contact_browser.draw()
+                imgui.EndTabItem()
+
+            imgui.EndTabBar()
 
         imgui.PopItemWidth()
 
@@ -278,7 +297,6 @@ def make_callback(
 def _update_mesh(state: SimulationState, mesh_name: str):
     x = state.fem.data.x.numpy()  # (N, 3)
     ps.get_volume_mesh(mesh_name).update_vertex_positions(x)
-    ps.get_surface_mesh(mesh_name).update_vertex_positions(x)
 
 
 # --- Entry point ---
@@ -329,9 +347,6 @@ def main():
     )
     vm.add_scalar_quantity(
         "m(i)", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
-    )
-    sm = ps.register_surface_mesh(
-        mesh_name, fem_cpu.X.T, state.multimesh.data.F.numpy()
     )
     ps.set_user_callback(make_callback(state, UIState(), mesh_name))
     ps.show()
