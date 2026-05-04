@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Tuple
 
 import numpy as np
@@ -6,18 +5,29 @@ import cupy as cp
 
 import warp as wp
 
+from ...common.fields import DocField
 
-@dataclass
+
 class OgcParams:
     """Parameters for Offset Geometric Contact detection."""
 
-    r: float = 0.003
-    rq: float = 0.005
-    gammap: float = 0.45
-    n_vv_contact_capacity: float = 1.0
-    n_ve_contact_capacity: float = 1.0
-    n_vf_contact_capacity: float = 1.0
-    n_ee_contact_capacity: float = 1.0
+    r = DocField(0.003, "Contact radius. Pairs closer than r are in contact.")
+    rq = DocField(0.005, "Query radius for broad-phase BVH traversal (should be >= r).")
+    gammap = DocField(
+        0.45, "Relaxation factor for displacement bounds (0 < gammap < 0.5)."
+    )
+    n_vv_contact_capacity = DocField(
+        1.0, "Vertex-vertex capacity multiplier (x num_vertices)."
+    )
+    n_ve_contact_capacity = DocField(
+        1.0, "Vertex-edge capacity multiplier (x num_vertices)."
+    )
+    n_vf_contact_capacity = DocField(
+        1.0, "Vertex-face capacity multiplier (x num_vertices)."
+    )
+    n_ee_contact_capacity = DocField(
+        1.0, "Edge-edge capacity multiplier (x num_edges)."
+    )
 
 
 from .multimesh import MultiMesh, MultiMeshData
@@ -81,6 +91,10 @@ class ContactPairs:
         nuv = cp.asarray(self.data.prefix)[-1].get()
         u, v = self.data.u.numpy()[:nuv], self.data.v.numpy()[:nuv]
         return u, v
+
+    def size(self):
+        """Get the number of contact pairs."""
+        return cp.asarray(self.data.prefix)[-1].get()
 
 
 @wp.struct
@@ -797,10 +811,10 @@ class Ogc:
         self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
         self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
 
-        vv_capacity = int(params.n_vv_contact_capacity * meshes.n_verts)
-        ve_capacity = int(params.n_ve_contact_capacity * meshes.n_verts)
-        vf_capacity = int(params.n_vf_contact_capacity * meshes.n_verts)
-        ee_capacity = int(params.n_ee_contact_capacity * meshes.n_edges)
+        vv_capacity = int(params.n_vv_contact_capacity * meshes.n_verts)  # type: ignore
+        ve_capacity = int(params.n_ve_contact_capacity * meshes.n_verts)  # type: ignore
+        vf_capacity = int(params.n_vf_contact_capacity * meshes.n_verts)  # type: ignore
+        ee_capacity = int(params.n_ee_contact_capacity * meshes.n_edges)  # type: ignore
 
         self._vv, self._rvv = ContactPairs(
             meshes.n_verts, meshes.n_verts, vv_capacity
@@ -1067,6 +1081,15 @@ class Ogc:
             self._ve.capacity,
             self._vf.capacity,
             self._ee.capacity,
+        )
+
+    @property
+    def num_contacts(self) -> Tuple[int, int, int, int]:
+        return (
+            self._vv.size(),
+            self._ve.size(),
+            self._vf.size(),
+            self._ee.size(),
         )
 
     @property

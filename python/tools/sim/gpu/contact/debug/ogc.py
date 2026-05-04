@@ -3,6 +3,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from ..ogc import *
 
+
 class OgcContactBrowser:
     """Simple Polyscope/imgui browser for OGC contact pairs."""
 
@@ -49,16 +50,15 @@ class OgcContactBrowser:
         if changed:
             self._focus_camera_on_contact()
 
-        imgui.Text(f"# Vertex-Vertex Contacts: {len(self._ogc.vv_contacts[0])}")  # type: ignore
-        imgui.Text(f"# Vertex-Edge Contacts: {len(self._ogc.ve_contacts[0])}")  # type: ignore
-        imgui.Text(f"# Vertex-Triangle Contacts: {len(self._ogc.vf_contacts[0])}")  # type: ignore
-        imgui.Text(f"# Edge-Edge Contacts: {len(self._ogc.ee_contacts[0])}")  # type: ignore
-
         changed, self._show_reverse = imgui.Checkbox("Show Reverse", self._show_reverse)  # type: ignore
         if changed:
             self._contact_idx = 0
 
-        changed, self._kind_idx = imgui.Combo("Kind", self._kind_idx, self._CONTACT_KINDS)  # type: ignore
+        contact_kinds = [
+            f"{kind} ({count})"
+            for kind, count in zip(self._CONTACT_KINDS, self._ogc.num_contacts)
+        ]
+        changed, self._kind_idx = imgui.Combo("Kind", self._kind_idx, contact_kinds)  # type: ignore
         if changed:
             self._contact_idx = 0
 
@@ -250,7 +250,9 @@ class OgcContactBrowser:
                 else (int(contacts[1][k]), int(contacts[0][k]))
             )
             f, e_local = he // 3, he % 3
-            pts = x[[int(V[v_idx]), int(F[f, e_local]), int(F[f, (e_local + 1) % 3])], :]
+            pts = x[
+                [int(V[v_idx]), int(F[f, e_local]), int(F[f, (e_local + 1) % 3])], :
+            ]
         elif self._kind_idx == 2:  # VF
             v_idx, f = (
                 (int(contacts[0][k]), int(contacts[1][k]))
@@ -262,8 +264,15 @@ class OgcContactBrowser:
             he0, he1 = int(contacts[0][k]), int(contacts[1][k])
             f0, e0 = he0 // 3, he0 % 3
             f1, e1 = he1 // 3, he1 % 3
-            pts = x[[int(F[f0, e0]), int(F[f0, (e0 + 1) % 3]),
-                      int(F[f1, e1]), int(F[f1, (e1 + 1) % 3])], :]
+            pts = x[
+                [
+                    int(F[f0, e0]),
+                    int(F[f0, (e0 + 1) % 3]),
+                    int(F[f1, e1]),
+                    int(F[f1, (e1 + 1) % 3]),
+                ],
+                :,
+            ]
 
         centroid = pts.mean(axis=0)
         # Bounding-sphere radius of the stencil points around the centroid

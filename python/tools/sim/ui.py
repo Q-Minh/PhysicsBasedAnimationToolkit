@@ -240,7 +240,16 @@ def make_callback(
 
                 # --- Contact parameters ---
                 if imgui.TreeNode("Contact"):
-                    draw_params(state.ogc_params)
+                    if imgui.TreeNode("Statistics"):
+                        nvv, nve, nvf, nee = state.ogc.num_contacts
+                        imgui.Text(f"# Vertex-Vertex Contacts: {nvv}")
+                        imgui.Text(f"# Vertex-Edge Contacts: {nve}")
+                        imgui.Text(f"# Vertex-Face Contacts: {nvf}")
+                        imgui.Text(f"# Edge-Edge Contacts: {nee}")
+                        imgui.TreePop()
+                    if imgui.TreeNode("Params"):
+                        draw_params(state.ogc_params)
+                        imgui.TreePop()
                     imgui.TreePop()
 
                 imgui.Separator()
