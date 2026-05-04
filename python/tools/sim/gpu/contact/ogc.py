@@ -720,14 +720,16 @@ def _compute_reverse_contact_counts(ogc: OgcData):  # type: ignore
 class Ogc:
     """Offset Geometric Contact"""
 
-    vv: ContactPairs
-    rvv: ContactPairs
-    ve: ContactPairs
-    rve: ContactPairs
-    vf: ContactPairs
-    rvf: ContactPairs
-    ee: ContactPairs
-    ree: ContactPairs
+    _vv: ContactPairs  # Vertex-Vertex contact pair list
+    _rvv: ContactPairs  # Vertex-Vertex reverse contact pair list
+    _ve: ContactPairs  # Vertex-Edge contact pair list
+    _rve: ContactPairs  # Vertex-Edge reverse contact pair list
+    _vf: ContactPairs  # Vertex-Face contact pair list
+    _rvf: ContactPairs  # Vertex-Face reverse contact pair list
+    _ee: ContactPairs  # Edge-Edge contact pair list
+    _ree: ContactPairs  # Edge-Edge reverse contact pair list
+    _streams: list[wp.Stream]  # Stream list
+
     _ogc: OgcData  # pyright: ignore[reportGeneralTypeIssues]
     _e_bvh: wp.Bvh  # BVH over edges
     _f_bvh: wp.Bvh  # BVH over faces
@@ -779,25 +781,27 @@ class Ogc:
         vf_capacity = int(n_vf_contact_capacity * meshes.n_verts)
         ee_capacity = int(n_ee_contact_capacity * meshes.n_edges)
 
-        self.vv, self.rvv = ContactPairs(
+        self._vv, self._rvv = ContactPairs(
             meshes.n_verts, meshes.n_verts, vv_capacity
         ), ContactPairs(meshes.n_verts, meshes.n_verts, vv_capacity)
-        self._ogc.vv, self._ogc.rvv = self.vv.data, self.rvv.data
+        self._ogc.vv, self._ogc.rvv = self._vv.data, self._rvv.data
 
-        self.ve, self.rve = ContactPairs(
+        self._ve, self._rve = ContactPairs(
             meshes.n_verts, meshes.n_half_edges, ve_capacity
         ), ContactPairs(meshes.n_half_edges, meshes.n_verts, ve_capacity)
-        self._ogc.ve, self._ogc.rve = self.ve.data, self.rve.data
+        self._ogc.ve, self._ogc.rve = self._ve.data, self._rve.data
 
-        self.vf, self.rvf = ContactPairs(
+        self._vf, self._rvf = ContactPairs(
             meshes.n_verts, meshes.n_triangles, vf_capacity
         ), ContactPairs(meshes.n_triangles, meshes.n_verts, vf_capacity)
-        self._ogc.vf, self._ogc.rvf = self.vf.data, self.rvf.data
+        self._ogc.vf, self._ogc.rvf = self._vf.data, self._rvf.data
 
-        self.ee, self.ree = ContactPairs(
+        self._ee, self._ree = ContactPairs(
             meshes.n_half_edges, meshes.n_half_edges, ee_capacity
         ), ContactPairs(meshes.n_half_edges, meshes.n_half_edges, ee_capacity)
-        self._ogc.ee, self._ogc.ree = self.ee.data, self.ree.data
+        self._ogc.ee, self._ogc.ree = self._ee.data, self._ree.data
+
+        self._streams = [wp.Stream() for _ in range(8)]
 
         dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
         wp.launch(
@@ -842,14 +846,14 @@ class Ogc:
             else:
                 bvh.refit()
         # Reset contact pairs
-        self.vv.clear()
-        self.rvv.clear()
-        self.ve.clear()
-        self.rve.clear()
-        self.vf.clear()
-        self.rvf.clear()
-        self.ee.clear()
-        self.ree.clear()
+        self._vv.clear()
+        self._rvv.clear()
+        self._ve.clear()
+        self._rve.clear()
+        self._vf.clear()
+        self._rvf.clear()
+        self._ee.clear()
+        self._ree.clear()
 
     def detect_contacts(self):  # type: ignore
         n_verts, n_edges, n_half_edges, n_tris = (
@@ -858,6 +862,7 @@ class Ogc:
             self._meshes.n_half_edges,
             self._meshes.n_triangles,
         )
+        main_stream = wp.get_stream()
         # 1. Compute contact set
         wp.launch(
             _fused_contact_detection,
@@ -868,53 +873,116 @@ class Ogc:
                 self._ogc,
             ],
             block_dim=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
+            stream=main_stream,
         )
-        # TODO: Use stream-parallelism for each contact pair list, and independent operations.
 
         # 2. Construct CSR representation of forward contacts
         # Each pair (u,v) for a given u is stored contiguously and sorted by v after
         # the fused contact detection. We only need to (stable-)sort by u. The counts
         # for each u are stored in counts, so the CSR prefix is an exclusive scan.
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.capacity
-        wp.utils.radix_sort_pairs(
-            keys=self.vv.data.u, values=self.vv.data.v, count=vv_capacity
-        )
-        wp.utils.radix_sort_pairs(
-            keys=self.ve.data.u, values=self.ve.data.v, count=ve_capacity
-        )
-        wp.utils.radix_sort_pairs(
-            keys=self.vf.data.u, values=self.vf.data.v, count=vf_capacity
-        )
-        wp.utils.radix_sort_pairs(
-            keys=self.ee.data.u, values=self.ee.data.v, count=ee_capacity
-        )
-        wp.utils.array_scan(self.vv.data.counts, self.vv.data.prefix, inclusive=False)
-        wp.utils.array_scan(self.ve.data.counts, self.ve.data.prefix, inclusive=False)
-        wp.utils.array_scan(self.vf.data.counts, self.vf.data.prefix, inclusive=False)
-        wp.utils.array_scan(self.ee.data.counts, self.ee.data.prefix, inclusive=False)
+        with wp.ScopedStream(self._streams[0]):
+            wp.utils.radix_sort_pairs(
+                keys=self._vv.data.u, values=self._vv.data.v, count=vv_capacity
+            )
+        with wp.ScopedStream(self._streams[1]):
+            wp.utils.radix_sort_pairs(
+                keys=self._ve.data.u, values=self._ve.data.v, count=ve_capacity
+            )
+        with wp.ScopedStream(self._streams[2]):
+            wp.utils.radix_sort_pairs(
+                keys=self._vf.data.u, values=self._vf.data.v, count=vf_capacity
+            )
+        with wp.ScopedStream(self._streams[3]):
+            wp.utils.radix_sort_pairs(
+                keys=self._ee.data.u, values=self._ee.data.v, count=ee_capacity
+            )
+        with wp.ScopedStream(self._streams[4]):
+            wp.utils.array_scan(
+                self._vv.data.counts, self._vv.data.prefix, inclusive=False
+            )
+        with wp.ScopedStream(self._streams[5]):
+            wp.utils.array_scan(
+                self._ve.data.counts, self._ve.data.prefix, inclusive=False
+            )
+        with wp.ScopedStream(self._streams[6]):
+            wp.utils.array_scan(
+                self._vf.data.counts, self._vf.data.prefix, inclusive=False
+            )
+        with wp.ScopedStream(self._streams[7]):
+            wp.utils.array_scan(
+                self._ee.data.counts, self._ee.data.prefix, inclusive=False
+            )
         # 3. Construct CSR representation of backward contacts
         # We need to store pairs (v,u) for each (u,v) for reverse contacts via mem copy.
         # Then, we sort by v (named u in reverse ContactPairs).
-        wp.copy(self.rvv.data.u, self.vv.data.v, count=vv_capacity)
-        wp.copy(self.rvv.data.v, self.vv.data.u, count=vv_capacity)
-        wp.copy(self.rve.data.u, self.ve.data.v, count=ve_capacity)
-        wp.copy(self.rve.data.v, self.ve.data.u, count=ve_capacity)
-        wp.copy(self.rvf.data.u, self.vf.data.v, count=vf_capacity)
-        wp.copy(self.rvf.data.v, self.vf.data.u, count=vf_capacity)
-        wp.copy(self.ree.data.u, self.ee.data.v, count=ee_capacity)
-        wp.copy(self.ree.data.v, self.ee.data.u, count=ee_capacity)
-        wp.utils.radix_sort_pairs(
-            keys=self.rvv.data.u, values=self.rvv.data.v, count=vv_capacity
+        wp.copy(
+            self._rvv.data.u,
+            self._vv.data.v,
+            count=vv_capacity,
+            stream=self._streams[0],
         )
-        wp.utils.radix_sort_pairs(
-            keys=self.rve.data.u, values=self.rve.data.v, count=ve_capacity
+        wp.copy(
+            self._rvv.data.v,
+            self._vv.data.u,
+            count=vv_capacity,
+            stream=self._streams[0],
         )
-        wp.utils.radix_sort_pairs(
-            keys=self.rvf.data.u, values=self.rvf.data.v, count=vf_capacity
+        wp.copy(
+            self._rve.data.u,
+            self._ve.data.v,
+            count=ve_capacity,
+            stream=self._streams[1],
         )
-        wp.utils.radix_sort_pairs(
-            keys=self.ree.data.u, values=self.ree.data.v, count=ee_capacity
+        wp.copy(
+            self._rve.data.v,
+            self._ve.data.u,
+            count=ve_capacity,
+            stream=self._streams[1],
         )
+        wp.copy(
+            self._rvf.data.u,
+            self._vf.data.v,
+            count=vf_capacity,
+            stream=self._streams[2],
+        )
+        wp.copy(
+            self._rvf.data.v,
+            self._vf.data.u,
+            count=vf_capacity,
+            stream=self._streams[2],
+        )
+        wp.copy(
+            self._ree.data.u,
+            self._ee.data.v,
+            count=ee_capacity,
+            stream=self._streams[3],
+        )
+        wp.copy(
+            self._ree.data.v,
+            self._ee.data.u,
+            count=ee_capacity,
+            stream=self._streams[3],
+        )
+        with wp.ScopedStream(self._streams[0]):
+            wp.utils.radix_sort_pairs(
+                keys=self._rvv.data.u, values=self._rvv.data.v, count=vv_capacity
+            )
+        with wp.ScopedStream(self._streams[1]):
+            wp.utils.radix_sort_pairs(
+                keys=self._rve.data.u, values=self._rve.data.v, count=ve_capacity
+            )
+        with wp.ScopedStream(self._streams[2]):
+            wp.utils.radix_sort_pairs(
+                keys=self._rvf.data.u, values=self._rvf.data.v, count=vf_capacity
+            )
+        with wp.ScopedStream(self._streams[3]):
+            wp.utils.radix_sort_pairs(
+                keys=self._ree.data.u, values=self._ree.data.v, count=ee_capacity
+            )
+        # Fence
+        for stream in self._streams:
+            main_stream.wait_stream(stream)
         block_dim = 256
         n_threads = max(n_verts, n_half_edges, n_tris)
         # Round up to a multiple of block_dim so that wp.tile() is always called by
@@ -927,11 +995,26 @@ class Ogc:
             dim=n_threads_padded,
             inputs=[self._ogc],
             block_dim=block_dim,
+            stream=main_stream,
         )
-        wp.utils.array_scan(self.rvv.data.counts, self.rvv.data.prefix, inclusive=False)
-        wp.utils.array_scan(self.rve.data.counts, self.rve.data.prefix, inclusive=False)
-        wp.utils.array_scan(self.rvf.data.counts, self.rvf.data.prefix, inclusive=False)
-        wp.utils.array_scan(self.ree.data.counts, self.ree.data.prefix, inclusive=False)
+        with wp.ScopedStream(self._streams[0]):
+            wp.utils.array_scan(
+                self._rvv.data.counts, self._rvv.data.prefix, inclusive=False
+            )
+        with wp.ScopedStream(self._streams[1]):
+            wp.utils.array_scan(
+                self._rve.data.counts, self._rve.data.prefix, inclusive=False
+            )
+        with wp.ScopedStream(self._streams[2]):
+            wp.utils.array_scan(
+                self._rvf.data.counts, self._rvf.data.prefix, inclusive=False
+            )
+        with wp.ScopedStream(self._streams[3]):
+            wp.utils.array_scan(
+                self._ree.data.counts, self._ree.data.prefix, inclusive=False
+            )
+        for stream in self._streams[:4]:
+            main_stream.wait_stream(stream)
 
     def update_displacement_bounds(self):
         wp.launch(
@@ -947,43 +1030,43 @@ class Ogc:
     @property
     def capacity(self) -> Tuple[int, int, int, int]:
         return (
-            self.vv.capacity,
-            self.ve.capacity,
-            self.vf.capacity,
-            self.ee.capacity,
+            self._vv.capacity,
+            self._ve.capacity,
+            self._vf.capacity,
+            self._ee.capacity,
         )
 
     @property
     def vv_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.vv.uv()
+        return self._vv.uv()
 
     @property
     def ve_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.ve.uv()
+        return self._ve.uv()
 
     @property
     def vf_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.vf.uv()
+        return self._vf.uv()
 
     @property
     def ee_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.ee.uv()
+        return self._ee.uv()
 
     @property
     def rvv_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.rvv.uv()
+        return self._rvv.uv()
 
     @property
     def rve_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.rve.uv()
+        return self._rve.uv()
 
     @property
     def rvf_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.rvf.uv()
+        return self._rvf.uv()
 
     @property
     def ree_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.ree.uv()
+        return self._ree.uv()
 
 
 class OgcContactBrowser:
