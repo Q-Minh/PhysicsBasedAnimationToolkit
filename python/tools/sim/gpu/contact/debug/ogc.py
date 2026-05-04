@@ -1,3 +1,4 @@
+import math
 import polyscope as ps
 import polyscope.imgui as imgui
 from ..ogc import *
@@ -7,11 +8,12 @@ class OgcContactBrowser:
 
     _CONTACT_KINDS = ["VV", "VE", "VF", "EE"]
 
-    def __init__(self, ogc: Ogc):
+    def __init__(self, ogc: Ogc, screen_fraction: float = 0.25):
         self._ogc = ogc
         self._x = ogc._points.numpy()
         self._V = ogc._meshes.data.V.numpy()
         self._F = ogc._meshes.data.F.numpy()
+        self._screen_fraction: float = screen_fraction
         self._kind_idx: int = 0
         self._contact_idx: int = 0
         self._show_reverse: bool = False
@@ -31,8 +33,21 @@ class OgcContactBrowser:
             ps.remove_surface_mesh(self._stencil_sm.get_name())
             self._stencil_sm = None
 
+    def update(self, ogc: Ogc):
+        """Refresh contact data from a new or updated Ogc instance."""
+        self.clear()
+        self._ogc = ogc
+        self._x = ogc._points.numpy()
+        self._last_visualized = None
+
     def draw(self):
         imgui.PushID("OgcContactBrowser")  # type: ignore
+
+        changed, self._screen_fraction = imgui.SliderFloat(  # type: ignore
+            "Zoom level", self._screen_fraction, 0.05, 1.0
+        )
+        if changed:
+            self._focus_camera_on_contact()
 
         imgui.Text(f"# Vertex-Vertex Contacts: {len(self._ogc.vv_contacts[0])}")  # type: ignore
         imgui.Text(f"# Vertex-Edge Contacts: {len(self._ogc.ve_contacts[0])}")  # type: ignore
@@ -212,3 +227,57 @@ class OgcContactBrowser:
 
         else:
             raise NotImplementedError(f"Contact kind {self._kind_idx} not supported")
+
+        self._focus_camera_on_contact()
+
+    def _focus_camera_on_contact(self):
+        """Reposition the camera so the contact stencil fills `screen_fraction` of screen height."""
+        contacts = self._get_selected_contacts()
+        if len(contacts[0]) == 0:
+            return
+        x = self._x
+        V = self._V
+        F = self._F
+        k = self._contact_idx
+
+        if self._kind_idx == 0:  # VV
+            u, v = int(contacts[0][k]), int(contacts[1][k])
+            pts = x[[int(V[u]), int(V[v])], :]
+        elif self._kind_idx == 1:  # VE
+            v_idx, he = (
+                (int(contacts[0][k]), int(contacts[1][k]))
+                if not self._show_reverse
+                else (int(contacts[1][k]), int(contacts[0][k]))
+            )
+            f, e_local = he // 3, he % 3
+            pts = x[[int(V[v_idx]), int(F[f, e_local]), int(F[f, (e_local + 1) % 3])], :]
+        elif self._kind_idx == 2:  # VF
+            v_idx, f = (
+                (int(contacts[0][k]), int(contacts[1][k]))
+                if not self._show_reverse
+                else (int(contacts[1][k]), int(contacts[0][k]))
+            )
+            pts = x[[int(V[v_idx]), int(F[f, 0]), int(F[f, 1]), int(F[f, 2])], :]
+        else:  # EE
+            he0, he1 = int(contacts[0][k]), int(contacts[1][k])
+            f0, e0 = he0 // 3, he0 % 3
+            f1, e1 = he1 // 3, he1 % 3
+            pts = x[[int(F[f0, e0]), int(F[f0, (e0 + 1) % 3]),
+                      int(F[f1, e1]), int(F[f1, (e1 + 1) % 3])], :]
+
+        centroid = pts.mean(axis=0)
+        # Bounding-sphere radius of the stencil points around the centroid
+        radius = float(np.linalg.norm(pts - centroid, axis=1).max())
+        # Ensure a minimum radius so we don't fly into a single degenerate point
+        radius = max(radius, 1e-4)
+
+        # Compute the camera distance so the stencil subtends `screen_fraction` of
+        # screen height: screen_fraction = radius / (dist * tan(fov_half))
+        cam_params = ps.get_view_camera_parameters()
+        fov_half_rad = math.radians(cam_params.get_fov_vertical_deg()) * 0.5
+        dist = radius / (self._screen_fraction * math.tan(fov_half_rad))
+
+        # Keep the current view direction, just reposition along it
+        look_dir = np.array(cam_params.get_look_dir(), dtype=float)
+        cam_pos = centroid - look_dir * dist
+        ps.look_at(cam_pos, centroid, fly_to=True)

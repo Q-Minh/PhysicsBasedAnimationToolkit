@@ -155,7 +155,7 @@ class SimulationState:
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.01)
-        self.contact_browser = None
+        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
 
         # Simulation state
         self.simulate: bool = False
@@ -179,9 +179,7 @@ class SimulationState:
         self.fem.step()
         self.t += 1
 
-        if self.contact_browser is not None:
-            self.contact_browser.clear()
-            self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
+        self.contact_browser.update(self.ogc)
 
     def reset(self):
         self.t = 0
@@ -189,10 +187,8 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = gpu.vbd.params.Params(self.params_cpu)
-        if self.contact_browser is not None:
-            self.contact_browser.clear()
         self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.003)
-        self.contact_browser = None
+        self.contact_browser.update(self.ogc)
         self.capture = None
 
 
@@ -269,19 +265,17 @@ def make_callback(
                     if ui_state.screenshot_after_step:
                         ps.screenshot("{:08d}.png".format(state.t))
 
-                ui_state.debug_tab_active = False
                 imgui.EndTabItem()
 
             if imgui.BeginTabItem("Debug", True)[0]:
-                if not ui_state.debug_tab_active or state.contact_browser is None:
-                    if state.contact_browser is not None:
-                        state.contact_browser.clear()
-                    state.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(
-                        state.ogc
-                    )
                 ui_state.debug_tab_active = True
-                state.contact_browser.draw()
+                if imgui.TreeNode("Contact"):
+                    state.contact_browser.draw()
+                    imgui.TreePop()
                 imgui.EndTabItem()
+            elif ui_state.debug_tab_active:
+                state.contact_browser.clear()
+                ui_state.debug_tab_active = False
 
             imgui.EndTabBar()
 
