@@ -68,7 +68,7 @@ class ContactPairs:
         Returns:
             Tuple[np.ndarray, np.ndarray]: (u, v) pairs
         """
-        nuv = cp.asarray(self.data.counts)[-1].get()
+        nuv = cp.asarray(self.data.prefix)[-1].get()
         u, v = self.data.u.numpy()[:nuv], self.data.v.numpy()[:nuv]
         return u, v
 
@@ -631,70 +631,90 @@ def _compute_reverse_contact_counts(ogc: OgcData):  # type: ignore
     nvf = ogc.vf.counts[n_verts]
     nee = ogc.ee.counts[n_half_edges]
     is_last_col = local_tid == block_dims - wp.int32(1)
+    base_idx = block_id * block_dims
 
     # --- Vertex-vertex: reverse array sorted by v (stored as rvv.u) ---
-    if block_id < n_verts:
+    if base_idx < n_verts:
         v = tid
         # Each thread finds lower_bound of its primitive index in rvv.u
-        lb_vv = common.lower_bound(ogc.rvv.u, nvv, v)  # type: ignore
+        if v < n_verts - wp.int32(1):
+            lb_vv = common.lower_bound(ogc.rvv.u, nvv, v)  # type: ignore
+        else:
+            lb_vv = nvv
         # Share lower bounds across the block so each thread can compute its count
         # as lb[local_tid+1] - lb[local_tid].
         blb_vv = wp.tile(lb_vv)  # type: ignore
-        lb_vv_next = wp.int32(0)
         if is_last_col:
-            lb_vv_next = common.lower_bound(ogc.rvv.u, nvv, v + wp.int32(1))  # type: ignore
+            if v >= n_verts - wp.int32(1):
+                lb_vv_next = nvv
+            else:
+                lb_vv_next = common.lower_bound(ogc.rvv.u, nvv, v + wp.int32(1))  # type: ignore
         else:
             lb_vv_next = blb_vv[
                 local_tid + 1
             ]  # Get next lower bound from right neighbour
-        blb_vv_next = wp.tile(lb_vv_next)  # type: ignore
         if v < n_verts:
-            ogc.rvv.counts[v] = blb_vv_next[local_tid + 1] - blb_vv[local_tid + 1]
+            ogc.rvv.counts[v] = lb_vv_next - lb_vv
 
     # --- (Half-)edge-vertex: reverse array sorted by he (stored as rve.u) ---
-    if block_id < n_half_edges:
+    if base_idx < n_half_edges:
         he = tid
-        lb_rve = common.lower_bound(ogc.rve.u, nve, he)  # type: ignore
+        if he < n_half_edges - wp.int32(1):
+            lb_rve = common.lower_bound(ogc.rve.u, nve, he)  # type: ignore
+        else:
+            lb_rve = nve
         blb_rve = wp.tile(lb_rve)  # type: ignore
         if is_last_col:
-            lb_rve_next = common.lower_bound(ogc.rve.u, nve, he + wp.int32(1))  # type: ignore
+            if he >= n_half_edges - wp.int32(1):
+                lb_rve_next = nve
+            else:
+                lb_rve_next = common.lower_bound(ogc.rve.u, nve, he + wp.int32(1))  # type: ignore
         else:
             lb_rve_next = blb_rve[
                 local_tid + 1
             ]  # Get next lower bound from right neighbour
-        blb_rve_next = wp.tile(lb_rve_next)  # type: ignore
         if he < n_half_edges:
-            ogc.rve.counts[he] = blb_rve_next[local_tid + 1] - blb_rve[local_tid + 1]
+            ogc.rve.counts[he] = lb_rve_next - lb_rve
 
     # --- Triangle-vertex: reverse array sorted by f (stored as rvf.u) ---
-    if block_id < n_tris:
+    if base_idx < n_tris:
         f = tid
-        lb_rvf = common.lower_bound(ogc.rvf.u, nvf, f)  # type: ignore
+        if f < n_tris - wp.int32(1):
+            lb_rvf = common.lower_bound(ogc.rvf.u, nvf, f)  # type: ignore
+        else:
+            lb_rvf = nvf
         blb_rvf = wp.tile(lb_rvf)  # type: ignore
         if is_last_col:
-            lb_rvf_next = common.lower_bound(ogc.rvf.u, nvf, f + wp.int32(1))  # type: ignore
+            if f >= n_tris - wp.int32(1):
+                lb_rvf_next = nvf
+            else:
+                lb_rvf_next = common.lower_bound(ogc.rvf.u, nvf, f + wp.int32(1))  # type: ignore
         else:
             lb_rvf_next = blb_rvf[
                 local_tid + 1
             ]  # Get next lower bound from right neighbour
-        blb_rvf_next = wp.tile(lb_rvf_next)  # type: ignore
         if f < n_tris:
-            ogc.rvf.counts[f] = blb_rvf_next[local_tid + 1] - blb_rvf[local_tid + 1]  # type: ignore
+            ogc.rvf.counts[f] = lb_rvf_next - lb_rvf  # type: ignore
 
     # --- (Half-)edge-(half-)edge: reverse array sorted by he (stored as ree.u) ---
-    if block_id < n_half_edges:
+    if base_idx < n_half_edges:
         he = tid
-        lb_ree = common.lower_bound(ogc.ree.u, nee, he)  # type: ignore
+        if he < n_half_edges - wp.int32(1):
+            lb_ree = common.lower_bound(ogc.ree.u, nee, he)  # type: ignore
+        else:
+            lb_ree = nee
         blb_ree = wp.tile(lb_ree)  # type: ignore
         if is_last_col:
-            lb_ree_next = common.lower_bound(ogc.ree.u, nee, he + wp.int32(1))  # type: ignore
+            if he >= n_half_edges - wp.int32(1):
+                lb_ree_next = nee
+            else:
+                lb_ree_next = common.lower_bound(ogc.ree.u, nee, he + wp.int32(1))  # type: ignore
         else:
             lb_ree_next = blb_ree[
                 local_tid + 1
             ]  # Get next lower bound from right neighbour
-        blb_ree_next = wp.tile(lb_ree_next)  # type: ignore
         if he < n_half_edges:
-            ogc.ree.counts[he] = blb_ree_next[local_tid + 1] - blb_ree[local_tid + 1]  # type: ignore
+            ogc.ree.counts[he] = lb_ree_next - lb_ree  # type: ignore
 
 
 class Ogc:
@@ -753,6 +773,7 @@ class Ogc:
         self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
         self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
         self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
+
         vv_capacity = int(n_vv_contact_capacity * meshes.n_verts)
         ve_capacity = int(n_ve_contact_capacity * meshes.n_verts)
         vf_capacity = int(n_vf_contact_capacity * meshes.n_verts)
@@ -895,11 +916,18 @@ class Ogc:
         wp.utils.radix_sort_pairs(
             keys=self.ree.data.u, values=self.ree.data.v, count=ee_capacity
         )
+        block_dim = 256
+        n_threads = max(n_verts, n_half_edges, n_tris)
+        # Round up to a multiple of block_dim so that wp.tile() is always called by
+        # exactly block_dim threads per block. If dim is not a multiple of block_dim,
+        # Warp auto-skips threads with tid >= dim, causing wp.tile() to be called by
+        # fewer than block_dim threads in the last block, which produces garbage values.
+        n_threads_padded = (n_threads + block_dim - 1) // block_dim * block_dim
         wp.launch(
             kernel=_compute_reverse_contact_counts,
-            dim=max(n_verts, n_half_edges, n_tris),
+            dim=n_threads_padded,
             inputs=[self._ogc],
-            block_dim=256,
+            block_dim=block_dim,
         )
         wp.utils.array_scan(self.rvv.data.counts, self.rvv.data.prefix, inclusive=False)
         wp.utils.array_scan(self.rve.data.counts, self.rve.data.prefix, inclusive=False)
@@ -942,6 +970,22 @@ class Ogc:
     def ee_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
         return self.ee.uv()
 
+    @property
+    def rvv_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.rvv.uv()
+
+    @property
+    def rve_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.rve.uv()
+
+    @property
+    def rvf_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.rvf.uv()
+
+    @property
+    def ree_contacts(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.ree.uv()
+
 
 class OgcContactBrowser:
     """Simple Polyscope/imgui browser for OGC contact pairs."""
@@ -955,10 +999,11 @@ class OgcContactBrowser:
         self._F = ogc._meshes.data.F.numpy()
         self._kind_idx: int = 0
         self._contact_idx: int = 0
+        self._show_reverse: bool = False
         self._stencil_pc = None
         self._stencil_cn = None
         self._stencil_sm = None
-        self._last_visualized: tuple[int, int, int] | None = None
+        self._last_visualized: tuple[int, int, int, bool] | None = None
 
     def clear(self):
         if self._stencil_pc is not None:
@@ -978,6 +1023,10 @@ class OgcContactBrowser:
         imgui.Text(f"# Vertex-Edge Contacts: {len(self._ogc.ve_contacts[0])}")  # type: ignore
         imgui.Text(f"# Vertex-Triangle Contacts: {len(self._ogc.vf_contacts[0])}")  # type: ignore
         imgui.Text(f"# Edge-Edge Contacts: {len(self._ogc.ee_contacts[0])}")  # type: ignore
+
+        changed, self._show_reverse = imgui.Checkbox("Show Reverse", self._show_reverse)  # type: ignore
+        if changed:
+            self._contact_idx = 0
 
         changed, self._kind_idx = imgui.Combo("Kind", self._kind_idx, self._CONTACT_KINDS)  # type: ignore
         if changed:
@@ -1007,7 +1056,7 @@ class OgcContactBrowser:
         imgui.SameLine()  # type: ignore
         imgui.Text(f"/ {n - 1}")  # type: ignore
 
-        signature = (self._kind_idx, self._contact_idx, n)
+        signature = (self._kind_idx, self._contact_idx, n, self._show_reverse)
         if signature != self._last_visualized:
             self._visualize_current_contact()
             self._last_visualized = signature
@@ -1019,13 +1068,22 @@ class OgcContactBrowser:
         imgui.PopID()  # type: ignore
 
     def _get_selected_contacts(self) -> tuple[np.ndarray, np.ndarray]:
-        if self._kind_idx == 0:
-            return self._ogc.vv_contacts
-        if self._kind_idx == 1:
-            return self._ogc.ve_contacts
-        if self._kind_idx == 2:
-            return self._ogc.vf_contacts
-        return self._ogc.ee_contacts
+        if self._show_reverse:
+            if self._kind_idx == 0:
+                return self._ogc.rvv_contacts
+            if self._kind_idx == 1:
+                return self._ogc.rve_contacts
+            if self._kind_idx == 2:
+                return self._ogc.rvf_contacts
+            return self._ogc.ree_contacts
+        else:
+            if self._kind_idx == 0:
+                return self._ogc.vv_contacts
+            if self._kind_idx == 1:
+                return self._ogc.ve_contacts
+            if self._kind_idx == 2:
+                return self._ogc.vf_contacts
+            return self._ogc.ee_contacts
 
     def _visualize_current_contact(self):
         self.clear()
@@ -1046,13 +1104,17 @@ class OgcContactBrowser:
             self._stencil_pc = ps.register_point_cloud("OGC VV Contact", x[[iu, iv], :])
 
         elif self._kind_idx == 1:
-            u, he = int(contacts[0][k]), int(contacts[1][k])
-            iu = int(V[u])
+            v, he = (
+                (int(contacts[0][k]), int(contacts[1][k]))
+                if not self._show_reverse
+                else (int(contacts[1][k]), int(contacts[0][k]))
+            )
+            iv = int(V[v])
             f = he // 3
             e_local = he % 3
             i = int(F[f, e_local])
             j = int(F[f, (e_local + 1) % 3])
-            self._stencil_pc = ps.register_point_cloud("OGC VE Vertex", x[[iu], :])
+            self._stencil_pc = ps.register_point_cloud("OGC VE Vertex", x[[iv], :])
             self._stencil_cn = ps.register_curve_network(
                 "OGC VE Edge",
                 x[[i, j], :],
@@ -1060,10 +1122,14 @@ class OgcContactBrowser:
             )
 
         elif self._kind_idx == 2:
-            u, f = int(contacts[0][k]), int(contacts[1][k])
-            iu = int(V[u])
+            v, f = (
+                (int(contacts[0][k]), int(contacts[1][k]))
+                if not self._show_reverse
+                else (int(contacts[1][k]), int(contacts[0][k]))
+            )
+            iv = int(V[v])
             tri = F[f, :]
-            self._stencil_pc = ps.register_point_cloud("OGC VF Vertex", x[[iu], :])
+            self._stencil_pc = ps.register_point_cloud("OGC VF Vertex", x[[iv], :])
             self._stencil_sm = ps.register_surface_mesh(
                 "OGC VF Triangle",
                 x[tri, :],
