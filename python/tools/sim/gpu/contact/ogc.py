@@ -400,9 +400,9 @@ def _classify_edge_edge_contacts(
         hei2, hej2 = ehe2[0], ehe2[1]
         he2 = wp.max(hei2, hej2)
         if is_edge_feasible(
-            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(True)  # type: ignore
+            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(False)  # type: ignore
         ) and is_edge_feasible(
-            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(True)  # type: ignore
+            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(False)  # type: ignore
         ):  # type: ignore
             tee[brow] = he2
             n_ee += wp.int32(1)
