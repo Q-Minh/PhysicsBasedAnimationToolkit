@@ -400,9 +400,9 @@ def _classify_edge_edge_contacts(
         hei2, hej2 = ehe2[0], ehe2[1]
         he2 = wp.max(hei2, hej2)
         if is_edge_feasible(
-            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(False)  # type: ignore
+            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(True)  # type: ignore
         ) and is_edge_feasible(
-            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(False)  # type: ignore
+            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(True)  # type: ignore
         ):  # type: ignore
             tee[brow] = he2
             n_ee += wp.int32(1)
@@ -824,7 +824,7 @@ class Ogc:
         ), ContactPairs(meshes.n_half_edges, meshes.n_half_edges, ee_capacity)
         self._ogc.ee, self._ogc.ree = self._ee.data, self._ree.data
 
-        self._streams = [wp.Stream() for _ in range(8)]
+        self._streams = [wp.Stream() for _ in range(10)]
 
         dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
         wp.launch(
@@ -852,6 +852,7 @@ class Ogc:
         )
 
     def prepare_for_execution(self, request_rebuild: bool = True):
+        main_stream = wp.get_stream()
         wp.launch(
             _compute_bounding_volumes_kernel,
             dim=max(
@@ -860,21 +861,34 @@ class Ogc:
                 self._meshes.n_triangles,
             ),
             inputs=[self._points, self._meshes.data, self._ogc],
+            stream=main_stream,
         )
-        for bvh in (self._e_bvh, self._f_bvh):
-            if request_rebuild:
-                bvh.rebuild()
-            else:
-                bvh.refit()
+        for bvh, stream in zip([self._e_bvh, self._f_bvh], self._streams[:2]):
+            stream.wait_stream(main_stream)
+            with wp.ScopedStream(stream):
+                if request_rebuild:
+                    bvh.rebuild()
+                else:
+                    bvh.refit()
         # Reset contact pairs
-        self._vv.clear()
-        self._rvv.clear()
-        self._ve.clear()
-        self._rve.clear()
-        self._vf.clear()
-        self._rvf.clear()
-        self._ee.clear()
-        self._ree.clear()
+        for contacts, stream in zip(
+            [
+                self._vv,
+                self._rvv,
+                self._ve,
+                self._rve,
+                self._vf,
+                self._rvf,
+                self._ee,
+                self._ree,
+            ],
+            self._streams[2:10],
+        ):
+            with wp.ScopedStream(stream):
+                contacts.clear()
+        # Fence
+        for stream in self._streams[:10]:
+            main_stream.wait_stream(stream)
 
     def detect_contacts(self):  # type: ignore
         n_verts, n_edges, n_half_edges, n_tris = (
