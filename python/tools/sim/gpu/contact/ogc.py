@@ -1,13 +1,24 @@
-from typing import Any, Tuple
+from dataclasses import dataclass
+from typing import Tuple
 
 import numpy as np
 import cupy as cp
 
 import warp as wp
-import polyscope as ps
-import polyscope.imgui as imgui
 
-from .set import ContactSet, ContactSetData
+
+@dataclass
+class OgcParams:
+    """Parameters for Offset Geometric Contact detection."""
+
+    r: float = 0.003
+    rq: float = 0.005
+    gammap: float = 0.45
+    n_vv_contact_capacity: float = 1.0
+    n_ve_contact_capacity: float = 1.0
+    n_vf_contact_capacity: float = 1.0
+    n_ee_contact_capacity: float = 1.0
+
 
 from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
@@ -763,27 +774,14 @@ class Ogc:
         self,
         points: wp.array[wp.vec3f],
         meshes: MultiMesh,  # type: ignore
-        r: float = 0.002,
-        gammap: float = 0.45,
-        n_vv_contact_capacity: float = float(1),
-        n_ve_contact_capacity: float = float(1),
-        n_vf_contact_capacity: float = float(1),
-        n_ee_contact_capacity: float = float(1),
+        params: OgcParams = OgcParams(),
     ):
         """Construct ogc data
 
         Args:
             points (wp.array[wp.vec3f]): (N,) points
             meshes (MultiMesh): Multi-body mesh
-            gammap (float, optional): Fraction of displacement (<0.5) for OGC bounds. Defaults to 0.45.
-            n_vv_contact_capacity (int, optional): Multiplier s.t.
-            # point-point contact capacity = n_vv_contact_capacity * n_verts. Defaults to 1.
-            n_ve_contact_capacity (int, optional): Multiplier s.t.
-            # point-edge contact capacity = n_ve_contact_capacity * n_verts. Defaults to 1.
-            n_vf_contact_capacity (int, optional): Multiplier s.t.
-            # point-face contact capacity = n_vf_contact_capacity * n_verts. Defaults to 1.
-            n_ee_contact_capacity (int, optional): Multiplier s.t.
-            # edge-edge contact capacity = n_ee_contact_capacity * n_edges. Defaults to 1.
+            params (OgcParams, optional): Contact detection parameters. Defaults to OgcParams().
         """
         self._points = points
         self._meshes = meshes
@@ -792,17 +790,17 @@ class Ogc:
         self._ogc.e_uppers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
         self._ogc.f_lowers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
         self._ogc.f_uppers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
-        self._ogc.rq = 2 * r
-        self._ogc.r = r
-        self._ogc.gammap = gammap
+        self._ogc.rq = params.rq
+        self._ogc.r = params.r
+        self._ogc.gammap = params.gammap
         self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
         self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
         self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
 
-        vv_capacity = int(n_vv_contact_capacity * meshes.n_verts)
-        ve_capacity = int(n_ve_contact_capacity * meshes.n_verts)
-        vf_capacity = int(n_vf_contact_capacity * meshes.n_verts)
-        ee_capacity = int(n_ee_contact_capacity * meshes.n_edges)
+        vv_capacity = int(params.n_vv_contact_capacity * meshes.n_verts)
+        ve_capacity = int(params.n_ve_contact_capacity * meshes.n_verts)
+        vf_capacity = int(params.n_vf_contact_capacity * meshes.n_verts)
+        ee_capacity = int(params.n_ee_contact_capacity * meshes.n_edges)
 
         self._vv, self._rvv = ContactPairs(
             meshes.n_verts, meshes.n_verts, vv_capacity

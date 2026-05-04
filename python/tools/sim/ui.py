@@ -154,7 +154,8 @@ class SimulationState:
             fem_cpu.E, np.full(n_nodes, 0, dtype=np.int64), n_components=1
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.01)
+        self.ogc_params = gpu.contact.ogc.OgcParams()
+        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
         self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
 
         # Simulation state
@@ -187,7 +188,7 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.003)
+        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
         self.contact_browser.update(self.ogc)
         self.capture = None
 
@@ -235,6 +236,11 @@ def make_callback(
                     if imgui.TreeNode("Params"):
                         draw_params(state.params_cpu[state.solver])
                         imgui.TreePop()
+                    imgui.TreePop()
+
+                # --- Contact parameters ---
+                if imgui.TreeNode("Contact"):
+                    draw_params(state.ogc_params)
                     imgui.TreePop()
 
                 imgui.Separator()
