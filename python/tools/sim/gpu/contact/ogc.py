@@ -186,19 +186,25 @@ def _closest_face_point_triangle(uvw: wp.vec3f) -> Tuple[wp.int32, wp.int32]:
 @wp.func
 def _vertex_triangle_contact_face_index(
     F: wp.array[wp.vec3i],
-    GXV: wp.array[wp.int32],
     f: wp.int32,
     a_local: wp.int32,
     e_face: wp.int32,
 ) -> wp.int32:
-    """Determine the contact face index for a point-triangle contact based on the barycentric coordinates `uvw`."""
+    """Determine the contact face index for a point-triangle contact based on the barycentric coordinates `uvw`.
+
+    Returns:
+        (wp.int32): There are 3 cases based on the contact type determined by `e_face`:
+            - VF_E_FACE_TRIANGLE: return the face index
+            - VF_E_FACE_EDGE: return the half-edge index
+            - VF_E_FACE_VERTEX: return the vertex's global point index
+    """
     return (
         # face contact, return face index
         wp.int32(e_face == VF_E_FACE_TRIANGLE) * f
         # edge contact, return half-edge index
         + wp.int32(e_face == VF_E_FACE_EDGE) * (wp.int32(3) * f + a_local)
-        # vertex contact, return global vertex index
-        + wp.int32(e_face == VF_E_FACE_VERTEX) * GXV[F[f][a_local]]  # type: ignore
+        # vertex contact, return global vertex point index
+        + wp.int32(e_face == VF_E_FACE_VERTEX) * F[f][a_local]  # type: ignore
     )
 
 
@@ -317,12 +323,10 @@ def _classify_vertex_facet_contacts(
             tvf[brow] = n_tris
             continue
         a_local, e_face = _closest_face_point_triangle(uvw)
-        a = _vertex_triangle_contact_face_index(
-            meshes.F, meshes.GXV, f, a_local, e_face
-        )
+        a = _vertex_triangle_contact_face_index(meshes.F, f, a_local, e_face)
         if e_face == VF_E_FACE_VERTEX:
             if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, a, xi):
-                tvv[brow] = a
+                tvv[brow] = meshes.GXV[a]
                 n_vv += wp.int32(1)
             tvf[brow] = n_tris
         elif e_face == VF_E_FACE_EDGE:
@@ -400,8 +404,10 @@ def _classify_edge_edge_contacts(
         ) and is_edge_feasible(
             x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(True)  # type: ignore
         ):  # type: ignore
-            tee[n_ee] = he2
+            tee[brow] = he2
             n_ee += wp.int32(1)
+        else:
+            tee[brow] = n_half_edges
     return tee, n_ee
 
 
