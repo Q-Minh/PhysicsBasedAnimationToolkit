@@ -123,7 +123,7 @@ class SimulationState:
     def __init__(
         self,
         fem_cpu: pbat.sim.dynamics.FemElastoDynamics,
-        params_cpu: pbat.sim.algorithm.vbd.Params,
+        params_cpu: dict[SolverType, pbat.sim.algorithm.vbd.Params],
     ):
         self.fem_cpu = fem_cpu
         self.params_cpu = params_cpu
@@ -144,7 +144,7 @@ class SimulationState:
 
         # Build GPU mirrors
         self.fem = gpu.elasticity.fem.FemElastoDynamics(fem_cpu)
-        self.params = gpu.vbd.params.Params(params_cpu)
+        self.params = {s: gpu.vbd.params.Params(p) for s, p in params_cpu.items()}
         self.capture = None
 
         # Build collision geometry
@@ -164,9 +164,9 @@ class SimulationState:
 
     def solve(self):
         if self.solver == SolverType.AAAVBD:
-            _ = gpu.vbd.aaasolver.solve(self.fem, self.params, self.ogc)
+            _ = gpu.vbd.aaasolver.solve(self.fem, self.params[self.solver], self.ogc)
         elif self.solver == SolverType.VBD:
-            _ = gpu.vbd.solver.solve(self.fem, self.params, self.ogc)
+            _ = gpu.vbd.solver.solve(self.fem, self.params[self.solver], self.ogc)
 
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
@@ -186,7 +186,7 @@ class SimulationState:
         self.fem_cpu.set_time_integration_scheme(self.dt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
-        self.params = gpu.vbd.params.Params(self.params_cpu)
+        self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
         self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, r=0.003)
         self.contact_browser.update(self.ogc)
         self.capture = None
@@ -232,11 +232,9 @@ def make_callback(
                         state.solver = new_solver
                         state.reset()
                         ui_state.request_reset = True
-                    imgui.TreePop()
-
-                # --- Solver params ---
-                if imgui.TreeNode("VBD Params"):
-                    draw_params(state.params_cpu)
+                    if imgui.TreeNode("Params"):
+                        draw_params(state.params_cpu[state.solver])
+                        imgui.TreePop()
                     imgui.TreePop()
 
                 imgui.Separator()
@@ -312,12 +310,14 @@ def parse_args():
 
 
 def main():
+    import copy
+
     # wp.config.mode = "debug"
     # wp.config.verify_cuda = True
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
-    params_cpu = load_vbd_params(fem_cpu, args.vbd_params)
+    params_cpu = {s: load_vbd_params(fem_cpu, args.vbd_params) for s in SolverType}
     state = SimulationState(fem_cpu, params_cpu)
     # Setup polyscope
     ps.set_verbosity(0)
