@@ -12,6 +12,7 @@ from .set import ContactSet, ContactSetData
 from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
 from . import queries
+from .. import common
 
 
 VF_E_FACE_TRIANGLE = wp.constant(0)
@@ -611,6 +612,91 @@ def _update_displacement_bounds(
     ogc.dminv[v] *= ogc.gammap
 
 
+@wp.kernel
+def _compute_reverse_contact_counts(ogc: OgcData):  # type: ignore
+    """Compute reverse contact counts for each contact pair type.
+
+    Args:
+        ogc (OgcData): The contact data after contact detection kernel invocation.
+    """
+    tid = wp.tid()
+    block_dims = wp.block_dim()
+    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
+    n_verts = ogc.vv.counts.shape[0] - wp.int32(1)
+    n_half_edges = ogc.rve.counts.shape[0] - wp.int32(1)
+    n_tris = ogc.rvf.counts.shape[0] - wp.int32(1)
+    nvv = ogc.vv.counts[n_verts]
+    nve = ogc.ve.counts[n_verts]
+    nvf = ogc.vf.counts[n_verts]
+    nee = ogc.ee.counts[n_half_edges]
+    is_last_col = local_tid == block_dims - wp.int32(1)
+
+    # --- Vertex-vertex: reverse array sorted by v (stored as rvv.u) ---
+    if block_id < n_verts:
+        v = tid
+        # Each thread finds lower_bound of its primitive index in rvv.u
+        lb_vv = common.lower_bound(ogc.rvv.u, nvv, v)  # type: ignore
+        # Share lower bounds across the block so each thread can compute its count
+        # as lb[local_tid+1] - lb[local_tid].
+        blb_vv = wp.tile(lb_vv)  # type: ignore
+        lb_vv_next = wp.int32(0)
+        if is_last_col:
+            lb_vv_next = common.lower_bound(ogc.rvv.u, nvv, v + wp.int32(1))  # type: ignore
+        else:
+            lb_vv_next = blb_vv[
+                local_tid + 1
+            ]  # Get next lower bound from right neighbour
+        blb_vv_next = wp.tile(lb_vv_next)  # type: ignore
+        if v < n_verts:
+            ogc.rvv.counts[v] = blb_vv_next[local_tid + 1] - blb_vv[local_tid + 1]
+
+    # --- (Half-)edge-vertex: reverse array sorted by he (stored as rve.u) ---
+    if block_id < n_half_edges:
+        he = tid
+        lb_rve = common.lower_bound(ogc.rve.u, nve, he)  # type: ignore
+        blb_rve = wp.tile(lb_rve)  # type: ignore
+        if is_last_col:
+            lb_rve_next = common.lower_bound(ogc.rve.u, nve, he + wp.int32(1))  # type: ignore
+        else:
+            lb_rve_next = blb_rve[
+                local_tid + 1
+            ]  # Get next lower bound from right neighbour
+        blb_rve_next = wp.tile(lb_rve_next)  # type: ignore
+        if he < n_half_edges:
+            ogc.rve.counts[he] = blb_rve_next[local_tid + 1] - blb_rve[local_tid + 1]
+
+    # --- Triangle-vertex: reverse array sorted by f (stored as rvf.u) ---
+    if block_id < n_tris:
+        f = tid
+        lb_rvf = common.lower_bound(ogc.rvf.u, nvf, f)  # type: ignore
+        blb_rvf = wp.tile(lb_rvf)  # type: ignore
+        if is_last_col:
+            lb_rvf_next = common.lower_bound(ogc.rvf.u, nvf, f + wp.int32(1))  # type: ignore
+        else:
+            lb_rvf_next = blb_rvf[
+                local_tid + 1
+            ]  # Get next lower bound from right neighbour
+        blb_rvf_next = wp.tile(lb_rvf_next)  # type: ignore
+        if f < n_tris:
+            ogc.rvf.counts[f] = blb_rvf_next[local_tid + 1] - blb_rvf[local_tid + 1]  # type: ignore
+
+    # --- (Half-)edge-(half-)edge: reverse array sorted by he (stored as ree.u) ---
+    if block_id < n_half_edges:
+        he = tid
+        lb_ree = common.lower_bound(ogc.ree.u, nee, he)  # type: ignore
+        blb_ree = wp.tile(lb_ree)  # type: ignore
+        if is_last_col:
+            lb_ree_next = common.lower_bound(ogc.ree.u, nee, he + wp.int32(1))  # type: ignore
+        else:
+            lb_ree_next = blb_ree[
+                local_tid + 1
+            ]  # Get next lower bound from right neighbour
+        blb_ree_next = wp.tile(lb_ree_next)  # type: ignore
+        if he < n_half_edges:
+            ogc.ree.counts[he] = blb_ree_next[local_tid + 1] - blb_ree[local_tid + 1]  # type: ignore
+
+
 class Ogc:
     """Offset Geometric Contact"""
 
@@ -745,11 +831,16 @@ class Ogc:
         self.ree.clear()
 
     def detect_contacts(self):  # type: ignore
-        dim = max(self._meshes.n_verts, self._meshes.n_edges)
+        n_verts, n_edges, n_half_edges, n_tris = (
+            self._meshes.n_verts,
+            self._meshes.n_edges,
+            self._meshes.n_half_edges,
+            self._meshes.n_triangles,
+        )
         # 1. Compute contact set
         wp.launch(
             _fused_contact_detection,
-            dim=dim * _FUSED_CONTACT_DETECTION_BLOCK_SIZE,
+            dim=max(n_verts, n_edges) * _FUSED_CONTACT_DETECTION_BLOCK_SIZE,
             inputs=[
                 self._points,
                 self._meshes.data,
@@ -764,26 +855,26 @@ class Ogc:
         # the fused contact detection. We only need to (stable-)sort by u. The counts
         # for each u are stored in counts, so the CSR prefix is an exclusive scan.
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.capacity
-        wp.utils.array_scan(self.vv.data.counts, self.vv.data.prefix, inclusive=False)
         wp.utils.radix_sort_pairs(
             keys=self.vv.data.u, values=self.vv.data.v, count=vv_capacity
         )
-        wp.utils.array_scan(self.ve.data.counts, self.ve.data.prefix, inclusive=False)
         wp.utils.radix_sort_pairs(
             keys=self.ve.data.u, values=self.ve.data.v, count=ve_capacity
         )
-        wp.utils.array_scan(self.vf.data.counts, self.vf.data.prefix, inclusive=False)
         wp.utils.radix_sort_pairs(
             keys=self.vf.data.u, values=self.vf.data.v, count=vf_capacity
         )
-        wp.utils.array_scan(self.ee.data.counts, self.ee.data.prefix, inclusive=False)
         wp.utils.radix_sort_pairs(
             keys=self.ee.data.u, values=self.ee.data.v, count=ee_capacity
         )
+        wp.utils.array_scan(self.vv.data.counts, self.vv.data.prefix, inclusive=False)
+        wp.utils.array_scan(self.ve.data.counts, self.ve.data.prefix, inclusive=False)
+        wp.utils.array_scan(self.vf.data.counts, self.vf.data.prefix, inclusive=False)
+        wp.utils.array_scan(self.ee.data.counts, self.ee.data.prefix, inclusive=False)
         # 3. Construct CSR representation of backward contacts
         # We need to store pairs (v,u) for each (u,v) for reverse contacts via mem copy.
         # Then, we sort by v (named u in reverse ContactPairs).
-        # TODO: Compute the counts via binary search for each v (named u).
+        # TODO: Compute the counts via binary search for each v (named u), then exclusive scan.
         wp.copy(self.rvv.data.u, self.vv.data.v, count=vv_capacity)
         wp.copy(self.rvv.data.v, self.vv.data.u, count=vv_capacity)
         wp.copy(self.rve.data.u, self.ve.data.v, count=ve_capacity)
@@ -804,6 +895,16 @@ class Ogc:
         wp.utils.radix_sort_pairs(
             keys=self.ree.data.u, values=self.ree.data.v, count=ee_capacity
         )
+        wp.launch(
+            kernel=_compute_reverse_contact_counts,
+            dim=max(n_verts, n_half_edges, n_tris),
+            inputs=[self._ogc],
+            block_dim=256,
+        )
+        wp.utils.array_scan(self.rvv.data.counts, self.rvv.data.prefix, inclusive=False)
+        wp.utils.array_scan(self.rve.data.counts, self.rve.data.prefix, inclusive=False)
+        wp.utils.array_scan(self.rvf.data.counts, self.rvf.data.prefix, inclusive=False)
+        wp.utils.array_scan(self.ree.data.counts, self.ree.data.prefix, inclusive=False)
 
     def update_displacement_bounds(self):
         wp.launch(
