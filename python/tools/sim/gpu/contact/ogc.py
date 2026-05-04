@@ -895,7 +895,6 @@ class Ogc:
         # 3. Construct CSR representation of backward contacts
         # We need to store pairs (v,u) for each (u,v) for reverse contacts via mem copy.
         # Then, we sort by v (named u in reverse ContactPairs).
-        # TODO: Compute the counts via binary search for each v (named u), then exclusive scan.
         wp.copy(self.rvv.data.u, self.vv.data.v, count=vv_capacity)
         wp.copy(self.rvv.data.v, self.vv.data.u, count=vv_capacity)
         wp.copy(self.rve.data.u, self.ve.data.v, count=ve_capacity)
