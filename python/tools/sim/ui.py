@@ -56,9 +56,6 @@ def draw_params(obj):
             setattr(obj, name, enum_values[selected_idx])
 
 
-# --- Loading ---
-
-
 def parse_archive_path(spec: str) -> tuple[str, str]:
     """Parse 'file.h5:group/path' into (file_path, group_path)."""
     parts = spec.split(":")
@@ -101,9 +98,6 @@ def load_vbd_params(
         GVGp, GVGe, GVGilocal
     ).with_vertex_colors(GVVp, GVVadj, colors).construct()
     return params_cpu
-
-
-# --- Simulation state ---
 
 
 class SolverType(enum.Enum):
@@ -302,9 +296,6 @@ def _update_mesh(state: SimulationState, mesh_name: str):
     ps.get_volume_mesh(mesh_name).update_vertex_positions(x)
 
 
-# --- Entry point ---
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description="GPU VBD Simulation UI")
     parser.add_argument(
@@ -325,8 +316,6 @@ def parse_args():
 
 
 def main():
-    import copy
-
     # wp.config.mode = "debug"
     # wp.config.verify_cuda = True
     wp.init()
