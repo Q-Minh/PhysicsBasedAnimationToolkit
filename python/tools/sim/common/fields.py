@@ -11,7 +11,7 @@ class DocField:
             lr = DocField(1e-3, "Learning rate.")
     """
 
-    def __init__(self, default: float, doc: str = ""):
+    def __init__(self, default: float | int | bool, doc: str = ""):
         self.default = default
         self.__doc__ = doc
 
