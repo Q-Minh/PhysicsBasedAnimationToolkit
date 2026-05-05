@@ -128,6 +128,11 @@ class OgcData:
     rvf: ContactPairsData  # vertex-face reverse contact pairs # type: ignore
     ree: ContactPairsData  # edge-edge reverse contact pairs # type: ignore
 
+    rvv2vv: wp.array[wp.int32]  # (vv_capacity,) reverse-vv index -> forward-vv index
+    rve2ve: wp.array[wp.int32]  # (ve_capacity,) reverse-ve index -> forward-ve index
+    rvf2vf: wp.array[wp.int32]  # (vf_capacity,) reverse-vf index -> forward-vf index
+    ree2ee: wp.array[wp.int32]  # (ee_capacity,) reverse-ee index -> forward-ee index
+
 
 @wp.func
 def _compute_edge_bounding_volume(
@@ -765,6 +770,29 @@ def _compute_reverse_contact_counts(ogc: OgcData):  # type: ignore
             ogc.ree.counts[he] = lb_ree_next - lb_ree  # type: ignore
 
 
+@wp.kernel
+def _build_reverse_to_forward_map(
+    fwd: ContactPairsData,  # pyright: ignore[reportGeneralTypeIssues]
+    rev: ContactPairsData,  # pyright: ignore[reportGeneralTypeIssues]
+    n_fwd_key: wp.int32,  # index into fwd.prefix for the total forward count
+    rx2x: wp.array[wp.int32],
+):
+    """Map each reverse contact index k to its corresponding forward contact index.
+
+    For the k-th reverse contact (rev.u[k], rev.v[k]) = (r_u, r_v), the matching
+    forward contact is the pair (r_v, r_u) in the sorted forward list. It is located
+    via a binary search using the pair-keyed lower_bound.
+    """
+    k = wp.tid()
+    n = fwd.prefix[n_fwd_key]
+    if k >= n:
+        return
+    ru = rev.u[k]
+    rv = rev.v[k]
+    l = common.lower_bound(fwd.u, fwd.v, n, rv, ru)  # type: ignore
+    rx2x[k] = l  # type: ignore
+
+
 class Ogc:
     """Offset Geometric Contact"""
 
@@ -835,6 +863,11 @@ class Ogc:
             meshes.n_half_edges, meshes.n_half_edges, ee_capacity
         ), ContactPairs(meshes.n_half_edges, meshes.n_half_edges, ee_capacity)
         self._ogc.ee, self._ogc.ree = self._ee.data, self._ree.data
+
+        self._ogc.rvv2vv = wp.empty((vv_capacity,), dtype=wp.int32)  # type: ignore
+        self._ogc.rve2ve = wp.empty((ve_capacity,), dtype=wp.int32)  # type: ignore
+        self._ogc.rvf2vf = wp.empty((vf_capacity,), dtype=wp.int32)  # type: ignore
+        self._ogc.ree2ee = wp.empty((ee_capacity,), dtype=wp.int32)  # type: ignore
 
         self._streams = [wp.Stream() for _ in range(10)]
 
@@ -1059,6 +1092,51 @@ class Ogc:
         with wp.ScopedStream(self._streams[3]):
             wp.utils.array_scan(
                 self._ree.data.counts, self._ree.data.prefix, inclusive=False
+            )
+        for stream in self._streams[:4]:
+            main_stream.wait_stream(stream)
+
+        # 5. Build reverse-to-forward contact index maps in parallel across contact types.
+        # Each reverse contact (r_u, r_v) at position k must find its forward counterpart
+        # (r_v, r_u) in the sorted forward list via binary search.
+        with wp.ScopedStream(self._streams[0]):
+            wp.launch(
+                _build_reverse_to_forward_map,
+                dim=vv_capacity,
+                inputs=[
+                    self._ogc.vv,
+                    self._ogc.rvv,
+                    n_verts,
+                    self._ogc.rvv2vv,
+                ],
+            )
+        with wp.ScopedStream(self._streams[1]):
+            wp.launch(
+                _build_reverse_to_forward_map,
+                dim=ve_capacity,
+                inputs=[
+                    self._ogc.ve,
+                    self._ogc.rve,
+                    n_verts,
+                    self._ogc.rve2ve,
+                ],
+            )
+        with wp.ScopedStream(self._streams[2]):
+            wp.launch(
+                _build_reverse_to_forward_map,
+                dim=vf_capacity,
+                inputs=[self._ogc.vf, self._ogc.rvf, n_verts, self._ogc.rvf2vf],
+            )
+        with wp.ScopedStream(self._streams[3]):
+            wp.launch(
+                _build_reverse_to_forward_map,
+                dim=ee_capacity,
+                inputs=[
+                    self._ogc.ee,
+                    self._ogc.ree,
+                    n_half_edges,
+                    self._ogc.ree2ee,
+                ],
             )
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)

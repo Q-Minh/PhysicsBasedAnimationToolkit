@@ -1,4 +1,4 @@
-from . import barrier
+from . import barrier, buffer
 
 import warp as wp
 
