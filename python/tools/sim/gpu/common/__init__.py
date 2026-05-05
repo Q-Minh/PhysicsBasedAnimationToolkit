@@ -59,3 +59,22 @@ def lower_bound(arr: wp.array[wp.int32], n: wp.int32, key: wp.int32) -> wp.int32
         length = go_right * (length - half - wp.int32(1)) + (wp.int32(1) - go_right) * half
         iters -= wp.int32(1)
     return lo
+
+
+@wp.func
+def lower_bound(u: wp.array[wp.int32], v: wp.array[wp.int32], n: wp.int32, keyu: wp.int32, keyv: wp.int32) -> wp.int32:  # type: ignore
+    """Branchless lower bound: returns the index of the first element >= (keyu, keyv) in (u, v)[0:n].
+    Uses lexicographic order: (a, b) < (c, d) if a < c or (a == c and b < d).
+    Uses clz to compute the exact number of iterations needed (no wasted steps).
+    """
+    lo = wp.int32(0)
+    # Number of binary-search iterations = 32 - clz(n) for n > 0, 0 for n == 0.
+    iters = wp.int32(32) - clz(n)  # type: ignore
+    length = n
+    while iters > wp.int32(0):
+        half = length >> wp.int32(1)
+        go_right = wp.int32(u[lo + half] < keyu or (u[lo + half] == keyu and v[lo + half] < keyv))
+        lo += go_right * (half + wp.int32(1))
+        length = go_right * (length - half - wp.int32(1)) + (wp.int32(1) - go_right) * half
+        iters -= wp.int32(1)
+    return lo
