@@ -284,7 +284,8 @@ class OgcContactBrowser:
         # screen height: screen_fraction = radius / (dist * tan(fov_half))
         cam_params = ps.get_view_camera_parameters()
         fov_half_rad = math.radians(cam_params.get_fov_vertical_deg()) * 0.5
-        dist = radius / (self._screen_fraction * math.tan(fov_half_rad))
+        screen_fraction = max(self._screen_fraction, 1e-4)
+        dist = radius / (screen_fraction * math.tan(fov_half_rad))
 
         # Keep the current view direction, just reposition along it
         look_dir = np.array(cam_params.get_look_dir(), dtype=float)
