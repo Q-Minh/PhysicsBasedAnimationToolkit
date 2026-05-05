@@ -54,7 +54,9 @@ class ContactPairsData:
     """Data structure for contact pairs."""
 
     counts: wp.array[wp.int32]  # (# u + 1,) contact counts per u primitive
-    prefix: wp.array[wp.int32]  # (# u + 1,) contact prefix sums per u primitive
+    prefix: wp.array[
+        wp.int32
+    ]  # (# u + 1,) contact prefix sums per u primitive, count is in last prefix element
     u: wp.array[wp.int32]  # (2*capacity,) u indices
     v: wp.array[wp.int32]  # (2*capacity,) v indices
 
@@ -108,7 +110,7 @@ class OgcData:
     f_lowers: wp.array[wp.vec3f]  # (# triangles,) triangle AABB lower bounds
     f_uppers: wp.array[wp.vec3f]  # (# triangles,) triangle AABB upper bounds
 
-    rq: wp.float32  # OGC query radius
+    rq: wp.array[wp.float32]  # (1,) OGC query radius
     r: wp.float32  # OGC contact radius
     gammap: (
         wp.float32
@@ -128,10 +130,18 @@ class OgcData:
     rvf: ContactPairsData  # vertex-face reverse contact pairs # type: ignore
     ree: ContactPairsData  # edge-edge reverse contact pairs # type: ignore
 
-    rvv2vv: wp.array[wp.int32]  # (vv_capacity,) reverse-vv index -> forward-vv index
-    rve2ve: wp.array[wp.int32]  # (ve_capacity,) reverse-ve index -> forward-ve index
-    rvf2vf: wp.array[wp.int32]  # (vf_capacity,) reverse-vf index -> forward-vf index
-    ree2ee: wp.array[wp.int32]  # (ee_capacity,) reverse-ee index -> forward-ee index
+    rvv2vv: wp.array[
+        wp.int32
+    ]  # (vv_capacity,) reverse-vv index -> forward-vv index, of size # vertex-vertex contacts
+    rve2ve: wp.array[
+        wp.int32
+    ]  # (ve_capacity,) reverse-ve index -> forward-ve index, of size # vertex-edge contacts
+    rvf2vf: wp.array[
+        wp.int32
+    ]  # (vf_capacity,) reverse-vf index -> forward-vf index, of size # vertex-face contacts
+    ree2ee: wp.array[
+        wp.int32
+    ]  # (ee_capacity,) reverse-ee index -> forward-ee index, of size # edge-edge contacts
 
 
 @wp.func
@@ -145,7 +155,7 @@ def _compute_edge_bounding_volume(
     xi, xj = x[einds[0]], x[einds[1]]
     xmid = float(0.5) * (xi + xj)
     hlen = float(0.5) * wp.norm_l2(xj - xi)
-    radius = hlen + ogc.rq
+    radius = hlen + ogc.rq[0]
     ogc.e_lowers[e] = xmid - wp.vec3f(radius)
     ogc.e_uppers[e] = xmid + wp.vec3f(radius)
 
@@ -165,8 +175,8 @@ def _compute_triangle_bounding_volume(
     xmax = wp.max(
         xi, wp.max(xj, xk)  # pyright: ignore[reportArgumentType, reportCallIssue]
     )
-    ogc.f_lowers[f] = xmin - wp.vec3f(ogc.rq)
-    ogc.f_uppers[f] = xmax + wp.vec3f(ogc.rq)
+    ogc.f_lowers[f] = xmin - wp.vec3f(ogc.rq[0])
+    ogc.f_uppers[f] = xmax + wp.vec3f(ogc.rq[0])
 
 
 @wp.kernel
@@ -181,17 +191,17 @@ def _compute_bounding_volumes_kernel(
     n_triangles = meshes.F.shape[0]
     if tid < n_verts:
         v = tid
-        ogc.dminv[v] = ogc.rq
+        ogc.dminv[v] = ogc.rq[0]
     if tid < n_edges:
         e = tid
         he = meshes.EHE[e]
-        ogc.dmine[he[0]] = ogc.rq
+        ogc.dmine[he[0]] = ogc.rq[0]
         if he[1] >= 0:
-            ogc.dmine[he[1]] = ogc.rq
+            ogc.dmine[he[1]] = ogc.rq[0]
         _compute_edge_bounding_volume(x, meshes, ogc, e)  # type: ignore
     if tid < n_triangles:
         f = tid
-        ogc.dminf[f] = ogc.rq
+        ogc.dminf[f] = ogc.rq[0]
         _compute_triangle_bounding_volume(x, meshes, ogc, f)  # type: ignore
 
 
@@ -832,7 +842,7 @@ class Ogc:
         self._ogc.e_uppers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
         self._ogc.f_lowers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
         self._ogc.f_uppers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
-        self._ogc.rq = params.rq
+        self._ogc.rq = wp.array([params.rq], dtype=wp.float32)
         self._ogc.r = params.r
         self._ogc.gammap = params.gammap
         self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
