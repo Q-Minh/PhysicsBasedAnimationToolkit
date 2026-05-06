@@ -12,7 +12,9 @@ class OgcParams:
     """Parameters for Offset Geometric Contact detection."""
 
     r = DocField(0.003, "Contact radius. Pairs closer than r are in contact.")
-    rq = DocField(0.005, "Query radius for broad-phase BVH traversal (should be >= r).")
+    arq = DocField(
+        1.0, "Query radius multiplier for broad-phase BVH traversal (should be >= 0)."
+    )
     gammap = DocField(
         0.45, "Relaxation factor for displacement bounds (0 < gammap < 0.5)."
     )
@@ -103,6 +105,8 @@ class ContactPairs:
 class OgcData:
     """Data structure for OGC."""
 
+    xk: wp.array[wp.vec3f]  # (N,) cached vertex positions at step k
+
     e_bvh_id: wp.uint64  # Edge BVH ID
     f_bvh_id: wp.uint64  # Triangle BVH ID
     e_lowers: wp.array[wp.vec3f]  # (# edges,) edge AABB lower bounds
@@ -110,7 +114,7 @@ class OgcData:
     f_lowers: wp.array[wp.vec3f]  # (# triangles,) triangle AABB lower bounds
     f_uppers: wp.array[wp.vec3f]  # (# triangles,) triangle AABB upper bounds
 
-    rq: wp.array[wp.float32]  # (1,) OGC query radius
+    arq: wp.float32  # OGC query radius multiplier
     r: wp.float32  # OGC contact radius
     gammap: (
         wp.float32
@@ -146,42 +150,42 @@ class OgcData:
 
 @wp.func
 def _compute_edge_bounding_volume(
-    x: wp.array[wp.vec3f],  # (N,) points
-    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     e: wp.int32,
+    xi: wp.vec3f,
+    xj: wp.vec3f,
+    rq: wp.float32,
 ):
-    einds = meshes.E[e]
-    xi, xj = x[einds[0]], x[einds[1]]
-    xmid = float(0.5) * (xi + xj)
-    hlen = float(0.5) * wp.norm_l2(xj - xi)
-    radius = hlen + ogc.rq[0]
+    xmid = float(0.5) * (xi + xj)  # type: ignore
+    hlen = float(0.5) * wp.norm_l2(xj - xi)  # type: ignore
+    radius = hlen + rq
     ogc.e_lowers[e] = xmid - wp.vec3f(radius)
     ogc.e_uppers[e] = xmid + wp.vec3f(radius)
 
 
 @wp.func
 def _compute_triangle_bounding_volume(
-    x: wp.array[wp.vec3f],  # (N,) points
-    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     f: wp.int32,
+    xi: wp.vec3f,
+    xj: wp.vec3f,
+    xk: wp.vec3f,
+    rq: wp.float32,
 ):
-    finds = meshes.F[f]
-    xi, xj, xk = x[finds[0]], x[finds[1]], x[finds[2]]
     xmin = wp.min(
         xi, wp.min(xj, xk)  # pyright: ignore[reportArgumentType, reportCallIssue]
     )
     xmax = wp.max(
         xi, wp.max(xj, xk)  # pyright: ignore[reportArgumentType, reportCallIssue]
     )
-    ogc.f_lowers[f] = xmin - wp.vec3f(ogc.rq[0])
-    ogc.f_uppers[f] = xmax + wp.vec3f(ogc.rq[0])
+    ogc.f_lowers[f] = xmin - wp.vec3f(rq)
+    ogc.f_uppers[f] = xmax + wp.vec3f(rq)
 
 
 @wp.kernel
-def _compute_bounding_volumes_kernel(
+def _compute_bounding_volumes(
     x: wp.array[wp.vec3f],  # (N,) points
+    xtilde: wp.array[wp.vec3f],  # (N,) predicted vertex positions
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
 ):
@@ -191,18 +195,44 @@ def _compute_bounding_volumes_kernel(
     n_triangles = meshes.F.shape[0]
     if tid < n_verts:
         v = tid
-        ogc.dminv[v] = ogc.rq[0]
+        i = meshes.V[v]
+        rq = wp.max(ogc.r, wp.norm_l2(x[i] - xtilde[i]))
+        ogc.dminv[v] = rq
     if tid < n_edges:
         e = tid
         he = meshes.EHE[e]
-        ogc.dmine[he[0]] = ogc.rq[0]
+        einds = meshes.E[e]
+        xi = x[einds[0]]
+        xj = x[einds[1]]
+        rq = wp.max(
+            ogc.r,
+            wp.max(
+                wp.norm_l2(xi - xtilde[einds[0]]),
+                wp.norm_l2(xj - xtilde[einds[1]]),
+            ),
+        )
+        ogc.dmine[he[0]] = rq
         if he[1] >= 0:
-            ogc.dmine[he[1]] = ogc.rq[0]
-        _compute_edge_bounding_volume(x, meshes, ogc, e)  # type: ignore
+            ogc.dmine[he[1]] = rq
+        _compute_edge_bounding_volume(ogc, e, xi, xj, rq)  # type: ignore
     if tid < n_triangles:
         f = tid
-        ogc.dminf[f] = ogc.rq[0]
-        _compute_triangle_bounding_volume(x, meshes, ogc, f)  # type: ignore
+        finds = meshes.F[f]
+        xi = x[finds[0]]
+        xj = x[finds[1]]
+        xk = x[finds[2]]
+        rq = wp.max(
+            ogc.r,
+            wp.max(
+                wp.norm_l2(xi - xtilde[finds[0]]),
+                wp.max(
+                    wp.norm_l2(xj - xtilde[finds[1]]),
+                    wp.norm_l2(xk - xtilde[finds[2]]),
+                ),
+            ),
+        )
+        ogc.dminf[f] = rq
+        _compute_triangle_bounding_volume(ogc, f, xi, xj, xk, rq)  # type: ignore
 
 
 @wp.func
@@ -819,7 +849,7 @@ class Ogc:
     _ogc: OgcData  # pyright: ignore[reportGeneralTypeIssues]
     _e_bvh: wp.Bvh  # BVH over edges
     _f_bvh: wp.Bvh  # BVH over faces
-    _points: wp.array[wp.vec3f]  # (N,) vertex positions
+    _xk: wp.array[wp.vec3f]  # (N,) cached vertex positions at step k
     _meshes: MultiMesh  # Meshes # type: ignore
 
     def __init__(
@@ -835,14 +865,15 @@ class Ogc:
             meshes (MultiMesh): Multi-body mesh
             params (OgcParams, optional): Contact detection parameters. Defaults to OgcParams().
         """
-        self._points = points
+        self._xk = wp.empty_like(points)
+        wp.copy(dest=self._xk, src=points)
         self._meshes = meshes
         self._ogc = OgcData()
         self._ogc.e_lowers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
         self._ogc.e_uppers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
         self._ogc.f_lowers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
         self._ogc.f_uppers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
-        self._ogc.rq = wp.array([params.rq], dtype=wp.float32)
+        self._ogc.arq = params.arq
         self._ogc.r = params.r
         self._ogc.gammap = params.gammap
         self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
@@ -883,9 +914,9 @@ class Ogc:
 
         dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
         wp.launch(
-            kernel=_compute_bounding_volumes_kernel,
+            kernel=_compute_bounding_volumes,
             dim=dim,
-            inputs=[self._points, self._meshes.data, self._ogc],
+            inputs=[self._xk, self._xk, self._meshes.data, self._ogc],
         )
         self._e_bvh, self._f_bvh = (
             wp.Bvh(
@@ -909,7 +940,7 @@ class Ogc:
     def compute_query_radius(self, xt: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]):
         # TODO: Accept cupy arrays as input
         # TODO: Compute rq = r + beta * (xtilde - xt).colwise().norm().maxCoeff()
-        # 0. Use cuda.compute and CuPy, using a stream wrapper that 
+        # 0. Use cuda.compute and CuPy, using a stream wrapper that
         # implements __cuda_stream__ (warp Stream's don't implement that interface)
         # 1. Capture xt, xtilde as CuPy 3 x N arrays
         xtc = cp.asarray(xt)
@@ -919,16 +950,22 @@ class Ogc:
         # 4. Use cuda.compute reduce_into on the transform iterator and store into CuPy array view of self._ogc.rq
         pass
 
-    def prepare_for_execution(self, request_rebuild: bool = True):
+    def prepare_for_execution(
+        self,
+        xk: wp.array[wp.vec3f],
+        xtilde: wp.array[wp.vec3f],
+        request_rebuild: bool = True,
+    ):
         main_stream = wp.get_stream()
+        wp.copy(dest=self._xk, src=xk, stream=main_stream)
         wp.launch(
-            _compute_bounding_volumes_kernel,
+            _compute_bounding_volumes,
             dim=max(
                 self._meshes.n_verts,
                 self._meshes.n_edges,
                 self._meshes.n_triangles,
             ),
-            inputs=[self._points, self._meshes.data, self._ogc],
+            inputs=[self._xk, xtilde, self._meshes.data, self._ogc],
             stream=main_stream,
         )
         for bvh, stream in zip([self._e_bvh, self._f_bvh], self._streams[:2]):
@@ -971,7 +1008,7 @@ class Ogc:
             _fused_contact_detection,
             dim=max(n_verts, n_edges) * _FUSED_CONTACT_DETECTION_BLOCK_SIZE,
             inputs=[
-                self._points,
+                self._xk,
                 self._meshes.data,
                 self._ogc,
             ],
@@ -1020,50 +1057,50 @@ class Ogc:
         # We need to store pairs (v,u) for each (u,v) for reverse contacts via mem copy.
         # Then, we sort by v (named u in reverse ContactPairs).
         wp.copy(
-            self._rvv.data.u,
-            self._vv.data.v,
+            dest=self._rvv.data.u,
+            src=self._vv.data.v,
             count=vv_capacity,
             stream=self._streams[0],
         )
         wp.copy(
-            self._rvv.data.v,
-            self._vv.data.u,
+            dest=self._rvv.data.v,
+            src=self._vv.data.u,
             count=vv_capacity,
             stream=self._streams[0],
         )
         wp.copy(
-            self._rve.data.u,
-            self._ve.data.v,
+            dest=self._rve.data.u,
+            src=self._ve.data.v,
             count=ve_capacity,
             stream=self._streams[1],
         )
         wp.copy(
-            self._rve.data.v,
-            self._ve.data.u,
+            dest=self._rve.data.v,
+            src=self._ve.data.u,
             count=ve_capacity,
             stream=self._streams[1],
         )
         wp.copy(
-            self._rvf.data.u,
-            self._vf.data.v,
+            dest=self._rvf.data.u,
+            src=self._vf.data.v,
             count=vf_capacity,
             stream=self._streams[2],
         )
         wp.copy(
-            self._rvf.data.v,
-            self._vf.data.u,
+            dest=self._rvf.data.v,
+            src=self._vf.data.u,
             count=vf_capacity,
             stream=self._streams[2],
         )
         wp.copy(
-            self._ree.data.u,
-            self._ee.data.v,
+            dest=self._ree.data.u,
+            src=self._ee.data.v,
             count=ee_capacity,
             stream=self._streams[3],
         )
         wp.copy(
-            self._ree.data.v,
-            self._ee.data.u,
+            dest=self._ree.data.v,
+            src=self._ee.data.u,
             count=ee_capacity,
             stream=self._streams[3],
         )
@@ -1172,7 +1209,7 @@ class Ogc:
         )
 
     def restore_feasibility(self):
-        # TODO: 
+        # TODO:
         # 1. Store last position array from last detect_contacts call
         # 2. Apply OGC (or planar DAT) truncation
         pass

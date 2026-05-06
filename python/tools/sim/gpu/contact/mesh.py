@@ -6,52 +6,10 @@ from .ogc import ContactPairsData, OgcData, Ogc
 from .. import common
 from ..common.buffer import DoubleBuffer
 
-
 # TODO: Review/refactor this code.
 # 1. Implement contact basis construction + constraint linearization. We might want
 #    to make OGC responsible for basis construction.
 # 2. Implement dual update
-
-# ---------------------------------------------------------------------------
-# Kernels (type-independent — shared by all four contact types)
-# ---------------------------------------------------------------------------
-
-
-@wp.kernel
-def _init_contact_set(
-    fwd: ContactPairsData,  # pyright: ignore[reportGeneralTypeIssues]
-    n_fwd_key: wp.int32,  # index into fwd.prefix that holds the total contact count
-    cur_u: wp.array[wp.int32],
-    cur_v: wp.array[wp.int32],
-    cur_lambda: wp.array[wp.float32],
-    cur_s: wp.array[wp.float32],
-    cur_gamma: wp.array[wp.float32],
-    cur_lambda_f: wp.array[wp.vec2f],
-    cur_sigma: wp.array[wp.float32],
-    cur_sigma_f: wp.array[wp.float32],
-):
-    """Initialize the k-th new OGC contact in the current buffer.
-
-    Each thread k handles one contact from the new OGC forward list.  The pair
-    keys (u, v) are copied from the OGC list and all augmented-Lagrangian state
-    fields are set to their defaults:
-      lambda = 0, s = 0, gamma = 1, lambda_f = [0,0], sigma = 0, sigma_f = 0.
-
-    Fields that are computed/overwritten by the linearization pass (chat, gradc,
-    c, T, W, cf, dhat) are intentionally left untouched.
-    """
-    k = wp.tid()
-    nfwd = fwd.prefix[n_fwd_key]
-    if k >= nfwd:
-        return
-    cur_u[k] = fwd.u[k]
-    cur_v[k] = fwd.v[k]
-    cur_lambda[k] = wp.float32(0)
-    cur_s[k] = wp.float32(0)
-    cur_gamma[k] = wp.float32(1)
-    cur_lambda_f[k] = wp.vec2f(0, 0)
-    cur_sigma[k] = wp.float32(0)
-    cur_sigma_f[k] = wp.float32(0)
 
 
 @wp.kernel
@@ -61,19 +19,17 @@ def _warm_start_contact_set(
     # Alternate (previous-step) buffer: read then invalidate ---------------
     alt_u: wp.array[wp.int32],
     alt_v: wp.array[wp.int32],
-    alt_lambda: wp.array[wp.float32],
+    alt_lambda_n: wp.array[wp.float32],
     alt_s: wp.array[wp.float32],
     alt_gamma: wp.array[wp.float32],
     alt_lambda_f: wp.array[wp.vec2f],
-    alt_sigma: wp.array[wp.float32],
-    alt_sigma_f: wp.array[wp.float32],
     # Current (new-step) buffer: overwrite defaults with warm-started state -
-    cur_lambda: wp.array[wp.float32],
+    cur_u: wp.array[wp.int32],
+    cur_v: wp.array[wp.int32],
+    cur_lambda_n: wp.array[wp.float32],
     cur_s: wp.array[wp.float32],
     cur_gamma: wp.array[wp.float32],
     cur_lambda_f: wp.array[wp.vec2f],
-    cur_sigma: wp.array[wp.float32],
-    cur_sigma_f: wp.array[wp.float32],
 ):
     """Warm-start the current buffer from the alternate buffer and invalidate the alternate.
 
@@ -101,12 +57,12 @@ def _warm_start_contact_set(
     l = common.lower_bound(fwd.u, fwd.v, nfwd, u, v)  # type: ignore
     if l >= nfwd or fwd.u[l] != u or fwd.v[l] != v:
         return  # contact dropped from the new set; discard prior state
-    cur_lambda[l] = alt_lambda[k]
+    cur_u[l] = u
+    cur_v[l] = v
+    cur_lambda_n[l] = alt_lambda_n[k]
     cur_s[l] = alt_s[k]
     cur_gamma[l] = alt_gamma[k]
     cur_lambda_f[l] = alt_lambda_f[k]
-    cur_sigma[l] = alt_sigma[k]
-    cur_sigma_f[l] = alt_sigma_f[k]
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +81,7 @@ class ContactConstraintSet:
     Fields
     ------
     u, v       : ``int32``          contact pair keys; ``-1`` marks an empty slot.
-    lambda     : ``float32``        normal Lagrange multiplier.
+    lambda_n   : ``float32``        normal Lagrange multiplier.
     s          : ``float32``        inequality slack variable.
     gamma      : ``float32``        constraint decay factor (default-initialised to 1).
     chat       : ``float32``        linearisation constant c(xk) - grad_c(xk)·xk.
@@ -136,8 +92,6 @@ class ContactConstraintSet:
     cf         : ``vec2f``          friction constraint value T^T W (x - x_t).
     dhat       : ``vec2f``          T^T W x_t.
     lambda_f   : ``vec2f``          friction Lagrange multiplier.
-    sigma      : ``float32``        normal contact penalty parameter.
-    sigma_f    : ``float32``        friction penalty parameter.
 
     Parameters
     ----------
@@ -168,23 +122,23 @@ class ContactConstraintSet:
 
         self.buffers: Dict[str, DoubleBuffer] = {
             # Contact pair keys — -1 = invalid/empty slot
-            "u":        _pair((capacity,), wp.int32,   fill=-1),
-            "v":        _pair((capacity,), wp.int32,   fill=-1),
+            "u": _pair((capacity,), wp.int32, fill=-1),
+            "v": _pair((capacity,), wp.int32, fill=-1),
             # Augmented-Lagrangian state (warm-started across steps)
-            "lambda":   _pair((capacity,), wp.float32),
-            "s":        _pair((capacity,), wp.float32),
-            "gamma":    _pair((capacity,), wp.float32, fill=1.0),  # decay, default 1
-            "sigma":    _pair((capacity,), wp.float32),
-            "sigma_f":  _pair((capacity,), wp.float32),
+            "lambda_n": _pair((capacity,), wp.float32),
+            "s": _pair((capacity,), wp.float32),
+            "gamma": _pair((capacity,), wp.float32, fill=1.0),  # decay, default 1
+            "sigma": _pair((capacity,), wp.float32),
+            "sigma_f": _pair((capacity,), wp.float32),
             "lambda_f": _pair((capacity,), wp.vec2f),
             # Geometric / linearization state (recomputed each step, not warm-started)
-            "chat":     _pair((capacity,), wp.float32),
-            "gradc":    _pair((capacity,), grad_t),
-            "c":        _pair((capacity,), wp.float32),
-            "T":        _pair((capacity,), T_t),
-            "W":        _pair((capacity,), W_t),
-            "cf":       _pair((capacity,), wp.vec2f),
-            "dhat":     _pair((capacity,), wp.vec2f),
+            "chat": _pair((capacity,), wp.float32),
+            "gradc": _pair((capacity,), grad_t),
+            "c": _pair((capacity,), wp.float32),
+            "T": _pair((capacity,), T_t),
+            "W": _pair((capacity,), W_t),
+            "cf": _pair((capacity,), wp.vec2f),
+            "dhat": _pair((capacity,), wp.vec2f),
         }
 
     def swap(self):
@@ -294,23 +248,12 @@ class MeshDynamics:
         # -- Step 2: Initialize new contacts in parallel across contact types ------
         for cs, fwd, n_key, si in contact_types:
             cur = cs.current
-            with wp.ScopedStream(self._streams[si]):
-                wp.launch(
-                    _init_contact_set,
-                    dim=cs.capacity,
-                    inputs=[
-                        fwd,
-                        wp.int32(n_key),
-                        cur["u"],
-                        cur["v"],
-                        cur["lambda"],
-                        cur["s"],
-                        cur["gamma"],
-                        cur["lambda_f"],
-                        cur["sigma"],
-                        cur["sigma_f"],
-                    ],
-                )
+            cur["u"].fill_(wp.int32(-1))
+            cur["v"].fill_(wp.int32(-1))
+            cur["lambda_n"].fill_(wp.float32(0))
+            cur["s"].fill_(wp.float32(0))
+            cur["gamma"].fill_(wp.float32(1))
+            cur["lambda_f"].fill_(wp.float32(0))
 
         # Cross-stream barrier: warm-start must not begin until all inits are done.
         # Pattern: main_stream gathers all side streams, then side streams re-sync
@@ -334,19 +277,15 @@ class MeshDynamics:
                         # alternate (old state, will be invalidated in-kernel)
                         alt["u"],
                         alt["v"],
-                        alt["lambda"],
+                        alt["lambda_n"],
                         alt["s"],
                         alt["gamma"],
                         alt["lambda_f"],
-                        alt["sigma"],
-                        alt["sigma_f"],
                         # current (warm-start targets)
-                        cur["lambda"],
+                        cur["lambda_n"],
                         cur["s"],
                         cur["gamma"],
                         cur["lambda_f"],
-                        cur["sigma"],
-                        cur["sigma_f"],
                     ],
                 )
 

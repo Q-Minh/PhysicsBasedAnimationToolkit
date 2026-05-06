@@ -146,7 +146,7 @@ def solve(
     for k in range(n_max_iters):
         # TODO: Replace these OGC calls with a proper
         # contact.MeshDynamics class that uses OGC internally
-        ogc.prepare_for_execution()
+        ogc.prepare_for_execution(fem.data.x, fem.data.xtilde)
         ogc.detect_contacts()
         ogc.update_displacement_bounds()
         # TODO: linearize_constraints(fem, params)

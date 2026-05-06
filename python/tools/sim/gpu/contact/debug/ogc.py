@@ -9,9 +9,9 @@ class OgcContactBrowser:
 
     _CONTACT_KINDS = ["VV", "VE", "VF", "EE"]
 
-    def __init__(self, ogc: Ogc, screen_fraction: float = 0.25):
+    def __init__(self, x: wp.array[wp.vec3f], ogc: Ogc, screen_fraction: float = 0.25):
         self._ogc = ogc
-        self._x = ogc._points.numpy()
+        self._x = x.numpy()
         self._V = ogc._meshes.data.V.numpy()
         self._F = ogc._meshes.data.F.numpy()
         self._screen_fraction: float = screen_fraction
@@ -34,11 +34,11 @@ class OgcContactBrowser:
             ps.remove_surface_mesh(self._stencil_sm.get_name())
             self._stencil_sm = None
 
-    def update(self, ogc: Ogc):
+    def update(self, x: wp.array[wp.vec3f], ogc: Ogc):
         """Refresh contact data from a new or updated Ogc instance."""
         self.clear()
         self._ogc = ogc
-        self._x = ogc._points.numpy()
+        self._x = x.numpy()
         self._last_visualized = None
 
     def draw(self):

@@ -150,7 +150,9 @@ class SimulationState:
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.ogc_params = gpu.contact.ogc.OgcParams()
         self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
-        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
+        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(
+            self.fem.data.x, self.ogc
+        )
 
         # Simulation state
         self.simulate: bool = False
@@ -174,7 +176,7 @@ class SimulationState:
         self.fem.step()
         self.t += 1
 
-        self.contact_browser.update(self.ogc)
+        self.contact_browser.update(self.fem.data.x, self.ogc)
 
     def reset(self):
         self.t = 0
@@ -183,7 +185,7 @@ class SimulationState:
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
         self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
-        self.contact_browser.update(self.ogc)
+        self.contact_browser.update(self.fem.data.x, self.ogc)
         self.capture = None
 
 
