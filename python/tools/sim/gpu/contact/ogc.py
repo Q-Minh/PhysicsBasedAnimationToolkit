@@ -147,6 +147,30 @@ class OgcData:
         wp.int32
     ]  # (ee_capacity,) reverse-ee index -> forward-ee index, of size # edge-edge contacts
 
+    # Contact bases and closest-point coordinates (computed in a second pass)
+    vv_bases: wp.array[
+        wp.mat33f
+    ]  # (vv_capacity,) orthonormal contact frame per VV pair
+
+    ve_bases: wp.array[
+        wp.mat33f
+    ]  # (ve_capacity,) orthonormal contact frame per VE pair
+    ve_bary: wp.array[
+        wp.float32
+    ]  # (ve_capacity,) parameter t of closest point on the edge
+
+    vf_bases: wp.array[
+        wp.mat33f
+    ]  # (vf_capacity,) orthonormal contact frame per VF pair
+    vf_bary: wp.array[
+        wp.vec2f
+    ]  # (vf_capacity,) barycentric uv (with w = 1-u-v) of closest point on triangle
+
+    ee_bases: wp.array[
+        wp.mat33f
+    ]  # (ee_capacity,) orthonormal contact frame per EE pair
+    ee_bary: wp.array[wp.vec2f]  # (ee_capacity,) parameters (s,t) on edge1 and edge2
+
 
 @wp.func
 def _compute_edge_bounding_volume(
@@ -833,6 +857,129 @@ def _build_reverse_to_forward_map(
     rx2x[k] = l  # type: ignore
 
 
+@wp.func
+def _build_contact_basis(n: wp.vec3f) -> wp.mat33f:
+    """Build an orthonormal contact frame from a unit normal vector.
+
+    The returned mat33f has the three basis vectors as rows:
+      row 0 = n  (contact normal)
+      row 1 = t1 (first tangent)
+      row 2 = t2 (second tangent)
+    """
+    right = wp.vec3f(wp.float32(1), wp.float32(0), wp.float32(0))
+    if wp.abs(n[0]) > wp.float32(0.9):  # type: ignore
+        right = wp.vec3f(wp.float32(0), wp.float32(1), wp.float32(0))
+    t1 = wp.normalize(wp.cross(n, right))  # type: ignore
+    t2 = wp.cross(n, t1)  # type: ignore
+    return wp.mat33f(
+        n[0],  # type: ignore
+        n[1],  # type: ignore
+        n[2],  # type: ignore
+        t1[0],  # type: ignore
+        t1[1],  # type: ignore
+        t1[2],  # type: ignore
+        t2[0],  # type: ignore
+        t2[1],  # type: ignore
+        t2[2],  # type: ignore
+    )
+
+
+@wp.kernel
+def _compute_vv_contact_data(
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
+    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+):
+    """Second pass: compute contact basis for each vertex-vertex contact pair."""
+    k = wp.tid()
+    n_verts = meshes.V.shape[0]
+    n_vv = ogc.vv.counts[n_verts]
+    if k >= n_vv:
+        return
+    u, v = ogc.vv.u[k], ogc.vv.v[k]
+    xi = x[meshes.V[u]]
+    xj = x[meshes.V[v]]
+    assert wp.norm_l2(xi - xj) > wp.float32(1e-7)  # type: ignore
+    n = wp.normalize(xi - xj)  # type: ignore
+    ogc.vv_bases[k] = _build_contact_basis(n)
+
+
+@wp.kernel
+def _compute_ve_contact_data(
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
+    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+):
+    """Second pass: compute contact basis and edge parameter t for each vertex-edge contact pair."""
+    k = wp.tid()
+    n_verts = meshes.V.shape[0]
+    n_ve = ogc.ve.counts[n_verts]
+    if k >= n_ve:
+        return
+    v, he = ogc.ve.u[k], ogc.ve.v[k]
+    xi = x[meshes.V[v]]
+    xa = x[halfedges.incoming_vertex(meshes.F, he)]  # type: ignore
+    xb = x[halfedges.outgoing_vertex(meshes.F, he)]  # type: ignore
+    uv = queries.closest_point_on_line_segment(xi, xa, xb)  # type: ignore
+    assert wp.norm_l2(xi - (uv[0] * xa + uv[1] * xb)) > wp.float32(1e-7)  # type: ignore
+    n = wp.normalize(xi - (uv[0] * xa + uv[1] * xb))  # type: ignore
+    ogc.ve_bases[k] = _build_contact_basis(n)
+    ogc.ve_bary[k] = uv[1]  # type: ignore
+
+
+@wp.kernel
+def _compute_vf_contact_data(
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
+    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+):
+    """Second pass: compute contact basis and barycentric uvw for each vertex-face contact pair."""
+    k = wp.tid()
+    n_verts = meshes.V.shape[0]
+    n_vf = ogc.vf.counts[n_verts]
+    if k >= n_vf:
+        return
+    v, f = ogc.vf.u[k], ogc.vf.v[k]
+    xi = x[meshes.V[v]]
+    finds = meshes.F[f]
+    xa = x[finds[0]]
+    xb = x[finds[1]]
+    xc = x[finds[2]]
+    uvw = queries.closest_point_triangle(xi, xa, xb, xc)  # type: ignore
+    xc = uvw[0] * xa + uvw[1] * xb + uvw[2] * xc  # type: ignore
+    assert wp.norm_l2(xi - xc) > wp.float32(1e-7)  # type: ignore
+    n = wp.normalize(xi - xc)
+    ogc.vf_bases[k] = _build_contact_basis(n)
+    ogc.vf_bary[k] = wp.vec2f(uvw[0], uvw[1])  # type: ignore
+
+
+@wp.kernel
+def _compute_ee_contact_data(
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
+    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+):
+    """Second pass: compute contact basis and parameters (s,t) for each edge-edge contact pair."""
+    k = wp.tid()
+    n_half_edges = ogc.ee.counts.shape[0] - wp.int32(1)
+    n_ee = ogc.ee.counts[n_half_edges]
+    if k >= n_ee:
+        return
+    he1 = ogc.ee.u[k]
+    he2 = ogc.ee.v[k]
+    xi1 = x[halfedges.incoming_vertex(meshes.F, he1)]
+    xj1 = x[halfedges.outgoing_vertex(meshes.F, he1)]
+    xi2 = x[halfedges.incoming_vertex(meshes.F, he2)]
+    xj2 = x[halfedges.outgoing_vertex(meshes.F, he2)]
+    st = queries.closest_points_line_segments(xi1, xj1, xi2, xj2)  # type: ignore
+    xc1 = (wp.float32(1.0) - st[0]) * xi1 + st[0] * xj1  # type: ignore
+    xc2 = (wp.float32(1.0) - st[1]) * xi2 + st[1] * xj2  # type: ignore
+    assert wp.norm_l2(xc1 - xc2) > wp.float32(1e-7)  # type: ignore
+    n = wp.normalize(xc1 - xc2)
+    ogc.ee_bases[k] = _build_contact_basis(n)
+    ogc.ee_bary[k] = st
+
+
 class Ogc:
     """Offset Geometric Contact"""
 
@@ -909,6 +1056,14 @@ class Ogc:
         self._ogc.rve2ve = wp.empty((ve_capacity,), dtype=wp.int32)  # type: ignore
         self._ogc.rvf2vf = wp.empty((vf_capacity,), dtype=wp.int32)  # type: ignore
         self._ogc.ree2ee = wp.empty((ee_capacity,), dtype=wp.int32)  # type: ignore
+
+        self._ogc.vv_bases = wp.empty((vv_capacity,), dtype=wp.mat33f)  # type: ignore
+        self._ogc.ve_bases = wp.empty((ve_capacity,), dtype=wp.mat33f)  # type: ignore
+        self._ogc.ve_bary = wp.empty((ve_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.vf_bases = wp.empty((vf_capacity,), dtype=wp.mat33f)  # type: ignore
+        self._ogc.vf_bary = wp.empty((vf_capacity,), dtype=wp.vec2f)  # type: ignore
+        self._ogc.ee_bases = wp.empty((ee_capacity,), dtype=wp.mat33f)  # type: ignore
+        self._ogc.ee_bary = wp.empty((ee_capacity,), dtype=wp.vec2f)  # type: ignore
 
         self._streams = [wp.Stream() for _ in range(10)]
 
@@ -1025,17 +1180,37 @@ class Ogc:
             wp.utils.radix_sort_pairs(
                 keys=self._vv.data.u, values=self._vv.data.v, count=vv_capacity
             )
+            wp.launch(
+                _compute_vv_contact_data,
+                dim=vv_capacity,
+                inputs=[self._xk, self._meshes.data, self._ogc],
+            )
         with wp.ScopedStream(self._streams[1]):
             wp.utils.radix_sort_pairs(
                 keys=self._ve.data.u, values=self._ve.data.v, count=ve_capacity
+            )
+            wp.launch(
+                _compute_ve_contact_data,
+                dim=ve_capacity,
+                inputs=[self._xk, self._meshes.data, self._ogc],
             )
         with wp.ScopedStream(self._streams[2]):
             wp.utils.radix_sort_pairs(
                 keys=self._vf.data.u, values=self._vf.data.v, count=vf_capacity
             )
+            wp.launch(
+                _compute_vf_contact_data,
+                dim=vf_capacity,
+                inputs=[self._xk, self._meshes.data, self._ogc],
+            )
         with wp.ScopedStream(self._streams[3]):
             wp.utils.radix_sort_pairs(
                 keys=self._ee.data.u, values=self._ee.data.v, count=ee_capacity
+            )
+            wp.launch(
+                _compute_ee_contact_data,
+                dim=ee_capacity,
+                inputs=[self._xk, self._meshes.data, self._ogc],
             )
         with wp.ScopedStream(self._streams[4]):
             wp.utils.array_scan(
@@ -1060,63 +1235,63 @@ class Ogc:
             dest=self._rvv.data.u,
             src=self._vv.data.v,
             count=vv_capacity,
-            stream=self._streams[0],
+            stream=self._streams[4],
         )
         wp.copy(
             dest=self._rvv.data.v,
             src=self._vv.data.u,
             count=vv_capacity,
-            stream=self._streams[0],
+            stream=self._streams[4],
         )
         wp.copy(
             dest=self._rve.data.u,
             src=self._ve.data.v,
             count=ve_capacity,
-            stream=self._streams[1],
+            stream=self._streams[5],
         )
         wp.copy(
             dest=self._rve.data.v,
             src=self._ve.data.u,
             count=ve_capacity,
-            stream=self._streams[1],
+            stream=self._streams[5],
         )
         wp.copy(
             dest=self._rvf.data.u,
             src=self._vf.data.v,
             count=vf_capacity,
-            stream=self._streams[2],
+            stream=self._streams[6],
         )
         wp.copy(
             dest=self._rvf.data.v,
             src=self._vf.data.u,
             count=vf_capacity,
-            stream=self._streams[2],
+            stream=self._streams[6],
         )
         wp.copy(
             dest=self._ree.data.u,
             src=self._ee.data.v,
             count=ee_capacity,
-            stream=self._streams[3],
+            stream=self._streams[7],
         )
         wp.copy(
             dest=self._ree.data.v,
             src=self._ee.data.u,
             count=ee_capacity,
-            stream=self._streams[3],
+            stream=self._streams[7],
         )
-        with wp.ScopedStream(self._streams[0]):
+        with wp.ScopedStream(self._streams[4]):
             wp.utils.radix_sort_pairs(
                 keys=self._rvv.data.u, values=self._rvv.data.v, count=vv_capacity
             )
-        with wp.ScopedStream(self._streams[1]):
+        with wp.ScopedStream(self._streams[5]):
             wp.utils.radix_sort_pairs(
                 keys=self._rve.data.u, values=self._rve.data.v, count=ve_capacity
             )
-        with wp.ScopedStream(self._streams[2]):
+        with wp.ScopedStream(self._streams[6]):
             wp.utils.radix_sort_pairs(
                 keys=self._rvf.data.u, values=self._rvf.data.v, count=vf_capacity
             )
-        with wp.ScopedStream(self._streams[3]):
+        with wp.ScopedStream(self._streams[7]):
             wp.utils.radix_sort_pairs(
                 keys=self._ree.data.u, values=self._ree.data.v, count=ee_capacity
             )
