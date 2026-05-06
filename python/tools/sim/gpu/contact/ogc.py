@@ -906,6 +906,19 @@ class Ogc:
             self._f_bvh.id,
         )
 
+    def compute_query_radius(self, xt: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]):
+        # TODO: Accept cupy arrays as input
+        # TODO: Compute rq = r + beta * (xtilde - xt).colwise().norm().maxCoeff()
+        # 0. Use cuda.compute and CuPy, using a stream wrapper that 
+        # implements __cuda_stream__ (warp Stream's don't implement that interface)
+        # 1. Capture xt, xtilde as CuPy 3 x N arrays
+        xtc = cp.asarray(xt)
+        xtildec = cp.asarray(xtilde)
+        # 2. Use ZipIterator(xtc[0,:], xtc[1,:], xtc[2,:], xtildec[0,:], xtildec[1,:], xtildec[2,:])
+        # 3. Use TransformIterator on the ZipIterator as transform = lambda x: sqrt((x[3] - x[0])**2 + (x[4] - x[1])**2 + (x[5] - x[2])**2)
+        # 4. Use cuda.compute reduce_into on the transform iterator and store into CuPy array view of self._ogc.rq
+        pass
+
     def prepare_for_execution(self, request_rebuild: bool = True):
         main_stream = wp.get_stream()
         wp.launch(
@@ -1157,6 +1170,12 @@ class Ogc:
             dim=self._meshes.n_verts,
             inputs=[self._meshes.data, self._ogc],
         )
+
+    def restore_feasibility(self):
+        # TODO: 
+        # 1. Store last position array from last detect_contacts call
+        # 2. Apply OGC (or planar DAT) truncation
+        pass
 
     @property
     def data(self) -> OgcData:  # pyright: ignore[reportGeneralTypeIssues]

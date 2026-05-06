@@ -236,6 +236,7 @@ def solve(
     for k in range(n_max_iters):
         # TODO: Replace these OGC calls with a proper
         # contact.MeshDynamics class that uses OGC internally
+        ogc.compute_query_radius(fem.bdf.current_state(), fem.data.xtilde)
         ogc.prepare_for_execution()
         ogc.detect_contacts()
         ogc.update_displacement_bounds()

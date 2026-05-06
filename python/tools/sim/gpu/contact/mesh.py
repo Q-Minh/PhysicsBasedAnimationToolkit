@@ -7,6 +7,11 @@ from .. import common
 from ..common.buffer import DoubleBuffer
 
 
+# TODO: Review/refactor this code.
+# 1. Implement contact basis construction + constraint linearization. We might want
+#    to make OGC responsible for basis construction.
+# 2. Implement dual update
+
 # ---------------------------------------------------------------------------
 # Kernels (type-independent — shared by all four contact types)
 # ---------------------------------------------------------------------------
