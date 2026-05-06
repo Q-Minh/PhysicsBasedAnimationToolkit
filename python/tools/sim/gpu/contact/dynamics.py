@@ -1,36 +1,37 @@
 import warp as wp
-import numpy as np
-from .. import types
-
-# TODO: Implement contact dynamics data structure based on `source/pbat/sim/contact/MeshDynamics.h`.
-# This is going to be a little complicated, since there's ogc state and multi-meshes for both dynamic and static meshes.
-# Perhaps we should just straight away merge the static and dynamic meshes together into one.
+from .ogc import Ogc, OgcData
+from .constraints import ConstraintSet, ConstraintSetData
 
 
 @wp.struct
-class ContactDynamics:
-    """From `source/pbat/sim/contact/MeshDynamics.h`"""
+class MeshDynamicsData:
 
-    # --- Dynamic surface mesh ---
-    dyn_V: wp.array[wp.int32]  # (nDV,) surface vertex indices into volume mesh
-    dyn_F: wp.array[types.vec3i]  # type: ignore  # (nDF,) surface triangle connectivity
-    dyn_E: wp.array[wp.int32]  # (2*nDE,) surface edge connectivity (flat pairs)
-    dyn_n_vertices: wp.int32
-    dyn_n_faces: wp.int32
+    ogc: OgcData  # type: ignore
+    cvv: ConstraintSetData  # type: ignore
+    cve: ConstraintSetData  # type: ignore
+    cvf: ConstraintSetData  # type: ignore
+    cee: ConstraintSetData  # type: ignore
 
-    # --- Static surface mesh ---
-    static_X: wp.array[wp.vec3f]  # (nSV,) static mesh positions
-    static_V: wp.array[wp.int32]  # (nSV,) static vertex indices
-    static_F: wp.array[
-        types.vec3i  # type: ignore
-    ]  # (nSF,) static triangle connectivity
-    static_n_vertices: wp.int32
-    static_n_faces: wp.int32
 
-    # --- Contact parameters ---
-    mu: wp.float32  # friction coefficient
-    epsv: wp.float32  # IPC velocity threshold
-    kc: wp.float32  # contact stiffness multiplier
-    dmin: wp.float32  # target minimum contact distance
-    gamma: wp.float32  # AL barrier multiplier (normal)
-    gammaf: wp.float32  # AL barrier multiplier (friction)
+class MeshDynamics:
+
+    _data: MeshDynamicsData  # type: ignore
+
+    def __init__(self, ogc: Ogc):
+        self.ogc = ogc
+        vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.ogc.capacity
+        n_verts, n_edges, n_half_edges, n_triangles = self.ogc.n_primitives
+        self.cvv = ConstraintSet(n_verts, vv_capacity)
+        self.cve = ConstraintSet(n_verts, ve_capacity)
+        self.cvf = ConstraintSet(n_verts, vf_capacity)
+        self.cee = ConstraintSet(n_half_edges, ee_capacity)
+        self._data = MeshDynamicsData()
+        self._data.ogc = self.ogc.data
+        self._data.cvv = self.cvv.data
+        self._data.cve = self.cve.data
+        self._data.cvf = self.cvf.data
+        self._data.cee = self.cee.data
+
+    @property
+    def data(self) -> MeshDynamicsData:  # type: ignore
+        return self._data

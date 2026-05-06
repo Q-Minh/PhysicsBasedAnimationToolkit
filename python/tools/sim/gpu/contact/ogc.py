@@ -1403,6 +1403,19 @@ class Ogc:
         )
 
     @property
+    def n_primitives(self) -> Tuple[int, int, int, int]:
+        """
+        Returns:
+            Tuple[int, int, int, int]: Number of vertices, edges, half-edges, and triangles in the input meshes, which define the primitive counts for contact pair types. Note that edge-edge contacts are defined over half-edges, so the primitive count for edge-edge contacts is the number of half-edges, not edges.
+        """
+        return (
+            self._meshes.n_verts,
+            self._meshes.n_edges,
+            self._meshes.n_half_edges,
+            self._meshes.n_triangles,
+        )
+
+    @property
     def num_contacts(self) -> Tuple[int, int, int, int]:
         return (
             self._vv.size(),
