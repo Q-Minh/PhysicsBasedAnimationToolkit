@@ -184,7 +184,7 @@ def _compute_triangle_bounding_volume(
 
 @wp.kernel
 def _compute_bounding_volumes(
-    x: wp.array[wp.vec3f],  # (N,) points
+    xk: wp.array[wp.vec3f],  # (N,) points
     xtilde: wp.array[wp.vec3f],  # (N,) predicted vertex positions
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -196,43 +196,43 @@ def _compute_bounding_volumes(
     if tid < n_verts:
         v = tid
         i = meshes.V[v]
-        rq = wp.max(ogc.r, wp.norm_l2(x[i] - xtilde[i]))
+        rq = wp.max(ogc.r, wp.norm_l2(xk[i] - xtilde[i]))
         ogc.dminv[v] = rq
     if tid < n_edges:
         e = tid
         he = meshes.EHE[e]
         einds = meshes.E[e]
-        xi = x[einds[0]]
-        xj = x[einds[1]]
+        xki = xk[einds[0]]
+        xkj = xk[einds[1]]
         rq = wp.max(
             ogc.r,
             wp.max(
-                wp.norm_l2(xi - xtilde[einds[0]]),
-                wp.norm_l2(xj - xtilde[einds[1]]),
+                wp.norm_l2(xki - xtilde[einds[0]]),
+                wp.norm_l2(xkj - xtilde[einds[1]]),
             ),
         )
         ogc.dmine[he[0]] = rq
         if he[1] >= 0:
             ogc.dmine[he[1]] = rq
-        _compute_edge_bounding_volume(ogc, e, xi, xj, rq)  # type: ignore
+        _compute_edge_bounding_volume(ogc, e, xki, xkj, rq)  # type: ignore
     if tid < n_triangles:
         f = tid
         finds = meshes.F[f]
-        xi = x[finds[0]]
-        xj = x[finds[1]]
-        xk = x[finds[2]]
+        xki = xk[finds[0]]
+        xkj = xk[finds[1]]
+        xkk = xk[finds[2]]
         rq = wp.max(
             ogc.r,
             wp.max(
-                wp.norm_l2(xi - xtilde[finds[0]]),
+                wp.norm_l2(xki - xtilde[finds[0]]),
                 wp.max(
-                    wp.norm_l2(xj - xtilde[finds[1]]),
-                    wp.norm_l2(xk - xtilde[finds[2]]),
+                    wp.norm_l2(xkj - xtilde[finds[1]]),
+                    wp.norm_l2(xkk - xtilde[finds[2]]),
                 ),
             ),
         )
         ogc.dminf[f] = rq
-        _compute_triangle_bounding_volume(ogc, f, xi, xj, xk, rq)  # type: ignore
+        _compute_triangle_bounding_volume(ogc, f, xki, xkj, xkk, rq)  # type: ignore
 
 
 @wp.func
