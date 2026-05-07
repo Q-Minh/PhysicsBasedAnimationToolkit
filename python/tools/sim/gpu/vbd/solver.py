@@ -18,7 +18,7 @@ from .kernels import (
     add_inertia_derivatives,
     integrate_positions,
 )
-from ..contact.ogc import Ogc
+from ..contact.dynamics import MeshDynamics
 
 
 @wp.kernel
@@ -90,9 +90,46 @@ def prepare_subproblem(fem: FemElastoDynamics, params: Params):
     pass
 
 
-def finalize_subproblem(fem: FemElastoDynamics, params: Params):
-    """TODO: Update dual variables, restore feasibility, update constraint set."""
-    pass
+def initialize_solve(
+    fem: FemElastoDynamics,
+    params: Params,
+    contact: MeshDynamics,
+):
+    """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
+
+    Mirrors ``pbat::sim::algorithm::vbd::InitializeSolve``.
+    Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
+    before the first call to :func:`solve`.
+    """
+    xt = fem.bdf.current_state(0).reshape(-1, 3)
+    assert xt.flags["OWNDATA"] == False
+    contact.ogc.compute_query_radius(
+        xt=wp.array(data=xt, dtype=wp.vec3f), xtilde=fem.data.xtilde
+    )
+    contact.update_constraint_set(wp.array(data=xt, dtype=wp.vec3f))
+    contact.restore_feasibility(fem.data.x)
+
+
+def finalize_subproblem(
+    fem: FemElastoDynamics,
+    params: Params,
+    contact: MeshDynamics,
+):
+    """Finalize the current linearized subproblem.
+
+    Mirrors ``pbat::sim::algorithm::vbd::FinalizeSubproblem``:
+      1. Full dual update (slack + decay + Lagrange multipliers).
+      2. Restore feasibility.
+      3. Update constraint set for the next subproblem.
+    """
+    contact.update_dual(
+        fem.data.x,
+        request_slack_update=True,
+        request_decay_update=True,
+        request_lagrange_multiplier_update=True,
+    )
+    contact.restore_feasibility(fem.data.x)
+    contact.update_constraint_set(fem.data.x)
 
 
 def iterate(fem: FemElastoDynamics, params: Params):
@@ -123,20 +160,25 @@ def iterate(fem: FemElastoDynamics, params: Params):
 def solve_subproblem(
     fem: FemElastoDynamics,
     params: Params,
+    contact: MeshDynamics,
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
-    # TODO: prepare_subproblem(fem, params)
     prepare_subproblem(fem, params)
     for kp in range(n_subproblem_max_iters):
+        contact.update_dual(
+            fem.data.x,
+            request_slack_update=True,
+            request_decay_update=False,
+            request_lagrange_multiplier_update=False,
+        )
         iterate(fem, params)
-    # TODO: finalize_subproblem(fem, params)
-    finalize_subproblem(fem, params)
+    finalize_subproblem(fem, params, contact)
 
 
 def solve(
     fem: FemElastoDynamics,
     params: Params,
-    ogc: Ogc,
+    contact: MeshDynamics,
 ) -> bool:
     """Solve the VBD minimization problem.
     Mimics `pbat::sim::algorithm::vbd::Solve`:
@@ -144,11 +186,6 @@ def solve(
     converged = False
     n_max_iters = params.data.n_max_iters
     for k in range(n_max_iters):
-        # TODO: Replace these OGC calls with a proper
-        # contact.MeshDynamics class that uses OGC internally
-        ogc.prepare_for_execution(fem.data.x, fem.data.xtilde)
-        ogc.detect_contacts()
-        ogc.update_displacement_bounds()
         # TODO: linearize_constraints(fem, params)
         linearize_constraints(fem, params)
         # TODO: if check_convergence(fem, params): break
@@ -156,18 +193,19 @@ def solve(
             converged = True
             break
         # Solve linearized subproblem
-        solve_subproblem(fem, params)
+        solve_subproblem(fem, params, contact)
     fem.back_substitute_velocities()
     return converged
 
 
-def integrate(fem: FemElastoDynamics, params: Params, ogc: Ogc):
-    """Integrate one time step: setup + solve + step.
+def integrate(fem: FemElastoDynamics, params: Params, contact: MeshDynamics):
+    """Integrate one time step: setup + initialize_solve + solve + step.
 
     Mimics `pbat::sim::algorithm::vbd::Integrate`.
     """
     fem.setup_time_integration_optimization()
-    solve(fem, params, ogc)
+    initialize_solve(fem, params, contact)
+    solve(fem, params, contact)
     fem.step()
 
 
@@ -296,12 +334,15 @@ class TestVbdSolver(unittest.TestCase):
         )
         multimesh = GpuMultiMesh(multimesh_cpu)
         ogc = Ogc(fem.data.x, multimesh)
+        from ..contact.dynamics import MeshDynamics
+
+        contact = MeshDynamics(ogc)
         x_before = fem.data.x.numpy().copy()
         # Run some number of steps
         for t in range(10):
             fem.setup_time_integration_optimization()
-            solve(fem, params, ogc)
-            fem.back_substitute_velocities()
+            initialize_solve(fem, params, contact)
+            solve(fem, params, contact)
         wp.synchronize()
         x_after = fem.data.x.numpy()
         # Free nodes should have moved

@@ -2,10 +2,16 @@ from typing import Tuple
 
 import numpy as np
 import cupy as cp
-
+import cuda.compute
 import warp as wp
+import math
 
+from .multimesh import MultiMesh, MultiMeshData
+from . import halfedges
+from . import queries
+from .. import common
 from ...common.fields import DocField
+from ...gpu import common
 
 
 class OgcParams:
@@ -31,11 +37,6 @@ class OgcParams:
         1.0, "Edge-edge capacity multiplier (x num_edges)."
     )
 
-
-from .multimesh import MultiMesh, MultiMeshData
-from . import halfedges
-from . import queries
-from .. import common
 
 VF_E_FACE_TRIANGLE = wp.constant(0)
 VF_E_FACE_EDGE = wp.constant(1)
@@ -116,6 +117,7 @@ class OgcData:
 
     arq: wp.float32  # OGC query radius multiplier
     r: wp.float32  # OGC contact radius
+    rq: wp.array[wp.float32]  # (1,) OGC query radius
     gammap: (
         wp.float32
     )  # Relaxation parameter for vertex displacement bound, must satisfy `0 < gammap < 0.5`
@@ -209,7 +211,6 @@ def _compute_triangle_bounding_volume(
 @wp.kernel
 def _compute_bounding_volumes(
     xk: wp.array[wp.vec3f],  # (N,) points
-    xtilde: wp.array[wp.vec3f],  # (N,) predicted vertex positions
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
 ):
@@ -217,46 +218,24 @@ def _compute_bounding_volumes(
     n_verts = meshes.V.shape[0]
     n_edges = meshes.E.shape[0]
     n_triangles = meshes.F.shape[0]
+    rq = ogc.r + ogc.rq[0]
     if tid < n_verts:
         v = tid
         i = meshes.V[v]
-        rq = wp.max(ogc.r, wp.norm_l2(xk[i] - xtilde[i]))
         ogc.dminv[v] = rq
     if tid < n_edges:
         e = tid
         he = meshes.EHE[e]
         einds = meshes.E[e]
-        xki = xk[einds[0]]
-        xkj = xk[einds[1]]
-        rq = wp.max(
-            ogc.r,
-            wp.max(
-                wp.norm_l2(xki - xtilde[einds[0]]),
-                wp.norm_l2(xkj - xtilde[einds[1]]),
-            ),
-        )
         ogc.dmine[he[0]] = rq
         if he[1] >= 0:
             ogc.dmine[he[1]] = rq
-        _compute_edge_bounding_volume(ogc, e, xki, xkj, rq)  # type: ignore
+        _compute_edge_bounding_volume(ogc, e, xk[einds[0]], xk[einds[1]], rq)  # type: ignore
     if tid < n_triangles:
         f = tid
         finds = meshes.F[f]
-        xki = xk[finds[0]]
-        xkj = xk[finds[1]]
-        xkk = xk[finds[2]]
-        rq = wp.max(
-            ogc.r,
-            wp.max(
-                wp.norm_l2(xki - xtilde[finds[0]]),
-                wp.max(
-                    wp.norm_l2(xkj - xtilde[finds[1]]),
-                    wp.norm_l2(xkk - xtilde[finds[2]]),
-                ),
-            ),
-        )
         ogc.dminf[f] = rq
-        _compute_triangle_bounding_volume(ogc, f, xki, xkj, xkk, rq)  # type: ignore
+        _compute_triangle_bounding_volume(ogc, f, xk[finds[0]], xk[finds[1]], xk[finds[2]], rq)  # type: ignore
 
 
 @wp.func
@@ -1050,6 +1029,7 @@ class Ogc:
         self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
         self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
         self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
+        self._ogc.rq = wp.zeros((1,), dtype=wp.float32)  # (1,) OGC query radius
 
         vv_capacity = int(params.n_vv_contact_capacity * meshes.n_verts)  # type: ignore
         ve_capacity = int(params.n_ve_contact_capacity * meshes.n_verts)  # type: ignore
@@ -1095,7 +1075,7 @@ class Ogc:
         wp.launch(
             kernel=_compute_bounding_volumes,
             dim=dim,
-            inputs=[self._xk, self._xk, self._meshes.data, self._ogc],
+            inputs=[self._xk, self._meshes.data, self._ogc],
         )
         self._e_bvh, self._f_bvh = (
             wp.Bvh(
@@ -1117,22 +1097,36 @@ class Ogc:
         )
 
     def compute_query_radius(self, xt: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]):
-        # TODO: Accept cupy arrays as input
-        # TODO: Compute rq = r + beta * (xtilde - xt).colwise().norm().maxCoeff()
+        # Compute rq = r + beta * (xtilde - xt).colwise().norm().maxCoeff()
         # 0. Use cuda.compute and CuPy, using a stream wrapper that
-        # implements __cuda_stream__ (warp Stream's don't implement that interface)
+        main_stream = wp.get_stream()
         # 1. Capture xt, xtilde as CuPy 3 x N arrays
         xtc = cp.asarray(xt)
         xtildec = cp.asarray(xtilde)
         # 2. Use ZipIterator(xtc[0,:], xtc[1,:], xtc[2,:], xtildec[0,:], xtildec[1,:], xtildec[2,:])
+        zip_it = cuda.compute.ZipIterator(
+            xtc[:, 0], xtc[:, 1], xtc[:, 2], xtildec[:, 0], xtildec[:, 1], xtildec[:, 2]
+        )
         # 3. Use TransformIterator on the ZipIterator as transform = lambda x: sqrt((x[3] - x[0])**2 + (x[4] - x[1])**2 + (x[5] - x[2])**2)
+        transform_it = cuda.compute.TransformIterator(
+            zip_it,
+            lambda x: math.sqrt(
+                (x[3] - x[0]) ** 2 + (x[4] - x[1]) ** 2 + (x[5] - x[2]) ** 2
+            ),
+        )
         # 4. Use cuda.compute reduce_into on the transform iterator and store into CuPy array view of self._ogc.rq
-        pass
+        cuda.compute.reduce_into(
+            d_in=transform_it,
+            d_out=cp.asarray(self._ogc.rq),
+            num_items=xtc.shape[0],
+            op=cuda.compute.OpKind.MAXIMUM,
+            h_init=np.zeros(1, dtype=np.float32),
+            stream=common.Stream(main_stream),
+        )
 
     def prepare_for_execution(
         self,
         xk: wp.array[wp.vec3f],
-        xtilde: wp.array[wp.vec3f],
         request_rebuild: bool = True,
     ):
         main_stream = wp.get_stream()
@@ -1144,7 +1138,7 @@ class Ogc:
                 self._meshes.n_edges,
                 self._meshes.n_triangles,
             ),
-            inputs=[self._xk, xtilde, self._meshes.data, self._ogc],
+            inputs=[self._xk, self._meshes.data, self._ogc],
             stream=main_stream,
         )
         for bvh, stream in zip([self._e_bvh, self._f_bvh], self._streams[:2]):

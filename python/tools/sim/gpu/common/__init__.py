@@ -78,3 +78,12 @@ def lower_bound(u: wp.array[wp.int32], v: wp.array[wp.int32], n: wp.int32, keyu:
         length = go_right * (length - half - wp.int32(1)) + (wp.int32(1) - go_right) * half
         iters -= wp.int32(1)
     return lo
+
+
+class Stream:
+
+    def __init__(self, stream: wp.Stream):
+        self._stream = stream
+
+    def __cuda_stream__(self):
+        return (0, self._stream.cuda_stream)

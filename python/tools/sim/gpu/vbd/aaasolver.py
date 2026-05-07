@@ -14,7 +14,7 @@ from .solver import (
     prepare_subproblem,
     finalize_subproblem,
 )
-from ..contact.ogc import Ogc
+from ..contact.dynamics import MeshDynamics
 
 
 @wp.func
@@ -171,14 +171,6 @@ def _accelerated_vertex_solve_kernel(
         fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
-def initialize_solve(
-    fem: FemElastoDynamics,
-    params: Params,
-):
-    # TODO: Support resetting betaG to betaG0 depending on a warm start mask (see "vbd/Core.h")
-    pass
-
-
 def iterate(
     k: int,
     kp: int,
@@ -209,24 +201,48 @@ def iterate(
             )
 
 
+def initialize_solve(
+    fem: FemElastoDynamics,
+    params: Params,
+    contact: MeshDynamics,
+):
+    """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
+
+    Mirrors ``pbat::sim::algorithm::vbd::InitializeSolve``.
+    Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
+    before the first call to :func:`solve`.
+    """
+    xt = fem.bdf.current_state(0).reshape(-1, 3)
+    assert xt.flags["OWNDATA"] == False
+    contact.ogc.compute_query_radius(
+        xt=wp.array(data=xt, dtype=wp.vec3f), xtilde=fem.data.xtilde
+    )
+    contact.update_constraint_set(wp.array(data=xt, dtype=wp.vec3f))
+    contact.restore_feasibility(fem.data.x)
+
+
 def solve_subproblem(
     k: int,
     fem: FemElastoDynamics,
     params: Params,
+    contact: MeshDynamics,
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
-    # TODO: prepare_subproblem(fem, params)
-    prepare_subproblem(fem, params)
     for kp in range(n_subproblem_max_iters):
+        contact.update_dual(
+            fem.data.x,
+            request_slack_update=True,
+            request_decay_update=False,
+            request_lagrange_multiplier_update=False,
+        )
         iterate(k, kp, fem, params)
-    # TODO: finalize_subproblem(fem, params)
-    finalize_subproblem(fem, params)
+    finalize_subproblem(fem, params, contact)
 
 
 def solve(
     fem: FemElastoDynamics,
     params: Params,
-    ogc: Ogc,
+    contact: MeshDynamics,
 ) -> bool:
     """Solve the VBD minimization problem.
     Mimics `pbat::sim::algorithm::vbd::Solve`:
@@ -234,11 +250,6 @@ def solve(
     converged = False
     n_max_iters = params.data.n_max_iters
     for k in range(n_max_iters):
-        # TODO: Replace these OGC calls with a proper
-        # contact.MeshDynamics class that uses OGC internally
-        ogc.prepare_for_execution(fem.data.x, fem.data.xtilde)
-        ogc.detect_contacts()
-        ogc.update_displacement_bounds()
         # TODO: linearize_constraints(fem, params)
         linearize_constraints(fem, params)
         # TODO: if check_convergence(fem, params): break
@@ -246,6 +257,7 @@ def solve(
             converged = True
             break
         # Solve linearized subproblem
-        solve_subproblem(k, fem, params)
+        prepare_subproblem(fem, params)
+        solve_subproblem(k, fem, params, contact)
     fem.back_substitute_velocities()
     return converged

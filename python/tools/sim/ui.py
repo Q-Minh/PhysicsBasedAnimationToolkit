@@ -149,9 +149,15 @@ class SimulationState:
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.ogc_params = gpu.contact.ogc.OgcParams()
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
+        xt = self.fem.bdf.current_state(0)
+        ogc = gpu.contact.ogc.Ogc(
+            self.fem.data.x,
+            self.multimesh,
+            self.ogc_params,
+        )
+        self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
         self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(
-            self.fem.data.x, self.ogc
+            self.fem.data.x, self.contact.ogc
         )
 
         # Simulation state
@@ -159,24 +165,37 @@ class SimulationState:
         self.t: int = 0
         self.until_t: int = -1
 
+    def initialize_solve(self):
+        if self.solver == SolverType.AAAVBD:
+            gpu.vbd.aaasolver.initialize_solve(
+                self.fem, self.params[self.solver], self.contact
+            )
+        else:
+            gpu.vbd.solver.initialize_solve(
+                self.fem, self.params[self.solver], self.contact
+            )
+
     def solve(self):
         if self.solver == SolverType.AAAVBD:
-            _ = gpu.vbd.aaasolver.solve(self.fem, self.params[self.solver], self.ogc)
+            _ = gpu.vbd.aaasolver.solve(
+                self.fem, self.params[self.solver], self.contact
+            )
         elif self.solver == SolverType.VBD:
-            _ = gpu.vbd.solver.solve(self.fem, self.params[self.solver], self.ogc)
+            _ = gpu.vbd.solver.solve(self.fem, self.params[self.solver], self.contact)
 
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
-        if self.capture is None:
-            with wp.ScopedCapture() as capture:
-                self.solve()
-            self.capture = capture
-        else:
-            wp.capture_launch(self.capture.graph)
+        # if self.capture is None:
+        #     with wp.ScopedCapture() as capture:
+        self.initialize_solve()
+        self.solve()
+        #     self.capture = capture
+        # else:
+        #     wp.capture_launch(self.capture.graph)
         self.fem.step()
         self.t += 1
 
-        self.contact_browser.update(self.fem.data.x, self.ogc)
+        self.contact_browser.update(self.fem.data.x, self.contact.ogc)
 
     def reset(self):
         self.t = 0
@@ -184,8 +203,14 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
-        self.contact_browser.update(self.fem.data.x, self.ogc)
+        xt = self.fem.bdf.current_state(0)
+        ogc = gpu.contact.ogc.Ogc(
+            self.fem.data.x,
+            self.multimesh,
+            self.ogc_params,
+        )
+        self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
+        self.contact_browser.update(self.fem.data.x, self.contact.ogc)
         self.capture = None
 
 
@@ -243,8 +268,11 @@ def make_callback(
                         imgui.Text(f"# Vertex-Face Contacts: {nvf}")
                         imgui.Text(f"# Edge-Edge Contacts: {nee}")
                         imgui.TreePop()
-                    if imgui.TreeNode("Params"):
+                    if imgui.TreeNode("OGC"):
                         draw_params(state.ogc_params)
+                        imgui.TreePop()
+                    if imgui.TreeNode("Dynamics"):
+                        draw_params(state.contact.params)
                         imgui.TreePop()
                     imgui.TreePop()
 
@@ -318,8 +346,8 @@ def parse_args():
 
 
 def main():
-    # wp.config.mode = "debug"
-    # wp.config.verify_cuda = True
+    wp.config.mode = "debug"
+    wp.config.verify_cuda = True
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)

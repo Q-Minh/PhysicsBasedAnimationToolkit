@@ -57,8 +57,8 @@ class ConstraintSetData:
     lambda_n: wp.array[wp.float32]
     lambda_f: wp.array[wp.vec2f]
 
-    mu_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter
-    mu_f: wp.array[wp.float32]  # (1,) friction contact penalty parameter
+    sigma_n: wp.array[wp.float32]  # (1,) normal contact AL penalty parameter
+    sigma_f: wp.array[wp.float32]  # (1,) friction contact AL penalty parameter
 
 
 class ConstraintSet:
@@ -126,8 +126,8 @@ class ConstraintSet:
         self._data.lambda_f = self.lambda_f.current
         # NOTE: Give these default values. They are meant to be
         # updated/set by the user of this ConstraintSet.
-        self._data.mu_n = wp.array([1e3], dtype=wp.float32)
-        self._data.mu_f = wp.array([1e-1], dtype=wp.float32)
+        self._data.sigma_n = wp.array([1e3], dtype=wp.float32)
+        self._data.sigma_f = wp.array([1e-1], dtype=wp.float32)
 
     def update_constraint_set(self, contacts: ContactPairsData):  # type: ignore
         """Prepare the current arrays for a new step, warm-starting from the previous snapshot.
@@ -135,7 +135,7 @@ class ConstraintSet:
         The four-step pipeline maximises GPU concurrency while remaining
         compatible with CUDA graph capture:
 
-        1. **Async copy** current → alternate (previous snapshot) on an internal
+        1. **Async copy** current -> alternate (previous snapshot) on an internal
            copy stream via :meth:`~DoubleBuffer.copy_to_alternate`.
         2. **Fill** current arrays to defaults via ``fill_()`` on ``main_stream``.
            Safely overlaps step 1 — current and alternate are distinct allocations.
@@ -153,7 +153,7 @@ class ConstraintSet:
         main_stream = wp.get_stream()
         fields = (self.u, self.v, self.s, self.gamma, self.lambda_n, self.lambda_f)
 
-        # Step 1: async-copy current → alternate on _copy_stream.
+        # Step 1: async-copy current -> alternate on _copy_stream.
         for streams in self._streams:
             for buf, stream in zip(fields, streams):
                 buf.copy_to_alternate(stream)

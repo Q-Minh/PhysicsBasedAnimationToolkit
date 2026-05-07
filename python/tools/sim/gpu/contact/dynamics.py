@@ -15,7 +15,6 @@ def _gap_vv(
     u: wp.int32,
     v: wp.int32,
 ) -> wp.vec3f:
-    """Gap vector (x_u - x_v) for a vertex-vertex contact pair."""
     return x[V[u]] - x[V[v]]  # type: ignore
 
 
@@ -28,12 +27,6 @@ def _gap_ve(
     u: wp.int32,
     v: wp.int32,
 ) -> wp.vec3f:
-    """Gap vector x_u - xcp_v for a vertex-edge contact pair.
-
-    u : vertex primitive index (into V -> global point)
-    v : half-edge index; its endpoints are the edge vertices
-    t : cached closest-point parameter on the edge (from OgcData.ve_bary)
-    """
     xi = x[V[u]]  # type: ignore
     i_he = halfedges.incoming_vertex(F, v)  # global point index
     j_he = halfedges.outgoing_vertex(F, v)  # global point index
@@ -50,12 +43,6 @@ def _gap_vf(
     u: wp.int32,
     v: wp.int32,
 ) -> wp.vec3f:
-    """Gap vector x_u - xcp_v for a vertex-face contact pair.
-
-    u    : vertex primitive index (into V -> global point)
-    v    : face (triangle) index
-    bary : cached (b0, b1) barycentric coords; b2 = 1 - b0 - b1 (from OgcData.vf_bary)
-    """
     xi = x[V[u]]  # type: ignore
     finds = F[v]
     xj, xk, xl = x[finds[0]], x[finds[1]], x[finds[2]]  # type: ignore
@@ -73,12 +60,6 @@ def _gap_ee(
     u: wp.int32,
     v: wp.int32,
 ) -> wp.vec3f:
-    """Gap vector xcp_u - xcp_v for an edge-edge contact pair.
-
-    u    : half-edge index (edge 1)
-    v    : half-edge index (edge 2)
-    bary : cached (s, t) parameters on edge 1 and edge 2 (from OgcData.ee_bary)
-    """
     s, t = bary[0], bary[1]
     i_u = halfedges.incoming_vertex(F, u)
     j_u = halfedges.outgoing_vertex(F, u)
@@ -116,24 +97,6 @@ def _apply_dual_update(
     request_decay_update: bool,
     request_lagrange_multiplier_update: bool,
 ):
-    """Augmented-Lagrangian dual variable update.
-
-    GPU equivalent of ``MeshDynamics::UpdateDual<Slack|Decay|LagrangeMultiplier>``
-    from the C++ side.  Rather than evaluating a cached Taylor expansion, the
-    caller supplies the already-projected gap components ``(c_n, c_f)``.
-
-    Reads and writes each array entry at index ``k`` only when the corresponding
-    ``request_*`` flag is set, avoiding unnecessary memory traffic.
-
-    Update order (mirrors C++):
-      1. Decay   : gamma[k] *= decay_rate when slack is growing (read s[k] first).
-      2. Slack   : s[k] = max(0, c_n - dmin - lambda_n[k] / mu_n[0]).
-      3. Multipliers: if s == 0
-             lambda_n[k] -= mu_n[0] * (c_n - dmin)
-             lambda_f[k] -= mu_f[0] * c_f  then project into Coulomb cone
-         else
-             lambda_n[k] = 0,  lambda_f[k] = 0
-    """
     # lambda_n[k] and mu_n[0] are always needed to compute new_s, which drives all branches.
     lambda_n_k = lambda_n[k]
     new_s = wp.max(wp.float32(0), c_n - dmin - lambda_n_k / sigma_n)
@@ -144,7 +107,7 @@ def _apply_dual_update(
         new_gamma = gamma_k
         if new_s == wp.float32(0):
             new_gamma = wp.float32(1)
-        elif new_s > s_prev:  # contact gap growing → separating
+        elif new_s > s_prev:  # contact gap growing -> separating
             new_gamma = gamma_k * decay_rate
         gamma[k] = new_gamma
     # --- Slack ---
@@ -182,7 +145,6 @@ def _update_dual_vv(
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
 ):
-    """Dual update for vertex-vertex contacts."""
     k = wp.tid()  # type: ignore
     if k >= ogc.vv.prefix[n_u]:
         return
@@ -224,7 +186,6 @@ def _update_dual_ve(
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
 ):
-    """Dual update for vertex-edge contacts."""
     k = wp.tid()  # type: ignore
     if k >= ogc.ve.prefix[n_u]:
         return
@@ -267,7 +228,6 @@ def _update_dual_vf(
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
 ):
-    """Dual update for vertex-face contacts."""
     k = wp.tid()  # type: ignore
     if k >= ogc.vf.prefix[n_u]:
         return
@@ -310,7 +270,6 @@ def _update_dual_ee(
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
 ):
-    """Dual update for edge-edge contacts."""
     k = wp.tid()  # type: ignore
     if k >= ogc.ee.prefix[n_u]:
         return
@@ -406,21 +365,21 @@ class MeshDynamics:
 
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
 
-    def update_constraint_set(self, xk: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]):
+    def update_constraint_set(self, xk: wp.array[wp.vec3f]):
         """Prepare constraint sets for a new step, warm-starting from the previous snapshot."""
-        self.ogc.prepare_for_execution(xk, xtilde)
+        self.ogc.prepare_for_execution(xk)
         self.ogc.detect_contacts()
         self.ogc.update_displacement_bounds()
-        contacts = self.ogc.data.contacts
+        ogc_data = self.ogc.data
         main_stream = wp.get_stream()
         for stream, cset, cuv in zip(
             self._streams,
             (self.cvv, self.cve, self.cvf, self.cee),
             (
-                contacts.vv,
-                contacts.ve,
-                contacts.vf,
-                contacts.ee,
+                ogc_data.vv,
+                ogc_data.ve,
+                ogc_data.vf,
+                ogc_data.ee,
             ),
         ):
             with wp.ScopedStream(stream):
@@ -441,7 +400,7 @@ class MeshDynamics:
         For each active contact k the kernel:
           1. Computes the gap vector between cached closest points using current positions ``x``.
           2. Projects the gap onto the cached contact basis (normal + 2 tangents).
-          3. Runs the AL update: slack → decay → (lambda_n, lambda_f with cone projection).
+          3. Runs the AL update: slack -> decay -> (lambda_n, lambda_f with cone projection).
 
         Unlike the C++ side, this implementation does not cache a Taylor expansion; it
         recomputes the linearized gap directly from the stored barycentric weights and basis.
@@ -459,12 +418,11 @@ class MeshDynamics:
         """
         meshes = self.ogc._meshes.data
         ogc = self.ogc.data
-        stream = wp.get_stream()
-        for kernel, cs in (
-            (_update_dual_vv, self.cvv),
-            (_update_dual_ve, self.cve),
-            (_update_dual_vf, self.cvf),
-            (_update_dual_ee, self.cee),
+        main_stream = wp.get_stream()
+        for kernel, cs, stream in zip(
+            [_update_dual_vv, _update_dual_ve, _update_dual_vf, _update_dual_ee],
+            [self.cvv, self.cve, self.cvf, self.cee],
+            self._streams[:4],
         ):
             wp.launch(
                 kernel,
@@ -484,6 +442,8 @@ class MeshDynamics:
                 ],
                 stream=stream,
             )
+        for stream in self._streams[:4]:
+            main_stream.wait_stream(stream)
 
     def restore_feasibility(self, x: wp.array):
         self.ogc.truncate(x)
