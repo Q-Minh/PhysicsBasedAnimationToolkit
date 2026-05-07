@@ -46,7 +46,7 @@ def _gap_vf(
     xi = x[V[u]]  # type: ignore
     finds = F[v]
     xj, xk, xl = x[finds[0]], x[finds[1]], x[finds[2]]  # type: ignore
-    b0, b1 = bary[0], bary[1]
+    b0, b1 = bary[0], bary[1]  # type: ignore
     b2 = wp.float32(1) - b0 - b1
     xcp = b0 * xj + b1 * xk + b2 * xl  # type: ignore
     return xi - xcp
@@ -60,7 +60,7 @@ def _gap_ee(
     u: wp.int32,
     v: wp.int32,
 ) -> wp.vec3f:
-    s, t = bary[0], bary[1]
+    s, t = bary[0], bary[1]  # type: ignore
     i_u = halfedges.incoming_vertex(F, u)
     j_u = halfedges.outgoing_vertex(F, u)
     i_v = halfedges.incoming_vertex(F, v)
@@ -109,10 +109,10 @@ def _apply_dual_update(
             new_gamma = wp.float32(1)
         elif new_s > s_prev:  # contact gap growing -> separating
             new_gamma = gamma_k * decay_rate
-        gamma[k] = new_gamma
+        gamma[k] = new_gamma  # type: ignore
     # --- Slack ---
     if request_slack_update:
-        s[k] = new_s
+        s[k] = new_s  # type: ignore
     # --- Lagrange multipliers ---
     if request_lagrange_multiplier_update:
         if new_s == wp.float32(0):
@@ -121,14 +121,14 @@ def _apply_dual_update(
             new_lambda_f = lambda_f_k - sigma_f * c_f
             # Coulomb friction cone: |lambda_f| <= mu_friction * lambda_n
             friction_limit = mu_friction * new_lambda_n
-            lf_sq = wp.dot(new_lambda_f, new_lambda_f)
-            if lf_sq > friction_limit * friction_limit:
+            lf_sq = wp.dot(new_lambda_f, new_lambda_f)  # type: ignore
+            if lf_sq > friction_limit * friction_limit:  # type: ignore
                 new_lambda_f = new_lambda_f * (friction_limit / wp.sqrt(lf_sq))
-            lambda_n[k] = new_lambda_n
-            lambda_f[k] = new_lambda_f
+            lambda_n[k] = new_lambda_n  # type: ignore
+            lambda_f[k] = new_lambda_f  # type: ignore
         else:
-            lambda_n[k] = wp.float32(0)
-            lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))
+            lambda_n[k] = wp.float32(0)  # type: ignore
+            lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))  # type: ignore
 
 
 @wp.kernel
@@ -198,7 +198,7 @@ def _update_dual_ve(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
-        k,
+        k,  # type: ignore
         data.s,
         data.gamma,
         data.lambda_n,
@@ -240,7 +240,7 @@ def _update_dual_vf(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
-        k,
+        k,  # type: ignore
         data.s,
         data.gamma,
         data.lambda_n,
@@ -282,7 +282,7 @@ def _update_dual_ee(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
-        k,
+        k,  # type: ignore
         data.s,
         data.gamma,
         data.lambda_n,
@@ -372,8 +372,9 @@ class MeshDynamics:
         self.ogc.update_displacement_bounds()
         ogc_data = self.ogc.data
         main_stream = wp.get_stream()
+        # Update all constraint sets
         for stream, cset, cuv in zip(
-            self._streams,
+            self._streams[:4],
             (self.cvv, self.cve, self.cvf, self.cee),
             (
                 ogc_data.vv,
@@ -382,9 +383,9 @@ class MeshDynamics:
                 ogc_data.ee,
             ),
         ):
-            with wp.ScopedStream(stream):
+            stream.wait_stream(main_stream)
+            with wp.ScopedStream(stream, sync_enter=False):
                 cset.update_constraint_set(cuv)
-        for stream in self._streams:
             main_stream.wait_stream(stream)
 
     def update_dual(
@@ -419,6 +420,9 @@ class MeshDynamics:
         meshes = self.ogc._meshes.data
         ogc = self.ogc.data
         main_stream = wp.get_stream()
+        # Fork all side streams into the current capture context before launching on them.
+        for stream in self._streams[:4]:
+            stream.wait_stream(main_stream)
         for kernel, cs, stream in zip(
             [_update_dual_vv, _update_dual_ve, _update_dual_vf, _update_dual_ee],
             [self.cvv, self.cve, self.cvf, self.cee],

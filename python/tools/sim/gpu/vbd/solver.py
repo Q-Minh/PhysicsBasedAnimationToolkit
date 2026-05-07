@@ -107,7 +107,7 @@ def initialize_solve(
         xt=wp.array(data=xt, dtype=wp.vec3f), xtilde=fem.data.xtilde
     )
     contact.update_constraint_set(wp.array(data=xt, dtype=wp.vec3f))
-    contact.restore_feasibility(fem.data.x)
+    # contact.restore_feasibility(fem.data.x)
 
 
 def finalize_subproblem(
@@ -128,7 +128,7 @@ def finalize_subproblem(
         request_decay_update=True,
         request_lagrange_multiplier_update=True,
     )
-    contact.restore_feasibility(fem.data.x)
+    # contact.restore_feasibility(fem.data.x)
     contact.update_constraint_set(fem.data.x)
 
 
@@ -207,6 +207,33 @@ def integrate(fem: FemElastoDynamics, params: Params, contact: MeshDynamics):
     initialize_solve(fem, params, contact)
     solve(fem, params, contact)
     fem.step()
+
+
+class VbdSolver:
+
+    def __init__(self):
+        self._cuda_graph = None
+
+    def solve(
+        self, fem: FemElastoDynamics, params: Params, contact: MeshDynamics
+    ) -> bool:
+        initialize_solve(fem, params, contact)
+        converged = False
+        for k in range(params.data.n_max_iters):
+            linearize_constraints(fem, params)
+            if check_convergence(fem, params):
+                converged = True
+                break
+            prepare_subproblem(fem, params)
+            if self._cuda_graph is None:
+                with wp.ScopedCapture() as capture:
+                    solve_subproblem(fem, params, contact)
+                self._cuda_graph = capture
+            else:
+                wp.capture_launch(self._cuda_graph.graph)  # type: ignore
+            finalize_subproblem(fem, params, contact)
+        fem.back_substitute_velocities()
+        return converged
 
 
 # --- Unit tests ---

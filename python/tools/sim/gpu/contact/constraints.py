@@ -156,28 +156,29 @@ class ConstraintSet:
         # Step 1: async-copy current -> alternate on _copy_stream.
         for streams in self._streams:
             for buf, stream in zip(fields, streams):
+                stream.wait_stream(main_stream)
                 buf.copy_to_alternate(stream)
-        for streams in self._streams:
-            for stream in streams:
                 main_stream.wait_stream(stream)
 
         # Step 2: fill current with defaults on main_stream.
         # Overlaps step 1 safely — current and alternate are distinct allocations.
         for streams in self._streams:
-            with wp.ScopedStream(streams[0]):
+            with wp.ScopedStream(streams[0], sync_enter=False):
                 self.u.current.fill_(-1)
-            with wp.ScopedStream(streams[1]):
+            main_stream.wait_stream(streams[0])
+            with wp.ScopedStream(streams[1], sync_enter=False):
                 self.v.current.fill_(-1)
+            main_stream.wait_stream(streams[1])
             # NOTE: The slack doesn't need any initialization, it is always updated during before/after solver iterations
-            with wp.ScopedStream(streams[3]):
+            with wp.ScopedStream(streams[3], sync_enter=False):
                 self.gamma.current.fill_(1.0)
-            with wp.ScopedStream(streams[4]):
+            main_stream.wait_stream(streams[3])
+            with wp.ScopedStream(streams[4], sync_enter=False):
                 self.lambda_n.current.fill_(0.0)
-            with wp.ScopedStream(streams[5]):
+            main_stream.wait_stream(streams[4])
+            with wp.ScopedStream(streams[5], sync_enter=False):
                 self.lambda_f.current.fill_(0.0)
-        for streams in self._streams:
-            for stream in streams:
-                main_stream.wait_stream(stream)
+            main_stream.wait_stream(streams[5])
 
         # Step 3: warm-start from alternate (previous) into current.
         wp.launch(

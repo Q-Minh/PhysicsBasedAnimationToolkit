@@ -1,6 +1,9 @@
 from typing import Tuple
 
+import numpy as np
 import warp as wp
+
+from python import fem
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from .params import Params, ParamsData
 from .kernels import (
@@ -84,7 +87,7 @@ def compute_thread_local_stencil_gradient_augmentation(
 @wp.kernel
 def _accelerated_vertex_solve_kernel(
     pbegin: int,
-    k: wp.int32,
+    _k: wp.array[wp.int32],
     kp: wp.int32,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -92,6 +95,7 @@ def _accelerated_vertex_solve_kernel(
 ):
     """Process one vertex in the current color partition with acceleration."""
     tid = wp.tid()
+    k = _k[0]
     block_dims = wp.block_dim()
     block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
@@ -123,7 +127,7 @@ def _accelerated_vertex_solve_kernel(
     # Augment residual
     is_surface_node = False  # multi_mesh.GXV[i] >= 0
     ai = wp.vec3f()
-    if k > 0 or kp > 0:
+    if k > 0 or kp > 0:  # type: ignore
         ail = compute_thread_local_stencil_gradient_augmentation(
             local_tid=local_tid,  # pyright: ignore[reportArgumentType]
             block_dims=block_dims,  # pyright: ignore[reportArgumentType]
@@ -172,7 +176,7 @@ def _accelerated_vertex_solve_kernel(
 
 
 def iterate(
-    k: int,
+    _k: wp.array[wp.int32],
     kp: int,
     fem: FemElastoDynamics,
     params: Params,
@@ -196,7 +200,7 @@ def iterate(
             wp.launch(
                 kernel=_accelerated_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[p_begin, k, kp, fem.data, params.data, h2],
+                inputs=[p_begin, _k, kp, fem.data, params.data, h2],
                 block_dim=block_dim,
             )
 
@@ -218,11 +222,11 @@ def initialize_solve(
         xt=wp.array(data=xt, dtype=wp.vec3f), xtilde=fem.data.xtilde
     )
     contact.update_constraint_set(wp.array(data=xt, dtype=wp.vec3f))
-    contact.restore_feasibility(fem.data.x)
+    # contact.restore_feasibility(fem.data.x)
 
 
 def solve_subproblem(
-    k: int,
+    _k: wp.array[wp.int32],
     fem: FemElastoDynamics,
     params: Params,
     contact: MeshDynamics,
@@ -235,29 +239,46 @@ def solve_subproblem(
             request_decay_update=False,
             request_lagrange_multiplier_update=False,
         )
-        iterate(k, kp, fem, params)
-    finalize_subproblem(fem, params, contact)
+        iterate(_k, kp, fem, params)
 
 
-def solve(
-    fem: FemElastoDynamics,
-    params: Params,
-    contact: MeshDynamics,
-) -> bool:
-    """Solve the VBD minimization problem.
-    Mimics `pbat::sim::algorithm::vbd::Solve`:
-    """
-    converged = False
-    n_max_iters = params.data.n_max_iters
-    for k in range(n_max_iters):
-        # TODO: linearize_constraints(fem, params)
-        linearize_constraints(fem, params)
-        # TODO: if check_convergence(fem, params): break
-        if check_convergence(fem, params):
-            converged = True
-            break
-        # Solve linearized subproblem
-        prepare_subproblem(fem, params)
-        solve_subproblem(k, fem, params, contact)
-    fem.back_substitute_velocities()
-    return converged
+@wp.kernel
+def increment_k(k: wp.array[wp.int32]):
+    k[0] += 1  # type: ignore
+
+
+class AaaVbdSolver:
+
+    def __init__(self):
+        self._cuda_graph = None
+        self._k = wp.array(
+            [0], dtype=wp.int32
+        )  # Iteration counter for acceleration schedule
+
+    def initialize_solve(
+        self, fem: FemElastoDynamics, params: Params, contact: MeshDynamics
+    ):
+        self.initialize_solve(fem, params, contact)
+        self._k.fill_(0)
+
+    def solve(
+        self, fem: FemElastoDynamics, params: Params, contact: MeshDynamics
+    ) -> bool:
+        initialize_solve(fem, params, contact)
+        converged = False
+        if self._cuda_graph is None:
+            with wp.ScopedCapture() as capture:
+                for k in range(params.data.n_max_iters):
+                    linearize_constraints(fem, params)
+                    if check_convergence(fem, params):
+                        converged = True
+                        break
+                    prepare_subproblem(fem, params)
+                    solve_subproblem(self._k, fem, params, contact)
+                    finalize_subproblem(fem, params, contact)
+                    wp.launch(kernel=increment_k, dim=1, inputs=[self._k])
+            self._cuda_graph = capture
+        else:
+            wp.capture_launch(self._cuda_graph.graph)  # type: ignore
+        fem.back_substitute_velocities()
+        return converged

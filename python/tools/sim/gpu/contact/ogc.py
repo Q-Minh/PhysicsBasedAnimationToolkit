@@ -1131,23 +1131,6 @@ class Ogc:
     ):
         main_stream = wp.get_stream()
         wp.copy(dest=self._xk, src=xk, stream=main_stream)
-        wp.launch(
-            _compute_bounding_volumes,
-            dim=max(
-                self._meshes.n_verts,
-                self._meshes.n_edges,
-                self._meshes.n_triangles,
-            ),
-            inputs=[self._xk, self._meshes.data, self._ogc],
-            stream=main_stream,
-        )
-        for bvh, stream in zip([self._e_bvh, self._f_bvh], self._streams[:2]):
-            stream.wait_stream(main_stream)
-            with wp.ScopedStream(stream):
-                if request_rebuild:
-                    bvh.rebuild()
-                else:
-                    bvh.refit()
         # Reset contact pairs
         for contacts, stream in zip(
             [
@@ -1162,8 +1145,27 @@ class Ogc:
             ],
             self._streams[2:10],
         ):
-            with wp.ScopedStream(stream):
+            stream.wait_stream(main_stream)
+            with wp.ScopedStream(stream, sync_enter=False):
                 contacts.clear()
+        # Recompute BVH
+        wp.launch(
+            _compute_bounding_volumes,
+            dim=max(
+                self._meshes.n_verts,
+                self._meshes.n_edges,
+                self._meshes.n_triangles,
+            ),
+            inputs=[self._xk, self._meshes.data, self._ogc],
+            stream=main_stream,
+        )
+        for bvh, stream in zip([self._e_bvh, self._f_bvh], self._streams[:2]):
+            stream.wait_stream(main_stream)
+            with wp.ScopedStream(stream, sync_enter=False):
+                if request_rebuild:
+                    bvh.rebuild()
+                else:
+                    bvh.refit()
         # Fence
         for stream in self._streams[:10]:
             main_stream.wait_stream(stream)
@@ -1193,8 +1195,10 @@ class Ogc:
         # Each pair (u,v) for a given u is stored contiguously and sorted by v after
         # the fused contact detection. We only need to (stable-)sort by u. The counts
         # for each u are stored in counts, so the CSR prefix is an exclusive scan.
+        for stream in self._streams[:8]:
+            stream.wait_stream(main_stream)
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.capacity
-        with wp.ScopedStream(self._streams[0]):
+        with wp.ScopedStream(self._streams[0], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._vv.data.u, values=self._vv.data.v, count=vv_capacity
             )
@@ -1203,7 +1207,7 @@ class Ogc:
                 dim=vv_capacity,
                 inputs=[self._xk, self._meshes.data, self._ogc],
             )
-        with wp.ScopedStream(self._streams[1]):
+        with wp.ScopedStream(self._streams[1], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._ve.data.u, values=self._ve.data.v, count=ve_capacity
             )
@@ -1212,7 +1216,7 @@ class Ogc:
                 dim=ve_capacity,
                 inputs=[self._xk, self._meshes.data, self._ogc],
             )
-        with wp.ScopedStream(self._streams[2]):
+        with wp.ScopedStream(self._streams[2], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._vf.data.u, values=self._vf.data.v, count=vf_capacity
             )
@@ -1221,7 +1225,7 @@ class Ogc:
                 dim=vf_capacity,
                 inputs=[self._xk, self._meshes.data, self._ogc],
             )
-        with wp.ScopedStream(self._streams[3]):
+        with wp.ScopedStream(self._streams[3], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._ee.data.u, values=self._ee.data.v, count=ee_capacity
             )
@@ -1230,19 +1234,19 @@ class Ogc:
                 dim=ee_capacity,
                 inputs=[self._xk, self._meshes.data, self._ogc],
             )
-        with wp.ScopedStream(self._streams[4]):
+        with wp.ScopedStream(self._streams[4], sync_enter=False):
             wp.utils.array_scan(
                 self._vv.data.counts, self._vv.data.prefix, inclusive=False
             )
-        with wp.ScopedStream(self._streams[5]):
+        with wp.ScopedStream(self._streams[5], sync_enter=False):
             wp.utils.array_scan(
                 self._ve.data.counts, self._ve.data.prefix, inclusive=False
             )
-        with wp.ScopedStream(self._streams[6]):
+        with wp.ScopedStream(self._streams[6], sync_enter=False):
             wp.utils.array_scan(
                 self._vf.data.counts, self._vf.data.prefix, inclusive=False
             )
-        with wp.ScopedStream(self._streams[7]):
+        with wp.ScopedStream(self._streams[7], sync_enter=False):
             wp.utils.array_scan(
                 self._ee.data.counts, self._ee.data.prefix, inclusive=False
             )
@@ -1297,19 +1301,19 @@ class Ogc:
             count=ee_capacity,
             stream=self._streams[7],
         )
-        with wp.ScopedStream(self._streams[4]):
+        with wp.ScopedStream(self._streams[4], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._rvv.data.u, values=self._rvv.data.v, count=vv_capacity
             )
-        with wp.ScopedStream(self._streams[5]):
+        with wp.ScopedStream(self._streams[5], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._rve.data.u, values=self._rve.data.v, count=ve_capacity
             )
-        with wp.ScopedStream(self._streams[6]):
+        with wp.ScopedStream(self._streams[6], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._rvf.data.u, values=self._rvf.data.v, count=vf_capacity
             )
-        with wp.ScopedStream(self._streams[7]):
+        with wp.ScopedStream(self._streams[7], sync_enter=False):
             wp.utils.radix_sort_pairs(
                 keys=self._ree.data.u, values=self._ree.data.v, count=ee_capacity
             )
@@ -1330,19 +1334,21 @@ class Ogc:
             block_dim=block_dim,
             stream=main_stream,
         )
-        with wp.ScopedStream(self._streams[0]):
+        for stream in self._streams[:4]:
+            stream.wait_stream(main_stream)
+        with wp.ScopedStream(self._streams[0], sync_enter=False):
             wp.utils.array_scan(
                 self._rvv.data.counts, self._rvv.data.prefix, inclusive=False
             )
-        with wp.ScopedStream(self._streams[1]):
+        with wp.ScopedStream(self._streams[1], sync_enter=False):
             wp.utils.array_scan(
                 self._rve.data.counts, self._rve.data.prefix, inclusive=False
             )
-        with wp.ScopedStream(self._streams[2]):
+        with wp.ScopedStream(self._streams[2], sync_enter=False):
             wp.utils.array_scan(
                 self._rvf.data.counts, self._rvf.data.prefix, inclusive=False
             )
-        with wp.ScopedStream(self._streams[3]):
+        with wp.ScopedStream(self._streams[3], sync_enter=False):
             wp.utils.array_scan(
                 self._ree.data.counts, self._ree.data.prefix, inclusive=False
             )
@@ -1352,7 +1358,9 @@ class Ogc:
         # 5. Build reverse-to-forward contact index maps in parallel across contact types.
         # Each reverse contact (r_u, r_v) at position k must find its forward counterpart
         # (r_v, r_u) in the sorted forward list via binary search.
-        with wp.ScopedStream(self._streams[0]):
+        for stream in self._streams[:4]:
+            stream.wait_stream(main_stream)
+        with wp.ScopedStream(self._streams[0], sync_enter=False):
             wp.launch(
                 _build_reverse_to_forward_map,
                 dim=vv_capacity,
@@ -1363,7 +1371,7 @@ class Ogc:
                     self._ogc.rvv2vv,
                 ],
             )
-        with wp.ScopedStream(self._streams[1]):
+        with wp.ScopedStream(self._streams[1], sync_enter=False):
             wp.launch(
                 _build_reverse_to_forward_map,
                 dim=ve_capacity,
@@ -1374,13 +1382,13 @@ class Ogc:
                     self._ogc.rve2ve,
                 ],
             )
-        with wp.ScopedStream(self._streams[2]):
+        with wp.ScopedStream(self._streams[2], sync_enter=False):
             wp.launch(
                 _build_reverse_to_forward_map,
                 dim=vf_capacity,
                 inputs=[self._ogc.vf, self._ogc.rvf, n_verts, self._ogc.rvf2vf],
             )
-        with wp.ScopedStream(self._streams[3]):
+        with wp.ScopedStream(self._streams[3], sync_enter=False):
             wp.launch(
                 _build_reverse_to_forward_map,
                 dim=ee_capacity,

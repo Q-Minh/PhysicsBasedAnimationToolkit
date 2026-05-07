@@ -149,13 +149,16 @@ class SimulationState:
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.ogc_params = gpu.contact.ogc.OgcParams()
-        xt = self.fem.bdf.current_state(0)
         ogc = gpu.contact.ogc.Ogc(
             self.fem.data.x,
             self.multimesh,
             self.ogc_params,
         )
         self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
+        self.solvers = {
+            SolverType.VBD: gpu.vbd.solver.VbdSolver(),
+            SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
+        }
         self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(
             self.fem.data.x, self.contact.ogc
         )
@@ -165,33 +168,11 @@ class SimulationState:
         self.t: int = 0
         self.until_t: int = -1
 
-    def initialize_solve(self):
-        if self.solver == SolverType.AAAVBD:
-            gpu.vbd.aaasolver.initialize_solve(
-                self.fem, self.params[self.solver], self.contact
-            )
-        else:
-            gpu.vbd.solver.initialize_solve(
-                self.fem, self.params[self.solver], self.contact
-            )
-
-    def solve(self):
-        if self.solver == SolverType.AAAVBD:
-            _ = gpu.vbd.aaasolver.solve(
-                self.fem, self.params[self.solver], self.contact
-            )
-        elif self.solver == SolverType.VBD:
-            _ = gpu.vbd.solver.solve(self.fem, self.params[self.solver], self.contact)
-
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
-        # if self.capture is None:
-        #     with wp.ScopedCapture() as capture:
-        self.initialize_solve()
-        self.solve()
-        #     self.capture = capture
-        # else:
-        #     wp.capture_launch(self.capture.graph)
+        self.solvers[self.solver].solve(
+            self.fem, self.params[self.solver], self.contact
+        )
         self.fem.step()
         self.t += 1
 
@@ -203,13 +184,16 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
-        xt = self.fem.bdf.current_state(0)
         ogc = gpu.contact.ogc.Ogc(
             self.fem.data.x,
             self.multimesh,
             self.ogc_params,
         )
         self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
+        self.solvers = {
+            SolverType.VBD: gpu.vbd.solver.VbdSolver(),
+            SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
+        }
         self.contact_browser.update(self.fem.data.x, self.contact.ogc)
         self.capture = None
 
@@ -262,7 +246,7 @@ def make_callback(
                 # --- Contact parameters ---
                 if imgui.TreeNode("Contact"):
                     if imgui.TreeNode("Statistics"):
-                        nvv, nve, nvf, nee = state.ogc.num_contacts
+                        nvv, nve, nvf, nee = state.contact.ogc.num_contacts
                         imgui.Text(f"# Vertex-Vertex Contacts: {nvv}")
                         imgui.Text(f"# Vertex-Edge Contacts: {nve}")
                         imgui.Text(f"# Vertex-Face Contacts: {nvf}")
@@ -346,8 +330,8 @@ def parse_args():
 
 
 def main():
-    wp.config.mode = "debug"
-    wp.config.verify_cuda = True
+    # wp.config.mode = "debug"
+    # wp.config.verify_cuda = True
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
