@@ -1,4 +1,4 @@
-from typing import Tuple
+from ...common.fields import DocField
 
 import warp as wp
 
@@ -6,13 +6,6 @@ from .ogc import Ogc, OgcData
 from .constraints import ConstraintSet, ConstraintSetData
 from .multimesh import MultiMeshData
 from . import halfedges
-
-# TODO: Review/refactor/improve the dual update implementation.
-
-
-# ---------------------------------------------------------------------------
-# Gap vector functions — one per contact type
-# ---------------------------------------------------------------------------
 
 
 @wp.func
@@ -96,92 +89,83 @@ def _gap_ee(
     return xcp_u - xcp_v
 
 
-# ---------------------------------------------------------------------------
-# Project gap onto contact basis
-# ---------------------------------------------------------------------------
-
-
 @wp.func
 def _project_gap(
     gap: wp.vec3f,
     basis: wp.mat33f,
-) -> Tuple[wp.float32, wp.vec2f]:  # type: ignore
-    """Decompose gap into normal and tangential components.
-
-    basis rows: [n (normal), t1 (first tangent), t2 (bitangent)].
-    Returns (c_n, c_f) where c_n = dot(gap, n) and c_f = (dot(gap, t1), dot(gap, t2)).
-    """
-    n  = wp.vec3f(basis[0, 0], basis[0, 1], basis[0, 2])
-    t1 = wp.vec3f(basis[1, 0], basis[1, 1], basis[1, 2])
-    t2 = wp.vec3f(basis[2, 0], basis[2, 1], basis[2, 2])
-    c_n = wp.dot(gap, n)
-    c_f = wp.vec2f(wp.dot(gap, t1), wp.dot(gap, t2))
-    return c_n, c_f
-
-
-# ---------------------------------------------------------------------------
-# AL dual update core
-# ---------------------------------------------------------------------------
+) -> wp.vec3f:  # type: ignore
+    c = basis @ gap  # type: ignore
+    return c
 
 
 @wp.func
 def _apply_dual_update(
     c_n: wp.float32,
     c_f: wp.vec2f,
-    s_prev: wp.float32,
-    gamma_k: wp.float32,
-    lambda_n_k: wp.float32,
-    lambda_f_k: wp.vec2f,
-    mu_n: wp.float32,
-    mu_f: wp.float32,
+    k: wp.int32,
+    s: wp.array[wp.float32],
+    gamma: wp.array[wp.float32],
+    lambda_n: wp.array[wp.float32],
+    lambda_f: wp.array[wp.vec2f],
+    sigma_n: wp.float32,
+    sigma_f: wp.float32,
     mu_friction: wp.float32,
     dmin: wp.float32,
     decay_rate: wp.float32,
-) -> Tuple[wp.float32, wp.float32, wp.float32, wp.vec2f]:  # type: ignore
+    request_slack_update: bool,
+    request_decay_update: bool,
+    request_lagrange_multiplier_update: bool,
+):
     """Augmented-Lagrangian dual variable update.
 
     GPU equivalent of ``MeshDynamics::UpdateDual<Slack|Decay|LagrangeMultiplier>``
     from the C++ side.  Rather than evaluating a cached Taylor expansion, the
     caller supplies the already-projected gap components ``(c_n, c_f)``.
 
+    Reads and writes each array entry at index ``k`` only when the corresponding
+    ``request_*`` flag is set, avoiding unnecessary memory traffic.
+
     Update order (mirrors C++):
-      1. Slack   : s = max(0, c_n - dmin - lambda_n / mu_n)
-      2. Decay   : gamma = 1 if s == 0 (contact active);
-                         gamma *= decay_rate if s > s_prev (separating).
+      1. Decay   : gamma[k] *= decay_rate when slack is growing (read s[k] first).
+      2. Slack   : s[k] = max(0, c_n - dmin - lambda_n[k] / mu_n[0]).
       3. Multipliers: if s == 0
-             lambda_n -= mu_n * (c_n - dmin)
-             lambda_f -= mu_f * c_f  then project into Coulomb cone
+             lambda_n[k] -= mu_n[0] * (c_n - dmin)
+             lambda_f[k] -= mu_f[0] * c_f  then project into Coulomb cone
          else
-             lambda_n = 0,  lambda_f = 0
+             lambda_n[k] = 0,  lambda_f[k] = 0
     """
+    # lambda_n[k] and mu_n[0] are always needed to compute new_s, which drives all branches.
+    lambda_n_k = lambda_n[k]
+    new_s = wp.max(wp.float32(0), c_n - dmin - lambda_n_k / sigma_n)
+    # --- Decay: read old s[k] before any write ---
+    if request_decay_update:
+        s_prev = s[k]
+        gamma_k = gamma[k]
+        new_gamma = gamma_k
+        if new_s == wp.float32(0):
+            new_gamma = wp.float32(1)
+        elif new_s > s_prev:  # contact gap growing → separating
+            new_gamma = gamma_k * decay_rate
+        gamma[k] = new_gamma
     # --- Slack ---
-    new_s = wp.max(wp.float32(0), c_n - dmin - lambda_n_k / mu_n)
-    # --- Decay ---
-    new_gamma = gamma_k
-    if new_s == wp.float32(0):
-        new_gamma = wp.float32(1)
-    elif new_s > s_prev:  # contact gap growing → separating
-        new_gamma = gamma_k * decay_rate
+    if request_slack_update:
+        s[k] = new_s
     # --- Lagrange multipliers ---
-    new_lambda_n = lambda_n_k
-    new_lambda_f = lambda_f_k
-    if new_s == wp.float32(0):
-        new_lambda_n = lambda_n_k - mu_n * (c_n - dmin)
-        new_lambda_f = lambda_f_k - mu_f * c_f
-        # Coulomb friction cone: |lambda_f| <= mu * lambda_n
-        friction_limit = mu_friction * new_lambda_n
-        lf_sq = wp.dot(new_lambda_f, new_lambda_f)
-        if lf_sq > friction_limit * friction_limit:
-            new_lambda_f = new_lambda_f * (friction_limit / wp.sqrt(lf_sq))
-    else:
-        new_lambda_n = wp.float32(0)
-        new_lambda_f = wp.vec2f(wp.float32(0), wp.float32(0))
-    return new_s, new_gamma, new_lambda_n, new_lambda_f
-
-
-# ---------------------------------------------------------------------------
-# Per-type dual update kernels
-# ---------------------------------------------------------------------------
+    if request_lagrange_multiplier_update:
+        if new_s == wp.float32(0):
+            lambda_f_k = lambda_f[k]
+            new_lambda_n = lambda_n_k - sigma_n * (c_n - dmin)
+            new_lambda_f = lambda_f_k - sigma_f * c_f
+            # Coulomb friction cone: |lambda_f| <= mu_friction * lambda_n
+            friction_limit = mu_friction * new_lambda_n
+            lf_sq = wp.dot(new_lambda_f, new_lambda_f)
+            if lf_sq > friction_limit * friction_limit:
+                new_lambda_f = new_lambda_f * (friction_limit / wp.sqrt(lf_sq))
+            lambda_n[k] = new_lambda_n
+            lambda_f[k] = new_lambda_f
+        else:
+            lambda_n[k] = wp.float32(0)
+            lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))
 
 
 @wp.kernel
@@ -194,6 +178,9 @@ def _update_dual_vv(
     dmin: wp.float32,
     mu_friction: wp.float32,
     decay_rate: wp.float32,
+    request_slack_update: bool = True,
+    request_decay_update: bool = True,
+    request_lagrange_multiplier_update: bool = True,
 ):
     """Dual update for vertex-vertex contacts."""
     k = wp.tid()  # type: ignore
@@ -202,17 +189,25 @@ def _update_dual_vv(
     u = ogc.vv.u[k]
     v = ogc.vv.v[k]
     gap = _gap_vv(x, meshes.V, u, v)  # type: ignore
-    c_n, c_f = _project_gap(gap, ogc.vv_bases[k])  # type: ignore
-    new_s, new_gamma, new_lambda_n, new_lambda_f = _apply_dual_update(  # type: ignore
-        c_n, c_f,
-        data.s[k], data.gamma[k], data.lambda_n[k], data.lambda_f[k],
-        data.mu_n[0], data.mu_f[0],
-        mu_friction, dmin, decay_rate,
+    c = _project_gap(gap, ogc.vv_bases[k])  # type: ignore
+    c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    _apply_dual_update(  # type: ignore
+        c_n,
+        c_f,
+        k,  # type: ignore
+        data.s,
+        data.gamma,
+        data.lambda_n,
+        data.lambda_f,
+        data.sigma_n[0],
+        data.sigma_f[0],
+        mu_friction,
+        dmin,
+        decay_rate,
+        request_slack_update,
+        request_decay_update,
+        request_lagrange_multiplier_update,
     )
-    data.s[k] = new_s  # type: ignore
-    data.gamma[k] = new_gamma  # type: ignore
-    data.lambda_n[k] = new_lambda_n  # type: ignore
-    data.lambda_f[k] = new_lambda_f  # type: ignore
 
 
 @wp.kernel
@@ -225,6 +220,9 @@ def _update_dual_ve(
     dmin: wp.float32,
     mu_friction: wp.float32,
     decay_rate: wp.float32,
+    request_slack_update: bool = True,
+    request_decay_update: bool = True,
+    request_lagrange_multiplier_update: bool = True,
 ):
     """Dual update for vertex-edge contacts."""
     k = wp.tid()  # type: ignore
@@ -234,17 +232,25 @@ def _update_dual_ve(
     v = ogc.ve.v[k]
     t = ogc.ve_bary[k]
     gap = _gap_ve(x, meshes.V, meshes.F, t, u, v)  # type: ignore
-    c_n, c_f = _project_gap(gap, ogc.ve_bases[k])  # type: ignore
-    new_s, new_gamma, new_lambda_n, new_lambda_f = _apply_dual_update(  # type: ignore
-        c_n, c_f,
-        data.s[k], data.gamma[k], data.lambda_n[k], data.lambda_f[k],
-        data.mu_n[0], data.mu_f[0],
-        mu_friction, dmin, decay_rate,
+    c = _project_gap(gap, ogc.ve_bases[k])  # type: ignore
+    c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    _apply_dual_update(  # type: ignore
+        c_n,
+        c_f,
+        k,
+        data.s,
+        data.gamma,
+        data.lambda_n,
+        data.lambda_f,
+        data.sigma_n[0],
+        data.sigma_f[0],
+        mu_friction,
+        dmin,
+        decay_rate,
+        request_slack_update,
+        request_decay_update,
+        request_lagrange_multiplier_update,
     )
-    data.s[k] = new_s  # type: ignore
-    data.gamma[k] = new_gamma  # type: ignore
-    data.lambda_n[k] = new_lambda_n  # type: ignore
-    data.lambda_f[k] = new_lambda_f  # type: ignore
 
 
 @wp.kernel
@@ -257,6 +263,9 @@ def _update_dual_vf(
     dmin: wp.float32,
     mu_friction: wp.float32,
     decay_rate: wp.float32,
+    request_slack_update: bool = True,
+    request_decay_update: bool = True,
+    request_lagrange_multiplier_update: bool = True,
 ):
     """Dual update for vertex-face contacts."""
     k = wp.tid()  # type: ignore
@@ -266,17 +275,25 @@ def _update_dual_vf(
     v = ogc.vf.v[k]
     bary = ogc.vf_bary[k]
     gap = _gap_vf(x, meshes.V, meshes.F, bary, u, v)  # type: ignore
-    c_n, c_f = _project_gap(gap, ogc.vf_bases[k])  # type: ignore
-    new_s, new_gamma, new_lambda_n, new_lambda_f = _apply_dual_update(  # type: ignore
-        c_n, c_f,
-        data.s[k], data.gamma[k], data.lambda_n[k], data.lambda_f[k],
-        data.mu_n[0], data.mu_f[0],
-        mu_friction, dmin, decay_rate,
+    c = _project_gap(gap, ogc.vf_bases[k])  # type: ignore
+    c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    _apply_dual_update(  # type: ignore
+        c_n,
+        c_f,
+        k,
+        data.s,
+        data.gamma,
+        data.lambda_n,
+        data.lambda_f,
+        data.sigma_n[0],
+        data.sigma_f[0],
+        mu_friction,
+        dmin,
+        decay_rate,
+        request_slack_update,
+        request_decay_update,
+        request_lagrange_multiplier_update,
     )
-    data.s[k] = new_s  # type: ignore
-    data.gamma[k] = new_gamma  # type: ignore
-    data.lambda_n[k] = new_lambda_n  # type: ignore
-    data.lambda_f[k] = new_lambda_f  # type: ignore
 
 
 @wp.kernel
@@ -289,6 +306,9 @@ def _update_dual_ee(
     dmin: wp.float32,
     mu_friction: wp.float32,
     decay_rate: wp.float32,
+    request_slack_update: bool = True,
+    request_decay_update: bool = True,
+    request_lagrange_multiplier_update: bool = True,
 ):
     """Dual update for edge-edge contacts."""
     k = wp.tid()  # type: ignore
@@ -298,22 +318,25 @@ def _update_dual_ee(
     v = ogc.ee.v[k]
     bary = ogc.ee_bary[k]
     gap = _gap_ee(x, meshes.F, bary, u, v)  # type: ignore
-    c_n, c_f = _project_gap(gap, ogc.ee_bases[k])  # type: ignore
-    new_s, new_gamma, new_lambda_n, new_lambda_f = _apply_dual_update(  # type: ignore
-        c_n, c_f,
-        data.s[k], data.gamma[k], data.lambda_n[k], data.lambda_f[k],
-        data.mu_n[0], data.mu_f[0],
-        mu_friction, dmin, decay_rate,
+    c = _project_gap(gap, ogc.ee_bases[k])  # type: ignore
+    c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    _apply_dual_update(  # type: ignore
+        c_n,
+        c_f,
+        k,
+        data.s,
+        data.gamma,
+        data.lambda_n,
+        data.lambda_f,
+        data.sigma_n[0],
+        data.sigma_f[0],
+        mu_friction,
+        dmin,
+        decay_rate,
+        request_slack_update,
+        request_decay_update,
+        request_lagrange_multiplier_update,
     )
-    data.s[k] = new_s  # type: ignore
-    data.gamma[k] = new_gamma  # type: ignore
-    data.lambda_n[k] = new_lambda_n  # type: ignore
-    data.lambda_f[k] = new_lambda_f  # type: ignore
-
-
-# ---------------------------------------------------------------------------
-# MeshDynamicsData struct and MeshDynamics class
-# ---------------------------------------------------------------------------
 
 
 @wp.struct
@@ -324,13 +347,46 @@ class MeshDynamicsData:
     cve: ConstraintSetData  # type: ignore
     cvf: ConstraintSetData  # type: ignore
     cee: ConstraintSetData  # type: ignore
+    sigma_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter
+    sigma_f: wp.array[wp.float32]  # (1,) friction contact penalty parameter
+
+
+class Params:
+    """Parameters for :class:`MeshDynamics`.
+
+    Attributes:
+        dmin   : Minimum separation distance used as the contact distance margin
+                 (separating threshold in the AL slack update).
+        mu_f   : Coulomb friction coefficient.
+        decay  : Multiplicative decay applied to the contact-activity weight ``gamma``
+                 when a contact is separating (slack growing). Must satisfy ``0 < decay < 1``.
+        gamman : Normal AL penalty scaling factor, equivalent to
+                 ``MeshDynamics::Params::gamma`` in the C++ side.
+        gammaf : Friction AL penalty scaling factor, equivalent to
+                 ``MeshDynamics::Params::gammaf`` in the C++ side.
+    """
+
+    dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
+    mu_f = DocField(0.2, "Coulomb friction coefficient")
+    decay = DocField(0.5, "Decay rate for contact deactivation")
+    gamman = DocField(5.0, "Normal contact AL penalty scaling factor")
+    gammaf = DocField(0.1, "Friction contact AL penalty scaling factor")
 
 
 class MeshDynamics:
 
+    params: Params
+    ogc: Ogc
+    cvv: ConstraintSet
+    cve: ConstraintSet
+    cvf: ConstraintSet
+    cee: ConstraintSet
     _data: MeshDynamicsData  # type: ignore
 
-    def __init__(self, ogc: Ogc):
+    _streams: list[wp.Stream]
+
+    def __init__(self, ogc: Ogc, params: Params | None = None):
+        self.params = params if params is not None else Params()
         self.ogc = ogc
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.ogc.capacity
         n_verts, n_edges, n_half_edges, n_triangles = self.ogc.n_primitives
@@ -344,13 +400,40 @@ class MeshDynamics:
         self._data.cve = self.cve.data
         self._data.cvf = self.cvf.data
         self._data.cee = self.cee.data
+        # TODO: Make the penalty parameters adaptive!!
+        self._data.sigma_n = wp.array([1e6], dtype=wp.float32)
+        self._data.sigma_f = wp.array([1e3], dtype=wp.float32)
+
+        self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
+
+    def update_constraint_set(self, xk: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]):
+        """Prepare constraint sets for a new step, warm-starting from the previous snapshot."""
+        self.ogc.prepare_for_execution(xk, xtilde)
+        self.ogc.detect_contacts()
+        self.ogc.update_displacement_bounds()
+        contacts = self.ogc.data.contacts
+        main_stream = wp.get_stream()
+        for stream, cset, cuv in zip(
+            self._streams,
+            (self.cvv, self.cve, self.cvf, self.cee),
+            (
+                contacts.vv,
+                contacts.ve,
+                contacts.vf,
+                contacts.ee,
+            ),
+        ):
+            with wp.ScopedStream(stream):
+                cset.update_constraint_set(cuv)
+        for stream in self._streams:
+            main_stream.wait_stream(stream)
 
     def update_dual(
         self,
         x: wp.array,
-        dmin: float = 5e-4,
-        mu: float = 0.5,
-        decay: float = 0.9,
+        request_slack_update: bool = True,
+        request_decay_update: bool = True,
+        request_lagrange_multiplier_update: bool = True,
     ):
         """Update dual variables (slack, decay, Lagrange multipliers) for all contact types.
 
@@ -367,16 +450,16 @@ class MeshDynamics:
             x         : Current vertex positions (``wp.array[wp.vec3f]``, indexed by global
                         point index).
             dmin      : Minimum contact distance margin (separating threshold).
-            mu        : Coulomb friction coefficient.
+            mu_f      : Coulomb friction coefficient.
             decay     : Decay multiplier applied to ``gamma`` when a contact is separating
                         (i.e. slack is growing).  Should satisfy ``0 < decay < 1``.
+            request_slack_update: Whether to update the slack variable.
+            request_decay_update: Whether to update the decay variable.
+            request_lagrange_multiplier_update: Whether to update the Lagrange multipliers.
         """
         meshes = self.ogc._meshes.data
         ogc = self.ogc.data
         stream = wp.get_stream()
-        dmin_f = wp.float32(dmin)
-        mu_f = wp.float32(mu)
-        decay_f = wp.float32(decay)
         for kernel, cs in (
             (_update_dual_vv, self.cvv),
             (_update_dual_ve, self.cve),
@@ -386,9 +469,24 @@ class MeshDynamics:
             wp.launch(
                 kernel,
                 dim=cs.capacity,
-                inputs=[x, meshes, ogc, cs.data, wp.int32(cs.n_u), dmin_f, mu_f, decay_f],
+                inputs=[
+                    x,
+                    meshes,
+                    ogc,
+                    cs.data,
+                    cs.n_u,
+                    self.params.dmin,
+                    self.params.mu_f,
+                    self.params.decay,
+                    request_slack_update,
+                    request_decay_update,
+                    request_lagrange_multiplier_update,
+                ],
                 stream=stream,
             )
+
+    def restore_feasibility(self, x: wp.array):
+        self.ogc.truncate(x)
 
     @property
     def data(self) -> MeshDynamicsData:  # type: ignore

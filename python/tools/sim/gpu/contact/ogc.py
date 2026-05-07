@@ -730,6 +730,30 @@ def _update_displacement_bounds(
 
 
 @wp.kernel
+def _truncate_displacements(
+    xk: wp.array[
+        wp.vec3f
+    ],  # (N,) reference positions cached at last prepare_for_execution
+    dminv: wp.array[wp.float32],  # (n_verts,) per-vertex-primitive displacement bounds
+    V: wp.array[wp.int32],  # (n_verts,) vertex primitive -> global point index
+    x: wp.array[wp.vec3f],  # (N,) positions to truncate in-place
+):
+    """Truncate the displacement of vertex primitive v to remain within its bound dminv[v].
+
+    For each vertex primitive v with global point index i = V[v]:
+      d = x[i] - xk[i]
+      if |d| > dminv[v]: x[i] = xk[i] + d * (dminv[v] / |d|)
+    """
+    v = wp.tid()
+    i = V[v]
+    b = dminv[v]
+    d = x[i] - xk[i]
+    dnorm = wp.norm_l2(d)
+    if dnorm > b:  # type: ignore
+        x[i] = xk[i] + (b / dnorm) * d  # type: ignore
+
+
+@wp.kernel
 def _compute_reverse_contact_counts(ogc: OgcData):  # type: ignore
     """Compute reverse contact counts for each contact pair type.
 
@@ -1383,11 +1407,22 @@ class Ogc:
             inputs=[self._meshes.data, self._ogc],
         )
 
-    def restore_feasibility(self):
-        # TODO:
-        # 1. Store last position array from last detect_contacts call
-        # 2. Apply OGC (or planar DAT) truncation
-        pass
+    def truncate(self, x: wp.array):
+        """Truncate per-vertex displacements in-place to stay within OGC displacement bounds.
+
+        Displacement is measured from the reference positions cached at the last
+        ``prepare_for_execution`` call (``self._xk``).  If vertex ``v``'s displacement
+        ``|x[V[v]] - xk[V[v]]|`` exceeds ``dminv[v]``, it is scaled back to the bound.
+
+        Args:
+            x: Current vertex positions to truncate in-place
+               (``wp.array[wp.vec3f]``, global-point indexed, shape ``(N,)``).
+        """
+        wp.launch(
+            _truncate_displacements,
+            dim=self._meshes.n_verts,
+            inputs=[self._xk, self._ogc.dminv, self._meshes.data.V, x],
+        )
 
     @property
     def data(self) -> OgcData:  # pyright: ignore[reportGeneralTypeIssues]
