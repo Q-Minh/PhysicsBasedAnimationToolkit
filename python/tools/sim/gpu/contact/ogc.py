@@ -1457,6 +1457,10 @@ class Ogc:
     @property
     def data(self) -> OgcData:  # pyright: ignore[reportGeneralTypeIssues]
         return self._ogc
+    
+    @property
+    def meshes(self) -> MultiMesh:
+        return self._meshes
 
     @property
     def capacity(self) -> Tuple[int, int, int, int]:

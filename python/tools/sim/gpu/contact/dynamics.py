@@ -4,7 +4,7 @@ import warp as wp
 
 from .ogc import Ogc, OgcData
 from .constraints import ConstraintSet, ConstraintSetData
-from .multimesh import MultiMeshData
+from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
 
 
@@ -300,14 +300,15 @@ def _update_dual_ee(
 
 @wp.struct
 class MeshDynamicsData:
-
     ogc: OgcData  # type: ignore
+    meshes: MultiMeshData  # type: ignore
     cvv: ConstraintSetData  # type: ignore
     cve: ConstraintSetData  # type: ignore
     cvf: ConstraintSetData  # type: ignore
     cee: ConstraintSetData  # type: ignore
     sigma_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter
     sigma_f: wp.array[wp.float32]  # (1,) friction contact penalty parameter
+    dmin: wp.float32
 
 
 class Params:
@@ -325,7 +326,21 @@ class Params:
                  ``MeshDynamics::Params::gammaf`` in the C++ side.
     """
 
-    dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
+    _dmin: float
+
+    def __init__(self):
+        self._dmin = 2e-3
+        self._mu_f = 0.2
+        self._decay = 0.5
+        self._gamman = 5.0
+        self._gammaf = 0.1
+
+    @property
+    def dmin(self) -> float:
+        """Minimum separation distance margin (contact threshold)"""
+        return self._dmin
+    
+    # dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
     mu_f = DocField(0.2, "Coulomb friction coefficient")
     decay = DocField(0.5, "Decay rate for contact deactivation")
     gamman = DocField(5.0, "Normal contact AL penalty scaling factor")
@@ -335,6 +350,7 @@ class Params:
 class MeshDynamics:
 
     params: Params
+    meshes: MultiMesh
     ogc: Ogc
     cvv: ConstraintSet
     cve: ConstraintSet
@@ -347,6 +363,7 @@ class MeshDynamics:
     def __init__(self, ogc: Ogc, params: Params | None = None):
         self.params = params if params is not None else Params()
         self.ogc = ogc
+        self.meshes = self.ogc.meshes
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.ogc.capacity
         n_verts, n_edges, n_half_edges, n_triangles = self.ogc.n_primitives
         self.cvv = ConstraintSet(n_verts, vv_capacity)
@@ -354,15 +371,16 @@ class MeshDynamics:
         self.cvf = ConstraintSet(n_verts, vf_capacity)
         self.cee = ConstraintSet(n_half_edges, ee_capacity)
         self._data = MeshDynamicsData()
+        self._data.meshes = self.meshes.data
         self._data.ogc = self.ogc.data
         self._data.cvv = self.cvv.data
         self._data.cve = self.cve.data
         self._data.cvf = self.cvf.data
         self._data.cee = self.cee.data
         # TODO: Make the penalty parameters adaptive!!
-        self._data.sigma_n = wp.array([1e6], dtype=wp.float32)
+        self._data.sigma_n = wp.array([1e7], dtype=wp.float32)
         self._data.sigma_f = wp.array([1e3], dtype=wp.float32)
-
+        self._data.dmin = self.params.dmin  # type: ignore
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
 
     def update_constraint_set(self, xk: wp.array[wp.vec3f]):

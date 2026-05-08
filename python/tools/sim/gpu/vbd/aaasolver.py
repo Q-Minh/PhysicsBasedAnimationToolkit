@@ -5,9 +5,14 @@ import warp as wp
 
 from python import fem
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
+from ..contact.dynamics import (
+    MeshDynamics as ContactDynamics,
+    MeshDynamicsData as ContactDynamicsData,
+)
 from .params import Params, ParamsData
 from .kernels import (
     local_elastic_derivatives,
+    local_contact_derivatives,
     add_inertia_derivatives,
     integrate_positions,
 )
@@ -17,7 +22,6 @@ from .solver import (
     prepare_subproblem,
     finalize_subproblem,
 )
-from ..contact.dynamics import MeshDynamics
 
 
 @wp.func
@@ -31,7 +35,6 @@ def adapt_stencil_gradient_acceleration_parameter(
     is_surface_node: bool,
     eps: wp.float32,
 ) -> wp.float32:
-    # TODO: Check if the node is a surface node
     grp = wp.int32(1) if is_surface_node else wp.int32(0)
     betaG = params.betaG[i, grp]
     if kp > 0:
@@ -67,6 +70,7 @@ def compute_thread_local_stencil_gradient_augmentation(
     local_tid: wp.int32,
     block_dims: wp.int32,
     i: wp.int32,
+    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     is_surface_node: bool,
 ):
@@ -77,9 +81,9 @@ def compute_thread_local_stencil_gradient_augmentation(
     n_neighbours = nend - nbegin
     for jlocal in range(local_tid, n_neighbours, block_dims):
         j = params.GVVadj[nbegin + jlocal]
-        # TODO: Handle surface node's surface stencil
-        # if is_surface_node and params.bSurfaceStencilSurfaceNeighboursOnly and fem.dynamic_meshes[j] < 0:
-        #     continue
+        is_j_surface_node = contact.meshes.GXV[j] >= 0
+        if is_surface_node and not is_j_surface_node:
+            continue
         ai += params.gk[j]
     return ai
 
@@ -90,6 +94,7 @@ def _accelerated_vertex_solve_kernel(
     k: wp.int32,
     kp: wp.int32,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     h2: float,
 ):
@@ -111,6 +116,16 @@ def _accelerated_vertex_solve_kernel(
     gil, Hil = local_elastic_derivatives(
         i, fem, params, local_tid, block_dims  # pyright: ignore[reportArgumentType]
     )
+    gil *= h2  # type: ignore
+    Hil *= h2  # type: ignore
+    vi = contact.meshes.GXV[i]
+    is_surface_node = vi >= 0
+    if is_surface_node:
+        gil_c, Hil_c = local_contact_derivatives(
+            i, vi, fem, contact, params, local_tid, block_dims  # type: ignore
+        )
+        gil += gil_c  # type: ignore
+        Hil += Hil_c  # type: ignore
     gis, His = (
         wp.tile(gil, preserve_type=True),  # pyright: ignore[reportArgumentType]
         wp.tile(Hil, preserve_type=True),  # pyright: ignore[reportArgumentType]
@@ -119,18 +134,15 @@ def _accelerated_vertex_solve_kernel(
         wp.tile_reduce(wp.add, gis)[0],  # pyright: ignore[reportIndexIssue]
         wp.tile_reduce(wp.add, His)[0],  # pyright: ignore[reportIndexIssue]
     )
-    gi *= h2  # pyright: ignore[reportOperatorIssue]
-    Hi *= h2  # pyright: ignore[reportOperatorIssue]
-    # TODO: AccumulateContactEnergy(i, params.xb, contact, gi, Hi)
     eps = wp.float32(1e-10)  # pyright: ignore[reportArgumentType]
     # Augment residual
-    is_surface_node = False  # multi_mesh.GXV[i] >= 0
     ai = wp.vec3f()
     if k > 0 or kp > 0:  # type: ignore
         ail = compute_thread_local_stencil_gradient_augmentation(
             local_tid=local_tid,  # pyright: ignore[reportArgumentType]
             block_dims=block_dims,  # pyright: ignore[reportArgumentType]
             i=i,
+            contact=contact,
             params=params,
             is_surface_node=is_surface_node,
         )
@@ -178,6 +190,7 @@ def iterate(
     k: int,
     kp: int,
     fem: FemElastoDynamics,
+    contact: ContactDynamics,
     params: Params,
 ):
     """One VBD Gauss-Seidel sweep over all color partitions."""
@@ -199,7 +212,7 @@ def iterate(
             wp.launch(
                 kernel=_accelerated_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[p_begin, k, kp, fem.data, params.data, h2],
+                inputs=[p_begin, k, kp, fem.data, contact.data, params.data, h2],
                 block_dim=block_dim,
             )
 
@@ -207,7 +220,7 @@ def iterate(
 def initialize_solve(
     fem: FemElastoDynamics,
     params: Params,
-    contact: MeshDynamics,
+    contact: ContactDynamics,
 ):
     """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
 
@@ -217,14 +230,11 @@ def initialize_solve(
     """
     contact.ogc.compute_query_radius()
     contact.update_constraint_set(fem.xt)
-    # contact.restore_feasibility(fem.data.x)
+    contact.restore_feasibility(fem.data.x)
 
 
 def solve_subproblem(
-    k: int,
-    fem: FemElastoDynamics,
-    params: Params,
-    contact: MeshDynamics,
+    k: int, fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
     for kp in range(n_subproblem_max_iters):
@@ -234,7 +244,7 @@ def solve_subproblem(
             request_decay_update=False,
             request_lagrange_multiplier_update=False,
         )
-        iterate(k, kp, fem, params)
+        iterate(k, kp, fem, contact, params)
 
 
 class AaaVbdSolver:
@@ -246,26 +256,26 @@ class AaaVbdSolver:
         )  # Iteration counter for acceleration schedule
 
     def initialize_solve(
-        self, fem: FemElastoDynamics, params: Params, contact: MeshDynamics
+        self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
     ):
         self.initialize_solve(fem, params, contact)
         self._k.fill_(0)
 
     def solve(
-        self, fem: FemElastoDynamics, params: Params, contact: MeshDynamics
+        self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
     ) -> bool:
         converged = False
         if self._cuda_graph is None:
             with wp.ScopedCapture() as capture:
                 initialize_solve(fem, params, contact)
                 for k in range(params.data.n_max_iters):
-                    linearize_constraints(fem, params)
-                    if check_convergence(fem, params):
+                    linearize_constraints(fem, contact, params)
+                    if check_convergence(fem, contact, params):
                         converged = True
                         break
-                    prepare_subproblem(fem, params)
-                    solve_subproblem(k, fem, params, contact)
-                    finalize_subproblem(fem, params, contact)
+                    prepare_subproblem(fem, contact, params)
+                    solve_subproblem(k, fem, contact, params)
+                    finalize_subproblem(fem, contact, params)
             self._cuda_graph = capture
         else:
             wp.capture_launch(self._cuda_graph.graph)  # type: ignore

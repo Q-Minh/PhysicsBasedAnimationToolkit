@@ -95,6 +95,7 @@ class FemElastoDynamicsData:
     v: wp.array[wp.vec3f]  # (N,) velocities
 
     # --- Time integration ---
+    xt: wp.array[wp.vec3f]  # (N,) current positions (BDF)
     xtilde: wp.array[wp.vec3f]  # (N,) BDF inertial target
 
     # --- Mass ---
@@ -162,6 +163,7 @@ class FemElastoDynamics:
         self.bdf.set_initial_conditions(
             cp.asarray(self._data.x).ravel(), cp.asarray(self._data.v).ravel()
         )
+        self._data.xt = self.xt
 
     @property
     def data(self) -> FemElastoDynamicsData:  # pyright: ignore[reportGeneralTypeIssues]

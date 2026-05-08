@@ -18,7 +18,7 @@ from .kernels import (
     add_inertia_derivatives,
     integrate_positions,
 )
-from ..contact.dynamics import MeshDynamics
+from ..contact.dynamics import MeshDynamics as ContactDynamics
 
 
 @wp.kernel
@@ -75,25 +75,25 @@ def _vertex_solve_kernel(
     fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
-def linearize_constraints(fem: FemElastoDynamics, params: Params):
+def linearize_constraints(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
     """TODO: Linearize contact constraints at current iterate."""
     pass
 
 
-def check_convergence(fem: FemElastoDynamics, params: Params) -> bool:
+def check_convergence(fem: FemElastoDynamics, contact: ContactDynamics, params: Params) -> bool:
     """TODO: Check gradient norm convergence (elastic + momentum + contact)."""
     return False
 
 
-def prepare_subproblem(fem: FemElastoDynamics, params: Params):
+def prepare_subproblem(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
     """TODO: Assemble block-diagonal Hessian, update penalty parameter."""
     pass
 
 
 def initialize_solve(
     fem: FemElastoDynamics,
+    contact: ContactDynamics,
     params: Params,
-    contact: MeshDynamics,
 ):
     """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
 
@@ -103,13 +103,13 @@ def initialize_solve(
     """
     contact.ogc.compute_query_radius()
     contact.update_constraint_set(fem.xt)
-    # contact.restore_feasibility(fem.data.x)
+    contact.restore_feasibility(fem.data.x)
 
 
 def finalize_subproblem(
     fem: FemElastoDynamics,
+    contact: ContactDynamics,
     params: Params,
-    contact: MeshDynamics,
 ):
     """Finalize the current linearized subproblem.
 
@@ -124,11 +124,11 @@ def finalize_subproblem(
         request_decay_update=True,
         request_lagrange_multiplier_update=True,
     )
-    # contact.restore_feasibility(fem.data.x)
+    contact.restore_feasibility(fem.data.x)
     contact.update_constraint_set(fem.data.x)
 
 
-def iterate(fem: FemElastoDynamics, params: Params):
+def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
     """One VBD Gauss-Seidel sweep over all color partitions."""
     h = fem.bdf.beta_tilde
     h2 = h * h
@@ -148,18 +148,18 @@ def iterate(fem: FemElastoDynamics, params: Params):
             wp.launch(
                 kernel=_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[p_begin, fem.data, params.data, h2],
+                inputs=[p_begin, fem.data, contact.data, params.data, h2],
                 block_dim=block_dim,
             )
 
 
 def solve_subproblem(
     fem: FemElastoDynamics,
+    contact: ContactDynamics,
     params: Params,
-    contact: MeshDynamics,
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
-    prepare_subproblem(fem, params)
+    prepare_subproblem(fem, contact, params)
     for kp in range(n_subproblem_max_iters):
         contact.update_dual(
             fem.data.x,
@@ -167,42 +167,8 @@ def solve_subproblem(
             request_decay_update=False,
             request_lagrange_multiplier_update=False,
         )
-        iterate(fem, params)
-    finalize_subproblem(fem, params, contact)
-
-
-def solve(
-    fem: FemElastoDynamics,
-    params: Params,
-    contact: MeshDynamics,
-) -> bool:
-    """Solve the VBD minimization problem.
-    Mimics `pbat::sim::algorithm::vbd::Solve`:
-    """
-    converged = False
-    n_max_iters = params.data.n_max_iters
-    for k in range(n_max_iters):
-        # TODO: linearize_constraints(fem, params)
-        linearize_constraints(fem, params)
-        # TODO: if check_convergence(fem, params): break
-        if check_convergence(fem, params):
-            converged = True
-            break
-        # Solve linearized subproblem
-        solve_subproblem(fem, params, contact)
-    fem.back_substitute_velocities()
-    return converged
-
-
-def integrate(fem: FemElastoDynamics, params: Params, contact: MeshDynamics):
-    """Integrate one time step: setup + initialize_solve + solve + step.
-
-    Mimics `pbat::sim::algorithm::vbd::Integrate`.
-    """
-    fem.setup_time_integration_optimization()
-    initialize_solve(fem, params, contact)
-    solve(fem, params, contact)
-    fem.step()
+        iterate(fem, contact, params)
+    finalize_subproblem(fem, contact, params)
 
 
 class VbdSolver:
@@ -211,23 +177,22 @@ class VbdSolver:
         self._cuda_graph = None
 
     def solve(
-        self, fem: FemElastoDynamics, params: Params, contact: MeshDynamics
+        self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
     ) -> bool:
-        initialize_solve(fem, params, contact)
+        initialize_solve(fem, contact, params)
         converged = False
         for k in range(params.data.n_max_iters):
-            linearize_constraints(fem, params)
-            if check_convergence(fem, params):
+            linearize_constraints(fem, contact, params)
+            if check_convergence(fem, contact, params):
                 converged = True
                 break
-            prepare_subproblem(fem, params)
+            prepare_subproblem(fem, contact, params)
             if self._cuda_graph is None:
                 with wp.ScopedCapture() as capture:
-                    solve_subproblem(fem, params, contact)
+                    solve_subproblem(fem, contact, params)
                 self._cuda_graph = capture
             else:
                 wp.capture_launch(self._cuda_graph.graph)  # type: ignore
-            finalize_subproblem(fem, params, contact)
+            finalize_subproblem(fem, contact, params)
         fem.back_substitute_velocities()
         return converged
-
