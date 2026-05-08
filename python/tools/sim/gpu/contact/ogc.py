@@ -1096,31 +1096,59 @@ class Ogc:
             self._f_bvh.id,
         )
 
-    def compute_query_radius(self, xt: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]):
+    def enable_adaptive_query_radius(
+        self, xt: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]
+    ):
         # Compute rq = r + beta * (xtilde - xt).colwise().norm().maxCoeff()
-        # 0. Use cuda.compute and CuPy, using a stream wrapper that
-        main_stream = wp.get_stream()
         # 1. Capture xt, xtilde as CuPy 3 x N arrays
-        xtc = cp.asarray(xt)
-        xtildec = cp.asarray(xtilde)
+        self._rq_xtc = cp.asarray(xt)
+        self._rq_xtildec = cp.asarray(xtilde)
         # 2. Use ZipIterator(xtc[0,:], xtc[1,:], xtc[2,:], xtildec[0,:], xtildec[1,:], xtildec[2,:])
-        zip_it = cuda.compute.ZipIterator(
-            xtc[:, 0], xtc[:, 1], xtc[:, 2], xtildec[:, 0], xtildec[:, 1], xtildec[:, 2]
+        self._rq_zip_it = cuda.compute.ZipIterator(
+            self._rq_xtc[:, 0],
+            self._rq_xtc[:, 1],
+            self._rq_xtc[:, 2],
+            self._rq_xtildec[:, 0],
+            self._rq_xtildec[:, 1],
+            self._rq_xtildec[:, 2],
         )
         # 3. Use TransformIterator on the ZipIterator as transform = lambda x: sqrt((x[3] - x[0])**2 + (x[4] - x[1])**2 + (x[5] - x[2])**2)
-        transform_it = cuda.compute.TransformIterator(
-            zip_it,
+        self._rq_transform_it = cuda.compute.TransformIterator(
+            self._rq_zip_it,
             lambda x: math.sqrt(
                 (x[3] - x[0]) ** 2 + (x[4] - x[1]) ** 2 + (x[5] - x[2]) ** 2
             ),
         )
         # 4. Use cuda.compute reduce_into on the transform iterator and store into CuPy array view of self._ogc.rq
-        cuda.compute.reduce_into(
-            d_in=transform_it,
-            d_out=cp.asarray(self._ogc.rq),
-            num_items=xtc.shape[0],
-            op=cuda.compute.OpKind.MAXIMUM,
-            h_init=np.zeros(1, dtype=np.float32),
+        self._rq_op = cuda.compute.OpKind.MAXIMUM
+        self._rq_init = np.zeros(1, dtype=np.float32)
+        self._rq_d_out = cp.asarray(self._ogc.rq)
+        self._rq_reductor = cuda.compute.make_reduce_into(
+            d_in=self._rq_transform_it,
+            d_out=self._rq_d_out,
+            op=self._rq_op,
+            h_init=self._rq_init,
+        )
+        rq_storage_size = self._rq_reductor(
+            temp_storage=None,
+            d_in=self._rq_transform_it,
+            d_out=self._rq_d_out,
+            num_items=self._rq_xtc.shape[0],
+            op=self._rq_op,
+            h_init=self._rq_init,
+        )
+        self._rq_storage = cp.empty((rq_storage_size,), dtype=np.uint8)
+
+    def compute_query_radius(self):
+        # 0. Use cuda.compute and CuPy, using a stream wrapper that
+        main_stream = wp.get_stream()
+        self._rq_reductor(
+            temp_storage=self._rq_storage,
+            d_in=self._rq_transform_it,
+            d_out=self._rq_d_out,
+            num_items=self._rq_xtc.shape[0],
+            op=self._rq_op,
+            h_init=self._rq_init,
             stream=common.Stream(main_stream),
         )
 

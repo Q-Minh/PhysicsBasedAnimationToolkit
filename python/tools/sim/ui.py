@@ -154,6 +154,7 @@ class SimulationState:
             self.multimesh,
             self.ogc_params,
         )
+        ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
         self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
@@ -189,6 +190,7 @@ class SimulationState:
             self.multimesh,
             self.ogc_params,
         )
+        ogc.enable_adaptive_query_radius(self.fem.xt, fem.data.xtilde)
         self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),

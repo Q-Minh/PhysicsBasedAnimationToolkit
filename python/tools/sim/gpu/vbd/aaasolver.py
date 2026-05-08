@@ -86,8 +86,8 @@ def compute_thread_local_stencil_gradient_augmentation(
 
 @wp.kernel
 def _accelerated_vertex_solve_kernel(
-    pbegin: int,
-    _k: wp.array[wp.int32],
+    pbegin: wp.int32,
+    k: wp.int32,
     kp: wp.int32,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -95,7 +95,6 @@ def _accelerated_vertex_solve_kernel(
 ):
     """Process one vertex in the current color partition with acceleration."""
     tid = wp.tid()
-    k = _k[0]
     block_dims = wp.block_dim()
     block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
@@ -176,7 +175,7 @@ def _accelerated_vertex_solve_kernel(
 
 
 def iterate(
-    _k: wp.array[wp.int32],
+    k: int,
     kp: int,
     fem: FemElastoDynamics,
     params: Params,
@@ -200,7 +199,7 @@ def iterate(
             wp.launch(
                 kernel=_accelerated_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[p_begin, _k, kp, fem.data, params.data, h2],
+                inputs=[p_begin, k, kp, fem.data, params.data, h2],
                 block_dim=block_dim,
             )
 
@@ -216,17 +215,13 @@ def initialize_solve(
     Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
     before the first call to :func:`solve`.
     """
-    xt = fem.bdf.current_state(0).reshape(-1, 3)
-    assert xt.flags["OWNDATA"] == False
-    contact.ogc.compute_query_radius(
-        xt=wp.array(data=xt, dtype=wp.vec3f), xtilde=fem.data.xtilde
-    )
-    contact.update_constraint_set(wp.array(data=xt, dtype=wp.vec3f))
+    contact.ogc.compute_query_radius()
+    contact.update_constraint_set(fem.xt)
     # contact.restore_feasibility(fem.data.x)
 
 
 def solve_subproblem(
-    _k: wp.array[wp.int32],
+    k: int,
     fem: FemElastoDynamics,
     params: Params,
     contact: MeshDynamics,
@@ -239,12 +234,7 @@ def solve_subproblem(
             request_decay_update=False,
             request_lagrange_multiplier_update=False,
         )
-        iterate(_k, kp, fem, params)
-
-
-@wp.kernel
-def increment_k(k: wp.array[wp.int32]):
-    k[0] += 1  # type: ignore
+        iterate(k, kp, fem, params)
 
 
 class AaaVbdSolver:
@@ -264,19 +254,18 @@ class AaaVbdSolver:
     def solve(
         self, fem: FemElastoDynamics, params: Params, contact: MeshDynamics
     ) -> bool:
-        initialize_solve(fem, params, contact)
         converged = False
         if self._cuda_graph is None:
             with wp.ScopedCapture() as capture:
+                initialize_solve(fem, params, contact)
                 for k in range(params.data.n_max_iters):
                     linearize_constraints(fem, params)
                     if check_convergence(fem, params):
                         converged = True
                         break
                     prepare_subproblem(fem, params)
-                    solve_subproblem(self._k, fem, params, contact)
+                    solve_subproblem(k, fem, params, contact)
                     finalize_subproblem(fem, params, contact)
-                    wp.launch(kernel=increment_k, dim=1, inputs=[self._k])
             self._cuda_graph = capture
         else:
             wp.capture_launch(self._cuda_graph.graph)  # type: ignore
