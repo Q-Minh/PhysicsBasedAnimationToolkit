@@ -57,9 +57,6 @@ class ConstraintSetData:
     lambda_n: wp.array[wp.float32]
     lambda_f: wp.array[wp.vec2f]
 
-    sigma_n: wp.array[wp.float32]  # (1,) normal contact AL penalty parameter
-    sigma_f: wp.array[wp.float32]  # (1,) friction contact AL penalty parameter
-
 
 class ConstraintSet:
     """Storage class for augmented-Lagrangian contact constraints.
@@ -124,10 +121,6 @@ class ConstraintSet:
         self._data.gamma = self.gamma.current
         self._data.lambda_n = self.lambda_n.current
         self._data.lambda_f = self.lambda_f.current
-        # NOTE: Give these default values. They are meant to be
-        # updated/set by the user of this ConstraintSet.
-        self._data.sigma_n = wp.array([1e3], dtype=wp.float32)
-        self._data.sigma_f = wp.array([1e-1], dtype=wp.float32)
 
     def update_constraint_set(self, contacts: ContactPairsData):  # type: ignore
         """Prepare the current arrays for a new step, warm-starting from the previous snapshot.

@@ -139,6 +139,8 @@ def _update_dual_vv(
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     dmin: wp.float32,
+    sigma_n: wp.array[wp.float32],
+    sigma_f: wp.array[wp.float32],
     mu_friction: wp.float32,
     decay_rate: wp.float32,
     request_slack_update: bool = True,
@@ -161,8 +163,8 @@ def _update_dual_vv(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        data.sigma_n[0],
-        data.sigma_f[0],
+        sigma_n[0],  # type: ignore
+        sigma_f[0],  # type: ignore
         mu_friction,
         dmin,
         decay_rate,
@@ -180,6 +182,8 @@ def _update_dual_ve(
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     dmin: wp.float32,
+    sigma_n: wp.array[wp.float32],
+    sigma_f: wp.array[wp.float32],
     mu_friction: wp.float32,
     decay_rate: wp.float32,
     request_slack_update: bool = True,
@@ -203,8 +207,8 @@ def _update_dual_ve(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        data.sigma_n[0],
-        data.sigma_f[0],
+        sigma_n[0],  # type: ignore
+        sigma_f[0],  # type: ignore
         mu_friction,
         dmin,
         decay_rate,
@@ -222,6 +226,8 @@ def _update_dual_vf(
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     dmin: wp.float32,
+    sigma_n: wp.array[wp.float32],
+    sigma_f: wp.array[wp.float32],
     mu_friction: wp.float32,
     decay_rate: wp.float32,
     request_slack_update: bool = True,
@@ -245,8 +251,8 @@ def _update_dual_vf(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        data.sigma_n[0],
-        data.sigma_f[0],
+        sigma_n[0],  # type: ignore
+        sigma_f[0],  # type: ignore
         mu_friction,
         dmin,
         decay_rate,
@@ -264,6 +270,8 @@ def _update_dual_ee(
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     dmin: wp.float32,
+    sigma_n: wp.array[wp.float32],
+    sigma_f: wp.array[wp.float32],
     mu_friction: wp.float32,
     decay_rate: wp.float32,
     request_slack_update: bool = True,
@@ -287,8 +295,8 @@ def _update_dual_ee(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        data.sigma_n[0],
-        data.sigma_f[0],
+        sigma_n[0],  # type: ignore
+        sigma_f[0],  # type: ignore
         mu_friction,
         dmin,
         decay_rate,
@@ -339,7 +347,7 @@ class Params:
     def dmin(self) -> float:
         """Minimum separation distance margin (contact threshold)"""
         return self._dmin
-    
+
     # dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
     mu_f = DocField(0.2, "Coulomb friction coefficient")
     decay = DocField(0.5, "Decay rate for contact deactivation")
@@ -378,7 +386,7 @@ class MeshDynamics:
         self._data.cvf = self.cvf.data
         self._data.cee = self.cee.data
         # TODO: Make the penalty parameters adaptive!!
-        self._data.sigma_n = wp.array([1e7], dtype=wp.float32)
+        self._data.sigma_n = wp.array([1e8], dtype=wp.float32)
         self._data.sigma_f = wp.array([1e3], dtype=wp.float32)
         self._data.dmin = self.params.dmin  # type: ignore
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
@@ -456,6 +464,8 @@ class MeshDynamics:
                     cs.data,
                     cs.n_u,
                     self.params.dmin,
+                    self._data.sigma_n,
+                    self._data.sigma_f,
                     self.params.mu_f,
                     self.params.decay,
                     request_slack_update,
