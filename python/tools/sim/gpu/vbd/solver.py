@@ -68,7 +68,6 @@ def _vertex_solve_kernel(
         wp.tile_reduce(wp.add, gis)[0],  # pyright: ignore[reportIndexIssue]
         wp.tile_reduce(wp.add, His)[0],  # pyright: ignore[reportIndexIssue]
     )
-    # TODO: AccumulateContactEnergy(i, params.xb, contact, gi, Hi)
     if local_tid > 0:
         return
     # Add inertia derivatives (K = m, already in position space)
