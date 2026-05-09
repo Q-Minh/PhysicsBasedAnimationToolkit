@@ -386,8 +386,8 @@ class MeshDynamics:
         self._data.cvf = self.cvf.data
         self._data.cee = self.cee.data
         # TODO: Make the penalty parameters adaptive!!
-        self._data.sigma_n = wp.array([1e8], dtype=wp.float32)
-        self._data.sigma_f = wp.array([1e3], dtype=wp.float32)
+        self._data.sigma_n = wp.array([1e2], dtype=wp.float32)
+        self._data.sigma_f = wp.array([0], dtype=wp.float32)
         self._data.dmin = self.params.dmin  # type: ignore
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
 

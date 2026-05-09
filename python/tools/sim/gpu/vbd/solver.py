@@ -15,16 +15,21 @@ from .params import (
 )
 from .kernels import (
     local_elastic_derivatives,
+    local_contact_derivatives,
     add_inertia_derivatives,
     integrate_positions,
 )
-from ..contact.dynamics import MeshDynamics as ContactDynamics
+from ..contact.dynamics import (
+    MeshDynamics as ContactDynamics,
+    MeshDynamicsData as ContactDynamicsData,
+)
 
 
 @wp.kernel
 def _vertex_solve_kernel(
     pbegin: int,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     h2: float,
 ):
@@ -46,16 +51,23 @@ def _vertex_solve_kernel(
     gil, Hil = local_elastic_derivatives(
         i, fem, params, local_tid, block_dims  # pyright: ignore[reportArgumentType]
     )
-    gs, Hs = (
+    gil *= h2  # type: ignore
+    Hil *= h2  # type: ignore
+    vi = contact.meshes.GXV[i]
+    if vi >= 0:
+        gil_c, Hil_c = local_contact_derivatives(
+            i, vi, fem, contact, params, local_tid, block_dims  # type: ignore
+        )
+        gil += gil_c
+        Hil += Hil_c
+    gis, His = (
         wp.tile(gil, preserve_type=True),  # pyright: ignore[reportArgumentType]
         wp.tile(Hil, preserve_type=True),  # pyright: ignore[reportArgumentType]
     )
     gi, Hi = (
-        wp.tile_reduce(wp.add, gs)[0],  # pyright: ignore[reportIndexIssue]
-        wp.tile_reduce(wp.add, Hs)[0],  # pyright: ignore[reportIndexIssue]
+        wp.tile_reduce(wp.add, gis)[0],  # pyright: ignore[reportIndexIssue]
+        wp.tile_reduce(wp.add, His)[0],  # pyright: ignore[reportIndexIssue]
     )
-    gi *= h2  # pyright: ignore[reportOperatorIssue]
-    Hi *= h2  # pyright: ignore[reportOperatorIssue]
     # TODO: AccumulateContactEnergy(i, params.xb, contact, gi, Hi)
     if local_tid > 0:
         return
@@ -75,17 +87,23 @@ def _vertex_solve_kernel(
     fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
-def linearize_constraints(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
+def linearize_constraints(
+    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+):
     """TODO: Linearize contact constraints at current iterate."""
     pass
 
 
-def check_convergence(fem: FemElastoDynamics, contact: ContactDynamics, params: Params) -> bool:
+def check_convergence(
+    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+) -> bool:
     """TODO: Check gradient norm convergence (elastic + momentum + contact)."""
     return False
 
 
-def prepare_subproblem(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
+def prepare_subproblem(
+    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+):
     """TODO: Assemble block-diagonal Hessian, update penalty parameter."""
     pass
 
@@ -179,20 +197,20 @@ class VbdSolver:
     def solve(
         self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
     ) -> bool:
-        initialize_solve(fem, contact, params)
-        converged = False
-        for k in range(params.data.n_max_iters):
-            linearize_constraints(fem, contact, params)
-            if check_convergence(fem, contact, params):
-                converged = True
-                break
-            prepare_subproblem(fem, contact, params)
-            if self._cuda_graph is None:
-                with wp.ScopedCapture() as capture:
+        if self._cuda_graph is None:
+            with wp.ScopedCapture() as capture:
+                initialize_solve(fem, contact, params)
+                converged = False
+                for k in range(params.data.n_max_iters):
+                    linearize_constraints(fem, contact, params)
+                    if check_convergence(fem, contact, params):
+                        converged = True
+                        break
+                    prepare_subproblem(fem, contact, params)
                     solve_subproblem(fem, contact, params)
-                self._cuda_graph = capture
-            else:
-                wp.capture_launch(self._cuda_graph.graph)  # type: ignore
-            finalize_subproblem(fem, contact, params)
-        fem.back_substitute_velocities()
+                    finalize_subproblem(fem, contact, params)
+                fem.back_substitute_velocities()
+            self._cuda_graph = capture
+        else:
+            wp.capture_launch(self._cuda_graph.graph)  # type: ignore
         return converged

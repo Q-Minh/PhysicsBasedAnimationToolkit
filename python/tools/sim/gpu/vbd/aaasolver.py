@@ -276,8 +276,8 @@ class AaaVbdSolver:
                     prepare_subproblem(fem, contact, params)
                     solve_subproblem(k, fem, contact, params)
                     finalize_subproblem(fem, contact, params)
+                fem.back_substitute_velocities()
             self._cuda_graph = capture
         else:
             wp.capture_launch(self._cuda_graph.graph)  # type: ignore
-        fem.back_substitute_velocities()
         return converged

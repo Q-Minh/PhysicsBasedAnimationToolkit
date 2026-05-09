@@ -334,6 +334,8 @@ def parse_args():
 def main():
     # wp.config.mode = "debug"
     # wp.config.verify_cuda = True
+    # wp.config.print_launches = True
+    # wp.config.verify_fp = True
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
