@@ -16,6 +16,7 @@ from .params import (
 from .kernels import (
     local_elastic_derivatives,
     local_contact_derivatives,
+    local_contact_rayleigh_quotients,
     add_inertia_derivatives,
     integrate_positions,
     local_elastic_hessians,
@@ -88,8 +89,9 @@ def _vertex_solve_kernel(
 
 
 @wp.kernel(launch_bounds=32)
-def _assemble_block_diagonal_dynamics_hessian(
+def _compute_constraint_rayleigh_quotients(
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     h2: float,
 ):
@@ -98,19 +100,29 @@ def _assemble_block_diagonal_dynamics_hessian(
     block_dims = wp.block_dim()
     block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
-    i = block_id
+    v = block_id
+    i = contact.meshes.V[v]
     # Add elastic hessian
     Hil = local_elastic_hessians(i, fem, params, local_tid, block_dims)  # type: ignore
     Hil *= h2  # type: ignore
     His = wp.tile(Hil, preserve_type=wp.bool(True))
     Hi = wp.tile_sum(His)[0]  # type: ignore
-    if local_tid > 0:
-        return
     # Add mass hessian
     for d in range(3):
         Hi[d, d] += fem.m[i]  # type: ignore
-    # Global write block
-    params.Hk[i] = Hi
+    # Visit each contact pair incident on this node, and keep track
+    # of the largest (per 3x3 diagonal block) Rayleigh quotient w.r.t.
+    # the contact normals and tangents.
+    Qnl, Qfl = local_contact_rayleigh_quotients(
+        i, v, Hi, contact, local_tid, block_dims  # type: ignore
+    )
+    Qns = wp.tile(Qnl)  # type: ignore
+    Qfs = wp.tile(Qfl)  # type: ignore
+    maxQn = wp.tile_max(Qns)
+    maxQf = wp.tile_max(Qfs)
+    if local_tid == 0:
+        params.Qnk[v] = maxQn[0]  # pyright: ignore[reportIndexIssue]
+        params.Qfk[v] = maxQf[0]  # pyright: ignore[reportIndexIssue]
 
 
 def linearize_constraints(
@@ -130,17 +142,18 @@ def check_convergence(
 def prepare_subproblem(
     fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
-    """TODO: Assemble block-diagonal Hessian, update penalty parameter."""
+    """Assemble block-diagonal Hessian, update penalty parameter."""
     h = fem.bdf.beta_tilde
     h2 = h * h
-    n_nodes = fem.data.m.shape[0]
+    n_surface_verts = contact.meshes.n_verts
     block_dims = 32
     wp.launch(
-        kernel=_assemble_block_diagonal_dynamics_hessian,
-        dim=block_dims * n_nodes,
-        inputs=[fem.data, params.data, h2],
+        kernel=_compute_constraint_rayleigh_quotients,
+        dim=block_dims * n_surface_verts,
+        inputs=[fem.data, contact.data, params.data, h2],
         block_dim=block_dims,
     )
+    # TODO: Compute global max Rayleigh quotients via cuda.compute.reduce_into
 
 
 def initialize_solve(

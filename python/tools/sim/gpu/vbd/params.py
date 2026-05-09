@@ -77,7 +77,8 @@ class ParamsData:
     xk: wp.array[wp.vec3f]  # (N,) vertex past iteration
     Hnk: wp.array[wp.float32]  # (N,) vertex Hessian norms
     betaG: wp.array2d[wp.float32]  # (N,2) vertex stencil gradient augmentation scales
-    Hk: wp.array[wp.mat33f]  # (N,) (3x3) block-diagonal Hessian
+    Qnk: wp.array[wp.float32]  # (N,) max vertex normal contact Rayleigh quotients
+    Qfk: wp.array[wp.float32]  # (N,) max vertex friction contact Rayleigh quotients
 
 
 class Params:
@@ -130,9 +131,14 @@ class Params:
             (n_nodes,), dtype=wp.float32
         )  # (N,) vertex Hessian norms
         self._data.betaG = wp.full((n_nodes, 2), params.betaG0, dtype=wp.float32)
-        self._data.Hk = wp.zeros(
-            (n_nodes,), dtype=wp.mat33f
-        )  # (N,) (3x3) block-diagonal Hessian
+        # NOTE: Ideally, Qnk,Qfk would have shape (# surface verts,) but we don't have 
+        # mesh information in this constructor...
+        self._data.Qnk = wp.zeros(
+            (n_nodes,), dtype=wp.float32
+        )  # (N,) max vertex normal contact Rayleigh quotients
+        self._data.Qfk = wp.zeros(
+            (n_nodes,), dtype=wp.float32
+        )  # (N,) max vertex friction contact Rayleigh quotients
 
     @property
     def data(self) -> ParamsData:  # pyright: ignore[reportGeneralTypeIssues]
