@@ -157,6 +157,11 @@ class SimulationState:
         ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
         self.contact_params = gpu.contact.dynamics.Params()
         self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
+        # NOTE: This will need to be updated if adding new Solvers with
+        # different storage location for Qnk, Qfk
+        self.contact.enable_adaptive_penalty_parameters(
+            self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
+        )
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
@@ -193,6 +198,11 @@ class SimulationState:
         )
         ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
         self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
+        # NOTE: This will need to be updated if adding new Solvers with
+        # different storage location for Qnk, Qfk
+        self.contact.enable_adaptive_penalty_parameters(
+            self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
+        )
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),

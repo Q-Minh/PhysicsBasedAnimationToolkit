@@ -1,11 +1,32 @@
 from ...common.fields import DocField
 
 import warp as wp
+import cupy as cp
+import cuda.compute
+import numpy as np
 
 from .ogc import Ogc, OgcData
 from .constraints import ConstraintSet, ConstraintSetData
 from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
+from .. import common
+
+
+@wp.struct
+class MeshDynamicsData:
+    ogc: OgcData  # type: ignore
+    meshes: MultiMeshData  # type: ignore
+    cvv: ConstraintSetData  # type: ignore
+    cve: ConstraintSetData  # type: ignore
+    cvf: ConstraintSetData  # type: ignore
+    cee: ConstraintSetData  # type: ignore
+    gamma_n: wp.float32  # Multiplier of sigma_n
+    gamma_f: wp.float32  # Multiplier of sigma_f
+    sigma_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter
+    sigma_f: wp.array[wp.float32]  # (1,) friction contact penalty parameter
+    dmin: wp.float32
+    mu_f: wp.float32  # Friction coefficient
+    decay: wp.float32  # Rate of decay for deactivating constraints
 
 
 @wp.func
@@ -138,11 +159,7 @@ def _update_dual_vv(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
-    dmin: wp.float32,
-    sigma_n: wp.array[wp.float32],
-    sigma_f: wp.array[wp.float32],
-    mu_friction: wp.float32,
-    decay_rate: wp.float32,
+    contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     request_slack_update: bool = True,
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
@@ -155,6 +172,8 @@ def _update_dual_vv(
     gap = _gap_vv(x, meshes.V, u, v)  # type: ignore
     c = _project_gap(gap, ogc.vv_bases[k])  # type: ignore
     c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -163,11 +182,11 @@ def _update_dual_vv(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        sigma_n[0],  # type: ignore
-        sigma_f[0],  # type: ignore
-        mu_friction,
-        dmin,
-        decay_rate,
+        sigma_n,
+        sigma_f,
+        contact.mu_f,
+        contact.dmin,
+        contact.decay,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -181,11 +200,7 @@ def _update_dual_ve(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
-    dmin: wp.float32,
-    sigma_n: wp.array[wp.float32],
-    sigma_f: wp.array[wp.float32],
-    mu_friction: wp.float32,
-    decay_rate: wp.float32,
+    contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     request_slack_update: bool = True,
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
@@ -199,6 +214,8 @@ def _update_dual_ve(
     gap = _gap_ve(x, meshes.V, meshes.F, t, u, v)  # type: ignore
     c = _project_gap(gap, ogc.ve_bases[k])  # type: ignore
     c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -207,11 +224,11 @@ def _update_dual_ve(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        sigma_n[0],  # type: ignore
-        sigma_f[0],  # type: ignore
-        mu_friction,
-        dmin,
-        decay_rate,
+        sigma_n,
+        sigma_f,
+        contact.mu_f,
+        contact.dmin,
+        contact.decay,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -225,11 +242,7 @@ def _update_dual_vf(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
-    dmin: wp.float32,
-    sigma_n: wp.array[wp.float32],
-    sigma_f: wp.array[wp.float32],
-    mu_friction: wp.float32,
-    decay_rate: wp.float32,
+    contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     request_slack_update: bool = True,
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
@@ -243,6 +256,8 @@ def _update_dual_vf(
     gap = _gap_vf(x, meshes.V, meshes.F, bary, u, v)  # type: ignore
     c = _project_gap(gap, ogc.vf_bases[k])  # type: ignore
     c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -251,11 +266,11 @@ def _update_dual_vf(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        sigma_n[0],  # type: ignore
-        sigma_f[0],  # type: ignore
-        mu_friction,
-        dmin,
-        decay_rate,
+        sigma_n,
+        sigma_f,
+        contact.mu_f,
+        contact.dmin,
+        contact.decay,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -269,11 +284,7 @@ def _update_dual_ee(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
-    dmin: wp.float32,
-    sigma_n: wp.array[wp.float32],
-    sigma_f: wp.array[wp.float32],
-    mu_friction: wp.float32,
-    decay_rate: wp.float32,
+    contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     request_slack_update: bool = True,
     request_decay_update: bool = True,
     request_lagrange_multiplier_update: bool = True,
@@ -287,6 +298,8 @@ def _update_dual_ee(
     gap = _gap_ee(x, meshes.F, bary, u, v)  # type: ignore
     c = _project_gap(gap, ogc.ee_bases[k])  # type: ignore
     c_n, c_f = c[0], wp.vec2f(c[1], c[2])  # type: ignore
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -295,28 +308,15 @@ def _update_dual_ee(
         data.gamma,
         data.lambda_n,
         data.lambda_f,
-        sigma_n[0],  # type: ignore
-        sigma_f[0],  # type: ignore
-        mu_friction,
-        dmin,
-        decay_rate,
+        sigma_n,
+        sigma_f,
+        contact.mu_f,
+        contact.dmin,
+        contact.decay,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
     )
-
-
-@wp.struct
-class MeshDynamicsData:
-    ogc: OgcData  # type: ignore
-    meshes: MultiMeshData  # type: ignore
-    cvv: ConstraintSetData  # type: ignore
-    cve: ConstraintSetData  # type: ignore
-    cvf: ConstraintSetData  # type: ignore
-    cee: ConstraintSetData  # type: ignore
-    sigma_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter
-    sigma_f: wp.array[wp.float32]  # (1,) friction contact penalty parameter
-    dmin: wp.float32
 
 
 class Params:
@@ -371,10 +371,13 @@ class MeshDynamics:
         self._data.cve = self.cve.data
         self._data.cvf = self.cvf.data
         self._data.cee = self.cee.data
-        # TODO: Make the penalty parameters adaptive!!
-        self._data.sigma_n = wp.array([1e2], dtype=wp.float32)
-        self._data.sigma_f = wp.array([0], dtype=wp.float32)
+        self._data.gamma_n = self.params.gamman
+        self._data.gamma_f = self.params.gammaf
+        self._data.sigma_n = wp.array([self.params.gamman], dtype=wp.float32)
+        self._data.sigma_f = wp.array([self.params.gammaf], dtype=wp.float32)
         self._data.dmin = self.params.dmin  # type: ignore
+        self._data.mu_f = self.params.mu_f
+        self._data.decay = self.params.decay
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
 
     def update_constraint_set(self, xk: wp.array[wp.vec3f]):
@@ -449,11 +452,7 @@ class MeshDynamics:
                     ogc,
                     cs.data,
                     cs.n_u,
-                    self.params.dmin,
-                    self._data.sigma_n,
-                    self._data.sigma_f,
-                    self.params.mu_f,
-                    self.params.decay,
+                    self._data,
                     request_slack_update,
                     request_decay_update,
                     request_lagrange_multiplier_update,
@@ -461,6 +460,77 @@ class MeshDynamics:
                 stream=stream,
             )
         for stream in self._streams[:4]:
+            main_stream.wait_stream(stream)
+
+    def enable_adaptive_penalty_parameters(
+        self, maxQnv: wp.array[wp.float32], maxQfv: wp.array[wp.float32]
+    ):
+        n_verts = self.meshes.n_verts
+        self._adaptive_penalty_d_in_n = cp.asarray(maxQnv)
+        self._adaptive_penalty_d_in_f = cp.asarray(maxQfv)
+        self._adaptive_penalty_d_out_n = cp.asarray(self._data.sigma_n)
+        self._adaptive_penalty_d_out_f = cp.asarray(self._data.sigma_f)
+        self._adaptive_penalty_h_init = np.zeros((1,), dtype=np.float32)
+        self._adaptive_penalty_reduce_op = cuda.compute.OpKind.MAXIMUM
+        self._adaptive_penalty_reduce_n = cuda.compute.make_reduce_into(
+            d_in=self._adaptive_penalty_d_in_n,
+            d_out=self._adaptive_penalty_d_out_n,
+            op=self._adaptive_penalty_reduce_op,
+            h_init=self._adaptive_penalty_h_init,
+        )
+        self._adaptive_penalty_reduce_f = cuda.compute.make_reduce_into(
+            d_in=self._adaptive_penalty_d_in_f,
+            d_out=self._adaptive_penalty_d_out_f,
+            op=self._adaptive_penalty_reduce_op,
+            h_init=self._adaptive_penalty_h_init,
+        )
+        temp_size_n = self._adaptive_penalty_reduce_n(
+            temp_storage=None,
+            d_in=self._adaptive_penalty_d_in_n,
+            d_out=self._adaptive_penalty_d_out_n,
+            num_items=n_verts,
+            op=self._adaptive_penalty_reduce_op,
+            h_init=self._adaptive_penalty_h_init,
+        )
+        self._adaptive_penalty_reduce_storage = cp.empty((temp_size_n,), dtype=np.uint8)
+        temp_size_f = self._adaptive_penalty_reduce_f(
+            temp_storage=None,
+            d_in=self._adaptive_penalty_d_in_f,
+            d_out=self._adaptive_penalty_d_out_f,
+            num_items=n_verts,
+            op=self._adaptive_penalty_reduce_op,
+            h_init=self._adaptive_penalty_h_init,
+        )
+        self._adaptive_penalty_reduce_storage_f = cp.empty(
+            (temp_size_f,), dtype=np.uint8
+        )
+
+    def adapt_penalty_parameters(self):
+        main_stream = wp.get_stream()
+        # Fork
+        for stream in self._streams[:2]:
+            stream.wait_stream(main_stream)
+        n_verts = self.meshes.n_verts
+        self._adaptive_penalty_reduce_n(
+            temp_storage=self._adaptive_penalty_reduce_storage,
+            d_in=self._adaptive_penalty_d_in_n,
+            d_out=self._adaptive_penalty_d_out_n,
+            num_items=n_verts,
+            op=self._adaptive_penalty_reduce_op,
+            h_init=self._adaptive_penalty_h_init,
+            stream=common.Stream(self._streams[0]),
+        )
+        self._adaptive_penalty_reduce_f(
+            temp_storage=self._adaptive_penalty_reduce_storage_f,
+            d_in=self._adaptive_penalty_d_in_f,
+            d_out=self._adaptive_penalty_d_out_f,
+            num_items=n_verts,
+            op=self._adaptive_penalty_reduce_op,
+            h_init=self._adaptive_penalty_h_init,
+            stream=common.Stream(self._streams[1]),
+        )
+        # Join
+        for stream in self._streams[:2]:
             main_stream.wait_stream(stream)
 
     def restore_feasibility(self, x: wp.array):

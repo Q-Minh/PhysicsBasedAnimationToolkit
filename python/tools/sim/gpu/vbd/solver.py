@@ -153,7 +153,7 @@ def prepare_subproblem(
         inputs=[fem.data, contact.data, params.data, h2],
         block_dim=block_dims,
     )
-    # TODO: Compute global max Rayleigh quotients via cuda.compute.reduce_into
+    contact.adapt_penalty_parameters()
 
 
 def initialize_solve(

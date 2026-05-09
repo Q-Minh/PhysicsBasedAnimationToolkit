@@ -508,8 +508,8 @@ def local_contact_derivatives(
     meshes = contact.meshes
     ogc = contact.ogc
     dmin = contact.dmin
-    sigma_n = contact.sigma_n[0]
-    sigma_f = contact.sigma_f[0]
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
     cvv, vv_bases = contact.cvv, ogc.vv_bases
     cve, ve_bases, ve_bary = contact.cve, ogc.ve_bases, ogc.ve_bary
     cvf, vf_bases, vf_bary = contact.cvf, ogc.vf_bases, ogc.vf_bary
