@@ -18,6 +18,7 @@ from .kernels import (
     local_contact_derivatives,
     add_inertia_derivatives,
     integrate_positions,
+    local_elastic_hessians,
 )
 from ..contact.dynamics import (
     MeshDynamics as ContactDynamics,
@@ -86,6 +87,32 @@ def _vertex_solve_kernel(
     fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
+@wp.kernel(launch_bounds=32)
+def _assemble_block_diagonal_dynamics_hessian(
+    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    h2: float,
+):
+    """Compute on-diagonal dynamics hessian blocks."""
+    tid = wp.tid()
+    block_dims = wp.block_dim()
+    block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
+    i = block_id
+    # Add elastic hessian
+    Hil = local_elastic_hessians(i, fem, params, local_tid, block_dims)  # type: ignore
+    Hil *= h2  # type: ignore
+    His = wp.tile(Hil, preserve_type=wp.bool(True))
+    Hi = wp.tile_sum(His)[0]  # type: ignore
+    if local_tid > 0:
+        return
+    # Add mass hessian
+    for d in range(3):
+        Hi[d, d] += fem.m[i]  # type: ignore
+    # Global write block
+    params.Hk[i] = Hi
+
+
 def linearize_constraints(
     fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
@@ -104,7 +131,16 @@ def prepare_subproblem(
     fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
     """TODO: Assemble block-diagonal Hessian, update penalty parameter."""
-    pass
+    h = fem.bdf.beta_tilde
+    h2 = h * h
+    n_nodes = fem.data.m.shape[0]
+    block_dims = 32
+    wp.launch(
+        kernel=_assemble_block_diagonal_dynamics_hessian,
+        dim=block_dims * n_nodes,
+        inputs=[fem.data, params.data, h2],
+        block_dim=block_dims,
+    )
 
 
 def initialize_solve(

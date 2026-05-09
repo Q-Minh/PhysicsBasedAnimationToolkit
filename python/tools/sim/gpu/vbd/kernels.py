@@ -2,7 +2,7 @@ import warp as wp
 import warp.fem.linalg
 from .. import types
 from ..elasticity.fem import FemElastoDynamicsData
-from ..elasticity.snh import snh_grad_and_hess
+from ..elasticity.snh import snh_grad_and_hess, snh_hess
 from ..elasticity.chain import gradient_segment_wrt_dofs, hessian_block_wrt_dofs
 from ..contact.dynamics import MeshDynamicsData as ContactDynamicsData
 from ..contact.dynamics import ConstraintSetData
@@ -451,6 +451,45 @@ def local_elastic_derivatives(
         gi += wg * gradient_segment_wrt_dofs(gF, GP, ilocal)
         Hi += wg * hessian_block_wrt_dofs(HF, GP, ilocal, ilocal)
     return gi, Hi
+
+
+@wp.func
+def local_elastic_hessians(
+    i: wp.int32,
+    fem: FemElastoDynamicsData, # type: ignore
+    params: ParamsData, # type: ignore
+    local_tid: wp.int32,
+    block_dims: wp.int32,
+):
+    Hi = wp.mat33f()
+    GVGbegin = params.GVGp[i]
+    n_adj_elems = params.GVGp[i + 1] - GVGbegin
+    for elocal in range(local_tid, n_adj_elems, block_dims):
+        e = params.GVGadj[GVGbegin + elocal]
+        nodes = fem.E[e]
+        ilocal = (
+            wp.int32(i == nodes[1])
+            * wp.int32(1)  # pyright: ignore[reportOperatorIssue]
+            + wp.int32(i == nodes[2])
+            * wp.int32(2)  # pyright: ignore[reportOperatorIssue]
+            + wp.int32(i == nodes[3])
+            * wp.int32(3)  # pyright: ignore[reportOperatorIssue]
+        )
+        wg = fem.wg[e]
+        GP = fem.GNeg[e]
+        mu = fem.mug[e]
+        llambda = fem.lambdag[e]
+        # Gather element positions -> compute F
+        xe = types.mat3x4f()
+        for j in range(4):
+            xj = fem.x[nodes[j]]
+            for d in range(3):
+                xe[d, j] = xj[d]
+        # xe = 3x4 matrix of element positions (columns are nodes)
+        F = xe @ GP
+        HF = snh_hess(F, mu, llambda)
+        Hi += wg * hessian_block_wrt_dofs(HF, GP, ilocal, ilocal)
+    return Hi
 
 
 @wp.func
