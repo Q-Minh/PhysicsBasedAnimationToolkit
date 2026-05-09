@@ -567,6 +567,8 @@ def _fused_contact_detection(
             if local_tid == last_col:
                 tvv_offset = wp.atomic_add(ogc.vv.counts, n_verts, tnvv)  # type: ignore
                 assert tvv_offset + tnvv <= ogc.vv.u.shape[0] // wp.int32(2)
+                # 4.a. Write unique contact counts to global count arrays
+                ogc.vv.counts[v] = tnvv  # type: ignore
             bvv_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvv_offset,
@@ -580,7 +582,6 @@ def _fused_contact_detection(
                     k = bvv_offset[bcol] + bvv_prefix[brow, bcol]  # type: ignore
                     ogc.vv.u[k] = v
                     ogc.vv.v[k] = bvv[brow, bcol]
-            ogc.vv.counts[v] = tnvv  # type: ignore
 
         if has_ve_contacts:
             # 1. Sort contacts
@@ -606,6 +607,8 @@ def _fused_contact_detection(
             if local_tid == last_col:
                 tve_offset = wp.atomic_add(ogc.ve.counts, n_verts, tnve)  # type: ignore
                 assert tve_offset + tnve <= ogc.ve.u.shape[0] // wp.int32(2)
+                # 4.a. Write unique contact counts to global count arrays
+                ogc.ve.counts[v] = tnve  # type: ignore
             bve_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tve_offset,
@@ -619,7 +622,6 @@ def _fused_contact_detection(
                     k = bve_offset[bcol] + bve_prefix[brow, bcol]  # type: ignore
                     ogc.ve.u[k] = v
                     ogc.ve.v[k] = bve[brow, bcol]
-            ogc.ve.counts[v] = tnve  # type: ignore
 
         if has_vf_contacts:
             # 1. Sort contacts
@@ -632,6 +634,8 @@ def _fused_contact_detection(
             if local_tid == last_col:
                 tvf_offset = wp.atomic_add(ogc.vf.counts, n_verts, tnvf)  # type: ignore
                 assert tvf_offset + tnvf <= ogc.vf.u.shape[0] // wp.int32(2)
+                # 2.a. Write unique contact counts to global count arrays
+                ogc.vf.counts[v] = tnvf  # type: ignore
             bvf_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvf_offset,
@@ -643,7 +647,6 @@ def _fused_contact_detection(
                     k = bvf_offset[bcol] + brow * block_dims + bcol
                     ogc.vf.u[k] = v
                     ogc.vf.v[k] = bvf[brow, bcol]
-            ogc.vf.counts[v] = tnvf  # type: ignore
 
     # EE contact detection
     if block_id < n_edges:
@@ -693,6 +696,8 @@ def _fused_contact_detection(
             if local_tid == last_col:
                 tee_offset = wp.atomic_add(ogc.ee.counts, n_half_edges, tnee)  # type: ignore
                 assert tee_offset + tnee <= ogc.ee.u.shape[0] // wp.int32(2)
+                # 2.a. Write unique contact counts to global count arrays
+                ogc.ee.counts[he_max] = tnee  # type: ignore
             bee_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tee_offset,
@@ -704,8 +709,6 @@ def _fused_contact_detection(
                     k = bee_offset[bcol] + brow * block_dims + bcol  # type: ignore
                     ogc.ee.u[k] = he_max
                     ogc.ee.v[k] = bee[brow, bcol]
-            # 4. Write unique contact counts to global count arrays
-            ogc.ee.counts[he_max] = tnee  # type: ignore
 
 
 @wp.kernel
