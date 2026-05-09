@@ -179,7 +179,7 @@ def _contact_vv_fwd(
 
 @wp.func
 def _contact_vv_rev(
-    c: wp.int32,
+    k: wp.int32,
     i: wp.int32,
     j: wp.int32,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -190,12 +190,12 @@ def _contact_vv_rev(
     dmin: wp.float32,
 ):
     """Gradient and Hessian contribution of a single reverse vertex-vertex contact for vertex i (v-side)."""
-    ntb = vv_bases[c]
+    ntb = vv_bases[k]
     n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]  # type: ignore
-    s = cvv.s[c]
-    gamma = cvv.gamma[c]
-    lambda_n = cvv.lambda_n[c]
-    lambda_f = cvv.lambda_f[c]
+    s = cvv.s[k]
+    gamma = cvv.gamma[k]
+    lambda_n = cvv.lambda_n[k]
+    lambda_f = cvv.lambda_f[k]
     d = fem.x[j] - fem.x[i]  # forward gap: x_u - x_v = x_j - x_i (we are v)
     u = (fem.x[j] - fem.xt[j]) - (fem.x[i] - fem.xt[i])
     c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
@@ -235,7 +235,7 @@ def _contact_ve_fwd(
 
 @wp.func
 def _contact_ve_rev(
-    c: wp.int32,
+    k: wp.int32,
     i: wp.int32,
     i_he: wp.int32,
     j_he: wp.int32,
@@ -249,13 +249,13 @@ def _contact_ve_rev(
     dmin: wp.float32,
 ):
     """Gradient and Hessian contribution of a single reverse vertex-edge contact for vertex i (v-side, on edge)."""
-    ntb = ve_bases[c]
-    bary = ve_bary[c]  # type: ignore
+    ntb = ve_bases[k]
+    bary = ve_bary[k]  # type: ignore
     n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]  # type: ignore
-    s = cve.s[c]
-    gamma = cve.gamma[c]
-    lambda_n = cve.lambda_n[c]
-    lambda_f = cve.lambda_f[c]
+    s = cve.s[k]
+    gamma = cve.gamma[k]
+    lambda_n = cve.lambda_n[k]
+    lambda_f = cve.lambda_f[k]
     xcp, xtcp = edge_closest_point(fem.x, fem.xt, i_he, j_he, bary)  # type: ignore
     d = fem.x[j_global] - xcp
     u = (fem.x[j_global] - fem.xt[j_global]) - (xcp - xtcp)
@@ -487,12 +487,16 @@ def local_contact_derivatives(
         Hi += Hic
     # 2. Vertex-halfedge contacts (forward)
     for k in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
-        gic, Hic = _contact_ve_fwd(k, i, ogc.ve.v[k], fem, meshes.F, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
+        hei = ogc.ve.v[k]
+        hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
+        he = wp.max(hei, hej)
+        gic, Hic = _contact_ve_fwd(k, i, he, fem, meshes.F, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
         gi += gic
         Hi += Hic
     # 3. Vertex-triangle contacts (forward)
     for k in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
-        gic, Hic = _contact_vf_fwd(k, i, ogc.vf.v[k], fem, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
+        f = ogc.vf.v[k]
+        gic, Hic = _contact_vf_fwd(k, i, f, fem, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
         gi += gic
         Hi += Hic
     # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
@@ -506,7 +510,10 @@ def local_contact_derivatives(
         for l in range(
             ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
         ):
-            gic, Hic = _contact_ee_fwd(l, i, i_he, j_he, ogc.ee.v[l], fem, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            hei2 = ogc.ee.v[l]
+            hej2 = halfedges.opposite_half_edge(meshes.F, hei2, meshes.GHEF)
+            he2 = wp.max(hei2, hej2)
+            gic, Hic = _contact_ee_fwd(l, i, i_he, j_he, he2, fem, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
             gi += gic
             Hi += Hic
         # 5.a VE contacts (reverse): he is v-side
@@ -528,7 +535,10 @@ def local_contact_derivatives(
         for l in range(
             ogc.ree.prefix[he] + local_tid, ogc.ree.prefix[he + 1], block_dims
         ):
-            gic, Hic = _contact_ee_rev(ogc.ree2ee[l], i, i_he, j_he, ogc.ree.v[l], fem, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            hei2 = ogc.ree.v[l]
+            hej2 = halfedges.opposite_half_edge(meshes.F, hei2, meshes.GHEF)
+            he = wp.max(hei2, hej2)
+            gic, Hic = _contact_ee_rev(ogc.ree2ee[l], i, i_he, j_he, he, fem, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
             gi += gic
             Hi += Hic
 
