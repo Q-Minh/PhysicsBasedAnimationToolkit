@@ -1464,6 +1464,7 @@ class Ogc:
             x: Current vertex positions to truncate in-place
                (``wp.array[wp.vec3f]``, global-point indexed, shape ``(N,)``).
         """
+        # TODO: Implement planar DAT for truncation
         wp.launch(
             _truncate_displacements,
             dim=self._meshes.n_verts,
