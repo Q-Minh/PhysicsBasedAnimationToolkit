@@ -155,7 +155,8 @@ class SimulationState:
             self.ogc_params,
         )
         ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
-        self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
+        self.contact_params = gpu.contact.dynamics.Params()
+        self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
@@ -191,7 +192,7 @@ class SimulationState:
             self.ogc_params,
         )
         ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
-        self.contact = gpu.contact.dynamics.MeshDynamics(ogc)
+        self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
@@ -258,7 +259,7 @@ def make_callback(
                         draw_params(state.ogc_params)
                         imgui.TreePop()
                     if imgui.TreeNode("Dynamics"):
-                        draw_params(state.contact.params)
+                        draw_params(state.contact_params)
                         imgui.TreePop()
                     imgui.TreePop()
 

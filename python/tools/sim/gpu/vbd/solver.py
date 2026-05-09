@@ -196,10 +196,10 @@ class VbdSolver:
     def solve(
         self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
     ) -> bool:
+        converged = False
         if self._cuda_graph is None:
             with wp.ScopedCapture() as capture:
                 initialize_solve(fem, contact, params)
-                converged = False
                 for k in range(params.data.n_max_iters):
                     linearize_constraints(fem, contact, params)
                     if check_convergence(fem, contact, params):

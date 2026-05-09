@@ -334,21 +334,7 @@ class Params:
                  ``MeshDynamics::Params::gammaf`` in the C++ side.
     """
 
-    _dmin: float
-
-    def __init__(self):
-        self._dmin = 2e-3
-        self._mu_f = 0.2
-        self._decay = 0.5
-        self._gamman = 5.0
-        self._gammaf = 0.1
-
-    @property
-    def dmin(self) -> float:
-        """Minimum separation distance margin (contact threshold)"""
-        return self._dmin
-
-    # dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
+    dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
     mu_f = DocField(0.2, "Coulomb friction coefficient")
     decay = DocField(0.5, "Decay rate for contact deactivation")
     gamman = DocField(5.0, "Normal contact AL penalty scaling factor")
