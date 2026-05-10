@@ -44,9 +44,6 @@ class ParamsData:
     colors: wp.array[wp.int32]  # (N,) map of vertex colors
 
     # --- Partitioning ---
-    Pptr: wp.array[
-        wp.int32
-    ]  # (# colors + 1,) partition pointers s.t. the range `[Pptr[p], Pptr[p+1])` indexes into Padj from partition/color `p`
     Padj: wp.array[wp.int32]  # (# verts,) partition vertices
 
     # --- Iteration control ---
@@ -92,6 +89,7 @@ class Params:
     """
 
     _data: ParamsData  # pyright: ignore[reportGeneralTypeIssues]
+    _Pptr: np.ndarray  # (# colors + 1,) partition pointers on CPU, not part of GPU struct
 
     def __init__(self, params: pbat.sim.algorithm.vbd.Params):
         self._data = ParamsData()
@@ -103,8 +101,8 @@ class Params:
         self._data.GVVadj = wp.array(params.GVVadj, dtype=wp.int32)
         # Graph coloring
         self._data.colors = wp.array(params.colors, dtype=wp.int32)
-        # Partitioning
-        self._data.Pptr = wp.array(params.Pptr, dtype=wp.int32, device="cpu")
+        # Partitioning — Pptr stays on CPU (used only to drive partition dispatch, never in GPU kernels)
+        self._Pptr = params.Pptr.copy()
         self._data.Padj = wp.array(params.Padj, dtype=wp.int32)
         # Iteration control
         self._data.n_max_iters = int(params.n_max_iters)
@@ -144,6 +142,10 @@ class Params:
     def data(self) -> ParamsData:  # pyright: ignore[reportGeneralTypeIssues]
         return self._data
 
+    @property
+    def Pptr(self) -> np.ndarray:
+        return self._Pptr
+
 
 import unittest
 
@@ -181,7 +183,7 @@ class TestParams(unittest.TestCase):
         self.assertTrue(np.all(params.data.GVVadj.numpy() == params_cpu.GVVadj))
         # Verify coloring and partitioning
         self.assertTrue(np.all(params.data.colors.numpy() == params_cpu.colors))
-        self.assertTrue(np.all(params.data.Pptr.numpy() == params_cpu.Pptr))
+        self.assertTrue(np.all(params.Pptr == params_cpu.Pptr))
         self.assertTrue(np.all(params.data.Padj.numpy() == params_cpu.Padj))
         # Verify scalars
         self.assertEqual(params.data.n_max_iters, int(params_cpu.n_max_iters))

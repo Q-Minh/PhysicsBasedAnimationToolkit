@@ -51,14 +51,30 @@ def _vertex_solve_kernel(
     mi = fem.m[i]  # pyright: ignore[reportIndexIssue]
     # Accumulate elastic energy derivatives
     gil, Hil = local_elastic_derivatives(
-        i, fem, params, local_tid, block_dims  # pyright: ignore[reportArgumentType]
+        i,
+        fem.x,
+        fem.E,
+        fem.wg,
+        fem.GNeg,
+        fem.mug,
+        fem.lambdag,
+        params.GVGp,
+        params.GVGadj,
+        local_tid,  # type: ignore
+        block_dims,  # type: ignore
     )
     gil *= h2  # type: ignore
     Hil *= h2  # type: ignore
     vi = contact.meshes.GXV[i]
     if vi >= 0:
         gil_c, Hil_c = local_contact_derivatives(
-            i, vi, fem, contact, params, local_tid, block_dims  # type: ignore
+            i,
+            vi,
+            fem.xt,
+            params.xb,
+            contact,
+            local_tid,  # type: ignore
+            block_dims,  # type: ignore
         )
         gil += gil_c
         Hil += Hil_c
@@ -103,7 +119,19 @@ def _compute_constraint_rayleigh_quotients(
     v = block_id
     i = contact.meshes.V[v]
     # Add elastic hessian
-    Hil = local_elastic_hessians(i, fem, params, local_tid, block_dims)  # type: ignore
+    Hil = local_elastic_hessians(
+        i,
+        fem.x,
+        fem.E,
+        fem.wg,
+        fem.GNeg,
+        fem.mug,
+        fem.lambdag,
+        params.GVGp,
+        params.GVGadj,
+        local_tid,  # type: ignore
+        block_dims,  # type: ignore
+    )
     Hil *= h2  # type: ignore
     His = wp.tile(Hil, preserve_type=wp.bool(True))
     Hi = wp.tile_sum(His)[0]  # type: ignore
@@ -199,11 +227,9 @@ def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
     h = fem.bdf.beta_tilde
     h2 = h * h
     # Copy current positions to buffer (for contact lagging)
-    wp.copy(params.data.xb, fem.data.x)
+    wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially
-    Pptr = params.data.Pptr.numpy()
-    # NOTE: Should be no-copy if params.data.Pptr is already on CPU.
-    # assert type(Pptr) == np.ndarray and Pptr.flags["OWNDATA"] == False
+    Pptr = params.Pptr
     n_partitions = len(Pptr) - 1
     for p in range(n_partitions):
         p_begin = int(Pptr[p])

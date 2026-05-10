@@ -399,18 +399,22 @@ def _classify_vertex_facet_contacts(
         a = _vertex_triangle_contact_face_index(meshes.F, f, a_local, e_face)
         if e_face == VF_E_FACE_VERTEX:
             if is_vertex_feasible(x, meshes.F, meshes.GVHEp, meshes.GVHEadj, a, xi):
-                assert n_vv < MAX_VV_PER_THREAD
-                tvv[n_vv] = meshes.GXV[a]
-                n_vv += wp.int32(1)
+                if n_vv < MAX_VV_PER_THREAD:
+                    tvv[n_vv] = meshes.GXV[a]
+                    n_vv += wp.int32(1)
+                else:
+                    assert False
             tvf[brow] = n_tris
         elif e_face == VF_E_FACE_EDGE:
             if is_edge_feasible(
                 x, meshes.F, meshes.GHEF, a, xi, check_adjacent_facets=wp.bool(True)
             ):  # type: ignore
-                assert n_ve < MAX_VE_PER_THREAD
-                hei, hej = a, halfedges.opposite_half_edge(meshes.F, a, meshes.GHEF)
-                tve[n_ve] = wp.max(hei, hej)
-                n_ve += wp.int32(1)
+                if n_ve < MAX_VE_PER_THREAD:
+                    hei, hej = a, halfedges.opposite_half_edge(meshes.F, a, meshes.GHEF)
+                    tve[n_ve] = wp.max(hei, hej)
+                    n_ve += wp.int32(1)
+                else:
+                    assert False
             tvf[brow] = n_tris
         else:  # VF_E_FACE_TRIANGLE
             if is_triangle_feasible(xj, xk, xl, xi):  # type: ignore
@@ -432,6 +436,7 @@ def _classify_edge_edge_contacts(
     hei1: wp.int32,
     tee: teelist,  # type: ignore
     n_half_edges: wp.int32,
+    n_edges: wp.int32,
 ) -> Tuple[teelist, wp.int32, wp.float32]:  # type: ignore
     fzero = wp.float32(0)
     fone = wp.float32(1)
@@ -439,10 +444,15 @@ def _classify_edge_edge_contacts(
     tdmin = ogc.dmine[hei1]  # thread local edge minimum distance
     for brow in range(MAX_EE_PER_THREAD):
         e2 = tee[brow]  # pyright: ignore[reportIndexIssue]
-        if e2 >= n_half_edges:
-            break
+        if e2 >= n_edges:
+            tee[brow] = n_half_edges
+            continue
+        ehe2 = meshes.EHE[e2]
+        hei2, hej2 = ehe2[0], ehe2[1]
+        he2 = wp.max(hei2, hej2)
         einds2 = meshes.E[e2]
         xi2, xj2 = x[einds2[0]], x[einds2[1]]
+        tee[brow] = n_half_edges
         are_adjacent = (
             (einds1[0] == einds2[0])  # type: ignore
             or (einds1[0] == einds2[1])  # type: ignore
@@ -450,7 +460,6 @@ def _classify_edge_edge_contacts(
             or (einds1[1] == einds2[1])  # type: ignore
         )
         if are_adjacent:
-            tee[brow] = n_half_edges  # type: ignore
             continue
         st = queries.closest_points_line_segments(xi1, xj1, xi2, xj2)  # type: ignore
         xc1 = (fone - st[0]) * xi1 + st[0] * xj1  # type: ignore
@@ -459,29 +468,23 @@ def _classify_edge_edge_contacts(
         tdmin = wp.min(tdmin, d)
         # Only store each unordered pair once (deduplication guard)
         if e1 >= e2:
-            tee[brow] = n_half_edges
             continue
         if d > ogc.r:
-            tee[brow] = n_half_edges
             continue
         is_xc1_vertex = st[0] == fzero or st[0] == fone  # type: ignore
         is_xc2_vertex = st[1] == fzero or st[1] == fone  # type: ignore
         if is_xc1_vertex or is_xc2_vertex:
-            tee[brow] = n_half_edges
             continue
-        ehe2 = meshes.EHE[e2]
-        hei2, hej2 = ehe2[0], ehe2[1]
-        he2 = wp.max(hei2, hej2)
         if is_edge_feasible(
             x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(True)  # type: ignore
         ) and is_edge_feasible(
             x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(True)  # type: ignore
         ):  # type: ignore
-            assert n_ee < MAX_EE_PER_THREAD
-            tee[brow] = he2
-            n_ee += wp.int32(1)
-        else:
-            tee[brow] = n_half_edges
+            if n_ee < MAX_EE_PER_THREAD:
+                tee[brow] = he2
+                n_ee += wp.int32(1)
+            else:
+                assert False
     return tee, n_ee, tdmin  # type: ignore
 
 
@@ -658,7 +661,7 @@ def _fused_contact_detection(
         einds1 = meshes.E[e1]
         xi1, xj1 = x[einds1[0]], x[einds1[1]]
         # 1. Query all nearby edges
-        tee = teelist(n_half_edges)
+        tee = teelist(n_edges)
         query = wp.tile_bvh_query_aabb(
             ogc.e_bvh_id,
             ogc.e_lowers[e],
@@ -674,7 +677,7 @@ def _fused_contact_detection(
                 break
         # 2. Classify and store ee contacts
         tee, tnee, tdmine = _classify_edge_edge_contacts(
-            x, meshes, ogc, e1, einds1, xi1, xj1, hei, tee, n_half_edges  # type: ignore
+            x, meshes, ogc, e1, einds1, xi1, xj1, hei, tee, n_half_edges, n_edges  # type: ignore
         )
         # 2.a Reduce dmine across the block and write from the last thread.
         dmine = wp.tile_min(wp.tile(tdmine))[0]  # type: ignore

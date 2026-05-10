@@ -294,7 +294,10 @@ def make_callback(
                 if request_step:
                     if ui_state.screenshot_after_step and state.t == 0:
                         ps.screenshot("{:08d}.png".format(state.t))
-                    state.step()
+                    try:
+                        state.step()
+                    except Exception as e:
+                        ps.error("Simulation step failed: {}".format(e))
                     _update_mesh(state, mesh_name)
                     if ui_state.screenshot_after_step:
                         ps.screenshot("{:08d}.png".format(state.t))

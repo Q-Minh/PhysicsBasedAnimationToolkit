@@ -31,38 +31,42 @@ def adapt_stencil_gradient_acceleration_parameter(
     xi: wp.vec3f,
     gi: wp.vec3f,
     Hi: wp.mat33f,
-    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xk: wp.array[wp.vec3f],
+    gk: wp.array[wp.vec3f],
+    Hnk: wp.array[wp.float32],
+    betaG: wp.array2d[wp.float32],
+    rhohat: wp.vec2f,
+    gammaup: wp.vec2f,
+    gammadown: wp.vec2f,
     is_surface_node: bool,
     eps: wp.float32,
 ) -> wp.float32:
     grp = wp.int32(1) if is_surface_node else wp.int32(0)
-    betaG = params.betaG[i, grp]
+    betaGi = betaG[i, grp]  # type: ignore
     if kp > 0:
-        rhohat = params.rhohat[grp]
-        gammaup = params.gammaup[grp]
-        gammadown = params.gammadown[grp]
+        rhohati = rhohat[grp]  # type: ignore
+        gammaupi = gammaup[grp]  # type: ignore
+        gammadowni = gammadown[grp]  # type: ignore
         ngk = wp.norm_l2(gi)
-        gkm1 = params.gk[i]  # Previous gradient
+        gkm1 = gk[i]  # Previous gradient
         ngkm1 = wp.norm_l2(gkm1)
         ndgkm1 = wp.norm_l2(gi - gkm1)
-        xk = params.xk[i]  # Previous position
+        xki = xk[i]  # Previous position # type: ignore
         ndxkm1 = wp.max(
-            wp.norm_l2(xi - xk),
+            wp.norm_l2(xi - xki),
             eps,  # pyright: ignore[reportCallIssue, reportArgumentType]
         )
-        L = params.Hnk[i] + ngk / ndxkm1
+        L = Hnk[i] + ngk / ndxkm1
         rho = ndgkm1 / wp.max(L * ndxkm1, eps)
         if ngk > ngkm1:
-            betaG *= gammadown
-        elif rho > rhohat:
-            betaG += (wp.float32(1) - betaG) * gammaup
-        params.betaG[i, grp] = betaG
-    params.gk[i] = gi  # Store current gradient
-    params.xk[i] = xi  # Store current position
-    params.Hnk[i] = wp.sqrt(
-        wp.ddot(Hi, Hi)  # pyright: ignore[reportArgumentType]
-    )  # Store Hessian norm
-    return betaG
+            betaGi *= gammadowni
+        elif rho > rhohati:  # type: ignore
+            betaGi += (wp.float32(1) - betaGi) * gammaupi
+        betaG[i, grp] = betaGi  # type: ignore
+    gk[i] = gi  # Store current gradient # type: ignore
+    xk[i] = xi  # Store current position # type: ignore
+    Hnk[i] = wp.sqrt(wp.ddot(Hi, Hi))  # Store Hessian norm # type: ignore
+    return betaGi  # type: ignore
 
 
 @wp.func
@@ -70,21 +74,23 @@ def compute_thread_local_stencil_gradient_augmentation(
     local_tid: wp.int32,
     block_dims: wp.int32,
     i: wp.int32,
-    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    gk: wp.array[wp.vec3f],
+    GVVp: wp.array[wp.int32],
+    GVVadj: wp.array[wp.int32],
+    GXV: wp.array[wp.int32],
     is_surface_node: bool,
 ):
     """Compute thread-local stencil gradient augmentation for vertex i."""
     ai = wp.vec3f()
-    nbegin = params.GVVp[i]
-    nend = params.GVVp[i + 1]
+    nbegin = GVVp[i]
+    nend = GVVp[i + 1]
     n_neighbours = nend - nbegin
-    for jlocal in range(local_tid, n_neighbours, block_dims):
-        j = params.GVVadj[nbegin + jlocal]
-        is_j_surface_node = contact.meshes.GXV[j] >= 0
+    for jlocal in range(local_tid, n_neighbours, block_dims):  # type: ignore
+        j = GVVadj[nbegin + jlocal]
+        is_j_surface_node = GXV[j] >= 0  # type: ignore
         if is_surface_node and not is_j_surface_node:
             continue
-        ai += params.gk[j]
+        ai += gk[j]  # type: ignore
     return ai
 
 
@@ -114,7 +120,17 @@ def _accelerated_vertex_solve_kernel(
     mi = fem.m[i]  # pyright: ignore[reportIndexIssue]
     # Accumulate elastic energy derivatives
     gil, Hil = local_elastic_derivatives(
-        i, fem, params, local_tid, block_dims  # pyright: ignore[reportArgumentType]
+        i,
+        fem.x,
+        fem.E,
+        fem.wg,
+        fem.GNeg,
+        fem.mug,
+        fem.lambdag,
+        params.GVGp,
+        params.GVGadj,
+        local_tid,  # pyright: ignore[reportArgumentType]
+        block_dims,  # pyright: ignore[reportArgumentType]
     )
     gil *= h2  # type: ignore
     Hil *= h2  # type: ignore
@@ -122,7 +138,13 @@ def _accelerated_vertex_solve_kernel(
     is_surface_node = vi >= 0
     if is_surface_node:
         gil_c, Hil_c = local_contact_derivatives(
-            i, vi, fem, contact, params, local_tid, block_dims  # type: ignore
+            i,
+            vi,
+            fem.xt,
+            params.xb,
+            contact,
+            local_tid,  # type: ignore
+            block_dims,  # type: ignore
         )
         gil += gil_c  # type: ignore
         Hil += Hil_c  # type: ignore
@@ -142,8 +164,10 @@ def _accelerated_vertex_solve_kernel(
             local_tid=local_tid,  # pyright: ignore[reportArgumentType]
             block_dims=block_dims,  # pyright: ignore[reportArgumentType]
             i=i,
-            contact=contact,
-            params=params,
+            gk=params.gk,
+            GVVp=params.GVVp,
+            GVVadj=params.GVVadj,
+            GXV=contact.meshes.GXV,
             is_surface_node=is_surface_node,
         )
         ais = wp.tile(ail, preserve_type=True)  # pyright: ignore[reportArgumentType]
@@ -160,9 +184,15 @@ def _accelerated_vertex_solve_kernel(
             xi=xi,
             gi=gi,
             Hi=Hi,
-            params=params,
-            eps=eps,
+            xk=params.xk,
+            gk=params.gk,
+            Hnk=params.Hnk,
+            betaG=params.betaG,
+            rhohat=params.rhohat,
+            gammaup=params.gammaup,
+            gammadown=params.gammadown,
             is_surface_node=is_surface_node,
+            eps=eps,
         )
         lam = (
             betaG
@@ -197,11 +227,9 @@ def iterate(
     h = fem.bdf.beta_tilde
     h2 = h * h
     # Copy current positions to buffer (for contact lagging)
-    wp.copy(params.data.xb, fem.data.x)
+    wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially
-    Pptr = params.data.Pptr.numpy()
-    # NOTE: Should be no-copy if params.data.Pptr is already on CPU.
-    # assert type(Pptr) == np.ndarray and Pptr.flags["OWNDATA"] == False
+    Pptr = params.Pptr
     n_partitions = len(Pptr) - 1
     for p in range(n_partitions):
         p_begin = int(Pptr[p])

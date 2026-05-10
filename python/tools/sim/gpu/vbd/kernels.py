@@ -7,10 +7,8 @@ from ..elasticity.snh import snh_grad_and_hess, snh_hess
 from ..elasticity.chain import gradient_segment_wrt_dofs, hessian_block_wrt_dofs
 from ..contact.dynamics import MeshDynamicsData as ContactDynamicsData
 from ..contact.dynamics import ConstraintSetData
-from ..contact.ogc import OgcData, ContactPairsData
 from ..contact import halfedges
 from .params import (
-    ParamsData,
     VLS_SOLVER_INVERSE,
     VLS_SOLVER_LLT,
     VLS_SOLVER_QR,
@@ -158,7 +156,8 @@ def _contact_vv_fwd(
     k: wp.int32,
     i: wp.int32,
     j: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     cvv: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     vv_bases: wp.array[wp.mat33f],
     sigma_n: wp.float32,
@@ -172,8 +171,8 @@ def _contact_vv_fwd(
     gamma = cvv.gamma[k]
     lambda_n = cvv.lambda_n[k]
     lambda_f = cvv.lambda_f[k]
-    d = fem.x[i] - fem.x[j]
-    u = (fem.x[i] - fem.xt[i]) - (fem.x[j] - fem.xt[j])
+    d = x[i] - x[j]
+    u = (x[i] - xt[i]) - (x[j] - xt[j])
     c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
@@ -183,7 +182,8 @@ def _contact_vv_rev(
     k: wp.int32,
     i: wp.int32,
     j: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     cvv: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     vv_bases: wp.array[wp.mat33f],
     sigma_n: wp.float32,
@@ -197,8 +197,8 @@ def _contact_vv_rev(
     gamma = cvv.gamma[k]
     lambda_n = cvv.lambda_n[k]
     lambda_f = cvv.lambda_f[k]
-    d = fem.x[j] - fem.x[i]  # forward gap: x_u - x_v = x_j - x_i (we are v)
-    u = (fem.x[j] - fem.xt[j]) - (fem.x[i] - fem.xt[i])
+    d = x[j] - x[i]  # forward gap: x_u - x_v = x_j - x_i (we are v)
+    u = (x[j] - xt[j]) - (x[i] - xt[i])
     c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(-1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
@@ -208,7 +208,8 @@ def _contact_ve_fwd(
     k: wp.int32,
     i: wp.int32,
     he: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     F: wp.array[wp.vec3i],
     cve: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     ve_bases: wp.array[wp.mat33f],
@@ -227,9 +228,9 @@ def _contact_ve_fwd(
     lambda_f = cve.lambda_f[k]
     i_he = halfedges.incoming_vertex(F, he)
     j_he = halfedges.outgoing_vertex(F, he)
-    xcp, xtcp = edge_closest_point(fem.x, fem.xt, i_he, j_he, bary)  # type: ignore
-    d = fem.x[i] - xcp
-    u = (fem.x[i] - fem.xt[i]) - (xcp - xtcp)
+    xcp, xtcp = edge_closest_point(x, xt, i_he, j_he, bary)  # type: ignore
+    d = x[i] - xcp
+    u = (x[i] - xt[i]) - (xcp - xtcp)
     c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
@@ -241,7 +242,8 @@ def _contact_ve_rev(
     i_he: wp.int32,
     j_he: wp.int32,
     j_global: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     cve: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     ve_bases: wp.array[wp.mat33f],
     ve_bary: wp.array[wp.float32],
@@ -257,9 +259,9 @@ def _contact_ve_rev(
     gamma = cve.gamma[k]
     lambda_n = cve.lambda_n[k]
     lambda_f = cve.lambda_f[k]
-    xcp, xtcp = edge_closest_point(fem.x, fem.xt, i_he, j_he, bary)  # type: ignore
-    d = fem.x[j_global] - xcp
-    u = (fem.x[j_global] - fem.xt[j_global]) - (xcp - xtcp)
+    xcp, xtcp = edge_closest_point(x, xt, i_he, j_he, bary)  # type: ignore
+    d = x[j_global] - xcp
+    u = (x[j_global] - xt[j_global]) - (xcp - xtcp)
     c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
     one_m_bary = wp.float32(1) - bary  # type: ignore
     wi = -one_m_bary * wp.float32(i == i_he) - bary * wp.float32(i == j_he)  # type: ignore
@@ -271,7 +273,8 @@ def _contact_vf_fwd(
     k: wp.int32,
     i: wp.int32,
     f: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     F: wp.array[wp.vec3i],
     cvf: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     vf_bases: wp.array[wp.mat33f],
@@ -289,9 +292,9 @@ def _contact_vf_fwd(
     lambda_n = cvf.lambda_n[k]
     lambda_f = cvf.lambda_f[k]
     finds = F[f]
-    xcp, xtcp = tri_closest_point(fem.x, fem.xt, finds, bary[0], bary[1])  # type: ignore
-    d = fem.x[i] - xcp
-    u = (fem.x[i] - fem.xt[i]) - (xcp - xtcp)
+    xcp, xtcp = tri_closest_point(x, xt, finds, bary[0], bary[1])  # type: ignore
+    d = x[i] - xcp
+    u = (x[i] - xt[i]) - (xcp - xtcp)
     c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
@@ -302,7 +305,8 @@ def _contact_vf_rev(
     i: wp.int32,
     f: wp.int32,
     j_global: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     F: wp.array[wp.vec3i],
     cvf: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     vf_bases: wp.array[wp.mat33f],
@@ -323,9 +327,9 @@ def _contact_vf_rev(
     b1 = bary[1]  # type: ignore
     b2 = wp.float32(1) - b0 - b1
     finds = F[f]
-    xcp, xtcp = tri_closest_point(fem.x, fem.xt, finds, b0, b1)  # type: ignore
-    d = fem.x[j_global] - xcp
-    u = (fem.x[j_global] - fem.xt[j_global]) - (xcp - xtcp)
+    xcp, xtcp = tri_closest_point(x, xt, finds, b0, b1)  # type: ignore
+    d = x[j_global] - xcp
+    u = (x[j_global] - xt[j_global]) - (xcp - xtcp)
     c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
     wi = (
         -b0 * wp.float32(i == finds[0])  # type: ignore
@@ -342,7 +346,8 @@ def _contact_ee_fwd(
     i_he: wp.int32,
     j_he: wp.int32,
     he2: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     F: wp.array[wp.vec3i],
     cee: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     ee_bases: wp.array[wp.mat33f],
@@ -363,8 +368,8 @@ def _contact_ee_fwd(
     lambda_f = cee.lambda_f[l]
     i_he2 = halfedges.incoming_vertex(F, he2)
     j_he2 = halfedges.outgoing_vertex(F, he2)
-    xcp_u, xtcp_u = edge_closest_point(fem.x, fem.xt, i_he, j_he, s_param)  # type: ignore
-    xcp_v, xtcp_v = edge_closest_point(fem.x, fem.xt, i_he2, j_he2, t_param)  # type: ignore
+    xcp_u, xtcp_u = edge_closest_point(x, xt, i_he, j_he, s_param)  # type: ignore
+    xcp_v, xtcp_v = edge_closest_point(x, xt, i_he2, j_he2, t_param)  # type: ignore
     d = xcp_u - xcp_v
     u = (xcp_u - xtcp_u) - (xcp_v - xtcp_v)
     c_n, c_f = contact_constraints(d, u, n, t, b, s_al, dmin)  # type: ignore
@@ -380,7 +385,8 @@ def _contact_ee_rev(
     i_he: wp.int32,
     j_he: wp.int32,
     he2: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     F: wp.array[wp.vec3i],
     cee: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     ee_bases: wp.array[wp.mat33f],
@@ -401,8 +407,8 @@ def _contact_ee_rev(
     lambda_f = cee.lambda_f[c]
     i_he2 = halfedges.incoming_vertex(F, he2)
     j_he2 = halfedges.outgoing_vertex(F, he2)
-    xcp_u, xtcp_u = edge_closest_point(fem.x, fem.xt, i_he2, j_he2, s_param)  # type: ignore
-    xcp_v, xtcp_v = edge_closest_point(fem.x, fem.xt, i_he, j_he, t_param)  # type: ignore
+    xcp_u, xtcp_u = edge_closest_point(x, xt, i_he2, j_he2, s_param)  # type: ignore
+    xcp_v, xtcp_v = edge_closest_point(x, xt, i_he, j_he, t_param)  # type: ignore
     d = xcp_u - xcp_v  # same direction as the forward pair
     u = (xcp_u - xtcp_u) - (xcp_v - xtcp_v)
     c_n, c_f = contact_constraints(d, u, n, t, b, s_al, dmin)  # type: ignore
@@ -414,82 +420,94 @@ def _contact_ee_rev(
 @wp.func
 def local_elastic_derivatives(
     i: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    x: wp.array[wp.vec3f],
+    E: wp.array[wp.vec4i],
+    wg: wp.array[wp.float32],
+    GNeg: wp.array[types.mat4x3f],  # type: ignore
+    mug: wp.array[wp.float32],
+    lambdag: wp.array[wp.float32],
+    GVGp: wp.array[wp.int32],
+    GVGadj: wp.array[wp.int32],
     local_tid: wp.int32,
     block_dims: wp.int32,
 ):
     gi = wp.vec3f()
     Hi = wp.mat33f()
-    GVGbegin = params.GVGp[i]
-    n_adj_elems = params.GVGp[i + 1] - GVGbegin
-    for elocal in range(local_tid, n_adj_elems, block_dims):
-        e = params.GVGadj[GVGbegin + elocal]
-        nodes = fem.E[e]
+    GVGbegin = GVGp[i]
+    n_adj_elems = GVGp[i + 1] - GVGbegin
+    for elocal in range(local_tid, n_adj_elems, block_dims):  # type: ignore
+        e = GVGadj[GVGbegin + elocal]
+        nodes = E[e]
         ilocal = (
-            wp.int32(i == nodes[1])
+            wp.int32(i == nodes[1])  # type: ignore
             * wp.int32(1)  # pyright: ignore[reportOperatorIssue]
-            + wp.int32(i == nodes[2])
+            + wp.int32(i == nodes[2])  # type: ignore
             * wp.int32(2)  # pyright: ignore[reportOperatorIssue]
-            + wp.int32(i == nodes[3])
+            + wp.int32(i == nodes[3])  # type: ignore
             * wp.int32(3)  # pyright: ignore[reportOperatorIssue]
         )
-        wg = fem.wg[e]
-        GP = fem.GNeg[e]
-        mu = fem.mug[e]
-        llambda = fem.lambdag[e]
+        wge = wg[e]  # type: ignore
+        GP = GNeg[e]
+        mu = mug[e]
+        llambda = lambdag[e]
         # Gather element positions -> compute F
         xe = types.mat3x4f()
         for j in range(4):
-            xj = fem.x[nodes[j]]
+            xj = x[nodes[j]]  # type: ignore
             for d in range(3):
-                xe[d, j] = xj[d]
+                xe[d, j] = xj[d]  # type: ignore
         # xe = 3x4 matrix of element positions (columns are nodes)
         F = xe @ GP
         # SNH grad and hess w.r.t. vec(F)
-        gF, HF = snh_grad_and_hess(F, mu, llambda)
+        gF, HF = snh_grad_and_hess(F, mu, llambda)  # type: ignore
         # Chain rule: accumulate into vertex gradient and hessian
-        gi += wg * gradient_segment_wrt_dofs(gF, GP, ilocal)
-        Hi += wg * hessian_block_wrt_dofs(HF, GP, ilocal, ilocal)
+        gi += wge * gradient_segment_wrt_dofs(gF, GP, ilocal)
+        Hi += wge * hessian_block_wrt_dofs(HF, GP, ilocal, ilocal)
     return gi, Hi
 
 
 @wp.func
 def local_elastic_hessians(
     i: wp.int32,
-    fem: FemElastoDynamicsData,  # type: ignore
-    params: ParamsData,  # type: ignore
+    x: wp.array[wp.vec3f],
+    E: wp.array[wp.vec4i],
+    wg: wp.array[wp.float32],
+    GNeg: wp.array[types.mat4x3f],  # type: ignore
+    mug: wp.array[wp.float32],
+    lambdag: wp.array[wp.float32],
+    GVGp: wp.array[wp.int32],
+    GVGadj: wp.array[wp.int32],
     local_tid: wp.int32,
     block_dims: wp.int32,
 ):
     Hi = wp.mat33f()
-    GVGbegin = params.GVGp[i]
-    n_adj_elems = params.GVGp[i + 1] - GVGbegin
-    for elocal in range(local_tid, n_adj_elems, block_dims):
-        e = params.GVGadj[GVGbegin + elocal]
-        nodes = fem.E[e]
+    GVGbegin = GVGp[i]
+    n_adj_elems = GVGp[i + 1] - GVGbegin
+    for elocal in range(local_tid, n_adj_elems, block_dims):  # type: ignore
+        e = GVGadj[GVGbegin + elocal]
+        nodes = E[e]
         ilocal = (
-            wp.int32(i == nodes[1])
+            wp.int32(i == nodes[1])  # type: ignore
             * wp.int32(1)  # pyright: ignore[reportOperatorIssue]
-            + wp.int32(i == nodes[2])
+            + wp.int32(i == nodes[2])  # type: ignore
             * wp.int32(2)  # pyright: ignore[reportOperatorIssue]
-            + wp.int32(i == nodes[3])
+            + wp.int32(i == nodes[3])  # type: ignore
             * wp.int32(3)  # pyright: ignore[reportOperatorIssue]
         )
-        wg = fem.wg[e]
-        GP = fem.GNeg[e]
-        mu = fem.mug[e]
-        llambda = fem.lambdag[e]
+        wge = wg[e]  # type: ignore
+        GP = GNeg[e]
+        mu = mug[e]
+        llambda = lambdag[e]  # type: ignore
         # Gather element positions -> compute F
         xe = types.mat3x4f()
         for j in range(4):
-            xj = fem.x[nodes[j]]
+            xj = x[nodes[j]]  # type: ignore
             for d in range(3):
-                xe[d, j] = xj[d]
+                xe[d, j] = xj[d]  # type: ignore
         # xe = 3x4 matrix of element positions (columns are nodes)
         F = xe @ GP
-        HF = snh_hess(F, mu, llambda)
-        Hi += wg * hessian_block_wrt_dofs(HF, GP, ilocal, ilocal)
+        HF = snh_hess(F, mu, llambda)  # type: ignore
+        Hi += wge * hessian_block_wrt_dofs(HF, GP, ilocal, ilocal)
     return Hi
 
 
@@ -497,9 +515,9 @@ def local_elastic_hessians(
 def local_contact_derivatives(
     i: wp.int32,
     vi: wp.int32,
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
     contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     local_tid: wp.int32,
     block_dims: wp.int32,
 ):
@@ -517,12 +535,12 @@ def local_contact_derivatives(
 
     # 1a. Vertex-vertex contacts (forward)
     for k in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
-        gic, Hic = _contact_vv_fwd(k, i, meshes.V[ogc.vv.v[k]], fem, cvv, vv_bases, sigma_n, sigma_f, dmin)  # type: ignore
+        gic, Hic = _contact_vv_fwd(k, i, meshes.V[ogc.vv.v[k]], xt, x, cvv, vv_bases, sigma_n, sigma_f, dmin)  # type: ignore
         gi += gic
         Hi += Hic
     # 1b. Vertex-vertex contacts (reverse)
     for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
-        gic, Hic = _contact_vv_rev(ogc.rvv2vv[k], i, meshes.V[ogc.rvv.v[k]], fem, cvv, vv_bases, sigma_n, sigma_f, dmin)  # type: ignore
+        gic, Hic = _contact_vv_rev(ogc.rvv2vv[k], i, meshes.V[ogc.rvv.v[k]], xt, x, cvv, vv_bases, sigma_n, sigma_f, dmin)  # type: ignore
         gi += gic
         Hi += Hic
     # 2. Vertex-halfedge contacts (forward)
@@ -530,13 +548,13 @@ def local_contact_derivatives(
         hei = ogc.ve.v[k]
         hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
         he = wp.max(hei, hej)
-        gic, Hic = _contact_ve_fwd(k, i, he, fem, meshes.F, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
+        gic, Hic = _contact_ve_fwd(k, i, he, xt, x, meshes.F, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
         gi += gic
         Hi += Hic
     # 3. Vertex-triangle contacts (forward)
     for k in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
         f = ogc.vf.v[k]
-        gic, Hic = _contact_vf_fwd(k, i, f, fem, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
+        gic, Hic = _contact_vf_fwd(k, i, f, xt, x, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
         gi += gic
         Hi += Hic
     # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
@@ -553,14 +571,14 @@ def local_contact_derivatives(
             hei2 = ogc.ee.v[l]
             hej2 = halfedges.opposite_half_edge(meshes.F, hei2, meshes.GHEF)
             he2 = wp.max(hei2, hej2)
-            gic, Hic = _contact_ee_fwd(l, i, i_he, j_he, he2, fem, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            gic, Hic = _contact_ee_fwd(l, i, i_he, j_he, he2, xt, x, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
             gi += gic
             Hi += Hic
         # 5.a VE contacts (reverse): he is v-side
         for l in range(
             ogc.rve.prefix[he] + local_tid, ogc.rve.prefix[he + 1], block_dims
         ):
-            gic, Hic = _contact_ve_rev(ogc.rve2ve[l], i, i_he, j_he, meshes.V[ogc.rve.v[l]], fem, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            gic, Hic = _contact_ve_rev(ogc.rve2ve[l], i, i_he, j_he, meshes.V[ogc.rve.v[l]], xt, x, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
             gi += gic
             Hi += Hic
         # 5.b VF contacts (reverse): face of hei contains vertex i
@@ -568,7 +586,7 @@ def local_contact_derivatives(
         for l in range(
             ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
         ):
-            gic, Hic = _contact_vf_rev(ogc.rvf2vf[l], i, f, meshes.V[ogc.rvf.v[l]], fem, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            gic, Hic = _contact_vf_rev(ogc.rvf2vf[l], i, f, meshes.V[ogc.rvf.v[l]], xt, x, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
             gi += gic
             Hi += Hic
         # 5.c EE contacts (reverse): he is v-side
@@ -578,7 +596,7 @@ def local_contact_derivatives(
             hei2 = ogc.ree.v[l]
             hej2 = halfedges.opposite_half_edge(meshes.F, hei2, meshes.GHEF)
             he = wp.max(hei2, hej2)
-            gic, Hic = _contact_ee_rev(ogc.ree2ee[l], i, i_he, j_he, he, fem, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            gic, Hic = _contact_ee_rev(ogc.ree2ee[l], i, i_he, j_he, he, xt, x, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
             gi += gic
             Hi += Hic
 
