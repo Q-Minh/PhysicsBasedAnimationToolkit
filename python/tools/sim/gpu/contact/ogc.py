@@ -923,7 +923,7 @@ def _compute_vv_contact_data(
     u, v = ogc.vv.u[k], ogc.vv.v[k]
     xi = x[meshes.V[u]]
     xj = x[meshes.V[v]]
-    # assert wp.norm_l2(xi - xj) > wp.float32(1e-7)  # type: ignore
+    assert wp.norm_l2(xi - xj) > wp.float32(1e-10)  # type: ignore
     n = wp.normalize(xi - xj)  # type: ignore
     ogc.vv_bases[k] = _build_contact_basis(n)
 
@@ -945,7 +945,7 @@ def _compute_ve_contact_data(
     xa = x[halfedges.incoming_vertex(meshes.F, he)]  # type: ignore
     xb = x[halfedges.outgoing_vertex(meshes.F, he)]  # type: ignore
     uv = queries.closest_point_on_line_segment(xi, xa, xb)  # type: ignore
-    # assert wp.norm_l2(xi - (uv[0] * xa + uv[1] * xb)) > wp.float32(1e-7)  # type: ignore
+    assert wp.norm_l2(xi - (uv[0] * xa + uv[1] * xb)) > wp.float32(1e-10)  # type: ignore
     n = wp.normalize(xi - (uv[0] * xa + uv[1] * xb))  # type: ignore
     ogc.ve_bases[k] = _build_contact_basis(n)
     ogc.ve_bary[k] = uv[1]  # type: ignore
@@ -971,7 +971,7 @@ def _compute_vf_contact_data(
     xc = x[finds[2]]
     uvw = queries.closest_point_triangle(xi, xa, xb, xc)  # type: ignore
     xc = uvw[0] * xa + uvw[1] * xb + uvw[2] * xc  # type: ignore
-    # assert wp.norm_l2(xi - xc) > wp.float32(1e-7)  # type: ignore
+    assert wp.norm_l2(xi - xc) > wp.float32(1e-10)  # type: ignore
     n = wp.normalize(xi - xc)
     ogc.vf_bases[k] = _build_contact_basis(n)
     ogc.vf_bary[k] = wp.vec2f(uvw[0], uvw[1])  # type: ignore
@@ -998,7 +998,7 @@ def _compute_ee_contact_data(
     st = queries.closest_points_line_segments(xi1, xj1, xi2, xj2)  # type: ignore
     xc1 = (wp.float32(1.0) - st[0]) * xi1 + st[0] * xj1  # type: ignore
     xc2 = (wp.float32(1.0) - st[1]) * xi2 + st[1] * xj2  # type: ignore
-    # assert wp.norm_l2(xc1 - xc2) > wp.float32(1e-7)  # type: ignore
+    assert wp.norm_l2(xc1 - xc2) > wp.float32(1e-10)  # type: ignore
     n = wp.normalize(xc1 - xc2)
     ogc.ee_bases[k] = _build_contact_basis(n)
     ogc.ee_bary[k] = st
