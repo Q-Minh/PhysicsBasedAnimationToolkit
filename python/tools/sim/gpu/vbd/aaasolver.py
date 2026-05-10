@@ -268,6 +268,7 @@ def solve_subproblem(
     for kp in range(n_subproblem_max_iters):
         contact.update_dual(
             fem.data.x,
+            fem.xt,
             request_slack_update=True,
             request_decay_update=False,
             request_lagrange_multiplier_update=False,

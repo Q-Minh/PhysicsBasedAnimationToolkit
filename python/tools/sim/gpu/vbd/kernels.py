@@ -63,9 +63,7 @@ def accumulate_contact_al(
     Hi = (
         gamma
         * (wi * wi)
-        * (  # type: ignore
-            sigma_n * wp.outer(n, n) + sigma_f * (wp.outer(t, t) + wp.outer(b, b))  # type: ignore
-        )
+        * (sigma_n * wp.outer(n, n) + sigma_f * (wp.outer(t, t) + wp.outer(b, b)))  # type: ignore
     )
     return gi, Hi
 
@@ -124,8 +122,8 @@ def tri_closest_point(
 
 @wp.func
 def contact_constraints(
-    d: wp.vec3f,
-    u: wp.vec3f,
+    dx: wp.vec3f,
+    du: wp.vec3f,
     n: wp.vec3f,
     t: wp.vec3f,
     b: wp.vec3f,
@@ -146,8 +144,8 @@ def contact_constraints(
     Returns:
         ``(c_n, c_f)`` — scalar normal constraint and 2-vector tangential constraint.
     """
-    c_n = wp.dot(d, n) - dmin - s  # type: ignore
-    c_f = wp.vec2f(wp.dot(u, t), wp.dot(u, b))  # type: ignore
+    c_n = wp.dot(dx, n) - dmin - s  # type: ignore
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     return c_n, c_f
 
 
@@ -171,9 +169,9 @@ def _contact_vv_fwd(
     gamma = cvv.gamma[k]
     lambda_n = cvv.lambda_n[k]
     lambda_f = cvv.lambda_f[k]
-    d = x[i] - x[j]
-    u = (x[i] - xt[i]) - (x[j] - xt[j])
-    c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
+    dx = x[i] - x[j]
+    du = (x[i] - xt[i]) - (x[j] - xt[j])
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
 
@@ -197,9 +195,9 @@ def _contact_vv_rev(
     gamma = cvv.gamma[k]
     lambda_n = cvv.lambda_n[k]
     lambda_f = cvv.lambda_f[k]
-    d = x[j] - x[i]  # forward gap: x_u - x_v = x_j - x_i (we are v)
-    u = (x[j] - xt[j]) - (x[i] - xt[i])
-    c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
+    dx = x[j] - x[i]  # forward gap: x_u - x_v = x_j - x_i (we are v)
+    du = (x[j] - xt[j]) - (x[i] - xt[i])
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(-1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
 
@@ -229,9 +227,9 @@ def _contact_ve_fwd(
     i_he = halfedges.incoming_vertex(F, he)
     j_he = halfedges.outgoing_vertex(F, he)
     xcp, xtcp = edge_closest_point(x, xt, i_he, j_he, bary)  # type: ignore
-    d = x[i] - xcp
-    u = (x[i] - xt[i]) - (xcp - xtcp)
-    c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
+    dx = x[i] - xcp
+    du = (x[i] - xt[i]) - (xcp - xtcp)
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
 
@@ -260,9 +258,9 @@ def _contact_ve_rev(
     lambda_n = cve.lambda_n[k]
     lambda_f = cve.lambda_f[k]
     xcp, xtcp = edge_closest_point(x, xt, i_he, j_he, bary)  # type: ignore
-    d = x[j_global] - xcp
-    u = (x[j_global] - xt[j_global]) - (xcp - xtcp)
-    c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
+    dx = x[j_global] - xcp
+    du = (x[j_global] - xt[j_global]) - (xcp - xtcp)
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s, dmin)  # type: ignore
     one_m_bary = wp.float32(1) - bary  # type: ignore
     wi = -one_m_bary * wp.float32(i == i_he) - bary * wp.float32(i == j_he)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wi, gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
@@ -293,9 +291,9 @@ def _contact_vf_fwd(
     lambda_f = cvf.lambda_f[k]
     finds = F[f]
     xcp, xtcp = tri_closest_point(x, xt, finds, bary[0], bary[1])  # type: ignore
-    d = x[i] - xcp
-    u = (x[i] - xt[i]) - (xcp - xtcp)
-    c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
+    dx = x[i] - xcp
+    du = (x[i] - xt[i]) - (xcp - xtcp)
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s, dmin)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wp.float32(1), gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
 
 
@@ -328,9 +326,9 @@ def _contact_vf_rev(
     b2 = wp.float32(1) - b0 - b1
     finds = F[f]
     xcp, xtcp = tri_closest_point(x, xt, finds, b0, b1)  # type: ignore
-    d = x[j_global] - xcp
-    u = (x[j_global] - xt[j_global]) - (xcp - xtcp)
-    c_n, c_f = contact_constraints(d, u, n, t, b, s, dmin)  # type: ignore
+    dx = x[j_global] - xcp
+    du = (x[j_global] - xt[j_global]) - (xcp - xtcp)
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s, dmin)  # type: ignore
     wi = (
         -b0 * wp.float32(i == finds[0])  # type: ignore
         - b1 * wp.float32(i == finds[1])  # type: ignore
@@ -370,9 +368,9 @@ def _contact_ee_fwd(
     j_he2 = halfedges.outgoing_vertex(F, he2)
     xcp_u, xtcp_u = edge_closest_point(x, xt, i_he, j_he, s_param)  # type: ignore
     xcp_v, xtcp_v = edge_closest_point(x, xt, i_he2, j_he2, t_param)  # type: ignore
-    d = xcp_u - xcp_v
-    u = (xcp_u - xtcp_u) - (xcp_v - xtcp_v)
-    c_n, c_f = contact_constraints(d, u, n, t, b, s_al, dmin)  # type: ignore
+    dx = xcp_u - xcp_v
+    du = (xcp_u - xtcp_u) - (xcp_v - xtcp_v)
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s_al, dmin)  # type: ignore
     one_m_s = wp.float32(1) - s_param  # type: ignore
     wi = one_m_s * wp.float32(i == i_he) + s_param * wp.float32(i == j_he)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wi, gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
@@ -409,9 +407,9 @@ def _contact_ee_rev(
     j_he2 = halfedges.outgoing_vertex(F, he2)
     xcp_u, xtcp_u = edge_closest_point(x, xt, i_he2, j_he2, s_param)  # type: ignore
     xcp_v, xtcp_v = edge_closest_point(x, xt, i_he, j_he, t_param)  # type: ignore
-    d = xcp_u - xcp_v  # same direction as the forward pair
-    u = (xcp_u - xtcp_u) - (xcp_v - xtcp_v)
-    c_n, c_f = contact_constraints(d, u, n, t, b, s_al, dmin)  # type: ignore
+    dx = xcp_u - xcp_v  # same direction as the forward pair
+    du = (xcp_u - xtcp_u) - (xcp_v - xtcp_v)
+    c_n, c_f = contact_constraints(dx, du, n, t, b, s_al, dmin)  # type: ignore
     one_m_t = wp.float32(1) - t_param  # type: ignore
     wi = -one_m_t * wp.float32(i == i_he) - t_param * wp.float32(i == j_he)  # type: ignore
     return accumulate_contact_al(c_n, c_f, wi, gamma, n, t, b, lambda_n, lambda_f, sigma_n, sigma_f)  # type: ignore
