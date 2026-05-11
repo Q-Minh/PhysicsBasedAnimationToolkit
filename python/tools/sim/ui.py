@@ -149,32 +149,41 @@ class SimulationState:
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.ogc_params = gpu.contact.ogc.OgcParams()
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
-        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(self.ogc)
+        ogc = gpu.contact.ogc.Ogc(
+            self.fem.data.x,
+            self.multimesh,
+            self.ogc_params,
+        )
+        ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
+        self.contact_params = gpu.contact.dynamics.Params()
+        self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
+        # NOTE: This will need to be updated if adding new Solvers with
+        # different storage location for Qnk, Qfk
+        self.contact.enable_adaptive_penalty_parameters(
+            self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
+        )
+        self.solvers = {
+            SolverType.VBD: gpu.vbd.solver.VbdSolver(),
+            SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
+        }
+        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(
+            self.fem.data.x, self.contact.ogc
+        )
 
         # Simulation state
         self.simulate: bool = False
         self.t: int = 0
         self.until_t: int = -1
 
-    def solve(self):
-        if self.solver == SolverType.AAAVBD:
-            _ = gpu.vbd.aaasolver.solve(self.fem, self.params[self.solver], self.ogc)
-        elif self.solver == SolverType.VBD:
-            _ = gpu.vbd.solver.solve(self.fem, self.params[self.solver], self.ogc)
-
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
-        if self.capture is None:
-            with wp.ScopedCapture() as capture:
-                self.solve()
-            self.capture = capture
-        else:
-            wp.capture_launch(self.capture.graph)
+        self.solvers[self.solver].solve(
+            self.fem, self.params[self.solver], self.contact
+        )
         self.fem.step()
         self.t += 1
 
-        self.contact_browser.update(self.ogc)
+        self.contact_browser.update(self.fem.data.x, self.contact.ogc)
 
     def reset(self):
         self.t = 0
@@ -182,8 +191,23 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
-        self.ogc = gpu.contact.ogc.Ogc(self.fem.data.x, self.multimesh, self.ogc_params)
-        self.contact_browser.update(self.ogc)
+        ogc = gpu.contact.ogc.Ogc(
+            self.fem.data.x,
+            self.multimesh,
+            self.ogc_params,
+        )
+        ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
+        self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
+        # NOTE: This will need to be updated if adding new Solvers with
+        # different storage location for Qnk, Qfk
+        self.contact.enable_adaptive_penalty_parameters(
+            self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
+        )
+        self.solvers = {
+            SolverType.VBD: gpu.vbd.solver.VbdSolver(),
+            SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
+        }
+        self.contact_browser.update(self.fem.data.x, self.contact.ogc)
         self.capture = None
 
 
@@ -235,14 +259,17 @@ def make_callback(
                 # --- Contact parameters ---
                 if imgui.TreeNode("Contact"):
                     if imgui.TreeNode("Statistics"):
-                        nvv, nve, nvf, nee = state.ogc.num_contacts
+                        nvv, nve, nvf, nee = state.contact.ogc.num_contacts
                         imgui.Text(f"# Vertex-Vertex Contacts: {nvv}")
                         imgui.Text(f"# Vertex-Edge Contacts: {nve}")
                         imgui.Text(f"# Vertex-Face Contacts: {nvf}")
                         imgui.Text(f"# Edge-Edge Contacts: {nee}")
                         imgui.TreePop()
-                    if imgui.TreeNode("Params"):
+                    if imgui.TreeNode("OGC"):
                         draw_params(state.ogc_params)
+                        imgui.TreePop()
+                    if imgui.TreeNode("Dynamics"):
+                        draw_params(state.contact_params)
                         imgui.TreePop()
                     imgui.TreePop()
 
@@ -267,7 +294,10 @@ def make_callback(
                 if request_step:
                     if ui_state.screenshot_after_step and state.t == 0:
                         ps.screenshot("{:08d}.png".format(state.t))
-                    state.step()
+                    try:
+                        state.step()
+                    except Exception as e:
+                        ps.error("Simulation step failed: {}".format(e))
                     _update_mesh(state, mesh_name)
                     if ui_state.screenshot_after_step:
                         ps.screenshot("{:08d}.png".format(state.t))
@@ -318,6 +348,8 @@ def parse_args():
 def main():
     # wp.config.mode = "debug"
     # wp.config.verify_cuda = True
+    # wp.config.print_launches = True
+    # wp.config.verify_fp = True
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)

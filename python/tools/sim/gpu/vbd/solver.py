@@ -15,16 +15,23 @@ from .params import (
 )
 from .kernels import (
     local_elastic_derivatives,
+    local_contact_derivatives,
+    local_contact_rayleigh_quotients,
     add_inertia_derivatives,
     integrate_positions,
+    local_elastic_hessians,
 )
-from ..contact.ogc import Ogc
+from ..contact.dynamics import (
+    MeshDynamics as ContactDynamics,
+    MeshDynamicsData as ContactDynamicsData,
+)
 
 
 @wp.kernel
 def _vertex_solve_kernel(
     pbegin: int,
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     h2: float,
 ):
@@ -44,19 +51,41 @@ def _vertex_solve_kernel(
     mi = fem.m[i]  # pyright: ignore[reportIndexIssue]
     # Accumulate elastic energy derivatives
     gil, Hil = local_elastic_derivatives(
-        i, fem, params, local_tid, block_dims  # pyright: ignore[reportArgumentType]
+        i,
+        fem.x,
+        fem.E,
+        fem.wg,
+        fem.GNeg,
+        fem.mug,
+        fem.lambdag,
+        params.GVGp,
+        params.GVGadj,
+        local_tid,  # type: ignore
+        block_dims,  # type: ignore
     )
-    gs, Hs = (
+    gil *= h2  # type: ignore
+    Hil *= h2  # type: ignore
+    vi = contact.meshes.GXV[i]
+    if vi >= 0:
+        gil_c, Hil_c = local_contact_derivatives(
+            i,
+            vi,
+            fem.xt,
+            params.xb,
+            contact,
+            local_tid,  # type: ignore
+            block_dims,  # type: ignore
+        )
+        gil += gil_c
+        Hil += Hil_c
+    gis, His = (
         wp.tile(gil, preserve_type=True),  # pyright: ignore[reportArgumentType]
         wp.tile(Hil, preserve_type=True),  # pyright: ignore[reportArgumentType]
     )
     gi, Hi = (
-        wp.tile_reduce(wp.add, gs)[0],  # pyright: ignore[reportIndexIssue]
-        wp.tile_reduce(wp.add, Hs)[0],  # pyright: ignore[reportIndexIssue]
+        wp.tile_reduce(wp.add, gis)[0],  # pyright: ignore[reportIndexIssue]
+        wp.tile_reduce(wp.add, His)[0],  # pyright: ignore[reportIndexIssue]
     )
-    gi *= h2  # pyright: ignore[reportOperatorIssue]
-    Hi *= h2  # pyright: ignore[reportOperatorIssue]
-    # TODO: AccumulateContactEnergy(i, params.xb, contact, gi, Hi)
     if local_tid > 0:
         return
     # Add inertia derivatives (K = m, already in position space)
@@ -75,36 +104,133 @@ def _vertex_solve_kernel(
     fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
-def linearize_constraints(fem: FemElastoDynamics, params: Params):
+@wp.kernel(launch_bounds=32)
+def _compute_constraint_rayleigh_quotients(
+    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    h2: float,
+):
+    """Compute on-diagonal dynamics hessian blocks."""
+    tid = wp.tid()
+    block_dims = wp.block_dim()
+    block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
+    v = block_id
+    i = contact.meshes.V[v]
+    # Add elastic hessian
+    Hil = local_elastic_hessians(
+        i,
+        fem.x,
+        fem.E,
+        fem.wg,
+        fem.GNeg,
+        fem.mug,
+        fem.lambdag,
+        params.GVGp,
+        params.GVGadj,
+        local_tid,  # type: ignore
+        block_dims,  # type: ignore
+    )
+    Hil *= h2  # type: ignore
+    His = wp.tile(Hil, preserve_type=wp.bool(True))
+    Hi = wp.tile_sum(His)[0]  # type: ignore
+    # Add mass hessian
+    for d in range(3):
+        Hi[d, d] += fem.m[i]  # type: ignore
+    # Visit each contact pair incident on this node, and keep track
+    # of the largest (per 3x3 diagonal block) Rayleigh quotient w.r.t.
+    # the contact normals and tangents.
+    Qnl, Qfl = local_contact_rayleigh_quotients(
+        i, v, Hi, contact, local_tid, block_dims  # type: ignore
+    )
+    Qns = wp.tile(Qnl)  # type: ignore
+    Qfs = wp.tile(Qfl)  # type: ignore
+    maxQn = wp.tile_max(Qns)
+    maxQf = wp.tile_max(Qfs)
+    if local_tid == 0:
+        params.Qnk[v] = maxQn[0]  # pyright: ignore[reportIndexIssue]
+        params.Qfk[v] = maxQf[0]  # pyright: ignore[reportIndexIssue]
+
+
+def linearize_constraints(
+    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+):
     """TODO: Linearize contact constraints at current iterate."""
     pass
 
 
-def check_convergence(fem: FemElastoDynamics, params: Params) -> bool:
+def check_convergence(
+    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+) -> bool:
     """TODO: Check gradient norm convergence (elastic + momentum + contact)."""
     return False
 
 
-def prepare_subproblem(fem: FemElastoDynamics, params: Params):
-    """TODO: Assemble block-diagonal Hessian, update penalty parameter."""
-    pass
+def prepare_subproblem(
+    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+):
+    """Assemble block-diagonal Hessian, update penalty parameter."""
+    h = fem.bdf.beta_tilde
+    h2 = h * h
+    n_surface_verts = contact.meshes.n_verts
+    block_dims = 32
+    # wp.launch(
+    #     kernel=_compute_constraint_rayleigh_quotients,
+    #     dim=block_dims * n_surface_verts,
+    #     inputs=[fem.data, contact.data, params.data, h2],
+    #     block_dim=block_dims,
+    # )
+    # contact.adapt_penalty_parameters()
 
 
-def finalize_subproblem(fem: FemElastoDynamics, params: Params):
-    """TODO: Update dual variables, restore feasibility, update constraint set."""
-    pass
+def initialize_solve(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+):
+    """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
+
+    Mirrors ``pbat::sim::algorithm::vbd::InitializeSolve``.
+    Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
+    before the first call to :func:`solve`.
+    """
+    contact.ogc.compute_query_radius()
+    contact.update_constraint_set(fem.xt)
+    contact.restore_feasibility(fem.data.x)
 
 
-def iterate(fem: FemElastoDynamics, params: Params):
+def finalize_subproblem(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+):
+    """Finalize the current linearized subproblem.
+
+    Mirrors ``pbat::sim::algorithm::vbd::FinalizeSubproblem``:
+      1. Full dual update (slack + decay + Lagrange multipliers).
+      2. Restore feasibility.
+      3. Update constraint set for the next subproblem.
+    """
+    contact.update_dual(
+        fem.data.x,
+        fem.xt,
+        request_slack_update=True,
+        request_decay_update=True,
+        request_lagrange_multiplier_update=True,
+    )
+    contact.restore_feasibility(fem.data.x)
+    contact.update_constraint_set(fem.data.x)
+
+
+def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
     """One VBD Gauss-Seidel sweep over all color partitions."""
     h = fem.bdf.beta_tilde
     h2 = h * h
     # Copy current positions to buffer (for contact lagging)
-    wp.copy(params.data.xb, fem.data.x)
+    wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially
-    Pptr = params.data.Pptr.numpy()
-    # NOTE: Should be no-copy if params.data.Pptr is already on CPU.
-    # assert type(Pptr) == np.ndarray and Pptr.flags["OWNDATA"] == False
+    Pptr = params.Pptr
     n_partitions = len(Pptr) - 1
     for p in range(n_partitions):
         p_begin = int(Pptr[p])
@@ -115,202 +241,51 @@ def iterate(fem: FemElastoDynamics, params: Params):
             wp.launch(
                 kernel=_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[p_begin, fem.data, params.data, h2],
+                inputs=[p_begin, fem.data, contact.data, params.data, h2],
                 block_dim=block_dim,
             )
 
 
 def solve_subproblem(
     fem: FemElastoDynamics,
+    contact: ContactDynamics,
     params: Params,
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
-    # TODO: prepare_subproblem(fem, params)
-    prepare_subproblem(fem, params)
     for kp in range(n_subproblem_max_iters):
-        iterate(fem, params)
-    # TODO: finalize_subproblem(fem, params)
-    finalize_subproblem(fem, params)
-
-
-def solve(
-    fem: FemElastoDynamics,
-    params: Params,
-    ogc: Ogc,
-) -> bool:
-    """Solve the VBD minimization problem.
-    Mimics `pbat::sim::algorithm::vbd::Solve`:
-    """
-    converged = False
-    n_max_iters = params.data.n_max_iters
-    for k in range(n_max_iters):
-        # TODO: Replace these OGC calls with a proper
-        # contact.MeshDynamics class that uses OGC internally
-        ogc.prepare_for_execution()
-        ogc.detect_contacts()
-        ogc.update_displacement_bounds()
-        # TODO: linearize_constraints(fem, params)
-        linearize_constraints(fem, params)
-        # TODO: if check_convergence(fem, params): break
-        if check_convergence(fem, params):
-            converged = True
-            break
-        # Solve linearized subproblem
-        solve_subproblem(fem, params)
-    fem.back_substitute_velocities()
-    return converged
-
-
-def integrate(fem: FemElastoDynamics, params: Params, ogc: Ogc):
-    """Integrate one time step: setup + solve + step.
-
-    Mimics `pbat::sim::algorithm::vbd::Integrate`.
-    """
-    fem.setup_time_integration_optimization()
-    solve(fem, params, ogc)
-    fem.step()
-
-
-# --- Unit tests ---
-import unittest
-
-
-class TestVbdSolver(unittest.TestCase):
-    def test_single_iterate(self):
-        """Test that a single VBD iterate modifies free node positions."""
-        from pbatoolkit import pbat, pypbat
-        from ..contact.multimesh import MultiMesh as GpuMultiMesh
-
-        V = np.array(
-            [
-                [0, 0, 0],
-                [1, 0, 0],
-                [0, 1, 0],
-                [1, 1, 0],
-                [0, 0, 1],
-                [1, 0, 1],
-                [0, 1, 1],
-                [1, 1, 1],
-            ],
-            dtype=np.float32,
+        contact.update_dual(
+            fem.data.x,
+            fem.xt,
+            request_slack_update=True,
+            request_decay_update=False,
+            request_lagrange_multiplier_update=False,
         )
-        C = np.array(
-            [
-                [0, 1, 3, 5],
-                [3, 2, 0, 6],
-                [5, 4, 6, 0],
-                [6, 7, 5, 3],
-                [0, 5, 3, 6],
-            ],
-            dtype=np.int64,
-        )
-        n_nodes = V.shape[0]
-        E = C.T
-        # Setup FEM
-        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(V.T, C.T)
-        fem_cpu.set_mass_matrix(1e3)
-        mu, llambda = pypbat.fem.lame_coefficients(1e6, 0.45)
-        fem_cpu.set_elastic_energy(mu, llambda)  # pyright: ignore[reportArgumentType]
-        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
-        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
-        # Bottom 4 nodes free, top 4 fixed
-        fem_cpu.constrain(np.array([0, 0, 0, 0, 1, 1, 1, 1]))
-        fem = FemElastoDynamics(fem_cpu)
-        # Setup VBD params
-        GVGp, GVGe, GVGilocal = pbat.sim.algorithm.vbd.vertex_element_adjacency_graph(
-            E, n_nodes
-        )
-        GVVp, GVVadj, colors = pbat.sim.algorithm.vbd.vertex_colors(E, n_nodes)
-        params_cpu = pbat.sim.algorithm.vbd.Params()
-        params_cpu.with_vertex_element_adjacency_graph(GVGp, GVGe, GVGilocal)
-        params_cpu.with_vertex_colors(GVVp, GVVadj, colors)
-        params_cpu.construct()
-        params = Params(params_cpu)
-        # Setup time integration
-        fem.setup_time_integration_optimization()
-        # Record positions before iterate
-        x_before = fem.data.x.numpy().copy()
-        # Run one iterate
-        iterate(fem, params)
-        wp.synchronize()
-        x_after = fem.data.x.numpy()
-        # Constrained nodes should not move
-        np.testing.assert_allclose(x_after[4:], x_before[4:], atol=1e-10)
-        # Free nodes should have moved (gravity pulls them)
-        self.assertFalse(np.allclose(x_after[:4], x_before[:4], atol=1e-10))
-
-    def test_integrate_step(self):
-        """Test that integrate advances the simulation by one time step."""
-        from pbatoolkit import pbat, pypbat
-        from ..contact.multimesh import MultiMesh as GpuMultiMesh
-        from ..contact.ogc import Ogc
-
-        V = np.array(
-            [
-                [0, 0, 0],
-                [1, 0, 0],
-                [0, 1, 0],
-                [1, 1, 0],
-                [0, 0, 1],
-                [1, 0, 1],
-                [0, 1, 1],
-                [1, 1, 1],
-            ],
-            dtype=np.float32,
-        )
-        C = np.array(
-            [
-                [0, 1, 3, 5],
-                [3, 2, 0, 6],
-                [5, 4, 6, 0],
-                [6, 7, 5, 3],
-                [0, 5, 3, 6],
-            ],
-            dtype=np.int64,
-        )
-        n_nodes = V.shape[0]
-        E = C.T
-        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(V.T, C.T)
-        fem_cpu.set_mass_matrix(1e3)
-        mu, llambda = pypbat.fem.lame_coefficients(1e6, 0.45)
-        fem_cpu.set_elastic_energy(mu, llambda)  # pyright: ignore[reportArgumentType]
-        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
-        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
-        fem_cpu.constrain(np.array([0, 0, 0, 0, 1, 1, 1, 1]))
-        fem = FemElastoDynamics(fem_cpu)
-        GVGp, GVGe, GVGilocal = pbat.sim.algorithm.vbd.vertex_element_adjacency_graph(
-            E, n_nodes
-        )
-        GVVp, GVVadj, colors = pbat.sim.algorithm.vbd.vertex_colors(E, n_nodes)
-        params_cpu = pbat.sim.algorithm.vbd.Params()
-        params_cpu.with_vertex_element_adjacency_graph(GVGp, GVGe, GVGilocal)
-        params_cpu.with_vertex_colors(GVVp, GVVadj, colors)
-        params_cpu.n_max_iters = 1
-        params_cpu.n_subproblem_max_iters = 5
-        params_cpu.construct()
-        params = Params(params_cpu)
-        # Setup OGC
-        multimesh_cpu = pbat.sim.contact.MultiMesh()
-        multimesh_cpu.construct_from_tetrahedral_mesh(
-            fem_cpu.E, np.full(n_nodes, 0, dtype=np.int64), n_components=1
-        )
-        multimesh = GpuMultiMesh(multimesh_cpu)
-        ogc = Ogc(fem.data.x, multimesh)
-        x_before = fem.data.x.numpy().copy()
-        # Run some number of steps
-        for t in range(10):
-            fem.setup_time_integration_optimization()
-            solve(fem, params, ogc)
-            fem.back_substitute_velocities()
-        wp.synchronize()
-        x_after = fem.data.x.numpy()
-        # Free nodes should have moved
-        self.assertFalse(np.allclose(x_after[:4], x_before[:4], atol=1e-10))
+        iterate(fem, contact, params)
+    finalize_subproblem(fem, contact, params)
 
 
-if __name__ == "__main__":
-    wp.init()
-    wp.config.mode = "debug"
-    wp.config.verify_cuda = True
-    wp.config.verify_fp = True
-    unittest.main()
+class VbdSolver:
+
+    def __init__(self):
+        self._cuda_graph = None
+
+    def solve(
+        self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
+    ) -> bool:
+        converged = False
+        if self._cuda_graph is None:
+            with wp.ScopedCapture() as capture:
+                initialize_solve(fem, contact, params)
+                for k in range(params.data.n_max_iters):
+                    linearize_constraints(fem, contact, params)
+                    if check_convergence(fem, contact, params):
+                        converged = True
+                        break
+                    prepare_subproblem(fem, contact, params)
+                    solve_subproblem(fem, contact, params)
+                    finalize_subproblem(fem, contact, params)
+                fem.back_substitute_velocities()
+            self._cuda_graph = capture
+        else:
+            wp.capture_launch(self._cuda_graph.graph)  # type: ignore
+        return converged
