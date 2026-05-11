@@ -98,6 +98,7 @@ class Scene:
     _tet_elastic_bodies: list[TetrahedralElastodynamicsBody]
     _recycled_tet_elastic_body_indices: list[int]
     _transform_library: TransformLibrary
+    _pattern_data: str = ""
 
     _all_selectors: dict[str, SelectorListManager]
     # _box_selector_lists: dict[str, SelectorList]
@@ -180,6 +181,7 @@ class Scene:
                     )
 
         self._current_selection_property_idx = 0
+        self._tet_body_to_dup_idx = 0
         self._transform_library = TransformLibrary()
         self._static_mesh_colliders = []
 
@@ -195,6 +197,12 @@ class Scene:
                     "Add Static Mesh Collider", styles.default_button_size()
                 ):
                     self._load_static_mesh_collider()
+                if imgui.Button(
+                    "Load Pattern File", styles.default_button_size()
+                ):
+                    self._load_pattern_file()
+                imgui.SameLine()
+                imgui.Text(self._pattern_data)
                 if imgui.TreeNode("Tetrahedral Elastic Bodies"):
                     for b, body in enumerate(self._tet_elastic_bodies):
                         imgui.PushID(body.name)
@@ -212,6 +220,19 @@ class Scene:
                     imgui.TreePop()
                 if imgui.TreeNode("Static Mesh Colliders"):
                     self._draw_static_mesh_colliders()
+                    imgui.TreePop()
+                if imgui.TreeNode("Pattern Data"):
+                    if self._pattern_data:
+                        imgui.Text(self._pattern_data)
+
+                    _, self._tet_body_to_dup_idx = imgui.Combo(
+                        "Apply to",
+                        self._tet_body_to_dup_idx,
+                        [body.name for body in self._tet_elastic_bodies],
+                    )
+                    body = self._tet_elastic_bodies[self._tet_body_to_dup_idx]
+                    if imgui.Button("Apply pattern data to selected body", styles.default_button_size()):
+                        self.duplicate_tet_elastic_body(body, self._pattern_data)
                     imgui.TreePop()
                 imgui.EndTabItem()
 
@@ -373,9 +394,9 @@ class Scene:
             ],
         )
         if file_path:
-            try:
+            def read_mesh(offset=(0, 0, 0)):
                 imesh = meshio.read(file_path)
-                V = imesh.points
+                V = imesh.points + np.array(offset)
                 T = imesh.cells_dict["tetra"]
                 R = imesh.cell_data["medit:ref"][0].T if "medit:ref" in imesh.cell_data else None
                 filename = os.path.basename(file_path)
@@ -384,10 +405,68 @@ class Scene:
                 body.on_mesh_loaded(f"{filename} - {id}", V, T, R)
                 self._transform_library.on_mesh_added(body.name)
                 self._tet_elastic_bodies.append(body)
+
+            try:
+                if self._pattern_data:
+                    with open(self._pattern_data, "r") as f:
+                        # this file is a csv with x, y, z coordinates. 
+                        # for each row, we want to load a mesh using read_mesh, offset using the x,y,z data
+                        for row in f:
+                            vals = row.strip().split(",")
+                            if len(vals) != 3:
+                                continue
+                            x, y, z = map(float, vals)
+                            read_mesh(offset=(x, y, z))
+                    self._pattern_data = ""
+                else:
+                    read_mesh()
+                
             except Exception as e:
                 ps.error(f"Error loading tetrahedral mesh:\n{e}")
             finally:
                 root.destroy()
+
+    def duplicate_tet_elastic_body(self, pattern_body: TetrahedralElastodynamicsBody, pattern_data: str):
+        if self._pattern_data:
+            with open(self._pattern_data, "r") as f:
+                # this file is a csv with x, y, z coordinates. 
+                # for each row, we want to load a mesh using read_mesh, offset using the x,y,z data
+                for row in f:
+                    vals = row.strip().split(",")
+                    if len(vals) != 3:
+                        continue
+                    print(vals)
+                    x, y, z = map(float, vals)
+                    id = self._get_new_id()
+                    body = TetrahedralElastodynamicsBody()
+                    body.on_mesh_loaded(
+                        f"{pattern_body.name} - {id}",
+                        pattern_body.VT + np.array([x, y, z]),
+                        pattern_body.T,
+                        pattern_body.R,
+                        pattern_body.Ye,
+                        pattern_body.nue,
+                        pattern_body.rhoe,
+                        pattern_body.bext,
+                        pattern_body.aext,
+                        pattern_body.v0,
+                        headless=False
+                    )
+                    self._transform_library.on_mesh_added(body.name)
+                    self._tet_elastic_bodies.append(body)
+                    
+            self._pattern_data = ""
+        
+
+    def _load_pattern_file(self):
+        root = tk.Tk()
+        root.withdraw()
+        self._pattern_data = filedialog.askopenfilename(
+            title="Select pattern file",
+            defaultextension=".csv",
+            filetypes=[("Pattern files", "*.csv"), ("All files", "*.*")],
+        )
+        root.destroy()
 
     def _load_static_mesh_collider(self):
         root = tk.Tk()
