@@ -173,6 +173,14 @@ class OgcData:
     ]  # (ee_capacity,) orthonormal contact frame per EE pair
     ee_bary: wp.array[wp.vec2f]  # (ee_capacity,) parameters (s,t) on edge1 and edge2
 
+    # Planar DAT plane offsets
+    lambda_vv: wp.array[
+        wp.float32
+    ]  # (vv_capacity,) vertex-vertex contact plane offsets
+    lambda_ve: wp.array[wp.float32]  # (ve_capacity,) vertex-edge contact plane offsets
+    lambda_vf: wp.array[wp.float32]  # (vf_capacity,) vertex-face contact plane offsets
+    lambda_ee: wp.array[wp.float32]  # (ee_capacity,) edge-edge contact plane offsets
+
 
 @wp.func
 def _compute_edge_bounding_volume(
@@ -1089,6 +1097,11 @@ class Ogc:
         self._ogc.vf_bary = wp.empty((vf_capacity,), dtype=wp.vec2f)  # type: ignore
         self._ogc.ee_bases = wp.empty((ee_capacity,), dtype=wp.mat33f)  # type: ignore
         self._ogc.ee_bary = wp.empty((ee_capacity,), dtype=wp.vec2f)  # type: ignore
+
+        self._ogc.lambda_vv = wp.empty((vv_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.lambda_ve = wp.empty((ve_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.lambda_vf = wp.empty((vf_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.lambda_ee = wp.empty((ee_capacity,), dtype=wp.float32)  # type: ignore
 
         self._streams = [wp.Stream() for _ in range(10)]
 

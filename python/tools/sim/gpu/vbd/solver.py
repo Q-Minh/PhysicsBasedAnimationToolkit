@@ -175,13 +175,13 @@ def prepare_subproblem(
     h2 = h * h
     n_surface_verts = contact.meshes.n_verts
     block_dims = 32
-    wp.launch(
-        kernel=_compute_constraint_rayleigh_quotients,
-        dim=block_dims * n_surface_verts,
-        inputs=[fem.data, contact.data, params.data, h2],
-        block_dim=block_dims,
-    )
-    contact.adapt_penalty_parameters()
+    # wp.launch(
+    #     kernel=_compute_constraint_rayleigh_quotients,
+    #     dim=block_dims * n_surface_verts,
+    #     inputs=[fem.data, contact.data, params.data, h2],
+    #     block_dim=block_dims,
+    # )
+    # contact.adapt_penalty_parameters()
 
 
 def initialize_solve(
@@ -252,7 +252,6 @@ def solve_subproblem(
     params: Params,
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
-    prepare_subproblem(fem, contact, params)
     for kp in range(n_subproblem_max_iters):
         contact.update_dual(
             fem.data.x,

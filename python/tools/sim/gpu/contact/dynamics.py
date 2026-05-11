@@ -344,8 +344,8 @@ class MeshDynamics:
         self._data.cee = self.cee.data
         self._data.gamma_n = self.params.gamman
         self._data.gamma_f = self.params.gammaf
-        self._data.sigma_n = wp.array([self.params.gamman], dtype=wp.float32)
-        self._data.sigma_f = wp.array([self.params.gammaf], dtype=wp.float32)
+        self._data.sigma_n = wp.array([1], dtype=wp.float32)
+        self._data.sigma_f = wp.array([1], dtype=wp.float32)
         self._data.dmin = self.params.dmin  # type: ignore
         self._data.mu_f = self.params.mu_f
         self._data.decay = self.params.decay
