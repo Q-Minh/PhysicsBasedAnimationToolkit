@@ -216,6 +216,7 @@ class CylinderSelection(Selection):
     _scale: np.ndarray
     _ps_cloud: ps.PointCloud
     _ps_helper: PsHelper
+    _surface_only: bool = False
 
     def __init__(
         self,
@@ -288,7 +289,7 @@ class CylinderSelection(Selection):
 
             if imgui.BeginTabItem("Setup", True, tab_flags)[0]:
                 num_change, self._box_num = imgui.InputInt("Number of boxes", self._box_num)
-                rad_change, self._radius = imgui.SliderFloat("Radius", self._radius, 0, 2)
+                rad_change, self._radius = imgui.SliderFloat("Radius", self._radius, 0, 5)
                 
                 if (num_change or rad_change) and self._box_num > 0:
                     # Clear all previous data
@@ -299,15 +300,21 @@ class CylinderSelection(Selection):
                     # Regenerate ring
                     self._make_ring()
 
-                _, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 2)
+                changed, self._scale = imgui.SliderFloat3("Size", self._scale, 0, 2)
                 self._scale = np.array(self._scale)
-                for box in self._box_selections:
-                    box._scale = self._scale
-                    box._ps_mesh.update_vertex_positions(box._vertices * box._scale)
+                if changed:
+                    for box in self._box_selections:
+                        box._scale = self._scale
+                        box._ps_mesh.update_vertex_positions(box._vertices * box._scale)
                 
                 # Input field for specific property that we're manipulating
                 
                 self.specific_draw()
+                if self._target == SelectionTargets.VERTEX:
+                    changed, self._surface_only = imgui.Checkbox("Surface Only", self._surface_only)
+                    if changed:
+                        for box in self._box_selections:
+                            box._surface_only = self._surface_only
                 imgui.EndTabItem()
 
             if self._ps_helper is not None:
@@ -358,13 +365,21 @@ class RegionSelection(Selection):
     def region_test(self, cells: np.ndarray, regions: np.ndarray, region_selection: str):
         """Test which cells are inside the regions that have been selected."""
         if region_selection == "":
-            return np.zeros_like(regions)
+            return np.zeros_like(regions, dtype=bool)
         if region_selection == "---":
             return np.ones_like(regions, dtype=bool)
-        region_list = region_selection.split("-")
-        region_list = [int(value) for value in region_list if value.isdigit() ]
-        region_list = np.array(region_list)
         
+        # Allow for two options: R1-R2 means separate regions, R1--R2 means all regions between two ascending numbers
+        if "--" in region_selection:
+            start, end = region_selection.split("--")
+            start = int(start) if start.isdigit() else -1
+            end = int(end) if end.isdigit() else -1
+            region_list = np.arange(start, end + 1)
+        else:
+            region_list = region_selection.split("-")
+            region_list = [int(value) for value in region_list if value.isdigit()]
+            region_list = np.array(region_list)
+
         
         indices = np.isin(regions, region_list)
         return indices
@@ -397,11 +412,12 @@ class RegionSelection(Selection):
         if imgui.Button("Apply", styles.default_button_size()):
             for b, m in enumerate(meshes):
                 C, R = m.T, m.R
-                regions = self._region_selection[mesh.name]
+                regions = self._region_selection[m.name]
                 # Get indices inside box
                 indices = self.region_test(C, R, regions)
                 # Apply in callback that depends on property that we selected
-                self._callback(b, self._prop_value, indices)
+                if len(indices) > 0:
+                    self._callback(b, self._prop_value, indices)
         imgui.SameLine()
         if imgui.Button("Clear All", styles.half_button_size()):
             for mesh_name in self._region_selection:
