@@ -34,28 +34,28 @@ def define_args():
         "--dims",
         nargs="+",
         type=float,
-        default=[1.0, 1.0, 1.0],
+        default=[0.2, 0.2, 3],
         help="Dimensions of the cylinder/prism in the format: dx dy dz",
     )
     parser.add_argument(
         "--equator_divisions",
         "--equator-divisions",
         type=int,
-        default=40,
+        default=20,
         help="For mode == cyl. Number of divisions around the equator.",
     )
     parser.add_argument(
         "--height_divisions",
         "--height-divisions",
         type=int,
-        default=20,
+        default=7,
         help="For mode == cyl. Number of divisions along the height of the cylinder.",
     )
     parser.add_argument(
         "--resolution",
         nargs="+",
         type=int,
-        default=[40, 10, 10],
+        default=[10, 10, 40],
         help="For mode == prism. Mesh resolution for the beam in the format: nx ny nz",
     )
     parser.add_argument(
@@ -165,6 +165,24 @@ def define_args():
         dest="aggressiveness",
         default=5,
     )
+    parser.add_argument(
+        "--variable-volume",
+        help="Use variable volume elements",
+        type=bool,
+        default=False,
+    )
+    parser.add_argument(
+        "--max-volume",
+        help="Maximum volume for tetrahedra",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
+        "--quality",
+        help="Quality of the tetrahedralization",
+        type=bool,
+        default=True,
+    )
     return parser.parse_args()
 
 
@@ -188,6 +206,8 @@ def make_cylinder(equator_divisions, height_divisions, dims, normalize):
     V = V @ R_y
 
     # Create planar caps at each planar division
+    middles = []
+    centers = []
     for i in range(height_divisions):
         start = i * equator_divisions
         stop = (i + 1) * equator_divisions
@@ -195,12 +215,17 @@ def make_cylinder(equator_divisions, height_divisions, dims, normalize):
         # Triangulate interior faces
         # TODO: it might be better to seed more points to make better triangles. This will help tetgen make more regular tets on the caps
         center = np.mean(V[start:stop, :], axis=0)
+        centers.append(center)
+        if i != 0:
+            middle = (centers[i-1] + center) / 2
+            middles.append(middle)
         V = np.vstack((V, center))
 
         center_index = V.shape[0] - 1
         for j in range(equator_divisions):
             next_j = (j + 1) % equator_divisions
             F = np.vstack((F, np.array([start + j, start + next_j, center_index])))
+    args.middle_points = np.array(middles)
     return V, F
 
 
@@ -313,7 +338,7 @@ def simplify(V, T, args):
 
 def to_tets(V, T, args):
     tgen = tg.TetGen(V, T)
-    if args.mode == "prism":
+    if args.mode in ["prism", "cyl"]:
         # add a region at every layer
         for i in range(args.middle_points.shape[0]):
             tgen.add_region(i, args.middle_points[i])
@@ -324,6 +349,9 @@ def to_tets(V, T, args):
         mindihedral=args.min_dihedral,
         nobisect=args.nobisect,
         regionattrib=True,
+        maxvolume=args.max_volume,
+        fixedvolume=args.variable_volume,
+        quality=args.quality
     )
     return nodes, elem, attrib
 
@@ -450,6 +478,9 @@ if __name__ == "__main__":
                 "Steiner points (-1 for auto)", args.steiner_points
             )
             _, args.nobisect = imgui.Checkbox("Disable bisecting mesh", args.nobisect)
+            _, args.variable_volume = imgui.Checkbox("Use max volume", args.variable_volume)
+            _, args.max_volume = imgui.InputFloat("Max volume", args.max_volume, format="%.8f")
+            _, args.quality = imgui.Checkbox("Quality", args.quality)
             imgui.TreePop()
 
         if imgui.TreeNode("Remeshing Parameters"):
@@ -477,9 +508,12 @@ if __name__ == "__main__":
             else:
                 transform = sm.get_transform()
                 transform[:3, 3] = np.array([0.0, 0.0, 0.4])
-            nodes, elem, attrib = to_tets(Vr, Tr, args)
-            vm = set_volume_mesh(nodes, elem, attrib)
-            vm.set_transform(transform)
+            try:
+                nodes, elem, attrib = to_tets(Vr, Tr, args)
+                vm = set_volume_mesh(nodes, elem, attrib)
+                vm.set_transform(transform)
+            except Exception as e:
+                ps.info(f"Error during tetrahedralization:\n{e}")
 
         if imgui.Button("Save"):
             root = tk.Tk()
