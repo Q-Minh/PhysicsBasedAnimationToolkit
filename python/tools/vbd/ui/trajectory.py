@@ -21,6 +21,7 @@ class Trajectory:
     _tmax: int
     _autoplay: bool
     _dt: float
+    _screenshot: bool
     _clock_time: float
 
     def __init__(self):
@@ -34,6 +35,7 @@ class Trajectory:
         self._autoplay = False
         self._dt = 1e-2
         self._clock_time = time.time()
+        self._screenshot = False
 
     def draw(self):
         imgui.PushID("Trajectory")
@@ -53,6 +55,9 @@ class Trajectory:
             autoplay_changed, self._autoplay = imgui.Checkbox(
                 "Autoplay", self._autoplay
             )
+            imgui.SameLine()
+            _, self._screenshot = imgui.Checkbox("Screenshot", self._screenshot)
+
             if t != self._t or sync:
                 self._t = t
                 self._dirty = True
@@ -64,8 +69,13 @@ class Trajectory:
                     now = time.time()
                     elapsed = now - self._clock_time
                     self._clock_time = now
-                    n_frames_advance = round(elapsed / self._dt)
+                    if self._screenshot:
+                        ps.screenshot("{:08d}.png".format(self._t))
+                        n_frames_advance = 1
+                    else:
+                        n_frames_advance = round(elapsed / self._dt)
                     self._t = min(self._t + n_frames_advance, self._tmax)
+
 
         imgui.PopID()
 
