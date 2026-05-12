@@ -484,9 +484,9 @@ def _classify_edge_edge_contacts(
         if is_xc1_vertex or is_xc2_vertex:
             continue
         if is_edge_feasible(
-            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(True)  # type: ignore
+            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(False)  # type: ignore
         ) and is_edge_feasible(
-            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(True)  # type: ignore
+            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(False)  # type: ignore
         ):  # type: ignore
             if n_ee < MAX_EE_PER_THREAD:
                 tee[brow] = he2
@@ -1233,7 +1233,7 @@ def _planar_truncate(
         lambda_c = ogc.vv_lambda[c]
         xc1 = xki
         xc2 = xk[j]
-        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
     # 1b. Vertex-vertex contacts (reverse)
     for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
@@ -1245,7 +1245,7 @@ def _planar_truncate(
         lambda_c = ogc.vv_lambda[c]
         xc1 = xk[j]
         xc2 = xki
-        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
     # 2. Vertex-halfedge contacts (forward)
     for c in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
@@ -1259,7 +1259,7 @@ def _planar_truncate(
         p = halfedges.incoming_vertex(meshes.F, he)
         q = halfedges.outgoing_vertex(meshes.F, he)
         xc2 = b0 * xk[p] + b1 * xk[q]
-        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
     # 3. Vertex-triangle contacts (forward)
     for c in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
@@ -1277,7 +1277,7 @@ def _planar_truncate(
         w = wp.float32(1) - u - v
         xc1 = xki
         xc2 = u * xk[p] + v * xk[q] + w * xk[r]
-        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
     # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
     for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):
@@ -1301,7 +1301,7 @@ def _planar_truncate(
             j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
             xc1 = (wp.float32(1) - s1) * xk[i_he] + s1 * xk[j_he]
             xc2 = (wp.float32(1) - s2) * xk[i_he2] + s2 * xk[j_he2]
-            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
         # 5.a VE contacts (reverse): he is v-side
         for l in range(
@@ -1319,7 +1319,7 @@ def _planar_truncate(
             p = halfedges.incoming_vertex(meshes.F, he)
             q = halfedges.outgoing_vertex(meshes.F, he)
             xc2 = b0 * xk[p] + b1 * xk[q]
-            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
         # 5.b VF contacts (reverse): face of hei contains vertex i
         f = halfedges.face_of_half_edge(hei)
@@ -1342,7 +1342,7 @@ def _planar_truncate(
             w = wp.float32(1) - u - v
             xc1 = xk[_i]
             xc2 = u * xk[p] + v * xk[q] + w * xk[r]
-            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
         # 5.c EE contacts (reverse): he is v-side
         for l in range(
@@ -1360,7 +1360,7 @@ def _planar_truncate(
             j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
             xc1 = (wp.float32(1) - s1) * xk[i_he2] + s1 * xk[j_he2]
             xc2 = (wp.float32(1) - s2) * xk[i_he] + s2 * xk[j_he]
-            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
     # Final truncation
     ts = wp.tile(t)  # type: ignore
@@ -1369,6 +1369,8 @@ def _planar_truncate(
         assert tmin[0] > wp.float32(0) and tmin[0] <= wp.float32(1)  # type: ignore
         assert wp.norm_l2(dxi) < rq
         x[i] = xki + tmin[0] * dxi  # type: ignore
+
+    # TODO: Assert that we actually are in all our exclusive regions
 
 
 class Ogc:
