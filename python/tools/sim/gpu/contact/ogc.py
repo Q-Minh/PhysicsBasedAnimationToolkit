@@ -1028,7 +1028,6 @@ def _compute_separating_plane_offsets(
 
     n_verts = meshes.V.shape[0]
     n_half_edges = meshes.EHE.shape[0]
-    n_tris = meshes.F.shape[0]
 
     n_vv = ogc.vv.prefix[n_verts]
     n_ve = ogc.ve.prefix[n_verts]
@@ -1179,6 +1178,7 @@ def _planar_dat_truncate_one(
     # Assert that if the denominator is near zero, i.e. the vertex
     # is moving parallel to the plane, then the vertex is on the
     # correct side of the plane (i.e. non penetrating).
+    # eps = wp.float32(1e-10)  # type: ignore
     parallel = den == wp.float32(0)
     assert not parallel or wp.dot(xi - p, n) > wp.float32(0)  # type: ignore
     if not parallel:
@@ -1227,7 +1227,6 @@ def _planar_truncate(
 
     gamma = wp.float32(2) * ogc.gammap
     t = wp.float32(1)
-    eps = wp.float32(1e-10)  # type: ignore
 
     # 1a. Vertex-vertex contacts (forward)
     for c in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
@@ -1242,12 +1241,12 @@ def _planar_truncate(
 
     # 1b. Vertex-vertex contacts (reverse)
     for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
+        c = ogc.rvv2vv[k]
         vj = ogc.rvv.v[k]
         j = meshes.V[vj]
-        k = ogc.rvv2vv[k]
-        basis = ogc.vv_bases[k]
+        basis = ogc.vv_bases[c]
         n = -basis[0, :]
-        lambda_c = ogc.vv_lambda[k]
+        lambda_c = ogc.vv_lambda[c]
         xc1 = xk[j]
         xc2 = xki
         t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
@@ -1261,27 +1260,27 @@ def _planar_truncate(
         n = basis[0, :]
         lambda_c = ogc.ve_lambda[c]
         xc1 = xki
-        j = halfedges.incoming_vertex(meshes.F, he)
-        k = halfedges.outgoing_vertex(meshes.F, he)
-        xc2 = b0 * xk[j] + b1 * xk[k]
+        p = halfedges.incoming_vertex(meshes.F, he)
+        q = halfedges.outgoing_vertex(meshes.F, he)
+        xc2 = b0 * xk[p] + b1 * xk[q]
         t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
     # 3. Vertex-triangle contacts (forward)
-    for k in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
-        f = ogc.vf.v[k]
-        basis = ogc.vf_bases[k]
-        uv = ogc.vf_bary[k]
+    for c in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
+        f = ogc.vf.v[c]
+        basis = ogc.vf_bases[c]
+        uv = ogc.vf_bary[c]
         n = basis[0, :]
-        lambda_c = ogc.vf_lambda[k]
+        lambda_c = ogc.vf_lambda[c]
         finds = meshes.F[f]
-        j = finds[0]
-        k = finds[1]
-        l = finds[2]
+        p = finds[0]
+        q = finds[1]
+        r = finds[2]
         u = uv[0]
         v = uv[1]
         w = wp.float32(1) - u - v
         xc1 = xki
-        xc2 = u * xk[j] + v * xk[k] + w * xk[l]
+        xc2 = u * xk[p] + v * xk[q] + w * xk[r]
         t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
     # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
@@ -1292,16 +1291,16 @@ def _planar_truncate(
         i_he = halfedges.incoming_vertex(meshes.F, he)
         j_he = halfedges.outgoing_vertex(meshes.F, he)
         # 4. EE contacts (forward): he is u-side
-        for l in range(
+        for c in range(
             ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
         ):
-            he2 = ogc.ee.v[l]
-            basis = ogc.ee_bases[l]
-            ee_bary = ogc.ee_bary[l]
+            he2 = ogc.ee.v[c]
+            basis = ogc.ee_bases[c]
+            ee_bary = ogc.ee_bary[c]
             s1 = ee_bary[0]
             s2 = ee_bary[1]
             n = basis[0, :]
-            lambda_c = ogc.ee_lambda[l]
+            lambda_c = ogc.ee_lambda[c]
             i_he2 = halfedges.incoming_vertex(meshes.F, he2)
             j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
             xc1 = (wp.float32(1) - s1) * xk[i_he] + s1 * xk[j_he]
@@ -1321,13 +1320,14 @@ def _planar_truncate(
             n = basis[0, :]
             lambda_c = ogc.ve_lambda[c]
             xc1 = xk[_i]
-            j = halfedges.incoming_vertex(meshes.F, he)
-            k = halfedges.outgoing_vertex(meshes.F, he)
-            xc2 = b0 * xk[j] + b1 * xk[k]
+            p = halfedges.incoming_vertex(meshes.F, he)
+            q = halfedges.outgoing_vertex(meshes.F, he)
+            xc2 = b0 * xk[p] + b1 * xk[q]
             t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
         # 5.b VF contacts (reverse): face of hei contains vertex i
         f = halfedges.face_of_half_edge(hei)
+        finds = meshes.F[f]
         for l in range(
             ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
         ):
@@ -1338,15 +1338,14 @@ def _planar_truncate(
             uv = ogc.vf_bary[c]
             n = basis[0, :]
             lambda_c = ogc.vf_lambda[c]
-            finds = meshes.F[f]
-            j = finds[0]
-            k = finds[1]
-            l = finds[2]
+            p = finds[0]
+            q = finds[1]
+            r = finds[2]
             u = uv[0]
             v = uv[1]
             w = wp.float32(1) - u - v
             xc1 = xk[_i]
-            xc2 = u * xk[j] + v * xk[k] + w * xk[l]
+            xc2 = u * xk[p] + v * xk[q] + w * xk[r]
             t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
 
         # 5.c EE contacts (reverse): he is v-side
@@ -1510,7 +1509,7 @@ class Ogc:
         )
         # 3. Use TransformIterator on the ZipIterator as transform = lambda x: sqrt((x[3] - x[0])**2 + (x[4] - x[1])**2 + (x[5] - x[2])**2)
         self._rq_transform_it = cuda.compute.TransformIterator(
-            self._rq_zip_it,
+            zip_it,
             lambda x: math.sqrt(
                 (x[3] - x[0]) ** 2 + (x[4] - x[1]) ** 2 + (x[5] - x[2]) ** 2
             ),
