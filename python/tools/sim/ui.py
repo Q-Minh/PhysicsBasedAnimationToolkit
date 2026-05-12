@@ -351,6 +351,7 @@ def main():
     # wp.config.verify_cuda = True
     # wp.config.print_launches = True
     # wp.config.verify_fp = True
+    # wp.config.cache_kernels = False
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)

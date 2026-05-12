@@ -486,9 +486,9 @@ def _classify_edge_edge_contacts(
         if is_xc1_vertex or is_xc2_vertex:
             continue
         if is_edge_feasible(
-            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(False)  # type: ignore
+            x, meshes.F, meshes.GHEF, hei1, xc2, check_adjacent_facets=wp.bool(True)  # type: ignore
         ) and is_edge_feasible(
-            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(False)  # type: ignore
+            x, meshes.F, meshes.GHEF, he2, xc1, check_adjacent_facets=wp.bool(True)  # type: ignore
         ):  # type: ignore
             if n_ee < MAX_EE_PER_THREAD:
                 tee[brow] = he2
@@ -1021,9 +1021,9 @@ def _planar_dat_truncate_one(
     xc1: wp.vec3f,
     xc2: wp.vec3f,
     lambda_c: wp.float32,
-    t: wp.float32,
     gamma: wp.float32,
 ) -> wp.float32:
+    t = wp.float32(1)
     p = (wp.float32(1) - lambda_c) * xc1 + lambda_c * xc2
     den = wp.dot(dx, n)  # type: ignore
     # Assert that if the denominator is near zero, i.e. the vertex
@@ -1035,33 +1035,6 @@ def _planar_dat_truncate_one(
     if not parallel:
         tk = gamma * (wp.dot(p - xk, n) / den)  # type: ignore
         if tk > wp.float32(0) and tk < t:
-            t = tk
-    return t
-
-
-@wp.func
-def _scatter_planar_truncate_one(
-    xk: wp.vec3f,
-    x: wp.vec3f,
-    dx: wp.vec3f,
-    n: wp.vec3f,
-    xc1: wp.vec3f,
-    xc2: wp.vec3f,
-    lambda_c: wp.float32,
-    gamma: wp.float32,
-):
-    p = (wp.float32(1) - lambda_c) * xc1 + lambda_c * xc2
-    den = wp.dot(dx, n)  # type: ignore
-    # Assert that if the denominator is near zero, i.e. the vertex
-    # is moving parallel to the plane, then the vertex is on the
-    # correct side of the plane (i.e. non penetrating).
-    eps = wp.float32(1e-10)  # type: ignore
-    parallel = wp.abs(den) <= eps
-    # assert not parallel or wp.dot(x - p, n) > wp.float32(0)  # type: ignore
-    t = wp.float32(1)
-    if not parallel:
-        tk = gamma * (wp.dot(p - xk, n) / den)  # type: ignore
-        if tk > wp.float32(0):
             t = tk
     return t
 
@@ -1124,10 +1097,9 @@ def _vertex_triangle_planar_dat(
         xkc1,  # type: ignore
         xkc2,
         llambda,
-        tv,
         gamma,
     )
-    ta = _scatter_planar_truncate_one(
+    ta = _planar_dat_truncate_one(
         xka,  # type: ignore
         xa,  # type: ignore
         xa - xka,  # type: ignore
@@ -1137,7 +1109,7 @@ def _vertex_triangle_planar_dat(
         llambda,
         gamma,
     )
-    tb = _scatter_planar_truncate_one(
+    tb = _planar_dat_truncate_one(
         xkb,  # type: ignore
         xb,  # type: ignore
         xb - xkb,  # type: ignore
@@ -1147,7 +1119,7 @@ def _vertex_triangle_planar_dat(
         llambda,
         gamma,
     )
-    tc = _scatter_planar_truncate_one(
+    tc = _planar_dat_truncate_one(
         xkc,  # type: ignore
         xc,  # type: ignore
         xc - xkc,  # type: ignore
@@ -1209,12 +1181,12 @@ def _edge_edge_planar_dat(
         llambda = dxe1n / den
     # Perform ray-plane intersection and atomic min truncation for edge 1
     tvi1 = _planar_dat_truncate_one(
-        xki1, xi1, dxi1, -n, xc1, xc2, llambda, tvi1, gamma  # type: ignore
+        xki1, xi1, dxi1, -n, xc1, xc2, llambda, gamma  # type: ignore
     )
     tvj1 = _planar_dat_truncate_one(
-        xkj1, xj1, dxj1, -n, xc1, xc2, llambda, tvj1, gamma  # type: ignore
+        xkj1, xj1, dxj1, -n, xc1, xc2, llambda, gamma  # type: ignore
     )
-    tvi2 = _scatter_planar_truncate_one(
+    tvi2 = _planar_dat_truncate_one(
         xki2,  # type: ignore
         xi2,  # type: ignore
         dxi2,  # type: ignore
@@ -1224,7 +1196,7 @@ def _edge_edge_planar_dat(
         llambda,
         gamma,
     )
-    tvj2 = _scatter_planar_truncate_one(
+    tvj2 = _planar_dat_truncate_one(
         xkj2,  # type: ignore
         xj2,  # type: ignore
         dxj2,  # type: ignore
@@ -1294,74 +1266,84 @@ def _planar_dat(
                 va = meshes.GXV[finds[0]]
                 vb = meshes.GXV[finds[1]]
                 vc = meshes.GXV[finds[2]]
+                # TODO: For some reason, these scattered atomic mins cause issues,
+                # probably also with stability.
                 # wp.atomic_min(ogc.tv, va, ta)
                 # wp.atomic_min(ogc.tv, vb, tb)
                 # wp.atomic_min(ogc.tv, vc, tc)
 
         # Global write
-        tvs = wp.tile(tv)  # type: ignore
-        tvs_min = wp.tile_min(tvs)
-        tv_min = wp.tile_extract(tvs_min, wp.int32(0))  # type: ignore
-        if local_tid == 0:
-            wp.atomic_min(ogc.tv, v, tv_min)  # type: ignore
+        # TODO: Truncation yields really weird artifacts!!
+        # tvs = wp.tile(tv)  # type: ignore
+        # tvs_min = wp.tile_min(tvs)
+        # tv_min = wp.tile_extract(tvs_min, wp.int32(0))  # type: ignore
+        # if local_tid == 0:
+        #     wp.atomic_min(ogc.tv, v, tv_min)  # type: ignore
 
     # Loop over all edge-edge broad phase (one-sided) pairs and planar DAT on each side using atomic mins on ray-plane intersections
-    # if block_id < n_edges:
-    #     e = block_id
-    #     e1 = e
-    #     einds1 = meshes.E[e1]
-    #     xi1, xj1 = x[einds1[0]], x[einds1[1]]
-    #     xki1, xkj1 = xk[einds1[0]], xk[einds1[1]]
-    #     dxi1 = xi1 - xki1
-    #     dxj1 = xj1 - xkj1
-    #     tvi1 = wp.float32(1)
-    #     tvj1 = wp.float32(1)
-    #     # Query all nearby edges
-    #     query = wp.tile_bvh_query_aabb(
-    #         ogc.e_bvh_id,
-    #         ogc.e_lowers[e],
-    #         ogc.e_uppers[e],
-    #     )
-    #     # Store all candidates in thread local candidate list
-    #     tee = teelist(wp.int32(-1))
-    #     for brow in range(MAX_EE_PER_THREAD):
-    #         if not wp.tile_query_valid(query):
-    #             break
-    #         candidates = wp.tile_bvh_query_next(query)
-    #         e2 = wp.untile(candidates)
-    #         tee[brow] = e2
-    #     # Visit each candidate pair (e1, e2) where e1 < e2 to avoid double counting
-    #     for brow in range(MAX_EE_PER_THREAD):
-    #         e2 = tee[brow]
-    #         # Only visit unique pairs (e1, e2) where e1 < e2
-    #         if e2 > e1:  # type: ignore
-    #             einds2 = meshes.E[e2]
-    #             tvi1_candidate, tvj1_candidate, tvi2, tvj2 = _edge_edge_planar_dat(
-    #                 x,
-    #                 xk,
-    #                 einds1,
-    #                 einds2,
-    #                 xi1,  # type: ignore
-    #                 xki1,  # type: ignore
-    #                 dxi1,  # type: ignore
-    #                 xj1,  # type: ignore
-    #                 xkj1,  # type: ignore
-    #                 dxj1,  # type: ignore
-    #                 gamma,
-    #             )
-    #             tvi1 = wp.min(tvi1, tvi1_candidate)
-    #             tvj1 = wp.min(tvj1, tvj1_candidate)
-    #             wp.atomic_min(ogc.tv, meshes.GXV[einds2[0]], tvi2)  # type: ignore
-    #             wp.atomic_min(ogc.tv, meshes.GXV[einds2[1]], tvj2)  # type: ignore
+    if block_id < n_edges:
+        e = block_id
+        e1 = e
+        einds1 = meshes.E[e1]
+        xi1, xj1 = x[einds1[0]], x[einds1[1]]
+        xki1, xkj1 = xk[einds1[0]], xk[einds1[1]]
+        dxi1 = xi1 - xki1
+        dxj1 = xj1 - xkj1
+        tvi1 = wp.float32(1)
+        tvj1 = wp.float32(1)
+        # Query all nearby edges
+        query = wp.tile_bvh_query_aabb(
+            ogc.e_bvh_id,
+            ogc.e_lowers[e],
+            ogc.e_uppers[e],
+        )
+        # Store all candidates in thread local candidate list
+        tee = teelist(wp.int32(-1))
+        for brow in range(MAX_EE_PER_THREAD):
+            if not wp.tile_query_valid(query):
+                break
+            candidates = wp.tile_bvh_query_next(query)
+            e2 = wp.untile(candidates)
+            tee[brow] = e2
+        # Visit each candidate pair (e1, e2) where e1 < e2 to avoid double counting
+        for brow in range(MAX_EE_PER_THREAD):
+            e2 = tee[brow]
+            # Only visit unique pairs (e1, e2) where e1 < e2
+            if e2 > e1:  # type: ignore
+                einds2 = meshes.E[e2]
+                tvi1_candidate, tvj1_candidate, tvi2, tvj2 = _edge_edge_planar_dat(
+                    x,
+                    xk,
+                    einds1,
+                    einds2,
+                    xi1,  # type: ignore
+                    xki1,  # type: ignore
+                    dxi1,  # type: ignore
+                    xj1,  # type: ignore
+                    xkj1,  # type: ignore
+                    dxj1,  # type: ignore
+                    gamma,
+                )
+                tvi1 = wp.min(tvi1, tvi1_candidate)
+                tvj1 = wp.min(tvj1, tvj1_candidate)
+                # TODO: For some reason, these scattered atomic mins cause issues,
+                # probably also with stability.
+                # wp.atomic_min(ogc.tv, meshes.GXV[einds2[0]], tvi2)  # type: ignore
+                # wp.atomic_min(ogc.tv, meshes.GXV[einds2[1]], tvj2)  # type: ignore
 
-    #     # Global write
-    #     tvi1_min = wp.tile_min(wp.tile(tvi1))  # type: ignore
-    #     tvj1_min = wp.tile_min(wp.tile(tvj1))  # type: ignore
-    #     if local_tid == 0:
-    #         vi1 = meshes.GXV[einds1[0]]
-    #         vj1 = meshes.GXV[einds1[1]]
-    #         wp.atomic_min(ogc.tv, vi1, tvi1_min[0])  # type: ignore
-    #         wp.atomic_min(ogc.tv, vj1, tvj1_min[0])  # type: ignore
+        # TODO: Investigate why these edge-edge planar DATs make the sim super unstable.
+        # Global write
+        # tvi1s = wp.tile(tvi1)  # type: ignore
+        # tvj1s = wp.tile(tvj1)  # type: ignore
+        # tvi1s_min = wp.tile_min(tvi1s)
+        # tvj1s_min = wp.tile_min(tvj1s)
+        # tvi1_min = wp.tile_extract(tvi1s_min, wp.int32(0))  # type: ignore
+        # tvj1_min = wp.tile_extract(tvj1s_min, wp.int32(0))  # type: ignore
+        # if local_tid == 0:
+        #     vi1 = meshes.GXV[einds1[0]]
+        #     vj1 = meshes.GXV[einds1[1]]
+        #     wp.atomic_min(ogc.tv, vi1, tvi1_min)  # type: ignore
+        #     wp.atomic_min(ogc.tv, vj1, tvj1_min)  # type: ignore
 
 
 @wp.kernel
