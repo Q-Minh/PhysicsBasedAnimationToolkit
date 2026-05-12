@@ -533,26 +533,72 @@ def local_contact_derivatives(
 
     # 1a. Vertex-vertex contacts (forward)
     for k in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
-        gic, Hic = _contact_vv_fwd(k, i, meshes.V[ogc.vv.v[k]], xt, x, cvv, vv_bases, sigma_n, sigma_f, dmin)  # type: ignore
+        gic, Hic = _contact_vv_fwd(
+            k,  # type: ignore
+            i,
+            meshes.V[ogc.vv.v[k]],
+            xt,
+            x,
+            cvv,
+            vv_bases,
+            sigma_n,
+            sigma_f,
+            dmin,
+        )
         gi += gic
         Hi += Hic
     # 1b. Vertex-vertex contacts (reverse)
     for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
-        gic, Hic = _contact_vv_rev(ogc.rvv2vv[k], i, meshes.V[ogc.rvv.v[k]], xt, x, cvv, vv_bases, sigma_n, sigma_f, dmin)  # type: ignore
+        gic, Hic = _contact_vv_rev(
+            ogc.rvv2vv[k],
+            i,
+            meshes.V[ogc.rvv.v[k]],
+            xt,
+            x,
+            cvv,
+            vv_bases,
+            sigma_n,
+            sigma_f,
+            dmin,
+        )
         gi += gic
         Hi += Hic
     # 2. Vertex-halfedge contacts (forward)
     for k in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
-        hei = ogc.ve.v[k]
-        hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
-        he = wp.max(hei, hej)
-        gic, Hic = _contact_ve_fwd(k, i, he, xt, x, meshes.F, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
+        he = ogc.ve.v[k]
+        gic, Hic = _contact_ve_fwd(
+            k,  # type: ignore
+            i,
+            he,
+            xt,
+            x,
+            meshes.F,
+            cve,
+            ve_bases,
+            ve_bary,
+            sigma_n,
+            sigma_f,
+            dmin,
+        )
         gi += gic
         Hi += Hic
     # 3. Vertex-triangle contacts (forward)
     for k in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
         f = ogc.vf.v[k]
-        gic, Hic = _contact_vf_fwd(k, i, f, xt, x, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
+        gic, Hic = _contact_vf_fwd(
+            k,  # type: ignore
+            i,
+            f,
+            xt,
+            x,
+            meshes.F,
+            cvf,
+            vf_bases,
+            vf_bary,
+            sigma_n,
+            sigma_f,
+            dmin,
+        )
         gi += gic
         Hi += Hic
     # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
@@ -566,17 +612,44 @@ def local_contact_derivatives(
         for l in range(
             ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
         ):
-            hei2 = ogc.ee.v[l]
-            hej2 = halfedges.opposite_half_edge(meshes.F, hei2, meshes.GHEF)
-            he2 = wp.max(hei2, hej2)
-            gic, Hic = _contact_ee_fwd(l, i, i_he, j_he, he2, xt, x, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            he2 = ogc.ee.v[l]
+            gic, Hic = _contact_ee_fwd(
+                l,  # type: ignore
+                i,
+                i_he,
+                j_he,
+                he2,
+                xt,
+                x,
+                meshes.F,
+                cee,
+                ee_bases,
+                ee_bary,
+                sigma_n,
+                sigma_f,
+                dmin,
+            )
             gi += gic
             Hi += Hic
         # 5.a VE contacts (reverse): he is v-side
         for l in range(
             ogc.rve.prefix[he] + local_tid, ogc.rve.prefix[he + 1], block_dims
         ):
-            gic, Hic = _contact_ve_rev(ogc.rve2ve[l], i, i_he, j_he, meshes.V[ogc.rve.v[l]], xt, x, cve, ve_bases, ve_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            gic, Hic = _contact_ve_rev(
+                ogc.rve2ve[l],
+                i,
+                i_he,
+                j_he,
+                meshes.V[ogc.rve.v[l]],
+                xt,
+                x,
+                cve,
+                ve_bases,
+                ve_bary,
+                sigma_n,
+                sigma_f,
+                dmin,
+            )
             gi += gic
             Hi += Hic
         # 5.b VF contacts (reverse): face of hei contains vertex i
@@ -584,17 +657,44 @@ def local_contact_derivatives(
         for l in range(
             ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
         ):
-            gic, Hic = _contact_vf_rev(ogc.rvf2vf[l], i, f, meshes.V[ogc.rvf.v[l]], xt, x, meshes.F, cvf, vf_bases, vf_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            gic, Hic = _contact_vf_rev(
+                ogc.rvf2vf[l],
+                i,
+                f,
+                meshes.V[ogc.rvf.v[l]],
+                xt,
+                x,
+                meshes.F,
+                cvf,
+                vf_bases,
+                vf_bary,
+                sigma_n,
+                sigma_f,
+                dmin,
+            )
             gi += gic
             Hi += Hic
         # 5.c EE contacts (reverse): he is v-side
         for l in range(
             ogc.ree.prefix[he] + local_tid, ogc.ree.prefix[he + 1], block_dims
         ):
-            hei2 = ogc.ree.v[l]
-            hej2 = halfedges.opposite_half_edge(meshes.F, hei2, meshes.GHEF)
-            he2 = wp.max(hei2, hej2)
-            gic, Hic = _contact_ee_rev(ogc.ree2ee[l], i, i_he, j_he, he2, xt, x, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            he2 = ogc.ree.v[l]
+            gic, Hic = _contact_ee_rev(
+                ogc.ree2ee[l],
+                i,
+                i_he,
+                j_he,
+                he2,
+                xt,
+                x,
+                meshes.F,
+                cee,
+                ee_bases,
+                ee_bary,
+                sigma_n,
+                sigma_f,
+                dmin,
+            )
             gi += gic
             Hi += Hic
 

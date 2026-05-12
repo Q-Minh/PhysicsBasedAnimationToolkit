@@ -174,12 +174,12 @@ class OgcData:
     ee_bary: wp.array[wp.vec2f]  # (ee_capacity,) parameters (s,t) on edge1 and edge2
 
     # Planar DAT plane offsets
-    lambda_vv: wp.array[
+    vv_lambda: wp.array[
         wp.float32
     ]  # (vv_capacity,) vertex-vertex contact plane offsets
-    lambda_ve: wp.array[wp.float32]  # (ve_capacity,) vertex-edge contact plane offsets
-    lambda_vf: wp.array[wp.float32]  # (vf_capacity,) vertex-face contact plane offsets
-    lambda_ee: wp.array[wp.float32]  # (ee_capacity,) edge-edge contact plane offsets
+    ve_lambda: wp.array[wp.float32]  # (ve_capacity,) vertex-edge contact plane offsets
+    vf_lambda: wp.array[wp.float32]  # (vf_capacity,) vertex-face contact plane offsets
+    ee_lambda: wp.array[wp.float32]  # (ee_capacity,) edge-edge contact plane offsets
 
 
 @wp.func
@@ -1012,6 +1012,368 @@ def _compute_ee_contact_data(
     ogc.ee_bary[k] = st
 
 
+@wp.kernel
+def _compute_separating_plane_offsets(
+    xprev: wp.array[
+        wp.vec3f
+    ],  # (N,) reference positions cached at last prepare_for_execution
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
+    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+):
+    tid = wp.tid()
+    block_dims = wp.block_dim()
+    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
+
+    n_verts = meshes.V.shape[0]
+    n_half_edges = meshes.EHE.shape[0]
+    n_tris = meshes.F.shape[0]
+
+    n_vv = ogc.vv.prefix[n_verts]
+    n_ve = ogc.ve.prefix[n_verts]
+    n_vf = ogc.vf.prefix[n_verts]
+    n_ee = ogc.ee.prefix[n_half_edges]
+
+    # Compute vertex-vertex contact plane offsets
+    if block_id < n_vv:
+        vi = block_id
+        i = meshes.V[vi]
+        xki = xprev[i]
+        xi = x[i]
+        begin = ogc.vv.prefix[vi]
+        end = ogc.vv.prefix[vi + 1]
+        for c in range(begin + local_tid, end, block_dims):
+            vj = ogc.vv.v[c]
+            basis = ogc.vv_bases[c]
+            j = meshes.V[vj]
+            xkj = xprev[j]
+            xj = x[j]
+            n = basis[0, :]
+            dxin = wp.max(wp.dot(xi - xki, -n), wp.float32(0))  # type: ignore
+            dxjn = wp.max(wp.dot(xj - xkj, n), wp.float32(0))  # type: ignore
+            den = dxin + dxjn
+            if den < wp.float32(1e-10):  # type: ignore
+                ogc.vv_lambda[c] = wp.float32(0.5)  # type: ignore
+            else:
+                ogc.vv_lambda[c] = dxin / den
+
+    # Compute vertex-edge contact plane offsets
+    if block_id < n_ve:
+        vi = block_id
+        i = meshes.V[vi]
+        xki = xprev[i]
+        xi = x[i]
+        begin = ogc.ve.prefix[vi]
+        end = ogc.ve.prefix[vi + 1]
+        for c in range(begin + local_tid, end, block_dims):
+            he = ogc.ve.v[c]
+            basis = ogc.ve_bases[c]
+            j = halfedges.incoming_vertex(meshes.F, he)
+            k = halfedges.outgoing_vertex(meshes.F, he)
+            xj = x[j]
+            xk = x[k]
+            xkj = xprev[j]
+            xkk = xprev[k]
+            n = basis[0, :]
+            dxin = wp.max(wp.dot(xi - xki, -n), wp.float32(0))  # type: ignore
+            dxen = wp.max(
+                wp.max(wp.dot(xj - xkj, n), wp.dot(xk - xkk, n)),  # type: ignore
+                wp.float32(0),
+            )
+            den = dxin + dxen
+            if den < wp.float32(1e-10):  # type: ignore
+                ogc.ve_lambda[c] = wp.float32(0.5)  # type: ignore
+            else:
+                ogc.ve_lambda[c] = dxin / den
+
+    # Compute vertex-face contact plane offsets
+    if block_id < n_vf:
+        vi = block_id
+        i = meshes.V[vi]
+        xki = xprev[i]
+        xi = x[i]
+        begin = ogc.vf.prefix[vi]
+        end = ogc.vf.prefix[vi + 1]
+        for c in range(begin + local_tid, end, block_dims):
+            f = ogc.vf.v[c]
+            basis = ogc.vf_bases[c]
+            finds = meshes.F[f]
+            j = finds[0]
+            k = finds[1]
+            l = finds[2]
+            xj = x[j]
+            xk = x[k]
+            xl = x[l]
+            xkj = xprev[j]
+            xkk = xprev[k]
+            xkl = xprev[l]
+            n = basis[0, :]
+            dxin = wp.max(wp.dot(xi - xki, -n), wp.float32(0))  # type: ignore
+            dxfn = wp.max(
+                wp.max(
+                    wp.max(
+                        wp.dot(xj - xkj, n),  # type: ignore
+                        wp.dot(xk - xkk, n),  # type: ignore
+                    ),
+                    wp.dot(xl - xkl, n),  # type: ignore
+                ),
+                wp.float32(0),
+            )
+            den = dxin + dxfn
+            if den < wp.float32(1e-10):  # type: ignore
+                ogc.vf_lambda[c] = wp.float32(0.5)  # type: ignore
+            else:
+                ogc.vf_lambda[c] = dxin / den
+
+    # Compute edge-edge contact plane offsets
+    if block_id < n_ee:
+        he1 = block_id
+        i1 = halfedges.incoming_vertex(meshes.F, he1)  # type: ignore
+        j1 = halfedges.outgoing_vertex(meshes.F, he1)  # type: ignore
+        begin = ogc.ee.prefix[he1]
+        end = ogc.ee.prefix[he1 + 1]
+        for c in range(begin + local_tid, end, block_dims):
+            he2 = ogc.ee.v[c]
+            basis = ogc.ee_bases[c]
+            i2 = halfedges.incoming_vertex(meshes.F, he2)
+            j2 = halfedges.outgoing_vertex(meshes.F, he2)
+            xi1 = x[i1]
+            xj1 = x[j1]
+            xi2 = x[i2]
+            xj2 = x[j2]
+            xki1 = xprev[i1]
+            xkj1 = xprev[j1]
+            xki2 = xprev[i2]
+            xkj2 = xprev[j2]
+            n = basis[0, :]
+            dxe1n = wp.max(
+                wp.max(wp.dot(xi1 - xki1, -n), wp.dot(xj1 - xkj1, -n)),  # type: ignore
+                wp.float32(0),
+            )
+            dxe2n = wp.max(
+                wp.max(wp.dot(xi2 - xki2, n), wp.dot(xj2 - xkj2, n)),  # type: ignore
+                wp.float32(0),
+            )
+            den = dxe1n + dxe2n
+            if den < wp.float32(1e-10):  # type: ignore
+                ogc.ee_lambda[c] = wp.float32(0.5)  # type: ignore
+            else:
+                ogc.ee_lambda[c] = dxe1n / den
+
+
+@wp.func
+def _planar_dat_truncate_one(
+    xki: wp.vec3f,
+    xi: wp.vec3f,
+    dxi: wp.vec3f,
+    n: wp.vec3f,
+    xc1: wp.vec3f,
+    xc2: wp.vec3f,
+    lambda_c: wp.float32,
+    t: wp.float32,
+    gamma: wp.float32,
+) -> wp.float32:
+    p = (wp.float32(1) - lambda_c) * xc1 + lambda_c * xc2
+    den = wp.dot(dxi, n)  # type: ignore
+    # Assert that if the denominator is near zero, i.e. the vertex
+    # is moving parallel to the plane, then the vertex is on the
+    # correct side of the plane (i.e. non penetrating).
+    parallel = den == wp.float32(0)
+    assert not parallel or wp.dot(xi - p, n) > wp.float32(0)  # type: ignore
+    if not parallel:
+        tk = gamma * (wp.dot(p - xki, n) / den)  # type: ignore
+        if tk > wp.float32(0) and tk < t:
+            t = tk
+    return t
+
+
+@wp.kernel
+def _planar_truncate(
+    xk: wp.array[
+        wp.vec3f
+    ],  # (N,) reference positions cached at last prepare_for_execution
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
+    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+):
+    tid = wp.tid()
+    block_dims = wp.block_dim()
+    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
+    vi = block_id
+    i = meshes.V[vi]
+    xki = xk[i]
+    xi = x[i]
+    rq = ogc.r + ogc.arq * ogc.rq[0]
+    dxi = xi - xki
+    # Truncate xi to be at most distance |rq| from xki.
+    dxinorm = wp.norm_l2(dxi)
+    if dxinorm <= wp.float32(1e-10):  # type: ignore
+        x[i] = xki  # type: ignore
+        return
+    xi = xki + wp.min(dxinorm, rq) * (dxi / dxinorm)
+    dxi = xi - xki
+
+    # TODO: Loop over each contact incident on this thread block's vertex
+    # and perform truncation via ray-plane intersection query where
+    # the ray is r(t) = xki + t * (xi - xki) and the plane is defined
+    # by the contact basis normal n and offset \lambda as
+    # (x - p) \cdot n > 0 or (x - p) \cdot n < 0 depending on which side of
+    # the contact the vertex is on, and p = x_c^1 + \lambda * (x_c^2 - x_c^1) where
+    # \lambda is the precomputed contact plane offset, x_c^1 is the closest point
+    # on the contact primitive u, and x_c^2 is the closest point on the contact
+    # primitive v.
+
+    gamma = wp.float32(2) * ogc.gammap
+    t = wp.float32(1)
+    eps = wp.float32(1e-10)  # type: ignore
+
+    # 1a. Vertex-vertex contacts (forward)
+    for c in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
+        vj = ogc.vv.v[c]
+        j = meshes.V[vj]
+        basis = ogc.vv_bases[c]
+        n = basis[0, :]
+        lambda_c = ogc.vv_lambda[c]
+        xc1 = xki
+        xc2 = xk[j]
+        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+    # 1b. Vertex-vertex contacts (reverse)
+    for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
+        vj = ogc.rvv.v[k]
+        j = meshes.V[vj]
+        k = ogc.rvv2vv[k]
+        basis = ogc.vv_bases[k]
+        n = -basis[0, :]
+        lambda_c = ogc.vv_lambda[k]
+        xc1 = xk[j]
+        xc2 = xki
+        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+    # 2. Vertex-halfedge contacts (forward)
+    for c in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
+        he = ogc.ve.v[c]
+        basis = ogc.ve_bases[c]
+        b1 = ogc.ve_bary[c]
+        b0 = wp.float32(1) - b1
+        n = basis[0, :]
+        lambda_c = ogc.ve_lambda[c]
+        xc1 = xki
+        j = halfedges.incoming_vertex(meshes.F, he)
+        k = halfedges.outgoing_vertex(meshes.F, he)
+        xc2 = b0 * xk[j] + b1 * xk[k]
+        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+    # 3. Vertex-triangle contacts (forward)
+    for k in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
+        f = ogc.vf.v[k]
+        basis = ogc.vf_bases[k]
+        uv = ogc.vf_bary[k]
+        n = basis[0, :]
+        lambda_c = ogc.vf_lambda[k]
+        finds = meshes.F[f]
+        j = finds[0]
+        k = finds[1]
+        l = finds[2]
+        u = uv[0]
+        v = uv[1]
+        w = wp.float32(1) - u - v
+        xc1 = xki
+        xc2 = u * xk[j] + v * xk[k] + w * xk[l]
+        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+    # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
+    for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):
+        hei = meshes.GVHEadj[k]
+        hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
+        he = wp.max(hei, hej)
+        i_he = halfedges.incoming_vertex(meshes.F, he)
+        j_he = halfedges.outgoing_vertex(meshes.F, he)
+        # 4. EE contacts (forward): he is u-side
+        for l in range(
+            ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
+        ):
+            he2 = ogc.ee.v[l]
+            basis = ogc.ee_bases[l]
+            ee_bary = ogc.ee_bary[l]
+            s1 = ee_bary[0]
+            s2 = ee_bary[1]
+            n = basis[0, :]
+            lambda_c = ogc.ee_lambda[l]
+            i_he2 = halfedges.incoming_vertex(meshes.F, he2)
+            j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
+            xc1 = (wp.float32(1) - s1) * xk[i_he] + s1 * xk[j_he]
+            xc2 = (wp.float32(1) - s2) * xk[i_he2] + s2 * xk[j_he2]
+            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+        # 5.a VE contacts (reverse): he is v-side
+        for l in range(
+            ogc.rve.prefix[he] + local_tid, ogc.rve.prefix[he + 1], block_dims
+        ):
+            c = ogc.rve2ve[l]
+            _vi = ogc.rve.v[l]
+            _i = meshes.V[_vi]
+            basis = ogc.ve_bases[c]
+            b1 = ogc.ve_bary[c]
+            b0 = wp.float32(1) - b1
+            n = basis[0, :]
+            lambda_c = ogc.ve_lambda[c]
+            xc1 = xk[_i]
+            j = halfedges.incoming_vertex(meshes.F, he)
+            k = halfedges.outgoing_vertex(meshes.F, he)
+            xc2 = b0 * xk[j] + b1 * xk[k]
+            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+        # 5.b VF contacts (reverse): face of hei contains vertex i
+        f = halfedges.face_of_half_edge(hei)
+        for l in range(
+            ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
+        ):
+            c = ogc.rvf2vf[l]
+            _vi = ogc.rvf.v[l]
+            _i = meshes.V[_vi]
+            basis = ogc.vf_bases[c]
+            uv = ogc.vf_bary[c]
+            n = basis[0, :]
+            lambda_c = ogc.vf_lambda[c]
+            finds = meshes.F[f]
+            j = finds[0]
+            k = finds[1]
+            l = finds[2]
+            u = uv[0]
+            v = uv[1]
+            w = wp.float32(1) - u - v
+            xc1 = xk[_i]
+            xc2 = u * xk[j] + v * xk[k] + w * xk[l]
+            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+        # 5.c EE contacts (reverse): he is v-side
+        for l in range(
+            ogc.ree.prefix[he] + local_tid, ogc.ree.prefix[he + 1], block_dims
+        ):
+            c = ogc.ree2ee[l]
+            he2 = ogc.ree.v[l]
+            basis = ogc.ee_bases[c]
+            ee_bary = ogc.ee_bary[c]
+            s1 = ee_bary[0]
+            s2 = ee_bary[1]
+            n = basis[0, :]
+            lambda_c = ogc.ee_lambda[c]
+            i_he2 = halfedges.incoming_vertex(meshes.F, he2)
+            j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
+            xc1 = (wp.float32(1) - s1) * xk[i_he2] + s1 * xk[j_he2]
+            xc2 = (wp.float32(1) - s2) * xk[i_he] + s2 * xk[j_he]
+            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
+
+    # Final truncation
+    ts = wp.tile(t)  # type: ignore
+    tmin = wp.tile_min(ts)
+    if local_tid == 0:
+        x[i] = xki + tmin[0] * dxi  # type: ignore
+
+
 class Ogc:
     """Offset Geometric Contact"""
 
@@ -1098,10 +1460,10 @@ class Ogc:
         self._ogc.ee_bases = wp.empty((ee_capacity,), dtype=wp.mat33f)  # type: ignore
         self._ogc.ee_bary = wp.empty((ee_capacity,), dtype=wp.vec2f)  # type: ignore
 
-        self._ogc.lambda_vv = wp.empty((vv_capacity,), dtype=wp.float32)  # type: ignore
-        self._ogc.lambda_ve = wp.empty((ve_capacity,), dtype=wp.float32)  # type: ignore
-        self._ogc.lambda_vf = wp.empty((vf_capacity,), dtype=wp.float32)  # type: ignore
-        self._ogc.lambda_ee = wp.empty((ee_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.vv_lambda = wp.empty((vv_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.ve_lambda = wp.empty((ve_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.vf_lambda = wp.empty((vf_capacity,), dtype=wp.float32)  # type: ignore
+        self._ogc.ee_lambda = wp.empty((ee_capacity,), dtype=wp.float32)  # type: ignore
 
         self._streams = [wp.Stream() for _ in range(10)]
 
@@ -1480,12 +1842,30 @@ class Ogc:
             x: Current vertex positions to truncate in-place
                (``wp.array[wp.vec3f]``, global-point indexed, shape ``(N,)``).
         """
-        # TODO: Implement planar DAT for truncation
+        n_verts, n_half_edges = self._meshes.n_verts, self._meshes.n_half_edges
+        block_dim = 32
         wp.launch(
-            _truncate_displacements,
-            dim=self._meshes.n_verts,
-            inputs=[self._xk, self._ogc.dminv, self._meshes.data.V, x],
+            kernel=_compute_separating_plane_offsets,
+            dim=max(n_verts, n_half_edges) * block_dim,
+            inputs=[
+                self._xk,
+                x,
+                self._meshes.data,
+                self._ogc,
+            ],
+            block_dim=block_dim,
         )
+        wp.launch(
+            kernel=_planar_truncate,
+            dim=n_verts * block_dim,
+            inputs=[self._xk, x, self._meshes.data, self._ogc],
+            block_dim=block_dim,
+        )
+        # wp.launch(
+        #     _truncate_displacements,
+        #     dim=self._meshes.n_verts,
+        #     inputs=[self._xk, self._ogc.dminv, self._meshes.data.V, x],
+        # )
 
     @property
     def data(self) -> OgcData:  # pyright: ignore[reportGeneralTypeIssues]
