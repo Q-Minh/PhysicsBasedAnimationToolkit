@@ -294,10 +294,10 @@ def make_callback(
                 if request_step:
                     if ui_state.screenshot_after_step and state.t == 0:
                         ps.screenshot("{:08d}.png".format(state.t))
-                    try:
-                        state.step()
-                    except Exception as e:
-                        ps.error("Simulation step failed: {}".format(e))
+                    # try:
+                    state.step()
+                    # except Exception as e:
+                    #     ps.error("Simulation step failed: {}".format(e))
                     _update_mesh(state, mesh_name)
                     if ui_state.screenshot_after_step:
                         ps.screenshot("{:08d}.png".format(state.t))
@@ -324,6 +324,7 @@ def make_callback(
 def _update_mesh(state: SimulationState, mesh_name: str):
     x = state.fem.data.x.numpy()  # (N, 3)
     ps.get_volume_mesh(mesh_name).update_vertex_positions(x)
+    ps.get_surface_mesh(mesh_name).update_vertex_positions(x)
 
 
 def parse_args():
@@ -374,6 +375,10 @@ def main():
     vm.add_scalar_quantity(
         "m(i)", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
     )
+    sm = ps.register_surface_mesh(
+        mesh_name, fem_cpu.X.T, state.multimesh.data.F.numpy()
+    )
+    sm.set_enabled(False)
     ps.set_user_callback(make_callback(state, UIState(), mesh_name))
     ps.show()
 
