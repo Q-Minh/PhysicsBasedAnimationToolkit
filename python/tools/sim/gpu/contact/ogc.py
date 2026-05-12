@@ -1028,14 +1028,10 @@ def _compute_separating_plane_offsets(
 
     n_verts = meshes.V.shape[0]
     n_half_edges = meshes.EHE.shape[0]
-
-    n_vv = ogc.vv.prefix[n_verts]
-    n_ve = ogc.ve.prefix[n_verts]
-    n_vf = ogc.vf.prefix[n_verts]
-    n_ee = ogc.ee.prefix[n_half_edges]
+    zero = wp.float32(1e-10)  # type: ignore
 
     # Compute vertex-vertex contact plane offsets
-    if block_id < n_vv:
+    if block_id < n_verts:
         vi = block_id
         i = meshes.V[vi]
         xki = xprev[i]
@@ -1052,13 +1048,13 @@ def _compute_separating_plane_offsets(
             dxin = wp.max(wp.dot(xi - xki, -n), wp.float32(0))  # type: ignore
             dxjn = wp.max(wp.dot(xj - xkj, n), wp.float32(0))  # type: ignore
             den = dxin + dxjn
-            if den < wp.float32(1e-10):  # type: ignore
+            if dxin <= zero and dxjn <= zero:
                 ogc.vv_lambda[c] = wp.float32(0.5)  # type: ignore
             else:
                 ogc.vv_lambda[c] = dxin / den
 
     # Compute vertex-edge contact plane offsets
-    if block_id < n_ve:
+    if block_id < n_verts:
         vi = block_id
         i = meshes.V[vi]
         xki = xprev[i]
@@ -1081,13 +1077,13 @@ def _compute_separating_plane_offsets(
                 wp.float32(0),
             )
             den = dxin + dxen
-            if den < wp.float32(1e-10):  # type: ignore
+            if dxin <= zero and dxen <= zero:
                 ogc.ve_lambda[c] = wp.float32(0.5)  # type: ignore
             else:
                 ogc.ve_lambda[c] = dxin / den
 
     # Compute vertex-face contact plane offsets
-    if block_id < n_vf:
+    if block_id < n_verts:
         vi = block_id
         i = meshes.V[vi]
         xki = xprev[i]
@@ -1120,13 +1116,13 @@ def _compute_separating_plane_offsets(
                 wp.float32(0),
             )
             den = dxin + dxfn
-            if den < wp.float32(1e-10):  # type: ignore
+            if dxin <= zero and dxfn <= zero:
                 ogc.vf_lambda[c] = wp.float32(0.5)  # type: ignore
             else:
                 ogc.vf_lambda[c] = dxin / den
 
     # Compute edge-edge contact plane offsets
-    if block_id < n_ee:
+    if block_id < n_half_edges:
         he1 = block_id
         i1 = halfedges.incoming_vertex(meshes.F, he1)  # type: ignore
         j1 = halfedges.outgoing_vertex(meshes.F, he1)  # type: ignore
