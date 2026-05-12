@@ -41,10 +41,10 @@ class OgcParams:
 VF_E_FACE_TRIANGLE = wp.constant(0)
 VF_E_FACE_EDGE = wp.constant(1)
 VF_E_FACE_VERTEX = wp.constant(2)
-MAX_VV_PER_THREAD = wp.constant(2)
-MAX_VE_PER_THREAD = wp.constant(2)
-MAX_VF_PER_THREAD = wp.constant(4)
-MAX_EE_PER_THREAD = wp.constant(4)
+MAX_VV_PER_THREAD = wp.constant(4)
+MAX_VE_PER_THREAD = wp.constant(4)
+MAX_VF_PER_THREAD = wp.constant(8)
+MAX_EE_PER_THREAD = wp.constant(8)
 _FUSED_CONTACT_DETECTION_BLOCK_SIZE = wp.constant(64)
 tvvlist = wp.types.vector(length=MAX_VV_PER_THREAD, dtype=wp.int32)
 tvelist = wp.types.vector(length=MAX_VE_PER_THREAD, dtype=wp.int32)
@@ -181,6 +181,8 @@ class OgcData:
     vf_lambda: wp.array[wp.float32]  # (vf_capacity,) vertex-face contact plane offsets
     ee_lambda: wp.array[wp.float32]  # (ee_capacity,) edge-edge contact plane offsets
 
+    tv: wp.array[wp.float32]  # (# verts,) planar DAT displacement scales
+
 
 @wp.func
 def _compute_edge_bounding_volume(
@@ -229,19 +231,19 @@ def _compute_bounding_volumes(
     rq = ogc.r + ogc.arq * ogc.rq[0]
     if tid < n_verts:
         v = tid
-        ogc.dminv[v] = rq
+        # ogc.dminv[v] = rq
     if tid < n_edges:
         e = tid
         he = meshes.EHE[e]
         einds = meshes.E[e]
-        ogc.dmine[he[0]] = rq
-        if he[1] >= 0:
-            ogc.dmine[he[1]] = rq
+        # ogc.dmine[he[0]] = rq
+        # if he[1] >= 0:
+        #     ogc.dmine[he[1]] = rq
         _compute_edge_bounding_volume(ogc, e, xk[einds[0]], xk[einds[1]], rq)  # type: ignore
     if tid < n_triangles:
         f = tid
         finds = meshes.F[f]
-        ogc.dminf[f] = rq
+        # ogc.dminf[f] = rq
         _compute_triangle_bounding_volume(ogc, f, xk[finds[0]], xk[finds[1]], xk[finds[2]], rq)  # type: ignore
 
 
@@ -379,10 +381,10 @@ def _classify_vertex_facet_contacts(
     n_verts: wp.int32,
     n_half_edges: wp.int32,
     n_tris: wp.int32,
-) -> Tuple[tvvlist, tvelist, tvflist, wp.int32, wp.int32, wp.int32, wp.float32]:  # type: ignore
+) -> Tuple[tvvlist, tvelist, tvflist, wp.int32, wp.int32, wp.int32]:  # type: ignore
     tvv, tve = tvvlist(n_verts), tvelist(n_half_edges)
     n_vv, n_ve, n_vf = wp.int32(0), wp.int32(0), wp.int32(0)
-    tdmin = ogc.dminv[v]  # thread local vertex minimum distance
+    # tdmin = ogc.dminv[v]  # thread local vertex minimum distance
     for brow in range(MAX_VF_PER_THREAD):
         f = tvf[brow]
         if f >= n_tris:
@@ -398,8 +400,8 @@ def _classify_vertex_facet_contacts(
         )
         xc = uvw[0] * xj + uvw[1] * xk + uvw[2] * xl  # type: ignore
         d = wp.norm_l2(xi - xc)
-        tdmin = wp.min(tdmin, d)
-        wp.atomic_min(ogc.dminf, f, d)
+        # tdmin = wp.min(tdmin, d)
+        # wp.atomic_min(ogc.dminf, f, d)
         if d > ogc.r:
             tvf[brow] = n_tris
             continue
@@ -429,7 +431,7 @@ def _classify_vertex_facet_contacts(
                 n_vf += wp.int32(1)
             else:
                 tvf[brow] = n_tris
-    return tvv, tve, tvf, n_vv, n_ve, n_vf, tdmin  # type: ignore
+    return tvv, tve, tvf, n_vv, n_ve, n_vf  # , tdmin  # type: ignore
 
 
 @wp.func
@@ -445,11 +447,11 @@ def _classify_edge_edge_contacts(
     tee: teelist,  # type: ignore
     n_half_edges: wp.int32,
     n_edges: wp.int32,
-) -> Tuple[teelist, wp.int32, wp.float32]:  # type: ignore
+) -> Tuple[teelist, wp.int32]:  # type: ignore
     fzero = wp.float32(0)
     fone = wp.float32(1)
     n_ee = wp.int32(0)
-    tdmin = ogc.dmine[hei1]  # thread local edge minimum distance
+    # tdmin = ogc.dmine[hei1]  # thread local edge minimum distance
     for brow in range(MAX_EE_PER_THREAD):
         e2 = tee[brow]  # pyright: ignore[reportIndexIssue]
         if e2 >= n_edges:
@@ -473,7 +475,7 @@ def _classify_edge_edge_contacts(
         xc1 = (fone - st[0]) * xi1 + st[0] * xj1  # type: ignore
         xc2 = (fone - st[1]) * xi2 + st[1] * xj2  # type: ignore
         d = wp.norm_l2(xc1 - xc2)
-        tdmin = wp.min(tdmin, d)
+        # tdmin = wp.min(tdmin, d)
         # Only store each unordered pair once (deduplication guard)
         if e1 >= e2:
             continue
@@ -493,7 +495,7 @@ def _classify_edge_edge_contacts(
                 n_ee += wp.int32(1)
             else:
                 assert False
-    return tee, n_ee, tdmin  # type: ignore
+    return tee, n_ee  # tdmin  # type: ignore
 
 
 @wp.kernel(launch_bounds=_FUSED_CONTACT_DETECTION_BLOCK_SIZE)
@@ -528,21 +530,20 @@ def _fused_contact_detection(
             ogc.f_bvh_id, xi, xi  # pyright: ignore[reportArgumentType]
         )
         for brow in range(MAX_VF_PER_THREAD):
+            if not wp.tile_query_valid(query):
+                break
             candidates = wp.tile_bvh_query_next(query)
-            f = candidates[local_tid]  # type: ignore
+            f = wp.untile(candidates)
             if f >= 0:
                 tvf[brow] = f
-            no_more_candidates = candidates[last_col] < int(0)  # type: ignore
-            if no_more_candidates:
-                break
         # 2. Classify and store vv,ve,vf contacts
-        tvv, tve, tvf, tnvv, tnve, tnvf, tdmin = _classify_vertex_facet_contacts(
+        tvv, tve, tvf, tnvv, tnve, tnvf = _classify_vertex_facet_contacts(
             x, meshes, ogc, v, i, xi, tvf, n_verts, n_half_edges, n_tris  # type: ignore
         )
         # 2.a Reduce dminv across the block and write from the last thread.
-        dminv = wp.tile_min(wp.tile(tdmin))[0]  # type: ignore
-        if local_tid == last_col:
-            ogc.dminv[v] = dminv  # type: ignore
+        # dminv = wp.tile_min(wp.tile(tdmin))[0]  # type: ignore
+        # if local_tid == last_col:
+        #     ogc.dminv[v] = dminv  # type: ignore
         # 2.b Count contacts (including duplicates) for early exit opportunity
         tnvv, tnve, tnvf = (
             wp.tile_sum(wp.tile(tnvv))[0],  # type: ignore
@@ -676,23 +677,22 @@ def _fused_contact_detection(
             ogc.e_uppers[e],
         )
         for brow in range(MAX_EE_PER_THREAD):
+            if not wp.tile_query_valid(query):
+                break
             candidates = wp.tile_bvh_query_next(query)
-            e2 = candidates[local_tid]  # pyright: ignore[reportIndexIssue]
+            e2 = wp.untile(candidates)
             if e2 >= 0:
                 tee[brow] = e2
-            no_more_candidates = candidates[last_col] < int(0)  # type: ignore
-            if no_more_candidates:
-                break
         # 2. Classify and store ee contacts
-        tee, tnee, tdmine = _classify_edge_edge_contacts(
+        tee, tnee = _classify_edge_edge_contacts(
             x, meshes, ogc, e1, einds1, xi1, xj1, hei, tee, n_half_edges, n_edges  # type: ignore
         )
         # 2.a Reduce dmine across the block and write from the last thread.
-        dmine = wp.tile_min(wp.tile(tdmine))[0]  # type: ignore
-        if local_tid == last_col:
-            ogc.dmine[hei] = dmine
-            if hej >= wp.int32(0):
-                ogc.dmine[hej] = dmine
+        # dmine = wp.tile_min(wp.tile(tdmine))[0]  # type: ignore
+        # if local_tid == last_col:
+        #     ogc.dmine[hei] = dmine
+        #     if hej >= wp.int32(0):
+        #         ogc.dmine[hej] = dmine
         # 3. Count contacts
         tnee = wp.tile_sum(wp.tile(tnee))[0]  # type: ignore
         has_ee_contacts = tnee > wp.int32(0)
@@ -1012,9 +1012,234 @@ def _compute_ee_contact_data(
     ogc.ee_bary[k] = st
 
 
+@wp.func
+def _planar_dat_truncate_one(
+    xk: wp.vec3f,
+    x: wp.vec3f,
+    dx: wp.vec3f,
+    n: wp.vec3f,
+    xc1: wp.vec3f,
+    xc2: wp.vec3f,
+    lambda_c: wp.float32,
+    t: wp.float32,
+    gamma: wp.float32,
+) -> wp.float32:
+    p = (wp.float32(1) - lambda_c) * xc1 + lambda_c * xc2
+    den = wp.dot(dx, n)  # type: ignore
+    # Assert that if the denominator is near zero, i.e. the vertex
+    # is moving parallel to the plane, then the vertex is on the
+    # correct side of the plane (i.e. non penetrating).
+    eps = wp.float32(1e-10)  # type: ignore
+    parallel = wp.abs(den) <= eps
+    # assert not parallel or wp.dot(x - p, n) > wp.float32(0)  # type: ignore
+    if not parallel:
+        tk = gamma * (wp.dot(p - xk, n) / den)  # type: ignore
+        if tk > wp.float32(0) and tk < t:
+            t = tk
+    return t
+
+
+@wp.func
+def _scatter_planar_truncate_one(
+    xk: wp.vec3f,
+    x: wp.vec3f,
+    dx: wp.vec3f,
+    n: wp.vec3f,
+    xc1: wp.vec3f,
+    xc2: wp.vec3f,
+    lambda_c: wp.float32,
+    gamma: wp.float32,
+):
+    p = (wp.float32(1) - lambda_c) * xc1 + lambda_c * xc2
+    den = wp.dot(dx, n)  # type: ignore
+    # Assert that if the denominator is near zero, i.e. the vertex
+    # is moving parallel to the plane, then the vertex is on the
+    # correct side of the plane (i.e. non penetrating).
+    eps = wp.float32(1e-10)  # type: ignore
+    parallel = wp.abs(den) <= eps
+    # assert not parallel or wp.dot(x - p, n) > wp.float32(0)  # type: ignore
+    t = wp.float32(1)
+    if not parallel:
+        tk = gamma * (wp.dot(p - xk, n) / den)  # type: ignore
+        if tk > wp.float32(0):
+            t = tk
+    return t
+
+
+@wp.func
+def _vertex_triangle_planar_dat(
+    x: wp.array[wp.vec3f],
+    xk: wp.array[wp.vec3f],
+    i: wp.int32,
+    finds: wp.vec3i,
+    xi: wp.vec3f,
+    xki: wp.vec3f,
+    dxi: wp.vec3f,
+    gamma: wp.float32,
+) -> Tuple[wp.float32, wp.float32, wp.float32, wp.float32]:  # type: ignore
+    tv = wp.float32(1)
+    ta = wp.float32(1)
+    tb = wp.float32(1)
+    tc = wp.float32(1)
+    zero = wp.float32(1e-10)  # type: ignore
+    a = finds[0]  # type: ignore
+    b = finds[1]  # type: ignore
+    c = finds[2]  # type: ignore
+    are_adjacent = (a == i) or (b == i) or (c == i)
+    if are_adjacent:
+        return tv, ta, tb, tc
+    xa = x[a]
+    xb = x[b]
+    xc = x[c]
+    xka = xk[a]
+    xkb = xk[b]
+    xkc = xk[c]
+    # Compute separating plane
+    uvw = queries.closest_point_triangle(xki, xka, xkb, xkc)  # type: ignore
+    xkc2 = uvw[0] * xka + uvw[1] * xkb + uvw[2] * xkc  # type: ignore
+    xkc1 = xki
+    n = xkc1 - xkc2
+    dxin = wp.max(wp.dot(dxi, -n), wp.float32(0))  # type: ignore
+    dxfn = wp.max(
+        wp.max(
+            wp.max(
+                wp.dot(xa - xka, n),  # type: ignore
+                wp.dot(xb - xkb, n),  # type: ignore
+            ),
+            wp.dot(xc - xkc, n),  # type: ignore
+        ),
+        wp.float32(0),
+    )
+    den = dxin + dxfn
+    if dxin <= zero and dxfn <= zero:
+        llambda = wp.float32(0.5)  # type: ignore
+    else:
+        llambda = dxin / den
+    # Perform ray-plane intersection and atomic min truncation
+    tv = _planar_dat_truncate_one(
+        xki,  # type: ignore
+        xi,  # type: ignore
+        dxi,  # type: ignore
+        n,
+        xkc1,  # type: ignore
+        xkc2,
+        llambda,
+        tv,
+        gamma,
+    )
+    ta = _scatter_planar_truncate_one(
+        xka,  # type: ignore
+        xa,  # type: ignore
+        xa - xka,  # type: ignore
+        n,
+        xkc1,  # type: ignore
+        xkc2,
+        llambda,
+        gamma,
+    )
+    tb = _scatter_planar_truncate_one(
+        xkb,  # type: ignore
+        xb,  # type: ignore
+        xb - xkb,  # type: ignore
+        n,
+        xkc1,  # type: ignore
+        xkc2,
+        llambda,
+        gamma,
+    )
+    tc = _scatter_planar_truncate_one(
+        xkc,  # type: ignore
+        xc,  # type: ignore
+        xc - xkc,  # type: ignore
+        n,
+        xkc1,  # type: ignore
+        xkc2,
+        llambda,
+        gamma,
+    )
+    return tv, ta, tb, tc
+
+
+@wp.func
+def _edge_edge_planar_dat(
+    x: wp.array[wp.vec3f],
+    xk: wp.array[wp.vec3f],
+    einds1: wp.vec2i,
+    einds2: wp.vec2i,
+    xi1: wp.vec3f,
+    xki1: wp.vec3f,
+    dxi1: wp.vec3f,
+    xj1: wp.vec3f,
+    xkj1: wp.vec3f,
+    dxj1: wp.vec3f,
+    gamma: wp.float32,
+) -> Tuple[wp.float32, wp.float32, wp.float32, wp.float32]:  # type: ignore
+    tvi1 = wp.float32(1)
+    tvj1 = wp.float32(1)
+    tvi2 = wp.float32(1)
+    tvj2 = wp.float32(1)
+    are_adjacent = (
+        (einds1[0] == einds2[0])  # type: ignore
+        or (einds1[0] == einds2[1])  # type: ignore
+        or (einds1[1] == einds2[0])  # type: ignore
+        or (einds1[1] == einds2[1])  # type: ignore
+    )
+    if are_adjacent:
+        return tvi1, tvj1, tvi2, tvj2
+    xi2, xj2 = x[einds2[0]], x[einds2[1]]  # type: ignore
+    xki2, xkj2 = xk[einds2[0]], xk[einds2[1]]  # type: ignore
+    st = queries.closest_points_line_segments(xki1, xkj1, xki2, xkj2)  # type: ignore
+    xc1 = (wp.float32(1) - st[0]) * xki1 + st[0] * xkj1  # type: ignore
+    xc2 = (wp.float32(1) - st[1]) * xki2 + st[1] * xkj2  # type: ignore
+    n = wp.normalize(xc1 - xc2)
+    dxi2 = xi2 - xki2
+    dxj2 = xj2 - xkj2
+    dxe1n = wp.max(
+        wp.max(wp.dot(dxi1, -n), wp.dot(dxj1, -n)),  # type: ignore
+        wp.float32(0),
+    )
+    dxe2n = wp.max(
+        wp.max(wp.dot(dxi2, n), wp.dot(dxj2, n)),  # type: ignore
+        wp.float32(0),
+    )
+    den = dxe1n + dxe2n
+    if den <= wp.float32(1e-10):  # type: ignore
+        llambda = wp.float32(0.5)  # type: ignore
+    else:
+        llambda = dxe1n / den
+    # Perform ray-plane intersection and atomic min truncation for edge 1
+    tvi1 = _planar_dat_truncate_one(
+        xki1, xi1, dxi1, -n, xc1, xc2, llambda, tvi1, gamma  # type: ignore
+    )
+    tvj1 = _planar_dat_truncate_one(
+        xkj1, xj1, dxj1, -n, xc1, xc2, llambda, tvj1, gamma  # type: ignore
+    )
+    tvi2 = _scatter_planar_truncate_one(
+        xki2,  # type: ignore
+        xi2,  # type: ignore
+        dxi2,  # type: ignore
+        n,
+        xc1,
+        xc2,
+        llambda,
+        gamma,
+    )
+    tvj2 = _scatter_planar_truncate_one(
+        xkj2,  # type: ignore
+        xj2,  # type: ignore
+        dxj2,  # type: ignore
+        n,
+        xc1,
+        xc2,
+        llambda,
+        gamma,
+    )
+    return tvi1, tvj1, tvi2, tvj2
+
+
 @wp.kernel
-def _compute_separating_plane_offsets(
-    xprev: wp.array[
+def _planar_dat(
+    xk: wp.array[
         wp.vec3f
     ],  # (N,) reference positions cached at last prepare_for_execution
     x: wp.array[wp.vec3f],
@@ -1027,165 +1252,120 @@ def _compute_separating_plane_offsets(
     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
 
     n_verts = meshes.V.shape[0]
-    n_half_edges = meshes.EHE.shape[0]
-    zero = wp.float32(1e-10)  # type: ignore
+    n_edges = meshes.E.shape[0]
+    gamma = wp.float32(2) * ogc.gammap
 
-    # Compute vertex-vertex contact plane offsets
+    # Loop over all vertex-triangle broad phase pairs and planar DAT on
+    # each side using atomic mins on ray-plane intersections
     if block_id < n_verts:
-        vi = block_id
-        i = meshes.V[vi]
-        xki = xprev[i]
+        v = block_id
+        i = meshes.V[v]
         xi = x[i]
-        begin = ogc.vv.prefix[vi]
-        end = ogc.vv.prefix[vi + 1]
-        for c in range(begin + local_tid, end, block_dims):
-            vj = ogc.vv.v[c]
-            basis = ogc.vv_bases[c]
-            j = meshes.V[vj]
-            xkj = xprev[j]
-            xj = x[j]
-            n = basis[0, :]
-            dxin = wp.max(wp.dot(xi - xki, -n), wp.float32(0))  # type: ignore
-            dxjn = wp.max(wp.dot(xj - xkj, n), wp.float32(0))  # type: ignore
-            den = dxin + dxjn
-            if dxin <= zero and dxjn <= zero:
-                ogc.vv_lambda[c] = wp.float32(0.5)  # type: ignore
-            else:
-                ogc.vv_lambda[c] = dxin / den
+        xki = xk[i]
+        dxi = xi - xki
+        tv = wp.float32(1)
+        # Visit each candidate face
+        query = wp.tile_bvh_query_aabb(
+            ogc.f_bvh_id, xki, xki  # pyright: ignore[reportArgumentType]
+        )
+        # Store all candidates in thread local candidate list
+        tvf = tvflist(wp.int32(-1))
+        for brow in range(MAX_VF_PER_THREAD):
+            if not wp.tile_query_valid(query):
+                break
+            candidates = wp.tile_bvh_query_next(query)
+            f = wp.untile(candidates)  # type: ignore
+            tvf[brow] = f
+        # Visit each candidate pair
+        n_tris = meshes.F.shape[0]
+        for brow in range(MAX_VF_PER_THREAD):
+            f = tvf[brow]
+            if f >= wp.int32(0) and f < n_tris:
+                assert f < n_tris
+                finds = meshes.F[f]
+                tv_candidate = wp.float32(1)
+                ta = wp.float32(1)
+                tb = wp.float32(1)
+                tc = wp.float32(1)
+                tv_candidate, ta, tb, tc = _vertex_triangle_planar_dat(
+                    x, xk, i, finds, xi, xki, dxi, gamma  # type: ignore
+                )
+                tv = wp.min(tv, tv_candidate)
+                va = meshes.GXV[finds[0]]
+                vb = meshes.GXV[finds[1]]
+                vc = meshes.GXV[finds[2]]
+                # wp.atomic_min(ogc.tv, va, ta)
+                # wp.atomic_min(ogc.tv, vb, tb)
+                # wp.atomic_min(ogc.tv, vc, tc)
 
-    # Compute vertex-edge contact plane offsets
-    if block_id < n_verts:
-        vi = block_id
-        i = meshes.V[vi]
-        xki = xprev[i]
-        xi = x[i]
-        begin = ogc.ve.prefix[vi]
-        end = ogc.ve.prefix[vi + 1]
-        for c in range(begin + local_tid, end, block_dims):
-            he = ogc.ve.v[c]
-            basis = ogc.ve_bases[c]
-            j = halfedges.incoming_vertex(meshes.F, he)
-            k = halfedges.outgoing_vertex(meshes.F, he)
-            xj = x[j]
-            xk = x[k]
-            xkj = xprev[j]
-            xkk = xprev[k]
-            n = basis[0, :]
-            dxin = wp.max(wp.dot(xi - xki, -n), wp.float32(0))  # type: ignore
-            dxen = wp.max(
-                wp.max(wp.dot(xj - xkj, n), wp.dot(xk - xkk, n)),  # type: ignore
-                wp.float32(0),
-            )
-            den = dxin + dxen
-            if dxin <= zero and dxen <= zero:
-                ogc.ve_lambda[c] = wp.float32(0.5)  # type: ignore
-            else:
-                ogc.ve_lambda[c] = dxin / den
+        # Global write
+        tvs = wp.tile(tv)  # type: ignore
+        tvs_min = wp.tile_min(tvs)
+        tv_min = wp.tile_extract(tvs_min, wp.int32(0))  # type: ignore
+        if local_tid == 0:
+            wp.atomic_min(ogc.tv, v, tv_min)  # type: ignore
 
-    # Compute vertex-face contact plane offsets
-    if block_id < n_verts:
-        vi = block_id
-        i = meshes.V[vi]
-        xki = xprev[i]
-        xi = x[i]
-        begin = ogc.vf.prefix[vi]
-        end = ogc.vf.prefix[vi + 1]
-        for c in range(begin + local_tid, end, block_dims):
-            f = ogc.vf.v[c]
-            basis = ogc.vf_bases[c]
-            finds = meshes.F[f]
-            j = finds[0]
-            k = finds[1]
-            l = finds[2]
-            xj = x[j]
-            xk = x[k]
-            xl = x[l]
-            xkj = xprev[j]
-            xkk = xprev[k]
-            xkl = xprev[l]
-            n = basis[0, :]
-            dxin = wp.max(wp.dot(xi - xki, -n), wp.float32(0))  # type: ignore
-            dxfn = wp.max(
-                wp.max(
-                    wp.max(
-                        wp.dot(xj - xkj, n),  # type: ignore
-                        wp.dot(xk - xkk, n),  # type: ignore
-                    ),
-                    wp.dot(xl - xkl, n),  # type: ignore
-                ),
-                wp.float32(0),
-            )
-            den = dxin + dxfn
-            if dxin <= zero and dxfn <= zero:
-                ogc.vf_lambda[c] = wp.float32(0.5)  # type: ignore
-            else:
-                ogc.vf_lambda[c] = dxin / den
+    # Loop over all edge-edge broad phase (one-sided) pairs and planar DAT on each side using atomic mins on ray-plane intersections
+    # if block_id < n_edges:
+    #     e = block_id
+    #     e1 = e
+    #     einds1 = meshes.E[e1]
+    #     xi1, xj1 = x[einds1[0]], x[einds1[1]]
+    #     xki1, xkj1 = xk[einds1[0]], xk[einds1[1]]
+    #     dxi1 = xi1 - xki1
+    #     dxj1 = xj1 - xkj1
+    #     tvi1 = wp.float32(1)
+    #     tvj1 = wp.float32(1)
+    #     # Query all nearby edges
+    #     query = wp.tile_bvh_query_aabb(
+    #         ogc.e_bvh_id,
+    #         ogc.e_lowers[e],
+    #         ogc.e_uppers[e],
+    #     )
+    #     # Store all candidates in thread local candidate list
+    #     tee = teelist(wp.int32(-1))
+    #     for brow in range(MAX_EE_PER_THREAD):
+    #         if not wp.tile_query_valid(query):
+    #             break
+    #         candidates = wp.tile_bvh_query_next(query)
+    #         e2 = wp.untile(candidates)
+    #         tee[brow] = e2
+    #     # Visit each candidate pair (e1, e2) where e1 < e2 to avoid double counting
+    #     for brow in range(MAX_EE_PER_THREAD):
+    #         e2 = tee[brow]
+    #         # Only visit unique pairs (e1, e2) where e1 < e2
+    #         if e2 > e1:  # type: ignore
+    #             einds2 = meshes.E[e2]
+    #             tvi1_candidate, tvj1_candidate, tvi2, tvj2 = _edge_edge_planar_dat(
+    #                 x,
+    #                 xk,
+    #                 einds1,
+    #                 einds2,
+    #                 xi1,  # type: ignore
+    #                 xki1,  # type: ignore
+    #                 dxi1,  # type: ignore
+    #                 xj1,  # type: ignore
+    #                 xkj1,  # type: ignore
+    #                 dxj1,  # type: ignore
+    #                 gamma,
+    #             )
+    #             tvi1 = wp.min(tvi1, tvi1_candidate)
+    #             tvj1 = wp.min(tvj1, tvj1_candidate)
+    #             wp.atomic_min(ogc.tv, meshes.GXV[einds2[0]], tvi2)  # type: ignore
+    #             wp.atomic_min(ogc.tv, meshes.GXV[einds2[1]], tvj2)  # type: ignore
 
-    # Compute edge-edge contact plane offsets
-    if block_id < n_half_edges:
-        he1 = block_id
-        i1 = halfedges.incoming_vertex(meshes.F, he1)  # type: ignore
-        j1 = halfedges.outgoing_vertex(meshes.F, he1)  # type: ignore
-        begin = ogc.ee.prefix[he1]
-        end = ogc.ee.prefix[he1 + 1]
-        for c in range(begin + local_tid, end, block_dims):
-            he2 = ogc.ee.v[c]
-            basis = ogc.ee_bases[c]
-            i2 = halfedges.incoming_vertex(meshes.F, he2)
-            j2 = halfedges.outgoing_vertex(meshes.F, he2)
-            xi1 = x[i1]
-            xj1 = x[j1]
-            xi2 = x[i2]
-            xj2 = x[j2]
-            xki1 = xprev[i1]
-            xkj1 = xprev[j1]
-            xki2 = xprev[i2]
-            xkj2 = xprev[j2]
-            n = basis[0, :]
-            dxe1n = wp.max(
-                wp.max(wp.dot(xi1 - xki1, -n), wp.dot(xj1 - xkj1, -n)),  # type: ignore
-                wp.float32(0),
-            )
-            dxe2n = wp.max(
-                wp.max(wp.dot(xi2 - xki2, n), wp.dot(xj2 - xkj2, n)),  # type: ignore
-                wp.float32(0),
-            )
-            den = dxe1n + dxe2n
-            if den < wp.float32(1e-10):  # type: ignore
-                ogc.ee_lambda[c] = wp.float32(0.5)  # type: ignore
-            else:
-                ogc.ee_lambda[c] = dxe1n / den
-
-
-@wp.func
-def _planar_dat_truncate_one(
-    xki: wp.vec3f,
-    xi: wp.vec3f,
-    dxi: wp.vec3f,
-    n: wp.vec3f,
-    xc1: wp.vec3f,
-    xc2: wp.vec3f,
-    lambda_c: wp.float32,
-    t: wp.float32,
-    gamma: wp.float32,
-) -> wp.float32:
-    p = (wp.float32(1) - lambda_c) * xc1 + lambda_c * xc2
-    den = wp.dot(dxi, n)  # type: ignore
-    # Assert that if the denominator is near zero, i.e. the vertex
-    # is moving parallel to the plane, then the vertex is on the
-    # correct side of the plane (i.e. non penetrating).
-    # eps = wp.float32(1e-10)  # type: ignore
-    parallel = den == wp.float32(0)
-    assert not parallel or wp.dot(xi - p, n) > wp.float32(0)  # type: ignore
-    if not parallel:
-        tk = gamma * (wp.dot(p - xki, n) / den)  # type: ignore
-        if tk > wp.float32(0) and tk < t:
-            t = tk
-    return t
+    #     # Global write
+    #     tvi1_min = wp.tile_min(wp.tile(tvi1))  # type: ignore
+    #     tvj1_min = wp.tile_min(wp.tile(tvj1))  # type: ignore
+    #     if local_tid == 0:
+    #         vi1 = meshes.GXV[einds1[0]]
+    #         vj1 = meshes.GXV[einds1[1]]
+    #         wp.atomic_min(ogc.tv, vi1, tvi1_min[0])  # type: ignore
+    #         wp.atomic_min(ogc.tv, vj1, tvj1_min[0])  # type: ignore
 
 
 @wp.kernel
-def _planar_truncate(
+def _planar_dat_truncate(
     xk: wp.array[
         wp.vec3f
     ],  # (N,) reference positions cached at last prepare_for_execution
@@ -1194,183 +1374,18 @@ def _planar_truncate(
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
 ):
     tid = wp.tid()
-    block_dims = wp.block_dim()
-    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
-    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
-    vi = block_id
+    vi = tid
     i = meshes.V[vi]
     xki = xk[i]
     xi = x[i]
-    rq = ogc.r + ogc.arq * ogc.rq[0]
+    t = ogc.tv[vi]
+    xi = xki + t * (xi - xki)
     dxi = xi - xki
-    # Truncate xi to be at most distance |rq| from xki.
     dxinorm = wp.norm_l2(dxi)
-    if dxinorm <= wp.float32(1e-10):  # type: ignore
-        x[i] = xki  # type: ignore
-        return
-    xi = xki + wp.min(dxinorm, rq) * (dxi / dxinorm)
-    dxi = xi - xki
-
-    # Loop over each contact incident on this thread block's vertex
-    # and perform truncation via ray-plane intersection query where
-    # the ray is r(t) = xki + t * (xi - xki) and the plane is defined
-    # by the contact basis normal n and offset \lambda as
-    # (x - p) \cdot n > 0 or (x - p) \cdot n < 0 depending on which side of
-    # the contact the vertex is on, and p = x_c^1 + \lambda * (x_c^2 - x_c^1) where
-    # \lambda is the precomputed contact plane offset, x_c^1 is the closest point
-    # on the contact primitive u, and x_c^2 is the closest point on the contact
-    # primitive v.
-
-    gamma = wp.float32(2) * ogc.gammap
-    t = wp.float32(1)
-
-    # 1a. Vertex-vertex contacts (forward)
-    for c in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
-        vj = ogc.vv.v[c]
-        j = meshes.V[vj]
-        basis = ogc.vv_bases[c]
-        n = basis[0, :]
-        lambda_c = ogc.vv_lambda[c]
-        xc1 = xki
-        xc2 = xk[j]
-        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-    # 1b. Vertex-vertex contacts (reverse)
-    for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
-        c = ogc.rvv2vv[k]
-        vj = ogc.rvv.v[k]
-        j = meshes.V[vj]
-        basis = ogc.vv_bases[c]
-        n = -basis[0, :]
-        lambda_c = ogc.vv_lambda[c]
-        xc1 = xk[j]
-        xc2 = xki
-        t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-    # 2. Vertex-halfedge contacts (forward)
-    for c in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
-        he = ogc.ve.v[c]
-        basis = ogc.ve_bases[c]
-        b1 = ogc.ve_bary[c]
-        b0 = wp.float32(1) - b1
-        n = basis[0, :]
-        lambda_c = ogc.ve_lambda[c]
-        xc1 = xki
-        p = halfedges.incoming_vertex(meshes.F, he)
-        q = halfedges.outgoing_vertex(meshes.F, he)
-        xc2 = b0 * xk[p] + b1 * xk[q]
-        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-    # 3. Vertex-triangle contacts (forward)
-    for c in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
-        f = ogc.vf.v[c]
-        basis = ogc.vf_bases[c]
-        uv = ogc.vf_bary[c]
-        n = basis[0, :]
-        lambda_c = ogc.vf_lambda[c]
-        finds = meshes.F[f]
-        p = finds[0]
-        q = finds[1]
-        r = finds[2]
-        u = uv[0]
-        v = uv[1]
-        w = wp.float32(1) - u - v
-        xc1 = xki
-        xc2 = u * xk[p] + v * xk[q] + w * xk[r]
-        t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-    # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
-    for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):
-        hei = meshes.GVHEadj[k]
-        hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
-        he = wp.max(hei, hej)
-        i_he = halfedges.incoming_vertex(meshes.F, he)
-        j_he = halfedges.outgoing_vertex(meshes.F, he)
-        # 4. EE contacts (forward): he is u-side
-        for c in range(
-            ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
-        ):
-            he2 = ogc.ee.v[c]
-            basis = ogc.ee_bases[c]
-            ee_bary = ogc.ee_bary[c]
-            s1 = ee_bary[0]
-            s2 = ee_bary[1]
-            n = basis[0, :]
-            lambda_c = ogc.ee_lambda[c]
-            i_he2 = halfedges.incoming_vertex(meshes.F, he2)
-            j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
-            xc1 = (wp.float32(1) - s1) * xk[i_he] + s1 * xk[j_he]
-            xc2 = (wp.float32(1) - s2) * xk[i_he2] + s2 * xk[j_he2]
-            t = _planar_dat_truncate_one(xki, xi, dxi, -n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-        # 5.a VE contacts (reverse): he is v-side
-        for l in range(
-            ogc.rve.prefix[he] + local_tid, ogc.rve.prefix[he + 1], block_dims
-        ):
-            c = ogc.rve2ve[l]
-            _vi = ogc.rve.v[l]
-            _i = meshes.V[_vi]
-            basis = ogc.ve_bases[c]
-            b1 = ogc.ve_bary[c]
-            b0 = wp.float32(1) - b1
-            n = basis[0, :]
-            lambda_c = ogc.ve_lambda[c]
-            xc1 = xk[_i]
-            p = halfedges.incoming_vertex(meshes.F, he)
-            q = halfedges.outgoing_vertex(meshes.F, he)
-            xc2 = b0 * xk[p] + b1 * xk[q]
-            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-        # 5.b VF contacts (reverse): face of hei contains vertex i
-        f = halfedges.face_of_half_edge(hei)
-        finds = meshes.F[f]
-        for l in range(
-            ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
-        ):
-            c = ogc.rvf2vf[l]
-            _vi = ogc.rvf.v[l]
-            _i = meshes.V[_vi]
-            basis = ogc.vf_bases[c]
-            uv = ogc.vf_bary[c]
-            n = basis[0, :]
-            lambda_c = ogc.vf_lambda[c]
-            p = finds[0]
-            q = finds[1]
-            r = finds[2]
-            u = uv[0]
-            v = uv[1]
-            w = wp.float32(1) - u - v
-            xc1 = xk[_i]
-            xc2 = u * xk[p] + v * xk[q] + w * xk[r]
-            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-        # 5.c EE contacts (reverse): he is v-side
-        for l in range(
-            ogc.ree.prefix[he] + local_tid, ogc.ree.prefix[he + 1], block_dims
-        ):
-            c = ogc.ree2ee[l]
-            he2 = ogc.ree.v[l]
-            basis = ogc.ee_bases[c]
-            ee_bary = ogc.ee_bary[c]
-            s1 = ee_bary[0]
-            s2 = ee_bary[1]
-            n = basis[0, :]
-            lambda_c = ogc.ee_lambda[c]
-            i_he2 = halfedges.incoming_vertex(meshes.F, he2)
-            j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
-            xc1 = (wp.float32(1) - s1) * xk[i_he2] + s1 * xk[j_he2]
-            xc2 = (wp.float32(1) - s2) * xk[i_he] + s2 * xk[j_he]
-            t = _planar_dat_truncate_one(xki, xi, dxi, n, xc1, xc2, lambda_c, t, gamma)  # type: ignore
-
-    # Final truncation
-    ts = wp.tile(t)  # type: ignore
-    tmin = wp.tile_min(ts)
-    if local_tid == 0:
-        assert tmin[0] > wp.float32(0) and tmin[0] <= wp.float32(1)  # type: ignore
-        assert wp.norm_l2(dxi) < rq
-        x[i] = xki + tmin[0] * dxi  # type: ignore
-
-    # TODO: Assert that we actually are in all our exclusive regions
+    rq = ogc.r + ogc.arq * ogc.rq[0]
+    if dxinorm > wp.float32(0):
+        dxi = wp.min(wp.float32(1), rq / dxinorm) * dxi
+    x[i] = xki + dxi  # type: ignore
 
 
 class Ogc:
@@ -1463,6 +1478,8 @@ class Ogc:
         self._ogc.ve_lambda = wp.empty((ve_capacity,), dtype=wp.float32)  # type: ignore
         self._ogc.vf_lambda = wp.empty((vf_capacity,), dtype=wp.float32)  # type: ignore
         self._ogc.ee_lambda = wp.empty((ee_capacity,), dtype=wp.float32)  # type: ignore
+
+        self._ogc.tv = wp.empty((meshes.n_verts,), dtype=wp.float32)  # type: ignore
 
         self._streams = [wp.Stream() for _ in range(10)]
 
@@ -1824,11 +1841,12 @@ class Ogc:
             main_stream.wait_stream(stream)
 
     def update_displacement_bounds(self):
-        wp.launch(
-            _update_displacement_bounds,
-            dim=self._meshes.n_verts,
-            inputs=[self._meshes.data, self._ogc],
-        )
+        pass
+        # wp.launch(
+        #     _update_displacement_bounds,
+        #     dim=self._meshes.n_verts,
+        #     inputs=[self._meshes.data, self._ogc],
+        # )
 
     def truncate(self, x: wp.array):
         """Truncate per-vertex displacements in-place to stay within OGC displacement bounds.
@@ -1841,25 +1859,21 @@ class Ogc:
             x: Current vertex positions to truncate in-place
                (``wp.array[wp.vec3f]``, global-point indexed, shape ``(N,)``).
         """
-        n_verts, n_half_edges = self._meshes.n_verts, self._meshes.n_half_edges
-        block_dim = 32
+        block_dim = 64
+        n_verts, n_edges = self._meshes.n_verts, self._meshes.n_edges
+        self._ogc.tv.fill_(wp.float32(1))
         wp.launch(
-            kernel=_compute_separating_plane_offsets,
-            dim=max(n_verts, n_half_edges) * block_dim,
-            inputs=[
-                self._xk,
-                x,
-                self._meshes.data,
-                self._ogc,
-            ],
-            block_dim=block_dim,
-        )
-        wp.launch(
-            kernel=_planar_truncate,
-            dim=n_verts * block_dim,
+            kernel=_planar_dat,
+            dim=max(n_verts, n_edges) * block_dim,
             inputs=[self._xk, x, self._meshes.data, self._ogc],
             block_dim=block_dim,
         )
+        wp.launch(
+            kernel=_planar_dat_truncate,
+            dim=n_verts,
+            inputs=[self._xk, x, self._meshes.data, self._ogc],
+        )
+        # NOTE: This is OGC truncation.
         # wp.launch(
         #     _truncate_displacements,
         #     dim=self._meshes.n_verts,

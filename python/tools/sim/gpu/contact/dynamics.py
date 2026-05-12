@@ -48,6 +48,7 @@ def _apply_dual_update(
 ):
     # lambda_n[k] and mu_n[0] are always needed to compute new_s, which drives all branches.
     lambda_n_k = lambda_n[k]
+    assert sigma_n > wp.float32(0)
     new_s = wp.max(wp.float32(0), c_n - lambda_n_k / sigma_n)
     # --- Decay: read old s[k] before any write ---
     if request_decay_update:

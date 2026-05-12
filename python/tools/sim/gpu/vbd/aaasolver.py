@@ -56,7 +56,7 @@ def adapt_stencil_gradient_acceleration_parameter(
             wp.norm_l2(xi - xki),
             eps,  # pyright: ignore[reportCallIssue, reportArgumentType]
         )
-        L = Hnk[i] + ngk / ndxkm1
+        L = Hnk[i] + ngk / wp.max(ndxkm1, eps)
         rho = ndgkm1 / wp.max(L * ndxkm1, eps)
         if ngk > ngkm1:
             betaGi *= gammadowni
@@ -107,7 +107,7 @@ def _accelerated_vertex_solve_kernel(
     """Process one vertex in the current color partition with acceleration."""
     tid = wp.tid()
     block_dims = wp.block_dim()
-    block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
+    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
     i = params.Padj[
         pbegin + block_id  # pyright: ignore[reportOperatorIssue, reportIndexIssue]

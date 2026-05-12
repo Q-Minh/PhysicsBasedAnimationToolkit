@@ -38,7 +38,7 @@ def _vertex_solve_kernel(
     """Process one vertex in the current color partition."""
     tid = wp.tid()
     block_dims = wp.block_dim()
-    block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
+    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
     i = params.Padj[
         pbegin + block_id  # pyright: ignore[reportOperatorIssue, reportIndexIssue]
@@ -114,7 +114,7 @@ def _compute_constraint_rayleigh_quotients(
     """Compute on-diagonal dynamics hessian blocks."""
     tid = wp.tid()
     block_dims = wp.block_dim()
-    block_id = tid / block_dims  # pyright: ignore[reportOperatorIssue]
+    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
     v = block_id
     i = contact.meshes.V[v]

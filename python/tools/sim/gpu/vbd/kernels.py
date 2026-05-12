@@ -604,7 +604,10 @@ def integrate_positions(
         dxi = wp.transpose(V) * gi  # pyright: ignore[reportOperatorIssue]
         for d in range(3):
             eigd = wp.abs(eigs[d])  # pyright: ignore[reportIndexIssue]
-            dxi[d] = (dxi[d] / eigd) if (eigd > hess_zero) else 0.0
+            if eigd > hess_zero:
+                dxi[d] = dxi[d] / eigd
+            else:
+                dxi[d] = wp.float32(0)
         dxi = V * dxi
     else:
         assert False
