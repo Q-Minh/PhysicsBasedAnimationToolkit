@@ -1215,7 +1215,7 @@ def _planar_truncate(
     xi = xki + wp.min(dxinorm, rq) * (dxi / dxinorm)
     dxi = xi - xki
 
-    # TODO: Loop over each contact incident on this thread block's vertex
+    # Loop over each contact incident on this thread block's vertex
     # and perform truncation via ray-plane intersection query where
     # the ray is r(t) = xki + t * (xi - xki) and the plane is defined
     # by the contact basis normal n and offset \lambda as
