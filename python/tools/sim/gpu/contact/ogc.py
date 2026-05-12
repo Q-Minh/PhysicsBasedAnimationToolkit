@@ -1509,7 +1509,7 @@ class Ogc:
         )
         # 3. Use TransformIterator on the ZipIterator as transform = lambda x: sqrt((x[3] - x[0])**2 + (x[4] - x[1])**2 + (x[5] - x[2])**2)
         self._rq_transform_it = cuda.compute.TransformIterator(
-            zip_it,
+            self._rq_zip_it,
             lambda x: math.sqrt(
                 (x[3] - x[0]) ** 2 + (x[4] - x[1]) ** 2 + (x[5] - x[2]) ** 2
             ),
