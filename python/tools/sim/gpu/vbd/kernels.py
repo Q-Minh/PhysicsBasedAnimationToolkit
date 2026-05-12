@@ -593,8 +593,8 @@ def local_contact_derivatives(
         ):
             hei2 = ogc.ree.v[l]
             hej2 = halfedges.opposite_half_edge(meshes.F, hei2, meshes.GHEF)
-            he = wp.max(hei2, hej2)
-            gic, Hic = _contact_ee_rev(ogc.ree2ee[l], i, i_he, j_he, he, xt, x, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
+            he2 = wp.max(hei2, hej2)
+            gic, Hic = _contact_ee_rev(ogc.ree2ee[l], i, i_he, j_he, he2, xt, x, meshes.F, cee, ee_bases, ee_bary, sigma_n, sigma_f, dmin)  # type: ignore
             gi += gic
             Hi += Hic
 
