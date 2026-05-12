@@ -284,12 +284,6 @@ class AaaVbdSolver:
             [0], dtype=wp.int32
         )  # Iteration counter for acceleration schedule
 
-    def initialize_solve(
-        self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
-    ):
-        self.initialize_solve(fem, params, contact)
-        self._k.fill_(0)
-
     def solve(
         self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
     ) -> bool:
