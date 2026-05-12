@@ -1366,6 +1366,8 @@ def _planar_truncate(
     ts = wp.tile(t)  # type: ignore
     tmin = wp.tile_min(ts)
     if local_tid == 0:
+        assert tmin[0] > wp.float32(0) and tmin[0] <= wp.float32(1)  # type: ignore
+        assert wp.norm_l2(dxi) < rq
         x[i] = xki + tmin[0] * dxi  # type: ignore
 
 
