@@ -1,3 +1,5 @@
+from enum import Enum
+
 class DocField:
     """Descriptor for a scalar field with a default value and docstring.
 
@@ -11,7 +13,7 @@ class DocField:
             lr = DocField(1e-3, "Learning rate.")
     """
 
-    def __init__(self, default: float | int | bool, doc: str = ""):
+    def __init__(self, default: float | int | bool | Enum, doc: str = ""):
         self.default = default
         self.__doc__ = doc
 

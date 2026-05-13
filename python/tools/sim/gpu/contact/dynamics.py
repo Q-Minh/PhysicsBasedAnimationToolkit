@@ -356,7 +356,6 @@ class MeshDynamics:
         """Prepare constraint sets for a new step, warm-starting from the previous snapshot."""
         self.ogc.prepare_for_execution(xk)
         self.ogc.detect_contacts()
-        self.ogc.update_displacement_bounds()
         ogc_data = self.ogc.data
         main_stream = wp.get_stream()
         # Update all constraint sets

@@ -1,4 +1,4 @@
-warp-lang==1.12.1
+warp-lang==1.13.1
 usd-core==26.3
 pyglet==2.1.14
 nvtx==0.2.15

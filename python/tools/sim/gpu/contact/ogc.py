@@ -13,6 +13,19 @@ from .. import common
 from ...common.fields import DocField
 from ...gpu import common
 
+from enum import Enum
+
+
+class TruncationStrategy(Enum):
+    NoTruncation = 0
+    Distance = 1
+    PlanarDAT = 2
+
+
+TRUNCATION_NONE = wp.constant(TruncationStrategy.NoTruncation.value)
+TRUNCATION_DISTANCE = wp.constant(TruncationStrategy.Distance.value)
+TRUNCATION_PLANARDAT = wp.constant(TruncationStrategy.PlanarDAT.value)
+
 
 class OgcParams:
     """Parameters for Offset Geometric Contact detection."""
@@ -35,6 +48,9 @@ class OgcParams:
     )
     n_ee_contact_capacity = DocField(
         1.0, "Edge-edge capacity multiplier (x num_edges)."
+    )
+    truncation_strategy = DocField(
+        TruncationStrategy.NoTruncation, "Truncation strategy for contact queries."
     )
 
 
@@ -183,6 +199,8 @@ class OgcData:
 
     tv: wp.array[wp.float32]  # (# verts,) planar DAT displacement scales
 
+    truncation_strategy: wp.int32  # Truncation strategy for contact queries
+
 
 @wp.func
 def _compute_edge_bounding_volume(
@@ -231,19 +249,22 @@ def _compute_bounding_volumes(
     rq = ogc.r + ogc.arq * ogc.rq[0]
     if tid < n_verts:
         v = tid
-        # ogc.dminv[v] = rq
+        if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            ogc.dminv[v] = rq
     if tid < n_edges:
         e = tid
         he = meshes.EHE[e]
         einds = meshes.E[e]
-        # ogc.dmine[he[0]] = rq
-        # if he[1] >= 0:
-        #     ogc.dmine[he[1]] = rq
+        if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            ogc.dmine[he[0]] = rq
+            if he[1] >= 0:
+                ogc.dmine[he[1]] = rq
         _compute_edge_bounding_volume(ogc, e, xk[einds[0]], xk[einds[1]], rq)  # type: ignore
     if tid < n_triangles:
         f = tid
         finds = meshes.F[f]
-        # ogc.dminf[f] = rq
+        if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            ogc.dminf[f] = rq
         _compute_triangle_bounding_volume(ogc, f, xk[finds[0]], xk[finds[1]], xk[finds[2]], rq)  # type: ignore
 
 
@@ -377,14 +398,17 @@ def _classify_vertex_facet_contacts(
     v: wp.int32,
     i: wp.int32,
     xi: wp.vec3f,
+    r: wp.float32,
     tvf: tvflist,  # type: ignore
     n_verts: wp.int32,
     n_half_edges: wp.int32,
     n_tris: wp.int32,
-) -> Tuple[tvvlist, tvelist, tvflist, wp.int32, wp.int32, wp.int32]:  # type: ignore
+) -> Tuple[tvvlist, tvelist, tvflist, wp.int32, wp.int32, wp.int32, wp.float32]:  # type: ignore
     tvv, tve = tvvlist(n_verts), tvelist(n_half_edges)
     n_vv, n_ve, n_vf = wp.int32(0), wp.int32(0), wp.int32(0)
-    # tdmin = ogc.dminv[v]  # thread local vertex minimum distance
+    tdmin = wp.float32(0)
+    if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+        tdmin = ogc.dminv[v]  # thread local vertex minimum distance
     for brow in range(MAX_VF_PER_THREAD):
         f = tvf[brow]
         if f >= n_tris:
@@ -400,9 +424,10 @@ def _classify_vertex_facet_contacts(
         )
         xc = uvw[0] * xj + uvw[1] * xk + uvw[2] * xl  # type: ignore
         d = wp.norm_l2(xi - xc)
-        # tdmin = wp.min(tdmin, d)
-        # wp.atomic_min(ogc.dminf, f, d)
-        if d > ogc.r:
+        if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            tdmin = wp.min(tdmin, d)
+            wp.atomic_min(ogc.dminf, f, d)
+        if d > r:
             tvf[brow] = n_tris
             continue
         a_local, e_face = _closest_face_point_triangle(uvw)
@@ -431,7 +456,7 @@ def _classify_vertex_facet_contacts(
                 n_vf += wp.int32(1)
             else:
                 tvf[brow] = n_tris
-    return tvv, tve, tvf, n_vv, n_ve, n_vf  # , tdmin  # type: ignore
+    return tvv, tve, tvf, n_vv, n_ve, n_vf, tdmin  # type: ignore
 
 
 @wp.func
@@ -444,14 +469,17 @@ def _classify_edge_edge_contacts(
     xi1: wp.vec3f,
     xj1: wp.vec3f,
     hei1: wp.int32,
+    r: wp.float32,
     tee: teelist,  # type: ignore
     n_half_edges: wp.int32,
     n_edges: wp.int32,
-) -> Tuple[teelist, wp.int32]:  # type: ignore
+) -> Tuple[teelist, wp.int32, wp.float32]:  # type: ignore
     fzero = wp.float32(0)
     fone = wp.float32(1)
     n_ee = wp.int32(0)
-    # tdmin = ogc.dmine[hei1]  # thread local edge minimum distance
+    tdmin = wp.float32(0)
+    if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+        tdmin = ogc.dmine[hei1]  # thread local edge minimum distance
     for brow in range(MAX_EE_PER_THREAD):
         e2 = tee[brow]  # pyright: ignore[reportIndexIssue]
         if e2 >= n_edges:
@@ -475,11 +503,12 @@ def _classify_edge_edge_contacts(
         xc1 = (fone - st[0]) * xi1 + st[0] * xj1  # type: ignore
         xc2 = (fone - st[1]) * xi2 + st[1] * xj2  # type: ignore
         d = wp.norm_l2(xc1 - xc2)
-        # tdmin = wp.min(tdmin, d)
+        if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            tdmin = wp.min(tdmin, d)
         # Only store each unordered pair once (deduplication guard)
         if e1 >= e2:
             continue
-        if d > ogc.r:
+        if d > r:
             continue
         is_xc1_vertex = st[0] == fzero or st[0] == fone  # type: ignore
         is_xc2_vertex = st[1] == fzero or st[1] == fone  # type: ignore
@@ -495,7 +524,7 @@ def _classify_edge_edge_contacts(
                 n_ee += wp.int32(1)
             else:
                 assert False
-    return tee, n_ee  # tdmin  # type: ignore
+    return tee, n_ee, tdmin  # type: ignore
 
 
 @wp.kernel(launch_bounds=_FUSED_CONTACT_DETECTION_BLOCK_SIZE)
@@ -513,6 +542,10 @@ def _fused_contact_detection(
     n_tris = meshes.F.shape[0]
     n_edges = meshes.E.shape[0]
     n_half_edges = n_tris * wp.int32(3)
+    rq = ogc.r + ogc.arq * ogc.rq[0]
+    r = ogc.r
+    if ogc.truncation_strategy == TRUNCATION_NONE:
+        r = rq
 
     # Location of this thread within the block for cooperative execution
     bcol = local_tid
@@ -537,13 +570,14 @@ def _fused_contact_detection(
             if f >= 0:
                 tvf[brow] = f
         # 2. Classify and store vv,ve,vf contacts
-        tvv, tve, tvf, tnvv, tnve, tnvf = _classify_vertex_facet_contacts(
-            x, meshes, ogc, v, i, xi, tvf, n_verts, n_half_edges, n_tris  # type: ignore
+        tvv, tve, tvf, tnvv, tnve, tnvf, tdmin = _classify_vertex_facet_contacts(
+            x, meshes, ogc, v, i, xi, r, tvf, n_verts, n_half_edges, n_tris  # type: ignore
         )
         # 2.a Reduce dminv across the block and write from the last thread.
-        # dminv = wp.tile_min(wp.tile(tdmin))[0]  # type: ignore
-        # if local_tid == last_col:
-        #     ogc.dminv[v] = dminv  # type: ignore
+        if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            dminv = wp.tile_min(wp.tile(tdmin))[0]  # type: ignore
+            if local_tid == last_col:
+                ogc.dminv[v] = dminv  # type: ignore
         # 2.b Count contacts (including duplicates) for early exit opportunity
         tnvv, tnve, tnvf = (
             wp.tile_sum(wp.tile(tnvv))[0],  # type: ignore
@@ -684,15 +718,16 @@ def _fused_contact_detection(
             if e2 >= 0:
                 tee[brow] = e2
         # 2. Classify and store ee contacts
-        tee, tnee = _classify_edge_edge_contacts(
-            x, meshes, ogc, e1, einds1, xi1, xj1, hei, tee, n_half_edges, n_edges  # type: ignore
+        tee, tnee, tdmin = _classify_edge_edge_contacts(
+            x, meshes, ogc, e1, einds1, xi1, xj1, hei, r, tee, n_half_edges, n_edges  # type: ignore
         )
         # 2.a Reduce dmine across the block and write from the last thread.
-        # dmine = wp.tile_min(wp.tile(tdmine))[0]  # type: ignore
-        # if local_tid == last_col:
-        #     ogc.dmine[hei] = dmine
-        #     if hej >= wp.int32(0):
-        #         ogc.dmine[hej] = dmine
+        if ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            dminv = wp.tile_min(wp.tile(tdmin))[0]  # type: ignore
+            if local_tid == last_col:
+                ogc.dmine[hei] = tdmin
+                if hej >= wp.int32(0):
+                    ogc.dmine[hej] = tdmin
         # 3. Count contacts
         tnee = wp.tile_sum(wp.tile(tnee))[0]  # type: ignore
         has_ee_contacts = tnee > wp.int32(0)
@@ -1388,6 +1423,7 @@ class Ogc:
     _f_bvh: wp.Bvh  # BVH over faces
     _xk: wp.array[wp.vec3f]  # (N,) cached vertex positions at step k
     _meshes: MultiMesh  # Meshes # type: ignore
+    _truncation_strategy: TruncationStrategy
 
     def __init__(
         self,
@@ -1406,6 +1442,7 @@ class Ogc:
         wp.copy(dest=self._xk, src=points)
         self._meshes = meshes
         self._ogc = OgcData()
+        self._ogc.truncation_strategy = int(params.truncation_strategy.value)  # type: ignore
         self._ogc.e_lowers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
         self._ogc.e_uppers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
         self._ogc.f_lowers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
@@ -1738,6 +1775,13 @@ class Ogc:
             wp.utils.radix_sort_pairs(
                 keys=self._ree.data.u, values=self._ree.data.v, count=ee_capacity
             )
+        if self._ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            wp.launch(
+                _update_displacement_bounds,
+                dim=self._meshes.n_verts,
+                inputs=[self._meshes.data, self._ogc],
+                stream=main_stream,
+            )
         # Fence
         for stream in self._streams:
             main_stream.wait_stream(stream)
@@ -1822,14 +1866,6 @@ class Ogc:
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
 
-    def update_displacement_bounds(self):
-        pass
-        # wp.launch(
-        #     _update_displacement_bounds,
-        #     dim=self._meshes.n_verts,
-        #     inputs=[self._meshes.data, self._ogc],
-        # )
-
     def truncate(self, x: wp.array):
         """Truncate per-vertex displacements in-place to stay within OGC displacement bounds.
 
@@ -1841,26 +1877,29 @@ class Ogc:
             x: Current vertex positions to truncate in-place
                (``wp.array[wp.vec3f]``, global-point indexed, shape ``(N,)``).
         """
-        block_dim = 64
-        n_verts, n_edges = self._meshes.n_verts, self._meshes.n_edges
-        self._ogc.tv.fill_(wp.float32(1))
-        wp.launch(
-            kernel=_planar_dat,
-            dim=max(n_verts, n_edges) * block_dim,
-            inputs=[self._xk, x, self._meshes.data, self._ogc],
-            block_dim=block_dim,
-        )
-        wp.launch(
-            kernel=_planar_dat_truncate,
-            dim=n_verts,
-            inputs=[self._xk, x, self._meshes.data, self._ogc],
-        )
-        # NOTE: This is OGC truncation.
-        # wp.launch(
-        #     _truncate_displacements,
-        #     dim=self._meshes.n_verts,
-        #     inputs=[self._xk, self._ogc.dminv, self._meshes.data.V, x],
-        # )
+        if self._ogc.truncation_strategy == TRUNCATION_DISTANCE:
+            block_dim = 32
+            wp.launch(
+                _truncate_displacements,
+                dim=self._meshes.n_verts,
+                inputs=[self._xk, self._ogc.dminv, self._meshes.data.V, x],
+                block_dim=block_dim,
+            )
+        elif self._ogc.truncation_strategy == TRUNCATION_PLANARDAT:
+            block_dim = 64
+            n_verts, n_edges = self._meshes.n_verts, self._meshes.n_edges
+            self._ogc.tv.fill_(wp.float32(1))
+            wp.launch(
+                kernel=_planar_dat,
+                dim=max(n_verts, n_edges) * block_dim,
+                inputs=[self._xk, x, self._meshes.data, self._ogc],
+                block_dim=block_dim,
+            )
+            wp.launch(
+                kernel=_planar_dat_truncate,
+                dim=n_verts,
+                inputs=[self._xk, x, self._meshes.data, self._ogc],
+            )
 
     @property
     def data(self) -> OgcData:  # pyright: ignore[reportGeneralTypeIssues]
