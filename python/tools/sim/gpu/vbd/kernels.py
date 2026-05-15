@@ -2,11 +2,10 @@ from typing import Tuple
 import warp as wp
 import warp.fem.linalg
 from .. import types
-from ..elasticity.fem import FemElastoDynamicsData
 from ..elasticity.snh import snh_grad_and_hess, snh_hess
 from ..elasticity.chain import gradient_segment_wrt_dofs, hessian_block_wrt_dofs
 from ..contact.dynamics import MeshDynamicsData as ContactDynamicsData
-from ..contact.dynamics import ConstraintSetData
+from ..contact.mesh.pairs import ContactBasesData
 from ..contact import halfedges
 from .params import (
     VLS_SOLVER_INVERSE,
@@ -113,7 +112,7 @@ def local_elastic_hessians(
 @wp.func
 def _contact_derivatives(
     c: wp.int32,
-    bases: wp.array[wp.mat33f],
+    bases: ContactBasesData,  # type: ignore
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
@@ -127,8 +126,7 @@ def _contact_derivatives(
     dmin: wp.float32,
     wi: wp.float32,
 ):
-    basis = bases[c]
-    n, t, b = basis[0, :], basis[1, :], basis[2, :]  # type: ignore
+    n, t, b = bases.n[c], bases.t[c], bases.b[c]  # type: ignore
     sk = s[c]
     gammak = gamma[c]
     dx = xcp1 - xcp2  # type: ignore
@@ -157,20 +155,23 @@ def local_contact_derivatives(
     gi = wp.vec3f()
     Hi = wp.mat33f()
     meshes = contact.meshes
-    ogc = contact.ogc
+    fcontacts = contact.contacts
+    rcontacts = contact.rcontacts
     dmin = contact.dmin
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
-    cvv, vv_bases = contact.cvv, ogc.vv_bases
-    cve, ve_bases, ve_bary = contact.cve, ogc.ve_bases, ogc.ve_bary
-    cvf, vf_bases, vf_bary = contact.cvf, ogc.vf_bases, ogc.vf_bary
-    cee, ee_bases, ee_bary = contact.cee, ogc.ee_bases, ogc.ee_bary
+    cvv, vv_bases = contact.cvv, fcontacts.vv_bases
+    cve, ve_bases, ve_bary = contact.cve, fcontacts.ve_bases, fcontacts.ve_bary
+    cvf, vf_bases, vf_bary = contact.cvf, fcontacts.vf_bases, fcontacts.vf_bary
+    cee, ee_bases, ee_bary = contact.cee, fcontacts.ee_bases, fcontacts.ee_bary
     xi = x[i]
     xti = xt[i]
 
     # 1a. Vertex-vertex contacts (forward)
-    for c in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
-        vj = ogc.vv.v[c]
+    for c in range(
+        fcontacts.vv.prefix[vi] + local_tid, fcontacts.vv.prefix[vi + 1], block_dims
+    ):
+        vj = fcontacts.vv.v[c]
         j = meshes.V[vj]
         xcp1 = xi
         xcp2 = x[j]
@@ -197,9 +198,11 @@ def local_contact_derivatives(
         Hi += Hic
 
     # 1b. Vertex-vertex contacts (reverse)
-    for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
-        c = ogc.rvv2vv[k]
-        vj = ogc.rvv.v[k]
+    for k in range(
+        rcontacts.rvv.prefix[vi] + local_tid, rcontacts.rvv.prefix[vi + 1], block_dims
+    ):
+        c = rcontacts.rvv2vv[k]
+        vj = rcontacts.rvv.v[k]
         j = meshes.V[vj]
         xcp1 = x[j]
         xtcp1 = xt[j]
@@ -226,8 +229,10 @@ def local_contact_derivatives(
         Hi += Hic
 
     # 2. Vertex-halfedge contacts (forward)
-    for c in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
-        he = ogc.ve.v[c]
+    for c in range(
+        fcontacts.ve.prefix[vi] + local_tid, fcontacts.ve.prefix[vi + 1], block_dims
+    ):
+        he = fcontacts.ve.v[c]
         a = halfedges.incoming_vertex(meshes.F, he)
         b = halfedges.outgoing_vertex(meshes.F, he)
         b1 = ve_bary[c]
@@ -257,13 +262,15 @@ def local_contact_derivatives(
         Hi += Hic
 
     # 3. Vertex-triangle contacts (forward)
-    for c in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
-        f = ogc.vf.v[c]
+    for c in range(
+        fcontacts.vf.prefix[vi] + local_tid, fcontacts.vf.prefix[vi + 1], block_dims
+    ):
+        f = fcontacts.vf.v[c]
         finds = meshes.F[f]
         uv = vf_bary[c]
-        b0 = uv[0]
-        b1 = uv[1]
-        b2 = wp.float32(1) - b0 - b1
+        b0 = wp.float32(1) - b0 - b1
+        b1 = uv[0]
+        b2 = uv[1]
         xcp1 = xi
         xtcp1 = xti
         xcp2 = b0 * x[finds[0]] + b1 * x[finds[1]] + b2 * x[finds[2]]
@@ -297,9 +304,9 @@ def local_contact_derivatives(
         j_he = halfedges.outgoing_vertex(meshes.F, he)
         # 4. EE contacts (forward): he is u-side
         for c in range(
-            ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
+            fcontacts.ee.prefix[he] + local_tid, fcontacts.ee.prefix[he + 1], block_dims
         ):
-            he2 = ogc.ee.v[c]
+            he2 = fcontacts.ee.v[c]
             i_he2 = halfedges.incoming_vertex(meshes.F, he2)
             j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
             st = ee_bary[c]
@@ -333,10 +340,12 @@ def local_contact_derivatives(
 
         # 5.a VE contacts (reverse): he is v-side
         for l in range(
-            ogc.rve.prefix[he] + local_tid, ogc.rve.prefix[he + 1], block_dims
+            rcontacts.rve.prefix[he] + local_tid,
+            rcontacts.rve.prefix[he + 1],
+            block_dims,
         ):
-            c = ogc.rve2ve[l]
-            _vi = ogc.rve.v[l]
+            c = rcontacts.rve2ve[l]
+            _vi = rcontacts.rve.v[l]
             _i = meshes.V[_vi]
             b1 = ve_bary[c]
             b0 = wp.float32(1) - b1
@@ -368,10 +377,10 @@ def local_contact_derivatives(
         f = halfedges.face_of_half_edge(hei)
         finds = meshes.F[f]
         for l in range(
-            ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
+            rcontacts.rvf.prefix[f] + local_tid, rcontacts.rvf.prefix[f + 1], block_dims
         ):
-            c = ogc.rvf2vf[l]
-            _vi = ogc.rvf.v[l]
+            c = rcontacts.rvf2vf[l]
+            _vi = rcontacts.rvf.v[l]
             _i = meshes.V[_vi]
             uv = vf_bary[c]
             b0 = uv[0]
@@ -407,10 +416,12 @@ def local_contact_derivatives(
 
         # 5.c EE contacts (reverse): he is v-side
         for l in range(
-            ogc.ree.prefix[he] + local_tid, ogc.ree.prefix[he + 1], block_dims
+            rcontacts.ree.prefix[he] + local_tid,
+            rcontacts.ree.prefix[he + 1],
+            block_dims,
         ):
-            c = ogc.ree2ee[l]
-            he2 = ogc.ree.v[l]
+            c = rcontacts.ree2ee[l]
+            he2 = rcontacts.ree.v[l]
             i_he2 = halfedges.incoming_vertex(meshes.F, he2)
             j_he2 = halfedges.outgoing_vertex(meshes.F, he2)
             st = ee_bary[c]
@@ -445,121 +456,121 @@ def local_contact_derivatives(
     return gi, Hi
 
 
-@wp.func
-def _contact_ntb_rayleigh(
-    ntb: wp.mat33f,
-    Hi: wp.mat33f,
-) -> Tuple[wp.float32, wp.float32]:
-    """Compute per-contact Rayleigh quotients Q = (g^T Hi g) / (g^T g) for normal, tangent, and bitangent directions.
+# @wp.func
+# def _contact_ntb_rayleigh(
+#     ntb: wp.mat33f,
+#     Hi: wp.mat33f,
+# ) -> Tuple[wp.float32, wp.float32]:
+#     """Compute per-contact Rayleigh quotients Q = (g^T Hi g) / (g^T g) for normal, tangent, and bitangent directions.
 
-    Since g = wi * dir and wi^2 cancels in the ratio, and n/t/b are unit vectors so g^T g = 1,
-    the quotients reduce to simply ``dir^T Hi dir``.
+#     Since g = wi * dir and wi^2 cancels in the ratio, and n/t/b are unit vectors so g^T g = 1,
+#     the quotients reduce to simply ``dir^T Hi dir``.
 
-    Args:
-        ntb: Row matrix whose rows are the contact normal, first tangent, and bitangent.
-        Hi: Symmetric positive-(semi)definite 3x3 dynamics Hessian block for vertex i.
+#     Args:
+#         ntb: Row matrix whose rows are the contact normal, first tangent, and bitangent.
+#         Hi: Symmetric positive-(semi)definite 3x3 dynamics Hessian block for vertex i.
 
-    Returns:
-        ``(Qn, Qf)`` where ``Qn = n^T Hi n`` and ``Qf = max(t^T Hi t, b^T Hi b)``.
-    """
-    n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]  # type: ignore
-    Qn = wp.dot(n, Hi @ n)
-    Qf = wp.max(wp.dot(t, Hi @ t), wp.dot(b, Hi @ b))
-    return Qn, Qf  # type: ignore
+#     Returns:
+#         ``(Qn, Qf)`` where ``Qn = n^T Hi n`` and ``Qf = max(t^T Hi t, b^T Hi b)``.
+#     """
+#     n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]  # type: ignore
+#     Qn = wp.dot(n, Hi @ n)
+#     Qf = wp.max(wp.dot(t, Hi @ t), wp.dot(b, Hi @ b))
+#     return Qn, Qf  # type: ignore
 
 
-@wp.func
-def local_contact_rayleigh_quotients(
-    i: wp.int32,
-    vi: wp.int32,
-    Hi: wp.mat33f,
-    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-    local_tid: wp.int32,
-    block_dims: wp.int32,
-):
-    """Compute thread-local maximum normal and tangential Rayleigh quotients over all contacts incident on vertex i.
+# @wp.func
+# def local_contact_rayleigh_quotients(
+#     i: wp.int32,
+#     vi: wp.int32,
+#     Hi: wp.mat33f,
+#     contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+#     local_tid: wp.int32,
+#     block_dims: wp.int32,
+# ):
+#     """Compute thread-local maximum normal and tangential Rayleigh quotients over all contacts incident on vertex i.
 
-    Mirrors the loop structure of :func:`local_contact_derivatives`, but instead of accumulating
-    gradient and Hessian contributions, computes per-contact Rayleigh quotients
-    ``Q = 1 / (dir^T Hi dir)`` for the contact normal, tangent, and bitangent directions,
-    tracking the thread-local maxima.
+#     Mirrors the loop structure of :func:`local_contact_derivatives`, but instead of accumulating
+#     gradient and Hessian contributions, computes per-contact Rayleigh quotients
+#     ``Q = 1 / (dir^T Hi dir)`` for the contact normal, tangent, and bitangent directions,
+#     tracking the thread-local maxima.
 
-    Args:
-        i: Global FEM vertex index.
-        vi: Surface/contact vertex index (indexes into OGC contact lists).
-        Hi: Full dynamics Hessian block for vertex i (elastic + mass).
-        contact: Contact dynamics data.
-        local_tid: Thread index within the block (0..block_dims-1).
-        block_dims: Number of threads in the block.
+#     Args:
+#         i: Global FEM vertex index.
+#         vi: Surface/contact vertex index (indexes into OGC contact lists).
+#         Hi: Full dynamics Hessian block for vertex i (elastic + mass).
+#         contact: Contact dynamics data.
+#         local_tid: Thread index within the block (0..block_dims-1).
+#         block_dims: Number of threads in the block.
 
-    Returns:
-        ``(local_Qn, local_Qf)`` thread-local maximum normal and tangential Rayleigh quotients.
-    """
-    maxQn = wp.float32(0)
-    maxQf = wp.float32(0)
-    meshes = contact.meshes
-    ogc = contact.ogc
-    vv_bases = ogc.vv_bases
-    ve_bases = ogc.ve_bases
-    vf_bases = ogc.vf_bases
-    ee_bases = ogc.ee_bases
+#     Returns:
+#         ``(local_Qn, local_Qf)`` thread-local maximum normal and tangential Rayleigh quotients.
+#     """
+#     maxQn = wp.float32(0)
+#     maxQf = wp.float32(0)
+#     meshes = contact.meshes
+#     ogc = contact.ogc
+#     vv_bases = ogc.vv_bases
+#     ve_bases = ogc.ve_bases
+#     vf_bases = ogc.vf_bases
+#     ee_bases = ogc.ee_bases
 
-    # 1a. Vertex-vertex contacts (forward)
-    for k in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
-        vvQn, vvQf = _contact_ntb_rayleigh(vv_bases[k], Hi)
-        maxQn = wp.max(maxQn, vvQn)
-        maxQf = wp.max(maxQf, vvQf)
-    # 1b. Vertex-vertex contacts (reverse)
-    for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
-        rvvQn, rvvQf = _contact_ntb_rayleigh(vv_bases[ogc.rvv2vv[k]], Hi)  # type: ignore
-        maxQn = wp.max(maxQn, rvvQn)
-        maxQf = wp.max(maxQf, rvvQf)
-    # 2. Vertex-halfedge contacts (forward)
-    for k in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
-        veQn, veQf = _contact_ntb_rayleigh(ve_bases[k], Hi)
-        maxQn = wp.max(maxQn, veQn)
-        maxQf = wp.max(maxQf, veQf)
-    # 3. Vertex-triangle contacts (forward)
-    for k in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
-        vfQn, vfQf = _contact_ntb_rayleigh(vf_bases[k], Hi)
-        maxQn = wp.max(maxQn, vfQn)
-        maxQf = wp.max(maxQf, vfQf)
-    # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
-    for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):
-        hei = meshes.GVHEadj[k]
-        hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
-        he = wp.max(hei, hej)
-        # 4. EE contacts (forward): he is u-side
-        for l in range(
-            ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
-        ):
-            eeQn, eeQf = _contact_ntb_rayleigh(ee_bases[l], Hi)
-            maxQn = wp.max(maxQn, eeQn)
-            maxQf = wp.max(maxQf, eeQf)
-        # 5.a VE contacts (reverse): he is v-side
-        for l in range(
-            ogc.rve.prefix[he] + local_tid, ogc.rve.prefix[he + 1], block_dims
-        ):
-            rveQn, rveQf = _contact_ntb_rayleigh(ve_bases[ogc.rve2ve[l]], Hi)
-            maxQn = wp.max(maxQn, rveQn)
-            maxQf = wp.max(maxQf, rveQf)
-        # 5.b VF contacts (reverse): face of hei contains vertex i
-        f = halfedges.face_of_half_edge(hei)
-        for l in range(
-            ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
-        ):
-            rvfQn, rvfQf = _contact_ntb_rayleigh(vf_bases[ogc.rvf2vf[l]], Hi)
-            maxQn = wp.max(maxQn, rvfQn)
-            maxQf = wp.max(maxQf, rvfQf)
-        # 5.c EE contacts (reverse): he is v-side
-        for l in range(
-            ogc.ree.prefix[he] + local_tid, ogc.ree.prefix[he + 1], block_dims
-        ):
-            reeQn, reeQf = _contact_ntb_rayleigh(ee_bases[ogc.ree2ee[l]], Hi)
-            maxQn = wp.max(maxQn, reeQn)
-            maxQf = wp.max(maxQf, reeQf)
+#     # 1a. Vertex-vertex contacts (forward)
+#     for k in range(ogc.vv.prefix[vi] + local_tid, ogc.vv.prefix[vi + 1], block_dims):
+#         vvQn, vvQf = _contact_ntb_rayleigh(vv_bases[k], Hi)
+#         maxQn = wp.max(maxQn, vvQn)
+#         maxQf = wp.max(maxQf, vvQf)
+#     # 1b. Vertex-vertex contacts (reverse)
+#     for k in range(ogc.rvv.prefix[vi] + local_tid, ogc.rvv.prefix[vi + 1], block_dims):
+#         rvvQn, rvvQf = _contact_ntb_rayleigh(vv_bases[ogc.rvv2vv[k]], Hi)  # type: ignore
+#         maxQn = wp.max(maxQn, rvvQn)
+#         maxQf = wp.max(maxQf, rvvQf)
+#     # 2. Vertex-halfedge contacts (forward)
+#     for k in range(ogc.ve.prefix[vi] + local_tid, ogc.ve.prefix[vi + 1], block_dims):
+#         veQn, veQf = _contact_ntb_rayleigh(ve_bases[k], Hi)
+#         maxQn = wp.max(maxQn, veQn)
+#         maxQf = wp.max(maxQf, veQf)
+#     # 3. Vertex-triangle contacts (forward)
+#     for k in range(ogc.vf.prefix[vi] + local_tid, ogc.vf.prefix[vi + 1], block_dims):
+#         vfQn, vfQf = _contact_ntb_rayleigh(vf_bases[k], Hi)
+#         maxQn = wp.max(maxQn, vfQn)
+#         maxQf = wp.max(maxQf, vfQf)
+#     # 4 & 5. Per-incident-halfedge loops (EE forward/reverse, VE/VF/EE reverse)
+#     for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):
+#         hei = meshes.GVHEadj[k]
+#         hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
+#         he = wp.max(hei, hej)
+#         # 4. EE contacts (forward): he is u-side
+#         for l in range(
+#             ogc.ee.prefix[he] + local_tid, ogc.ee.prefix[he + 1], block_dims
+#         ):
+#             eeQn, eeQf = _contact_ntb_rayleigh(ee_bases[l], Hi)
+#             maxQn = wp.max(maxQn, eeQn)
+#             maxQf = wp.max(maxQf, eeQf)
+#         # 5.a VE contacts (reverse): he is v-side
+#         for l in range(
+#             ogc.rve.prefix[he] + local_tid, ogc.rve.prefix[he + 1], block_dims
+#         ):
+#             rveQn, rveQf = _contact_ntb_rayleigh(ve_bases[ogc.rve2ve[l]], Hi)
+#             maxQn = wp.max(maxQn, rveQn)
+#             maxQf = wp.max(maxQf, rveQf)
+#         # 5.b VF contacts (reverse): face of hei contains vertex i
+#         f = halfedges.face_of_half_edge(hei)
+#         for l in range(
+#             ogc.rvf.prefix[f] + local_tid, ogc.rvf.prefix[f + 1], block_dims
+#         ):
+#             rvfQn, rvfQf = _contact_ntb_rayleigh(vf_bases[ogc.rvf2vf[l]], Hi)
+#             maxQn = wp.max(maxQn, rvfQn)
+#             maxQf = wp.max(maxQf, rvfQf)
+#         # 5.c EE contacts (reverse): he is v-side
+#         for l in range(
+#             ogc.ree.prefix[he] + local_tid, ogc.ree.prefix[he + 1], block_dims
+#         ):
+#             reeQn, reeQf = _contact_ntb_rayleigh(ee_bases[ogc.ree2ee[l]], Hi)
+#             maxQn = wp.max(maxQn, reeQn)
+#             maxQf = wp.max(maxQf, reeQf)
 
-    return maxQn, maxQf
+#     return maxQn, maxQf
 
 
 @wp.func

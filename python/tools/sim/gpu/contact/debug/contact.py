@@ -1,11 +1,20 @@
 import math
+import numpy as np
+import warp as wp
+import cupy as cp
 import polyscope as ps
 import polyscope.imgui as imgui
-from ..ogc import *
+
+from ..mesh.pairs import ContactPairs
+from ..multimesh import MultiMesh
 
 
-class OgcContactBrowser:
-    """Simple Polyscope/imgui browser for OGC contact pairs."""
+class ContactBrowser:
+    """Simple Polyscope/imgui browser for mesh contact pairs.
+
+    Displays one contact stencil at a time, browsable by kind (VV, VE, VF, EE)
+    and index, with optional contact-frame basis vector overlays.
+    """
 
     _CONTACT_KINDS = ["VV", "VE", "VF", "EE"]
     _BASIS_COLORS: dict[str, tuple[float, float, float]] = {
@@ -14,11 +23,17 @@ class OgcContactBrowser:
         "Bitangent": (0.20, 0.45, 0.90),
     }
 
-    def __init__(self, x: wp.array[wp.vec3f], ogc: Ogc, screen_fraction: float = 0.25):
-        self._ogc = ogc
+    def __init__(
+        self,
+        x: wp.array,
+        meshes: MultiMesh,
+        contacts: ContactPairs,
+        screen_fraction: float = 0.25,
+    ):
+        self._contacts = contacts
         self._x = x.numpy()
-        self._V = ogc._meshes.data.V.numpy()
-        self._F = ogc._meshes.data.F.numpy()
+        self._V = meshes.data.V.numpy()
+        self._F = meshes.data.F.numpy()
         self._screen_fraction: float = screen_fraction
         self._kind_idx: int = 0
         self._contact_idx: int = 0
@@ -26,7 +41,7 @@ class OgcContactBrowser:
         self._stencil_pc = None
         self._stencil_cn = None
         self._stencil_sm = None
-        self._last_visualized: tuple[int, int, int, bool] | None = None
+        self._last_visualized: tuple | None = None
         self._show_normal: bool = True
         self._show_tangent: bool = False
         self._show_bitangent: bool = False
@@ -46,15 +61,17 @@ class OgcContactBrowser:
             ps.remove_surface_mesh(self._stencil_sm.get_name())
             self._stencil_sm = None
 
-    def update(self, x: wp.array[wp.vec3f], ogc: Ogc):
-        """Refresh contact data from a new or updated Ogc instance."""
+    def update(self, x: wp.array, meshes: MultiMesh, contacts: ContactPairs):
+        """Refresh visualization data from updated positions and contact pairs."""
         self.clear()
-        self._ogc = ogc
+        self._contacts = contacts
         self._x = x.numpy()
+        self._V = meshes.data.V.numpy()
+        self._F = meshes.data.F.numpy()
         self._last_visualized = None
 
     def draw(self):
-        imgui.PushID("OgcContactBrowser")  # type: ignore
+        imgui.PushID("ContactBrowser")  # type: ignore
 
         changed, self._screen_fraction = imgui.SliderFloat(  # type: ignore
             "Zoom level", self._screen_fraction, 0.05, 1.0
@@ -68,7 +85,7 @@ class OgcContactBrowser:
 
         contact_kinds = [
             f"{kind} ({count})"
-            for kind, count in zip(self._CONTACT_KINDS, self._ogc.num_contacts)
+            for kind, count in zip(self._CONTACT_KINDS, self._contacts.num_contacts)
         ]
         changed, self._kind_idx = imgui.Combo("Kind", self._kind_idx, contact_kinds)  # type: ignore
         if changed:
@@ -86,14 +103,14 @@ class OgcContactBrowser:
 
         self._contact_idx = max(0, min(self._contact_idx, n - 1))
 
-        if imgui.Button("<##ogc_prev"):  # type: ignore
+        if imgui.Button("<##cb_prev"):  # type: ignore
             self._contact_idx = max(0, self._contact_idx - 1)
         imgui.SameLine()  # type: ignore
         imgui.SetNextItemWidth(80)  # type: ignore
         _, self._contact_idx = imgui.InputInt("Index", self._contact_idx)  # type: ignore
         self._contact_idx = max(0, min(self._contact_idx, n - 1))
         imgui.SameLine()  # type: ignore
-        if imgui.Button(">##ogc_next"):  # type: ignore
+        if imgui.Button(">##cb_next"):  # type: ignore
             self._contact_idx = min(n - 1, self._contact_idx + 1)
         imgui.SameLine()  # type: ignore
         imgui.Text(f"/ {n - 1}")  # type: ignore
@@ -187,20 +204,36 @@ class OgcContactBrowser:
     def _get_selected_contacts(self) -> tuple[np.ndarray, np.ndarray]:
         if self._show_reverse:
             if self._kind_idx == 0:
-                return self._ogc.rvv_contacts
+                return self._contacts.rvv_contacts
             if self._kind_idx == 1:
-                return self._ogc.rve_contacts
+                return self._contacts.rve_contacts
             if self._kind_idx == 2:
-                return self._ogc.rvf_contacts
-            return self._ogc.ree_contacts
+                return self._contacts.rvf_contacts
+            return self._contacts.ree_contacts
         else:
             if self._kind_idx == 0:
-                return self._ogc.vv_contacts
+                return self._contacts.vv_contacts
             if self._kind_idx == 1:
-                return self._ogc.ve_contacts
+                return self._contacts.ve_contacts
             if self._kind_idx == 2:
-                return self._ogc.vf_contacts
-            return self._ogc.ee_contacts
+                return self._contacts.vf_contacts
+            return self._contacts.ee_contacts
+
+    def _get_basis(self, kind: str, k: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return (n, t, b) unit vectors for contact index k of the given kind."""
+        fwd_data, _ = self._contacts.read_data
+        if kind == "VV":
+            bases = fwd_data.vv_bases
+        elif kind == "VE":
+            bases = fwd_data.ve_bases
+        elif kind == "VF":
+            bases = fwd_data.vf_bases
+        else:  # EE
+            bases = fwd_data.ee_bases
+        n = cp.asarray(bases.n)[k].get()  # (3,)
+        t = cp.asarray(bases.t)[k].get()  # (3,)
+        b = cp.asarray(bases.b)[k].get()  # (3,)
+        return n, t, b
 
     def _visualize_current_contact(self):
         self.clear()
@@ -213,67 +246,58 @@ class OgcContactBrowser:
         V = self._V
         F = self._F
         k = self._contact_idx
-        ogc_data = self._ogc.data
+        fwd_data, _ = self._contacts.read_data
 
-        _BASIS_ROWS = [("Normal", 0), ("Tangent", 1), ("Bitangent", 2)]
         _basis_enabled = {
             "Normal": self._show_normal,
             "Tangent": self._show_tangent,
             "Bitangent": self._show_bitangent,
         }
 
-        if self._kind_idx == 0:
+        if self._kind_idx == 0:  # VV
             u, v = int(contacts[0][k]), int(contacts[1][k])
             iu = int(V[u])
             iv = int(V[v])
-            self._stencil_pc = ps.register_point_cloud("OGC VV Contact", x[[iu, iv], :])
+            self._stencil_pc = ps.register_point_cloud("Contact VV", x[[iu, iv], :])
             self._stencil_pc.set_radius(self._point_radius, relative=True)
-            basis = cp.asarray(ogc_data.vv_bases)[
-                k, :, :
-            ].get()  # (3, 3), rows = [n, t1, t2]
-            for name, row in _BASIS_ROWS:
-                if self._show_reverse:
-                    self._stencil_pc.remove_quantity(name)
-                else:
+            if not self._show_reverse:
+                n_v, t_v, b_v = self._get_basis("VV", k)
+                for name, vec in (("Normal", n_v), ("Tangent", t_v), ("Bitangent", b_v)):
                     self._stencil_pc.add_vector_quantity(
                         name,
-                        np.array([basis[row, :], -basis[row, :]]),
+                        np.array([vec, -vec]),
                         enabled=_basis_enabled[name],
                         color=self._BASIS_COLORS[name],
                         length=self._vector_length,
                         radius=self._vector_radius,
                     )
 
-        elif self._kind_idx == 1:
-            v, he = (
+        elif self._kind_idx == 1:  # VE
+            v_prim, he = (
                 (int(contacts[0][k]), int(contacts[1][k]))
                 if not self._show_reverse
                 else (int(contacts[1][k]), int(contacts[0][k]))
             )
-            iv = int(V[v])
+            iv = int(V[v_prim])
             f = he // 3
             e_local = he % 3
             i = int(F[f, e_local])
             j = int(F[f, (e_local + 1) % 3])
-            self._stencil_pc = ps.register_point_cloud("OGC VE Vertex", x[[iv], :])
+            self._stencil_pc = ps.register_point_cloud("Contact VE Vertex", x[[iv], :])
             self._stencil_pc.set_radius(self._point_radius, relative=True)
             self._stencil_cn = ps.register_curve_network(
-                "OGC VE Edge",
+                "Contact VE Edge",
                 x[[i, j], :],
                 np.array([[0, 1]], dtype=np.int32),
             )
             self._stencil_cn.set_radius(self._edge_radius, relative=True)
-            # Vertex weight = 1; edge node weights = (1-t, t).
-            basis = cp.asarray(ogc_data.ve_bases)[k, :, :].get()  # (3, 3)
-            t = float(cp.asarray(ogc_data.ve_bary)[k].get())  # (1,)
-            for name, row in _BASIS_ROWS:
-                if self._show_reverse:
-                    self._stencil_pc.remove_quantity(name)
-                    self._stencil_cn.remove_quantity(name)
-                else:
+            if not self._show_reverse:
+                n_v, t_v, b_v = self._get_basis("VE", k)
+                t_bary = float(cp.asarray(fwd_data.ve_bary)[k].get())
+                for name, vec in (("Normal", n_v), ("Tangent", t_v), ("Bitangent", b_v)):
                     self._stencil_pc.add_vector_quantity(
                         name,
-                        np.array([basis[row, :]]),
+                        np.array([vec]),
                         enabled=_basis_enabled[name],
                         color=self._BASIS_COLORS[name],
                         length=self._vector_length,
@@ -281,41 +305,37 @@ class OgcContactBrowser:
                     )
                     self._stencil_cn.add_vector_quantity(
                         name,
-                        -np.array([(1.0 - t) * basis[row, :], t * basis[row, :]]),
+                        -np.array([(1.0 - t_bary) * vec, t_bary * vec]),
                         enabled=_basis_enabled[name],
                         color=self._BASIS_COLORS[name],
                         length=self._vector_length,
                         radius=self._vector_radius,
                     )
 
-        elif self._kind_idx == 2:
-            v, f = (
+        elif self._kind_idx == 2:  # VF
+            v_prim, f = (
                 (int(contacts[0][k]), int(contacts[1][k]))
                 if not self._show_reverse
                 else (int(contacts[1][k]), int(contacts[0][k]))
             )
-            iv = int(V[v])
+            iv = int(V[v_prim])
             tri = F[f, :]
-            self._stencil_pc = ps.register_point_cloud("OGC VF Vertex", x[[iv], :])
+            self._stencil_pc = ps.register_point_cloud("Contact VF Vertex", x[[iv], :])
             self._stencil_pc.set_radius(self._point_radius, relative=True)
             self._stencil_sm = ps.register_surface_mesh(
-                "OGC VF Triangle",
+                "Contact VF Triangle",
                 x[tri, :],
                 np.array([[0, 1, 2]], dtype=np.int32),
             )
-            # Vertex weight = 1; triangle vertex weights = (u, v, w) with w = 1 - u - v.
-            basis = cp.asarray(ogc_data.vf_bases)[k, :, :].get()  # (3, 3)
-            uv = cp.asarray(ogc_data.vf_bary)[k, :].get()  # (2,)
-            u_b, v_b = float(uv[0]), float(uv[1])
-            w_b = 1.0 - u_b - v_b
-            for name, row in _BASIS_ROWS:
-                if self._show_reverse:
-                    self._stencil_pc.remove_quantity(name)
-                    self._stencil_sm.remove_quantity(name)
-                else:
+            if not self._show_reverse:
+                n_v, t_v, b_v = self._get_basis("VF", k)
+                vw = cp.asarray(fwd_data.vf_bary)[k].get()  # (v, w)
+                v_b, w_b = float(vw[0]), float(vw[1])
+                u_b = 1.0 - v_b - w_b
+                for name, vec in (("Normal", n_v), ("Tangent", t_v), ("Bitangent", b_v)):
                     self._stencil_pc.add_vector_quantity(
                         name,
-                        np.array([basis[row, :]]),
+                        np.array([vec]),
                         enabled=_basis_enabled[name],
                         color=self._BASIS_COLORS[name],
                         length=self._vector_length,
@@ -323,20 +343,14 @@ class OgcContactBrowser:
                     )
                     self._stencil_sm.add_vector_quantity(
                         name,
-                        -np.array(
-                            [
-                                u_b * basis[row, :],
-                                v_b * basis[row, :],
-                                w_b * basis[row, :],
-                            ]
-                        ),
+                        -np.array([u_b * vec, v_b * vec, w_b * vec]),
                         enabled=_basis_enabled[name],
                         color=self._BASIS_COLORS[name],
                         length=self._vector_length,
                         radius=self._vector_radius,
                     )
 
-        elif self._kind_idx == 3:
+        elif self._kind_idx == 3:  # EE
             he0, he1 = int(contacts[0][k]), int(contacts[1][k])
             f0, e0 = he0 // 3, he0 % 3
             f1, e1 = he1 // 3, he1 % 3
@@ -345,30 +359,25 @@ class OgcContactBrowser:
             j0 = int(F[f1, e1])
             j1 = int(F[f1, (e1 + 1) % 3])
             self._stencil_cn = ps.register_curve_network(
-                "OGC EE Edges",
+                "Contact EE Edges",
                 x[[i0, i1, j0, j1], :],
                 np.array([[0, 1], [2, 3]], dtype=np.int32),
             )
             self._stencil_cn.set_radius(self._edge_radius, relative=True)
-            # Edge1 node weights = (1-s, s); edge2 node weights = (1-t, t).
-            basis = cp.asarray(ogc_data.ee_bases)[k, :, :].get()  # (3, 3)
-            st = cp.asarray(ogc_data.ee_bary)[k, :].get()  # (2,)
-            s, t = float(st[0]), float(st[1])
-            w_nodes = np.array([1.0 - s, s, 1.0 - t, t])  # (4, 1)
-            for name, row in _BASIS_ROWS:
-                if self._show_reverse:
-                    self._stencil_cn.remove_quantity(name)
-                else:
+            if not self._show_reverse:
+                n_v, t_v, b_v = self._get_basis("EE", k)
+                st = cp.asarray(fwd_data.ee_bary)[k].get()  # (s, t)
+                s, t_bary = float(st[0]), float(st[1])
+                w_nodes = np.array([1.0 - s, s, 1.0 - t_bary, t_bary])
+                for name, vec in (("Normal", n_v), ("Tangent", t_v), ("Bitangent", b_v)):
                     self._stencil_cn.add_vector_quantity(
                         name,
-                        np.array(
-                            [
-                                w_nodes[0] * basis[row, :],
-                                w_nodes[1] * basis[row, :],
-                                -w_nodes[2] * basis[row, :],
-                                -w_nodes[3] * basis[row, :],
-                            ]
-                        ),
+                        np.array([
+                            w_nodes[0] * vec,
+                            w_nodes[1] * vec,
+                            -w_nodes[2] * vec,
+                            -w_nodes[3] * vec,
+                        ]),
                         enabled=_basis_enabled[name],
                         color=self._BASIS_COLORS[name],
                         length=self._vector_length,
@@ -400,9 +409,7 @@ class OgcContactBrowser:
                 else (int(contacts[1][k]), int(contacts[0][k]))
             )
             f, e_local = he // 3, he % 3
-            pts = x[
-                [int(V[v_idx]), int(F[f, e_local]), int(F[f, (e_local + 1) % 3])], :
-            ]
+            pts = x[[int(V[v_idx]), int(F[f, e_local]), int(F[f, (e_local + 1) % 3])], :]
         elif self._kind_idx == 2:  # VF
             v_idx, f = (
                 (int(contacts[0][k]), int(contacts[1][k]))
@@ -414,41 +421,26 @@ class OgcContactBrowser:
             he0, he1 = int(contacts[0][k]), int(contacts[1][k])
             f0, e0 = he0 // 3, he0 % 3
             f1, e1 = he1 // 3, he1 % 3
-            pts = x[
-                [
-                    int(F[f0, e0]),
-                    int(F[f0, (e0 + 1) % 3]),
-                    int(F[f1, e1]),
-                    int(F[f1, (e1 + 1) % 3]),
-                ],
-                :,
-            ]
+            pts = x[[int(F[f0, e0]), int(F[f0, (e0 + 1) % 3]), int(F[f1, e1]), int(F[f1, (e1 + 1) % 3])], :]
 
         centroid = pts.mean(axis=0)
-        # Bounding-sphere radius of the stencil points around the centroid
         radius = float(np.linalg.norm(pts - centroid, axis=1).max())
-        # Ensure a minimum radius so we don't fly into a single degenerate point
         radius = max(radius, 1e-4)
-
-        # Compute the camera distance so the stencil subtends `screen_fraction` of
-        # screen height: screen_fraction = radius / (dist * tan(fov_half))
         cam_params = ps.get_view_camera_parameters()
         fov_half_rad = math.radians(cam_params.get_fov_vertical_deg()) * 0.5
         screen_fraction = max(self._screen_fraction, 1e-4)
         dist = radius / (screen_fraction * math.tan(fov_half_rad))
-
-        # Keep the current view direction, just reposition along it
         look_dir = np.array(cam_params.get_look_dir(), dtype=float)
         cam_pos = centroid - look_dir * dist
         ps.look_at(cam_pos, centroid, fly_to=True)
 
 
-class OgcContactOverview:
+class ContactOverview:
     """Polyscope overlay that displays *all* contacts of every type simultaneously.
 
     Each contact type uses a consistent two-color coding:
-      - first  side of a pair → orange  (``_COLOR_FIRST``)
-      - second side of a pair → blue    (``_COLOR_SECOND``)
+      - first  side of a pair → orange
+      - second side of a pair → blue
 
     Structures registered:
       1. PointCloud   - VV vertex A  (all first vertices)
@@ -461,22 +453,20 @@ class OgcContactOverview:
       8. CurveNetwork - EE edge 1    (second edges)
     """
 
-    # Color palette: first side of a pair vs. second side
-    _COLOR_FIRST = (0.95, 0.45, 0.10)  # orange
+    _COLOR_FIRST = (0.95, 0.45, 0.10)   # orange
     _COLOR_SECOND = (0.20, 0.55, 0.90)  # blue
 
     _PS_NAMES = {
-        "vv_u": "OGC Overview - VV vertex A",
-        "vv_v": "OGC Overview - VV vertex B",
-        "ve_v": "OGC Overview - VE vertex",
-        "ve_e": "OGC Overview - VE edge",
-        "vf_v": "OGC Overview - VF vertex",
-        "vf_f": "OGC Overview - VF triangle",
-        "ee_e0": "OGC Overview - EE edge 0",
-        "ee_e1": "OGC Overview - EE edge 1",
+        "vv_u":  "Contact Overview - VV vertex A",
+        "vv_v":  "Contact Overview - VV vertex B",
+        "ve_v":  "Contact Overview - VE vertex",
+        "ve_e":  "Contact Overview - VE edge",
+        "vf_v":  "Contact Overview - VF vertex",
+        "vf_f":  "Contact Overview - VF triangle",
+        "ee_e0": "Contact Overview - EE edge 0",
+        "ee_e1": "Contact Overview - EE edge 1",
     }
 
-    # Keys belonging to each contact type, for visibility toggling
     _TYPE_KEYS = {
         "VV": ("vv_u", "vv_v"),
         "VE": ("ve_v", "ve_e"),
@@ -487,7 +477,8 @@ class OgcContactOverview:
     def __init__(
         self,
         x: wp.array,
-        ogc: Ogc,
+        meshes: MultiMesh,
+        contacts: ContactPairs,
         point_radius: float = 0.005,
         edge_radius: float = 0.003,
     ):
@@ -499,20 +490,20 @@ class OgcContactOverview:
         self._x_np: np.ndarray | None = None
         self._V_np: np.ndarray | None = None
         self._F_np: np.ndarray | None = None
-        self._contacts: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-        self.update(x, ogc)
+        self._cached_contacts: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self.update(x, meshes, contacts)
 
-    def update(self, x: wp.array, ogc: Ogc):
+    def update(self, x: wp.array, meshes: MultiMesh, contacts: ContactPairs):
         """Cache contact data for the next draw() call. Does not register any polyscope structures."""
         self._remove_all()
         self._x_np = x.numpy()
-        self._V_np = ogc.meshes.data.V.numpy()
-        self._F_np = ogc.meshes.data.F.numpy()
-        self._contacts = {
-            "VV": ogc.vv_contacts,
-            "VE": ogc.ve_contacts,
-            "VF": ogc.vf_contacts,
-            "EE": ogc.ee_contacts,
+        self._V_np = meshes.data.V.numpy()
+        self._F_np = meshes.data.F.numpy()
+        self._cached_contacts = {
+            "VV": contacts.vv_contacts,
+            "VE": contacts.ve_contacts,
+            "VF": contacts.vf_contacts,
+            "EE": contacts.ee_contacts,
         }
         self._dirty = True
 
@@ -535,7 +526,7 @@ class OgcContactOverview:
 
     def draw(self):
         """Draw imgui controls for the overview. Builds polyscope structures on first call after update()."""
-        imgui.PushID("OgcContactOverview")  # type: ignore
+        imgui.PushID("ContactOverview")  # type: ignore
 
         if self._dirty:
             self._build()
@@ -578,7 +569,6 @@ class OgcContactOverview:
                 ps.remove_surface_mesh(name)
             else:
                 ps.remove_curve_network(name)
-        self._dirty = True
         self._structures = {}
 
     def _build(self):
@@ -588,24 +578,21 @@ class OgcContactOverview:
         F = self._F_np
 
         # Vertex-Vertex
-        vv_u, vv_v = self._contacts["VV"]
+        vv_u, vv_v = self._cached_contacts["VV"]
         if len(vv_u) > 0:
-            pts_a = x[V[vv_u.astype(int)], :]
-            pts_b = x[V[vv_v.astype(int)], :]
-            s = ps.register_point_cloud(self._PS_NAMES["vv_u"], pts_a)
+            s = ps.register_point_cloud(self._PS_NAMES["vv_u"], x[V[vv_u.astype(int)], :])
             s.set_radius(self._point_radius, relative=True)
             s.set_color(self._COLOR_FIRST)
             self._structures["vv_u"] = s
-            s = ps.register_point_cloud(self._PS_NAMES["vv_v"], pts_b)
+            s = ps.register_point_cloud(self._PS_NAMES["vv_v"], x[V[vv_v.astype(int)], :])
             s.set_radius(self._point_radius, relative=True)
             s.set_color(self._COLOR_SECOND)
             self._structures["vv_v"] = s
 
         # Vertex-Edge
-        ve_v, ve_he = self._contacts["VE"]
+        ve_v, ve_he = self._cached_contacts["VE"]
         if len(ve_v) > 0:
-            pts_v = x[V[ve_v.astype(int)], :]
-            s = ps.register_point_cloud(self._PS_NAMES["ve_v"], pts_v)
+            s = ps.register_point_cloud(self._PS_NAMES["ve_v"], x[V[ve_v.astype(int)], :])
             s.set_radius(self._point_radius, relative=True)
             s.set_color(self._COLOR_FIRST)
             self._structures["ve_v"] = s
@@ -616,7 +603,6 @@ class OgcContactOverview:
             i_arr = F[f_arr, e_local_arr]
             j_arr = F[f_arr, (e_local_arr + 1) % 3]
             n_ve = len(he_arr)
-            # Build a flat vertex list (2 verts per edge) and edge index pairs
             verts_e = np.empty((2 * n_ve, 3), dtype=float)
             verts_e[0::2] = x[i_arr, :]
             verts_e[1::2] = x[j_arr, :]
@@ -629,27 +615,24 @@ class OgcContactOverview:
             self._structures["ve_e"] = s
 
         # Vertex-Face
-        vf_v, vf_f = self._contacts["VF"]
+        vf_v, vf_f = self._cached_contacts["VF"]
         if len(vf_v) > 0:
-            pts_v = x[V[vf_v.astype(int)], :]
-            s = ps.register_point_cloud(self._PS_NAMES["vf_v"], pts_v)
+            s = ps.register_point_cloud(self._PS_NAMES["vf_v"], x[V[vf_v.astype(int)], :])
             s.set_radius(self._point_radius, relative=True)
             s.set_color(self._COLOR_FIRST)
             self._structures["vf_v"] = s
 
             f_arr = vf_f.astype(int)
-            tri_inds = F[f_arr, :]  # (n_vf, 3) global point indices
+            tri_inds = F[f_arr, :]
             n_vf = len(f_arr)
-            # Flatten triangles into a local vertex buffer to avoid duplicates
-            # affecting the mesh connectivity; just emit one entry per triangle.
-            verts_f = x[tri_inds.reshape(-1), :]  # (3*n_vf, 3)
+            verts_f = x[tri_inds.reshape(-1), :]
             faces_f = np.arange(3 * n_vf, dtype=np.int32).reshape(n_vf, 3)
             s = ps.register_surface_mesh(self._PS_NAMES["vf_f"], verts_f, faces_f)
             s.set_color(self._COLOR_SECOND)
             self._structures["vf_f"] = s
 
         # Edge-Edge
-        ee_he0, ee_he1 = self._contacts["EE"]
+        ee_he0, ee_he1 = self._cached_contacts["EE"]
         if len(ee_he0) > 0:
             for key, he_arr_raw in (("ee_e0", ee_he0), ("ee_e1", ee_he1)):
                 color = self._COLOR_FIRST if key == "ee_e0" else self._COLOR_SECOND
@@ -670,19 +653,9 @@ class OgcContactOverview:
                 s.set_color(color)
                 self._structures[key] = s
 
-        if not self._type_visible.get("VV", True):
-            for key in self._TYPE_KEYS["VV"]:
-                if key in self._structures:
-                    self._structures[key].set_enabled(False)
-        if not self._type_visible.get("VE", True):
-            for key in self._TYPE_KEYS["VE"]:
-                if key in self._structures:
-                    self._structures[key].set_enabled(False)
-        if not self._type_visible.get("VF", True):
-            for key in self._TYPE_KEYS["VF"]:
-                if key in self._structures:
-                    self._structures[key].set_enabled(False)
-        if not self._type_visible.get("EE", True):
-            for key in self._TYPE_KEYS["EE"]:
-                if key in self._structures:
-                    self._structures[key].set_enabled(False)
+        # Apply deferred visibility
+        for t, keys in self._TYPE_KEYS.items():
+            if not self._type_visible.get(t, True):
+                for key in keys:
+                    if key in self._structures:
+                        self._structures[key].set_enabled(False)

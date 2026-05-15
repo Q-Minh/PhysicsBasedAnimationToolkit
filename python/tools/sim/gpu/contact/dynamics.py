@@ -6,6 +6,7 @@ import cuda.compute
 import numpy as np
 
 from .ogc import Ogc, OgcData
+from .mesh import pairs
 from .constraints import ConstraintSet, ConstraintSetData
 from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
@@ -16,10 +17,15 @@ from .. import common
 class MeshDynamicsData:
     ogc: OgcData  # type: ignore
     meshes: MultiMeshData  # type: ignore
+    contacts: pairs.ContactPairsData  # Forward contacts # type: ignore
+    rcontacts: (
+        pairs.ReverseContactPairsData
+    )  # Reverse contacts, if available # type: ignore
     cvv: ConstraintSetData  # type: ignore
     cve: ConstraintSetData  # type: ignore
     cvf: ConstraintSetData  # type: ignore
     cee: ConstraintSetData  # type: ignore
+
     gamma_n: wp.float32  # Multiplier of sigma_n
     gamma_f: wp.float32  # Multiplier of sigma_f
     sigma_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter
@@ -86,7 +92,7 @@ def _update_dual_vv(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
-    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+    contacts: pairs.ContactPairsData,  # Forward contacts # type: ignore
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -95,15 +101,15 @@ def _update_dual_vv(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= ogc.vv.prefix[n_u]:
+    if c >= contacts.vv.prefix[n_u]:
         return
-    u = ogc.vv.u[c]
-    v = ogc.vv.v[c]
-    ntb = ogc.vv_bases[c]
+    u = contacts.vv.u[c]
+    v = contacts.vv.v[c]
+    bases = contacts.vv_bases
+    n, t, b = bases.n[c], bases.t[c], bases.b[c]
     i, j = meshes.V[u], meshes.V[v]
     xi, xj = x[i], x[j]
     xti, xtj = xt[i], xt[j]
-    n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]
     c_n = wp.dot(xi - xj, n) - contact.dmin  # type: ignore
     du = (xi - xti) - (xj - xtj)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
@@ -132,7 +138,7 @@ def _update_dual_ve(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
-    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+    contacts: pairs.ContactPairsData,  # Forward contacts # type: ignore
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -141,21 +147,22 @@ def _update_dual_ve(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= ogc.ve.prefix[n_u]:
+    if c >= contacts.ve.prefix[n_u]:
         return
-    v = ogc.ve.u[c]
-    he = ogc.ve.v[c]
-    ntb = ogc.ve_bases[c]
-    b0 = ogc.ve_bary[c]
+    v = contacts.ve.u[c]
+    he = contacts.ve.v[c]
+    bases = contacts.ve_bases
+    n, t, b = bases.n[c], bases.t[c], bases.b[c]
+    b1 = contacts.ve_bary[c]
+    b0 = wp.float32(1) - b1
     i = meshes.V[v]
     j, k = halfedges.incoming_vertex(meshes.F, he), halfedges.outgoing_vertex(
         meshes.F, he
     )
     xi, xj, xk = x[i], x[j], x[k]
     xti, xtj, xtk = xt[i], xt[j], xt[k]
-    n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]
-    xc = (wp.float32(1) - b0) * xj + b0 * xk
-    xtc = (wp.float32(1) - b0) * xtj + b0 * xtk
+    xc = b0 * xj + b1 * xk
+    xtc = b0 * xtj + b1 * xtk
     dx = xi - xtc
     du = (xi - xti) - (xc - xtc)
     c_n = wp.dot(dx, n) - contact.dmin  # type: ignore
@@ -185,7 +192,7 @@ def _update_dual_vf(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
-    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+    contacts: pairs.ContactPairsData,  # Forward contacts # type: ignore
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -194,20 +201,20 @@ def _update_dual_vf(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= ogc.vf.prefix[n_u]:
+    if c >= contacts.vf.prefix[n_u]:
         return
-    v = ogc.vf.u[c]
-    f = ogc.vf.v[c]
-    ntb = ogc.vf_bases[c]
-    bary = ogc.vf_bary[c]
+    v = contacts.vf.u[c]
+    f = contacts.vf.v[c]
+    bases = contacts.vf_bases
+    n, t, b = bases.n[c], bases.t[c], bases.b[c]
+    bary = contacts.vf_bary[c]
     finds = meshes.F[f]
     i = meshes.V[v]
     j, k, l = finds[0], finds[1], finds[2]
     xi, xj, xk, xl = x[i], x[j], x[k], x[l]
     xti, xtj, xtk, xtl = xt[i], xt[j], xt[k], xt[l]
-    n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]
-    b0, b1 = bary[0], bary[1]
-    b2 = wp.float32(1) - b0 - b1
+    b1, b2 = bary[0], bary[1]
+    b0 = wp.float32(1) - b1 - b2
     xc = b0 * xj + b1 * xk + b2 * xl
     xtc = b0 * xtj + b1 * xtk + b2 * xtl
     dx = xi - xtc
@@ -239,7 +246,7 @@ def _update_dual_ee(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
-    ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+    contacts: pairs.ContactPairsData,  # Forward contacts # type: ignore
     data: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,
     contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -248,12 +255,13 @@ def _update_dual_ee(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= ogc.ee.prefix[n_u]:
+    if c >= contacts.ee.prefix[n_u]:
         return
-    he1 = ogc.ee.u[c]
-    he2 = ogc.ee.v[c]
-    ntb = ogc.ee_bases[c]
-    bary = ogc.ee_bary[c]
+    he1 = contacts.ee.u[c]
+    he2 = contacts.ee.v[c]
+    bases = contacts.ee_bases
+    n, t, b = bases.n[c], bases.t[c], bases.b[c]
+    bary = contacts.ee_bary[c]
     i, j = halfedges.incoming_vertex(meshes.F, he1), halfedges.outgoing_vertex(
         meshes.F, he1
     )
@@ -262,11 +270,12 @@ def _update_dual_ee(
     )
     xi, xj, xk, xl = x[i], x[j], x[k], x[l]
     xti, xtj, xtk, xtl = xt[i], xt[j], xt[k], xt[l]
-    n, t, b = ntb[0, :], ntb[1, :], ntb[2, :]
-    xc1 = (wp.float32(1) - bary[0]) * xi + bary[0] * xj
-    xtc1 = (wp.float32(1) - bary[0]) * xti + bary[0] * xtj
-    xc2 = (wp.float32(1) - bary[1]) * xk + bary[1] * xl
-    xtc2 = (wp.float32(1) - bary[1]) * xtk + bary[1] * xtl
+    s0, t0 = wp.float32(1) - bary[0], bary[0]
+    s1, t1 = wp.float32(1) - bary[1], bary[1]
+    xc1 = s0 * xi + t0 * xj
+    xtc1 = s0 * xti + t0 * xtj
+    xc2 = s1 * xk + t1 * xl
+    xtc2 = s1 * xtk + t1 * xtl
     dx = xc1 - xc2
     du = (xc1 - xtc1) - (xc2 - xtc2)
     c_n = wp.dot(dx, n) - contact.dmin
@@ -318,6 +327,7 @@ class MeshDynamics:
     params: Params
     meshes: MultiMesh
     ogc: Ogc
+    contacts: pairs.ContactPairs
     cvv: ConstraintSet
     cve: ConstraintSet
     cvf: ConstraintSet
@@ -326,12 +336,15 @@ class MeshDynamics:
 
     _streams: list[wp.Stream]
 
-    def __init__(self, ogc: Ogc, params: Params | None = None):
+    def __init__(
+        self, ogc: Ogc, contacts: pairs.ContactPairs, params: Params | None = None
+    ):
         self.params = params if params is not None else Params()
         self.ogc = ogc
-        self.meshes = self.ogc.meshes
-        vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.ogc.capacity
-        n_verts, n_edges, n_half_edges, n_triangles = self.ogc.n_primitives
+        self.contacts = contacts
+        self.meshes = self.contacts.meshes
+        vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.contacts.capacity
+        n_verts, n_half_edges = self.meshes.n_verts, self.meshes.n_half_edges
         self.cvv = ConstraintSet(n_verts, vv_capacity)
         self.cve = ConstraintSet(n_verts, ve_capacity)
         self.cvf = ConstraintSet(n_verts, vf_capacity)
@@ -354,19 +367,20 @@ class MeshDynamics:
 
     def update_constraint_set(self, xk: wp.array[wp.vec3f]):
         """Prepare constraint sets for a new step, warm-starting from the previous snapshot."""
+        self.contacts.clear()
         self.ogc.prepare_for_execution(xk)
-        self.ogc.detect_contacts()
-        ogc_data = self.ogc.data
+        self.ogc.detect_contacts(self.contacts)
+        contacts, _ = self.contacts.read_data
         main_stream = wp.get_stream()
         # Update all constraint sets
         for stream, cset, cuv in zip(
             self._streams[:4],
             (self.cvv, self.cve, self.cvf, self.cee),
             (
-                ogc_data.vv,
-                ogc_data.ve,
-                ogc_data.vf,
-                ogc_data.ee,
+                contacts.vv,
+                contacts.ve,
+                contacts.vf,
+                contacts.ee,
             ),
         ):
             stream.wait_stream(main_stream)
@@ -403,8 +417,8 @@ class MeshDynamics:
             request_decay_update: Whether to update the decay variable.
             request_lagrange_multiplier_update: Whether to update the Lagrange multipliers.
         """
-        meshes = self.ogc._meshes.data
-        ogc = self.ogc.data
+        meshes = self.meshes.data
+        contacts = self.contacts._data
         main_stream = wp.get_stream()
         # Fork all side streams into the current capture context before launching on them.
         for stream in self._streams[:4]:
@@ -421,7 +435,7 @@ class MeshDynamics:
                     x,
                     xt,
                     meshes,
-                    ogc,
+                    contacts,
                     cs.data,
                     cs.n_u,
                     self._data,

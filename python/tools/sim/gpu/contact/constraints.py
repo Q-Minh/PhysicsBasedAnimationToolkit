@@ -1,13 +1,13 @@
 import warp as wp
 
-from .ogc import ContactPairsData
+from . import pairs
 from .. import common
 from ..common.buffer import DoubleBuffer
 
 
 @wp.kernel
 def _warm_start_constraints(
-    contacts: ContactPairsData,  # pyright: ignore[reportGeneralTypeIssues]
+    contacts: pairs.PairsData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.int32,  # Number of u primitives
     u_prev: wp.array[wp.int32],
     v_prev: wp.array[wp.int32],
@@ -33,7 +33,7 @@ def _warm_start_constraints(
     pv = v_prev[k]
     if pu < wp.int32(0):
         return
-    n_contacts = contacts.prefix[n_u]
+    n_contacts = wp.int32(contacts.prefix[n_u])
     l = common.lower_bound(contacts.u, contacts.v, n_contacts, pu, pv)  # type: ignore
     if l >= n_contacts or contacts.u[l] != pu or contacts.v[l] != pv:
         return
@@ -83,7 +83,7 @@ class ConstraintSet:
     n_u : int
         Number of u primitives (vertices, half-edges, or faces) in the mesh.
     capacity : int
-        Maximum number of contacts for one step (matches the OGC contact capacity).
+        Maximum number of contacts.
     """
 
     capacity: int
@@ -122,7 +122,7 @@ class ConstraintSet:
         self._data.lambda_n = self.lambda_n.current
         self._data.lambda_f = self.lambda_f.current
 
-    def update_constraint_set(self, contacts: ContactPairsData):  # type: ignore
+    def update_constraint_set(self, contacts: pairs.Pairs):  # type: ignore
         """Prepare the current arrays for a new step, warm-starting from the previous snapshot.
 
         The four-step pipeline maximises GPU concurrency while remaining
@@ -134,14 +134,14 @@ class ConstraintSet:
            Safely overlaps step 1 — current and alternate are distinct allocations.
         3. **Fence** — ``main_stream`` waits for the copy stream to finish.
         4. **Warm-start kernel** — for each valid previous pair whose ``(u, v)``
-           appears in the new OGC forward contact list, copy ``s``, ``gamma``,
+           appears in the new forward contact list, copy ``s``, ``gamma``,
            ``lambda_n``, ``lambda_f`` to the corresponding current slot.
 
         After this call, current slots that were warm-started have
         ``u.current[k] >= 0``; new contacts keep the default ``u.current[k] = -1``.
 
         Args:
-            contacts: Forward contact pairs produced by ``Ogc.detect_contacts()``.
+            contacts: Forward contact pairs produced by a collision detector.
         """
         main_stream = wp.get_stream()
         fields = (self.u, self.v, self.s, self.gamma, self.lambda_n, self.lambda_f)

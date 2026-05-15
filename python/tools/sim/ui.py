@@ -142,10 +142,18 @@ class SimulationState:
         self.capture = None
 
         # Build collision geometry
-        n_nodes = fem_cpu.X.shape[1]
         multimesh_cpu = pbat.sim.contact.MultiMesh()
+        Xordering, Eordering, XCC, ECC, n_components = (
+            pbat.graph.sorted_connected_component_ordering(fem_cpu.X, fem_cpu.E)
+        )
+        is_X_sorted = np.all(Xordering[:-1] <= Xordering[1:])
+        is_E_sorted = np.all(Eordering[:-1] <= Eordering[1:])
+        if not is_X_sorted or not is_E_sorted:
+            raise ValueError(
+                "The FemElastoDynamics is expected to already be sorted by connected components."
+            )
         multimesh_cpu.construct_from_tetrahedral_mesh(
-            fem_cpu.E, np.full(n_nodes, 0, dtype=np.int64), n_components=1
+            fem_cpu.E, XCC, n_components=n_components
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.ogc_params = gpu.contact.ogc.OgcParams()
@@ -155,8 +163,14 @@ class SimulationState:
             self.ogc_params,
         )
         ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
+        self.contact_storage_params = gpu.contact.mesh.pairs.Params()
+        contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
+            self.multimesh, self.contact_storage_params
+        )
         self.contact_params = gpu.contact.dynamics.Params()
-        self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
+        self.contact = gpu.contact.dynamics.MeshDynamics(
+            ogc, contact_pair_storage, self.contact_params
+        )
         # NOTE: This will need to be updated if adding new Solvers with
         # different storage location for Qnk, Qfk
         self.contact.enable_adaptive_penalty_parameters(
@@ -166,10 +180,12 @@ class SimulationState:
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
         }
-        self.contact_browser = gpu.contact.debug.ogc.OgcContactBrowser(
-            self.fem.data.x, self.contact.ogc
+        self.contact_browser = gpu.contact.debug.contact.ContactBrowser(
+            self.fem.data.x, self.multimesh, self.contact.contacts
         )
-
+        self.contact_overview = gpu.contact.debug.contact.ContactOverview(
+            self.fem.data.x, self.multimesh, self.contact.contacts
+        )
         # Simulation state
         self.simulate: bool = False
         self.t: int = 0
@@ -182,8 +198,9 @@ class SimulationState:
         )
         self.fem.step()
         self.t += 1
-
-        self.contact_browser.update(self.fem.data.x, self.contact.ogc)
+        wp.synchronize()
+        self.contact_browser.update(self.fem.data.x, self.multimesh, self.contact.contacts)
+        self.contact_overview.update(self.fem.data.x, self.multimesh, self.contact.contacts)
 
     def reset(self):
         self.t = 0
@@ -197,7 +214,12 @@ class SimulationState:
             self.ogc_params,
         )
         ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
-        self.contact = gpu.contact.dynamics.MeshDynamics(ogc, self.contact_params)
+        contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
+            self.multimesh, self.contact_storage_params
+        )
+        self.contact = gpu.contact.dynamics.MeshDynamics(
+            ogc, contact_pair_storage, self.contact_params
+        )
         # NOTE: This will need to be updated if adding new Solvers with
         # different storage location for Qnk, Qfk
         self.contact.enable_adaptive_penalty_parameters(
@@ -207,7 +229,8 @@ class SimulationState:
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
         }
-        self.contact_browser.update(self.fem.data.x, self.contact.ogc)
+        self.contact_browser.update(self.fem.data.x, self.multimesh, self.contact.contacts)
+        self.contact_overview.update(self.fem.data.x, self.multimesh, self.contact.contacts)
         self.capture = None
 
 
@@ -307,11 +330,17 @@ def make_callback(
             if imgui.BeginTabItem("Debug", True)[0]:
                 ui_state.debug_tab_active = True
                 if imgui.TreeNode("Contact"):
-                    state.contact_browser.draw()
+                    if imgui.TreeNode("Overview"):
+                        state.contact_overview.draw()
+                        imgui.TreePop()
+                    if imgui.TreeNode("Browser"):
+                        state.contact_browser.draw()
+                        imgui.TreePop()
                     imgui.TreePop()
                 imgui.EndTabItem()
             elif ui_state.debug_tab_active:
                 state.contact_browser.clear()
+                state.contact_overview.remove()
                 ui_state.debug_tab_active = False
 
             imgui.EndTabBar()

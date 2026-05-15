@@ -16,7 +16,7 @@ from .params import (
 from .kernels import (
     local_elastic_derivatives,
     local_contact_derivatives,
-    local_contact_rayleigh_quotients,
+    # local_contact_rayleigh_quotients,
     add_inertia_derivatives,
     integrate_positions,
     local_elastic_hessians,
@@ -104,53 +104,53 @@ def _vertex_solve_kernel(
     fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
-@wp.kernel(launch_bounds=32)
-def _compute_constraint_rayleigh_quotients(
-    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-    contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
-    h2: float,
-):
-    """Compute on-diagonal dynamics hessian blocks."""
-    tid = wp.tid()
-    block_dims = wp.block_dim()
-    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
-    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
-    v = block_id
-    i = contact.meshes.V[v]
-    # Add elastic hessian
-    Hil = local_elastic_hessians(
-        i,
-        fem.x,
-        fem.E,
-        fem.wg,
-        fem.GNeg,
-        fem.mug,
-        fem.lambdag,
-        params.GVGp,
-        params.GVGadj,
-        local_tid,  # type: ignore
-        block_dims,  # type: ignore
-    )
-    Hil *= h2  # type: ignore
-    His = wp.tile(Hil, preserve_type=wp.bool(True))
-    Hi = wp.tile_sum(His)[0]  # type: ignore
-    # Add mass hessian
-    for d in range(3):
-        Hi[d, d] += fem.m[i]  # type: ignore
-    # Visit each contact pair incident on this node, and keep track
-    # of the largest (per 3x3 diagonal block) Rayleigh quotient w.r.t.
-    # the contact normals and tangents.
-    Qnl, Qfl = local_contact_rayleigh_quotients(
-        i, v, Hi, contact, local_tid, block_dims  # type: ignore
-    )
-    Qns = wp.tile(Qnl)  # type: ignore
-    Qfs = wp.tile(Qfl)  # type: ignore
-    maxQn = wp.tile_max(Qns)
-    maxQf = wp.tile_max(Qfs)
-    if local_tid == 0:
-        params.Qnk[v] = maxQn[0]  # pyright: ignore[reportIndexIssue]
-        params.Qfk[v] = maxQf[0]  # pyright: ignore[reportIndexIssue]
+# @wp.kernel(launch_bounds=32)
+# def _compute_constraint_rayleigh_quotients(
+#     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+#     contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+#     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+#     h2: float,
+# ):
+#     """Compute on-diagonal dynamics hessian blocks."""
+#     tid = wp.tid()
+#     block_dims = wp.block_dim()
+#     block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
+#     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
+#     v = block_id
+#     i = contact.meshes.V[v]
+#     # Add elastic hessian
+#     Hil = local_elastic_hessians(
+#         i,
+#         fem.x,
+#         fem.E,
+#         fem.wg,
+#         fem.GNeg,
+#         fem.mug,
+#         fem.lambdag,
+#         params.GVGp,
+#         params.GVGadj,
+#         local_tid,  # type: ignore
+#         block_dims,  # type: ignore
+#     )
+#     Hil *= h2  # type: ignore
+#     His = wp.tile(Hil, preserve_type=wp.bool(True))
+#     Hi = wp.tile_sum(His)[0]  # type: ignore
+#     # Add mass hessian
+#     for d in range(3):
+#         Hi[d, d] += fem.m[i]  # type: ignore
+#     # Visit each contact pair incident on this node, and keep track
+#     # of the largest (per 3x3 diagonal block) Rayleigh quotient w.r.t.
+#     # the contact normals and tangents.
+#     Qnl, Qfl = local_contact_rayleigh_quotients(
+#         i, v, Hi, contact, local_tid, block_dims  # type: ignore
+#     )
+#     Qns = wp.tile(Qnl)  # type: ignore
+#     Qfs = wp.tile(Qfl)  # type: ignore
+#     maxQn = wp.tile_max(Qns)
+#     maxQf = wp.tile_max(Qfs)
+#     if local_tid == 0:
+#         params.Qnk[v] = maxQn[0]  # pyright: ignore[reportIndexIssue]
+#         params.Qfk[v] = maxQf[0]  # pyright: ignore[reportIndexIssue]
 
 
 def linearize_constraints(
