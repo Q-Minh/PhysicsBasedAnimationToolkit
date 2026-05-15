@@ -8,15 +8,15 @@ from ..common.buffer import DoubleBuffer
 @wp.kernel
 def _warm_start_constraints(
     contacts: pairs.PairsData,  # pyright: ignore[reportGeneralTypeIssues]
-    n_u: wp.int32,  # Number of u primitives
-    u_prev: wp.array[wp.int32],
-    v_prev: wp.array[wp.int32],
+    n_u: wp.uint32,  # Number of u primitives (also the sentinel value for invalid slots)
+    u_prev: wp.array[wp.uint32],
+    v_prev: wp.array[wp.uint32],
     s_prev: wp.array[wp.float32],
     gamma_prev: wp.array[wp.float32],
     lambda_n_prev: wp.array[wp.float32],
     lambda_f_prev: wp.array[wp.vec2f],
-    u: wp.array[wp.int32],
-    v: wp.array[wp.int32],
+    u: wp.array[wp.uint32],
+    v: wp.array[wp.uint32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
@@ -31,9 +31,9 @@ def _warm_start_constraints(
     k = wp.tid()  # type: ignore
     pu = u_prev[k]
     pv = v_prev[k]
-    if pu < wp.int32(0):
+    if pu >= n_u:  # sentinel: n_u means invalid slot
         return
-    n_contacts = wp.int32(contacts.prefix[n_u])
+    n_contacts = contacts.prefix[n_u]
     l = common.lower_bound(contacts.u, contacts.v, n_contacts, pu, pv)  # type: ignore
     if l >= n_contacts or contacts.u[l] != pu or contacts.v[l] != pv:
         return
@@ -72,7 +72,7 @@ class ConstraintSet:
 
     Fields
     ------
-    u, v      : int32   contact pair keys (-1 = empty slot).
+    u, v      : uint32  contact pair keys (n_u = empty slot sentinel).
     s         : float32 inequality slack variable.
     gamma     : float32 constraint decay factor (default 1).
     lambda_n  : float32 normal Lagrange multiplier.
@@ -82,6 +82,7 @@ class ConstraintSet:
     ----------
     n_u : int
         Number of u primitives (vertices, half-edges, or faces) in the mesh.
+        Also used as the sentinel value for empty slots in u and v arrays.
     capacity : int
         Maximum number of contacts.
     """
@@ -110,8 +111,8 @@ class ConstraintSet:
                 wp.full(shape=(capacity,), value=value, dtype=dtype),
             )
 
-        self.u = _make(-1, wp.int32)
-        self.v = _make(-1, wp.int32)
+        self.u = _make(n_u, wp.uint32)
+        self.v = _make(n_u, wp.uint32)
         self.s = _make(0.0, wp.float32)
         self.gamma = _make(1.0, wp.float32)
         self.lambda_n = _make(0.0, wp.float32)
@@ -137,8 +138,8 @@ class ConstraintSet:
            appears in the new forward contact list, copy ``s``, ``gamma``,
            ``lambda_n``, ``lambda_f`` to the corresponding current slot.
 
-        After this call, current slots that were warm-started have
-        ``u.current[k] >= 0``; new contacts keep the default ``u.current[k] = -1``.
+        After this call, current slots that were warm-started have a valid u value;
+        new contacts keep the default sentinel ``u.current[k] = n_u``.
 
         Args:
             contacts: Forward contact pairs produced by a collision detector.
@@ -149,7 +150,7 @@ class ConstraintSet:
         # Step 1: async-copy current -> alternate on _copy_stream.
         for streams in self._streams:
             for buf, stream in zip(fields, streams):
-                stream.wait_stream(main_stream)
+                stream.wait_stream(main_stream) # Fork to register stream in cuda graph
                 buf.copy_to_alternate(stream)
                 main_stream.wait_stream(stream)
 
@@ -157,11 +158,9 @@ class ConstraintSet:
         # Overlaps step 1 safely — current and alternate are distinct allocations.
         for streams in self._streams:
             with wp.ScopedStream(streams[0], sync_enter=False):
-                self.u.current.fill_(-1)
+                self.u.current.fill_(self.n_u)  # sentinel = n_u (no valid contact)
             main_stream.wait_stream(streams[0])
-            with wp.ScopedStream(streams[1], sync_enter=False):
-                self.v.current.fill_(-1)
-            main_stream.wait_stream(streams[1])
+            # NOTE: The self.v doesn't need initialization either, only the self.u is used to determine empty vs filled constraint
             # NOTE: The slack doesn't need any initialization, it is always updated during before/after solver iterations
             with wp.ScopedStream(streams[3], sync_enter=False):
                 self.gamma.current.fill_(1.0)

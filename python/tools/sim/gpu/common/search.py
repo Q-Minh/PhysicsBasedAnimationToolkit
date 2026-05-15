@@ -11,7 +11,7 @@ class LowerBound:
     d_values: cuda.compute.typing.DeviceArrayLike | cuda.compute.typing.IteratorT  # type: ignore
     num_values: int
     d_out: cuda.compute.typing.DeviceArrayLike
-    comp: cuda.compute.typing.Operator
+    comp: cuda.compute.typing.Operator | None
 
     _lower_bound: Any
 
@@ -22,7 +22,7 @@ class LowerBound:
         d_values: cuda.compute.typing.DeviceArrayLike | cuda.compute.typing.IteratorT,  # type: ignore
         num_values: int,
         d_out: cuda.compute.typing.DeviceArrayLike,
-        comp: cuda.compute.typing.Operator = cuda.compute.OpKind.LESS,
+        comp: cuda.compute.typing.Operator | None = None,
     ):
         self.d_data = d_data
         self.num_items = num_items

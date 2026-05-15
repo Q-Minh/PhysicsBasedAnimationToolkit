@@ -169,7 +169,9 @@ def local_contact_derivatives(
 
     # 1a. Vertex-vertex contacts (forward)
     for c in range(
-        fcontacts.vv.prefix[vi] + local_tid, fcontacts.vv.prefix[vi + 1], block_dims
+        wp.int32(fcontacts.vv.prefix[vi]) + local_tid,
+        wp.int32(fcontacts.vv.prefix[vi + 1]),
+        block_dims,
     ):
         vj = fcontacts.vv.v[c]
         j = meshes.V[vj]
@@ -199,7 +201,9 @@ def local_contact_derivatives(
 
     # 1b. Vertex-vertex contacts (reverse)
     for k in range(
-        rcontacts.rvv.prefix[vi] + local_tid, rcontacts.rvv.prefix[vi + 1], block_dims
+        wp.int32(rcontacts.rvv.prefix[vi]) + local_tid,
+        wp.int32(rcontacts.rvv.prefix[vi + 1]),
+        block_dims,
     ):
         c = rcontacts.rvv2vv[k]
         vj = rcontacts.rvv.v[k]
@@ -230,7 +234,9 @@ def local_contact_derivatives(
 
     # 2. Vertex-halfedge contacts (forward)
     for c in range(
-        fcontacts.ve.prefix[vi] + local_tid, fcontacts.ve.prefix[vi + 1], block_dims
+        wp.int32(fcontacts.ve.prefix[vi]) + local_tid,
+        wp.int32(fcontacts.ve.prefix[vi + 1]),
+        block_dims,
     ):
         he = fcontacts.ve.v[c]
         a = halfedges.incoming_vertex(meshes.F, he)
@@ -263,14 +269,16 @@ def local_contact_derivatives(
 
     # 3. Vertex-triangle contacts (forward)
     for c in range(
-        fcontacts.vf.prefix[vi] + local_tid, fcontacts.vf.prefix[vi + 1], block_dims
+        wp.int32(fcontacts.vf.prefix[vi]) + local_tid,
+        wp.int32(fcontacts.vf.prefix[vi + 1]),
+        block_dims,
     ):
         f = fcontacts.vf.v[c]
         finds = meshes.F[f]
         uv = vf_bary[c]
-        b0 = wp.float32(1) - b0 - b1
         b1 = uv[0]
         b2 = uv[1]
+        b0 = wp.float32(1) - b1 - b2
         xcp1 = xi
         xtcp1 = xti
         xcp2 = b0 * x[finds[0]] + b1 * x[finds[1]] + b2 * x[finds[2]]
@@ -299,12 +307,14 @@ def local_contact_derivatives(
     for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):
         hei = meshes.GVHEadj[k]
         hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
-        he = wp.max(hei, hej)
-        i_he = halfedges.incoming_vertex(meshes.F, he)
-        j_he = halfedges.outgoing_vertex(meshes.F, he)
+        he = wp.uint32(wp.max(hei, hej))  # type: ignore
+        i_he = halfedges.incoming_vertex(meshes.F, he)  # type: ignore
+        j_he = halfedges.outgoing_vertex(meshes.F, he)  # type: ignore
         # 4. EE contacts (forward): he is u-side
         for c in range(
-            fcontacts.ee.prefix[he] + local_tid, fcontacts.ee.prefix[he + 1], block_dims
+            wp.int32(fcontacts.ee.prefix[he]) + local_tid,
+            wp.int32(fcontacts.ee.prefix[he + wp.uint32(1)]),
+            block_dims,
         ):
             he2 = fcontacts.ee.v[c]
             i_he2 = halfedges.incoming_vertex(meshes.F, he2)
@@ -340,8 +350,8 @@ def local_contact_derivatives(
 
         # 5.a VE contacts (reverse): he is v-side
         for l in range(
-            rcontacts.rve.prefix[he] + local_tid,
-            rcontacts.rve.prefix[he + 1],
+            wp.int32(rcontacts.rve.prefix[he]) + local_tid,
+            wp.int32(rcontacts.rve.prefix[he + wp.uint32(1)]),
             block_dims,
         ):
             c = rcontacts.rve2ve[l]
@@ -374,10 +384,12 @@ def local_contact_derivatives(
             Hi += Hic
 
         # 5.b VF contacts (reverse): face of hei contains vertex i
-        f = halfedges.face_of_half_edge(hei)
+        f = wp.uint32(halfedges.face_of_half_edge(hei))  # type: ignore
         finds = meshes.F[f]
         for l in range(
-            rcontacts.rvf.prefix[f] + local_tid, rcontacts.rvf.prefix[f + 1], block_dims
+            wp.int32(rcontacts.rvf.prefix[f]) + local_tid,
+            wp.int32(rcontacts.rvf.prefix[f + wp.uint32(1)]),
+            block_dims,
         ):
             c = rcontacts.rvf2vf[l]
             _vi = rcontacts.rvf.v[l]
@@ -416,8 +428,8 @@ def local_contact_derivatives(
 
         # 5.c EE contacts (reverse): he is v-side
         for l in range(
-            rcontacts.ree.prefix[he] + local_tid,
-            rcontacts.ree.prefix[he + 1],
+            wp.int32(rcontacts.ree.prefix[he]) + local_tid,
+            wp.int32(rcontacts.ree.prefix[he + wp.uint32(1)]),
             block_dims,
         ):
             c = rcontacts.ree2ee[l]

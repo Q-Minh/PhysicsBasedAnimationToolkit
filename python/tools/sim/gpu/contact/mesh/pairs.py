@@ -109,13 +109,13 @@ def _map_reverse_to_forward(
     via a binary search using the pair-keyed lower_bound.
     """
     k = wp.tid()
-    n = wp.int32(fwd.prefix[n_fwd])
-    if k >= n:
+    n = fwd.prefix[n_fwd]
+    if wp.uint64(k) >= n:  # type: ignore
         return
     ru = rev.u[k]
     rv = rev.v[k]
     l = common.lower_bound(fwd.u, fwd.v, n, rv, ru)  # type: ignore
-    rx2x[k] = l  # type: ignore
+    rx2x[k] = wp.int32(l)  # type: ignore
 
 
 @wp.func
@@ -144,8 +144,8 @@ def _compute_vv_contact_data(
     """Second pass: compute contact basis for each vertex-vertex contact pair."""
     k = wp.tid()
     n_verts = meshes.V.shape[0]
-    n_vv = contacts.vv.counts[n_verts]
-    if k >= n_vv:
+    n_vv = contacts.vv.prefix[n_verts]
+    if wp.uint64(k) >= n_vv:  # type: ignore
         return
     u, v = contacts.vv.u[k], contacts.vv.v[k]
     xi = x[meshes.V[u]]
@@ -167,8 +167,8 @@ def _compute_ve_contact_data(
     """Second pass: compute contact basis and edge parameter t for each vertex-edge contact pair."""
     k = wp.tid()
     n_verts = meshes.V.shape[0]
-    n_ve = contacts.ve.counts[n_verts]
-    if k >= n_ve:
+    n_ve = contacts.ve.prefix[n_verts]
+    if wp.uint64(k) >= n_ve:  # type: ignore
         return
     v, he = contacts.ve.u[k], contacts.ve.v[k]
     xi = x[meshes.V[v]]
@@ -193,8 +193,8 @@ def _compute_vf_contact_data(
     """Second pass: compute contact basis and barycentric uvw for each vertex-face contact pair."""
     k = wp.tid()
     n_verts = meshes.V.shape[0]
-    n_vf = contacts.vf.counts[n_verts]
-    if k >= n_vf:
+    n_vf = contacts.vf.prefix[n_verts]
+    if wp.uint64(k) >= n_vf:  # type: ignore
         return
     v, f = contacts.vf.u[k], contacts.vf.v[k]
     xi = x[meshes.V[v]]
@@ -221,9 +221,9 @@ def _compute_ee_contact_data(
 ):
     """Second pass: compute contact basis and parameters (s,t) for each edge-edge contact pair."""
     k = wp.tid()
-    n_half_edges = contacts.ee.counts.shape[0] - wp.int32(1)
-    n_ee = contacts.ee.counts[n_half_edges]
-    if k >= n_ee:
+    n_half_edges = contacts.ee.prefix.shape[0] - wp.int32(1)
+    n_ee = contacts.ee.prefix[n_half_edges]
+    if wp.uint64(k) >= n_ee:  # type: ignore
         return
     he1 = contacts.ee.u[k]
     he2 = contacts.ee.v[k]
@@ -231,17 +231,17 @@ def _compute_ee_contact_data(
     xj1 = x[halfedges.outgoing_vertex(meshes.F, he1)]
     xi2 = x[halfedges.incoming_vertex(meshes.F, he2)]
     xj2 = x[halfedges.outgoing_vertex(meshes.F, he2)]
-    std = wp.closest_point_edge_edge(xi1, xj2, xi2, xj2)  # type: ignore
-    s, t = std[0], std[1]
-    xc1 = (wp.float32(1.0) - s) * xi1 + s * xj1  # type: ignore
-    xc2 = (wp.float32(1.0) - t) * xi2 + t * xj2  # type: ignore
+    std = wp.closest_point_edge_edge(xi1, xj2, xi2, xj2, epsilon=wp.float32(1e-3))  # type: ignore
+    s0, s1 = std[0], std[1]  # type: ignore
+    xc1 = (wp.float32(1.0) - s0) * xi1 + s0 * xj1  # type: ignore
+    xc2 = (wp.float32(1.0) - s1) * xi2 + s1 * xj2  # type: ignore
     # assert wp.norm_l2(xc1 - xc2) > wp.float32(1e-10)  # type: ignore
     n = wp.normalize(xc1 - xc2)
     t, b = _build_contact_basis(n)
     contacts.ee_bases.n[k] = n
     contacts.ee_bases.t[k] = t
     contacts.ee_bases.b[k] = b
-    contacts.ee_bary[k] = wp.vec2f(st[0], st[1])  # type: ignore
+    contacts.ee_bary[k] = wp.vec2f(s0, s1)  # type: ignore
 
 
 class ContactPairs:
@@ -261,23 +261,23 @@ class ContactPairs:
     # Sorting storage.
     # NOTE: The _*_u_* and _*_v_* buffers are used for the user to write into
     # transparently through the .write_data property.
-    _vv_u_buffer: wp.array[wp.int32]
-    _vv_v_buffer: wp.array[wp.int32]
+    _vv_u_buffer: wp.array[wp.uint32]
+    _vv_v_buffer: wp.array[wp.uint32]
     _vv_sort: sort.Sort
     _rvv_sort: sort.Sort
 
-    _ve_u_buffer: wp.array[wp.int32]
-    _ve_v_buffer: wp.array[wp.int32]
+    _ve_u_buffer: wp.array[wp.uint32]
+    _ve_v_buffer: wp.array[wp.uint32]
     _ve_sort: sort.Sort
     _rve_sort: sort.Sort
 
-    _vf_u_buffer: wp.array[wp.int32]
-    _vf_v_buffer: wp.array[wp.int32]
+    _vf_u_buffer: wp.array[wp.uint32]
+    _vf_v_buffer: wp.array[wp.uint32]
     _vf_sort: sort.Sort
     _rvf_sort: sort.Sort
 
-    _ee_u_buffer: wp.array[wp.int32]
-    _ee_v_buffer: wp.array[wp.int32]
+    _ee_u_buffer: wp.array[wp.uint32]
+    _ee_v_buffer: wp.array[wp.uint32]
     _ee_sort: sort.Sort
     _ree_sort: sort.Sort
 
@@ -413,63 +413,66 @@ class ContactPairs:
             n_items=ee_capacity,
         )
 
-        # CSR compression (i.e. prefix sum) algorithms
+        # CSR compression (i.e. prefix sum) algorithms.
+        # NOTE: For the LowerBoun algorithms, we directly use the CuPy
+        # arrays exposed through Pairs.u, Pairs.v, Pairs.prefix for 
+        # cuda.compute interoperability.
         self._vv_lower_bound = search.LowerBound(
-            d_data=self._vv.data.u,
+            d_data=self._vv.u,
             num_items=vv_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_verts + 1,
-            d_out=self._vv.data.prefix,
+            d_out=self._vv.prefix,
         )
         self._ve_lower_bound = search.LowerBound(
-            d_data=self._ve.data.u,
+            d_data=self._ve.u,
             num_items=ve_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_verts + 1,
-            d_out=self._ve.data.prefix,
+            d_out=self._ve.prefix,
         )
         self._vf_lower_bound = search.LowerBound(
-            d_data=self._vf.data.u,
+            d_data=self._vf.u,
             num_items=vf_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_verts + 1,
-            d_out=self._vf.data.prefix,
+            d_out=self._vf.prefix,
         )
         self._ee_lower_bound = search.LowerBound(
-            d_data=self._ee.data.u,
+            d_data=self._ee.u,
             num_items=ee_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_half_edges + 1,
-            d_out=self._ee.data.prefix,
+            d_out=self._ee.prefix,
         )
 
         self._rvv_lower_bound = search.LowerBound(
-            d_data=self._rvv.data.u,
+            d_data=self._rvv.u,
             num_items=vv_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_verts + 1,
-            d_out=self._rvv.data.prefix,
+            d_out=self._rvv.prefix,
         )
         self._rve_lower_bound = search.LowerBound(
-            d_data=self._rve.data.u,
+            d_data=self._rve.u,
             num_items=ve_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_half_edges + 1,
-            d_out=self._rve.data.prefix,
+            d_out=self._rve.prefix,
         )
         self._rvf_lower_bound = search.LowerBound(
-            d_data=self._rvf.data.u,
+            d_data=self._rvf.u,
             num_items=vf_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_triangles + 1,
-            d_out=self._rvf.data.prefix,
+            d_out=self._rvf.prefix,
         )
         self._ree_lower_bound = search.LowerBound(
-            d_data=self._ree.data.u,
+            d_data=self._ree.u,
             num_items=ee_capacity,
-            d_values=cuda.compute.CountingIterator(np.int32(0)),
+            d_values=cuda.compute.CountingIterator(np.uint32(0)),
             num_values=meshes.n_half_edges + 1,
-            d_out=self._ree.data.prefix,
+            d_out=self._ree.prefix,
         )
 
         # Stream parallelism
@@ -492,6 +495,21 @@ class ContactPairs:
         ):
             with wp.ScopedStream(stream):
                 pairs.clear()
+        # Also reset write buffers to sentinel values so that the Sort
+        # produces an all-sentinel read array when there are no contacts.
+        write_buffer_fills = [
+            (self._vv_u_buffer, self._vv.nu),
+            (self._vv_v_buffer, self._vv.nv),
+            (self._ve_u_buffer, self._ve.nu),
+            (self._ve_v_buffer, self._ve.nv),
+            (self._vf_u_buffer, self._vf.nu),
+            (self._vf_v_buffer, self._vf.nv),
+            (self._ee_u_buffer, self._ee.nu),
+            (self._ee_v_buffer, self._ee.nv),
+        ]
+        for (buf, sentinel), stream in zip(write_buffer_fills, self._streams[8:16]):
+            with wp.ScopedStream(stream):
+                buf.fill_(sentinel)
 
     def assemble_contacts(
         self, x: wp.array[wp.vec3f], with_reverse_contacts: bool = False
@@ -647,7 +665,7 @@ class ContactPairs:
 
     @property
     def write_data(self) -> ContactPairsData:  # type: ignore
-        """Return write data for contact pairs, in which it is safe to overwrite counts, u and v."""
+        """Return write data for contact pairs, in which it is safe to overwrite prefix[-1], u and v."""
         write_data = ContactPairsData()
 
         write_data.vv = PairsData()
@@ -655,22 +673,18 @@ class ContactPairs:
         write_data.vf = PairsData()
         write_data.ee = PairsData()
 
-        write_data.vv.counts = self._data.vv.counts
         write_data.vv.prefix = self._data.vv.prefix
         write_data.vv.u = self._vv_u_buffer
         write_data.vv.v = self._vv_v_buffer
 
-        write_data.ve.counts = self._data.ve.counts
         write_data.ve.prefix = self._data.ve.prefix
         write_data.ve.u = self._ve_u_buffer
         write_data.ve.v = self._ve_v_buffer
 
-        write_data.vf.counts = self._data.vf.counts
         write_data.vf.prefix = self._data.vf.prefix
         write_data.vf.u = self._vf_u_buffer
         write_data.vf.v = self._vf_v_buffer
 
-        write_data.ee.counts = self._data.ee.counts
         write_data.ee.prefix = self._data.ee.prefix
         write_data.ee.u = self._ee_u_buffer
         write_data.ee.v = self._ee_v_buffer

@@ -2,13 +2,19 @@ import warp as wp
 
 
 @wp.func
-def face_of_half_edge(he: wp.int32) -> wp.int32:
+def face_of_half_edge(he: wp.int32) -> wp.int32:  # type: ignore
     """Return the face index adjacent to half-edge `he`."""
-    return he // wp.int32(3)  # pyright: ignore[reportOperatorIssue]
+    return wp.int32(he // wp.int32(3))  # type: ignore
 
 
 @wp.func
-def incoming_vertex(F: wp.array[wp.vec3i], he: wp.int32) -> wp.int32:
+def face_of_half_edge(he: wp.uint32) -> wp.uint32:  # type: ignore
+    """Return the face index adjacent to half-edge `he`."""
+    return wp.uint32(he // wp.uint32(3))  # type: ignore
+
+
+@wp.func
+def incoming_vertex(F: wp.array[wp.vec3i], he: wp.int32) -> wp.int32:  # type: ignore
     """Source vertex of half-edge he of triangle mesh F
 
     Args:
@@ -22,9 +28,21 @@ def incoming_vertex(F: wp.array[wp.vec3i], he: wp.int32) -> wp.int32:
 
 
 @wp.func
-def outgoing_vertex(F: wp.array[wp.vec3i], he: wp.int32) -> wp.int32:
+def incoming_vertex(F: wp.array[wp.vec3i], he: wp.uint32) -> wp.int32:  # type: ignore
+    """Source vertex of half-edge he of triangle mesh F (uint32 overload)."""
+    return F[face_of_half_edge(he)][he % wp.uint32(3)]  # type: ignore
+
+
+@wp.func
+def outgoing_vertex(F: wp.array[wp.vec3i], he: wp.int32) -> wp.int32:  # type: ignore
     """Return the outgoing vertex index of half-edge `he`."""
     return F[face_of_half_edge(he)][(he + wp.int32(1)) % wp.int32(3)]  # type: ignore
+
+
+@wp.func
+def outgoing_vertex(F: wp.array[wp.vec3i], he: wp.uint32) -> wp.int32:  # type: ignore
+    """Return the outgoing vertex index of half-edge `he` (uint32 overload)."""
+    return F[face_of_half_edge(he)][(he + wp.uint32(1)) % wp.uint32(3)]  # type: ignore
 
 
 @wp.func
@@ -60,8 +78,8 @@ def half_edge_of_face(f: wp.int32, helocal: wp.int32) -> wp.int32:
 def are_opposite_half_edges(
     F: wp.array[wp.vec3i], hei: wp.int32, hej: wp.int32
 ) -> bool:
-    fi = face_of_half_edge(hei)
-    fj = face_of_half_edge(hej)
+    fi = face_of_half_edge(hei)  # type: ignore
+    fj = face_of_half_edge(hej)  # type: ignore
     three = wp.int32(3)
     one = wp.int32(1)
     via, vib = F[hei % three, fi], F[(hei + one) % three, fi]
@@ -86,7 +104,7 @@ def opposite_half_edge(
     fj = GHEF[he][1]  # pyright: ignore[reportIndexIssue]
     if fj == -1:
         return wp.int32(-1)
-    vib = outgoing_vertex(F, he)
+    vib = outgoing_vertex(F, he)  # type: ignore
     one, two, three = wp.int32(1), wp.int32(2), wp.int32(3)
     ej = (
         wp.int32(F[fj][1] == vib) * one  # pyright: ignore

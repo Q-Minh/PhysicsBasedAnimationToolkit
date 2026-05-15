@@ -101,7 +101,7 @@ def _update_dual_vv(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= contacts.vv.prefix[n_u]:
+    if wp.uint64(c) >= contacts.vv.prefix[n_u]:  # type: ignore
         return
     u = contacts.vv.u[c]
     v = contacts.vv.v[c]
@@ -147,7 +147,7 @@ def _update_dual_ve(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= contacts.ve.prefix[n_u]:
+    if wp.uint64(c) >= contacts.ve.prefix[n_u]:  # type: ignore
         return
     v = contacts.ve.u[c]
     he = contacts.ve.v[c]
@@ -201,7 +201,7 @@ def _update_dual_vf(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= contacts.vf.prefix[n_u]:
+    if wp.uint64(c) >= contacts.vf.prefix[n_u]:  # type: ignore
         return
     v = contacts.vf.u[c]
     f = contacts.vf.v[c]
@@ -255,7 +255,7 @@ def _update_dual_ee(
     request_lagrange_multiplier_update: bool = True,
 ):
     c = wp.tid()  # type: ignore
-    if c >= contacts.ee.prefix[n_u]:
+    if wp.uint64(c) >= contacts.ee.prefix[n_u]:  # type: ignore
         return
     he1 = contacts.ee.u[c]
     he2 = contacts.ee.v[c]
@@ -352,6 +352,7 @@ class MeshDynamics:
         self._data = MeshDynamicsData()
         self._data.meshes = self.meshes.data
         self._data.ogc = self.ogc.data
+        self._data.contacts, self._data.rcontacts = self.contacts.read_data
         self._data.cvv = self.cvv.data
         self._data.cve = self.cve.data
         self._data.cvf = self.cvf.data
@@ -370,6 +371,7 @@ class MeshDynamics:
         self.contacts.clear()
         self.ogc.prepare_for_execution(xk)
         self.ogc.detect_contacts(self.contacts)
+        self.contacts.assemble_contacts(xk, with_reverse_contacts=True)
         contacts, _ = self.contacts.read_data
         main_stream = wp.get_stream()
         # Update all constraint sets

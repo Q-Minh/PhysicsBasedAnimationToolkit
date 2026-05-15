@@ -226,8 +226,8 @@ def is_edge_feasible(
     fzero = wp.float32(0)
     zero = wp.int32(0)
     i, j = (
-        halfedges.incoming_vertex(F, he),
-        halfedges.outgoing_vertex(F, he),
+        halfedges.incoming_vertex(F, he),  # type: ignore
+        halfedges.outgoing_vertex(F, he),  # type: ignore
     )
     xi, xj = x[i], x[j]
     in_edge_feasible_region = wp.bool(True)
@@ -492,11 +492,11 @@ def _fused_contact_detection(
             # 3. Compute exclusive prefix sum (unique contact count is last element of prefix sum)
             bvv_prefix = wp.tile_scan_exclusive(bvv_adj_diff)
             # 4. Determine global write offset via atomic add
-            tvv_offset = wp.int32(0)
+            tvv_offset = wp.uint64(0)
             tnvv = bvv_prefix[last_row, last_col]  # type: ignore
             if local_tid == last_col:
-                tvv_offset = wp.atomic_add(contacts.vv.prefix, n_verts, tnvv)  # type: ignore
-                assert tvv_offset + tnvv <= contacts.vv.u.shape[0] // wp.int32(2)
+                tvv_offset = wp.atomic_add(contacts.vv.prefix, n_verts, wp.uint64(tnvv))  # type: ignore
+                assert (wp.int32(tvv_offset) + tnvv <= contacts.vv.u.shape[0] // wp.int32(2))
             bvv_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvv_offset,
@@ -507,9 +507,9 @@ def _fused_contact_detection(
                 is_marked_unique = bvv_adj_diff[brow, bcol] == wp.int32(1)
                 is_last_element = (brow == last_row) and (bcol == last_col)
                 if is_marked_unique and not is_last_element:
-                    k = bvv_offset[bcol] + bvv_prefix[brow, bcol]  # type: ignore
-                    contacts.vv.u[k] = v
-                    contacts.vv.v[k] = bvv[brow, bcol]
+                    k = bvv_offset[bcol] + wp.uint64(bvv_prefix[brow, bcol])  # type: ignore
+                    contacts.vv.u[k] = wp.uint32(v)
+                    contacts.vv.v[k] = wp.uint32(bvv[brow, bcol])
 
         if has_ve_contacts:
             # 1. Sort contacts
@@ -530,11 +530,11 @@ def _fused_contact_detection(
             # 3. Compute exclusive prefix sum (unique contact count is last element of prefix sum)
             bve_prefix = wp.tile_scan_exclusive(bve_adj_diff)
             # 4. Determine global write offset via atomic add
-            tve_offset = wp.int32(0)
+            tve_offset = wp.uint64(0)
             tnve = bve_prefix[last_row, last_col]  # type: ignore
             if local_tid == last_col:
-                tve_offset = wp.atomic_add(contacts.ve.prefix, n_verts, tnve)  # type: ignore
-                assert tve_offset + tnve <= contacts.ve.u.shape[0] // wp.int32(2)
+                tve_offset = wp.atomic_add(contacts.ve.prefix, n_verts, wp.uint64(tnve))  # type: ignore
+                assert wp.int32(tve_offset) + tnve <= contacts.ve.u.shape[0] // wp.int32(2)
             bve_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tve_offset,
@@ -545,21 +545,21 @@ def _fused_contact_detection(
                 is_marked_unique = bve_adj_diff[brow, bcol] == wp.int32(1)
                 is_last_element = (brow == last_row) and (bcol == last_col)
                 if is_marked_unique and not is_last_element:
-                    k = bve_offset[bcol] + bve_prefix[brow, bcol]  # type: ignore
-                    contacts.ve.u[k] = v
-                    contacts.ve.v[k] = bve[brow, bcol]
+                    k = bve_offset[bcol] + wp.uint64(bve_prefix[brow, bcol])  # type: ignore
+                    contacts.ve.u[k] = wp.uint32(v)
+                    contacts.ve.v[k] = wp.uint32(bve[brow, bcol])
 
         if has_vf_contacts:
-            # 1. Sort contacts
+            # 1. Sort contacts (already unique, count=tnvf)
             bvf = wp.tile(tvf)  # type: ignore
             wp.tile_sort(keys=bvf, values=bvf)
             last_row = MAX_VF_PER_THREAD - wp.int32(1)
             assert bvf[last_row, last_col] == n_tris
             # 2. Determine global write offset (vf contacts are already unique, count=tnvf)
-            tvf_offset = wp.int32(0)
+            tvf_offset = wp.uint64(0)
             if local_tid == last_col:
-                tvf_offset = wp.atomic_add(contacts.vf.prefix, n_verts, tnvf)  # type: ignore
-                assert tvf_offset + tnvf <= contacts.vf.u.shape[0] // wp.int32(2)
+                tvf_offset = wp.atomic_add(contacts.vf.prefix, n_verts, wp.uint64(tnvf))  # type: ignore
+                assert wp.int32(tvf_offset) + tnvf <= contacts.vf.u.shape[0] // wp.int32(2)
             bvf_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvf_offset,
@@ -568,9 +568,9 @@ def _fused_contact_detection(
             # 3. Write unique contacts to global contact list
             for brow in range(MAX_VF_PER_THREAD):
                 if bvf[brow, bcol] < n_tris:
-                    k = bvf_offset[bcol] + brow * block_dims + bcol
-                    contacts.vf.u[k] = v
-                    contacts.vf.v[k] = bvf[brow, bcol]
+                    k = bvf_offset[bcol] + wp.uint64(brow * block_dims + bcol)
+                    contacts.vf.u[k] = wp.uint32(v)
+                    contacts.vf.v[k] = wp.uint32(bvf[brow, bcol])
 
     # EE contact detection
     if block_id < n_edges:
@@ -616,10 +616,10 @@ def _fused_contact_detection(
             last_row = MAX_EE_PER_THREAD - wp.int32(1)
             assert bee[last_row, last_col] == n_half_edges
             # 2. Determine global write offset via atomic add
-            tee_offset = wp.int32(0)
+            tee_offset = wp.uint64(0)
             if local_tid == last_col:
-                tee_offset = wp.atomic_add(contacts.ee.prefix, n_half_edges, tnee)  # type: ignore
-                assert tee_offset + tnee <= contacts.ee.u.shape[0] // wp.int32(2)
+                tee_offset = wp.atomic_add(contacts.ee.prefix, n_half_edges, wp.uint64(tnee))  # type: ignore
+                assert wp.int32(tee_offset) + tnee <= contacts.ee.u.shape[0] // wp.int32(2)
             bee_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tee_offset,
@@ -628,9 +628,9 @@ def _fused_contact_detection(
             # 3. Write contacts to global contact set
             for brow in range(MAX_EE_PER_THREAD):
                 if bee[brow, bcol] < n_half_edges:
-                    k = bee_offset[bcol] + brow * block_dims + bcol  # type: ignore
-                    contacts.ee.u[k] = he_max
-                    contacts.ee.v[k] = bee[brow, bcol]
+                    k = bee_offset[bcol] + wp.uint64(brow * block_dims + bcol)  # type: ignore
+                    contacts.ee.u[k] = wp.uint32(he_max)  # type: ignore
+                    contacts.ee.v[k] = wp.uint32(bee[brow, bcol])
 
 
 @wp.kernel

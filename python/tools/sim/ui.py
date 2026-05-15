@@ -282,7 +282,7 @@ def make_callback(
                 # --- Contact parameters ---
                 if imgui.TreeNode("Contact"):
                     if imgui.TreeNode("Statistics"):
-                        nvv, nve, nvf, nee = state.contact.ogc.num_contacts
+                        nvv, nve, nvf, nee = state.contact.contacts.num_contacts
                         imgui.Text(f"# Vertex-Vertex Contacts: {nvv}")
                         imgui.Text(f"# Vertex-Edge Contacts: {nve}")
                         imgui.Text(f"# Vertex-Face Contacts: {nvf}")
