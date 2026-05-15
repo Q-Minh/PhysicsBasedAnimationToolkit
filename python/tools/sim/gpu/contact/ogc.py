@@ -1033,14 +1033,13 @@ def _planar_dat_truncate(
 class Ogc:
     """Offset Geometric Contact"""
 
-    _streams: list[wp.Stream]  # Stream list
-
     _ogc: OgcData  # pyright: ignore[reportGeneralTypeIssues]
     _e_bvh: wp.Bvh  # BVH over edges
     _f_bvh: wp.Bvh  # BVH over faces
     _xk: wp.array[wp.vec3f]  # (N,) cached vertex positions at step k
     _meshes: MultiMesh  # Meshes # type: ignore
     _truncation_strategy: TruncationStrategy
+    _streams: list[wp.Stream]  # Stream list
 
     def __init__(
         self,
@@ -1073,8 +1072,6 @@ class Ogc:
         self._ogc.rq = wp.zeros((1,), dtype=wp.float32)  # (1,) OGC query radius
         self._ogc.tv = wp.empty((meshes.n_verts,), dtype=wp.float32)  # type: ignore
 
-        self._streams = [wp.Stream() for _ in range(10)]
-
         dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
         wp.launch(
             kernel=_compute_bounding_volumes,
@@ -1099,6 +1096,7 @@ class Ogc:
             self._e_bvh.id,
             self._f_bvh.id,
         )
+        self._streams = [wp.Stream() for _ in range(2)]
 
     def enable_adaptive_query_radius(
         self, xt: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]
@@ -1182,7 +1180,7 @@ class Ogc:
                 else:
                     bvh.refit()
         # Fence
-        for stream in self._streams[:10]:
+        for stream in self._streams[:2]:
             main_stream.wait_stream(stream)
 
     def detect_contacts(self, contacts: pairs.ContactPairs):  # type: ignore

@@ -75,9 +75,11 @@ class Pairs:
         return self._v
 
     def clear(self):
-        self._prefix.fill(np.uint64(0))
-        self._u.fill(np.uint32(self.nu))
-        self._v.fill(np.uint32(self.nv))
+        # NOTE: We need to go through the warp interface for memset, because 
+        # warp and CuPy use different main streams.
+        self.data.prefix.fill_(wp.uint64(0))
+        self.data.u.fill_(wp.uint32(self.nu))
+        self.data.v.fill_(wp.uint32(self.nv))
 
     def uv(self):
         """Get the pairs (u,v) on CPU

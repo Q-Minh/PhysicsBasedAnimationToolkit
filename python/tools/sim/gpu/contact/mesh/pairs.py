@@ -480,6 +480,7 @@ class ContactPairs:
 
     def clear(self):
         """Clear all contact pair data. Resets all empty contacts to their sentinel values."""
+        main_stream = wp.get_stream()
         for pairs, stream in zip(
             [
                 self._vv,
@@ -493,6 +494,7 @@ class ContactPairs:
             ],
             self._streams[:8],
         ):
+            stream.wait_stream(main_stream)
             with wp.ScopedStream(stream):
                 pairs.clear()
         # Also reset write buffers to sentinel values so that the Sort
@@ -508,6 +510,7 @@ class ContactPairs:
             (self._ee_v_buffer, self._ee.nv),
         ]
         for (buf, sentinel), stream in zip(write_buffer_fills, self._streams[8:16]):
+            stream.wait_stream(main_stream)
             with wp.ScopedStream(stream):
                 buf.fill_(sentinel)
 
