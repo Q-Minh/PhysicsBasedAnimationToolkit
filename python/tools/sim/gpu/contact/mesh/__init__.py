@@ -1,1 +1,1 @@
-from . import cd, pairs, sdf, ogc
+from . import cd, pairs, sd, ogc

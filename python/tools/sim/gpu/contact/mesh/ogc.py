@@ -1043,7 +1043,6 @@ class Ogc(ContactDetection):
     _ogc: OgcData  # pyright: ignore[reportGeneralTypeIssues]
     _e_bvh: wp.Bvh  # BVH over edges
     _f_bvh: wp.Bvh  # BVH over faces
-    _meshes: MultiMesh  # Meshes # type: ignore
     _truncation_strategy: TruncationStrategy
     _streams: list[wp.Stream]  # Stream list
     _query_radius_reduction: reduce.Reduce

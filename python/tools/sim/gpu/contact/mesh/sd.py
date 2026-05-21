@@ -1,0 +1,178 @@
+import warp as wp
+import cupy as cp
+import numpy as np
+
+from . import pairs
+from ..multimesh import MultiMesh, MultiMeshData
+from .. import halfedges
+from .cd import ContactDetection
+from ...common import reduce, lower_bound
+from ....common.fields import DocField
+
+MAX_VV_PER_THREAD = wp.constant(4)
+MAX_VE_PER_THREAD = wp.constant(4)
+MAX_VF_PER_THREAD = wp.constant(8)
+MAX_EE_PER_THREAD = wp.constant(8)
+tvvlist = wp.types.vector(length=MAX_VV_PER_THREAD, dtype=wp.int32)
+tvelist = wp.types.vector(length=MAX_VE_PER_THREAD, dtype=wp.int32)
+tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
+teelist = wp.types.vector(length=MAX_EE_PER_THREAD, dtype=wp.int32)
+
+
+@wp.kernel
+def _detect_vertex_mesh_contacts(
+    mesh_ids: wp.array[wp.uint64],
+    max_dist: wp.float32,
+    dmin: wp.float32,
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # type: ignore
+    contacts: pairs.ContactPairsData,  # type: ignore
+):
+    tid = wp.tid()
+    block_dim = wp.block_dim()
+    block_id = tid // block_dim  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dim  # pyright: ignore[reportOperatorIssue]
+    v = block_id
+    b = lower_bound(meshes.VP, meshes.VP.shape[0], v + 1) - 1  # type: ignore
+    i = meshes.V[v]
+    xi = x[i]
+    n_verts, n_half_edges, n_tris = (
+        meshes.V.shape[0],
+        3 * meshes.F.shape[0],
+        meshes.F.shape[0],
+    )
+    # tnvv = wp.int32(0)
+    # tnve = wp.int32(0)
+    # tnvf = wp.int32(0)
+    # tvv = tvvlist(n_verts)
+    # tve = tvelist(n_half_edges)
+    # tvf = tvflist(n_tris)
+    for k in range(0, mesh_ids.shape[0], block_dim):
+        if k == b:
+            continue
+        qp = wp.mesh_query_point(mesh_ids[k], xi, max_dist)  # type: ignore
+        if not qp.result:  # type: ignore
+            continue
+        f = meshes.FP[b] + qp.face  # type: ignore
+        finds = meshes.F[f]
+        j, k, l = finds[0], finds[1], finds[2]
+        xj, xk, xl = x[j], x[k], x[l]
+        b0, b1, b2 = (wp.float32(1) - qp.u - qp.v), qp.u, qp.v  # type: ignore
+        xc = b0 * xj + b1 * xk + b2 * xl  # type: ignore
+        sd = qp.sign * wp.norm_l2(xi - xc)  # type: ignore
+        if sd < dmin:
+            is_j_zero = wp.int32(b0 == wp.float32(0))
+            is_k_zero = wp.int32(b1 == wp.float32(0))
+            is_l_zero = wp.int32(b2 == wp.float32(0))
+            nz = is_j_zero + is_k_zero + is_l_zero
+            if nz == 0:
+                # Triangle contact
+                # assert tnvf < MAX_VF_PER_THREAD
+                # tvf[tnvf] = f
+                # tnvf += 1
+                tvf_offset = wp.atomic_add(contacts.vf.prefix, n_tris, wp.uint64(1))
+                contacts.vf.u[tvf_offset] = wp.uint32(v)
+                contacts.vf.v[tvf_offset] = wp.uint32(f)
+            elif nz == 1:
+                # Edge contact
+                # assert tnve < MAX_VE_PER_THREAD
+                helocal = is_k_zero * wp.int32(1) + is_l_zero * wp.int32(2)  # type: ignore
+                he_candidate = halfedges.next_half_edge(
+                    halfedges.half_edge_of_face(f, helocal)
+                )
+                he = wp.max(
+                    he_candidate,
+                    halfedges.opposite_half_edge(meshes.F, he_candidate, meshes.GHEF),
+                )
+                # tve[tnve] = he
+                # tnve += 1
+                tve_offset = wp.atomic_add(
+                    contacts.ve.prefix, n_half_edges, wp.uint64(1)
+                )
+                contacts.ve.u[tve_offset] = wp.uint32(v)
+                contacts.ve.v[tve_offset] = wp.uint32(he)
+            else:
+                # Vertex contact
+                # assert tnvv < MAX_VV_PER_THREAD
+                jnode = wp.int32(not is_j_zero) * j + wp.int32(not is_k_zero) * k + wp.int32(not is_l_zero) * l  # type: ignore
+                tvv_offset = wp.atomic_add(contacts.vv.prefix, n_verts, wp.uint64(1))
+                contacts.vv.u[tvv_offset] = wp.uint32(v)
+                contacts.vv.v[tvv_offset] = wp.uint32(meshes.GXV[jnode])
+                # tvv[tnvv] = meshes.GXV[jnode]  # type: ignore
+                # tnvv += 1
+
+    # TODO: Use block-level primitives to avoid atomic contention on global memory when writing contact pairs.
+
+
+class Params:
+    max_dist = DocField(0.2, "Maximum distance for closest point computations.")
+    dmin = DocField(0.01, "Minimum distance threshold for contacts to be created.")
+
+
+class Sd(ContactDetection):
+    """Vertex-(Mesh)SDF based contact detection."""
+
+    _wp_meshes: list[wp.Mesh]
+    _mesh_ids: wp.array[wp.uint64]
+    # _query_radius_reduction: reduce.Reduce
+
+    def __init__(self, params: Params | None):
+        self.params = params or Params()
+
+    def register_handles(
+        self,
+        xt: wp.array[wp.vec3f],
+        xk: wp.array[wp.vec3f],
+        x: wp.array[wp.vec3f],
+        xtilde: wp.array[wp.vec3f],
+        meshes: MultiMesh,
+        contacts: pairs.ContactPairs,
+    ):
+        super().register_handles(xt, xk, x, xtilde, meshes, contacts)
+
+        FP = self._meshes.data.FP.numpy()
+        Fb = [
+            cp.asarray(self._meshes.data.F)[FP[b] : FP[b + 1], :].ravel()
+            for b in range(FP.shape[0] - 1)
+        ]
+        self._wp_meshes = [
+            wp.Mesh(
+                self._x,
+                wp.array(
+                    data=Fb[b],
+                    dtype=wp.int32,
+                ),
+            )
+            for b in range(FP.shape[0] - 1)
+        ]
+        self._mesh_ids = wp.array([m.id for m in self._wp_meshes], dtype=wp.uint64)
+
+    def on_time_step_started(self):
+        pass
+
+    def detect_contacts(self, from_xt: bool = False):
+        for mesh in self._wp_meshes:
+            mesh.refit()
+        self._contacts.clear()
+        n_verts = self._meshes.data.V.shape[0]
+        block_dim = 32
+        wp.launch(
+            _detect_vertex_mesh_contacts,
+            dim=n_verts * block_dim,
+            inputs=[
+                self._mesh_ids,
+                self.params.max_dist,  # max_dist
+                self.params.dmin,  # dmin
+                self._x,
+                self._meshes.data,  # type: ignore
+                self._contacts.write_data,  # type: ignore
+            ],
+            block_dim=block_dim,
+        )
+        self._contacts.assemble_contacts(self._x, with_reverse_contacts=True)
+
+    def filter_step(self):
+        pass
+
+    def on_time_step_ended(self):
+        pass

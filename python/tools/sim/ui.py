@@ -107,6 +107,7 @@ class SolverType(enum.Enum):
 
 class CDType(enum.Enum):
     OGC = 0
+    VertexSdf = 1
 
 
 class UIState:
@@ -170,7 +171,10 @@ class SimulationState:
         )
         # Contact detection algorithm selection
         self.cd_type: CDType = CDType.OGC
-        self.cd_params = {CDType.OGC: gpu.contact.mesh.ogc.OgcParams()}
+        self.cd_params = {
+            CDType.OGC: gpu.contact.mesh.ogc.OgcParams(),
+            CDType.VertexSdf: gpu.contact.mesh.sd.Params(),
+        }
         self.detector = self._make_contact_detector(contact_pair_storage)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
@@ -193,6 +197,8 @@ class SimulationState:
         """Instantiate and register the currently selected contact detection algorithm."""
         if self.cd_type == CDType.OGC:
             detector = gpu.contact.mesh.ogc.Ogc(self.cd_params[CDType.OGC])
+        elif self.cd_type == CDType.VertexSdf:
+            detector = gpu.contact.mesh.sd.Sd(self.cd_params[CDType.VertexSdf])
         else:
             raise ValueError(f"Unknown CDType: {self.cd_type}")
         detector.register_handles(
