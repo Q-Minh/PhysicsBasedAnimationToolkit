@@ -1,4 +1,4 @@
-from . import barrier, buffer
+from . import barrier, buffer, reduce, scan, search, sort, stream
 
 import warp as wp
 
@@ -203,12 +203,3 @@ def lower_bound(u: wp.array[wp.uint32], v: wp.array[wp.uint32], n: wp.uint64, ke
         )
         iters -= wp.uint64(1)
     return lo
-
-
-class Stream:
-
-    def __init__(self, stream: wp.Stream):
-        self._stream = stream
-
-    def __cuda_stream__(self):
-        return (0, self._stream.cuda_stream)

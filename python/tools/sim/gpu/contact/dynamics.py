@@ -1,3 +1,5 @@
+import enum
+
 from ...common.fields import DocField
 
 import warp as wp
@@ -23,6 +25,10 @@ class MeshDynamicsData:
     cve: ConstraintSetData  # type: ignore
     cvf: ConstraintSetData  # type: ignore
     cee: ConstraintSetData  # type: ignore
+
+    Qc: wp.array[
+        wp.float32
+    ]  # (cvv capacity + cve capacity + cvf capacity + cee capacity,) constraint Rayleigh quotients w.r.t. dynamics hessian
 
     gamma_n: wp.float32  # Multiplier of sigma_n
     gamma_f: wp.float32  # Multiplier of sigma_f
@@ -298,19 +304,172 @@ def _update_dual_ee(
     )
 
 
+@wp.kernel
+def _compute_rayleigh_vv(
+    Hi: wp.array[wp.mat33f],
+    meshes: MultiMeshData,  # type: ignore
+    contacts: pairs.ContactPairsData,  # type: ignore
+    n_u: wp.int32,
+    Qc: wp.array[wp.float32],
+    offset: wp.int32,
+    Qcmin: wp.float32,
+    penalty_adaptivity: wp.int32,
+):
+    c = wp.tid()  # type: ignore
+    if wp.uint64(c) >= contacts.vv.prefix[n_u]:  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
+            Qc[offset + c] = wp.float32(0)  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+            Qc[offset + c] = Qcmin  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
+            assert False, "No Rayleigh quotients when constant penalty adaptivity"
+        return
+    u = contacts.vv.u[c]
+    v = contacts.vv.v[c]
+    n = contacts.vv_bases.n[c]
+    i, j = meshes.V[u], meshes.V[v]
+    Qc[offset + c] = wp.float32(0.5) * (wp.dot(n, Hi[i] @ n) + wp.dot(n, Hi[j] @ n))  # type: ignore
+
+
+@wp.kernel
+def _compute_rayleigh_ve(
+    Hi: wp.array[wp.mat33f],
+    meshes: MultiMeshData,  # type: ignore
+    contacts: pairs.ContactPairsData,  # type: ignore
+    n_u: wp.int32,
+    Qc: wp.array[wp.float32],
+    offset: wp.int32,
+    Qcmin: wp.float32,
+    penalty_adaptivity: wp.int32,
+):
+    c = wp.tid()  # type: ignore
+    if wp.uint64(c) >= contacts.ve.prefix[n_u]:  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
+            Qc[offset + c] = wp.float32(0)  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+            Qc[offset + c] = Qcmin  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
+            assert False, "No Rayleigh quotients when constant penalty adaptivity"
+        return
+    v = contacts.ve.u[c]
+    he = contacts.ve.v[c]
+    n = contacts.ve_bases.n[c]
+    b1 = contacts.ve_bary[c]
+    b0 = wp.float32(1) - b1
+    i = meshes.V[v]
+    j = halfedges.incoming_vertex(meshes.F, he)  # type: ignore
+    k = halfedges.outgoing_vertex(meshes.F, he)  # type: ignore
+    Qc[offset + c] = wp.float32(0.5) * (  # type: ignore
+        wp.dot(n, Hi[i] @ n)
+        + b0 * b0 * wp.dot(n, Hi[j] @ n)
+        + b1 * b1 * wp.dot(n, Hi[k] @ n)
+    )
+
+
+@wp.kernel
+def _compute_rayleigh_vf(
+    Hi: wp.array[wp.mat33f],
+    meshes: MultiMeshData,  # type: ignore
+    contacts: pairs.ContactPairsData,  # type: ignore
+    n_u: wp.int32,
+    Qc: wp.array[wp.float32],
+    offset: wp.int32,
+    Qcmin: wp.float32,
+    penalty_adaptivity: wp.int32,
+):
+    c = wp.tid()  # type: ignore
+    if wp.uint64(c) >= contacts.vf.prefix[n_u]:  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
+            Qc[offset + c] = wp.float32(0)  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+            Qc[offset + c] = Qcmin  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
+            assert False, "No Rayleigh quotients when constant penalty adaptivity"
+        return
+    v = contacts.vf.u[c]
+    f = contacts.vf.v[c]
+    n = contacts.vf_bases.n[c]
+    bary = contacts.vf_bary[c]
+    finds = meshes.F[f]
+    i = meshes.V[v]
+    j, k, l = finds[0], finds[1], finds[2]
+    b1 = bary[0]
+    b2 = bary[1]
+    b0 = wp.float32(1) - b1 - b2
+    Qc[offset + c] = wp.float32(0.5) * (  # type: ignore
+        wp.dot(n, Hi[i] @ n)
+        + b0 * b0 * wp.dot(n, Hi[j] @ n)
+        + b1 * b1 * wp.dot(n, Hi[k] @ n)
+        + b2 * b2 * wp.dot(n, Hi[l] @ n)
+    )
+
+
+@wp.kernel
+def _compute_rayleigh_ee(
+    Hi: wp.array[wp.mat33f],
+    meshes: MultiMeshData,  # type: ignore
+    contacts: pairs.ContactPairsData,  # type: ignore
+    n_u: wp.int32,
+    Qc: wp.array[wp.float32],
+    offset: wp.int32,
+    Qcmin: wp.float32,
+    penalty_adaptivity: wp.int32,
+):
+    c = wp.tid()  # type: ignore
+    if wp.uint64(c) >= contacts.ee.prefix[n_u]:  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
+            Qc[offset + c] = wp.float32(0)  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+            Qc[offset + c] = Qcmin  # type: ignore
+        if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
+            assert False, "No Rayleigh quotients when constant penalty adaptivity"
+        return
+    he1 = contacts.ee.u[c]
+    he2 = contacts.ee.v[c]
+    n = contacts.ee_bases.n[c]
+    bary = contacts.ee_bary[c]
+    i = halfedges.incoming_vertex(meshes.F, he1)  # type: ignore
+    j = halfedges.outgoing_vertex(meshes.F, he1)  # type: ignore
+    k = halfedges.incoming_vertex(meshes.F, he2)  # type: ignore
+    l = halfedges.outgoing_vertex(meshes.F, he2)  # type: ignore
+    s0 = wp.float32(1) - bary[0]
+    t0 = bary[0]
+    s1 = wp.float32(1) - bary[1]
+    t1 = bary[1]
+    Qc[offset + c] = wp.float32(0.5) * (  # type: ignore
+        s0 * s0 * wp.dot(n, Hi[i] @ n)
+        + t0 * t0 * wp.dot(n, Hi[j] @ n)
+        + s1 * s1 * wp.dot(n, Hi[k] @ n)
+        + t1 * t1 * wp.dot(n, Hi[l] @ n)
+    )
+
+
+class PenaltyAdaptivity(enum.Enum):
+    CONSTANT = 0
+    TIMESTEP = 1
+    SUBPROBLEM = 2
+
+
+PENALTY_ADAPTIVITY_CONSTANT = wp.constant(int(PenaltyAdaptivity.CONSTANT.value))
+PENALTY_ADAPTIVITY_TIMESTEP = wp.constant(int(PenaltyAdaptivity.TIMESTEP.value))
+PENALTY_ADAPTIVITY_SUBPROBLEM = wp.constant(int(PenaltyAdaptivity.SUBPROBLEM.value))
+
+
 class Params:
     """Parameters for :class:`MeshDynamics`.
 
     Attributes:
-        dmin   : Minimum separation distance used as the contact distance margin
-                 (separating threshold in the AL slack update).
-        mu_f   : Coulomb friction coefficient.
-        decay  : Multiplicative decay applied to the contact-activity weight ``gamma``
-                 when a contact is separating (slack growing). Must satisfy ``0 < decay < 1``.
-        gamman : Normal AL penalty scaling factor, equivalent to
-                 ``MeshDynamics::Params::gamma`` in the C++ side.
-        gammaf : Friction AL penalty scaling factor, equivalent to
-                 ``MeshDynamics::Params::gammaf`` in the C++ side.
+        dmin        : Minimum separation distance used as the contact distance margin
+                      (separating threshold in the AL slack update).
+        mu_f        : Coulomb friction coefficient.
+        decay       : Multiplicative decay applied to the contact-activity weight ``gamma``
+                      when a contact is separating (slack growing). Must satisfy ``0 < decay < 1``.
+        gamman      : Normal AL penalty scaling factor, equivalent to
+                      ``MeshDynamics::Params::gamma`` in the C++ side.
+        gammaf      : Friction AL penalty scaling factor, equivalent to
+                      ``MeshDynamics::Params::gammaf`` in the C++ side.
+        min_sigma_n : Floor for the adaptive normal penalty ``sigma_n``.
+        penalty_adaptivity : Strategy for adapting the penalty parameters.
     """
 
     dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
@@ -318,6 +477,10 @@ class Params:
     decay = DocField(0.5, "Decay rate for contact deactivation")
     gamman = DocField(5.0, "Normal contact AL penalty scaling factor")
     gammaf = DocField(0.1, "Friction contact AL penalty scaling factor")
+    min_sigma_n = DocField(1.0, "Minimum normal penalty")
+    penalty_adaptivity = DocField(
+        PenaltyAdaptivity.CONSTANT, "Strategy for adapting penalty parameters"
+    )
 
 
 class MeshDynamics:
@@ -350,14 +513,26 @@ class MeshDynamics:
         self._data.cve = self.cve.data
         self._data.cvf = self.cvf.data
         self._data.cee = self.cee.data
+        self._data.Qc = wp.zeros(
+            vv_capacity + ve_capacity + vf_capacity + ee_capacity, dtype=wp.float32
+        )
         self._data.gamma_n = self.params.gamman
         self._data.gamma_f = self.params.gammaf
         self._data.sigma_n = wp.array([1], dtype=wp.float32)
         self._data.sigma_f = wp.array([1], dtype=wp.float32)
-        self._data.dmin = self.params.dmin  # type: ignore
+        self._data.dmin = self.params.dmin
         self._data.mu_f = self.params.mu_f
         self._data.decay = self.params.decay
+        self.sigma_n_min = self.params.min_sigma_n
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
+        n_points = self.meshes.data.GXV.shape[0]
+        self.Hi = wp.zeros(n_points, dtype=wp.mat33f)
+        self._normal_penalty_reduction = common.reduce.Reduce(
+            d_in=cp.asarray(self._data.Qc),
+            d_out=cp.asarray(self._data.sigma_n),
+            num_items=self._data.Qc.shape[0],
+            op=cuda.compute.OpKind.MAXIMUM,
+        )
 
     def update_constraint_set(self):
         """Prepare constraint sets for a new step, warm-starting from the previous snapshot.
@@ -443,76 +618,46 @@ class MeshDynamics:
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
 
-    def enable_adaptive_penalty_parameters(
-        self, maxQnv: wp.array[wp.float32], maxQfv: wp.array[wp.float32]
-    ):
-        n_verts = self.meshes.n_verts
-        self._adaptive_penalty_d_in_n = cp.asarray(maxQnv)
-        self._adaptive_penalty_d_in_f = cp.asarray(maxQfv)
-        self._adaptive_penalty_d_out_n = cp.asarray(self._data.sigma_n)
-        self._adaptive_penalty_d_out_f = cp.asarray(self._data.sigma_f)
-        self._adaptive_penalty_h_init = np.zeros((1,), dtype=np.float32)
-        self._adaptive_penalty_reduce_op = cuda.compute.OpKind.MAXIMUM
-        self._adaptive_penalty_reduce_n = cuda.compute.make_reduce_into(
-            d_in=self._adaptive_penalty_d_in_n,
-            d_out=self._adaptive_penalty_d_out_n,
-            op=self._adaptive_penalty_reduce_op,
-            h_init=self._adaptive_penalty_h_init,
-        )
-        self._adaptive_penalty_reduce_f = cuda.compute.make_reduce_into(
-            d_in=self._adaptive_penalty_d_in_f,
-            d_out=self._adaptive_penalty_d_out_f,
-            op=self._adaptive_penalty_reduce_op,
-            h_init=self._adaptive_penalty_h_init,
-        )
-        temp_size_n = self._adaptive_penalty_reduce_n(
-            temp_storage=None,
-            d_in=self._adaptive_penalty_d_in_n,
-            d_out=self._adaptive_penalty_d_out_n,
-            num_items=n_verts,
-            op=self._adaptive_penalty_reduce_op,
-            h_init=self._adaptive_penalty_h_init,
-        )
-        self._adaptive_penalty_reduce_storage = cp.empty((temp_size_n,), dtype=np.uint8)
-        temp_size_f = self._adaptive_penalty_reduce_f(
-            temp_storage=None,
-            d_in=self._adaptive_penalty_d_in_f,
-            d_out=self._adaptive_penalty_d_out_f,
-            num_items=n_verts,
-            op=self._adaptive_penalty_reduce_op,
-            h_init=self._adaptive_penalty_h_init,
-        )
-        self._adaptive_penalty_reduce_storage_f = cp.empty(
-            (temp_size_f,), dtype=np.uint8
-        )
-
     def adapt_penalty_parameters(self):
+        if self.params.penalty_adaptivity == PenaltyAdaptivity.CONSTANT:
+            return
+        vv_cap, ve_cap, vf_cap, _ = self.contacts.capacity
+        contacts = self.contacts._data
+        meshes = self.meshes.data
         main_stream = wp.get_stream()
         # Fork
-        for stream in self._streams[:2]:
+        for stream in self._streams[:4]:
             stream.wait_stream(main_stream)
-        n_verts = self.meshes.n_verts
-        self._adaptive_penalty_reduce_n(
-            temp_storage=self._adaptive_penalty_reduce_storage,
-            d_in=self._adaptive_penalty_d_in_n,
-            d_out=self._adaptive_penalty_d_out_n,
-            num_items=n_verts,
-            op=self._adaptive_penalty_reduce_op,
-            h_init=self._adaptive_penalty_h_init,
-            stream=common.Stream(self._streams[0]),
-        )
-        self._adaptive_penalty_reduce_f(
-            temp_storage=self._adaptive_penalty_reduce_storage_f,
-            d_in=self._adaptive_penalty_d_in_f,
-            d_out=self._adaptive_penalty_d_out_f,
-            num_items=n_verts,
-            op=self._adaptive_penalty_reduce_op,
-            h_init=self._adaptive_penalty_h_init,
-            stream=common.Stream(self._streams[1]),
-        )
+        for kernel, cs, stream, offset in zip(
+            [
+                _compute_rayleigh_vv,
+                _compute_rayleigh_ve,
+                _compute_rayleigh_vf,
+                _compute_rayleigh_ee,
+            ],
+            [self.cvv, self.cve, self.cvf, self.cee],
+            self._streams[:4],
+            [0, vv_cap, vv_cap + ve_cap, vv_cap + ve_cap + vf_cap],
+        ):
+            wp.launch(
+                kernel,
+                dim=cs.capacity,
+                inputs=[
+                    self.Hi,
+                    meshes,
+                    contacts,
+                    cs.n_u,
+                    self._data.Qc,
+                    offset,
+                    self.sigma_n_min / self._data.gamma_n,
+                    int(self.params.penalty_adaptivity.value),  # type: ignore
+                ],
+                stream=stream,
+            )
         # Join
-        for stream in self._streams[:2]:
+        for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
+        self._normal_penalty_reduction(main_stream)
 
     @property
     def data(self) -> MeshDynamicsData:  # type: ignore

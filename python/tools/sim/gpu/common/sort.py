@@ -3,7 +3,7 @@ import cuda.compute
 import cupy as cp
 import numpy as np
 import warp as wp
-from ..common import Stream
+from .stream import Stream
 
 
 class Sort:

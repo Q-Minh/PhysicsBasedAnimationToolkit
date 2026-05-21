@@ -172,11 +172,6 @@ class SimulationState:
         self.cd_type: CDType = CDType.OGC
         self.cd_params = {CDType.OGC: gpu.contact.ogc.OgcParams()}
         self.detector = self._make_contact_detector(contact_pair_storage)
-        # NOTE: This will need to be updated if adding new Solvers with
-        # different storage location for Qnk, Qfk
-        # self.contact.enable_adaptive_penalty_parameters(
-        #     self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
-        # )
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
@@ -238,11 +233,6 @@ class SimulationState:
             contact_pair_storage, self.contact_params
         )
         self.detector = self._make_contact_detector(contact_pair_storage)
-        # NOTE: This will need to be updated if adding new Solvers with
-        # different storage location for Qnk, Qfk
-        # self.contact.enable_adaptive_penalty_parameters(
-        #     self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
-        # )
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),

@@ -26,6 +26,7 @@ from .kernels import (
 from ..contact.dynamics import (
     MeshDynamics as ContactDynamics,
     MeshDynamicsData as ContactDynamicsData,
+    PenaltyAdaptivity,
 )
 
 
@@ -106,53 +107,43 @@ def _vertex_solve_kernel(
     fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
-# @wp.kernel(launch_bounds=32)
-# def _compute_constraint_rayleigh_quotients(
-#     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-#     contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
-#     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
-#     h2: float,
-# ):
-#     """Compute on-diagonal dynamics hessian blocks."""
-#     tid = wp.tid()
-#     block_dims = wp.block_dim()
-#     block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
-#     local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
-#     v = block_id
-#     i = contact.meshes.V[v]
-#     # Add elastic hessian
-#     Hil = local_elastic_hessians(
-#         i,
-#         fem.x,
-#         fem.E,
-#         fem.wg,
-#         fem.GNeg,
-#         fem.mug,
-#         fem.lambdag,
-#         params.GVGp,
-#         params.GVGadj,
-#         local_tid,  # type: ignore
-#         block_dims,  # type: ignore
-#     )
-#     Hil *= h2  # type: ignore
-#     His = wp.tile(Hil, preserve_type=wp.bool(True))
-#     Hi = wp.tile_sum(His)[0]  # type: ignore
-#     # Add mass hessian
-#     for d in range(3):
-#         Hi[d, d] += fem.m[i]  # type: ignore
-#     # Visit each contact pair incident on this node, and keep track
-#     # of the largest (per 3x3 diagonal block) Rayleigh quotient w.r.t.
-#     # the contact normals and tangents.
-#     Qnl, Qfl = local_contact_rayleigh_quotients(
-#         i, v, Hi, contact, local_tid, block_dims  # type: ignore
-#     )
-#     Qns = wp.tile(Qnl)  # type: ignore
-#     Qfs = wp.tile(Qfl)  # type: ignore
-#     maxQn = wp.tile_max(Qns)
-#     maxQf = wp.tile_max(Qfs)
-#     if local_tid == 0:
-#         params.Qnk[v] = maxQn[0]  # pyright: ignore[reportIndexIssue]
-#         params.Qfk[v] = maxQf[0]  # pyright: ignore[reportIndexIssue]
+@wp.kernel(launch_bounds=32)
+def _compute_vertex_hessians(
+    fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+    params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
+    Hi: wp.array[wp.mat33f],
+    h2: float,
+):
+    """Compute per-surface-vertex dynamics Hessian blocks (elastic + mass).
+    Results are stored in Hi[v] for each surface vertex index v.
+    """
+    tid = wp.tid()
+    block_dims = wp.block_dim()
+    block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
+    local_tid = tid % block_dims  # pyright: ignore[reportOperatorIssue]
+    i = block_id
+    Hil = local_elastic_hessians(
+        i,  # type: ignore
+        fem.x,
+        fem.E,
+        fem.wg,
+        fem.GNeg,
+        fem.mug,
+        fem.lambdag,
+        params.GVGp,
+        params.GVGadj,
+        local_tid,  # type: ignore
+        block_dims,  # type: ignore
+    )
+    Hil *= h2  # type: ignore
+    His = wp.tile(Hil, preserve_type=wp.bool(True))
+    Hib = wp.tile_sum(His)
+    Hil = wp.tile_extract(Hib, 0)  # type: ignore
+    if local_tid == 0:
+        mi = fem.m[i]
+        for d in range(3):
+            Hil[d, d] += mi
+        Hi[i] = Hil  # type: ignore
 
 
 def linearize_constraints(
@@ -169,6 +160,22 @@ def check_convergence(
     return False
 
 
+def compute_augmented_lagrangian_penalty(
+    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+):
+    h = fem.bdf.beta_tilde
+    h2 = h * h
+    n_nodes = fem.data.x.shape[0]
+    block_dim = 32
+    wp.launch(
+        kernel=_compute_vertex_hessians,
+        dim=n_nodes * block_dim,
+        inputs=[fem.data, params.data, contact.Hi, h2],
+        block_dim=block_dim,
+    )
+    contact.adapt_penalty_parameters()
+
+
 def prepare_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -176,17 +183,8 @@ def prepare_subproblem(
     params: Params,
 ):
     """Assemble block-diagonal Hessian, update penalty parameter."""
-    h = fem.bdf.beta_tilde
-    h2 = h * h
-    n_surface_verts = contact.meshes.n_verts
-    block_dims = 32
-    # wp.launch(
-    #     kernel=_compute_constraint_rayleigh_quotients,
-    #     dim=block_dims * n_surface_verts,
-    #     inputs=[fem.data, contact.data, params.data, h2],
-    #     block_dim=block_dims,
-    # )
-    # contact.adapt_penalty_parameters()
+    if contact.params.penalty_adaptivity == PenaltyAdaptivity.SUBPROBLEM:
+        compute_augmented_lagrangian_penalty(fem, contact, params)
 
 
 def initialize_solve(
@@ -201,10 +199,13 @@ def initialize_solve(
     Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
     before the first call to :func:`solve`.
     """
+    # Compute contact set from current state
     cd.on_time_step_started()
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
     cd.filter_step()
+    if contact.params.penalty_adaptivity == PenaltyAdaptivity.TIMESTEP:
+        compute_augmented_lagrangian_penalty(fem, contact, params)
 
 
 def finalize_subproblem(

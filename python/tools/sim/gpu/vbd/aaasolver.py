@@ -18,6 +18,7 @@ from .kernels import (
 )
 from .solver import (
     check_convergence,
+    initialize_solve,
     linearize_constraints,
     prepare_subproblem,
     finalize_subproblem,
@@ -243,24 +244,6 @@ def iterate(
                 inputs=[p_begin, k, kp, fem.data, contact.data, params.data, h2],
                 block_dim=block_dim,
             )
-
-
-def initialize_solve(
-    fem: FemElastoDynamics,
-    contact: ContactDynamics,
-    cd: ContactDetection,
-    params: Params,
-):
-    """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
-
-    Mirrors ``pbat::sim::algorithm::vbd::InitializeSolve``.
-    Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
-    before the first call to :func:`solve`.
-    """
-    cd.on_time_step_started()
-    cd.detect_contacts(from_xt=True)
-    contact.update_constraint_set()
-    cd.filter_step()
 
 
 def solve_subproblem(

@@ -2,7 +2,7 @@ from typing import Any
 import cuda.compute
 import cuda.compute.typing
 import warp as wp
-from ..common import Stream
+from .stream import Stream
 
 
 class LowerBound:
