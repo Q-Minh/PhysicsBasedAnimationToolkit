@@ -395,9 +395,9 @@ def local_contact_derivatives(
             _vi = rcontacts.rvf.v[l]
             _i = meshes.V[_vi]
             uv = vf_bary[c]
-            b0 = uv[0]
-            b1 = uv[1]
-            b2 = wp.float32(1) - b0 - b1
+            b1 = uv[0]
+            b2 = uv[1]
+            b0 = wp.float32(1) - b1 - b2
             xcp1 = x[_i]
             xtcp1 = xt[_i]
             xcp2 = b0 * x[finds[0]] + b1 * x[finds[1]] + b2 * x[finds[2]]
