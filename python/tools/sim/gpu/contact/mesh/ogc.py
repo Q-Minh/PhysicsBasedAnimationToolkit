@@ -7,15 +7,13 @@ import warp as wp
 import math
 from enum import Enum
 
-from .multimesh import MultiMesh, MultiMeshData
-from . import halfedges
-from . import queries
-from .. import common
-from ...common.fields import DocField
-from ...gpu import common
-from .mesh import pairs
-from .mesh.cd import ContactDetection
-from ..common import reduce
+from ..multimesh import MultiMesh, MultiMeshData
+from .. import halfedges
+from .. import queries
+from ....common.fields import DocField
+from . import pairs
+from .cd import ContactDetection
+from ...common import reduce
 
 
 class TruncationStrategy(Enum):

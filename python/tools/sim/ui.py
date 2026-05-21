@@ -170,7 +170,7 @@ class SimulationState:
         )
         # Contact detection algorithm selection
         self.cd_type: CDType = CDType.OGC
-        self.cd_params = {CDType.OGC: gpu.contact.ogc.OgcParams()}
+        self.cd_params = {CDType.OGC: gpu.contact.mesh.ogc.OgcParams()}
         self.detector = self._make_contact_detector(contact_pair_storage)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
@@ -192,7 +192,7 @@ class SimulationState:
     ) -> gpu.contact.mesh.cd.ContactDetection:
         """Instantiate and register the currently selected contact detection algorithm."""
         if self.cd_type == CDType.OGC:
-            detector = gpu.contact.ogc.Ogc(self.cd_params[CDType.OGC])
+            detector = gpu.contact.mesh.ogc.Ogc(self.cd_params[CDType.OGC])
         else:
             raise ValueError(f"Unknown CDType: {self.cd_type}")
         detector.register_handles(
