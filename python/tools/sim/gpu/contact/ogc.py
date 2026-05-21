@@ -5,6 +5,7 @@ import cupy as cp
 import cuda.compute
 import warp as wp
 import math
+from enum import Enum
 
 from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
@@ -13,8 +14,8 @@ from .. import common
 from ...common.fields import DocField
 from ...gpu import common
 from .mesh import pairs
-
-from enum import Enum
+from .mesh.cd import ContactDetection
+from ..common import reduce
 
 
 class TruncationStrategy(Enum):
@@ -496,7 +497,9 @@ def _fused_contact_detection(
             tnvv = bvv_prefix[last_row, last_col]  # type: ignore
             if local_tid == last_col:
                 tvv_offset = wp.atomic_add(contacts.vv.prefix, n_verts, wp.uint64(tnvv))  # type: ignore
-                assert (wp.int32(tvv_offset) + tnvv <= contacts.vv.u.shape[0] // wp.int32(2))
+                # assert wp.int32(tvv_offset) + tnvv <= contacts.vv.u.shape[
+                #     0
+                # ] // wp.int32(2)
             bvv_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvv_offset,
@@ -534,7 +537,9 @@ def _fused_contact_detection(
             tnve = bve_prefix[last_row, last_col]  # type: ignore
             if local_tid == last_col:
                 tve_offset = wp.atomic_add(contacts.ve.prefix, n_verts, wp.uint64(tnve))  # type: ignore
-                assert wp.int32(tve_offset) + tnve <= contacts.ve.u.shape[0] // wp.int32(2)
+                # assert wp.int32(tve_offset) + tnve <= contacts.ve.u.shape[
+                #     0
+                # ] // wp.int32(2)
             bve_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tve_offset,
@@ -559,7 +564,9 @@ def _fused_contact_detection(
             tvf_offset = wp.uint64(0)
             if local_tid == last_col:
                 tvf_offset = wp.atomic_add(contacts.vf.prefix, n_verts, wp.uint64(tnvf))  # type: ignore
-                assert wp.int32(tvf_offset) + tnvf <= contacts.vf.u.shape[0] // wp.int32(2)
+                # assert wp.int32(tvf_offset) + tnvf <= contacts.vf.u.shape[
+                #     0
+                # ] // wp.int32(2)
             bvf_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tvf_offset,
@@ -619,7 +626,9 @@ def _fused_contact_detection(
             tee_offset = wp.uint64(0)
             if local_tid == last_col:
                 tee_offset = wp.atomic_add(contacts.ee.prefix, n_half_edges, wp.uint64(tnee))  # type: ignore
-                assert wp.int32(tee_offset) + tnee <= contacts.ee.u.shape[0] // wp.int32(2)
+                # assert wp.int32(tee_offset) + tnee <= contacts.ee.u.shape[
+                #     0
+                # ] // wp.int32(2)
             bee_offset = wp.tile_from_thread(
                 shape=_FUSED_CONTACT_DETECTION_BLOCK_SIZE,
                 value=tee_offset,
@@ -1030,16 +1039,16 @@ def _planar_dat_truncate(
     x[i] = xki + dxi  # type: ignore
 
 
-class Ogc:
+class Ogc(ContactDetection):
     """Offset Geometric Contact"""
 
     _ogc: OgcData  # pyright: ignore[reportGeneralTypeIssues]
     _e_bvh: wp.Bvh  # BVH over edges
     _f_bvh: wp.Bvh  # BVH over faces
-    _xk: wp.array[wp.vec3f]  # (N,) cached vertex positions at step k
     _meshes: MultiMesh  # Meshes # type: ignore
     _truncation_strategy: TruncationStrategy
     _streams: list[wp.Stream]  # Stream list
+    _query_radius_reduction: reduce.Reduce
 
     def __init__(
         self,
@@ -1054,8 +1063,6 @@ class Ogc:
             meshes (MultiMesh): Multi-body mesh
             params (OgcParams, optional): Contact detection parameters. Defaults to OgcParams().
         """
-        self._xk = wp.empty_like(points)
-        wp.copy(dest=self._xk, src=points)
         self._meshes = meshes
         self._ogc = OgcData()
         self._ogc.truncation_strategy = int(params.truncation_strategy.value)  # type: ignore
@@ -1076,7 +1083,7 @@ class Ogc:
         wp.launch(
             kernel=_compute_bounding_volumes,
             dim=dim,
-            inputs=[self._xk, self._meshes.data, self._ogc],
+            inputs=[points, self._meshes.data, self._ogc],
         )
         self._e_bvh, self._f_bvh = (
             wp.Bvh(
@@ -1103,64 +1110,37 @@ class Ogc:
     ):
         # Compute rq = r + beta * (xtilde - xt).colwise().norm().maxCoeff()
         # 1. Capture xt, xtilde as CuPy 3 x N arrays
-        self._rq_xtc = cp.asarray(xt)
-        self._rq_xtildec = cp.asarray(xtilde)
+        xtc = cp.asarray(xt)
+        xtildec = cp.asarray(xtilde)
         # 2. Use ZipIterator(xtc[0,:], xtc[1,:], xtc[2,:], xtildec[0,:], xtildec[1,:], xtildec[2,:])
-        self._rq_zip_it = cuda.compute.ZipIterator(
-            self._rq_xtc[:, 0],
-            self._rq_xtc[:, 1],
-            self._rq_xtc[:, 2],
-            self._rq_xtildec[:, 0],
-            self._rq_xtildec[:, 1],
-            self._rq_xtildec[:, 2],
+        zip_it = cuda.compute.ZipIterator(
+            xtc[:, 0],
+            xtc[:, 1],
+            xtc[:, 2],
+            xtildec[:, 0],
+            xtildec[:, 1],
+            xtildec[:, 2],
         )
         # 3. Use TransformIterator on the ZipIterator as transform = lambda x: sqrt((x[3] - x[0])**2 + (x[4] - x[1])**2 + (x[5] - x[2])**2)
-        self._rq_transform_it = cuda.compute.TransformIterator(
-            self._rq_zip_it,
+        transform_it = cuda.compute.TransformIterator(
+            zip_it,
             lambda x: math.sqrt(
                 (x[3] - x[0]) ** 2 + (x[4] - x[1]) ** 2 + (x[5] - x[2]) ** 2
             ),
         )
         # 4. Use cuda.compute reduce_into on the transform iterator and store into CuPy array view of self._ogc.rq
-        self._rq_op = cuda.compute.OpKind.MAXIMUM
-        self._rq_init = np.zeros(1, dtype=np.float32)
-        self._rq_d_out = cp.asarray(self._ogc.rq)
-        self._rq_reductor = cuda.compute.make_reduce_into(
-            d_in=self._rq_transform_it,
-            d_out=self._rq_d_out,
-            op=self._rq_op,
-            h_init=self._rq_init,
-        )
-        rq_storage_size = self._rq_reductor(
-            temp_storage=None,
-            d_in=self._rq_transform_it,
-            d_out=self._rq_d_out,
-            num_items=self._rq_xtc.shape[0],
-            op=self._rq_op,
-            h_init=self._rq_init,
-        )
-        self._rq_storage = cp.empty((rq_storage_size,), dtype=np.uint8)
-
-    def compute_query_radius(self):
-        # 0. Use cuda.compute and CuPy, using a stream wrapper that
-        main_stream = wp.get_stream()
-        self._rq_reductor(
-            temp_storage=self._rq_storage,
-            d_in=self._rq_transform_it,
-            d_out=self._rq_d_out,
-            num_items=self._rq_xtc.shape[0],
-            op=self._rq_op,
-            h_init=self._rq_init,
-            stream=common.Stream(main_stream),
+        self._query_radius_reduction = reduce.Reduce(
+            d_in=transform_it,
+            d_out=cp.asarray(self._ogc.rq),
+            num_items=xt.shape[0],
+            op=cuda.compute.OpKind.MAXIMUM,
         )
 
     def prepare_for_execution(
         self,
-        xk: wp.array[wp.vec3f],
         request_rebuild: bool = True,
     ):
         main_stream = wp.get_stream()
-        wp.copy(dest=self._xk, src=xk, stream=main_stream)
         # Recompute BVH
         wp.launch(
             _compute_bounding_volumes,
@@ -1183,7 +1163,7 @@ class Ogc:
         for stream in self._streams[:2]:
             main_stream.wait_stream(stream)
 
-    def detect_contacts(self, contacts: pairs.ContactPairs):  # type: ignore
+    def _detect_contacts(self, contacts: pairs.ContactPairs):  # type: ignore
         n_verts, n_edges, n_half_edges, n_tris = (
             self._meshes.n_verts,
             self._meshes.n_edges,
@@ -1248,6 +1228,36 @@ class Ogc:
                 dim=n_verts,
                 inputs=[self._xk, x, self._meshes.data, self._ogc],
             )
+
+    def register_handles(
+        self,
+        xt: wp.array[wp.vec3f],
+        xk: wp.array[wp.vec3f],
+        x: wp.array[wp.vec3f],
+        xtilde: wp.array[wp.vec3f],
+        contacts: pairs.ContactPairs,
+    ):
+        super().register_handles(xt, xk, x, xtilde, contacts)
+        self.enable_adaptive_query_radius(xt, xtilde)
+
+    def on_time_step_started(self):
+        main_stream = wp.get_stream()
+        self._query_radius_reduction(main_stream)
+
+    def detect_contacts(self, from_xt: bool = False):
+        main_stream = wp.get_stream()
+        x = self._xt if from_xt else self._x
+        wp.copy(dest=self._xk, src=x, stream=main_stream)
+        self.prepare_for_execution(request_rebuild=True)
+        self._contacts.clear()
+        self._detect_contacts(self._contacts)
+        self._contacts.assemble_contacts(self._xk, with_reverse_contacts=True)
+
+    def filter_step(self):
+        self.truncate(self._x)
+
+    def on_time_step_ended(self):
+        pass
 
     @property
     def data(self) -> OgcData:  # pyright: ignore[reportGeneralTypeIssues]

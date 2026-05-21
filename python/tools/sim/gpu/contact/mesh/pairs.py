@@ -513,6 +513,9 @@ class ContactPairs:
             stream.wait_stream(main_stream)
             with wp.ScopedStream(stream):
                 buf.fill_(sentinel)
+        # Join
+        for stream in self._streams[:16]:
+            main_stream.wait_stream(stream)
 
     def assemble_contacts(
         self, x: wp.array[wp.vec3f], with_reverse_contacts: bool = False
@@ -661,10 +664,10 @@ class ContactPairs:
 
         # Join
         for stream in self._streams[:12]:
-            stream.wait_stream(main_stream)
+            main_stream.wait_stream(stream)
         if with_reverse_contacts:
             for stream in self._streams[12:]:
-                stream.wait_stream(main_stream)
+                main_stream.wait_stream(stream)
 
     @property
     def write_data(self) -> ContactPairsData:  # type: ignore

@@ -156,26 +156,32 @@ class SimulationState:
             fem_cpu.E, XCC, n_components=n_components
         )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
-        self.ogc_params = gpu.contact.ogc.OgcParams()
-        ogc = gpu.contact.ogc.Ogc(
-            self.fem.data.x,
-            self.multimesh,
-            self.ogc_params,
-        )
-        ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
         self.contact_storage_params = gpu.contact.mesh.pairs.Params()
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
             self.multimesh, self.contact_storage_params
         )
         self.contact_params = gpu.contact.dynamics.Params()
         self.contact = gpu.contact.dynamics.MeshDynamics(
-            ogc, contact_pair_storage, self.contact_params
+            contact_pair_storage, self.contact_params
+        )
+        self.ogc_params = gpu.contact.ogc.OgcParams()
+        self.ogc = gpu.contact.ogc.Ogc(
+            self.fem.data.x,
+            self.multimesh,
+            self.ogc_params,
+        )
+        self.ogc.register_handles(
+            self.fem.xt,
+            None,
+            self.fem.data.x,
+            self.fem.data.xtilde,
+            contact_pair_storage,
         )
         # NOTE: This will need to be updated if adding new Solvers with
         # different storage location for Qnk, Qfk
-        self.contact.enable_adaptive_penalty_parameters(
-            self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
-        )
+        # self.contact.enable_adaptive_penalty_parameters(
+        #     self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
+        # )
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
@@ -194,13 +200,17 @@ class SimulationState:
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
         self.solvers[self.solver].solve(
-            self.fem, self.params[self.solver], self.contact
+            self.fem, self.contact, self.ogc, self.params[self.solver]
         )
         self.fem.step()
         self.t += 1
         wp.synchronize()
-        self.contact_browser.update(self.fem.data.x, self.multimesh, self.contact.contacts)
-        self.contact_overview.update(self.fem.data.x, self.multimesh, self.contact.contacts)
+        self.contact_browser.update(
+            self.fem.data.x, self.multimesh, self.contact.contacts
+        )
+        self.contact_overview.update(
+            self.fem.data.x, self.multimesh, self.contact.contacts
+        )
 
     def reset(self):
         self.t = 0
@@ -208,29 +218,39 @@ class SimulationState:
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
-        ogc = gpu.contact.ogc.Ogc(
-            self.fem.data.x,
-            self.multimesh,
-            self.ogc_params,
-        )
-        ogc.enable_adaptive_query_radius(self.fem.xt, self.fem.data.xtilde)
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
             self.multimesh, self.contact_storage_params
         )
         self.contact = gpu.contact.dynamics.MeshDynamics(
-            ogc, contact_pair_storage, self.contact_params
+            contact_pair_storage, self.contact_params
+        )
+        self.ogc = gpu.contact.ogc.Ogc(
+            self.fem.data.x,
+            self.multimesh,
+            self.ogc_params,
+        )
+        self.ogc.register_handles(
+            self.fem.xt,
+            None,
+            self.fem.data.x,
+            self.fem.data.xtilde,
+            contact_pair_storage,
         )
         # NOTE: This will need to be updated if adding new Solvers with
         # different storage location for Qnk, Qfk
-        self.contact.enable_adaptive_penalty_parameters(
-            self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
-        )
+        # self.contact.enable_adaptive_penalty_parameters(
+        #     self.params[self.solver].data.Qnk, self.params[self.solver].data.Qfk
+        # )
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
         }
-        self.contact_browser.update(self.fem.data.x, self.multimesh, self.contact.contacts)
-        self.contact_overview.update(self.fem.data.x, self.multimesh, self.contact.contacts)
+        self.contact_browser.update(
+            self.fem.data.x, self.multimesh, self.contact.contacts
+        )
+        self.contact_overview.update(
+            self.fem.data.x, self.multimesh, self.contact.contacts
+        )
         self.capture = None
 
 

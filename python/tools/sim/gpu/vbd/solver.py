@@ -8,6 +8,8 @@ Contact constraints are left as placeholders for future implementation.
 from typing import Tuple
 import warp as wp
 import numpy as np
+
+from ..contact.mesh.cd import ContactDetection
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from .params import (
     Params,
@@ -168,7 +170,10 @@ def check_convergence(
 
 
 def prepare_subproblem(
-    fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    cd: ContactDetection,
+    params: Params,
 ):
     """Assemble block-diagonal Hessian, update penalty parameter."""
     h = fem.bdf.beta_tilde
@@ -187,6 +192,7 @@ def prepare_subproblem(
 def initialize_solve(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
+    cd: ContactDetection,
     params: Params,
 ):
     """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
@@ -195,14 +201,16 @@ def initialize_solve(
     Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
     before the first call to :func:`solve`.
     """
-    contact.ogc.compute_query_radius()
-    contact.update_constraint_set(fem.xt)
-    contact.restore_feasibility(fem.data.x)
+    cd.on_time_step_started()
+    cd.detect_contacts(from_xt=True)
+    contact.update_constraint_set()
+    cd.filter_step()
 
 
 def finalize_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
+    cd: ContactDetection,
     params: Params,
 ):
     """Finalize the current linearized subproblem.
@@ -219,8 +227,9 @@ def finalize_subproblem(
         request_decay_update=True,
         request_lagrange_multiplier_update=True,
     )
-    contact.restore_feasibility(fem.data.x)
-    contact.update_constraint_set(fem.data.x)
+    cd.filter_step()
+    cd.detect_contacts()
+    contact.update_constraint_set()
 
 
 def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
@@ -261,7 +270,6 @@ def solve_subproblem(
             request_lagrange_multiplier_update=False,
         )
         iterate(fem, contact, params)
-    finalize_subproblem(fem, contact, params)
 
 
 class VbdSolver:
@@ -270,21 +278,26 @@ class VbdSolver:
         self._cuda_graph = None
 
     def solve(
-        self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
+        self,
+        fem: FemElastoDynamics,
+        contact: ContactDynamics,
+        cd: ContactDetection,
+        params: Params,
     ) -> bool:
         converged = False
         if self._cuda_graph is None:
             with wp.ScopedCapture() as capture:
-                initialize_solve(fem, contact, params)
+                initialize_solve(fem, contact, cd, params)
                 for k in range(params.data.n_max_iters):
                     linearize_constraints(fem, contact, params)
                     if check_convergence(fem, contact, params):
                         converged = True
                         break
-                    prepare_subproblem(fem, contact, params)
+                    prepare_subproblem(fem, contact, cd, params)
                     solve_subproblem(fem, contact, params)
-                    finalize_subproblem(fem, contact, params)
+                    finalize_subproblem(fem, contact, cd, params)
                 fem.back_substitute_velocities()
+                cd.on_time_step_ended()
             self._cuda_graph = capture
         else:
             wp.capture_launch(self._cuda_graph.graph)  # type: ignore

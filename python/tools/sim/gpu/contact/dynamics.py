@@ -5,7 +5,6 @@ import cupy as cp
 import cuda.compute
 import numpy as np
 
-from .ogc import Ogc, OgcData
 from .mesh import pairs
 from .constraints import ConstraintSet, ConstraintSetData
 from .multimesh import MultiMesh, MultiMeshData
@@ -15,7 +14,6 @@ from .. import common
 
 @wp.struct
 class MeshDynamicsData:
-    ogc: OgcData  # type: ignore
     meshes: MultiMeshData  # type: ignore
     contacts: pairs.ContactPairsData  # Forward contacts # type: ignore
     rcontacts: (
@@ -326,7 +324,6 @@ class MeshDynamics:
 
     params: Params
     meshes: MultiMesh
-    ogc: Ogc
     contacts: pairs.ContactPairs
     cvv: ConstraintSet
     cve: ConstraintSet
@@ -336,11 +333,8 @@ class MeshDynamics:
 
     _streams: list[wp.Stream]
 
-    def __init__(
-        self, ogc: Ogc, contacts: pairs.ContactPairs, params: Params | None = None
-    ):
+    def __init__(self, contacts: pairs.ContactPairs, params: Params | None = None):
         self.params = params if params is not None else Params()
-        self.ogc = ogc
         self.contacts = contacts
         self.meshes = self.contacts.meshes
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = self.contacts.capacity
@@ -351,7 +345,6 @@ class MeshDynamics:
         self.cee = ConstraintSet(n_half_edges, ee_capacity)
         self._data = MeshDynamicsData()
         self._data.meshes = self.meshes.data
-        self._data.ogc = self.ogc.data
         self._data.contacts, self._data.rcontacts = self.contacts.read_data
         self._data.cvv = self.cvv.data
         self._data.cve = self.cve.data
@@ -366,12 +359,12 @@ class MeshDynamics:
         self._data.decay = self.params.decay
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
 
-    def update_constraint_set(self, xk: wp.array[wp.vec3f]):
-        """Prepare constraint sets for a new step, warm-starting from the previous snapshot."""
-        self.contacts.clear()
-        self.ogc.prepare_for_execution(xk)
-        self.ogc.detect_contacts(self.contacts)
-        self.contacts.assemble_contacts(xk, with_reverse_contacts=True)
+    def update_constraint_set(self):
+        """Prepare constraint sets for a new step, warm-starting from the previous snapshot.
+
+        Preconditions:
+        - self.contacts must be up-to-date
+        """
         contacts, _ = self.contacts.read_data
         main_stream = wp.get_stream()
         # Update all constraint sets
@@ -520,9 +513,6 @@ class MeshDynamics:
         # Join
         for stream in self._streams[:2]:
             main_stream.wait_stream(stream)
-
-    def restore_feasibility(self, x: wp.array):
-        self.ogc.truncate(x)
 
     @property
     def data(self) -> MeshDynamicsData:  # type: ignore

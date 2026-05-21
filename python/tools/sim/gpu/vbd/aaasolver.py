@@ -3,12 +3,12 @@ from typing import Tuple
 import numpy as np
 import warp as wp
 
-from python import fem
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from ..contact.dynamics import (
     MeshDynamics as ContactDynamics,
     MeshDynamicsData as ContactDynamicsData,
 )
+from ..contact.mesh.cd import ContactDetection
 from .params import Params, ParamsData
 from .kernels import (
     local_elastic_derivatives,
@@ -247,8 +247,9 @@ def iterate(
 
 def initialize_solve(
     fem: FemElastoDynamics,
-    params: Params,
     contact: ContactDynamics,
+    cd: ContactDetection,
+    params: Params,
 ):
     """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
 
@@ -256,9 +257,10 @@ def initialize_solve(
     Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
     before the first call to :func:`solve`.
     """
-    contact.ogc.compute_query_radius()
-    contact.update_constraint_set(fem.xt)
-    contact.restore_feasibility(fem.data.x)
+    cd.on_time_step_started()
+    cd.detect_contacts(from_xt=True)
+    contact.update_constraint_set()
+    cd.filter_step()
 
 
 def solve_subproblem(
@@ -285,21 +287,26 @@ class AaaVbdSolver:
         )  # Iteration counter for acceleration schedule
 
     def solve(
-        self, fem: FemElastoDynamics, params: Params, contact: ContactDynamics
+        self,
+        fem: FemElastoDynamics,
+        contact: ContactDynamics,
+        cd: ContactDetection,
+        params: Params,
     ) -> bool:
         converged = False
         if self._cuda_graph is None:
             with wp.ScopedCapture() as capture:
-                initialize_solve(fem, params, contact)
+                initialize_solve(fem, contact, cd, params)
                 for k in range(params.data.n_max_iters):
                     linearize_constraints(fem, contact, params)
                     if check_convergence(fem, contact, params):
                         converged = True
                         break
-                    prepare_subproblem(fem, contact, params)
+                    prepare_subproblem(fem, contact, cd, params)
                     solve_subproblem(k, fem, contact, params)
-                    finalize_subproblem(fem, contact, params)
+                    finalize_subproblem(fem, contact, cd, params)
                 fem.back_substitute_velocities()
+                cd.on_time_step_ended()
             self._cuda_graph = capture
         else:
             wp.capture_launch(self._cuda_graph.graph)  # type: ignore

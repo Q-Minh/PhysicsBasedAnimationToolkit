@@ -7,44 +7,53 @@ class ContactDetection(ABC):
     """Abstract base class for contact detection algorithms."""
 
     _name: str
+    _xt: wp.array[wp.vec3f]
+    _xk: wp.array[wp.vec3f]
+    _x: wp.array[wp.vec3f]
+    _xtilde: wp.array[wp.vec3f]
+    _contacts: pairs.ContactPairs
 
     def __init__(self, name: str):
         self._name = name
 
-    @abstractmethod
-    def on_time_step_started(self, xt: wp.array[wp.vec3f], x: wp.array[wp.vec3f]):
-        """Callback for any one-time precomputation for the duration of the
-        current time step.
-
-        Args:
-            xt (wp.array[wp.vec3f]): Point positions at the start of the
-            time step.
-            x (wp.array[wp.vec3f]): Current point positions (may be
-            different from xt).
-        """
-        pass
-
-    @abstractmethod
-    def on_contact_detection_starting(
-        self, xt: wp.array[wp.vec3f], x: wp.array[wp.vec3f]
-    ):
-        """Callback for any one-time precomputation to be done right
-        before the next contact detection.
-
-        Args:
-            xt (wp.array[wp.vec3f]): Point positions at the start of
-            the time step.
-            x (wp.array[wp.vec3f]): Current point positions.
-        """
-        pass
-
-    @abstractmethod
-    def detect_contacts(
+    def register_handles(
         self,
         xt: wp.array[wp.vec3f],
+        xk: wp.array[wp.vec3f],
         x: wp.array[wp.vec3f],
+        xtilde: wp.array[wp.vec3f],
         contacts: pairs.ContactPairs,
     ):
+        """Registers any necessary handles for contact detection. This is called
+        once at the beginning of the simulation, so that every time step is CUDA
+        graph compatible. If xk is None, the ContactDetection implementation should
+        allocate its own handle for xk, and update it as needed.
+
+        Args:
+            xt (wp.array[wp.vec3f]): Point positions at the start of the time step.
+            xk (wp.array[wp.vec3f]): Point positions from the last call to detect_contacts.
+            x (wp.array[wp.vec3f]): Current point positions.
+            xtilde (wp.array[wp.vec3f]): Time integrator inertial target.
+            contacts (pairs.ContactPairs): Contact pairs to write to.
+        """
+        self._xt = xt
+        self._x = x
+        self._xtilde = xtilde
+        self._contacts = contacts
+        if xk is not None:
+            self._xk = xk
+        else:
+            self._xk = wp.zeros_like(x)
+
+    @abstractmethod
+    def on_time_step_started(self):
+        """Callback for any one-time precomputation for the duration of the
+        current time step.
+        """
+        pass
+
+    @abstractmethod
+    def detect_contacts(self, from_xt: bool = False):
         """Detects and writes contact pairs (u, v), and contact
         count (prefix[-1]) for any detected vv, ve, vf and ee contact.
 
@@ -54,36 +63,24 @@ class ContactDetection(ABC):
         contiguous.
         - The total number of detected contacts for each type * is stored
         in *.prefix[-1].
+        - self._contacts.assemble_contacts() is called so that ContactPairs 
+        are readable.
 
         Args:
-            xt (wp.array[wp.vec3f]): Point positions at the start of
-            the time step.
-            x (wp.array[wp.vec3f]): Current point positions.
-            contacts (pairs.ContactPairs): Contact pairs to populate.
+            from_xt (bool): If True, detects contacts based on the positions at
+            the start of the time step (xt) instead of the current positions (x).
         """
         pass
 
     @abstractmethod
-    def on_contact_detection_ended(self, xt: wp.array[wp.vec3f], x: wp.array[wp.vec3f]):
-        """Callback for any one-time post-computation after the contact detection
-        phase.
-
-        Args:
-            xt (wp.array[wp.vec3f]): Point positions at the start of
-            the time step.
-            x (wp.array[wp.vec3f]): Current point positions.
-        """
+    def filter_step(self):
+        """Modifies x so that the step xk -> x is improved."""
         pass
 
     @abstractmethod
-    def on_time_step_ended(self, xt: wp.array[wp.vec3f], x: wp.array[wp.vec3f]):
+    def on_time_step_ended(self):
         """Callback for any one-time post-computation before the start of the next
         time step.
-
-        Args:
-            xt (wp.array[wp.vec3f]): Point positions at the start of
-            the time step.
-            x (wp.array[wp.vec3f]): Current point positions.
         """
         pass
 
