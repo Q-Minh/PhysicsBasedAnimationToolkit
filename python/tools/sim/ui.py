@@ -105,6 +105,10 @@ class SolverType(enum.Enum):
     AAAVBD = 1
 
 
+class CDType(enum.Enum):
+    OGC = 0
+
+
 class UIState:
     def __init__(self):
         self.request_reset: bool = False
@@ -164,19 +168,10 @@ class SimulationState:
         self.contact = gpu.contact.dynamics.MeshDynamics(
             contact_pair_storage, self.contact_params
         )
-        self.ogc_params = gpu.contact.ogc.OgcParams()
-        self.ogc = gpu.contact.ogc.Ogc(
-            self.fem.data.x,
-            self.multimesh,
-            self.ogc_params,
-        )
-        self.ogc.register_handles(
-            self.fem.xt,
-            None,
-            self.fem.data.x,
-            self.fem.data.xtilde,
-            contact_pair_storage,
-        )
+        # Contact detection algorithm selection
+        self.cd_type: CDType = CDType.OGC
+        self.cd_params = {CDType.OGC: gpu.contact.ogc.OgcParams()}
+        self.detector = self._make_contact_detector(contact_pair_storage)
         # NOTE: This will need to be updated if adding new Solvers with
         # different storage location for Qnk, Qfk
         # self.contact.enable_adaptive_penalty_parameters(
@@ -197,10 +192,28 @@ class SimulationState:
         self.t: int = 0
         self.until_t: int = -1
 
+    def _make_contact_detector(
+        self, contact_pair_storage: gpu.contact.mesh.pairs.ContactPairs
+    ) -> gpu.contact.mesh.cd.ContactDetection:
+        """Instantiate and register the currently selected contact detection algorithm."""
+        if self.cd_type == CDType.OGC:
+            detector = gpu.contact.ogc.Ogc(self.cd_params[CDType.OGC])
+        else:
+            raise ValueError(f"Unknown CDType: {self.cd_type}")
+        detector.register_handles(
+            self.fem.xt,
+            None,
+            self.fem.data.x,
+            self.fem.data.xtilde,
+            self.multimesh,
+            contact_pair_storage,
+        )
+        return detector
+
     def step(self):
         self.fem.setup_time_integration_optimization(self.init_strategy)
         self.solvers[self.solver].solve(
-            self.fem, self.contact, self.ogc, self.params[self.solver]
+            self.fem, self.contact, self.detector, self.params[self.solver]
         )
         self.fem.step()
         self.t += 1
@@ -224,18 +237,7 @@ class SimulationState:
         self.contact = gpu.contact.dynamics.MeshDynamics(
             contact_pair_storage, self.contact_params
         )
-        self.ogc = gpu.contact.ogc.Ogc(
-            self.fem.data.x,
-            self.multimesh,
-            self.ogc_params,
-        )
-        self.ogc.register_handles(
-            self.fem.xt,
-            None,
-            self.fem.data.x,
-            self.fem.data.xtilde,
-            contact_pair_storage,
-        )
+        self.detector = self._make_contact_detector(contact_pair_storage)
         # NOTE: This will need to be updated if adding new Solvers with
         # different storage location for Qnk, Qfk
         # self.contact.enable_adaptive_penalty_parameters(
@@ -308,8 +310,20 @@ def make_callback(
                         imgui.Text(f"# Vertex-Face Contacts: {nvf}")
                         imgui.Text(f"# Edge-Edge Contacts: {nee}")
                         imgui.TreePop()
-                    if imgui.TreeNode("OGC"):
-                        draw_params(state.ogc_params)
+                    if imgui.TreeNode("Detection"):
+                        cd_types = list(CDType)
+                        cd_idx = cd_types.index(state.cd_type)
+                        _, cd_idx = imgui.Combo(
+                            "Algorithm", cd_idx, [c.name for c in cd_types]
+                        )
+                        new_cd = cd_types[cd_idx]
+                        if new_cd != state.cd_type:
+                            state.cd_type = new_cd
+                            state.reset()
+                            ui_state.request_reset = True
+                        if imgui.TreeNode("Params"):
+                            draw_params(state.cd_params[state.cd_type])
+                            imgui.TreePop()
                         imgui.TreePop()
                     if imgui.TreeNode("Dynamics"):
                         draw_params(state.contact_params)

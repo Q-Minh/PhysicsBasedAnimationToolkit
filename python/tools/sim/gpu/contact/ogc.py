@@ -1049,61 +1049,13 @@ class Ogc(ContactDetection):
     _truncation_strategy: TruncationStrategy
     _streams: list[wp.Stream]  # Stream list
     _query_radius_reduction: reduce.Reduce
+    _params: OgcParams
 
     def __init__(
         self,
-        points: wp.array[wp.vec3f],
-        meshes: MultiMesh,  # type: ignore
         params: OgcParams = OgcParams(),
     ):
-        """Construct ogc data
-
-        Args:
-            points (wp.array[wp.vec3f]): (N,) points
-            meshes (MultiMesh): Multi-body mesh
-            params (OgcParams, optional): Contact detection parameters. Defaults to OgcParams().
-        """
-        self._meshes = meshes
-        self._ogc = OgcData()
-        self._ogc.truncation_strategy = int(params.truncation_strategy.value)  # type: ignore
-        self._ogc.e_lowers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
-        self._ogc.e_uppers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
-        self._ogc.f_lowers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
-        self._ogc.f_uppers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
-        self._ogc.arq = params.arq
-        self._ogc.r = params.r
-        self._ogc.gammap = params.gammap
-        self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
-        self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
-        self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
-        self._ogc.rq = wp.zeros((1,), dtype=wp.float32)  # (1,) OGC query radius
-        self._ogc.tv = wp.empty((meshes.n_verts,), dtype=wp.float32)  # type: ignore
-
-        dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
-        wp.launch(
-            kernel=_compute_bounding_volumes,
-            dim=dim,
-            inputs=[points, self._meshes.data, self._ogc],
-        )
-        self._e_bvh, self._f_bvh = (
-            wp.Bvh(
-                self._ogc.e_lowers,
-                self._ogc.e_uppers,
-                constructor="lbvh",
-                groups=None,
-            ),
-            wp.Bvh(
-                self._ogc.f_lowers,
-                self._ogc.f_uppers,
-                constructor="lbvh",
-                groups=None,
-            ),
-        )
-        self._ogc.e_bvh_id, self._ogc.f_bvh_id = (
-            self._e_bvh.id,
-            self._f_bvh.id,
-        )
-        self._streams = [wp.Stream() for _ in range(2)]
+        self._params = params
 
     def enable_adaptive_query_radius(
         self, xt: wp.array[wp.vec3f], xtilde: wp.array[wp.vec3f]
@@ -1235,9 +1187,52 @@ class Ogc(ContactDetection):
         xk: wp.array[wp.vec3f],
         x: wp.array[wp.vec3f],
         xtilde: wp.array[wp.vec3f],
+        meshes: MultiMesh, 
         contacts: pairs.ContactPairs,
     ):
-        super().register_handles(xt, xk, x, xtilde, contacts)
+        super().register_handles(xt, xk, x, xtilde, meshes, contacts)
+
+        # Construct
+        self._ogc = OgcData()
+        self._ogc.truncation_strategy = int(self._params.truncation_strategy.value)  # type: ignore
+        self._ogc.e_lowers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
+        self._ogc.e_uppers = wp.zeros((meshes.n_edges,), dtype=wp.vec3f)
+        self._ogc.f_lowers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
+        self._ogc.f_uppers = wp.zeros((meshes.n_triangles,), dtype=wp.vec3f)
+        self._ogc.arq = self._params.arq
+        self._ogc.r = self._params.r
+        self._ogc.gammap = self._params.gammap
+        self._ogc.dminv = wp.zeros((meshes.n_verts,), dtype=wp.float32)
+        self._ogc.dmine = wp.zeros((meshes.n_half_edges,), dtype=wp.float32)
+        self._ogc.dminf = wp.zeros((meshes.n_triangles,), dtype=wp.float32)
+        self._ogc.rq = wp.zeros((1,), dtype=wp.float32)  # (1,) OGC query radius
+        self._ogc.tv = wp.empty((meshes.n_verts,), dtype=wp.float32)  # type: ignore
+
+        dim = max(meshes.n_verts, meshes.n_edges, meshes.n_triangles)
+        wp.launch(
+            kernel=_compute_bounding_volumes,
+            dim=dim,
+            inputs=[self._x, self._meshes.data, self._ogc],
+        )
+        self._e_bvh, self._f_bvh = (
+            wp.Bvh(
+                self._ogc.e_lowers,
+                self._ogc.e_uppers,
+                constructor="lbvh",
+                groups=None,
+            ),
+            wp.Bvh(
+                self._ogc.f_lowers,
+                self._ogc.f_uppers,
+                constructor="lbvh",
+                groups=None,
+            ),
+        )
+        self._ogc.e_bvh_id, self._ogc.f_bvh_id = (
+            self._e_bvh.id,
+            self._f_bvh.id,
+        )
+        self._streams = [wp.Stream() for _ in range(2)]
         self.enable_adaptive_query_radius(xt, xtilde)
 
     def on_time_step_started(self):

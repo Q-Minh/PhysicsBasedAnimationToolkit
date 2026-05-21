@@ -1,6 +1,7 @@
 import warp as wp
 from abc import ABC, abstractmethod
 from . import pairs
+from ..multimesh import MultiMesh
 
 
 class ContactDetection(ABC):
@@ -11,6 +12,7 @@ class ContactDetection(ABC):
     _xk: wp.array[wp.vec3f]
     _x: wp.array[wp.vec3f]
     _xtilde: wp.array[wp.vec3f]
+    _meshes: MultiMesh
     _contacts: pairs.ContactPairs
 
     def __init__(self, name: str):
@@ -22,6 +24,7 @@ class ContactDetection(ABC):
         xk: wp.array[wp.vec3f],
         x: wp.array[wp.vec3f],
         xtilde: wp.array[wp.vec3f],
+        meshes: MultiMesh,
         contacts: pairs.ContactPairs,
     ):
         """Registers any necessary handles for contact detection. This is called
@@ -34,11 +37,13 @@ class ContactDetection(ABC):
             xk (wp.array[wp.vec3f]): Point positions from the last call to detect_contacts.
             x (wp.array[wp.vec3f]): Current point positions.
             xtilde (wp.array[wp.vec3f]): Time integrator inertial target.
+            meshes (MultiMesh): Mesh data for contact detection queries.
             contacts (pairs.ContactPairs): Contact pairs to write to.
         """
         self._xt = xt
         self._x = x
         self._xtilde = xtilde
+        self._meshes = meshes
         self._contacts = contacts
         if xk is not None:
             self._xk = xk
