@@ -122,7 +122,7 @@ class UIState:
         self.request_reset: bool = False
         self.item_width: int = 250
         self.screenshot_after_step: bool = False
-        self.screenshot_fps: float = 30.0
+        self.screenshot_fps: float = 60.0
         self.screenshot_frame: int = 0
         self.debug_tab_active: bool = False
 
