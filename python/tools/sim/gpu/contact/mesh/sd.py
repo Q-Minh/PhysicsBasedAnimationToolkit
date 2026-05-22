@@ -9,14 +9,14 @@ from .cd import ContactDetection
 from ...common import reduce, lower_bound
 from ....common.fields import DocField
 
-MAX_VV_PER_THREAD = wp.constant(4)
+MAX_VV_PER_THREAD = wp.constant(2)
 MAX_VE_PER_THREAD = wp.constant(4)
 MAX_VF_PER_THREAD = wp.constant(8)
-MAX_EE_PER_THREAD = wp.constant(8)
+# MAX_EE_PER_THREAD = wp.constant(8)
 tvvlist = wp.types.vector(length=MAX_VV_PER_THREAD, dtype=wp.int32)
 tvelist = wp.types.vector(length=MAX_VE_PER_THREAD, dtype=wp.int32)
 tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
-teelist = wp.types.vector(length=MAX_EE_PER_THREAD, dtype=wp.int32)
+# teelist = wp.types.vector(length=MAX_EE_PER_THREAD, dtype=wp.int32)
 
 
 @wp.kernel
@@ -205,7 +205,7 @@ class Sd(ContactDetection):
             mesh.refit()
         self._contacts.clear()
         n_verts = self._meshes.data.V.shape[0]
-        block_dim = 32
+        block_dim = 256
         wp.launch(
             _detect_vertex_mesh_contacts,
             dim=n_verts * block_dim,

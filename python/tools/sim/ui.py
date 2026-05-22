@@ -110,11 +110,20 @@ class CDType(enum.Enum):
     VertexSdf = 1
 
 
+def _should_screenshot(t: int, dt: float, fps: float) -> bool:
+    """Return True if simulation step t crosses a new video-frame boundary at the given fps."""
+    if t == 0:
+        return True
+    return int(t * dt * fps) > int((t - 1) * dt * fps)
+
+
 class UIState:
     def __init__(self):
         self.request_reset: bool = False
         self.item_width: int = 250
         self.screenshot_after_step: bool = False
+        self.screenshot_fps: float = 30.0
+        self.screenshot_frame: int = 0
         self.debug_tab_active: bool = False
 
 
@@ -306,6 +315,9 @@ def make_callback(
                         imgui.Text(f"# Vertex-Face Contacts: {nvf}")
                         imgui.Text(f"# Edge-Edge Contacts: {nee}")
                         imgui.TreePop()
+                    if imgui.TreeNode("Storage"):
+                        draw_params(state.contact_storage_params)
+                        imgui.TreePop()
                     if imgui.TreeNode("Detection"):
                         cd_types = list(CDType)
                         cd_idx = cd_types.index(state.cd_type)
@@ -332,6 +344,12 @@ def make_callback(
                 _, ui_state.screenshot_after_step = imgui.Checkbox(
                     "Screenshot", ui_state.screenshot_after_step
                 )
+                if ui_state.screenshot_after_step:
+                    imgui.SameLine()
+                    _, ui_state.screenshot_fps = imgui.InputFloat(
+                        "fps##screenshot", ui_state.screenshot_fps, format="%.1f"
+                    )
+                    ui_state.screenshot_fps = max(0.1, ui_state.screenshot_fps)
                 _, state.simulate = imgui.Checkbox("Simulate", state.simulate)
                 imgui.SameLine()
                 _, state.until_t = imgui.InputInt("Until", state.until_t)
@@ -340,20 +358,25 @@ def make_callback(
 
                 if imgui.Button("Reset") or ui_state.request_reset:
                     state.reset()
+                    ui_state.screenshot_frame = 0
                     _update_mesh(state, mesh_name)
 
                 # --- Continuous simulation ---
                 request_step = state.simulate or imgui.Button("Step")
                 if request_step:
                     if ui_state.screenshot_after_step and state.t == 0:
-                        ps.screenshot("{:08d}.png".format(state.t))
+                        ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                        ui_state.screenshot_frame += 1
                     # try:
                     state.step()
                     # except Exception as e:
                     #     ps.error("Simulation step failed: {}".format(e))
                     _update_mesh(state, mesh_name)
-                    if ui_state.screenshot_after_step:
-                        ps.screenshot("{:08d}.png".format(state.t))
+                    if ui_state.screenshot_after_step and _should_screenshot(
+                        state.t, state.dt, ui_state.screenshot_fps
+                    ):
+                        ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                        ui_state.screenshot_frame += 1
 
                 imgui.EndTabItem()
 
