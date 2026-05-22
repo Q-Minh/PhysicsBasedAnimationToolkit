@@ -41,19 +41,21 @@ def _detect_vertex_mesh_contacts(
         3 * meshes.F.shape[0],
         meshes.F.shape[0],
     )
-    # tnvv = wp.int32(0)
-    # tnve = wp.int32(0)
-    # tnvf = wp.int32(0)
-    # tvv = tvvlist(n_verts)
-    # tve = tvelist(n_half_edges)
-    # tvf = tvflist(n_tris)
-    for k in range(0, mesh_ids.shape[0], block_dim):
+    tnvv = wp.int32(0)
+    tnve = wp.int32(0)
+    tnvf = wp.int32(0)
+    tvv = tvvlist(n_verts)
+    tve = tvelist(n_half_edges)
+    tvf = tvflist(n_tris)
+
+    # 1. Detect thread local contacts
+    for k in range(local_tid, mesh_ids.shape[0], block_dim):
         if k == b:
             continue
         qp = wp.mesh_query_point(mesh_ids[k], xi, max_dist)  # type: ignore
         if not qp.result:  # type: ignore
             continue
-        f = meshes.FP[b] + qp.face  # type: ignore
+        f = meshes.FP[k] + qp.face  # type: ignore
         finds = meshes.F[f]
         j, k, l = finds[0], finds[1], finds[2]
         xj, xk, xl = x[j], x[k], x[l]
@@ -67,15 +69,12 @@ def _detect_vertex_mesh_contacts(
             nz = is_j_zero + is_k_zero + is_l_zero
             if nz == 0:
                 # Triangle contact
-                # assert tnvf < MAX_VF_PER_THREAD
-                # tvf[tnvf] = f
-                # tnvf += 1
-                tvf_offset = wp.atomic_add(contacts.vf.prefix, n_tris, wp.uint64(1))
-                contacts.vf.u[tvf_offset] = wp.uint32(v)
-                contacts.vf.v[tvf_offset] = wp.uint32(f)
+                assert tnvf < MAX_VF_PER_THREAD
+                tvf[tnvf] = f
+                tnvf += 1
             elif nz == 1:
                 # Edge contact
-                # assert tnve < MAX_VE_PER_THREAD
+                assert tnve < MAX_VE_PER_THREAD
                 helocal = is_k_zero * wp.int32(1) + is_l_zero * wp.int32(2)  # type: ignore
                 he_candidate = halfedges.next_half_edge(
                     halfedges.half_edge_of_face(f, helocal)
@@ -84,24 +83,75 @@ def _detect_vertex_mesh_contacts(
                     he_candidate,
                     halfedges.opposite_half_edge(meshes.F, he_candidate, meshes.GHEF),
                 )
-                # tve[tnve] = he
-                # tnve += 1
-                tve_offset = wp.atomic_add(
-                    contacts.ve.prefix, n_half_edges, wp.uint64(1)
-                )
-                contacts.ve.u[tve_offset] = wp.uint32(v)
-                contacts.ve.v[tve_offset] = wp.uint32(he)
+                tve[tnve] = he
+                tnve += 1
             else:
                 # Vertex contact
-                # assert tnvv < MAX_VV_PER_THREAD
+                assert tnvv < MAX_VV_PER_THREAD
                 jnode = wp.int32(not is_j_zero) * j + wp.int32(not is_k_zero) * k + wp.int32(not is_l_zero) * l  # type: ignore
-                tvv_offset = wp.atomic_add(contacts.vv.prefix, n_verts, wp.uint64(1))
-                contacts.vv.u[tvv_offset] = wp.uint32(v)
-                contacts.vv.v[tvv_offset] = wp.uint32(meshes.GXV[jnode])
-                # tvv[tnvv] = meshes.GXV[jnode]  # type: ignore
-                # tnvv += 1
+                tvv[tnvv] = meshes.GXV[jnode]  # type: ignore
+                tnvv += 1
 
-    # TODO: Use block-level primitives to avoid atomic contention on global memory when writing contact pairs.
+    # 2. Use block-level primitives to avoid atomic contention on global memory when writing contact pairs.
+    # NOTE:
+    # 1. All contact pairs should be unique here, because this block's vertex only detects 1 contact
+    # per every other mesh.
+    # 2. We still need to sort the contacts by their partner indices, this is a precondition to ContactPairs.assemble_contacts.
+    tnvv, tnve, tnvf = (
+        wp.tile_extract(wp.tile_sum(wp.tile(tnvv)), 0),  # type: ignore
+        wp.tile_extract(wp.tile_sum(wp.tile(tnve)), 0),  # type: ignore
+        wp.tile_extract(wp.tile_sum(wp.tile(tnvf)), 0),  # type: ignore
+    )
+    has_vv_contacts, has_ve_contacts, has_vf_contacts = tnvv > 0, tnve > 0, tnvf > 0
+    if has_vv_contacts:
+        bvv = wp.tile(tvv)  # type: ignore
+        wp.tile_sort(keys=bvv, values=bvv)
+        vv_offset = wp.uint64(0)
+        if local_tid == 0:
+            vv_offset = wp.atomic_add(contacts.vv.prefix, n_verts, wp.uint64(tnvv))
+        vv_offset = wp.tile_extract(wp.tile_from_thread(shape=1, value=vv_offset, thread_idx=0), 0)  # type: ignore
+        for block_row in range(MAX_VV_PER_THREAD):
+            if bvv[block_row, local_tid] < n_verts:
+                c = vv_offset + wp.uint64(block_row * block_dim + local_tid)
+                contacts.vv.u[c] = wp.uint32(v)
+                contacts.vv.v[c] = wp.uint32(bvv[block_row, local_tid])
+    if has_ve_contacts:
+        bve = wp.tile(tve)  # type: ignore
+        wp.tile_sort(keys=bve, values=bve)
+        ve_offset = wp.uint64(0)
+        if local_tid == 0:
+            ve_offset = wp.atomic_add(contacts.ve.prefix, n_verts, wp.uint64(tnve))
+        ve_offset = wp.tile_extract(wp.tile_from_thread(shape=1, value=ve_offset, thread_idx=0), 0)  # type: ignore
+        for block_row in range(MAX_VE_PER_THREAD):
+            if bve[block_row, local_tid] < n_half_edges:
+                c = ve_offset + wp.uint64(block_row * block_dim + local_tid)
+                contacts.ve.u[c] = wp.uint32(v)
+                contacts.ve.v[c] = wp.uint32(bve[block_row, local_tid])
+    if has_vf_contacts:
+        bvf = wp.tile(tvf)  # type: ignore
+        wp.tile_sort(keys=bvf, values=bvf)
+        vf_offset = wp.uint64(0)
+        if local_tid == 0:
+            vf_offset = wp.atomic_add(contacts.vf.prefix, n_verts, wp.uint64(tnvf))
+        vf_offset = wp.tile_extract(wp.tile_from_thread(shape=1, value=vf_offset, thread_idx=0), 0)  # type: ignore
+        for block_row in range(MAX_VF_PER_THREAD):
+            if bvf[block_row, local_tid] < n_tris:
+                c = vf_offset + wp.uint64(block_row * block_dim + local_tid)
+                contacts.vf.u[c] = wp.uint32(v)
+                contacts.vf.v[c] = wp.uint32(bvf[block_row, local_tid])
+
+
+@wp.kernel
+def _flip_contact_normals(
+    cpairs: pairs.PairsData,  # type: ignore
+    bases: pairs.ContactBasesData,  # type: ignore
+    n_u: wp.int32,
+):
+    k = wp.tid()
+    n_uv = cpairs.prefix[n_u]
+    if wp.uint64(k) >= n_uv:  # type: ignore
+        return
+    bases.n[k] = -bases.n[k]
 
 
 class Params:
@@ -170,6 +220,17 @@ class Sd(ContactDetection):
             block_dim=block_dim,
         )
         self._contacts.assemble_contacts(self._x, with_reverse_contacts=True)
+        contact_data = self._contacts.read_data[0]
+        for capacity, cpairs, bases in zip(
+            self._contacts.capacity[:3],
+            [contact_data.vv, contact_data.ve, contact_data.vf],
+            [contact_data.vv_bases, contact_data.ve_bases, contact_data.vf_bases],
+        ):  # (vv, ve, vf)
+            wp.launch(
+                kernel=_flip_contact_normals,
+                dim=capacity,
+                inputs=[cpairs, bases, self._meshes.n_verts],
+            )
 
     def filter_step(self):
         pass
