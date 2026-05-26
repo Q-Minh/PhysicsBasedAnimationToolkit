@@ -138,6 +138,7 @@ class SimulationState:
 
         # Time integration (modifiable from UI)
         self.dt: float = 1e-2
+        self.substeps: int = 1
         self.bdf_scheme: int = 1
         self.init_strategy = (
             pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad
@@ -223,12 +224,13 @@ class SimulationState:
     def step(self):
         if getattr(self, "capture", None) is None:
             with wp.ScopedCapture() as capture:
-                self.fem.setup_time_integration_optimization(self.init_strategy)
-                self.solvers[self.solver].solve(
-                    self.fem, self.contact, self.detector, self.params[self.solver]
-                )
-                self.fem.step()
-            self.capture = capture
+                for s in range(self.substeps):
+                    self.fem.setup_time_integration_optimization(self.init_strategy)
+                    self.solvers[self.solver].solve(
+                        self.fem, self.contact, self.detector, self.params[self.solver]
+                    )
+                    self.fem.step()
+                self.capture = capture
         else:
             wp.capture_launch(self.capture.graph)  # type: ignore
         self.t += 1
@@ -242,7 +244,8 @@ class SimulationState:
 
     def reset(self):
         self.t = 0
-        self.fem_cpu.set_time_integration_scheme(self.dt, self.bdf_scheme)
+        sdt = self.dt / float(self.substeps)
+        self.fem_cpu.set_time_integration_scheme(sdt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
@@ -282,6 +285,7 @@ def make_callback(
                 # --- Integration controls ---
                 if imgui.TreeNode("Integration"):
                     _, state.dt = imgui.InputFloat("dt", state.dt, format="%.5f")
+                    _, state.substeps = imgui.InputInt("Substeps", state.substeps)
                     _, state.bdf_scheme = imgui.InputInt("BDF order", state.bdf_scheme)
                     state.bdf_scheme = max(1, min(6, state.bdf_scheme))
                     init_strategies = list(
