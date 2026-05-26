@@ -475,8 +475,8 @@ class Params:
     dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
     mu_f = DocField(0.2, "Coulomb friction coefficient")
     decay = DocField(0.5, "Decay rate for contact deactivation")
-    gamman = DocField(5.0, "Normal contact AL penalty scaling factor")
-    gammaf = DocField(0.1, "Friction contact AL penalty scaling factor")
+    gamman = DocField(1e4, "Normal contact AL penalty scaling factor")
+    gammaf = DocField(1e3, "Friction contact AL penalty scaling factor")
     min_sigma_n = DocField(1.0, "Minimum normal penalty")
     penalty_adaptivity = DocField(
         PenaltyAdaptivity.CONSTANT, "Strategy for adapting penalty parameters"
@@ -496,7 +496,9 @@ class MeshDynamics:
 
     _streams: list[wp.Stream]
 
-    def __init__(self, contacts: pairs.ContactPairs, params: Params | None = None):
+    def __init__(
+        self, dt: float, contacts: pairs.ContactPairs, params: Params | None = None
+    ):
         self.params = params if params is not None else Params()
         self.contacts = contacts
         self.meshes = self.contacts.meshes
@@ -516,10 +518,10 @@ class MeshDynamics:
         self._data.Qc = wp.zeros(
             vv_capacity + ve_capacity + vf_capacity + ee_capacity, dtype=wp.float32
         )
-        self._data.gamma_n = self.params.gamman
-        self._data.gamma_f = self.params.gammaf
-        self._data.sigma_n = wp.array([1], dtype=wp.float32)
-        self._data.sigma_f = wp.array([1], dtype=wp.float32)
+        self._data.gamma_n = self.params.gamman  # type: ignore
+        self._data.gamma_f = self.params.gammaf  # type: ignore
+        self._data.sigma_n = wp.array([dt * dt], dtype=wp.float32)
+        self._data.sigma_f = wp.array([dt * dt], dtype=wp.float32)
         self._data.dmin = self.params.dmin
         self._data.mu_f = self.params.mu_f
         self._data.decay = self.params.decay

@@ -177,7 +177,7 @@ class SimulationState:
         )
         self.contact_params = gpu.contact.dynamics.Params()
         self.contact = gpu.contact.dynamics.MeshDynamics(
-            contact_pair_storage, self.contact_params
+            self.dt, contact_pair_storage, self.contact_params
         )
         # Contact detection algorithm selection
         self.cd_type: CDType = CDType.OGC
@@ -253,7 +253,7 @@ class SimulationState:
             self.multimesh, self.contact_storage_params
         )
         self.contact = gpu.contact.dynamics.MeshDynamics(
-            contact_pair_storage, self.contact_params
+            sdt, contact_pair_storage, self.contact_params
         )
         self.detector = self._make_contact_detector(contact_pair_storage)
         self.solvers = {
