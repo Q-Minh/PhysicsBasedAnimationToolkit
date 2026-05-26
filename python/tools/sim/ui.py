@@ -221,11 +221,16 @@ class SimulationState:
         return detector
 
     def step(self):
-        self.fem.setup_time_integration_optimization(self.init_strategy)
-        self.solvers[self.solver].solve(
-            self.fem, self.contact, self.detector, self.params[self.solver]
-        )
-        self.fem.step()
+        if getattr(self, "capture", None) is None:
+            with wp.ScopedCapture() as capture:
+                self.fem.setup_time_integration_optimization(self.init_strategy)
+                self.solvers[self.solver].solve(
+                    self.fem, self.contact, self.detector, self.params[self.solver]
+                )
+                self.fem.step()
+            self.capture = capture
+        else:
+            wp.capture_launch(self.capture.graph)  # type: ignore
         self.t += 1
         wp.synchronize()
         self.contact_browser.update(

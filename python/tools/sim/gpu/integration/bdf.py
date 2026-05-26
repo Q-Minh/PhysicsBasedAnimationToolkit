@@ -1,5 +1,6 @@
 import cupy as cp
 import numpy as np
+import warp as wp
 
 # BDF coefficients (alpha, beta) for steps 1..6
 _BDF_COEFFS = {
@@ -32,6 +33,35 @@ _BDF_COEFFS = {
         60.0 / 147,
     ),
 }
+
+
+@wp.kernel
+def _construct_equations_kernel(
+    xt: wp.array3d[wp.float32],
+    alpha: wp.array[wp.float32],
+    xtilde: wp.array2d[wp.float32],
+    step: int,
+):
+    """xtilde[o, i] = sum_{k=0}^{step-1} alpha[k] * xt[o, k, i]."""
+    o, i = wp.tid()  # type: ignore
+    res = wp.float32(0)
+    for k in range(step):
+        res += alpha[k] * xt[o, k, i]  # type: ignore
+    xtilde[o, i] = res  # type: ignore
+
+
+@wp.kernel
+def _shift_and_insert_kernel(
+    xt: wp.array3d[wp.float32],
+    x_new: wp.array[wp.float32],
+    step: int,
+    order: int,
+):
+    """Shift xt[o, k] <- xt[o, k+1] for k in 0..step-2, then write x_new[o] into slot step-1."""
+    i = wp.tid()  # type: ignore
+    for k in range(step - 1):
+        xt[order, k, i] = xt[order, k + 1, i]  # type: ignore
+    xt[order, step - 1, i] = x_new[i]  # type: ignore
 
 
 class Bdf:
@@ -82,7 +112,8 @@ class Bdf:
         self._order = order
         self._ti = 0
         self._h = dt
-        self._alpha, self._beta = _BDF_COEFFS[step]
+        alpha, self._beta = _BDF_COEFFS[step]
+        self._alpha = cp.array(alpha, dtype=cp.float32)
         self.xt: cp.ndarray = None  # (order, step, N)
         self.xtilde: cp.ndarray = None  # (order, N)
 
@@ -120,11 +151,11 @@ class Bdf:
         return self._beta * self._h
 
     def _state_index(self, k: int) -> int:
-        """Map logical index k to circular buffer column: (ti + k) % step."""
-        return (self._ti + k) % self._step
+        """Map logical index k to circular buffer column: k % step."""
+        return k % self._step
 
     def state(self, k: int, o: int = 0) -> cp.ndarray:
-        """Return xt[o, (ti+k)%step] which is x^{(o)}_{ti - step + k}, shape (N,)."""
+        """Return xt[o, k % step] which is x^{(o)}_{ti - step + k}, shape (N,)."""
         return self.xt[o, self._state_index(k)]
 
     def current_state(self, o: int = 0) -> cp.ndarray:
@@ -147,24 +178,35 @@ class Bdf:
 
     def construct_equations(self):
         """Compute xtilde[o] = sum_k alpha[k] * State(k, o) for all o."""
-        self.xtilde[:] = 0
-        for o in range(self._order):
-            # We could implement this as a matrix-multiplication by permuting
-            # alpha similarly to our circular buffer on self.xt
-            for k in range(self._step):
-                self.xtilde[o] += self._alpha[k] * self.state(k, o)
+        xtilde = wp.array(data=self.xtilde, dtype=wp.float32, copy=False)
+        n = xtilde.shape[1]
+        xt = wp.array(data=self.xt, dtype=wp.float32, copy=False)
+        wp.launch(
+            kernel=_construct_equations_kernel,
+            dim=(self._order, n),
+            inputs=[xt, self._alpha, xtilde, self._step],
+        )
 
     def step(self, *x_new: cp.ndarray):
         """Advance by one time step. Pass `order` arrays each of shape (N,)."""
         assert len(x_new) == self._order
+        n = self.xt.shape[2]
+        xt = wp.array(data=self.xt, dtype=wp.float32, copy=False)
+        for o, xo in enumerate(x_new):
+            wp.launch(
+                kernel=_shift_and_insert_kernel,
+                dim=n,
+                inputs=[
+                    xt,
+                    wp.array(data=xo, dtype=wp.float32, copy=False),
+                    self._step,
+                    o,
+                ],
+            )
         self._ti += 1
-        kt = self._state_index(self._step - 1)
-        for o in range(self._order):
-            self.xt[o, kt] = x_new[o]
 
 
 import unittest
-import warp as wp
 
 
 @wp.kernel
@@ -187,7 +229,9 @@ class TestBdf(unittest.TestCase):
             bdf.construct_equations()
             # v0 = cp.asarray(v0) + bdf.beta_tilde * a0
             # x0 = cp.asarray(x0) + bdf.beta_tilde * cp.asarray(v0)
-            wp.launch(_explicit_integration_kernel, dim=n, inputs=[a0, bdf.beta_tilde, x0, v0])
+            wp.launch(
+                _explicit_integration_kernel, dim=n, inputs=[a0, bdf.beta_tilde, x0, v0]
+            )
             bdf.step(cp.asarray(x0).ravel(), cp.asarray(v0).ravel())
 
 

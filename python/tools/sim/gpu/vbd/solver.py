@@ -286,20 +286,15 @@ class VbdSolver:
         params: Params,
     ) -> bool:
         converged = False
-        if self._cuda_graph is None:
-            with wp.ScopedCapture() as capture:
-                initialize_solve(fem, contact, cd, params)
-                for k in range(params.data.n_max_iters):
-                    linearize_constraints(fem, contact, params)
-                    if check_convergence(fem, contact, params):
-                        converged = True
-                        break
-                    prepare_subproblem(fem, contact, cd, params)
-                    solve_subproblem(fem, contact, params)
-                    finalize_subproblem(fem, contact, cd, params)
-                fem.back_substitute_velocities()
-                cd.on_time_step_ended()
-            self._cuda_graph = capture
-        else:
-            wp.capture_launch(self._cuda_graph.graph)  # type: ignore
+        initialize_solve(fem, contact, cd, params)
+        for k in range(params.data.n_max_iters):
+            linearize_constraints(fem, contact, params)
+            if check_convergence(fem, contact, params):
+                converged = True
+                break
+            prepare_subproblem(fem, contact, cd, params)
+            solve_subproblem(fem, contact, params)
+            finalize_subproblem(fem, contact, cd, params)
+        fem.back_substitute_velocities()
+        cd.on_time_step_ended()
         return converged
