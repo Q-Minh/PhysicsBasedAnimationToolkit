@@ -10,8 +10,8 @@ from ...common import reduce, lower_bound
 from ....common.fields import DocField
 
 MAX_VV_PER_THREAD = wp.constant(2)
-MAX_VE_PER_THREAD = wp.constant(4)
-MAX_VF_PER_THREAD = wp.constant(8)
+MAX_VE_PER_THREAD = wp.constant(2)
+MAX_VF_PER_THREAD = wp.constant(4)
 # MAX_EE_PER_THREAD = wp.constant(8)
 tvvlist = wp.types.vector(length=MAX_VV_PER_THREAD, dtype=wp.int32)
 tvelist = wp.types.vector(length=MAX_VE_PER_THREAD, dtype=wp.int32)
