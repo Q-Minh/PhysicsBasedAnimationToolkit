@@ -172,7 +172,9 @@ class PrimitiveTransform:
                     for name, V in zip(mesh_names, mesh_verts)
                 ]
             )
-            self._pc = ps.register_point_cloud(f"Transform {self.id} - Dirichlet Nodes", VD)
+            self._pc = ps.register_point_cloud(
+                f"Transform {self.id} - Dirichlet Nodes", VD
+            )
         self._dirty = False
         return VD
 
@@ -289,11 +291,11 @@ class LocalRotateTransform(PrimitiveTransform):
         return LocalRotateTransform(
             "New Local Rotate", 0, 1, np.array([1, 0, 0]), np.array([0, 0, 0]), 10
         )
-    
+
     def undirty(self, mesh_names: list[str], mesh_verts: list[np.ndarray]):
         VD = super().undirty(mesh_names, mesh_verts)
-        #We'll use the average position of VD in order to define the local position
-        if VD.shape[0] == 0: 
+        # We'll use the average position of VD in order to define the local position
+        if VD.shape[0] == 0:
             self.origin = np.array([0, 0, 0])
         else:
             self.origin = np.mean(VD, axis=0)
@@ -412,7 +414,8 @@ class TranslateTransform(PrimitiveTransform):
         return (
             f"{base_str}\n\t\t Direction: {self.direction},\n\t\t Speed: {self.speed}"
         )
-    
+
+
 class LocalTranslateTransform(PrimitiveTransform):
     """Translate all vertices away from point of origin"""
 
@@ -433,7 +436,9 @@ class LocalTranslateTransform(PrimitiveTransform):
 
     @staticmethod
     def make_default():
-        return LocalTranslateTransform("New Local Translation", 0, 1, np.array([0, 0, 0]), 10)
+        return LocalTranslateTransform(
+            "New Local Translation", 0, 1, np.array([0, 0, 0]), 10
+        )
 
     def specific_apply(self, t, dt, V):
         """Apply the translation to the given vertices.
@@ -450,7 +455,9 @@ class LocalTranslateTransform(PrimitiveTransform):
         distance = self.speed * dt
         translation_vector = V - self.origin[:, np.newaxis]
         translation_vector[2] = 0
-        translation_vector = translation_vector / np.linalg.norm(translation_vector) * distance
+        translation_vector = (
+            translation_vector / np.linalg.norm(translation_vector) * distance
+        )
         # Apply translation
         V_translated = V + translation_vector
         return V_translated
@@ -467,9 +474,7 @@ class LocalTranslateTransform(PrimitiveTransform):
 
     def __str__(self):
         base_str = super().__str__()
-        return (
-            f"{base_str}\n\t\t Origin: {self.origin},\n\t\t Speed: {self.speed}"
-        )
+        return f"{base_str}\n\t\t Origin: {self.origin},\n\t\t Speed: {self.speed}"
 
 
 class FixedTransform(PrimitiveTransform):
@@ -558,6 +563,26 @@ class TransformLibrary:
             if len(all_nodes[i]) > 0:
                 all_nodes[i] = np.unique(np.concatenate(all_nodes[i]))
         return zip(self._mesh_names, all_nodes)
+
+    def all_transformed_nodes_with_durations(
+        self,
+    ) -> list[tuple[str, np.ndarray[int], np.ndarray[float]]]:
+        all_nodes = [[] for _ in range(len(self._mesh_names))]
+        durations = [[] for _ in range(len(self._mesh_names))]
+        for i, name in enumerate(self._mesh_names):
+            for transform in self.transforms:
+                if transform.affects(name):
+                    nodes = transform.nodes(name)
+                    all_nodes[i].append(nodes)
+                    durations[i].append(np.full_like(nodes, transform.duration, dtype=np.float32))
+            if len(all_nodes[i]) > 0:
+                all_nodes_i_cpy = np.concatenate(all_nodes[i])
+                durations[i] = np.concatenate(durations[i])
+                all_nodes[i], indices = np.unique(all_nodes_i_cpy, return_index=True)
+                durations[i] = np.maximum.reduceat(
+                    durations[i][np.argsort(all_nodes_i_cpy)], indices
+                )
+        return zip(self._mesh_names, all_nodes, durations)
 
     def apply(self, name: str, V: np.ndarray, t: int, dt: float) -> np.ndarray:
         for transform in self.transforms:

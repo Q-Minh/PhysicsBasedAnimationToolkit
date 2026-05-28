@@ -542,6 +542,20 @@ class Simulation:
             )
         fem.x = self._xD
 
+    def _apply_release_dirichlet_constraints(self):
+        fem = self._fem_dynamics
+        fem.dmask = np.zeros_like(fem.dmask, dtype=int)
+        for start, tup in zip(
+            self._XP[:-1],
+            self._transform_library.all_transformed_nodes_with_durations(),
+        ):
+            _, dnodes, durations = tup
+            if len(dnodes) != 0:
+                fem.dmask[start + dnodes] = (durations * 1000).astype(
+                    int
+                )  # Convert durations from seconds to milliseconds for storage in dmask
+        fem.constrain(fem.dmask)
+
     def _serialize_problem(self):
         root = tk.Tk()
         root.withdraw()
@@ -554,7 +568,10 @@ class Simulation:
             if file_path:
                 archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
                 xt = self._fem_dynamics.x.copy()
-                self._apply_procedural_constraints()
+                # TODO: Hack the procedural constraint application into writing
+                # "release after X milliseconds" Dirichlet constraints
+                # self._apply_procedural_constraints()
+                self._apply_release_dirichlet_constraints()
                 self._solver.serialize_problem(
                     archive, self._fem_dynamics, self._contact.contact_dynamics
                 )
