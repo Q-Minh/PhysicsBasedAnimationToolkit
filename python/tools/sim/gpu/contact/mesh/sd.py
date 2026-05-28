@@ -179,6 +179,10 @@ def _filter_initial_step(
 class Params:
     max_dist = DocField(0.2, "Maximum distance for closest point computations.")
     dmin = DocField(0.01, "Minimum distance threshold for contacts to be created.")
+    use_step_filter = DocField(
+        True,
+        "Whether to apply initial step filter.",
+    )
 
 
 class Sd(ContactDetection):
@@ -187,7 +191,8 @@ class Sd(ContactDetection):
     _wp_meshes: list[wp.Mesh]
     _mesh_ids: wp.array[wp.uint64]
     _sds: wp.array[wp.float32]  # (# verts,) signed distances
-    # _query_radius_reduction: reduce.Reduce
+    _mesh_streams: list[wp.Stream]
+    _normal_flip_streams: list[wp.Stream]
 
     def __init__(self, params: Params | None):
         self.params = params or Params()
@@ -222,13 +227,19 @@ class Sd(ContactDetection):
         self._sds = wp.full(
             (self._meshes.n_verts,), self.params.max_dist, dtype=wp.float32
         )
+        self._mesh_streams = [wp.Stream() for _ in range(len(self._wp_meshes))]
+        self._normal_flip_streams = [wp.Stream() for _ in range(3)]  # (vv, ve, vf)
 
     def on_time_step_started(self):
         self.request_step_filter = True
 
     def detect_contacts(self, from_xt: bool = False):
-        for mesh in self._wp_meshes:
-            mesh.refit()
+        main_stream = wp.get_stream()
+        for mesh, stream in zip(self._wp_meshes, self._mesh_streams):
+            stream.wait_stream(main_stream)
+            with wp.ScopedStream(stream, sync_enter=False, sync_exit=False):
+                mesh.refit()
+            main_stream.wait_stream(stream)
         self._contacts.clear()
         n_verts = self._meshes.data.V.shape[0]
         block_dim = 256
@@ -245,22 +256,27 @@ class Sd(ContactDetection):
                 self._contacts.write_data,  # type: ignore
             ],
             block_dim=block_dim,
+            stream=main_stream,
         )
         self._contacts.assemble_contacts(self._x, with_reverse_contacts=True)
         contact_data = self._contacts.read_data[0]
-        for capacity, cpairs, bases in zip(
+        for capacity, cpairs, bases, stream in zip(
             self._contacts.capacity[:3],
             [contact_data.vv, contact_data.ve, contact_data.vf],
             [contact_data.vv_bases, contact_data.ve_bases, contact_data.vf_bases],
+            self._normal_flip_streams,
         ):  # (vv, ve, vf)
+            stream.wait_stream(main_stream)
             wp.launch(
                 kernel=_flip_contact_normals,
                 dim=capacity,
                 inputs=[cpairs, bases, self._meshes.n_verts],
+                stream=stream,
             )
+            main_stream.wait_stream(stream)
 
     def filter_step(self):
-        if self.request_step_filter:
+        if self.request_step_filter and self.params.use_step_filter:
             n_verts = self._meshes.n_verts
             wp.launch(
                 kernel=_filter_initial_step,
