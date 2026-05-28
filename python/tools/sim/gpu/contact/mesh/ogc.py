@@ -40,6 +40,7 @@ class OgcParams:
     truncation_strategy = DocField(
         TruncationStrategy.NoTruncation, "Truncation strategy for contact queries."
     )
+    deactivate = DocField(False, "Whether to deactivate contact detection.")
 
 
 VF_E_FACE_TRIANGLE = wp.constant(0)
@@ -1184,7 +1185,7 @@ class Ogc(ContactDetection):
         xk: wp.array[wp.vec3f],
         x: wp.array[wp.vec3f],
         xtilde: wp.array[wp.vec3f],
-        meshes: MultiMesh, 
+        meshes: MultiMesh,
         contacts: pairs.ContactPairs,
     ):
         super().register_handles(xt, xk, x, xtilde, meshes, contacts)
@@ -1233,10 +1234,14 @@ class Ogc(ContactDetection):
         self.enable_adaptive_query_radius(xt, xtilde)
 
     def on_time_step_started(self):
+        if self._params.deactivate:
+            return
         main_stream = wp.get_stream()
         self._query_radius_reduction(main_stream)
 
     def detect_contacts(self, from_xt: bool = False):
+        if self._params.deactivate:
+            return
         main_stream = wp.get_stream()
         x = self._xt if from_xt else self._x
         wp.copy(dest=self._xk, src=x, stream=main_stream)
@@ -1246,6 +1251,8 @@ class Ogc(ContactDetection):
         self._contacts.assemble_contacts(self._xk, with_reverse_contacts=True)
 
     def filter_step(self):
+        if self._params.deactivate:
+            return
         self.truncate(self._x)
 
     def on_time_step_ended(self):

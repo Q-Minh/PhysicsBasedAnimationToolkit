@@ -183,6 +183,7 @@ class Params:
         False,
         "Whether to apply initial step filter.",
     )
+    deactivate = DocField(False, "Whether to deactivate contact detection.")
 
 
 class Sd(ContactDetection):
@@ -234,6 +235,8 @@ class Sd(ContactDetection):
         self.request_step_filter = True
 
     def detect_contacts(self, from_xt: bool = False):
+        if self.params.deactivate:
+            return
         main_stream = wp.get_stream()
         for mesh, stream in zip(self._wp_meshes, self._mesh_streams):
             stream.wait_stream(main_stream)
@@ -276,6 +279,8 @@ class Sd(ContactDetection):
             main_stream.wait_stream(stream)
 
     def filter_step(self):
+        if self.params.deactivate:
+            return
         if self.request_step_filter and self.params.use_step_filter:
             n_verts = self._meshes.n_verts
             wp.launch(
