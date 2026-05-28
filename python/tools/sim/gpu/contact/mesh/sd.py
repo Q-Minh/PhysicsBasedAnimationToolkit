@@ -24,6 +24,7 @@ def _detect_vertex_mesh_contacts(
     mesh_ids: wp.array[wp.uint64],
     max_dist: wp.float32,
     dmin: wp.float32,
+    sds: wp.array[wp.float32],
     x: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # type: ignore
     contacts: pairs.ContactPairsData,  # type: ignore
@@ -49,6 +50,7 @@ def _detect_vertex_mesh_contacts(
     tvf = tvflist(n_tris)
 
     # 1. Detect thread local contacts
+    tsdmin = max_dist
     for k in range(local_tid, mesh_ids.shape[0], block_dim):
         if k == b:
             continue
@@ -62,6 +64,7 @@ def _detect_vertex_mesh_contacts(
         b0, b1, b2 = (wp.float32(1) - qp.u - qp.v), qp.u, qp.v  # type: ignore
         xc = b0 * xj + b1 * xk + b2 * xl  # type: ignore
         sd = qp.sign * wp.norm_l2(xi - xc)  # type: ignore
+        tsdmin = wp.min(tsdmin, sd)
         if sd < dmin:
             is_j_zero = wp.int32(b0 == wp.float32(0))
             is_k_zero = wp.int32(b1 == wp.float32(0))
@@ -140,6 +143,11 @@ def _detect_vertex_mesh_contacts(
                 contacts.vf.u[c] = wp.uint32(v)
                 contacts.vf.v[c] = wp.uint32(bvf[block_row, local_tid])
 
+    # 3. Update signed distances
+    bsdmin = wp.tile(tsdmin)  # type: ignore
+    sdmin = wp.tile_extract(wp.tile_min(bsdmin), 0)  # type: ignore
+    sds[v] = sdmin  # type: ignore
+
 
 @wp.kernel
 def _flip_contact_normals(
@@ -154,6 +162,20 @@ def _flip_contact_normals(
     bases.n[k] = -bases.n[k]
 
 
+@wp.kernel
+def _filter_initial_step(
+    sds: wp.array[wp.float32],
+    meshes: MultiMeshData,  # type: ignore
+    xt: wp.array[wp.vec3f],
+    x: wp.array[wp.vec3f],
+):
+    tid = wp.tid()
+    v = tid
+    i = meshes.V[v]
+    if sds[v] <= wp.float32(0):
+        x[i] = xt[i]  # type: ignore
+
+
 class Params:
     max_dist = DocField(0.2, "Maximum distance for closest point computations.")
     dmin = DocField(0.01, "Minimum distance threshold for contacts to be created.")
@@ -164,6 +186,7 @@ class Sd(ContactDetection):
 
     _wp_meshes: list[wp.Mesh]
     _mesh_ids: wp.array[wp.uint64]
+    _sds: wp.array[wp.float32]  # (# verts,) signed distances
     # _query_radius_reduction: reduce.Reduce
 
     def __init__(self, params: Params | None):
@@ -196,9 +219,12 @@ class Sd(ContactDetection):
             for b in range(FP.shape[0] - 1)
         ]
         self._mesh_ids = wp.array([m.id for m in self._wp_meshes], dtype=wp.uint64)
+        self._sds = wp.full(
+            (self._meshes.n_verts,), self.params.max_dist, dtype=wp.float32
+        )
 
     def on_time_step_started(self):
-        pass
+        self.request_step_filter = True
 
     def detect_contacts(self, from_xt: bool = False):
         for mesh in self._wp_meshes:
@@ -213,6 +239,7 @@ class Sd(ContactDetection):
                 self._mesh_ids,
                 self.params.max_dist,  # max_dist
                 self.params.dmin,  # dmin
+                self._sds,
                 self._x,
                 self._meshes.data,  # type: ignore
                 self._contacts.write_data,  # type: ignore
@@ -233,7 +260,14 @@ class Sd(ContactDetection):
             )
 
     def filter_step(self):
-        pass
+        if self.request_step_filter:
+            n_verts = self._meshes.n_verts
+            wp.launch(
+                kernel=_filter_initial_step,
+                dim=n_verts,
+                inputs=[self._sds, self._meshes.data, self._xt, self._x],
+            )
+        self.request_step_filter = False
 
     def on_time_step_ended(self):
         pass
