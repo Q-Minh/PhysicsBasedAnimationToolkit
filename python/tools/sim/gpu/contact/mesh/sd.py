@@ -177,10 +177,10 @@ def _filter_initial_step(
 
 
 class Params:
-    max_dist = DocField(0.2, "Maximum distance for closest point computations.")
-    dmin = DocField(0.01, "Minimum distance threshold for contacts to be created.")
+    max_dist = DocField(0.01, "Maximum distance for closest point computations.")
+    dmin = DocField(-0.0001, "Minimum distance threshold for contacts to be created.")
     use_step_filter = DocField(
-        True,
+        False,
         "Whether to apply initial step filter.",
     )
 

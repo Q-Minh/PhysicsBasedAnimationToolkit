@@ -15,16 +15,16 @@ from .. import queries
 
 class Params:
     n_vv_contact_capacity = DocField(
-        1.0, "Vertex-vertex capacity multiplier (x num_vertices)."
+        0.05, "Vertex-vertex capacity multiplier (x num_vertices)."
     )
     n_ve_contact_capacity = DocField(
-        1.0, "Vertex-edge capacity multiplier (x num_vertices)."
+        0.05, "Vertex-edge capacity multiplier (x num_vertices)."
     )
     n_vf_contact_capacity = DocField(
-        1.0, "Vertex-face capacity multiplier (x num_vertices)."
+        0.2, "Vertex-face capacity multiplier (x num_vertices)."
     )
     n_ee_contact_capacity = DocField(
-        1.0, "Edge-edge capacity multiplier (x num_edges)."
+        0.2, "Edge-edge capacity multiplier (x num_edges)."
     )
 
 

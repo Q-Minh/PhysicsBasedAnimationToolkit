@@ -180,7 +180,7 @@ class SimulationState:
             self.dt, contact_pair_storage, self.contact_params
         )
         # Contact detection algorithm selection
-        self.cd_type: CDType = CDType.OGC
+        self.cd_type: CDType = CDType.VertexSdf
         self.cd_params = {
             CDType.OGC: gpu.contact.mesh.ogc.OgcParams(),
             CDType.VertexSdf: gpu.contact.mesh.sd.Params(),
@@ -237,7 +237,7 @@ class SimulationState:
             #     detailed=True,
             #     use_nvtx=True,
             #     synchronize=True,
-            #     cuda_filter=wp.TIMING_KERNEL,
+            #     cuda_filter=wp.TIMING_ALL,
             # ):
             wp.capture_launch(self.capture.graph)  # type: ignore
         self.t += 1
@@ -368,8 +368,13 @@ def make_callback(
                     ui_state.screenshot_fps = max(0.1, ui_state.screenshot_fps)
                 _, state.simulate = imgui.Checkbox("Simulate", state.simulate)
                 imgui.SameLine()
-                _, state.until_seconds = imgui.InputFloat("Until (s)", state.until_seconds, format="%.3f")
-                if state.until_seconds >= 0.0 and state.t * state.dt >= state.until_seconds:
+                _, state.until_seconds = imgui.InputFloat(
+                    "Until (s)", state.until_seconds, format="%.3f"
+                )
+                if (
+                    state.until_seconds >= 0.0
+                    and state.t * state.dt >= state.until_seconds
+                ):
                     state.simulate = False
 
                 if imgui.Button("Reset") or ui_state.request_reset:
