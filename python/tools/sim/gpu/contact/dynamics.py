@@ -1,6 +1,6 @@
 import enum
 
-from ...common.fields import DocField
+from ...common.fields import DocField, SerializableMixin
 
 import warp as wp
 import cupy as cp
@@ -455,7 +455,7 @@ PENALTY_ADAPTIVITY_TIMESTEP = wp.constant(int(PenaltyAdaptivity.TIMESTEP.value))
 PENALTY_ADAPTIVITY_SUBPROBLEM = wp.constant(int(PenaltyAdaptivity.SUBPROBLEM.value))
 
 
-class Params:
+class Params(SerializableMixin):
     """Parameters for :class:`MeshDynamics`.
 
     Attributes:

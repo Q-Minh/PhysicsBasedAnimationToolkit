@@ -7,7 +7,7 @@ from ..multimesh import MultiMesh, MultiMeshData
 from .. import halfedges
 from .cd import ContactDetection
 from ...common import reduce, lower_bound
-from ....common.fields import DocField
+from ....common.fields import DocField, SerializableMixin
 
 MAX_VV_PER_THREAD = wp.constant(2)
 MAX_VE_PER_THREAD = wp.constant(2)
@@ -176,7 +176,7 @@ def _filter_initial_step(
         x[i] = xt[i]  # type: ignore
 
 
-class Params:
+class Params(SerializableMixin):
     max_dist = DocField(0.01, "Maximum distance for closest point computations.")
     dmin = DocField(-0.0001, "Minimum distance threshold for contacts to be created.")
     use_step_filter = DocField(

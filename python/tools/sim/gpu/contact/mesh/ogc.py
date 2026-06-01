@@ -10,7 +10,7 @@ from enum import Enum
 from ..multimesh import MultiMesh, MultiMeshData
 from .. import halfedges
 from .. import queries
-from ....common.fields import DocField
+from ....common.fields import DocField, SerializableMixin
 from . import pairs
 from .cd import ContactDetection
 from ...common import reduce
@@ -27,7 +27,7 @@ TRUNCATION_DISTANCE = wp.constant(TruncationStrategy.Distance.value)
 TRUNCATION_PLANARDAT = wp.constant(TruncationStrategy.PlanarDAT.value)
 
 
-class OgcParams:
+class OgcParams(SerializableMixin):
     """Parameters for Offset Geometric Contact detection."""
 
     r = DocField(0.003, "Contact radius. Pairs closer than r are in contact.")

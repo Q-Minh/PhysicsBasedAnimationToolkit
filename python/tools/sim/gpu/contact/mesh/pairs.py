@@ -6,14 +6,14 @@ import cuda.compute
 
 from ..pairs import Pairs, PairsData
 from ..multimesh import MultiMesh, MultiMeshData
-from ....common.fields import DocField
+from ....common.fields import DocField, SerializableMixin
 from ...common import sort, search
 from ... import common
 from .. import halfedges
 from .. import queries
 
 
-class Params:
+class Params(SerializableMixin):
     n_vv_contact_capacity = DocField(
         0.05, "Vertex-vertex capacity multiplier (x num_vertices)."
     )

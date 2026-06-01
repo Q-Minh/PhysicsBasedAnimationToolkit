@@ -300,6 +300,55 @@ def _init_h5_serialization(
     return h5f
 
 
+def _serialize_params(state: "SimulationState", f: h5py.File) -> None:
+    """Write all simulation parameters to an open HDF5 file."""
+    intg = f.create_group("Integration")
+    intg.attrs["dt"] = state.dt
+    intg.attrs["substeps"] = state.substeps
+    intg.attrs["bdf_scheme"] = state.bdf_scheme
+    intg.attrs["init_strategy"] = state.init_strategy.value
+    for stype in SolverType:
+        gpu.vbd.params.serialize_vbd_cpu_params(
+            state.params_cpu[stype], f.create_group(f"Solver/{stype.name}")
+        )
+    state.cd_params[CDType.OGC].serialize(f.create_group("Contact/CDType/OGC"))
+    state.cd_params[CDType.VertexSdf].serialize(
+        f.create_group("Contact/CDType/VertexSdf")
+    )
+    state.contact_storage_params.serialize(f.create_group("Contact/ContactStorage"))
+    state.contact_params.serialize(f.create_group("Contact/ContactDynamics"))
+
+
+def _deserialize_params(state: "SimulationState", f: h5py.File) -> None:
+    """Read simulation parameters from an open HDF5 file into state, skipping absent groups."""
+    if "Integration" in f:
+        intg = f["Integration"]
+        if "dt" in intg.attrs:
+            state.dt = float(intg.attrs["dt"])
+        if "substeps" in intg.attrs:
+            state.substeps = int(intg.attrs["substeps"])
+        if "bdf_scheme" in intg.attrs:
+            state.bdf_scheme = int(intg.attrs["bdf_scheme"])
+        if "init_strategy" in intg.attrs:
+            state.init_strategy = (
+                pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization(
+                    int(intg.attrs["init_strategy"])
+                )
+            )
+    for stype in SolverType:
+        key = f"Solver/{stype.name}"
+        if key in f:
+            gpu.vbd.params.deserialize_vbd_cpu_params(state.params_cpu[stype], f[key])
+    if "Contact/CDType/OGC" in f:
+        state.cd_params[CDType.OGC].deserialize(f["Contact/CDType/OGC"])
+    if "Contact/CDType/VertexSdf" in f:
+        state.cd_params[CDType.VertexSdf].deserialize(f["Contact/CDType/VertexSdf"])
+    if "Contact/ContactStorage" in f:
+        state.contact_storage_params.deserialize(f["Contact/ContactStorage"])
+    if "Contact/ContactDynamics" in f:
+        state.contact_params.deserialize(f["Contact/ContactDynamics"])
+
+
 def make_callback(
     state: SimulationState, ui_state: UIState, mesh_name: str = "FEM Mesh"
 ):
@@ -378,6 +427,43 @@ def make_callback(
                         imgui.TreePop()
                     imgui.TreePop()
 
+                # --- Parameters I/O ---
+                if imgui.TreeNode("I/O"):
+                    if imgui.Button("Export Parameters"):
+                        root = tk.Tk()
+                        root.withdraw()
+                        path = filedialog.asksaveasfilename(
+                            title="Export simulation parameters",
+                            defaultextension=".h5",
+                            filetypes=[
+                                ("HDF5 files", "*.h5 *.hdf5"),
+                                ("All files", "*.*"),
+                            ],
+                        )
+                        root.destroy()
+                        if path:
+                            with h5py.File(path, "w") as f:
+                                _serialize_params(state, f)
+                    if imgui.Button("Import Parameters"):
+                        root = tk.Tk()
+                        root.withdraw()
+                        path = filedialog.askopenfilename(
+                            title="Import simulation parameters",
+                            defaultextension=".h5",
+                            filetypes=[
+                                ("HDF5 files", "*.h5 *.hdf5"),
+                                ("All files", "*.*"),
+                            ],
+                        )
+                        root.destroy()
+                        if path:
+                            with h5py.File(path, "r") as f:
+                                _deserialize_params(state, f)
+                            state.reset()
+                            _update_mesh(state, mesh_name)
+                            ui_state.request_reset = True
+                    imgui.TreePop()
+
                 # --- Serialization ---
                 if imgui.TreeNode("Serialization"):
                     if ui_state.serialization_h5 is None:
@@ -399,7 +485,9 @@ def make_callback(
                                 )
                                 ui_state.serialization_path = path
                     else:
-                        imgui.TextWrapped(f"Serializing to {ui_state.serialization_path}")
+                        imgui.TextWrapped(
+                            f"Serializing to {ui_state.serialization_path}"
+                        )
                         if imgui.Button("Stop##Serialization"):
                             ui_state.serialization_h5.close()
                             ui_state.serialization_h5 = None

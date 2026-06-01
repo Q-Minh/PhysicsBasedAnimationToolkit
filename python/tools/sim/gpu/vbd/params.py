@@ -147,6 +147,61 @@ class Params:
         return self._Pptr
 
 
+def serialize_vbd_cpu_params(params: pbat.sim.algorithm.vbd.Params, grp) -> None:
+    """Serialize the scalar/enum fields of a VBD CPU Params object to an h5py group.
+
+    Only settable float, int, bool, and enum properties are written (same set that
+    ``draw_params`` displays in the UI).
+    """
+    import inspect
+    import enum
+
+    for name, value in inspect.getmembers(params):
+        if name.startswith("_"):
+            continue
+        descriptor = getattr(type(params), name, None)
+        if isinstance(descriptor, property) and descriptor.fset is None:
+            continue
+        if isinstance(value, float):
+            grp.attrs[name] = value
+        elif isinstance(value, bool):
+            grp.attrs[name] = int(value)
+        elif isinstance(value, int):
+            grp.attrs[name] = value
+        elif isinstance(value, enum.Enum):
+            grp.attrs[name] = value.value
+
+
+def deserialize_vbd_cpu_params(params: pbat.sim.algorithm.vbd.Params, grp) -> None:
+    """Deserialize scalar/enum fields from an h5py group into a VBD CPU Params object.
+
+    Silently skips keys absent in the group or attributes that cannot be set.
+    """
+    import inspect
+    import enum
+
+    for name, value in inspect.getmembers(params):
+        if name.startswith("_"):
+            continue
+        descriptor = getattr(type(params), name, None)
+        if isinstance(descriptor, property) and descriptor.fset is None:
+            continue
+        if name not in grp.attrs:
+            continue
+        raw = grp.attrs[name]
+        try:
+            if isinstance(value, enum.Enum):
+                setattr(params, name, type(value)(int(raw)))
+            elif isinstance(value, bool):
+                setattr(params, name, bool(int(raw)))
+            elif isinstance(value, float):
+                setattr(params, name, float(raw))
+            elif isinstance(value, int):
+                setattr(params, name, int(raw))
+        except Exception:
+            pass
+
+
 import unittest
 
 

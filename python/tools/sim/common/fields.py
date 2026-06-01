@@ -27,3 +27,51 @@ class DocField:
 
     def __set__(self, obj, value):
         setattr(obj, self._attr, value)
+
+
+class SerializableMixin:
+    """Mixin for Params classes using :class:`DocField` that adds h5py serialize/deserialize.
+
+    Iterates all :class:`DocField` descriptors on the class, storing each value as an
+    HDF5 group attribute. Enum fields are stored as their integer value. Bool fields
+    are stored as int to ensure portability.
+    """
+
+    def serialize(self, grp) -> None:
+        """Write all DocField values to HDF5 group attributes."""
+        from enum import Enum
+
+        for name in dir(type(self)):
+            if isinstance(getattr(type(self), name, None), DocField):
+                value = getattr(self, name)
+                if isinstance(value, Enum):
+                    grp.attrs[name] = value.value
+                elif isinstance(value, bool):
+                    grp.attrs[name] = int(value)
+                else:
+                    grp.attrs[name] = value
+
+    def deserialize(self, grp) -> None:
+        """Read DocField values from HDF5 group attributes, skipping missing keys."""
+        from enum import Enum
+
+        for name in dir(type(self)):
+            descriptor = getattr(type(self), name, None)
+            if not isinstance(descriptor, DocField):
+                continue
+            if name not in grp.attrs:
+                continue
+            default = descriptor.default
+            raw = grp.attrs[name]
+            try:
+                if isinstance(default, Enum):
+                    value = type(default)(int(raw))
+                elif isinstance(default, bool):
+                    value = bool(int(raw))
+                elif isinstance(default, int):
+                    value = int(raw)
+                else:
+                    value = float(raw)
+                setattr(self, name, value)
+            except Exception:
+                pass
