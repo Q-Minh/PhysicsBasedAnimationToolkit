@@ -10,6 +10,9 @@ import argparse
 import inspect
 import enum
 import gc
+import h5py
+import tkinter as tk
+from tkinter import filedialog
 import warp as wp
 import polyscope as ps
 import polyscope.imgui as imgui
@@ -125,6 +128,9 @@ class UIState:
         self.screenshot_fps: float = 60.0
         self.screenshot_frame: int = 0
         self.debug_tab_active: bool = False
+        self.serialization_path: str | None = None
+        self.serialization_h5: h5py.File | None = None
+        self.serialization_time_since_flush: float = 0.0
 
 
 class SimulationState:
@@ -276,6 +282,24 @@ class SimulationState:
         self.capture = None
 
 
+def _init_h5_serialization(
+    fem_cpu: pbat.sim.dynamics.FemElastoDynamics, path: str
+) -> h5py.File:
+    """Create an HDF5 file and write FemElastoDynamics static data."""
+    h5f = h5py.File(path, "w")
+    grp = h5f.create_group("FemElastoDynamics")
+    grp.create_dataset("X", data=fem_cpu.X.T)  # (N, 3) rest positions
+    grp.create_dataset("E", data=fem_cpu.E.T)  # (E, 4) element connectivity
+    grp.create_dataset("lame_mu", data=fem_cpu.lamegU[0, :])  # (Q,) 1st Lame parameter
+    grp.create_dataset(
+        "lame_lambda", data=fem_cpu.lamegU[1, :]
+    )  # (Q,) 2nd Lame parameter
+    grp.create_dataset("m", data=fem_cpu.m)  # (N,) lumped masses
+    grp.create_dataset("dmask", data=fem_cpu.dmask)  # (N,) Dirichlet mask
+    h5f.create_group("sim")
+    return h5f
+
+
 def make_callback(
     state: SimulationState, ui_state: UIState, mesh_name: str = "FEM Mesh"
 ):
@@ -354,9 +378,38 @@ def make_callback(
                         imgui.TreePop()
                     imgui.TreePop()
 
-                imgui.Separator()
+                # --- Serialization ---
+                if imgui.TreeNode("Serialization"):
+                    if ui_state.serialization_h5 is None:
+                        if imgui.Button("Start##Serialization"):
+                            root = tk.Tk()
+                            root.withdraw()
+                            path = filedialog.asksaveasfilename(
+                                title="Save simulation serialization",
+                                defaultextension=".h5",
+                                filetypes=[
+                                    ("HDF5 files", "*.h5 *.hdf5"),
+                                    ("All files", "*.*"),
+                                ],
+                            )
+                            root.destroy()
+                            if path:
+                                ui_state.serialization_h5 = _init_h5_serialization(
+                                    state.fem_cpu, path
+                                )
+                                ui_state.serialization_path = path
+                    else:
+                        imgui.TextWrapped(f"Serializing to {ui_state.serialization_path}")
+                        if imgui.Button("Stop##Serialization"):
+                            ui_state.serialization_h5.close()
+                            ui_state.serialization_h5 = None
+                            ui_state.serialization_path = None
+                    imgui.TreePop()
 
                 # --- Simulation controls ---
+                imgui.Separator()
+
+                # --- Screenshot ---
                 _, ui_state.screenshot_after_step = imgui.Checkbox(
                     "Screenshot", ui_state.screenshot_after_step
                 )
@@ -366,6 +419,7 @@ def make_callback(
                         "fps##screenshot", ui_state.screenshot_fps, format="%.1f"
                     )
                     ui_state.screenshot_fps = max(0.1, ui_state.screenshot_fps)
+
                 _, state.simulate = imgui.Checkbox("Simulate", state.simulate)
                 imgui.SameLine()
                 _, state.until_seconds = imgui.InputFloat(
@@ -378,6 +432,10 @@ def make_callback(
                     state.simulate = False
 
                 if imgui.Button("Reset") or ui_state.request_reset:
+                    if ui_state.serialization_h5 is not None:
+                        ui_state.serialization_h5.close()
+                        ui_state.serialization_h5 = None
+                        ui_state.serialization_path = None
                     state.reset()
                     ui_state.screenshot_frame = 0
                     _update_mesh(state, mesh_name)
@@ -388,11 +446,19 @@ def make_callback(
                     if ui_state.screenshot_after_step and state.t == 0:
                         ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
                         ui_state.screenshot_frame += 1
-                    # try:
                     state.step()
-                    # except Exception as e:
-                    #     ps.error("Simulation step failed: {}".format(e))
                     _update_mesh(state, mesh_name)
+                    if ui_state.serialization_h5 is not None:
+                        x = state.fem.data.x.numpy()
+                        ui_state.serialization_h5.create_dataset(
+                            f"sim/{state.t:08d}/x", data=x
+                        )
+                        ui_state.serialization_time_since_flush += (
+                            imgui.GetIO().DeltaTime
+                        )
+                        if ui_state.serialization_time_since_flush >= 1.0:
+                            ui_state.serialization_h5.flush()
+                            ui_state.serialization_time_since_flush = 0.0
                     if ui_state.screenshot_after_step and _should_screenshot(
                         state.t, state.dt, ui_state.screenshot_fps
                     ):
