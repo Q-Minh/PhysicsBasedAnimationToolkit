@@ -297,7 +297,8 @@ void BindCore(nanobind::module_& m)
             "warm_start_beta",
             &Params::eWarmStartMask,
             "Warm start mask for stencil gradient augmentation scale initialization")
-        .def_rw("k", &Params::k, "Current iteration");
+        .def_rw("k", &Params::k, "Current iteration")
+        .def_rw("kp", &Params::kp, "Current subproblem iteration");
 
     using ElasticEnergyType = pbat::physics::StableNeoHookeanEnergy<3>;
     using MeshDynamicsType  = pbat::sim::contact::MeshDynamics<ScalarType, IndexType>;

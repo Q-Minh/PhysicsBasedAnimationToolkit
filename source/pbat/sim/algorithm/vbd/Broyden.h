@@ -172,7 +172,7 @@ void Iterate(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
@@ -241,21 +241,20 @@ void Iterate(
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Iterate");
-    if (broyden.k == 0)
+    if (params.kp == 0)
     {
         broyden.xkm1 = fem.x.reshaped();
-        Solve(fem, contact, params);
+        Iterate(fem, contact, params);
         broyden.fkm1 = broyden.xkm1 - fem.x.reshaped();
     }
     else
     {
-        params.k = 0;
-        Index k  = broyden.k;
+        Index k  = params.kp;
         auto dkl = pbat::common::Modulo(k - 1, broyden.m);
         // Update (preconditioned) history
         broyden.Xk.col(dkl) = fem.x.reshaped() - broyden.xkm1;
         broyden.xkm1        = fem.x.reshaped();
-        Solve(fem, contact, params);
+        Iterate(fem, contact, params);
         broyden.fk          = broyden.xkm1 - fem.x.reshaped();
         broyden.Fk.col(dkl) = broyden.fk - broyden.fkm1;
         broyden.fkm1        = broyden.fk;
@@ -336,7 +335,6 @@ void Iterate(
             fem.x.reshaped() -= broyden.Xk.leftCols(mk) * broyden.gammak.head(mk);
             fem.x.reshaped() += broyden.Fk.leftCols(mk) * broyden.gammak.head(mk);
         }
-        contact.RestoreFeasibility(fem.x, fem.dmask);
         // Update Jacobian (inverse) estimate
         switch (broyden.eJacobianEstimate)
         {
@@ -404,25 +402,36 @@ void Iterate(
             default: break;
         }
     }
-    ++broyden.k;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     BroydenParams& broyden)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Broyden.Solve");
-    while (params.k < params.nSubproblemMaxIters)
+    bool bConverged{false};
+    for (params.k = 0; params.k < params.nMaxIters; ++params.k)
     {
-        // if (contact.RequiresConstraintSetUpdate())
-        //     contact.UpdateConstraintSet(fem.x);
-        Iterate<TElasticEnergy>(fem, contact, params, broyden);
-        // contact.RestoreFeasibility(fem.x, fem.dmask);
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+        if (bConverged)
+            break;
+        PrepareSubproblem(fem, contact, params);
+        using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
+        for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
+            Iterate(fem, contact, params, broyden);
+        FinalizeSubproblem(fem, contact, params);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
+    if (not bConverged)
+    {
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+    }
+    return bConverged;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

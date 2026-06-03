@@ -109,7 +109,7 @@ void Iterate(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
@@ -153,21 +153,19 @@ void Iterate(
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Iterate");
-    if (params.k == 0)
+    if (params.kp == 0)
     {
         anderson.xkm1 = fem.x.reshaped();
         Iterate(fem, contact, params);
-        contact.RestoreFeasibility(fem.x, fem.dmask);
         anderson.fkm1 = fem.x.reshaped() - anderson.xkm1;
     }
     else
     {
-        Index k              = params.k;
+        Index k              = params.kp;
         auto dkl             = pbat::common::Modulo(k - 1, anderson.m);
         anderson.Xk.col(dkl) = fem.x.reshaped() - anderson.xkm1;
         anderson.xkm1        = fem.x.reshaped();
         Iterate(fem, contact, params);
-        contact.RestoreFeasibility(fem.x, fem.dmask);
         anderson.fk          = fem.x.reshaped() - anderson.xkm1;
         anderson.Fk.col(dkl) = anderson.fk - anderson.fkm1;
         anderson.fkm1        = anderson.fk;
@@ -190,21 +188,33 @@ void Iterate(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     AndersonParams& anderson)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Anderson.Solve");
-    while (params.k < params.nSubproblemMaxIters)
+    bool bConverged{false};
+    for (params.k = 0; params.k < params.nMaxIters; ++params.k)
     {
-        if (contact.RequiresConstraintSetUpdate())
-            contact.UpdateConstraintSet(fem.x);
-        Iterate<TElasticEnergy>(fem, contact, params, anderson);
-        contact.RestoreFeasibility(fem.x, fem.dmask);
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+        if (bConverged)
+            break;
+        PrepareSubproblem(fem, contact, params);
+        using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
+        for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
+            Iterate(fem, contact, params, anderson);
+        FinalizeSubproblem(fem, contact, params);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
+    if (not bConverged)
+    {
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+    }
+    return bConverged;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
