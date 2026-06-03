@@ -28,7 +28,7 @@ def try_draw_tooltip(obj, name):
         imgui.EndTooltip()
 
 
-def draw_params(obj):
+def draw_params(obj, sub_params: dict | None = None, _depth=0):
     for name, value in inspect.getmembers(obj):
         if name.startswith("_"):
             continue
@@ -36,6 +36,8 @@ def draw_params(obj):
             isinstance(getattr(type(obj), name, None), property)
             and getattr(type(obj), name).fset is None
         ):
+            continue
+        if value is None or callable(value):
             continue
         if isinstance(value, float):
             _, new_value = imgui.InputFloat(name, value, format="%.6f")
@@ -57,6 +59,22 @@ def draw_params(obj):
             )
             try_draw_tooltip(obj, name)
             setattr(obj, name, enum_values[selected_idx])
+        elif sub_params is None and _depth < 4 and not isinstance(value, np.ndarray):
+            if imgui.TreeNode(name):
+                imgui.PushID(name)
+                draw_params(value, None, _depth + 1)
+                imgui.PopID()
+                imgui.TreePop()
+    if sub_params:
+        for sub_name, nested_sub_params in sub_params.items():
+            sub_value = getattr(obj, sub_name, None)
+            if sub_value is None:
+                continue
+            if imgui.TreeNode(sub_name):
+                imgui.PushID(sub_name)
+                draw_params(sub_value, nested_sub_params or None, _depth + 1)
+                imgui.PopID()
+                imgui.TreePop()
 
 
 def parse_archive_path(spec: str) -> tuple[str, str]:
@@ -76,6 +94,17 @@ def load_fem_dynamics(spec: str) -> pbat.sim.dynamics.FemElastoDynamics:
     archive = None
     gc.collect()
     return fem_cpu
+
+
+def load_newton_params(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+) -> pbat.sim.algorithm.newton.Params:
+    """Construct Newton params from fem mesh with default optimizer settings."""
+    return pbat.sim.algorithm.newton.Params().with_optimizer(
+        pbat.math.optimization.Newton(
+            line_search=pbat.math.optimization.BackTrackingLineSearch()
+        )
+    )
 
 
 def load_vbd_params(
@@ -106,11 +135,19 @@ def load_vbd_params(
 class SolverType(enum.Enum):
     VBD = 0
     AAAVBD = 1
+    Newton = 2
 
 
 class CDType(enum.Enum):
     OGC = 0
     VertexSdf = 1
+
+
+SOLVER_SUB_PARAMS: dict[SolverType, dict] = {
+    SolverType.VBD: {},
+    SolverType.AAAVBD: {},
+    SolverType.Newton: {"newton": {"line_search": {}}},
+}
 
 
 def _should_screenshot(t: int, dt: float, fps: float) -> bool:
@@ -137,7 +174,7 @@ class SimulationState:
     def __init__(
         self,
         fem_cpu: pbat.sim.dynamics.FemElastoDynamics,
-        params_cpu: dict[SolverType, pbat.sim.algorithm.vbd.Params],
+        params_cpu: dict[SolverType, pbat.sim.algorithm.vbd.Params | pbat.sim.algorithm.newton.Params],
     ):
         self.fem_cpu = fem_cpu
         self.params_cpu = params_cpu
@@ -159,7 +196,7 @@ class SimulationState:
 
         # Build GPU mirrors
         self.fem = gpu.elasticity.fem.FemElastoDynamics(fem_cpu)
-        self.params = {s: gpu.vbd.params.Params(p) for s, p in params_cpu.items()}
+        self.params = {s: gpu.vbd.params.Params(p) for s, p in params_cpu.items() if s != SolverType.Newton}
         self.capture = None
 
         # Build collision geometry
@@ -185,6 +222,9 @@ class SimulationState:
         self.contact = gpu.contact.dynamics.MeshDynamics(
             self.dt, contact_pair_storage, self.contact_params
         )
+        newton_params = gpu.newton.solver.Params(self.params_cpu[SolverType.Newton])
+        newton_params.construct(self.fem, self.contact)
+        self.params[SolverType.Newton] = newton_params
         # Contact detection algorithm selection
         self.cd_type: CDType = CDType.VertexSdf
         self.cd_params = {
@@ -195,6 +235,7 @@ class SimulationState:
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
+            SolverType.Newton: gpu.newton.solver.NewtonSolver(),
         }
         self.contact_browser = gpu.contact.debug.contact.ContactBrowser(
             self.fem.data.x, self.multimesh, self.contact.contacts
@@ -261,17 +302,21 @@ class SimulationState:
         self.fem_cpu.set_time_integration_scheme(sdt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
-        self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items()}
+        self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items() if s != SolverType.Newton}
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
             self.multimesh, self.contact_storage_params
         )
         self.contact = gpu.contact.dynamics.MeshDynamics(
             sdt, contact_pair_storage, self.contact_params
         )
+        newton_params = gpu.newton.solver.Params(self.params_cpu[SolverType.Newton])
+        newton_params.construct(self.fem, self.contact)
+        self.params[SolverType.Newton] = newton_params
         self.detector = self._make_contact_detector(contact_pair_storage)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
+            SolverType.Newton: gpu.newton.solver.NewtonSolver(),
         }
         self.contact_browser.update(
             self.fem.data.x, self.multimesh, self.contact.contacts
@@ -307,10 +352,13 @@ def _serialize_params(state: "SimulationState", f: h5py.File) -> None:
     intg.attrs["substeps"] = state.substeps
     intg.attrs["bdf_scheme"] = state.bdf_scheme
     intg.attrs["init_strategy"] = state.init_strategy.value
-    for stype in SolverType:
+    for stype in [SolverType.VBD, SolverType.AAAVBD]:
         gpu.vbd.params.serialize_vbd_cpu_params(
             state.params_cpu[stype], f.create_group(f"Solver/{stype.name}")
         )
+    gpu.newton.solver.serialize_newton_cpu_params(
+        state.params_cpu[SolverType.Newton], f.create_group("Solver/Newton")
+    )
     state.cd_params[CDType.OGC].serialize(f.create_group("Contact/CDType/OGC"))
     state.cd_params[CDType.VertexSdf].serialize(
         f.create_group("Contact/CDType/VertexSdf")
@@ -335,10 +383,14 @@ def _deserialize_params(state: "SimulationState", f: h5py.File) -> None:
                     int(intg.attrs["init_strategy"])
                 )
             )
-    for stype in SolverType:
+    for stype in [SolverType.VBD, SolverType.AAAVBD]:
         key = f"Solver/{stype.name}"
         if key in f:
             gpu.vbd.params.deserialize_vbd_cpu_params(state.params_cpu[stype], f[key])
+    if "Solver/Newton" in f:
+        gpu.newton.solver.deserialize_newton_cpu_params(
+            state.params_cpu[SolverType.Newton], f["Solver/Newton"]
+        )
     if "Contact/CDType/OGC" in f:
         state.cd_params[CDType.OGC].deserialize(f["Contact/CDType/OGC"])
     if "Contact/CDType/VertexSdf" in f:
@@ -391,7 +443,7 @@ def make_callback(
                         state.reset()
                         ui_state.request_reset = True
                     if imgui.TreeNode("Params"):
-                        draw_params(state.params_cpu[state.solver])
+                        draw_params(state.params_cpu[state.solver], SOLVER_SUB_PARAMS.get(state.solver))
                         imgui.TreePop()
                     imgui.TreePop()
 
@@ -593,13 +645,6 @@ def parse_args():
         help="file.h5:group/path to a serialized FemElastoDynamics object.",
         dest="fem_elasto_dynamics",
     )
-    parser.add_argument(
-        "--vbd-params",
-        type=str,
-        default=None,
-        help="file.h5:group/path to serialized VBD Params (optional, uses defaults otherwise).",
-        dest="vbd_params",
-    )
     return parser.parse_args()
 
 
@@ -612,7 +657,8 @@ def main():
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
-    params_cpu = {s: load_vbd_params(fem_cpu, args.vbd_params) for s in SolverType}
+    params_cpu = {s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]}
+    params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
     # Setup polyscope
     ps.set_verbosity(0)

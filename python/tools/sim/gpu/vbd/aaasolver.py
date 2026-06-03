@@ -264,10 +264,7 @@ def solve_subproblem(
 class AaaVbdSolver:
 
     def __init__(self):
-        self._cuda_graph = None
-        self._k = wp.array(
-            [0], dtype=wp.int32
-        )  # Iteration counter for acceleration schedule
+        pass
 
     def solve(
         self,
@@ -279,7 +276,6 @@ class AaaVbdSolver:
         converged = False
         initialize_solve(fem, contact, cd, params)
         for k in range(params.data.n_max_iters):
-            linearize_constraints(fem, contact, params)
             if check_convergence(fem, contact, params):
                 converged = True
                 break
