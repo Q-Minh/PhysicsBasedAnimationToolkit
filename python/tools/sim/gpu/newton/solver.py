@@ -6,12 +6,14 @@ Outer loop mirrors ``gpu/vbd/solver.py``.  Newton-specific work lives in
 to the VBD solver.
 """
 
+import cuda.compute
 import warp as wp
 import warp.sparse
 import warp.optim.linear
 import cupy as cp
 
 from pbatoolkit import pbat
+from ..common.reduce import Reduce
 from ..contact.mesh.cd import ContactDetection
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from ..contact.dynamics import (
@@ -37,6 +39,9 @@ class ParamsData:
     # Inner Newton iteration control
     n_subproblem_max_iters: wp.int32
     gtol2: wp.float32  # squared gradient-norm convergence threshold
+    n_lin_max_iters: wp.int32
+    rel_eps_lin: wp.float32
+    abs_eps_lin: wp.float32
 
     # Backtracking line search (Armijo)
     ls_max_iters: wp.int32
@@ -244,7 +249,7 @@ def _energy_ee(
 
 
 @wp.kernel
-def _fill_hessian_values(
+def _compute_hessian_triplets(
     fem: FemElastoDynamicsData,
     h2: wp.float32,
     params: ParamsData,
@@ -364,6 +369,9 @@ class Params:
         self._data.k = 0
         self._data.n_subproblem_max_iters = newton.n_max_iters
         self._data.gtol2 = newton.gtol2
+        self._data.n_lin_max_iters = 300
+        self._data.rel_eps_lin = 1e-5
+        self._data.abs_eps_lin = 1e-5
         self._data.ls_max_iters = line_search.n_max_iters if line_search else 0
         self._data.ls_tau = line_search.tau if line_search else 0.5
         self._data.ls_c = line_search.c if line_search else 1e-4
@@ -408,10 +416,28 @@ class Params:
             prune_numerical_zeros=False,
         )
         self._g = wp.zeros(n_nodes, dtype=wp.vec3f)
-        self._neg_g = wp.zeros(n_nodes, dtype=wp.vec3f)
         self._dx = wp.zeros(n_nodes, dtype=wp.vec3f)
         self._energy_buf = wp.zeros(1, dtype=wp.float32)
         self._gradient = Gradient(fem, contact, self._g)
+        g_flat = cp.asarray(self._g).ravel()
+        dx_flat = cp.asarray(self._dx).ravel()
+        self._gnorm2 = wp.zeros(1, dtype=wp.float32)
+        self._slope_buf = wp.zeros(1, dtype=wp.float32)
+        self._gnorm2_reduce = Reduce(
+            d_in=cuda.compute.TransformIterator(g_flat, lambda x: x * x),
+            d_out=cp.asarray(self._gnorm2),
+            num_items=3 * n_nodes,
+            op=cuda.compute.OpKind.PLUS,
+        )
+        self._slope_reduce = Reduce(
+            d_in=cuda.compute.TransformIterator(
+                cuda.compute.ZipIterator(g_flat, dx_flat),
+                lambda x: x[0] * x[1],
+            ),
+            d_out=cp.asarray(self._slope_buf),
+            num_items=3 * n_nodes,
+            op=cuda.compute.OpKind.PLUS,
+        )
 
     @property
     def data(self) -> ParamsData:  # pyright: ignore[reportGeneralTypeIssues]
@@ -453,7 +479,6 @@ def _compute_energy(
         wp.launch(
             kernel, dim=cs.capacity, inputs=[x, xt, cd, cs.n_u, params._energy_buf]
         )
-    wp.synchronize()
     return float(params._energy_buf.numpy()[0])
 
 
@@ -463,9 +488,9 @@ def check_convergence(
     params: Params,
 ) -> bool:
     params._gradient.compute()
-    g_cp = cp.asarray(params._g).ravel()
-    gnorm2 = float(cp.dot(g_cp, g_cp))
-    return gnorm2 <= float(params.data.gtol2)
+    main_stream = wp.get_stream()
+    params._gnorm2_reduce(main_stream)
+    return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
 
 
 def prepare_subproblem(
@@ -486,14 +511,14 @@ def solve_subproblem(
     n_elems = fem.data.E.shape[0]
     h2 = fem.bdf.beta_tilde**2
     params._gradient.compute()
+    main_stream = wp.get_stream()
     for _ in range(int(params.data.n_subproblem_max_iters)):
-        g_cp = cp.asarray(params._g).ravel()
-        gnorm2 = float(cp.dot(g_cp, g_cp))
-        if gnorm2 <= float(params.data.gtol2):
+        params._gnorm2_reduce(main_stream)
+        if float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2):
             break
-        # Assemble FEM + inertial Hessian
+        # TODO: Assemble FEM + contact Hessian
         wp.launch(
-            _fill_hessian_values,
+            _compute_hessian_triplets,
             dim=max(n_nodes, n_elems),
             inputs=[fem.data, h2, params._data],
         )
@@ -507,22 +532,21 @@ def solve_subproblem(
             masked=False,
         )
         M = warp.optim.linear.preconditioner(params._H, "diag")
-        # Solve H dx = -g
+        # Solve H (-dx) = g
         params._dx.zero_()
-        final_iteration, residual_norm, absolute_tolerance = warp.optim.linear.cg(
+        warp.optim.linear.cg(
             params._H,
             params._g,
             x=params._dx,
-            tol=1e-5,
-            atol=None,
-            maxiter=300,
+            tol=params.data.rel_eps_lin,
+            atol=params.data.abs_eps_lin,
+            maxiter=params.data.n_lin_max_iters,
             M=M,
             use_cuda_graph=True,
         )
-        # Check descent direction
-        dx_cp = cp.asarray(params._dx).ravel()
-        slope = float(cp.dot(g_cp, dx_cp))
-        if slope >= 0.0:
+        # Check descent direction: slope = dot(g, dx) should be < 0
+        params._slope_reduce(main_stream)
+        if float(params._slope_buf.numpy()[0]) >= 0.0:
             break
         # Armijo backtracking line search
         E0 = _compute_energy(fem, contact, params, h2)
