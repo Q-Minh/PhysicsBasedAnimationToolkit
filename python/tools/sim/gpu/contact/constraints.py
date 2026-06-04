@@ -166,10 +166,10 @@ class ConstraintSet:
                 self.gamma.current.fill_(1.0)
             main_stream.wait_stream(streams[3])
             with wp.ScopedStream(streams[4], sync_enter=False):
-                self.lambda_n.current.fill_(0.0)
+                self.lambda_n.current.zero_()
             main_stream.wait_stream(streams[4])
             with wp.ScopedStream(streams[5], sync_enter=False):
-                self.lambda_f.current.fill_(0.0)
+                self.lambda_f.current.zero_()
             main_stream.wait_stream(streams[5])
 
         # Step 3: warm-start from alternate (previous) into current.
