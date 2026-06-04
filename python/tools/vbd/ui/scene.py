@@ -6,6 +6,7 @@ import polyscope.imgui as imgui
 import tkinter as tk
 from tkinter import filedialog
 import meshio
+import scipy as sp
 import os
 import typing
 import numpy as np
@@ -428,20 +429,33 @@ class Scene:
 
     def duplicate_tet_elastic_body(self, pattern_body: TetrahedralElastodynamicsBody, pattern_data: str):
         if self._pattern_data:
+            pattern_count = 0
             with open(self._pattern_data, "r") as f:
                 # this file is a csv with x, y, z coordinates. 
                 # for each row, we want to load a mesh using read_mesh, offset using the x,y,z data
                 for row in f:
                     vals = row.strip().split(",")
-                    if len(vals) != 3:
+                    
+                    if len(vals) != 3 and len(vals) != 6:
                         continue
-                    print(vals)
-                    x, y, z = map(float, vals)
+                    print(pattern_count, vals)
+                    pattern_count += 1
+                    x, y, z = map(float, vals[0:3])
+                    if len(vals) == 6:
+                        #Convert rotation in Euler angles to rotation matrix
+                        print("Hi")
+                        rx, ry, rz = map(float, vals[3:6])
+                        obj_rot = sp.spatial.transform.Rotation.from_euler('xyz', [rx, ry, rz]).as_matrix()
+                    else:
+                        obj_rot = np.eye(3)
+                    transform = np.eye(4)
+                    transform[:3, :3] = obj_rot
+                    transform[:3, 3] = np.array([x, y, z]).T
                     id = self._get_new_id()
                     body = TetrahedralElastodynamicsBody()
                     body.on_mesh_loaded(
                         f"{pattern_body.name} - {id}",
-                        pattern_body.VT + np.array([x, y, z]),
+                        pattern_body.VT,
                         pattern_body.T,
                         pattern_body.R,
                         pattern_body.Ye,
@@ -450,7 +464,8 @@ class Scene:
                         pattern_body.bext,
                         pattern_body.aext,
                         pattern_body.v0,
-                        headless=False
+                        headless=False,
+                        cached_transform=transform
                     )
                     self._transform_library.on_mesh_added(body.name)
                     self._tet_elastic_bodies.append(body)

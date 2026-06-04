@@ -115,7 +115,8 @@ class TetrahedralElastodynamicsBody:
         bext: np.ndarray[float] = None,
         aext: np.ndarray[float] = None,
         v0: np.ndarray[float] = None,
-        headless=False
+        headless=False,
+        cached_transform=np.eye(4)
     ):
         default_Y = 1e6
         default_nu = 0.45
@@ -140,7 +141,7 @@ class TetrahedralElastodynamicsBody:
                 cmap=material.regions_cmap(),
                 enabled=False
             )
-            self._cached_transform = np.eye(4)
+            self._cached_transform = cached_transform
             self._vm.set_transform(self._cached_transform)
             self._dirty = True
             self._ps_helper = PsHelper(self._vm)
