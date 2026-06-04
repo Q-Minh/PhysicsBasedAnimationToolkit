@@ -113,7 +113,7 @@ class CDType(enum.Enum):
     VertexSdf = 1
 
 
-def _should_screenshot(t: int, dt: float, fps: float) -> bool:
+def _should_save(t: int, dt: float, fps: float) -> bool:
     """Return True if simulation step t crosses a new video-frame boundary at the given fps."""
     if t == 0:
         return True
@@ -297,6 +297,8 @@ def _init_h5_serialization(
     grp.create_dataset("m", data=fem_cpu.m)  # (N,) lumped masses
     grp.create_dataset("dmask", data=fem_cpu.dmask)  # (N,) Dirichlet mask
     h5f.create_group("sim")
+    grp = h5f.create_group("params")
+    grp.attrs["fps"] = ui_state.screenshot_fps
     return h5f
 
 
@@ -348,6 +350,18 @@ def _deserialize_params(state: "SimulationState", f: h5py.File) -> None:
     if "Contact/ContactDynamics" in f:
         state.contact_params.deserialize(f["Contact/ContactDynamics"])
 
+def _serialize_simulation(state: SimulationState, ui_state: UIState):
+    if ui_state.serialization_h5 is not None:
+        x = state.fem.data.x.numpy()
+        ui_state.serialization_h5.create_dataset(
+            f"sim/{ui_state.screenshot_frame:08d}/x", data=x
+        )
+        ui_state.serialization_time_since_flush += (
+            imgui.GetIO().DeltaTime
+        )
+        if ui_state.serialization_time_since_flush >= 1.0:
+            ui_state.serialization_h5.flush()
+            ui_state.serialization_time_since_flush = 0.0
 
 def make_callback(
     state: SimulationState, ui_state: UIState, mesh_name: str = "FEM Mesh"
@@ -498,15 +512,20 @@ def make_callback(
                 imgui.Separator()
 
                 # --- Screenshot ---
+                
+                #if ui_state.screenshot_after_step:
+                
+                changed, ui_state.screenshot_fps = imgui.InputFloat(
+                    "fps##screenshot", ui_state.screenshot_fps, format="%.1f"
+                )
+                if changed:
+                    ui_state.screenshot_fps = max(0.1, ui_state.screenshot_fps)
+                    if ui_state.serialization_h5 is not None:
+                        ui_state.serialization_h5.get("params").attrs["fps"] = ui_state.screenshot_fps
+
                 _, ui_state.screenshot_after_step = imgui.Checkbox(
                     "Screenshot", ui_state.screenshot_after_step
                 )
-                if ui_state.screenshot_after_step:
-                    imgui.SameLine()
-                    _, ui_state.screenshot_fps = imgui.InputFloat(
-                        "fps##screenshot", ui_state.screenshot_fps, format="%.1f"
-                    )
-                    ui_state.screenshot_fps = max(0.1, ui_state.screenshot_fps)
 
                 _, state.simulate = imgui.Checkbox("Simulate", state.simulate)
                 imgui.SameLine()
@@ -533,24 +552,16 @@ def make_callback(
                 if request_step:
                     if ui_state.screenshot_after_step and state.t == 0:
                         ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                        _serialize_simulation(state, ui_state)
                         ui_state.screenshot_frame += 1
+                        
                     state.step()
                     _update_mesh(state, mesh_name)
-                    if ui_state.serialization_h5 is not None:
-                        x = state.fem.data.x.numpy()
-                        ui_state.serialization_h5.create_dataset(
-                            f"sim/{state.t:08d}/x", data=x
-                        )
-                        ui_state.serialization_time_since_flush += (
-                            imgui.GetIO().DeltaTime
-                        )
-                        if ui_state.serialization_time_since_flush >= 1.0:
-                            ui_state.serialization_h5.flush()
-                            ui_state.serialization_time_since_flush = 0.0
-                    if ui_state.screenshot_after_step and _should_screenshot(
+                    if ui_state.screenshot_after_step and _should_save(
                         state.t, state.dt, ui_state.screenshot_fps
                     ):
                         ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                        _serialize_simulation(state, ui_state)
                         ui_state.screenshot_frame += 1
 
                 imgui.EndTabItem()
