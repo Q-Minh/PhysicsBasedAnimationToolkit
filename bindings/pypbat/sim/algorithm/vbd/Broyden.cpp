@@ -164,7 +164,9 @@ void BindBroyden(nanobind::module_& m)
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elastodynamics simulator\n"
         "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters");
+        "    broyden (pbat.sim.algorithm.vbd.BroydenParams): The Broyden parameters\n\n"
+        "Returns:\n"
+        "    bool: True if the solver converged, False otherwise");
     m.def(
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,

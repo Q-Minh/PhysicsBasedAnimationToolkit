@@ -100,7 +100,7 @@ void Iterate(
  * @pre `TElasticEnergy::kDims == 3`
  */
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
@@ -144,9 +144,8 @@ void Iterate(
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Iterate");
-    Index k = params.k;
+    Index k = params.kp;
     Iterate(fem, contact, params);
-    contact.RestoreFeasibility(fem.x, fem.dmask);
     // Chebyshev Update
     cheb.omega = kernels::ChebyshevOmega(k, cheb.rho2, cheb.omega);
     auto& xk   = fem.x;
@@ -157,21 +156,33 @@ void Iterate(
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
-void Solve(
+bool Solve(
     common::FemElastoDynamics<TElasticEnergy>& fem,
     contact::MeshDynamics<Scalar, Index>& contact,
     Params& params,
     ChebyshevParams& cheb)
 {
     PBAT_PROFILE_NAMED_SCOPE("pbat.sim.algorithm.vbd.Chebyshev.Solve");
-    while (params.k < params.nSubproblemMaxIters)
+    bool bConverged{false};
+    for (params.k = 0; params.k < params.nMaxIters; ++params.k)
     {
-        if (contact.RequiresConstraintSetUpdate())
-            contact.UpdateConstraintSet(fem.x);
-        Iterate<TElasticEnergy>(fem, contact, params, cheb);
-        contact.RestoreFeasibility(fem.x, fem.dmask);
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+        if (bConverged)
+            break;
+        PrepareSubproblem(fem, contact, params);
+        using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
+        for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
+            Iterate(fem, contact, params, cheb);
+        FinalizeSubproblem(fem, contact, params);
     }
     fem.BackSubstituteIntegratedPositionsIntoVelocities();
+    if (not bConverged)
+    {
+        LinearizeConstraints(fem, contact);
+        bConverged = CheckConvergence(fem, contact, params);
+    }
+    return bConverged;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>

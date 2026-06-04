@@ -75,16 +75,23 @@ class ChebyshevSolver(BaseSolver):
         if callback is None:
             callback = lambda: None
         callback()
-        # TODO: Update Chebyshev solver for most recent SAL contact framework
-        # pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
-        # callback()
-        # while vbd.k < vbd.n_max_iters:
-        #     if contact.requires_constraint_set_update:
-        #         contact.update_constraint_set(fem.x)
-        #     pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
-        #     fem.x = contact.restore_feasibility(fem.x, fem.dmask)
-        #     callback()
-        # fem.back_substitute_integrated_positions_into_velocities()
+        # Update Chebyshev solver for most recent SAL contact framework
+        pbat.sim.algorithm.vbd.initialize_solve(fem, contact, vbd, chebyshev)
+        callback()
+        for k in range(vbd.n_max_iters):
+            callback()
+            pbat.sim.algorithm.vbd.linearize_constraints(fem, contact)
+            converged = pbat.sim.algorithm.vbd.check_convergence(fem, contact, vbd)
+            if converged:
+                break
+            pbat.sim.algorithm.vbd.prepare_subproblem(fem, contact, vbd)
+            vbd.kp = 0
+            while vbd.kp < vbd.n_subproblem_max_iters:
+                pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
+                vbd.kp += 1
+            pbat.sim.algorithm.vbd.finalize_subproblem(fem, contact, vbd)
+        callback()
+        fem.back_substitute_integrated_positions_into_velocities()
 
     def serialize(self, archive: pbat.io.Archive):
         params: Params = self._params.params

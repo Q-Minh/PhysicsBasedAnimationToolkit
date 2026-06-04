@@ -109,7 +109,9 @@ void BindAnderson(nanobind::module_& m)
         "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
         "    anderson (pbat.sim.algorithm.vbd.AndersonParams): The Anderson acceleration "
-        "parameters");
+        "parameters\n\n"
+        "Returns:\n"
+        "    bool: True if the solver converged, False otherwise");
     m.def(
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,

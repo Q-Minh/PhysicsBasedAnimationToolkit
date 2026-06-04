@@ -103,7 +103,9 @@ void BindChebyshev(nanobind::module_& m)
         "    fem (pbat.sim.dynamics.FemElastoDynamics): The FEM elasto-dynamics system\n"
         "    contact (pbat.sim.contact.MeshDynamics): The mesh contact dynamics system\n"
         "    params (pbat.sim.algorithm.vbd.Params): The VBD parameters\n"
-        "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters");
+        "    cheb (pbat.sim.algorithm.vbd.ChebyshevParams): The Chebyshev parameters\n\n"
+        "Returns:\n"
+        "    bool: True if the solver converged, False otherwise");
     m.def(
         "integrate",
         [](FemElastoDynamics<ElasticEnergyType>& fem,
