@@ -328,7 +328,7 @@ class SimulationState:
 
 
 def _init_h5_serialization(
-    fem_cpu: pbat.sim.dynamics.FemElastoDynamics, path: str
+    fem_cpu: pbat.sim.dynamics.FemElastoDynamics, path: str, ui_state: UIState = None
 ) -> h5py.File:
     """Create an HDF5 file and write FemElastoDynamics static data."""
     h5f = h5py.File(path, "w")
@@ -343,7 +343,8 @@ def _init_h5_serialization(
     grp.create_dataset("dmask", data=fem_cpu.dmask)  # (N,) Dirichlet mask
     h5f.create_group("sim")
     grp = h5f.create_group("params")
-    grp.attrs["fps"] = ui_state.screenshot_fps
+    if ui_state is not None:
+        grp.attrs["fps"] = ui_state.screenshot_fps
     return h5f
 
 
@@ -414,6 +415,14 @@ def _serialize_simulation(state: SimulationState, ui_state: UIState):
         if ui_state.serialization_time_since_flush >= 1.0:
             ui_state.serialization_h5.flush()
             ui_state.serialization_time_since_flush = 0.0
+
+
+def _import_parameters_from_file(path: str, state: SimulationState, ui_state: UIState, mesh_name: str):
+    with h5py.File(path, "r") as f:
+        _deserialize_params(state, f)
+    state.reset()
+    _update_mesh(state, mesh_name)
+    ui_state.request_reset = True
 
 def make_callback(
     state: SimulationState, ui_state: UIState, mesh_name: str = "FEM Mesh"
@@ -523,11 +532,7 @@ def make_callback(
                         )
                         root.destroy()
                         if path:
-                            with h5py.File(path, "r") as f:
-                                _deserialize_params(state, f)
-                            state.reset()
-                            _update_mesh(state, mesh_name)
-                            ui_state.request_reset = True
+                            _import_parameters_from_file(path, state, ui_state, mesh_name)
                     imgui.TreePop()
 
                 # --- Serialization ---
@@ -547,7 +552,7 @@ def make_callback(
                             root.destroy()
                             if path:
                                 ui_state.serialization_h5 = _init_h5_serialization(
-                                    state.fem_cpu, path
+                                    state.fem_cpu, path, ui_state
                                 )
                                 ui_state.serialization_path = path
                     else:
@@ -602,19 +607,24 @@ def make_callback(
                 # --- Continuous simulation ---
                 request_step = state.simulate or imgui.Button("Step")
                 if request_step:
-                    if ui_state.screenshot_after_step and state.t == 0:
-                        ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
-                        _serialize_simulation(state, ui_state)
-                        ui_state.screenshot_frame += 1
-                        
+                    if ui_state.screenshot_after_step or ui_state.serialization_h5 is not None:
+                        if state.t == 0:
+                            if ui_state.screenshot_after_step:
+                                ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                            if ui_state.serialization_h5 is not None:
+                                _serialize_simulation(state, ui_state)
+                            ui_state.screenshot_frame += 1
+
                     state.step()
                     _update_mesh(state, mesh_name)
-                    if ui_state.screenshot_after_step and _should_save(
-                        state.t, state.dt, ui_state.screenshot_fps
-                    ):
-                        ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
-                        _serialize_simulation(state, ui_state)
-                        ui_state.screenshot_frame += 1
+                    
+                    if ui_state.screenshot_after_step or ui_state.serialization_h5 is not None:
+                        if _should_save(state.t, state.dt, ui_state.screenshot_fps):
+                            if ui_state.screenshot_after_step:
+                                ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                            if ui_state.serialization_h5 is not None:
+                                _serialize_simulation(state, ui_state)
+                            ui_state.screenshot_frame += 1
 
                 imgui.EndTabItem()
 
@@ -656,6 +666,13 @@ def parse_args():
         help="file.h5:group/path to a serialized FemElastoDynamics object.",
         dest="fem_elasto_dynamics",
     )
+    parser.add_argument(
+        "--sim-params",
+        type=str,
+        required=False,
+        help="file.h5 to simulation parameters to load (optional).",
+        dest="sim_params",
+    )
     return parser.parse_args()
 
 
@@ -671,6 +688,9 @@ def main():
     params_cpu = {s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]}
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
+    ui_state = UIState()
+    mesh_name = "Mesh"
+
     # Setup polyscope
     ps.set_verbosity(0)
     ps.set_up_dir("z_up")
@@ -679,7 +699,7 @@ def main():
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Simulator")
     ps.init()
-    mesh_name = "Mesh"
+    
     vm = ps.register_volume_mesh(mesh_name, fem_cpu.X.T, fem_cpu.E.T)
     vm.add_scalar_quantity(
         "mug", fem_cpu.lamegU[0, :], defined_on="cells", enabled=True, cmap="blues"
@@ -694,7 +714,11 @@ def main():
         mesh_name, fem_cpu.X.T, state.multimesh.data.F.numpy()
     )
     sm.set_enabled(False)
-    ps.set_user_callback(make_callback(state, UIState(), mesh_name))
+
+    if args.sim_params:
+        _import_parameters_from_file(args.sim_params, state, ui_state, mesh_name)
+
+    ps.set_user_callback(make_callback(state, ui_state, mesh_name))
     ps.show()
 
 
