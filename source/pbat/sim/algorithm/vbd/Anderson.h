@@ -203,8 +203,7 @@ bool Solve(
         if (bConverged)
             break;
         PrepareSubproblem(fem, contact, params);
-        using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
-        for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
+        while (params.kp < params.nSubproblemMaxIters)
             Iterate(fem, contact, params, anderson);
         FinalizeSubproblem(fem, contact, params);
     }

@@ -864,6 +864,7 @@ void PrepareSubproblem(
     if (static_cast<int>(params.eWarmStartMask) <
         static_cast<int>(EStencilGradientBetaWarmStartMask::Subproblem))
         params.betaG.setConstant(params.betaG0);
+    params.kp = 0;
 }
 
 template <physics::CHyperElasticEnergy TElasticEnergy>
@@ -896,7 +897,7 @@ bool Solve(
             break;
         PrepareSubproblem(fem, contact, params);
         using EDualVariable = typename contact::MeshDynamics<Scalar, Index>::EDualVariable;
-        for (params.kp = 0; params.kp < params.nSubproblemMaxIters;)
+        while (params.kp < params.nSubproblemMaxIters)
             Iterate(fem, contact, params);
         FinalizeSubproblem(fem, contact, params);
     }
