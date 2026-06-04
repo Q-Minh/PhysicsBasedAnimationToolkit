@@ -57,7 +57,7 @@ def _setup_time_integration_optimization_kernel(
         # Dirichlet nodes: xtilde = current BDF position
         xti = x_bdf_current[i]
         # NOTE: dmask contains the remaining time until free in milliseconds.
-        dmask[i] = wp.max(dmask[i] - wp.int32(bt * wp.float32(1000)), wp.int32(0))  # type: ignore
+        dmask[i] = wp.max(dmask[i] - wp.int32(wp.round(bt * wp.float32(1000))), wp.int32(0))  # type: ignore
 
     xtilde[i] = xti  # pyright: ignore[reportIndexIssue]
     # Initialize x based on strategy (only for free nodes)
