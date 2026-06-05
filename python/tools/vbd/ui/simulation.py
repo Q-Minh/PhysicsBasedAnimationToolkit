@@ -43,6 +43,8 @@ class Simulation:
     _dmin: float = float("inf")
     _masscpy: np.ndarray[float]
     _static_elasticity: bool
+    _should_screenshot: bool
+    _screenshot_t: int
 
     def __init__(self):
         self._fem_dynamics = pbat.sim.dynamics.FemElastoDynamics()
@@ -73,6 +75,8 @@ class Simulation:
         self._energy_history_potential = []
         self._masscpy = self._fem_dynamics.m.copy()
         self._static_elasticity = False
+        self._should_screenshot = False
+        self._screenshot_t = 0
 
     def draw(self):
         default_button_size = [imgui.GetWindowWidth() / 2.1, 0]
@@ -157,6 +161,7 @@ class Simulation:
 
     def _reset_sim(self):
         self._t = 0
+        self._screenshot_t = 0
         if self._fem_dynamics is not None:
             self._fem_dynamics.set_time_integration_scheme(
                 dt=self._dt, s=self._bdf_scheme
@@ -177,6 +182,9 @@ class Simulation:
         if self._fem_dynamics is None:
             ps.error("No simulation scenario loaded!")
             return
+        if self._should_screenshot:
+            ps.screenshot("{:08d}.png".format(self._screenshot_t))
+            self._screenshot_t += 1
         self._contact.contact_dynamics.params.construct()
         self._apply_procedural_constraints()
         self._profiler.begin_frame("Physics")
@@ -266,10 +274,11 @@ class Simulation:
                     defined_on="vertices",
                 )
                 self._fem_dynamics_vm.add_scalar_quantity(
-                    "|residual|",
-                    gnorms,
+                    "log(|residual|)",
+                    np.log10(gnorms),
                     defined_on="vertices",
                     cmap="turbo",
+                    vminmax=(-2,-0.2)
                 )
             if self._contact.requires_debug_display:
                 self._contact.on_debug_display_requested(x)
@@ -332,6 +341,9 @@ class Simulation:
         reset = imgui.Button("Reset", button_size)
         if imgui.Button("Dump", button_size):
             self._serialize_problem()
+        _, self._should_screenshot = imgui.Checkbox(
+            "Screenshot", self._should_screenshot
+        )
         imgui.Text(f"Time step={self._t}, t={self._t * self._dt:.4f}s")
         if reset:
             self._reset_sim()
