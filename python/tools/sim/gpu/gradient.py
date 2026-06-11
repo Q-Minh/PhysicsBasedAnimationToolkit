@@ -28,25 +28,25 @@ def _elastic_gradient(
             xe[d, j] = xj[d]
     F = xe @ GP
     gF = snh_grad(F, mu, llambda)
-    ge = gradient_wrt_dofs(gF, GP)
+    ge = h2 * wge * gradient_wrt_dofs(gF, GP)
     node0 = nodes[0]
-    if not is_dirichlet_node(fem.dmask, node0):
-        gi0 = (h2 * wge) * ge[0:3]
+    if True: # not is_dirichlet_node(fem.dmask, node0):
+        gi0 = ge[0:3]
         wp.atomic_add(g, node0, gi0)
 
     node1 = nodes[1]
-    if not is_dirichlet_node(fem.dmask, node1):
-        gi1 = (h2 * wge) * ge[3:6]
+    if True: # not is_dirichlet_node(fem.dmask, node1):
+        gi1 = ge[3:6]
         wp.atomic_add(g, node1, gi1)
 
     node2 = nodes[2]
-    if not is_dirichlet_node(fem.dmask, node2):
-        gi2 = (h2 * wge) * ge[6:9]
+    if True: # not is_dirichlet_node(fem.dmask, node2):
+        gi2 = ge[6:9]
         wp.atomic_add(g, node2, gi2)
 
     node3 = nodes[3]
-    if not is_dirichlet_node(fem.dmask, node3):
-        gi3 = (h2 * wge) * ge[9:12]
+    if True: # not is_dirichlet_node(fem.dmask, node3):
+        gi3 = ge[9:12]
         wp.atomic_add(g, node3, gi3)
 
 
@@ -56,7 +56,7 @@ def _inertial_gradient(
     g: wp.array[wp.vec3f],
 ):
     i = wp.tid()
-    if is_dirichlet_node(fem.dmask, i):
+    if False: # is_dirichlet_node(fem.dmask, i):
         return
     wp.atomic_add(g, i, fem.m[i] * (fem.x[i] - fem.xtilde[i]))
 
@@ -92,9 +92,9 @@ def _vv_gradient(
     dEn = sigma_n * c_n - contact.cvv.lambda_n[c]
     dEf = sigma_f * c_f - contact.cvv.lambda_f[c]
     grad = dEn * n + dEf[0] * t + dEf[1] * b
-    if not is_dirichlet_node(dmask, i):
+    if True: # not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
-    if not is_dirichlet_node(dmask, j):
+    if True: # not is_dirichlet_node(dmask, j):
         wp.atomic_add(g, j, -gamma * grad)
 
 
@@ -133,11 +133,11 @@ def _ve_gradient(
     dEn = sigma_n * c_n - contact.cve.lambda_n[c]
     dEf = sigma_f * c_f - contact.cve.lambda_f[c]
     grad = dEn * n + dEf[0] * t + dEf[1] * b
-    if not is_dirichlet_node(dmask, i):
+    if True: # not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
-    if not is_dirichlet_node(dmask, ea):
+    if True: # not is_dirichlet_node(dmask, ea):
         wp.atomic_add(g, ea, -gamma * b0 * grad)
-    if not is_dirichlet_node(dmask, eb):
+    if True: # not is_dirichlet_node(dmask, eb):
         wp.atomic_add(g, eb, -gamma * b1 * grad)
 
 
@@ -177,13 +177,13 @@ def _vf_gradient(
     dEn = sigma_n * c_n - contact.cvf.lambda_n[c]
     dEf = sigma_f * c_f - contact.cvf.lambda_f[c]
     grad = dEn * n + dEf[0] * t + dEf[1] * b
-    if not is_dirichlet_node(dmask, i):
+    if True: # not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
-    if not is_dirichlet_node(dmask, finds[0]):
+    if True: # not is_dirichlet_node(dmask, finds[0]):
         wp.atomic_add(g, finds[0], -gamma * b0 * grad)
-    if not is_dirichlet_node(dmask, finds[1]):
+    if True: # not is_dirichlet_node(dmask, finds[1]):
         wp.atomic_add(g, finds[1], -gamma * b1 * grad)
-    if not is_dirichlet_node(dmask, finds[2]):
+    if True: # not is_dirichlet_node(dmask, finds[2]):
         wp.atomic_add(g, finds[2], -gamma * b2 * grad)
 
 
@@ -226,13 +226,13 @@ def _ee_gradient(
     dEn = sigma_n * c_n - contact.cee.lambda_n[c]
     dEf = sigma_f * c_f - contact.cee.lambda_f[c]
     grad = dEn * n + dEf[0] * t + dEf[1] * b
-    if not is_dirichlet_node(dmask, ia):
+    if True: # not is_dirichlet_node(dmask, ia):
         wp.atomic_add(g, ia, gamma * b0 * grad)
-    if not is_dirichlet_node(dmask, ib):
+    if True: # not is_dirichlet_node(dmask, ib):
         wp.atomic_add(g, ib, gamma * b1 * grad)
-    if not is_dirichlet_node(dmask, ic):
+    if True: # not is_dirichlet_node(dmask, ic):
         wp.atomic_add(g, ic, -gamma * b2 * grad)
-    if not is_dirichlet_node(dmask, id_):
+    if True: # not is_dirichlet_node(dmask, id_):
         wp.atomic_add(g, id_, -gamma * b3 * grad)
 
 
