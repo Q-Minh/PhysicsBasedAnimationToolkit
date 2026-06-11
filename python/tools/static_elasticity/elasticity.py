@@ -89,27 +89,16 @@ class ModeParams:
     
     def draw(self):
         imgui.PushID(self.mode)
-        imgui.PushItemWidth(imgui.GetWindowWidth() * 0.5)
-        imgui.Text(f"Mode {self.mode:03}")
-        imgui.SameLine()
         _, self.amplitude  = imgui.SliderFloat("Amplitude", self.amplitude, self.min_amplitude, self.max_amplitude)
-        imgui.SameLine()
-        label = "More" if not self.show_more else "Less"
-        if imgui.Button(label):
-            self.show_more = not self.show_more
-        imgui.PopItemWidth()
-        if self.show_more:
-            imgui.PushItemWidth(imgui.GetWindowWidth() * 0.3)
-            imgui.Text("")
-            imgui.SameLine()
-            _, self.max_amplitude = imgui.SliderFloat("Max Amplitude", self.max_amplitude, 0.0, 1000.0)
-            imgui.SameLine()
-            _, self.min_amplitude = imgui.SliderFloat("Min Amplitude", self.min_amplitude, 0.0, 1000.0)
-            imgui.PopItemWidth()
-
-        #self.frequency = imgui.SliderFloat("Frequency", self.frequency, 0.0, 1.0)
+        _, self.max_amplitude = imgui.InputFloat("Max Amplitude", self.max_amplitude)
+        _, self.min_amplitude = imgui.InputFloat("Min Amplitude", self.min_amplitude)
         
-        #self.frequency = imgui.SliderFloat("Frequency", self.frequency, 0, 1)
+        if imgui.Button("Reset"):
+            self.amplitude = 0.0
+        if imgui.Button("Flip"):
+            self.amplitude = -self.amplitude
+        if imgui.Button("Randomize"):
+            self.amplitude = np.random.uniform(self.min_amplitude, self.max_amplitude)
         imgui.PopID()
 
 
@@ -126,7 +115,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--poisson-ratio", help="Poisson's ratio", type=float,
                         dest="nu", default=0.45)
     parser.add_argument("-k", "--num-modes", help="Number of modes to compute", type=int,
-                        dest="modes", default=30)
+                        dest="modes", default=10)
     args = parser.parse_args()
 
     zero = 0.0
@@ -149,19 +138,45 @@ if __name__ == "__main__":
     c = 0
     k = 1
     mode_params = [ModeParams(i, c) for i in range(args.modes)]
+    mode_names = [f"Mode {i:03}" for i in range(args.modes)]
+    index_selected = 0
+    mode_selected = mode_names[index_selected]
 
     def callback():
         global mode, c, k, args
-        V = fem_loaded.X.T
-        for param in mode_params:
-            param.draw()
+        global mode_params, mode_names, index_selected, mode_selected, fem_loaded
+        V = fem_loaded.X.T.copy()
+
+        widthleft = 0.3
+        widthright = 1 - widthleft
+        # Child 1: no border, enable horizontal scrollbar
+        imgui.BeginChild("ChildL", (imgui.GetWindowWidth() * widthleft, 1000), imgui.ImGuiWindowFlags_HorizontalScrollbar)
+    
+        for i, param in enumerate(mode_params):
+            if imgui.Button(mode_names[i]):
+                mode_selected = mode_names[i]
+                index_selected = i
             u = param.amplitude*np.sin(w[param.mode])*Veigs[:, param.mode]
             V += u.reshape(fem_loaded.X.shape[1], 3)
+        imgui.EndChild()
+        
+
+        imgui.SameLine()
+
+        imgui.BeginChild("ChildR", (imgui.GetWindowWidth() * widthright, 1000), imgui.ImGuiWindowFlags_HorizontalScrollbar)
+        mode_params[index_selected].draw()
+        imgui.EndChild()
+
+            
 
         # t = time.time() - t0
         # V = fem_loaded.X.T + signal(w[mode], Veigs[:, mode],
         #                       t, c, k).reshape(fem_loaded.X.shape[1], 3)
         vm.update_vertex_positions(V)
+        if imgui.Button("Dump"):
+            fem_loaded.x = V.T.copy()
+            archive = pbat.io.Archive("dump.h5", flags=pbat.io.AccessMode.Overwrite)
+            fem_loaded.serialize(archive["fem"])
 
     ps.set_user_callback(callback)
     ps.show()
