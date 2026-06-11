@@ -12,6 +12,7 @@ import warp.optim.linear
 import cupy as cp
 
 from pbatoolkit import pbat
+
 from ..common.reduce import Reduce
 from ..contact.mesh.cd import ContactDetection
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
@@ -48,21 +49,22 @@ class ParamsData:
     ls_c: wp.float32  # Armijo slope constant
     ls_alpha: wp.float32  # initial step size
 
-    # Vertex-element adjacency (for elastic gradient / Hessian)
-    # GVGp: wp.array[wp.int32]
-    # GVGadj: wp.array[wp.int32]
-
     # BSR Hessian 3x3 block triplets
     Hrows: wp.array[wp.int32]
     Hcols: wp.array[wp.int32]
     Hvals: wp.array[wp.mat33f]
+
+    # Energy evaluations
+    f_obj_partial: wp.array[
+        wp.float32
+    ]  # (# nodes + # elems + # vv contacts + # ve contacts + # vf contacts + # ee contacts, ) partial energy contributions
 
 
 @wp.kernel
 def _energy_elastic(
     fem: FemElastoDynamicsData,  # type: ignore
     h2: wp.float32,
-    energy: wp.array[wp.float32],
+    f_obj_partial: wp.array[wp.float32],
 ):
     e = wp.tid()
     nodes = fem.E[e]
@@ -77,25 +79,19 @@ def _energy_elastic(
             xe[d, j] = xj[d]
     F = xe @ GP
     Ue = h2 * wge * snh_eval(F, mu, llambda)
-    # TODO: Add into a global array
-    # of size (# elems,) without atomics, then
-    # compute a global reduction using our Reduce
-    # type after this kernel has been invoked.
-    wp.atomic_add(energy, 0, Ue)
+    f_obj_partial[e] = Ue  # type: ignore
 
 
 @wp.kernel
 def _energy_inertial(
     fem: FemElastoDynamicsData,  # type: ignore
-    energy: wp.array[wp.float32],
+    f_obj_partial: wp.array[wp.float32],
 ):
     i = wp.tid()
-    if is_dirichlet_node(fem.dmask, i):
+    if is_dirichlet_node(fem.dmask, i):  # type: ignore
         return
     diff = fem.x[i] - fem.xtilde[i]
-    # TODO: The inertial energy can be computed using a single
-    # transform+reduce kernel using cuda.compute and our Reduce type.
-    wp.atomic_add(energy, 0, wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff))
+    f_obj_partial[i] = wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff)  # type: ignore
 
 
 @wp.kernel
@@ -104,47 +100,47 @@ def _energy_vv(
     xt: wp.array[wp.vec3f],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
-    energy: wp.array[wp.float32],
+    f_obj_partial: wp.array[wp.float32],
 ):
     c = wp.tid()
-    if wp.uint64(c) >= contact.contacts.vv.prefix[n_u]:
+    if wp.uint64(c) >= contact.contacts.vv.prefix[n_u]:  # type: ignore
         return
     u, v = contact.contacts.vv.u[c], contact.contacts.vv.v[c]
-    n, t, bvec = (
+    n, t, b = (
         contact.contacts.vv_bases.n[c],
         contact.contacts.vv_bases.t[c],
         contact.contacts.vv_bases.b[c],
     )
     i, j = contact.meshes.V[u], contact.meshes.V[v]
     xi, xj, xti, xtj = x[i], x[j], xt[i], xt[j]
-    c_n = wp.dot(xi - xj, n) - contact.dmin - contact.cvv.s[c]
+    c_n = wp.dot(xi - xj, n) - contact.dmin - contact.cvv.s[c]  # type: ignore
     du = (xi - xti) - (xj - xtj)
-    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, bvec))
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     E = contact.cvv.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n
+        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvv.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)
-        - wp.dot(contact.cvv.lambda_f[c], c_f)
+        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
+        - wp.dot(contact.cvv.lambda_f[c], c_f)  # type: ignore
     )
-    wp.atomic_add(energy, 0, E)
+    f_obj_partial[c] = E  # type: ignore
 
 
 @wp.kernel
 def _energy_ve(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
-    contact: ContactDynamicsData,
+    contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
-    energy: wp.array[wp.float32],
+    f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
-    if wp.uint64(c) >= contact.contacts.ve.prefix[n_u]:
+    if wp.uint64(c) >= contact.contacts.ve.prefix[n_u]:  # type: ignore
         return
     vi = contact.contacts.ve.u[c]
     he = contact.contacts.ve.v[c]
-    n, t, bvec = (
+    n, t, b = (
         contact.contacts.ve_bases.n[c],
         contact.contacts.ve_bases.t[c],
         contact.contacts.ve_bases.b[c],
@@ -159,32 +155,32 @@ def _energy_ve(
     xtcp2 = b0 * xt[ea] + b1 * xt[eb]
     c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cve.s[c]
     du = (xi - xti) - (xcp2 - xtcp2)
-    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, bvec))
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     E = contact.cve.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n
+        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cve.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)
-        - wp.dot(contact.cve.lambda_f[c], c_f)
+        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
+        - wp.dot(contact.cve.lambda_f[c], c_f)  # type: ignore
     )
-    wp.atomic_add(energy, 0, E)
+    f_obj_partial[c] = E  # type: ignore
 
 
 @wp.kernel
 def _energy_vf(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
-    contact: ContactDynamicsData,
+    contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
-    energy: wp.array[wp.float32],
+    f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
-    if wp.uint64(c) >= contact.contacts.vf.prefix[n_u]:
+    if wp.uint64(c) >= contact.contacts.vf.prefix[n_u]:  # type: ignore
         return
     vi = contact.contacts.vf.u[c]
     f = contact.contacts.vf.v[c]
-    n, t, bvec = (
+    n, t, b = (
         contact.contacts.vf_bases.n[c],
         contact.contacts.vf_bases.t[c],
         contact.contacts.vf_bases.b[c],
@@ -199,32 +195,32 @@ def _energy_vf(
     xtcp2 = b0 * xt[finds[0]] + b1 * xt[finds[1]] + b2 * xt[finds[2]]
     c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cvf.s[c]
     du = (xi - xti) - (xcp2 - xtcp2)
-    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, bvec))
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     E = contact.cvf.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n
+        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvf.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)
-        - wp.dot(contact.cvf.lambda_f[c], c_f)
+        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
+        - wp.dot(contact.cvf.lambda_f[c], c_f)  # type: ignore
     )
-    wp.atomic_add(energy, 0, E)
+    f_obj_partial[c] = E  # type: ignore
 
 
 @wp.kernel
 def _energy_ee(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
-    contact: ContactDynamicsData,
+    contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
-    energy: wp.array[wp.float32],
+    f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
-    if wp.uint64(c) >= contact.contacts.ee.prefix[n_u]:
+    if wp.uint64(c) >= contact.contacts.ee.prefix[n_u]:  # type: ignore
         return
     he_u = contact.contacts.ee.u[c]
     he_v = contact.contacts.ee.v[c]
-    n, t, bvec = (
+    n, t, b = (
         contact.contacts.ee_bases.n[c],
         contact.contacts.ee_bases.t[c],
         contact.contacts.ee_bases.b[c],
@@ -242,16 +238,16 @@ def _energy_ee(
     xtcp2 = b2 * xt[ic] + b3 * xt[id_]
     c_n = wp.dot(xcp1 - xcp2, n) - contact.dmin - contact.cee.s[c]
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)
-    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, bvec))
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     E = contact.cee.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n
+        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cee.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)
-        - wp.dot(contact.cee.lambda_f[c], c_f)
+        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
+        - wp.dot(contact.cee.lambda_f[c], c_f)  # type: ignore
     )
-    wp.atomic_add(energy, 0, E)
+    f_obj_partial[c] = E  # type: ignore
 
 
 @wp.kernel
@@ -285,17 +281,49 @@ def _compute_hessian_triplets(
                 xe[d, j] = xj[d]
         F = xe @ GP
         HF = snh_hess(F, mu, llambda)
-        He = hessian_wrt_dofs(HF, GP)
-        for ii in range(4):
-            for jj in range(4):
-                idx = offset + e * 16 + ii * 4 + jj
-                if is_dirichlet_node(fem.dmask, nodes[ii]) or is_dirichlet_node(
-                    fem.dmask, nodes[jj]
-                ):
-                    params.Hvals[idx] = wp.mat33f()
-                else:
-                    Heij = He[(ii) * 3 : (ii + 1) * 3, (jj) * 3 : (jj + 1) * 3]
-                    params.Hvals[idx] = h2 * wge * Heij
+        He = h2 * wge * hessian_wrt_dofs(HF, GP)
+        base = offset + e * 16
+        d0 = is_dirichlet_node(fem.dmask, nodes[0])
+        d1 = is_dirichlet_node(fem.dmask, nodes[1])
+        d2 = is_dirichlet_node(fem.dmask, nodes[2])
+        d3 = is_dirichlet_node(fem.dmask, nodes[3])
+
+        # First block row
+        if (not d0) and (not d0):
+            params.Hvals[base + 0] = He[0:3, 0:3]
+        if (not d0) and (not d1):
+            params.Hvals[base + 1] = He[0:3, 3:6]
+        if (not d0) and (not d2):
+            params.Hvals[base + 2] = He[0:3, 6:9]
+        if (not d0) and (not d3):
+            params.Hvals[base + 3] = He[0:3, 9:12]
+        # Second block row
+        if (not d1) and (not d0):
+            params.Hvals[base + 4] = He[3:6, 0:3]
+        if (not d1) and (not d1):
+            params.Hvals[base + 5] = He[3:6, 3:6]
+        if (not d1) and (not d2):
+            params.Hvals[base + 6] = He[3:6, 6:9]
+        if (not d1) and (not d3):
+            params.Hvals[base + 7] = He[3:6, 9:12]
+        # Third block row
+        if (not d2) and (not d0):
+            params.Hvals[base + 8] = He[6:9, 0:3]
+        if (not d2) and (not d1):
+            params.Hvals[base + 9] = He[6:9, 3:6]
+        if (not d2) and (not d2):
+            params.Hvals[base + 10] = He[6:9, 6:9]
+        if (not d2) and (not d3):
+            params.Hvals[base + 11] = He[6:9, 9:12]
+        # Fourth block row
+        if (not d3) and (not d0):
+            params.Hvals[base + 12] = He[9:12, 0:3]
+        if (not d3) and (not d1):
+            params.Hvals[base + 13] = He[9:12, 3:6]
+        if (not d3) and (not d2):
+            params.Hvals[base + 14] = He[9:12, 6:9]
+        if (not d3) and (not d3):
+            params.Hvals[base + 15] = He[9:12, 9:12]
 
 
 @wp.kernel
@@ -399,8 +427,6 @@ class Params:
         self._data.Hrows = wp.zeros(n_max_triplets, dtype=wp.int32)
         self._data.Hcols = wp.zeros(n_max_triplets, dtype=wp.int32)
         self._data.Hvals = wp.zeros(n_max_triplets, dtype=wp.mat33f)
-        self._data.GVGp = wp.zeros(1, dtype=wp.int32)
-        self._data.GVGadj = wp.zeros(1, dtype=wp.int32)
         # Create template hessian triplets
         wp.launch(
             kernel=_initialize_hessian_triplets,
@@ -416,25 +442,49 @@ class Params:
             prune_numerical_zeros=False,
         )
         self._g = wp.zeros(n_nodes, dtype=wp.vec3f)
-        self._dx = wp.zeros(n_nodes, dtype=wp.vec3f)
-        self._energy_buf = wp.zeros(1, dtype=wp.float32)
+        self._ndx = wp.zeros(n_nodes, dtype=wp.vec3f)
+        # Energy partial-contributions buffer: one slot per inertial node, elastic element,
+        # and each contact pair type.
+        f_obj_partial_counts = [
+            n_nodes,
+            n_elems,
+            vv_capacity,
+            ve_capacity,
+            vf_capacity,
+            ee_capacity,
+        ]
+        self._energy_offsets = [0] * len(f_obj_partial_counts)
+        for i in range(1, len(f_obj_partial_counts)):
+            self._energy_offsets[i] = (
+                self._energy_offsets[i - 1] + f_obj_partial_counts[i - 1]
+            )
+        n_energy_items = self._energy_offsets[-1] + f_obj_partial_counts[-1]
+        self._data.f_obj_partial = wp.zeros(n_energy_items, dtype=wp.float32)
+        self._energy_scalar = wp.zeros(1, dtype=wp.float32)
+        f_partial_cp = cp.asarray(self._data.f_obj_partial)
+        self._energy_reduce = Reduce(
+            d_in=f_partial_cp,
+            d_out=cp.asarray(self._energy_scalar),
+            num_items=n_energy_items,
+            op=cuda.compute.OpKind.PLUS,
+        )
         self._gradient = Gradient(fem, contact, self._g)
         g_flat = cp.asarray(self._g).ravel()
-        dx_flat = cp.asarray(self._dx).ravel()
+        ndx_flat = cp.asarray(self._ndx).ravel()
         self._gnorm2 = wp.zeros(1, dtype=wp.float32)
-        self._slope_buf = wp.zeros(1, dtype=wp.float32)
+        self._nslope = wp.zeros(1, dtype=wp.float32)
         self._gnorm2_reduce = Reduce(
             d_in=cuda.compute.TransformIterator(g_flat, lambda x: x * x),
             d_out=cp.asarray(self._gnorm2),
             num_items=3 * n_nodes,
             op=cuda.compute.OpKind.PLUS,
         )
-        self._slope_reduce = Reduce(
+        self._nslope_reduce = Reduce(
             d_in=cuda.compute.TransformIterator(
-                cuda.compute.ZipIterator(g_flat, dx_flat),
+                cuda.compute.ZipIterator(g_flat, ndx_flat),
                 lambda x: x[0] * x[1],
             ),
-            d_out=cp.asarray(self._slope_buf),
+            d_out=cp.asarray(self._nslope),
             num_items=3 * n_nodes,
             op=cuda.compute.OpKind.PLUS,
         )
@@ -463,23 +513,40 @@ def _compute_energy(
     params: Params,
     h2: wp.float32,
 ) -> float:
-    params._energy_buf.zero_()
+    main_stream = wp.get_stream()
+    params._data.f_obj_partial.zero_()
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
-    cd = contact._data
+    cd = contact.data
     x, xt = fem.data.x, fem.data.xt
-    wp.launch(_energy_elastic, dim=n_elems, inputs=[fem.data, h2, params._energy_buf])
-    wp.launch(_energy_inertial, dim=n_nodes, inputs=[fem.data, params._energy_buf])
-    for kernel, cs in [
-        (_energy_vv, contact.cvv),
-        (_energy_ve, contact.cve),
-        (_energy_vf, contact.cvf),
-        (_energy_ee, contact.cee),
-    ]:
-        wp.launch(
-            kernel, dim=cs.capacity, inputs=[x, xt, cd, cs.n_u, params._energy_buf]
-        )
-    return float(params._energy_buf.numpy()[0])
+    offsets = params._energy_offsets
+    f_cp = cp.asarray(params._data.f_obj_partial)
+    f_inertial = wp.array(
+        data=f_cp[offsets[0] : offsets[1]], copy=False, dtype=wp.float32
+    )
+    f_elastic = wp.array(
+        data=f_cp[offsets[1] : offsets[2]], copy=False, dtype=wp.float32
+    )
+    f_vv = wp.array(data=f_cp[offsets[2] : offsets[3]], copy=False, dtype=wp.float32)
+    f_ve = wp.array(data=f_cp[offsets[3] : offsets[4]], copy=False, dtype=wp.float32)
+    f_vf = wp.array(data=f_cp[offsets[4] : offsets[5]], copy=False, dtype=wp.float32)
+    f_ee = wp.array(data=f_cp[offsets[5] :], copy=False, dtype=wp.float32)
+    wp.launch(_energy_inertial, dim=n_nodes, inputs=[fem.data, f_inertial])
+    wp.launch(_energy_elastic, dim=n_elems, inputs=[fem.data, h2, f_elastic])
+    wp.launch(
+        _energy_vv, dim=contact.cvv.capacity, inputs=[x, xt, cd, contact.cvv.n_u, f_vv]
+    )
+    wp.launch(
+        _energy_ve, dim=contact.cve.capacity, inputs=[x, xt, cd, contact.cve.n_u, f_ve]
+    )
+    wp.launch(
+        _energy_vf, dim=contact.cvf.capacity, inputs=[x, xt, cd, contact.cvf.n_u, f_vf]
+    )
+    wp.launch(
+        _energy_ee, dim=contact.cee.capacity, inputs=[x, xt, cd, contact.cee.n_u, f_ee]
+    )
+    params._energy_reduce(main_stream)
+    return float(params._energy_scalar.numpy()[0])
 
 
 def check_convergence(
@@ -487,8 +554,8 @@ def check_convergence(
     contact: ContactDynamics,
     params: Params,
 ) -> bool:
-    params._gradient.compute()
     main_stream = wp.get_stream()
+    params._gradient.compute(main_stream)
     params._gnorm2_reduce(main_stream)
     return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
 
@@ -499,7 +566,8 @@ def prepare_subproblem(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    contact.adapt_penalty_parameters()
+    # TODO: Support penalty adaptation?
+    pass
 
 
 def solve_subproblem(
@@ -507,16 +575,18 @@ def solve_subproblem(
     contact: ContactDynamics,
     params: Params,
 ) -> None:
+    main_stream = wp.get_stream()
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
-    h2 = fem.bdf.beta_tilde**2
-    params._gradient.compute()
-    main_stream = wp.get_stream()
+    h2 = wp.float32(fem.bdf.beta_tilde**2)  # type: ignore
+    params._gradient.compute(main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
         params._gnorm2_reduce(main_stream)
-        if float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2):
+        gnorm2 = float(params._gnorm2.numpy()[0])
+        if gnorm2 <= float(params.data.gtol2):
             break
         # TODO: Assemble FEM + contact Hessian
+        params._data.Hvals.zero_()
         wp.launch(
             _compute_hessian_triplets,
             dim=max(n_nodes, n_elems),
@@ -533,40 +603,42 @@ def solve_subproblem(
         )
         M = warp.optim.linear.preconditioner(params._H, "diag")
         # Solve H (-dx) = g
-        params._dx.zero_()
+        params._ndx.zero_()
         final_iteration, residual_norm, absolute_tolerance = warp.optim.linear.cg(
             params._H,
             params._g,
-            x=params._dx,
+            x=params._ndx,
             tol=params.data.rel_eps_lin,
             atol=params.data.abs_eps_lin,
             maxiter=params.data.n_lin_max_iters,
             M=M,
-            use_cuda_graph=True,
+            use_cuda_graph=False,  # True
         )
-        # Check descent direction: slope = dot(g, dx) should be < 0
-        params._slope_reduce(main_stream)
-        if float(params._slope_buf.numpy()[0]) >= 0.0:
-            break
+        # Check descent direction slope=dot(g, dx) < 0.
+        # Since we compute ndx=-dx, we check -dot(g, ndx) < 0.
+        params._nslope_reduce(main_stream)
+        slope = -params._nslope.numpy()[0]
+        wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, -1.0])
+        # if slope >= 0.0:
+        #     break
         # Armijo backtracking line search
-        E0 = _compute_energy(fem, contact, params, h2)
-        alpha = float(params.data.ls_alpha)
-        x_backup = wp.clone(fem.data.x)
-        accepted = False
-        for _ in range(int(params.data.ls_max_iters)):
-            wp.copy(fem.data.x, x_backup)
-            wp.launch(
-                _axpy, dim=n_nodes, inputs=[fem.data.x, params._dx, wp.float32(alpha)]
-            )
-            E_trial = _compute_energy(fem, contact, params, h2)
-            if E_trial <= E0 + float(params.data.ls_c) * alpha * slope:
-                accepted = True
-                break
-            alpha *= float(params.data.ls_tau)
-        if not accepted:
-            wp.copy(fem.data.x, x_backup)
-            break
-        params._gradient.compute()
+        # E0 = _compute_energy(fem, contact, params, h2)
+        # alpha = float(params.data.ls_alpha)
+        # c = float(params.data.ls_c)
+        # x_backup = wp.clone(fem.data.x)
+        # accepted = False
+        # for _ in range(int(params.data.ls_max_iters)):
+        #     # wp.copy(fem.data.x, x_backup)
+        #     wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, alpha])
+        #     E_trial = _compute_energy(fem, contact, params, h2)
+        #     if E_trial <= E0 + c * alpha * slope:
+        #         accepted = True
+        #         break
+        #     alpha *= float(params.data.ls_tau)
+        # if not accepted:
+        #     wp.copy(fem.data.x, x_backup)
+        #     break
+        params._gradient.compute(main_stream)
 
 
 def finalize_subproblem(

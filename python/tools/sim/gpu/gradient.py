@@ -28,12 +28,26 @@ def _elastic_gradient(
             xe[d, j] = xj[d]
     F = xe @ GP
     gF = snh_grad(F, mu, llambda)
-    ge = gradient_wrt_dofs(gF, GP)
-    for ilocal in range(4):
-        node = nodes[ilocal]
-        if not is_dirichlet_node(fem.dmask, node):
-            gi = (h2 * wge) * ge[(ilocal) * 3 : (ilocal + 1) * 3]
-            wp.atomic_add(g, node, gi)
+    ge = h2 * wge * gradient_wrt_dofs(gF, GP)
+    node0 = nodes[0]
+    if not is_dirichlet_node(fem.dmask, node0):
+        gi0 = ge[0:3]
+        wp.atomic_add(g, node0, gi0)
+
+    node1 = nodes[1]
+    if not is_dirichlet_node(fem.dmask, node1):
+        gi1 = ge[3:6]
+        wp.atomic_add(g, node1, gi1)
+
+    node2 = nodes[2]
+    if not is_dirichlet_node(fem.dmask, node2):
+        gi2 = ge[6:9]
+        wp.atomic_add(g, node2, gi2)
+
+    node3 = nodes[3]
+    if not is_dirichlet_node(fem.dmask, node3):
+        gi3 = ge[9:12]
+        wp.atomic_add(g, node3, gi3)
 
 
 @wp.kernel
@@ -242,7 +256,7 @@ class Gradient:
             wp.Stream() for _ in range(6)
         ]  # elastic, inertial, vv, ve, vf, ee
 
-    def compute(self) -> None:
+    def compute(self, main_stream: wp.Stream) -> None:
         self._g.zero_()
         fem = self._fem
         contact = self._contact
@@ -254,7 +268,6 @@ class Gradient:
         x = fem.data.x
         xt = fem.data.xt
         dmask = fem.data.dmask
-        main_stream = wp.get_stream()
         for stream in self._streams:
             stream.wait_stream(main_stream)
         wp.launch(
