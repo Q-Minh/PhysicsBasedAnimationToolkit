@@ -88,7 +88,7 @@ def _energy_inertial(
     f_obj_partial: wp.array[wp.float32],
 ):
     i = wp.tid()
-    if False:  # is_dirichlet_node(fem.dmask, i):  # type: ignore
+    if is_dirichlet_node(fem.dmask, i):  # type: ignore
         return
     diff = fem.x[i] - fem.xtilde[i]
     f_obj_partial[i] = wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff)  # type: ignore
@@ -262,7 +262,7 @@ def _compute_hessian_triplets(
     identity = wp.identity(n=3, dtype=wp.float32)  # type: ignore
     if tid < n_nodes:
         i = tid
-        if False:  # is_dirichlet_node(fem.dmask, i):  # type: ignore
+        if is_dirichlet_node(fem.dmask, i):  # type: ignore
             params.Hvals[i] = identity
         else:
             params.Hvals[i] = fem.m[i] * identity
@@ -283,10 +283,10 @@ def _compute_hessian_triplets(
         HF = snh_hess(F, mu, llambda)
         He = h2 * wge * hessian_wrt_dofs(HF, GP)
         base = offset + e * 16
-        d0 = False # is_dirichlet_node(fem.dmask, nodes[0])
-        d1 = False # is_dirichlet_node(fem.dmask, nodes[1])
-        d2 = False # is_dirichlet_node(fem.dmask, nodes[2])
-        d3 = False # is_dirichlet_node(fem.dmask, nodes[3])
+        d0 = is_dirichlet_node(fem.dmask, nodes[0])
+        d1 = is_dirichlet_node(fem.dmask, nodes[1])
+        d2 = is_dirichlet_node(fem.dmask, nodes[2])
+        d3 = is_dirichlet_node(fem.dmask, nodes[3])
 
         # First block row
         if (not d0) and (not d0):
@@ -612,12 +612,13 @@ def solve_subproblem(
             atol=params.data.abs_eps_lin,
             maxiter=params.data.n_lin_max_iters,
             M=M,
-            use_cuda_graph=False, # True
+            use_cuda_graph=False,  # True
         )
         # Check descent direction slope=dot(g, dx) < 0.
         # Since we compute ndx=-dx, we check -dot(g, ndx) < 0.
         params._nslope_reduce(main_stream)
         slope = -params._nslope.numpy()[0]
+        wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, -1.0])
         # if slope >= 0.0:
         #     break
         # Armijo backtracking line search
