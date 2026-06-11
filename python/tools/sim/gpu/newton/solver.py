@@ -2,8 +2,7 @@
 Newton solver for FEM elasto-dynamics with contact (augmented Lagrangian).
 
 Outer loop mirrors ``gpu/vbd/solver.py``.  Newton-specific work lives in
-``prepare_subproblem`` and ``solve_subproblem``; everything else is identical
-to the VBD solver.
+``prepare_subproblem`` and ``solve_subproblem``
 """
 
 import cuda.compute
@@ -22,7 +21,7 @@ from ..contact.dynamics import (
     PenaltyAdaptivity,
 )
 from ..elasticity.snh import snh_eval, snh_hess
-from ..elasticity.chain import hessian_block_wrt_dofs
+from ..elasticity.chain import hessian_wrt_dofs
 from ..gradient import Gradient
 from ..contact import halfedges
 from .. import types
@@ -50,8 +49,8 @@ class ParamsData:
     ls_alpha: wp.float32  # initial step size
 
     # Vertex-element adjacency (for elastic gradient / Hessian)
-    GVGp: wp.array[wp.int32]
-    GVGadj: wp.array[wp.int32]
+    # GVGp: wp.array[wp.int32]
+    # GVGadj: wp.array[wp.int32]
 
     # BSR Hessian 3x3 block triplets
     Hrows: wp.array[wp.int32]
@@ -61,7 +60,7 @@ class ParamsData:
 
 @wp.kernel
 def _energy_elastic(
-    fem: FemElastoDynamicsData,
+    fem: FemElastoDynamicsData,  # type: ignore
     h2: wp.float32,
     energy: wp.array[wp.float32],
 ):
@@ -77,18 +76,25 @@ def _energy_elastic(
         for d in range(3):
             xe[d, j] = xj[d]
     F = xe @ GP
-    wp.atomic_add(energy, 0, h2 * wge * snh_eval(F, mu, llambda))
+    Ue = h2 * wge * snh_eval(F, mu, llambda)
+    # TODO: Add into a global array
+    # of size (# elems,) without atomics, then
+    # compute a global reduction using our Reduce
+    # type after this kernel has been invoked.
+    wp.atomic_add(energy, 0, Ue)
 
 
 @wp.kernel
 def _energy_inertial(
-    fem: FemElastoDynamicsData,
+    fem: FemElastoDynamicsData,  # type: ignore
     energy: wp.array[wp.float32],
 ):
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):
         return
     diff = fem.x[i] - fem.xtilde[i]
+    # TODO: The inertial energy can be computed using a single
+    # transform+reduce kernel using cuda.compute and our Reduce type.
     wp.atomic_add(energy, 0, wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff))
 
 
@@ -96,7 +102,7 @@ def _energy_inertial(
 def _energy_vv(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
-    contact: ContactDynamicsData,
+    contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
     energy: wp.array[wp.float32],
 ):
@@ -250,17 +256,17 @@ def _energy_ee(
 
 @wp.kernel
 def _compute_hessian_triplets(
-    fem: FemElastoDynamicsData,
+    fem: FemElastoDynamicsData,  # type: ignore
     h2: wp.float32,
-    params: ParamsData,
+    params: ParamsData,  # type: ignore
 ):
     tid = wp.tid()
     n_nodes = fem.x.shape[0]
     n_elems = fem.E.shape[0]
-    identity = wp.identity(n=3, dtype=wp.float32)
+    identity = wp.identity(n=3, dtype=wp.float32)  # type: ignore
     if tid < n_nodes:
         i = tid
-        if is_dirichlet_node(fem.dmask, i):
+        if is_dirichlet_node(fem.dmask, i):  # type: ignore
             params.Hvals[i] = identity
         else:
             params.Hvals[i] = fem.m[i] * identity
@@ -279,23 +285,17 @@ def _compute_hessian_triplets(
                 xe[d, j] = xj[d]
         F = xe @ GP
         HF = snh_hess(F, mu, llambda)
+        He = hessian_wrt_dofs(HF, GP)
         for ii in range(4):
             for jj in range(4):
                 idx = offset + e * 16 + ii * 4 + jj
                 if is_dirichlet_node(fem.dmask, nodes[ii]) or is_dirichlet_node(
                     fem.dmask, nodes[jj]
                 ):
-                    params.Hvals[idx] = wp.mat33f(wp.float32(0))
+                    params.Hvals[idx] = wp.mat33f()
                 else:
-                    params.Hvals[idx] = (
-                        h2 * wge * hessian_block_wrt_dofs(HF, GP, ii, jj)
-                    )
-
-
-@wp.kernel
-def _negate_array(a: wp.array[wp.vec3f], out: wp.array[wp.vec3f]):
-    i = wp.tid()
-    out[i] = -a[i]
+                    Heij = He[(ii) * 3 : (ii + 1) * 3, (jj) * 3 : (jj + 1) * 3]
+                    params.Hvals[idx] = h2 * wge * Heij
 
 
 @wp.kernel
@@ -534,7 +534,7 @@ def solve_subproblem(
         M = warp.optim.linear.preconditioner(params._H, "diag")
         # Solve H (-dx) = g
         params._dx.zero_()
-        warp.optim.linear.cg(
+        final_iteration, residual_norm, absolute_tolerance = warp.optim.linear.cg(
             params._H,
             params._g,
             x=params._dx,
@@ -663,3 +663,7 @@ class NewtonSolver:
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged
+
+    @property
+    def supports_graph_capture(self):
+        return False

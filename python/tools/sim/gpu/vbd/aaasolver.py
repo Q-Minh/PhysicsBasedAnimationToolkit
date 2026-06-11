@@ -285,3 +285,7 @@ class AaaVbdSolver:
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged
+
+    @property
+    def supports_graph_capture(self):
+        return True

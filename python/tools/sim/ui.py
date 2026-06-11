@@ -174,7 +174,9 @@ class SimulationState:
     def __init__(
         self,
         fem_cpu: pbat.sim.dynamics.FemElastoDynamics,
-        params_cpu: dict[SolverType, pbat.sim.algorithm.vbd.Params | pbat.sim.algorithm.newton.Params],
+        params_cpu: dict[
+            SolverType, pbat.sim.algorithm.vbd.Params | pbat.sim.algorithm.newton.Params
+        ],
     ):
         self.fem_cpu = fem_cpu
         self.params_cpu = params_cpu
@@ -196,7 +198,11 @@ class SimulationState:
 
         # Build GPU mirrors
         self.fem = gpu.elasticity.fem.FemElastoDynamics(fem_cpu)
-        self.params = {s: gpu.vbd.params.Params(p) for s, p in params_cpu.items() if s != SolverType.Newton}
+        self.params = {
+            s: gpu.vbd.params.Params(p)
+            for s, p in params_cpu.items()
+            if s != SolverType.Newton
+        }
         self.capture = None
 
         # Build collision geometry
@@ -269,24 +275,35 @@ class SimulationState:
         return detector
 
     def step(self):
-        if getattr(self, "capture", None) is None:
-            with wp.ScopedCapture() as capture:
-                for s in range(self.substeps):
-                    self.fem.setup_time_integration_optimization(self.init_strategy)
-                    self.solvers[self.solver].solve(
-                        self.fem, self.contact, self.detector, self.params[self.solver]
-                    )
-                    self.fem.step()
-            self.capture = capture
+        if self.solvers[self.solver].supports_graph_capture:
+            if getattr(self, "capture", None) is None:
+                with wp.ScopedCapture() as capture:
+                    for s in range(self.substeps):
+                        self.fem.setup_time_integration_optimization(self.init_strategy)
+                        self.solvers[self.solver].solve(
+                            self.fem,
+                            self.contact,
+                            self.detector,
+                            self.params[self.solver],
+                        )
+                        self.fem.step()
+                self.capture = capture
+            else:
+                # with wp.ScopedTimer(
+                #     "PBAT Step",
+                #     detailed=True,
+                #     use_nvtx=True,
+                #     synchronize=True,
+                #     cuda_filter=wp.TIMING_ALL,
+                # ):
+                wp.capture_launch(self.capture.graph)  # type: ignore
         else:
-            # with wp.ScopedTimer(
-            #     "PBAT Step",
-            #     detailed=True,
-            #     use_nvtx=True,
-            #     synchronize=True,
-            #     cuda_filter=wp.TIMING_ALL,
-            # ):
-            wp.capture_launch(self.capture.graph)  # type: ignore
+            for s in range(self.substeps):
+                self.fem.setup_time_integration_optimization(self.init_strategy)
+                self.solvers[self.solver].solve(
+                    self.fem, self.contact, self.detector, self.params[self.solver]
+                )
+                self.fem.step()
         self.t += 1
         wp.synchronize()
         self.contact_browser.update(
@@ -302,7 +319,11 @@ class SimulationState:
         self.fem_cpu.set_time_integration_scheme(sdt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
-        self.params = {s: gpu.vbd.params.Params(p) for s, p in self.params_cpu.items() if s != SolverType.Newton}
+        self.params = {
+            s: gpu.vbd.params.Params(p)
+            for s, p in self.params_cpu.items()
+            if s != SolverType.Newton
+        }
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
             self.multimesh, self.contact_storage_params
         )
@@ -403,26 +424,28 @@ def _deserialize_params(state: "SimulationState", f: h5py.File) -> None:
     if "Contact/ContactDynamics" in f:
         state.contact_params.deserialize(f["Contact/ContactDynamics"])
 
+
 def _serialize_simulation(state: SimulationState, ui_state: UIState):
     if ui_state.serialization_h5 is not None:
         x = state.fem.data.x.numpy()
         ui_state.serialization_h5.create_dataset(
             f"sim/{ui_state.screenshot_frame:08d}/x", data=x
         )
-        ui_state.serialization_time_since_flush += (
-            imgui.GetIO().DeltaTime
-        )
+        ui_state.serialization_time_since_flush += imgui.GetIO().DeltaTime
         if ui_state.serialization_time_since_flush >= 1.0:
             ui_state.serialization_h5.flush()
             ui_state.serialization_time_since_flush = 0.0
 
 
-def _import_parameters_from_file(path: str, state: SimulationState, ui_state: UIState, mesh_name: str):
+def _import_parameters_from_file(
+    path: str, state: SimulationState, ui_state: UIState, mesh_name: str
+):
     with h5py.File(path, "r") as f:
         _deserialize_params(state, f)
     state.reset()
     _update_mesh(state, mesh_name)
     ui_state.request_reset = True
+
 
 def make_callback(
     state: SimulationState, ui_state: UIState, mesh_name: str = "FEM Mesh"
@@ -466,7 +489,10 @@ def make_callback(
                         state.reset()
                         ui_state.request_reset = True
                     if imgui.TreeNode("Params"):
-                        draw_params(state.params_cpu[state.solver], SOLVER_SUB_PARAMS.get(state.solver))
+                        draw_params(
+                            state.params_cpu[state.solver],
+                            SOLVER_SUB_PARAMS.get(state.solver),
+                        )
                         imgui.TreePop()
                     imgui.TreePop()
 
@@ -532,7 +558,9 @@ def make_callback(
                         )
                         root.destroy()
                         if path:
-                            _import_parameters_from_file(path, state, ui_state, mesh_name)
+                            _import_parameters_from_file(
+                                path, state, ui_state, mesh_name
+                            )
                     imgui.TreePop()
 
                 # --- Serialization ---
@@ -569,16 +597,18 @@ def make_callback(
                 imgui.Separator()
 
                 # --- Screenshot ---
-                
-                #if ui_state.screenshot_after_step:
-                
+
+                # if ui_state.screenshot_after_step:
+
                 changed, ui_state.screenshot_fps = imgui.InputFloat(
                     "fps##screenshot", ui_state.screenshot_fps, format="%.1f"
                 )
                 if changed:
                     ui_state.screenshot_fps = max(0.1, ui_state.screenshot_fps)
                     if ui_state.serialization_h5 is not None:
-                        ui_state.serialization_h5.get("params").attrs["fps"] = ui_state.screenshot_fps
+                        ui_state.serialization_h5.get("params").attrs[
+                            "fps"
+                        ] = ui_state.screenshot_fps
 
                 _, ui_state.screenshot_after_step = imgui.Checkbox(
                     "Screenshot", ui_state.screenshot_after_step
@@ -607,21 +637,31 @@ def make_callback(
                 # --- Continuous simulation ---
                 request_step = state.simulate or imgui.Button("Step")
                 if request_step:
-                    if ui_state.screenshot_after_step or ui_state.serialization_h5 is not None:
+                    if (
+                        ui_state.screenshot_after_step
+                        or ui_state.serialization_h5 is not None
+                    ):
                         if state.t == 0:
                             if ui_state.screenshot_after_step:
-                                ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                                ps.screenshot(
+                                    "{:08d}.png".format(ui_state.screenshot_frame)
+                                )
                             if ui_state.serialization_h5 is not None:
                                 _serialize_simulation(state, ui_state)
                             ui_state.screenshot_frame += 1
 
                     state.step()
                     _update_mesh(state, mesh_name)
-                    
-                    if ui_state.screenshot_after_step or ui_state.serialization_h5 is not None:
+
+                    if (
+                        ui_state.screenshot_after_step
+                        or ui_state.serialization_h5 is not None
+                    ):
                         if _should_save(state.t, state.dt, ui_state.screenshot_fps):
                             if ui_state.screenshot_after_step:
-                                ps.screenshot("{:08d}.png".format(ui_state.screenshot_frame))
+                                ps.screenshot(
+                                    "{:08d}.png".format(ui_state.screenshot_frame)
+                                )
                             if ui_state.serialization_h5 is not None:
                                 _serialize_simulation(state, ui_state)
                             ui_state.screenshot_frame += 1
@@ -685,7 +725,9 @@ def main():
     wp.init()
     args = parse_args()
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
-    params_cpu = {s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]}
+    params_cpu = {
+        s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]
+    }
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
     ui_state = UIState()
@@ -699,7 +741,7 @@ def main():
     ps.set_ground_plane_height_factor(0.5)
     ps.set_program_name("Simulator")
     ps.init()
-    
+
     vm = ps.register_volume_mesh(mesh_name, fem_cpu.X.T, fem_cpu.E.T)
     vm.add_scalar_quantity(
         "mug", fem_cpu.lamegU[0, :], defined_on="cells", enabled=True, cmap="blues"
