@@ -250,11 +250,20 @@ def _energy_ee(
     f_obj_partial[c] = E  # type: ignore
 
 
+K_INERTIAL_TRIPLETS = wp.constant(0)
+K_ELASTIC_TRIPLETS = wp.constant(1)
+K_VV_TRIPLETS = wp.constant(2)
+K_VE_TRIPLETS = wp.constant(3)
+K_VF_TRIPLETS = wp.constant(4)
+K_EE_TRIPLETS = wp.constant(5)
+
+
 @wp.kernel
-def _compute_hessian_triplets(
+def _compute_dynamics_hessian_triplets(
     fem: FemElastoDynamicsData,  # type: ignore
     h2: wp.float32,
     params: ParamsData,  # type: ignore
+    offsets: wp.array[wp.int32],
 ):
     tid = wp.tid()
     n_nodes = fem.x.shape[0]
@@ -263,12 +272,11 @@ def _compute_hessian_triplets(
     if tid < n_nodes:
         i = tid
         if is_dirichlet_node(fem.dmask, i):  # type: ignore
-            params.Hvals[i] = identity
+            params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = identity
         else:
-            params.Hvals[i] = fem.m[i] * identity
+            params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = fem.m[i] * identity
     if tid < n_elems:
         e = tid
-        offset = n_nodes
         nodes = fem.E[e]
         wge = fem.wg[e]
         GP = fem.GNeg[e]
@@ -282,7 +290,7 @@ def _compute_hessian_triplets(
         F = xe @ GP
         HF = snh_hess(F, mu, llambda)
         He = h2 * wge * hessian_wrt_dofs(HF, GP)
-        base = offset + e * 16
+        base = offsets[K_ELASTIC_TRIPLETS] + e * 16
         d0 = is_dirichlet_node(fem.dmask, nodes[0])
         d1 = is_dirichlet_node(fem.dmask, nodes[1])
         d2 = is_dirichlet_node(fem.dmask, nodes[2])
@@ -324,6 +332,72 @@ def _compute_hessian_triplets(
             params.Hvals[base + 14] = He[9:12, 6:9]
         if (not d3) and (not d3):
             params.Hvals[base + 15] = He[9:12, 9:12]
+
+
+@wp.func
+def _barycentrically_unscaled_contact_hessian(
+    bases: ContactBasesData,  # type: ignore
+    gamma: wp.float32,
+    sigma_n: wp.float32,
+    sigma_f: wp.float32,
+):
+    n, t, b = bases.n[c], bases.t[c], bases.b[c]  # type: ignore
+    Hi = gamma * (
+        sigma_n * wp.outer(n, n) + sigma_f * (wp.outer(t, t) + wp.outer(b, b))  # type: ignore
+    )
+    return Hi
+
+
+@wp.kernel
+def _compute_vv_contact_hessian_triplets(
+    dmask: wp.array[wp.int32],
+    contact: MeshDynamicsData,  # type: ignore
+    n_u: wp.int32,
+    params: ParamsData,  # type: ignore
+    offsets: wp.array[wp.int32],
+):
+    c = wp.tid()
+    if wp.uint64(c) >= contact.contacts.vv.prefix[n_u]:  # type: ignore
+        return
+    u = contact.contacts.vv.u[c]
+    v = contact.contacts.vv.v[c]
+    i = contact.meshes.V[u]
+    j = contact.meshes.V[v]
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    Hvv_base = _barycentrically_unscaled_contact_hessian(
+        contact.contacts.vv_bases,
+        contact.cvv.gamma[c],
+        sigma_n,
+        sigma_f,
+    )
+    d0 = is_dirichlet_node(dmask, i)
+    d1 = is_dirichlet_node(dmask, j)
+    # Block row 0
+    if (not d0) and (not d0):
+        params.Hvals[offsets[K_VV_TRIPLETS] + 0] = Hvv_base
+    if (not d0) and (not d1):
+        params.Hvals[offsets[K_VV_TRIPLETS] + 1] = -Hvv_base
+    # Block row 1
+    if (not d1) and (not d0):
+        params.Hvals[offsets[K_VV_TRIPLETS] + 2] = -Hvv_base
+    if (not d1) and (not d1):
+        params.Hvals[offsets[K_VV_TRIPLETS] + 3] = Hvv_base
+
+
+@wp.kernel
+def _compute_ve_contact_hessian_triplets():
+    pass
+
+
+@wp.kernel
+def _compute_vf_contact_hessian_triplets():
+    pass
+
+
+@wp.kernel
+def _compute_ee_contact_hessian_triplets():
+    pass
 
 
 @wp.kernel
@@ -588,7 +662,7 @@ def solve_subproblem(
         # TODO: Assemble FEM + contact Hessian
         params._data.Hvals.zero_()
         wp.launch(
-            _compute_hessian_triplets,
+            _compute_dynamics_hessian_triplets,
             dim=max(n_nodes, n_elems),
             inputs=[fem.data, h2, params._data],
         )
