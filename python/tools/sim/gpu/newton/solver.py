@@ -716,23 +716,23 @@ def solve_subproblem(
         # Since we compute ndx=-dx, we check -dot(g, ndx) < 0.
         params._nslope_reduce(main_stream)
         slope = -params._nslope.numpy()[0]
-        wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, -1.0])
-        # if slope >= 0.0:
-        #     break
+        if slope >= 0.0:
+            break
         # Armijo backtracking line search
-        # E0 = _compute_energy(fem, contact, params, h2)
-        # alpha = float(params.data.ls_alpha)
-        # c = float(params.data.ls_c)
+        E0 = _compute_energy(fem, contact, params, h2)
+        alpha = float(params.data.ls_alpha)
+        wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, -alpha])
+        c = float(params.data.ls_c)
         # x_backup = wp.clone(fem.data.x)
-        # accepted = False
-        # for _ in range(int(params.data.ls_max_iters)):
-        #     # wp.copy(fem.data.x, x_backup)
-        #     wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, alpha])
-        #     E_trial = _compute_energy(fem, contact, params, h2)
-        #     if E_trial <= E0 + c * alpha * slope:
-        #         accepted = True
-        #         break
-        #     alpha *= float(params.data.ls_tau)
+        accepted = False
+        for _ in range(int(params.data.ls_max_iters)):
+            # wp.copy(fem.data.x, x_backup)
+            E_trial = _compute_energy(fem, contact, params, h2)
+            if E_trial <= E0 + c * alpha * slope:
+                accepted = True
+                break
+            alpha *= float(params.data.ls_tau)
+            wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, alpha])
         # if not accepted:
         #     wp.copy(fem.data.x, x_backup)
         #     break
