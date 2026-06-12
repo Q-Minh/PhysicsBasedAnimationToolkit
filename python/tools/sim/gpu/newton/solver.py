@@ -21,6 +21,7 @@ from ..contact.dynamics import (
     MeshDynamicsData as ContactDynamicsData,
     PenaltyAdaptivity,
 )
+from ..contact.mesh.pairs import ContactBasesData
 from ..elasticity.snh import snh_eval, snh_hess
 from ..elasticity.chain import hessian_wrt_dofs
 from ..gradient import Gradient
@@ -336,12 +337,13 @@ def _compute_dynamics_hessian_triplets(
 
 @wp.func
 def _barycentrically_unscaled_contact_hessian(
-    bases: ContactBasesData,  # type: ignore
+    n: wp.vec3f,
+    t: wp.vec3f,
+    b: wp.vec3f,
     gamma: wp.float32,
     sigma_n: wp.float32,
     sigma_f: wp.float32,
 ):
-    n, t, b = bases.n[c], bases.t[c], bases.b[c]  # type: ignore
     Hi = gamma * (
         sigma_n * wp.outer(n, n) + sigma_f * (wp.outer(t, t) + wp.outer(b, b))  # type: ignore
     )
@@ -351,7 +353,7 @@ def _barycentrically_unscaled_contact_hessian(
 @wp.kernel
 def _compute_vv_contact_hessian_triplets(
     dmask: wp.array[wp.int32],
-    contact: MeshDynamicsData,  # type: ignore
+    contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
     params: ParamsData,  # type: ignore
     offsets: wp.array[wp.int32],
@@ -365,8 +367,11 @@ def _compute_vv_contact_hessian_triplets(
     j = contact.meshes.V[v]
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
+    bases = contact.contacts.vv_bases
     Hvv_base = _barycentrically_unscaled_contact_hessian(
-        contact.contacts.vv_bases,
+        bases.n[c],
+        bases.t[c],
+        bases.b[c],
         contact.cvv.gamma[c],
         sigma_n,
         sigma_f,
@@ -542,6 +547,25 @@ class Params:
             num_items=n_energy_items,
             op=cuda.compute.OpKind.PLUS,
         )
+        # Hessian triplet offsets
+        self._hessian_triplet_counts = [
+            n_nodes,
+            n_elems * (4**2),
+            vv_capacity * (2**2),
+            ve_capacity * (3**2),
+            vf_capacity * (4**2),
+            ee_capacity * (4**2),
+        ]
+        self._hessian_triplet_offsets = [0] * len(self._hessian_triplet_counts)
+        for i in range(1, len(self._hessian_triplet_offsets)):
+            self._hessian_triplet_offsets[i] = (
+                self._hessian_triplet_offsets[i - 1]
+                + self._hessian_triplet_counts[i - 1]
+            )
+        self._hessian_triplet_offsets = wp.array(
+            self._hessian_triplet_offsets, dtype=wp.int32
+        )
+        # Gradient + line search
         self._gradient = Gradient(fem, contact, self._g)
         g_flat = cp.asarray(self._g).ravel()
         ndx_flat = cp.asarray(self._ndx).ravel()
@@ -664,7 +688,7 @@ def solve_subproblem(
         wp.launch(
             _compute_dynamics_hessian_triplets,
             dim=max(n_nodes, n_elems),
-            inputs=[fem.data, h2, params._data],
+            inputs=[fem.data, h2, params._data, params._hessian_triplet_offsets],
         )
         warp.sparse.bsr_set_from_triplets(
             dest=params._H,
