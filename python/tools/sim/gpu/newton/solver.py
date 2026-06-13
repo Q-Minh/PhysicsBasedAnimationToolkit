@@ -232,11 +232,11 @@ def _energy_ee(
     ia = halfedges.incoming_vertex(contact.meshes.F, he_u)
     ib = halfedges.outgoing_vertex(contact.meshes.F, he_u)
     ic = halfedges.incoming_vertex(contact.meshes.F, he_v)
-    id_ = halfedges.outgoing_vertex(contact.meshes.F, he_v)
+    id = halfedges.outgoing_vertex(contact.meshes.F, he_v)
     xcp1 = b0 * x[ia] + b1 * x[ib]
     xtcp1 = b0 * xt[ia] + b1 * xt[ib]
-    xcp2 = b2 * x[ic] + b3 * x[id_]
-    xtcp2 = b2 * xt[ic] + b3 * xt[id_]
+    xcp2 = b2 * x[ic] + b3 * x[id]
+    xtcp2 = b2 * xt[ic] + b3 * xt[id]
     c_n = wp.dot(xcp1 - xcp2, n) - contact.dmin - contact.cee.s[c]
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
@@ -368,11 +368,13 @@ def _compute_vv_contact_hessian_triplets(
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     bases = contact.contacts.vv_bases
+    n, t, b = bases.n[c], bases.t[c], bases.b[c]
+    gamma = contact.cvv.gamma[c]
     Hvv_base = _barycentrically_unscaled_contact_hessian(
-        bases.n[c],
-        bases.t[c],
-        bases.b[c],
-        contact.cvv.gamma[c],
+        n,
+        t,
+        b,
+        gamma,
         sigma_n,
         sigma_f,
     )
@@ -380,29 +382,319 @@ def _compute_vv_contact_hessian_triplets(
     d1 = is_dirichlet_node(dmask, j)
     # Block row 0
     if (not d0) and (not d0):
+        params.Hrows[offsets[K_VV_TRIPLETS] + 0] = i
+        params.Hcols[offsets[K_VV_TRIPLETS] + 0] = i
         params.Hvals[offsets[K_VV_TRIPLETS] + 0] = Hvv_base
     if (not d0) and (not d1):
+        params.Hrows[offsets[K_VV_TRIPLETS] + 1] = i
+        params.Hcols[offsets[K_VV_TRIPLETS] + 1] = j
         params.Hvals[offsets[K_VV_TRIPLETS] + 1] = -Hvv_base
     # Block row 1
     if (not d1) and (not d0):
+        params.Hrows[offsets[K_VV_TRIPLETS] + 2] = j
+        params.Hcols[offsets[K_VV_TRIPLETS] + 2] = i
         params.Hvals[offsets[K_VV_TRIPLETS] + 2] = -Hvv_base
     if (not d1) and (not d1):
+        params.Hrows[offsets[K_VV_TRIPLETS] + 3] = j
+        params.Hcols[offsets[K_VV_TRIPLETS] + 3] = j
         params.Hvals[offsets[K_VV_TRIPLETS] + 3] = Hvv_base
 
 
 @wp.kernel
-def _compute_ve_contact_hessian_triplets():
-    pass
+def _compute_ve_contact_hessian_triplets(
+    dmask: wp.array[wp.int32],
+    contact: ContactDynamicsData,  # type: ignore
+    n_u: wp.int32,
+    params: ParamsData,  # type: ignore
+    offsets: wp.array[wp.int32],
+):
+    c = wp.tid()
+    if wp.uint64(c) >= contact.contacts.ve.prefix[n_u]:  # type: ignore
+        return
+    vi = contact.contacts.ve.u[c]
+    he = contact.contacts.ve.v[c]
+    n, t, b = (
+        contact.contacts.ve_bases.n[c],
+        contact.contacts.ve_bases.t[c],
+        contact.contacts.ve_bases.b[c],
+    )
+    gamma = contact.cve.gamma[c]
+    b1 = contact.contacts.ve_bary[c]
+    b0 = wp.float32(1) - b1
+    i = contact.meshes.V[vi]
+    ea = halfedges.incoming_vertex(contact.meshes.F, he)
+    eb = halfedges.outgoing_vertex(contact.meshes.F, he)
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    Hve_base = _barycentrically_unscaled_contact_hessian(
+        n,
+        t,
+        b,
+        gamma,
+        sigma_n,
+        sigma_f,
+    )
+    d0 = is_dirichlet_node(dmask, i)
+    d1 = is_dirichlet_node(dmask, ea)  # type: ignore
+    d2 = is_dirichlet_node(dmask, eb)  # type: ignore
+    # Block row 0
+    if (not d0) and (not d0):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 0] = i
+        params.Hcols[offsets[K_VE_TRIPLETS] + 0] = i
+        params.Hvals[offsets[K_VE_TRIPLETS] + 0] = Hve_base
+    if (not d0) and (not d1):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 1] = i
+        params.Hcols[offsets[K_VE_TRIPLETS] + 1] = ea
+        params.Hvals[offsets[K_VE_TRIPLETS] + 1] = -b0 * Hve_base
+    if (not d0) and (not d2):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 2] = i
+        params.Hcols[offsets[K_VE_TRIPLETS] + 2] = eb
+        params.Hvals[offsets[K_VE_TRIPLETS] + 2] = -b1 * Hve_base
+    # Block row 1
+    if (not d1) and (not d0):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 3] = ea
+        params.Hcols[offsets[K_VE_TRIPLETS] + 3] = i
+        params.Hvals[offsets[K_VE_TRIPLETS] + 3] = -b0 * Hve_base
+    if (not d1) and (not d1):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 4] = ea
+        params.Hcols[offsets[K_VE_TRIPLETS] + 4] = ea
+        params.Hvals[offsets[K_VE_TRIPLETS] + 4] = b0 * b0 * Hve_base
+    if (not d1) and (not d2):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 5] = ea
+        params.Hcols[offsets[K_VE_TRIPLETS] + 5] = eb
+        params.Hvals[offsets[K_VE_TRIPLETS] + 5] = b0 * b1 * Hve_base
+    # Block row 2
+    if (not d2) and (not d0):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 6] = eb
+        params.Hcols[offsets[K_VE_TRIPLETS] + 6] = i
+        params.Hvals[offsets[K_VE_TRIPLETS] + 6] = -b1 * Hve_base
+    if (not d2) and (not d1):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 7] = eb
+        params.Hcols[offsets[K_VE_TRIPLETS] + 7] = ea
+        params.Hvals[offsets[K_VE_TRIPLETS] + 7] = b1 * b0 * Hve_base
+    if (not d2) and (not d2):
+        params.Hrows[offsets[K_VE_TRIPLETS] + 8] = eb
+        params.Hcols[offsets[K_VE_TRIPLETS] + 8] = eb
+        params.Hvals[offsets[K_VE_TRIPLETS] + 8] = b1 * b1 * Hve_base
 
 
 @wp.kernel
-def _compute_vf_contact_hessian_triplets():
-    pass
+def _compute_vf_contact_hessian_triplets(
+    dmask: wp.array[wp.int32],
+    contact: ContactDynamicsData,  # type: ignore
+    n_u: wp.int32,
+    params: ParamsData,  # type: ignore
+    offsets: wp.array[wp.int32],
+):
+    c = wp.tid()
+    if wp.uint64(c) >= contact.contacts.vf.prefix[n_u]:  # type: ignore
+        return
+    vi = contact.contacts.vf.u[c]
+    f = contact.contacts.vf.v[c]
+    n, t, b = (
+        contact.contacts.vf_bases.n[c],
+        contact.contacts.vf_bases.t[c],
+        contact.contacts.vf_bases.b[c],
+    )
+    gamma = contact.cvf.gamma[c]
+    uv = contact.contacts.vf_bary[c]
+    b1, b2 = uv[0], uv[1]
+    b0 = wp.float32(1) - b1 - b2
+    i = contact.meshes.V[vi]
+    finds = contact.meshes.F[f]
+    j, k, l = finds[0], finds[1], finds[2]
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    Hvf_base = _barycentrically_unscaled_contact_hessian(
+        n,
+        t,
+        b,
+        gamma,
+        sigma_n,
+        sigma_f,
+    )
+    d0 = is_dirichlet_node(dmask, i)
+    d1 = is_dirichlet_node(dmask, j)
+    d2 = is_dirichlet_node(dmask, k)
+    d3 = is_dirichlet_node(dmask, l)
+    # Block row 0
+    if (not d0) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 0] = i
+        params.Hcols[offsets[K_VF_TRIPLETS] + 0] = i
+        params.Hvals[offsets[K_VF_TRIPLETS] + 0] = Hvf_base
+    if (not d0) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 1] = i
+        params.Hcols[offsets[K_VF_TRIPLETS] + 1] = j
+        params.Hvals[offsets[K_VF_TRIPLETS] + 1] = -b0 * Hvf_base
+    if (not d0) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 2] = i
+        params.Hcols[offsets[K_VF_TRIPLETS] + 2] = k
+        params.Hvals[offsets[K_VF_TRIPLETS] + 2] = -b1 * Hvf_base
+    if (not d0) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 3] = i
+        params.Hcols[offsets[K_VF_TRIPLETS] + 3] = l
+        params.Hvals[offsets[K_VF_TRIPLETS] + 3] = -b2 * Hvf_base
+    # Block row 1
+    if (not d1) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 4] = j
+        params.Hcols[offsets[K_VF_TRIPLETS] + 4] = i
+        params.Hvals[offsets[K_VF_TRIPLETS] + 4] = -b0 * Hvf_base
+    if (not d1) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 5] = j
+        params.Hcols[offsets[K_VF_TRIPLETS] + 5] = j
+        params.Hvals[offsets[K_VF_TRIPLETS] + 5] = b0 * b0 * Hvf_base
+    if (not d1) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 6] = j
+        params.Hcols[offsets[K_VF_TRIPLETS] + 6] = k
+        params.Hvals[offsets[K_VF_TRIPLETS] + 6] = b0 * b1 * Hvf_base
+    if (not d1) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 7] = j
+        params.Hcols[offsets[K_VF_TRIPLETS] + 7] = l
+        params.Hvals[offsets[K_VF_TRIPLETS] + 7] = b0 * b2 * Hvf_base
+    # Block row 2
+    if (not d2) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 8] = k
+        params.Hcols[offsets[K_VF_TRIPLETS] + 8] = i
+        params.Hvals[offsets[K_VF_TRIPLETS] + 8] = -b1 * Hvf_base
+    if (not d2) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 9] = k
+        params.Hcols[offsets[K_VF_TRIPLETS] + 9] = j
+        params.Hvals[offsets[K_VF_TRIPLETS] + 9] = b1 * b0 * Hvf_base
+    if (not d2) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 10] = k
+        params.Hcols[offsets[K_VF_TRIPLETS] + 10] = k
+        params.Hvals[offsets[K_VF_TRIPLETS] + 10] = b1 * b1 * Hvf_base
+    if (not d2) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 11] = k
+        params.Hcols[offsets[K_VF_TRIPLETS] + 11] = l
+        params.Hvals[offsets[K_VF_TRIPLETS] + 11] = b1 * b2 * Hvf_base
+    # Block row 3
+    if (not d3) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 12] = l
+        params.Hcols[offsets[K_VF_TRIPLETS] + 12] = i
+        params.Hvals[offsets[K_VF_TRIPLETS] + 12] = -b2 * Hvf_base
+    if (not d3) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 13] = l
+        params.Hcols[offsets[K_VF_TRIPLETS] + 13] = j
+        params.Hvals[offsets[K_VF_TRIPLETS] + 13] = b2 * b0 * Hvf_base
+    if (not d3) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 14] = l
+        params.Hcols[offsets[K_VF_TRIPLETS] + 14] = k
+        params.Hvals[offsets[K_VF_TRIPLETS] + 14] = b2 * b1 * Hvf_base
+    if (not d3) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 15] = l
+        params.Hcols[offsets[K_VF_TRIPLETS] + 15] = l
+        params.Hvals[offsets[K_VF_TRIPLETS] + 15] = b2 * b2 * Hvf_base
 
 
 @wp.kernel
-def _compute_ee_contact_hessian_triplets():
-    pass
+def _compute_ee_contact_hessian_triplets(
+    dmask: wp.array[wp.int32],
+    contact: ContactDynamicsData,  # type: ignore
+    n_u: wp.int32,
+    params: ParamsData,  # type: ignore
+    offsets: wp.array[wp.int32],
+):
+    c = wp.tid()
+    if wp.uint64(c) >= contact.contacts.ee.prefix[n_u]:  # type: ignore
+        return
+    he_u = contact.contacts.ee.u[c]
+    he_v = contact.contacts.ee.v[c]
+    n, t, b = (
+        contact.contacts.ee_bases.n[c],
+        contact.contacts.ee_bases.t[c],
+        contact.contacts.ee_bases.b[c],
+    )
+    st = contact.contacts.ee_bary[c]
+    b1, b3 = st[0], st[1]
+    b0, b2 = wp.float32(1) - b1, wp.float32(1) - b3
+    ia = halfedges.incoming_vertex(contact.meshes.F, he_u)
+    ib = halfedges.outgoing_vertex(contact.meshes.F, he_u)
+    ic = halfedges.incoming_vertex(contact.meshes.F, he_v)
+    id = halfedges.outgoing_vertex(contact.meshes.F, he_v)
+    gamma = contact.cvf.gamma[c]
+    sigma_n = contact.gamma_n * contact.sigma_n[0]
+    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    Hee_base = _barycentrically_unscaled_contact_hessian(
+        n,
+        t,
+        b,
+        gamma,
+        sigma_n,
+        sigma_f,
+    )
+    d0 = is_dirichlet_node(dmask, ia)  # type: ignore
+    d1 = is_dirichlet_node(dmask, ib)  # type: ignore
+    d2 = is_dirichlet_node(dmask, ic)  # type: ignore
+    d3 = is_dirichlet_node(dmask, id)  # type: ignore
+    # Block row 0
+    if (not d0) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 0] = ia
+        params.Hcols[offsets[K_VF_TRIPLETS] + 0] = ia
+        params.Hvals[offsets[K_VF_TRIPLETS] + 0] = b0 * b0 * Hee_base
+    if (not d0) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 1] = ia
+        params.Hcols[offsets[K_VF_TRIPLETS] + 1] = ib
+        params.Hvals[offsets[K_VF_TRIPLETS] + 1] = b0 * b1 * Hee_base
+    if (not d0) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 2] = ia
+        params.Hcols[offsets[K_VF_TRIPLETS] + 2] = ic
+        params.Hvals[offsets[K_VF_TRIPLETS] + 2] = -b0 * b2 * Hee_base
+    if (not d0) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 3] = ia
+        params.Hcols[offsets[K_VF_TRIPLETS] + 3] = id
+        params.Hvals[offsets[K_VF_TRIPLETS] + 3] = -b0 * b3 * Hee_base
+    # Block row 1
+    if (not d1) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 4] = ib
+        params.Hcols[offsets[K_VF_TRIPLETS] + 4] = ia
+        params.Hvals[offsets[K_VF_TRIPLETS] + 4] = b1 * b0 * Hee_base
+    if (not d1) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 5] = ib
+        params.Hcols[offsets[K_VF_TRIPLETS] + 5] = ib
+        params.Hvals[offsets[K_VF_TRIPLETS] + 5] = b1 * b1 * Hee_base
+    if (not d1) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 6] = ib
+        params.Hcols[offsets[K_VF_TRIPLETS] + 6] = ic
+        params.Hvals[offsets[K_VF_TRIPLETS] + 6] = -b1 * b2 * Hee_base
+    if (not d1) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 7] = ib
+        params.Hcols[offsets[K_VF_TRIPLETS] + 7] = id
+        params.Hvals[offsets[K_VF_TRIPLETS] + 7] = -b1 * b3 * Hee_base
+    # Block row 2
+    if (not d2) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 8] = ic
+        params.Hcols[offsets[K_VF_TRIPLETS] + 8] = ia
+        params.Hvals[offsets[K_VF_TRIPLETS] + 8] = -b2 * b0 * Hee_base
+    if (not d2) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 9] = ic
+        params.Hcols[offsets[K_VF_TRIPLETS] + 9] = ib
+        params.Hvals[offsets[K_VF_TRIPLETS] + 9] = -b2 * b1 * Hee_base
+    if (not d2) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 10] = ic
+        params.Hcols[offsets[K_VF_TRIPLETS] + 10] = ic
+        params.Hvals[offsets[K_VF_TRIPLETS] + 10] = b2 * b2 * Hee_base
+    if (not d2) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 11] = ic
+        params.Hcols[offsets[K_VF_TRIPLETS] + 11] = id
+        params.Hvals[offsets[K_VF_TRIPLETS] + 11] = b2 * b3 * Hee_base
+    # Block row 3
+    if (not d3) and (not d0):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 12] = id
+        params.Hcols[offsets[K_VF_TRIPLETS] + 12] = ia
+        params.Hvals[offsets[K_VF_TRIPLETS] + 12] = -b3 * b0 * Hee_base
+    if (not d3) and (not d1):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 13] = id
+        params.Hcols[offsets[K_VF_TRIPLETS] + 13] = ib
+        params.Hvals[offsets[K_VF_TRIPLETS] + 13] = -b3 * b1 * Hee_base
+    if (not d3) and (not d2):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 14] = id
+        params.Hcols[offsets[K_VF_TRIPLETS] + 14] = ic
+        params.Hvals[offsets[K_VF_TRIPLETS] + 14] = b3 * b2 * Hee_base
+    if (not d3) and (not d3):
+        params.Hrows[offsets[K_VF_TRIPLETS] + 15] = id
+        params.Hcols[offsets[K_VF_TRIPLETS] + 15] = id
+        params.Hvals[offsets[K_VF_TRIPLETS] + 15] = b3 * b3 * Hee_base
 
 
 @wp.kernel
