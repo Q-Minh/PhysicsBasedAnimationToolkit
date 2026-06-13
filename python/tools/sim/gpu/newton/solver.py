@@ -754,6 +754,7 @@ class Params:
     """
 
     _H: warp.sparse.BsrMatrix  # Assembled sparse Hessian
+    _streams: list[wp.Stream]
 
     def __init__(
         self,
@@ -775,6 +776,7 @@ class Params:
         self._data.ls_tau = line_search.tau if line_search else 0.5
         self._data.ls_c = line_search.c if line_search else 1e-4
         self._data.ls_alpha = line_search.alpha if line_search else 1.0
+        self._streams = [wp.Stream() for _ in range(6)]
 
     def construct(self, fem: FemElastoDynamics, contact: ContactDynamics):
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = (
@@ -904,6 +906,8 @@ def _compute_energy(
     h2: wp.float32,
 ) -> float:
     main_stream = wp.get_stream()
+    for stream in params._streams[:6]:
+        stream.wait_stream(main_stream)
     params._data.f_obj_partial.zero_()
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
@@ -921,20 +925,44 @@ def _compute_energy(
     f_ve = wp.array(data=f_cp[offsets[3] : offsets[4]], copy=False, dtype=wp.float32)
     f_vf = wp.array(data=f_cp[offsets[4] : offsets[5]], copy=False, dtype=wp.float32)
     f_ee = wp.array(data=f_cp[offsets[5] :], copy=False, dtype=wp.float32)
-    wp.launch(_energy_inertial, dim=n_nodes, inputs=[fem.data, f_inertial])
-    wp.launch(_energy_elastic, dim=n_elems, inputs=[fem.data, h2, f_elastic])
     wp.launch(
-        _energy_vv, dim=contact.cvv.capacity, inputs=[x, xt, cd, contact.cvv.n_u, f_vv]
+        _energy_inertial,
+        dim=n_nodes,
+        inputs=[fem.data, f_inertial],
+        stream=params._streams[0],
     )
     wp.launch(
-        _energy_ve, dim=contact.cve.capacity, inputs=[x, xt, cd, contact.cve.n_u, f_ve]
+        _energy_elastic,
+        dim=n_elems,
+        inputs=[fem.data, h2, f_elastic],
+        stream=params._streams[1],
     )
     wp.launch(
-        _energy_vf, dim=contact.cvf.capacity, inputs=[x, xt, cd, contact.cvf.n_u, f_vf]
+        _energy_vv,
+        dim=contact.cvv.capacity,
+        inputs=[x, xt, cd, contact.cvv.n_u, f_vv],
+        stream=params._streams[2],
     )
     wp.launch(
-        _energy_ee, dim=contact.cee.capacity, inputs=[x, xt, cd, contact.cee.n_u, f_ee]
+        _energy_ve,
+        dim=contact.cve.capacity,
+        inputs=[x, xt, cd, contact.cve.n_u, f_ve],
+        stream=params._streams[3],
     )
+    wp.launch(
+        _energy_vf,
+        dim=contact.cvf.capacity,
+        inputs=[x, xt, cd, contact.cvf.n_u, f_vf],
+        stream=params._streams[4],
+    )
+    wp.launch(
+        _energy_ee,
+        dim=contact.cee.capacity,
+        inputs=[x, xt, cd, contact.cee.n_u, f_ee],
+        stream=params._streams[5],
+    )
+    for stream in params._streams:
+        main_stream.wait_stream(stream)
     params._energy_reduce(main_stream)
     return float(params._energy_scalar.numpy()[0])
 
@@ -966,6 +994,8 @@ def solve_subproblem(
     params: Params,
 ) -> None:
     main_stream = wp.get_stream()
+    for stream in params._streams[:5]:
+        stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
     h2 = wp.float32(fem.bdf.beta_tilde**2)  # type: ignore
@@ -975,13 +1005,64 @@ def solve_subproblem(
         gnorm2 = float(params._gnorm2.numpy()[0])
         if gnorm2 <= float(params.data.gtol2):
             break
-        # TODO: Assemble FEM + contact Hessian
+        # Assemble FEM + contact Hessian
         params._data.Hvals.zero_()
         wp.launch(
-            _compute_dynamics_hessian_triplets,
+            kernel=_compute_dynamics_hessian_triplets,
             dim=max(n_nodes, n_elems),
             inputs=[fem.data, h2, params._data, params._hessian_triplet_offsets],
+            stream=params._streams[0],
         )
+        wp.launch(
+            kernel=_compute_vv_contact_hessian_triplets,
+            dim=contact.cvv.capacity,
+            inputs=[
+                fem.data.dmask,
+                contact.data,
+                contact.cvv.n_u,
+                params._data,
+                params._hessian_triplet_offsets,
+            ],
+            stream=params._streams[1],
+        )
+        wp.launch(
+            kernel=_compute_ve_contact_hessian_triplets,
+            dim=contact.cve.capacity,
+            inputs=[
+                fem.data.dmask,
+                contact.data,
+                contact.cve.n_u,
+                params._data,
+                params._hessian_triplet_offsets,
+            ],
+            stream=params._streams[2],
+        )
+        wp.launch(
+            kernel=_compute_vf_contact_hessian_triplets,
+            dim=contact.cvf.capacity,
+            inputs=[
+                fem.data.dmask,
+                contact.data,
+                contact.cvf.n_u,
+                params._data,
+                params._hessian_triplet_offsets,
+            ],
+            stream=params._streams[3],
+        )
+        wp.launch(
+            kernel=_compute_ee_contact_hessian_triplets,
+            dim=contact.cee.capacity,
+            inputs=[
+                fem.data.dmask,
+                contact.data,
+                contact.cee.n_u,
+                params._data,
+                params._hessian_triplet_offsets,
+            ],
+            stream=params._streams[4],
+        )
+        for stream in params._streams[:5]:
+            main_stream.wait_stream(stream)
         warp.sparse.bsr_set_from_triplets(
             dest=params._H,
             rows=params._data.Hrows,
