@@ -212,11 +212,11 @@ def _ee_gradient(
     ia = halfedges.incoming_vertex(contact.meshes.F, he_u)
     ib = halfedges.outgoing_vertex(contact.meshes.F, he_u)
     ic = halfedges.incoming_vertex(contact.meshes.F, he_v)
-    id_ = halfedges.outgoing_vertex(contact.meshes.F, he_v)
+    id = halfedges.outgoing_vertex(contact.meshes.F, he_v)
     xcp1 = b0 * x[ia] + b1 * x[ib]
     xtcp1 = b0 * xt[ia] + b1 * xt[ib]
-    xcp2 = b2 * x[ic] + b3 * x[id_]
-    xtcp2 = b2 * xt[ic] + b3 * xt[id_]
+    xcp2 = b2 * x[ic] + b3 * x[id]
+    xtcp2 = b2 * xt[ic] + b3 * xt[id]
     c_n = wp.dot(xcp1 - xcp2, n) - contact.dmin - contact.cee.s[c]
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
@@ -232,8 +232,8 @@ def _ee_gradient(
         wp.atomic_add(g, ib, gamma * b1 * grad)
     if not is_dirichlet_node(dmask, ic):
         wp.atomic_add(g, ic, -gamma * b2 * grad)
-    if not is_dirichlet_node(dmask, id_):
-        wp.atomic_add(g, id_, -gamma * b3 * grad)
+    if not is_dirichlet_node(dmask, id):
+        wp.atomic_add(g, id, -gamma * b3 * grad)
 
 
 class Gradient:
