@@ -32,6 +32,17 @@ def load_fem_dynamics(spec: str) -> pbat.sim.dynamics.FemElastoDynamics:
     return fem_cpu
 
 
+def encode_dirichlet_active_time(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+    active_time_seconds: float = 3600.0,
+) -> np.ndarray:
+    """Return a copy of dmask with constrained nodes assigned an active time."""
+    dmask = np.asarray(fem.dmask).copy()
+    if dmask.size != 0:
+        dmask[dmask != 0] = int(active_time_seconds * 1000.0)
+    return dmask
+
+
 def hyper_elastic_modes(
     fem: pbat.sim.dynamics.FemElastoDynamics,
     modes: int = 30,
@@ -174,9 +185,20 @@ if __name__ == "__main__":
         #                       t, c, k).reshape(fem_loaded.X.shape[1], 3)
         vm.update_vertex_positions(V)
         if imgui.Button("Dump"):
-            fem_loaded.x = V.T.copy()
-            archive = pbat.io.Archive("dump.h5", flags=pbat.io.AccessMode.Overwrite)
-            fem_loaded.serialize(archive["fem"])
+            x_saved = fem_loaded.X.copy()
+            dmask_saved = fem_loaded.dmask.copy()
+            try:
+                fem_loaded.X = V.T.copy()
+                fem_loaded.dmask = encode_dirichlet_active_time(fem_loaded)
+                archive = pbat.io.Archive(
+                    "dump.h5", flags=pbat.io.AccessMode.Overwrite
+                )
+                fem_loaded.serialize(archive["fem"])
+                archive = None
+                gc.collect()
+            finally:
+                fem_loaded.X = x_saved
+                fem_loaded.dmask = dmask_saved
 
     ps.set_user_callback(callback)
     ps.show()
