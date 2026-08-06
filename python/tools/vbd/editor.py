@@ -202,6 +202,7 @@ class ModeStateMachine(StateMachine):
         )
         # Pass simulation scenario to simulation UI
         tet_elastic_body_names = [body.name for body in tet_elastic_bodies]
+        self.scene.transform_library.sync_mesh_names(tet_elastic_body_names)
         self.simulation.on_simulation_scenario_created(
             tet_elastic_body_names,
             VP,

@@ -515,14 +515,27 @@ class TransformLibrary:
             self._transform_map[ttype] = []
 
     def on_mesh_added(self, mesh_name: str):
-        self._mesh_names.append(mesh_name)
+        if mesh_name not in self._mesh_names:
+            self._mesh_names.append(mesh_name)
         for transform in self.transforms:
             transform.on_mesh_added(mesh_name)
 
     def on_mesh_removed(self, mesh_name: str):
-        self._mesh_names.remove(mesh_name)
+        if mesh_name in self._mesh_names:
+            self._mesh_names.remove(mesh_name)
         for transform in self.transforms:
             transform.on_mesh_removed(mesh_name)
+
+    def sync_mesh_names(self, mesh_names: list[str]):
+        self._mesh_names = list(mesh_names)
+        for transform in self.transforms:
+            preserved_nodes = {}
+            for name in self._mesh_names:
+                if name in transform._mesh_dirichlet_nodes:
+                    preserved_nodes[name] = transform._mesh_dirichlet_nodes[name]
+                else:
+                    preserved_nodes[name] = np.array([], dtype=np.int32)
+            transform._mesh_dirichlet_nodes = preserved_nodes
 
     def on_dirichlet_nodes_added(
         self, transform_id: int, mesh_name: str, inds: list[int]

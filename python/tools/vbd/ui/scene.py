@@ -185,6 +185,7 @@ class Scene:
         self._tet_body_to_dup_idx = 0
         self._transform_library = TransformLibrary()
         self._static_mesh_colliders = []
+        self._next_tet_elastic_body_id = 0
 
     def draw(self):
         tab_flags = styles.default_tab_flags()
@@ -213,8 +214,7 @@ class Scene:
                             if imgui.Button(
                                 styles.delete_key(), styles.small_button_size()
                             ):
-                                body = self._tet_elastic_bodies.pop(b)
-                                body.on_mesh_removed()
+                                self._remove_tet_elastic_body(b)
                             styles.pop_most_recent_style()
                             imgui.TreePop()
                         imgui.PopID()
@@ -377,10 +377,18 @@ class Scene:
             root.destroy()
 
     def _get_new_id(self) -> int:
-        if self._recycled_tet_elastic_body_indices:
-            return self._recycled_tet_elastic_body_indices.pop()
-        else:
-            return len(self._tet_elastic_bodies)
+        body_id = self._next_tet_elastic_body_id
+        self._next_tet_elastic_body_id += 1
+        return body_id
+
+    def _update_next_body_id_from_name(self, body_name: str):
+        try:
+            body_id = int(body_name.split(" - ")[-1])
+        except ValueError:
+            return
+        self._next_tet_elastic_body_id = max(
+            self._next_tet_elastic_body_id, body_id + 1
+        )
 
     def _load_tet_elastic_body(self):
         root = tk.Tk()
@@ -436,18 +444,19 @@ class Scene:
                 for row in f:
                     vals = row.strip().split(",")
                     
-                    if len(vals) != 3 and len(vals) != 6:
+                    if len(vals) % 3 != 0:
                         continue
                     print(pattern_count, vals)
                     pattern_count += 1
                     x, y, z = map(float, vals[0:3])
-                    if len(vals) == 6:
-                        #Convert rotation in Euler angles to rotation matrix
-                        print("Hi")
+                    if len(vals) == 3:
+                        obj_rot = np.eye(3)
+                    else:
                         rx, ry, rz = map(float, vals[3:6])
                         obj_rot = sp.spatial.transform.Rotation.from_euler('xyz', [rx, ry, rz]).as_matrix()
-                    else:
-                        obj_rot = np.eye(3)
+                    if len(vals) == 9:
+                        sx, sy, sz = map(float, vals[6:9])
+                        obj_rot = np.diag([sx, sy, sz]) @ obj_rot
                     transform = np.eye(4)
                     transform[:3, :3] = obj_rot
                     transform[:3, 3] = np.array([x, y, z]).T
@@ -526,10 +535,8 @@ class Scene:
 
     def _remove_tet_elastic_body(self, b: int):
         body = self._tet_elastic_bodies.pop(b)
-        idx = int(body.name.split(" - ")[-1])
         self._transform_library.on_mesh_removed(body.name)
         body.on_mesh_removed()
-        self._recycled_tet_elastic_body_indices.append(idx)
 
     def _on_dirichlet_group_applied(self, b: int, group: int, inds: np.ndarray[int]):
         body = self._tet_elastic_bodies[b]
@@ -558,6 +565,7 @@ class Scene:
             body = TetrahedralElastodynamicsBody()
             body.deserialize(body_grp)
             self._tet_elastic_bodies.append(body)
+            self._update_next_body_id_from_name(body.name)
 
     def _deserialize_static_mesh_colliders(self, grp: h5.Group):
         num_colliders = grp.attrs["num_static_mesh_colliders"]
@@ -581,6 +589,7 @@ class Scene:
             body.on_mesh_removed()
         self._tet_elastic_bodies = []
         self._recycled_tet_elastic_body_indices = []
+        self._next_tet_elastic_body_id = 0
 
     def _buildup(self, f, bodies_only=False):
         self._deserialize_fem_tet_elastic_bodies(f["fem_tet_elastic_bodies"])
