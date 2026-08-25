@@ -73,7 +73,12 @@ def potential(
         nue (np.ndarray): |# elements| x 1 element Poisson's ratios.
 
     Returns:
-        _type_: _description_
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+            |# quad.pts.| x 1 array of element indices at quadrature points,
+            |# quad.pts.| x 1 array of quadrature weights,
+            |# elem. nodes| x 3*|# quad.pts.| array of element shape function gradients,
+            |# quad.pts.| x 1 array of element 1st Lame coefficient,
+            |# quad.pts.| x 1 array of element 2nd Lame coefficient.
     """
     # Compute the hyper-elastic potential's hessian
     order = 1
