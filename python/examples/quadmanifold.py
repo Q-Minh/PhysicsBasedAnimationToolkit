@@ -206,19 +206,16 @@ if __name__ == "__main__":
         E, X, element, Ye=Ye, nue=nue, rhoe=rhoe, energy=energy, modes=args.modes
     )
     n, m = U.shape
-    h = args.eps
+    # compute bounding box diagonal length
+    Xmax, Xmin = np.max(X, axis=1), np.min(X, axis=1)
+    bbdiag = np.linalg.norm(Xmax - Xmin)
+    h = args.eps * bbdiag
     Q = np.empty((n, m, m), dtype=U.dtype)
     b = np.zeros((n + 1, 1), dtype=U.dtype)
     for i in range(m):
-        # factorize modal derivative matrix
+        # Factorize modal derivative matrix
         A12 = -M @ U[:, i]
         A12 = A12.reshape(-1, 1)
-        # To use SuperLU,
-        # A = scipy.sparse.block_array(
-        #     [[Keq - w[i] ** 2 * M, A12], [A12.T, None]],
-        #     format="csc",
-        # )
-        # Ainv = scipy.sparse.linalg.factorized(A)
         # To use Eigen LDLT
         A = scipy.sparse.bmat(
             [[Keq - w[i] ** 2 * M, A12], [A12.T, None]],
@@ -226,6 +223,12 @@ if __name__ == "__main__":
         )
         Ainv = pypbat.math.linalg.ldlt(A)
         Ainv.compute(A)
+        # To use SuperLU,
+        # A = scipy.sparse.block_array(
+        #     [[Keq - w[i] ** 2 * M, A12], [A12.T, None]],
+        #     format="csc",
+        # )
+        # Ainv = scipy.sparse.linalg.factorized(A)
         for j in range(m):
             # Compute dK/d\eta_j
             xleft = np.ravel(X, order="F") - h * U[:, j]
@@ -238,11 +241,11 @@ if __name__ == "__main__":
             )
             dKdetaj = (Kright - Kleft) / h
             b[:-1, 0] = -dKdetaj @ U[:, i]
-            # If SuperLU
-            # thetaij = Ainv(b).squeeze()[:-1]
             # If Eigen LDLT
             thetaij = Ainv.solve(b).squeeze()[:-1]
             Q[:, i, j] = thetaij
+            # If SuperLU
+            # thetaij = Ainv(b).squeeze()[:-1]
     # symmetrize Q
     Q = (Q + Q.transpose(0, 2, 1)) / 2
 
