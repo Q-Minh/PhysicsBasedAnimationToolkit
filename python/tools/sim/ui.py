@@ -80,9 +80,10 @@ def draw_params(obj, sub_params: dict | None = None, _depth=0):
 def parse_archive_path(spec: str) -> tuple[str, str]:
     """Parse 'file.h5:group/path' into (file_path, group_path)."""
     parts = spec.split(":")
-    if len(parts) >= 2:
-        return parts[0], ":".join(parts[1:])
-    return parts[0], ""
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    else:
+        raise ValueError("Invalid archive path format.")
 
 
 def load_fem_dynamics(spec: str) -> pbat.sim.dynamics.FemElastoDynamics:
