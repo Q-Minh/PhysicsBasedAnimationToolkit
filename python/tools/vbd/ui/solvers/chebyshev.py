@@ -85,7 +85,7 @@ class ChebyshevSolver(BaseSolver):
             if converged:
                 break
             pbat.sim.algorithm.vbd.prepare_subproblem(fem, contact, vbd)
-            while vbd.kp < vbd.n_subproblem_max_iters:
+            for kp in range(vbd.n_subproblem_max_iters):
                 pbat.sim.algorithm.vbd.iterate(fem, contact, vbd, chebyshev)
             pbat.sim.algorithm.vbd.finalize_subproblem(fem, contact, vbd)
         callback()
