@@ -10,6 +10,85 @@ import meshio
 import argparse
 
 
+def mass(
+    E: np.ndarray,
+    X: np.ndarray,
+    element: pbat.fem.Element,
+    rhoe: np.ndarray,
+    order: int = 1,
+):
+    """Compute mass matrix
+
+    Args:
+        E (np.ndarray): |# elem. nodes| x |# elements| element connectivity array.
+        X (np.ndarray): 3 x |# nodes| node positions array.
+        element (pbat.fem.Element): Element type.
+        rhoe (np.ndarray): |# elements| x 1 element densities.
+
+    Returns:
+        np.ndarray: The mass matrix.
+    """
+    qorderM = 2 * order
+    wgM = pbat.fem.mesh_quadrature_weights(
+        E, X, element, order=order, quadrature_order=qorderM
+    )
+    egM = pbat.fem.mesh_quadrature_elements(E, wgM)
+    Neg = pbat.fem.shape_functions(
+        n_elements=E.shape[1],
+        element=element,
+        order=order,
+        quadrature_order=qorderM,
+        dtype=wgM.dtype,
+    )
+    rhog = rhoe[np.newaxis, :].repeat(egM.shape[0], axis=0)
+    M = pbat.fem.mass_matrix(
+        E,
+        X.shape[1],
+        eg=np.ravel(egM),
+        wg=np.ravel(wgM),
+        rhog=np.ravel(rhog),
+        Neg=Neg,
+        dims=X.shape[0],
+        element=element,
+        order=order,
+        spatial_dims=X.shape[0],
+    )
+    return M
+
+
+def potential(
+    E: np.ndarray,
+    X: np.ndarray,
+    element: pbat.fem.Element,
+    Ye: np.ndarray,
+    nue: np.ndarray,
+):
+    """Compute quadrature for elastic potential
+
+    Args:
+        E (np.ndarray): |# elem. nodes| x |# elements| element connectivity array.
+        X (np.ndarray): 3 x |# nodes| node positions array.
+        element (pbat.fem.Element): Element type.
+        Ye (np.ndarray): |# elements| x 1 element Young's moduli.
+        nue (np.ndarray): |# elements| x 1 element Poisson's ratios.
+
+    Returns:
+        _type_: _description_
+    """
+    # Compute the hyper-elastic potential's hessian
+    order = 1
+    qorderU = order
+    wgU = pbat.fem.mesh_quadrature_weights(
+        E, X, element, order=order, quadrature_order=qorderU
+    )
+    egU = pbat.fem.mesh_quadrature_elements(E, wgU)
+    GNegU = pbat.fem.shape_function_gradients(
+        E, X, element=element, order=order, dims=X.shape[0], quadrature_order=qorderU
+    )
+    mug, lambdag = pypbat.fem.lame_coefficients(Ye, nue)
+    return egU, wgU, GNegU, mug, lambdag
+
+
 def stiffness(
     E, X, egU, wgU, GNegU, mug, lambdag, x, energy, element, order=1
 ) -> scipy.sparse.csr_matrix:
@@ -50,83 +129,32 @@ def stiffness(
     return K
 
 
-def rest_pose_hyper_elastic_modes(
-    E: np.ndarray,
-    X: np.ndarray,
-    element: pbat.fem.Element,
-    Ye: np.ndarray,
-    nue: np.ndarray,
-    rhoe: np.ndarray,
-    energy=pbat.fem.HyperElasticEnergy.StableNeoHookean,
+def vibration_modes(
+    M: scipy.sparse.csr_matrix,
+    K: scipy.sparse.csr_matrix,
     modes: int = 30,
     sigma: float = -1e-5,
     zero: float = 0.0,
 ):
-    """Computes natural (linear) displacement modes of mesh.
+    """Computes natural (linear) displacement modes.
 
     Args:
-        E (np.ndarray): Element matrix.
-        X (np.ndarray): Node coordinates.
-        element (_pbat.fem.Element): Element type.
-        Ye (np.ndarray): |# elements| x 1 Young's modulus.
-        nue (np.ndarray): |# elements| x 1 Poisson's ratio.
-        rhoe (np.ndarray): |# elements| x 1 Mass density.
-        energy (_pbat.fem.HyperElasticEnergy, optional): Constitutive model. Defaults to _fem.HyperElasticEnergy.StableNeoHookean.
-        modes (int, optional): Maximum number of modes to compute. Defaults to 30.
+        M (scipy.sparse.csr_matrix): Mass matrix.
+        K (scipy.sparse.csr_matrix): Stiffness matrix.
+        modes (int, optional): Number of modes to compute. Defaults to 30.
         sigma (float, optional): Shift (see scipy.sparse.eigsh). Defaults to -1e-5.
         zero (float, optional): Numerical zero used to cull modes. Defaults to 0.
 
     Returns:
-        (np.ndarray, np.ndarray, sp.sparse.csr_matrix, sp.sparse.csr_matrix): (w,U,M,K) s.t. w is
-        a |# modes| vector of amplitudes, U is a n x |# modes| array of displacement modes in columns,
-        M is the mass matrix and K is the stiffness matrix.
+        (np.ndarray, np.ndarray): (w, V) s.t. w is a |# modes| vector of frequencies and V is a n x |# modes| array of mode shapes in columns.
     """
-    # Compute elasticity at rest pose
-    x = np.ravel(X, order="F")
-    # Compute the mass matrix
-    order = 1
-    qorderM = 2 * order
-    wgM = pbat.fem.mesh_quadrature_weights(
-        E, X, element, order=order, quadrature_order=qorderM
-    )
-    egM = pbat.fem.mesh_quadrature_elements(E, wgM)
-    Neg = pbat.fem.shape_functions(
-        n_elements=E.shape[1],
-        element=element,
-        order=order,
-        quadrature_order=qorderM,
-        dtype=wgM.dtype,
-    )
-    rhog = rhoe[np.newaxis, :].repeat(egM.shape[0], axis=0)
-    M = pbat.fem.mass_matrix(
-        E,
-        X.shape[1],
-        eg=np.ravel(egM),
-        wg=np.ravel(wgM),
-        rhog=np.ravel(rhog),
-        Neg=Neg,
-        dims=X.shape[0],
-        element=element,
-        order=order,
-        spatial_dims=X.shape[0],
-    )
-    # Compute the hyper-elastic potential's hessian
-    qorderU = order
-    wgU = pbat.fem.mesh_quadrature_weights(
-        E, X, element, order=order, quadrature_order=qorderU
-    )
-    egU = pbat.fem.mesh_quadrature_elements(E, wgU)
-    GNegU = pbat.fem.shape_function_gradients(
-        E, X, element=element, order=order, dims=X.shape[0], quadrature_order=qorderU
-    )
-    mug, lambdag = pypbat.fem.lame_coefficients(Ye, nue)
-    K = stiffness(E, X, egU, wgU, GNegU, mug, lambdag, x, energy, element, order)
-    modes = min(modes, x.shape[0])
+    n = M.shape[0]
+    modes = min(modes, n)
     l, V = sp.sparse.linalg.eigsh(K, k=modes, M=M, sigma=sigma, which="LM")
     V = V / sp.linalg.norm(V, axis=0, keepdims=True)
     l[l <= zero] = 0
     w = np.sqrt(l)
-    return w, V, M, K, egU, wgU, GNegU, mug, lambdag
+    return w, V
 
 
 def signal(w: float, t: float, c: float, k: float):
@@ -148,7 +176,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         "--input",
-        help="Path to input tetrahedral mesh",
+        help="Path to input tetrahedral mesh or filepath:h5path pair "
+        "of hdf5 file containing an FemElastoDynamics and the hdf5 group "
+        "path to the FemElastoDynamics",
         type=str,
         dest="input",
         required=True,
@@ -190,35 +220,74 @@ if __name__ == "__main__":
         help="Epsilon for numerical differentiation",
         type=float,
         dest="eps",
-        default=1e-4,
+        default=1e-3,
     )
     args = parser.parse_args()
 
-    imesh = meshio.read(args.input)
-    V, C = imesh.points, imesh.cells_dict["tetra"]
+    input_tokens = str(args.input).split(":")
     element = pbat.fem.Element.Tetrahedron
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    X, E = pbat.fem.mesh(V.T, C.T, element=element)
-    Ye = np.full(E.shape[1], args.Y)
-    nue = np.full(E.shape[1], args.nu)
-    rhoe = np.full(E.shape[1], args.rho)
-    w, U, M, Keq, egU, wgU, GNegU, mug, lambdag = rest_pose_hyper_elastic_modes(
-        E, X, element, Ye=Ye, nue=nue, rhoe=rhoe, energy=energy, modes=args.modes
+    if len(input_tokens) == 2:
+        import gc
+
+        file_path, group_path = input_tokens[0], input_tokens[1]
+        archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
+        fem = pbat.sim.dynamics.FemElastoDynamics()
+        fem.deserialize(archive[group_path] if group_path else "/")
+        archive = None
+        gc.collect()
+        n = fem.X.shape[0] * fem.X.shape[1]
+        E = fem.E
+        X = fem.X
+        M = scipy.sparse.csr_matrix(
+            (fem.M(), (np.arange(n), np.arange(n))), shape=(n, n)
+        )
+        egU, wgU, GNegU, mug, lambdag = (
+            fem.egU,
+            fem.wgU,
+            fem.GNegU,
+            fem.lamegU[0, :],
+            fem.lamegU[1, :],
+        )
+        freedofs = fem.free_dofs
+    else:
+        imesh = meshio.read(args.input)
+        V, C = imesh.points, imesh.cells_dict["tetra"]
+        X, E = pbat.fem.mesh(V.T, C.T, element=element)
+        Ye = np.full(E.shape[1], args.Y)
+        nue = np.full(E.shape[1], args.nu)
+        rhoe = np.full(E.shape[1], args.rho)
+        M = mass(E, X, element, rhoe)
+        egU, wgU, GNegU, mug, lambdag = potential(E, X, element, Ye, nue)
+        freedofs = np.arange(M.shape[0])
+
+    n = X.shape[0] * X.shape[1]
+    m = int(args.modes)
+    Keq = stiffness(
+        E, X, egU, wgU, GNegU, mug, lambdag, np.ravel(X, order="F"), energy, element
     )
-    n, m = U.shape
+    # Mred = M[freedofs, :].tocsc()[:, freedofs].tocsr()
+    # Keqred = Keq.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
+    # w, Ured = vibration_modes(Mred, Keqred, modes=args.modes)
+    Mred = M[freedofs, :].tocsc()[:, freedofs].tocsr()
+    Keqred = Keq.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
+    w, Ured = vibration_modes(Mred, Keqred, modes=args.modes)
+    U = np.zeros((n, m), dtype=Ured.dtype)
+    U[freedofs, :] = Ured
     # compute bounding box diagonal length
     Xmax, Xmin = np.max(X, axis=1), np.min(X, axis=1)
     bbdiag = np.linalg.norm(Xmax - Xmin)
     h = args.eps * bbdiag
     Q = np.empty((n, m, m), dtype=U.dtype)
-    b = np.zeros((n + 1, 1), dtype=U.dtype)
+    b = np.zeros((freedofs.shape[0] + 1, 1), dtype=U.dtype)
+    thetaij = np.zeros(n, dtype=Ured.dtype)
     for i in range(m):
         # Factorize modal derivative matrix
-        A12 = -M @ U[:, i]
+        A12 = -Mred @ Ured[:, i]
         A12 = A12.reshape(-1, 1)
         # To use Eigen LDLT
         A = scipy.sparse.bmat(
-            [[Keq - w[i] ** 2 * M, A12], [A12.T, None]],
+            [[Keqred - w[i] ** 2 * Mred, A12], [A12.T, None]],
             format="csr",
         )
         Ainv = pypbat.math.linalg.ldlt(A)
@@ -240,9 +309,10 @@ if __name__ == "__main__":
                 E, X, egU, wgU, GNegU, mug, lambdag, xright, energy, element
             )
             dKdetaj = (Kright - Kleft) / h
-            b[:-1, 0] = -dKdetaj @ U[:, i]
+            dKdetajred = dKdetaj.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
+            b[:-1, 0] = -dKdetajred @ Ured[:, i]
             # If Eigen LDLT
-            thetaij = Ainv.solve(b).squeeze()[:-1]
+            thetaij[freedofs] = Ainv.solve(b).squeeze()[:-1]
             Q[:, i, j] = thetaij
             # If SuperLU
             # thetaij = Ainv(b).squeeze()[:-1]
