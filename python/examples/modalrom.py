@@ -292,13 +292,6 @@ if __name__ == "__main__":
         dest="eps",
         default=1e-3,
     )
-    parser.add_argument(
-        "--mapping",
-        help="Mapping type (linear | quadratic)",
-        type=str,
-        dest="mapping",
-        default="linear",
-    )
     args = parser.parse_args()
 
     input_tokens = str(args.input).split(":")
@@ -408,7 +401,14 @@ if __name__ == "__main__":
         changed, map_idx = imgui.Combo("Mapping", mappings.index(mapping), mappings)
         mapping = mappings[map_idx]
         nrdofs = q.shape[0] if mapping == "Linear" else mu
-        changed, mode = imgui.InputInt(f"Mode {mode}/{nrdofs-1}", mode)
+
+        if imgui.Button("<##mode_prev"):
+            mode -= 1
+        imgui.SameLine()
+        if imgui.Button(">##mode_next"):
+            mode += 1
+        imgui.SameLine()
+        imgui.Text(f"Mode {mode}/{nrdofs-1}")
         changed, c = imgui.InputFloat("Wave amplitude", c)
         changed, k = imgui.InputFloat("Wave frequency", k)
 
