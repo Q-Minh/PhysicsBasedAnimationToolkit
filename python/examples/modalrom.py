@@ -374,15 +374,16 @@ if __name__ == "__main__":
     )
     Thetared = np.eye(nfree) @ Thetared - Ured @ (Ured.T @ (Mred @ Thetared))
     # Compute M-orthogonal SVD
-    Zredhat, s, _ = np.linalg.svd(
+    Zredhat, s2, _ = np.linalg.svd(
         Mredsqrt @ Thetared, full_matrices=False, compute_uv=True
     )
     # Undo the M-norm on the SVD basis
     Zred = Mredinvsqrt @ Zredhat
     tau = h
-    mz = np.argmax(s < tau) if s[-1] < tau else s.shape[0]
+    mz = np.argmax(s2 < tau) if s2[-1] < tau else s2.shape[0]
     Zred = Zred[:, :mz]
-    ws = np.hstack([w, np.sqrt(s[:mz])])
+    s = np.sqrt(s2)
+    ws = np.hstack([w, s[:mz]])
     Z = np.zeros((n, mz), dtype=Zred.dtype)
     Z[freedofs, :] = Zred
     UZ = np.hstack([U, Z])
