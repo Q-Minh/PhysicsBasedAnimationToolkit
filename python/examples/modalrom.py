@@ -1,3 +1,4 @@
+import typing
 from pbatoolkit import pbat, pypbat
 import numpy as np
 import scipy as sp
@@ -135,7 +136,7 @@ def stiffness(
 
 
 def vibration_modes(
-    M: scipy.sparse.csr_matrix,
+    M: scipy.sparse.dia_array,
     K: scipy.sparse.csr_matrix,
     modes: int = 30,
     sigma: float = -1e-5,
@@ -160,6 +161,70 @@ def vibration_modes(
     l[l <= zero] = 0
     w = np.sqrt(l)
     return w, V
+
+
+def modal_derivatives(
+    x: np.ndarray,
+    Ured: np.ndarray,
+    Mred: scipy.sparse.dia_array,
+    Keqred: scipy.sparse.csr_matrix,
+    h: float,
+    freedofs: np.ndarray,
+    compute_stiffness: typing.Callable[[np.ndarray], scipy.sparse.csr_matrix],
+):
+    """Computes the quadratic manifold.
+
+    Args:
+        x (np.ndarray): 3*|# nodes| array of node positions in F order
+        Ured (np.ndarray): |# free dofs| x |# modes| array of vibration modes
+        Mred (scipy.sparse.csr_matrix): |# free dofs| x |# free dofs| mass matrix
+        Keqred (scipy.sparse.csr_matrix): |# free dofs| x |# free dofs| stiffness matrix
+        h (float): step size for finite difference
+        freedofs (np.ndarray): array of free dofs
+        compute_stiffness (typing.Callable[[np.ndarray], scipy.sparse.csr_matrix]): function to compute stiffness matrix
+        symmetrize (bool, optional): whether to symmetrize the quadratic manifold. Defaults to True.
+
+    Returns:
+        np.ndarray: The quadratic manifold rank-3 tensor
+    """
+    n, m = x.shape[0], Ured.shape[1]
+    Q = np.empty((n, m, m), dtype=Ured.dtype)
+    b = np.zeros((freedofs.shape[0] + 1, 1), dtype=Ured.dtype)
+    thetaij = np.zeros(n, dtype=Ured.dtype)
+    xleft = np.copy(x)
+    xright = np.copy(x)
+    for i in range(m):
+        # Factorize modal derivative matrix
+        A12 = -Mred @ Ured[:, i]
+        A12 = A12.reshape(-1, 1)
+        # To use Eigen LDLT
+        A = scipy.sparse.bmat(
+            [[Keqred - w[i] ** 2 * Mred, A12], [A12.T, None]],
+            format="csr",
+        )
+        Ainv = pypbat.math.linalg.ldlt(A)
+        Ainv.compute(A)
+        # To use SuperLU,
+        # A = scipy.sparse.block_array(
+        #     [[Keq - w[i] ** 2 * M, A12], [A12.T, None]],
+        #     format="csc",
+        # )
+        # Ainv = scipy.sparse.linalg.factorized(A)
+        for j in range(m):
+            # Compute dK/d\eta_j
+            xleft[freedofs] = x[freedofs] - h * Ured[:, j]
+            xright[freedofs] = x[freedofs] + h * Ured[:, j]
+            Kleft = compute_stiffness(xleft)
+            Kright = compute_stiffness(xright)
+            dKdetaj = (Kright - Kleft) / h
+            dKdetajred = dKdetaj.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
+            b[:-1, 0] = -dKdetajred @ Ured[:, i]
+            # If Eigen LDLT
+            thetaij[freedofs] = Ainv.solve(b).squeeze()[:-1]
+            # If SuperLU
+            # thetaij = Ainv(b).squeeze()[:-1]
+            Q[:, i, j] = thetaij
+    return Q
 
 
 def signal(w: float, t: float, c: float, k: float):
@@ -227,6 +292,13 @@ if __name__ == "__main__":
         dest="eps",
         default=1e-3,
     )
+    parser.add_argument(
+        "--mapping",
+        help="Mapping type (linear | quadratic)",
+        type=str,
+        dest="mapping",
+        default="linear",
+    )
     args = parser.parse_args()
 
     input_tokens = str(args.input).split(":")
@@ -244,9 +316,7 @@ if __name__ == "__main__":
         n = fem.X.shape[0] * fem.X.shape[1]
         E = fem.E
         X = fem.X
-        M = scipy.sparse.csr_matrix(
-            (fem.M(), (np.arange(n), np.arange(n))), shape=(n, n)
-        )
+        M = scipy.sparse.diags_array(fem.M(), shape=(n, n))
         egU, wgU, GNegU, mug, lambdag = (
             fem.egU,
             fem.wgU,
@@ -259,70 +329,63 @@ if __name__ == "__main__":
         imesh = meshio.read(args.input)
         V, C = imesh.points, imesh.cells_dict["tetra"]
         X, E = pbat.fem.mesh(V.T, C.T, element=element)
+        n = X.shape[0] * X.shape[1]
         Ye = np.full(E.shape[1], args.Y)
         nue = np.full(E.shape[1], args.nu)
         rhoe = np.full(E.shape[1], args.rho)
         M = mass(E, X, element, rhoe)
+        M = scipy.sparse.diags_array(M.sum(axis=1), shape=(n, n))
         egU, wgU, GNegU, mug, lambdag = potential(E, X, element, Ye, nue)
-        freedofs = np.arange(M.shape[0])
+        freedofs = np.arange(n)
 
     n = X.shape[0] * X.shape[1]
-    m = int(args.modes)
+    nfree = len(freedofs)
+    mu = int(args.modes)
     Keq = stiffness(
         E, X, egU, wgU, GNegU, mug, lambdag, np.ravel(X, order="F"), energy, element
     )
-    # Mred = M[freedofs, :].tocsc()[:, freedofs].tocsr()
-    # Keqred = Keq.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
-    # w, Ured = vibration_modes(Mred, Keqred, modes=args.modes)
-    Mred = M[freedofs, :].tocsc()[:, freedofs].tocsr()
+    Mred = scipy.sparse.diags_array(M.diagonal()[freedofs], shape=(nfree, nfree))
     Keqred = Keq.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
     w, Ured = vibration_modes(Mred, Keqred, modes=args.modes)
-    U = np.zeros((n, m), dtype=Ured.dtype)
+    U = np.zeros((n, mu), dtype=Ured.dtype)
     U[freedofs, :] = Ured
-    # compute bounding box diagonal length
     Xmax, Xmin = np.max(X, axis=1), np.min(X, axis=1)
     bbdiag = np.linalg.norm(Xmax - Xmin)
     h = args.eps * bbdiag
-    Q = np.empty((n, m, m), dtype=U.dtype)
-    b = np.zeros((freedofs.shape[0] + 1, 1), dtype=U.dtype)
-    thetaij = np.zeros(n, dtype=Ured.dtype)
-    for i in range(m):
-        # Factorize modal derivative matrix
-        A12 = -Mred @ Ured[:, i]
-        A12 = A12.reshape(-1, 1)
-        # To use Eigen LDLT
-        A = scipy.sparse.bmat(
-            [[Keqred - w[i] ** 2 * Mred, A12], [A12.T, None]],
-            format="csr",
-        )
-        Ainv = pypbat.math.linalg.ldlt(A)
-        Ainv.compute(A)
-        # To use SuperLU,
-        # A = scipy.sparse.block_array(
-        #     [[Keq - w[i] ** 2 * M, A12], [A12.T, None]],
-        #     format="csc",
-        # )
-        # Ainv = scipy.sparse.linalg.factorized(A)
-        for j in range(m):
-            # Compute dK/d\eta_j
-            xleft = np.ravel(X, order="F") - h * U[:, j]
-            xright = np.ravel(X, order="F") + h * U[:, j]
-            Kleft = stiffness(
-                E, X, egU, wgU, GNegU, mug, lambdag, xleft, energy, element
-            )
-            Kright = stiffness(
-                E, X, egU, wgU, GNegU, mug, lambdag, xright, energy, element
-            )
-            dKdetaj = (Kright - Kleft) / h
-            dKdetajred = dKdetaj.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
-            b[:-1, 0] = -dKdetajred @ Ured[:, i]
-            # If Eigen LDLT
-            thetaij[freedofs] = Ainv.solve(b).squeeze()[:-1]
-            Q[:, i, j] = thetaij
-            # If SuperLU
-            # thetaij = Ainv(b).squeeze()[:-1]
-    # symmetrize Q
-    Q = (Q + Q.transpose(0, 2, 1)) / 2
+    Theta = modal_derivatives(
+        X.flatten(order="F"),
+        Ured,
+        Mred,
+        Keqred,
+        h,
+        freedofs,
+        lambda x: stiffness(E, X, egU, wgU, GNegU, mug, lambdag, x, energy, element),
+    )
+    # Compute rank-3 quadratic manifold tensor
+    Q = (Theta + Theta.transpose(0, 2, 1)) / 2
+    # Compute augmented linear basis
+    Thetared = Theta.reshape(n, -1)[freedofs, :]
+    # Project out linear basis from modal derivatives
+    Mredsqrt = scipy.sparse.diags_array(
+        np.sqrt(M.diagonal()[freedofs]), shape=(nfree, nfree)
+    )
+    Mredinvsqrt = scipy.sparse.diags_array(
+        1.0 / Mredsqrt.diagonal(), shape=(nfree, nfree)
+    )
+    Thetared = np.eye(nfree) @ Thetared - Ured @ (Ured.T @ (Mred @ Thetared))
+    # Compute M-orthogonal SVD
+    Zredhat, s, _ = np.linalg.svd(
+        Mredsqrt @ Thetared, full_matrices=False, compute_uv=True
+    )
+    # Undo the M-norm on the SVD basis
+    Zred = Mredinvsqrt @ Zredhat
+    tau = h
+    mz = np.argmax(s < tau) if s[-1] < tau else s.shape[0]
+    Zred = Zred[:, :mz]
+    ws = np.hstack([w, np.sqrt(s[:mz])])
+    Z = np.zeros((n, mz), dtype=Zred.dtype)
+    Z[freedofs, :] = Zred
+    UZ = np.hstack([U, Z])
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -333,7 +396,7 @@ if __name__ == "__main__":
     mappings = ["Linear", "Quadratic"]
     mapping = mappings[0]
     mode = 6
-    q = np.zeros(m, dtype=U.dtype)
+    q = np.zeros(mu + mz, dtype=U.dtype)
     t0 = time.time()
     t = 0
     c = 0.15
@@ -342,20 +405,21 @@ if __name__ == "__main__":
     def callback():
         global mode, c, k, q, mapping
         changed, map_idx = imgui.Combo("Mapping", mappings.index(mapping), mappings)
-        changed, mode = imgui.InputInt("Mode", mode)
+        mapping = mappings[map_idx]
+        nrdofs = q.shape[0] if mapping == "Linear" else mu
+        changed, mode = imgui.InputInt(f"Mode {mode}/{nrdofs-1}", mode)
         changed, c = imgui.InputFloat("Wave amplitude", c)
         changed, k = imgui.InputFloat("Wave frequency", k)
 
-        mode = max(0, min(m - 1, mode))
-        mapping = mappings[map_idx]
+        mode = max(0, min(nrdofs - 1, mode))
         t = time.time() - t0
-        etam = signal(w[mode], t, c, k)
+        etam = signal(ws[mode], t, c, k)
         q[:] = 0
         q[mode] = etam
         if mapping == "Quadratic":
-            u = quadratic_map(U, Q, q)
+            u = quadratic_map(U, Q, q[:mu])
         else:
-            u = linear_map(U, q)
+            u = linear_map(UZ, q)
 
         V = X.T + u.reshape(X.shape[1], 3)
         vm.update_vertex_positions(V)
