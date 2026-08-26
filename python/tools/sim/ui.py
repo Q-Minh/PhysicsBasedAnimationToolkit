@@ -136,6 +136,8 @@ def load_vbd_params(
 class SolverType(enum.Enum):
     VBD = 0
     AAAVBD = 1
+    # TODO: Add AndersonSolver and ChebyshevSolver to the enum when implemented
+    # ...
     Newton = 2
 
 
@@ -147,6 +149,8 @@ class CDType(enum.Enum):
 SOLVER_SUB_PARAMS: dict[SolverType, dict] = {
     SolverType.VBD: {},
     SolverType.AAAVBD: {},
+    # TODO: Add sub-params for AndersonSolver and ChebyshevSolver when implemented
+    # ...
     SolverType.Newton: {"newton": {"line_search": {}}},
 }
 
@@ -204,6 +208,8 @@ class SimulationState:
             for s, p in params_cpu.items()
             if s != SolverType.Newton
         }
+        # TODO: Add params to self.params for AndersonSolver and ChebyshevSolver
+        # ...
         self.capture = None
 
         # Build collision geometry
@@ -241,6 +247,8 @@ class SimulationState:
         self.detector = self._make_contact_detector(contact_pair_storage)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
+            # TODO: Add AndersonSolver and ChebyshevSolver here when implemented
+            # ...
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
             SolverType.Newton: gpu.newton.solver.NewtonSolver(),
         }
@@ -325,6 +333,8 @@ class SimulationState:
             for s, p in self.params_cpu.items()
             if s != SolverType.Newton
         }
+        # TODO: Add params to self.params for AndersonSolver and ChebyshevSolver 
+        # ...
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
             self.multimesh, self.contact_storage_params
         )
