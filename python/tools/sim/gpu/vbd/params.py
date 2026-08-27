@@ -2,6 +2,8 @@ import warp as wp
 import numpy as np
 from pbatoolkit import pbat
 
+from ...common.fields import DocField
+
 # --- Vertex linear solver constants ---
 VLS_SOLVER_INVERSE = wp.constant(
     int(pbat.sim.algorithm.vbd.VertexIntegrationLinearSolver.Inverse.value)
@@ -200,6 +202,97 @@ def deserialize_vbd_cpu_params(params: pbat.sim.algorithm.vbd.Params, grp) -> No
                 setattr(params, name, int(raw))
         except Exception:
             pass
+
+
+class ChebyshevParams(Params):
+    """VBD solver parameters augmented with Chebyshev semi-iterative acceleration state, for
+    GPU execution.
+
+    Wraps a `pbat.sim.algorithm.vbd.Params` CPU object, inheriting all VBD parameters/buffers
+    (see `Params`), and additionally stores the Chebyshev-specific GPU-resident state mirroring
+    `pbat::sim::algorithm::vbd::ChebyshevParams` (`source/pbat/sim/algorithm/vbd/Chebyshev.h`):
+      - rho: spectral radius estimate, `0 < rho < 1`, read once from the CPU
+        `pbat.sim.algorithm.vbd.ChebyshevParams` object at construction time
+      - omega: current relaxation weight, recomputed every VBD sweep
+      - xkm1, xkm2: previous VBD-sweep iterates used by the momentum recurrence
+    """
+
+    def __init__(
+        self,
+        params: pbat.sim.algorithm.vbd.Params,
+        cheb_params: pbat.sim.algorithm.vbd.ChebyshevParams,
+    ):
+        super().__init__(params)
+        self.rho = cheb_params.rho
+        self.omega = 1.0
+        n_nodes = params.colors.shape[0]
+        self.xkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
+        self.xkm2: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
+
+
+def serialize_chebyshev_cpu_params(
+    vbd_params: pbat.sim.algorithm.vbd.Params,
+    cheb_params: pbat.sim.algorithm.vbd.ChebyshevParams,
+    grp,
+) -> None:
+    """Serialize a VBD CPU `Params` object plus a Chebyshev CPU `ChebyshevParams` object's
+    `rho` to an h5py group."""
+    serialize_vbd_cpu_params(vbd_params, grp)
+    grp.attrs["rho"] = float(cheb_params.rho)
+
+
+def deserialize_chebyshev_cpu_params(
+    vbd_params: pbat.sim.algorithm.vbd.Params,
+    cheb_params: pbat.sim.algorithm.vbd.ChebyshevParams,
+    grp,
+) -> None:
+    """Deserialize a VBD CPU `Params` object plus a Chebyshev CPU `ChebyshevParams` object's
+    `rho` from an h5py group, in place. Silently skips `rho` if absent from the group."""
+    deserialize_vbd_cpu_params(vbd_params, grp)
+    if "rho" in grp.attrs:
+        cheb_params.rho = float(grp.attrs["rho"])
+
+
+class ChebyshevCpuParams:
+    """Container bundling the two CPU-side parameter objects the Chebyshev-accelerated VBD
+    solver needs, so that they can be stored/passed around as a single `params_cpu` entry in
+    `ui.py`.
+
+    `rho` is exposed as a top-level property delegating to the underlying
+    `pbat.sim.algorithm.vbd.ChebyshevParams.rho`, so it's drawn directly by `draw_params`,
+    while `vbd_params` (the underlying `pbat.sim.algorithm.vbd.Params`) is meant to be drawn
+    as a nested sub-tree via `draw_params`'s `sub_params` mechanism (see
+    `SOLVER_SUB_PARAMS[SolverType.Chebyshev] = {"vbd_params": None}` in `ui.py`), the same way
+    Newton's `line_search` sub-params are handled.
+    """
+
+    def __init__(
+        self,
+        vbd_params: pbat.sim.algorithm.vbd.Params | None = None,
+        cheb_params: pbat.sim.algorithm.vbd.ChebyshevParams | None = None,
+    ):
+        self.vbd_params = (
+            vbd_params if vbd_params is not None else pbat.sim.algorithm.vbd.Params()
+        )
+        self._cheb_params = (
+            cheb_params
+            if cheb_params is not None
+            else pbat.sim.algorithm.vbd.ChebyshevParams()
+        )
+
+    @property
+    def cheb_params(self) -> pbat.sim.algorithm.vbd.ChebyshevParams:
+        """The underlying `pbat.sim.algorithm.vbd.ChebyshevParams` CPU object."""
+        return self._cheb_params
+
+    @property
+    def rho(self) -> float:
+        """Spectral radius estimate `0 < rho < 1` for Chebyshev acceleration."""
+        return self._cheb_params.rho
+
+    @rho.setter
+    def rho(self, value: float):
+        self._cheb_params.rho = float(value)
 
 
 import unittest
