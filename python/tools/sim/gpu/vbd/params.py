@@ -1,5 +1,6 @@
 import warp as wp
 import numpy as np
+import cupy as cp
 from pbatoolkit import pbat
 
 from ...common.fields import DocField
@@ -293,6 +294,165 @@ class ChebyshevCpuParams:
     @rho.setter
     def rho(self, value: float):
         self._cheb_params.rho = float(value)
+
+
+class AndersonParams(Params):
+    """VBD solver parameters augmented with Anderson acceleration state, for GPU execution.
+
+    Wraps a `pbat.sim.algorithm.vbd.Params` CPU object, inheriting all VBD parameters/buffers
+    (see `Params`), and additionally stores the Anderson-specific GPU-resident state mirroring
+    `pbat::sim::algorithm::vbd::AndersonParams` (`source/pbat/sim/algorithm/vbd/Anderson.h`):
+      - m: window size, read once from the CPU `pbat.sim.algorithm.vbd.AndersonParams` object
+        at construction time
+      - beta: mixing parameter, read once from the CPU object at construction time
+      - xkm1: `(N,)` previous step's positions
+      - fk, fkm1: `(N,)` current/past residuals `x - xkm1`
+      - Xk, Fk: `(m, N, 3)` CuPy ndarrays of past step/residual differences (one slot per
+        window entry, indexed modulo `m` as in `pbat::common::Modulo`), so that the Anderson
+        mixing step (`gpu/vbd/aasolver.py`) can run `cupy.linalg.lstsq`/matmul directly on them
+        as `(3N, mk)` matrices. Per-slot `wp.array` vec3f views (`Xk`/`Fk`, zero-copy over the
+        same device memory as `Xk_cp`/`Fk_cp`) are exposed so the per-vertex bookkeeping
+        kernels can keep writing into them exactly as before.
+      - gammak: `(m,)` warp array of subspace mixing coefficients, solved for via
+        `warp.optim.linear.cg` (see `gpu/vbd/aasolver.py`) applied to the normal equations
+        `Fk[:mk]^T Fk[:mk] gammak[:mk] = Fk[:mk]^T fk`, using a custom
+        `warp.optim.linear.LinearOperator` whose matvec runs `cupy` matmuls
+      - b: `(m,)` warp array scratch buffer holding the CG right-hand-side `Fk[:mk]^T fk`
+    """
+
+    def __init__(
+        self,
+        params: pbat.sim.algorithm.vbd.Params,
+        anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
+    ):
+        super().__init__(params)
+        self.m = int(anderson_params.m)
+        self.beta = float(anderson_params.beta)
+        n_nodes = params.colors.shape[0]
+        self.xkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
+        self.fk: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
+        self.fkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
+        # Xk, Fk are stored as CuPy ndarrays (m, N, 3) rather than lists of independently
+        # allocated warp arrays, so the Anderson mixing step can treat them as (3N, mk)
+        # matrices for `cupy` matmuls without any gather/copy. Each slot's `wp.array` vec3f
+        # view shares the exact same device memory (zero-copy), so per-vertex kernels
+        # (`gpu/vbd/aasolver.py`) can still write into `Xk[dkl]`/`Fk[dkl]` directly.
+        self.Xk_cp: cp.ndarray = cp.zeros((self.m, n_nodes, 3), dtype=cp.float32)
+        self.Fk_cp: cp.ndarray = cp.zeros((self.m, n_nodes, 3), dtype=cp.float32)
+        self.Xk: list[wp.array[wp.vec3f]] = [
+            wp.array(
+                ptr=self.Xk_cp[i].data.ptr,
+                dtype=wp.vec3f,
+                shape=(n_nodes,),
+                ndim=1,
+                copy=False,
+            )
+            for i in range(self.m)
+        ]
+        self.Fk: list[wp.array[wp.vec3f]] = [
+            wp.array(
+                ptr=self.Fk_cp[i].data.ptr,
+                dtype=wp.vec3f,
+                shape=(n_nodes,),
+                ndim=1,
+                copy=False,
+            )
+            for i in range(self.m)
+        ]
+        # gammak/b are plain warp arrays (rather than CuPy ndarrays) so they can be passed
+        # directly as the `x`/`b` arguments of `warp.optim.linear.cg`.
+        self.gammak: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
+        self.b: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
+
+
+def serialize_anderson_cpu_params(
+    vbd_params: pbat.sim.algorithm.vbd.Params,
+    anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
+    grp,
+) -> None:
+    """Serialize a VBD CPU `Params` object plus an Anderson CPU `AndersonParams` object's
+    `m`, `beta`, and `cod_numerical_zero` to an h5py group."""
+    serialize_vbd_cpu_params(vbd_params, grp)
+    grp.attrs["m"] = int(anderson_params.m)
+    grp.attrs["beta"] = float(anderson_params.beta)
+    grp.attrs["cod_numerical_zero"] = float(anderson_params.cod_numerical_zero)
+
+
+def deserialize_anderson_cpu_params(
+    vbd_params: pbat.sim.algorithm.vbd.Params,
+    anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
+    grp,
+) -> None:
+    """Deserialize a VBD CPU `Params` object plus an Anderson CPU `AndersonParams` object's
+    `m`, `beta`, and `cod_numerical_zero` from an h5py group, in place. Silently skips keys
+    absent from the group."""
+    deserialize_vbd_cpu_params(vbd_params, grp)
+    if "m" in grp.attrs:
+        anderson_params.m = int(grp.attrs["m"])
+    if "beta" in grp.attrs:
+        anderson_params.beta = float(grp.attrs["beta"])
+    if "cod_numerical_zero" in grp.attrs:
+        anderson_params.cod_numerical_zero = float(grp.attrs["cod_numerical_zero"])
+
+
+class AndersonCpuParams:
+    """Container bundling the two CPU-side parameter objects the Anderson-accelerated VBD
+    solver needs, so that they can be stored/passed around as a single `params_cpu` entry in
+    `ui.py`.
+
+    `m`, `beta`, and `cod_numerical_zero` are exposed as top-level properties delegating to the
+    underlying `pbat.sim.algorithm.vbd.AndersonParams`, so they're drawn directly by
+    `draw_params`, while `vbd_params` (the underlying `pbat.sim.algorithm.vbd.Params`) is meant
+    to be drawn as a nested sub-tree via `draw_params`'s `sub_params` mechanism (see
+    `SOLVER_SUB_PARAMS[SolverType.AndersonSolver] = {"vbd_params": None}` in `ui.py`), the same
+    way Newton's `line_search` sub-params are handled.
+    """
+
+    def __init__(
+        self,
+        vbd_params: pbat.sim.algorithm.vbd.Params | None = None,
+        anderson_params: pbat.sim.algorithm.vbd.AndersonParams | None = None,
+    ):
+        self.vbd_params = (
+            vbd_params if vbd_params is not None else pbat.sim.algorithm.vbd.Params()
+        )
+        self._anderson_params = (
+            anderson_params
+            if anderson_params is not None
+            else pbat.sim.algorithm.vbd.AndersonParams()
+        )
+
+    @property
+    def anderson_params(self) -> pbat.sim.algorithm.vbd.AndersonParams:
+        """The underlying `pbat.sim.algorithm.vbd.AndersonParams` CPU object."""
+        return self._anderson_params
+
+    @property
+    def m(self) -> int:
+        """Anderson acceleration window size."""
+        return self._anderson_params.m
+
+    @m.setter
+    def m(self, value: int):
+        self._anderson_params.m = int(value)
+
+    @property
+    def beta(self) -> float:
+        """Anderson acceleration mixing parameter."""
+        return self._anderson_params.beta
+
+    @beta.setter
+    def beta(self, value: float):
+        self._anderson_params.beta = float(value)
+
+    @property
+    def cod_numerical_zero(self) -> float:
+        """Numerical zero threshold for the COD least-squares solver."""
+        return self._anderson_params.cod_numerical_zero
+
+    @cod_numerical_zero.setter
+    def cod_numerical_zero(self, value: float):
+        self._anderson_params.cod_numerical_zero = float(value)
 
 
 import unittest

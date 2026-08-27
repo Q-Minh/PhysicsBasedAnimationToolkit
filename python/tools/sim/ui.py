@@ -142,13 +142,21 @@ def load_chebyshev_params(
     return gpu.vbd.params.ChebyshevCpuParams(vbd_params_cpu)
 
 
+def load_anderson_params(
+    fem: pbat.sim.dynamics.FemElastoDynamics, spec: str | None = None
+) -> gpu.vbd.params.AndersonCpuParams:
+    """Construct Anderson-accelerated VBD CPU params from fem mesh, optionally deserializing
+    the underlying VBD params from file:group."""
+    vbd_params_cpu = load_vbd_params(fem, spec=spec)
+    return gpu.vbd.params.AndersonCpuParams(vbd_params_cpu)
+
+
 class SolverType(enum.Enum):
     VBD = 0
     AAAVBD = 1
     Chebyshev = 2
-    # TODO: Add AndersonSolver to the enum when implemented
-    # ...
-    Newton = 3
+    AndersonSolver = 3
+    Newton = 4
 
 
 class CDType(enum.Enum):
@@ -160,8 +168,7 @@ SOLVER_SUB_PARAMS: dict[SolverType, dict] = {
     SolverType.VBD: {},
     SolverType.AAAVBD: {},
     SolverType.Chebyshev: {"vbd_params": None},
-    # TODO: Add sub-params for AndersonSolver when implemented
-    # ...
+    SolverType.AndersonSolver: {"vbd_params": None},
     SolverType.Newton: {"newton": {"line_search": {}}},
 }
 
@@ -223,8 +230,10 @@ class SimulationState:
             self.params_cpu[SolverType.Chebyshev].vbd_params,
             self.params_cpu[SolverType.Chebyshev].cheb_params,
         )
-        # TODO: Add params to self.params for AndersonSolver
-        # ...
+        self.params[SolverType.AndersonSolver] = gpu.vbd.params.AndersonParams(
+            self.params_cpu[SolverType.AndersonSolver].vbd_params,
+            self.params_cpu[SolverType.AndersonSolver].anderson_params,
+        )
         self.capture = None
 
         # Build collision geometry
@@ -262,8 +271,7 @@ class SimulationState:
         self.detector = self._make_contact_detector(contact_pair_storage)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
-            # TODO: Add AndersonSolver here when implemented
-            # ...
+            SolverType.AndersonSolver: gpu.vbd.aasolver.AndersonSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
             SolverType.Chebyshev: gpu.vbd.chebsolver.ChebyshevSolver(),
             SolverType.Newton: gpu.newton.solver.NewtonSolver(),
@@ -353,8 +361,10 @@ class SimulationState:
             self.params_cpu[SolverType.Chebyshev].vbd_params,
             self.params_cpu[SolverType.Chebyshev].cheb_params,
         )
-        # TODO: Add params to self.params for AndersonSolver
-        # ...
+        self.params[SolverType.AndersonSolver] = gpu.vbd.params.AndersonParams(
+            self.params_cpu[SolverType.AndersonSolver].vbd_params,
+            self.params_cpu[SolverType.AndersonSolver].anderson_params,
+        )
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
             self.multimesh, self.contact_storage_params
         )
@@ -369,6 +379,7 @@ class SimulationState:
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),
             SolverType.AAAVBD: gpu.vbd.aaasolver.AaaVbdSolver(),
             SolverType.Chebyshev: gpu.vbd.chebsolver.ChebyshevSolver(),
+            SolverType.AndersonSolver: gpu.vbd.aasolver.AndersonSolver(),
             SolverType.Newton: gpu.newton.solver.NewtonSolver(),
         }
         self.contact_browser.update(
@@ -417,6 +428,11 @@ def _serialize_params(state: "SimulationState", f: h5py.File) -> None:
         state.params_cpu[SolverType.Chebyshev].cheb_params,
         f.create_group("Solver/Chebyshev"),
     )
+    gpu.vbd.params.serialize_anderson_cpu_params(
+        state.params_cpu[SolverType.AndersonSolver].vbd_params,
+        state.params_cpu[SolverType.AndersonSolver].anderson_params,
+        f.create_group("Solver/AndersonSolver"),
+    )
     gpu.newton.solver.serialize_newton_cpu_params(
         state.params_cpu[SolverType.Newton], f.create_group("Solver/Newton")
     )
@@ -453,6 +469,12 @@ def _deserialize_params(state: "SimulationState", f: h5py.File) -> None:
             state.params_cpu[SolverType.Chebyshev].vbd_params,
             state.params_cpu[SolverType.Chebyshev].cheb_params,
             f["Solver/Chebyshev"],
+        )
+    if "Solver/AndersonSolver" in f:
+        gpu.vbd.params.deserialize_anderson_cpu_params(
+            state.params_cpu[SolverType.AndersonSolver].vbd_params,
+            state.params_cpu[SolverType.AndersonSolver].anderson_params,
+            f["Solver/AndersonSolver"],
         )
     if "Solver/Newton" in f:
         gpu.newton.solver.deserialize_newton_cpu_params(
@@ -772,6 +794,7 @@ def main():
         s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]
     }
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
+    params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
     ui_state = UIState()
