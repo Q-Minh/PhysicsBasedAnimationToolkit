@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cmath>
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <limits>
 #include <tbb/parallel_for.h>
 #include <tuple>

@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <cassert>
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <type_traits>
 
 namespace pbat::sim::dynamics {

@@ -21,7 +21,7 @@
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <string>
 #include <tbb/parallel_for.h>
 

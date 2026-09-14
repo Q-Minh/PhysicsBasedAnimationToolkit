@@ -19,7 +19,7 @@
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <cassert>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/Eigen.h>
 #include <pbat/profiling/Profiling.h>

@@ -16,7 +16,7 @@
 
 #include <concepts>
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <string>
 
 namespace pbat {

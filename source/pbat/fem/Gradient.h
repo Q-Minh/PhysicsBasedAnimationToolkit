@@ -28,7 +28,7 @@
 #include "pbat/profiling/Profiling.h"
 
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat::fem {

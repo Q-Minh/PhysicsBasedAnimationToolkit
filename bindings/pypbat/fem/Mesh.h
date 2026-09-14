@@ -3,7 +3,7 @@
 
 #include <Eigen/Core>
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <nanobind/nanobind.h>
 #include <pbat/Aliases.h>
 #include <pbat/common/ConstexprFor.h>

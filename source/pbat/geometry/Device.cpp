@@ -5,7 +5,7 @@
 #include "pbat/geometry/Device.h"
 
 #include <embree4/rtcore.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <numeric>
 #include <stdexcept>
 #include <utility>

@@ -3,7 +3,6 @@
 #include "HyperElasticity.h"
 
 #include <doctest/doctest.h>
-#include <fmt/core.h>
 #include <pbat/common/ConstexprFor.h>
 #include <pbat/math/linalg/mini/Eigen.h>
 

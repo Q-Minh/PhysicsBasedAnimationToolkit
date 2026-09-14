@@ -28,7 +28,6 @@
 
 #include <Eigen/Core>
 #include <exception>
-#include <fmt/core.h>
 #include <tbb/parallel_for.h>
 
 namespace pbat::sim::algorithm::pd {

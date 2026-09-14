@@ -25,7 +25,6 @@
 
 #include <Eigen/Eigenvalues>
 #include <exception>
-#include <fmt/core.h>
 #include <span>
 #include <string>
 #include <tbb/parallel_for.h>

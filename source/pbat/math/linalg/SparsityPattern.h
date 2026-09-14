@@ -18,7 +18,7 @@
 #include "pbat/profiling/Profiling.h"
 
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <range/v3/action/sort.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/iota.hpp>

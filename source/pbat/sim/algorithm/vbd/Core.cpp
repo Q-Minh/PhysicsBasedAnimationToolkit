@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <thread>
 
 namespace pbat::sim::algorithm::vbd {

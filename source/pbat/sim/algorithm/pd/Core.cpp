@@ -4,7 +4,7 @@
 #include "pbat/graph/Mesh.h"
 
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace pbat::sim::algorithm::pd {
 

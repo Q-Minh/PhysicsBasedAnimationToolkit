@@ -20,7 +20,7 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/QR>
 #include <exception>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace pbat::sim::algorithm::vbd {
 
