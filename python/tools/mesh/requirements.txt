@@ -4,7 +4,7 @@ meshio==5.3.5
 tetgen==0.6.6
 libigl==v2.5.1
 polyscope==2.5.0
-gpytoolbox==0.3.4
+gpytoolbox==0.3.7
 pymeshfix==0.17.0
 fast-simplification==0.1.13
-networkx==3.3
+networkx==3.6.1
