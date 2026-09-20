@@ -332,37 +332,13 @@ class AndersonParams(Params):
         self.xkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
         self.fk: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
         self.fkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
-        # Xk, Fk are stored as CuPy ndarrays (m, N, 3) rather than lists of independently
-        # allocated warp arrays, so the Anderson mixing step can treat them as (3N, mk)
-        # matrices for `cupy` matmuls without any gather/copy. Each slot's `wp.array` vec3f
-        # view shares the exact same device memory (zero-copy), so per-vertex kernels
-        # (`gpu/vbd/aasolver.py`) can still write into `Xk[dkl]`/`Fk[dkl]` directly.
-        self.Xk_cp: cp.ndarray = cp.zeros((self.m, n_nodes, 3), dtype=cp.float32)
-        self.Fk_cp: cp.ndarray = cp.zeros((self.m, n_nodes, 3), dtype=cp.float32)
-        self.Xk: list[wp.array[wp.vec3f]] = [
-            wp.array(
-                ptr=self.Xk_cp[i].data.ptr,
-                dtype=wp.vec3f,
-                shape=(n_nodes,),
-                ndim=1,
-                copy=False,
-            )
-            for i in range(self.m)
-        ]
-        self.Fk: list[wp.array[wp.vec3f]] = [
-            wp.array(
-                ptr=self.Fk_cp[i].data.ptr,
-                dtype=wp.vec3f,
-                shape=(n_nodes,),
-                ndim=1,
-                copy=False,
-            )
-            for i in range(self.m)
-        ]
-        # gammak/b are plain warp arrays (rather than CuPy ndarrays) so they can be passed
-        # directly as the `x`/`b` arguments of `warp.optim.linear.cg`.
+        self.XkT: cp.ndarray = cp.zeros((self.m, n_nodes*3), dtype=cp.float32)
+        self.FkT: cp.ndarray = cp.zeros((self.m, n_nodes*3), dtype=cp.float32)
         self.gammak: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
-        self.b: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
+        self.FkTfk: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
+        self.FkTFk: cp.ndarray = cp.zeros((self.m, self.m), dtype=cp.float32)
+        self.Fkgammak: wp.array[wp.float32] = wp.zeros((n_nodes*3,), dtype=wp.float32)
+        self.Xkgammak: wp.array[wp.float32] = wp.zeros((n_nodes*3,), dtype=wp.float32)
 
 
 def serialize_anderson_cpu_params(
