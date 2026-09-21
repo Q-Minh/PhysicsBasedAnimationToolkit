@@ -307,17 +307,12 @@ class AndersonParams(Params):
       - beta: mixing parameter, read once from the CPU object at construction time
       - xkm1: `(N,)` previous step's positions
       - fk, fkm1: `(N,)` current/past residuals `x - xkm1`
-      - Xk, Fk: `(m, N, 3)` CuPy ndarrays of past step/residual differences (one slot per
-        window entry, indexed modulo `m` as in `pbat::common::Modulo`), so that the Anderson
-        mixing step (`gpu/vbd/aasolver.py`) can run `cupy.linalg.lstsq`/matmul directly on them
-        as `(3N, mk)` matrices. Per-slot `wp.array` vec3f views (`Xk`/`Fk`, zero-copy over the
-        same device memory as `Xk_cp`/`Fk_cp`) are exposed so the per-vertex bookkeeping
-        kernels can keep writing into them exactly as before.
-      - gammak: `(m,)` warp array of subspace mixing coefficients, solved for via
-        `warp.optim.linear.cg` (see `gpu/vbd/aasolver.py`) applied to the normal equations
-        `Fk[:mk]^T Fk[:mk] gammak[:mk] = Fk[:mk]^T fk`, using a custom
-        `warp.optim.linear.LinearOperator` whose matvec runs `cupy` matmuls
-      - b: `(m,)` warp array scratch buffer holding the CG right-hand-side `Fk[:mk]^T fk`
+      - XkT, FkT: `(m, 3N)` C-contiguous CuPy ndarrays. Each row is a window slot and therefore
+        stores one conceptual column of the `(3N, m)` Anderson history matrix contiguously. The
+        bookkeeping kernels use zero-copy `(m, N)` `wp.vec3f` views over these buffers.
+      - gammak: `(m,)` Warp array of subspace mixing coefficients, obtained by the in-kernel
+        LDLT solve in `gpu/vbd/aasolver.py`
+      - FkTfk, FkTFk: GPU-resident normal-equation right-hand side and matrix, respectively
     """
 
     def __init__(
@@ -328,6 +323,7 @@ class AndersonParams(Params):
         super().__init__(params)
         self.m = int(anderson_params.m)
         self.beta = float(anderson_params.beta)
+        self.cod_numerical_zero = float(anderson_params.cod_numerical_zero)
         n_nodes = params.colors.shape[0]
         self.xkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
         self.fk: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
@@ -335,10 +331,8 @@ class AndersonParams(Params):
         self.XkT: cp.ndarray = cp.zeros((self.m, n_nodes*3), dtype=cp.float32)
         self.FkT: cp.ndarray = cp.zeros((self.m, n_nodes*3), dtype=cp.float32)
         self.gammak: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
-        self.FkTfk: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
+        self.FkTfk: cp.ndarray = cp.zeros((self.m,), dtype=cp.float32)
         self.FkTFk: cp.ndarray = cp.zeros((self.m, self.m), dtype=cp.float32)
-        self.Fkgammak: wp.array[wp.float32] = wp.zeros((n_nodes*3,), dtype=wp.float32)
-        self.Xkgammak: wp.array[wp.float32] = wp.zeros((n_nodes*3,), dtype=wp.float32)
 
 
 def serialize_anderson_cpu_params(
@@ -423,7 +417,7 @@ class AndersonCpuParams:
 
     @property
     def cod_numerical_zero(self) -> float:
-        """Numerical zero threshold for the COD least-squares solver."""
+        """Numerical zero threshold for CPU COD and diagonal regularization for GPU normal equations."""
         return self._anderson_params.cod_numerical_zero
 
     @cod_numerical_zero.setter

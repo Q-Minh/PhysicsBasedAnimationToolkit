@@ -1,5 +1,4 @@
 import warp as wp
-import warp.optim.linear as wol
 import cupy as cp
 
 from python.tools.sim.gpu.vbd.solver import (
@@ -12,23 +11,16 @@ from python.tools.sim.gpu.vbd.solver import (
 
 from ..common.stream import Stream
 from ..contact.mesh.cd import ContactDetection
-from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
-from .params import (
-    AndersonParams,
-    ParamsData,
-)
-from ..contact.dynamics import (
-    MeshDynamics as ContactDynamics,
-    MeshDynamicsData as ContactDynamicsData,
-    PenaltyAdaptivity,
-)
+from ..elasticity.fem import FemElastoDynamics
+from .params import AndersonParams
+from ..contact.dynamics import MeshDynamics as ContactDynamics
 
 
 @wp.kernel
 def _anderson_pre_iterate_kernel(
     x: wp.array[wp.vec3f],
     xkm1: wp.array[wp.vec3f],
-    Xk: wp.array[wp.vec3f],
+    Xk: wp.array2d[wp.vec3f], 
     dkl: int,
 ):
     i = wp.tid()
@@ -43,7 +35,7 @@ def _anderson_post_iterate_kernel(
     xkm1: wp.array[wp.vec3f],
     fk: wp.array[wp.vec3f],
     fkm1: wp.array[wp.vec3f],
-    Fk: wp.array[wp.vec3f],
+    Fk: wp.array2d[wp.vec3f],
     dkl: int,
 ):
     i = wp.tid()
@@ -61,6 +53,71 @@ def _anderson_residual_kernel(
 ):
     i = wp.tid()
     fkm1[i] = x[i] - xkm1[i]  # pyright: ignore[reportIndexIssue]
+
+
+@wp.kernel
+def _anderson_solve_normal_equations_kernel(
+    A: wp.array2d[wp.float32],
+    b: wp.array[wp.float32],
+    gammak: wp.array[wp.float32],
+    mk: int,
+    regularization: float,
+):
+    """Solve ``A gamma = b`` with an in-place LDLT factorization in one thread."""
+    if wp.tid() != 0:
+        return
+
+    # The user-configured diagonal shift makes the normal system positive definite when F is rank
+    # deficient.
+    for i in range(mk):
+        A[i, i] += regularization  # pyright: ignore[reportIndexIssue]
+        for j in range(i):
+            lij = A[i, j]  # pyright: ignore[reportIndexIssue]
+            for k in range(j):
+                lij -= A[i, k] * A[j, k] * A[k, k]  # pyright: ignore[reportIndexIssue]
+            A[i, j] = lij / A[j, j]  # pyright: ignore[reportIndexIssue]
+
+        dii = A[i, i]  # pyright: ignore[reportIndexIssue]
+        for k in range(i):
+            dii -= A[i, k] * A[i, k] * A[k, k]  # pyright: ignore[reportIndexIssue]
+        A[i, i] = dii  # pyright: ignore[reportIndexIssue]
+
+    # Forward solve: L y = b.
+    for i in range(mk):
+        yi = b[i]  # pyright: ignore[reportIndexIssue]
+        for j in range(i):
+            yi -= A[i, j] * gammak[j]  # pyright: ignore[reportIndexIssue]
+        gammak[i] = yi  # pyright: ignore[reportIndexIssue]
+
+    # Diagonal solve: D z = y.
+    for i in range(mk):
+        gammak[i] /= A[i, i]  # pyright: ignore[reportIndexIssue]
+
+    # Backward solve: L^T gamma = z.
+    for i in range(mk - 1, -1, -1):
+        gammai = gammak[i]  # pyright: ignore[reportIndexIssue]
+        for j in range(i + 1, mk):
+            gammai -= A[j, i] * gammak[j]  # pyright: ignore[reportIndexIssue]
+        gammak[i] = gammai  # pyright: ignore[reportIndexIssue]
+
+
+@wp.kernel
+def _anderson_mixing_kernel(
+    x: wp.array[wp.vec3f],
+    xkm1: wp.array[wp.vec3f],
+    fk: wp.array[wp.vec3f],
+    Xk: wp.array2d[wp.vec3f], 
+    Fk: wp.array2d[wp.vec3f], 
+    gammak: wp.array[wp.float32],
+    beta: float,
+    mk: int,
+):
+    i = wp.tid()
+    xi = xkm1[i] + beta * fk[i]  # pyright: ignore[reportIndexIssue]
+    for j in range(mk):
+        gammaj = gammak[j]  # pyright: ignore[reportIndexIssue]
+        xi -= gammaj * (Xk[j, i] + beta * Fk[j, i])  # pyright: ignore[reportIndexIssue]
+    x[i] = xi  # pyright: ignore[reportIndexIssue]
 
 
 def solve_subproblem(
@@ -84,14 +141,14 @@ def solve_subproblem(
 
     device = wp.get_cuda_device()
     Xk = wp.array(
-        params.Xk,
+        params.XkT,
         dtype=wp.vec3f,
         shape=(params.m, n_nodes),
         device=device,
         copy=False,
     )
     Fk = wp.array(
-        params.Fk,
+        params.FkT,
         dtype=wp.vec3f,
         shape=(params.m, n_nodes),
         device=device,
@@ -124,44 +181,60 @@ def solve_subproblem(
 
 
 def anderson_mix(x: wp.array, params: AndersonParams, mk: int):
-    """Solve the Anderson mixing least-squares subproblem via CG on the normal equations, and
-    mix the accelerated iterate into `x` in place, mirroring `Anderson.h`'s `Iterate` (`kp > 0`
-    branch, after `Fk`/`fk` have been updated):
+    """Solve the Anderson normal equations and mix the accelerated iterate into ``x`` in place.
 
-        gammak[:mk] = argmin_gamma || Fk[:mk] @ gamma - fk ||
-                    <=> Fk[:mk]^T Fk[:mk] gammak[:mk] = Fk[:mk]^T fk    (normal equations)
-        x = xkm1 + beta * fk - Xk[:mk] @ gammak[:mk] - beta * (Fk[:mk] @ gammak[:mk])
-
-    The normal equations are solved with `warp.optim.linear.cg`, using a custom
-    `warp.optim.linear.LinearOperator` whose matvec routine performs the `Fk[:mk]^T Fk[:mk] @ v`
-    product as a `cupy` matmul. All CuPy operations (including the mixing update) are enqueued
-    on the current Warp stream (wrapped via `Stream`, which implements the CUDA stream protocol)
-    so that they interleave correctly with the surrounding Warp kernel launches, instead of
-    running on CuPy's own default stream.
+    ``params.FkT[:mk]`` stores ``F^T`` and has shape ``(mk, 3N)``. Therefore this solves
+    ``(F^T F + eps I) gamma = F^T f``, where ``eps`` is the UI-exposed
+    ``cod_numerical_zero`` setting, with an in-kernel LDLT factorization. It then applies
+    ``x = xkm1 + beta * fk - (X + beta * F) gamma``.
     """
     device = wp.get_cuda_device()
     n_nodes = x.shape[0]
     stream = Stream(wp.get_stream())
     with cp.cuda.Stream.from_external(stream):
-        FkT = params.FkT
-        Fk = FkT.T
-        # Form normal equations
-        cp.matmul(FkT, params.fk, out=params.FkTfk)
-        cp.matmul(FkT, Fk, out=params.FkTFk)
-        # Solve normal equations (i.e. least squares)
-        wol.cg(params.FkTFk, params.FkTfk, params.gammak, maxiter=params.m)
-        # TODO: Implement mixing
-        # xkp1 = xkm1 + beta*fk - Xk[:mk] @ gammak[:mk] - beta * (Fk[:mk] @ gammak[:mk])
-        Xk = params.XkT.T
-        cp.matmul(Xk[:mk], params.gammak[:mk], out=params.Xkgammak)
-        cp.matmul(Fk[:mk], params.gammak[:mk], out=params.Fkgammak)
-        x = cp.asarray(x).ravel(order="F")
-        xkm1 = cp.asarray(params.xkm1).ravel(order="F")
-        wp.launch(
-            kernel=_anderson_mixing_kernel,
-            dim=(n_nodes*3,),
-            inputs=[x, xkm1, params.fk, params.Xkgammak, params.Fkgammak, params.beta],
-        )
+        FkT = params.FkT[:mk]
+        fk = cp.asarray(params.fk).ravel()
+        cp.matmul(FkT, fk, out=params.FkTfk[:mk])
+        cp.matmul(FkT, FkT.T, out=params.FkTFk[:mk, :mk])
+
+    Xk = wp.array(
+        params.XkT,
+        dtype=wp.vec3f,
+        shape=(params.m, n_nodes),
+        device=device,
+        copy=False,
+    )
+    Fk = wp.array(
+        params.FkT,
+        dtype=wp.vec3f,
+        shape=(params.m, n_nodes),
+        device=device,
+        copy=False,
+    )
+    A = wp.array(
+        params.FkTFk,
+        dtype=wp.float32,
+        shape=(params.m, params.m),
+        device=device,
+        copy=False,
+    )
+    b = wp.array(
+        params.FkTfk,
+        dtype=wp.float32,
+        shape=(params.m,),
+        device=device,
+        copy=False,
+    )
+    wp.launch(
+        kernel=_anderson_solve_normal_equations_kernel,
+        dim=1,
+        inputs=[A, b, params.gammak, mk, params.cod_numerical_zero],
+    )
+    wp.launch(
+        kernel=_anderson_mixing_kernel,
+        dim=n_nodes,
+        inputs=[x, params.xkm1, params.fk, Xk, Fk, params.gammak, params.beta, mk],
+    )
 
 class AndersonSolver:
 
