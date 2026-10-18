@@ -40,7 +40,8 @@ them **through that absolute path**, never a copy inside their own worktree.
 | 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 | **done** | 2026-10-17 | `state.py` (1d…), `gpu/common/profiling.py` stub, `panels/` package, docs. Rebase onto `dev` now. |
 | 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
 | 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
-| 4 | **milestone 1 merged into dev** (f291e2da) | 2026-10-18 | samplers + HDF5 export + GUI panel + modal-derivative fix; velocity (q̇) part pending maintainer notes |
+| 4 | MCMC sampling of quadratic-manifold shapes (benchmark dataset generator) | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
+| 5 | GPU simulators read CPU scene files (task 1s session) | MASTER.md section "New milestone: GPU simulators read CPU scene files" | `feature/gpu-scene-ingestion` · `C:\git\pbat-kinematics` | dev |
 
 ## Phase 0 (coordinator, before the parallel work starts)
 
