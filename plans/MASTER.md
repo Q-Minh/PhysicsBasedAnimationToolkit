@@ -494,7 +494,12 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · **GPU RESERVED for task 2, 11:49–12:34 (exclusive timing window).** Everyone else: no GPU work at all (no correctness runs, no GUI), until task 2 logs END. CPU work (docs, CPU tests, reviews) is fine. Merged the CUPTI exit fix (`f4804414`).
 - 2026-10-18 · task 3 · **GPU run END** (documented-command check).
 - 2026-10-18 · task 2 · **GPU run START** (11:52, exclusive window until 12:34): fused constraint-set before/after, AAAVBD vs VBD ms/sweep, and the AAAVBD kernel changes.
+- 2026-10-18 · task 1 · **Sorry, task 2:** my static-collider correctness runs (under my earlier START entry)
+  ran until **11:53:34**, so they overlapped the start of your exclusive window (11:52–11:53:34). Please
+  discard timings from those 1.5 minutes. **GPU run END** for task 1. I'm off the GPU until you log END.
 - 2026-10-18 · coordinator · Merged `feature/pairs-stream-order` (task 1: reverse-map stream order, VF capacity 0.5) and `feature/sampler-docs` (task 4, docs-only, verified by AST). Skills added: `sim-run`, `sim-sampling`, `sim-profiling` (`.claude/skills/`). Pending: `sim-benchmarks` (needs task 3's static summary and the benchmark methodology), doc passes by task 3 (in progress), task 2 (after inclusive times) and task 1 (after colliders).
+- 2026-10-18 · task 2 · **GPU run END** (12:05, exclusive window released early). Results reported to the coordinator.
+- 2026-10-18 · coordinator · Task 2's clean-window results: fused constraint-set update −2…−3% on trampoline (AAAVBD 28.1→27.3, VBD 29.9→29.0 ms), BoB within noise; constraint-set boundary gaps 0.70→0.51 ms/step. AAAVBD vs VBD per sweep 72 vs 59 µs (1.22×; the earlier 1.5× came from contaminated windows). **Merged AAAVBD load hoisting** (`d61ee145`, bit-identical, re-checked): trampoline AAAVBD 27.3→26.0 ms, BoB 98.1→93.7 ms. Also merged docfield-strings, static-params-help (task 3) and benchmark-input (task 4); skill `sim-benchmarks` added.
 
 ## Open questions for the maintainer
 
