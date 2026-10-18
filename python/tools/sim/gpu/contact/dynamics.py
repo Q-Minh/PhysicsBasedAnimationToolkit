@@ -347,9 +347,8 @@ def _compute_rayleigh_vv(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.vv.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -374,9 +373,8 @@ def _compute_rayleigh_ve(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.ve.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -409,9 +407,8 @@ def _compute_rayleigh_vf(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.vf.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -447,9 +444,8 @@ def _compute_rayleigh_ee(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.ee.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
