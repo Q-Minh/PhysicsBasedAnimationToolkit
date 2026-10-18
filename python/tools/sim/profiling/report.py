@@ -289,9 +289,9 @@ def render(result_list: list[dict], note: str | None = None) -> str:
     )
 
 
-# A page body without the document skeleton: it opens directly in a browser, and claude.ai artifact
-# publishing adds the skeleton.
-_PAGE = """<title>{title}</title>
+# Page pieces shared with profiling/overheads.py, as str.format templates. The page body has no document
+# skeleton: it opens directly in a browser, and claude.ai artifact publishing adds the skeleton.
+_HEAD = """<title>{title}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -336,7 +336,25 @@ dt {{ color:var(--muted); }} dd {{ margin:0; overflow-wrap:anywhere; }}
   border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:13px;
   box-shadow:0 4px 16px rgba(0,0,0,0.15); display:none; max-width:320px; }}
 </style>
-<main>
+"""
+
+_TOOLTIP = """<div id="tip"></div>
+<script>
+const tip = document.getElementById("tip");
+document.querySelectorAll("[data-tip]").forEach(el => {{
+  el.addEventListener("mousemove", e => {{
+    tip.textContent = el.dataset.tip; tip.style.display = "block";
+    const x = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8);
+    tip.style.left = x + "px"; tip.style.top = (e.clientY + 12) + "px";
+  }});
+  el.addEventListener("mouseleave", () => {{ tip.style.display = "none"; }});
+}});
+</script>
+"""
+
+_PAGE = (
+    _HEAD
+    + """<main>
 <h1>{title}</h1>
 <p class="sub">{scene}</p>{note_html}
 <div class="card">{summary}</div>
@@ -350,19 +368,9 @@ dt {{ color:var(--muted); }} dd {{ margin:0; overflow-wrap:anywhere; }}
 <div class="card">{kernels}</div>
 <h2>Run</h2>
 <div class="card"><dl>{meta}</dl><p class="note">{note}</p></div>
-</main><div id="tip"></div>
-<script>
-const tip = document.getElementById("tip");
-document.querySelectorAll("[data-tip]").forEach(el => {{
-  el.addEventListener("mousemove", e => {{
-    tip.textContent = el.dataset.tip; tip.style.display = "block";
-    const x = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8);
-    tip.style.left = x + "px"; tip.style.top = (e.clientY + 12) + "px";
-  }});
-  el.addEventListener("mouseleave", () => {{ tip.style.display = "none"; }});
-}});
-</script>
-"""
+</main>"""
+    + _TOOLTIP
+)
 
 
 def main():
