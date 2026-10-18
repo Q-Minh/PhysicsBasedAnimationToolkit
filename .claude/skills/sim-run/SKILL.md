@@ -110,7 +110,7 @@ The GPU defaults (`state.load_params`, listed in `configs/defaults.toml`) follow
   | Stiff, heterogeneous | ~400 |
 
   With substeps, count the sweeps across all of them.
-- **Early exit:** `Solver.Convergence.rtol = 1e-2` (default) is a relative, mass-normalized gradient test against the step's free-flight displacement. It's resolution-independent for smooth residuals and stricter on fine meshes for contact or mesh-scale residuals, which is accepted. `ftol = 0.5` (default) allows half the contact margin between outer iterations.
+- **Early exit:** `Solver.Convergence.rtol = 1e-2` (default) is a relative, mass-normalized gradient test against the step's free-flight displacement, for the VBD family and Newton. It's resolution-independent for smooth residuals and stricter on fine meshes for contact or mesh-scale residuals, which is accepted. `ftol = 0.5` (default) allows half the contact margin between outer iterations.
 - **AAAVBD:** the defaults are gammadown 0.99, gammadownS 0.95, gammaup(S) 0.5 and warm_start_beta 2. Make `gammaupS` smaller for contact-rich scenes.
 - **Vertex solve:** Inverse (default). Use EVD only when singular vertex Hessians cause problems.
 - **Contact penalty:** the default is CONSTANT for now. TIMESTEP adaptive (the maintainer's intended default) is being stabilized (it diverged on BeamFallingOnBeam with these defaults). Collider scenes are stable with `penalty_adaptivity=1` and `gamman_adaptive=1` (the adaptive default 0.1 is too soft against colliders).

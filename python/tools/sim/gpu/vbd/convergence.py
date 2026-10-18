@@ -35,7 +35,8 @@ class ConvergenceParams(SerializableMixin):
     Held by ``SimulationState.convergence_params`` (kept across resets) and serialized under
     ``Solver/Convergence``, so configs set them as ``Solver.Convergence.check_interval`` and
     ``Solver.Convergence.ftol``. The gradient tolerance is relative (``rtol > 0``, default 1e-2, see below)
-    or, with ``rtol = 0``, each solver's absolute ``gtol`` (``Solver.<solver>.gtol``).
+    or, with ``rtol = 0``, each solver's absolute ``gtol`` (``Solver.<solver>.gtol``; Newton's ``gtol2``). GPU Newton
+    uses the same relative test (see ``gpu.newton.solver.check_convergence``).
 
     Relative test (``rtol > 0``): the gradient g of the time step's Lagrangian is turned into a
     position-like residual by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step
@@ -345,25 +346,29 @@ class ConvergenceCheck:
         self.subproblem_keep = wp.zeros(1, dtype=wp.int32)
 
     @property
-    def _relative(self) -> bool:
+    def relative(self) -> bool:
         """Whether the relative test applies: enabled, and not a static problem."""
         return float(self.params.rtol) > 0.0 and not self._fem.static
 
     def _test(self) -> None:
         stream = wp.get_stream()
         self.gradient_norm.compute(stream)
-        if self._relative:
-            wp.launch(
-                _mass_normalized_residual_terms,
-                dim=self._terms.shape[0],
-                inputs=[self.gradient_norm.g, self._fem.data, self._terms],
-            )
-            self._reduce_residual(stream)
+        if self.relative:
+            self._measure_residual(self.gradient_norm.g)
 
-    def _measure_displacement(self) -> None:
-        """The relative test's scale: the step's sum m_i |x~_i - x^t_i|^2 over free nodes, floored at
-        (free mass) * displacement_floor^2."""
-        if self._relative:
+    def _measure_residual(self, g: wp.array) -> None:
+        wp.launch(
+            _mass_normalized_residual_terms,
+            dim=self._terms.shape[0],
+            inputs=[g, self._fem.data, self._terms],
+        )
+        self._reduce_residual(wp.get_stream())
+
+    def measure_scale(self) -> None:
+        """Measure the relative test's scale for the time step: the step's sum m_i |x~_i - x^t_i|^2
+        over free nodes, floored at (free mass) * displacement_floor^2. No-op unless :attr:`relative`.
+        Capturable."""
+        if self.relative:
             stream = wp.get_stream()
             wp.launch(
                 _free_flight_displacement_terms,
@@ -384,7 +389,7 @@ class ConvergenceCheck:
             float(gtol) ** 2,
             self.residual_m2,
             self.displacement_m2,
-            float(self.params.rtol) ** 2 if self._relative else 0.0,
+            float(self.params.rtol) ** 2 if self.relative else 0.0,
         ]
 
     def _measure_penetration(self) -> None:
@@ -414,7 +419,7 @@ class ConvergenceCheck:
             gtol (float): Gradient-norm tolerance (absolute; used when the relative test is off).
             n_max_iters (int): Maximum outer iterations; ``keep`` is 0 if it's 0.
         """
-        self._measure_displacement()
+        self.measure_scale()
         self._test()
         self._measure_penetration()
         wp.launch(_start_kernel, dim=1, inputs=self._outer_test_inputs(gtol, n_max_iters))
@@ -479,7 +484,39 @@ class ConvergenceCheck:
         Returns:
             bool: Whether the last gradient test passed (feasibility isn't included).
         """
-        if self._relative:
-            dm2 = float(self.displacement_m2.numpy()[0])
-            return float(self.residual_m2.numpy()[0]) <= float(self.params.rtol) ** 2 * dm2
+        if self.relative:
+            return self._relative_passes()
         return float(self.gradient_norm.gnorm2.numpy()[0]) <= float(gtol) * float(gtol)
+
+    def _relative_passes(self) -> bool:
+        dm2 = float(self.displacement_m2.numpy()[0])
+        return float(self.residual_m2.numpy()[0]) <= float(self.params.rtol) ** 2 * dm2
+
+    def test_gradient(self) -> bool:
+        """Host-side gradient test of the current positions (relative or absolute with ``gtol``
+        unused: see :meth:`converged`). Synchronizes, so not capturable.
+
+        Returns:
+            bool: Whether the relative test passes (False if it's off).
+        """
+        if not self.relative:
+            return False
+        self._test()
+        return self._relative_passes()
+
+    def relative_test(self, g: wp.array) -> bool:
+        """Host-side relative test of a given gradient, ``sum |g_i|^2 / m_i <= rtol^2 * scale``, against
+        the scale from the last :meth:`measure_scale`. Synchronizes, so not capturable.
+
+        Newton uses it for its augmented-Lagrangian subproblem gradient.
+
+        Args:
+            g (wp.array): (N,) vec3f gradient.
+
+        Returns:
+            bool: Whether ``g`` passes (False if the relative test is off).
+        """
+        if not self.relative:
+            return False
+        self._measure_residual(g)
+        return self._relative_passes()

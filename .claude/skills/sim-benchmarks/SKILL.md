@@ -63,8 +63,9 @@ Translating requests:
 - **`results.json`:**
   - the spec, plus metadata: scene, sim-params sources, sample attributes, Newton CG limits, device, commit, date;
   - per solver and sample: e0, iterations, sweeps, solver time, final e/e0, time and iterations to each 5% level (null if never reached), deformation energy, min det F, and a log-spaced curve;
-  - per level: aggregates (median, q25, q75, fraction of solves that reached it).
-- **Dynamic batches** add the problem kind and h to the metadata, and to each sample a `reference` with its accuracy (`newton_correction`, `error_bound`, `relative_error_bound`). Per level, `reliable` counts the samples whose reference resolves that level.
+  - per level: aggregates (median, q25, q75, fraction of solves that reached it);
+  - per sample, `termination`, and per solver, the count per reason: `target`, `iteration_cap`, `time_cap`, `non_finite`, or Newton's `newton_non_descent`, `newton_line_search_failed` or `newton_zero_gradient`. Newton stops at its first rejected step; at the float32 floor that is usually `newton_line_search_failed`.
+- **Dynamic batches** add the problem kind and h to the metadata, and to each sample a `reference` with its accuracy in the error's M-norm (`error_bound`, `relative_error_bound`). It comes from the file's `samples/ref_error_mnorm`, or for older files without it from a loose worst case on `newton_correction` (`error_bound_source` says which). Per level, `reliable` counts the samples whose reference resolves that level.
 - **`results.h5`** next to it: the spec and the full logs at `<solver>/<sample>/{error,time,sweeps}`.
 
 When comparing solvers, use the time to reach each error level, not the time per iteration. Also report iterations and sweeps. Anderson iterations aren't sweeps when p > 1.
@@ -72,9 +73,9 @@ When comparing solvers, use the time to reach each error level, not the time per
 ## Pitfalls
 
 - **Contact** is always off, for both problem kinds.
-- **Dynamic h:** dynamic problems take h from the file and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution, so float32 limits and the reference's accuracy cap the reduction around 80–95%.
+- **Dynamic h:** dynamic problems take h from the file and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution (e0 ~ 1e-3), so float32 rounding floors the error around e/e0 ~ 1e-5 to 1e-4.
 - **Solver parameters:** without `--sim-params`, only the code defaults apply (`configs/defaults.toml`), not the Dump's `vbd/params`. Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
-- **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Vertex-solve and acceleration parameters still matter.
+- **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Newton's CG absolute tolerance is set to 0 (its relative one stays), since in h²-scaled units at small h the gradient drops below it after one step. Vertex-solve and acceleration parameters still matter.
 - **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 300 leaves Newton steps inexact.
 - **Quiet GPU:** timings are only valid while nothing else runs. Reserve the GPU in `plans/MASTER.md` while parallel sessions are active.
 - **Sample batches:** batches that need importance weights (ray sampler) are refused. R-hat ≥ 1.05 and nonzero gravity only warn. Static problems should be gravity-free.

@@ -52,12 +52,18 @@ Representative commands (from the repo root; scenes and samples live in the main
 Outputs:
     ``results.json``: the effective spec; metadata (problem kind, h, scene, parameter sources, sample-file
     attributes, Newton CG limits, device, git commit, date); and per solver, one summary per sample (e0, iterations,
-    VBD sweeps, solver time, final relative error, time and iterations to each percentile, starting
-    deformation energy, min det F, and a log-spaced curve of relative error vs time and sweeps), plus
+    VBD sweeps, solver time, final relative error, termination, time and iterations to each percentile,
+    starting deformation energy, min det F, and a log-spaced curve of relative error vs time and sweeps),
     aggregates per percentile (median and quartiles of the time over the samples that reached it, and
-    how many did). Dynamic summaries add ``reference``: the reference's ``newton_correction`` (m), its
-    mass-norm ``error_bound`` (newton_correction * sqrt(3 * sum of free masses)) and
-    ``relative_error_bound`` (over e0). Levels with 1 - p below that bound can't be resolved against
+    how many did), and ``termination``, the number of samples per stop reason. A solve's
+    ``termination`` is ``target`` (reached --target-reduction), ``iteration_cap``, ``time_cap``,
+    ``non_finite`` (NaN or infinite error), or for Newton ``newton_non_descent``,
+    ``newton_line_search_failed`` or ``newton_zero_gradient``: Newton stops at its first rejected step,
+    since x doesn't change after it. Dynamic summaries add ``reference``: the reference's ``newton_correction`` (m), its
+    accuracy in the error's M-norm ``error_bound`` and ``relative_error_bound`` (over e0), and
+    ``error_bound_source``. The bound is the file's ``samples/ref_error_mnorm`` (the M-norm of the
+    reference's last Newton correction), or, for files without it, the loose worst case
+    newton_correction * sqrt(3 * sum of free masses) (``newton_correction_bound``). Levels with 1 - p below that bound can't be resolved against
     this reference, and the per-level aggregates count the samples whose reference allows them
     (``reliable``).
     ``results.h5`` (same name, next to it): the spec and the full per-iteration logs,
@@ -67,11 +73,13 @@ Pitfalls:
     - The benchmark is contact-free: contact detection is deactivated whatever the parameters say.
     - Dynamic problems take their time step from the file: ``Integration.dt``, ``substeps`` and the BDF
       order from --sim-params are overridden (one BDF1 step of size h).
-    - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 limits and the
-      reference's accuracy (``relative_error_bound``) cap the reachable reduction around 80-95%.
+    - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 rounding
+      floors the error around e/e0 ~ 1e-5 to 1e-4. Newton usually ends there with
+      ``newton_line_search_failed``: the energy decrease is below float32 resolution.
     - Solves run to the target reduction or the caps, not to a solver tolerance: ``Solver.<solver>.gtol``,
       ``n_max_iters`` and ``n_subproblem_max_iters`` don't stop them (a static solve is one long
-      subproblem). The vertex-solve and acceleration parameters do matter.
+      subproblem). Newton's CG keeps its relative tolerance, but its absolute one (``atol``) is set
+      to 0: in h^2-scaled units at small h, |g| drops below it after one step. The vertex-solve and acceleration parameters do matter.
     - Newton isn't graph-captured. Each Newton step synchronizes with the host, so its times include host
       work and vary more between runs. Raise ``Solver.Newton.LinearSolver.n_max_iters`` for static problems:
       the default 300 leaves Newton steps inexact, and 1500-3000 is typical.
@@ -212,6 +220,7 @@ def summarize(log: static.StaticSolveLog) -> dict:
         "sweeps": int(log.sweeps[-1]),
         "time": float(log.time[-1]),
         "final_relative_error": float(log.relative_error[-1]),
+        "termination": log.termination,
         "time_to_reduction": {f"{p:.2f}": _nan_to_none(log.time_to_reduction(p)) for p in PERCENTILES},
         "iterations_to_reduction": {
             f"{p:.2f}": _nan_to_none(log.iterations_to_reduction(p)) for p in PERCENTILES
@@ -223,6 +232,12 @@ def summarize(log: static.StaticSolveLog) -> dict:
             "relative_error": log.relative_error[idx].tolist(),
         },
     }
+
+
+def count_terminations(samples: list[dict]) -> dict:
+    """Number of samples per stop reason (lowercase ``static.StopReason`` names)."""
+    reasons = [s["termination"] for s in samples]
+    return {reason: reasons.count(reason) for reason in sorted(set(reasons))}
 
 
 def aggregate(samples: list[dict]) -> dict:
@@ -267,7 +282,8 @@ def main():
         print(f"Warning: {spec.sample_file}: {w}")
     if not dynamic:
         static.prepare_static_problem(state, spec.fext_scale)
-    # Mass-norm bound of a reference whose entries are off by at most ref_newton_correction
+    # Fallback for files without ref_error_mnorm: the mass-norm bound of a reference whose entries
+    # are off by at most ref_newton_correction (a loose worst case)
     free = state.fem.data.dmask.numpy() == 0
     mass_scale = math.sqrt(3.0 * float(state.fem.data.m.numpy()[free].sum()))
     indices = list(spec.sample_indices(batch.n_samples))
@@ -307,10 +323,15 @@ def main():
                         log = runner.solve(batch.x[s])
                     summary = summarize(log)
                     if dynamic:
-                        bound = float(batch.ref_newton_correction[s]) * mass_scale
+                        if batch.ref_error_mnorm is not None:
+                            bound, source = float(batch.ref_error_mnorm[s]), "ref_error_mnorm"
+                        else:
+                            bound = float(batch.ref_newton_correction[s]) * mass_scale
+                            source = "newton_correction_bound"
                         summary["reference"] = {
                             "newton_correction": float(batch.ref_newton_correction[s]),
                             "error_bound": bound,
+                            "error_bound_source": source,
                             "relative_error_bound": bound / summary["e0"] if summary["e0"] > 0 else math.inf,
                         }
                     summary["sample"] = int(s)
@@ -324,7 +345,11 @@ def main():
                     g.create_dataset("sweeps", data=log.sweeps)
                     pbar.set_postfix(solver=solver.name, e=f"{summary['final_relative_error']:.2e}")
                     pbar.update(1)
-                results["solvers"][solver.name] = {"samples": samples, "aggregate": aggregate(samples)}
+                results["solvers"][solver.name] = {
+                    "samples": samples,
+                    "aggregate": aggregate(samples),
+                    "termination": count_terminations(samples),
+                }
     with open(args.output, "w") as f:
         json.dump(results, f, indent=1)
     print(f"Wrote {args.output} and {h5_path}")

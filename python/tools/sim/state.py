@@ -399,7 +399,7 @@ class SimulationState:
         self.fem.set_kinematic_constraints(self.kinematics)
 
     def _construct_convergence_check(self):
-        """Share one device-side convergence test among the VBD-family solvers' params."""
+        """Share one device-side convergence test among the VBD-family and Newton solvers' params."""
         self.convergence = gpu.vbd.convergence.ConvergenceCheck(
             self.fem, self.contact, self.convergence_params
         )
@@ -408,6 +408,7 @@ class SimulationState:
             SolverType.AAAVBD,
             SolverType.Chebyshev,
             SolverType.AndersonSolver,
+            SolverType.Newton,
         ):
             self.params[s].convergence = self.convergence
 
