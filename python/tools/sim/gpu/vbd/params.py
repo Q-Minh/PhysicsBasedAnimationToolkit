@@ -84,6 +84,7 @@ class ParamsData:
     rhohat: wp.vec2f  # Lipschitz-normalized step thresholds (0: interior, 1: surface)
     gammadown: wp.vec2f  # beta reduction factors (0: interior, 1: surface)
     gammaup: wp.vec2f  # beta increase factors (0: interior, 1: surface)
+    surface_stencil_surface_neighbours_only: wp.int32  # surface vertices skip interior neighbours
 
     # --- Read-write ---
     xb: wp.array[wp.vec3f]  # (N,) vertex positions
@@ -154,6 +155,9 @@ class Params:
         self._data.rhohat = (float(params.rhohat), float(params.rhohatS))
         self._data.gammadown = (float(params.gammadown), float(params.gammadownS))
         self._data.gammaup = (float(params.gammaup), float(params.gammaupS))
+        self._data.surface_stencil_surface_neighbours_only = int(
+            params.surface_stencil_surface_neighbours_only
+        )
         self.warm_start_beta = warm_start_beta  # host-side: decides which resets are recorded
         # Read-write
         n_nodes = params.colors.shape[0]
@@ -604,6 +608,10 @@ class TestParams(unittest.TestCase):
         self.assertAlmostEqual(params.data.hess_zero, float(params_cpu.hess_zero))
         self.assertAlmostEqual(params.data.vls_eps, float(params_cpu.vls_eps))
         self.assertEqual(params.data.vls_max_iters, int(params_cpu.vls_max_iters))
+        self.assertEqual(
+            params.data.surface_stencil_surface_neighbours_only,
+            int(params_cpu.surface_stencil_surface_neighbours_only),
+        )
         # Verify tuples
         self.assertEqual(
             params.data.rhohat, (float(params_cpu.rhohat), float(params_cpu.rhohatS))

@@ -88,8 +88,11 @@ def compute_thread_local_stencil_gradient_augmentation(
     GVVadj: wp.array[wp.int32],
     GXV: wp.array[wp.int32],
     is_surface_node: bool,
+    surface_neighbours_only: wp.int32,
 ):
-    """Compute thread-local stencil gradient augmentation for vertex i."""
+    """Compute thread-local stencil gradient augmentation for vertex i: the sum of its neighbours'
+    gradients ``gk[j]``. With ``surface_neighbours_only`` (``Params.surface_stencil_surface_neighbours_only``),
+    surface vertices sum only their surface neighbours, as in C++ ``vbd::Iterate``."""
     ai = wp.vec3f()
     nbegin = GVVp[i]
     nend = GVVp[i + 1]
@@ -97,9 +100,9 @@ def compute_thread_local_stencil_gradient_augmentation(
     for jlocal in range(local_tid, n_neighbours, block_dims):  # type: ignore
         j = GVVadj[nbegin + jlocal]
         # Load gk[j] unconditionally, so it doesn't wait for the GXV[j] load that decides whether it
-        # counts; surface vertices skip interior neighbours.
+        # counts.
         gkj = gk[j]
-        skip = is_surface_node and GXV[j] < 0  # type: ignore
+        skip = is_surface_node and surface_neighbours_only != 0 and GXV[j] < 0  # type: ignore
         ai += wp.where(skip, wp.vec3f(), gkj)  # type: ignore
     return ai
 
@@ -199,6 +202,7 @@ def _accelerated_vertex_solve_kernel(
             GVVadj=params.GVVadj,
             GXV=contact.meshes.GXV,
             is_surface_node=is_surface_node,
+            surface_neighbours_only=params.surface_stencil_surface_neighbours_only,
         )
         ais = wp.tile(ail, preserve_type=True)  # pyright: ignore[reportArgumentType]
         ai = wp.tile_sum(ais)[0]  # pyright: ignore[reportIndexIssue]
