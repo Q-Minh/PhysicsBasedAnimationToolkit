@@ -32,8 +32,8 @@ python -m unittest python.tools.sim.gpu.vbd.params
 
 `ui.py` is the GPU successor of `python/tools/vbd/`, which pairs an online simulator (`editor.py`) with an offline one (`simulate.py`). Both run the **C++ solvers** through the `pbatoolkit` CPU API, so they're the natural source of reference trajectories when checking GPU results.
 
-- **Input files.** The GPU UI takes as input the HDF5 file written by the editor's **Dump** button (`tools/vbd/ui/simulation.py::_serialize_problem` → `solvers/*.py::serialize_problem`). That file contains the groups `fem`, `contact` and `vbd/params` (plus solver-specific groups such as `vbd/anderson_params`) and an `initialization_strategy` metadata entry. Launch with `--fem-elasto-dynamics dump.h5:fem`. Changing how C++ `FemElastoDynamics` (or the dumped `MeshDynamics`/`Params`) serializes therefore affects both tools.
-- **Features missing on the GPU.** Some editor features have no GPU equivalent yet, most notably **kinematic constraints**, i.e. procedurally animated Dirichlet boundary conditions (`_apply_procedural_constraints`). When dumping, the editor currently bakes them into static "release after X ms" Dirichlet constraints instead (`_apply_release_dirichlet_constraints`). Don't assume an editor feature exists in `tools/sim`. Check first.
+- **Input files.** The GPU UI takes as input the HDF5 file written by the editor's **Dump** button (`tools/vbd/ui/simulation.py::_serialize_problem` → `solvers/*.py::serialize_problem`). That file contains the groups `fem`, `contact`, `vbd/params` (plus solver-specific groups such as `vbd/anderson_params`) and `kinematics`, and an `initialization_strategy` metadata entry. Launch with `--fem-elasto-dynamics dump.h5:fem`. Changing how C++ `FemElastoDynamics` (or the dumped `MeshDynamics`/`Params`) serializes therefore affects both tools.
+- **Kinematic constraints** (procedurally animated Dirichlet BCs, the editor's `TransformLibrary`) exist on both sides with the same closed-form semantics; see "Kinematic constraints" below. Other editor features may still be missing on the GPU, so check before assuming one exists in `tools/sim`.
 
 ## Architecture
 
@@ -84,12 +84,24 @@ Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated 
   - `vbd_iters_per_anderson_iter` (`p`, GPU only) makes each Anderson iteration apply `p` VBD sweeps. `n_subproblem_max_iters` counts Anderson iterations, so a subproblem runs `n·p` sweeps.
   - Tests: `python -m unittest python.tools.sim.gpu.vbd.aasolver`.
 
-**CUDA graph capture.** `ui.py` records one `wp.ScopedCapture` of `substeps × (setup → solve → step)` and replays it. That means `solve()` on a capturable solver must:
+**CUDA graph capture.** `state.SimulationState.step` records one `wp.ScopedCapture` of `substeps × (setup → solve → step)` and replays it. Capturing doesn't execute anything, so the first step launches the graph right after recording it. That means `solve()` on a capturable solver must:
 - not allocate,
 - not copy device data back to the host,
 - not use Python control flow that depends on device values.
 
 Loop counts come from host-side params, so changing them requires a recapture. The UI sets `state.capture = None` on reset. Handles must stay stable across steps, which is why `cd.register_handles(...)` is called once and buffers are preallocated with capacity multipliers (`gpu.contact.mesh.pairs.Params`). Work that is independent across contact types runs on separate `wp.Stream`s, one per VV/VE/VF/EE.
+
+## Kinematic constraints
+
+`gpu/kinematics/constraints.py` (module docstring has the exact semantics) mirrors the CPU editor's `TransformLibrary.evaluate` (`python/tools/vbd/ui/utils/transform_library.py`):
+
+- **Data.** A `KinematicConstraint` prescribes the motion of a node group (`Fixed`, `Translate`, `Rotate`, `RadialTranslate`) over a half-open time window `[begin, begin + duration)`, rounded to the step grid. A `KinematicConstraintSet` holds all of them on the device.
+- **Evaluation.** Positions are evaluated in closed form from per-node anchors (the position when a node's constrained run starts), composing overlapping constraints in order, so nothing drifts. Constrained nodes get the analytic prescribed velocity, so they keep moving when released.
+- **Ownership of `dmask`.** `FemElastoDynamics.setup_time_integration_optimization` calls `kinematics.update(...)` first, which rewrites `dmask` and sets `x`/`v` of constrained nodes. Their `xtilde` is then their end-of-step position. `fem.step()` advances the device step counter. Time therefore lives in a device array and replays correctly in the captured graph. `advance_time = False` freezes it (needs a recapture).
+- **Loading.** `state.load_kinematic_constraints` reads the Dump's `kinematics` group (written by `TransformLibrary.export_kinematic_constraints`, including `t0` and the anchors of runs open at Dump time). Dumps without one treat nonzero `dmask` as permanently fixed. `SimulationState` attaches a fresh set to every GPU FEM (construction and `reset`).
+- **Contact.** `ContactDetection.register_handles(..., dmask)` makes `filter_step` skip constrained nodes, like C++ `RestoreFeasibility(x, dmask)`.
+- **GUI.** `panels/kinematics.py` lists, toggles (on the device, no recapture) and highlights constraints.
+- **Tests.** `python -m unittest python.tools.sim.gpu.kinematics.constraints` checks the GPU against the CPU editor, graph replay, releases and anchors.
 
 ## Contact on the GPU
 
