@@ -107,6 +107,9 @@ class FemElastoDynamicsData:
     # --- External forces ---
     fext: wp.array[wp.vec3f]  # (N,) external force per node
 
+    # --- Problem kind ---
+    is_static: wp.int32  # 1 = static equilibrium: objective Psi(x) - fext^T x, no inertia, no BDF
+
     # --- Elastic quadrature ---
     wg: wp.array[wp.float32]  # (Q,) quadrature weights
     GNeg: wp.array[
@@ -121,6 +124,10 @@ class FemElastoDynamicsData:
 
 class FemElastoDynamics:
     """Elastodynamic IVP (initial value problem) using FEM spatial discretization and BDF time discretization.
+
+    With :attr:`static` set, the same data describes the static equilibrium problem
+    min_x Psi(x) - fext^T x instead (no kinetic term, no BDF). Masses are kept, so lumped mass
+    weighted quantities (and gravity loads) are unaffected.
 
     Usage:
         fem = FemElastoDynamics(cpu_fem)
@@ -154,6 +161,7 @@ class FemElastoDynamics:
         )
         self._data.mug = wp.array(fem.lamegU[0, :], dtype=wp.float32)
         self._data.lambdag = wp.array(fem.lamegU[1, :], dtype=wp.float32)
+        self._data.is_static = wp.int32(0)
         self._data.dmask = wp.array(fem.dmask, dtype=wp.int32)
 
         # BDF integrator (operates on flat 3*N dof vectors)
@@ -168,6 +176,41 @@ class FemElastoDynamics:
     @property
     def data(self) -> FemElastoDynamicsData:  # pyright: ignore[reportGeneralTypeIssues]
         return self._data
+
+    @property
+    def static(self) -> bool:
+        """Whether this is a static equilibrium problem, min_x Psi(x) - fext^T x.
+
+        In static mode, solvers drop the inertia term and use :attr:`h2` = 1,
+        :meth:`setup_time_integration_optimization` leaves free nodes in place,
+        and :meth:`back_substitute_velocities` and :meth:`step` do nothing. Leaving static mode
+        restarts the time integration from the current positions at rest.
+        """
+        return bool(self._data.is_static)
+
+    @static.setter
+    def static(self, value: bool):
+        if bool(value) == self.static:
+            return
+        self._data.is_static = wp.int32(1 if value else 0)
+        if not value:
+            # Restart at rest from the current positions. Write the BDF history in place, since
+            # contact detection holds handles to xt.
+            self.bdf.xt[0, :] = cp.asarray(self._data.x).ravel()[cp.newaxis, :]
+            self.bdf.xt[1, :] = 0
+            self._data.v.zero_()
+
+    @property
+    def h2(self) -> float:
+        """Scale of the elastic energy in the optimization objective.
+
+        ``BetaTilde^2`` for dynamics (the objective is 1/2 |x - xtilde|_M^2 + h^2 Psi(x)), and 1 for
+        static problems.
+        """
+        if self.static:
+            return 1.0
+        h = self.bdf.beta_tilde
+        return h * h
 
     @property
     def xt(self) -> wp.array[wp.vec3f]:
@@ -196,8 +239,11 @@ class FemElastoDynamics:
     ):
         """Compute xtilde and initialize x for the time step.
 
-        Strategies: "position", "free_trajectory", "trajectory_with_external_load"
+        Strategies: "position", "free_trajectory", "trajectory_with_external_load". Static problems
+        always use "position", i.e. free nodes start from the current x.
         """
+        if self.static:
+            strategy = pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position
         if self.kinematics is not None:
             with profiling.scope("kinematics.update"):
                 self.kinematics.update(
@@ -227,7 +273,9 @@ class FemElastoDynamics:
         )
 
     def back_substitute_velocities(self):
-        """Recover v from integrated x on free dofs."""
+        """Recover v from integrated x on free dofs. Does nothing for static problems."""
+        if self.static:
+            return
         bt = self.bdf.beta_tilde
         N = self._data.x.shape[0]
         xtilde_bdf = self.bdf.inertia(0).reshape(-1, 3)
@@ -244,7 +292,9 @@ class FemElastoDynamics:
         )
 
     def step(self):
-        """Advance BDF by one time step using current x, v."""
+        """Advance BDF by one time step using current x, v. Does nothing for static problems."""
+        if self.static:
+            return
         self.bdf.step(
             cp.asarray(self._data.x).ravel(), cp.asarray(self._data.v).ravel()
         )
@@ -256,7 +306,7 @@ import unittest
 
 
 class TestFemElastoDynamics(unittest.TestCase):
-    def test_construction(self):
+    def _make_cpu_fem(self):
         from pbatoolkit import pypbat
 
         V = np.array(
@@ -287,6 +337,10 @@ class TestFemElastoDynamics(unittest.TestCase):
         fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
         fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
         fem_cpu.constrain(np.array([0, 0, 0, 0, 1, 1, 1, 1]))
+        return fem_cpu
+
+    def test_construction(self):
+        fem_cpu = self._make_cpu_fem()
         fem = FemElastoDynamics(fem_cpu)
         self.assertEqual(fem.data.x.shape[0], 8)
         self.assertTrue(np.all(fem.data.X.numpy() == fem_cpu.X.T))
@@ -304,6 +358,36 @@ class TestFemElastoDynamics(unittest.TestCase):
         self.assertTrue(np.all(fem.data.mug.numpy() == fem_cpu.lamegU[0, :]))
         self.assertTrue(np.all(fem.data.lambdag.numpy() == fem_cpu.lamegU[1, :]))
         self.assertTrue(np.all(fem.data.dmask.numpy() == fem_cpu.dmask))
+
+    def test_static_mode(self):
+        fem_cpu = self._make_cpu_fem()
+        fem = FemElastoDynamics(fem_cpu)
+        self.assertFalse(fem.static)
+        self.assertAlmostEqual(fem.h2, 1e-4, places=9)
+        fem.static = True
+        self.assertTrue(fem.static)
+        self.assertEqual(fem.h2, 1.0)
+        x0 = fem.data.x.numpy().copy()
+        xt0 = fem.xt.numpy().copy()
+        # Free nodes stay in place even with a strategy that would move them, and neither the
+        # velocities nor the BDF history change.
+        fem.setup_time_integration_optimization(
+            pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.TrajectoryWithExternalLoad
+        )
+        self.assertTrue(np.all(fem.data.x.numpy() == x0))
+        self.assertTrue(np.all(np.isfinite(fem.data.xtilde.numpy())))
+        fem.data.x.assign(x0 + 0.1)
+        fem.back_substitute_velocities()
+        fem.step()
+        self.assertTrue(np.all(fem.data.v.numpy() == 0.0))
+        self.assertTrue(np.all(fem.xt.numpy() == xt0))
+        # Leaving static mode restarts the time integration at rest from the current positions,
+        # without reallocating xt.
+        xt_ptr = fem.xt.ptr
+        fem.static = False
+        self.assertEqual(fem.xt.ptr, xt_ptr)
+        self.assertTrue(np.allclose(fem.xt.numpy(), x0 + 0.1))
+        self.assertTrue(np.all(fem.data.v.numpy() == 0.0))
 
 
 if __name__ == "__main__":
