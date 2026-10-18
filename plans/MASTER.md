@@ -574,6 +574,10 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 2 · **GPU run START** (~15 min, correctness only): `feature/aaavbd-params` bit-identity checks (warm_start_beta = 2 vs dev, then 0 and 1) on the beam and the trampoline, AAAVBD. Ignore timings. Will log END.
 - 2026-10-18 · task 2 · **GPU run END** (bit-identity checks). **Ready for review:** `feature/aaavbd-params` (4 commits on dev `ef2558a1`, head `f46176c6`). warm_start_beta = 2 (default and explicit) is bit-identical to dev on MediumLongBendingBeam (61 frames) and trampoline (31 frames), AAAVBD. Per step on the beam: 1 = 2 after step 1, differs from step 2; 0 differs within step 1.
 - 2026-10-18 · coordinator · Merged `feature/finite-plane-thickness` (task 1, `c06e7c08`) and `feature/aaavbd-params` (task 2, `9598e393`: stencil keys AAAVBD-only; warm_start_beta honoured, GPU default 2). Added the **relative gradient test** `Solver.Convergence.rtol` (`8f9d5329`, off by default; mass-normalized residual vs the free-flight displacement x̃ − xᵗ, the maintainer's design). Regenerated defaults.toml and paper configs (`c4f4249c`, still bit-identical on load). Manual test page v2 published. Default rtol value pending the maintainer.
+- 2026-10-18 · task 3 · **GPU run END** (adaptive-penalty investigation and validation).
+- 2026-10-18 · task 3 · **GPU run START** (~10 min: GPU Newton SPD correction in dynamics, dev vs branch on beam/trampoline, incl. Newton step times). Will log END.
+- 2026-10-18 · task 3 · **GPU run END** (Newton SPD validation).
+- 2026-10-18 · coordinator · Merged `feature/adaptive-penalty` (task 3: other-color contact partners read at current positions in adaptive modes; SUBPROBLEM floored; friction adapted; new gamman_adaptive/gammaf_adaptive = 1; constant mode bit-identical; paper configs regenerated `f327a6c2`) and `feature/newton-spd` (GPU Newton SPD-corrects in dynamics too, default Absolute; old dynamic Newton results change by ~1e-6 to 1e-4). Maintainer: the relative gtol may be stricter on fine meshes (mesh-scale and contact residuals); that's accepted. Task 3 → dynamic benchmark runner next.
 
 ## Open questions for the maintainer
 
