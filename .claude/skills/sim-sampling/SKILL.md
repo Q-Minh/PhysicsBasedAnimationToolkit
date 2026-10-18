@@ -14,7 +14,7 @@ The sampling tools live in `python/examples`, everything runs on the **CPU**, an
 
 Read those docstrings for anything not covered here. The derivations, algorithms, parameters and validation of every sampler and of shape matching are in `python/examples/docs/sampling-methods.md`, the maintainer's technical reference and the source of truth. Update it in the same change as any sampler, fit or benchmark-definition change, keeping its equation tags and citations consistent. https://claude.ai/artifact/8EuUcmLsX882p2y5Qsh67n is a rendered snapshot of an earlier version.
 
-Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Inputs are an hdf5 file storing a FemElastoDynamics (`filepath:h5path`, e.g. a Dump's `fem` group). `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`. `make_benchmark.py` rejects meshes, and also scenes whose Dirichlet nodes are displaced or moving. Use absolute paths: `data/` exists only in the main checkout.
+Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Prefer **scene files** (e.g. `data/scenarios/trampoline.h5`), which are built into a FemElastoDynamics the way the CPU editor builds them. A stored FemElastoDynamics (`filepath:h5path`, e.g. `trampoline.Dump.h5:fem`) works too and gives identical results. `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`; `make_benchmark.py` rejects meshes. Scenes are rejected, with a message naming the culprit, when they have static colliders, more than one body, or constraints that move nodes or start or end during the problems' time span [0, max(`--dt`)]. Constraints entirely outside that span are ignored. Of the current scenarios, `trampoline.h5` and `trampoline.Y1e7.h5` qualify. Use absolute paths: `data/` exists only in the main checkout.
 
 ## Which sampler
 
@@ -34,20 +34,20 @@ Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `
 ```bash
 # GUI: mode animation, fixed-energy sampling (energy, sampler, gravity, Sample, slider, velocity arrows),
 # shape reachability (load or handle target -> "Solve target" -> linear/quadratic fits and ROM equilibrium)
-python modalrom.py -i C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem
+python modalrom.py -i C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5
 
 # Headless microcanonical batch (ensemble="total", writes samples/qdot), prints acceptance, thinning, tau, ESS, split R-hat
-python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler microcanonical --energy 10 --samples 400
+python modalrom.py -i <scene>.h5 --headless -o batch.h5 --sampler microcanonical --energy 10 --samples 400
 
 # Headless fixed-potential batch, every shape at U = E* (ensemble="potential")
-python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler polar --energy 10 --samples 100
+python modalrom.py -i <scene>.h5 --headless -o batch.h5 --sampler polar --energy 10 --samples 100
 
 # Benchmark problem sets: pool/E{E}.h5 (sampled without gravity) and pool_gravity/E{E}.h5 (with gravity), static/E{E}.h5,
 # dynamic_h{h}/E{E}.h5. By default static problems are sampled without gravity and dynamic ones with it, from separate pools;
 # the dynamic h sets always share samples, and all sets share them when both gravity settings match
-python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 500 5000 --problems 10 --dt 1e-4 1e-2
-python make_benchmark.py -i <Dump>.h5:fem -o <dir> --dt              # static only
-python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
+python make_benchmark.py -i <scene>.h5 -o <dir> --energies 50 500 5000 --problems 10 --dt 1e-4 1e-2
+python make_benchmark.py -i <scene>.h5 -o <dir> --dt              # static only
+python make_benchmark.py -i <scene>.h5 -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
 
 # Browse a generated dataset: problem set, energy and problem selectors; start state (colored by displacement
 # or det F), rest-shape ghost, velocity arrows, and for dynamic problems the inertial target x~ and reference x*;
@@ -93,7 +93,8 @@ Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd
 ## Pitfalls
 
 - **Gravity** is off in `modalrom.py` unless `--gravity` (or the GUI checkbox). In `make_benchmark.py`, the default is sampling without gravity for static problems and with gravity for dynamic ones. Static problems are always solved without loads (equilibrium exactly X); dynamic `xtilde` always includes the scene's gravity. With gravity in the sampled potential, U and U/E can be negative (sagged shapes), and K = E − U can exceed E.
-- **Mesh inputs** (not a Dump) work in `modalrom.py` only (`-m`/`-Y`/`-n` set the material). They have no Dirichlet constraints: the 6 rigid modes are excluded, and reachability load targets need constraints. `make_benchmark.py` needs a Dump.
+- **Mesh inputs** work in `modalrom.py` only (`-m`/`-Y`/`-n` set the material). They have no Dirichlet constraints: the 6 rigid modes are excluded, and reachability load targets need constraints. `make_benchmark.py` needs a scene file or a stored FemElastoDynamics.
+- **Scene loading** imports `python/tools/sim/state.py` (and Warp, without initializing the GPU) and the editor's `python/tools/vbd` modules, so the tools must run from a full checkout.
 - **`make_benchmark.py` overwrites** existing files in `--output`.
 - **GUI costs:** the first Sample click pays for burn-in and the pilot run, and "Solve target" blocks the UI for 2–6 s.
 - **Shared venv:** never reinstall pbatoolkit from a worktree.
