@@ -526,6 +526,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 1 · **GPU run START** (~10 min, correctness only): plane-collider scenes (cube on an
   infinite ground plane, fast cube, inclined plane). Ignore timings. Will log END.
 - 2026-10-18 · coordinator · Maintainer on solver configs: **params discussion deferred** (the maintainer will say when). Vertex linear solve: **Inverse by default; EVD only when singular Hessians cause problems.** The paper's trampoline configs are **different scenes** from `data/scenarios/trampoline.Dump.h5`. Still open: whether a tuned-parameter layer should also set sweep budgets. h5py pin bumped to 3.16.0 in python/tools/sim/requirements.txt; other pins match the venv.
+- 2026-10-18 · coordinator · **Dynamic benchmark runner → task 3** (maintainer request: stop on the real error, not the solvers' checks). One runner: benchmark_static.py → benchmark.py, kind read from the problem file's `problem` attribute; dynamic = one BDF1 step, error vs samples/x_ref (mass-weighted, free DOFs), reference accuracy recorded. Comes after the adaptive-penalty fix (root cause: lagged contact positions xb make the contact coupling Jacobi-like, which diverges once the penalty reaches the vertex stiffness). Merged task 4's sampling-methods reference (python/examples/docs/sampling-methods.md).
 
 ## Open questions for the maintainer
 
