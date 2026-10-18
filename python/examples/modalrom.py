@@ -562,14 +562,14 @@ if __name__ == "__main__":
         help="Number of burn-in steps, during which the step size adapts",
         type=int,
         dest="burn_in",
-        default=1000,
+        default=300,
     )
     parser.add_argument(
         "--pilot",
         help="Number of steps used to estimate the autocorrelation time for automatic thinning",
         type=int,
         dest="pilot",
-        default=1000,
+        default=500,
     )
     parser.add_argument(
         "--thin",
