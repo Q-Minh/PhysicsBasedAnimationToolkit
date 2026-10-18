@@ -38,28 +38,33 @@ def adapt_stencil_gradient_acceleration_parameter(
     gk: wp.array[wp.vec3f],
     Hnk: wp.array[wp.float32],
     betaG: wp.array2d[wp.float32],
+    xki: wp.vec3f,
+    gkm1: wp.vec3f,
+    Hnki: wp.float32,
+    betaGi: wp.float32,
     rhohat: wp.vec2f,
     gammaup: wp.vec2f,
     gammadown: wp.vec2f,
-    is_surface_node: bool,
+    grp: wp.int32,
     eps: wp.float32,
 ) -> wp.float32:
-    grp = wp.int32(1) if is_surface_node else wp.int32(0)
-    betaGi = betaG[i, grp]  # type: ignore
+    """Adapt vertex i's acceleration parameter and store its gradient, position and Hessian norm.
+
+    ``xki``, ``gkm1``, ``Hnki`` and ``betaGi`` are vertex i's stored state, which the caller loads early so
+    the loads overlap the derivative gathers; ``grp`` selects the interior (0) or surface (1) parameters.
+    """
     if kp > 0:
         rhohati = rhohat[grp]  # type: ignore
         gammaupi = gammaup[grp]  # type: ignore
         gammadowni = gammadown[grp]  # type: ignore
         ngk = wp.norm_l2(gi)
-        gkm1 = gk[i]  # Previous gradient
         ngkm1 = wp.norm_l2(gkm1)
         ndgkm1 = wp.norm_l2(gi - gkm1)
-        xki = xk[i]  # Previous position # type: ignore
         ndxkm1 = wp.max(
             wp.norm_l2(xi - xki),
             eps,  # pyright: ignore[reportCallIssue, reportArgumentType]
         )
-        L = Hnk[i] + ngk / wp.max(ndxkm1, eps)
+        L = Hnki + ngk / wp.max(ndxkm1, eps)
         rho = ndgkm1 / wp.max(L * ndxkm1, eps)
         if ngk > ngkm1:
             betaGi *= gammadowni
@@ -122,6 +127,15 @@ def _accelerated_vertex_solve_kernel(
     xi = fem.x[i]  # pyright: ignore[reportIndexIssue]
     xtildei = fem.xtilde[i]  # pyright: ignore[reportIndexIssue]
     mi = fem.m[i]  # pyright: ignore[reportIndexIssue]
+    vi = contact.meshes.GXV[i]
+    is_surface_node = vi >= 0
+    # Load the vertex's acceleration state now: the tile reductions below are barriers, so loads issued
+    # after them by thread 0 would wait on memory with no other work to hide it.
+    grp = wp.int32(1) if is_surface_node else wp.int32(0)
+    betaGi = params.betaG[i, grp]  # type: ignore
+    gkm1 = params.gk[i]  # pyright: ignore[reportIndexIssue]
+    xki = params.xk[i]  # pyright: ignore[reportIndexIssue]
+    Hnki = params.Hnk[i]  # pyright: ignore[reportIndexIssue]
     # Accumulate elastic energy derivatives
     gil, Hil = local_elastic_derivatives(
         i,
@@ -138,8 +152,6 @@ def _accelerated_vertex_solve_kernel(
     )
     gil *= h2  # type: ignore
     Hil *= h2  # type: ignore
-    vi = contact.meshes.GXV[i]
-    is_surface_node = vi >= 0
     # Only surface vertices with contact pairs have contact terms (MeshDynamicsData.in_contact).
     gather_contacts = False
     if is_surface_node:
@@ -196,10 +208,14 @@ def _accelerated_vertex_solve_kernel(
             gk=params.gk,
             Hnk=params.Hnk,
             betaG=params.betaG,
+            xki=xki,
+            gkm1=gkm1,
+            Hnki=Hnki,
+            betaGi=betaGi,
             rhohat=params.rhohat,
             gammaup=params.gammaup,
             gammadown=params.gammadown,
-            is_surface_node=is_surface_node,
+            grp=grp,
             eps=eps,
         )
         lam = (
