@@ -17,6 +17,7 @@ from pbatoolkit import pbat
 import numpy as np
 from . import gpu
 from .panels.common import draw_params, try_draw_tooltip
+from .panels.kinematics import draw_kinematics_panel
 from .state import (
     SimulationState,
     SolverType,
@@ -227,6 +228,7 @@ def make_callback(
                 # --- Feature panels ---
                 # One draw_<feature>_panel(state, ui_state) call per feature, implemented in
                 # python/tools/sim/panels/<feature>.py (see panels/__init__.py).
+                draw_kinematics_panel(state, ui_state)
 
                 # --- Simulation controls ---
                 imgui.Separator()
