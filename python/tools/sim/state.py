@@ -502,7 +502,9 @@ def serialize_params(state: "SimulationState", f: h5py.File) -> None:
     intg.attrs["init_strategy"] = state.init_strategy.value
     for stype in [SolverType.VBD, SolverType.AAAVBD]:
         gpu.vbd.params.serialize_vbd_cpu_params(
-            state.params_cpu[stype], f.create_group(f"Solver/{stype.name}")
+            state.params_cpu[stype],
+            f.create_group(f"Solver/{stype.name}"),
+            stencil_gradient_acceleration=stype == SolverType.AAAVBD,
         )
     gpu.vbd.params.serialize_chebyshev_cpu_params(
         state.params_cpu[SolverType.Chebyshev].vbd_params,
@@ -546,7 +548,11 @@ def deserialize_params(state: "SimulationState", f: h5py.File) -> None:
     for stype in [SolverType.VBD, SolverType.AAAVBD]:
         key = f"Solver/{stype.name}"
         if key in f:
-            gpu.vbd.params.deserialize_vbd_cpu_params(state.params_cpu[stype], f[key])
+            gpu.vbd.params.deserialize_vbd_cpu_params(
+                state.params_cpu[stype],
+                f[key],
+                stencil_gradient_acceleration=stype == SolverType.AAAVBD,
+            )
     if "Solver/Chebyshev" in f:
         gpu.vbd.params.deserialize_chebyshev_cpu_params(
             state.params_cpu[SolverType.Chebyshev].vbd_params,
