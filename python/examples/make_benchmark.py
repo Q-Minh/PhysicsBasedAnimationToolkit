@@ -11,7 +11,37 @@ evenly spaced subset of it becomes the benchmark problems. The same subset is us
                                    xtilde = x + h v + h^2 g. samples/x_ref holds a reference solution from a
                                    converged full-order Newton solve.
 
-All files follow the sample-file contract in plans/MASTER.md. Dirichlet DOFs stay at rest in every state.
+All files follow the sample-file contract (see rom_mcmc.write_samples), with ensemble = "total" and
+sampler = "microcanonical". Dirichlet DOFs stay at rest in every state. Problem files add:
+
+    root attributes      problem ("pool", "static" or "dynamic"), problem_definition, pool_file, pool_indices.
+    dynamic files only   root attributes h (s), bdf_order = 1, aext (3,) the scene gravity (m/s^2),
+                         reference_time (s), and the datasets
+                         samples/v                       (S, N, 3) float32 start velocities J(q) qdot,
+                         samples/xtilde                  (S, N, 3) float32 inertial targets x + h v + h^2 aext
+                                                         (aext on the free DOFs only),
+                         samples/x_ref                   (S, N, 3) float32 reference solutions,
+                         samples/ref_newton_iterations   (S,) Newton iterations of the reference solves,
+                         samples/ref_newton_decrement    (S,) their last Newton decrement,
+                         samples/ref_newton_correction   (S,) the largest entry (m) of their last Newton
+                                                         correction, an accuracy estimate,
+                         samples/ref_min_J               (S,) minimum det(F) of the reference solutions.
+
+Sampling and the reference solves run on the CPU. The samples' quality is in each pool file: check rhat < 1.05
+(otherwise increase --pool or --burn-in) and energy_noise_warning = False.
+
+Usage:
+    # Default levels (50, 500, 5000 J), 10 problems each, h = 1e-4 and 1e-2 s
+    python make_benchmark.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.Dump.h5:fem -o C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline
+
+    # Chosen energies, problem counts and time steps
+    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 5 --dt 1e-4 1e-2
+
+    # Static problems only (no dynamic sets)
+    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --dt
+
+    # Quick test set (rhat isn't meaningful with such small pools)
+    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100
 """
 
 import argparse
@@ -27,6 +57,7 @@ import rom_reach
 
 
 def subset(batch: rom_mcmc.SampleBatch, indices: np.ndarray) -> rom_mcmc.SampleBatch:
+    """The samples of a microcanonical batch at the given indices, with the batch's statistics."""
     return rom_mcmc.SampleBatch(
         batch.q[indices],
         batch.energy[indices],
@@ -37,6 +68,7 @@ def subset(batch: rom_mcmc.SampleBatch, indices: np.ndarray) -> rom_mcmc.SampleB
 
 
 def min_det_F(E, egU, GNegU, model, qs) -> np.ndarray:
+    """Minimum det(F) over the mesh of each shape X + u(q) for q in qs (<= 0 means inverted elements)."""
     return np.array(
         [
             modalrom.deformation_gradient_determinants(
@@ -50,21 +82,30 @@ def min_det_F(E, egU, GNegU, model, qs) -> np.ndarray:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Static and dynamic elasticity benchmark problems from microcanonical ROM samples",
+        description="Writes pool/, static/ and dynamic_h{h}/ problem files per total energy under --output. "
+        "See the module docstring for the file contents and representative commands.",
     )
     parser.add_argument(
         "-i",
         "--input",
-        help="filepath:h5path of an hdf5 file containing an FemElastoDynamics (e.g. a Dump)",
+        help="filepath:h5path of an hdf5 file containing an FemElastoDynamics (e.g. scene.Dump.h5:fem), which "
+        "provides the mesh, material, masses, Dirichlet constraints and gravity",
         type=str,
         dest="input",
         required=True,
     )
     parser.add_argument(
-        "-o", "--output", help="Output directory", type=str, dest="output", required=True
+        "-o",
+        "--output",
+        help="Output directory; existing files with the same names are overwritten",
+        type=str,
+        dest="output",
+        required=True,
     )
     parser.add_argument(
         "--energies",
-        help="Total energies E = K + U in J, one problem file per energy and set",
+        help="Total energies E = K + U in J, one problem file per energy and set. On the trampoline, 50 / 500 / "
+        "5000 J give median peak displacements of ~14 / 24 / 36 cm (default: %(default)s)",
         type=float,
         nargs="+",
         dest="energies",
@@ -72,53 +113,79 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--problems",
-        help="Number of problems per energy (an evenly spaced subset of the pool)",
+        help="Number of problems per energy, an evenly spaced subset of the pool shared by all sets "
+        "(default: %(default)s)",
         type=int,
         dest="problems",
         default=10,
     )
     parser.add_argument(
-        "--pool", help="Number of pooled samples per energy", type=int, dest="pool", default=400
+        "--pool",
+        help="Number of pooled samples per energy; large enough for rhat < 1.05 (default: %(default)s)",
+        type=int,
+        dest="pool",
+        default=400,
     )
     parser.add_argument(
-        "--chains", help="Number of independent chains", type=int, dest="chains", default=4
+        "--chains",
+        help="Number of independent chains per energy, pooled (default: %(default)s)",
+        type=int,
+        dest="chains",
+        default=4,
     )
     parser.add_argument(
-        "--burn-in", help="Burn-in steps per chain", type=int, dest="burn_in", default=300
+        "--burn-in",
+        help="Burn-in steps per chain, during which the step size adapts (default: %(default)s)",
+        type=int,
+        dest="burn_in",
+        default=300,
     )
     parser.add_argument(
         "--pilot",
-        help="Steps per chain used to estimate the autocorrelation time for thinning",
+        help="Steps per chain used to estimate the autocorrelation time for thinning (default: %(default)s)",
         type=int,
         dest="pilot",
         default=500,
     )
     parser.add_argument(
         "--dt",
-        help="Time steps h of the dynamic problem sets",
+        help="Time steps h in s of the dynamic problem sets, one set per value; pass no value for static problems "
+        "only (default: %(default)s)",
         type=float,
         nargs="*",
         dest="dt",
         default=[1e-4, 1e-2],
     )
     parser.add_argument(
-        "-k", "--num-modes", help="Number of modes", type=int, dest="modes", default=20
+        "-k",
+        "--num-modes",
+        help="Number of vibration modes m of the quadratic manifold (default: %(default)s)",
+        type=int,
+        dest="modes",
+        default=20,
     )
     parser.add_argument(
         "--eps",
-        help="Epsilon for numerical differentiation of modal derivatives",
+        help="Finite-difference step of the modal derivatives, as a fraction of the bounding box diagonal "
+        "(default: %(default)s)",
         type=float,
         dest="eps",
         default=1e-3,
     )
     parser.add_argument(
         "--newton-iters",
-        help="Maximum Newton iterations of the reference solves of dynamic problems",
+        help="Maximum Newton iterations of each reference solve of a dynamic problem (default: %(default)s)",
         type=int,
         dest="newton_iters",
         default=100,
     )
-    parser.add_argument("--seed", help="Random seed", type=int, dest="seed", default=0)
+    parser.add_argument(
+        "--seed",
+        help="Seed of the chains' random streams (default: %(default)s)",
+        type=int,
+        dest="seed",
+        default=0,
+    )
     args = parser.parse_args()
 
     element = pbat.fem.Element.Tetrahedron

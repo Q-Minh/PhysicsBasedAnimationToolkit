@@ -7,6 +7,19 @@ three ways:
 - geometric least squares, min_q 1/2 |u(q) - u_t|_M^2 (linear bases in closed form),
 - least squares regularized by the elastic energy, which trades the geometric match for plausibility,
 - the reduced model's own equilibrium under the same load or handles, i.e. what it predicts.
+
+static_equilibrium also solves one implicit Euler (BDF1) step when given an inertia term, which
+make_benchmark.py uses for the reference solutions of dynamic problems. Its accuracy is limited by pbat's float32
+energy: it stops at the gradient noise floor (a residual of a few N on the beam and trampoline).
+
+modalrom.py's "Shape reachability" GUI panel drives this module. Usage from a script, with the model from
+modalrom.load_model, modalrom.build_rom and modalrom.reduced_model:
+
+    tip = rom_reach.box_region(X, [0.95, 0, 0], [1, 1, 1])
+    ut, info = rom_reach.static_equilibrium(potential, x0, freedofs, rom_reach.gravity_load(m, [0, 0, -0.4]))
+    u, q = rom_reach.manifold_fit(quadratic_model, ut)              # geometric best fit
+    u, q = rom_reach.rom_equilibrium(quadratic_model, rom_reach.gravity_load(m, [0, 0, -0.4]))  # ROM prediction
+    print(rom_reach.fit_metrics(u, ut, m)["relative_error"])
 """
 
 import typing
@@ -40,12 +53,29 @@ def node_dofs(nodes: np.ndarray) -> np.ndarray:
 
 
 def gravity_load(m: np.ndarray, g: np.ndarray) -> np.ndarray:
-    """Full-space gravity load M g, given the lumped DOF masses m and the acceleration g (3,)."""
+    """Full-space gravity load M g.
+
+    Args:
+        m (np.ndarray): 3*|# nodes| lumped masses per DOF, interleaved per node.
+        g (np.ndarray): 3 gravitational acceleration in m/s^2.
+
+    Returns:
+        np.ndarray: 3*|# nodes| load in N.
+    """
     return m * np.tile(np.asarray(g, dtype=np.float64), m.shape[0] // 3)
 
 
 def region_load(m: np.ndarray, nodes: np.ndarray, force: np.ndarray) -> np.ndarray:
-    """Full-space load applying the total force (3,) to nodes, distributed in proportion to their masses."""
+    """Full-space load applying a total force to nodes, distributed in proportion to their masses.
+
+    Args:
+        m (np.ndarray): 3*|# nodes| lumped masses per DOF, interleaved per node.
+        nodes (np.ndarray): Indices of the loaded nodes, e.g. from box_region.
+        force (np.ndarray): 3 total force in N.
+
+    Returns:
+        np.ndarray: 3*|# nodes| load in N, zero outside the nodes.
+    """
     f = np.zeros(m.shape[0])
     if len(nodes) == 0:
         return f
@@ -137,12 +167,26 @@ def static_equilibrium(
 
 
 def deformation_energy(potential: typing.Callable, x0: np.ndarray, u: np.ndarray) -> float:
-    """Psi(x0 + u) - Psi(x0)."""
+    """Deformation energy Psi(x0 + u) - Psi(x0).
+
+    Args:
+        potential (typing.Callable): potential(x, gradient, hessian), see static_equilibrium.
+        x0 (np.ndarray): n rest positions in F order.
+        u (np.ndarray): n displacement.
+
+    Returns:
+        float: The deformation energy in J.
+    """
     return float(potential(x0 + u, False, False)) - float(potential(x0, False, False))
 
 
 def linear_fit(B: np.ndarray, m: np.ndarray, ut: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray]:
     """M-orthogonal projection of ut onto span(B), the best fit min_c |B c - ut|_M.
+
+    Args:
+        B (np.ndarray): n x k basis, e.g. the modes U or the augmented basis [U Z].
+        m (np.ndarray): n lumped masses (the diagonal of M).
+        ut (np.ndarray): n target displacement.
 
     Returns:
         typing.Tuple[np.ndarray, np.ndarray]: The fitted displacement B c and the coefficients c.
@@ -250,7 +294,17 @@ def rom_equilibrium(
 
 
 def fit_metrics(u: np.ndarray, ut: np.ndarray, m: np.ndarray) -> dict:
-    """Relative M-norm error, maximum vertex error, and per-vertex error magnitudes of u against ut."""
+    """Errors of a fitted displacement u against a target ut.
+
+    Args:
+        u (np.ndarray): n fitted displacement.
+        ut (np.ndarray): n target displacement.
+        m (np.ndarray): n lumped masses (the diagonal of M).
+
+    Returns:
+        dict: relative_error |u - ut|_M / |ut|_M, max_error (largest vertex error in m), and vertex_error
+        (|# nodes| per-vertex error magnitudes in m).
+    """
     d = u - ut
     vertex_error = np.linalg.norm(d.reshape(-1, 3), axis=1)
     return dict(

@@ -1,3 +1,35 @@
+"""Quadratic-manifold reduced model of an elastic body, with fixed-energy sampling and shape reachability.
+
+Builds a reduced displacement model u(q) = U q + 1/2 Q:qq from mass-normalized vibration modes U and their
+modal derivatives Q (projected M-orthogonally off span(U)), for a tetrahedral mesh or the FemElastoDynamics of a
+Dump, under a Stable Neo-Hookean energy. Then either opens a Polyscope GUI or samples headless.
+
+GUI panels:
+    Modes:              animate one linear mode or its quadratic-manifold counterpart ("Mapping").
+    Fixed-energy
+    sampling:           draw shapes at a fixed potential energy (samplers "polar", "crw", "ray") or states at a
+                        fixed total energy K + U ("microcanonical"), optionally with gravity in the potential, and
+                        page through them. Microcanonical samples show their velocities as vectors.
+    Shape reachability: author a full-order static target (gravity, a force on a box region, or a prescribed
+                        displacement of a box region), solve it, and fit linear and quadratic reduced models to it.
+
+Headless mode (--headless -o <file.h5>) writes one batch of samples in the sample-file contract format (see
+rom_mcmc.write_samples). Benchmark datasets are generated with make_benchmark.py instead.
+
+Usage:
+    # GUI on a Dump (filepath:h5path)
+    python modalrom.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\MediumLongBendingBeam.Dump.h5:fem
+
+    # Headless, 100 shapes at deformation energy E* = 10 J (polar sampler)
+    python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --energy 10 --samples 100
+
+    # Headless, 400 states (q, qdot) at total energy E = K + U = 10 J, pooled from 4 chains
+    python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler microcanonical --energy 10 --samples 400
+
+    # GUI on a tetrahedral mesh with its own material
+    python modalrom.py -i mesh.msh -m 1000 -Y 1e6 -n 0.45
+"""
+
 import typing
 from pbatoolkit import pbat, pypbat
 import numpy as np
@@ -253,15 +285,28 @@ def m_orthogonal_complement(V: np.ndarray, B: np.ndarray, m: np.ndarray):
 
 
 def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1):
-    """Returns potential(x, gradient=False) evaluating the total hyper-elastic energy at positions x.
+    """Returns potential(x, gradient=False, hessian=False) evaluating the total hyper-elastic energy at positions x.
+
+    The energy is pbat's (float32), so it carries round-off noise of about 1e-5 relative (see rom_mcmc).
 
     Args:
-        x (np.ndarray): 3*|# nodes| array of node positions in F order
-        gradient (bool): if True, also return the 3*|# nodes| energy gradient
-        hessian (bool): if True (with gradient), also return the SPD-corrected sparse energy Hessian
+        E (np.ndarray): |# elem. nodes| x |# elements| element connectivity array.
+        X (np.ndarray): 3 x |# nodes| rest positions.
+        egU (np.ndarray): |# quad.pts.| element indices at quadrature points.
+        wgU (np.ndarray): |# quad.pts.| quadrature weights.
+        GNegU (np.ndarray): |# elem. nodes| x 3*|# quad.pts.| shape function gradients.
+        mug (np.ndarray): |# quad.pts.| first Lame coefficients.
+        lambdag (np.ndarray): |# quad.pts.| second Lame coefficients.
+        energy (pbat.fem.HyperElasticEnergy): Hyper-elastic energy model.
+        element (pbat.fem.Element): Element type.
+        order (int, optional): Polynomial order. Defaults to 1.
 
     Returns:
-        float | Tuple: The energy, then its gradient and Hessian if requested
+        typing.Callable: potential(x, gradient, hessian), where
+            x (np.ndarray): 3*|# nodes| array of node positions in F order,
+            gradient (bool): if True, also return the 3*|# nodes| energy gradient,
+            hessian (bool): if True (with gradient), also return the SPD-corrected sparse energy Hessian,
+        returning the energy, then its gradient and Hessian if requested.
     """
     flags = pbat.fem.ElementElasticityComputationFlags.Potential
     flags_grad = flags | pbat.fem.ElementElasticityComputationFlags.Gradient
@@ -318,14 +363,17 @@ def deformation_gradient_determinants(E, egU, GNegU, x):
 
 
 def signal(w: float, t: float, c: float, k: float):
+    """Mode animation amplitude c sin(k w t) at time t, for a mode of frequency w slowed down by k."""
     return c * np.sin(k * w * t)
 
 
 def linear_map(U: np.ndarray, q: np.ndarray):
+    """Linear reduced displacement u = U q, for the n x m basis U and m coordinates q."""
     return U @ q
 
 
 def quadratic_map(U: np.ndarray, Q: np.ndarray, q: np.ndarray):
+    """Quadratic-manifold displacement u = U q + 1/2 Q:qq, for the n x m x m symmetric tensor Q."""
     return U @ q + 0.5 * np.einsum("nij,i,j->n", Q, q, q)
 
 
@@ -403,6 +451,14 @@ def build_rom(
     Modal derivatives are projected M-orthogonally off the span of the vibration modes. The augmented
     basis keeps the M-orthogonal SVD directions of the derivatives whose singular values are at least
     z_rtol times the largest.
+
+    Args:
+        E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs: The model, as returned by load_model.
+        energy (pbat.fem.HyperElasticEnergy): Hyper-elastic energy model.
+        element (pbat.fem.Element): Element type.
+        modes (int): Number of vibration modes m.
+        eps (float): Finite-difference step of the modal derivatives, as a fraction of the bounding box diagonal.
+        z_rtol (float, optional): Relative singular value cutoff of the augmented basis. Defaults to 0.02.
 
     Returns:
         Tuple: (w, U, Q, Z, ws), with w the |# modes| mode frequencies, U the n x |# modes|
@@ -509,13 +565,15 @@ def reduced_model(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Elastic stiffness quadratic manifold demo",
+        description="Quadratic-manifold reduced model with fixed-energy sampling (GUI or headless) and shape "
+        "reachability tests. See the module docstring for representative commands.",
     )
     parser.add_argument(
         "-i",
         "--input",
-        help="Path to input tetrahedral mesh or filepath:h5path pair "
-        "of hdf5 file containing an FemElastoDynamics and the hdf5 group "
-        "path to the FemElastoDynamics",
+        help="Path to an input tetrahedral mesh (read with meshio), or a filepath:h5path pair of an hdf5 file "
+        "containing an FemElastoDynamics and the hdf5 group path to it, e.g. scene.Dump.h5:fem. A Dump brings "
+        "its own material, masses and Dirichlet constraints; a mesh uses -m, -Y and -n and has none",
         type=str,
         dest="input",
         required=True,
@@ -523,7 +581,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--mass-density",
-        help="Mass density",
+        help="Mass density in kg/m^3, for mesh input only (default: %(default)s)",
         type=float,
         dest="rho",
         default=1000.0,
@@ -531,7 +589,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-Y",
         "--young-modulus",
-        help="Young's modulus",
+        help="Young's modulus in Pa, for mesh input only (default: %(default)s)",
         type=float,
         dest="Y",
         default=1e6,
@@ -539,7 +597,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-n",
         "--poisson-ratio",
-        help="Poisson's ratio",
+        help="Poisson's ratio, for mesh input only (default: %(default)s)",
         type=float,
         dest="nu",
         default=0.45,
@@ -547,64 +605,68 @@ if __name__ == "__main__":
     parser.add_argument(
         "-k",
         "--num-modes",
-        help="Number of modes to compute",
+        help="Number of vibration modes m, i.e. reduced coordinates (default: %(default)s). Without Dirichlet "
+        "constraints, the 6 lowest (rigid) modes are excluded from sampling",
         type=int,
         dest="modes",
         default=20,
     )
     parser.add_argument(
         "--eps",
-        help="Epsilon for numerical differentiation",
+        help="Finite-difference step of the modal derivatives, as a fraction of the bounding box diagonal "
+        "(default: %(default)s)",
         type=float,
         dest="eps",
         default=1e-3,
     )
     parser.add_argument(
         "--headless",
-        help="Sample without the GUI and write the samples to --output",
+        help="Sample without the GUI and write one batch to --output (sample-file contract, see "
+        "rom_mcmc.write_samples)",
         action="store_true",
     )
     parser.add_argument(
         "-o",
         "--output",
-        help="Output HDF5 file for --headless sampling",
+        help="Output HDF5 file for --headless sampling (required with --headless)",
         type=str,
         dest="output",
     )
     parser.add_argument(
         "--energy",
-        help="Target energy in J: the potential energy E* for the level-set samplers, "
-        "the total energy E = K + U for the microcanonical sampler",
+        help="Target energy in J: the potential energy E* for the level-set samplers (polar, crw, ray), the "
+        "total energy E = K + U for the microcanonical sampler. Also the GUI's initial value (default: %(default)s)",
         type=float,
         dest="energy",
         default=1.0,
     )
     parser.add_argument(
         "--samples",
-        help="Number of samples",
+        help="Number of samples written by --headless, pooled over all chains (default: %(default)s)",
         type=int,
         dest="samples",
         default=100,
     )
     parser.add_argument(
         "--sampler",
-        help="polar: Metropolis on directions with exact radial solves, "
-        "crw: constrained random walk with projection, "
-        "ray: independent random directions (not distributed as the target), "
-        "microcanonical: positions and velocities at fixed total energy K + U",
+        help="polar: Metropolis on directions with exact radial solves, crw: constrained random walk with "
+        "projection, ray: independent random directions (biased; files require importance weights), "
+        "microcanonical: positions and velocities at fixed total energy K + U (default: %(default)s)",
         choices=tuple(rom_mcmc.SAMPLERS),
         default="polar",
     )
     parser.add_argument(
         "--chains",
-        help="Number of independent chains, pooled. Defaults to 4 for the microcanonical sampler, 1 otherwise.",
+        help="Number of independent chains, pooled, whose agreement is reported as split R-hat. Defaults to 4 "
+        "for the microcanonical sampler, 1 otherwise",
         type=int,
         dest="chains",
         default=None,
     )
     parser.add_argument(
         "--gravity",
-        help="Gravitational acceleration (gx gy gz), adding the potential -(M g)^T u(q). Off by default.",
+        help="Gravitational acceleration gx gy gz in m/s^2, adding the potential -(M g)^T u(q) to headless "
+        "sampling and enabling it in the GUI. Off by default; the GUI otherwise offers the scene's gravity",
         type=float,
         nargs=3,
         dest="gravity",
@@ -612,40 +674,43 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--weight",
-        help="Target distribution on the energy level set (see rom_mcmc)",
+        help="Distribution on the energy level set for polar, crw and ray: mass = sqrt(det J^T M J) (independent "
+        "of how q is scaled), uniform, or area (see rom_mcmc) (default: %(default)s)",
         choices=rom_mcmc.WEIGHTS,
         default="mass",
     )
     parser.add_argument(
         "--mapping",
-        help="Reduced displacement map to sample on",
+        help="Reduced displacement map to sample on in --headless mode: quadratic u = U q + 1/2 Q:qq, or "
+        "linear u = U q (default: %(default)s)",
         choices=("quadratic", "linear"),
         default="quadratic",
     )
     parser.add_argument(
         "--burn-in",
-        help="Number of burn-in steps, during which the step size adapts",
+        help="Burn-in steps per chain, during which the proposal step size adapts (default: %(default)s)",
         type=int,
         dest="burn_in",
         default=300,
     )
     parser.add_argument(
         "--pilot",
-        help="Number of steps used to estimate the autocorrelation time for automatic thinning",
+        help="Steps per chain used to estimate the integrated autocorrelation time, which sets the thinning "
+        "(default: %(default)s)",
         type=int,
         dest="pilot",
         default=500,
     )
     parser.add_argument(
         "--thin",
-        help="Keep every thin-th step. Defaults to the estimated autocorrelation time.",
+        help="Keep every thin-th step. Defaults to the autocorrelation time estimated from the pilot steps",
         type=int,
         dest="thin",
         default=None,
     )
     parser.add_argument(
         "--seed",
-        help="Random seed",
+        help="Random seed (default: %(default)s)",
         type=int,
         dest="seed",
         default=0,

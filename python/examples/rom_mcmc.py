@@ -18,6 +18,35 @@ M_r(q) = J(q)^T M J(q). See MicrocanonicalMetropolis.
 
 Samplers work in whitened coordinates y = q / scale, in which the linearized energy is |y|^2 / 2.
 They all expose `burn_in`, `estimate_thinning` and `sample`, so that `run_chain` can drive any of them.
+
+Which sampler to use:
+
+- "microcanonical" (the preferred default): states (q, qdot) at total energy E. Shapes span a range of
+  deformation energies below E (U/E averages ~0.5 at small E and ~0.3 at large E), and velocities come for
+  free, which dynamic problems need. Steps are cheap (~1 ms, no root solves) but strongly correlated
+  (tau ~ 100-250 steps), so pool several chains (run_chains, 4 by default) with >= 400 samples and check
+  split R-hat < 1.05. Used for the benchmark datasets (make_benchmark.py).
+- "polar": shapes exactly on the level set U(q) = E*, when every sample must have the same deformation
+  energy. Mixes fast (tau ~ 10-20 steps, ~3 ms/step with the radial root solve). Requires a star-shaped
+  level set; check star_violations = 0.
+- "crw": the same target as polar by an independent method, about 2x costlier per independent sample. Use
+  it to cross-check polar, or if star_violations appear.
+- "ray": independent directions, not distributed as the target (files set importance_weights_required).
+  Only for browsing shapes or debugging, never for statistics.
+
+Energies come from pbat in float32, so they carry an absolute round-off noise floor (about 1e-4 J on
+MediumLongBendingBeam). Each chain measures it and keeps its tolerances above it, and batches report it as
+`energy_noise`, `energy_tolerance` and `energy_noise_warning` (set when the tolerance exceeds 1e-3 E).
+
+Usage (modalrom.py builds the model; see its build_rom and reduced_model):
+
+    model, omega = modalrom.reduced_model("quadratic", U, Q, w, m, x0, potential, rigid, "mass")
+    batch = rom_mcmc.run_chains(
+        lambda rng: rom_mcmc.make_sampler("microcanonical", model, 10.0, rng),
+        n_chains=4, n_samples=400, burn_in=300, pilot=500, seed=0,
+    )
+    assert batch.stats["rhat"] < 1.05  # the chains agree
+    rom_mcmc.write_samples("batch.h5", X, model, omega, batch, attrs={"input": "scene.Dump.h5:fem"})
 """
 
 import dataclasses
@@ -76,12 +105,14 @@ class QuadraticManifold:
             self._Qnm_m = self.Q.reshape(n * m, m)
 
     def displacement(self, q: np.ndarray) -> np.ndarray:
+        """The n full-space displacement u(q) = U q + 1/2 Q:qq (or U q) at the m coordinates q."""
         u = self.U @ q
         if self.Q is not None:
             u += 0.5 * (self._Qnmm @ np.outer(q, q).ravel())
         return u
 
     def jacobian(self, q: np.ndarray) -> np.ndarray:
+        """The n x m Jacobian J(q) = du/dq = U + Q:q of the map at q (Q symmetric)."""
         if self.Q is None:
             return self.U
         return self.U + (self._Qnm_m @ q).reshape(self.U.shape)
@@ -93,6 +124,7 @@ class QuadraticManifold:
         return e - self.fext @ u if self.fext is not None else e
 
     def energy_and_gradient(self, q: np.ndarray) -> typing.Tuple[float, np.ndarray]:
+        """The potential energy U(q) (see energy) and its m gradient J(q)^T (grad Psi - fext)."""
         u = self.displacement(q)
         e, g = self.potential(self.x0 + u, True)
         e = float(e) - self.rest_energy
@@ -121,7 +153,15 @@ class QuadraticManifold:
         return J.T @ (self.M[:, np.newaxis] * J)
 
     def log_weight(self, q: np.ndarray, gq: np.ndarray) -> float:
-        """Log of the weight w(q), given the reduced energy gradient gq at q."""
+        """Log of the weight w(q) that selects the fixed-potential distribution (see the module docstring).
+
+        Args:
+            q (np.ndarray): m reduced coordinates.
+            gq (np.ndarray): m reduced energy gradient at q (used by the "area" weight).
+
+        Returns:
+            float: log w(q).
+        """
         if self.weight == "uniform":
             return 0.0
         if self.weight == "area":
@@ -131,6 +171,8 @@ class QuadraticManifold:
 
 
 class StarShapeError(RuntimeError):
+    """Raised when the target energy can't be bracketed along a ray, e.g. because the energy never reaches it."""
+
     pass
 
 
@@ -271,6 +313,20 @@ def split_rhat(traces: typing.Sequence[np.ndarray]) -> float:
 
 @dataclasses.dataclass
 class SampleBatch:
+    """A batch of samples drawn by a sampler.
+
+    Attributes:
+        q (np.ndarray): S x m reduced coordinates.
+        energy (np.ndarray): S potential energies U(q) in J (= E* on the level set for fixed-potential samplers).
+        log_target (np.ndarray): S log unnormalized target densities in the sampler's own parametrization.
+        stats (dict): Chain statistics (acceptance, step, thin, tau, ess, star_violations,
+            importance_weights_required, energy_noise, energy_tolerance, energy_noise_warning, and from
+            run_chain/run_chains burn_in, pilot, auto_thin, n_chains, rhat).
+        qdot (np.ndarray | None): S x m reduced velocities (microcanonical sampler only).
+        trace (np.ndarray | None): |# steps| x |# observables| per-step observables of the sampling run, used for
+            the autocorrelation time and split R-hat.
+    """
+
     q: np.ndarray
     energy: np.ndarray
     log_target: np.ndarray
@@ -362,6 +418,16 @@ class _Chain:
         self.n_steps += 1
 
     def sample(self, n: int, thin: int | None = None) -> SampleBatch:
+        """Runs n * thin steps and keeps every thin-th state.
+
+        Args:
+            n (int): Number of samples.
+            thin (int | None): Thinning, or None for the one estimated by estimate_thinning (or 1).
+
+        Returns:
+            SampleBatch: The samples, with statistics of this run (the autocorrelation time tau and the
+            effective sample size ess are estimated from its steps).
+        """
         thin = thin or self.thin or 1
         steps0, accepted0 = self.n_steps, self.n_accepted
         q = np.empty((n, self.model.dims))
@@ -400,6 +466,14 @@ class PolarMetropolis(_Chain):
     The target on the sphere is p(theta) ~ w(q) r^(m-1) / (d Psi_hat / dr). The proposal
     theta' = normalize(theta + step * xi), xi ~ N(0, I), is symmetric. Requires every ray to cross
     the level set once (star-shaped level set); violations found while bracketing are counted.
+
+    Args:
+        model: Reduced model (QuadraticManifold, or any object with the same dims, scale, energy,
+            energy_and_gradient, log_weight and reduced_mass members).
+        energy (float): Target energy in J.
+        rng (np.random.Generator): Random generator.
+        step (float): Initial proposal step size in whitened coordinates, adapted during burn-in.
+        target_acceptance (float): Acceptance rate the burn-in adapts the step size toward.
     """
 
     def __init__(self, model, energy: float, rng: np.random.Generator, step: float = 0.3, target_acceptance: float = 0.3):
@@ -428,6 +502,17 @@ class ConstrainedRandomWalk(_Chain):
     density with respect to the surface measure in y is f(y) = w(q) / |grad_y Psi_hat|. A move is
     rejected if the projection fails, or if the reverse projection doesn't return to the start
     (the reversibility check).
+
+    Args:
+        model: Reduced model (QuadraticManifold, or any object with the same dims, scale, energy,
+            energy_and_gradient, log_weight and reduced_mass members).
+        energy (float): Target energy in J.
+        rng (np.random.Generator): Random generator.
+        step (float): Initial proposal step size in whitened coordinates, adapted during burn-in.
+        target_acceptance (float): Acceptance rate the burn-in adapts the step size toward.
+        projection_rtol (float): Relative energy tolerance of the projections (kept above the noise floor).
+        reverse_rtol (float): Relative position tolerance of the reversibility check.
+        max_newton (int): Maximum Newton iterations per projection.
     """
 
     def __init__(
@@ -515,6 +600,11 @@ class RaySampler(_Chain):
 
     Samples are not distributed according to the target. Each sample's log_target is the log target
     density on the sphere, so log importance weights relative to the uniform direction proposal.
+
+    Args:
+        model: Reduced model (see PolarMetropolis).
+        energy (float): Target energy E* in J.
+        rng (np.random.Generator): Random generator.
     """
 
     def __init__(self, model, energy: float, rng: np.random.Generator):
@@ -545,7 +635,17 @@ class MicrocanonicalMetropolis(_Chain):
     the position marginal pi(q) ~ sqrt(det M_r(q)) (E - U(q))^((d-2)/2) on U(q) < E. It is sampled by
     random-walk Metropolis in whitened coordinates, starting from the rest state q = 0. Given q, the
     momentum is uniform on the sphere |M_r^{-1/2} p|^2 = 2 (E - U), which sample_velocity draws exactly.
-    The sample energies are the potential energies U(q); the kinetic energies are E - U(q).
+    The sample energies are the potential energies U(q); the kinetic energies are E - U(q). Chains are
+    strongly correlated (tau ~ 100-250 steps on the beam and trampoline), so pool several chains with
+    run_chains and check that split R-hat < 1.05.
+
+    Args:
+        model: Reduced model (QuadraticManifold, or any object with the same dims, scale, energy,
+            energy_and_gradient, log_weight and reduced_mass members).
+        energy (float): Total energy E = K + U in J.
+        rng (np.random.Generator): Random generator.
+        step (float): Initial proposal step size in whitened coordinates, adapted during burn-in.
+        target_acceptance (float): Acceptance rate the burn-in adapts the step size toward.
     """
 
     def __init__(self, model, energy: float, rng: np.random.Generator, step: float = 0.3, target_acceptance: float = 0.25):
@@ -578,7 +678,15 @@ class MicrocanonicalMetropolis(_Chain):
         return np.append(self.y, self.logp)
 
     def sample_velocity(self, q: np.ndarray, e: float) -> np.ndarray:
-        """Draws qdot given q, s.t. 1/2 qdot^T M_r(q) qdot = E - U(q), with U(q) = e."""
+        """Draws qdot given q, s.t. 1/2 qdot^T M_r(q) qdot = E - U(q), from the exact conditional distribution.
+
+        Args:
+            q (np.ndarray): m reduced coordinates.
+            e (float): The potential energy U(q).
+
+        Returns:
+            np.ndarray: m reduced velocities qdot.
+        """
         kinetic = max(self.target_energy - e, 0.0)
         C = np.linalg.cholesky(self.model.reduced_mass(q))
         z = self.rng.standard_normal(self.model.dims)
@@ -596,13 +704,36 @@ SAMPLERS = {
 
 
 def make_sampler(kind: str, model, energy: float, rng: np.random.Generator):
+    """Creates a sampler with default settings.
+
+    Args:
+        kind (str): One of SAMPLERS: "polar", "crw", "ray" (fixed potential energy E*) or "microcanonical"
+            (fixed total energy E = K + U).
+        model: Reduced model, e.g. a QuadraticManifold.
+        energy (float): Target energy in J (E* or E, depending on kind).
+        rng (np.random.Generator): Random generator.
+
+    Returns:
+        The sampler, ready for run_chain.
+    """
     if kind not in SAMPLERS:
         raise ValueError(f"Unknown sampler {kind}, expected one of {tuple(SAMPLERS)}")
     return SAMPLERS[kind](model, energy, rng)
 
 
 def run_chain(sampler, n_samples: int, burn_in: int, pilot: int, thin: int | None = None) -> SampleBatch:
-    """Burn in, then thin by the pilot's autocorrelation time (unless thin is given), then sample."""
+    """Burn in, then thin by the pilot's autocorrelation time (unless thin is given), then sample.
+
+    Args:
+        sampler: A sampler from make_sampler.
+        n_samples (int): Number of samples.
+        burn_in (int): Burn-in steps, during which the step size adapts.
+        pilot (int): Steps used to estimate the autocorrelation time when thin is None.
+        thin (int | None): Fixed thinning, or None for automatic thinning.
+
+    Returns:
+        SampleBatch: The samples, with burn_in, pilot and auto_thin added to its statistics.
+    """
     sampler.burn_in(burn_in)
     auto_thin = thin is None
     if auto_thin:
@@ -683,7 +814,42 @@ def write_samples(
     min_det_F: np.ndarray | None = None,
     extra_samples: dict | None = None,
 ):
-    """Write a sample batch to HDF5 (see the sample-file contract in plans/MASTER.md).
+    """Write a sample batch to HDF5, following the sample-file contract below.
+
+    Sample-file contract (one target energy per file; S samples, N nodes, m reduced coordinates):
+
+    Datasets:
+        X                  (N, 3) float32 rest positions; row i is node i, i.e. pbat's 3 x N X transposed.
+        samples/q          (S, m) reduced coordinates.
+        samples/x          (S, N, 3) float32 positions X + u(q), in the same node order as X. Dirichlet nodes are
+                           exactly at rest, because U and Q vanish on their DOFs.
+        samples/energy     (S,) potential energy U(q) = Psi(X + u(q)) - Psi(X) [- (M g)^T u(q) with gravity], in J.
+        samples/log_target (S,) log unnormalized target density per sample (see the root attribute log_target).
+        samples/qdot       (S, m) reduced velocities, for ensemble "total" only. Full-space velocities are
+                           J(q) qdot with J(q) = U + Q:q, and 1/2 qdot^T J^T M J qdot = target_energy - U(q).
+        samples/min_J      (S,) minimum det(F) over the mesh per sample, if given (<= 0: inverted elements).
+        samples/<name>     extra per-sample datasets, if given (e.g. the benchmark's v, xtilde, x_ref).
+        basis/U            (3N, m) mass-normalized vibration modes (U^T M U = I). Row 3i + d is node i, coordinate d.
+        basis/Q            (3N, m, m) symmetric quadratic tensor, M-orthogonal to U; (0, 0, 0) for the linear map.
+        basis/omega        (m,) mode frequencies in rad/s.
+        basis/scale        (m,) whitening scales, q = scale * y.
+        basis/M            (3N,) lumped masses per DOF.
+
+    Root attributes:
+        From attrs (as written by modalrom.py and make_benchmark.py): input, n_linear_modes,
+            rigid_modes_excluded, modal_derivatives, mode_normalization, eps, sampler, target_energy (E* for
+            ensemble "potential", E = K + U for ensemble "total"), gravity (3,), seed, git_commit, sampling_time.
+        From batch.stats: acceptance, step, thin, tau, ess, star_violations, importance_weights_required,
+            energy_noise, energy_tolerance, energy_noise_warning, burn_in, pilot, auto_thin, and from run_chains
+            n_chains and rhat (split R-hat).
+        Written here: weight, log_target (how to use samples/log_target), map ("linear" or "quadratic"), n_modes,
+            ensemble ("potential" or "total"), energy_definition, rest_energy (pbat's float32 energy at rest,
+            round-off only) and layout (these conventions).
+
+    Consuming samples: MCMC batches (importance_weights_required = False) already follow the target, so average
+    uniformly over samples. Ray batches need the self-normalized importance weights exp(log_target - max) /
+    sum(exp(log_target - max)). Check rhat < 1.05 when present, and energy_noise_warning = False (otherwise
+    samples only lie on the level set to within energy_tolerance J).
 
     Args:
         path (str): Output .h5 file path.
