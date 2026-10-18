@@ -22,14 +22,23 @@ from ..contact.dynamics import (
 )
 
 
-def _chebyshev_omega(k: int, rho2: float, omega: float) -> float:
-    """Mirrors `pbat::sim::algorithm::vbd::kernels::ChebyshevOmega`."""
+@wp.kernel
+def _chebyshev_omega_kernel(
+    omega: wp.array[wp.float32],
+    rho2: wp.float32,
+    k: wp.int32,
+):
+    """Mirrors `pbat::sim::algorithm::vbd::kernels::ChebyshevOmega`, updating omega[0] in place.
+
+    Kept on the device so that a recorded iteration (k > 1) can be replayed, e.g. inside
+    `wp.capture_while`.
+    """
     if k == 0:
-        return 1.0
+        omega[0] = wp.float32(1.0)
     elif k == 1:
-        return 2.0 / (2.0 - rho2)
+        omega[0] = wp.float32(2.0) / (wp.float32(2.0) - rho2)
     else:
-        return 4.0 / (4.0 - rho2 * omega)
+        omega[0] = wp.float32(4.0) / (wp.float32(4.0) - rho2 * omega[0])
 
 
 @wp.kernel
@@ -37,7 +46,7 @@ def _chebyshev_momentum_update_kernel(
     x: wp.array[wp.vec3f],
     xkm1: wp.array[wp.vec3f],
     xkm2: wp.array[wp.vec3f],
-    omega: wp.float32,
+    omega: wp.array[wp.float32],
     apply_omega: wp.int32,
 ):
     """Mirrors lines 149-155 of `source/pbat/sim/algorithm/vbd/Chebyshev.h`:
@@ -50,7 +59,7 @@ def _chebyshev_momentum_update_kernel(
     i = wp.tid()
     xk = x[i]
     if apply_omega != 0:
-        xk = omega * (xk - xkm2[i]) + xkm2[i]
+        xk = omega[0] * (xk - xkm2[i]) + xkm2[i]
         x[i] = xk  # pyright: ignore[reportIndexIssue]
     xkm2[i] = xkm1[i]  # pyright: ignore[reportIndexIssue]
     xkm1[i] = xk  # pyright: ignore[reportIndexIssue]
@@ -65,14 +74,36 @@ def chebyshev_momentum_update(fem: FemElastoDynamics, cheb: ChebyshevParams, k: 
     """
     rho = cheb.rho  # pyright: ignore[reportArgumentType]
     rho2 = rho * rho
-    omega = _chebyshev_omega(k, rho2, cheb.omega)  # pyright: ignore[reportArgumentType]
-    cheb.omega = omega
+    wp.launch(
+        kernel=_chebyshev_omega_kernel, dim=1, inputs=[cheb.omega, rho2, min(k, 2)]
+    )
     n_nodes = fem.data.x.shape[0]
     wp.launch(
         kernel=_chebyshev_momentum_update_kernel,
         dim=n_nodes,
-        inputs=[fem.data.x, cheb.xkm1, cheb.xkm2, omega, 1 if k > 1 else 0],
+        inputs=[fem.data.x, cheb.xkm1, cheb.xkm2, cheb.omega, 1 if k > 1 else 0],
     )
+
+
+def subproblem_iteration(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: ChebyshevParams,
+    kp: int,
+):
+    """Iteration ``kp`` of the subproblem: slack dual update, VBD sweep, Chebyshev momentum.
+
+    Iterations ``kp >= 2`` record identical work, so they can be replayed.
+    """
+    contact.update_dual(
+        fem.data.x,
+        fem.xt,
+        request_slack_update=True,
+        request_decay_update=False,
+        request_lagrange_multiplier_update=False,
+    )
+    iterate(fem, contact, params)
+    chebyshev_momentum_update(fem, params, kp)
 
 
 @profiling.scoped("chebyshev.subproblem")
@@ -83,15 +114,7 @@ def solve_subproblem(
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
     for kp in range(n_subproblem_max_iters):
-        contact.update_dual(
-            fem.data.x,
-            fem.xt,
-            request_slack_update=True,
-            request_decay_update=False,
-            request_lagrange_multiplier_update=False,
-        )
-        iterate(fem, contact, params)
-        chebyshev_momentum_update(fem, params, kp)
+        subproblem_iteration(fem, contact, params, kp)
 
 
 class ChebyshevSolver:

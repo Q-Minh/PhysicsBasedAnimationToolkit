@@ -247,20 +247,31 @@ def iterate(
             )
 
 
+def subproblem_iteration(
+    k: int, fem: FemElastoDynamics, contact: ContactDynamics, params: Params, kp: int
+):
+    """Iteration ``kp`` of subproblem ``k``: slack dual update, then one accelerated sweep.
+
+    The sweep only distinguishes ``k == 0 and kp == 0`` (no stencil gradient augmentation yet) and
+    ``kp == 0`` (no acceleration parameter adaptation yet) from later iterations.
+    """
+    contact.update_dual(
+        fem.data.x,
+        fem.xt,
+        request_slack_update=True,
+        request_decay_update=False,
+        request_lagrange_multiplier_update=False,
+    )
+    iterate(k, kp, fem, contact, params)
+
+
 @profiling.scoped("aaavbd.subproblem")
 def solve_subproblem(
     k: int, fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
     for kp in range(n_subproblem_max_iters):
-        contact.update_dual(
-            fem.data.x,
-            fem.xt,
-            request_slack_update=True,
-            request_decay_update=False,
-            request_lagrange_multiplier_update=False,
-        )
-        iterate(k, kp, fem, contact, params)
+        subproblem_iteration(k, fem, contact, params, kp)
 
 
 class AaaVbdSolver:

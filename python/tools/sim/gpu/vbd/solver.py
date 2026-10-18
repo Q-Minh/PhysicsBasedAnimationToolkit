@@ -312,6 +312,23 @@ def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
             )
 
 
+def subproblem_iteration(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+    kp: int,
+):
+    """Iteration ``kp`` of the subproblem: slack dual update, then one VBD sweep."""
+    contact.update_dual(
+        fem.data.x,
+        fem.xt,
+        request_slack_update=True,
+        request_decay_update=False,
+        request_lagrange_multiplier_update=False,
+    )
+    iterate(fem, contact, params)
+
+
 @profiling.scoped("vbd.subproblem")
 def solve_subproblem(
     fem: FemElastoDynamics,
@@ -320,14 +337,7 @@ def solve_subproblem(
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
     for kp in range(n_subproblem_max_iters):
-        contact.update_dual(
-            fem.data.x,
-            fem.xt,
-            request_slack_update=True,
-            request_decay_update=False,
-            request_lagrange_multiplier_update=False,
-        )
-        iterate(fem, contact, params)
+        subproblem_iteration(fem, contact, params, kp)
 
 
 class VbdSolver:

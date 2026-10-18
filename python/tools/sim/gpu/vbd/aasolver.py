@@ -273,6 +273,21 @@ def solve_subproblem(
     subproblem runs ``n_subproblem_max_iters * vbd_iters_per_anderson_iter`` sweeps in total.
     """
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
+    for kp in range(n_subproblem_max_iters):
+        subproblem_iteration(fem, contact, params, kp)
+
+
+def subproblem_iteration(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: AndersonParams,
+    kp: int,
+):
+    """Anderson iteration ``kp`` of the subproblem, applying ``vbd_iters_per_anderson_iter`` sweeps.
+
+    Iteration ``kp`` records the history slot ``(kp - 1) % m`` and the window ``min(m, kp)``, so
+    iterations ``kp >= m`` repeat with period ``m`` and can be replayed in blocks of ``m``.
+    """
     n_vbd_iters = params.vbd_iters_per_anderson_iter
     x = fem.data.x
     n_nodes = x.shape[0]
@@ -288,32 +303,29 @@ def solve_subproblem(
             )
             iterate(fem, contact, params)
 
-    Xk = params.Xk
-    Fk = params.Fk
-
-    # kp == 0
-    wp.copy(params.xkm1, x)
-    _vbd_iterate()
-    wp.launch(
-        kernel=_anderson_residual_kernel,
-        dim=n_nodes,
-        inputs=[x, params.xkm1, params.fkm1],
-    )
-    for kp in range(1, n_subproblem_max_iters):
-        dkl = (kp - 1) % params.m
-        wp.launch(
-            kernel=_anderson_pre_iterate_kernel,
-            dim=n_nodes,
-            inputs=[x, params.xkm1, Xk, dkl],
-        )
+    if kp == 0:
+        wp.copy(params.xkm1, x)
         _vbd_iterate()
         wp.launch(
-            kernel=_anderson_post_iterate_kernel,
+            kernel=_anderson_residual_kernel,
             dim=n_nodes,
-            inputs=[x, params.xkm1, params.fk, params.fkm1, Fk, dkl],
+            inputs=[x, params.xkm1, params.fkm1],
         )
-        mk = min(params.m, kp)
-        anderson_mix(x, params, mk)
+        return
+    dkl = (kp - 1) % params.m
+    wp.launch(
+        kernel=_anderson_pre_iterate_kernel,
+        dim=n_nodes,
+        inputs=[x, params.xkm1, params.Xk, dkl],
+    )
+    _vbd_iterate()
+    wp.launch(
+        kernel=_anderson_post_iterate_kernel,
+        dim=n_nodes,
+        inputs=[x, params.xkm1, params.fk, params.fkm1, params.Fk, dkl],
+    )
+    mk = min(params.m, kp)
+    anderson_mix(x, params, mk)
 
 
 @profiling.scoped("anderson.mix")
