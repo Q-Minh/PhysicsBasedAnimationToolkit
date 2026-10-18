@@ -179,7 +179,10 @@ def load_simulation_scenario_from_scene(path: str):
             transform_library = TransformLibrary()
             tlib_h5grp = f[_archive_tlib_group]
             transform_library.deserialize(tlib_h5grp)
-            tet_elastic_body_names = tlib_h5grp["mesh_names"][:].astype(str).tolist()
+        # Constraint nodes are mapped onto the FEM mesh by body, in body order. The library's own
+        # mesh_names may list other meshes or another order (e.g. ArmadilloFallingInBasket).
+        tet_elastic_body_names = [str(body.name) for body in tet_elastic_bodies]
+        transform_library.sync_mesh_names(tet_elastic_body_names)
 
         fem, vert_counts, XP = make_fem_dynamics_object(
             tet_elastic_bodies, get_external_info=True
