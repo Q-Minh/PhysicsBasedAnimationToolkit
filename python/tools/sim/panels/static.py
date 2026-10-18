@@ -1,10 +1,21 @@
 # type: ignore
 """GUI panel for static equilibrium solves (see ``static.py``).
 
-With "Static equilibrium" on, every simulation step runs the selected solver on
-min_x Psi(x) - s fext^T x from the current positions, so stepping watches the solve converge. Initial
-shapes can be loaded from an MCMC sample batch. The error is reported relative to the shape loaded
-last.
+Open the GUI, e.g. ``python -m python.tools.sim.ui --fem-elasto-dynamics dump.h5:fem [--sim-params
+a.toml]``, then the "Static Equilibrium" node in the Simulation tab:
+
+- **Static equilibrium**: switches the FEM to static mode (``fem.static``). Every simulation step then
+  runs the selected solver on min_x Psi(x) - s fext^T x from the current positions, with no inertia and
+  kinematic constraints frozen, so stepping watches the solve converge. Turning it off restarts the
+  dynamics at rest from the current positions.
+- **External load scale**: s, the factor on the external load in static mode (0 = no loads).
+- **Load samples...**: loads an MCMC sample batch (.h5) and checks it against the mesh. Its warnings
+  (unmixed chains, sampling gravity) are shown.
+- **Sample / Apply sample**: sets the positions to one sample and remembers its error to the rest shape.
+- **Error to rest shape**: e/e0, with e = |x - X|_M over free nodes and e0 the error of the applied sample.
+
+Both settings survive a GUI reset (they're re-applied to the new FEM), and any change drops the
+captured CUDA graph so the next step records a new one. For timed runs, use ``benchmark_static.py``.
 """
 
 import tkinter as tk
@@ -17,6 +28,8 @@ from .. import static
 
 
 class _StaticPanelState:
+    """The panel's settings and loaded batch, kept on ``ui_state.static_panel``."""
+
     def __init__(self):
         self.enabled = False
         self.fext_scale = 0.0
@@ -47,12 +60,14 @@ class _StaticPanelState:
         state.capture = None
 
     def relative_error(self, state) -> float | None:
+        """e/e0 for the current positions, or None until a sample has been applied."""
         if self.e0 is None or self.e0 <= 0:
             return None
         return _error(state.fem) / self.e0
 
 
 def _error(fem) -> float:
+    """Mass-weighted error to the rest shape over free nodes, |x - X|_M."""
     x = fem.data.x.numpy().astype(np.float64)
     X = fem.data.X.numpy().astype(np.float64)
     m = fem.data.m.numpy().astype(np.float64)
@@ -69,6 +84,12 @@ def _panel_state(ui_state) -> _StaticPanelState:
 
 
 def draw_static_panel(state, ui_state):
+    """Draw the "Static Equilibrium" panel and apply its settings to ``state.fem``.
+
+    Args:
+        state (SimulationState): The simulation; its FEM's static flag and external load are set here.
+        ui_state (UIState): GUI state; the panel keeps its own settings on it as ``static_panel``.
+    """
     panel = _panel_state(ui_state)
     panel.apply(state)
     if not imgui.TreeNode("Static Equilibrium"):
