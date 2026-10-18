@@ -5,6 +5,8 @@ Outer loop mirrors ``gpu/vbd/solver.py``.  Newton-specific work lives in
 ``prepare_subproblem`` and ``solve_subproblem``
 """
 
+from enum import IntEnum
+
 import cuda.compute
 import warp as wp
 from ..common import profiling
@@ -1027,12 +1029,27 @@ def prepare_subproblem(
     pass
 
 
+class SubproblemStatus(IntEnum):
+    """How :func:`solve_subproblem` ended."""
+
+    STEPPED = 0  # took its n_subproblem_max_iters Newton steps
+    CONVERGED = 1  # the gradient met gtol2
+    NON_DESCENT = 2  # the Newton direction wasn't a descent direction; x is unchanged
+    LINE_SEARCH_FAILED = 3  # no step length passed the Armijo test; x is restored
+
+
 @profiling.scoped("newton.subproblem")
 def solve_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
     params: Params,
-) -> None:
+) -> SubproblemStatus:
+    """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
+
+    Returns:
+        SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
+        leaves ``x`` at the last accepted iterate.
+    """
     main_stream = wp.get_stream()
     for stream in params._streams[:5]:
         stream.wait_stream(main_stream)
@@ -1044,7 +1061,7 @@ def solve_subproblem(
         params._gradient_norm.reduce(main_stream)
         gnorm2 = float(params._gnorm2.numpy()[0])
         if gnorm2 <= float(params.data.gtol2):
-            break
+            return SubproblemStatus.CONVERGED
         # Assemble FEM + contact Hessian
         profiling.push("newton.assemble")
         params._data.Hvals.zero_()
@@ -1134,7 +1151,7 @@ def solve_subproblem(
         params._nslope_reduce(main_stream)
         slope = -params._nslope.numpy()[0]
         if slope >= 0.0:
-            break
+            return SubproblemStatus.NON_DESCENT
         # Armijo backtracking line search
         profiling.push("newton.line_search")
         x_backup = wp.clone(fem.data.x)
@@ -1156,8 +1173,9 @@ def solve_subproblem(
         profiling.pop()
         if not accepted:
             wp.copy(fem.data.x, x_backup)
-            break
+            return SubproblemStatus.LINE_SEARCH_FAILED
         params._gradient_norm.compute_gradient(main_stream)
+    return SubproblemStatus.STEPPED
 
 
 @profiling.scoped("solve.finalize_subproblem")
