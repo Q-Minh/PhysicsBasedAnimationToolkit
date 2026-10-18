@@ -1148,8 +1148,10 @@ def solve_subproblem(
             if E_trial <= E0 + c * alpha * slope:
                 accepted = True
                 break
-            alpha *= float(params.data.ls_tau)
-            wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, alpha])
+            # Move x from x0 - alpha*ndx back to x0 - alpha_next*ndx
+            alpha_next = alpha * float(params.data.ls_tau)
+            wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, alpha - alpha_next])
+            alpha = alpha_next
         profiling.pop()
         if not accepted:
             wp.copy(fem.data.x, x_backup)
