@@ -119,6 +119,11 @@ will instrument).
   report** and the specific plot to produce, then the coordinator relays the exact data requirements to tasks 3 and 4.
   Until then, build and test the machinery on small cases only.
 
+**Benchmark scenes (maintainer, 2026-10-18):** `data/scenarios/trampoline.h5` (homogeneous, Young's modulus 1e6, 4 fixed
+patches on the rim) and the same scene stiffer, `data/scenarios/trampoline.Y1e7.h5` (1e7), to compare solvers across
+materials. The paper's trampoline configs (soft-stiff, stiff-soft, stiff_sphere) belong to their own specific trampoline
+scenes in the extras repo, not to these. Reported error reductions go up to 99% at most.
+
 ## New milestone: GPU simulators read CPU scene files (maintainer, 2026-10-18)
 
 The GPU simulators (`ui.py`, `simulate.py`) should ingest the same scene/session `.h5` files that the CPU simulator
@@ -605,10 +610,11 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 1 · **GPU run START** (~15 min, correctness only): plane scenes under the new defaults,
   with the constant vs TIMESTEP/SUBPROBLEM adaptive penalty, to correct the manual-test flags. Ignore timings.
   Will log END.
-- 2026-10-18 · task 3 · **GPU run END** (adaptive-penalty stability, and the h = 1e-4 plateau diagnosis). Before reading the assignment to task 2, I had also implemented the relative check on `feature/vertex-solve-scale` (`bc7220d6`, Frobenius scale `|H|_F/sqrt(3)` instead of `tr H/3`). **It duplicates `feature/relative-hess-zero`, so don't merge it. Task 2's branch is the one to take.** Its validation corroborates task 2's: beam and trampoline (VBD, AAAVBD, default params) are bit-identical to dev; trampoline-sample dynamic_h0.0001 (E50, E5000, 2 samples each): VBD, AAAVBD and Anderson reach 95% in ~0.1-2 ms and end at e/e0 ~1e-5 to 1e-4 (before: 0.12-0.19); Chebyshev ends at ~7e-3; h = 1e-2 and static are unchanged. Task 3 → Newton next: the h = 1e-4 line-search plateau, the relative gradient check, and termination statuses.
+- 2026-10-18 · task 3 · **GPU run END** (adaptive-penalty stability, and the h = 1e-4 plateau diagnosis). Before reading the assignment to task 2, I had also implemented the relative check on `feature/vertex-solve-scale` (`bc7220d6`, Frobenius scale `|H|_F/sqrt(3)` instead of `tr H/3`). **It duplicates `feature/relative-hess-zero`, and I deleted it. Task 2's branch is the one to take.** Its validation corroborates task 2's: beam and trampoline (VBD, AAAVBD, default params) are bit-identical to dev; trampoline-sample dynamic_h0.0001 (E50, E5000, 2 samples each): VBD, AAAVBD and Anderson reach 95% in ~0.1-2 ms and end at e/e0 ~1e-5 to 1e-4 (before: 0.12-0.19); Chebyshev ends at ~7e-3; h = 1e-2 and static are unchanged. Task 3 → Newton next: the h = 1e-4 line-search plateau, the relative gradient check, and termination statuses.
 - 2026-10-18 · task 4 · **CPU run START** (~10 min, CPU only): regenerating `data/benchmarks/trampoline-sample` from the `trampoline.h5` scene with float32 references again (maintainer: no error reduction beyond 99% is reported, so the float64 references are dropped). Will log END.
 - 2026-10-18 · task 4 · **CPU run END.** `data/benchmarks/trampoline-sample` regenerated from `trampoline.h5` with float32 references (branch `feature/float32-references`, ready to merge; reverts the float64 references of `cbd3aca2` at the maintainer's request). Inputs are bit-identical to the previous set; references are within 6.5e-4 e0 of exact ones, enough for the 99% reductions the benchmark reports. Previous sets kept as `trampoline-sample.old-float32-refs` and `.old-float64-refs` for the maintainer to delete.
 - 2026-10-18 · coordinator · Maintainer answers: housekeeping approved (old sample sets deleted, merged branches removed); **AAAVBD must honour surface_stencil_surface_neighbours_only** → task 2 (after relative hess_zero; task 3's duplicate vertex-solve-scale to be dropped); task 4's judgment calls approved; configs move to the extras repo later; **benchmark methodology still pending, the final step; the maintainer does a manual test pass right before the benchmarks**; future benchmarks will include stiffer materials (e.g. Y = 1e7, `data/scenarios/trampoline.Y1e7.h5`). Merged task 4's float32 references (maintainer reports at most 99% reductions; references within 6.5e-4 e0).
+- 2026-10-18 · task 3 · **GPU run START** (intermittent, correctness only: GPU Newton diagnostics on trampoline-sample dynamic_h0.0001, small single solves). Ignore timings. Will log END.
 
 ## Open questions for the maintainer
 
