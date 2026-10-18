@@ -438,6 +438,12 @@ def main():
     )
     if static_faces.shape[0] > 0:
         ps.register_surface_mesh("Static colliders", fem_cpu.X.T, static_faces)
+        # Frame the bodies, not the (possibly huge, e.g. infinite plane) colliders
+        XB = fem_cpu.X[:, np.unique(fem_cpu.E)]
+        low, high = XB.min(axis=1), XB.max(axis=1)
+        ps.set_automatically_compute_scene_extents(False)
+        ps.set_bounding_box(low, high)
+        ps.set_length_scale(float(np.linalg.norm(high - low)))
 
     if args.sim_params or args.overrides:
         _import_parameters_from_file(
