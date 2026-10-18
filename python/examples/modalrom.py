@@ -256,12 +256,14 @@ def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1
     Args:
         x (np.ndarray): 3*|# nodes| array of node positions in F order
         gradient (bool): if True, also return the 3*|# nodes| energy gradient
+        hessian (bool): if True (with gradient), also return the SPD-corrected sparse energy Hessian
 
     Returns:
-        float | Tuple[float, np.ndarray]: The energy, and its gradient if requested
+        float | Tuple: The energy, then its gradient and Hessian if requested
     """
     flags = pbat.fem.ElementElasticityComputationFlags.Potential
     flags_grad = flags | pbat.fem.ElementElasticityComputationFlags.Gradient
+    flags_hess = flags_grad | pbat.fem.ElementElasticityComputationFlags.Hessian
     # Convert once to the layouts the bindings take without copying (column-major matrices,
     # contiguous vectors), since the sampler calls potential thousands of times
     E = np.asfortranarray(E)
@@ -270,8 +272,8 @@ def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1
         np.ascontiguousarray(np.ravel(a)) for a in (egU, wgU, mug, lambdag)
     )
 
-    def potential(x: np.ndarray, gradient: bool = False):
-        U, gradU, _ = pbat.fem.hyper_elastic_potential(
+    def potential(x: np.ndarray, gradient: bool = False, hessian: bool = False):
+        U, gradU, hessU = pbat.fem.hyper_elastic_potential(
             E=E,
             n_nodes=X.shape[1],
             eg=egU,
@@ -281,11 +283,14 @@ def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1
             lambdag=lambdag,
             x=np.asarray(x, dtype=np.float32),
             energy=energy,
-            flags=flags_grad if gradient else flags,
+            flags=flags_hess if hessian else (flags_grad if gradient else flags),
+            spd_correction=pbat.fem.HyperElasticSpdCorrection.Absolute,
             element=element,
             order=order,
             dims=X.shape[0],
         )
+        if hessian:
+            return U, gradU.astype(np.float64), hessU
         return (U, gradU.astype(np.float64)) if gradient else U
 
     return potential
