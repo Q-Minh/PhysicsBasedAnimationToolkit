@@ -26,12 +26,12 @@ Error: e = sqrt((x − X)ᵀ M (x − X)) over free nodes (lumped mass). Each so
 
 ```bash
 # One quick solve (smoke test)
-python -m python.tools.sim.benchmark --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
+python -m python.tools.sim.benchmark --scene C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5 \
     --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
     --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
 
 # Every solver x every sample, with a scene's parameters
-python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+python -m python.tools.sim.benchmark --scene SCENE.h5 --samples BATCH.h5 \
     --sim-params python/tools/sim/configs/paper/<scene>.toml --max-seconds 10 -o out/all.json
 
 # Parameter variations: configs layered left to right, then single-key overrides
@@ -40,8 +40,10 @@ python -m python.tools.sim.benchmark ... --sim-params base.toml static.toml \
 
 # Reproducible case: save the spec, rerun it
 python -m python.tools.sim.benchmark ... --save-spec out/case.h5 -o out/a.json
-python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --spec out/case.h5 -o out/b.json
+python -m python.tools.sim.benchmark --scene SCENE.h5 --spec out/case.h5 -o out/b.json
 ```
+
+The problem comes from a scene file (`--scene`, preferred) or an editor Dump (`--fem-elasto-dynamics file.h5:fem`, for debugging). Either way, the constrained nodes stay fixed at rest, and colliders and kinematic animation are ignored.
 
 Translating requests:
 
@@ -74,7 +76,7 @@ When comparing solvers, use the time to reach each error level, not the time per
 
 - **Contact** is always off, for both problem kinds.
 - **Dynamic h:** dynamic problems take h from the file and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution (e0 ~ 1e-3), so float32 rounding floors the error around e/e0 ~ 1e-5 to 1e-4.
-- **Solver parameters:** without `--sim-params`, only the code defaults apply (`configs/defaults.toml`), not the Dump's `vbd/params`. Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
+- **Solver parameters:** without `--sim-params`, only the code defaults apply (`configs/defaults.toml`), not the scene's or Dump's solver parameters. Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
 - **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Newton's CG absolute tolerance is set to 0 (its relative one stays), since in h²-scaled units at small h the gradient drops below it after one step. Vertex-solve and acceleration parameters still matter.
 - **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 300 leaves Newton steps inexact.
 - **Quiet GPU:** timings are only valid while nothing else runs. Reserve the GPU in `plans/MASTER.md` while parallel sessions are active.

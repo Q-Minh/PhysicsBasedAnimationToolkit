@@ -763,7 +763,12 @@ class LinearSolverParams(SerializableMixin):
 
     n_max_iters = DocField(300, "Maximum CG iterations per Newton step")
     rtol = DocField(1e-5, "Relative CG residual tolerance")
-    atol = DocField(1e-5, "Absolute CG residual tolerance")
+    atol = DocField(
+        1e-10,
+        "Absolute CG residual tolerance, in the units of the h^2-scaled objective's gradient. Keep it "
+        "well below |g| at convergence: at small time steps |g| can be ~1e-8, and an atol above |g| makes "
+        "CG return a zero step",
+    )
 
 
 class Params:
