@@ -83,6 +83,22 @@ class TestExternalForce(unittest.TestCase):
 
 
 class TestRadialRoot(unittest.TestCase):
+    def test_energy_dip_is_not_a_star_violation(self):
+        # Like gravity: U = 1/2 q^T A q - b^T q first dips below zero along rays with b^T d > 0, but still
+        # crosses each positive level once
+        b = np.array([2.0, 0.0, 0.0])
+
+        class Tilted(QuadraticEnergy):
+            def energy(self, q):
+                return super().energy(q) - b @ q
+
+        model = Tilted(np.array([1.0, 4.0, 9.0]), np.ones(3))
+        d = np.array([1.0, 0.2, 0.0])
+        for r0 in [1e-2, 1.0, 10.0]:
+            r, single_crossing = rom_mcmc.radial_root(model, d, 0.5, r0)
+            self.assertTrue(single_crossing)
+            self.assertAlmostEqual(model.energy(r * d), 0.5, delta=1e-5)
+
     def test_hits_level_set(self):
         model = QuadraticEnergy(np.array([1.0, 4.0, 9.0]), np.ones(3))
         rng = np.random.default_rng(0)

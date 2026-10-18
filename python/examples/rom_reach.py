@@ -13,6 +13,7 @@ import typing
 
 import numpy as np
 import scipy.optimize
+import scipy.sparse
 import scipy.sparse.linalg
 
 
@@ -63,13 +64,17 @@ def static_equilibrium(
     steps: int = 5,
     max_iters: int = 50,
     rtol: float = 1e-9,
+    inertia: typing.Tuple[np.ndarray, np.ndarray] | None = None,
+    u0: np.ndarray | None = None,
 ) -> typing.Tuple[np.ndarray, dict]:
-    """Full-order static equilibrium, min_u Psi(x0 + u) - fext^T u, by load-stepped Newton with backtracking.
+    """Full-order equilibrium, min_u Psi(x0 + u) - fext^T u [+ 1/2 sum_i k_i (u_i - ut_i)^2], by load-stepped
+    Newton with backtracking.
 
-    The load and the handle displacements are ramped linearly over `steps` increments, each solved by
-    Newton from the previous one. Each Newton solve stops when the decrement drops below
-    rtol * (1 + |Psi|), or when the line search can't decrease the objective any more, which happens
-    at the energy's round-off floor (pbat evaluates it in float32).
+    With inertia = (k, ut), k = M / h^2 and ut = xtilde - x0, this is one implicit Euler (BDF1) step,
+    min_x 1/(2 h^2) |x - xtilde|_M^2 + Psi(x). The load and the handle displacements are ramped linearly
+    over `steps` increments, each solved by Newton from the previous one. Each Newton solve stops when the
+    decrement drops below rtol * (1 + |Psi|), or when the line search can't decrease the objective any
+    more, which happens at the energy's round-off floor (pbat evaluates it in float32).
 
     Args:
         potential (typing.Callable): potential(x, gradient, hessian) returns Psi(x), or
@@ -82,16 +87,22 @@ def static_equilibrium(
         steps (int): Number of load increments.
         max_iters (int): Maximum Newton iterations per increment.
         rtol (float): Relative Newton decrement tolerance.
+        inertia (typing.Tuple[np.ndarray, np.ndarray] | None): (k, ut), n diagonal inertia stiffness and n
+            inertial target displacement, or None for a static solve.
+        u0 (np.ndarray | None): n initial displacement (e.g. the inertial target), or zero.
 
     Returns:
-        typing.Tuple[np.ndarray, dict]: The n equilibrium displacement u, and solve statistics.
+        typing.Tuple[np.ndarray, dict]: The n equilibrium displacement u, and solve statistics: Newton
+        iterations, the last decrement, and the largest entry of the last Newton correction, which estimates
+        how far u is from the exact solution.
     """
     n = x0.shape[0]
     fext = np.zeros(n) if fext is None else fext
     handle_dofs = np.zeros(0, dtype=np.int64) if handle_dofs is None else np.asarray(handle_dofs)
     unknown = np.setdiff1d(free, handle_dofs)
-    u = np.zeros(n)
-    iterations, decrement = 0, np.inf
+    u = np.zeros(n) if u0 is None else np.array(u0, dtype=np.float64)
+    k, ut = (np.zeros(n), np.zeros(n)) if inertia is None else inertia
+    iterations, decrement, correction = 0, np.inf, np.inf
     for s in range(1, steps + 1):
         scale = s / steps
         if handle_dofs.size:
@@ -99,13 +110,16 @@ def static_equilibrium(
         f = scale * fext
 
         def objective(u):
-            return float(potential(x0 + u, False, False)) - f @ u
+            d = u - ut
+            return float(potential(x0 + u, False, False)) - f @ u + 0.5 * d @ (k * d)
 
         for _ in range(max_iters):
             psi, g, H = potential(x0 + u, True, True)
-            r = (g - f)[unknown]
+            r = (g - f + k * (u - ut))[unknown]
             Huu = H.tocsr()[unknown, :].tocsc()[:, unknown].astype(np.float64)
+            Huu = Huu + scipy.sparse.diags(k[unknown])
             du = scipy.sparse.linalg.spsolve(Huu, -r)
+            correction = float(np.abs(du).max())
             iterations += 1
             decrement = -(r @ du)
             if 0.5 * decrement <= rtol * (1.0 + abs(psi)):
@@ -119,7 +133,7 @@ def static_equilibrium(
             else:
                 break
             u += step
-    return u, dict(iterations=iterations, decrement=decrement)
+    return u, dict(iterations=iterations, decrement=decrement, correction=correction)
 
 
 def deformation_energy(potential: typing.Callable, x0: np.ndarray, u: np.ndarray) -> float:

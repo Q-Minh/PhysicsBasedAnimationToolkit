@@ -141,8 +141,8 @@ def radial_root(
     r0: float,
     rtol: float = 1e-6,
     max_expansions: int = 60,
-    monotonicity_rtol: float = 1e-6,
-    monotonicity_atol: float = 0.0,
+    crossing_rtol: float = 1e-6,
+    crossing_atol: float = 0.0,
 ) -> typing.Tuple[float, bool]:
     """Find r > 0 s.t. model.energy(r * d) = energy.
 
@@ -156,13 +156,14 @@ def radial_root(
         r0 (float): Initial guess for r.
         rtol (float): Relative tolerance on r.
         max_expansions (int): Maximum number of bracket expansions.
-        monotonicity_rtol (float): Energy decreases along the ray smaller than
-            max(monotonicity_rtol * energy, monotonicity_atol) are attributed to round-off.
-        monotonicity_atol (float): See monotonicity_rtol, e.g. a multiple of the energy's noise floor.
+        crossing_rtol (float): Energies within max(crossing_rtol * energy, crossing_atol) of the target
+            are attributed to round-off when counting crossings.
+        crossing_atol (float): See crossing_rtol, e.g. a multiple of the energy's noise floor.
 
     Returns:
-        typing.Tuple[float, bool]: The root r, and False if the energy was found to decrease
-        along the ray at the evaluated points (the level set may not be star-shaped).
+        typing.Tuple[float, bool]: The root r, and False if the evaluated energies along the ray cross
+        the target more than once (the level set is not star-shaped). The energy may decrease along the
+        ray without crossing, e.g. under gravity, where it first dips below zero.
     """
     # Models may provide a cheaper evaluation restricted to the ray
     along_ray = model.ray_energy(d) if hasattr(model, "ray_energy") else lambda r: model.energy(r * d)
@@ -198,8 +199,9 @@ def radial_root(
             raise StarShapeError(f"Could not bracket energy {energy} along ray")
     root = scipy.optimize.brentq(f, lo, hi, rtol=rtol)
     fs = np.array([evaluations[r] for r in sorted(evaluations)])
-    monotone = bool(np.all(np.diff(fs) >= -max(monotonicity_rtol * energy, monotonicity_atol)))
-    return root, monotone
+    signs = np.sign(fs[np.abs(fs) > max(crossing_rtol * energy, crossing_atol)])
+    single_crossing = bool(np.count_nonzero(np.diff(signs)) <= 1)
+    return root, single_crossing
 
 
 def estimate_energy_noise(model, q: np.ndarray, n: int = 33, rel: float = 1e-3) -> float:
@@ -317,16 +319,16 @@ class _Chain:
     def _radial_point(self, theta: np.ndarray, r0: float):
         """The level-set point along whitened direction theta, and its polar log density."""
         d = self.model.scale * theta
-        r, monotone = radial_root(
+        r, single_crossing = radial_root(
             self.model,
             d,
             self.target_energy,
             r0,
             # Psi_hat ~ r^2, so a relative error eps in r is an energy error ~2 eps E*: stop at the noise floor
             rtol=max(1e-6, 0.5 * self.energy_noise / self.target_energy),
-            monotonicity_atol=self.energy_atol,
+            crossing_atol=self.energy_atol,
         )
-        self.star_violations += not monotone
+        self.star_violations += not single_crossing
         q = r * d
         e, gq = self.model.energy_and_gradient(q)
         drdpsi = gq @ d
@@ -679,6 +681,7 @@ def write_samples(
     batch: SampleBatch,
     attrs: dict,
     min_det_F: np.ndarray | None = None,
+    extra_samples: dict | None = None,
 ):
     """Write a sample batch to HDF5 (see the sample-file contract in plans/MASTER.md).
 
@@ -690,6 +693,7 @@ def write_samples(
         batch (SampleBatch): The samples.
         attrs (dict): Extra root attributes (input, sampler settings, target energy, seed, ...).
         min_det_F (np.ndarray | None): Per-sample minimum det(F) over the mesh, a diagnostic for inversion.
+        extra_samples (dict | None): Additional per-sample datasets written under samples/, by name.
     """
     import h5py
 
@@ -744,6 +748,8 @@ def write_samples(
             g.create_dataset("qdot", data=batch.qdot)
         if min_det_F is not None:
             g.create_dataset("min_J", data=min_det_F)
+        for name, data in (extra_samples or {}).items():
+            g.create_dataset(name, data=data)
         b = f.create_group("basis")
         b.create_dataset("U", data=model.U)
         b.create_dataset("Q", data=model.Q if model.Q is not None else np.zeros((0, 0, 0)))
