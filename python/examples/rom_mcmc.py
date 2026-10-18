@@ -82,6 +82,19 @@ class QuadraticManifold:
         e, g = self.potential(self.x0 + self.displacement(q), True)
         return float(e) - self.rest_energy, self.jacobian(q).T @ g
 
+    def ray_energy(self, d: np.ndarray) -> typing.Callable[[float], float]:
+        """Returns r -> energy(r * d), using u(r d) = r U d + r^2 (1/2 Q:dd) to avoid the map's products per call."""
+        a = self.U @ d
+        b = 0.5 * (self._Qnmm @ np.outer(d, d).ravel()) if self.Q is not None else None
+
+        def energy(r: float) -> float:
+            x = self.x0 + r * a
+            if b is not None:
+                x += (r * r) * b
+            return float(self.potential(x, False)) - self.rest_energy
+
+        return energy
+
     def log_weight(self, q: np.ndarray, gq: np.ndarray) -> float:
         """Log of the weight w(q), given the reduced energy gradient gq at q."""
         if self.weight == "uniform":
@@ -127,12 +140,14 @@ def radial_root(
         typing.Tuple[float, bool]: The root r, and False if the energy was found to decrease
         along the ray at the evaluated points (the level set may not be star-shaped).
     """
+    # Models may provide a cheaper evaluation restricted to the ray
+    along_ray = model.ray_energy(d) if hasattr(model, "ray_energy") else lambda r: model.energy(r * d)
     # Cached, so that brentq's re-evaluation of the bracket ends can't flip their signs under noise
     evaluations = {}
 
     def f(r):
         if r not in evaluations:
-            evaluations[r] = model.energy(r * d) - energy
+            evaluations[r] = along_ray(r) - energy
         return evaluations[r]
 
     psi0 = f(r0) + energy
