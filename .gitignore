@@ -49,3 +49,5 @@ data
 imgui.ini
 bindings/**/gen
 venv
+# Claude Code personal settings
+.claude/settings.local.json

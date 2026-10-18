@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git blame *)",
+      "Bash(git ls-files *)",
+      "Bash(git rev-parse *)",
+      "Bash(git grep *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(cmake --preset*)",
+      "Bash(cmake --build *)",
+      "Bash(ctest *)",
+      "Bash(./build/bin/Release/PhysicsBasedAnimationToolkitTests.exe *)",
+      "Bash(./build/bin/Debug/PhysicsBasedAnimationToolkitTests.exe *)",
+      "PowerShell(git status *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git log *)",
+      "PowerShell(git show *)",
+      "PowerShell(git ls-files *)",
+      "PowerShell(cmake --preset*)",
+      "PowerShell(cmake --build *)",
+      "PowerShell(ctest *)",
+      "PowerShell(.\\build\\bin\\Release\\PhysicsBasedAnimationToolkitTests.exe *)",
+      "PowerShell(.\\build\\bin\\Debug\\PhysicsBasedAnimationToolkitTests.exe *)"
+    ]
+  }
+}
