@@ -179,7 +179,7 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
   - Gravity loads stay finite with static mode on (fext used directly, no fext/m).
   - Dynamics stay unchanged (bit-identical or round-off, see commits).
 - **Still open:**
-  - (a) Filing the `wp.Mesh.refit` allocation as a Warp issue: outward-facing, needs the maintainer's OK.
+  - (a) ~~Warp issue~~: not needed (maintainer, 2026-10-18).
   - (b) The maintainer's static params file.
   - (c) The full benchmark run, 30 samples × 5 solvers × 60 s cap (about 2.5 h exclusive GPU; to be announced).
   - (d) Optional `cpu-gpu-parity` review.
@@ -214,3 +214,4 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
   - (a) Vertex-SDF detection counts VF slots holding the sentinel v = nF on CubeFallingOnCube, so consumers read `F[nF]` out of bounds; suspected cause is the block write indexing after `tile_sort` in `sd.py`.
   - (b) OGC crashes with CUDA 700 on CubeFallingOnCube between steps 10 and 20.
 - 2026-10-18 · **Merged:** `feature/gpu-static-solves` @43babcfb is on dev as 3aae8ba5. The vertex-SDF sentinel bug goes to task 1; the OGC crash is parked (not used for the paper). The coordinator implements Anderson sweep parity on dev. Next: wait for the maintainer and coordinator to settle the benchmark data, plot and measurement; static benchmark runs stay on hold.
+- 2026-10-18 · **Maintainer: no Warp issue about `wp.Mesh.refit`.** The restructured loop records the refit in the regular graph between conditional nodes, so it stays captured. The draft stays unposted in the session scratchpad. The static params file is being prepared via the coordinator; if it's delegated here, this session builds it.
