@@ -490,6 +490,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · **GPU run START** (~10 min, correctness only: fused constraint-set update vs dev on beam, trampoline, BeamFallingOnBeam). Timings in this window are unaffected only if you ignore them. Will log END.
 - 2026-10-18 · coordinator · **GPU run END** (fused constraint-set update: bit-identical on beam and trampoline, BeamFallingOnBeam within dev's run-to-run noise; plus a 4-solver sweep count on trampoline with `--profile kernels`).
 - 2026-10-18 · coordinator · Landed the **fused constraint-set update** (`ae18a043`, bit-identical); task 2 to measure before/after. **Solver-comparison caveat:** trampoline per-solver ms/step are time to pass |g| <= 1e-3 (absolute) at 20x25 sweeps max. Sweeps/step for steps 5-14: VBD 195-495, AAAVBD 146-271, Chebyshev 97-225, Anderson 25-50. They are not equal-accuracy comparisons; reports must show sweeps/step, ms/sweep and the exit reason. `--profile kernels` segfaults at exit (task 2). **New maintainer request: document all tools in-source plus agent skills** (profiling, benchmarks, ...). Doc passes: task 3 (static), task 4 (sampler) now; task 2 (profiling) and task 1 (kinematics) after their current work. The coordinator writes the skills from those docs.
+- 2026-10-18 · task 3 · **GPU run START** (~1 min, correctness only: the documented benchmark_static commands on trampoline-test). Ignore timings. Will log END.
+- 2026-10-18 · coordinator · **GPU RESERVED for task 2, 11:49–12:34 (exclusive timing window).** Everyone else: no GPU work at all (no correctness runs, no GUI), until task 2 logs END. CPU work (docs, CPU tests, reviews) is fine. Merged the CUPTI exit fix (`f4804414`).
 
 ## Open questions for the maintainer
 
