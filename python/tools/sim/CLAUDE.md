@@ -14,14 +14,14 @@ python -m python.tools.sim.gpu.elasticity.fem     # modules with a unittest.Test
 python -m unittest python.tools.sim.gpu.vbd.params
 ```
 
-- The docstring at the top of `ui.py` gives stale flag names (`--fem`, `--vbd-params`). The real flags are in `parse_args()`.
+- Code layout: `state.py` holds `SimulationState`, the loaders and the HDF5 (de)serialization, shared by `ui.py` (GUI) and `simulate.py` (headless). GUI features live in `panels/<feature>.py` (see `panels/__init__.py`). Profiling scopes come from `gpu/common/profiling.py`.
 - The UI is interactive (Polyscope + imgui), so Claude can't drive it. Use the headless counterpart instead:
 
   ```bash
   python -m python.tools.sim.simulate --fem-elasto-dynamics data/CubeFallingOnCube.Dump.h5:fem -o out.h5 [--sim-params p.h5] [--solver AndersonSolver] [--cd VertexSdf] [--duration 2] [--fps 60]
   ```
 
-  It reuses `ui.SimulationState` and the GUI's parameter (de)serialization. Its output uses the same layout as the GUI's Serialization feature:
+  It reuses `state.SimulationState` and the GUI's parameter (de)serialization. Its output uses the same layout as the GUI's Serialization feature:
   - `FemElastoDynamics/{X,E,m,dmask,...}`
   - `sim/<frame:08d>/x`
   - `params/` holding `fps`, `solver` and `cd` attributes, plus the full parameter groups.
@@ -107,6 +107,6 @@ The GPU uses the same contact model family as C++ `MeshDynamics`: an augmented L
 ## Params, UI and serialization
 
 - **GPU-only parameter classes** use `common.fields.DocField` descriptors (a default value plus a docstring that becomes the imgui tooltip) together with `SerializableMixin`, which serializes them to h5 attributes.
-- **UI widgets.** `ui.draw_params` reflects over objects: every public, settable `float`/`int`/`bool`/`Enum` attribute gets a widget. So a new C++ `Params` field bound with `def_rw`, or a new `DocField`, appears in the UI without any UI code.
-- **CPU param serialization.** CPU param objects are serialized by the same reflection (`serialize_vbd_cpu_params`, etc. in `gpu/vbd/params.py`). The group layout (`Solver/<SolverType.name>`, `Contact/...`, `Integration`) is defined in `ui._serialize_params`/`_deserialize_params`.
-- **GPU mirror updates are manual.** A field that kernels need must be copied into the `*Data` struct in the GPU `Params.__init__`. A new solver also has to be registered in `SolverType`, `SOLVER_SUB_PARAMS`, both `SimulationState.__init__` and `reset()`, and `_serialize_params`/`_deserialize_params`.
+- **UI widgets.** `panels.common.draw_params` reflects over objects: every public, settable `float`/`int`/`bool`/`Enum` attribute gets a widget. So a new C++ `Params` field bound with `def_rw`, or a new `DocField`, appears in the UI without any UI code.
+- **CPU param serialization.** CPU param objects are serialized by the same reflection (`serialize_vbd_cpu_params`, etc. in `gpu/vbd/params.py`). The group layout (`Solver/<SolverType.name>`, `Contact/...`, `Integration`) is defined in `state.serialize_params`/`deserialize_params`.
+- **GPU mirror updates are manual.** A field that kernels need must be copied into the `*Data` struct in the GPU `Params.__init__`. A new solver also has to be registered in `state.py` (`SolverType`, both `SimulationState.__init__` and `reset()`, `serialize_params`/`deserialize_params`) and in `ui.py` (`SOLVER_SUB_PARAMS`).

@@ -42,11 +42,11 @@ This step applies only if GPU kernels need the value.
 - Map enums through `wp.constant(int(pbat....Enum.X.value))` constants.
 - Values that only drive host-side loops stay as Python attributes rather than struct members. `Pptr` is an example.
 
-## 5. UI and serialization (`python/tools/sim/ui.py`)
+## 5. UI and serialization (`python/tools/sim/state.py`, `ui.py`)
 
 - **Automatic coverage.** `draw_params` and `serialize_*_cpu_params`/`deserialize_*_cpu_params` reflect over public, settable scalar and enum attributes. A bound `def_rw` field or a `DocField` therefore gets a widget and h5 persistence automatically. Confirm that the new field's type is one of float, int, bool or Enum.
 - **When a field is needed on the GPU.** The GPU `Params` is rebuilt from the CPU object only in `SimulationState.__init__`/`reset()`. Check that UI edits trigger a reset (and a recapture: `state.capture = None`), or the GPU keeps stale values.
-- **New solver or param group.** Register it in `SolverType`, `SOLVER_SUB_PARAMS`, `SimulationState.__init__` and `reset()`, and `_serialize_params`/`_deserialize_params`.
+- **New solver or param group.** Register it in `state.py` (`SolverType`, `SimulationState.__init__` and `reset()`, `serialize_params`/`deserialize_params`) and in `ui.py` (`SOLVER_SUB_PARAMS`).
 
 ## 6. Other callers
 

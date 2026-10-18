@@ -44,14 +44,14 @@ Library calls under capture:
 
 ## 5. Wire it up
 
-For a new solver class with `solve(fem, contact, cd, params) -> bool` and `supports_graph_capture`, register it in `ui.py`: `SolverType`, `SOLVER_SUB_PARAMS`, `SimulationState.__init__` and `reset()`, and `_serialize_params`/`_deserialize_params`.
+For a new solver class with `solve(fem, contact, cd, params) -> bool` and `supports_graph_capture`, register it in `state.py` (`SolverType`, `SimulationState.__init__` and `reset()`, `serialize_params`/`deserialize_params`) and in `ui.py` (`SOLVER_SUB_PARAMS`). The headless `simulate.py` then picks it up through `state.py`.
 
 ## 6. Validate against the CPU
 
 - **Unit tests.** Add a `unittest.TestCase` in the module with an `if __name__ == "__main__": unittest.main()` guard, following `gpu/elasticity/fem.py`. Compare `@wp.func` outputs with the bound C++ function or with finite differences.
 - **Solver-level check.** Write a scratch script, outside the repo, that:
   1. loads a dumped problem (`pbat.io.Archive(path)` → `pbat.sim.dynamics.FemElastoDynamics().deserialize(archive["fem"])`),
-  2. builds the GPU objects the way `SimulationState.__init__` does, and runs N steps,
+  2. builds the GPU objects with `state.SimulationState` (or runs `python -m python.tools.sim.simulate`), and runs N steps,
   3. runs the same N steps with the CPU solver through `pbat.sim.algorithm.<solver>` (as `python/tools/vbd/simulate.py` does),
   4. compares `x` and the per-step residual or energy.
   Expect float32-level differences and contact-model differences. Report the magnitudes instead of asserting exact equality.
