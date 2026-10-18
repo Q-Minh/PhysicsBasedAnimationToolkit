@@ -17,8 +17,8 @@ solver iteration (see ``static.py``). The benchmark reports, per solver and perc
 tests are bypassed. Unreached percentiles are reported as missing (``null``).
 
 Usage:
-    python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
-        -o results.json [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] \
+    python -m python.tools.sim.benchmark (--scene SCENE.h5 | --fem-elasto-dynamics DUMP.h5:fem) \
+        --samples BATCH.h5 -o results.json [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] \
         [--sim-params A.toml [B.h5 ...]] [--set Table.key=value ...] [--spec spec.h5] [--save-spec spec.h5] \
         [--sample-begin 0] [--sample-end -1] [--max-seconds 60] [--max-iterations 1000000] \
         [--target-reduction 0.95] [--block 16]
@@ -26,19 +26,17 @@ Usage:
 Representative commands (from the repo root; scenes and samples live in the main checkout's data/):
 
     # One static solve: one solver, the first problem, a 5 s cap
-    python -m python.tools.sim.benchmark \
-        --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
+    python -m python.tools.sim.benchmark --scene C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5 \
         --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
         --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
 
     # Dynamic problems: the same command on a dynamic batch (the kind and h come from the file)
-    python -m python.tools.sim.benchmark \
-        --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
+    python -m python.tools.sim.benchmark --scene C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5 \
         --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample/dynamic_h0.01/E500.h5 \
         --max-seconds 5 -o out/dynamic.json
 
     # Every solver on every sample of a batch, with the scene's paper parameters
-    python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+    python -m python.tools.sim.benchmark --scene SCENE.h5 --samples BATCH.h5 \
         --sim-params python/tools/sim/configs/paper/beam1e6.GroundTruth.toml --max-seconds 10 -o out/all.json
 
     # Parameter variations: layer configs and override single keys (see python/tools/sim/configs/README.md)
@@ -47,7 +45,7 @@ Representative commands (from the repo root; scenes and samples live in the main
 
     # Reproducible cases: save the effective StaticSolveSpec, then rerun from it
     python -m python.tools.sim.benchmark ... --samples BATCH.h5 --max-seconds 10 --save-spec case.h5 -o a.json
-    python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --spec case.h5 -o b.json
+    python -m python.tools.sim.benchmark --scene SCENE.h5 --spec case.h5 -o b.json
 
 Outputs:
     ``results.json``: the effective spec; metadata (problem kind, h, scene, parameter sources, sample-file
@@ -107,8 +105,8 @@ from .state import (
     SimulationState,
     SolverType,
     CDType,
-    load_fem_dynamics,
     load_params,
+    load_problem,
 )
 from . import config, static
 
@@ -121,9 +119,14 @@ def parse_args():
         description="Solver convergence benchmark (GPU) on static or dynamic problem batches: solver time "
         "per 5% level of error reduction."
     )
-    parser.add_argument("--fem-elasto-dynamics", required=True, dest="fem_elasto_dynamics",
-                        help="Scene: file.h5:group/path of the serialized FemElastoDynamics, e.g. an editor "
-                        "Dump's 'fem' group. Must be the mesh the samples were drawn on.")
+    problem = parser.add_mutually_exclusive_group(required=True)
+    problem.add_argument("--scene", default=None,
+                         help="CPU editor scene file (.h5), as for simulate.py --scene. Must be the mesh the "
+                         "samples were drawn on. Its constrained nodes stay fixed at rest (kinematic "
+                         "constraints don't animate them), and its colliders are ignored.")
+    problem.add_argument("--fem-elasto-dynamics", default=None, dest="fem_elasto_dynamics",
+                         help="file.h5:group/path of a serialized FemElastoDynamics (e.g. an editor Dump's "
+                         "'fem' group), instead of --scene. Dumps are mainly for debugging.")
     parser.add_argument("--samples", default=None,
                         help="Benchmark problem batch (.h5), static or dynamic (read from its 'problem' "
                         "attribute). Overrides the spec's sample_file; required unless --spec provides one.")
@@ -185,7 +188,9 @@ def make_spec(args) -> static.StaticSolveSpec:
 
 def make_state(args, h: float | None = None) -> SimulationState:
     """Build the contact-free simulation; ``h`` set means one-step dynamic problems of that step."""
-    fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
+    # Kinematic constraints and colliders aren't passed on: the Dirichlet nodes stay fixed at rest
+    # (check_sample_batch checks the samples against that), and the benchmark is contact-free.
+    fem_cpu, _, _ = load_problem(args.fem_elasto_dynamics, args.scene)
     params_cpu = load_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
     if args.sim_params or args.overrides:
@@ -293,6 +298,7 @@ def main():
         "metadata": {
             "problem": batch.problem,
             "h": batch.h,
+            "scene": args.scene,
             "fem_elasto_dynamics": args.fem_elasto_dynamics,
             "sim_params": " + ".join(args.sim_params + [f"--set {o}" for o in args.overrides])
             or "(code defaults)",
