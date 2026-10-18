@@ -264,8 +264,8 @@ def render(result_list: list[dict], note: str | None = None) -> str:
         + ("Nsight Systems times every kernel, including CUB and cupy ones; the union column "
            "does not double-count work running concurrently on several streams. "
            if "nsys" in sources else "")
-        + ("Warp activity timing (kernels backend) misses non-Warp kernels and, in eager mode, "
-           "includes launch latency in each activity, which inflates short kernels. "
+        + ("The kernels backend times every kernel in-process with CUPTI; the union column does "
+           "not double-count work running concurrently on several streams. "
            if "kernels" in sources else "")
         + ("Production step is the GPU time of one step as the simulator normally runs it (CUDA "
            "events around a CUDA graph replay; Newton runs eagerly), so it includes the scheduling "

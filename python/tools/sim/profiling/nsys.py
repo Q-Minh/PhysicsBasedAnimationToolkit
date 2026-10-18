@@ -30,6 +30,7 @@ import subprocess
 import sys
 
 from . import results
+from ..gpu.common.profiling import interval_union_ns
 
 DEFAULT_NSYS = (
     r"C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.1.3\target-windows-x64\nsys.exe"
@@ -172,20 +173,6 @@ class _ThreadScopes:
         return out
 
 
-def _union_ns(intervals: list[tuple[int, int]]) -> int:
-    total, current_start, current_end = 0, None, None
-    for start, end in sorted(intervals):
-        if current_end is None or start > current_end:
-            if current_end is not None:
-                total += current_end - current_start
-            current_start, current_end = start, end
-        else:
-            current_end = max(current_end, end)
-    if current_end is not None:
-        total += current_end - current_start
-    return total
-
-
 def import_sqlite(path: str, metadata_result: dict | None = None) -> dict:
     """Convert an Nsight Systems SQLite export to the profiling result schema.
 
@@ -234,8 +221,8 @@ def import_sqlite(path: str, metadata_result: dict | None = None) -> dict:
                 "busy_ms": {p: sum(e - s for s, e in iv) * 1e-6 for p, iv in by_path.items()},
                 "launches": {p: len(iv) for p, iv in by_path.items()},
                 "calls": calls.get(step, {}),
-                "union_ms": {p: _union_ns(iv) * 1e-6 for p, iv in by_path.items()},
-                "step_union_ms": _union_ns(everything) * 1e-6,
+                "union_ms": {p: interval_union_ns(iv) * 1e-6 for p, iv in by_path.items()},
+                "step_union_ms": interval_union_ns(everything) * 1e-6,
                 "step_span_ms": (max(e for _, e in everything) - min(s for s, _ in everything))
                 * 1e-6,
             }
