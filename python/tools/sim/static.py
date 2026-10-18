@@ -58,10 +58,19 @@ from .state import SimulationState, SolverType
 
 @dataclass
 class SampleBatch:
-    """Initial shapes from one MCMC sample file (one target energy).
+    """Benchmark problems from one MCMC sample file (one target energy).
+
+    The file's root attribute ``problem`` gives the kind (``"static"`` when absent):
+
+    - **static**: release ``x`` with no loads; the solution is the rest shape ``X``.
+    - **dynamic**: one implicit-Euler (BDF1) step of size ``h`` from ``x`` with velocity ``v``, i.e.
+      minimize 1/(2 h^2) |y - xtilde|_M^2 + Psi(y) with the Dirichlet DOFs at rest. ``x_ref`` is a
+      reference solution (full-order Newton) and ``ref_newton_correction`` the largest entry (m) of its
+      last Newton correction, an estimate of its accuracy.
 
     ``attrs`` holds the file's root attributes as written by the sampler (e.g. ``target_energy``,
-    ``sampler``, ``ensemble``, ``rhat``, ``gravity``; see the sample-file contract in plans/MASTER.md).
+    ``sampler``, ``ensemble``, ``rhat``, ``gravity``, ``h``; see the sample-file contract in
+    plans/MASTER.md).
     """
 
     path: str
@@ -70,6 +79,20 @@ class SampleBatch:
     energy: np.ndarray  # (S,) achieved deformation energies (J)
     attrs: dict = field(default_factory=dict)
     min_J: np.ndarray | None = None  # (S,) smallest element volume ratio det(F), when the file has it
+    problem: str = "static"  # "static" or "dynamic"
+    v: np.ndarray | None = None  # (S, N, 3) initial velocities (dynamic)
+    xtilde: np.ndarray | None = None  # (S, N, 3) inertial targets x + h v + h^2 aext (dynamic)
+    x_ref: np.ndarray | None = None  # (S, N, 3) reference solutions (dynamic)
+    ref_newton_correction: np.ndarray | None = None  # (S,) reference accuracy estimate (m) (dynamic)
+
+    @property
+    def h(self) -> float | None:
+        """Time step of a dynamic batch (s), from the ``h`` attribute; None for static batches."""
+        return float(self.attrs["h"]) if self.problem == "dynamic" else None
+
+    def reference(self, s: int) -> np.ndarray:
+        """(N, 3) solution sample ``s``'s error is measured against: ``X`` (static) or ``x_ref[s]``."""
+        return self.X if self.problem == "static" else self.x_ref[s]
 
     @property
     def target_energy(self) -> float:
@@ -93,7 +116,7 @@ class SampleBatch:
         if rhat is not None and not float(rhat) < 1.05:
             out.append(f"split R-hat {float(rhat):.3f} >= 1.05: the chains haven't mixed, sample more or burn in longer")
         gravity = self.attrs.get("gravity")
-        if gravity is not None and np.any(np.asarray(gravity, dtype=np.float64) != 0):
+        if self.problem == "static" and gravity is not None and np.any(np.asarray(gravity, dtype=np.float64) != 0):
             out.append(f"sampled with gravity {gravity}: the benchmark's static problem has no loads")
         return out
 
@@ -124,13 +147,31 @@ def load_sample_batch(path: str) -> SampleBatch:
         x = np.asarray(f["samples/x"], dtype=np.float32)
         energy = np.asarray(f["samples/energy"], dtype=np.float64)
         min_J = np.asarray(f["samples/min_J"], dtype=np.float64) if "samples/min_J" in f else None
+        problem = str(attrs.get("problem", "static"))
+        dynamic = {}
+        if problem == "dynamic":
+            for name in ["v", "xtilde", "x_ref"]:
+                dynamic[name] = np.asarray(f[f"samples/{name}"], dtype=np.float32)
+            dynamic["ref_newton_correction"] = np.asarray(
+                f["samples/ref_newton_correction"], dtype=np.float64
+            )
+            if "h" not in attrs:
+                raise ValueError(f"{path}: dynamic problems need the time step attribute h")
+        elif problem != "static":
+            raise ValueError(f"{path}: unknown problem kind {problem!r} (expected static or dynamic)")
     if X.ndim != 2 or X.shape[1] != 3 or x.ndim != 3 or x.shape[1:] != X.shape:
         raise ValueError(f"{path}: expected X (N, 3) and samples/x (S, N, 3), got {X.shape}, {x.shape}")
-    return SampleBatch(path=path, X=X, x=x, energy=energy, attrs=attrs, min_J=min_J)
+    for name, a in dynamic.items():
+        if name != "ref_newton_correction" and a.shape != x.shape:
+            raise ValueError(f"{path}: samples/{name} has shape {a.shape}, expected {x.shape}")
+    return SampleBatch(
+        path=path, X=X, x=x, energy=energy, attrs=attrs, min_J=min_J, problem=problem, **dynamic
+    )
 
 
 def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float = 1e-5) -> None:
-    """Check that the batch was sampled on this FEM mesh and keeps its Dirichlet nodes at rest.
+    """Check that the batch was sampled on this FEM mesh and keeps its Dirichlet nodes at rest
+    (in the initial shapes and, for dynamic batches, in the reference solutions).
 
     Args:
         batch (SampleBatch): The loaded batch.
@@ -145,9 +186,13 @@ def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float =
         raise ValueError(f"{batch.path}: rest positions don't match the FEM's X")
     fixed = fem.data.dmask.numpy() != 0
     if fixed.any():
-        drift = np.abs(batch.x[:, fixed] - X[None, fixed]).max()
-        if drift > atol:
-            raise ValueError(f"{batch.path}: Dirichlet nodes move by up to {drift} in the samples")
+        for name in ["x", "x_ref"]:
+            a = getattr(batch, name)
+            if a is None:
+                continue
+            drift = np.abs(a[:, fixed] - X[None, fixed]).max()
+            if drift > atol:
+                raise ValueError(f"{batch.path}: Dirichlet nodes move by up to {drift} in samples/{name}")
 
 
 # --- Solve specification ---
@@ -203,12 +248,14 @@ def _stamp_kernel(t_a: wp.array[wp.int64], count: wp.array[wp.int32]):
 
 
 @wp.kernel
-def _error_terms_kernel(fem: FemElastoDynamicsData, w: wp.array[wp.float32]):
+def _error_terms_kernel(
+    fem: FemElastoDynamicsData, reference: wp.array[wp.vec3f], w: wp.array[wp.float32]
+):
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):
         w[i] = wp.float32(0)
         return
-    d = fem.x[i] - fem.X[i]
+    d = fem.x[i] - reference[i]
     w[i] = fem.m[i] * wp.dot(d, d)
 
 
@@ -245,7 +292,7 @@ def _commit_kernel(
 
 
 class ErrorLog:
-    """Per-iteration log of the squared error, cumulative sweeps and device timestamps.
+    """Per-iteration log of the squared error to :attr:`reference`, cumulative sweeps and device timestamps.
 
     Entry 0 is the initial state. ``record`` appends an entry after a solver iteration and updates
     ``keep`` (1 while the error is above the target and the budgets aren't exhausted). It doesn't
@@ -255,11 +302,13 @@ class ErrorLog:
     def __init__(self, fem: FemElastoDynamics, capacity: int):
         """
         Args:
-            fem (FemElastoDynamics): The problem whose ``x`` is logged against its rest positions ``X``.
+            fem (FemElastoDynamics): The problem whose ``x`` is logged against :attr:`reference`, which
+                starts as its rest positions ``X``.
             capacity (int): Number of entries the device arrays hold (initial state included).
         """
         n_nodes = fem.data.x.shape[0]
         self._fem = fem
+        self.reference = wp.clone(fem.data.X)  # (N,) solution the error is measured against
         self.capacity = int(capacity)
         self.e2 = wp.zeros(self.capacity, dtype=wp.float32)
         self.sweeps = wp.zeros(self.capacity, dtype=wp.int32)
@@ -302,7 +351,7 @@ class ErrorLog:
         """
         fem = self._fem
         wp.launch(_stamp_kernel, dim=1, inputs=[self.t_a, self.count])
-        wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[fem.data, self._w])
+        wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[fem.data, self.reference, self._w])
         self._reduce(wp.get_stream())
         wp.launch(
             _commit_kernel,
@@ -346,7 +395,7 @@ class ErrorLog:
 class StaticSolveLog:
     """Host copy of an :class:`ErrorLog`: entry j is the state after j solver iterations."""
 
-    error: np.ndarray  # (n,) mass-weighted error to the rest shape
+    error: np.ndarray  # (n,) mass-weighted error to the reference (the rest shape for static problems)
     time: np.ndarray  # (n,) cumulative solver wall-clock time (s), logging excluded
     sweeps: np.ndarray  # (n,) cumulative VBD sweeps (0 for Newton)
 
