@@ -305,10 +305,13 @@ class ContactPairs:
         self._data = ContactPairsData()
         self._rdata = ReverseContactPairsData()
 
-        vv_capacity = int(params.n_vv_contact_capacity * meshes.n_verts)  # type: ignore
-        ve_capacity = int(params.n_ve_contact_capacity * meshes.n_verts)  # type: ignore
-        vf_capacity = int(params.n_vf_contact_capacity * meshes.n_verts)  # type: ignore
-        ee_capacity = int(params.n_ee_contact_capacity * meshes.n_edges)  # type: ignore
+        # At least 1 slot per type: cuda.compute caches its radix sort by array types, and a sort built
+        # from empty arrays turns later sorts of the same types into keys-only sorts (their values are
+        # never written), e.g. the VF sort on tiny meshes like CubeFallingOnCube.
+        vv_capacity = max(1, int(params.n_vv_contact_capacity * meshes.n_verts))  # type: ignore
+        ve_capacity = max(1, int(params.n_ve_contact_capacity * meshes.n_verts))  # type: ignore
+        vf_capacity = max(1, int(params.n_vf_contact_capacity * meshes.n_verts))  # type: ignore
+        ee_capacity = max(1, int(params.n_ee_contact_capacity * meshes.n_edges))  # type: ignore
 
         # Pair storage
         self._vv, self._rvv = Pairs(meshes.n_verts, meshes.n_verts, vv_capacity), Pairs(
