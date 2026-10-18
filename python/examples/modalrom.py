@@ -639,8 +639,14 @@ if __name__ == "__main__":
         print(
             f"Wrote {args.samples} samples to {args.output} in {elapsed:.1f} s: "
             f"acceptance={s['acceptance']:.2f}, thin={s['thin']}, tau={s['tau']:.1f}, "
-            f"ESS={s['ess']:.0f}, star violations={s['star_violations']}"
+            f"ESS={s['ess']:.0f}, star violations={s['star_violations']}, "
+            f"energy noise={s['energy_noise']:.2g} J"
         )
+        if s["energy_noise_warning"]:
+            print(
+                f"Warning: the energy noise limits samples to |Psi - E*| <~ {s['energy_tolerance']:.2g} J, "
+                "more than 1e-3 E*. Use a larger E* for exact level-set samples."
+            )
         raise SystemExit(0)
 
     ps.set_up_dir("z_up")
@@ -721,9 +727,18 @@ if __name__ == "__main__":
                 "Sample", sample_idx, 0, len(samples) - 1
             )
             imgui.Text(
-                f"Energy {samples[sample_idx][1]:.6g} J, acceptance {stats['acceptance']:.2f}, "
-                f"thin {stats['thin']}, ESS {stats['ess']:.0f}, star violations {stats['star_violations']}"
+                f"{chain_key[0]} map, {chain_key[2]} sampler, E* {chain_key[1]:.6g} J: "
+                f"energy {samples[sample_idx][1]:.6g} J"
             )
+            imgui.Text(
+                f"Acceptance {stats['acceptance']:.2f}, thin {stats['thin']}, ESS {stats['ess']:.0f}, "
+                f"star violations {stats['star_violations']}, energy noise {stats['energy_noise']:.2g} J"
+            )
+            if stats["energy_noise_warning"]:
+                imgui.TextColored(
+                    (1.0, 0.6, 0.0, 1.0),
+                    f"Energy noise limits |Psi - E*| to ~{stats['energy_tolerance']:.2g} J (> 1e-3 E*): use a larger E*",
+                )
 
         if show_samples and samples:
             u = model.displacement(samples[sample_idx][0])
