@@ -125,6 +125,11 @@ def make_callback(
                             state.params_cpu[state.solver],
                             SOLVER_SUB_PARAMS.get(state.solver),
                         )
+                        if state.solver == SolverType.Newton and imgui.TreeNode(
+                            "linear_solver"
+                        ):
+                            draw_params(state.newton_linear_solver_params)
+                            imgui.TreePop()
                         imgui.TreePop()
                     imgui.TreePop()
 

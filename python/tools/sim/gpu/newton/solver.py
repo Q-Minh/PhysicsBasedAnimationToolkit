@@ -14,6 +14,7 @@ import cupy as cp
 
 from pbatoolkit import pbat
 
+from ...common.fields import DocField, SerializableMixin
 from ..common.reduce import Reduce
 from ..contact.mesh.cd import ContactDetection
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
@@ -746,6 +747,19 @@ def _initialize_hessian_triplets(
                 params.Hcols[idx] = nodes[j]
 
 
+class LinearSolverParams(SerializableMixin):
+    """GPU-only settings of the Jacobi-preconditioned CG solve of each Newton step.
+
+    The C++ Newton solver uses a direct solver (``ELinearSolver``), so these have no CPU counterpart.
+    Static problems lack the mass term and are far worse conditioned, so they typically need many
+    more CG iterations than dynamic ones.
+    """
+
+    n_max_iters = DocField(300, "Maximum CG iterations per Newton step")
+    rtol = DocField(1e-5, "Relative CG residual tolerance")
+    atol = DocField(1e-5, "Absolute CG residual tolerance")
+
+
 class Params:
     """Python wrapper that builds and owns the GPU :class:`ParamsData` struct.
 
@@ -759,6 +773,8 @@ class Params:
         Maximum Newton steps per AL subproblem.
     gtol2:
         Squared gradient-norm convergence threshold.
+    linear_solver:
+        GPU-only CG settings (:class:`LinearSolverParams`); defaults when omitted.
     spd_correction:
         SPD correction of the elastic Hessians d^2Psi/dF^2, from the CPU params' ``spd_correction``.
         Applied to static problems only, whose Hessians lack the mass term.
@@ -778,6 +794,7 @@ class Params:
     def __init__(
         self,
         params_cpu: pbat.sim.algorithm.newton.Params,
+        linear_solver: LinearSolverParams | None = None,
     ):
         newton: pbat.math.optimization.Newton = params_cpu.newton
         line_search: pbat.math.optimization.BackTrackingLineSearch | None = (
@@ -789,9 +806,10 @@ class Params:
         self._data.n_subproblem_max_iters = newton.n_max_iters
         self._data.gtol2 = newton.gtol2
         self._data.spd_correction = int(params_cpu.spd_correction.value)
-        self._data.n_lin_max_iters = 300
-        self._data.rel_eps_lin = 1e-5
-        self._data.abs_eps_lin = 1e-5
+        linear_solver = linear_solver or LinearSolverParams()
+        self._data.n_lin_max_iters = int(linear_solver.n_max_iters)
+        self._data.rel_eps_lin = float(linear_solver.rtol)
+        self._data.abs_eps_lin = float(linear_solver.atol)
         self._data.ls_max_iters = line_search.n_max_iters if line_search else 0
         self._data.ls_tau = line_search.tau if line_search else 0.5
         self._data.ls_c = line_search.c if line_search else 1e-4

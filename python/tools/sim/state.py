@@ -281,7 +281,10 @@ class SimulationState:
         self.contact = gpu.contact.dynamics.MeshDynamics(
             self.dt, contact_pair_storage, self.contact_params
         )
-        newton_params = gpu.newton.solver.Params(self.params_cpu[SolverType.Newton])
+        self.newton_linear_solver_params = gpu.newton.solver.LinearSolverParams()
+        newton_params = gpu.newton.solver.Params(
+            self.params_cpu[SolverType.Newton], self.newton_linear_solver_params
+        )
         newton_params.construct(self.fem, self.contact)
         self.params[SolverType.Newton] = newton_params
         # Contact detection algorithm selection
@@ -407,7 +410,9 @@ class SimulationState:
         self.contact = gpu.contact.dynamics.MeshDynamics(
             sdt, contact_pair_storage, self.contact_params
         )
-        newton_params = gpu.newton.solver.Params(self.params_cpu[SolverType.Newton])
+        newton_params = gpu.newton.solver.Params(
+            self.params_cpu[SolverType.Newton], self.newton_linear_solver_params
+        )
         newton_params.construct(self.fem, self.contact)
         self.params[SolverType.Newton] = newton_params
         self.detector = self._make_contact_detector(contact_pair_storage)
@@ -470,6 +475,9 @@ def serialize_params(state: "SimulationState", f: h5py.File) -> None:
     gpu.newton.solver.serialize_newton_cpu_params(
         state.params_cpu[SolverType.Newton], f.create_group("Solver/Newton")
     )
+    state.newton_linear_solver_params.serialize(
+        f.create_group("Solver/Newton/LinearSolver")
+    )
     state.cd_params[CDType.OGC].serialize(f.create_group("Contact/CDType/OGC"))
     state.cd_params[CDType.VertexSdf].serialize(
         f.create_group("Contact/CDType/VertexSdf")
@@ -512,6 +520,8 @@ def deserialize_params(state: "SimulationState", f: h5py.File) -> None:
         gpu.newton.solver.deserialize_newton_cpu_params(
             state.params_cpu[SolverType.Newton], f["Solver/Newton"]
         )
+    if "Solver/Newton/LinearSolver" in f:
+        state.newton_linear_solver_params.deserialize(f["Solver/Newton/LinearSolver"])
     if "Contact/CDType/OGC" in f:
         state.cd_params[CDType.OGC].deserialize(f["Contact/CDType/OGC"])
     if "Contact/CDType/VertexSdf" in f:
