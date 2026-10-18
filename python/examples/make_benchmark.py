@@ -35,11 +35,17 @@ sampler = "microcanonical". Dirichlet DOFs stay at rest in every state. Problem 
                          samples/v                       (S, N, 3) float32 start velocities J(q) qdot,
                          samples/xtilde                  (S, N, 3) float32 inertial targets x + h v + h^2 aext
                                                          (aext on the free DOFs only),
-                         samples/x_ref                   (S, N, 3) float32 reference solutions,
+                         samples/x_ref                   (S, N, 3) float64 reference solutions, for the stored
+                                                         (float32) xtilde, from Newton with float64 energies and
+                                                         gradients (modalrom.elastic_energy_float64) converged to
+                                                         a relative gradient norm of 1e-10,
                          samples/ref_newton_iterations   (S,) Newton iterations of the reference solves,
                          samples/ref_newton_decrement    (S,) their last Newton decrement,
                          samples/ref_newton_correction   (S,) the largest entry (m) of their last Newton
-                                                         correction, an accuracy estimate,
+                                                         correction,
+                         samples/ref_error_mnorm         (S,) the M-norm (free DOFs, as the benchmark's error
+                                                         e = |x - x_ref|_M) of that last correction: the
+                                                         reference's accuracy in the benchmark's own metric,
                          samples/ref_min_J               (S,) minimum det(F) of the reference solutions.
 
 Sampling and the reference solves run on the CPU. The samples' quality is in each pool file: check rhat < 1.05
@@ -336,6 +342,8 @@ if __name__ == "__main__":
         E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, energy, element, args.modes, args.eps
     )
     psi = modalrom.elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element)
+    # Reference solutions use float64 energies and gradients, which have no round-off floor
+    psi_ref = modalrom.elastic_energy_float64(E, X, egU, wgU, GNegU, mug, lambdag, energy, element)
     x0 = X.flatten(order="F").astype(np.float64)
     m = M.diagonal().astype(np.float64)
     rigid = 6 if len(freedofs) == n else 0
@@ -423,24 +431,33 @@ if __name__ == "__main__":
                 v = np.array([sampled_model.jacobian(q) @ qd for q, qd in zip(problems.q, problems.qdot)])
             for h in args.dt if plan.dynamic else []:
                 t = time.time()
-                xtilde, xref, iterations, decrements, corrections, ref_min_J = [], [], [], [], [], []
+                xtilde, xref, iterations, decrements, corrections, errors, ref_min_J = [], [], [], [], [], [], []
+                e0s = []
                 for k in range(args.problems):
                     ut = ux[k] + h * v[k] + h**2 * accel
                     ut[fixed] = 0.0
+                    # Solve for the inertial target as stored (float32), which is what the benchmark's solvers read
+                    xtilde32 = (x0 + ut).astype(np.float32)
+                    ut = xtilde32.astype(np.float64) - x0
                     uref, info = rom_reach.static_equilibrium(
-                        psi,
+                        psi_ref,
                         x0,
                         freedofs,
                         inertia=(m / h**2, ut),
                         u0=ut,
                         steps=1,
                         max_iters=args.newton_iters,
+                        gtol=1e-10,
                     )
-                    xtilde.append((x0 + ut).reshape(N, 3))
+                    xtilde.append(xtilde32.reshape(N, 3))
                     xref.append((x0 + uref).reshape(N, 3))
                     iterations.append(info["iterations"])
                     decrements.append(info["decrement"])
                     corrections.append(info["correction"])
+                    du = info["last_correction"]
+                    errors.append(float(np.sqrt(du @ (m * du))))
+                    step = uref - ux[k]
+                    e0s.append(float(np.sqrt(step @ (m * step))))
                     ref_min_J.append(
                         modalrom.deformation_gradient_determinants(E, egU, GNegU, x0 + uref).min()
                     )
@@ -459,24 +476,27 @@ if __name__ == "__main__":
                         reference_time=time.time() - t,
                         problem_definition="One implicit Euler step: minimize 1/(2 h^2) |x - xtilde|_M^2 + Psi(x) "
                         "with the Dirichlet DOFs at rest, starting from samples/x with velocity samples/v. "
-                        "xtilde = x + h v + h^2 aext on the free DOFs. samples/x_ref is a reference solution from "
-                        "full-order Newton, converged to the float32 energy noise floor; samples/ref_newton_correction is the "
-                        "largest entry (m) of its last Newton correction, an estimate of its accuracy.",
+                        "xtilde = x + h v + h^2 aext on the free DOFs. samples/x_ref (float64) is a reference solution "
+                        "for the stored xtilde from full-order Newton with float64 energies and gradients, converged to a "
+                        "relative gradient norm of 1e-10; samples/ref_error_mnorm is the M-norm of its last Newton "
+                        "correction, its accuracy in the benchmark's error metric |x - x_ref|_M.",
                     ),
                     start_min_J,
                     dict(
                         v=v.reshape(-1, N, 3).astype(np.float32),
                         xtilde=np.array(xtilde, dtype=np.float32),
-                        x_ref=np.array(xref, dtype=np.float32),
+                        x_ref=np.array(xref, dtype=np.float64),
                         ref_newton_iterations=np.array(iterations),
                         ref_newton_decrement=np.array(decrements),
                         ref_newton_correction=np.array(corrections),
+                        ref_error_mnorm=np.array(errors),
                         ref_min_J=np.array(ref_min_J),
                     ),
                 )
                 print(
                     f"E={Etot:g} J, h={h:g} s: reference Newton iterations {np.min(iterations)}-{np.max(iterations)}, "
-                    f"{time.time() - t:.1f} s"
+                    f"accuracy |last correction|_M <= {max(e / e0 for e, e0 in zip(errors, e0s)):.1e} of "
+                    f"e0 = |x - x_ref|_M, {time.time() - t:.1f} s"
                 )
             stats = pool.stats
             print(

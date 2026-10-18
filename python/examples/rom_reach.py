@@ -96,6 +96,7 @@ def static_equilibrium(
     rtol: float = 1e-9,
     inertia: typing.Tuple[np.ndarray, np.ndarray] | None = None,
     u0: np.ndarray | None = None,
+    gtol: float | None = None,
 ) -> typing.Tuple[np.ndarray, dict]:
     """Full-order equilibrium, min_u Psi(x0 + u) - fext^T u [+ 1/2 sum_i k_i (u_i - ut_i)^2], by load-stepped
     Newton with backtracking.
@@ -132,11 +133,16 @@ def static_equilibrium(
             time step h) and n inertial target displacement (xtilde - x0), or None for a static solve.
         u0 (np.ndarray | None): n initial displacement (e.g. the inertial target, a good guess for small h), or
             zero. Fixed DOFs keep their u0 values.
+        gtol (float | None): If given, stop each increment when the gradient norm drops below gtol times its
+            initial value, instead of the decrement test. Use it with a float64 potential
+            (modalrom.elastic_energy_float64), whose gradient has no round-off floor, to converge to near machine
+            precision (e.g. gtol = 1e-10).
 
     Returns:
-        typing.Tuple[np.ndarray, dict]: The n equilibrium displacement u, and solve statistics: Newton
-        iterations, the last decrement, and the largest entry of the last Newton correction, which estimates
-        how far u is from the exact solution.
+        typing.Tuple[np.ndarray, dict]: The n equilibrium displacement u, and solve statistics: iterations (Newton
+        iterations), decrement (the last one), correction (the largest entry of the last Newton correction) and
+        last_correction (that n correction, zero on fixed DOFs), which estimates how far u is from the exact
+        solution.
     """
     n = x0.shape[0]
     fext = np.zeros(n) if fext is None else fext
@@ -145,6 +151,7 @@ def static_equilibrium(
     u = np.zeros(n) if u0 is None else np.array(u0, dtype=np.float64)
     k, ut = (np.zeros(n), np.zeros(n)) if inertia is None else inertia
     iterations, decrement, correction = 0, np.inf, np.inf
+    last_correction = np.zeros(n)
     for s in range(1, steps + 1):
         scale = s / steps
         if handle_dofs.size:
@@ -155,16 +162,24 @@ def static_equilibrium(
             d = u - ut
             return float(potential(x0 + u, False, False)) - f @ u + 0.5 * d @ (k * d)
 
+        r_first = None
         for _ in range(max_iters):
             psi, g, H = potential(x0 + u, True, True)
             r = (g - f + k * (u - ut))[unknown]
+            r_norm = np.linalg.norm(r)
+            r_first = r_norm if r_first is None else r_first
             Huu = H.tocsr()[unknown, :].tocsc()[:, unknown].astype(np.float64)
             Huu = Huu + scipy.sparse.diags(k[unknown])
             du = scipy.sparse.linalg.spsolve(Huu, -r)
             correction = float(np.abs(du).max())
+            last_correction = np.zeros(n)
+            last_correction[unknown] = du
             iterations += 1
             decrement = -(r @ du)
-            if 0.5 * decrement <= rtol * (1.0 + abs(psi)):
+            if gtol is not None:
+                if r_norm <= gtol * r_first:
+                    break
+            elif 0.5 * decrement <= rtol * (1.0 + abs(psi)):
                 break
             f0, alpha, step = objective(u), 1.0, np.zeros(n)
             while alpha > 1e-8:
@@ -175,7 +190,7 @@ def static_equilibrium(
             else:
                 break
             u += step
-    return u, dict(iterations=iterations, decrement=decrement, correction=correction)
+    return u, dict(iterations=iterations, decrement=decrement, correction=correction, last_correction=last_correction)
 
 
 def deformation_energy(potential: typing.Callable, x0: np.ndarray, u: np.ndarray) -> float:
