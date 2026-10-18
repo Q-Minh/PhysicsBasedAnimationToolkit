@@ -23,8 +23,7 @@ from .state import (
     SimulationState,
     SolverType,
     CDType,
-    load_fem_dynamics,
-    load_kinematic_constraints,
+    load_problem,
     load_vbd_params,
     load_chebyshev_params,
     load_anderson_params,
@@ -339,12 +338,18 @@ def _update_mesh(state: SimulationState, mesh_name: str):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="GPU VBD Simulation UI")
-    parser.add_argument(
+    problem = parser.add_mutually_exclusive_group(required=True)
+    problem.add_argument(
         "--fem-elasto-dynamics",
         type=str,
-        required=True,
         help="file.h5:group/path to a serialized FemElastoDynamics object.",
         dest="fem_elasto_dynamics",
+    )
+    problem.add_argument(
+        "--scene",
+        type=str,
+        help="CPU editor scene file (.h5). Static mesh colliders are ignored.",
+        dest="scene",
     )
     parser.add_argument(
         "--sim-params",
@@ -364,18 +369,14 @@ def main():
     # wp.config.cache_kernels = False
     wp.init()
     args = parse_args()
-    fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
+    fem_cpu, kinematics = load_problem(args.fem_elasto_dynamics, args.scene)
     params_cpu = {
         s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]
     }
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
     params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
-    state = SimulationState(
-        fem_cpu,
-        params_cpu,
-        load_kinematic_constraints(args.fem_elasto_dynamics, fem_cpu),
-    )
+    state = SimulationState(fem_cpu, params_cpu, kinematics)
     ui_state = UIState()
     mesh_name = "Mesh"
 
