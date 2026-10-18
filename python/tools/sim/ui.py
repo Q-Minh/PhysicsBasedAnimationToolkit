@@ -3,7 +3,7 @@
 Lightweight GPU VBD simulation UI using Polyscope + imgui.
 
 Usage:
-    python -m python.tools.sim.ui --fem path/to/fem.h5:hdf5/group/to/fem --vbd-params path/to/params.h5:hdf5/group/to/vbdparams
+    python -m python.tools.sim.ui --fem-elasto-dynamics path/to/fem.h5:hdf5/group/to/fem [--sim-params path/to/params.h5]
 """
 
 import argparse
@@ -78,9 +78,12 @@ def draw_params(obj, sub_params: dict | None = None, _depth=0):
 
 
 def parse_archive_path(spec: str) -> tuple[str, str]:
-    """Parse 'file.h5:group/path' into (file_path, group_path)."""
-    parts = spec.split(":")
-    if len(parts) == 2:
+    """Parse 'file.h5:group/path' into (file_path, group_path).
+
+    Splits on the last ':' only, so that Windows drive letters (e.g. 'C:/data/x.h5:fem') are kept.
+    """
+    parts = spec.rsplit(":", 1)
+    if len(parts) == 2 and len(parts[0]) > 1:
         return parts[0], parts[1]
     else:
         raise ValueError("Invalid archive path format.")
