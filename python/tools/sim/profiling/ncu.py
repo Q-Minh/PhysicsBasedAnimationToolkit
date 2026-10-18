@@ -8,13 +8,19 @@ breakdown from PC sampling. Nsight Compute locks clocks to base and flushes cach
 default, so durations are longer than in normal runs; compare kernels with each other, not with
 Nsight Systems timings.
 
-Usage (from the repo root):
+With ``--lineinfo``, kernels are compiled with line information, and the summary adds source hotspots:
+warp stall samples, stall reasons and executed instructions per line of the Warp (Python) source,
+including inlined helper functions, and per source file.
 
-    python -m python.tools.sim.profiling.ncu run -o out/aaavbd_ncu --kernel accelerated_vertex_solve \\
-        --skip 900 --count 9 -- --fem-elasto-dynamics scene.h5:fem --solver AAAVBD --duration 0.05 -o x.h5
+Usage (from the repo root; Warp kernel names start with an underscore):
+
+    python -m python.tools.sim.profiling.ncu run -o out/aaavbd_ncu --kernel ^_accelerated_vertex_solve \\
+        --skip 900 --count 9 [--lineinfo] -- --fem-elasto-dynamics scene.h5:fem --solver AAAVBD \\
+        --duration 0.05 -o x.h5
 """
 
 import argparse
+import ast
 import csv
 import io
 import json
@@ -59,9 +65,14 @@ def _number(text: str) -> float | None:
         return None
 
 
-def _csv(ncu: str, report: str, page: str) -> list[list[str]]:
+def _csv(ncu: str, report: str, page: str, *extra: str) -> list[list[str]]:
     out = subprocess.run(
-        [ncu, "--import", report, "--csv", "--page", page], check=True, capture_output=True, text=True
+        [ncu, "--import", report, "--csv", "--page", page, *extra],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     ).stdout
     return list(csv.reader(io.StringIO(out)))
 
@@ -107,7 +118,133 @@ def summarize(report: str, ncu: str = DEFAULT_NCU) -> dict:
     }
 
 
-def run(out_prefix: str, kernel: str, skip: int, count: int, simulate_args: list[str], ncu: str) -> dict:
+_REPO_MARKER = "python/tools/sim/"
+_STALL_COLUMNS = ("stall_long_sb", "stall_wait", "stall_short_sb", "stall_lg", "stall_mio", "stall_math")
+
+
+def _short_path(path: str) -> str:
+    path = path.replace("\\", "/")
+    if _REPO_MARKER in path:
+        return path[path.index(_REPO_MARKER) + len(_REPO_MARKER) :]
+    return path.rsplit("/", 1)[-1]
+
+
+_function_cache: dict[str, list[tuple[int, int, str]]] = {}
+
+
+def _enclosing_function(path: str, line: int) -> str:
+    """Name of the innermost Python function containing ``line`` in the source file ``path``."""
+    if path not in _function_cache:
+        spans = []
+        try:
+            with open(path, encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    spans.append((node.lineno, node.end_lineno or node.lineno, node.name))
+        except (OSError, SyntaxError):
+            pass
+        _function_cache[path] = sorted(spans, key=lambda s: s[1] - s[0])
+    return next((name for lo, hi, name in _function_cache[path] if lo <= line <= hi), "(module)")
+
+
+def source_hotspots(report: str, ncu: str = DEFAULT_NCU, top: int = 30) -> dict:
+    """Stall samples, stall reasons and executed instructions by source location, from the source page
+    of a report recorded with line information. Values are summed over launches.
+
+    ``lines`` and ``files`` use the innermost location, which for inlined Warp builtins is a native
+    header. ``python_lines`` and ``functions`` instead fold each native-header instruction into the
+    nearest preceding instruction (by address) that maps to a simulator source line, its likely
+    caller, since inlined code is laid out next to the code that calls it. That folding is a heuristic.
+    """
+    rows = _csv(ncu, report, "source", "--print-source", "cuda,sass")
+    keys = ("samples", "instructions") + _STALL_COLUMNS
+    col: dict[str, int] = {}
+    path, current = "", None
+    lines: dict[tuple[str, int], dict] = {}
+    instructions: list[tuple[int, tuple[str, int, str], list[float]]] = []
+
+    def values(row):
+        return [
+            (_number(row[col[k]]) or 0.0) if k in col and col[k] < len(row) else 0.0 for k in keys
+        ]
+
+    for row in rows:
+        if not row:
+            continue
+        if row[0] == "File Path":
+            path = row[1].replace("\\", "/")
+        elif row[0] == "Line No":
+            col = {}
+            for i, name in enumerate(row):
+                col.setdefault(name, i)  # first occurrence: the issued-sample stall columns
+            col["samples"] = col["Warp Stall Sampling (All Samples)"]
+            col["instructions"] = col["Instructions Executed"]
+        elif row[0].isdigit() and col:
+            current = (path, int(row[0]), row[1].strip())
+            entry = lines.setdefault(current[:2], {"location": current, **{k: 0.0 for k in keys}})
+            for k, v in zip(keys, values(row)):
+                entry[k] += v
+        elif row[0] == "" and len(row) > 2 and row[2].startswith("0x") and current and col:
+            instructions.append((int(row[2], 16), current, values(row)))
+
+    folded: dict[tuple[str, int], dict] = {}
+    owner = None
+    for _, location, vals in sorted(instructions, key=lambda i: i[0]):
+        if _REPO_MARKER in location[0]:
+            owner = location
+        target = owner or location
+        entry = folded.setdefault(target[:2], {"location": target, **{k: 0.0 for k in keys}})
+        for k, v in zip(keys, vals):
+            entry[k] += v
+
+    def finish(entries, top_n=None):
+        total_s = sum(e["samples"] for e in entries.values()) or 1.0
+        total_i = sum(e["instructions"] for e in entries.values()) or 1.0
+        out = []
+        for e in sorted(entries.values(), key=lambda e: -e["samples"]):
+            path_, line, source = e["location"]
+            item = {"file": _short_path(path_), "line": line, "source": source,
+                    **{k: e[k] for k in keys},
+                    "sample_share": e["samples"] / total_s, "instruction_share": e["instructions"] / total_i}
+            out.append(item)
+        return out[:top_n] if top_n else out
+
+    def group(entries, by):
+        groups: dict[str, dict] = {}
+        for e in entries.values():
+            name = by(e["location"])
+            g = groups.setdefault(name, {"location": (name, 0, ""), **{k: 0.0 for k in keys}})
+            for k in keys:
+                g[k] += e[k]
+        return groups
+
+    files = finish(group(lines, lambda loc: loc[0]))
+    functions = finish(group(folded, lambda loc: (
+        f"{_short_path(loc[0])}::{_enclosing_function(loc[0], loc[1])}" if _REPO_MARKER in loc[0]
+        else f"{_short_path(loc[0])} (no simulator caller)")))
+    for f in files:
+        f.pop("line"), f.pop("source")
+    for f in functions:
+        f["function"] = f.pop("file")
+        f.pop("line"), f.pop("source")
+    return {
+        "lines": finish(lines, top),
+        "files": files,
+        "python_lines": finish(folded, top),
+        "functions": functions,
+    }
+
+
+def run(
+    out_prefix: str,
+    kernel: str,
+    skip: int,
+    count: int,
+    simulate_args: list[str],
+    ncu: str,
+    lineinfo: bool = False,
+) -> dict:
     venvrun = os.path.join(os.path.dirname(__file__), "venvrun.py")
     subprocess.run(
         [
@@ -120,6 +257,7 @@ def run(out_prefix: str, kernel: str, skip: int, count: int, simulate_args: list
             str(count),
             "--set",
             "full",
+            *(["--import-source", "yes"] if lineinfo else []),
             "-f",
             "-o",
             out_prefix,
@@ -130,8 +268,12 @@ def run(out_prefix: str, kernel: str, skip: int, count: int, simulate_args: list
             *simulate_args,
         ],
         check=True,
+        env=dict(os.environ, PBAT_WARP_LINEINFO="1") if lineinfo else None,
     )
-    return summarize(out_prefix + ".ncu-rep", ncu)
+    summary = summarize(out_prefix + ".ncu-rep", ncu)
+    if lineinfo:
+        summary["hotspots"] = source_hotspots(out_prefix + ".ncu-rep", ncu)
+    return summary
 
 
 def main():
@@ -143,20 +285,26 @@ def main():
     p_run.add_argument("--skip", type=int, default=0, help="Matching launches to skip first.")
     p_run.add_argument("--count", type=int, default=1, help="Matching launches to profile.")
     p_run.add_argument("--ncu", default=DEFAULT_NCU, help="Path to ncu.exe.")
+    p_run.add_argument("--lineinfo", action="store_true", help="Add per-source-line hotspots.")
     p_run.add_argument("simulate_args", nargs=argparse.REMAINDER, help="-- simulate.py arguments")
     p_sum = sub.add_parser("summarize", help="Summarize an existing .ncu-rep report.")
     p_sum.add_argument("report")
     p_sum.add_argument("-o", "--out", required=True, help="Output .json.", dest="out")
     p_sum.add_argument("--ncu", default=DEFAULT_NCU, help="Path to ncu.exe.")
+    p_sum.add_argument("--lineinfo", action="store_true", help="Add hotspots (report recorded with line info).")
     args = parser.parse_args()
     if args.command == "run":
         simulate_args = args.simulate_args
         if simulate_args and simulate_args[0] == "--":
             simulate_args = simulate_args[1:]
-        summary = run(args.out, args.kernel, args.skip, args.count, simulate_args, args.ncu)
+        summary = run(
+            args.out, args.kernel, args.skip, args.count, simulate_args, args.ncu, args.lineinfo
+        )
         out = args.out + ".ncu.json"
     else:
         summary = summarize(args.report, args.ncu)
+        if args.lineinfo:
+            summary["hotspots"] = source_hotspots(args.report, args.ncu)
         out = args.out
     with open(out, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=1)
@@ -165,6 +313,11 @@ def main():
     for k, v in m.items():
         print(f"  {k:30s} {v:12.2f}")
     print("  stalls:", ", ".join(f"{k} {100 * v:.0f}%" for k, v in list(summary["stall_share"].items())[:6]))
+    if "hotspots" in summary:
+        print("  hottest source lines (share of stall samples, of instructions):")
+        for h in summary["hotspots"]["lines"][:12]:
+            print(f"    {100 * h['sample_share']:5.1f}%  {100 * h['instruction_share']:5.1f}%  "
+                  f"{h['file']}:{h['line']}  {h['source'][:70]}")
     print(f"Wrote {out}")
 
 
