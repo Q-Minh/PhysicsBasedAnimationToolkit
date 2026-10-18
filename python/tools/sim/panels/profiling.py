@@ -3,7 +3,7 @@ GUI panel for live per-phase GPU profiling (CUPTI-based ``kernels`` backend).
 
 While enabled, steps run eagerly and every step's GPU activities are attributed to profiling scopes.
 The panel shows the mean GPU busy time per step over a rolling window of steps, by phase (innermost
-scope) or by full scope path, and can export the window in the result schema of
+scope), by full scope path, or as a scope tree with total (inclusive) and self times, and can export the window in the result schema of
 ``profiling/results.py``, so ``profiling/report.py`` can render it.
 """
 
@@ -22,6 +22,7 @@ class _PanelState:
     def __init__(self):
         self.window = 20
         self.by_leaf = True
+        self.tree = False
         self.steps: collections.deque = collections.deque(maxlen=self.window)
         self.error: str | None = None
 
@@ -49,6 +50,7 @@ def _step_dict(profile: profiling.StepProfile) -> dict:
         "launches": profile.launches,
         "calls": profile.calls,
         "union_ms": profile.union_ms,
+        "union_incl_ms": profile.union_incl_ms,
         "step_union_ms": profile.step_union_ms,
         "step_span_ms": profile.step_span_ms,
     }
@@ -93,11 +95,14 @@ def draw_profiling_panel(state, ui_state):
     if changed and window > 0:
         _panel.window = window
         _panel.steps = collections.deque(_panel.steps, maxlen=window)
-    if imgui.RadioButton("By phase", _panel.by_leaf):
-        _panel.by_leaf = True
+    if imgui.RadioButton("By phase", _panel.by_leaf and not _panel.tree):
+        _panel.by_leaf, _panel.tree = True, False
     imgui.SameLine()
-    if imgui.RadioButton("By scope path", not _panel.by_leaf):
-        _panel.by_leaf = False
+    if imgui.RadioButton("By scope path", not _panel.by_leaf and not _panel.tree):
+        _panel.by_leaf, _panel.tree = False, False
+    imgui.SameLine()
+    if imgui.RadioButton("Tree", _panel.tree):
+        _panel.tree = True
     imgui.SameLine()
     if imgui.Button("Clear##profiling"):
         _panel.steps.clear()
@@ -115,6 +120,10 @@ def draw_profiling_panel(state, ui_state):
     total = sum(busy.values())
     union = sum(s["step_union_ms"] for s in _panel.steps) / n
     imgui.Text(f"{n} steps: {total:.3f} ms/step GPU busy, {union:.3f} ms/step union over streams")
+    if _panel.tree:
+        _draw_tree(window)
+        imgui.TreePop()
+        return
 
     launches: dict[str, float] = {}
     calls: dict[str, float] = {}
@@ -146,3 +155,29 @@ def draw_profiling_panel(state, ui_state):
         imgui.NextColumn()
     imgui.Columns(1)
     imgui.TreePop()
+
+
+def _draw_tree(window: dict):
+    """Scope tree with total (inclusive) and self busy time per step, share of the step, total union and calls."""
+    rows = results.scope_tree(window)
+    step_total = sum(r["total_ms"] for r in rows if r["depth"] == 0) or 1.0
+    imgui.Columns(6, "profiling_tree", True)
+    for header in ("Scope", "Total ms", "Self ms", "Share of step", "Total union ms", "Calls"):
+        imgui.Text(header)
+        imgui.NextColumn()
+    imgui.Separator()
+    for r in rows:
+        imgui.Text("  " * r["depth"] + (r["name"] if r["path"] else results.UNSCOPED))
+        imgui.NextColumn()
+        imgui.Text(f"{r['total_ms']:.3f}")
+        imgui.NextColumn()
+        imgui.Text(f"{r['self_ms']:.3f}")
+        imgui.NextColumn()
+        imgui.ProgressBar(r["total_ms"] / step_total, (-1.0, 0.0))
+        imgui.NextColumn()
+        imgui.Text("" if r["union_incl_ms"] is None else f"{r['union_incl_ms']:.3f}")
+        imgui.NextColumn()
+        imgui.Text(f"{r['calls']:.0f}" if r["calls"] else "")
+        imgui.NextColumn()
+    imgui.Columns(1)
+
