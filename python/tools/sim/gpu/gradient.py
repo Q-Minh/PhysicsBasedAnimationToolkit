@@ -1,4 +1,6 @@
 # type: ignore
+import cuda.compute
+import cupy as cp
 import warp as wp
 from .common import profiling
 
@@ -7,6 +9,7 @@ from .elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichl
 from .elasticity.snh import snh_grad
 from .elasticity.chain import gradient_wrt_dofs
 from .contact import halfedges
+from .common.reduce import Reduce
 from . import types
 
 
@@ -59,7 +62,11 @@ def _inertial_gradient(
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):
         return
-    wp.atomic_add(g, i, fem.m[i] * (fem.x[i] - fem.xtilde[i]))
+    if fem.is_static != 0:
+        # Static objective Psi(x) - fext^T x
+        wp.atomic_add(g, i, -fem.fext[i])
+    else:
+        wp.atomic_add(g, i, fem.m[i] * (fem.x[i] - fem.xtilde[i]))
 
 
 @wp.kernel
@@ -69,6 +76,7 @@ def _vv_gradient(
     dmask: wp.array[wp.int32],
     contact: MeshDynamicsData,
     n_u: wp.int32,
+    augmented: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -90,8 +98,11 @@ def _vv_gradient(
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     gamma = contact.cvv.gamma[c]
-    dEn = sigma_n * c_n - contact.cvv.lambda_n[c]
-    dEf = sigma_f * c_f - contact.cvv.lambda_f[c]
+    dEn = -contact.cvv.lambda_n[c]
+    dEf = -contact.cvv.lambda_f[c]
+    if augmented != 0:
+        dEn += sigma_n * c_n
+        dEf += sigma_f * c_f
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
@@ -106,6 +117,7 @@ def _ve_gradient(
     dmask: wp.array[wp.int32],
     contact: MeshDynamicsData,
     n_u: wp.int32,
+    augmented: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -131,8 +143,11 @@ def _ve_gradient(
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     gamma = contact.cve.gamma[c]
-    dEn = sigma_n * c_n - contact.cve.lambda_n[c]
-    dEf = sigma_f * c_f - contact.cve.lambda_f[c]
+    dEn = -contact.cve.lambda_n[c]
+    dEf = -contact.cve.lambda_f[c]
+    if augmented != 0:
+        dEn += sigma_n * c_n
+        dEf += sigma_f * c_f
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
@@ -149,6 +164,7 @@ def _vf_gradient(
     dmask: wp.array[wp.int32],
     contact: MeshDynamicsData,
     n_u: wp.int32,
+    augmented: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -175,8 +191,11 @@ def _vf_gradient(
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     gamma = contact.cvf.gamma[c]
-    dEn = sigma_n * c_n - contact.cvf.lambda_n[c]
-    dEf = sigma_f * c_f - contact.cvf.lambda_f[c]
+    dEn = -contact.cvf.lambda_n[c]
+    dEf = -contact.cvf.lambda_f[c]
+    if augmented != 0:
+        dEn += sigma_n * c_n
+        dEf += sigma_f * c_f
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
@@ -195,6 +214,7 @@ def _ee_gradient(
     dmask: wp.array[wp.int32],
     contact: MeshDynamicsData,
     n_u: wp.int32,
+    augmented: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -224,8 +244,11 @@ def _ee_gradient(
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     gamma = contact.cee.gamma[c]
-    dEn = sigma_n * c_n - contact.cee.lambda_n[c]
-    dEf = sigma_f * c_f - contact.cee.lambda_f[c]
+    dEn = -contact.cee.lambda_n[c]
+    dEf = -contact.cee.lambda_f[c]
+    if augmented != 0:
+        dEn += sigma_n * c_n
+        dEf += sigma_f * c_f
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, ia):
         wp.atomic_add(g, ia, gamma * b0 * grad)
@@ -238,7 +261,14 @@ def _ee_gradient(
 
 
 class Gradient:
-    """Computes the full FEM elasto-dynamics + augmented-Lagrangian contact gradient.
+    """Computes the full FEM elasto-dynamics + contact gradient.
+
+    The contact terms are those of the augmented Lagrangian (the subproblem objective, gradient
+    ``(sigma c - lambda) grad c``) or, with ``augmented_lagrangian=False``, of the Lagrangian with
+    the current multipliers (``-lambda grad c``), as C++ ``MeshDynamics::ToGradient`` with
+    ``bForAugmentedLagrangian``. Without contact both are the objective's gradient.
+
+    For static problems (``fem.static``), the inertial term is replaced by the external load, -fext.
 
     Kernel launches are overlapped across 6 streams (elastic, inertial, vv, ve, vf, ee)
     forked from the active stream, making the computation graph-capturable.
@@ -249,10 +279,12 @@ class Gradient:
         fem: FemElastoDynamics,
         contact: ContactDynamics,
         g: wp.array,
+        augmented_lagrangian: bool = True,
     ):
         self._fem = fem
         self._contact = contact
         self._g = g
+        self._augmented = 1 if augmented_lagrangian else 0
         self._streams = [
             wp.Stream() for _ in range(6)
         ]  # elastic, inertial, vv, ve, vf, ee
@@ -263,7 +295,7 @@ class Gradient:
         fem = self._fem
         contact = self._contact
         g = self._g
-        h2 = wp.float32(fem.bdf.beta_tilde**2)
+        h2 = wp.float32(fem.h2)
         n_nodes = fem.data.x.shape[0]
         n_elems = fem.data.E.shape[0]
         cd = contact._data
@@ -292,8 +324,47 @@ class Gradient:
             wp.launch(
                 kernel,
                 dim=cs.capacity,
-                inputs=[x, xt, dmask, cd, cs.n_u, g],
+                inputs=[x, xt, dmask, cd, cs.n_u, self._augmented, g],
                 stream=stream,
             )
         for stream in self._streams:
             main_stream.wait_stream(stream)
+
+
+class GradientNorm:
+    """Owns the objective gradient ``g`` (see :class:`Gradient`) and its squared norm on the device.
+
+    ``gnorm2[0] = |g|^2`` over the free DOFs (Dirichlet entries of ``g`` stay 0) is the convergence
+    measure of the GPU solvers. :meth:`compute` launches no host synchronization, so it captures.
+    ``augmented_lagrangian`` selects the contact terms (see :class:`Gradient`).
+    """
+
+    def __init__(
+        self,
+        fem: FemElastoDynamics,
+        contact: ContactDynamics,
+        augmented_lagrangian: bool = True,
+    ):
+        n_nodes = fem.data.x.shape[0]
+        self.g = wp.zeros(n_nodes, dtype=wp.vec3f)
+        self.gnorm2 = wp.zeros(1, dtype=wp.float32)
+        self._gradient = Gradient(fem, contact, self.g, augmented_lagrangian)
+        self._reduce = Reduce(
+            d_in=cuda.compute.TransformIterator(cp.asarray(self.g).ravel(), lambda x: x * x),
+            d_out=cp.asarray(self.gnorm2),
+            num_items=3 * n_nodes,
+            op=cuda.compute.OpKind.PLUS,
+        )
+
+    def compute_gradient(self, main_stream: wp.Stream) -> None:
+        """Recompute ``g`` at the current positions."""
+        self._gradient.compute(main_stream)
+
+    def reduce(self, main_stream: wp.Stream) -> None:
+        """Recompute ``gnorm2`` from the current ``g``."""
+        self._reduce(main_stream)
+
+    def compute(self, main_stream: wp.Stream) -> None:
+        """Recompute ``g`` and ``gnorm2`` at the current positions."""
+        self.compute_gradient(main_stream)
+        self.reduce(main_stream)

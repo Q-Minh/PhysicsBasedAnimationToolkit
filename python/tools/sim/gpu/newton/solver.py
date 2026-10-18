@@ -14,6 +14,7 @@ import cupy as cp
 
 from pbatoolkit import pbat
 
+from ...common.fields import DocField, SerializableMixin
 from ..common.reduce import Reduce
 from ..contact.mesh.cd import ContactDetection
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
@@ -24,8 +25,9 @@ from ..contact.dynamics import (
 )
 from ..contact.mesh.pairs import ContactBasesData
 from ..elasticity.snh import snh_eval, snh_hess
+from ..elasticity.spd import filter_eigenvalues9
 from ..elasticity.chain import hessian_wrt_dofs
-from ..gradient import Gradient
+from ..gradient import GradientNorm
 from ..contact import halfedges
 from .. import types
 
@@ -41,6 +43,7 @@ class ParamsData:
     # Inner Newton iteration control
     n_subproblem_max_iters: wp.int32
     gtol2: wp.float32  # squared gradient-norm convergence threshold
+    spd_correction: wp.int32  # pbat.fem.HyperElasticSpdCorrection of d^2Psi/dF^2 (static problems only)
     n_lin_max_iters: wp.int32
     rel_eps_lin: wp.float32
     abs_eps_lin: wp.float32
@@ -92,8 +95,12 @@ def _energy_inertial(
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):  # type: ignore
         return
-    diff = fem.x[i] - fem.xtilde[i]
-    f_obj_partial[i] = wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff)  # type: ignore
+    if fem.is_static != 0:
+        # Static objective Psi(x) - fext^T x
+        f_obj_partial[i] = -wp.dot(fem.fext[i], fem.x[i])  # type: ignore
+    else:
+        diff = fem.x[i] - fem.xtilde[i]
+        f_obj_partial[i] = wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff)  # type: ignore
 
 
 @wp.kernel
@@ -275,6 +282,8 @@ def _compute_dynamics_hessian_triplets(
         i = tid
         if is_dirichlet_node(fem.dmask, i):  # type: ignore
             params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = identity
+        elif fem.is_static != 0:
+            params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = wp.mat33f()
         else:
             params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = fem.m[i] * identity
     if tid < n_elems:
@@ -291,6 +300,9 @@ def _compute_dynamics_hessian_triplets(
                 xe[d, j] = xj[d]
         F = xe @ GP
         HF = snh_hess(F, mu, llambda)
+        if fem.is_static != 0:
+            # Without the mass term, the SNH Hessian can be indefinite
+            HF = filter_eigenvalues9(HF, params.spd_correction)
         He = h2 * wge * hessian_wrt_dofs(HF, GP)
         base = offsets[K_ELASTIC_TRIPLETS] + e * 16
         d0 = is_dirichlet_node(fem.dmask, nodes[0])
@@ -735,6 +747,19 @@ def _initialize_hessian_triplets(
                 params.Hcols[idx] = nodes[j]
 
 
+class LinearSolverParams(SerializableMixin):
+    """GPU-only settings of the Jacobi-preconditioned CG solve of each Newton step.
+
+    The C++ Newton solver uses a direct solver (``ELinearSolver``), so these have no CPU counterpart.
+    Static problems lack the mass term and are far worse conditioned, so they typically need many
+    more CG iterations than dynamic ones.
+    """
+
+    n_max_iters = DocField(300, "Maximum CG iterations per Newton step")
+    rtol = DocField(1e-5, "Relative CG residual tolerance")
+    atol = DocField(1e-5, "Absolute CG residual tolerance")
+
+
 class Params:
     """Python wrapper that builds and owns the GPU :class:`ParamsData` struct.
 
@@ -748,6 +773,11 @@ class Params:
         Maximum Newton steps per AL subproblem.
     gtol2:
         Squared gradient-norm convergence threshold.
+    linear_solver:
+        GPU-only CG settings (:class:`LinearSolverParams`); defaults when omitted.
+    spd_correction:
+        SPD correction of the elastic Hessians d^2Psi/dF^2, from the CPU params' ``spd_correction``.
+        Applied to static problems only, whose Hessians lack the mass term.
     ls_max_iters:
         Maximum backtracking iterations.
     ls_tau:
@@ -764,6 +794,7 @@ class Params:
     def __init__(
         self,
         params_cpu: pbat.sim.algorithm.newton.Params,
+        linear_solver: LinearSolverParams | None = None,
     ):
         newton: pbat.math.optimization.Newton = params_cpu.newton
         line_search: pbat.math.optimization.BackTrackingLineSearch | None = (
@@ -774,9 +805,11 @@ class Params:
         self._data.k = 0
         self._data.n_subproblem_max_iters = newton.n_max_iters
         self._data.gtol2 = newton.gtol2
-        self._data.n_lin_max_iters = 300
-        self._data.rel_eps_lin = 1e-5
-        self._data.abs_eps_lin = 1e-5
+        self._data.spd_correction = int(params_cpu.spd_correction.value)
+        linear_solver = linear_solver or LinearSolverParams()
+        self._data.n_lin_max_iters = int(linear_solver.n_max_iters)
+        self._data.rel_eps_lin = float(linear_solver.rtol)
+        self._data.abs_eps_lin = float(linear_solver.atol)
         self._data.ls_max_iters = line_search.n_max_iters if line_search else 0
         self._data.ls_tau = line_search.tau if line_search else 0.5
         self._data.ls_c = line_search.c if line_search else 1e-4
@@ -819,7 +852,6 @@ class Params:
             self._data.Hvals,
             prune_numerical_zeros=False,
         )
-        self._g = wp.zeros(n_nodes, dtype=wp.vec3f)
         self._ndx = wp.zeros(n_nodes, dtype=wp.vec3f)
         # Energy partial-contributions buffer: one slot per inertial node, elastic element,
         # and each contact pair type.
@@ -865,17 +897,12 @@ class Params:
             self._hessian_triplet_offsets, dtype=wp.int32
         )
         # Gradient + line search
-        self._gradient = Gradient(fem, contact, self._g)
+        self._gradient_norm = GradientNorm(fem, contact)
+        self._g = self._gradient_norm.g
+        self._gnorm2 = self._gradient_norm.gnorm2
         g_flat = cp.asarray(self._g).ravel()
         ndx_flat = cp.asarray(self._ndx).ravel()
-        self._gnorm2 = wp.zeros(1, dtype=wp.float32)
         self._nslope = wp.zeros(1, dtype=wp.float32)
-        self._gnorm2_reduce = Reduce(
-            d_in=cuda.compute.TransformIterator(g_flat, lambda x: x * x),
-            d_out=cp.asarray(self._gnorm2),
-            num_items=3 * n_nodes,
-            op=cuda.compute.OpKind.PLUS,
-        )
         self._nslope_reduce = Reduce(
             d_in=cuda.compute.TransformIterator(
                 cuda.compute.ZipIterator(g_flat, ndx_flat),
@@ -981,8 +1008,7 @@ def check_convergence(
     params: Params,
 ) -> bool:
     main_stream = wp.get_stream()
-    params._gradient.compute(main_stream)
-    params._gnorm2_reduce(main_stream)
+    params._gradient_norm.compute(main_stream)
     return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
 
 
@@ -1007,10 +1033,10 @@ def solve_subproblem(
         stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
-    h2 = wp.float32(fem.bdf.beta_tilde**2)  # type: ignore
-    params._gradient.compute(main_stream)
+    h2 = wp.float32(fem.h2)  # type: ignore
+    params._gradient_norm.compute_gradient(main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
-        params._gnorm2_reduce(main_stream)
+        params._gradient_norm.reduce(main_stream)
         gnorm2 = float(params._gnorm2.numpy()[0])
         if gnorm2 <= float(params.data.gtol2):
             break
@@ -1124,7 +1150,7 @@ def solve_subproblem(
         if not accepted:
             wp.copy(fem.data.x, x_backup)
             break
-        params._gradient.compute(main_stream)
+        params._gradient_norm.compute_gradient(main_stream)
 
 
 @profiling.scoped("solve.finalize_subproblem")
@@ -1151,6 +1177,7 @@ def serialize_newton_cpu_params(params: pbat.sim.algorithm.newton.Params, grp) -
     """Serialize a Newton CPU Params object to an h5py group."""
     grp.attrs["n_max_iters"] = params.n_max_iters
     grp.attrs["linear_solver"] = params.linear_solver.value
+    grp.attrs["spd_correction"] = params.spd_correction.value
     newton = params.newton
     ng = grp.require_group("newton")
     ng.attrs["n_max_iters"] = newton.n_max_iters
@@ -1173,6 +1200,10 @@ def deserialize_newton_cpu_params(
     if "linear_solver" in grp.attrs:
         params.linear_solver = pbat.sim.algorithm.newton.ELinearSolver(
             int(grp.attrs["linear_solver"])
+        )
+    if "spd_correction" in grp.attrs:
+        params.spd_correction = pbat.fem.HyperElasticSpdCorrection(
+            int(grp.attrs["spd_correction"])
         )
     newton = params.newton
     if "newton" in grp:

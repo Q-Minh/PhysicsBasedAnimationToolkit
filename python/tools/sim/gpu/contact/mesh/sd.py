@@ -240,7 +240,9 @@ class Sd(ContactDetection):
         self.request_step_filter = True
 
     @profiling.scoped("contact.detect")
-    def detect_contacts(self, from_xt: bool = False):
+    def prepare_detection(self):
+        """Refit the meshes' BVHs. wp.Mesh.refit allocates scan temporaries, so it can't run in a
+        conditional graph body."""
         if self.params.deactivate:
             return
         main_stream = wp.get_stream()
@@ -249,6 +251,13 @@ class Sd(ContactDetection):
             with wp.ScopedStream(stream, sync_enter=False, sync_exit=False):
                 mesh.refit()
             main_stream.wait_stream(stream)
+
+    def detect_contacts(self, from_xt: bool = False, prepared: bool = False):
+        if self.params.deactivate:
+            return
+        if not prepared:
+            self.prepare_detection()
+        main_stream = wp.get_stream()
         self._contacts.clear()
         n_verts = self._meshes.data.V.shape[0]
         block_dim = 256
@@ -299,3 +308,8 @@ class Sd(ContactDetection):
 
     def on_time_step_ended(self):
         pass
+
+    @property
+    def supports_conditional_capture(self) -> bool:
+        # Only the refit allocates, and it lives in prepare_detection
+        return True

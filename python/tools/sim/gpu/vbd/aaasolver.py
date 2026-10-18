@@ -14,12 +14,13 @@ from .params import Params, ParamsData
 from .kernels import (
     local_elastic_derivatives,
     local_contact_derivatives,
-    add_inertia_derivatives,
+    add_inertia_or_external_load_derivatives,
     integrate_positions,
 )
 from .solver import (
-    check_convergence,
+    IterationSchedule,
     initialize_solve,
+    solve_outer_loop,
     linearize_constraints,
     prepare_subproblem,
     finalize_subproblem,
@@ -175,9 +176,9 @@ def _accelerated_vertex_solve_kernel(
         ais = wp.tile(ail, preserve_type=True)  # pyright: ignore[reportArgumentType]
         ai = wp.tile_sum(ais)[0]  # pyright: ignore[reportIndexIssue]
     if local_tid == 0:
-        # Add inertia derivatives (K = m, already in position space)
-        gi, Hi = add_inertia_derivatives(
-            mi, xtildei, xi, gi, Hi
+        # Add inertia (K = m, already in position space) or, for static problems, external load derivatives
+        gi, Hi = add_inertia_or_external_load_derivatives(
+            fem.is_static, mi, xtildei, fem.fext[i], xi, gi, Hi
         )  # pyright: ignore[reportArgumentType]
         # Adapt stencil gradient acceleration parameter using the total gradient
         betaG = adapt_stencil_gradient_acceleration_parameter(
@@ -227,8 +228,7 @@ def iterate(
     params: Params,
 ):
     """One VBD Gauss-Seidel sweep over all color partitions."""
-    h = fem.bdf.beta_tilde
-    h2 = h * h
+    h2 = fem.h2
     # Copy current positions to buffer (for contact lagging)
     wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially
@@ -248,20 +248,31 @@ def iterate(
             )
 
 
+def subproblem_iteration(
+    k: int, fem: FemElastoDynamics, contact: ContactDynamics, params: Params, kp: int
+):
+    """Iteration ``kp`` of subproblem ``k``: slack dual update, then one accelerated sweep.
+
+    The sweep only distinguishes ``k == 0 and kp == 0`` (no stencil gradient augmentation yet) and
+    ``kp == 0`` (no acceleration parameter adaptation yet) from later iterations.
+    """
+    contact.update_dual(
+        fem.data.x,
+        fem.xt,
+        request_slack_update=True,
+        request_decay_update=False,
+        request_lagrange_multiplier_update=False,
+    )
+    iterate(k, kp, fem, contact, params)
+
+
 @profiling.scoped("aaavbd.subproblem")
 def solve_subproblem(
     k: int, fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
     for kp in range(n_subproblem_max_iters):
-        contact.update_dual(
-            fem.data.x,
-            fem.xt,
-            request_slack_update=True,
-            request_decay_update=False,
-            request_lagrange_multiplier_update=False,
-        )
-        iterate(k, kp, fem, contact, params)
+        subproblem_iteration(k, fem, contact, params, kp)
 
 
 class AaaVbdSolver:
@@ -276,18 +287,23 @@ class AaaVbdSolver:
         cd: ContactDetection,
         params: Params,
     ) -> bool:
-        converged = False
         initialize_solve(fem, contact, cd, params)
-        for k in range(params.data.n_max_iters):
-            if check_convergence(fem, contact, params):
-                converged = True
-                break
-            prepare_subproblem(fem, contact, cd, params)
-            solve_subproblem(k, fem, contact, params)
-            finalize_subproblem(fem, contact, cd, params)
+        converged = solve_outer_loop(
+            fem, contact, cd, params, self.schedule(fem, contact, params)
+        )
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged
+
+    def schedule(
+        self, fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+    ) -> IterationSchedule:
+        """Only the first iteration of a subproblem differs (no acceleration adaptation yet)."""
+        return IterationSchedule(
+            lambda k, kp: subproblem_iteration(k, fem, contact, params, kp),
+            prefix=1,
+            scope="aaavbd.subproblem",
+        )
 
     @property
     def supports_graph_capture(self):

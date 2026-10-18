@@ -154,6 +154,10 @@ class Params:
         self._data.Qfk = wp.zeros(
             (n_nodes,), dtype=wp.float32
         )  # (N,) max vertex friction contact Rayleigh quotients
+        # Device-side convergence test (gpu.vbd.convergence.ConvergenceCheck), built for a given
+        # FEM and contact problem by the owner of both. Without it, solves run n_max_iters outer
+        # iterations.
+        self.convergence = None
 
     @property
     def data(self) -> ParamsData:  # pyright: ignore[reportGeneralTypeIssues]
@@ -228,7 +232,7 @@ class ChebyshevParams(Params):
     `pbat::sim::algorithm::vbd::ChebyshevParams` (`source/pbat/sim/algorithm/vbd/Chebyshev.h`):
       - rho: spectral radius estimate, `0 < rho < 1`, read once from the CPU
         `pbat.sim.algorithm.vbd.ChebyshevParams` object at construction time
-      - omega: current relaxation weight, recomputed every VBD sweep
+      - omega: (1,) device array holding the current relaxation weight, recomputed every VBD sweep
       - xkm1, xkm2: previous VBD-sweep iterates used by the momentum recurrence
     """
 
@@ -239,7 +243,7 @@ class ChebyshevParams(Params):
     ):
         super().__init__(params)
         self.rho = cheb_params.rho
-        self.omega = 1.0
+        self.omega: wp.array[wp.float32] = wp.ones((1,), dtype=wp.float32)
         n_nodes = params.colors.shape[0]
         self.xkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
         self.xkm2: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
