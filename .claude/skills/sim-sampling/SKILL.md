@@ -13,7 +13,7 @@ The sampling tools live in `python/examples`, everything runs on the **CPU**, an
 
 Read those docstrings for anything not covered here.
 
-Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Inputs are `file.h5:h5path` (an editor Dump's `fem` group). `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`. `make_benchmark.py` **requires a Dump**: given a mesh, it produces zero masses and stiffness. Use absolute paths: `data/` exists only in the main checkout.
+Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Inputs are an hdf5 file storing a FemElastoDynamics (`filepath:h5path`, e.g. a Dump's `fem` group). `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`. `make_benchmark.py` rejects meshes, and also scenes whose Dirichlet nodes are displaced or moving. Use absolute paths: `data/` exists only in the main checkout.
 
 ## Which sampler
 
@@ -67,7 +67,7 @@ All batches follow the sample-file contract (`rom_mcmc.write_samples`):
 - `X` (N,3) rest positions, `samples/x` (S,N,3) float32 positions, plus `samples/q`, `energy`, `log_target`, `samples/min_J`.
 - `basis/{U,Q,omega,M}`.
 - Root attributes: `target_energy`, `rhat`, `ensemble`, `gravity`, `mode_normalization="mass"`, `importance_weights_required`.
-- Problem files add `problem`, `pool_file`, `pool_indices`.
+- Problem files add `problem`, `pool_file`, `pool_indices`, and `scene_dt`/`scene_bdf_steps` (the input's integrator, recorded only; dynamic problems are always BDF1 steps with the `--dt` values).
 - Dynamic files also add `h`, `aext`, and `samples/{v, xtilde, x_ref, ref_newton_*, ref_min_J}`.
 
 Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd4`, so `q` from older files isn't comparable.
