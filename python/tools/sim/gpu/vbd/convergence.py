@@ -2,8 +2,10 @@
 Device-side convergence test of the VBD-family outer (augmented-Lagrangian) loop.
 
 Mirrors ``pbat::sim::algorithm::vbd::CheckConvergence``: stop once ``|g|^2 <= gtol^2``, where ``g`` is
-the objective gradient over free DOFs (:class:`gpu.gradient.GradientNorm`, shared with the Newton
-solver). The decision is kept on the device in ``keep_iterating``, so a captured CUDA graph can loop
+the gradient of the time step's Lagrangian at the current contact multipliers, over free DOFs
+(:class:`gpu.gradient.GradientNorm` without the augmented-Lagrangian penalty term, as C++
+``ToGradient(..., bForAugmentedLagrangian = false)``). Without contact it is the objective's gradient,
+so the test means the same inside a subproblem as between subproblems. The decision is kept on the device in ``keep_iterating``, so a captured CUDA graph can loop
 on it with ``wp.capture_while`` and stop early.
 """
 
@@ -43,7 +45,7 @@ class ConvergenceCheck:
     """
 
     def __init__(self, fem: FemElastoDynamics, contact: ContactDynamics):
-        self.gradient_norm = GradientNorm(fem, contact)
+        self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False)
         self.k = wp.zeros(1, dtype=wp.int32)
         self.keep_iterating = wp.zeros(1, dtype=wp.int32)
 
