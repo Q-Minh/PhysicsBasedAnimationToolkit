@@ -119,6 +119,7 @@ def _contact_derivatives(
     lambda_f: wp.array[wp.vec2f],
     sigma_n: wp.float32,
     sigma_f: wp.float32,
+    mu_f: wp.float32,
     xcp1: wp.vec3f,
     xtcp1: wp.vec3f,
     xcp2: wp.vec3f,
@@ -135,9 +136,20 @@ def _contact_derivatives(
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     dEn = sigma_n * c_n - lambda_n[c]
     dEf = sigma_f * c_f - lambda_f[c]
+    # Coulomb limit: the AL friction force sigma_f c_f - lambda_f is capped at mu_f times the
+    # contact's current normal force max(lambda_n - sigma_n c_n, 0), and its Hessian is scaled by
+    # the same factor. Without it, friction acts as unbounded viscous drag within a step (only the
+    # dual update projects lambda_f onto the cone).
+    friction_limit = mu_f * wp.max(-dEn, wp.float32(0))
+    friction_scale = wp.float32(1)
+    friction_norm = wp.length(dEf)
+    if friction_norm > friction_limit:
+        friction_scale = friction_limit / friction_norm
+        dEf = friction_scale * dEf
     gi = (gammak * wi) * (dEn * n + dEf[0] * t + dEf[1] * b)
     Hi = (gammak * wi * wi) * (
-        sigma_n * wp.outer(n, n) + sigma_f * (wp.outer(t, t) + wp.outer(b, b))  # type: ignore
+        sigma_n * wp.outer(n, n)  # type: ignore
+        + (friction_scale * sigma_f) * (wp.outer(t, t) + wp.outer(b, b))  # type: ignore
     )
     return gi, Hi
 
@@ -192,6 +204,7 @@ def local_contact_derivatives(
     dmin = contact.dmin
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
+    mu_f = contact.mu_f
     cvv, vv_bases = contact.cvv, fcontacts.vv_bases
     cve, ve_bases, ve_bary = contact.cve, fcontacts.ve_bases, fcontacts.ve_bary
     cvf, vf_bases, vf_bary = contact.cvf, fcontacts.vf_bases, fcontacts.vf_bary
@@ -221,6 +234,7 @@ def local_contact_derivatives(
             cvv.lambda_f,
             sigma_n,
             sigma_f,
+            mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
             xcp2,  # type: ignore
@@ -254,6 +268,7 @@ def local_contact_derivatives(
             cvv.lambda_f,
             sigma_n,
             sigma_f,
+            mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
             xcp2,  # type: ignore
@@ -289,6 +304,7 @@ def local_contact_derivatives(
             cve.lambda_f,
             sigma_n,
             sigma_f,
+            mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
             xcp2,  # type: ignore
@@ -325,6 +341,7 @@ def local_contact_derivatives(
             cvf.lambda_f,
             sigma_n,
             sigma_f,
+            mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
             xcp2,  # type: ignore
@@ -370,6 +387,7 @@ def local_contact_derivatives(
                 cee.lambda_f,
                 sigma_n,
                 sigma_f,
+                mu_f,
                 xcp1,
                 xtcp1,
                 xcp2,
@@ -405,6 +423,7 @@ def local_contact_derivatives(
                 cve.lambda_f,
                 sigma_n,
                 sigma_f,
+                mu_f,
                 xcp1,  # type: ignore
                 xtcp1,  # type: ignore
                 xcp2,
@@ -448,6 +467,7 @@ def local_contact_derivatives(
                 cvf.lambda_f,
                 sigma_n,
                 sigma_f,
+                mu_f,
                 xcp1,  # type: ignore
                 xtcp1,  # type: ignore
                 xcp2,
@@ -487,6 +507,7 @@ def local_contact_derivatives(
                 cee.lambda_f,
                 sigma_n,
                 sigma_f,
+                mu_f,
                 xcp1,
                 xtcp1,
                 xcp2,
