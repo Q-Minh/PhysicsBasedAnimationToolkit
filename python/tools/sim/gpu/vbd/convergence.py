@@ -26,7 +26,13 @@ from ..gradient import GradientNorm
 
 
 class ConvergenceParams(SerializableMixin):
-    """GPU-only settings of the VBD-family convergence test."""
+    """GPU-only settings of the VBD-family convergence test.
+
+    Held by ``SimulationState.convergence_params`` (kept across resets) and serialized under
+    ``Solver/Convergence``, so configs set them as ``Solver.Convergence.check_interval`` and
+    ``Solver.Convergence.ftol``. The gradient tolerance itself is each solver's ``gtol``
+    (``Solver.<solver>.gtol``), an absolute norm.
+    """
 
     check_interval = DocField(
         20, "VBD sweeps between convergence tests inside a subproblem (each test costs about a quarter sweep)"
@@ -222,6 +228,13 @@ class ConvergenceCheck:
         contact: ContactDynamics,
         params: ConvergenceParams | None = None,
     ):
+        """
+        Args:
+            fem (FemElastoDynamics): The problem whose gradient is tested.
+            contact (ContactDynamics): Its contact model (multipliers for the gradient, contact sets
+                for the feasibility test).
+            params (ConvergenceParams | None): Check interval and feasibility tolerance; defaults if None.
+        """
         self.params = params or ConvergenceParams()
         self._fem = fem
         self._contact = contact
@@ -260,7 +273,12 @@ class ConvergenceCheck:
         ]
 
     def start(self, gtol: float, n_max_iters: int) -> None:
-        """Test the initial positions: ``k = 0``, ``keep`` = not (optimal and feasible)."""
+        """Test the initial positions: ``k = 0``, ``keep`` = not (optimal and feasible).
+
+        Args:
+            gtol (float): Gradient-norm tolerance (absolute).
+            n_max_iters (int): Maximum outer iterations; ``keep`` is 0 if it's 0.
+        """
         self._test()
         self._measure_penetration()
         wp.launch(_start_kernel, dim=1, inputs=self._outer_test_inputs(gtol, n_max_iters))
@@ -270,7 +288,11 @@ class ConvergenceCheck:
         wp.launch(_begin_outer_kernel, dim=1, inputs=[self.keep, self.active])
 
     def begin_inner(self, n_blocks: int) -> None:
-        """Start a subproblem's loop over ``n_blocks`` sweep blocks."""
+        """Start a subproblem's loop over sweep blocks: ``inner_keep`` = 1 if ``n_blocks > 0``.
+
+        Args:
+            n_blocks (int): Number of blocks in the subproblem.
+        """
         wp.launch(
             _begin_inner_kernel,
             dim=1,
@@ -278,7 +300,14 @@ class ConvergenceCheck:
         )
 
     def after_block(self, gtol: float, n_blocks: int) -> None:
-        """Test after a sweep block: a converged subproblem stops, and so do its remaining sweeps."""
+        """Test after a sweep block: a converged subproblem stops, and so do its remaining sweeps.
+
+        Only the gradient is tested here; feasibility is tested between outer iterations.
+
+        Args:
+            gtol (float): Gradient-norm tolerance (absolute).
+            n_blocks (int): Number of blocks in the subproblem.
+        """
         self._test()
         wp.launch(
             _after_block_kernel,
@@ -295,11 +324,23 @@ class ConvergenceCheck:
 
     def end_outer(self, gtol: float, n_max_iters: int) -> None:
         """Test after an outer iteration (C++'s check before the next one, plus feasibility):
-        ``k += 1``, update ``keep``."""
+        ``k += 1``, update ``keep``.
+
+        Args:
+            gtol (float): Gradient-norm tolerance (absolute).
+            n_max_iters (int): Maximum outer iterations.
+        """
         self._test()
         self._measure_penetration()
         wp.launch(_end_outer_kernel, dim=1, inputs=self._outer_test_inputs(gtol, n_max_iters))
 
     def converged(self, gtol: float) -> bool:
-        """Host-side ``|g|^2 <= gtol^2`` from the last test. Synchronizes, so not capturable."""
+        """Host-side ``|g|^2 <= gtol^2`` from the last test. Synchronizes, so not capturable.
+
+        Args:
+            gtol (float): Gradient-norm tolerance (absolute).
+
+        Returns:
+            bool: Whether the last gradient test passed (feasibility isn't included).
+        """
         return float(self.gradient_norm.gnorm2.numpy()[0]) <= float(gtol) * float(gtol)
