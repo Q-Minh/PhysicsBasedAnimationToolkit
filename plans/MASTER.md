@@ -255,7 +255,7 @@ Each session updates only its own row.
 | 1 | idle: kinematics (`c41bc1ad`) and scene ingestion (`65fc5fe1`) merged into dev | 2026-10-18 | Worktree rebased on dev. Open follow-ups, if wanted: GPU static-collider contact, the CPU `simulate.py -o` drive-letter bug |
 | 2 | milestone 3 in progress (AAAVBD analysis) | 2026-10-18 | Milestones 1–2 merged. M3 tools on branch (anatomy, ncu, overheads report, 7 commits after `92791e16`): [AAAVBD overheads](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Found 4× redundant constraint-set copies (−23% step time with a 2-line fix, awaiting maintainer decision) |
 | 3 | merged (3aae8ba5); on hold | 2026-10-18 | static machinery, convergence/feasibility loop, benchmark tooling merged; waiting for benchmark data/plot requirements |
-| 4 | benchmark generator ready; full dataset on hold | 2026-10-18 | 5 commits (GUI gravity, `make_benchmark.py`) awaiting review. Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data and plot requirements |
+| 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
 
@@ -455,6 +455,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · Maintainer: (a) dependencies go in the nearest `requirements.txt` (added to Rules). (b) Feasibility check between outer iterations: **normal contact only, ignore friction**; user-prescribed tolerance under `Solver/Convergence` (relayed to task 3). (c) Next, once the task branches are merged: coordinator proposes manual test scenes covering the recent features, then pushes `dev` to the remote, then the benchmark discussion.
 - 2026-10-18 · task 3 · **GPU run END** (feasibility-test validation on CubeFallingOnCube/BeamFallingOnBeam; dev-vs-branch contact scans).
 - 2026-10-18 · coordinator · **Merged `feature/gpu-static-solves` @43babcfb** into dev (`3aae8ba5`). The 1e-6 to 1e-5 dynamic differences vs dev at gtol=0 come from codegen (the `is_static` branch changes FMA contraction) and Chebyshev's omega recurrence now running in float32 on the device; verified by task 3. Bug ownership: **vertex-SDF sentinel VF slots** (CubeFallingOnCube, also on dev) → task 1, high priority (paper detector). **OGC CUDA 700 on CubeFallingOnCube/AAAVBD** → parked (OGC low priority). Task 2: contact-gather early-out on dev now. Task 1: rebase `feature/gpu-static-colliders` on dev.
+- 2026-10-18 · coordinator · **GPU run START** (~3 min, correctness only: Anderson sweep-parity counts on the beam). Will log END.
+- 2026-10-18 · coordinator · **GPU run END** (Anderson sweep parity: every p runs exactly n_max_iters × n_subproblem_max_iters sweeps, eager and captured).
 
 ## Open questions for the maintainer
 

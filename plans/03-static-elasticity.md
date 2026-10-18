@@ -1,6 +1,6 @@
 # Task 3: Static (equilibrium) solves and a convergence benchmark
 
-Status: **not started** · Branch `feature/gpu-static-solves` · Worktree `C:\git\pbat-static`
+Status: **merged (static machinery); benchmark runs on hold** · Branch `feature/gpu-static-solves` · Worktree `C:\git\pbat-static`
 Read first: `MASTER.md`, `python/tools/sim/CLAUDE.md`, `source/pbat/sim/CLAUDE.md`.
 
 ## Goal
@@ -130,6 +130,7 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
     - Restructure the loops: outer iterations unrolled on the host; each subproblem's sweeps replay as one device block inside `capture_if`/`capture_while`; refit/detection stay in the regular graph between conditional nodes.
     - The maintainer wants graph capture to stay close to the efficiency of capturing the whole step. Explanation: https://claude.ai/artifact/A632yEjdeA2JV1cEMPqmPp
     - Evidence for the blocker: whole-step capture with VertexSdf works (the allocation becomes a regular graph memory node); only conditional bodies reject it. `scan_device` calls `wp_alloc_device` per call with no cache or option. The scanned average edge length is used only by `mesh_query_point_sign_normal`, while we call `mesh_query_point` (ray-parity sign). Python doesn't expose the mesh's BVH.
+18. ~~Feasibility test?~~ **Answered (2026-10-18):** penetration only, over normal contacts (friction ignored): max_j max(0, dmin − c_j(x)) ≤ ftol · dmin, with ftol relative to dmin (`ConvergenceParams.ftol`, default 0.1, under Solver/Convergence). It's tested between outer iterations together with the gradient test; if it fails, the next subproblem runs. The maintainer asked whether AL complementarity is already enforced by the dual update. Answer given: the update keeps s ≥ 0 and λ ≥ 0, but λĉ = 0 is only its fixed point; the multiplier part is bounded by ‖g_L‖ at converged subproblems, while penetration needs the separate length test.
 
 ## Progress
 
@@ -204,3 +205,12 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 - 2026-10-18 · Small trampoline check (E5000 sample 0, 5 s cap, Dump params):
   - VBD e/e0 = 0.50 (37k sweeps, ~129 µs/sweep); AAAVBD 0.39 (50% at 2.5 s); Newton (CG ≤ 300) 0.35.
   - Much faster than the conditioning extrapolation suggested: cond(M⁻¹K) overstates the difficulty for these modal shapes.
+- 2026-10-18 · Commits after the rebase on dev 65fc5fe1:
+  - `0e948904`: Lagrangian-form convergence gradient (C++ parity).
+  - `3de23271`: check interval and the loop restructure (unrolled outer loop inside capture_if, sweep blocks in capture_while, refit in `prepare_detection`). Bit-identical to unrolled; early exit now works with contact (VBD 59 → 16 ms, AAAVBD 67 → 11 ms per beam step at the Dump's gtol).
+  - `43babcfb`: feasibility test, validated against numpy on BeamFallingOnBeam.
+  - The branch is merge-ready per the coordinator's review. The branch-vs-dev difference at gtol = 0 is codegen from the static branch (≤ ~1e-5), confirmed earlier.
+- 2026-10-18 · **Pre-existing contact bugs found (also on dev), reported to the coordinator:**
+  - (a) Vertex-SDF detection counts VF slots holding the sentinel v = nF on CubeFallingOnCube, so consumers read `F[nF]` out of bounds; suspected cause is the block write indexing after `tile_sort` in `sd.py`.
+  - (b) OGC crashes with CUDA 700 on CubeFallingOnCube between steps 10 and 20.
+- 2026-10-18 · **Merged:** `feature/gpu-static-solves` @43babcfb is on dev as 3aae8ba5. The vertex-SDF sentinel bug goes to task 1; the OGC crash is parked (not used for the paper). The coordinator implements Anderson sweep parity on dev. Next: wait for the maintainer and coordinator to settle the benchmark data, plot and measurement; static benchmark runs stay on hold.
