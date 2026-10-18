@@ -13,7 +13,7 @@ class DocField:
             lr = DocField(1e-3, "Learning rate.")
     """
 
-    def __init__(self, default: float | int | bool | Enum, doc: str = ""):
+    def __init__(self, default: float | int | bool | Enum | str, doc: str = ""):
         self.default = default
         self.__doc__ = doc
 
@@ -70,8 +70,44 @@ class SerializableMixin:
                     value = bool(int(raw))
                 elif isinstance(default, int):
                     value = int(raw)
+                elif isinstance(default, str):
+                    value = raw.decode() if isinstance(raw, bytes) else str(raw)
                 else:
                     value = float(raw)
                 setattr(self, name, value)
             except Exception:
                 pass
+
+
+import unittest
+
+
+class TestSerializableMixin(unittest.TestCase):
+    def test_h5_round_trip(self):
+        import uuid
+        import h5py
+
+        class Color(Enum):
+            RED = 1
+            BLUE = 2
+
+        class Params(SerializableMixin):
+            name = DocField("", "A path or label")
+            count = DocField(3, "An int")
+            scale = DocField(0.5, "A float")
+            flag = DocField(False, "A bool")
+            color = DocField(Color.RED, "An enum")
+
+        a = Params()
+        a.name, a.count, a.scale, a.flag, a.color = "C:/data/batch.h5", 7, 0.25, True, Color.BLUE
+        with h5py.File(f"{uuid.uuid4().hex}.h5", "w", driver="core", backing_store=False) as f:
+            a.serialize(f.create_group("p"))
+            b = Params()
+            b.deserialize(f["p"])
+        self.assertEqual(b.name, "C:/data/batch.h5")
+        self.assertIsInstance(b.name, str)
+        self.assertEqual((b.count, b.scale, b.flag, b.color), (7, 0.25, True, Color.BLUE))
+
+
+if __name__ == "__main__":
+    unittest.main()
