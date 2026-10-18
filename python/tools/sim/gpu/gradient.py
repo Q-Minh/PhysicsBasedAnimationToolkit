@@ -1,5 +1,6 @@
 # type: ignore
 import warp as wp
+from .common import profiling
 
 from .contact.dynamics import MeshDynamics as ContactDynamics, MeshDynamicsData
 from .elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
@@ -256,6 +257,7 @@ class Gradient:
             wp.Stream() for _ in range(6)
         ]  # elastic, inertial, vv, ve, vf, ee
 
+    @profiling.scoped("newton.gradient")
     def compute(self, main_stream: wp.Stream) -> None:
         self._g.zero_()
         fem = self._fem

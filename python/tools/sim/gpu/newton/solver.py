@@ -7,6 +7,7 @@ Outer loop mirrors ``gpu/vbd/solver.py``.  Newton-specific work lives in
 
 import cuda.compute
 import warp as wp
+from ..common import profiling
 import warp.sparse
 import warp.optim.linear
 import cupy as cp
@@ -890,6 +891,7 @@ class Params:
         return self._data
 
 
+@profiling.scoped("solve.initialize")
 def initialize_solve(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -903,6 +905,7 @@ def initialize_solve(
     cd.filter_step()
 
 
+@profiling.scoped("newton.energy")
 def _compute_energy(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -971,6 +974,7 @@ def _compute_energy(
     return float(params._energy_scalar.numpy()[0])
 
 
+@profiling.scoped("newton.convergence")
 def check_convergence(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -992,6 +996,7 @@ def prepare_subproblem(
     pass
 
 
+@profiling.scoped("newton.subproblem")
 def solve_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -1010,6 +1015,7 @@ def solve_subproblem(
         if gnorm2 <= float(params.data.gtol2):
             break
         # Assemble FEM + contact Hessian
+        profiling.push("newton.assemble")
         params._data.Hvals.zero_()
         wp.launch(
             kernel=_compute_dynamics_hessian_triplets,
@@ -1076,6 +1082,8 @@ def solve_subproblem(
             prune_numerical_zeros=True,
             masked=False,
         )
+        profiling.pop()
+        profiling.push("newton.linear_solve")
         M = warp.optim.linear.preconditioner(params._H, "diag")
         # Solve H (-dx) = g
         params._ndx.zero_()
@@ -1089,6 +1097,7 @@ def solve_subproblem(
             M=M,
             use_cuda_graph=False,  # True
         )
+        profiling.pop()
         # Check descent direction slope=dot(g, dx) < 0.
         # Since we compute ndx=-dx, we check -dot(g, ndx) < 0.
         params._nslope_reduce(main_stream)
@@ -1096,6 +1105,7 @@ def solve_subproblem(
         if slope >= 0.0:
             break
         # Armijo backtracking line search
+        profiling.push("newton.line_search")
         x_backup = wp.clone(fem.data.x)
         E0 = _compute_energy(fem, contact, params, h2)
         alpha = float(params.data.ls_alpha)
@@ -1110,12 +1120,14 @@ def solve_subproblem(
                 break
             alpha *= float(params.data.ls_tau)
             wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, alpha])
+        profiling.pop()
         if not accepted:
             wp.copy(fem.data.x, x_backup)
             break
         params._gradient.compute(main_stream)
 
 
+@profiling.scoped("solve.finalize_subproblem")
 def finalize_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
