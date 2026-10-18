@@ -57,6 +57,8 @@ class StepProfile:
     """GPU busy time per scope path, exclusive of nested scopes (sum of activity durations)."""
     launches: dict[str, int]
     """Number of timed activities (kernel launches, memsets, memcpys) per scope path."""
+    calls: dict[str, int]
+    """Number of times each scope path was entered (e.g. VBD sweeps per step)."""
     kernels: dict[tuple[str, str], tuple[float, int]]
     """(scope path, activity name) -> (GPU busy time in ms, count)."""
     timeline_ms: dict[str, float]
@@ -128,17 +130,19 @@ class _KernelRecorder:
                 ms, count = kernels.get((path, activity.name), (0.0, 0))
                 kernels[(path, activity.name)] = (ms + activity.elapsed, count + 1)
         timeline_ms: dict[str, float] = {}
+        calls: dict[str, int] = {}
         for path, begin, end in self._brackets:
             elapsed = wp.get_event_elapsed_time(
                 self._events[begin], self._events[end], synchronize=False
             )
             timeline_ms[path] = timeline_ms.get(path, 0.0) + elapsed
+            calls[path] = calls.get(path, 0) + 1
         step_timeline_ms = wp.get_event_elapsed_time(
             self._events[self._step_begin_event],
             self._events[step_end_event],
             synchronize=False,
         )
-        return StepProfile(busy_ms, launches, kernels, timeline_ms, step_timeline_ms)
+        return StepProfile(busy_ms, launches, calls, kernels, timeline_ms, step_timeline_ms)
 
     def push(self, name: str):
         if not self._active:
@@ -298,7 +302,7 @@ class TestProfiling(unittest.TestCase):
         profile = end_step()
         self.assertEqual(profile.launches, {"": 1, "outer": 2, "outer/inner": 2, "outer/inner.decorated": 1})
         self.assertGreater(profile.total_busy_ms, 0.0)
-        self.assertEqual(set(profile.timeline_ms), {"outer", "outer/inner", "outer/inner.decorated"})
+        self.assertEqual(profile.calls, {"outer": 1, "outer/inner": 1, "outer/inner.decorated": 1})
         self.assertGreaterEqual(profile.timeline_ms["outer"], profile.timeline_ms["outer/inner"])
         self.assertGreaterEqual(profile.step_timeline_ms, profile.timeline_ms["outer"])
 

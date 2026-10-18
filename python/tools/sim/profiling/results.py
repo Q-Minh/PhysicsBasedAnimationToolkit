@@ -12,6 +12,7 @@ Nsight Systems importer, so reports can consume either. Layout::
         {"t": int,
          "busy_ms": {path: ms},        # GPU busy time per scope path, exclusive of nested scopes
          "launches": {path: n},        # timed activities per scope path
+         "calls": {path: n},           # times each scope path was entered
          "timeline_ms": {path: ms},    # optional diagnostic: scope GPU timeline, inclusive
          "step_timeline_ms": ms}       # optional diagnostic: step GPU timeline
       ],
@@ -56,6 +57,7 @@ class ProfileRecorder:
                 "t": t,
                 "busy_ms": profile.busy_ms,
                 "launches": profile.launches,
+                "calls": profile.calls,
                 "timeline_ms": profile.timeline_ms,
                 "step_timeline_ms": profile.step_timeline_ms,
             }
