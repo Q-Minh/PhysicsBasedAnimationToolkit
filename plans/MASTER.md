@@ -648,6 +648,19 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   Will log END.
 - 2026-10-18 · task 4 · **GPU run START**: GUI (`ui.py`, TwistPullBeam) for the maintainer's manual test of kinematic constraints. Timings from other sessions are unreliable while it runs. Will log END when the GUI closes.
 - 2026-10-18 · coordinator · Inverse singularity check scaled by the Frobenius norm (`3e7efa6a`, maintainer OK, bit-identical). Merged task 2's AAAVBD surface_stencil flag (default 1 bit-identical) and friction tuning guidance. Benchmark trampolines merged (rim_patch_scene). **Friction drag:** maintainer says fix only if cheap → task 3, time-boxed lagged-Coulomb cap (mu_f·lambda_n) at the end of its queue; stop and report if it needs real design work.
+- 2026-10-18 · task 4 · **GPU run START** (cont.): also the manual-test research scenes with kinematic constraints and contact (spaghetti tangle first), GUI, default sim-params. Will log END.
+- 2026-10-18 · task 3 · **GPU run END** (Newton diagnostics). **GPU run START** (~30 min, correctness only): penalty-default check, CONSTANT vs TIMESTEP vs SUBPROBLEM (gamma_adaptive 0.1) at the current defaults on BeamFallingOnBeam, CubeFallingOnCube and cow_on_trampoline, for all four VBD-family solvers. Ignore timings. Will log END.
+- 2026-10-18 · task 4 · **GPU run END**: TwistPullBeam and spaghetti-tangle GUIs closed.
+- 2026-10-18 · task 1 · **GPU run END** (friction penalty defaults). **Ready for review:** `feature/lower-friction-penalty`
+  (2 commits on dev `02614e4a`, head `82e6ed6d`). Defaults change from `gammaf` 1e3 to 10 and from `gammaf_adaptive`
+  0.1 to 1e-3, with defaults.toml and docs updated. On the 15° slope with mu_f 0.2, the cube's fitted acceleration goes
+  from ~0 (creep) to 1.39 (CONSTANT) and 0.99 (TIMESTEP); Coulomb is 0.64 and frictionless 2.54. ~50 / 0.002 would
+  match Coulomb on that scene. BeamFallingOnBeam and CubeFallingOnCube stay finite in both modes (beam max |dx| vs the old
+  defaults: 7 mm CONSTANT, 27 mm TIMESTEP). **Finding:** `mu_f` 0.2 and 0.5 give identical trajectories at every
+  penalty I tried, so the GPU's friction is entirely penalty drag and `lambda_f` never reaches the cone. This is
+  relevant to task 3's lagged-Coulomb cap. Paper configs pin both values and are unaffected.
+- 2026-10-18 · coordinator · Spaghetti timing run **deferred** (not started) until task 3's penalty check logs END; it needs a quiet GPU.
+- 2026-10-18 · task 4 · **GPU run START**: GUI, prism beams (twisting stiff, then compressing two_het-cubes), default sim-params, for the maintainer's manual test. Will log END.
 
 ## Open questions for the maintainer
 
