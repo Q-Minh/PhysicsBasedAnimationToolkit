@@ -299,3 +299,8 @@ class Sd(ContactDetection):
 
     def on_time_step_ended(self):
         pass
+
+    @property
+    def supports_conditional_capture(self) -> bool:
+        # wp.Mesh.refit allocates scan temporaries, which conditional graph bodies forbid
+        return bool(self.params.deactivate)

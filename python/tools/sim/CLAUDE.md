@@ -60,7 +60,15 @@ initialize_solve → for k < n_max_iters: [check_convergence] → prepare_subpro
 → fem.back_substitute_velocities() → cd.on_time_step_ended()
 ```
 
-Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated variants. `check_convergence` and `linearize_constraints` are still TODO stubs on the GPU, so solvers always run the full iteration counts. The UI calls `fem.setup_time_integration_optimization(...)` before `solve` and `fem.step()` after it.
+Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated variants. `linearize_constraints` is still a TODO stub on the GPU. The UI calls `fem.setup_time_integration_optimization(...)` before `solve` and `fem.step()` after it.
+
+**Convergence and early exit.** The VBD-family solvers share `vbd.solver.solve_outer_loop`:
+- It tests `|g|^2 <= gtol^2` on the device (`gpu/vbd/convergence.py::ConvergenceCheck`, built on `gpu/gradient.py::GradientNorm`, which Newton uses too). `SimulationState` builds one check and shares it among the VBD-family params (`params.convergence`).
+- It loops with `wp.capture_if` (k = 0) + `wp.capture_while` (k ≥ 1), so captured graphs exit early. Each body is recorded once, so solvers may only distinguish `k == 0` from `k > 0` (AAAVBD's acceleration gate).
+- The conditional loop is also about 2× faster than the unrolled graph at equal work: graph size, not kernel work, dominated the step time (6669 vs 696 nodes on MediumLongBendingBeam).
+- Conditional graph bodies must not allocate. A detector whose `supports_conditional_capture` is False makes captured solves fall back to `n_max_iters` unrolled iterations. That's the case for vertex SDF when active, because `wp.Mesh.refit` allocates scan temporaries, and for OGC, which is untested.
+
+**Static problems.** With `fem.static` set, the objective is Ψ(x) − fextᵀx: solvers drop the inertia term, use `fem.h2 = 1` instead of `BetaTilde²`, and static Newton SPD-corrects d²Ψ/dF² (`gpu/elasticity/spd.py`). Its CG limits are `newton.solver.LinearSolverParams`.
 
 **How solver names map between GPU and CPU:**
 - `VbdSolver` is plain VBD.

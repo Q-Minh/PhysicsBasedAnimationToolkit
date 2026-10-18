@@ -154,6 +154,10 @@ class Params:
         self._data.Qfk = wp.zeros(
             (n_nodes,), dtype=wp.float32
         )  # (N,) max vertex friction contact Rayleigh quotients
+        # Device-side convergence test (gpu.vbd.convergence.ConvergenceCheck), built for a given
+        # FEM and contact problem by the owner of both. Without it, solves run n_max_iters outer
+        # iterations.
+        self.convergence = None
 
     @property
     def data(self) -> ParamsData:  # pyright: ignore[reportGeneralTypeIssues]

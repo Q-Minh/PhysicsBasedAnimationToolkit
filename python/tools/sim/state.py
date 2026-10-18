@@ -287,6 +287,7 @@ class SimulationState:
         )
         newton_params.construct(self.fem, self.contact)
         self.params[SolverType.Newton] = newton_params
+        self._construct_convergence_check()
         # Contact detection algorithm selection
         self.cd_type: CDType = CDType.VertexSdf
         self.cd_params = {
@@ -322,6 +323,17 @@ class SimulationState:
             self.kinematics_anchors,
         )
         self.fem.set_kinematic_constraints(self.kinematics)
+
+    def _construct_convergence_check(self):
+        """Share one device-side convergence test among the VBD-family solvers' params."""
+        self.convergence = gpu.vbd.convergence.ConvergenceCheck(self.fem, self.contact)
+        for s in (
+            SolverType.VBD,
+            SolverType.AAAVBD,
+            SolverType.Chebyshev,
+            SolverType.AndersonSolver,
+        ):
+            self.params[s].convergence = self.convergence
 
     def _make_contact_detector(
         self, contact_pair_storage: gpu.contact.mesh.pairs.ContactPairs
@@ -415,6 +427,7 @@ class SimulationState:
         )
         newton_params.construct(self.fem, self.contact)
         self.params[SolverType.Newton] = newton_params
+        self._construct_convergence_check()
         self.detector = self._make_contact_detector(contact_pair_storage)
         self.solvers = {
             SolverType.VBD: gpu.vbd.solver.VbdSolver(),

@@ -5,7 +5,7 @@ Mirrors `pbat::sim::algorithm::vbd::Solve` from `source/pbat/sim/algorithm/vbd/C
 Contact constraints are left as placeholders for future implementation.
 """
 
-from typing import Tuple
+from typing import Callable, Tuple
 import warp as wp
 from ..common import profiling
 import numpy as np
@@ -158,8 +158,59 @@ def linearize_constraints(
 def check_convergence(
     fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ) -> bool:
-    """TODO: Check gradient norm convergence (elastic + momentum + contact)."""
-    return False
+    """Check gradient norm convergence (elastic + momentum or external load + contact), |g| <= gtol.
+
+    Mirrors ``pbat::sim::algorithm::vbd::CheckConvergence``. Reads the result back to the host, so
+    it can't be captured; solves test convergence on the device instead (see
+    :func:`solve_outer_loop`). Returns False if ``params.convergence`` wasn't built.
+    """
+    if params.convergence is None:
+        return False
+    params.convergence.gradient_norm.compute(wp.get_stream())
+    return params.convergence.converged(params.data.gtol)
+
+
+def solve_outer_loop(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    cd: ContactDetection,
+    params: Params,
+    outer_iteration: Callable[[int], None],
+) -> bool:
+    """Run the outer (augmented-Lagrangian) loop shared by the VBD-family solvers.
+
+    Equivalent to ``for k < n_max_iters: if check_convergence(...): break; outer_iteration(k)``. The
+    convergence test runs on the device (:class:`ConvergenceCheck`) and the loop is a
+    ``wp.capture_if`` (k = 0) followed by a ``wp.capture_while`` (k >= 1), so captured graphs stop
+    early too. Each body is recorded once, so ``outer_iteration`` receives ``k = 0`` for the first
+    iteration and ``k = 1`` for every later one; solvers may only distinguish ``k == 0`` from
+    ``k > 0``.
+
+    Falls back to ``n_max_iters`` unrolled iterations without a convergence test if
+    ``params.convergence`` wasn't built, or if a graph is being captured and ``cd`` can't run inside
+    conditional graph bodies (:attr:`ContactDetection.supports_conditional_capture`).
+
+    Returns:
+        bool: Whether the solve converged. Always False while capturing, where the result stays on
+        the device (``params.convergence.keep_iterating``).
+    """
+    check = params.convergence
+    n_max_iters = int(params.data.n_max_iters)
+    is_capturing = wp.get_device().is_capturing
+    if check is None or (is_capturing and not cd.supports_conditional_capture):
+        for k in range(n_max_iters):
+            outer_iteration(k)
+        return False
+    gtol = float(params.data.gtol)
+
+    def body(k: int):
+        outer_iteration(k)
+        check.advance(gtol, n_max_iters)
+
+    check.start(gtol, n_max_iters)
+    wp.capture_if(check.keep_iterating, on_true=body, k=0)
+    wp.capture_while(check.keep_iterating, while_body=body, k=1)
+    return False if is_capturing else check.converged(gtol)
 
 
 @profiling.scoped("contact.penalty")
@@ -291,15 +342,14 @@ class VbdSolver:
         cd: ContactDetection,
         params: Params,
     ) -> bool:
-        converged = False
         initialize_solve(fem, contact, cd, params)
-        for k in range(params.data.n_max_iters):
-            if check_convergence(fem, contact, params):
-                converged = True
-                break
+
+        def outer_iteration(k: int):
             prepare_subproblem(fem, contact, cd, params)
             solve_subproblem(fem, contact, params)
             finalize_subproblem(fem, contact, cd, params)
+
+        converged = solve_outer_loop(fem, contact, cd, params, outer_iteration)
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged

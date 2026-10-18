@@ -98,5 +98,13 @@ class ContactDetection(ABC):
         pass
 
     @property
+    def supports_conditional_capture(self) -> bool:
+        """Whether :meth:`detect_contacts` and :meth:`filter_step` can be recorded inside a
+        conditional CUDA graph body (``wp.capture_if``/``wp.capture_while``), which must not
+        allocate. Solvers unroll their loops otherwise. Conservatively False unless verified.
+        """
+        return False
+
+    @property
     def name(self) -> str:
         return self._name

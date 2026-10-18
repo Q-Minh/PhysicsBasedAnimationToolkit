@@ -18,8 +18,8 @@ from .kernels import (
     integrate_positions,
 )
 from .solver import (
-    check_convergence,
     initialize_solve,
+    solve_outer_loop,
     linearize_constraints,
     prepare_subproblem,
     finalize_subproblem,
@@ -275,15 +275,14 @@ class AaaVbdSolver:
         cd: ContactDetection,
         params: Params,
     ) -> bool:
-        converged = False
         initialize_solve(fem, contact, cd, params)
-        for k in range(params.data.n_max_iters):
-            if check_convergence(fem, contact, params):
-                converged = True
-                break
+
+        def outer_iteration(k: int):
             prepare_subproblem(fem, contact, cd, params)
             solve_subproblem(k, fem, contact, params)
             finalize_subproblem(fem, contact, cd, params)
+
+        converged = solve_outer_loop(fem, contact, cd, params, outer_iteration)
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged
