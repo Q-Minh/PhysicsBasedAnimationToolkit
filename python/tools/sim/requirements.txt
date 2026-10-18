@@ -2,6 +2,7 @@ warp-lang==1.17.0
 usd-core==26.3
 pyglet==2.1.14
 nvtx==0.2.15
+nvidia-cuda-cupti-cu12==12.9.79
 cuda-cccl[cu12]==0.6.0
 cupy==14.0.1
 psutil==7.2.2
