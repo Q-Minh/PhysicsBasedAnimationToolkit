@@ -14,7 +14,9 @@ Backends (see plans/02-profiling.md):
   giving per-scope GPU busy time. Scope boundaries are also bracketed with CUDA events on the current
   stream, whose elapsed time (the scope's GPU timeline, including idle gaps) serves as a diagnostic for
   work Warp does not time (e.g. ``cuda.compute`` and cupy kernels). Requires eager execution.
-- ``Backend.NVTX``: scopes emit NVTX ranges in the ``pbat`` domain, for Nsight Systems.
+- ``Backend.NVTX``: scopes emit NVTX ranges in the ``pbat`` domain, for Nsight Systems. Each profiled
+  step is wrapped in a ``step`` range, so the importer (``python/tools/sim/profiling/nsys.py``) can
+  tell measured steps from warm-up steps.
 
 Profile one simulation step with::
 
@@ -34,6 +36,7 @@ import warp as wp
 
 _NO_OP_SCOPE = contextlib.nullcontext()
 _NVTX_DOMAIN = "pbat"
+_NVTX_STEP = "step"
 _PATH_SEPARATOR = "/"
 
 
@@ -237,6 +240,8 @@ def begin_step():
     """Start profiling one step. Pair with :func:`end_step`."""
     if _backend is Backend.KERNELS:
         _recorder.begin_step()
+    elif _backend is Backend.NVTX:
+        nvtx.push_range(_NVTX_STEP, domain=_NVTX_DOMAIN)
 
 
 def end_step() -> StepProfile | None:
@@ -247,6 +252,8 @@ def end_step() -> StepProfile | None:
     """
     if _backend is Backend.KERNELS:
         return _recorder.end_step()
+    if _backend is Backend.NVTX:
+        nvtx.pop_range(domain=_NVTX_DOMAIN)
     return None
 
 
