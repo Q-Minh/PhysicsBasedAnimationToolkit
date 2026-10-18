@@ -97,6 +97,7 @@ def _detect_vertex_mesh_contacts(
                 tnvv += 1
 
     # 2. Use block-level primitives to avoid atomic contention on global memory when writing contact pairs.
+    # Contacts that don't fit the pair storage's capacity are dropped (raise the n_*_contact_capacity params).
     # NOTE:
     # 1. All contact pairs should be unique here, because this block's vertex only detects 1 contact
     # per every other mesh.
@@ -115,8 +116,8 @@ def _detect_vertex_mesh_contacts(
             vv_offset = wp.atomic_add(contacts.vv.prefix, n_verts, wp.uint64(tnvv))
         vv_offset = wp.tile_extract(wp.tile_from_thread(shape=1, value=vv_offset, thread_idx=0), 0)  # type: ignore
         for block_row in range(MAX_VV_PER_THREAD):
-            if bvv[block_row, local_tid] < n_verts:
-                c = vv_offset + wp.uint64(block_row * block_dim + local_tid)
+            c = vv_offset + wp.uint64(block_row * block_dim + local_tid)
+            if bvv[block_row, local_tid] < n_verts and c < wp.uint64(contacts.vv.u.shape[0]):
                 contacts.vv.u[c] = wp.uint32(v)
                 contacts.vv.v[c] = wp.uint32(bvv[block_row, local_tid])
     if has_ve_contacts:
@@ -127,8 +128,8 @@ def _detect_vertex_mesh_contacts(
             ve_offset = wp.atomic_add(contacts.ve.prefix, n_verts, wp.uint64(tnve))
         ve_offset = wp.tile_extract(wp.tile_from_thread(shape=1, value=ve_offset, thread_idx=0), 0)  # type: ignore
         for block_row in range(MAX_VE_PER_THREAD):
-            if bve[block_row, local_tid] < n_half_edges:
-                c = ve_offset + wp.uint64(block_row * block_dim + local_tid)
+            c = ve_offset + wp.uint64(block_row * block_dim + local_tid)
+            if bve[block_row, local_tid] < n_half_edges and c < wp.uint64(contacts.ve.u.shape[0]):
                 contacts.ve.u[c] = wp.uint32(v)
                 contacts.ve.v[c] = wp.uint32(bve[block_row, local_tid])
     if has_vf_contacts:
@@ -139,8 +140,8 @@ def _detect_vertex_mesh_contacts(
             vf_offset = wp.atomic_add(contacts.vf.prefix, n_verts, wp.uint64(tnvf))
         vf_offset = wp.tile_extract(wp.tile_from_thread(shape=1, value=vf_offset, thread_idx=0), 0)  # type: ignore
         for block_row in range(MAX_VF_PER_THREAD):
-            if bvf[block_row, local_tid] < n_tris:
-                c = vf_offset + wp.uint64(block_row * block_dim + local_tid)
+            c = vf_offset + wp.uint64(block_row * block_dim + local_tid)
+            if bvf[block_row, local_tid] < n_tris and c < wp.uint64(contacts.vf.u.shape[0]):
                 contacts.vf.u[c] = wp.uint32(v)
                 contacts.vf.v[c] = wp.uint32(bvf[block_row, local_tid])
 
