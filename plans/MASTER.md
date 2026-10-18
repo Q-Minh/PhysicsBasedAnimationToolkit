@@ -98,6 +98,9 @@ will instrument).
 - **Context.** `CLAUDE.md`, `python/tools/sim/CLAUDE.md` and the skills (`pbat-build`, `pbat-python-api`,
   `warp-port`) are tracked and available in every worktree. The `cpu-gpu-parity` agent is useful for tasks 1 and 3.
 - **Granular commits (maintainer, 2026-10-17).** One logical, reversible change per commit, each leaving the code working, so any state can be reverted or bisected. Split unrelated hunks.
+- **Dependencies (maintainer, 2026-10-18).** Add every new external dependency to the `requirements.txt`
+  closest to the code that needs it (e.g. `python/tools/sim/requirements.txt` for `tools/sim`), pinned like
+  its neighbours. Configs are TOML (or YAML); everything else (trajectories, datasets, meshes) is HDF5.
 - **Commits.** Small commits on your own branch, ending with the Co-Authored-By line. Rebase on `dev` before
   asking for a merge. Never push to `dev` or `master` yourself; the coordinator merges.
 - **Asking the maintainer.** Each plan lists open questions. Ask them in your own session before
@@ -249,7 +252,7 @@ Each session updates only its own row.
 | Task | State | Last update | Notes |
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
-| 1 | kinematics merged (`c41bc1ad`); scene ingestion implemented on `feature/gpu-scene-ingestion` | 2026-10-18 | 8 commits on dev `3caa72c1`. Waiting for the GPU (task 2 run) to verify: bit-identical Dumps, scene vs Dump runs, CubeFallingOnPlaneFast |
+| 1 | idle: kinematics (`c41bc1ad`) and scene ingestion (`65fc5fe1`) merged into dev | 2026-10-18 | Worktree rebased on dev. Open follow-ups, if wanted: GPU static-collider contact, the CPU `simulate.py -o` drive-letter bug |
 | 2 | milestone 3 in progress (AAAVBD analysis) | 2026-10-18 | Milestones 1–2 merged. M3 tools on branch (anatomy, ncu, overheads report, 7 commits after `92791e16`): [AAAVBD overheads](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Found 4× redundant constraint-set copies (−23% step time with a 2-line fix, awaiting maintainer decision) |
 | 3 | implementing | 2026-10-18 | static solves, convergence loop, benchmark + GUI panel done; preliminary results published; waiting on the maintainer's static params file and full run |
 | 4 | benchmark generator ready; full dataset on hold | 2026-10-18 | 5 commits (GUI gravity, `make_benchmark.py`) awaiting review. Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data and plot requirements |
@@ -422,6 +425,34 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 2 · **GPU run END.** New finding (FYI task 3, who owns the solver kernels): on trampoline, which has no contacts, **contact gathering dominates the vertex solve**. `local_contact_derivatives` plus the half-edge helpers take ~60% of AAAVBD's warp stall samples (VBD ~72%) and about half its instructions (ncu source view with line info, native builtins folded into their callers). Every trampoline vertex is a surface vertex, so each one walks its half-edges and faces and reads reverse-contact prefixes in every sweep. A contact-free experiment that skips the gather is bit-identical: AAAVBD 83.8 → 40.6 ms/step (−52%), VBD 75.2 → 46.3 (−38%). Candidate fix: compute a per-vertex contact count once per constraint-set update and early-out in the vertex solve. **Not implemented** (solver kernels belong to task 3); asking the maintainer. Tooling (`ncu.py --lineinfo` hotspots, report section) is 3 commits on `feature/gpu-profiling` after `7ad6a983`. **Coordinator:** the `capture_while` anatomy needs task 3's branch on dev; I'll run it after that merge.
 - 2026-10-18 · coordinator · Merged task 2's ncu hotspot tooling (d05f0987). **Task 2 finding:** contact gathering in the vertex solve takes ~60% of AAAVBD's stalls (VBD ~72%) even with zero contacts; skipping it is bit-identical: AAAVBD 83.8 → 40.6, VBD 75.2 → 46.3 ms/step on trampoline. The owner of the fix is pending the maintainer's decision; it should land after task 3's kernel changes (gpu/vbd/kernels.py). Asked task 3 for a merge-ready slice.
 - 2026-10-18 · coordinator · Maintainer wants reusable sim-params files for benchmarks and scenarios. The paper's configs live in `C:\git\accelerated-vbd-extras` (parameters/gpu = GPU export format, all 19 files load in the current GPU loader with no unknown keys; parameters/cpu + vbd.sal.h5 = CPU format). Design discussion pending.
+- 2026-10-18 · task 1 · **GPU run (correctness only, ~8 min, just finished; logged afterwards because my START
+  edit didn't get written).** It overlapped task 3's correctness window only; no timings were affected.
+  **START/END.** Results for `feature/gpu-scene-ingestion`:
+  - MediumLongBendingBeam and TwistPullBeam, branch vs dev (VBD, 0.3 s): bit-identical, so the reset change
+    leaves zero-velocity Dumps unchanged.
+  - Scene vs Dump: `--scene CubeFallingOnCube.h5` vs its Dump (0.5 s), and the compressing prism scene vs a Dump
+    of it (0.3 s): bit-identical.
+  - CubeFallingOnPlaneFast: loads with the "ignoring 1 static mesh collider" warning and starts at its v0 = 10
+    (1.054 m in 0.1 s).
+  - **Ready for review:** 8 commits on dev `3caa72c1`.
+- 2026-10-18 · task 3 · **GPU run END** (restructured-loop bit-identity checks).
+- 2026-10-18 · task 2 · **GPU run START** (~30 min, light): validating the contact-gather early-out prototype (bit-identity and timing on trampoline, beam and a contact scene). Will log END.
+- 2026-10-18 · task 1 · Maintainer requests (this session):
+  - **CPU `simulate.py -o` drive-letter bug:** fixed on `feature/cpu-output-path` (1 commit, `402c0225`). It
+    splits on the last `:`. Ready for review.
+  - **GPU static colliders, "if it can be done simply".** I think it can, so I'm implementing it on
+    `feature/gpu-static-colliders`. Design: collider vertices become element-less FEM nodes appended after the
+    bodies (`--scene` only), fixed forever by a "Static colliders" kinematic constraint. They get the
+    bodies' mean nodal mass, which only scales the contact penalty's Rayleigh quotients. The contact
+    MultiMesh is the tet boundary plus the collider triangles, one component per body and per collider.
+    `SimulationState(..., contact_mesh=None)` takes it, append-only. `sd.py`: open meshes (e.g. ground
+    planes) sign distances by face normal (`mesh_query_point_sign_normal`) instead of ray parity. No solver
+    or contact-constraint kernel changes. **Touches `gpu/contact/mesh/sd.py`** (a per-mesh closed flag and
+    one branch in the detection kernel). Closed meshes are unchanged, so Dumps are expected bit-identical
+    (to be verified). GPU checks wait for task 2's END.
+- 2026-10-18 · task 3 · **GPU run START** (~5 min, correctness only: feasibility test on CubeFallingOnCube, AAAVBD/VBD). Will log END.
+
+- 2026-10-18 · coordinator · Maintainer: (a) dependencies go in the nearest `requirements.txt` (added to Rules). (b) Feasibility check between outer iterations: **normal contact only, ignore friction**; user-prescribed tolerance under `Solver/Convergence` (relayed to task 3). (c) Next, once the task branches are merged: coordinator proposes manual test scenes covering the recent features, then pushes `dev` to the remote, then the benchmark discussion.
 
 ## Open questions for the maintainer
 
