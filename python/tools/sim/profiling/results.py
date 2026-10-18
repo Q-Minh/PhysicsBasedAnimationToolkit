@@ -15,6 +15,8 @@ Nsight Systems importer, so reports can consume either. Layout::
          "calls": {path: n},           # times each scope path was entered
          "union_ms": {path: ms},       # union of activity intervals per path (no double-counting
                                        # of concurrent streams)
+         "union_incl_ms": {path: ms},  # the same union over the path and all paths below it, for every
+                                       # path and ancestor path (inclusive unions can't be summed)
          "step_union_ms": ms,          # union over the whole step
          "step_span_ms": ms,           # first activity start to last activity end
          "step_timeline_ms": ms}       # production runs only (no per-phase timings): step GPU
@@ -35,7 +37,7 @@ import subprocess
 import numpy as np
 import warp as wp
 
-from ..gpu.common.profiling import StepProfile
+from ..gpu.common.profiling import StepProfile, path_ancestors
 
 SCHEMA = "pbat-sim-profile/1"
 UNSCOPED = "(unscoped)"
@@ -63,6 +65,7 @@ class ProfileRecorder:
                 "launches": profile.launches,
                 "calls": profile.calls,
                 "union_ms": profile.union_ms,
+                "union_incl_ms": profile.union_incl_ms,
                 "step_union_ms": profile.step_union_ms,
                 "step_span_ms": profile.step_span_ms,
             }
@@ -113,6 +116,66 @@ def mean_busy_ms_per_step(result: dict, by_leaf: bool = False) -> dict[str, floa
             totals[key] = totals.get(key, 0.0) + ms
     n = max(len(result["steps"]), 1)
     return {key: ms / n for key, ms in totals.items()}
+
+
+def inclusive(per_path: dict[str, float]) -> dict[str, float]:
+    """Inclusive values from exclusive ones: per path and ancestor path, the sum over the path and all
+    paths below it. Valid for additive quantities (busy time, launches), not for interval unions."""
+    out: dict[str, float] = {}
+    for path, value in per_path.items():
+        for ancestor in path_ancestors(path):
+            out[ancestor] = out.get(ancestor, 0.0) + value
+    return out
+
+
+def _mean_per_step(result: dict, key: str) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for step in result["steps"]:
+        for path, value in step.get(key, {}).items():
+            totals[path] = totals.get(path, 0.0) + value
+    n = max(len(result["steps"]), 1)
+    return {path: value / n for path, value in totals.items()}
+
+
+def scope_tree(result: dict) -> list[dict]:
+    """Scope tree rows with per-step means, depth first, siblings by decreasing total busy time.
+
+    Each row has ``path``, ``name`` (innermost scope), ``depth``, ``self_ms`` and ``total_ms`` (busy time,
+    exclusive and inclusive of nested scopes), ``self_launches`` and ``total_launches``, ``calls`` and
+    ``union_incl_ms`` (``None`` for results recorded without inclusive unions).
+    """
+    self_ms = _mean_per_step(result, "busy_ms")
+    self_launches = _mean_per_step(result, "launches")
+    calls = _mean_per_step(result, "calls")
+    has_unions = any("union_incl_ms" in step for step in result["steps"])
+    unions = _mean_per_step(result, "union_incl_ms")
+    total_ms, total_launches = inclusive(self_ms), inclusive(self_launches)
+    children: dict[str | None, list[str]] = {}
+    for path in total_ms:
+        parent = path.rsplit("/", 1)[0] if "/" in path else None
+        children.setdefault(parent, []).append(path)
+    rows = []
+
+    def visit(path: str, depth: int):
+        rows.append(
+            {
+                "path": path,
+                "name": leaf(path),
+                "depth": depth,
+                "self_ms": self_ms.get(path, 0.0),
+                "total_ms": total_ms[path],
+                "self_launches": self_launches.get(path, 0.0),
+                "total_launches": total_launches.get(path, 0.0),
+                "calls": calls.get(path, 0.0),
+                "union_incl_ms": unions.get(path) if has_unions else None,
+            }
+        )
+        for child in sorted(children.get(path, []), key=lambda c: -total_ms[c]):
+            visit(child, depth + 1)
+
+    for root in sorted(children.get(None, []), key=lambda r: -total_ms[r]):
+        visit(root, 0)
+    return rows
 
 
 def format_summary(result: dict) -> str:
@@ -211,3 +274,40 @@ def collect_metadata(state, scene: str, warmup_steps: int) -> dict:
         "contact_params": reflect_params(state.contact_params),
         "cd_params": reflect_params(state.cd_params[state.cd_type]),
     }
+
+
+import unittest
+
+
+class TestScopeTree(unittest.TestCase):
+
+    def test_inclusive_sums_descendants(self):
+        self.assertEqual(
+            inclusive({"a": 1.0, "a/b": 2.0, "a/b/c": 4.0, "x/y": 8.0, "": 16.0}),
+            {"a": 7.0, "a/b": 6.0, "a/b/c": 4.0, "x": 8.0, "x/y": 8.0, "": 16.0},
+        )
+
+    def test_scope_tree(self):
+        result = {
+            "steps": [
+                {"busy_ms": {"s": 1.0, "s/sweep": 6.0, "s/detect": 2.0, "": 0.5},
+                 "launches": {"s/sweep": 9, "s/detect": 3},
+                 "calls": {"s": 1, "s/sweep": 3},
+                 "union_incl_ms": {"s": 8.0, "s/sweep": 6.0, "s/detect": 2.0, "": 0.5}},
+                {"busy_ms": {"s": 1.0, "s/sweep": 8.0, "s/detect": 2.0, "": 0.5},
+                 "launches": {"s/sweep": 11, "s/detect": 3},
+                 "calls": {"s": 1, "s/sweep": 3},
+                 "union_incl_ms": {"s": 10.0, "s/sweep": 8.0, "s/detect": 2.0, "": 0.5}},
+            ]
+        }
+        rows = scope_tree(result)
+        self.assertEqual([(r["path"], r["depth"]) for r in rows],
+                         [("s", 0), ("s/sweep", 1), ("s/detect", 1), ("", 0)])
+        s = rows[0]
+        self.assertEqual((s["self_ms"], s["total_ms"], s["total_launches"], s["union_incl_ms"]), (1.0, 10.0, 13.0, 9.0))
+        self.assertEqual(rows[1]["calls"], 3.0)
+
+
+if __name__ == "__main__":
+    unittest.main()
+

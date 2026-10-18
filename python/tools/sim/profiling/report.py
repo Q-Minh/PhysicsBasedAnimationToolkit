@@ -170,6 +170,33 @@ def _scene_name(scene: str) -> str:
     return name[0].upper() + name[1:]
 
 
+def _scope_tree_section(solvers: list[str], by_solver: dict[str, dict]) -> str:
+    """One collapsible scope tree per solver, with profiler-style total (inclusive) and self columns."""
+    sections = []
+    for n, s in enumerate(solvers):
+        rows = results.scope_tree(by_solver[s])
+        step_total = sum(r["total_ms"] for r in rows if r["depth"] == 0) or 1.0
+        body = []
+        for r in rows:
+            union = "" if r["union_incl_ms"] is None else f"{r['union_incl_ms']:.3f}"
+            share = 100 * r["total_ms"] / step_total
+            body.append(
+                f"<tr><td class='scope' style='padding-left:{10 + 18 * r['depth']}px'>{_esc(r['name'])}</td>"
+                f"<td>{r['total_ms']:.3f}<span class='pct'>{share:.1f}%</span></td>"
+                f"<td>{r['self_ms']:.3f}</td><td>{union}</td>"
+                f"<td>{r['total_launches']:.0f}</td><td>{r['self_launches']:.0f}</td>"
+                f"<td>{r['calls']:.0f}</td></tr>"
+            )
+        body = "".join(body)
+        sections.append(
+            f"<details{' open' if n == 0 else ''}><summary>{_esc(s)}</summary><table><thead><tr>"
+            "<th>Scope</th><th>Total ms/step</th><th>Self ms/step</th><th>Total union ms/step</th>"
+            "<th>Total launches</th><th>Self launches</th><th>Calls/step</th></tr></thead>"
+            f"<tbody>{body}</tbody></table></details>"
+        )
+    return "".join(sections)
+
+
 def render(result_list: list[dict], note: str | None = None) -> str:
     """Render the comparison page for one phase-timed result per solver, plus optional production
     results (``source: "production"``, graph replay timings) for the same solvers."""
@@ -283,6 +310,7 @@ def render(result_list: list[dict], note: str | None = None) -> str:
         bars=_stacked_bars(solvers, folded, colored),
         donuts="".join(donuts),
         phase_table=phase_table,
+        scope_tree=_scope_tree_section(solvers, by_solver),
         kernels="".join(kernel_sections),
         meta=meta_html,
         note=_esc(source_note),
@@ -362,6 +390,10 @@ _PAGE = (
 <div class="card">{legend}{bars}</div>
 <h2>Share of each phase</h2>
 <div class="card">{legend}<div class="donuts">{donuts}</div></div>
+<h2>Scope tree</h2>
+<div class="card">{scope_tree}
+<p class="note">Total includes nested scopes; self is the scope's own work. Busy times sum activity durations, so
+work on concurrent streams counts once per stream; the total union counts overlapping work once.</p></div>
 <h2>Phases by solver (ms/step)</h2>
 <div class="card">{phase_table}</div>
 <h2>Top GPU activities</h2>
