@@ -19,6 +19,8 @@ M_r(q) = J(q)^T M J(q). See MicrocanonicalMetropolis.
 Samplers work in whitened coordinates y = q / scale, in which the linearized energy is |y|^2 / 2.
 They all expose `burn_in`, `estimate_thinning` and `sample`, so that `run_chain` can drive any of them.
 
+The derivations behind each sampler are in docs/sampling-methods.md.
+
 Which sampler to use:
 
 - "microcanonical" (the preferred default): states (q, qdot) at total energy E. Shapes span a range of
