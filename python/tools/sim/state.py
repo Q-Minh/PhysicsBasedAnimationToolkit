@@ -253,6 +253,8 @@ class SimulationState:
                 with wp.ScopedCapture() as capture:
                     self._advance()
                 self.capture = capture
+                # Capturing only records the work: launch it, or this step would be skipped.
+                wp.capture_launch(self.capture.graph)  # type: ignore
             else:
                 wp.capture_launch(self.capture.graph)  # type: ignore
         else:
