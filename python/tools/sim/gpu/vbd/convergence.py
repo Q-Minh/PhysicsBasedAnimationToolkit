@@ -41,8 +41,9 @@ class ConvergenceParams(SerializableMixin):
     position-like residual by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step
     would make), and compared with the step's free-flight displacement d = x~ - x^t (h v^t + h^2 a_ext
     for BDF1): ``RMS_M(M^-1 g) <= rtol * RMS_M(d)``, with mass-weighted RMS over free nodes, i.e.
-    ``sum |g_i|^2 / m_i <= rtol^2 * sum m_i |d_i|^2``. It doesn't depend on the mesh's size or mass. When
-    d is 0 (a body at rest without loads) or for static problems, the absolute ``gtol`` test applies.
+    ``sum |g_i|^2 / m_i <= rtol^2 * sum m_i |d_i|^2``. It doesn't depend on the mesh's size or mass. The
+    scale is floored, ``max(RMS_M(d), displacement_floor)``, so it never vanishes (e.g. for a body at
+    rest without loads). Static problems have no inertial displacement and use the absolute ``gtol``.
     """
 
     check_interval = DocField(
@@ -58,6 +59,11 @@ class ConvergenceParams(SerializableMixin):
         "residual RMS(M^-1 g) is at most rtol times the step's free-flight displacement RMS(x~ - x^t) "
         "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes",
     )
+    displacement_floor = DocField(
+        1e-6,
+        "Smallest displacement scale (m) of the relative gradient test: the scale is max(RMS(x~ - x^t), "
+        "displacement_floor), so it never vanishes for bodies at rest",
+    )
 
 
 @wp.func
@@ -68,8 +74,9 @@ def _is_converged(
     dm2: wp.array[wp.float32],
     rtol2: wp.float32,
 ) -> bool:
-    """Relative test ``sum |g|^2/m <= rtol^2 sum m |d|^2`` if enabled and d != 0, else ``|g|^2 <= gtol^2``."""
-    if rtol2 > wp.float32(0) and dm2[0] > wp.float32(0):
+    """Relative test ``sum |g|^2/m <= rtol^2 max(sum m |d|^2, M floor^2)`` if enabled (``rtol2 > 0``;
+    ``dm2`` holds the floored scale), else ``|g|^2 <= gtol^2``."""
+    if rtol2 > wp.float32(0):
         return gm2[0] <= rtol2 * dm2[0]
     return gnorm2[0] <= gtol2
 
@@ -85,12 +92,23 @@ def _mass_normalized_residual_terms(
 
 
 @wp.kernel
-def _free_flight_displacement_terms(fem: FemElastoDynamicsData, terms: wp.array[wp.float32]):
+def _free_flight_displacement_terms(
+    fem: FemElastoDynamicsData, terms: wp.array[wp.float32], masses: wp.array[wp.float32]
+):
     i = wp.tid()
     terms[i] = wp.float32(0)
-    if fem.is_static == 0 and not is_dirichlet_node(fem.dmask, i):
+    masses[i] = wp.float32(0)
+    if not is_dirichlet_node(fem.dmask, i):
         d = fem.xtilde[i] - fem.xt[i]
         terms[i] = fem.m[i] * wp.dot(d, d)
+        masses[i] = fem.m[i]
+
+
+@wp.kernel
+def _floor_displacement_scale(
+    dm2: wp.array[wp.float32], free_mass: wp.array[wp.float32], floor2: wp.float32
+):
+    dm2[0] = wp.max(dm2[0], free_mass[0] * floor2)
 
 
 @wp.func
@@ -296,8 +314,10 @@ class ConvergenceCheck:
         # Relative test (params.rtol > 0): sum |g_i|^2 / m_i and sum m_i |d_i|^2 over free nodes
         n_nodes = fem.data.x.shape[0]
         self._terms = wp.zeros(n_nodes, dtype=wp.float32)
+        self._masses = wp.zeros(n_nodes, dtype=wp.float32)
         self.residual_m2 = wp.zeros(1, dtype=wp.float32)
-        self.displacement_m2 = wp.zeros(1, dtype=wp.float32)
+        self.displacement_m2 = wp.zeros(1, dtype=wp.float32)  # floored scale, see ConvergenceParams
+        self.free_mass = wp.zeros(1, dtype=wp.float32)
         self._reduce_residual = Reduce(
             d_in=cp.asarray(self._terms),
             d_out=cp.asarray(self.residual_m2),
@@ -307,6 +327,12 @@ class ConvergenceCheck:
         self._reduce_displacement = Reduce(
             d_in=cp.asarray(self._terms),
             d_out=cp.asarray(self.displacement_m2),
+            num_items=n_nodes,
+            op=cuda.compute.OpKind.PLUS,
+        )
+        self._reduce_free_mass = Reduce(
+            d_in=cp.asarray(self._masses),
+            d_out=cp.asarray(self.free_mass),
             num_items=n_nodes,
             op=cuda.compute.OpKind.PLUS,
         )
@@ -320,7 +346,8 @@ class ConvergenceCheck:
 
     @property
     def _relative(self) -> bool:
-        return float(self.params.rtol) > 0.0
+        """Whether the relative test applies: enabled, and not a static problem."""
+        return float(self.params.rtol) > 0.0 and not self._fem.static
 
     def _test(self) -> None:
         stream = wp.get_stream()
@@ -334,14 +361,22 @@ class ConvergenceCheck:
             self._reduce_residual(stream)
 
     def _measure_displacement(self) -> None:
-        """The step's sum m_i |x~_i - x^t_i|^2 over free nodes, the relative test's scale."""
+        """The relative test's scale: the step's sum m_i |x~_i - x^t_i|^2 over free nodes, floored at
+        (free mass) * displacement_floor^2."""
         if self._relative:
+            stream = wp.get_stream()
             wp.launch(
                 _free_flight_displacement_terms,
                 dim=self._terms.shape[0],
-                inputs=[self._fem.data, self._terms],
+                inputs=[self._fem.data, self._terms, self._masses],
             )
-            self._reduce_displacement(wp.get_stream())
+            self._reduce_displacement(stream)
+            self._reduce_free_mass(stream)
+            wp.launch(
+                _floor_displacement_scale,
+                dim=1,
+                inputs=[self.displacement_m2, self.free_mass, float(self.params.displacement_floor) ** 2],
+            )
 
     def _tolerance_inputs(self, gtol: float) -> list:
         return [
@@ -444,7 +479,7 @@ class ConvergenceCheck:
         Returns:
             bool: Whether the last gradient test passed (feasibility isn't included).
         """
-        dm2 = float(self.displacement_m2.numpy()[0])
-        if self._relative and dm2 > 0.0:
+        if self._relative:
+            dm2 = float(self.displacement_m2.numpy()[0])
             return float(self.residual_m2.numpy()[0]) <= float(self.params.rtol) ** 2 * dm2
         return float(self.gradient_norm.gnorm2.numpy()[0]) <= float(gtol) * float(gtol)
