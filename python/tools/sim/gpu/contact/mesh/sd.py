@@ -23,6 +23,7 @@ tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
 @wp.kernel
 def _detect_vertex_mesh_contacts(
     mesh_ids: wp.array[wp.uint64],
+    mesh_closed: wp.array[wp.int32],
     max_dist: wp.float32,
     dmin: wp.float32,
     sds: wp.array[wp.float32],
@@ -56,7 +57,12 @@ def _detect_vertex_mesh_contacts(
     for m in range(local_tid, mesh_ids.shape[0], block_dim):
         if m == b:
             continue
-        qp = wp.mesh_query_point(mesh_ids[m], xi, max_dist)  # type: ignore
+        # Closed meshes sign the distance by ray parity. Open ones (e.g. a static ground plane) can't,
+        # so they use the closest face's normal.
+        if mesh_closed[m] != 0:
+            qp = wp.mesh_query_point(mesh_ids[m], xi, max_dist)  # type: ignore
+        else:
+            qp = wp.mesh_query_point_sign_normal(mesh_ids[m], xi, max_dist)  # type: ignore
         if not qp.result:  # type: ignore
             continue
         f = meshes.FP[m] + qp.face  # type: ignore
@@ -183,6 +189,13 @@ def _filter_initial_step(
         x[i] = xt[i]  # type: ignore
 
 
+def _is_closed(F: np.ndarray) -> bool:
+    """Whether every edge of the triangle mesh F (|# triangles| x 3) is shared by exactly 2 triangles."""
+    E = np.sort(F[:, [0, 1, 1, 2, 2, 0]].reshape(-1, 2), axis=1)
+    _, counts = np.unique(E, axis=0, return_counts=True)
+    return bool(np.all(counts == 2))
+
+
 class Params(SerializableMixin):
     max_dist = DocField(0.01, "Maximum distance for closest point computations.")
     dmin = DocField(-0.0001, "Minimum distance threshold for contacts to be created.")
@@ -198,6 +211,7 @@ class Sd(ContactDetection):
 
     _wp_meshes: list[wp.Mesh]
     _mesh_ids: wp.array[wp.uint64]
+    _mesh_closed: wp.array[wp.int32]  # (# meshes,) 1 if every edge of the mesh has 2 faces
     _sds: wp.array[wp.float32]  # (# verts,) signed distances
     _mesh_streams: list[wp.Stream]
     _normal_flip_streams: list[wp.Stream]
@@ -233,6 +247,10 @@ class Sd(ContactDetection):
             for b in range(FP.shape[0] - 1)
         ]
         self._mesh_ids = wp.array([m.id for m in self._wp_meshes], dtype=wp.uint64)
+        self._mesh_closed = wp.array(
+            [int(_is_closed(Fb[b].get().reshape(-1, 3))) for b in range(len(Fb))],
+            dtype=wp.int32,
+        )
         self._sds = wp.full(
             (self._meshes.n_verts,), self.params.max_dist, dtype=wp.float32
         )
@@ -269,6 +287,7 @@ class Sd(ContactDetection):
             dim=n_verts * block_dim,
             inputs=[
                 self._mesh_ids,
+                self._mesh_closed,
                 self.params.max_dist,  # max_dist
                 self.params.dmin,  # dmin
                 self._sds,
