@@ -9,8 +9,6 @@ Procedural Dirichlet constraints (`ui/utils/transform_library.py`) are evaluated
 
 Features that exist only here (for now): the Broyden-accelerated VBD solver UI and convergence analysis (`ui/convergence.py`).
 
-Note: `simulate.py -o` splits on every `:`, so pass a relative output path on Windows (e.g. `-o out.h5:sim`).
-
 Scene files (bodies, static colliders, transform library) are read by `scenario.py` (`read_scene`, `make_fem_dynamics_object`, `make_contact_dynamics_object`, `load_simulation_scenario_from_scene`), shared by the editor, the offline simulator and the GPU simulators' `--scene`. Constraint nodes are mapped by body name, and a missing `static_mesh_colliders` group means no colliders.
 
 Run from the repo root: `python -m python.tools.vbd.editor` and `python -m python.tools.vbd.simulate -h`. Dependencies are in `requirements.txt`.
