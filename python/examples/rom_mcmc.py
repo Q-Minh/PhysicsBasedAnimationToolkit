@@ -678,6 +678,7 @@ def write_samples(
     omega: np.ndarray,
     batch: SampleBatch,
     attrs: dict,
+    min_det_F: np.ndarray | None = None,
 ):
     """Write a sample batch to HDF5 (see the sample-file contract in plans/MASTER.md).
 
@@ -688,6 +689,7 @@ def write_samples(
         omega (np.ndarray): m frequencies of the linear modes in model.U.
         batch (SampleBatch): The samples.
         attrs (dict): Extra root attributes (input, sampler settings, target energy, seed, ...).
+        min_det_F (np.ndarray | None): Per-sample minimum det(F) over the mesh, a diagnostic for inversion.
     """
     import h5py
 
@@ -712,7 +714,19 @@ def write_samples(
         )
         f.attrs["map"] = "linear" if model.Q is None else "quadratic"
         f.attrs["n_modes"] = model.dims
-        f.attrs["energy_definition"] = "Psi(X + u(q)) - Psi(X) in J (deformation energy, rest energy subtracted)"
+        microcanonical = batch.qdot is not None
+        f.attrs["ensemble"] = "total" if microcanonical else "potential"
+        f.attrs["energy_definition"] = (
+            "samples/energy is the potential energy U(q) = Psi(X + u(q)) - Psi(X) in J (deformation energy, "
+            "rest energy subtracted), minus fext^T u(q) if attribute gravity is nonzero (fext = M g). "
+            + (
+                "Ensemble 'total': target_energy is the total energy E = K + U, the kinetic energy is "
+                "E - U = 1/2 qdot^T M_r(q) qdot with M_r = J^T M J, and full-space velocities are J(q) qdot "
+                "with J(q) = U + Q:q."
+                if microcanonical
+                else "Ensemble 'potential': target_energy is E*, and samples lie on U(q) = E*."
+            )
+        )
         f.attrs["rest_energy"] = model.rest_energy
         f.attrs["layout"] = (
             "X: (N, 3), row i is node i (column i of pbat's 3 x N X). "
@@ -726,8 +740,13 @@ def write_samples(
         g.create_dataset("x", data=x)
         g.create_dataset("energy", data=energy)
         g.create_dataset("log_target", data=batch.log_target)
+        if microcanonical:
+            g.create_dataset("qdot", data=batch.qdot)
+        if min_det_F is not None:
+            g.create_dataset("min_J", data=min_det_F)
         b = f.create_group("basis")
         b.create_dataset("U", data=model.U)
         b.create_dataset("Q", data=model.Q if model.Q is not None else np.zeros((0, 0, 0)))
         b.create_dataset("omega", data=omega)
         b.create_dataset("scale", data=model.scale)
+        b.create_dataset("M", data=model.M)
