@@ -1,6 +1,7 @@
 # type: ignore
 from .tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
 from .static_mesh_collider import StaticMeshCollider
+from .plane_collider import PlaneCollider, serialize_plane_colliders, deserialize_plane_colliders
 import polyscope as ps
 import polyscope.imgui as imgui
 import tkinter as tk
@@ -107,6 +108,7 @@ class Scene:
     # _cylinder_selector_lists: dict[str, SelectorList]
     _current_selection_property_idx: int
     _static_mesh_colliders: list[StaticMeshCollider]
+    _plane_colliders: list[PlaneCollider]
     _selection_props: dict[str, dict[str, typing.Any]]
 
     def set_young_modulus(self, b, prop_value, inds): 
@@ -185,6 +187,8 @@ class Scene:
         self._tet_body_to_dup_idx = 0
         self._transform_library = TransformLibrary()
         self._static_mesh_colliders = []
+        self._plane_colliders = []
+        self._next_plane_collider_id = 0
         self._next_tet_elastic_body_id = 0
 
     def draw(self):
@@ -199,6 +203,8 @@ class Scene:
                     "Add Static Mesh Collider", styles.default_button_size()
                 ):
                     self._load_static_mesh_collider()
+                if imgui.Button("Add Plane Collider", styles.default_button_size()):
+                    self._add_plane_collider(PlaneCollider())
                 if imgui.Button(
                     "Load Pattern File", styles.default_button_size()
                 ):
@@ -221,6 +227,9 @@ class Scene:
                     imgui.TreePop()
                 if imgui.TreeNode("Static Mesh Colliders"):
                     self._draw_static_mesh_colliders()
+                    imgui.TreePop()
+                if imgui.TreeNode("Plane Colliders"):
+                    self._draw_plane_colliders()
                     imgui.TreePop()
                 if imgui.TreeNode("Pattern Data"):
                     if self._pattern_data:
@@ -306,6 +315,8 @@ class Scene:
             body.set_visible(visible)
         for smc in self._static_mesh_colliders:
             smc.set_visible(visible)
+        for plane in self._plane_colliders:
+            plane.set_visible(visible)
 
         for selector_name, manager in self._all_selectors.items():
             if selector_name in ["Box", "Cylinder"]:
@@ -323,6 +334,10 @@ class Scene:
     @property
     def static_mesh_colliders(self) -> list[StaticMeshCollider]:
         return self._static_mesh_colliders
+
+    @property
+    def plane_colliders(self) -> list[PlaneCollider]:
+        return self._plane_colliders
 
     @property
     def transform_library(self) -> TransformLibrary:
@@ -344,6 +359,9 @@ class Scene:
                     )
                     self._serialize_static_mesh_colliders(
                         f.create_group("static_mesh_colliders")
+                    )
+                    serialize_plane_colliders(
+                        self._plane_colliders, f.create_group("plane_colliders")
                     )
                     self._transform_library.serialize(
                         f.create_group("transform_library")
@@ -520,6 +538,34 @@ class Scene:
             finally:
                 root.destroy()
 
+    def _scene_diameter(self) -> float:
+        """Diameter of the bodies and static meshes, which sizes infinite planes."""
+        P = [b.VT for b in self._tet_elastic_bodies] + [smc.VT for smc in self._static_mesh_colliders]
+        if len(P) == 0:
+            return 1.0
+        P = np.vstack(P)
+        return float(np.linalg.norm(P.max(axis=0) - P.min(axis=0)))
+
+    def _add_plane_collider(self, plane: PlaneCollider):
+        # Polyscope needs unique names
+        taken = {other.name for other in self._plane_colliders}
+        while not plane.name or plane.name == "Plane" or plane.name in taken:
+            plane.name = f"Plane Collider {self._next_plane_collider_id}"
+            self._next_plane_collider_id += 1
+        plane.update_visual(self._scene_diameter())
+        self._plane_colliders.append(plane)
+
+    def _draw_plane_colliders(self):
+        diameter = self._scene_diameter()
+        for idx, plane in enumerate(self._plane_colliders):
+            if imgui.TreeNode(plane.name):
+                plane.draw(diameter)
+                styles.set_style_danger()
+                if imgui.Button(styles.delete_key(), styles.small_button_size()):
+                    self._plane_colliders.pop(idx).on_removed()
+                styles.pop_most_recent_style()
+                imgui.TreePop()
+
     def _draw_static_mesh_colliders(self):
         for idx, smc in enumerate(self._static_mesh_colliders):
             if imgui.TreeNode(smc.name):
@@ -581,6 +627,10 @@ class Scene:
             for smc in self._static_mesh_colliders:
                 smc.on_mesh_removed()
             self._static_mesh_colliders = []
+            for plane in self._plane_colliders:
+                plane.on_removed()
+            self._plane_colliders = []
+            self._next_plane_collider_id = 0
         else:
             for body in self._tet_elastic_bodies:
                 self._transform_library.on_mesh_removed(body.name)
@@ -595,6 +645,9 @@ class Scene:
         self._deserialize_fem_tet_elastic_bodies(f["fem_tet_elastic_bodies"])
         if "static_mesh_colliders" in f:
             self._deserialize_static_mesh_colliders(f["static_mesh_colliders"])
+        if not bodies_only:
+            for plane in deserialize_plane_colliders(f.get("plane_colliders", None)):
+                self._add_plane_collider(plane)
         self._recycled_tet_elastic_body_indices = list(
             f["recycled_tet_elastic_body_indices"][:]
         )

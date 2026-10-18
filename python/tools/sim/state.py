@@ -75,7 +75,7 @@ def load_scene(path: str) -> tuple[
     """Build the FEM problem, its kinematic constraints and its contact surface from a CPU editor scene
     file.
 
-    Reads the tetrahedral elastodynamic bodies, static mesh colliders and transform library that the CPU
+    Reads the tetrahedral elastodynamic bodies, static mesh and plane colliders and transform library that the CPU
     offline simulator reads (``python -m python.tools.vbd.simulate --scene``), and builds the FEM as the
     editor does. The transforms become kinematic constraints through the editor Dump's format.
 

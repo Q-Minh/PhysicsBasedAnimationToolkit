@@ -1,11 +1,14 @@
 """
-Static mesh colliders of CPU editor scenes, as pinned contact geometry for the GPU simulators.
+Static colliders of CPU editor scenes (mesh and plane colliders), as pinned contact geometry for the GPU
+simulators.
 
 GPU contact only knows the FEM nodes. A scene's static colliders therefore join the problem as
 element-less FEM nodes appended after the bodies' nodes (see `scenario.make_fem_dynamics_object`'s
 `static_points`), fixed forever by a kinematic constraint, and their triangles join the contact surface.
-Contact detection and resolution then need no static-geometry special case. The only collider-specific
-code is in this module, plus the open-mesh sign in `gpu/contact/mesh/sd.py`.
+Contact detection and resolution then need no static-geometry special case. Plane colliders come in as
+quads (`tools/vbd/scenario.py::static_meshes`), which vertex-SDF detection recognizes as planar and tests
+analytically. The only collider-specific code is in this module, plus the open-mesh and plane queries in
+`gpu/contact/mesh/sd.py`.
 """
 
 import numpy as np
@@ -13,15 +16,16 @@ from pbatoolkit import pbat
 from .gpu.kinematics.constraints import KinematicConstraint, KinematicConstraintKind
 
 
-def collider_points(colliders: list) -> np.ndarray | None:
-    """`|# points| x 3` vertices of all colliders, in order, or None without colliders."""
-    return np.vstack([c.VT for c in colliders]) if len(colliders) > 0 else None
+def collider_points(colliders: list[tuple[np.ndarray, np.ndarray]]) -> np.ndarray | None:
+    """`|# points| x 3` vertices of all colliders (`(V, F)` triangle meshes), in order, or None without
+    colliders."""
+    return np.vstack([V for V, _ in colliders]) if len(colliders) > 0 else None
 
 
 def add_colliders(
     fem: pbat.sim.dynamics.FemElastoDynamics,
     body_offsets: np.ndarray,
-    colliders: list,
+    colliders: list[tuple[np.ndarray, np.ndarray]],
 ) -> tuple[KinematicConstraint, pbat.sim.contact.MultiMesh]:
     """Turn the element-less nodes after the bodies into static colliders.
 
@@ -31,7 +35,7 @@ def add_colliders(
     Args:
         fem: FEM problem whose nodes after `body_offsets[-1]` are the colliders' vertices, in order.
         body_offsets: `|# bodies| + 1` prefix offsets of the bodies' nodes.
-        colliders: The scene's static mesh colliders.
+        colliders: The scene's static colliders as `(V, F)` triangle meshes (see `scenario.static_meshes`).
 
     Returns:
         The kinematic constraint that fixes the collider nodes forever, and the contact surface: each
@@ -54,10 +58,10 @@ def add_colliders(
     tets.construct_from_tetrahedral_mesh(fem.E, XCC[0], n_components=n_bodies)
     F = [tets.F]
     start = n_body_nodes
-    for c, collider in enumerate(colliders):
-        F.append((collider.F + start).T)
-        XCC.append(np.full(collider.VT.shape[0], n_bodies + c))
-        start += collider.VT.shape[0]
+    for c, (Vc, Fc) in enumerate(colliders):
+        F.append((Fc + start).T)
+        XCC.append(np.full(Vc.shape[0], n_bodies + c))
+        start += Vc.shape[0]
     contact_mesh = pbat.sim.contact.MultiMesh()
     contact_mesh.construct_from_triangle_mesh(
         np.hstack(F), np.concatenate(XCC), n_components=n_bodies + len(colliders)

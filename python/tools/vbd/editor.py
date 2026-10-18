@@ -5,7 +5,7 @@ from pbatoolkit import pbat, pypbat
 import numpy as np
 from .ui.scene import Scene
 from .ui.simulation import Simulation
-from .scenario import make_fem_dynamics_object, make_contact_dynamics_object
+from .scenario import make_fem_dynamics_object, make_contact_dynamics_object, static_meshes
 from statemachine import State, StateMachine, Event
 
 
@@ -61,7 +61,12 @@ class ModeStateMachine(StateMachine):
             fem_dynamics,
             n_bodies,
             vert_counts,
-            static_mesh_colliders=self.scene.static_mesh_colliders,
+            static_meshes(
+                tet_elastic_bodies,
+                self.scene.static_mesh_colliders,
+                self.scene.plane_colliders,
+                tessellate_planes=True,
+            ),
         )
         # Pass simulation scenario to simulation UI
         tet_elastic_body_names = [body.name for body in tet_elastic_bodies]
