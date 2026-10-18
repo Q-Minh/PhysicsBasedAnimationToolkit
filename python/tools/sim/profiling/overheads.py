@@ -217,14 +217,48 @@ def _ncu_section(kernels: list[tuple[str, dict]]) -> str:
             + _legend([(r.replace("_", " "), c) for r, c in zip(reasons, colors)]) + "".join(bars))
 
 
+def _hotspot_section(kernels: list[tuple[str, dict]], top: int = 10) -> str:
+    """Stall-sample share by Python function, one bar column per kernel."""
+    kernels = [(l, k) for l, k in kernels if "hotspots" in k]
+    if not kernels:
+        return ""
+    shares = {
+        label: {f["function"]: f for f in k["hotspots"]["functions"]} for label, k in kernels
+    }
+    names = sorted(
+        {n for per in shares.values() for n in per},
+        key=lambda n: -max(per.get(n, {}).get("sample_share", 0.0) for per in shares.values()),
+    )[:top]
+    vmax = max((per[n]["sample_share"] for per in shares.values() for n in names if n in per), default=1.0)
+    head = "".join(f"<th class='barcell'>{_esc(l)}</th>" for l, _ in kernels)
+    rows = []
+    for name in names:
+        cells = []
+        for label, _ in kernels:
+            f = shares[label].get(name)
+            if f is None:
+                cells.append("<td class='barcell'></td>")
+                continue
+            tip = (f"{label} · {name}: {100 * f['sample_share']:.1f}% of stall samples, "
+                   f"{100 * f['instruction_share']:.1f}% of instructions")
+            cells.append(
+                f"<td class='barcell'><span class='hbar' data-tip='{_esc(tip)}'><span style='width:"
+                f"{100 * f['sample_share'] / vmax:.2f}%;background:var(--series-1)'></span></span>"
+                f"<span class='pct'>{100 * f['sample_share']:.1f}%</span></td>"
+            )
+        rows.append(f"<tr><td class='kname'>{_esc(name)}</td>{''.join(cells)}</tr>")
+    return ("<table><thead><tr><th>Function (file::name)</th>" + head + "</tr></thead><tbody>"
+            + "".join(rows) + "</tbody></table>")
+
+
 def _production_table(production: list[tuple[str, dict]]) -> str:
     if not production:
         return ""
     means = {l: sum(s["step_timeline_ms"] for s in r["steps"]) / len(r["steps"]) for l, r in production}
     rows = []
     for label, r in production:
-        # "X + change" rows compare with row "X" when it exists.
-        base_label = label.split(" + ", 1)[0]
+        # "X + change" rows compare with row "X" when it exists, so changes can be chained.
+        base_label = label.rsplit(" + ", 1)[0]
         change = ""
         if base_label != label and base_label in means:
             change = f"{100 * (means[label] - means[base_label]) / means[base_label]:+.1f}% vs {_esc(base_label)}"
@@ -282,6 +316,11 @@ execution intervals; gaps are idle time between nodes. Boundaries are the window
 <div class="card">{_ncu_section(kernels)}
 <p class="note">Nsight Compute, mean over the launches of one sweep. It locks clocks to base and flushes caches,
 so durations are longer than in normal runs; compare the columns with each other.</p></div>
+<h2>Where the vertex solve stalls, by function</h2>
+<div class="card">{_hotspot_section(kernels) or '<p class="note">No line-info profile given.</p>'}
+<p class="note">Share of Nsight Compute warp stall samples per Python function, from a profile compiled with line
+information. Instructions of inlined Warp builtins are folded into the nearest preceding simulator source line,
+their likely caller; this attribution is a heuristic.</p></div>
 <h2>Production step timings</h2>
 <div class="card">{_production_table(production)}
 <p class="note">CUDA events around each graph replay (simulate.py --profile-out with profiling off).</p></div>
