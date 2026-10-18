@@ -122,16 +122,18 @@ def analyze(path: str, metadata_result: dict | None = None, phases_result: dict 
     ordered = [w for w in steady if tuple(name for _, _, name in w) == steady_signature]
     nodes = []
     for i, name in enumerate(steady_signature):
-        durations, gaps = [], []
+        durations, gaps, starts = [], [], []
         for w in ordered:
             start, end, _ = w[i]
             frontier = max((e for _, e, _ in w[:i]), default=start)
             durations.append((end - start) * 1e-3)
             gaps.append(max(0, start - frontier) * 1e-3)
+            starts.append((start - w[0][0]) * 1e-3)
         nodes.append(
             {
                 "name": name,
                 "phase": phase_of.get(name, ""),
+                "start_us": statistics.mean(starts),
                 "duration_us": statistics.mean(durations),
                 "gap_before_us": statistics.mean(gaps),
             }
