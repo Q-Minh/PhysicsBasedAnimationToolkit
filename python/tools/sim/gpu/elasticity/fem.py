@@ -3,6 +3,8 @@ import cupy as cp
 import numpy as np
 from .. import types
 from ..integration.bdf import Bdf
+from ..kinematics.constraints import KinematicConstraintSet
+from ..common import profiling
 from pbatoolkit import pbat
 
 # --- Strategy constants ---
@@ -44,7 +46,6 @@ def _setup_time_integration_optimization_kernel(
     dmask: wp.array[wp.int32],
     xtilde_bdf: wp.array[wp.vec3f],
     vtilde_bdf: wp.array[wp.vec3f],
-    x_bdf_current: wp.array[wp.vec3f],
     bt: float,
     bt2: float,
     strategy: int,
@@ -54,8 +55,9 @@ def _setup_time_integration_optimization_kernel(
     # xtilde = -(xtilde_bdf + bt * vtilde_bdf) + bt^2 * aext
     xti = -(xtilde_bdf[i] + bt * vtilde_bdf[i]) + bt2 * aexti
     if is_dirichlet_node(dmask, i):  # pyright: ignore[reportArgumentType]
-        # Dirichlet nodes: xtilde = current BDF position
-        xti = x_bdf_current[i]
+        # Dirichlet nodes: xtilde = their position at the end of the step, i.e. the prescribed
+        # position (kinematic constraints) or the current BDF position (fixed nodes)
+        xti = x[i]
 
     xtilde[i] = xti  # pyright: ignore[reportIndexIssue]
     # Initialize x based on strategy (only for free nodes)
@@ -125,6 +127,7 @@ class FemElastoDynamics:
         fem.set_time_integration_scheme(dt=0.01, s=1) # for BDF1
         fem.set_time_integration_scheme(dt=0.01, s=2) # for BDF2
         fem.set_initial_conditions(x0, v0)
+        fem.set_kinematic_constraints(kcs)  # optional, prescribes dmask, x and v of constrained nodes
         for t in range(100):
             fem.setup_time_integration_optimization()
             solve(fem)
@@ -133,6 +136,7 @@ class FemElastoDynamics:
     """
 
     _data: FemElastoDynamicsData  # pyright: ignore[reportGeneralTypeIssues]
+    kinematics: KinematicConstraintSet | None
 
     def __init__(self, fem: pbat.sim.dynamics.FemElastoDynamics):
         self._data = FemElastoDynamicsData()
@@ -159,6 +163,7 @@ class FemElastoDynamics:
             cp.asarray(self._data.x).ravel(), cp.asarray(self._data.v).ravel()
         )
         self._data.xt = self.xt
+        self.kinematics = None
 
     @property
     def data(self) -> FemElastoDynamicsData:  # pyright: ignore[reportGeneralTypeIssues]
@@ -180,6 +185,11 @@ class FemElastoDynamics:
         """Set initial conditions. x0, v0 are (N, 3) or (3*N,) arrays."""
         self.bdf.set_initial_conditions(cp.asarray(x0).ravel(), cp.asarray(v0).ravel())
 
+    def set_kinematic_constraints(self, kinematics: KinematicConstraintSet | None):
+        """Prescribe the motion of Dirichlet nodes. The set then owns dmask: every time step, it marks
+        the constrained nodes and sets their positions and velocities at the end of the step."""
+        self.kinematics = kinematics
+
     def setup_time_integration_optimization(
         self,
         strategy: pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization = pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position,
@@ -188,13 +198,17 @@ class FemElastoDynamics:
 
         Strategies: "position", "free_trajectory", "trajectory_with_external_load"
         """
+        if self.kinematics is not None:
+            with profiling.scope("kinematics.update"):
+                self.kinematics.update(
+                    self._data.xt, self._data.x, self._data.v, self._data.dmask
+                )
         self.bdf.construct_equations()
         bt = self.bdf.beta_tilde
         bt2 = bt * bt
         N = self._data.x.shape[0]
         xtilde_bdf = self.bdf.inertia(0).reshape(-1, 3)
         vtilde_bdf = self.bdf.inertia(1).reshape(-1, 3)
-        x_bdf_current = self.bdf.current_state(0).reshape(-1, 3)
         wp.launch(
             _setup_time_integration_optimization_kernel,
             dim=N,
@@ -206,7 +220,6 @@ class FemElastoDynamics:
                 self._data.dmask,
                 xtilde_bdf,
                 vtilde_bdf,
-                x_bdf_current,
                 bt,
                 bt2,
                 _STRATEGY_MAP[strategy],
@@ -235,6 +248,8 @@ class FemElastoDynamics:
         self.bdf.step(
             cp.asarray(self._data.x).ravel(), cp.asarray(self._data.v).ravel()
         )
+        if self.kinematics is not None:
+            self.kinematics.advance()
 
 
 import unittest
