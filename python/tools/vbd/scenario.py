@@ -19,7 +19,18 @@ from .ui.utils.transform_library import TransformLibrary
 _archive_tlib_group = "transform_library"
 
 
-def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
+def make_fem_dynamics_object(
+    tet_elastic_bodies, get_external_info=False, static_points: np.ndarray | None = None
+):
+    """Build the FEM elastodynamics problem of the scene's tetrahedral bodies, concatenated in order.
+
+    Args:
+        tet_elastic_bodies: The scene's tetrahedral elastodynamic bodies.
+        get_external_info (bool): Also return the per-body vertex counts and vertex offsets.
+        static_points (np.ndarray | None): `|# points| x 3` extra nodes appended after the bodies' nodes,
+            belonging to no element (zero mass and load, zero initial velocity). The GPU simulators use
+            them for static mesh colliders.
+    """
     vert_counts = [body.VT.shape[0] for body in tet_elastic_bodies]
     tet_counts = [body.T.shape[0] for body in tet_elastic_bodies]
     # Per-body offsets (prefix) array for vertices
@@ -27,6 +38,9 @@ def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
     # Per-body offsets (prefix) array for tets
     TP = np.array([0] + list(itertools.accumulate(tet_counts)))
     V = np.vstack([body.VT for body in tet_elastic_bodies])
+    n_static = 0 if static_points is None else static_points.shape[0]
+    if n_static > 0:
+        V = np.vstack([V, static_points])
     T = np.vstack([body.T + VP[b] for b, body in enumerate(tet_elastic_bodies)])
     # Construct the fem dynamics
     fem_dynamics = pbat.sim.dynamics.FemElastoDynamics(V.T, T.T)
@@ -113,7 +127,9 @@ def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
     )
     # Initial velocity
     x0 = fem_dynamics.X
-    v0 = np.vstack([body.v0 for body in tet_elastic_bodies]).T
+    v0 = np.vstack(
+        [body.v0 for body in tet_elastic_bodies] + [np.zeros((n_static, dims))]
+    ).T
     fem_dynamics.x = x0
     fem_dynamics.v = v0
 
