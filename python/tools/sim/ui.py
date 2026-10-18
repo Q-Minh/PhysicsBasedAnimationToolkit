@@ -17,6 +17,7 @@ from pbatoolkit import pbat
 import numpy as np
 from . import gpu
 from .panels.common import draw_params, try_draw_tooltip
+from .panels.profiling import draw_profiling_panel, profile_step
 from .state import (
     SimulationState,
     SolverType,
@@ -226,6 +227,7 @@ def make_callback(
                 # --- Feature panels ---
                 # One draw_<feature>_panel(state, ui_state) call per feature, implemented in
                 # python/tools/sim/panels/<feature>.py (see panels/__init__.py).
+                draw_profiling_panel(state, ui_state)
 
                 # --- Simulation controls ---
                 imgui.Separator()
@@ -284,7 +286,8 @@ def make_callback(
                                 _serialize_simulation(state, ui_state)
                             ui_state.screenshot_frame += 1
 
-                    state.step()
+                    with profile_step(state):
+                        state.step()
                     _update_mesh(state, mesh_name)
 
                     if (
