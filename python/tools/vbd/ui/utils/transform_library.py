@@ -78,9 +78,23 @@ class PrimitiveTransform:
         else:
             raise ValueError(f"Unknown TransformType {ttype}")
 
+    def window_steps(self, dt: float) -> tuple[int, int]:
+        """Half-open range [n_begin, n_end) of time steps during which the transform is active.
+
+        Step n (from t_n = n * dt to t_{n+1}) is active when begin <= t_n < begin + duration.
+        Boundaries are rounded to the step grid with a tolerance of 1e-3 steps, so that e.g. a 1.2 s
+        window stored in float32 (1.2000000476837158) at dt = 0.01 covers exactly 120 steps.
+        """
+        tol = 1e-3
+        n_begin = int(np.ceil(self.begin / dt - tol))
+        end = self.begin + self.duration
+        n_end = int(np.ceil(end / dt - tol)) if np.isfinite(end) else np.iinfo(np.int64).max
+        return n_begin, n_end
+
     def applicable(self, t: int, dt: float) -> bool:
-        """Check if the transform is applicable at time t"""
-        return self.begin <= t * dt <= self.begin + self.duration
+        """Check if the transform is active during time step t, i.e. begin <= t * dt < begin + duration"""
+        n_begin, n_end = self.window_steps(dt)
+        return n_begin <= t < n_end
 
     def expired(self, t: float) -> bool:
         """Check if the transform has expired at time t"""
