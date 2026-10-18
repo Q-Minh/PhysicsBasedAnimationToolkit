@@ -9,7 +9,7 @@ Pinned dependencies are in `requirements.txt` (warp-lang, cupy, cuda-cccl, polys
 All commands run from the repo root, as modules:
 
 ```bash
-python -m python.tools.sim.ui --fem-elasto-dynamics scene.h5:group/path [--sim-params params.h5]
+python -m python.tools.sim.ui --fem-elasto-dynamics scene.h5:group/path [--sim-params params.toml ...] [--set Solver.VBD.gtol=1e-4]
 python -m python.tools.sim.gpu.elasticity.fem     # modules with a unittest.TestCase run their tests via __main__
 python -m unittest python.tools.sim.gpu.vbd.params
 ```
@@ -18,7 +18,7 @@ python -m unittest python.tools.sim.gpu.vbd.params
 - The UI is interactive (Polyscope + imgui), so Claude can't drive it. Use the headless counterpart instead:
 
   ```bash
-  python -m python.tools.sim.simulate --fem-elasto-dynamics data/CubeFallingOnCube.Dump.h5:fem -o out.h5 [--sim-params p.h5] [--solver AndersonSolver] [--cd VertexSdf] [--duration 2] [--fps 60]
+  python -m python.tools.sim.simulate --fem-elasto-dynamics data/CubeFallingOnCube.Dump.h5:fem -o out.h5 [--sim-params p.toml ...] [--set KEY=VALUE] [--solver AndersonSolver] [--cd VertexSdf] [--duration 2] [--fps 60]
   ```
 
   It reuses `state.SimulationState` and the GUI's parameter (de)serialization. Its output uses the same layout as the GUI's Serialization feature:
@@ -126,6 +126,8 @@ The GPU uses the same contact model family as C++ `MeshDynamics`: an augmented L
 - **`contact/debug/contact.py`.** Polyscope browsers for inspecting individual contact stencils.
 
 ## Params, UI and serialization
+
+- **Configs.** Parameter files are layered TOML (`configs/README.md`, `config.py`). Their tables mirror the HDF5 groups that `serialize_params` writes. `--sim-params` merges `.toml`/`.h5` sources left to right, then `--set Table.key=value` overrides. Unknown and missing keys raise `ConfigWarning`, checked against what the code serializes, so a new serialized parameter is picked up automatically. `configs/paper/*.toml` are the paper's hand-tuned files: never edit them, `extends` them instead. Configs are TOML; data (trajectories, datasets, meshes) is HDF5.
 
 - **GPU-only parameter classes** use `common.fields.DocField` descriptors (a default value plus a docstring that becomes the imgui tooltip) together with `SerializableMixin`, which serializes them to h5 attributes.
 - **UI widgets.** `panels.common.draw_params` reflects over objects: every public, settable `float`/`int`/`bool`/`Enum` attribute gets a widget. So a new C++ `Params` field bound with `def_rw`, or a new `DocField`, appears in the UI without any UI code.
