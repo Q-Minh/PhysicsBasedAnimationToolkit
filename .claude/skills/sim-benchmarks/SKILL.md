@@ -38,9 +38,9 @@ python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --
 python -m python.tools.sim.benchmark_static ... --sim-params base.toml static.toml \
     --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
 
-# Reproducible case: save the spec, rerun it (pass --samples again)
+# Reproducible case: save the spec, rerun it
 python -m python.tools.sim.benchmark_static ... --save-spec out/case.h5 -o out/a.json
-python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --spec out/case.h5 --samples BATCH.h5 -o out/b.json
+python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --spec out/case.h5 -o out/b.json
 ```
 
 Translating requests:
@@ -77,4 +77,3 @@ When comparing solvers, use the time to reach each error level, not the time per
 - **Sample batches:** batches that need importance weights (ray sampler) are refused. R-hat ≥ 1.05 and nonzero gravity only warn. Static problems should be gravity-free.
 - **First solve:** the first solve per solver includes kernel compilation and graph capture in its host time, but not in the reported times.
 - **Not sim-params:** `fem.static` and the StaticSolveSpec aren't part of the config system.
-- **`--spec` reruns** need `--samples` until the string-DocField deserialization fix lands (task 3).
