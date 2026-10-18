@@ -4,7 +4,8 @@ HTML report on where a solver's production step time goes beyond kernel work.
 Combines sweep anatomies (``profiling/anatomy.py``), Nsight Compute kernel summaries
 (``profiling/ncu.py``), production step timings (``simulate.py --profile-out``) and a findings file
 into one page: the per-step time budget (sweep and boundary kernels and gaps), the subproblem
-boundary by phase, the steady sweep as a timeline, a kernel comparison, and before/after timings.
+boundary by phase, the steady sweep as a timeline, a kernel comparison, the kernel's stall hotspots by
+Python function (from ``ncu.py --lineinfo`` summaries), and before/after timings.
 
 Usage (from the repo root):
 

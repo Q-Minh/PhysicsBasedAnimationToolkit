@@ -2,8 +2,10 @@
 HTML report comparing per-phase GPU cost across solvers.
 
 Takes one profiling result per solver (``simulate.py --profile kernels --profile-out`` or
-``profiling/nsys.py``) and writes a self-contained HTML page: stacked bars of mean GPU busy time per
-step by phase, one part-to-whole donut per solver, a phase-by-solver table and the top kernels.
+``profiling/nsys.py``), plus optional production timings, and writes a self-contained HTML page: a
+summary table (busy and union time, production step time, iterations, cost per iteration), stacked
+bars of mean GPU busy time per step by phase, one part-to-whole donut per solver, a scope tree per
+solver with total (inclusive) and self times, a phase-by-solver table and the top GPU activities.
 
 Usage (from the repo root):
 
