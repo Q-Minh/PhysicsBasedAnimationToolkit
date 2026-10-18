@@ -252,7 +252,7 @@ Each session updates only its own row.
 | Task | State | Last update | Notes |
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
-| 1 | idle: kinematics (`c41bc1ad`) and scene ingestion (`65fc5fe1`) merged into dev | 2026-10-18 | Worktree rebased on dev. Open follow-ups, if wanted: GPU static-collider contact, the CPU `simulate.py -o` drive-letter bug |
+| 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
 | 2 | on hold: `feature/aaavbd-params` merged into dev (`9598e393`) | 2026-10-18 | All work merged (profiling milestones, contact-gather early-out, AAAVBD load hoisting, AAAVBD-only stencil keys, betaG warm start). No GPU use except logged runs |
 | 3 | merged (3aae8ba5); on hold | 2026-10-18 | static machinery, convergence/feasibility loop, benchmark tooling merged; waiting for benchmark data/plot requirements |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
@@ -586,7 +586,14 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · Maintainer: benchmark Newton solves stop at the first rejected step (non-descent or line-search failure) and report a failure status; results record a termination status per (solver, sample) → task 3, with the Newton relative check. Verified: with gtol2 = 0 the benchmark does at most one Newton step between error checks. Dumps are mainly for debugging mid-simulation crashes; scene files build the FemElastoDynamics automatically wherever it makes sense.
 - 2026-10-18 · task 1 · **GPU run START** (~5 min, correctness only): `--scene` vs Dump runs for the new
   MediumLongBendingBeam and TwistPullBeam scenes. Ignore timings. Will log END.
+- 2026-10-18 · task 1 · **GPU run END.** **Done:** `data/scenarios/MediumLongBendingBeam.h5` and
+  `data/scenarios/TwistPullBeam.h5`, written by the new converter on `feature/dump-to-scene` (1 commit, ready for
+  review): `python -m python.tools.vbd.dump_to_scene dump.h5 scene.h5`. Recovered inputs: E 1e6, nu 0.45, rho 1000,
+  g −9.81. Constraints: Fixed (beam); twist clamp L_ROTATE [0, inf) about the clamp centroid, so it's editor-safe,
+  and lift tip TRANSLATE [0.5, 1.5) (TwistPull). Rebuilt FEM equals the Dumps' exactly. 2 s GPU runs, `--scene`
+  vs Dump: **bit-identical, all nodes, both scenes**. The CPU simulator loads both.
 - 2026-10-18 · coordinator · **h = 1e-4 dynamic benchmark must work** (maintainer: it shows mass regularization's benefit for the VBD family; Newton must run there). Every solver plateaus vs x_ref (VBD 12-19%, Newton 5-8%; reference bound 8.4%). Suspects: inaccurate x_ref (float32 CPU energy), float32 cancellation in Newton's Armijo test at h² = 1e-8, objective mismatch. Task 4 checks the reference (float64 recompute, where rom_reach stops, objective consistency); task 3 checks the GPU side (gradient at x_ref, VBD past its plateau, line-search cancellation).
+- 2026-10-18 · coordinator · h = 1e-4: **x_ref is accurate** (task 4: float64 re-solve within 0.00-0.04% of e0). The 8.4% bound was a loose max-entry·sqrt(3Σm) worst case. The plateau is GPU-side → task 3's decisive test: the GPU gradient at x_ref. Task 4: float64 references + `ref_error_mnorm` (accuracy in the error metric), sample set only. Merged task 4's sampler scene support and task 1's dump_to_scene converter (MediumLongBendingBeam.h5, TwistPullBeam.h5).
 
 ## Open questions for the maintainer
 
