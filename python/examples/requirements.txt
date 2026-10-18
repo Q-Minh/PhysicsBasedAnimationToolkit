@@ -6,4 +6,4 @@ polyscope==2.5.0
 ilupp==1.0.2
 ipctk==1.2.0
 qpsolvers[open_source_solvers]==4.4.0
-h5py==3.15.1
+h5py==3.16.0
