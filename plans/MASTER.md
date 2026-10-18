@@ -487,6 +487,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 1 · **GPU run START** (short, correctness only; task 2, ignore timings in this window): checks
   for the `assemble_contacts` stream-order fix, then the static-collider correctness runs. Will log END.
 - 2026-10-18 · coordinator · Maintainer decisions: **raise default contact capacities** (task 1 measures peaks, sets defaults with headroom; paper configs untouched; regenerate `configs/defaults.toml`). **Inclusive scope times** approved (task 2: derived inclusive busy/launches in report + GUI tree view, new inclusive union field). **Manual test scenes and push wait for task 1's static colliders.**
+- 2026-10-18 · coordinator · **GPU run START** (~10 min, correctness only: fused constraint-set update vs dev on beam, trampoline, BeamFallingOnBeam). Timings in this window are unaffected only if you ignore them. Will log END.
+- 2026-10-18 · coordinator · **GPU run END** (fused constraint-set update: bit-identical on beam and trampoline, BeamFallingOnBeam within dev's run-to-run noise; plus a 4-solver sweep count on trampoline with `--profile kernels`).
 
 ## Open questions for the maintainer
 
