@@ -3,6 +3,7 @@ import enum
 from ...common.fields import DocField, SerializableMixin
 
 import warp as wp
+from ..common import profiling
 import cupy as cp
 import cuda.compute
 import numpy as np
@@ -536,6 +537,7 @@ class MeshDynamics:
             op=cuda.compute.OpKind.MAXIMUM,
         )
 
+    @profiling.scoped("contact.constraint_set")
     def update_constraint_set(self):
         """Prepare constraint sets for a new step, warm-starting from the previous snapshot.
 
@@ -560,6 +562,7 @@ class MeshDynamics:
                 cset.update_constraint_set(cuv)
             main_stream.wait_stream(stream)
 
+    @profiling.scoped("contact.dual")
     def update_dual(
         self,
         x: wp.array[wp.vec3f],

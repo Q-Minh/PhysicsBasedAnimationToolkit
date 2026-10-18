@@ -1,4 +1,5 @@
 import warp as wp
+from ...common import profiling
 import cupy as cp
 import numpy as np
 
@@ -234,6 +235,7 @@ class Sd(ContactDetection):
     def on_time_step_started(self):
         self.request_step_filter = True
 
+    @profiling.scoped("contact.detect")
     def detect_contacts(self, from_xt: bool = False):
         if self.params.deactivate:
             return
@@ -278,6 +280,7 @@ class Sd(ContactDetection):
             )
             main_stream.wait_stream(stream)
 
+    @profiling.scoped("contact.filter")
     def filter_step(self):
         if self.params.deactivate:
             return

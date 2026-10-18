@@ -4,6 +4,7 @@ import numpy as np
 import cupy as cp
 import cuda.compute
 import warp as wp
+from ...common import profiling
 import math
 from enum import Enum
 
@@ -1233,12 +1234,14 @@ class Ogc(ContactDetection):
         self._streams = [wp.Stream() for _ in range(2)]
         self.enable_adaptive_query_radius(xt, xtilde)
 
+    @profiling.scoped("contact.detect")
     def on_time_step_started(self):
         if self._params.deactivate:
             return
         main_stream = wp.get_stream()
         self._query_radius_reduction(main_stream)
 
+    @profiling.scoped("contact.detect")
     def detect_contacts(self, from_xt: bool = False):
         if self._params.deactivate:
             return
@@ -1250,6 +1253,7 @@ class Ogc(ContactDetection):
         self._detect_contacts(self._contacts)
         self._contacts.assemble_contacts(self._xk, with_reverse_contacts=True)
 
+    @profiling.scoped("contact.filter")
     def filter_step(self):
         if self._params.deactivate:
             return
