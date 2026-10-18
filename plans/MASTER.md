@@ -101,6 +101,10 @@ will instrument).
 - **Dependencies (maintainer, 2026-10-18).** Add every new external dependency to the `requirements.txt`
   closest to the code that needs it (e.g. `python/tools/sim/requirements.txt` for `tools/sim`), pinned like
   its neighbours. Configs are TOML (or YAML); everything else (trajectories, datasets, meshes) is HDF5.
+- **Simulation parameters and inputs (maintainer, 2026-10-18).** Build solver params with `state.load_params(fem)`, never per-solver
+  `load_*_params` blocks; it applies the GPU defaults. Prefer scene files (`--scene`) plus `--sim-params` TOML configs
+  (`configs/README.md`); use Dumps only to debug mid-simulation crashes. Tune per scene with the "Tuning" section of
+  `.claude/skills/sim-run/SKILL.md`; never edit `configs/paper/*.toml`. Benchmarks stop on the error metric only.
 - **Commits.** Small commits on your own branch, ending with the Co-Authored-By line. Rebase on `dev` before
   asking for a merge. Never push to `dev` or `master` yourself; the coordinator merges.
 - **Asking the maintainer.** Each plan lists open questions. Ask them in your own session before
@@ -253,7 +257,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold: `feature/aaavbd-params` merged into dev (`9598e393`) | 2026-10-18 | All work merged (profiling milestones, contact-gather early-out, AAAVBD load hoisting, AAAVBD-only stencil keys, betaG warm start). No GPU use except logged runs |
+| 2 | in progress: `feature/relative-hess-zero` (relative vertex-solve singularity check) | 2026-10-18 | Coordinator-assigned. Earlier work all merged |
 | 3 | merged (3aae8ba5); on hold | 2026-10-18 | static machinery, convergence/feasibility loop, benchmark tooling merged; waiting for benchmark data/plot requirements |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -597,6 +601,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 4 · **CPU run START** (~10 min, no GPU): regenerating `data/benchmarks/trampoline-sample` with exact (float64) references into `trampoline-sample.new`, then swapping it in. Same seed, layout and samples. Will log END.
 - 2026-10-18 · task 4 · **CPU run END**: `data/benchmarks/trampoline-sample` regenerated with exact references (branch `feature/exact-references`). Samples, x, v and xtilde are bit-identical to before; x_ref is float64 and accurate to <= 5.4e-9 e0 (new `samples/ref_error_mnorm`), against <= 3.6e-4 e0 before. The old set is in `trampoline-sample.old-float32-refs` (can be deleted).
 - 2026-10-18 · coordinator · **h = 1e-4 plateau root cause** (task 3): the absolute vertex-solve singularity check (|det H| <= 1.19e-7) skips light vertices when H ≈ m I. Maintainer's design: relative (Inverse |det H| <= hess_zero·(tr H/3)³, EVD |λ| <= hess_zero·max|λ|) → task 2 (`feature/relative-hess-zero`). Newton's 5-8% plateau is separate (task 3). Merged task 3's adaptive-penalty-stability (gamma_adaptive default 0.1); penalty default stays CONSTANT until TIMESTEP at 0.1 is confirmed stable. trampoline-sample regenerated with exact float64 references (ref_error_mnorm/e0 <= 5.4e-9); old set kept as trampoline-sample.old-float32-refs. Manual test page v4: research scenes (prisms, spaghetti, paper beams/contact scenes).
+- 2026-10-18 · task 2 · **GPU run START** (~20 min, correctness/convergence only): `feature/relative-hess-zero` vs dev, beam and trampoline (VBD, AAAVBD) plus dynamic h = 1e-4 and static benchmark smoke runs (2 samples). Ignore timings. Will log END.
 
 ## Open questions for the maintainer
 
