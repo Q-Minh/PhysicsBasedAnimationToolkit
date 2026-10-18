@@ -68,8 +68,9 @@ class SampleBatch:
     - **static**: release ``x`` with no loads; the solution is the rest shape ``X``.
     - **dynamic**: one implicit-Euler (BDF1) step of size ``h`` from ``x`` with velocity ``v``, i.e.
       minimize 1/(2 h^2) |y - xtilde|_M^2 + Psi(y) with the Dirichlet DOFs at rest. ``x_ref`` is a
-      reference solution (full-order Newton) and ``ref_newton_correction`` the largest entry (m) of its
-      last Newton correction, an estimate of its accuracy.
+      reference solution (full-order Newton). Its accuracy is ``ref_error_mnorm``, the M-norm (free
+      DOFs, as the benchmark's error) of its last Newton correction, in files that have it, and
+      otherwise roughly ``ref_newton_correction``, that correction's largest entry (m).
 
     ``attrs`` holds the file's root attributes as written by the sampler (e.g. ``target_energy``,
     ``sampler``, ``ensemble``, ``rhat``, ``gravity``, ``h``; see the sample-file contract in
@@ -87,6 +88,7 @@ class SampleBatch:
     xtilde: np.ndarray | None = None  # (S, N, 3) inertial targets x + h v + h^2 aext (dynamic)
     x_ref: np.ndarray | None = None  # (S, N, 3) reference solutions (dynamic)
     ref_newton_correction: np.ndarray | None = None  # (S,) reference accuracy estimate (m) (dynamic)
+    ref_error_mnorm: np.ndarray | None = None  # (S,) reference accuracy in the error's M-norm (dynamic)
 
     @property
     def h(self) -> float | None:
@@ -158,6 +160,8 @@ def load_sample_batch(path: str) -> SampleBatch:
             dynamic["ref_newton_correction"] = np.asarray(
                 f["samples/ref_newton_correction"], dtype=np.float64
             )
+            if "samples/ref_error_mnorm" in f:
+                dynamic["ref_error_mnorm"] = np.asarray(f["samples/ref_error_mnorm"], dtype=np.float64)
             if "h" not in attrs:
                 raise ValueError(f"{path}: dynamic problems need the time step attribute h")
         elif problem != "static":
@@ -165,7 +169,7 @@ def load_sample_batch(path: str) -> SampleBatch:
     if X.ndim != 2 or X.shape[1] != 3 or x.ndim != 3 or x.shape[1:] != X.shape:
         raise ValueError(f"{path}: expected X (N, 3) and samples/x (S, N, 3), got {X.shape}, {x.shape}")
     for name, a in dynamic.items():
-        if name != "ref_newton_correction" and a.shape != x.shape:
+        if name not in ("ref_newton_correction", "ref_error_mnorm") and a.shape != x.shape:
             raise ValueError(f"{path}: samples/{name} has shape {a.shape}, expected {x.shape}")
     return SampleBatch(
         path=path, X=X, x=x, energy=energy, attrs=attrs, min_J=min_J, problem=problem, **dynamic

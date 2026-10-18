@@ -64,7 +64,7 @@ Translating requests:
   - the spec, plus metadata: scene, sim-params sources, sample attributes, Newton CG limits, device, commit, date;
   - per solver and sample: e0, iterations, sweeps, solver time, final e/e0, time and iterations to each 5% level (null if never reached), deformation energy, min det F, and a log-spaced curve;
   - per level: aggregates (median, q25, q75, fraction of solves that reached it).
-- **Dynamic batches** add the problem kind and h to the metadata, and to each sample a `reference` with its accuracy (`newton_correction`, `error_bound`, `relative_error_bound`). Per level, `reliable` counts the samples whose reference resolves that level.
+- **Dynamic batches** add the problem kind and h to the metadata, and to each sample a `reference` with its accuracy in the error's M-norm (`error_bound`, `relative_error_bound`). It comes from the file's `samples/ref_error_mnorm`, or for older files without it from a loose worst case on `newton_correction` (`error_bound_source` says which). Per level, `reliable` counts the samples whose reference resolves that level.
 - **`results.h5`** next to it: the spec and the full logs at `<solver>/<sample>/{error,time,sweeps}`.
 
 When comparing solvers, use the time to reach each error level, not the time per iteration. Also report iterations and sweeps. Anderson iterations aren't sweeps when p > 1.

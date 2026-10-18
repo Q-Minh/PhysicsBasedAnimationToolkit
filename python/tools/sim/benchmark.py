@@ -60,8 +60,10 @@ Outputs:
     ``non_finite`` (NaN or infinite error), or for Newton ``newton_non_descent``,
     ``newton_line_search_failed`` or ``newton_zero_gradient``: Newton stops at its first rejected step,
     since x doesn't change after it. Dynamic summaries add ``reference``: the reference's ``newton_correction`` (m), its
-    mass-norm ``error_bound`` (newton_correction * sqrt(3 * sum of free masses)) and
-    ``relative_error_bound`` (over e0). Levels with 1 - p below that bound can't be resolved against
+    accuracy in the error's M-norm ``error_bound`` and ``relative_error_bound`` (over e0), and
+    ``error_bound_source``. The bound is the file's ``samples/ref_error_mnorm`` (the M-norm of the
+    reference's last Newton correction), or, for files without it, the loose worst case
+    newton_correction * sqrt(3 * sum of free masses) (``newton_correction_bound``). Levels with 1 - p below that bound can't be resolved against
     this reference, and the per-level aggregates count the samples whose reference allows them
     (``reliable``).
     ``results.h5`` (same name, next to it): the spec and the full per-iteration logs,
@@ -280,7 +282,8 @@ def main():
         print(f"Warning: {spec.sample_file}: {w}")
     if not dynamic:
         static.prepare_static_problem(state, spec.fext_scale)
-    # Mass-norm bound of a reference whose entries are off by at most ref_newton_correction
+    # Fallback for files without ref_error_mnorm: the mass-norm bound of a reference whose entries
+    # are off by at most ref_newton_correction (a loose worst case)
     free = state.fem.data.dmask.numpy() == 0
     mass_scale = math.sqrt(3.0 * float(state.fem.data.m.numpy()[free].sum()))
     indices = list(spec.sample_indices(batch.n_samples))
@@ -320,10 +323,15 @@ def main():
                         log = runner.solve(batch.x[s])
                     summary = summarize(log)
                     if dynamic:
-                        bound = float(batch.ref_newton_correction[s]) * mass_scale
+                        if batch.ref_error_mnorm is not None:
+                            bound, source = float(batch.ref_error_mnorm[s]), "ref_error_mnorm"
+                        else:
+                            bound = float(batch.ref_newton_correction[s]) * mass_scale
+                            source = "newton_correction_bound"
                         summary["reference"] = {
                             "newton_correction": float(batch.ref_newton_correction[s]),
                             "error_bound": bound,
+                            "error_bound_source": source,
                             "relative_error_bound": bound / summary["e0"] if summary["e0"] > 0 else math.inf,
                         }
                     summary["sample"] = int(s)
