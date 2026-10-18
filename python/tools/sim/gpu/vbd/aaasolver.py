@@ -90,10 +90,11 @@ def compute_thread_local_stencil_gradient_augmentation(
     n_neighbours = nend - nbegin
     for jlocal in range(local_tid, n_neighbours, block_dims):  # type: ignore
         j = GVVadj[nbegin + jlocal]
-        is_j_surface_node = GXV[j] >= 0  # type: ignore
-        if is_surface_node and not is_j_surface_node:
-            continue
-        ai += gk[j]  # type: ignore
+        # Load gk[j] unconditionally, so it doesn't wait for the GXV[j] load that decides whether it
+        # counts; surface vertices skip interior neighbours.
+        gkj = gk[j]
+        skip = is_surface_node and GXV[j] < 0  # type: ignore
+        ai += wp.where(skip, wp.vec3f(), gkj)  # type: ignore
     return ai
 
 
