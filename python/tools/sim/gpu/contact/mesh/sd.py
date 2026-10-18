@@ -63,7 +63,8 @@ def _detect_vertex_mesh_contacts(
         finds = meshes.F[f]
         j, k, l = finds[0], finds[1], finds[2]
         xj, xk, xl = x[j], x[k], x[l]
-        b0, b1, b2 = (wp.float32(1) - qp.u - qp.v), qp.u, qp.v  # type: ignore
+        # Warp's convention: the closest point is u * x_j + v * x_k + (1 - u - v) * x_l
+        b0, b1, b2 = qp.u, qp.v, (wp.float32(1) - qp.u - qp.v)  # type: ignore
         xc = b0 * xj + b1 * xk + b2 * xl  # type: ignore
         sd = qp.sign * wp.norm_l2(xi - xc)  # type: ignore
         tsdmin = wp.min(tsdmin, sd)
