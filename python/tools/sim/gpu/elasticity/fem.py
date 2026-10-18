@@ -186,6 +186,10 @@ class FemElastoDynamics:
         and :meth:`back_substitute_velocities` and :meth:`step` do nothing. Since :meth:`step` doesn't
         advance the kinematic constraints either, they stay evaluated at a frozen time. Leaving static
         mode restarts the time integration from the current positions at rest.
+
+        It isn't a simulation parameter (not serialized): set it per run, e.g. with
+        ``static.prepare_static_problem`` or the GUI's Static Equilibrium panel. Kernels read it from the
+        data struct when a graph is captured, so recapture after changing it.
         """
         return bool(self._data.is_static)
 
