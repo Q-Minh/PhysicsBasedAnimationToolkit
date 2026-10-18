@@ -153,6 +153,8 @@ class SimulationState:
         ) = None,
     ):
         self.fem_cpu = fem_cpu
+        # Initial velocities of the loaded problem (the Dump's v or the scene's per-body v0), restored on reset
+        self.v0 = fem_cpu.v.copy()
         self.params_cpu = params_cpu
         # Kinematic constraints (see load_kinematic_constraints), defaulting to fem_cpu's dmask as
         # permanently fixed nodes. Every GPU FEM gets its own KinematicConstraintSet built from them.
@@ -326,7 +328,7 @@ class SimulationState:
         self.t = 0
         sdt = self.dt / self.substeps
         self.fem_cpu.set_time_integration_scheme(sdt, self.bdf_scheme)
-        self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
+        self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.v0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self._attach_kinematics()
         self.params = {
