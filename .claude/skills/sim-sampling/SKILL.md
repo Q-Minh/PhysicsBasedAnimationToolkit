@@ -13,7 +13,7 @@ The sampling tools live in `python/examples`, everything runs on the **CPU**, an
 
 Read those docstrings for anything not covered here.
 
-Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Inputs are `file.h5:h5path` (an editor Dump's `fem` group) or a tetrahedral mesh. Use absolute paths: `data/` exists only in the main checkout.
+Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Inputs are `file.h5:h5path` (an editor Dump's `fem` group). `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`. `make_benchmark.py` **requires a Dump**: given a mesh, it produces zero masses and stiffness. Use absolute paths: `data/` exists only in the main checkout.
 
 ## Which sampler
 
@@ -44,7 +44,7 @@ python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler polar --ene
 # Benchmark problem sets: pool/E{E}.h5, static/E{E}.h5, dynamic_h{h}/E{E}.h5 (the same samples in every set)
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 500 5000 --problems 10 --dt 1e-4 1e-2
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --dt              # static only
-python make_benchmark.py -i <Dump>.h5:fem -o <dir> --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
+python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
 ```
 
 Translating requests:
@@ -74,7 +74,7 @@ Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd
 
 ## Quality checks (report them with every batch)
 
-- **`rhat < 1.05`.** Otherwise raise `--samples`/`--pool` or `--burn-in`. Microcanonical with 100 samples is typically about 1.08, which fails.
+- **`rhat < 1.05`.** Otherwise raise `--samples`/`--pool` or `--burn-in`. Microcanonical with 100 samples can exceed 1.05 (e.g. 1.08).
 - **`energy_noise_warning = False`.** pbat's energy is float32, with ~1e-4 J absolute noise, so energies ≲ 1 J on the beam can't be resolved.
 - **`star_violations = 0`** for polar.
 - **`importance_weights_required = False`**, i.e. not a ray batch.
@@ -84,7 +84,7 @@ Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd
 ## Pitfalls
 
 - **Gravity** is off unless `--gravity` (or the GUI checkbox). Static benchmark problems must be gravity-free, so their equilibrium is exactly X. Dynamic sets put the scene's gravity only into `xtilde`.
-- **Mesh inputs** (not a Dump) have no Dirichlet constraints: the 6 rigid modes are excluded, and reachability load targets need constraints.
+- **Mesh inputs** (not a Dump) work in `modalrom.py` only (`-m`/`-Y`/`-n` set the material). They have no Dirichlet constraints: the 6 rigid modes are excluded, and reachability load targets need constraints. `make_benchmark.py` needs a Dump.
 - **`make_benchmark.py` overwrites** existing files in `--output`.
 - **GUI costs:** the first Sample click pays for burn-in and the pilot run, and "Solve target" blocks the UI for 2–6 s.
 - **Shared venv:** never reinstall pbatoolkit from a worktree.
