@@ -656,7 +656,7 @@ if __name__ == "__main__":
     vm = ps.register_volume_mesh("model", X.T, E.T)
     # drop-down to select mapping type (linear/quadratic)
     mappings = ["Linear", "Quadratic"]
-    mapping = mappings[0]
+    mapping = mappings[1]
     mode = 6
     q = np.zeros(mu + mz, dtype=U.dtype)
     t0 = time.time()
