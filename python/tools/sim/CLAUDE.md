@@ -25,6 +25,7 @@ python -m unittest python.tools.sim.gpu.vbd.params
   - `FemElastoDynamics/{X,E,m,dmask,...}`
   - `sim/<frame:08d>/x`
   - `params/` holding `fps`, `solver` and `cd` attributes, plus the full parameter groups.
+- Instead of `--fem-elasto-dynamics dump.h5:fem`, both `ui.py` and `simulate.py` accept `--scene scene.h5`, a CPU editor scene file (`state.load_scene`, built like the CPU editor through `tools/vbd/scenario.py`). Static mesh colliders are ignored with a warning, since GPU contact has no static geometry. Settings come from `--sim-params` or the defaults either way. `reset()` restarts from the rest positions with the loaded initial velocities.
 - Example Dump files live in `data/*.Dump.h5` and `data/scenarios/*.Dump.h5`. `data/` is git-ignored but present locally.
 - The FEM must already be sorted by connected component. `SimulationState` raises an error otherwise.
 

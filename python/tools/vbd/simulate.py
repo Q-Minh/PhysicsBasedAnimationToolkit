@@ -1,9 +1,7 @@
 # type: ignore
 from pbatoolkit import pbat, pypbat
 from .ui.utils.transform_library import TransformLibrary
-from .ui.tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
-from .ui.static_mesh_collider import StaticMeshCollider
-from .editor import make_fem_dynamics_object, make_contact_dynamics_object
+from .scenario import load_simulation_scenario_from_scene
 import enum
 import argparse
 import h5py as h5
@@ -38,8 +36,6 @@ _archive_solver_groups = {
     "chebyshev_vbd": "Solver/Chebychev",
     "newton": "Solver/Newton",
 }
-
-_archive_tlib_group = "transform_library"
 
 _solver_params = {
     "vbd": {
@@ -279,45 +275,6 @@ def load_time_integration(path: str):
     except Exception as e:
         raise RuntimeError(f"Failed to load time integration from '{path}': {e}") from e
     return dt, bdf_scheme, fem_dynamics_init_strategy
-
-
-def load_simulation_scenario_from_scene(path: str):
-    try:
-        tet_elastic_bodies = []
-        static_mesh_colliders = []
-        with h5.File(path, "r") as f:
-            grp = f["fem_tet_elastic_bodies"]
-            num_bodies = grp.attrs["num_tet_elastic_bodies"]
-            for b in range(num_bodies):
-                body_grp = grp[f"{b}"]
-                body = TetrahedralElastodynamicsBody()
-                body.deserialize(body_grp, headless=True)
-                tet_elastic_bodies.append(body)
-
-            grp = f["static_mesh_colliders"]
-            num_static_meshes = grp.attrs["num_static_mesh_colliders"]
-            for b in range(num_static_meshes):
-                body_grp = grp[f"{b}"]
-                body = StaticMeshCollider()
-                body.deserialize(body_grp, headless=True)
-                static_mesh_colliders.append(body)
-
-            transform_library = TransformLibrary()
-            tlib_h5grp = f[_archive_tlib_group]
-            transform_library.deserialize(tlib_h5grp)
-            tet_elastic_body_names = tlib_h5grp["mesh_names"][:].astype(str).tolist()
-
-        fem, vert_counts, XP = make_fem_dynamics_object(
-            tet_elastic_bodies, get_external_info=True
-        )
-        contact = make_contact_dynamics_object(
-            fem, len(tet_elastic_bodies), vert_counts, static_mesh_colliders
-        )
-        return fem, contact, transform_library, tet_elastic_body_names, XP
-    except Exception as e:
-        raise RuntimeError(
-            f"Failed to load simulation scenario from '{path}': {e}"
-        ) from e
 
 
 def apply_overrides(
