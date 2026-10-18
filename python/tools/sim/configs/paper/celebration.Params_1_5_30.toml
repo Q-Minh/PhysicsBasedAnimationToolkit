@@ -7,6 +7,8 @@
 #   Solver.AndersonSolver: Solver.VBD's values, plus the default m, beta, cod_numerical_zero
 #
 # Not in the source, code defaults:
+#   Contact.ContactDynamics.gammaf_adaptive
+#   Contact.ContactDynamics.gamman_adaptive
 #   Solver.AAAVBD.kp
 #   Solver.AndersonSolver.linear_solver
 #   Solver.AndersonSolver.vbd_iters_per_anderson_iter
@@ -65,7 +67,9 @@ use_step_filter = 0
 decay = 0.5
 dmin = -9.999999747378752e-05
 gammaf = 10000.0
+gammaf_adaptive = 1.0
 gamman = 20000.0
+gamman_adaptive = 1.0
 min_sigma_n = 1.0
 mu_f = 0.30000001192092896
 penalty_adaptivity = 0
