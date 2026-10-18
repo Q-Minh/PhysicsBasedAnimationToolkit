@@ -63,6 +63,9 @@ class StepProfile:
     union_ms: dict[str, float]
     """Duration of the union of activity intervals per scope path, which does not double-count
     activities running concurrently on several streams."""
+    union_incl_ms: dict[str, float]
+    """Like ``union_ms``, but inclusive of nested scopes: the union over the path and all paths below it,
+    for every path and ancestor path. Unions of nested scopes overlap, so they can't be summed instead."""
     step_union_ms: float
     """Duration of the union of all activity intervals in the step."""
     step_span_ms: float
@@ -86,6 +89,24 @@ def interval_union_ns(intervals: list[tuple[int, int]]) -> int:
     if current_end is not None:
         total += current_end - current_start
     return total
+
+
+def path_ancestors(path: str) -> list[str]:
+    """The path and its ancestor paths: ``"a/b/c"`` -> ``["a", "a/b", "a/b/c"]``. Work outside any
+    scope (``""``) has no ancestors."""
+    if not path:
+        return [path]
+    parts = path.split(_PATH_SEPARATOR)
+    return [_PATH_SEPARATOR.join(parts[: n + 1]) for n in range(len(parts))]
+
+
+def inclusive_union_ns(intervals: dict[str, list[tuple[int, int]]]) -> dict[str, int]:
+    """Per path and ancestor path, the union length of the intervals of that path and all paths below it."""
+    grouped: dict[str, list[tuple[int, int]]] = {}
+    for path, path_intervals in intervals.items():
+        for ancestor in path_ancestors(path):
+            grouped.setdefault(ancestor, []).extend(path_intervals)
+    return {path: interval_union_ns(group) for path, group in grouped.items()}
 
 
 class _KernelRecorder:
@@ -143,6 +164,7 @@ class _KernelRecorder:
             calls=dict(self._calls),
             kernels=kernels,
             union_ms={p: interval_union_ns(iv) * 1e-6 for p, iv in intervals.items()},
+            union_incl_ms={p: ns * 1e-6 for p, ns in inclusive_union_ns(intervals).items()},
             step_union_ms=interval_union_ns(everything) * 1e-6,
             step_span_ms=(
                 (max(e for _, e in everything) - min(s for s, _ in everything)) * 1e-6
@@ -318,6 +340,19 @@ class TestProfiling(unittest.TestCase):
         self.assertEqual(profile.calls, {"outer": 1, "outer/inner": 1, "outer/inner.decorated": 1})
         self.assertLessEqual(profile.step_union_ms, profile.step_span_ms)
         self.assertLessEqual(profile.step_union_ms, profile.total_busy_ms + 1e-9)
+        self.assertEqual(set(profile.union_incl_ms), {"", "outer", "outer/inner", "outer/inner.decorated"})
+        self.assertGreaterEqual(profile.union_incl_ms["outer"], profile.union_incl_ms["outer/inner"])
+        self.assertGreaterEqual(profile.union_incl_ms["outer"], profile.union_ms["outer"])
+
+    def test_inclusive_union(self):
+        self.assertEqual(path_ancestors("a/b/c"), ["a", "a/b", "a/b/c"])
+        self.assertEqual(path_ancestors(""), [""])
+        unions = inclusive_union_ns(
+            {"a": [(0, 10)], "a/b": [(5, 20)], "a/b/c": [(30, 40)], "x/y": [(0, 3)], "": [(50, 60)]}
+        )
+        # "a" covers [0, 20) and [30, 40), its own and its descendants' overlapping intervals; "x" has no
+        # activity of its own but gets its child's; unscoped work stays separate.
+        self.assertEqual(unions, {"a": 30, "a/b": 25, "a/b/c": 10, "x": 3, "x/y": 3, "": 10})
 
     def test_interval_union(self):
         self.assertEqual(interval_union_ns([(0, 10), (5, 15), (20, 30)]), 25)

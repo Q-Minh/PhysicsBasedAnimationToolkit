@@ -15,6 +15,8 @@ Nsight Systems importer, so reports can consume either. Layout::
          "calls": {path: n},           # times each scope path was entered
          "union_ms": {path: ms},       # union of activity intervals per path (no double-counting
                                        # of concurrent streams)
+         "union_incl_ms": {path: ms},  # the same union over the path and all paths below it, for every
+                                       # path and ancestor path (inclusive unions can't be summed)
          "step_union_ms": ms,          # union over the whole step
          "step_span_ms": ms,           # first activity start to last activity end
          "step_timeline_ms": ms}       # production runs only (no per-phase timings): step GPU
@@ -63,6 +65,7 @@ class ProfileRecorder:
                 "launches": profile.launches,
                 "calls": profile.calls,
                 "union_ms": profile.union_ms,
+                "union_incl_ms": profile.union_incl_ms,
                 "step_union_ms": profile.step_union_ms,
                 "step_span_ms": profile.step_span_ms,
             }
