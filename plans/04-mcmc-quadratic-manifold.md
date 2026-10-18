@@ -65,11 +65,45 @@ simulator files.
 
 ## Open questions for the maintainer
 
-1. Which distribution should the samples follow: uniform on the energy level set, or something else (e.g. weighted by the reduced mass matrix)?
-2. Is E* the deformation energy only for this milestone, with velocities added later?
+1. ~~Which distribution?~~ **Answered (2026-10-17):** the mass-metric microcanonical measure,
+   π(q) ∝ √det(J(q)ᵀ M J(q)) · δ(Ψ̂(q) − E*), with J(q) = U + Q:q and Ψ̂(q) = Ψ(X + u(q)) − Ψ(X). The weight is
+   pluggable; this one is the default and the one written to task 3's files.
+5. ~~Sampler?~~ **Answered:** implement **both**, side by side: polar Metropolis (random walk on directions θ
+   with an exact radial root r(θ), density p(θ) ∝ w · r^(m−1) / ∂_rΨ̂) and a constrained random walk with a
+   projection and a reversibility check (Zappa, Holmes-Cerfon & Goodman 2018). The ray sampler stays as a
+   browsing baseline.
+6. ~~Fix the modal derivatives?~~ **Answered:** yes. Divide by 2h, and project the derivatives M-orthogonally
+   off span(U), keeping the vibration-mode derivatives (K − ω²M). Also pass `w` to `modal_derivatives`
+   explicitly and drop the dense `np.eye(nfree) @ Thetared`.
+7. ~~Reduced space?~~ **Answered:** the quadratic map u = Uq + ½Q:qq over the first `-k` modes, excluding
+   ω≈0 (rigid) modes. The linear map Uq is selectable for comparison. The augmented [U Z] basis is not sampled.
+8. ~~Sample-file contents beyond the MASTER.md draft?~~ **Answered:** the draft, plus chain metadata (attrs:
+   weight kind, burn-in, thinning, acceptance rate, ESS; dataset `samples/weight_log`), plus the ROM basis
+   (`basis/U`, `basis/Q`, `basis/omega`), so samples can be re-lifted or checked without recomputing the MDs.
+   `samples/x` is stored as float32. One E* per file.
+9. ~~Default for headless batches?~~ **Answered:** polar Metropolis (`--sampler` selects the constrained random
+   walk), with automatic thinning by the estimated integrated autocorrelation time so the S samples are about
+   independent.
+10. ~~Headless entry point?~~ **Answered:** flags on `modalrom.py` (`--headless`, `--energy`, `--samples`,
+    `--sampler`, `--seed`, `-o`), sharing the ROM setup with the GUI. The samplers and export live in
+    `rom_mcmc.py`.
+2. ~~Deformation energy only?~~ **Answered:** yes. E* is the deformation energy Ψ(X+u(q)) − Ψ(X), in
+   **absolute joules**. Velocities come later.
 3. ~~Save samples for task 3?~~ **Answered:** yes, samples seed task 3's static benchmark. Agree on the sample-file contract in `MASTER.md` with the maintainer and task 3.
 4. Please share the notes from your earlier discussion when it's time for the velocity part.
 
 ## Progress
 
-(update as you go)
+- 2026-10-17 · Investigated `modalrom.py` and prototyped on MediumLongBendingBeam (scratch only, no tracked edits).
+  Findings: (a) `modal_derivatives` divides the central difference by h instead of 2h, so Q is 2x too large.
+  (b) The vibration-mode-derivative system K - w_i^2 M blows up for near-degenerate mode pairs (beam: 1.294/1.303,
+  7.59/7.65, 19.61/19.75). M-orthogonal projection of the MDs off span(U) fixes it: for mode 0 at 0.3 m tip
+  displacement, the energy drops from 93.5 J (linear) to 11.6 J, with optimal scale c=1. (c) The Stable
+  Neo-Hookean rest energy is nonzero (4.96e-4 J), so deformation energy = Psi(X+u) - Psi(X). (d) The energy is
+  monotone along random rays (the level set is star-shaped), so I propose a polar Metropolis sampler with an
+  exact radial root. (e) Energy plus gradient costs under 1 ms on the CPU, and the MDs for 20 modes take 14 s.
+- 2026-10-17 · Findings, the proposed design and question batch 1 published at
+  https://claude.ai/artifact/FzhhvttWedq3qMSLwu2GbE
+- 2026-10-17 · Batches 1 and 2 answered (questions 1, 2 and 5–10 above). Only question 4 (the velocity notes) is
+  still open, and it doesn't block the first milestone. The proposed contract additions are posted in the
+  MASTER.md coordination log for task 3.

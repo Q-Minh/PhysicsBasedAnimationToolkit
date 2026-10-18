@@ -101,18 +101,44 @@ will instrument).
 - **Asking the maintainer.** Each plan lists open questions. Ask them in your own session before
   implementing the affected part, and record the answers in your plan.
 
+## Shared technical facts (verified)
+
+- **Timing inside CUDA graphs:** Warp 1.17's `Stream.record_event(event, external=True)` records an
+  external event node during capture (`warp/_src/context.py`, `Stream.record_event`). Per-sweep timestamps
+  inside a captured graph are possible, not only events bracketing the replay. (Reported by task 2.)
+- **Device-side control flow in graphs:** Warp 1.17 has `wp.capture_while` / `wp.capture_if`. (Reported by task 3.)
+- **Nsight Systems** 2026.1.3 is installed, not on PATH:
+  `C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.1.3\target-windows-x64\nsys.exe`. Under nsys,
+  the venv's `python.exe` launcher stub hangs. Launch the base interpreter through a wrapper that sets
+  `sys.prefix` and calls `site.addsitedir` on the venv; plain `PYTHONPATH` breaks `cuda.compute`. Task 2 is
+  committing a working wrapper with its profiling scripts. (Reported by task 2.)
+- **Profiling and benchmarks are separate:** task 3's convergence benchmark runs in graph mode with
+  profiling off. `profiling.scope` is a no-op when off, so captured graphs are unaffected. Task 3 needs
+  task 2's scopes only for an optional per-phase breakdown, which is an eager profiling run.
+
 ## Contract: MCMC sample files (task 4 produces, task 3 consumes)
 
-Draft, to be agreed by the maintainer with both sessions before either implements it:
-- **HDF5 file**, one per batch. Root attributes: source mesh / Dump path, the reduced basis description
-  (number of linear modes, modal derivatives on/off), sampler kind and parameters, target energy E*,
-  energy definition, random seed, and the git commit.
-- **`X`**: (N, 3) rest positions, so the file can be checked against the Dump that task 3 loads.
+**Agreed 2026-10-17** (maintainer-approved via task 4; task 3 to confirm it can consume it):
+- **HDF5 file**, one per batch, with **one target energy E\* per file**. Root attributes: source mesh / Dump
+  path, sampler kind and parameters, E\*, the energy definition, random seed, git commit, and chain metadata
+  (weight kind, burn-in, thinning, acceptance rate, ESS).
+- **Energy definition:** E\* is the **deformation energy in absolute joules**, Ψ(X + u) − Ψ(X). Stable
+  Neo-Hookean has a nonzero rest energy, 4.96e-4 J on MediumLongBendingBeam, hence the subtraction.
+- **`X`**: rest positions, to check against the Dump that task 3 loads.
 - **`samples/q`**: (S, r) reduced coordinates.
-- **`samples/x`**: (S, N, 3) full-space positions X + u(q), so task 3 doesn't need the reduced basis.
+- **`samples/x`**: (S, N, 3) full-space positions X + u(q), **float32**, so task 3 doesn't need the basis.
 - **`samples/energy`**: (S,) achieved deformation energy per sample.
+- **`samples/weight_log`**: (S,) log importance weights.
+- **`basis/U`** (3N, m), **`basis/Q`** (3N, m, m), **`basis/omega`** (m,): the ROM basis. DOFs are
+  interleaved per node (F order), matching `X.flatten(order="F")` for pbat's 3×N layout.
+- **Layouts to state explicitly in task 4's writer:** whether `X` is (N, 3) or pbat's (3, N), and the node
+  order inside `samples/x`. Task 3 must not guess.
+- **Independence:** samples are thinned automatically to be approximately independent.
+- **Dirichlet DOFs are exactly at rest** in every sample, because U and Q vanish there.
 - Later, for the velocity-based benchmark: `samples/qdot`.
-- **Dirichlet nodes** are at rest in every sample, consistent with the static benchmark's boundary conditions.
+- **Don't use shapes from the current `modalrom.py` "Quadratic" view as test inputs.** Its modal
+  derivatives have two bugs (÷h instead of ÷2h, and a blow-up for near-degenerate mode pairs), which task 4
+  is fixing.
 
 Until task 4 delivers real samples, task 3 develops against a small hand-made file in this format (e.g.
 rest shape plus a few modal perturbations).
@@ -139,7 +165,7 @@ Each session updates only its own row.
 | 1 | answering questions | 2026-10-17 | worktree `C:\git\pbat-kinematics` created |
 | 2 | answering questions | 2026-10-17 | worktree `C:\git\pbat-profiling` created |
 | 3 | answering questions | 2026-10-17 | worktree `C:\git\pbat-static` created |
-| 4 | answering questions | 2026-10-17 | worktree `C:\git\pbat-mcmc` created |
+| 4 | questions answered; ready to implement | 2026-10-17 | MD bug fix + polar & constrained-RW samplers + HDF5 export; only the velocity notes are still pending (not blocking) |
 
 ## Coordination log
 
@@ -150,6 +176,17 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-17 · coordinator · Maintainer: task 3's convergence benchmark uses task 4's MCMC samples as initial
   shapes. The metric is wall-clock time per percentile of error reduction, with error = distance to the rest
   shape. Added the sample-file contract above. Tasks 3 and 4: agree on it with the maintainer.
+- 2026-10-17 · task 2 → coordinator · No conflict with task 3's graph-mode timing (profiling stays off in
+  that benchmark). Reported in-graph event support and the nsys location and wrapper, now under "Shared
+  technical facts". Task 3 asked to fix the stale "benchmark runner" line in plan 03.
+- 2026-10-17 · task 4 · Maintainer-approved additions to the sample-file contract (task 3, please check):
+  `samples/x` is float32; one E* per file; E* is the **deformation energy in absolute J**, Ψ(X+u) − Ψ(X)
+  (Stable Neo-Hookean has a nonzero rest energy, 4.96e-4 J on MediumLongBendingBeam); attrs for the weight
+  kind, burn-in, thinning, acceptance rate and ESS; dataset `samples/weight_log`; ROM basis in `basis/U` (3N, m),
+  `basis/Q` (3N, m, m) and `basis/omega` (m,). DOFs are interleaved per node (F order), matching
+  `X.flatten(order="F")`. Samples are about independent (automatic thinning). Dirichlet DOFs are exactly at rest,
+  because U and Q vanish there. Also FYI: the modal derivatives in `modalrom.py` had two bugs (÷h instead of ÷2h,
+  and a blow-up for near-degenerate mode pairs); task 4 fixes both.
 
 ## Open questions for the maintainer
 

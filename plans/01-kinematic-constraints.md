@@ -110,11 +110,25 @@ reset), and validate the old and new CPU paths against each other before relying
 
 ## Open questions for the maintainer
 
-1. Are the names `KinematicConstraint` and `KinematicConstraintSet` acceptable, or do you prefer another (e.g. prescribed motion, scripted BCs)?
-2. Compose overlapping constraints on the same node, or forbid overlaps?
+1. ~~Are the names `KinematicConstraint` and `KinematicConstraintSet` acceptable, or do you prefer another (e.g. prescribed motion, scripted BCs)?~~
+   **Answered (2026-10-17):** yes. Kinds: `Fixed`, `Translate`, `Rotate` (axis + pivot; covers G_ROTATE and
+   L_ROTATE), `RadialTranslate`. The CPU editor keeps `TransformLibrary` and its names.
+2. ~~Compose overlapping constraints on the same node, or forbid overlaps?~~ **Answered (2026-10-17):** compose,
+   in library order, from a per-node anchor, each constraint with its own clamped active time
+   (τ_k = clamp(t, b_k, e_k) − clamp(t_a, b_k, e_k)). Existing scenes rely on motion + Fixed overlaps.
 3. Should the GPU GUI edit constraints, or only display and toggle the ones from the Dump?
 4. Keep reading the millisecond-countdown format from existing Dumps, or regenerate them?
-5. At release, should a node keep its prescribed velocity or start at rest?
+5. At release, should a node keep its prescribed velocity or start at rest? *(discussing: maintainer leans
+   toward zero velocity; Claude explained the trade-off, awaiting final answer)*
+6. ~~L_TRANSLATE semantics.~~ **Answered (2026-10-17):** the maintainer let Claude decide the intent.
+   Finding: the CPU code divides by the Frobenius norm of the whole `3 x n` group (`np.linalg.norm` without
+   `axis`), so it is a uniform xy-scaling about `origin`, not a per-node translation. Decision: L_TRANSLATE /
+   `RadialTranslate` moves each node away from the local `origin` in the xy-plane at `speed` units/s along its
+   own direction (nodes on the axis don't move), in both simulators. Closed form: x + speed·τ·r̂(x_a).
+7. ~~What to do with scenes tuned under the old L_TRANSLATE behavior?~~ **Answered (2026-10-17):** one-off
+   migration script that rewrites `speed` to speed·mean|r_j|/ρ₀ (exact when the group's nodes share one radius,
+   as on rims), backing up the originals. Affected: `cow_on_trampoline`, `octo-sling-1m-tilted`,
+   `octopus-trampoline` (in `data/scenarios`, git-ignored).
 
 ## Progress
 

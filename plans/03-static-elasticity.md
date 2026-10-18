@@ -100,12 +100,21 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 ## Open questions for the maintainer
 
 1. ~~Proximal term or pure minimization?~~ **Answered:** pure minimization. VBD's pseudo-singularity check is enough; if a safeguard is ever needed, make it adaptive rather than a constant term.
-2. ~~Which convergence metric?~~ **Answered:** wall-clock time per percentile of error reduction, with error = distance to the rest shape. Still to settle: the norm (plain or mass-weighted), the percentile set, and whether the timing comes from graph mode with a device-side error log or from eager profiling.
-3. Should static benchmarks include contact, or start contact-free?
-4. Do you want CPU parity (a C++ static mode in `pbat.sim.algorithm`), or is GPU-only enough for the paper?
+2. ~~Which convergence metric?~~ **Answered:** wall-clock time per percentile of error reduction, with error = distance to the rest shape. **Norm (2026-10-17): mass-weighted L2 over free nodes**, e = sqrt((x−X)ᵀM(x−X)). **Timing (2026-10-17): graph mode with a device-side error log** for the VBD family: capture a fixed sweep budget, a small kernel writes e_k each sweep into a preallocated device log, CUDA events bracket the replay, and per-percentile times are interpolated from the sweep index. Newton (not capturable) runs eagerly. **Percentiles (2026-10-17): every 5%** (if that's too much data, every 5% from 60% up). The full e_k log is stored either way, so other percentiles can be computed in post-processing.
+3. ~~Contact?~~ **Answered (2026-10-17):** contact-free only. The paper's static benchmark never uses contact.
+4. ~~CPU parity?~~ **Answered (2026-10-17):** GPU-only. No C++ changes. GPU Newton is the reference solver, and validation checks convergence to X (known exactly).
+7. ~~Static Newton with an indefinite Hessian?~~ **Answered (2026-10-17):** per-element PSD projection of the elastic Hessian (clamp negative eigenvalues, as C++ `HyperElasticSpdCorrection` does), behind a param that defaults to on in static mode.
+8. `check_convergence` in captured dynamic solves: device-side with `wp.capture_while`, or eager only? **Maintainer undecided (2026-10-17):** wants early termination, but not if splitting the captured region adds execution-time overhead. → Measure before deciding (see question 9).
 5. ~~Which initial configurations?~~ **Answered:** MCMC samples from task 4.
-6. Benchmark cases have no gravity and Dirichlet nodes at rest positions, so that the equilibrium is exactly the rest shape. Correct?
+6. ~~No gravity, Dirichlet at rest?~~ **Answered (2026-10-17):** yes, the equilibrium is exactly X. Benchmark cases have no external loads, and the Dirichlet nodes are fixed at rest and must pin the rigid modes (validate this). Static mode itself still supports gravity and `f_ext` scaling for other uses.
 
 ## Progress
 
-(update as you go)
+- 2026-10-17 · Investigation findings (the code, not the plan text, is the source of truth):
+  - `fext` is integrated from the body-force density (`fext = bg·wg·N` in C++ `SetExternalLoad`) and doesn't depend on `m`. Static mode can use `fext` directly. Zeroing `m` breaks only the `h²·fext/m` term of `xtilde` (division by zero in `_setup_time_integration_optimization_kernel` and in C++ `aext()`).
+  - The CPU "Static Elasticity" hack drops gravity entirely. With `m = 0`, `fext` enters only through `xtilde`, so the hack solves min Ψ subject to the Dirichlet BCs. (Its `xtilde = X` line is live, but has no effect with `m = 0`.)
+  - `elasticity.py`'s Dump stores the mode-deformed shape in `X` and keeps the original `GNegU`/`wgU`, which encode the true rest shape. `ui.SimulationState.reset()` sets `x ← X`, so in those dumps `X` holds the initial configuration. The benchmark needs the true rest positions separately, which the MCMC contract's `X` provides.
+  - On the GPU, `fext` enters the VBD vertex solves, `gradient.py` and Newton's energy only through `xtilde`. Static mode needs an explicit `−fext` term in each of them, and `h2 = 1`.
+  - GPU Newton has no SPD projection of the elastic Hessian; C++ Newton has `spd_correction`. In dynamics the mass term hides indefiniteness, but in static mode the SNH Hessian can become indefinite.
+  - Warp 1.17 (installed) has `wp.capture_while`/`wp.capture_if`, so a device-side stopping test can stay inside a captured graph.
+  - The dmask countdown in the setup kernel subtracts `bt·1000` ms each step. A static solve must not advance it.
