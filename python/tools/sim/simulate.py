@@ -110,8 +110,9 @@ def parse_args():
         "--profile-out",
         type=str,
         default=None,
-        help="Output file.json for the per-step, per-phase GPU timings (kernels backend), or the "
-        "run metadata that the Nsight Systems importer completes (nvtx backend).",
+        help="Output file.json for the per-step, per-phase GPU timings (kernels backend), the run "
+        "metadata that the Nsight Systems importer completes (nvtx backend), or each step's GPU time "
+        "in production mode, i.e. graph replay for capturable solvers (off).",
         dest="profile_out",
     )
     parser.add_argument(
@@ -152,13 +153,19 @@ def main():
     state.reset()
     backend = profiling.Backend(args.profile)
     recorder = None
-    if backend != profiling.Backend.OFF:
+    if backend != profiling.Backend.OFF or args.profile_out:
+        # Without a profiling backend, --profile-out records each step's GPU time in production mode
+        # (graph replay for capturable solvers), from CUDA events around the step.
+        production = backend == profiling.Backend.OFF
         recorder = profiling_results.ProfileRecorder(
-            args.profile,
+            "production" if production else args.profile,
             profiling_results.collect_metadata(
                 state, args.fem_elasto_dynamics, args.profile_warmup
             ),
         )
+        graph = production and state.solvers[state.solver].supports_graph_capture
+        recorder.metadata["execution"] = "graph" if graph else "eager"
+        step_events = (wp.Event(enable_timing=True), wp.Event(enable_timing=True))
 
     n_steps = math.ceil(args.duration / state.dt)
     h5f = init_h5_serialization(state.fem_cpu, args.output, args.fps)
@@ -183,11 +190,17 @@ def main():
                     wp.cuda_profiler_start()
             if profile_step:
                 profiling.begin_step()
+                wp.get_stream().record_event(step_events[0])
             state.step()
             if profile_step:
+                wp.get_stream().record_event(step_events[1])
                 step_profile = profiling.end_step()
                 if step_profile is not None:
                     recorder.add_step(state.t - 1, step_profile)
+                elif backend == profiling.Backend.OFF:
+                    recorder.add_step_timeline(
+                        state.t - 1, wp.get_event_elapsed_time(*step_events)
+                    )
             if should_save(state.t, state.dt, args.fps):
                 _write_frame(h5f, state, frame)
                 frame += 1

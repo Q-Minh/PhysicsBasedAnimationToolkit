@@ -6,7 +6,7 @@ Nsight Systems importer, so reports can consume either. Layout::
 
     {
       "schema": "pbat-sim-profile/1",
-      "source": "kernels" | "nsys",
+      "source": "kernels" | "nsys" | "production",
       "metadata": {...},               # GPU, software versions, scene, solver and parameters
       "steps": [                       # one entry per measured (post-warm-up) step
         {"t": int,
@@ -14,7 +14,9 @@ Nsight Systems importer, so reports can consume either. Layout::
          "launches": {path: n},        # timed activities per scope path
          "calls": {path: n},           # times each scope path was entered
          "timeline_ms": {path: ms},    # optional diagnostic: scope GPU timeline, inclusive
-         "step_timeline_ms": ms}       # optional diagnostic: step GPU timeline
+         "step_timeline_ms": ms}       # step GPU timeline from CUDA events around the step: a
+                                       # diagnostic for profiled (eager) runs, the measurement for
+                                       # production runs (graph replay, no per-phase timings)
       ],
       "kernels": [{"path": str, "name": str, "busy_ms": ms, "count": n}]  # summed over steps
     }
@@ -67,6 +69,10 @@ class ProfileRecorder:
             acc[0] += ms
             acc[1] += count
 
+    def add_step_timeline(self, t: int, step_timeline_ms: float):
+        """Record only a step's GPU timeline (production runs, without per-phase timings)."""
+        self.steps.append({"t": t, "busy_ms": {}, "launches": {}, "step_timeline_ms": step_timeline_ms})
+
     def to_dict(self) -> dict:
         kernels = [
             {"path": path, "name": name, "busy_ms": ms, "count": count}
@@ -116,6 +122,8 @@ def format_summary(result: dict) -> str:
     ]
     for title, by_leaf in (("By phase", True), ("By scope path", False)):
         rows = sorted(mean_busy_ms_per_step(result, by_leaf).items(), key=lambda r: -r[1])
+        if not rows:
+            continue
         total = sum(ms for _, ms in rows)
         lines.append(f"\n{title} (mean GPU busy ms/step, total {total:.3f} ms):")
         for key, ms in rows:
@@ -123,9 +131,9 @@ def format_summary(result: dict) -> str:
             lines.append(f"  {ms:10.4f} ms  {share:5.1f}%  {key or UNSCOPED}")
     timelines = [s["step_timeline_ms"] for s in result["steps"] if "step_timeline_ms" in s]
     if timelines:
-        lines.append(
-            f"\nStep GPU timeline (eager, includes idle gaps): mean {np.mean(timelines):.3f} ms/step"
-        )
+        execution = meta.get("execution", "eager")
+        note = "graph replay" if execution == "graph" else "eager, includes idle gaps"
+        lines.append(f"\nStep GPU timeline ({note}): mean {np.mean(timelines):.3f} ms/step")
     return "\n".join(lines)
 
 
