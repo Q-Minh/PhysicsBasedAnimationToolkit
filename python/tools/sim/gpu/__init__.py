@@ -1,1 +1,1 @@
-from . import contact, elasticity, integration, newton, vbd, types
+from . import contact, elasticity, integration, kinematics, newton, vbd, types

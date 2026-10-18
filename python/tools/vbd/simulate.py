@@ -435,11 +435,16 @@ def apply_procedural_constraints(
 
         fem_elasto_dynamics.constrain(fem_elasto_dynamics.dmask)
         xD = fem_elasto_dynamics.x
+        v = fem_elasto_dynamics.v
         for start, end, name in zip(XP[:-1], XP[1:], fem_elastic_mesh_names):
-            xD[:, start:end] = dirichlet_constraints.apply(
+            xD[:, start:end], vD, active = dirichlet_constraints.evaluate(
                 name, xD[:, start:end], t, dt
             )
+            # Constrained nodes move at their prescribed velocity, so that they keep
+            # moving smoothly when released
+            v[:, start:end][:, active] = vD[:, active]
         fem_elasto_dynamics.x = xD
+        fem_elasto_dynamics.v = v
 
 
 def checkpoint(

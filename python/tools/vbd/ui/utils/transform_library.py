@@ -21,6 +21,36 @@ available primitives:
 """
 
 
+def _rotate_closed_form(
+    axis: np.ndarray,
+    omega: float,
+    pivot: np.ndarray,
+    tau: np.ndarray,
+    dtau: float,
+    Y: np.ndarray,
+    dY: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Rotate Y about the unit axis through pivot by the angle omega * tau (Rodrigues' formula).
+
+    Returns R (Y - p) + p and its time derivative R dY + omega dtau a x (R (Y - p)).
+    """
+    K = np.array(
+        [
+            [0, -axis[2], axis[1]],
+            [axis[2], 0, -axis[0]],
+            [-axis[1], axis[0], 0],
+        ]
+    )
+    theta = omega * tau
+    c, s = np.cos(theta), np.sin(theta)
+
+    def R(Z):
+        return Z * c + (K @ Z) * s + axis[:, np.newaxis] * (axis @ Z) * (1 - c)
+
+    RY = R(Y - pivot[:, np.newaxis])
+    return RY + pivot[:, np.newaxis], R(dY) + omega * dtau * (K @ RY)
+
+
 class TransformType(Enum):
     G_ROTATE = 0
     L_ROTATE = 1
@@ -78,22 +108,29 @@ class PrimitiveTransform:
         else:
             raise ValueError(f"Unknown TransformType {ttype}")
 
+    def window_steps(self, dt: float) -> tuple[int, int]:
+        """Half-open range [n_begin, n_end) of time steps during which the transform is active.
+
+        Step n (from t_n = n * dt to t_{n+1}) is active when begin <= t_n < begin + duration.
+        Boundaries are rounded to the step grid with a tolerance of 1e-3 steps, so that e.g. a 1.2 s
+        window stored in float32 (1.2000000476837158) at dt = 0.01 covers exactly 120 steps.
+        """
+        tol = 1e-3
+        n_begin = int(np.ceil(self.begin / dt - tol))
+        end = self.begin + self.duration
+        n_end = int(np.ceil(end / dt - tol)) if np.isfinite(end) else np.iinfo(np.int64).max
+        return n_begin, n_end
+
+    def window_times(self, dt: float) -> tuple[float, float]:
+        """Time window [begin, end) rounded to the step grid, see `window_steps`."""
+        n_begin, n_end = self.window_steps(dt)
+        end = n_end * dt if n_end != np.iinfo(np.int64).max else np.inf
+        return n_begin * dt, end
+
     def applicable(self, t: int, dt: float) -> bool:
-        """Check if the transform is applicable at time t"""
-        return self.begin <= t * dt <= self.begin + self.duration
-
-    def expired(self, t: float) -> bool:
-        """Check if the transform has expired at time t"""
-        return t > self.duration + self.begin
-
-    def apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
-        """
-        Apply the transform to the vertices V at time t * dt.
-        V: (n, 3) array of vertex positions
-        Returns transformed vertices (n, 3)
-        """
-        # Implement specific transformations in subclasses
-        return self.specific_apply(t, dt, V)
+        """Check if the transform is active during time step t, i.e. begin <= t * dt < begin + duration"""
+        n_begin, n_end = self.window_steps(dt)
+        return n_begin <= t < n_end
 
     def nodes(self, mesh_name: str) -> np.ndarray:
         """Get the dirichlet node indices for the given mesh"""
@@ -103,8 +140,22 @@ class PrimitiveTransform:
         """Check if the transform affects the given mesh"""
         return mesh_name in self._mesh_dirichlet_nodes
 
-    def specific_apply(self, t: float, dt: float, V: np.ndarray) -> np.ndarray:
-        raise NotImplementedError("specific_apply must be implemented in subclasses")
+    def closed_form(
+        self, tau: np.ndarray, dtau: float, Y: np.ndarray, dY: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Evaluate the transform after it has been active for time tau.
+
+        Args:
+            tau (np.ndarray): `|# nodes|` time in seconds that the transform has been active since
+                each node's anchor.
+            dtau (float): Time derivative of tau, 1 while the transform is moving and 0 otherwise.
+            Y (np.ndarray): `|# dims| x |# nodes|` input positions.
+            dY (np.ndarray): `|# dims| x |# nodes|` time derivative of the input positions.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: The transformed positions and their time derivative.
+        """
+        raise NotImplementedError("closed_form must be implemented in subclasses")
 
     def adjust(self):
         """Adjust parameters if necessary (e.g., normalize axes)"""
@@ -216,36 +267,10 @@ class GlobalRotateTransform(PrimitiveTransform):
     def make_default():
         return GlobalRotateTransform("New Global Rotate", 0, 1, np.array([1, 0, 0]), 10)
 
-    def specific_apply(self, t, dt, V):
-        """Apply the global rotation transform to the given vertices.
-
-        Args:
-            t (int): The current time step.
-            dt (float): The time step size.
-            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
-
-        Returns:
-            np.ndarray: The transformed vertex positions.
-        """
-        # Compute rotation angle
-        angle_degrees = self.degrees_per_second * (dt)
-        angle_radians = np.deg2rad(angle_degrees)
-        # Compute rotation matrix using Rodrigues' rotation formula
-        K = np.array(
-            [
-                [0, -self.axis[2], self.axis[1]],
-                [self.axis[2], 0, -self.axis[0]],
-                [-self.axis[1], self.axis[0], 0],
-            ]
+    def closed_form(self, tau, dtau, Y, dY):
+        return _rotate_closed_form(
+            self.axis, np.deg2rad(self.degrees_per_second), np.zeros(3), tau, dtau, Y, dY
         )
-        R = (
-            np.eye(3)
-            + np.sin(angle_radians) * K
-            + (1 - np.cos(angle_radians)) * (K @ K)
-        )
-        # Apply rotation
-        V_rotated = R @ V
-        return V_rotated
 
     def serialize(self, h5group: h5py.Group):
         super().serialize(h5group)
@@ -301,40 +326,10 @@ class LocalRotateTransform(PrimitiveTransform):
             self.origin = np.mean(VD, axis=0)
         return VD
 
-    def specific_apply(self, t, dt, V):
-        """Apply the local rotation transform to the given vertices.
-
-        Args:
-            t (int): The current time step.
-            dt (float): The time step size.
-            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
-
-        Returns:
-            np.ndarray: The transformed vertex positions.
-        """
-        # Compute rotation angle
-        angle_degrees = self.degrees_per_second * (dt)
-        angle_radians = np.deg2rad(angle_degrees)
-        # Compute rotation matrix using Rodrigues' rotation formula
-        K = np.array(
-            [
-                [0, -self.axis[2], self.axis[1]],
-                [self.axis[2], 0, -self.axis[0]],
-                [-self.axis[1], self.axis[0], 0],
-            ]
+    def closed_form(self, tau, dtau, Y, dY):
+        return _rotate_closed_form(
+            self.axis, np.deg2rad(self.degrees_per_second), self.origin, tau, dtau, Y, dY
         )
-        R = (
-            np.eye(3)
-            + np.sin(angle_radians) * K
-            + (1 - np.cos(angle_radians)) * (K @ K)
-        )
-        # Translate vertices to origin
-        V_translated = V - self.origin[:, np.newaxis]
-        # Apply rotation
-        V_rotated = R @ V_translated
-        # Translate back
-        V_final = V_rotated + self.origin[:, np.newaxis]
-        return V_final
 
     def serialize(self, h5group: h5py.Group):
         super().serialize(h5group)
@@ -378,23 +373,9 @@ class TranslateTransform(PrimitiveTransform):
     def make_default():
         return TranslateTransform("New Translation", 0, 1, np.array([1, 0, 0]), 10)
 
-    def specific_apply(self, t, dt, V):
-        """Apply the translation to the given vertices.
-
-        Args:
-            t (int): The current time step.
-            dt (float): The time step size.
-            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
-
-        Returns:
-            np.ndarray: The transformed vertex positions.
-        """
-        # Compute translation distance
-        distance = self.speed * dt
-        translation_vector = self.direction * distance
-        # Apply translation
-        V_translated = V + translation_vector[:, np.newaxis]
-        return V_translated
+    def closed_form(self, tau, dtau, Y, dY):
+        d = self.direction[:, np.newaxis]
+        return Y + self.speed * tau * d, dY + self.speed * dtau * d
 
     def serialize(self, h5group: h5py.Group):
         super().serialize(h5group)
@@ -417,7 +398,7 @@ class TranslateTransform(PrimitiveTransform):
 
 
 class LocalTranslateTransform(PrimitiveTransform):
-    """Translate all vertices away from point of origin"""
+    """Translate each vertex radially away from origin, in the xy-plane, at `speed` units per second"""
 
     origin: np.ndarray
     speed: float
@@ -440,27 +421,26 @@ class LocalTranslateTransform(PrimitiveTransform):
             "New Local Translation", 0, 1, np.array([0, 0, 0]), 10
         )
 
-    def specific_apply(self, t, dt, V):
-        """Apply the translation to the given vertices.
-
-        Args:
-            t (int): The current time step.
-            dt (float): The time step size.
-            V (np.ndarray): `|# dims| x |# nodes|` the vertex positions.
-
-        Returns:
-            np.ndarray: The transformed vertex positions.
-        """
-        # Compute translation distance
-        distance = self.speed * dt
-        translation_vector = V - self.origin[:, np.newaxis]
-        translation_vector[2] = 0
-        translation_vector = (
-            translation_vector / np.linalg.norm(translation_vector) * distance
+    def closed_form(self, tau, dtau, Y, dY):
+        # Each node moves along its radial direction rhat in the xy-plane, which stays constant
+        # while it moves. Nodes on the axis through origin have no radial direction and stay put.
+        r = Y - self.origin[:, np.newaxis]
+        r[2] = 0
+        rho = np.linalg.norm(r, axis=0)
+        rhat = np.divide(r, rho, out=np.zeros_like(r, dtype=float), where=rho > 0)
+        # d rhat / dt = (I - rhat rhat^T) P_xy dY / rho
+        PdY = dY.copy()
+        PdY[2] = 0
+        drhat = np.divide(
+            PdY - rhat * np.sum(rhat * PdY, axis=0),
+            rho,
+            out=np.zeros_like(r, dtype=float),
+            where=rho > 0,
         )
-        # Apply translation
-        V_translated = V + translation_vector
-        return V_translated
+        return (
+            Y + self.speed * tau * rhat,
+            dY + self.speed * tau * drhat + self.speed * dtau * rhat,
+        )
 
     def serialize(self, h5group: h5py.Group):
         super().serialize(h5group)
@@ -487,8 +467,8 @@ class FixedTransform(PrimitiveTransform):
     def make_default():
         return FixedTransform("New Fixed", 0, 1)
 
-    def specific_apply(self, t, dt, V):
-        return V
+    def closed_form(self, tau, dtau, Y, dY):
+        return Y, dY
 
     def serialize(self, h5group):
         return super().serialize(h5group)
@@ -502,12 +482,16 @@ class TransformLibrary:
     _recycled_indices: list[int]
     _current_transform_index: int
     _mesh_names: list[str]
+    _anchors: dict[
+        str, tuple[np.ndarray, np.ndarray]
+    ]  # mesh name -> (3 x n anchor positions, n anchor time steps or -1 outside constrained runs)
 
     def __init__(self):
         self.transforms = []
         self._recycled_indices = []
         self._current_transform_index = 0
         self._mesh_names = []
+        self._anchors = {}
 
     def build_transform_map(self):
         self._transform_map = {}
@@ -577,32 +561,177 @@ class TransformLibrary:
                 all_nodes[i] = np.unique(np.concatenate(all_nodes[i]))
         return zip(self._mesh_names, all_nodes)
 
-    def all_transformed_nodes_with_durations(
+    def export_kinematic_constraints(
         self,
-    ) -> list[tuple[str, np.ndarray[int], np.ndarray[float]]]:
-        all_nodes = [[] for _ in range(len(self._mesh_names))]
-        durations = [[] for _ in range(len(self._mesh_names))]
-        for i, name in enumerate(self._mesh_names):
-            for transform in self.transforms:
-                if transform.affects(name):
-                    nodes = transform.nodes(name)
-                    all_nodes[i].append(nodes)
-                    durations[i].append(np.full_like(nodes, transform.duration, dtype=np.float32))
-            if len(all_nodes[i]) > 0:
-                all_nodes_i_cpy = np.concatenate(all_nodes[i])
-                durations[i] = np.concatenate(durations[i])
-                all_nodes[i], indices = np.unique(all_nodes_i_cpy, return_index=True)
-                durations[i] = np.maximum.reduceat(
-                    durations[i][np.argsort(all_nodes_i_cpy)], indices
-                )
-        return zip(self._mesh_names, all_nodes, durations)
+        grp: h5py.Group,
+        mesh_names: list[str],
+        offsets: np.ndarray,
+        t: int,
+        dt: float,
+    ):
+        """Write the library as the GPU simulator's kinematic constraint set.
 
-    def apply(self, name: str, V: np.ndarray, t: int, dt: float) -> np.ndarray:
-        for transform in self.transforms:
-            if transform.applicable(t, dt) and transform.affects(name):
-                dnodes = transform.nodes(name)
-                V[:, dnodes] = transform.apply(t, dt, V[:, dnodes])
-        return V
+        This is the `kinematics` group of the editor's Dump, read by
+        `python/tools/sim/gpu/kinematics`. Each transform becomes one constraint, in library order,
+        with its nodes in global (concatenated) numbering. Kinds: 0 = Fixed, 1 = Translate,
+        2 = Rotate (G_ROTATE has pivot 0), 3 = RadialTranslate (L_TRANSLATE). Layout:
+
+        - attrs `version` (1) and `t0`, the simulation time t * dt in seconds at the time of the Dump
+        - `kind` (K,), `name` (K,), `begin` (K,) and `duration` (K,) in seconds
+        - `direction` (K, 3): translation direction or rotation axis (unit length, zero otherwise)
+        - `point` (K, 3): rotation pivot or radial origin (zero otherwise)
+        - `rate` (K,): speed in units/s, or angular velocity in rad/s for Rotate
+        - `node_offsets` (K+1,) and `nodes` (nnz,): CSR list of each constraint's nodes
+        - `anchor_nodes` (A,), `anchor_positions` (A, 3) and `anchor_times` (A,) in seconds: anchors of
+          the nodes that are in a constrained run at time t0
+
+        Args:
+            grp (h5py.Group): Group to write to.
+            mesh_names (list[str]): Names of the simulated meshes, in simulation order.
+            offsets (np.ndarray): `|# meshes| + 1` prefix offsets of the meshes' nodes in global numbering.
+            t (int): Current time step.
+            dt (float): Time step size.
+        """
+        kinds = {
+            TransformType.FIXED: 0,
+            TransformType.TRANSLATE: 1,
+            TransformType.G_ROTATE: 2,
+            TransformType.L_ROTATE: 2,
+            TransformType.L_TRANSLATE: 3,
+        }
+        K = len(self.transforms)
+        kind = np.zeros(K, dtype=np.int32)
+        direction = np.zeros((K, 3))
+        point = np.zeros((K, 3))
+        rate = np.zeros(K)
+        node_offsets = np.zeros(K + 1, dtype=np.int64)
+        nodes = []
+        for k, tr in enumerate(self.transforms):
+            kind[k] = kinds[tr.transform_type]
+            if tr.transform_type == TransformType.TRANSLATE:
+                direction[k], rate[k] = tr.direction, tr.speed
+            elif tr.transform_type in (TransformType.G_ROTATE, TransformType.L_ROTATE):
+                direction[k] = tr.axis
+                rate[k] = np.deg2rad(tr.degrees_per_second)
+                if tr.transform_type == TransformType.L_ROTATE:
+                    point[k] = tr.origin
+            elif tr.transform_type == TransformType.L_TRANSLATE:
+                point[k], rate[k] = tr.origin, tr.speed
+            knodes = [
+                offsets[m] + np.asarray(tr.nodes(name), dtype=np.int64)
+                for m, name in enumerate(mesh_names)
+                if tr.affects(name)
+            ]
+            knodes = np.concatenate(knodes) if knodes else np.zeros(0, dtype=np.int64)
+            nodes.append(knodes)
+            node_offsets[k + 1] = node_offsets[k] + knodes.size
+        anchor_nodes, anchor_positions, anchor_times = [], [], []
+        for m, name in enumerate(mesh_names):
+            XA, TA = self._anchors.get(name, (None, None))
+            if XA is None:
+                continue
+            open_runs = np.flatnonzero(TA >= 0)
+            anchor_nodes.append(offsets[m] + open_runs)
+            anchor_positions.append(XA[:, open_runs].T)
+            anchor_times.append(TA[open_runs] * dt)
+        grp.attrs["version"] = 1
+        grp.attrs["t0"] = t * dt
+        grp["kind"] = kind
+        grp["name"] = [tr.name for tr in self.transforms]
+        grp["begin"] = np.array([tr.begin for tr in self.transforms], dtype=float)
+        grp["duration"] = np.array([tr.duration for tr in self.transforms], dtype=float)
+        grp["direction"] = direction
+        grp["point"] = point
+        grp["rate"] = rate
+        grp["node_offsets"] = node_offsets
+        grp["nodes"] = (
+            np.concatenate(nodes) if nodes else np.zeros(0, dtype=np.int64)
+        )
+        grp["anchor_nodes"] = (
+            np.concatenate(anchor_nodes) if anchor_nodes else np.zeros(0, dtype=np.int64)
+        )
+        grp["anchor_positions"] = (
+            np.concatenate(anchor_positions) if anchor_positions else np.zeros((0, 3))
+        )
+        grp["anchor_times"] = (
+            np.concatenate(anchor_times) if anchor_times else np.zeros(0)
+        )
+
+    def evaluate(
+        self, name: str, V: np.ndarray, t: int, dt: float
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Evaluate the prescribed motion of mesh `name` for time step t (from t * dt to (t+1) * dt).
+
+        A node is constrained while any transform affecting it is active. When a node starts a
+        constrained run at step t_a, its position x_a in V is recorded as its anchor. Its prescribed
+        position at the end of the step is then the closed form
+
+            x = T_m(tau_m) o ... o T_1(tau_1) (x_a),
+            tau_k = clamp(t1, b_k, e_k) - clamp(t_a * dt, b_k, e_k),
+
+        with the transforms in library order, t1 = (t+1) * dt, and [b_k, e_k) the transform's time
+        window on the step grid. Motions therefore don't accumulate drift, and a motion that ends
+        while an overlapping transform still holds the node leaves it where the motion stopped.
+
+        Args:
+            name (str): Mesh name.
+            V (np.ndarray): `|# dims| x |# mesh nodes|` positions at the start of the time step.
+            t (int): Time step index.
+            dt (float): Time step size.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray]: The positions at the end of the step (V with
+            the constrained nodes replaced), the `|# dims| x |# mesh nodes|` prescribed velocities
+            (zero for free nodes) and the `|# mesh nodes|` boolean mask of constrained nodes.
+        """
+        n = V.shape[1]
+        XA, TA = self._anchors.get(name, (None, None))
+        if XA is None or XA.shape[1] != n:
+            XA = np.zeros((3, n))
+            TA = np.full(n, -1, dtype=np.int64)
+            self._anchors[name] = (XA, TA)
+        transforms = [tr for tr in self.transforms if tr.affects(name)]
+        active = np.zeros(n, dtype=bool)
+        for tr in transforms:
+            if tr.applicable(t, dt):
+                active[tr.nodes(name)] = True
+        # Close the runs of free nodes, and anchor the nodes that start a constrained run
+        TA[~active] = -1
+        opened = active & (TA < 0)
+        XA[:, opened] = V[:, opened]
+        TA[opened] = t
+        Vp = np.array(V, dtype=float)
+        dV = np.zeros_like(Vp)
+        idx = np.flatnonzero(active)
+        if idx.size == 0:
+            return Vp, dV, active
+        pos = np.full(n, -1, dtype=np.int64)
+        pos[idx] = np.arange(idx.size)
+        Y = XA[:, idx].copy()
+        dY = np.zeros_like(Y)
+        ta = TA[idx] * dt
+        t1 = (t + 1) * dt
+        for tr in transforms:
+            sub = pos[tr.nodes(name)]
+            sub = sub[sub >= 0]
+            if sub.size == 0:
+                continue
+            b, e = tr.window_times(dt)
+            tau = np.clip(t1, b, e) - np.clip(ta[sub], b, e)
+            # Left derivative: a node released when a motion ends keeps the motion's velocity
+            dtau = 1.0 if b < t1 <= e else 0.0
+            Y[:, sub], dY[:, sub] = tr.closed_form(tau, dtau, Y[:, sub], dY[:, sub])
+        Vp[:, idx] = Y
+        dV[:, idx] = dY
+        return Vp, dV, active
+
+    def reset_anchors(self):
+        """Forget all anchors, so that constrained nodes are re-anchored at their current positions.
+
+        Re-anchoring in the middle of a constrained run is exact unless the node follows several
+        simultaneous motions that don't commute (e.g. rotations about different axes).
+        """
+        self._anchors = {}
 
     def draw(self):
         transform_type_names = [tt.name for tt in TransformType]
@@ -703,3 +832,136 @@ class TransformLibrary:
         while len(self.transforms) > 0:
             transform = self.transforms.pop()
             transform.on_removed()
+        self.reset_anchors()
+
+
+import unittest
+
+
+class TestTransformLibrary(unittest.TestCase):
+    dt = 0.01
+
+    def _library(self, transforms_and_nodes):
+        lib = TransformLibrary()
+        lib.on_mesh_added("m")
+        for transform, nodes in transforms_and_nodes:
+            lib.add_transform(transform)
+            transform.on_dirichlet_nodes_added("m", nodes)
+        return lib
+
+    def _run(self, lib, V, n_steps):
+        traj = [V]
+        for t in range(n_steps):
+            V, dV, active = lib.evaluate("m", V, t, self.dt)
+            traj.append(V)
+        return traj
+
+    def test_half_open_windows(self):
+        transform = FixedTransform("f", 0.0, 1.2000000476837158)  # float32-stored 1.2 s
+        self.assertEqual(transform.window_steps(self.dt), (0, 120))
+        self.assertTrue(transform.applicable(119, self.dt))
+        self.assertFalse(transform.applicable(120, self.dt))
+
+    def test_rotation_is_exact(self):
+        rng = np.random.default_rng(0)
+        V = rng.normal(size=(3, 10))
+        origin = np.array([0.5, -0.2, 0.1])
+        lib = self._library(
+            [
+                (
+                    LocalRotateTransform(
+                        "r", 0.0, 1.0, np.array([0.0, 0, 1]), origin, 90.0
+                    ),
+                    np.arange(10),
+                )
+            ]
+        )
+        traj = self._run(lib, V, 150)
+        # After the 1 s window, the nodes have rotated by exactly 90 degrees and stay there
+        R = np.array([[0.0, -1, 0], [1, 0, 0], [0, 0, 1]])
+        expected = R @ (V - origin[:, np.newaxis]) + origin[:, np.newaxis]
+        np.testing.assert_allclose(traj[100], expected, atol=1e-12)
+        # ... and are released afterwards
+        _, _, active = lib.evaluate("m", traj[100], 100, self.dt)
+        self.assertFalse(np.any(active))
+
+    def test_motion_then_hold(self):
+        V = np.array([[1.0, 0, 0], [0, 2, 0], [0, 0, 1]]).T
+        nodes = np.arange(3)
+        lib = self._library(
+            [
+                (
+                    LocalTranslateTransform("l", 0.0, 1.0, np.zeros(3), 0.5),
+                    nodes,
+                ),
+                (FixedTransform("f", 0.0, 1.2), nodes),
+            ]
+        )
+        traj = self._run(lib, V, 130)
+        expected = V + 0.5 * np.array([[1.0, 0, 0], [0, 1, 0], [0, 0, 0]]).T
+        for t in (100, 110, 120):
+            np.testing.assert_allclose(traj[t], expected, atol=1e-12)
+
+    def test_prescribed_velocity(self):
+        rng = np.random.default_rng(1)
+        V = rng.normal(size=(3, 8))
+        nodes = np.arange(8)
+        lib = self._library(
+            [
+                (
+                    GlobalRotateTransform("r", 0.0, 1.0, np.array([1.0, 0, 0]), 60.0),
+                    nodes,
+                ),
+                (
+                    TranslateTransform("t", 0.0, 1.0, np.array([0.0, 1, 0]), 0.3),
+                    nodes,
+                ),
+                (
+                    LocalTranslateTransform("l", 0.0, 1.0, np.zeros(3), 0.2),
+                    nodes,
+                ),
+            ]
+        )
+        traj = self._run(lib, V, 52)
+        _, dV, active = lib.evaluate("m", traj[50], 50, self.dt)
+        self.assertTrue(np.all(active))
+        # dV is the velocity at t = 51 dt, compare with a central difference of the closed form
+        central = (traj[52] - traj[50]) / (2 * self.dt)
+        np.testing.assert_allclose(dV, central, atol=1e-3)
+
+    def test_export_kinematic_constraints(self):
+        lib = TransformLibrary()
+        for name in ("a", "b"):
+            lib.on_mesh_added(name)
+        rotate = LocalRotateTransform(
+            "r", 0.5, 2.0, np.array([0.0, 0, 2]), np.array([1.0, 2, 3]), 90.0
+        )
+        fixed = FixedTransform("f", 0.0, np.inf)
+        lib.add_transform(rotate)
+        lib.add_transform(fixed)
+        rotate.on_dirichlet_nodes_added("b", [0, 2])
+        fixed.on_dirichlet_nodes_added("a", [1])
+        fixed.on_dirichlet_nodes_added("b", [2])
+        V = np.arange(9, dtype=float).reshape(3, 3)
+        lib.evaluate("b", V, 60, self.dt)  # opens a constrained run at step 60
+        with h5py.File("export.h5", "w", driver="core", backing_store=False) as f:
+            lib.export_kinematic_constraints(
+                f.create_group("kinematics"), ["a", "b"], np.array([0, 4, 7]), 61, self.dt
+            )
+            g = f["kinematics"]
+            self.assertEqual(g.attrs["version"], 1)
+            self.assertAlmostEqual(g.attrs["t0"], 0.61)
+            np.testing.assert_array_equal(g["kind"][()], [2, 0])
+            np.testing.assert_allclose(g["direction"][0], [0, 0, 1])
+            np.testing.assert_allclose(g["point"][0], [1, 2, 3])
+            self.assertAlmostEqual(g["rate"][0], np.pi / 2)
+            self.assertTrue(np.isinf(g["duration"][1]))
+            np.testing.assert_array_equal(g["node_offsets"][()], [0, 2, 4])
+            np.testing.assert_array_equal(g["nodes"][()], [4, 6, 1, 6])
+            np.testing.assert_array_equal(g["anchor_nodes"][()], [4, 6])
+            np.testing.assert_allclose(g["anchor_positions"][()], V[:, [0, 2]].T)
+            np.testing.assert_allclose(g["anchor_times"][()], [0.6, 0.6])
+
+
+if __name__ == "__main__":
+    unittest.main()

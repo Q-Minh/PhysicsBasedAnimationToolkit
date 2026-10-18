@@ -17,11 +17,13 @@ from pbatoolkit import pbat
 import numpy as np
 from . import gpu
 from .panels.common import draw_params, try_draw_tooltip
+from .panels.kinematics import draw_kinematics_panel
 from .state import (
     SimulationState,
     SolverType,
     CDType,
     load_fem_dynamics,
+    load_kinematic_constraints,
     load_vbd_params,
     load_chebyshev_params,
     load_anderson_params,
@@ -226,6 +228,7 @@ def make_callback(
                 # --- Feature panels ---
                 # One draw_<feature>_panel(state, ui_state) call per feature, implemented in
                 # python/tools/sim/panels/<feature>.py (see panels/__init__.py).
+                draw_kinematics_panel(state, ui_state)
 
                 # --- Simulation controls ---
                 imgui.Separator()
@@ -365,7 +368,11 @@ def main():
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
     params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
-    state = SimulationState(fem_cpu, params_cpu)
+    state = SimulationState(
+        fem_cpu,
+        params_cpu,
+        load_kinematic_constraints(args.fem_elasto_dynamics, fem_cpu),
+    )
     ui_state = UIState()
     mesh_name = "Mesh"
 

@@ -40,6 +40,28 @@ def load_fem_dynamics(spec: str) -> pbat.sim.dynamics.FemElastoDynamics:
     return fem_cpu
 
 
+def load_kinematic_constraints(
+    spec: str, fem: pbat.sim.dynamics.FemElastoDynamics
+) -> tuple[
+    list[gpu.kinematics.constraints.KinematicConstraint],
+    float,
+    gpu.kinematics.constraints.KinematicAnchors | None,
+]:
+    """Load the kinematic constraints of the Dump whose FEM is at file:group.
+
+    Reads the `kinematics` group at the root of the file, written by the CPU editor's Dump. A Dump
+    without one gets permanently fixed constraints on the nodes with nonzero dmask.
+
+    Returns:
+        The constraints, the initial simulation time t0 in seconds and the anchors of the runs open at t0.
+    """
+    file_path, _ = parse_archive_path(spec)
+    with h5py.File(file_path, "r") as f:
+        if "kinematics" in f:
+            return gpu.kinematics.constraints.read_kinematic_constraints(f["kinematics"])
+    return gpu.kinematics.constraints.fixed_constraints_from_dmask(fem.dmask), 0.0, None
+
+
 def load_newton_params(
     fem: pbat.sim.dynamics.FemElastoDynamics,
 ) -> pbat.sim.algorithm.newton.Params:
@@ -121,9 +143,28 @@ class SimulationState:
         params_cpu: dict[
             SolverType, pbat.sim.algorithm.vbd.Params | pbat.sim.algorithm.newton.Params
         ],
+        kinematics: (
+            tuple[
+                list[gpu.kinematics.constraints.KinematicConstraint],
+                float,
+                gpu.kinematics.constraints.KinematicAnchors | None,
+            ]
+            | None
+        ) = None,
     ):
         self.fem_cpu = fem_cpu
         self.params_cpu = params_cpu
+        # Kinematic constraints (see load_kinematic_constraints), defaulting to fem_cpu's dmask as
+        # permanently fixed nodes. Every GPU FEM gets its own KinematicConstraintSet built from them.
+        self.kinematic_constraints, self.kinematics_t0, self.kinematics_anchors = (
+            kinematics
+            if kinematics is not None
+            else (
+                gpu.kinematics.constraints.fixed_constraints_from_dmask(fem_cpu.dmask),
+                0.0,
+                None,
+            )
+        )
 
         # Time integration (modifiable from UI)
         self.dt: float = 1e-2
@@ -142,6 +183,7 @@ class SimulationState:
 
         # Build GPU mirrors
         self.fem = gpu.elasticity.fem.FemElastoDynamics(fem_cpu)
+        self._attach_kinematics()
         self.params = {
             s: gpu.vbd.params.Params(p)
             for s, p in params_cpu.items()
@@ -210,6 +252,17 @@ class SimulationState:
         self.t: int = 0
         self.until_seconds: float = -1.0
 
+    def _attach_kinematics(self):
+        """Give the current GPU FEM a fresh KinematicConstraintSet, starting at kinematics_t0."""
+        self.kinematics = gpu.kinematics.constraints.KinematicConstraintSet(
+            self.kinematic_constraints,
+            self.fem.data.x.shape[0],
+            self.fem.bdf.h,
+            self.kinematics_t0,
+            self.kinematics_anchors,
+        )
+        self.fem.set_kinematic_constraints(self.kinematics)
+
     def _make_contact_detector(
         self, contact_pair_storage: gpu.contact.mesh.pairs.ContactPairs
     ) -> gpu.contact.mesh.cd.ContactDetection:
@@ -227,6 +280,7 @@ class SimulationState:
             self.fem.data.xtilde,
             self.multimesh,
             contact_pair_storage,
+            self.fem.data.dmask,
         )
         return detector
 
@@ -274,6 +328,7 @@ class SimulationState:
         self.fem_cpu.set_time_integration_scheme(sdt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.fem_cpu.v * 0.0)
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
+        self._attach_kinematics()
         self.params = {
             s: gpu.vbd.params.Params(p)
             for s, p in self.params_cpu.items()
