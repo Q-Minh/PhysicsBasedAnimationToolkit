@@ -27,7 +27,7 @@ penalty_adaptivity = 0
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.2
 n_ve_contact_capacity = 0.05
-n_vf_contact_capacity = 0.2
+n_vf_contact_capacity = 0.5
 n_vv_contact_capacity = 0.05
 
 [Integration]
