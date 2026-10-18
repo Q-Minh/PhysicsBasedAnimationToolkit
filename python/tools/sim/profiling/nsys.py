@@ -246,16 +246,23 @@ def _base_python() -> str:
     return os.path.join(sys.base_prefix, "python.exe")
 
 
-def run(out_prefix: str, simulate_args: list[str], nsys: str) -> dict:
-    """Profile ``simulate.py`` under Nsight Systems and import the result.
+def profile(
+    out_prefix: str, simulate_args: list[str], nsys: str, graph: bool = False
+) -> tuple[str, str]:
+    """Run ``simulate.py`` under Nsight Systems, limited to the measured steps, and export SQLite.
 
     Args:
         out_prefix (str): Prefix for the outputs ``.nsys-rep``, ``.sqlite`` and ``.json``.
         simulate_args (list[str]): Arguments for ``python.tools.sim.simulate``.
         nsys (str): Path to ``nsys.exe``.
+        graph (bool): Profile production steps (CUDA graph replay, profiling off) with per-node
+            graph tracing, instead of eager NVTX-scoped steps.
+
+    Returns:
+        tuple[str, str]: The SQLite export and the JSON that ``simulate.py --profile-out`` wrote.
     """
     out_json = out_prefix + ".json"
-    profile_args = ["--profile", "nvtx", "--profile-out", out_json]
+    profile_args = ["--profile-out", out_json] + ([] if graph else ["--profile", "nvtx"])
     venvrun = os.path.join(os.path.dirname(__file__), "venvrun.py")
     command = [
         nsys,
@@ -265,6 +272,7 @@ def run(out_prefix: str, simulate_args: list[str], nsys: str) -> dict:
         "--capture-range-end=stop",
         "--sample=none",
         "--cpuctxsw=none",
+        *(["--cuda-graph-trace=node"] if graph else []),
         "--force-overwrite=true",
         "-o",
         out_prefix,
@@ -288,7 +296,14 @@ def run(out_prefix: str, simulate_args: list[str], nsys: str) -> dict:
         ],
         check=True,
     )
-    result = import_sqlite(out_prefix + ".sqlite", results.load(out_json))
+    return out_prefix + ".sqlite", out_json
+
+
+def run(out_prefix: str, simulate_args: list[str], nsys: str) -> dict:
+    """Profile ``simulate.py --profile nvtx`` under Nsight Systems and import the result into
+    ``out_prefix.json`` (see :func:`profile`)."""
+    sqlite, out_json = profile(out_prefix, simulate_args, nsys)
+    result = import_sqlite(sqlite, results.load(out_json))
     results.save(result, out_json)
     return result
 
