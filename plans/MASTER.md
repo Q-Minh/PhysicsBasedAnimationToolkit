@@ -253,7 +253,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | idle: kinematics (`c41bc1ad`) and scene ingestion (`65fc5fe1`) merged into dev | 2026-10-18 | Worktree rebased on dev. Open follow-ups, if wanted: GPU static-collider contact, the CPU `simulate.py -o` drive-letter bug |
-| 2 | milestone 3 in progress (AAAVBD analysis) | 2026-10-18 | Milestones 1–2 merged. M3 tools on branch (anatomy, ncu, overheads report, 7 commits after `92791e16`): [AAAVBD overheads](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Found 4× redundant constraint-set copies (−23% step time with a 2-line fix, awaiting maintainer decision) |
+| 2 | contact-gather early-out ready for review | 2026-10-18 | Milestones 1–3 merged. Early-out: 2 commits, bit-identical (VBD/AAAVBD/Chebyshev), trampoline −52…−59% production step, contact scene −4…−5%. [AAAVBD overheads v3](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Next candidates: AAAVBD state-load hoisting, neighbour pre-filter, dual-update early-out |
 | 3 | merged (3aae8ba5); on hold | 2026-10-18 | static machinery, convergence/feasibility loop, benchmark tooling merged; waiting for benchmark data/plot requirements |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -458,6 +458,32 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · **GPU run START** (~3 min, correctness only: Anderson sweep-parity counts on the beam). Will log END.
 - 2026-10-18 · coordinator · **GPU run END** (Anderson sweep parity: every p runs exactly n_max_iters × n_subproblem_max_iters sweeps, eager and captured).
 - 2026-10-18 · coordinator · Merged `feature/cpu-output-path` (`28d3b2f7`) and `feature/rom-mcmc` (`4029072e`). On dev: **Anderson sweep parity** (`5f24e614`, `c3cca7e5`: `n_subproblem_max_iters` counts sweeps for every VBD-family solver). **TOML sim-params configs** (`ea8641ea`..`1d44eb82`): `config.py`, `configs/README.md`, `configs/defaults.toml`, and `configs/paper/*.toml` (the 19 paper GPU files, bit-identical on load, with Chebyshev/Anderson tables copied from VBD where absent). `--sim-params a.toml b.h5 --set Table.key=value` in simulate/ui/benchmark_static. New dependency `tomli-w==1.2.0` in `python/tools/sim/requirements.txt` (installed in the venv). Waiting on: task 1 (vertex-SDF slots, then colliders), task 2 (contact-gather early-out, tooling rebase).
+- 2026-10-18 · task 1 · **GPU run START** (~10 min, correctness only, no timings): vertex-SDF slot check on
+  CubeFallingOnCube and BeamFallingOnBeam (dev vs fix). Task 2: ignore timings in this window. Will log END.
+- 2026-10-18 · task 2 · **GPU run END.** The contact-gather early-out is ready for review on `feature/gpu-profiling` (`f9f689a3` flag, `2e4498e9` gate; rebased on the latest dev). Changes: `gpu/contact/dynamics.py` (`MeshDynamicsData.in_contact`, flagged after each constraint-set update from the same prefix ranges the gather reads, with no payload reads, so task 1's sentinel fix stays independent) and one guarded condition in each of `gpu/vbd/solver.py` and `gpu/vbd/aaasolver.py`. **Validation:** VBD/AAAVBD/Chebyshev are bit-identical on trampoline and MediumLongBendingBeam; Anderson differs by 2.0e-4 vs its own run-to-run spread of 2.1–2.6e-4. On BeamFallingOnBeam (contacts), flags equal the gathered sets at every step (0 mismatches over 120 steps). **Production (dev, capture_while):** trampoline AAAVBD 58.7 → 28.4 ms, VBD 75.1 → 30.5, Chebyshev 47.8 → 22.2, Anderson 9.1 → 5.0; BeamFallingOnBeam AAAVBD 105.3 → 100.4, VBD 95.1 → 91.5. Report v3: https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL
+- 2026-10-18 · task 1 · **GPU run END** (vertex-SDF checks). **Vertex-SDF slot bug fixed** on `feature/vertex-sdf-slots`
+  (3 commits on dev `3aae8ba5`). It's ready for review and independent of the collider work.
+  - **Root cause, not the in-kernel tile sort:** `ContactPairs` sized pair types as a fraction of
+    vertices/edges, so tiny meshes got **zero capacity** (CubeFallingOnCube: VV = VE = 0, VF = 3).
+    `cuda.compute` caches its radix sort by array types, and **a Sort built from empty arrays makes later
+    sorts of the same types keys-only.** The VF sort then left its values at the sentinel nF. Reproduced in
+    isolation (a 3-item key/value sort is correct, but drops its values if a zero-size Sort was built first).
+    Fix `fa980990`: at least 1 slot per type. CubeFallingOnCube now has 0 sentinel steps (was 6) and 79 valid
+    VF contacts over 60 steps (was 0). Old and new detection kernels give identical pairs on identical
+    positions, so the tile_sort pattern task 3 suspected is fine.
+  - **Second bug, `5e74a386`:** the detector wrote past the pair capacity on overflow. BeamFallingOnBeam
+    overflows the default VF capacity (923) at step 12. Excess contacts are now dropped instead of
+    corrupting memory. **Maintainer decision needed:** the defaults are too small for that scene, and tiny
+    scenes get only 1 VV/VE slot. Should the defaults (or a floor) go up?
+  - **Third, latent, `cf215b38`:** the mesh loop variable was overwritten in the body, which skips meshes
+    in scenes with more than 256 meshes.
+  - **FYI everyone:** GPU contact scenes are **not bit-reproducible run to run**. BeamFallingOnBeam differs
+    by 3.5e-3 from frame 10 between two runs of the same code (atomic contact order). Compare contact scenes
+    by contact sets or tolerances.
+  - CubeFallingOnCube still falls through, as the maintainer expects (coincident vertices, sd = 0), on dev
+    too. Task 3's sentinel guard in `convergence.py` can stay as a defensive check.
+- 2026-10-18 · task 2 · **GPU run START** (~1 h, intermittent): checking Anderson's sweep counts on trampoline, then the AAAVBD kernel changes the maintainer approved (state-load hoisting, neighbour pre-filter) with ncu and timing runs. Will log END.
+- 2026-10-18 · coordinator · **Merged `feature/gpu-profiling`** (contact-gather early-out, `1ba967d9`; beam AAAVBD/VBD bit-identical vs dev, re-checked by the coordinator) and **`feature/vertex-sdf-slots`** (`44d473c0`: min 1 slot per pair type, capacity guard, loop-variable fix; CubeFallingOnCube AAAVBD 0.5 s finite with contacts). Open for the maintainer: raise default contact capacities (BeamFallingOnBeam overflows VF 923)? Inclusive scope times (task 2) pending a decision. Task 1: colliders rebase next; possible overflow race in `assemble_contacts` (reverse map vs forward prefix stream) flagged to task 1.
 
 ## Open questions for the maintainer
 

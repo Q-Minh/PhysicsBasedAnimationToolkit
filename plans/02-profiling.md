@@ -228,3 +228,19 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
   - **To recheck:** AAAVBD is faster than VBD with the gather skipped.
   - **Report:** v2 of https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL
   - **Pending:** the `capture_while` anatomy waits for task 3's merge.
+- 2026-10-18 · **Contact-gather early-out implemented** (maintainer: task 2 implements it), on dev after task 3's merge:
+  - **Commits:** `f9f689a3`, `2e4498e9`. `MeshDynamicsData.in_contact` is flagged per constraint-set update from the
+    gather's own prefix ranges, plus one guarded condition per vertex solve.
+  - **Validation:**
+    - VBD/AAAVBD/Chebyshev are bit-identical on trampoline and the beam. Anderson is within run-to-run noise.
+    - On BeamFallingOnBeam, flags exactly match the gathered sets.
+  - **Production timings (dev, capture_while):**
+    - Trampoline: AAAVBD 58.7 → 28.4 ms, VBD 75.1 → 30.5, Chebyshev 47.8 → 22.2, Anderson 9.1 → 5.0.
+    - BeamFallingOnBeam: −4…−5%.
+  - **`capture_while` anatomy** (dev graph, AAAVBD trampoline): step 18.3 ms traced, gaps 1.2 ms (7%),
+    ~237 sweeps per step (convergence test).
+  - **ncu after the early-out:** AAAVBD's vertex solve takes 10.0 µs vs VBD's 7.6 µs (+32%, +36% instructions). The
+    acceleration functions hold ~25% of the stalls.
+  - **Ideas, not implemented:** hoist AAAVBD's per-vertex state loads, pre-filter surface neighbours, early-out for
+    the dual updates.
+  - **Report:** v3 of the same link.
