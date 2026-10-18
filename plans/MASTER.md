@@ -266,7 +266,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | in progress: `feature/relative-hess-zero` (relative vertex-solve singularity check) | 2026-10-18 | Coordinator-assigned. Earlier work all merged |
+| 2 | ready for review: `feature/relative-hess-zero` (`e46eb244`); next: surface_stencil_surface_neighbours_only | 2026-10-18 | Relative singularity check validated on the new defaults (bit-identical at dt 0.01; dynamic h = 1e-4 reaches 95% in 16–17 sweeps) |
 | 3 | in progress | 2026-10-18 | static/dynamic benchmark, adaptive-penalty fixes merged; `feature/vertex-solve-scale` superseded by task 2's `feature/relative-hess-zero`; now: Newton h = 1e-4 plateau, relative gradient check, termination statuses, `benchmark.py --scene` |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -626,6 +626,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   limit, so it acts as viscous drag even at `mu_f=0`. The frictionless cube creeps at ~0.1 m/s and slides only with
   `gammaf=0`. The C++ primal has the same form (`vbd/Core.h:509`), and mu enters only the dual projection. Corrected
   commands were sent to the coordinator.
+- 2026-10-18 · task 2 · **GPU run END** (relative hess_zero validation, new defaults, scene files). **Ready for review:** `feature/relative-hess-zero` (2 commits on dev `30fd3934`, head `e46eb244`). Beam and trampoline, VBD and AAAVBD at dt 0.01: bit-identical to dev. Dynamic h = 1e-4 (E50, 2 samples): dev stalls at e/e0 0.125 / 0.191; branch reaches the 95% target in 16 (VBD) / 17 (AAAVBD) sweeps. Static smoke: same iterations to every level as dev.
+- 2026-10-18 · coordinator · Merged `feature/relative-hess-zero` (task 2): vertex singularity check relative to H's scale (Inverse |det H| <= hess_zero·|tr H/3|³, EVD |λ| <= hess_zero·max|λ|); bit-identical at dt 0.01; h = 1e-4 benchmark now reaches 95% in 16-17 sweeps (was stalling at 12-19%). Plane-scene flags corrected (penalty_adaptivity=1, gamman_adaptive=1; sliding needs gammaf_adaptive 0.001). Friction finding (task 1): AL friction has no cone limit in the primal term → viscous drag; fix pending the maintainer. Benchmark trampolines: circle mesh, 4 fixed patches, 1e6/1e7 → task 1. Task 3: switch the benchmark reliability flags to ref_error_mnorm.
 
 ## Open questions for the maintainer
 
