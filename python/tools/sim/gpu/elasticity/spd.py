@@ -4,6 +4,11 @@ SPD correction of hyperelastic Hessians.
 Mirrors ``pbat::math::linalg::FilterEigenvalues`` (``math/linalg/FilterEigenvalues.h``) as used by
 ``pbat::fem::HyperElasticPotential`` on the 9x9 Hessian d^2Psi/dF^2. Warp only provides 3x3
 eigendecompositions, so the 9x9 symmetric eigenproblem is solved by cyclic Jacobi rotations.
+
+The static Newton solver applies it to every quadrature point's d^2Psi/dF^2 before the chain rule, with
+the mode from ``pbat.sim.algorithm.newton.Params.spd_correction`` (config key
+``Solver.Newton.spd_correction``; C++'s default is ``Absolute``). Tests:
+``python -m unittest python.tools.sim.gpu.elasticity.spd``.
 """
 
 import warp as wp
@@ -25,8 +30,14 @@ _JACOBI_REL_TOL2 = wp.constant(wp.float32(1e-14))
 def sym_eig9(A: types.mat9x9f):  # pyright: ignore[reportInvalidTypeForm]
     """Eigendecomposition A = V diag(d) V^T of a symmetric 9x9 matrix by cyclic Jacobi.
 
+    Sweeps stop once the off-diagonal Frobenius norm falls below about 1e-7 of the matrix's norm, or
+    after 12 sweeps.
+
+    Args:
+        A (mat9x9f): Symmetric matrix (only symmetric input is meaningful).
+
     Returns:
-        (d, V): eigenvalues (unsorted) and the orthonormal eigenvectors as the columns of V.
+        (vec9f, mat9x9f): Eigenvalues d (unsorted) and the orthonormal eigenvectors as the columns of V.
     """
     V = wp.identity(n=9, dtype=wp.float32)
     norm2 = wp.ddot(A, A)
@@ -76,6 +87,14 @@ def filter_eigenvalues9(A: types.mat9x9f, mode: wp.int32):  # pyright: ignore[re
 
     ``SPD_CORRECTION_PROJECTION`` clamps negative eigenvalues to 0 (nearest PSD matrix in the
     2-norm), ``SPD_CORRECTION_ABSOLUTE`` flips their sign, and ``SPD_CORRECTION_NONE`` returns A.
+
+    Args:
+        A (mat9x9f): Symmetric matrix, e.g. d^2Psi/dF^2.
+        mode (int32): One of the ``SPD_CORRECTION_*`` constants (``pbat.fem.HyperElasticSpdCorrection``
+            values).
+
+    Returns:
+        mat9x9f: The corrected matrix. A itself if it has no negative eigenvalue or ``mode`` is none.
     """
     if mode == SPD_CORRECTION_NONE:
         return A
