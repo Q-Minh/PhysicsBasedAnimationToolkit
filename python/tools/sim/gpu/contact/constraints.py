@@ -7,6 +7,7 @@ from ..common.buffer import DoubleBuffer
 
 @wp.kernel
 def _snapshot_and_reset_constraints(
+    contacts: pairs.PairsData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.uint32,
     u: wp.array[wp.uint32],
     v: wp.array[wp.uint32],
@@ -23,8 +24,9 @@ def _snapshot_and_reset_constraints(
 ):
     """Copy slot k of the current arrays to the previous snapshot, then reset it to defaults.
 
-    Only u (empty-slot sentinel n_u), gamma (1) and the multipliers (0) are reset: v is only read
-    where u is valid, and s is recomputed by the solver's dual updates.
+    Slot k gets the key (u, v) of the new contact k, or the empty-slot sentinel u = n_u past the
+    contacts, so that the next update can find it. gamma (1) and the multipliers (0) are reset, and
+    s is recomputed by the solver's dual updates.
     """
     k = wp.tid()  # type: ignore
     u_prev[k] = u[k]
@@ -33,7 +35,12 @@ def _snapshot_and_reset_constraints(
     gamma_prev[k] = gamma[k]
     lambda_n_prev[k] = lambda_n[k]
     lambda_f_prev[k] = lambda_f[k]
-    u[k] = n_u
+    n_contacts = contacts.prefix[n_u]
+    if wp.uint64(k) < n_contacts:  # type: ignore
+        u[k] = contacts.u[k]
+        v[k] = contacts.v[k]
+    else:
+        u[k] = n_u
     gamma[k] = wp.float32(1)
     lambda_n[k] = wp.float32(0)
     lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))
@@ -159,15 +166,16 @@ class ConstraintSet:
         Two kernels, so the update adds only two nodes to a captured graph:
 
         1. **Snapshot and reset** (:func:`_snapshot_and_reset_constraints`): copy every field's
-           current slot to alternate (the previous snapshot), then reset u to the empty-slot
-           sentinel ``n_u``, gamma to 1 and the multipliers to 0.
+           current slot to alternate (the previous snapshot), then set each slot's key ``(u, v)``
+           to its new contact's (``u = n_u`` past the contacts), gamma to 1 and the multipliers
+           to 0.
         2. **Warm start** (:func:`_warm_start_constraints`): for each valid previous pair whose
            ``(u, v)`` appears in the new forward contact list, copy ``s``, ``gamma``,
            ``lambda_n``, ``lambda_f`` to the corresponding current slot. It writes arbitrary
            slots, so it must follow the whole reset.
 
-        After this call, current slots that were warm-started have a valid u value;
-        new contacts keep the default sentinel ``u.current[k] = n_u``.
+        After this call, every contact's slot holds its key, so the next update can warm-start
+        it, and persisting contacts hold their previous AL state.
 
         Args:
             contacts: Forward contact pairs produced by a collision detector.
@@ -177,7 +185,7 @@ class ConstraintSet:
         wp.launch(
             _snapshot_and_reset_constraints,
             dim=self.capacity,
-            inputs=[self.n_u]
+            inputs=[contacts, self.n_u]
             + [buf.current for buf in fields]
             + [buf.alternate for buf in fields],
         )
