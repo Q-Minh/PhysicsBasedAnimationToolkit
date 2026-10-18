@@ -129,10 +129,11 @@ def main():
     frame = 0
     t_last_flush = time.perf_counter()
     t_start = t_last_flush
+    pbar = None
     try:
         _write_frame(h5f, state, frame)
         frame += 1
-        for _ in tqdm(range(n_steps), desc=f"{state.solver.name}", unit="step"):
+        while state.t < n_steps:
             state.step()
             if _should_save(state.t, state.dt, args.fps):
                 _write_frame(h5f, state, frame)
@@ -140,9 +141,17 @@ def main():
             if time.perf_counter() - t_last_flush >= 1.0:
                 h5f.flush()
                 t_last_flush = time.perf_counter()
+            # The first step compiles/loads Warp modules and captures the CUDA graph, which prints
+            # messages. Start the progress bar after it, so those messages don't break the bar up.
+            if pbar is None:
+                pbar = tqdm(total=n_steps, initial=state.t, desc="Simulating", unit="step")
+            else:
+                pbar.update(1)
     except KeyboardInterrupt:
         print("Interrupted, closing output file.")
     finally:
+        if pbar is not None:
+            pbar.close()
         h5f.close()
     elapsed = time.perf_counter() - t_start
     print(
