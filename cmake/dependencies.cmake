@@ -59,6 +59,14 @@ if(NOT TARGET embree)
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}"
     )
+    # Embree's common/cmake/msvc.cmake links with /DEPENDENTLOADFLAG:0x2000, which makes the
+    # Windows loader ignore the caller's DLL search directories (e.g. Python's extension module
+    # directory and os.add_dll_directory entries) when resolving embree's own imports (tbb12.dll).
+    # Importing pbatoolkit then intermittently fails, depending on whether tbb12.dll happens to be
+    # loaded already. Reset the flag so embree's imports use the caller's search path.
+    if(MSVC AND NOT EMBREE_STATIC_LIB)
+        target_link_options(embree PRIVATE "/DEPENDENTLOADFLAG:0x0")
+    endif()
 endif()
 
 if(NOT TARGET Spectra)
