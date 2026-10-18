@@ -38,7 +38,7 @@ them **through that absolute path**, never a copy inside their own worktree.
 | # | Task | Plan | Branch / worktree | Depends on |
 |---|---|---|---|---|
 | 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 | **done** | 2026-10-17 | `state.py` (1d…), `gpu/common/profiling.py` stub, `panels/` package, docs. Rebase onto `dev` now. |
-| 2 | on hold: `feature/aaavbd-params` merged into dev (`9598e393`) | 2026-10-18 | All work merged (profiling milestones, contact-gather early-out, AAAVBD load hoisting, AAAVBD-only stencil keys, betaG warm start). No GPU use except logged runs |
+| 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
 | 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
 | 4 | MCMC sampling of quadratic-manifold shapes (benchmark dataset generator) | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
 | 5 | GPU simulators read CPU scene files (task 1's session) | MASTER.md section "New milestone: GPU simulators read CPU scene files" | `feature/gpu-scene-ingestion` · `C:\git\pbat-kinematics` | dev |
@@ -253,7 +253,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | idle: kinematics (`c41bc1ad`) and scene ingestion (`65fc5fe1`) merged into dev | 2026-10-18 | Worktree rebased on dev. Open follow-ups, if wanted: GPU static-collider contact, the CPU `simulate.py -o` drive-letter bug |
-| 2 | on hold until the benchmark discussion | 2026-10-18 | All work merged: milestones 1–3, contact-gather early-out, AAAVBD load hoisting, inclusive scope times, docs pass; sim-profiling skill corrected (d5550ee8). No GPU use except logged runs |
+| 2 | on hold: `feature/aaavbd-params` merged into dev (`9598e393`) | 2026-10-18 | All work merged (profiling milestones, contact-gather early-out, AAAVBD load hoisting, AAAVBD-only stencil keys, betaG warm start). No GPU use except logged runs |
 | 3 | merged (3aae8ba5); on hold | 2026-10-18 | static machinery, convergence/feasibility loop, benchmark tooling merged; waiting for benchmark data/plot requirements |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
