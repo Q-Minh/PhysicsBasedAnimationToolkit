@@ -336,10 +336,16 @@ $$
   with the scene gravity $a_{\mathrm{ext}}$ applied to the free degrees of freedom only.
   - **Sampling:** dynamic pools are sampled with gravity in $\mathcal{U}$ by default, consistent with the
     gravity-loaded dynamics conserving $E$.
-  - **Reference solution:** $x^\star$ comes from full-order Newton with SPD-corrected Hessians
-    $\nabla^2 \Psi + M/h^2$ and Armijo backtracking, run to the float32 round-off floor.
-  - **Reference accuracy:** estimated by the last Newton correction, $10^{-7}$–$3 \times 10^{-5}$ m against steps of
-    $4 \times 10^{-4}$–$0.23$ m on the trampoline.
+  - **Reference solution:** $x^\star$ solves (14) for $\tilde x$ exactly as stored (float32, which the solvers
+    read). It comes from full-order Newton with float64 energies and gradients and Armijo backtracking, converged to
+    a relative gradient norm of $10^{-10}$, and is stored in float64. pbat's SPD-corrected (float32) Hessian
+    $\nabla^2\Psi + M/h^2$ serves only as the Newton matrix.
+  - **Reference accuracy:** recorded per problem as the $M$-norm of the last Newton correction (`ref_error_mnorm`),
+    the same metric as the benchmark's error $e=\lVert x - x^\star\rVert_M$.
+    - On the trampoline it is about $10^{-9}\,e_0$ (residuals of $10^{-6}$ N).
+    - With pbat's float32 energies the references stopped at the float32 gradient floor (about 3 N), leaving
+      errors up to $4 \times 10^{-4}\,e_0$, a large fraction of a 99.9% error-reduction target.
+    - Storing references in float32 would add about $3 \times 10^{-4}\,e_0$ more.
 
 The time step regularizes the problem through the mass term. With $\lambda_{\min}, \lambda_{\max}$ the extreme
 eigenvalues of $M^{-1} K$, the mass-scaled condition number of the step's Hessian is roughly
