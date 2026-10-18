@@ -9,6 +9,7 @@ simulation parameters and trajectories. Nothing here depends on Polyscope, imgui
 
 import enum
 import gc
+import warnings
 import h5py
 import warp as wp
 from pbatoolkit import pbat
@@ -60,6 +61,60 @@ def load_kinematic_constraints(
         if "kinematics" in f:
             return gpu.kinematics.constraints.read_kinematic_constraints(f["kinematics"])
     return gpu.kinematics.constraints.fixed_constraints_from_dmask(fem.dmask), 0.0, None
+
+
+def load_scene(path: str) -> tuple[
+    pbat.sim.dynamics.FemElastoDynamics,
+    tuple[
+        list[gpu.kinematics.constraints.KinematicConstraint],
+        float,
+        gpu.kinematics.constraints.KinematicAnchors | None,
+    ],
+]:
+    """Build the FEM problem and its kinematic constraints from a CPU editor scene file.
+
+    Reads the tetrahedral elastodynamic bodies, static mesh colliders and transform library that the CPU
+    offline simulator reads (``python -m python.tools.vbd.simulate --scene``), and builds the FEM as the
+    editor does. The transforms become kinematic constraints through the editor Dump's format. GPU
+    contact has no static geometry yet, so static colliders are ignored with a warning.
+
+    Returns:
+        The FEM problem (dmask holds the nodes constrained at t = 0), and its kinematic constraints as
+        returned by load_kinematic_constraints.
+    """
+    from ..vbd import scenario
+
+    bodies, colliders, transform_library, names = scenario.read_scene(path)
+    if len(colliders) > 0:
+        warnings.warn(
+            f"{path}: ignoring {len(colliders)} static mesh collider(s), "
+            "GPU contact has no static geometry",
+            stacklevel=2,
+        )
+    fem, _, offsets = scenario.make_fem_dynamics_object(bodies, get_external_info=True)
+    with h5py.File("kinematics.h5", "w", driver="core", backing_store=False) as f:
+        grp = f.create_group("kinematics")
+        transform_library.export_kinematic_constraints(grp, names, offsets, 0, 1.0)
+        kinematics = gpu.kinematics.constraints.read_kinematic_constraints(grp)
+    dmask = np.zeros(fem.X.shape[1], dtype=np.int64)
+    for c in kinematics[0]:
+        if c.begin <= 0.0 < c.begin + c.duration:
+            dmask[c.nodes] = 1
+    fem.constrain(dmask)
+    return fem, kinematics
+
+
+def load_problem(
+    fem_spec: str | None = None, scene: str | None = None
+) -> tuple[pbat.sim.dynamics.FemElastoDynamics, tuple]:
+    """Load the FEM problem and its kinematic constraints from either an editor Dump's FEM group
+    (``file.h5:fem``) or a CPU editor scene file."""
+    if (fem_spec is None) == (scene is None):
+        raise ValueError("Pass exactly one of fem_spec and scene")
+    if scene is not None:
+        return load_scene(scene)
+    fem_cpu = load_fem_dynamics(fem_spec)
+    return fem_cpu, load_kinematic_constraints(fem_spec, fem_cpu)
 
 
 def load_newton_params(
