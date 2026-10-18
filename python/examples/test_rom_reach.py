@@ -61,6 +61,23 @@ class TestStaticEquilibrium(unittest.TestCase):
         np.testing.assert_allclose(u[free], np.linalg.solve(Kd[np.ix_(free, free)] + np.diag(k[free]), rhs), rtol=1e-8)
         np.testing.assert_array_equal(u[fixed], ut[fixed])
 
+    def test_gradient_tolerance_converges_to_machine_precision(self):
+        # Psi = sum 1/2 d^2 + 1/4 d^4 again, stopped by the relative gradient norm instead of the decrement
+        n, x0 = 6, np.zeros(6)
+        f = np.linspace(-3.0, 3.0, n)
+
+        def potential(x, gradient=False, hessian=False):
+            d = x - x0
+            e = np.sum(0.5 * d**2 + 0.25 * d**4)
+            if hessian:
+                return e, d + d**3, scipy.sparse.diags(1 + 3 * d**2).tocsr()
+            return (e, d + d**3) if gradient else e
+
+        u, info = rom_reach.static_equilibrium(potential, x0, np.arange(n), f, steps=1, gtol=1e-12)
+        np.testing.assert_allclose(u + u**3, f, atol=1e-11)
+        self.assertEqual(info["last_correction"].shape, (n,))
+        self.assertLess(np.abs(info["last_correction"]).max(), 1e-10)
+
     def test_nonlinear_separable(self):
         # Psi = sum 1/2 d^2 + 1/4 d^4, so equilibrium solves d + d^3 = f per DOF
         n, x0 = 6, np.zeros(6)
