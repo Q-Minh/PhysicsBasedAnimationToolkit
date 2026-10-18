@@ -258,11 +258,14 @@ if __name__ == "__main__":
             f"problem {s} is pool sample {int(attrs['pool_indices'][s])}"
         )
         if state["shares"] is not None:
-            counts, edges = np.histogram(state["shares"], bins=24, range=(0.0, 1.0))
+            # With gravity in the sampled potential, U (and U/E) can be negative
+            lo = min(0.0, float(state["shares"].min()))
+            counts, edges = np.histogram(state["shares"], bins=24, range=(lo, 1.0))
+            bin = int(np.clip(np.searchsorted(edges, U / energy, side="right") - 1, 0, 23))
             imgui.PlotHistogram(
-                "U / E over the pool",
+                f"U / E over the pool, from {lo:.2f} to 1",
                 counts.astype(np.float32).tolist(),
-                overlay_text=f"this problem: U/E = {U / energy:.3f} (bin {min(int(U / energy * 24), 23) + 1}/24)",
+                overlay_text=f"this problem: U/E = {U / energy:.3f} (bin {bin + 1}/24)",
                 scale_min=0.0,
                 graph_size=(0.0, 80.0),
             )

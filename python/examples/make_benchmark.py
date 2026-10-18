@@ -1,9 +1,13 @@
 """Generates static and dynamic elasticity benchmark problems from microcanonical samples of a quadratic-manifold ROM.
 
 For each total energy E, a pool of microcanonical samples (q, qdot) is drawn on the quadratic manifold, and an
-evenly spaced subset of it becomes the benchmark problems. The same subset is used in every problem set:
+evenly spaced subset of it becomes the benchmark problems. The total energy E = K + U includes the gravity potential
+-(M g)^T u(q) in U when sampling with gravity: by default the dynamic problems are sampled with gravity (consistent
+with their inertial targets) and the static ones without (--static-gravity, --dynamic-gravity). Sets sampled with
+the same setting share one pool, i.e. the same problems; the dynamic sets always share theirs:
 
-    <output>/pool/E{E}.h5          all pooled samples.
+    <output>/pool/E{E}.h5          all pooled samples without gravity.
+    <output>/pool_gravity/E{E}.h5  all pooled samples with gravity.
     <output>/static/E{E}.h5        static problems: release x = X + u(q) into a static solve with no loads.
                                    The solution is the rest shape X.
     <output>/dynamic_h{h}/E{E}.h5  dynamic problems: one implicit Euler (BDF1) step of size h from
@@ -20,6 +24,7 @@ All files follow the sample-file contract (see rom_mcmc.write_samples), with ens
 sampler = "microcanonical". Dirichlet DOFs stay at rest in every state. Problem files add:
 
     root attributes      problem ("pool", "static" or "dynamic"), problem_definition, pool_file, pool_indices,
+                         gravity (3,) the acceleration in the sampled potential (zero without gravity),
                          scene_dt and scene_bdf_steps (the input's BDF time step in s and step count).
     dynamic files only   root attributes h (s), bdf_order = 1, aext (3,) the scene gravity (m/s^2),
                          reference_time (s), and the datasets
@@ -40,8 +45,11 @@ Usage:
     # Default levels (50, 500, 5000 J), 10 problems each, h = 1e-4 and 1e-2 s
     python make_benchmark.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.Dump.h5:fem -o C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline
 
-    # Chosen energies, problem counts and time steps
-    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 5 --dt 1e-4 1e-2
+    # Chosen energies, problem counts and time steps; e.g. 100 problems at 10000 J from a pool of 2000
+    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 10000 --problems 100 --pool 2000 --dt 1e-4 1e-2
+
+    # All sets sampled with gravity, sharing one pool (paired static and dynamic problems)
+    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --static-gravity
 
     # Static problems only (no dynamic sets)
     python make_benchmark.py -i <Dump>.h5:fem -o <dir> --dt
@@ -132,6 +140,40 @@ def check_scene(fem, atol: float = 1e-6) -> typing.List[str]:
     return warnings
 
 
+class SamplingPlan(typing.NamedTuple):
+    """One pool of samples per energy, and the problem sets drawn from it."""
+
+    pool: str
+    gravity: bool
+    static: bool
+    dynamic: bool
+
+
+def sampling_plan(static_gravity: bool, dynamic_gravity: bool, has_dynamic: bool) -> typing.List[SamplingPlan]:
+    """The pools to sample for the requested gravity settings.
+
+    Static and dynamic sets share one pool, so they're paired (the same samples), when they're sampled with the
+    same gravity setting. Otherwise each gets its own pool and the pairing is only kept between the dynamic sets.
+
+    Args:
+        static_gravity (bool): Whether the static problems' samples include the gravity potential.
+        dynamic_gravity (bool): Whether the dynamic problems' samples include the gravity potential.
+        has_dynamic (bool): Whether any dynamic set is requested.
+
+    Returns:
+        typing.List[SamplingPlan]: The pools, named pool (without gravity) or pool_gravity (with gravity).
+    """
+    pool = lambda gravity: "pool_gravity" if gravity else "pool"
+    if not has_dynamic:
+        return [SamplingPlan(pool(static_gravity), static_gravity, True, False)]
+    if static_gravity == dynamic_gravity:
+        return [SamplingPlan(pool(static_gravity), static_gravity, True, True)]
+    return [
+        SamplingPlan(pool(static_gravity), static_gravity, True, False),
+        SamplingPlan(pool(dynamic_gravity), dynamic_gravity, False, True),
+    ]
+
+
 def min_det_F(E, egU, GNegU, model, qs) -> np.ndarray:
     """Minimum det(F) over the mesh of each shape X + u(q) for q in qs (<= 0 means inverted elements)."""
     return np.array(
@@ -147,7 +189,8 @@ def min_det_F(E, egU, GNegU, model, qs) -> np.ndarray:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Static and dynamic elasticity benchmark problems from microcanonical ROM samples",
-        description="Writes pool/, static/ and dynamic_h{h}/ problem files per total energy under --output. "
+        description="Writes pool/ (and pool_gravity/), static/ and dynamic_h{h}/ problem files per total energy under "
+        "--output. "
         "See the module docstring for the file contents and representative commands.",
     )
     parser.add_argument(
@@ -178,8 +221,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--problems",
-        help="Number of problems per energy, an evenly spaced subset of the pool shared by all sets "
-        "(default: %(default)s)",
+        help="Number of problems per energy, an evenly spaced subset of the pool; at most --pool, and preferably "
+        "well below its effective sample size (default: %(default)s)",
         type=int,
         dest="problems",
         default=10,
@@ -222,6 +265,23 @@ if __name__ == "__main__":
         default=[1e-4, 1e-2],
     )
     parser.add_argument(
+        "--static-gravity",
+        help="Include the scene's gravity potential -(M g)^T u(q) in the total energy when sampling the static "
+        "problems (default: off). The static problems themselves are solved without loads either way",
+        action=argparse.BooleanOptionalAction,
+        dest="static_gravity",
+        default=False,
+    )
+    parser.add_argument(
+        "--dynamic-gravity",
+        help="Include the scene's gravity potential -(M g)^T u(q) in the total energy when sampling the dynamic "
+        "problems (default: on), consistent with their inertial targets, which always include gravity. When static "
+        "and dynamic settings differ, the two kinds of sets use separate pools and no longer share samples",
+        action=argparse.BooleanOptionalAction,
+        dest="dynamic_gravity",
+        default=True,
+    )
+    parser.add_argument(
         "-k",
         "--num-modes",
         help="Number of vibration modes m of the quadratic manifold (default: %(default)s)",
@@ -252,6 +312,8 @@ if __name__ == "__main__":
         default=0,
     )
     args = parser.parse_args()
+    if args.problems > args.pool:
+        parser.error(f"--problems ({args.problems}) can't exceed --pool ({args.pool}): problems are drawn from the pool")
     try:
         scene = load_scene(args.input)
         for warning in check_scene(scene):
@@ -279,6 +341,10 @@ if __name__ == "__main__":
     # Gravity acts on the free DOFs only; Dirichlet DOFs stay at rest
     accel = rom_reach.gravity_load(np.ones(n), gravity)
     accel[fixed] = 0.0
+    # The same model with the gravity potential -(M g)^T u(q), for pools sampled with gravity
+    model_gravity, _ = modalrom.reduced_model(
+        "quadratic", U, Q, w, m, x0, psi, rigid, "mass", rom_reach.gravity_load(m, gravity)
+    )
     common = dict(
         input=args.input,
         n_linear_modes=args.modes,
@@ -287,119 +353,131 @@ if __name__ == "__main__":
         mode_normalization="mass",
         eps=args.eps,
         sampler="microcanonical",
-        gravity=np.zeros(3),
         scene_dt=float(scene.bdf.h),
         scene_bdf_steps=int(scene.bdf.s),
         seed=args.seed,
         git_commit=rom_mcmc.git_commit(os.path.dirname(os.path.abspath(__file__))),
     )
-    for directory in ["pool", "static"] + [f"dynamic_h{h:g}" for h in args.dt]:
+    plans = sampling_plan(args.static_gravity, args.dynamic_gravity, len(args.dt) > 0)
+    directories = [plan.pool for plan in plans] + ["static"] + [f"dynamic_h{h:g}" for h in args.dt]
+    for directory in directories:
         os.makedirs(os.path.join(args.output, directory), exist_ok=True)
 
     for Etot in args.energies:
-        t0 = time.time()
-        pool = rom_mcmc.run_chains(
-            lambda rng: rom_mcmc.make_sampler("microcanonical", model, Etot, rng),
-            args.chains,
-            args.pool,
-            args.burn_in,
-            args.pilot,
-            seed=args.seed,
-        )
-        attrs = dict(common, target_energy=Etot, sampling_time=time.time() - t0)
         name = f"E{Etot:g}.h5"
-        rom_mcmc.write_samples(
-            os.path.join(args.output, "pool", name),
-            X,
-            model,
-            wr,
-            pool,
-            dict(attrs, problem="pool"),
-            min_det_F(E, egU, GNegU, model, pool.q),
-        )
-        indices = np.round(np.linspace(0, pool.q.shape[0] - 1, args.problems)).astype(np.int64)
-        problems = subset(pool, indices)
-        problem_attrs = dict(attrs, pool_file=os.path.join("pool", name), pool_indices=indices)
-        start_min_J = min_det_F(E, egU, GNegU, model, problems.q)
-        rom_mcmc.write_samples(
-            os.path.join(args.output, "static", name),
-            X,
-            model,
-            wr,
-            problems,
-            dict(
-                problem_attrs,
-                problem="static",
-                problem_definition="Release samples/x into a static solve of Psi with no loads and the "
-                "Dirichlet DOFs at rest. The solution is X.",
-            ),
-            start_min_J,
-        )
-        # Dynamic problems: one BDF1 step from (x, v) for each time step. Future work: BDF schemes with s > 1
-        # steps need s past states per problem, e.g. synthesized by integrating the reduced dynamics backward
-        # from the sample, and the inertial target of that scheme.
-        ux = np.array([model.displacement(q) for q in problems.q])
-        v = np.array([model.jacobian(q) @ qd for q, qd in zip(problems.q, problems.qdot)])
-        for h in args.dt:
-            t = time.time()
-            xtilde, xref, iterations, decrements, corrections, ref_min_J = [], [], [], [], [], []
-            for s in range(args.problems):
-                ut = ux[s] + h * v[s] + h**2 * accel
-                ut[fixed] = 0.0
-                uref, info = rom_reach.static_equilibrium(
-                    psi,
-                    x0,
-                    freedofs,
-                    inertia=(m / h**2, ut),
-                    u0=ut,
-                    steps=1,
-                    max_iters=args.newton_iters,
-                )
-                xtilde.append((x0 + ut).reshape(N, 3))
-                xref.append((x0 + uref).reshape(N, 3))
-                iterations.append(info["iterations"])
-                decrements.append(info["decrement"])
-                corrections.append(info["correction"])
-                ref_min_J.append(
-                    modalrom.deformation_gradient_determinants(E, egU, GNegU, x0 + uref).min()
-                )
+        for plan in plans:
+            sampled_model = model_gravity if plan.gravity else model
+            t0 = time.time()
+            pool = rom_mcmc.run_chains(
+                lambda rng: rom_mcmc.make_sampler("microcanonical", sampled_model, Etot, rng),
+                args.chains,
+                args.pool,
+                args.burn_in,
+                args.pilot,
+                seed=args.seed,
+            )
+            attrs = dict(
+                common,
+                gravity=np.asarray(gravity) if plan.gravity else np.zeros(3),
+                target_energy=Etot,
+                sampling_time=time.time() - t0,
+            )
             rom_mcmc.write_samples(
-                os.path.join(args.output, f"dynamic_h{h:g}", name),
+                os.path.join(args.output, plan.pool, name),
                 X,
-                model,
+                sampled_model,
                 wr,
-                problems,
-                dict(
-                    problem_attrs,
-                    problem="dynamic",
-                    h=h,
-                    bdf_order=1,
-                    aext=np.asarray(gravity),
-                    reference_time=time.time() - t,
-                    problem_definition="One implicit Euler step: minimize 1/(2 h^2) |x - xtilde|_M^2 + Psi(x) "
-                    "with the Dirichlet DOFs at rest, starting from samples/x with velocity samples/v. "
-                    "xtilde = x + h v + h^2 aext on the free DOFs. samples/x_ref is a reference solution from "
-                    "full-order Newton, converged to the float32 energy noise floor; samples/ref_newton_correction is the "
-                    "largest entry (m) of its last Newton correction, an estimate of its accuracy.",
-                ),
-                start_min_J,
-                dict(
-                    v=v.reshape(-1, N, 3).astype(np.float32),
-                    xtilde=np.array(xtilde, dtype=np.float32),
-                    x_ref=np.array(xref, dtype=np.float32),
-                    ref_newton_iterations=np.array(iterations),
-                    ref_newton_decrement=np.array(decrements),
-                    ref_newton_correction=np.array(corrections),
-                    ref_min_J=np.array(ref_min_J),
-                ),
+                pool,
+                dict(attrs, problem="pool"),
+                min_det_F(E, egU, GNegU, sampled_model, pool.q),
             )
+            indices = np.round(np.linspace(0, pool.q.shape[0] - 1, args.problems)).astype(np.int64)
+            problems = subset(pool, indices)
+            problem_attrs = dict(attrs, pool_file=os.path.join(plan.pool, name), pool_indices=indices)
+            start_min_J = min_det_F(E, egU, GNegU, sampled_model, problems.q)
+            if plan.static:
+                rom_mcmc.write_samples(
+                    os.path.join(args.output, "static", name),
+                    X,
+                    sampled_model,
+                    wr,
+                    problems,
+                    dict(
+                        problem_attrs,
+                        problem="static",
+                        problem_definition="Release samples/x into a static solve of Psi with no loads and the "
+                        "Dirichlet DOFs at rest. The solution is X.",
+                    ),
+                    start_min_J,
+                )
+            # Dynamic problems: one BDF1 step from (x, v) for each time step. Future work: BDF schemes with s > 1
+            # steps need s past states per problem, e.g. synthesized by integrating the reduced dynamics backward
+            # from the sample, and the inertial target of that scheme.
+            if plan.dynamic:
+                ux = np.array([sampled_model.displacement(q) for q in problems.q])
+                v = np.array([sampled_model.jacobian(q) @ qd for q, qd in zip(problems.q, problems.qdot)])
+            for h in args.dt if plan.dynamic else []:
+                t = time.time()
+                xtilde, xref, iterations, decrements, corrections, ref_min_J = [], [], [], [], [], []
+                for k in range(args.problems):
+                    ut = ux[k] + h * v[k] + h**2 * accel
+                    ut[fixed] = 0.0
+                    uref, info = rom_reach.static_equilibrium(
+                        psi,
+                        x0,
+                        freedofs,
+                        inertia=(m / h**2, ut),
+                        u0=ut,
+                        steps=1,
+                        max_iters=args.newton_iters,
+                    )
+                    xtilde.append((x0 + ut).reshape(N, 3))
+                    xref.append((x0 + uref).reshape(N, 3))
+                    iterations.append(info["iterations"])
+                    decrements.append(info["decrement"])
+                    corrections.append(info["correction"])
+                    ref_min_J.append(
+                        modalrom.deformation_gradient_determinants(E, egU, GNegU, x0 + uref).min()
+                    )
+                rom_mcmc.write_samples(
+                    os.path.join(args.output, f"dynamic_h{h:g}", name),
+                    X,
+                    sampled_model,
+                    wr,
+                    problems,
+                    dict(
+                        problem_attrs,
+                        problem="dynamic",
+                        h=h,
+                        bdf_order=1,
+                        aext=np.asarray(gravity),
+                        reference_time=time.time() - t,
+                        problem_definition="One implicit Euler step: minimize 1/(2 h^2) |x - xtilde|_M^2 + Psi(x) "
+                        "with the Dirichlet DOFs at rest, starting from samples/x with velocity samples/v. "
+                        "xtilde = x + h v + h^2 aext on the free DOFs. samples/x_ref is a reference solution from "
+                        "full-order Newton, converged to the float32 energy noise floor; samples/ref_newton_correction is the "
+                        "largest entry (m) of its last Newton correction, an estimate of its accuracy.",
+                    ),
+                    start_min_J,
+                    dict(
+                        v=v.reshape(-1, N, 3).astype(np.float32),
+                        xtilde=np.array(xtilde, dtype=np.float32),
+                        x_ref=np.array(xref, dtype=np.float32),
+                        ref_newton_iterations=np.array(iterations),
+                        ref_newton_decrement=np.array(decrements),
+                        ref_newton_correction=np.array(corrections),
+                        ref_min_J=np.array(ref_min_J),
+                    ),
+                )
+                print(
+                    f"E={Etot:g} J, h={h:g} s: reference Newton iterations {np.min(iterations)}-{np.max(iterations)}, "
+                    f"{time.time() - t:.1f} s"
+                )
+            stats = pool.stats
             print(
-                f"E={Etot:g} J, h={h:g} s: reference Newton iterations {np.min(iterations)}-{np.max(iterations)}, "
-                f"{time.time() - t:.1f} s"
+                f"E={Etot:g} J, {plan.pool} ({'with' if plan.gravity else 'without'} gravity, for "
+                f"{' and '.join(kind for kind, used in [('static', plan.static), ('dynamic', plan.dynamic)] if used)} "
+                f"problems): {pool.q.shape[0]} samples in {attrs['sampling_time']:.1f} s (split R-hat "
+                f"{stats['rhat']:.3f}, ESS {stats['ess']:.0f}), {args.problems} problems, start min det F "
+                f"{start_min_J.min():.3f}"
             )
-        s = pool.stats
-        print(
-            f"E={Etot:g} J: pool of {pool.q.shape[0]} samples in {attrs['sampling_time']:.1f} s "
-            f"(split R-hat {s['rhat']:.3f}, ESS {s['ess']:.0f}), {args.problems} problems, "
-            f"start min det F {start_min_J.min():.3f}"
-        )

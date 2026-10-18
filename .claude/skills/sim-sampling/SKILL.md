@@ -42,7 +42,9 @@ python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler microcanoni
 # Headless fixed-potential batch, every shape at U = E* (ensemble="potential")
 python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler polar --energy 10 --samples 100
 
-# Benchmark problem sets: pool/E{E}.h5, static/E{E}.h5, dynamic_h{h}/E{E}.h5 (the same samples in every set)
+# Benchmark problem sets: pool/E{E}.h5 (sampled without gravity) and pool_gravity/E{E}.h5 (with gravity), static/E{E}.h5,
+# dynamic_h{h}/E{E}.h5. By default static problems are sampled without gravity and dynamic ones with it, from separate pools;
+# the dynamic h sets always share samples, and all sets share them when both gravity settings match
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 500 5000 --problems 10 --dt 1e-4 1e-2
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --dt              # static only
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
@@ -56,10 +58,10 @@ python benchmark_browser.py -d C:/git/PhysicsBasedAnimationToolkit/data/benchmar
 Translating requests:
 - "N samples": `--samples N` (headless) or `--pool N` (`make_benchmark`).
 - "Energies a, b": `--energies a b`.
-- "M problems per energy": `--problems M`.
+- "M problems per energy": `--problems M`. It must not exceed `--pool` and should stay well below the pool's ESS. For example, 100 problems at 10000 J: `--energies 10000 --problems 100 --pool 2000`.
 - "Time steps h1, h2": `--dt h1 h2`.
 - "Static only": `--dt` with no value.
-- "With gravity": `--gravity gx gy gz` (headless) or the GUI checkbox.
+- "With gravity": `--gravity gx gy gz` (headless) or the GUI checkbox. In `make_benchmark.py`, use `--static-gravity`/`--no-static-gravity` (default off) and `--dynamic-gravity`/`--no-dynamic-gravity` (default on); they add the scene's gravity potential to the sampled total energy.
 - "Reproducible": `--seed`.
 - "More modes": `-k`.
 - "Show / explore / visualize the dataset": `benchmark_browser.py -d <dir>`. It takes the mesh from the files' `input` attribute; pass `--input <file.h5:h5path>` if that scene moved.
@@ -74,7 +76,7 @@ All batches follow the sample-file contract (`rom_mcmc.write_samples`):
 - `X` (N,3) rest positions, `samples/x` (S,N,3) float32 positions, plus `samples/q`, `energy`, `log_target`, `samples/min_J`.
 - `basis/{U,Q,omega,M}`.
 - Root attributes: `target_energy`, `rhat`, `ensemble`, `gravity`, `mode_normalization="mass"`, `importance_weights_required`.
-- Problem files add `problem`, `pool_file`, `pool_indices`, and `scene_dt`/`scene_bdf_steps` (the input's integrator, recorded only; dynamic problems are always BDF1 steps with the `--dt` values).
+- Problem files add `problem`, `pool_file`, `pool_indices`, `gravity` (the acceleration in the sampled potential; zero without), and `scene_dt`/`scene_bdf_steps` (the input's integrator, recorded only; dynamic problems are always BDF1 steps with the `--dt` values).
 - Dynamic files also add `h`, `aext`, and `samples/{v, xtilde, x_ref, ref_newton_*, ref_min_J}`.
 
 Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd4`, so `q` from older files isn't comparable.
@@ -90,7 +92,7 @@ Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd
 
 ## Pitfalls
 
-- **Gravity** is off unless `--gravity` (or the GUI checkbox). Static benchmark problems must be gravity-free, so their equilibrium is exactly X. Dynamic sets put the scene's gravity only into `xtilde`.
+- **Gravity** is off in `modalrom.py` unless `--gravity` (or the GUI checkbox). In `make_benchmark.py`, the default is sampling without gravity for static problems and with gravity for dynamic ones. Static problems are always solved without loads (equilibrium exactly X); dynamic `xtilde` always includes the scene's gravity. With gravity in the sampled potential, U and U/E can be negative (sagged shapes), and K = E − U can exceed E.
 - **Mesh inputs** (not a Dump) work in `modalrom.py` only (`-m`/`-Y`/`-n` set the material). They have no Dirichlet constraints: the 6 rigid modes are excluded, and reachability load targets need constraints. `make_benchmark.py` needs a Dump.
 - **`make_benchmark.py` overwrites** existing files in `--output`.
 - **GUI costs:** the first Sample click pays for burn-in and the pilot run, and "Solve target" blocks the UI for 2–6 s.
