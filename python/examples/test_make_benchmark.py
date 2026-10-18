@@ -40,6 +40,50 @@ class TestSceneChecks(unittest.TestCase):
                 make_benchmark.load_scene(path)
 
 
+def constraint(name, kind="Fixed", begin=0.0, duration=1e12):
+    """A stand-in for python/tools/sim/gpu/kinematics/constraints.KinematicConstraint."""
+    return types.SimpleNamespace(name=name, kind=types.SimpleNamespace(name=kind), begin=begin, duration=duration)
+
+
+class TestSceneInputs(unittest.TestCase):
+    def test_input_kind(self):
+        for path, kind in [
+            ("scene.Dump.h5:fem", "fem"),
+            (r"C:\data\scene.Dump.h5:fem", "fem"),
+            (r"C:\data\trampoline.h5", "scene"),
+            ("trampoline.HDF5", "scene"),
+            (r"C:\meshes\beam.msh", "mesh"),
+            ("beam.mesh", "mesh"),
+        ]:
+            self.assertEqual(make_benchmark.modalrom.input_kind(path), kind, path)
+
+    def test_accepts_constraints_fixed_over_the_problems(self):
+        check = make_benchmark.modalrom.check_scene_constraints
+        # The editor stores "forever" as a duration of ~1e12 s; finite windows covering [0, t_end] are fine too
+        check([constraint("rim"), constraint("rim for 1000 s", duration=1000.0)], None, "scene.h5", t_end=1e-2)
+        # Constraints entirely outside [0, t_end] never act on the problems, whatever they do
+        check([constraint("later", begin=5.0), constraint("spin later", kind="Rotate", begin=5.0)], None, "scene.h5", 1e-2)
+
+    def test_rejects_what_problems_cant_represent(self):
+        cases = [
+            ([constraint("spin", kind="Rotate")], None, "moves"),
+            ([constraint("starts mid-step", begin=5e-3)], None, "starts or ends"),
+            ([constraint("released mid-step", duration=5e-3)], None, "starts or ends"),
+            ([constraint("rim")], object(), "static colliders"),
+        ]
+        for constraints, colliders, message in cases:
+            with self.assertRaisesRegex(ValueError, message):
+                make_benchmark.modalrom.check_scene_constraints(constraints, colliders, "scene.h5", t_end=1e-2)
+
+
+class TestBodyCount(unittest.TestCase):
+    def test_counts_separate_bodies(self):
+        one = np.array([[0, 1], [1, 2], [2, 3], [3, 4]])  # two tets sharing nodes 1, 2, 3
+        self.assertEqual(make_benchmark.modalrom.count_bodies(one, 5), 1)
+        two = np.array([[0, 4], [1, 5], [2, 6], [3, 7]])  # two disjoint tets
+        self.assertEqual(make_benchmark.modalrom.count_bodies(two, 8), 2)
+
+
 class TestSamplingPlan(unittest.TestCase):
     def test_default_separate_pools(self):
         plans = make_benchmark.sampling_plan(static_gravity=False, dynamic_gravity=True, has_dynamic=True)

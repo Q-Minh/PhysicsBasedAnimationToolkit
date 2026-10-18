@@ -15,8 +15,12 @@ the same setting share one pool, i.e. the same problems; the dynamic sets always
                                    xtilde = x + h v + h^2 g. samples/x_ref holds a reference solution from a
                                    converged full-order Newton solve.
 
-The input is any hdf5 file storing a FemElastoDynamics, given as filepath:h5path (e.g. an editor Dump's fem
-group). It provides the mesh, masses, Stable Neo-Hookean material, Dirichlet constraints and gravity. Its
+The input is a CPU editor scene file (e.g. data/scenarios/trampoline.h5), whose FemElastoDynamics is built the way
+the editor builds it, or a stored FemElastoDynamics given as filepath:h5path (e.g. an editor Dump's fem group). It
+provides the mesh, masses, Stable Neo-Hookean material, Dirichlet constraints and gravity. The problems live in
+the time span [0, max(--dt)] with the Dirichlet nodes fixed at rest and no collision geometry, so a scene's
+constraints acting during that span must keep their nodes fixed throughout, and it can't have static colliders
+(constraints entirely outside the span are ignored). Its
 Dirichlet nodes must sit at rest with zero velocity, since every problem holds them at X. Its time integrator is
 only recorded: the dynamic problems are always BDF1 steps with the --dt time steps.
 
@@ -43,19 +47,19 @@ Sampling and the reference solves run on the CPU. The samples' quality is in eac
 
 Usage:
     # Default levels (50, 500, 5000 J), 10 problems each, h = 1e-4 and 1e-2 s
-    python make_benchmark.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.Dump.h5:fem -o C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline
+    python make_benchmark.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.h5 -o C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline
 
     # Chosen energies, problem counts and time steps; e.g. 100 problems at 10000 J from a pool of 2000
-    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 10000 --problems 100 --pool 2000 --dt 1e-4 1e-2
+    python make_benchmark.py -i <scene>.h5 -o <dir> --energies 10000 --problems 100 --pool 2000 --dt 1e-4 1e-2
 
     # All sets sampled with gravity, sharing one pool (paired static and dynamic problems)
-    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --static-gravity
+    python make_benchmark.py -i <scene>.h5 -o <dir> --static-gravity
 
     # Static problems only (no dynamic sets)
-    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --dt
+    python make_benchmark.py -i <scene>.h5 -o <dir> --dt
 
     # Quick test set (rhat isn't meaningful with such small pools)
-    python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100
+    python make_benchmark.py -i <scene>.h5 -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100
 """
 
 import argparse
@@ -82,29 +86,29 @@ def subset(batch: rom_mcmc.SampleBatch, indices: np.ndarray) -> rom_mcmc.SampleB
     )
 
 
-def load_scene(input: str):
-    """Deserializes the FemElastoDynamics at filepath:h5path.
+def load_scene(input: str, t_end: float = 0.0):
+    """Loads the FemElastoDynamics of a CPU editor scene file, or the one stored at filepath:h5path.
 
     Args:
-        input (str): filepath:h5path of an hdf5 file storing a FemElastoDynamics.
+        input (str): A scene file (e.g. data/scenarios/trampoline.h5), built as the editor does, or filepath:h5path
+            of an hdf5 file storing a FemElastoDynamics (e.g. scene.Dump.h5:fem).
+        t_end (float): End of the problems' time span in s (the largest time step), for checking a scene's
+            constraints.
 
     Returns:
         pbat.sim.dynamics.FemElastoDynamics: The scene.
 
     Raises:
-        ValueError: If input isn't of the form filepath:h5path (e.g. a plain mesh file).
+        ValueError: If input is a plain mesh file, or a scene with static colliders or with constraints acting
+            during [0, t_end] that move their nodes or start or end within it (see modalrom.check_scene_constraints).
     """
-    file_path, sep, group_path = str(input).rpartition(":")
-    # A lone drive letter (C:...) is part of a Windows path, not a filepath:h5path separator
-    if not sep or not file_path or (len(file_path) == 1 and file_path.isalpha()):
+    kind = modalrom.input_kind(input)
+    if kind == "mesh":
         raise ValueError(
-            f"{input} isn't filepath:h5path: the benchmark needs an hdf5 file storing a FemElastoDynamics "
-            "(e.g. scene.Dump.h5:fem), not a mesh"
+            f"{input} is a mesh: the benchmark needs a scene file (e.g. data/scenarios/trampoline.h5) or "
+            "filepath:h5path of a stored FemElastoDynamics (e.g. scene.Dump.h5:fem)"
         )
-    archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
-    fem = pbat.sim.dynamics.FemElastoDynamics()
-    fem.deserialize(archive[group_path] if group_path else "/")
-    return fem
+    return modalrom.load_scene_fem(input, t_end) if kind == "scene" else modalrom.load_fem(input)
 
 
 def check_scene(fem, atol: float = 1e-6) -> typing.List[str]:
@@ -196,8 +200,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         "--input",
-        help="filepath:h5path of an hdf5 file containing an FemElastoDynamics (e.g. scene.Dump.h5:fem), which "
-        "provides the mesh, material, masses, Dirichlet constraints and gravity",
+        help="A CPU editor scene file (e.g. data/scenarios/trampoline.h5) or filepath:h5path of an hdf5 file storing "
+        "a FemElastoDynamics (e.g. scene.Dump.h5:fem), which provides the mesh, material, masses, Dirichlet "
+        "constraints and gravity. A scene's constraints acting during [0, max(--dt)] must keep their nodes fixed "
+        "throughout, and it can't have static colliders; "
+        "meshes are rejected",
         type=str,
         dest="input",
         required=True,
@@ -315,7 +322,7 @@ if __name__ == "__main__":
     if args.problems > args.pool:
         parser.error(f"--problems ({args.problems}) can't exceed --pool ({args.pool}): problems are drawn from the pool")
     try:
-        scene = load_scene(args.input)
+        scene = load_scene(args.input, max(args.dt, default=0.0))
         for warning in check_scene(scene):
             print(f"Warning: {warning}")
     except ValueError as error:
@@ -323,9 +330,7 @@ if __name__ == "__main__":
 
     element = pbat.fem.Element.Tetrahedron
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, gravity = modalrom.load_model(
-        args.input, 0.0, 0.0, 0.0, element, energy
-    )
+    E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, gravity = modalrom.model_from_fem(scene)
     n, N = X.size, X.shape[1]
     w, U, Q, Z, ws = modalrom.build_rom(
         E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, energy, element, args.modes, args.eps
