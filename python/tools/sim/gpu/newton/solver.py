@@ -27,7 +27,7 @@ from ..contact.mesh.pairs import ContactBasesData
 from ..elasticity.snh import snh_eval, snh_hess
 from ..elasticity.spd import filter_eigenvalues9
 from ..elasticity.chain import hessian_wrt_dofs
-from ..gradient import Gradient
+from ..gradient import GradientNorm
 from ..contact import halfedges
 from .. import types
 
@@ -852,7 +852,6 @@ class Params:
             self._data.Hvals,
             prune_numerical_zeros=False,
         )
-        self._g = wp.zeros(n_nodes, dtype=wp.vec3f)
         self._ndx = wp.zeros(n_nodes, dtype=wp.vec3f)
         # Energy partial-contributions buffer: one slot per inertial node, elastic element,
         # and each contact pair type.
@@ -898,17 +897,12 @@ class Params:
             self._hessian_triplet_offsets, dtype=wp.int32
         )
         # Gradient + line search
-        self._gradient = Gradient(fem, contact, self._g)
+        self._gradient_norm = GradientNorm(fem, contact)
+        self._g = self._gradient_norm.g
+        self._gnorm2 = self._gradient_norm.gnorm2
         g_flat = cp.asarray(self._g).ravel()
         ndx_flat = cp.asarray(self._ndx).ravel()
-        self._gnorm2 = wp.zeros(1, dtype=wp.float32)
         self._nslope = wp.zeros(1, dtype=wp.float32)
-        self._gnorm2_reduce = Reduce(
-            d_in=cuda.compute.TransformIterator(g_flat, lambda x: x * x),
-            d_out=cp.asarray(self._gnorm2),
-            num_items=3 * n_nodes,
-            op=cuda.compute.OpKind.PLUS,
-        )
         self._nslope_reduce = Reduce(
             d_in=cuda.compute.TransformIterator(
                 cuda.compute.ZipIterator(g_flat, ndx_flat),
@@ -1014,8 +1008,7 @@ def check_convergence(
     params: Params,
 ) -> bool:
     main_stream = wp.get_stream()
-    params._gradient.compute(main_stream)
-    params._gnorm2_reduce(main_stream)
+    params._gradient_norm.compute(main_stream)
     return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
 
 
@@ -1041,9 +1034,9 @@ def solve_subproblem(
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
     h2 = wp.float32(fem.h2)  # type: ignore
-    params._gradient.compute(main_stream)
+    params._gradient_norm.compute_gradient(main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
-        params._gnorm2_reduce(main_stream)
+        params._gradient_norm.reduce(main_stream)
         gnorm2 = float(params._gnorm2.numpy()[0])
         if gnorm2 <= float(params.data.gtol2):
             break
@@ -1157,7 +1150,7 @@ def solve_subproblem(
         if not accepted:
             wp.copy(fem.data.x, x_backup)
             break
-        params._gradient.compute(main_stream)
+        params._gradient_norm.compute_gradient(main_stream)
 
 
 @profiling.scoped("solve.finalize_subproblem")

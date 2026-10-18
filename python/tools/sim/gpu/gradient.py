@@ -1,4 +1,6 @@
 # type: ignore
+import cuda.compute
+import cupy as cp
 import warp as wp
 from .common import profiling
 
@@ -7,6 +9,7 @@ from .elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichl
 from .elasticity.snh import snh_grad
 from .elasticity.chain import gradient_wrt_dofs
 from .contact import halfedges
+from .common.reduce import Reduce
 from . import types
 
 
@@ -303,3 +306,36 @@ class Gradient:
             )
         for stream in self._streams:
             main_stream.wait_stream(stream)
+
+
+class GradientNorm:
+    """Owns the objective gradient ``g`` (see :class:`Gradient`) and its squared norm on the device.
+
+    ``gnorm2[0] = |g|^2`` over the free DOFs (Dirichlet entries of ``g`` stay 0) is the convergence
+    measure of the GPU solvers. :meth:`compute` launches no host synchronization, so it captures.
+    """
+
+    def __init__(self, fem: FemElastoDynamics, contact: ContactDynamics):
+        n_nodes = fem.data.x.shape[0]
+        self.g = wp.zeros(n_nodes, dtype=wp.vec3f)
+        self.gnorm2 = wp.zeros(1, dtype=wp.float32)
+        self._gradient = Gradient(fem, contact, self.g)
+        self._reduce = Reduce(
+            d_in=cuda.compute.TransformIterator(cp.asarray(self.g).ravel(), lambda x: x * x),
+            d_out=cp.asarray(self.gnorm2),
+            num_items=3 * n_nodes,
+            op=cuda.compute.OpKind.PLUS,
+        )
+
+    def compute_gradient(self, main_stream: wp.Stream) -> None:
+        """Recompute ``g`` at the current positions."""
+        self._gradient.compute(main_stream)
+
+    def reduce(self, main_stream: wp.Stream) -> None:
+        """Recompute ``gnorm2`` from the current ``g``."""
+        self._reduce(main_stream)
+
+    def compute(self, main_stream: wp.Stream) -> None:
+        """Recompute ``g`` and ``gnorm2`` at the current positions."""
+        self.compute_gradient(main_stream)
+        self.reduce(main_stream)
