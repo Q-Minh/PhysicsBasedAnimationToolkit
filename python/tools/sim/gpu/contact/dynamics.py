@@ -691,6 +691,9 @@ class MeshDynamics:
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
         self._normal_penalty_reduction(main_stream)
+        # As C++ UpdatePenaltyParameter, the friction penalty scales the same Rayleigh quotient
+        # (gamma_f * max Q, while gamma_n * max Q is the normal one).
+        wp.copy(dest=self._data.sigma_f, src=self._data.sigma_n)
 
     @property
     def data(self) -> MeshDynamicsData:  # type: ignore
