@@ -2,6 +2,7 @@ from typing import Tuple
 
 import numpy as np
 import warp as wp
+from ..common import profiling
 
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from ..contact.dynamics import (
@@ -217,6 +218,7 @@ def _accelerated_vertex_solve_kernel(
         fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
 
 
+@profiling.scoped("aaavbd.sweep")
 def iterate(
     k: int,
     kp: int,
@@ -246,6 +248,7 @@ def iterate(
             )
 
 
+@profiling.scoped("aaavbd.subproblem")
 def solve_subproblem(
     k: int, fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):

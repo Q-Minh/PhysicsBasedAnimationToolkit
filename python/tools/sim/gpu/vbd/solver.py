@@ -7,6 +7,7 @@ Contact constraints are left as placeholders for future implementation.
 
 from typing import Tuple
 import warp as wp
+from ..common import profiling
 import numpy as np
 
 from ..contact.mesh.cd import ContactDetection
@@ -160,6 +161,7 @@ def check_convergence(
     return False
 
 
+@profiling.scoped("contact.penalty")
 def compute_augmented_lagrangian_penalty(
     fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
@@ -176,6 +178,7 @@ def compute_augmented_lagrangian_penalty(
     contact.adapt_penalty_parameters()
 
 
+@profiling.scoped("solve.prepare_subproblem")
 def prepare_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -187,6 +190,7 @@ def prepare_subproblem(
         compute_augmented_lagrangian_penalty(fem, contact, params)
 
 
+@profiling.scoped("solve.initialize")
 def initialize_solve(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -208,6 +212,7 @@ def initialize_solve(
         compute_augmented_lagrangian_penalty(fem, contact, params)
 
 
+@profiling.scoped("solve.finalize_subproblem")
 def finalize_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -233,6 +238,7 @@ def finalize_subproblem(
     contact.update_constraint_set()
 
 
+@profiling.scoped("vbd.sweep")
 def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
     """One VBD Gauss-Seidel sweep over all color partitions."""
     h = fem.bdf.beta_tilde
@@ -256,6 +262,7 @@ def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
             )
 
 
+@profiling.scoped("vbd.subproblem")
 def solve_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,

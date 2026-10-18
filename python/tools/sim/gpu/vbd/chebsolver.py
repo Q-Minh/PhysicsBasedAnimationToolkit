@@ -1,4 +1,5 @@
 import warp as wp
+from ..common import profiling
 
 from python.tools.sim.gpu.vbd.solver import (
     check_convergence,
@@ -55,6 +56,7 @@ def _chebyshev_momentum_update_kernel(
     xkm1[i] = xk  # pyright: ignore[reportIndexIssue]
 
 
+@profiling.scoped("chebyshev.mix")
 def chebyshev_momentum_update(fem: FemElastoDynamics, cheb: ChebyshevParams, k: int):
     """Update `fem.data.x` in place via the Chebyshev semi-iterative momentum recurrence,
     and advance `cheb`'s `omega`, `xkm1`, `xkm2` state.
@@ -73,6 +75,7 @@ def chebyshev_momentum_update(fem: FemElastoDynamics, cheb: ChebyshevParams, k: 
     )
 
 
+@profiling.scoped("chebyshev.subproblem")
 def solve_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,

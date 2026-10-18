@@ -1,4 +1,5 @@
 import warp as wp
+from ..common import profiling
 
 from python.tools.sim.gpu.vbd.solver import (
     check_convergence,
@@ -259,6 +260,7 @@ def _anderson_mixing_kernel(
     x[i] = xi  # pyright: ignore[reportIndexIssue]
 
 
+@profiling.scoped("anderson.subproblem")
 def solve_subproblem(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -314,6 +316,7 @@ def solve_subproblem(
         anderson_mix(x, params, mk)
 
 
+@profiling.scoped("anderson.mix")
 def anderson_mix(x: wp.array, params: AndersonParams, mk: int):
     """Solve the Anderson least-squares problem and mix the accelerated iterate into ``x``.
 
@@ -323,22 +326,24 @@ def anderson_mix(x: wp.array, params: AndersonParams, mk: int):
     """
     n_nodes = x.shape[0]
     gram, solve_cholesky, solve_pcg = params.kernels
-    params.G.zero_()
-    wp.launch_tiled(
-        kernel=gram,
-        dim=[(3 * n_nodes + _GRAM_TILE_K - 1) // _GRAM_TILE_K],
-        inputs=[params.FfT_flat, params.G],
-        block_dim=_GRAM_BLOCK_DIM,
-    )
-    if params.linear_solver == AndersonLinearSolver.NormalEquations:
+    with profiling.scope("anderson.gram"):
+        params.G.zero_()
         wp.launch_tiled(
-            kernel=solve_cholesky,
-            dim=[1],
-            inputs=[params.G, mk, params.cod_numerical_zero, params.gammak],
-            block_dim=_SOLVE_BLOCK_DIM,
+            kernel=gram,
+            dim=[(3 * n_nodes + _GRAM_TILE_K - 1) // _GRAM_TILE_K],
+            inputs=[params.FfT_flat, params.G],
+            block_dim=_GRAM_BLOCK_DIM,
         )
-    else:
-        wp.launch(kernel=solve_pcg, dim=1, inputs=[params.G, mk, params.gammak])
+    with profiling.scope("anderson.solve"):
+        if params.linear_solver == AndersonLinearSolver.NormalEquations:
+            wp.launch_tiled(
+                kernel=solve_cholesky,
+                dim=[1],
+                inputs=[params.G, mk, params.cod_numerical_zero, params.gammak],
+                block_dim=_SOLVE_BLOCK_DIM,
+            )
+        else:
+            wp.launch(kernel=solve_pcg, dim=1, inputs=[params.G, mk, params.gammak])
     wp.launch(
         kernel=_anderson_mixing_kernel,
         dim=n_nodes,
