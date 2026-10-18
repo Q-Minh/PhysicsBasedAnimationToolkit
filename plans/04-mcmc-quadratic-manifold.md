@@ -13,6 +13,12 @@ This is groundwork for a later convergence benchmark: MCMC over reduced coordina
 fixed total mechanical energy (kinetic + potential). The maintainer will provide more details later,
 including notes from an earlier discussion.
 
+**Task 3 depends on this task.** Its static convergence benchmark uses these samples as initial shapes,
+lifted to full space (x₀ = X + u(q)) and released into static solves whose equilibrium is the rest shape.
+So beyond the GUI, this task must **export samples to a file** following the sample-file contract in
+`MASTER.md`, and the sampler must be usable headless (from a script, without the GUI) to generate
+benchmark batches.
+
 ## What exists today
 
 - The quadratic-manifold example is now **`python/examples/modalrom.py`**. It was renamed from
@@ -61,7 +67,7 @@ simulator files.
 
 1. Which distribution should the samples follow: uniform on the energy level set, or something else (e.g. weighted by the reduced mass matrix)?
 2. Is E* the deformation energy only for this milestone, with velocities added later?
-3. Should samples be saved (e.g. as HDF5 states) so they can seed task 3's static benchmark?
+3. ~~Save samples for task 3?~~ **Answered:** yes, samples seed task 3's static benchmark. Agree on the sample-file contract in `MASTER.md` with the maintainer and task 3.
 4. Please share the notes from your earlier discussion when it's time for the velocity part.
 
 ## Progress

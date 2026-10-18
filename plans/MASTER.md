@@ -39,7 +39,7 @@ them **through that absolute path**, never a copy inside their own worktree.
 |---|---|---|---|---|
 | 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 |
 | 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
-| 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; uses task 2's scope API |
+| 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
 | 4 | MCMC sampling of quadratic-manifold shapes | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
 
 ## Phase 0 (coordinator, before the parallel work starts)
@@ -101,12 +101,29 @@ will instrument).
 - **Asking the maintainer.** Each plan lists open questions. Ask them in your own session before
   implementing the affected part, and record the answers in your plan.
 
+## Contract: MCMC sample files (task 4 produces, task 3 consumes)
+
+Draft, to be agreed by the maintainer with both sessions before either implements it:
+- **HDF5 file**, one per batch. Root attributes: source mesh / Dump path, the reduced basis description
+  (number of linear modes, modal derivatives on/off), sampler kind and parameters, target energy E*,
+  energy definition, random seed, and the git commit.
+- **`X`**: (N, 3) rest positions, so the file can be checked against the Dump that task 3 loads.
+- **`samples/q`**: (S, r) reduced coordinates.
+- **`samples/x`**: (S, N, 3) full-space positions X + u(q), so task 3 doesn't need the reduced basis.
+- **`samples/energy`**: (S,) achieved deformation energy per sample.
+- Later, for the velocity-based benchmark: `samples/qdot`.
+- **Dirichlet nodes** are at rest in every sample, consistent with the static benchmark's boundary conditions.
+
+Until task 4 delivers real samples, task 3 develops against a small hand-made file in this format (e.g.
+rest shape plus a few modal perturbations).
+
 ## Integration order
 
 1. Phase 0, on `dev`.
 2. Task 4 whenever it's ready (independent).
 3. Task 2's scope backend, early, so tasks 1 and 3 can profile their work.
-4. Task 1, then task 3 (task 3's static benchmark can reuse task 1's constraint sets with time frozen).
+4. Task 1, then task 3. Task 3's benchmark needs task 4's sampler and sample export merged first; task 3's
+   static-solve machinery can land before that.
 5. Task 2's full instrumentation pass and reports, last, over the merged solvers.
 
 Before each merge, the coordinator runs the unit tests (`python -m unittest` on the touched modules), one
@@ -118,11 +135,11 @@ Each session updates only its own row.
 
 | Task | State | Last update | Notes |
 |---|---|---|---|
-| Phase 0 | not started | - | waiting for approval |
-| 1 | not started | - | |
-| 2 | not started | - | |
-| 3 | not started | - | |
-| 4 | not started | - | |
+| Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
+| 1 | answering questions | 2026-10-17 | worktree `C:\git\pbat-kinematics` created |
+| 2 | answering questions | 2026-10-17 | worktree `C:\git\pbat-profiling` created |
+| 3 | answering questions | 2026-10-17 | worktree `C:\git\pbat-static` created |
+| 4 | answering questions | 2026-10-17 | worktree `C:\git\pbat-mcmc` created |
 
 ## Coordination log
 
@@ -130,6 +147,9 @@ Append-only. Use it for anything another session needs to know: interface change
 your ownership, planned GPU-heavy runs, C++ change requests.
 
 - 2026-10-17 · coordinator · Plans drafted.
+- 2026-10-17 · coordinator · Maintainer: task 3's convergence benchmark uses task 4's MCMC samples as initial
+  shapes. The metric is wall-clock time per percentile of error reduction, with error = distance to the rest
+  shape. Added the sample-file contract above. Tasks 3 and 4: agree on it with the maintainer.
 
 ## Open questions for the maintainer
 
