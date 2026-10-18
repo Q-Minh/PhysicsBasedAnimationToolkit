@@ -18,7 +18,7 @@ import h5py
 import warp as wp
 from tqdm import tqdm
 
-from .ui import (
+from .state import (
     SimulationState,
     SolverType,
     CDType,
@@ -27,10 +27,10 @@ from .ui import (
     load_chebyshev_params,
     load_anderson_params,
     load_newton_params,
-    _init_h5_serialization,
-    _serialize_params,
-    _deserialize_params,
-    _should_save,
+    init_h5_serialization,
+    serialize_params,
+    deserialize_params,
+    should_save,
 )
 
 
@@ -116,15 +116,14 @@ def main():
     state.cd_type = CDType[args.cd]
     if args.sim_params:
         with h5py.File(args.sim_params, "r") as f:
-            _deserialize_params(state, f)
+            deserialize_params(state, f)
     state.reset()
 
     n_steps = math.ceil(args.duration / state.dt)
-    h5f = _init_h5_serialization(state.fem_cpu, args.output)
-    h5f["params"].attrs["fps"] = args.fps
+    h5f = init_h5_serialization(state.fem_cpu, args.output, args.fps)
     h5f["params"].attrs["solver"] = state.solver.name
     h5f["params"].attrs["cd"] = state.cd_type.name
-    _serialize_params(state, h5f["params"])
+    serialize_params(state, h5f["params"])
 
     frame = 0
     t_last_flush = time.perf_counter()
@@ -135,7 +134,7 @@ def main():
         frame += 1
         while state.t < n_steps:
             state.step()
-            if _should_save(state.t, state.dt, args.fps):
+            if should_save(state.t, state.dt, args.fps):
                 _write_frame(h5f, state, frame)
                 frame += 1
             if time.perf_counter() - t_last_flush >= 1.0:
