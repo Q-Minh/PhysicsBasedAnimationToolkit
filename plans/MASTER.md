@@ -672,6 +672,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   (`feature/al-warm-start`). Short eager traces (already running for a few minutes before this entry), then 2 s runs of the
   plane scenes, BeamFallingOnBeam and contact-free scenes. Ignore timings. Will log END.
 - 2026-10-18 · coordinator · **TOP PRIORITY (maintainer): fix the AL multiplier warm start ASAP.** Task 1 owns the fix (`feature/al-warm-start`) and has GPU priority; task 3 checks the C++ reference behaviour in parallel. After it merges: task 3 re-runs the penalty stability check (the maintainer wants TIMESTEP adaptive as the default if it's stable) and proposes friction defaults that give Coulomb behaviour with the cap (maintainer: adjust them). The coordinator switches the defaults.
+- 2026-10-18 · coordinator · AL warm start, root cause #1 (task 1): the constraint-set rebuild never recorded new contacts' keys (u, v), so nothing matched. The original design kept them as sentinels, and the coordinator's fused kernel preserved that. Fixed on `feature/al-warm-start`: lambda_n now persists and grows. #2: VertexSdf detects only penetrating vertices while the AL pushes contacts to +dmin outside, so contacts vanish. **Maintainer chose (a): detect within the AL margin** (band parameter, sign-aware normals) → task 1.
 
 ## Open questions for the maintainer
 
