@@ -29,6 +29,7 @@ tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
 def _detect_vertex_mesh_contacts(
     mesh_ids: wp.array[wp.uint64],
     mesh_kind: wp.array[wp.int32],
+    mesh_depth: wp.array[wp.float32],
     max_dist: wp.float32,
     dmin: wp.float32,
     sds: wp.array[wp.float32],
@@ -91,6 +92,9 @@ def _detect_vertex_mesh_contacts(
             tangential = wp.norm_l2(xi - xc - sd * n)
             tol = wp.float32(1e-6) * (wp.norm_l2(xk - xj) + wp.norm_l2(xl - xj)) + wp.float32(1e-5) * wp.abs(sd)
             if tangential > tol:
+                continue
+            # Finite planes are plates: vertices deeper than their thickness passed under or beside them
+            if sd < -mesh_depth[m]:
                 continue
         tsdmin = wp.min(tsdmin, sd)
         if sd < dmin:
@@ -242,6 +246,7 @@ class Sd(ContactDetection):
     _wp_meshes: list[wp.Mesh]
     _mesh_ids: wp.array[wp.uint64]
     _mesh_kind: wp.array[wp.int32]  # (# meshes,) MESH_CLOSED, MESH_OPEN or MESH_PLANE
+    _mesh_depth: wp.array[wp.float32]  # (# meshes,) contact depth of plane meshes (inf: half-space)
     _sds: wp.array[wp.float32]  # (# verts,) signed distances
     _mesh_streams: list[wp.Stream]
     _normal_flip_streams: list[wp.Stream]
@@ -282,11 +287,22 @@ class Sd(ContactDetection):
             [_mesh_kind(Fb[b].get().reshape(-1, 3), X) for b in range(len(Fb))],
             dtype=wp.int32,
         )
+        self._mesh_depth = wp.full(len(Fb), float("inf"), dtype=wp.float32)
         self._sds = wp.full(
             (self._meshes.n_verts,), self.params.max_dist, dtype=wp.float32
         )
         self._mesh_streams = [wp.Stream() for _ in range(len(self._wp_meshes))]
         self._normal_flip_streams = [wp.Stream() for _ in range(3)]  # (vv, ve, vf)
+
+    def set_plane_depths(self, depths: np.ndarray):
+        """Set how far below each plane mesh a vertex is still in contact with it.
+
+        Args:
+            depths (np.ndarray): (# meshes,) depth per contact mesh component, used for MESH_PLANE meshes
+                only. inf (the default) makes a plane a half-space, as for infinite plane colliders.
+                Finite plane colliders use their thickness.
+        """
+        self._mesh_depth.assign(np.asarray(depths, dtype=np.float32))
 
     def on_time_step_started(self):
         self.request_step_filter = True
@@ -319,6 +335,7 @@ class Sd(ContactDetection):
             inputs=[
                 self._mesh_ids,
                 self._mesh_kind,
+                self._mesh_depth,
                 self.params.max_dist,  # max_dist
                 self.params.dmin,  # dmin
                 self._sds,
