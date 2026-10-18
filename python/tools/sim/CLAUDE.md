@@ -75,6 +75,7 @@ Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated 
 - `AaaVbdSolver` adds per-vertex *stencil gradient acceleration* (`betaG`, `rhohat`, `gammaup`/`gammadown`, separate interior/surface values in `vec2f`). In C++ this acceleration is built into `vbd::Iterate` itself.
   - Only AAAVBD reads the stencil parameters, so `gpu/vbd/params.py::STENCIL_GRADIENT_ACCELERATION_KEYS` lists them once: they are serialized (and so appear in configs) and shown in the GUI for AAAVBD only, and ignored when an older file stores them for VBD, Chebyshev or Anderson.
   - `warm_start_beta` follows C++ `InitializeSolve`/`PrepareSubproblem`: `initialize_solve` and `prepare_subproblem` reset `betaG` to `betaG0` with a capture-safe fill (0 `Never`: every subproblem; 1 `Subproblem`: every time step; 2 `TimeStep`: never). The GPU default is 2 (`SimulationState.__init__`), unlike C++'s 1, so that betaG warm starts across time steps.
+  - `surface_stencil_surface_neighbours_only` (default 1, as in C++): surface vertices sum only their surface neighbours' gradients in the stencil augmentation; 0 makes them use interior neighbours too. Interior vertices always use all neighbours.
 - Chebyshev and Anderson wrap the VBD sweep, matching C++ `Chebyshev.h` and `Anderson.h`. The GPU Anderson solves its least-squares problem by normal equations or CG (`AndersonLinearSolver`), whereas the CPU version uses a COD.
 - `NewtonSolver` assembles the sparse Hessian from triplets and has `supports_graph_capture == False`.
 
@@ -125,6 +126,7 @@ The GPU uses the same contact model family as C++ `MeshDynamics`: an augmented L
 - **`contact/dynamics.py`.** `MeshDynamics` handles dual updates and adaptive penalties. GPU-only differences from C++:
   - `PenaltyAdaptivity` (CONSTANT/TIMESTEP/SUBPROBLEM). CONSTANT: `sigma_n = sigma_f = dt^2`, so `gamman * dt^2` and `gammaf * dt^2` are stiffnesses scaled like `dt^2 Psi` (1e4 * 1e-4 = 1 by default). TIMESTEP/SUBPROBLEM: `sigma_n = sigma_f` = the global max contact Rayleigh quotient of the vertex Hessians, per time step or per subproblem, scaled by the dimensionless `gamman_adaptive`/`gammaf_adaptive` (default 0.1; C++'s `gamma`/`gammaf` default is 1, which on the GPU diverges with one detection pass per step, and for AAAVBD even with more). In these modes the VBD vertex solves read contact partners of other colors at their current positions (same-color ones stay at the sweep snapshot `params.xb`), because lagged partners diverge once the penalty reaches the vertex stiffness. C++ lags all of them.
   - `min_sigma_n` floors the effective normal penalty in both adaptive modes.
+  - Friction: `mu_f` only enters the dual update (Coulomb cone projection of `lambda_f`). The primal friction term `sigma_f c_f - lambda_f` has no cone limit, as in C++, so within a step the friction penalty acts as viscous drag even at `mu_f = 0`. Sliding scenes need a small `gammaf_adaptive` (e.g. 0.001) or `gammaf` (see the sim-run skill's "Tuning").
   - The penalty starts at `dt^2`.
 - **`contact/debug/contact.py`.** Polyscope browsers for inspecting individual contact stencils.
 
