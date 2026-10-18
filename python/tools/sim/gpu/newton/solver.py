@@ -778,7 +778,8 @@ class Params:
     n_subproblem_max_iters:
         Maximum Newton steps per AL subproblem.
     gtol2:
-        Squared gradient-norm convergence threshold.
+        Squared gradient-norm convergence threshold. Dynamic problems use the shared relative test
+        instead when ``Solver.Convergence.rtol > 0`` (see :func:`check_convergence`).
     linear_solver:
         GPU-only CG settings (:class:`LinearSolverParams`); defaults when omitted.
     spd_correction:
@@ -822,6 +823,9 @@ class Params:
         self._data.ls_c = line_search.c if line_search else 1e-4
         self._data.ls_alpha = line_search.alpha if line_search else 1.0
         self._streams = [wp.Stream() for _ in range(6)]
+        # Shared device-side convergence test (gpu.vbd.convergence.ConvergenceCheck), set by
+        # SimulationState. With its relative test on, it replaces gtol2 (see check_convergence).
+        self.convergence = None
 
     def construct(self, fem: FemElastoDynamics, contact: ContactDynamics):
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = (
@@ -925,6 +929,12 @@ class Params:
         return self._data
 
 
+def _relative_check(params: Params):
+    """The convergence check whose relative test applies to this solve, or None (absolute gtol2)."""
+    check = params.convergence
+    return check if check is not None and check.relative else None
+
+
 @profiling.scoped("solve.initialize")
 def initialize_solve(
     fem: FemElastoDynamics,
@@ -932,11 +942,15 @@ def initialize_solve(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    """Detect contacts and initialise the constraint set for the time step."""
+    """Detect contacts, initialise the constraint set for the time step and measure the relative
+    gradient test's scale."""
     cd.on_time_step_started()
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
     cd.filter_step()
+    check = _relative_check(params)
+    if check is not None:
+        check.measure_scale()
 
 
 @profiling.scoped("newton.energy")
@@ -1014,6 +1028,16 @@ def check_convergence(
     contact: ContactDynamics,
     params: Params,
 ) -> bool:
+    """Outer test between AL iterations.
+
+    With the shared convergence check's relative test on (``Solver.Convergence.rtol > 0``, dynamic
+    problems), it's the VBD family's test of the Lagrangian gradient,
+    ``sum |g_i|^2 / m_i <= rtol^2 max(sum m_i |x~_i - x^t_i|^2, M floor^2)``. Otherwise it's
+    ``|g|^2 <= gtol2`` on the augmented-Lagrangian gradient, as in C++.
+    """
+    check = _relative_check(params)
+    if check is not None:
+        return check.test_gradient()
     main_stream = wp.get_stream()
     params._gradient_norm.compute(main_stream)
     return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
@@ -1046,6 +1070,9 @@ def solve_subproblem(
 ) -> SubproblemStatus:
     """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
 
+    The subproblem converges when its augmented-Lagrangian gradient passes the shared relative test
+    (``Solver.Convergence.rtol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
+
     Returns:
         SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
         leaves ``x`` at the last accepted iterate.
@@ -1056,12 +1083,17 @@ def solve_subproblem(
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
     h2 = wp.float32(fem.h2)  # type: ignore
+    check = _relative_check(params)
     params._gradient_norm.compute_gradient(main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
-        params._gradient_norm.reduce(main_stream)
-        gnorm2 = float(params._gnorm2.numpy()[0])
-        if gnorm2 <= float(params.data.gtol2):
-            return SubproblemStatus.CONVERGED
+        if check is not None:
+            if check.relative_test(params._g):
+                return SubproblemStatus.CONVERGED
+        else:
+            params._gradient_norm.reduce(main_stream)
+            gnorm2 = float(params._gnorm2.numpy()[0])
+            if gnorm2 <= float(params.data.gtol2):
+                return SubproblemStatus.CONVERGED
         # Assemble FEM + contact Hessian
         profiling.push("newton.assemble")
         params._data.Hvals.zero_()
