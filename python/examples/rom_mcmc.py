@@ -273,7 +273,13 @@ class _Chain:
         """The level-set point along whitened direction theta, and its polar log density."""
         d = self.model.scale * theta
         r, monotone = radial_root(
-            self.model, d, self.target_energy, r0, monotonicity_atol=self.energy_atol
+            self.model,
+            d,
+            self.target_energy,
+            r0,
+            # Psi_hat ~ r^2, so a relative error eps in r is an energy error ~2 eps E*: stop at the noise floor
+            rtol=max(1e-6, 0.5 * self.energy_noise / self.target_energy),
+            monotonicity_atol=self.energy_atol,
         )
         self.star_violations += not monotone
         q = r * d
