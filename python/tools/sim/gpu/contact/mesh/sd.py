@@ -86,8 +86,11 @@ def _detect_vertex_mesh_contacts(
             # point is then the vertex's projection)
             n = wp.normalize(wp.cross(xk - xj, xl - xj))
             sd = wp.dot(xi - xc, n)
+            # The tolerance scales with the face, since xc's float32 error grows with its vertices'
+            # distance (infinite planes are large quads)
             tangential = wp.norm_l2(xi - xc - sd * n)
-            if tangential > wp.float32(1e-5) * (wp.float32(1) + wp.abs(sd)):
+            tol = wp.float32(1e-6) * (wp.norm_l2(xk - xj) + wp.norm_l2(xl - xj)) + wp.float32(1e-5) * wp.abs(sd)
+            if tangential > tol:
                 continue
         tsdmin = wp.min(tsdmin, sd)
         if sd < dmin:
