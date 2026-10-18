@@ -196,6 +196,16 @@ def modal_derivatives(
     thetaij = np.zeros(n, dtype=Ured.dtype)
     xleft = np.copy(x)
     xright = np.copy(x)
+    # dK/d\eta_j depends only on j, so assemble it once per mode and keep its action on all modes
+    dKU = np.empty((m, freedofs.shape[0], m), dtype=Ured.dtype)
+    for j in range(m):
+        xleft[freedofs] = x[freedofs] - h * Ured[:, j]
+        xright[freedofs] = x[freedofs] + h * Ured[:, j]
+        Kleft = compute_stiffness(xleft)
+        Kright = compute_stiffness(xright)
+        dKdetaj = (Kright - Kleft) / (2 * h)
+        dKdetajred = dKdetaj.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
+        dKU[j] = dKdetajred @ Ured
     for i in range(m):
         # Factorize modal derivative matrix
         A12 = -Mred @ Ured[:, i]
@@ -214,14 +224,7 @@ def modal_derivatives(
         # )
         # Ainv = scipy.sparse.linalg.factorized(A)
         for j in range(m):
-            # Compute dK/d\eta_j
-            xleft[freedofs] = x[freedofs] - h * Ured[:, j]
-            xright[freedofs] = x[freedofs] + h * Ured[:, j]
-            Kleft = compute_stiffness(xleft)
-            Kright = compute_stiffness(xright)
-            dKdetaj = (Kright - Kleft) / (2 * h)
-            dKdetajred = dKdetaj.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
-            b[:-1, 0] = -dKdetajred @ Ured[:, i]
+            b[:-1, 0] = -dKU[j][:, i]
             # If Eigen LDLT
             thetaij[freedofs] = Ainv.solve(b).squeeze()[:-1]
             # If SuperLU
