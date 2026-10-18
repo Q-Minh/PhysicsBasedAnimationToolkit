@@ -289,6 +289,25 @@ def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1
     return potential
 
 
+def deformation_gradient_determinants(E, egU, GNegU, x):
+    """Computes det(F) at the quadrature points of linear elements.
+
+    Args:
+        E (np.ndarray): |# elem. nodes| x |# elements| element connectivity array.
+        egU (np.ndarray): |# quad.pts.| element indices at quadrature points.
+        GNegU (np.ndarray): |# elem. nodes| x 3*|# quad.pts.| shape function gradients.
+        x (np.ndarray): 3*|# nodes| array of node positions in F order.
+
+    Returns:
+        np.ndarray: |# quad.pts.| array of det(F), which is <= 0 for inverted elements.
+    """
+    eg = np.ravel(egU)
+    xe = x.reshape(-1, 3)[np.asarray(E)[:, eg].T]
+    GN = np.asarray(GNegU).reshape(GNegU.shape[0], -1, 3).transpose(1, 0, 2)
+    # F = sum_a x_a grad(N_a)^T
+    return np.linalg.det(np.einsum("gai,gaj->gij", xe, GN))
+
+
 def signal(w: float, t: float, c: float, k: float):
     return c * np.sin(k * w * t)
 
@@ -428,6 +447,7 @@ def reduced_model(
     potential: typing.Callable,
     rigid: int,
     weight: str,
+    fext: np.ndarray | None = None,
 ):
     """Builds the reduced model to sample on, excluding the first `rigid` (zero-frequency) modes.
 
@@ -441,6 +461,7 @@ def reduced_model(
         potential (typing.Callable): Full-space energy, see elastic_energy.
         rigid (int): Number of leading rigid modes to exclude.
         weight (str): Sampling weight, see rom_mcmc.WEIGHTS.
+        fext (np.ndarray | None): n constant external force, e.g. gravity, or None.
 
     Returns:
         Tuple[rom_mcmc.QuadraticManifold, np.ndarray]: The model and its mode frequencies.
@@ -453,7 +474,7 @@ def reduced_model(
     mi = np.einsum("ni,n,ni->i", Ur, m, Ur)
     scale = 1.0 / (w[keep] * np.sqrt(mi))
     model = rom_mcmc.QuadraticManifold(
-        Ur, Qr, m, x0.astype(np.float64), potential, scale, weight
+        Ur, Qr, m, x0.astype(np.float64), potential, scale, weight, fext
     )
     return model, w[keep]
 
@@ -525,7 +546,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--energy",
-        help="Target deformation energy E* in J",
+        help="Target energy in J: the potential energy E* for the level-set samplers, "
+        "the total energy E = K + U for the microcanonical sampler",
         type=float,
         dest="energy",
         default=1.0,
@@ -541,9 +563,25 @@ if __name__ == "__main__":
         "--sampler",
         help="polar: Metropolis on directions with exact radial solves, "
         "crw: constrained random walk with projection, "
-        "ray: independent random directions (not distributed as the target)",
+        "ray: independent random directions (not distributed as the target), "
+        "microcanonical: positions and velocities at fixed total energy K + U",
         choices=tuple(rom_mcmc.SAMPLERS),
         default="polar",
+    )
+    parser.add_argument(
+        "--chains",
+        help="Number of independent chains, pooled. Defaults to 4 for the microcanonical sampler, 1 otherwise.",
+        type=int,
+        dest="chains",
+        default=None,
+    )
+    parser.add_argument(
+        "--gravity",
+        help="Gravitational acceleration (gx gy gz), adding the potential -(M g)^T u(q). Off by default.",
+        type=float,
+        nargs=3,
+        dest="gravity",
+        default=None,
     )
     parser.add_argument(
         "--weight",
@@ -617,21 +655,40 @@ if __name__ == "__main__":
     psi = elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element)
     # Without Dirichlet constraints, the 6 lowest modes are rigid and the energy level set is unbounded along them
     rigid = 6 if len(freedofs) == n else 0
+    # Gravity M g, with M lumped per DOF and DOFs interleaved per node
+    fext = (
+        M.diagonal() * np.tile(np.asarray(args.gravity), X.shape[1])
+        if args.gravity is not None
+        else None
+    )
 
     def make_model(mapping: str):
         return reduced_model(
-            mapping, U, Q, w, M.diagonal(), x0, psi, rigid, args.weight
+            mapping, U, Q, w, M.diagonal(), x0, psi, rigid, args.weight, fext
         )
 
     if args.headless:
         model, wr = make_model(args.mapping)
-        rng = np.random.default_rng(args.seed)
-        sampler = rom_mcmc.make_sampler(args.sampler, model, args.energy, rng)
+        chains = args.chains or (4 if args.sampler == "microcanonical" else 1)
         t0 = time.time()
-        batch = rom_mcmc.run_chain(
-            sampler, args.samples, args.burn_in, args.pilot, args.thin
+        batch = rom_mcmc.run_chains(
+            lambda rng: rom_mcmc.make_sampler(args.sampler, model, args.energy, rng),
+            chains,
+            args.samples,
+            args.burn_in,
+            args.pilot,
+            args.thin,
+            seed=args.seed,
         )
         elapsed = time.time() - t0
+        min_det_F = np.array(
+            [
+                deformation_gradient_determinants(
+                    E, egU, GNegU, model.x0 + model.displacement(qs)
+                ).min()
+                for qs in batch.q
+            ]
+        )
         attrs = dict(
             input=args.input,
             n_linear_modes=mu,
@@ -640,17 +697,18 @@ if __name__ == "__main__":
             eps=args.eps,
             sampler=args.sampler,
             target_energy=args.energy,
+            gravity=np.asarray(args.gravity if args.gravity is not None else [0.0] * 3),
             seed=args.seed,
             git_commit=rom_mcmc.git_commit(os.path.dirname(os.path.abspath(__file__))),
             sampling_time=elapsed,
         )
-        rom_mcmc.write_samples(args.output, X, model, wr, batch, attrs)
+        rom_mcmc.write_samples(args.output, X, model, wr, batch, attrs, min_det_F)
         s = batch.stats
         print(
             f"Wrote {args.samples} samples to {args.output} in {elapsed:.1f} s: "
-            f"acceptance={s['acceptance']:.2f}, thin={s['thin']}, tau={s['tau']:.1f}, "
-            f"ESS={s['ess']:.0f}, star violations={s['star_violations']}, "
-            f"energy noise={s['energy_noise']:.2g} J"
+            f"{chains} chain(s), acceptance={s['acceptance']:.2f}, thin={s['thin']}, tau={s['tau']:.1f}, "
+            f"ESS={s['ess']:.0f}, split R-hat={s['rhat']:.3f}, star violations={s['star_violations']}, "
+            f"energy noise={s['energy_noise']:.2g} J, inverted samples={np.sum(min_det_F <= 0)}"
         )
         if s["energy_noise_warning"]:
             print(
@@ -707,7 +765,8 @@ if __name__ == "__main__":
 
         imgui.Separator()
         imgui.Text("Fixed-energy sampling (Linear samples on U only)")
-        changed, target_energy = imgui.InputFloat("Energy E* (J)", target_energy)
+        imgui.Text("E is the potential energy, or K + U for the microcanonical sampler")
+        changed, target_energy = imgui.InputFloat("Energy E (J)", target_energy)
         target_energy = max(target_energy, 1e-8)
         changed, sampler_idx = imgui.Combo(
             "Sampler", samplers.index(sampler_kind), samplers
@@ -728,7 +787,8 @@ if __name__ == "__main__":
                 samples = []
             batch = chain.sample(samples_per_click)
             stats = batch.stats
-            samples.extend(zip(batch.q, batch.energy))
+            qdots = batch.qdot if batch.qdot is not None else [None] * len(batch.q)
+            samples.extend(zip(batch.q, batch.energy, qdots))
             sample_idx = len(samples) - 1
             show_samples = True
         if samples:
@@ -739,10 +799,16 @@ if __name__ == "__main__":
                 "Sample", sample_idx, 0, len(samples) - 1
             )
             imgui.PopID()
-            imgui.Text(
-                f"{chain_key[0]} map, {chain_key[2]} sampler, E* {chain_key[1]:.6g} J: "
-                f"energy {samples[sample_idx][1]:.6g} J"
-            )
+            if samples[sample_idx][2] is not None:
+                imgui.Text(
+                    f"{chain_key[0]} map, {chain_key[2]} sampler, E {chain_key[1]:.6g} J: "
+                    f"U {samples[sample_idx][1]:.6g} J, K {chain_key[1] - samples[sample_idx][1]:.6g} J"
+                )
+            else:
+                imgui.Text(
+                    f"{chain_key[0]} map, {chain_key[2]} sampler, E* {chain_key[1]:.6g} J: "
+                    f"energy {samples[sample_idx][1]:.6g} J"
+                )
             imgui.Text(
                 f"Acceptance {stats['acceptance']:.2f}, thin {stats['thin']}, ESS {stats['ess']:.0f}, "
                 f"star violations {stats['star_violations']}, energy noise {stats['energy_noise']:.2g} J"
@@ -753,8 +819,15 @@ if __name__ == "__main__":
                     f"Energy noise limits |Psi - E*| to ~{stats['energy_tolerance']:.2g} J (> 1e-3 E*): use a larger E*",
                 )
 
+        qdot = None
         if show_samples and samples:
-            u = model.displacement(samples[sample_idx][0])
+            qs, _, qdot = samples[sample_idx]
+            u = model.displacement(qs)
+            if qdot is not None:
+                v = model.jacobian(qs) @ qdot
+                vm.add_vector_quantity(
+                    "velocity", v.reshape(X.shape[1], 3), defined_on="vertices", enabled=True
+                )
         else:
             mode = max(0, min(nrdofs - 1, mode))
             t = time.time() - t0
@@ -766,6 +839,8 @@ if __name__ == "__main__":
             else:
                 u = linear_map(UZ, q)
 
+        if qdot is None:
+            vm.remove_quantity("velocity")
         V = X.T + u.reshape(X.shape[1], 3)
         vm.update_vertex_positions(V)
 
