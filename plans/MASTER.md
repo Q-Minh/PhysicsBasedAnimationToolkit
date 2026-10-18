@@ -41,7 +41,7 @@ them **through that absolute path**, never a copy inside their own worktree.
 | 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
 | 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
 | 4 | MCMC sampling of quadratic-manifold shapes (benchmark dataset generator) | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
-| 5 | GPU simulators read CPU scene files (task 1s session) | MASTER.md section "New milestone: GPU simulators read CPU scene files" | `feature/gpu-scene-ingestion` · `C:\git\pbat-kinematics` | dev |
+| 5 | GPU simulators read CPU scene files (task 1's session) | MASTER.md section "New milestone: GPU simulators read CPU scene files" | `feature/gpu-scene-ingestion` · `C:\git\pbat-kinematics` | dev |
 
 ## Phase 0 (coordinator, before the parallel work starts)
 
