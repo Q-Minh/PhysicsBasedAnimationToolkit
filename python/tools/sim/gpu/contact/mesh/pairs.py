@@ -649,15 +649,19 @@ class ContactPairs:
                 self._rdata.rvf2vf,
                 self._rdata.ree2ee,
             ]
-            for fwd, rev, rx2x, capacity, child_stream, parent_stream in zip(
+            for fwd, rev, rx2x, capacity, child_stream, parent_stream, fwd_prefix_stream in zip(
                 forward_pairs,
                 reverse_pairs,
                 r2f_maps,
                 capacities,
                 reverse_to_forward_map_streams,
                 reverse_sort_streams,
+                forward_prefix_streams,
             ):
+                # The map reads the forward count fwd.prefix[-1], which the forward prefix pass
+                # recomputes from the stored pairs (before it, the count may exceed the capacity).
                 child_stream.wait_stream(parent_stream)
+                child_stream.wait_stream(fwd_prefix_stream)
                 wp.launch(
                     kernel=_map_reverse_to_forward,
                     dim=capacity,
