@@ -304,6 +304,15 @@ class Sd(ContactDetection):
         """
         self._mesh_depth.assign(np.asarray(depths, dtype=np.float32))
 
+    contact_free = False
+    """Set for contact surfaces with a single component (one body, no colliders): vertex SDF detection
+    has no self-contact, so such scenes can't have contacts and detection is skipped."""
+
+    @property
+    def inactive(self) -> bool:
+        """Whether detection, refit and the step filter are skipped (``deactivate`` or contact-free)."""
+        return bool(self.params.deactivate) or self.contact_free
+
     def on_time_step_started(self):
         self.request_step_filter = True
 
@@ -311,7 +320,7 @@ class Sd(ContactDetection):
     def prepare_detection(self):
         """Refit the meshes' BVHs. wp.Mesh.refit allocates scan temporaries, so it can't run in a
         conditional graph body."""
-        if self.params.deactivate:
+        if self.inactive:
             return
         main_stream = wp.get_stream()
         for mesh, stream in zip(self._wp_meshes, self._mesh_streams):
@@ -321,7 +330,7 @@ class Sd(ContactDetection):
             main_stream.wait_stream(stream)
 
     def detect_contacts(self, from_xt: bool = False, prepared: bool = False):
-        if self.params.deactivate:
+        if self.inactive:
             return
         if not prepared:
             self.prepare_detection()
@@ -365,7 +374,7 @@ class Sd(ContactDetection):
 
     @profiling.scoped("contact.filter")
     def filter_step(self):
-        if self.params.deactivate:
+        if self.inactive:
             return
         if self.request_step_filter and self.params.use_step_filter:
             n_verts = self._meshes.n_verts

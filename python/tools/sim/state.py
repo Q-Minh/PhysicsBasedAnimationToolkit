@@ -394,6 +394,12 @@ class SimulationState:
         )
         if self.contact_geometry is not None and self.cd_type == CDType.VertexSdf:
             detector.set_plane_depths(self.contact_geometry.plane_depths)
+        if self.cd_type == CDType.VertexSdf and self.multimesh.data.FP.shape[0] - 1 <= 1:
+            # One contact component and no self-contact: nothing can collide
+            detector.contact_free = True
+            if not getattr(self, "_reported_contact_free", False):
+                print("Contact detection is off: the scene has a single body and no colliders.")
+                self._reported_contact_free = True
         return detector
 
     def _advance(self):
