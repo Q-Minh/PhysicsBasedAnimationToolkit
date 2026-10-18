@@ -52,13 +52,14 @@ def _detect_vertex_mesh_contacts(
 
     # 1. Detect thread local contacts
     tsdmin = max_dist
-    for k in range(local_tid, mesh_ids.shape[0], block_dim):
-        if k == b:
+    # The loop variable m must not be reassigned in the body (k below is a node index).
+    for m in range(local_tid, mesh_ids.shape[0], block_dim):
+        if m == b:
             continue
-        qp = wp.mesh_query_point(mesh_ids[k], xi, max_dist)  # type: ignore
+        qp = wp.mesh_query_point(mesh_ids[m], xi, max_dist)  # type: ignore
         if not qp.result:  # type: ignore
             continue
-        f = meshes.FP[k] + qp.face  # type: ignore
+        f = meshes.FP[m] + qp.face  # type: ignore
         finds = meshes.F[f]
         j, k, l = finds[0], finds[1], finds[2]
         xj, xk, xl = x[j], x[k], x[l]
