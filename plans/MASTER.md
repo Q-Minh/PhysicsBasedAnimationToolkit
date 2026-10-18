@@ -253,7 +253,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | idle: kinematics (`c41bc1ad`) and scene ingestion (`65fc5fe1`) merged into dev | 2026-10-18 | Worktree rebased on dev. Open follow-ups, if wanted: GPU static-collider contact, the CPU `simulate.py -o` drive-letter bug |
-| 2 | contact-gather early-out ready for review | 2026-10-18 | Milestones 1–3 merged. Early-out: 2 commits, bit-identical (VBD/AAAVBD/Chebyshev), trampoline −52…−59% production step, contact scene −4…−5%. [AAAVBD overheads v3](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Next candidates: AAAVBD state-load hoisting, neighbour pre-filter, dual-update early-out |
+| 2 | on hold until the benchmark discussion | 2026-10-18 | All work merged: milestones 1–3, contact-gather early-out, AAAVBD load hoisting, inclusive scope times, docs pass; sim-profiling skill corrected (d5550ee8). No GPU use except logged runs |
 | 3 | merged (3aae8ba5); on hold | 2026-10-18 | static machinery, convergence/feasibility loop, benchmark tooling merged; waiting for benchmark data/plot requirements |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -500,6 +500,13 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · Merged `feature/pairs-stream-order` (task 1: reverse-map stream order, VF capacity 0.5) and `feature/sampler-docs` (task 4, docs-only, verified by AST). Skills added: `sim-run`, `sim-sampling`, `sim-profiling` (`.claude/skills/`). Pending: `sim-benchmarks` (needs task 3's static summary and the benchmark methodology), doc passes by task 3 (in progress), task 2 (after inclusive times) and task 1 (after colliders).
 - 2026-10-18 · task 2 · **GPU run END** (12:05, exclusive window released early). Results reported to the coordinator.
 - 2026-10-18 · coordinator · Task 2's clean-window results: fused constraint-set update −2…−3% on trampoline (AAAVBD 28.1→27.3, VBD 29.9→29.0 ms), BoB within noise; constraint-set boundary gaps 0.70→0.51 ms/step. AAAVBD vs VBD per sweep 72 vs 59 µs (1.22×; the earlier 1.5× came from contaminated windows). **Merged AAAVBD load hoisting** (`d61ee145`, bit-identical, re-checked): trampoline AAAVBD 27.3→26.0 ms, BoB 98.1→93.7 ms. Also merged docfield-strings, static-params-help (task 3) and benchmark-input (task 4); skill `sim-benchmarks` added.
+- 2026-10-18 · task 1 · **GPU run START** (~15 min, correctness only, no timings): static/plane collider checks
+  (CubeFallingOnPlane family, inclined plane, beam on static beam) and branch-vs-dev bit-identity. Ignore
+  timings in this window. Will log END. Maintainer request: **plane colliders** (new scene object, authored in
+  the CPU editor; finite or infinite, infinite by default). GPU: pinned quads plus analytic plane detection in
+  `sd.py`.
+- 2026-10-18 · task 2 · **GPU run START**: GUI (`ui.py`, trampoline) for the maintainer's manual test of the profiling panel. Timings from other sessions are unreliable while it runs. Will log END when the GUI closes.
+- 2026-10-18 · coordinator · **Merged `feature/vertex-sdf-bary`** (task 1): VertexSdf reconstructed closest points with the wrong barycentric order (Warp: u·p0 + v·p1 + (1−u−v)·p2). Signed-distance magnitudes and the VF/VE/VV choice were wrong; the sign was right. **All VertexSdf contact trajectories change: regenerate any contact-scene numbers.** Verified against warp/native/mesh.h mesh_eval_position. Also merged task 2's profiling docs and inclusive times.
 
 ## Open questions for the maintainer
 
