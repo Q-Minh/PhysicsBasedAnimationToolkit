@@ -163,7 +163,14 @@ def _legend(phases, colored) -> str:
     return f'<div class="legend">{items}</div>'
 
 
-def render(result_list: list[dict]) -> str:
+def _scene_name(scene: str) -> str:
+    """``.../trampoline.Dump.h5:fem`` -> ``Trampoline``."""
+    stem = scene.rsplit(":", 1)[0].replace("\\", "/").rsplit("/", 1)[-1]
+    name = stem.split(".", 1)[0] or "scene"
+    return name[0].upper() + name[1:]
+
+
+def render(result_list: list[dict], note: str | None = None) -> str:
     """Render the comparison page for one phase-timed result per solver, plus optional production
     results (``source: "production"``, graph replay timings) for the same solvers."""
     production = {
@@ -266,7 +273,8 @@ def render(result_list: list[dict]) -> str:
            if production else "")
     )
     return _PAGE.format(
-        title="Solver cost breakdown",
+        title=f"{_scene_name(meta.get('scene', ''))} solver costs",
+        note_html=f'<p class="sub">{_esc(note)}</p>' if note else "",
         scene=_esc(meta.get("scene", "")),
         slot_vars_light="".join(f"--series-{i + 1}:{l};" for i, (l, _) in enumerate(_SLOTS)),
         slot_vars_dark="".join(f"--series-{i + 1}:{d};" for i, (_, d) in enumerate(_SLOTS)),
@@ -281,10 +289,11 @@ def render(result_list: list[dict]) -> str:
     )
 
 
-_PAGE = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
+# A page body without the document skeleton: it opens directly in a browser, and claude.ai artifact
+# publishing adds the skeleton.
+_PAGE = """<title>{title}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
 <style>
 :root {{ color-scheme: light; --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e;
   --muted:#898781; --grid:#e1e0d9; --border:rgba(11,11,11,0.10); --other:#b9b8b1; {slot_vars_light} }}
@@ -296,7 +305,8 @@ _PAGE = """<!doctype html>
   {slot_vars_dark} }}
 body {{ margin:0; background:var(--page); color:var(--ink);
   font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }}
-main {{ max-width:960px; margin:0 auto; padding:32px 16px 64px; }}
+main {{ max-width:960px; margin:0 auto; padding-block:32px 64px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }}
 h1 {{ font-size:28px; margin:0 0 4px; }} h2 {{ font-size:18px; margin:36px 0 12px; }}
 .sub {{ color:var(--ink-2); margin:0 0 24px; overflow-wrap:anywhere; }}
 .card {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;
@@ -325,10 +335,10 @@ dt {{ color:var(--muted); }} dd {{ margin:0; overflow-wrap:anywhere; }}
 #tip {{ position:fixed; pointer-events:none; background:var(--surface); color:var(--ink);
   border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:13px;
   box-shadow:0 4px 16px rgba(0,0,0,0.15); display:none; max-width:320px; }}
-</style></head>
-<body><main>
+</style>
+<main>
 <h1>{title}</h1>
-<p class="sub">{scene}</p>
+<p class="sub">{scene}</p>{note_html}
 <div class="card">{summary}</div>
 <h2>GPU busy time per step, by phase</h2>
 <div class="card">{legend}{bars}</div>
@@ -352,7 +362,6 @@ document.querySelectorAll("[data-tip]").forEach(el => {{
   el.addEventListener("mouseleave", () => {{ tip.style.display = "none"; }});
 }});
 </script>
-</body></html>
 """
 
 
@@ -360,8 +369,9 @@ def main():
     parser = argparse.ArgumentParser(description="Per-phase GPU cost report across solvers")
     parser.add_argument("results", nargs="+", help="Profiling result .json files, one per solver.")
     parser.add_argument("-o", "--out", required=True, help="Output .html.", dest="out")
+    parser.add_argument("--note", default=None, help="Context shown under the title.")
     args = parser.parse_args()
-    page = render([results.load(p) for p in args.results])
+    page = render([results.load(p) for p in args.results], args.note)
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(page)
     print(f"Wrote {args.out}")
