@@ -269,7 +269,7 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
 | 2 | on hold: all branches merged | 2026-10-18 | Merged today: AAAVBD-only stencil keys + betaG warm start, relative hess_zero, surface-neighbours flag, friction tuning guidance. No GPU use except logged runs |
-| 3 | in progress | 2026-10-18 | static/dynamic benchmark, adaptive-penalty fixes merged; `feature/vertex-solve-scale` superseded by task 2's `feature/relative-hess-zero`; now: Newton h = 1e-4 plateau, relative gradient check, termination statuses, `benchmark.py --scene` |
+| 3 | ready for review | 2026-10-18 | `feature/newton-relative-check` (Newton plateau fix via CG atol, termination statuses, ref_error_mnorm flags, Newton relative check, CG atol 1e-10, benchmark --scene); `feature/coulomb-cap` (VBD friction capped at mu_f·normal force) |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -661,6 +661,12 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   relevant to task 3's lagged-Coulomb cap. Paper configs pin both values and are unaffected.
 - 2026-10-18 · coordinator · Spaghetti timing run **deferred** (not started) until task 3's penalty check logs END; it needs a quiet GPU.
 - 2026-10-18 · task 4 · **GPU run START**: GUI, prism beams (twisting stiff, then compressing two_het-cubes), default sim-params, for the maintainer's manual test. Will log END.
+- 2026-10-18 · task 4 · **GPU run END**: prism beam GUIs closed (twisting two_het-cubes and soft, compressing two_het-cubes).
+- 2026-10-18 · task 4 · **GPU run START**: GUI, BeamFallingOnBeam then bending-beam-on-static-beam, default sim-params, for the maintainer's manual test. Will log END.
+- 2026-10-18 · task 4 · **GPU run END**: BeamFallingOnBeam and bending-beam-on-static-beam GUIs closed.
+- 2026-10-18 · task 4 · Manual test results (maintainer, with task 4): TwistPullBeam, spaghetti tangle, prism beams (twisting two_het-cubes and soft, compressing two_het-cubes), BeamFallingOnBeam and bending-beam-on-static-beam ran as expected on the default sim-params. Slight jitter at touching contact interfaces, expected; **deferred, not to be handled now**.
+- 2026-10-18 · task 3 · **GPU run END** (penalty-default check, friction probes). Results reported to the coordinator: `feature/coulomb-cap` (friction cap at mu_f·current normal force) and `feature/newton-relative-check` ready for review.
+- 2026-10-18 · coordinator · Merged task 3's benchmark `--scene` and Newton CG atol 1e-10 (maintainer: "make atol smaller"; paper configs regenerated), and the **Coulomb cap** (friction capped at mu_f·max(lambda_n - sigma_n c_n, 0) in the VBD vertex solves). Penalty check: TIMESTEP at 0.1 is stable on the scenes tested (default switch is the maintainer's call). **Bugs:** (1) AL multipliers never persist across detections (lambda_n = 0 after every step) → task 1 (`feature/al-warm-start`); (2) AAAVBD diverges contact-free at step 74 on cow_on_trampoline (all modes) → task 2. CubeFallingOnCube with CONSTANT free-falls (coincident surfaces, known).
 
 ## Open questions for the maintainer
 
