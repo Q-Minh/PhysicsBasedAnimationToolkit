@@ -62,7 +62,7 @@ python -m python.tools.sim.config show a.toml b.toml --set Solver.VBD.gtol=1e-4
 - **From an HDF5 file**, e.g. a GUI export: `python -m python.tools.sim.config convert params.h5 params.toml`.
 - **From the GUI:** I/O > Export Parameters, with a `.toml` file name.
 
-The checks compare against the code's keys, not against `defaults.toml`. Even so, regenerate `defaults.toml` when you add a parameter, so it stays a complete reference. To regenerate it, write `config.dumps(config.params_dict(state))` from a default `SimulationState`.
+The checks compare against the code's keys, not against `defaults.toml`. Even so, regenerate `defaults.toml` when you add a parameter, so it stays a complete reference. To regenerate it, write `config.dumps(config.params_dict(state))` from a `SimulationState` built with `state.load_params` (the GPU defaults, which differ from the C++ ones).
 
 ## Paper configs
 
