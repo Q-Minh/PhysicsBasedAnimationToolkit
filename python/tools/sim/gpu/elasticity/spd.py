@@ -5,8 +5,8 @@ Mirrors ``pbat::math::linalg::FilterEigenvalues`` (``math/linalg/FilterEigenvalu
 ``pbat::fem::HyperElasticPotential`` on the 9x9 Hessian d^2Psi/dF^2. Warp only provides 3x3
 eigendecompositions, so the 9x9 symmetric eigenproblem is solved by cyclic Jacobi rotations.
 
-The static Newton solver applies it to every quadrature point's d^2Psi/dF^2 before the chain rule, with
-the mode from ``pbat.sim.algorithm.newton.Params.spd_correction`` (config key
+The GPU Newton solver applies it to every quadrature point's d^2Psi/dF^2 before the chain rule, in
+dynamic and static problems as C++ Newton does, with the mode from ``pbat.sim.algorithm.newton.Params.spd_correction`` (config key
 ``Solver.Newton.spd_correction``; C++'s default is ``Absolute``). Tests:
 ``python -m unittest python.tools.sim.gpu.elasticity.spd``.
 """
