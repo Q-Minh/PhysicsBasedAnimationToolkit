@@ -71,6 +71,7 @@ When comparing solvers, use the time to reach each error level, not the time per
 ## Pitfalls
 
 - **Contact** is always off in the static benchmark.
+- **Solver parameters:** without `--sim-params`, only the code defaults apply (`configs/defaults.toml`), not the Dump's `vbd/params`. Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
 - **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Vertex-solve and acceleration parameters still matter.
 - **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 300 leaves Newton steps inexact.
 - **Quiet GPU:** timings are only valid while nothing else runs. Reserve the GPU in `plans/MASTER.md` while parallel sessions are active.
