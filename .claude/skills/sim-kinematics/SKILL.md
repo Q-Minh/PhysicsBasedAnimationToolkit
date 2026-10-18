@@ -73,7 +73,7 @@ Open it with `python -m python.tools.vbd.editor`. Claude can't drive the editor,
 - **Old Dumps:** a Dump without a `kinematics` group treats nonzero `dmask` as fixed forever.
 - **L_ROTATE origin:** the editor resets an L_ROTATE origin to its nodes' centroid whenever it redraws the transform.
 - **Old L_TRANSLATE scenes:** L_TRANSLATE used to be group-normalized, so migrate scenes authored before 2026-10-18 with `migrate_l_translate`.
-- **Finite planes** act like an infinitely deep column under their rectangle. A vertex that drifts back under a finite plane from the side counts as deeply penetrating and gets launched. Start bodies fully over a finite plane, and prefer infinite planes (a fix is being discussed).
+- **Finite planes** are plates of `thickness` (default 10% of the smaller half-extent, editable in the editor). A body can pass under or beside them, but impacts faster than the thickness per step can tunnel through. Infinite planes catch any depth.
 - **Colliders need `--scene`:** plane and static mesh colliders only work from scene files, since Dumps don't carry them.
 - **Hard impacts** currently need an adaptive penalty (`--set Contact.ContactDynamics.penalty_adaptivity=1 --set Contact.ContactDynamics.gamman=1`). The adaptive modes still diverge with VBD-family solvers on some contact scenes until task 3's fix lands, so check the result.
 - **Comparing contact scenes:** they aren't bit-reproducible run to run, so compare constrained-node trajectories or contact sets.
