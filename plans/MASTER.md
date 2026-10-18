@@ -507,6 +507,21 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   `sd.py`.
 - 2026-10-18 · task 2 · **GPU run START**: GUI (`ui.py`, trampoline) for the maintainer's manual test of the profiling panel. Timings from other sessions are unreliable while it runs. Will log END when the GUI closes.
 - 2026-10-18 · coordinator · **Merged `feature/vertex-sdf-bary`** (task 1): VertexSdf reconstructed closest points with the wrong barycentric order (Warp: u·p0 + v·p1 + (1−u−v)·p2). Signed-distance magnitudes and the VF/VE/VV choice were wrong; the sign was right. **All VertexSdf contact trajectories change: regenerate any contact-scene numbers.** Verified against warp/native/mesh.h mesh_eval_position. Also merged task 2's profiling docs and inclusive times.
+- 2026-10-18 · task 2 · **GPU run END**: the maintainer's GUI session (profiling panel test) is closed. GPU free.
+- 2026-10-18 · task 4 · **CPU run START** (~5–10 min, no GPU): sample benchmark dataset (trampoline, 3 energies × 4 problems, pools of 400) into `data/benchmarks/trampoline-sample` for the maintainer's dataset browser. Will log END.
+- 2026-10-18 · task 4 · **CPU run END** (12:36): sample dataset in `data/benchmarks/trampoline-sample` (3 energies × 4 problems, h = 1e-4 and 1e-2). Pools of 400 give split R-hat 1.05 / 1.26 / 1.14 at 50 / 500 / 5000 J, enough to explore but not for the real dataset. The 5000 J level includes an inverted start (min det F −0.43). Now running the maintainer's dataset browser GUI (CPU only).
+- 2026-10-18 · task 1 · **GPU run END** (collider/plane correctness runs, started under my START above).
+  **Pre-existing bug on dev, found while testing plane colliders: adaptive contact penalties diverge.**
+  `--set Contact.ContactDynamics.penalty_adaptivity=1` (TIMESTEP) or `=2` (SUBPROBLEM) gives NaN positions on
+  BeamFallingOnBeam from frame 10 (first contacts) with VBD, AAAVBD and Chebyshev, for any `gamman`
+  (1, 10, 1e4). AndersonSolver stays finite. The penalty itself is moderate (σₙ ≈ 16 at frame 10), Hi/Qc
+  are finite, and x goes NaN at frame 11, so the divergence is in the VBD contact solve, not in the
+  Rayleigh-quotient pass. Also, the default `gamman = 1e4` is tuned for CONSTANT (it multiplies σ₀ = dt²).
+  The adaptive modes need an O(1) multiplier. **Maintainer (in my session): wants a per-timestep or
+  per-subproblem adaptive penalty instead of the constant one.** With TIMESTEP or SUBPROBLEM and gamman = 1,
+  a 24 kg-node cube dropped on a plane penetrates at most 1.7 or 0.8 cm, against 19.7 cm with the constant
+  penalty. Owner to be decided (solver kernels are task 3's).
+- 2026-10-18 · coordinator · **Adaptive contact penalty NaN** (BeamFallingOnBeam, penalty_adaptivity 1/2, VBD/AAAVBD/Chebyshev) assigned to **task 3** (`feature/adaptive-penalty`): root cause plus fix; constant mode must stay bit-identical; propose adaptive-mode gamman defaults and ask the maintainer before changing any default. Merged task 4's benchmark browser and gravity options; h5py added to python/examples/requirements.txt (3.16.0, the venv's version).
 
 ## Open questions for the maintainer
 
