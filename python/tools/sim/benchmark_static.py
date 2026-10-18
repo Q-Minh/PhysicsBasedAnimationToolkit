@@ -249,7 +249,7 @@ def main():
         "metadata": {
             "fem_elasto_dynamics": args.fem_elasto_dynamics,
             "sim_params": " + ".join(args.sim_params + [f"--set {o}" for o in args.overrides])
-            or "(Dump parameters)",
+            or "(code defaults)",
             "sample_attrs": {k: v for k, v in batch.attrs.items() if isinstance(v, (int, float, str, bool))},
             "device": wp.get_device().name,
             "git_commit": _git_commit(),
