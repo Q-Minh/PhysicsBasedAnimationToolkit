@@ -244,3 +244,27 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
   - **Ideas, not implemented:** hoist AAAVBD's per-vertex state loads, pre-filter surface neighbours, early-out for
     the dual updates.
   - **Report:** v3 of the same link.
+- 2026-10-18 · **Maintainer: implement the cheap AAAVBD changes.** Commits `8439a205` (unconditional `gk[j]` load in the
+  stencil augmentation) and `e2bc4fe4` (load `betaG/gk/xk/Hnk[i]` before the gathers).
+  - **Validation:** bit-identical on trampoline and the beam.
+  - **ncu:** 10.5 → 9.2 µs per launch.
+  - **Exclusive-window replay:** trampoline AAAVBD 27.3 → 26.0 ms (−5%), BeamFallingOnBeam 98.1 → 93.7 (−4.5%).
+- 2026-10-18 · **Anderson question (maintainer):** on trampoline, Anderson exits after 2 outer iterations (50
+  sweeps/step) at gtol 1e-3, vs AAAVBD at 221–475 and VBD at 345–500. Against Newton, Anderson's position error is
+  close to AAAVBD's (e.g. 4.0e-2 vs 3.0e-2 at frame 25) and below VBD's. Newton is a rough reference (1 outer
+  iteration). **Per-step times are "time to pass |g| ≤ gtol", not equal-accuracy comparisons.** Reports must
+  show sweeps/step, outer iterations/step, ms/sweep and the exit reason (coordinator).
+- 2026-10-18 · **Exclusive window** (11:52–12:05):
+  - **Fused constraint-set update (`ae18a043`):** −2…−3% on trampoline. Boundary constraint-set nodes go from 13.8
+    to 3.6.
+  - **Per-sweep cost:** AAAVBD is 1.22× VBD per sweep on trampoline (72 vs 59 µs; 1.17× with the changes).
+  - **CUPTI exit segfault:** fixed (`f4804414`, merged).
+  - **Next:** inclusive scope times (maintainer-approved via the coordinator).
+- 2026-10-18 · **Inclusive scope times** (6 commits, merged):
+  - **Stored:** `union_incl_ms` from raw intervals in the CUPTI recorder and the nsys importer.
+  - **Derived:** `results.inclusive` and `results.scope_tree`.
+  - **Views:** a scope tree in `report.py` and a Tree mode in the GUI panel.
+  - **Tests:** unit-tested. The GUI Tree mode is on the maintainer's manual test list.
+- 2026-10-18 · **Docs pass** (2 commits): docstrings for all public profiling API and the non-trivial helpers, and module
+  docstrings matching their sections. Corrections for `.claude/skills/sim-profiling/SKILL.md` were sent to the
+  coordinator, who owns the skill.

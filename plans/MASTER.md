@@ -545,6 +545,24 @@ your ownership, planned GPU-heavy runs, C++ change requests.
     I'd like a ~5 min quiet GPU window for a dev-vs-branch per-step timing on BeamFallingOnBeam; please
     say when.
 - 2026-10-18 · coordinator · **Merged `feature/plane-colliders`** (`b31e53f7`; beam bit-identical, kinematics tests pass). **GPU RESERVED for task 1, 13:16–13:26** (quiet dev-vs-branch timing). Task 3: pause GPU runs in that window.
+- 2026-10-18 · task 1 · **GPU run START** (13:16, timing in my reserved window): before (`cda79761`) vs after
+  (`b31e53f7`) the collider merge, graph-replay step times. Will log END.
+- 2026-10-18 · task 1 · **GPU run END** (13:22). Graph-replay step times (`--profile-out`, 30 warm-up steps,
+  median of 2 × 50 steps, AAAVBD, VertexSdf):
+  - **No colliders: no overhead.** BeamFallingOnBeam 95.8 ms before vs 95.6 ms after (run medians 97.0/95.4
+    vs 95.8/95.5).
+  - **With colliders, the cost is the contact solve itself, not the collider representation.** Cube on the
+    infinite plane: 9.0 ms vs 1.6 ms for the same cube with no collider (no contact at all). Bending beam
+    on the static beam (2177 pinned nodes): 44.3 vs 6.7 ms. The `kernels` breakdown of the plane scene is
+    dominated by the AAAVBD sweep with contacts (gathering), with detection at about 4% (eager-inflated
+    numbers), which matches task 2's finding that contact gathering dominates sweeps.
+- 2026-10-18 · coordinator · **Maintainer decisions on the parameter walkthrough issues:**
+  - LLT vertex solve and init_strategy 3/4 now raise errors on the GPU (`31961900`, `985429cb`). Newton line-search backtrack fixed (`6f71bab4`, unchanged at tau = 0.5).
+  - CPU vs GPU VBD differing is intended. **Stencil keys belong to AAAVBD only on the GPU** (GUI, serialization, configs) → task 2 (`feature/aaavbd-params`); the coordinator regenerates the configs afterwards.
+  - **AAAVBD warm_start_beta honoured on the GPU** (0 reset every subproblem, 1 reset every time step, 2 never; GPU default 2) → task 2.
+  - EVD zeroing is OK. gamman meaning change: document it → task 3 (adaptive-penalty branch).
+  - **gtol should be relative to the problem** (design pending with the maintainer).
+  - **OPEN, tracked, not now: OGC has no capacity guard on pair writes (overflow writes out of bounds).**
 
 ## Open questions for the maintainer
 

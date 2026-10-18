@@ -206,3 +206,12 @@ simulator files.
       gradient drops 3–5 orders to the float32 noise floor (~3 N). Reference accuracy is ~3.5–4 decades of
       the step size.
     - Full generation waits until the coordinator relays the data requirements.
+- 2026-10-18 · **Documentation pass** (coordinator request) on `feature/sampler-docs`, 5 commits
+  (`03c746e5`..`80f78b58`), docs only, verified by comparing ASTs without docstrings:
+  - Module docstrings with usage, help with units and defaults, public API docstrings, and the full
+    sample-file contract in `rom_mcmc.write_samples`.
+  - **Sampler guidance (maintainer: microcanonical preferred):** microcanonical by default (velocities,
+    deformation scales spread; 4 chains, ≥400 samples, rhat < 1.05); polar when every shape needs the same
+    deformation energy; crw to cross-check polar; ray only for browsing.
+  - The CLI default of `modalrom.py --sampler` is unchanged (polar), since this was a docs-only pass.
+  - Skill summary sent to the coordinator.
