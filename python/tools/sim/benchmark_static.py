@@ -207,6 +207,9 @@ def main():
                     log = runner.solve(batch.x[s])
                     summary = summarize(log)
                     summary["sample"] = int(s)
+                    summary["deformation_energy"] = float(batch.energy[s])
+                    if batch.min_J is not None:
+                        summary["min_J"] = float(batch.min_J[s])
                     samples.append(summary)
                     g = h5f.create_group(f"{solver.name}/{s:06d}")
                     g.create_dataset("error", data=log.error)

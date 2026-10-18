@@ -47,6 +47,7 @@ class SampleBatch:
     x: np.ndarray  # (S, N, 3) float32 sample positions X + u(q)
     energy: np.ndarray  # (S,) achieved deformation energies (J)
     attrs: dict = field(default_factory=dict)
+    min_J: np.ndarray | None = None  # (S,) smallest element volume ratio det(F), when the file has it
 
     @property
     def target_energy(self) -> float:
@@ -86,9 +87,10 @@ def load_sample_batch(path: str) -> SampleBatch:
         X = np.asarray(f["X"], dtype=np.float32)
         x = np.asarray(f["samples/x"], dtype=np.float32)
         energy = np.asarray(f["samples/energy"], dtype=np.float64)
+        min_J = np.asarray(f["samples/min_J"], dtype=np.float64) if "samples/min_J" in f else None
     if X.ndim != 2 or X.shape[1] != 3 or x.ndim != 3 or x.shape[1:] != X.shape:
         raise ValueError(f"{path}: expected X (N, 3) and samples/x (S, N, 3), got {X.shape}, {x.shape}")
-    return SampleBatch(path=path, X=X, x=x, energy=energy, attrs=attrs)
+    return SampleBatch(path=path, X=X, x=x, energy=energy, attrs=attrs, min_J=min_J)
 
 
 def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float = 1e-5) -> None:
