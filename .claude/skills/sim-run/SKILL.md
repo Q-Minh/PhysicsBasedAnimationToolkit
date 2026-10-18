@@ -93,6 +93,27 @@ Frequently changed keys:
 | `Contact.ContactDynamics.*`, `Contact.CDType.VertexSdf.*` | Contact penalties, friction `mu_f`, margin `dmin`, detection distance |
 | `Contact.ContactStorage.n_*_contact_capacity` | Contact-pair capacity multipliers. Contacts beyond capacity are dropped |
 
+## Tuning (maintainer's guidance)
+
+The GPU defaults (`state.load_params`, listed in `configs/defaults.toml`) follow this guidance. Use it when writing scene configs:
+
+- **Outer iterations:** `Solver.<S>.n_max_iters = 1` for the VBD family (the default). Use more only when a step needs several contact detection passes to resolve the constraint set without tunnelling. Vertex SDF detection doesn't truncate steps the way OGC did, so it rarely needs more.
+- **Contact-free scenes:** keep `n_max_iters = 1` and turn contact detection off. Single-body scenes without colliders do this automatically, because vertex SDF has no self-contact. Otherwise set `--set Contact.CDType.VertexSdf.deactivate=1`.
+- **Sweep budget:** the total over all outer iterations, subproblems and Anderson steps (`n_subproblem_max_iters` when `n_max_iters = 1`; default 100).
+
+  | Mesh | Sweeps |
+  |---|---|
+  | Soft, low-res | ~50 |
+  | Soft, higher-res | ~100 |
+  | Stiffer (Young's modulus ~1e7) | ~200 |
+  | Stiff, heterogeneous | ~400 |
+
+  With substeps, count the sweeps across all of them.
+- **Early exit:** `Solver.Convergence.rtol = 1e-2` (default) is a relative, mass-normalized gradient test against the step's free-flight displacement. It's resolution-independent for smooth residuals and stricter on fine meshes for contact or mesh-scale residuals, which is accepted. `ftol = 0.5` (default) allows half the contact margin between outer iterations.
+- **AAAVBD:** the defaults are gammadown 0.99, gammadownS 0.95, gammaup(S) 0.5 and warm_start_beta 2. Make `gammaupS` smaller for contact-rich scenes.
+- **Vertex solve:** Inverse (default). Use EVD only when singular vertex Hessians cause problems.
+- **Contact penalty:** the default is CONSTANT for now. TIMESTEP adaptive (the maintainer's intended default) is being stabilized (it diverged on BeamFallingOnBeam with these defaults).
+
 ## Interactive GPU runs
 
 ```bash
