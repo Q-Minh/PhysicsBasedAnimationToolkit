@@ -81,8 +81,11 @@ class QuadraticManifold:
             M (np.ndarray): n lumped mass matrix diagonal.
             x0 (np.ndarray): n rest positions in F order (interleaved per node).
             potential (typing.Callable): potential(x, gradient) returns Psi(x), or (Psi(x), grad Psi(x)) if gradient.
-            scale (np.ndarray): m whitening scales s.t. q = scale * y.
-            weight (str): One of WEIGHTS.
+            scale (np.ndarray): m whitening scales s.t. q = scale * y. The samplers propose moves in y, where the
+                linearized energy is |y|^2 / 2, so one step size suits all modes. modalrom.reduced_model sets
+                scale_i = 1 / (omega_i sqrt(U_i^T M U_i)), i.e. 1 / omega_i for mass-normalized modes.
+            weight (str): One of WEIGHTS; selects the fixed-potential samplers' target distribution on the level
+                set (see the module docstring). The microcanonical sampler ignores it.
             fext (np.ndarray | None): n constant external force (e.g. gravity M g), adding the potential
                 -fext^T u(q) to the energy. Note that its map u(q) is quadratic in q on a quadratic manifold.
         """
@@ -188,16 +191,25 @@ def radial_root(
 ) -> typing.Tuple[float, bool]:
     """Find r > 0 s.t. model.energy(r * d) = energy.
 
-    Starts from the quadratic estimate r1 = r0 sqrt(energy / Psi_hat(r0 d)), brackets the root with
-    geometrically growing steps around r1, then refines it with Brent's method.
+    Algorithm:
+        1. Evaluate the energy at the guess r0 and rescale it by the quadratic estimate
+           r1 = r0 sqrt(energy / U(r0 d)), exact when the energy is quadratic along the ray (U(r0 d) <= 0, e.g.
+           under gravity, keeps r1 = r0).
+        2. Bracket the root around r1 with geometrically growing steps: the growth factor starts at 1.01 and is
+           squared after each expansion, so a good guess costs one or two evaluations and a bad one stays
+           logarithmic in the error.
+        3. Refine with Brent's method to the relative tolerance rtol on r.
+        4. Count the target crossings among all evaluated points (ignoring those within the round-off band).
 
     Args:
-        model: Reduced model exposing energy(q).
-        d (np.ndarray): Search direction in q.
-        energy (float): Target energy.
-        r0 (float): Initial guess for r.
-        rtol (float): Relative tolerance on r.
-        max_expansions (int): Maximum number of bracket expansions.
+        model: Reduced model exposing energy(q), and optionally ray_energy(d) for cheaper evaluations along d.
+        d (np.ndarray): Search direction in q (scale * theta for a whitened unit direction theta).
+        energy (float): Target energy in J.
+        r0 (float): Initial guess for r, e.g. the previous chain state's root, or sqrt(2 energy) (the linearized
+            root in whitened coordinates).
+        rtol (float): Relative tolerance on r. Since the energy grows like r^2, the energy error is ~2 rtol energy;
+            the samplers set it to the energy's noise floor (no point solving more accurately than the energy).
+        max_expansions (int): Maximum number of bracket expansions before giving up with StarShapeError.
         crossing_rtol (float): Energies within max(crossing_rtol * energy, crossing_atol) of the target
             are attributed to round-off when counting crossings.
         crossing_atol (float): See crossing_rtol, e.g. a multiple of the energy's noise floor.
@@ -206,6 +218,9 @@ def radial_root(
         typing.Tuple[float, bool]: The root r, and False if the evaluated energies along the ray cross
         the target more than once (the level set is not star-shaped). The energy may decrease along the
         ray without crossing, e.g. under gravity, where it first dips below zero.
+
+    Raises:
+        StarShapeError: If the target can't be bracketed within max_expansions.
     """
     # Models may provide a cheaper evaluation restricted to the ray
     along_ray = model.ray_energy(d) if hasattr(model, "ray_energy") else lambda r: model.energy(r * d)
@@ -255,9 +270,12 @@ def estimate_energy_noise(model, q: np.ndarray, n: int = 33, rel: float = 1e-3) 
 
     Args:
         model: Reduced model exposing energy(q).
-        q (np.ndarray): Point to probe, ideally near the level set.
-        n (int): Number of evaluations.
-        rel (float): Relative half-width of the probed segment.
+        q (np.ndarray): Point to probe, ideally near the level set (the noise of a float32 sum scales with the
+            magnitude of its terms, so it depends on where it's measured).
+        n (int): Number of evaluations; more gives a steadier estimate of the standard deviation.
+        rel (float): Relative half-width of the probed segment. 1e-3 makes float32 positions differ (at ~1e-6
+            relative, most probes would round to the same positions and underestimate the noise) while the smooth
+            part of the energy stays cubic to ~1e-12 relative.
 
     Returns:
         float: The estimated (absolute) energy noise standard deviation.
@@ -271,9 +289,14 @@ def estimate_energy_noise(model, q: np.ndarray, n: int = 33, rel: float = 1e-3) 
 def integrated_autocorrelation_time(x: np.ndarray, c: float = 5.0) -> float:
     """Integrated autocorrelation time of a scalar chain, with Sokal's automatic window.
 
+    tau = 1 + 2 sum_{k=1}^{M} rho_k, with rho_k the normalized autocorrelation at lag k (computed by FFT), and the
+    window M the smallest lag with M >= c tau(M). A chain of n steps then holds about n / tau independent samples
+    (its effective sample size).
+
     Args:
         x (np.ndarray): |# steps| chain of a scalar observable.
-        c (float): Window constant.
+        c (float): Window constant. Larger values sum more lags (less bias, more noise); 5 is Sokal's usual choice.
+            The estimate is only reliable when the chain is much longer than c tau.
 
     Returns:
         float: The estimated integrated autocorrelation time (1 for an uncorrelated chain).
@@ -294,6 +317,10 @@ def integrated_autocorrelation_time(x: np.ndarray, c: float = 5.0) -> float:
 
 def split_rhat(traces: typing.Sequence[np.ndarray]) -> float:
     """Split-R-hat (Gelman et al., Bayesian Data Analysis, 3rd ed.) of chains of observables.
+
+    Each chain is cut into two halves of n steps (detecting chains that are still drifting), and for each observable
+    R-hat = sqrt(((n - 1) / n W + B / n) / W), with W the mean within-half variance and B / n the variance of the
+    half means. It approaches 1 from above as all halves sample the same distribution.
 
     Args:
         traces (typing.Sequence[np.ndarray]): One |# steps| x |# observables| trace per chain.
@@ -343,6 +370,24 @@ class _Chain:
 
     The energy may be noisy (e.g. pbat evaluates it in float32). The noise floor is measured once
     near the level set, and energy tolerances are kept above noise_factor times it.
+
+    A run has three phases (see run_chain):
+        burn_in            adapts the step size sigma with the Robbins-Monro update
+                           log sigma <- log sigma + (a_k - target_acceptance) / sqrt(k + 1), where a_k is 1 if step k
+                           was accepted, clipped to sigma in [1e-4, 4]. The decaying gain lets sigma settle; the
+                           step size is then frozen, so the later phases are a valid (non-adaptive) Markov chain.
+        estimate_thinning  runs a pilot at the frozen step size and sets thin = ceil(tau), tau being the largest
+                           integrated autocorrelation time over the observables.
+        sample             keeps every thin-th state, so consecutive samples are about independent.
+
+    Args:
+        model: Reduced model (see QuadraticManifold).
+        energy (float): Target energy in J.
+        rng (np.random.Generator): Random generator.
+        step (float): Initial proposal step size sigma, in whitened coordinates.
+        target_acceptance (float): Acceptance rate the burn-in adapts sigma toward.
+        noise_factor (float): Energy tolerances (crossing checks, projections) are noise_factor times the measured
+            noise standard deviation, i.e. well above round-off.
     """
 
     def __init__(
@@ -395,7 +440,12 @@ class _Chain:
         return r, q, e, gq, logp
 
     def burn_in(self, n: int):
-        """Run n steps, adapting the step size toward the target acceptance rate."""
+        """Run n steps, adapting the step size toward the target acceptance rate (see the class docstring).
+
+        Args:
+            n (int): Number of burn-in steps. They also move the chain away from its start, so use enough for both
+                (a few hundred suffice for the step size; strongly correlated chains need more to forget the start).
+        """
         log_step = np.log(self.step)
         for k in range(n):
             accepted = self._step()
@@ -404,7 +454,15 @@ class _Chain:
             self.step = float(np.exp(log_step))
 
     def estimate_thinning(self, n: int) -> int:
-        """Run n steps at a fixed step size and set the thinning to the autocorrelation time."""
+        """Run n steps at a fixed step size and set the thinning to the autocorrelation time.
+
+        Args:
+            n (int): Number of pilot steps. Should be many times the autocorrelation time for a reliable estimate;
+                a short pilot tends to over- or underestimate the thinning.
+
+        Returns:
+            int: The thinning ceil(tau).
+        """
         obs = np.empty((n, self._observables().shape[0]))
         for k in range(n):
             self._advance()
@@ -467,13 +525,24 @@ class PolarMetropolis(_Chain):
     theta' = normalize(theta + step * xi), xi ~ N(0, I), is symmetric. Requires every ray to cross
     the level set once (star-shaped level set); violations found while bracketing are counted.
 
+    Algorithm (one step):
+        1. Propose theta' = normalize(theta + sigma xi), with xi ~ N(0, I_m).
+        2. Solve the radial root r' with U(r' scale theta') = E* (radial_root, warm-started at the current r).
+        3. Evaluate log p(theta') = log w(q') + (m - 1) log r' - log(dU/dr(q')) at q' = r' scale theta'.
+        4. Accept with probability min(1, p(theta') / p(theta)).
+    Since the energy is exact on the level set at every step, there is no projection and no rejection for failing
+    to reach it.
+
     Args:
         model: Reduced model (QuadraticManifold, or any object with the same dims, scale, energy,
             energy_and_gradient, log_weight and reduced_mass members).
-        energy (float): Target energy in J.
+        energy (float): Target potential energy E* in J; every sample lies on U(q) = E*.
         rng (np.random.Generator): Random generator.
-        step (float): Initial proposal step size in whitened coordinates, adapted during burn-in.
-        target_acceptance (float): Acceptance rate the burn-in adapts the step size toward.
+        step (float): Initial angular step size sigma of the direction proposal, adapted during burn-in. Small
+            values make local moves on the sphere; sigma >~ 2 makes proposals nearly independent directions, so the
+            adaptation's upper clip (4) still allows global moves when the target is broad.
+        target_acceptance (float): Acceptance rate the burn-in adapts sigma toward (0.3, a common choice for
+            random-walk proposals; if sigma hits its upper clip the realized rate is higher).
     """
 
     def __init__(self, model, energy: float, rng: np.random.Generator, step: float = 0.3, target_acceptance: float = 0.3):
@@ -503,16 +572,31 @@ class ConstrainedRandomWalk(_Chain):
     rejected if the projection fails, or if the reverse projection doesn't return to the start
     (the reversibility check).
 
+    Algorithm (one step, at y on the level set with unit normal n = grad_y U / |grad_y U|):
+        1. Draw a tangent step v = P (sigma xi), xi ~ N(0, I_m), with P = I - n n^T.
+        2. Project y + v back onto the level set along n: solve U(scale (y + v + a n)) = E* for a by Newton's
+           method. Reject if it fails to converge or the slope along n isn't positive.
+        3. Compute the reverse tangent step v' at the proposal y' (the tangent part of y - y') and accept with
+           probability min(1, f(y') exp(-|v'|^2 / (2 sigma^2)) / (f(y) exp(-|v|^2 / (2 sigma^2)))).
+        4. Reversibility check: project y' + v' along n'; reject unless it returns to y. Without this check the
+           chain would be biased wherever the projection isn't unique.
+
     Args:
         model: Reduced model (QuadraticManifold, or any object with the same dims, scale, energy,
             energy_and_gradient, log_weight and reduced_mass members).
-        energy (float): Target energy in J.
+        energy (float): Target potential energy E* in J; every sample lies on U(q) = E* to the projection tolerance.
         rng (np.random.Generator): Random generator.
-        step (float): Initial proposal step size in whitened coordinates, adapted during burn-in.
-        target_acceptance (float): Acceptance rate the burn-in adapts the step size toward.
-        projection_rtol (float): Relative energy tolerance of the projections (kept above the noise floor).
-        reverse_rtol (float): Relative position tolerance of the reversibility check.
-        max_newton (int): Maximum Newton iterations per projection.
+        step (float): Initial standard deviation sigma of the tangent step in whitened coordinates (where the level
+            set's radius is ~sqrt(2 E*)), adapted during burn-in. Large steps fail to project more often.
+        target_acceptance (float): Acceptance rate the burn-in adapts sigma toward; failed projections and failed
+            reversibility checks count as rejections.
+        projection_rtol (float): Relative energy tolerance |U - E*| <= projection_rtol E* of the projections, raised
+            to noise_factor times the energy noise when that's larger (Newton can't converge below round-off).
+        reverse_rtol (float): Relative position tolerance |y_reverse - y| <= reverse_rtol |y| of the reversibility
+            check, raised to 10 projection_atol / E* (projection_atol being the effective energy tolerance above) so that
+            round-off alone can't fail it.
+            It only has to tell a different projection branch from the start point.
+        max_newton (int): Maximum Newton iterations per projection before rejecting the move.
     """
 
     def __init__(
@@ -639,13 +723,21 @@ class MicrocanonicalMetropolis(_Chain):
     strongly correlated (tau ~ 100-250 steps on the beam and trampoline), so pool several chains with
     run_chains and check that split R-hat < 1.05.
 
+    Algorithm (one step):
+        1. Propose y' = y + sigma xi in whitened coordinates (q = scale * y), xi ~ N(0, I_m).
+        2. Evaluate U(q'); reject immediately if U(q') >= E (no kinetic energy left).
+        3. Accept with probability min(1, pi(q') / pi(q)), pi as above (one log-determinant of M_r per step).
+    Velocities are drawn only for the kept (thinned) samples, by sample_velocity.
+
     Args:
-        model: Reduced model (QuadraticManifold, or any object with the same dims, scale, energy,
-            energy_and_gradient, log_weight and reduced_mass members).
+        model: Reduced model (QuadraticManifold, or any object with the same dims, scale, energy and reduced_mass
+            members); its energy may include gravity (fext), in which case U < 0 is possible.
         energy (float): Total energy E = K + U in J.
         rng (np.random.Generator): Random generator.
-        step (float): Initial proposal step size in whitened coordinates, adapted during burn-in.
-        target_acceptance (float): Acceptance rate the burn-in adapts the step size toward.
+        step (float): Initial standard deviation sigma of the Gaussian random-walk proposal in whitened coordinates,
+            where the energy surface U = E has radius ~sqrt(2 E); adapted during burn-in.
+        target_acceptance (float): Acceptance rate the burn-in adapts sigma toward (0.25, near the 0.234 that is
+            optimal for random-walk Metropolis in many dimensions, Roberts, Gelman & Gilks 1997).
     """
 
     def __init__(self, model, energy: float, rng: np.random.Generator, step: float = 0.3, target_acceptance: float = 0.25):

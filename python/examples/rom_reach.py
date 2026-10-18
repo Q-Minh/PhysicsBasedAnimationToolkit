@@ -106,6 +106,14 @@ def static_equilibrium(
     decrement drops below rtol * (1 + |Psi|), or when the line search can't decrease the objective any
     more, which happens at the energy's round-off floor (pbat evaluates it in float32).
 
+    Algorithm (one Newton iteration on the unknown DOFs, i.e. free DOFs that aren't handles):
+        1. Assemble the gradient r = grad Psi - f + k (u - ut) and the Hessian H = hess Psi + diag(k), with pbat's
+           absolute-value SPD correction of the element Hessians, so H is positive definite and the Newton step a
+           descent direction.
+        2. Solve H du = -r (sparse direct solve) and stop if the decrement -r^T du is small enough.
+        3. Backtracking line search: halve the step from 1 until the Armijo condition (c = 1e-4) holds; give up
+           (round-off floor reached) below a step of 1e-8.
+
     Args:
         potential (typing.Callable): potential(x, gradient, hessian) returns Psi(x), or
             (Psi(x), grad Psi(x), Hessian of Psi(x) as a sparse matrix) if hessian.
@@ -114,12 +122,16 @@ def static_equilibrium(
         fext (np.ndarray | None): n external load, or None.
         handle_dofs (np.ndarray | None): Subset of free DOFs with prescribed displacements, or None.
         handle_u (np.ndarray | None): Prescribed displacements of handle_dofs.
-        steps (int): Number of load increments.
+        steps (int): Number of load increments. More increments make large loads and handle displacements converge
+            reliably (each Newton solve starts close to its solution) at the cost of more solves; 1 suffices for
+            well-conditioned problems such as implicit Euler steps.
         max_iters (int): Maximum Newton iterations per increment.
-        rtol (float): Relative Newton decrement tolerance.
-        inertia (typing.Tuple[np.ndarray, np.ndarray] | None): (k, ut), n diagonal inertia stiffness and n
-            inertial target displacement, or None for a static solve.
-        u0 (np.ndarray | None): n initial displacement (e.g. the inertial target), or zero.
+        rtol (float): Relative Newton decrement tolerance. Deliberately tight: in practice the solve stops at the
+            float32 round-off floor, when the line search can no longer decrease the objective.
+        inertia (typing.Tuple[np.ndarray, np.ndarray] | None): (k, ut), n diagonal inertia stiffness (M / h^2 for a
+            time step h) and n inertial target displacement (xtilde - x0), or None for a static solve.
+        u0 (np.ndarray | None): n initial displacement (e.g. the inertial target, a good guess for small h), or
+            zero. Fixed DOFs keep their u0 values.
 
     Returns:
         typing.Tuple[np.ndarray, dict]: The n equilibrium displacement u, and solve statistics: Newton
@@ -212,8 +224,10 @@ def manifold_fit(
     Args:
         model: Reduced model (rom_mcmc.QuadraticManifold, without an external force).
         ut (np.ndarray): n target displacement.
-        alpha (float): Weight of the energy regularizer.
-        energy_scale (float): Energy that normalizes the regularizer, e.g. the target's.
+        alpha (float): Weight of the energy regularizer. With energy_scale the target's deformation energy, the
+            two terms are comparable for alpha ~ 1; in practice alpha ~ 1e-3-1e-2 trims spurious strain while
+            keeping the shape close, and alpha ~ 1 already collapses the fit toward the rest shape.
+        energy_scale (float): Energy that normalizes the regularizer, e.g. the target's deformation energy.
 
     Returns:
         typing.Tuple[np.ndarray, np.ndarray]: The fitted displacement u(q) and the coordinates q.
@@ -262,8 +276,11 @@ def rom_equilibrium(
         fext (np.ndarray | None): n external load.
         handle_dofs (np.ndarray | None): Handle DOFs.
         handle_u (np.ndarray | None): Prescribed displacements of handle_dofs.
-        kappa (float): Mass-weighted handle penalty stiffness.
-        steps (int): Number of load increments.
+        kappa (float): Mass-weighted handle penalty stiffness in 1/s^2. It acts like a spring of stiffness
+            kappa m_h on each handle DOF, so values well above the model's largest squared frequency make the
+            handles nearly hard constraints (the GUI uses 100 omega_max^2); larger values make L-BFGS converge slower.
+        steps (int): Number of load increments, each warm-started from the previous solution, which keeps the
+            solve on the load path from rest (the reduced energy may have several minima).
 
     Returns:
         typing.Tuple[np.ndarray, np.ndarray]: The equilibrium displacement u(q) and coordinates q.

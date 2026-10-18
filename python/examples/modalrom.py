@@ -180,12 +180,17 @@ def vibration_modes(
 ):
     """Computes natural (linear) displacement modes.
 
+    Solves the generalized eigenproblem K v = lambda M v for the `modes` eigenvalues nearest sigma by shift-invert
+    Lanczos (scipy.sparse.linalg.eigsh), i.e. the lowest frequencies omega = sqrt(lambda), and mass-normalizes them.
+
     Args:
         M (scipy.sparse.csr_matrix): Mass matrix.
-        K (scipy.sparse.csr_matrix): Stiffness matrix.
+        K (scipy.sparse.csr_matrix): Stiffness matrix (at rest).
         modes (int, optional): Number of modes to compute. Defaults to 30.
-        sigma (float, optional): Shift (see scipy.sparse.eigsh). Defaults to -1e-5.
-        zero (float, optional): Numerical zero used to cull modes. Defaults to 0.
+        sigma (float, optional): Shift of the shift-invert solve. Slightly negative, so that K - sigma M is
+            nonsingular even when K has rigid (zero-energy) modes. Defaults to -1e-5.
+        zero (float, optional): Eigenvalues <= zero (rigid modes, and round-off below zero) are set to 0 before
+            taking square roots. Defaults to 0.
 
     Returns:
         (np.ndarray, np.ndarray): (w, V) s.t. w is a |# modes| vector of frequencies and V is a n x |# modes| array of mass-normalized (V^T M V = I) mode shapes in columns.
@@ -209,20 +214,31 @@ def modal_derivatives(
     freedofs: np.ndarray,
     compute_stiffness: typing.Callable[[np.ndarray], scipy.sparse.csr_matrix],
 ):
-    """Computes the quadratic manifold.
+    """Computes the modal derivatives Theta_ij = d U_i / d eta_j of the vibration modes (the quadratic manifold).
+
+    For each pair (i, j), solves the bordered system of vibration-mode derivatives (Idelsohn & Cardona 1985)
+
+        [ K - w_i^2 M    -M U_i ] [ Theta_ij ]   [ -(dK/d eta_j) U_i ]
+        [ -U_i^T M          0   ] [   mu     ] = [         0         ],
+
+    whose second row fixes the gauge U_i^T M Theta_ij = 0. The stiffness derivative along mode j is a central
+    difference, dK/d eta_j ~ |U_j| (K(x + h U_j / |U_j|) - K(x - h U_j / |U_j|)) / (2 h), assembled once per j.
+    The system for mode i is factorized once (LDLT) and reused for all j. build_rom then projects Theta M-orthogonally
+    off span(U) (which removes the blow-up of near-degenerate mode pairs) and symmetrizes it into Q.
 
     Args:
-        x (np.ndarray): 3*|# nodes| array of node positions in F order
+        x (np.ndarray): 3*|# nodes| array of node positions in F order (the rest shape)
         Ured (np.ndarray): |# free dofs| x |# modes| array of vibration modes
         w (np.ndarray): |# modes| array of vibration mode frequencies
         Mred (scipy.sparse.csr_matrix): |# free dofs| x |# free dofs| mass matrix
-        Keqred (scipy.sparse.csr_matrix): |# free dofs| x |# free dofs| stiffness matrix
-        h (float): step size for finite difference
+        Keqred (scipy.sparse.csr_matrix): |# free dofs| x |# free dofs| stiffness matrix at rest
+        h (float): finite-difference step, a length (build_rom uses eps times the bounding box diagonal). Too small
+            and the float32 stiffness round-off dominates; too large and the difference is no longer a derivative
         freedofs (np.ndarray): array of free dofs
         compute_stiffness (typing.Callable[[np.ndarray], scipy.sparse.csr_matrix]): function to compute stiffness matrix
 
     Returns:
-        np.ndarray: The quadratic manifold rank-3 tensor
+        np.ndarray: 3*|# nodes| x |# modes| x |# modes| tensor Theta, Theta[:, i, j] = Theta_ij (zero on fixed DOFs)
     """
     n, m = x.shape[0], Ured.shape[1]
     Q = np.empty((n, m, m), dtype=Ured.dtype)
@@ -534,6 +550,9 @@ def reduced_model(
 ):
     """Builds the reduced model to sample on, excluding the first `rigid` (zero-frequency) modes.
 
+    Also sets the whitening scales scale_i = 1 / (w_i sqrt(U_i^T M U_i)), so that the linearized energy is
+    1/2 |y|^2 in the samplers' coordinates y = q / scale.
+
     Args:
         mapping (str): "quadratic" for u = U q + 1/2 Q:qq, "linear" for u = U q.
         U (np.ndarray): n x |# modes| vibration modes.
@@ -542,9 +561,11 @@ def reduced_model(
         m (np.ndarray): n lumped mass matrix diagonal.
         x0 (np.ndarray): n rest positions in F order.
         potential (typing.Callable): Full-space energy, see elastic_energy.
-        rigid (int): Number of leading rigid modes to exclude.
-        weight (str): Sampling weight, see rom_mcmc.WEIGHTS.
-        fext (np.ndarray | None): n constant external force, e.g. gravity, or None.
+        rigid (int): Number of leading rigid modes to exclude (6 without Dirichlet constraints, 0 otherwise): the
+            energy is flat along them, so energy level sets would be unbounded and whitening would divide by zero.
+        weight (str): Distribution on the fixed-potential level set, see rom_mcmc.WEIGHTS.
+        fext (np.ndarray | None): n constant external force, e.g. gravity M g, adding -fext^T u(q) to the potential,
+            or None.
 
     Returns:
         Tuple[rom_mcmc.QuadraticManifold, np.ndarray]: The model and its mode frequencies.
