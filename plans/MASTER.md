@@ -102,6 +102,15 @@ will instrument).
 - **Asking the maintainer.** Each plan lists open questions. Ask them in your own session before
   implementing the affected part, and record the answers in your plan.
 
+## Benchmark plan (maintainer, 2026-10-18)
+
+- **Task 4 (MCMC sampler) generates the benchmark dataset**: static and dynamic elasticity test problems, built from its samplers.
+- **Task 3 runs the static problems** with all solvers; **the dynamic problems are run by the coordinator** (or a
+  dedicated session, to be decided).
+- **No benchmark runs yet.** They are time-consuming. The maintainer will first agree with the coordinator on **what data to
+  report** and the specific plot to produce, then the coordinator relays the exact data requirements to tasks 3 and 4.
+  Until then, build and test the machinery on small cases only.
+
 ## Shared technical facts (verified)
 
 - **Timing inside CUDA graphs:** Warp 1.17's `Stream.record_event(event, external=True)` records an
@@ -332,6 +341,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 2 · **GPU run START** (short, intermittent over the next hour): milestone 3 exploration. An Nsight Compute permission check, then single-kernel ncu captures and nsys graph-mode traces on trampoline. Will log END.
 - 2026-10-18 · task 3 · Maintainer: the full static benchmark is **on hold** until task 4 generates the benchmark dataset of problems. Tasks 3 and 4 coordinate on its contents.
 - 2026-10-18 · coordinator · **GPU run END.** Merged **task 1** (c41bc1ad, merge commit): 17 tests pass, VBD/AAAVBD/Chebyshev bit-identical to dev, Anderson/Newton within nondeterminism, zero Dirichlet drift. Merged **task 2 milestone 2** (CUPTI backend + profiling panel; ui.py conflict resolved by keeping both panels): 14 tests pass, AAAVBD 56 ms/step on an idle GPU. Tasks 2 and 3: rebase onto dev. The maintainer still needs to check the GUI panels (kinematics, profiling).
+- 2026-10-18 · coordinator · Maintainer refined the benchmark plan (new section "Benchmark plan" above): task 4 builds the static+dynamic dataset, task 3 runs static, the coordinator runs dynamic. **Hold all full benchmark runs** until the maintainer and coordinator fix the reported data and plot.
 
 ## Open questions for the maintainer
 
