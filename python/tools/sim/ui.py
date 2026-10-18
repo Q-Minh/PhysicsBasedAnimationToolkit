@@ -3,7 +3,7 @@
 Lightweight GPU VBD simulation UI using Polyscope + imgui.
 
 Usage:
-    python -m python.tools.sim.ui --fem-elasto-dynamics path/to/fem.h5:hdf5/group/to/fem [--sim-params path/to/params.h5]
+    python -m python.tools.sim.ui --fem-elasto-dynamics path/to/fem.h5:hdf5/group/to/fem [--sim-params params.toml ...] [--set KEY=VALUE]
 """
 
 import argparse
@@ -15,7 +15,7 @@ import polyscope as ps
 import polyscope.imgui as imgui
 from pbatoolkit import pbat
 import numpy as np
-from . import gpu
+from . import config, gpu
 from .panels.common import draw_params, try_draw_tooltip
 from .panels.kinematics import draw_kinematics_panel
 from .panels.profiling import draw_profiling_panel, profile_step
@@ -32,7 +32,6 @@ from .state import (
     should_save,
     init_h5_serialization,
     serialize_params,
-    deserialize_params,
 )
 
 
@@ -71,10 +70,13 @@ def _serialize_simulation(state: SimulationState, ui_state: UIState):
 
 
 def _import_parameters_from_file(
-    path: str, state: SimulationState, ui_state: UIState, mesh_name: str
+    paths: list[str],
+    state: SimulationState,
+    ui_state: UIState,
+    mesh_name: str,
+    overrides: list[str] = [],
 ):
-    with h5py.File(path, "r") as f:
-        deserialize_params(state, f)
+    config.load_sim_params(state, paths, overrides)
     state.reset()
     _update_mesh(state, mesh_name)
     ui_state.request_reset = True
@@ -178,14 +180,18 @@ def make_callback(
                         root.withdraw()
                         path = filedialog.asksaveasfilename(
                             title="Export simulation parameters",
-                            defaultextension=".h5",
+                            defaultextension=".toml",
                             filetypes=[
+                                ("TOML configs", "*.toml"),
                                 ("HDF5 files", "*.h5 *.hdf5"),
                                 ("All files", "*.*"),
                             ],
                         )
                         root.destroy()
-                        if path:
+                        if path and path.lower().endswith(".toml"):
+                            with open(path, "w", encoding="utf-8") as f:
+                                f.write(config.dumps(config.params_dict(state)))
+                        elif path:
                             with h5py.File(path, "w") as f:
                                 serialize_params(state, f)
                     if imgui.Button("Import Parameters"):
@@ -193,16 +199,16 @@ def make_callback(
                         root.withdraw()
                         path = filedialog.askopenfilename(
                             title="Import simulation parameters",
-                            defaultextension=".h5",
+                            defaultextension=".toml",
                             filetypes=[
-                                ("HDF5 files", "*.h5 *.hdf5"),
+                                ("Parameter files", "*.toml *.h5 *.hdf5"),
                                 ("All files", "*.*"),
                             ],
                         )
                         root.destroy()
                         if path:
                             _import_parameters_from_file(
-                                path, state, ui_state, mesh_name
+                                [path], state, ui_state, mesh_name
                             )
                     imgui.TreePop()
 
@@ -366,9 +372,19 @@ def parse_args():
     parser.add_argument(
         "--sim-params",
         type=str,
-        required=False,
-        help="file.h5 to simulation parameters to load (optional).",
+        nargs="+",
+        default=[],
+        help="Simulation parameters: .toml configs or HDF5 files as exported by the GUI, merged left "
+        "to right (see python/tools/sim/configs/README.md).",
         dest="sim_params",
+    )
+    parser.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Override one parameter after --sim-params, e.g. --set Solver.VBD.gtol=1e-4 (repeatable).",
+        dest="overrides",
     )
     return parser.parse_args()
 
@@ -416,8 +432,10 @@ def main():
     )
     sm.set_enabled(False)
 
-    if args.sim_params:
-        _import_parameters_from_file(args.sim_params, state, ui_state, mesh_name)
+    if args.sim_params or args.overrides:
+        _import_parameters_from_file(
+            args.sim_params, state, ui_state, mesh_name, args.overrides
+        )
 
     ps.set_user_callback(make_callback(state, ui_state, mesh_name))
     ps.show()
