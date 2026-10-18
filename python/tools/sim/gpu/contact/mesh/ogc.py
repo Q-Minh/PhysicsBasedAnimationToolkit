@@ -653,7 +653,7 @@ def _update_displacement_bounds(
         f = halfedges.face_of_half_edge(he)
         ogc.dminv[v] = wp.min(ogc.dminv[v], ogc.dminf[f])
         ogc.dminv[v] = wp.min(ogc.dminv[v], ogc.dmine[he])
-    ogc.dminv[v] *= ogc.gammap
+    ogc.dminv[v] = ogc.dminv[v] * ogc.gammap
 
 
 @wp.kernel
