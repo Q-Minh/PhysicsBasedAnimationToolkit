@@ -663,6 +663,24 @@ class TestErrorLog(unittest.TestCase):
         self.assertEqual(replay.error.size, 6)
         self.assertAlmostEqual(replay.error[0] / e0, 2.0, places=5)
 
+    def test_reference(self):
+        """Errors are measured against the log's reference, e.g. a dynamic step's x_ref."""
+        fem = self._make_fem()
+        X = fem.data.X.numpy()
+        m = fem.data.m.numpy()
+        rng = np.random.default_rng(1)
+        ref = (X + 0.1 * rng.standard_normal(X.shape)).astype(np.float32)
+        x = (X + 0.1 * rng.standard_normal(X.shape)).astype(np.float32)
+        ref[0] = x[0] = X[0]  # the Dirichlet node
+        log = ErrorLog(fem, capacity=4)
+        log.reference.assign(ref)
+        fem.data.x.assign(x)
+        log.reset()
+        log.record(0)
+        e = log.read().error[0]
+        expected = np.sqrt(np.sum(m[1:, None] * (x[1:].astype(np.float64) - ref[1:]) ** 2))
+        self.assertAlmostEqual(e / expected, 1.0, places=5)
+
 
 if __name__ == "__main__":
     wp.init()
