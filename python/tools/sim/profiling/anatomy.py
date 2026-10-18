@@ -109,13 +109,21 @@ def analyze(path: str, metadata_result: dict | None = None, phases_result: dict 
             }
         )
         windows.extend(_sweep_windows(acts)[1:])  # the first window also holds the step's setup
-    signatures = collections.Counter(tuple(name for _, _, name in w) for w in windows)
-    steady_signature, n_steady = signatures.most_common(1)[0] if signatures else ((), 0)
-    steady = [w for w in windows if tuple(name for _, _, name in w) == steady_signature]
+    # Concurrent nodes (e.g. dual updates on 4 streams) start in varying order, so steady windows are
+    # those with the most common multiset of nodes; the node-by-node anatomy uses the most common order.
+    content = lambda w: tuple(sorted(name for _, _, name in w))
+    steady_content, n_steady = (
+        collections.Counter(content(w) for w in windows).most_common(1)[0] if windows else ((), 0)
+    )
+    steady = [w for w in windows if content(w) == steady_content]
+    boundary = [w for w in windows if content(w) != steady_content]
+    order = collections.Counter(tuple(name for _, _, name in w) for w in steady)
+    steady_signature = order.most_common(1)[0][0] if order else ()
+    ordered = [w for w in steady if tuple(name for _, _, name in w) == steady_signature]
     nodes = []
     for i, name in enumerate(steady_signature):
         durations, gaps = [], []
-        for w in steady:
+        for w in ordered:
             start, end, _ = w[i]
             frontier = max((e for _, e, _ in w[:i]), default=start)
             durations.append((end - start) * 1e-3)
@@ -128,24 +136,51 @@ def analyze(path: str, metadata_result: dict | None = None, phases_result: dict 
                 "gap_before_us": statistics.mean(gaps),
             }
         )
-    boundary = [w for w in windows if tuple(name for _, _, name in w) != steady_signature]
-    window_span = lambda w: (w[-1][1] - w[0][0]) * 1e-3
+    span = lambda w: (w[-1][1] - w[0][0]) * 1e-3
+    union = lambda w: interval_union_ns([(s, e) for s, e, _ in w]) * 1e-3
+    n_steps = max(len(steps), 1)
+    budget = {
+        "sweep_kernels_ms": sum(union(w) for w in steady) * 1e-3 / n_steps,
+        "sweep_gaps_ms": sum(span(w) - union(w) for w in steady) * 1e-3 / n_steps,
+        "boundary_kernels_ms": sum(union(w) for w in boundary) * 1e-3 / n_steps,
+        "boundary_gaps_ms": sum(span(w) - union(w) for w in boundary) * 1e-3 / n_steps,
+    }
+    mean_span = statistics.mean(st["span_ms"] for st in steps) if steps else 0.0
+    budget["other_ms"] = max(0.0, mean_span - sum(budget.values()))
+    # Per boundary window and phase: kernel time, and idle gaps before the phase's nodes.
+    phases: dict[str, list[float]] = collections.defaultdict(lambda: [0.0, 0.0, 0.0])
+    for w in boundary:
+        frontier = w[0][0]
+        for start, end, name in w:
+            acc = phases[phase_of.get(name, name)]
+            acc[0] += (end - start) * 1e-3
+            acc[1] += max(0, start - frontier) * 1e-3
+            acc[2] += 1
+            frontier = max(frontier, end)
+    n_boundary = max(len(boundary), 1)
     return {
         "schema": "pbat-sim-anatomy/1",
         "metadata": dict(metadata_result["metadata"]) if metadata_result else {},
         "steps": steps,
+        "budget": budget,
         "sweep": {
             "windows": len(windows),
             "steady_windows": n_steady,
-            "span_us": statistics.mean(window_span(w) for w in steady) if steady else 0.0,
+            "span_us": statistics.mean(span(w) for w in steady) if steady else 0.0,
             "busy_us": sum(n["duration_us"] for n in nodes),
             "gap_us": sum(n["gap_before_us"] for n in nodes),
             "nodes": nodes,
         },
         "boundary_windows": {
             "count": len(boundary),
-            "mean_span_us": statistics.mean(window_span(w) for w in boundary) if boundary else 0.0,
+            "per_step": len(boundary) / n_steps,
+            "mean_span_us": statistics.mean(span(w) for w in boundary) if boundary else 0.0,
             "mean_activities": statistics.mean(len(w) for w in boundary) if boundary else 0.0,
+            "phases": [
+                {"phase": p, "kernel_us": v[0] / n_boundary, "gap_before_us": v[1] / n_boundary,
+                 "nodes": v[2] / n_boundary}
+                for p, v in sorted(phases.items(), key=lambda kv: -(kv[1][0] + kv[1][1]))
+            ],
         },
     }
 
@@ -163,6 +198,13 @@ def format_summary(anatomy: dict) -> str:
         f"Steady sweep ({sweep['steady_windows']} of {sweep['windows']} windows): span "
         f"{sweep['span_us']:.1f} us = {sweep['busy_us']:.1f} us busy + {sweep['gap_us']:.1f} us gaps",
     ]
+    budget = anatomy["budget"]
+    lines.append("Per step: " + ", ".join(f"{k[:-3].replace('_', ' ')} {v:.2f} ms" for k, v in budget.items()))
+    bw = anatomy["boundary_windows"]
+    lines.append(f"Boundary windows: {bw['per_step']:.1f}/step, {bw['mean_span_us']:.1f} us each")
+    for ph in bw["phases"][:6]:
+        lines.append(f"  {ph['phase']:28s} kernels {ph['kernel_us']:8.1f} us  gaps {ph['gap_before_us']:8.1f} us  "
+                     f"nodes {ph['nodes']:6.1f}")
     for n in sweep["nodes"]:
         lines.append(
             f"  gap {n['gap_before_us']:6.2f} us  run {n['duration_us']:7.2f} us  {n['name']}"
