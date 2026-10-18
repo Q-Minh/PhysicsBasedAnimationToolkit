@@ -227,6 +227,7 @@ class SimulationState:
             self.fem.data.xtilde,
             self.multimesh,
             contact_pair_storage,
+            self.fem.data.dmask,
         )
         return detector
 

@@ -12,6 +12,7 @@ class ContactDetection(ABC):
     _xk: wp.array[wp.vec3f]
     _x: wp.array[wp.vec3f]
     _xtilde: wp.array[wp.vec3f]
+    _dmask: wp.array[wp.int32]
     _meshes: MultiMesh
     _contacts: pairs.ContactPairs
 
@@ -26,6 +27,7 @@ class ContactDetection(ABC):
         xtilde: wp.array[wp.vec3f],
         meshes: MultiMesh,
         contacts: pairs.ContactPairs,
+        dmask: wp.array[wp.int32] | None = None,
     ):
         """Registers any necessary handles for contact detection. This is called
         once at the beginning of the simulation, so that every time step is CUDA
@@ -39,12 +41,18 @@ class ContactDetection(ABC):
             xtilde (wp.array[wp.vec3f]): Time integrator inertial target.
             meshes (MultiMesh): Mesh data for contact detection queries.
             contacts (pairs.ContactPairs): Contact pairs to write to.
+            dmask (wp.array[wp.int32] | None): (N,) Dirichlet mask (nonzero = constrained).
+                filter_step never moves constrained points, like C++
+                ``MeshDynamics::RestoreFeasibility(x, dmask)``. If None, no point is constrained.
         """
         self._xt = xt
         self._x = x
         self._xtilde = xtilde
         self._meshes = meshes
         self._contacts = contacts
+        self._dmask = (
+            dmask if dmask is not None else wp.zeros(x.shape[0], dtype=wp.int32)
+        )
         if xk is not None:
             self._xk = xk
         else:

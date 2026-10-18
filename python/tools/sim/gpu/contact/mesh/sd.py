@@ -168,11 +168,14 @@ def _filter_initial_step(
     sds: wp.array[wp.float32],
     meshes: MultiMeshData,  # type: ignore
     xt: wp.array[wp.vec3f],
+    dmask: wp.array[wp.int32],
     x: wp.array[wp.vec3f],
 ):
     tid = wp.tid()
     v = tid
     i = meshes.V[v]
+    if dmask[i] != 0:
+        return
     if sds[v] <= wp.float32(0):
         x[i] = xt[i]  # type: ignore
 
@@ -207,8 +210,9 @@ class Sd(ContactDetection):
         xtilde: wp.array[wp.vec3f],
         meshes: MultiMesh,
         contacts: pairs.ContactPairs,
+        dmask: wp.array[wp.int32] | None = None,
     ):
-        super().register_handles(xt, xk, x, xtilde, meshes, contacts)
+        super().register_handles(xt, xk, x, xtilde, meshes, contacts, dmask)
 
         FP = self._meshes.data.FP.numpy()
         Fb = [
@@ -289,7 +293,7 @@ class Sd(ContactDetection):
             wp.launch(
                 kernel=_filter_initial_step,
                 dim=n_verts,
-                inputs=[self._sds, self._meshes.data, self._xt, self._x],
+                inputs=[self._sds, self._meshes.data, self._xt, self._dmask, self._x],
             )
         self.request_step_filter = False
 

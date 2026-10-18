@@ -664,16 +664,19 @@ def _truncate_displacements(
     ],  # (N,) reference positions cached at last prepare_for_execution
     dminv: wp.array[wp.float32],  # (n_verts,) per-vertex-primitive displacement bounds
     V: wp.array[wp.int32],  # (n_verts,) vertex primitive -> global point index
+    dmask: wp.array[wp.int32],  # (N,) Dirichlet mask, constrained points are not truncated
     x: wp.array[wp.vec3f],  # (N,) positions to truncate in-place
 ):
     """Truncate the displacement of vertex primitive v to remain within its bound dminv[v].
 
-    For each vertex primitive v with global point index i = V[v]:
+    For each unconstrained vertex primitive v with global point index i = V[v]:
       d = x[i] - xk[i]
       if |d| > dminv[v]: x[i] = xk[i] + d * (dminv[v] / |d|)
     """
     v = wp.tid()
     i = V[v]
+    if dmask[i] != 0:
+        return
     b = dminv[v]
     d = x[i] - xk[i]
     dnorm = wp.norm_l2(d)
@@ -1023,10 +1026,13 @@ def _planar_dat_truncate(
     x: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # pyright: ignore[reportGeneralTypeIssues]
     ogc: OgcData,  # pyright: ignore[reportGeneralTypeIssues]
+    dmask: wp.array[wp.int32],  # (N,) Dirichlet mask, constrained points are not truncated
 ):
     tid = wp.tid()
     vi = tid
     i = meshes.V[vi]
+    if dmask[i] != 0:
+        return
     xki = xk[i]
     xi = x[i]
     t = ogc.tv[vi]
@@ -1161,7 +1167,7 @@ class Ogc(ContactDetection):
             wp.launch(
                 _truncate_displacements,
                 dim=self._meshes.n_verts,
-                inputs=[self._xk, self._ogc.dminv, self._meshes.data.V, x],
+                inputs=[self._xk, self._ogc.dminv, self._meshes.data.V, self._dmask, x],
                 block_dim=block_dim,
             )
         elif self._ogc.truncation_strategy == TRUNCATION_PLANARDAT:
@@ -1177,7 +1183,7 @@ class Ogc(ContactDetection):
             wp.launch(
                 kernel=_planar_dat_truncate,
                 dim=n_verts,
-                inputs=[self._xk, x, self._meshes.data, self._ogc],
+                inputs=[self._xk, x, self._meshes.data, self._ogc, self._dmask],
             )
 
     def register_handles(
@@ -1188,8 +1194,9 @@ class Ogc(ContactDetection):
         xtilde: wp.array[wp.vec3f],
         meshes: MultiMesh,
         contacts: pairs.ContactPairs,
+        dmask: wp.array[wp.int32] | None = None,
     ):
-        super().register_handles(xt, xk, x, xtilde, meshes, contacts)
+        super().register_handles(xt, xk, x, xtilde, meshes, contacts, dmask)
 
         # Construct
         self._ogc = OgcData()
