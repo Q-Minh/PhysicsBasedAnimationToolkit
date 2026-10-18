@@ -40,6 +40,7 @@ _PATH_SEPARATOR = "/"
 
 
 class Backend(enum.Enum):
+    """Profiling backend, selected with set_backend (see the module docstring)."""
     OFF = "off"
     KERNELS = "kernels"
     NVTX = "nvtx"
@@ -73,6 +74,7 @@ class StepProfile:
 
     @property
     def total_busy_ms(self) -> float:
+        """Sum of the exclusive busy times of all scope paths, in ms."""
         return sum(self.busy_ms.values())
 
 
@@ -133,6 +135,7 @@ class _KernelRecorder:
             self._collector = ActivityCollector()
 
     def begin_step(self):
+        """Enable CUPTI, drop activity recorded before the step and open the root scope."""
         self.load()
         self._collector.enable()
         wp.synchronize()
@@ -143,6 +146,7 @@ class _KernelRecorder:
         self._push_path()
 
     def end_step(self) -> StepProfile:
+        """Close the root scope, collect the step's CUPTI records and attribute them to scope paths."""
         self._collector.pop()
         self._active = False
         wp.synchronize()
@@ -174,10 +178,12 @@ class _KernelRecorder:
         )
 
     def disable(self):
+        """Stop CUPTI collection (when switching to another backend)."""
         if self._collector is not None:
             self._collector.disable()
 
     def push(self, name: str):
+        """Enter a nested scope: correlate subsequent launches with its path."""
         if not self._active:
             return
         self._stack.append(name)
@@ -185,6 +191,7 @@ class _KernelRecorder:
         self._calls[path] = self._calls.get(path, 0) + 1
 
     def pop(self):
+        """Leave the innermost scope."""
         if not self._active:
             return
         self._collector.pop()
@@ -206,6 +213,7 @@ def set_backend(backend: Backend):
 
 
 def get_backend() -> Backend:
+    """The active profiling backend."""
     return _backend
 
 
@@ -231,6 +239,7 @@ def pop():
 
 
 class _Scope:
+    """Context manager returned by scope() while a backend is active."""
     __slots__ = ("name",)
 
     def __init__(self, name: str):

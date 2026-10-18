@@ -45,6 +45,7 @@ def _mean_calls(result: dict, leaf_name: str) -> float:
 
 
 def _iterations_per_step(result: dict) -> tuple[float, str]:
+    """Mean solver iterations per step (VBD sweeps or Newton iterations) and their unit."""
     for name in _ITERATION_SCOPES:
         n = _mean_calls(result, name)
         if n > 0:
@@ -78,6 +79,7 @@ def _color(phase: str, colored: list[str]) -> str:
 
 
 def _stacked_bars(solvers, folded, colored) -> str:
+    """Horizontal stacked bars of mean busy ms/step by phase, one bar per solver."""
     width, bar_h, gap, label_w, right = 760, 28, 18, 150, 70
     vmax = max(sum(f.values()) for f in folded.values()) or 1.0
     step = 10 ** math.floor(math.log10(vmax))
@@ -122,6 +124,7 @@ def _bar_path(x, y, w, h, r) -> str:
 
 
 def _donut(solver, phases, colored) -> str:
+    """Part-to-whole donut of one solver's phases."""
     size, r_out, r_in = 180, 84, 52
     c = size / 2
     total = sum(phases.values()) or 1.0
@@ -406,6 +409,7 @@ work on concurrent streams counts once per stream; the total union counts overla
 
 
 def main():
+    """Command line for the per-solver cost report."""
     parser = argparse.ArgumentParser(description="Per-phase GPU cost report across solvers")
     parser.add_argument("results", nargs="+", help="Profiling result .json files, one per solver.")
     parser.add_argument("-o", "--out", required=True, help="Output .html.", dest="out")

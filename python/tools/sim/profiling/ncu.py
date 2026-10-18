@@ -66,6 +66,7 @@ def _number(text: str) -> float | None:
 
 
 def _csv(ncu: str, report: str, page: str, *extra: str) -> list[list[str]]:
+    """Export one page of an Nsight Compute report as CSV rows."""
     out = subprocess.run(
         [ncu, "--import", report, "--csv", "--page", page, *extra],
         check=True,
@@ -245,6 +246,8 @@ def run(
     ncu: str,
     lineinfo: bool = False,
 ) -> dict:
+    """Profile matching kernel launches of simulate.py under Nsight Compute and summarize them, with
+    source hotspots if ``lineinfo``."""
     venvrun = os.path.join(os.path.dirname(__file__), "venvrun.py")
     subprocess.run(
         [
@@ -277,6 +280,7 @@ def run(
 
 
 def main():
+    """Command line: run (profile and summarize) or summarize (an existing report)."""
     parser = argparse.ArgumentParser(description="Nsight Compute metrics for one simulator kernel")
     sub = parser.add_subparsers(dest="command", required=True)
     p_run = sub.add_parser("run", help="Profile kernels under ncu and summarize them.")

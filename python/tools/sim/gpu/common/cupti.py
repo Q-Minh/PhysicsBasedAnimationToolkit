@@ -175,12 +175,14 @@ class ActivityCollector:
         atexit.register(self.close)
 
     def _check(self, result: int):
+        """Raise RuntimeError with CUPTI's message if result is not CUPTI_SUCCESS."""
         if result != _SUCCESS:
             message = ctypes.c_char_p()
             self._lib.cuptiGetResultString(result, ctypes.byref(message))
             raise RuntimeError(f"CUPTI error {result}: {(message.value or b'').decode()}")
 
     def _on_request(self, buffer, size, max_records):
+        """CUPTI callback: hand out an aligned activity buffer."""
         raw = ctypes.create_string_buffer(_BUFFER_SIZE + _ALIGNMENT)
         address = (ctypes.addressof(raw) + _ALIGNMENT - 1) & ~(_ALIGNMENT - 1)
         with self._lock:
@@ -190,6 +192,7 @@ class ActivityCollector:
         max_records[0] = 0
 
     def _on_complete(self, context, stream_id, buffer, size, valid_size):
+        """CUPTI callback: parse a filled buffer into activities and correlations, then free it."""
         record = ctypes.c_void_p()
         activities, external = [], {}
         while (
@@ -231,12 +234,14 @@ class ActivityCollector:
             self._buffers.pop(buffer, None)
 
     def enable(self):
+        """Start collecting the activity kinds this module reads."""
         if not self._enabled:
             for kind in _KINDS:
                 self._check(self._lib.cuptiActivityEnable(kind))
             self._enabled = True
 
     def disable(self):
+        """Stop collecting activity records."""
         if self._enabled:
             for kind in _KINDS:
                 self._check(self._lib.cuptiActivityDisable(kind))
@@ -257,6 +262,7 @@ class ActivityCollector:
         )
 
     def pop(self):
+        """Stop correlating launches with the most recently pushed external id."""
         last = ctypes.c_uint64()
         self._check(
             self._lib.cuptiActivityPopExternalCorrelationId(

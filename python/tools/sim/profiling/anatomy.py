@@ -188,6 +188,8 @@ def analyze(path: str, metadata_result: dict | None = None, phases_result: dict 
 
 
 def format_summary(anatomy: dict) -> str:
+    """Text summary of a sweep anatomy: step budget, boundary phases and the steady sweep node by
+    node."""
     sweep = anatomy["sweep"]
     meta = anatomy["metadata"]
     steps = anatomy["steps"]
@@ -216,6 +218,7 @@ def format_summary(anatomy: dict) -> str:
 
 
 def main():
+    """Command line: run (profile and analyze) or analyze (an existing SQLite export)."""
     parser = argparse.ArgumentParser(description="Sweep anatomy of the production CUDA graph")
     sub = parser.add_subparsers(dest="command", required=True)
     p_run = sub.add_parser("run", help="Profile production steps under nsys and analyze them.")

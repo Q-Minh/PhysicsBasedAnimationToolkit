@@ -56,6 +56,7 @@ def _ticks(vmax: float, n: int = 6) -> float:
 
 
 def _budget_chart(anatomies: list[tuple[str, dict]]) -> str:
+    """Stacked bars of each anatomy's per-step budget (sweep and boundary kernels and gaps, other)."""
     width, bar_h, gap, label_w, right = 760, 28, 18, 170, 80
     totals = [sum(a["budget"][k] for k, _, _ in _BUDGET) for _, a in anatomies]
     vmax = max(totals) or 1.0
@@ -90,6 +91,7 @@ def _budget_chart(anatomies: list[tuple[str, dict]]) -> str:
 
 
 def _boundary_table(anatomies: list[tuple[str, dict]]) -> str:
+    """Kernel time and preceding gaps per phase in one subproblem-boundary window, per anatomy."""
     vmax = max(
         (p["kernel_us"] + p["gap_before_us"] for _, a in anatomies for p in a["boundary_windows"]["phases"]),
         default=1.0,
@@ -121,6 +123,7 @@ def _node_color(node: dict) -> str:
 
 
 def _sweep_timeline(anatomies: list[tuple[str, dict]]) -> str:
+    """Lane timeline of each anatomy's steady sweep (concurrent nodes in separate lanes)."""
     width, lane_h, label_w, right = 760, 14, 170, 20
     plot_w = width - label_w - right
     vmax = max(max(n["start_us"] + n["duration_us"] for n in a["sweep"]["nodes"]) for _, a in anatomies)
@@ -183,6 +186,8 @@ _NCU_ROWS = [
 
 
 def _ncu_section(kernels: list[tuple[str, dict]]) -> str:
+    """Nsight Compute metrics table (with the change vs the first kernel when there are two) and warp
+    stall shares."""
     if not kernels:
         return ""
     head = "".join(f"<th>{_esc(l)}</th>" for l, _ in kernels)
@@ -252,6 +257,7 @@ def _hotspot_section(kernels: list[tuple[str, dict]], top: int = 10) -> str:
 
 
 def _production_table(production: list[tuple[str, dict]]) -> str:
+    """Production step times, with each 'X + change' row compared with row 'X'."""
     if not production:
         return ""
     means = {l: sum(s["step_timeline_ms"] for s in r["steps"]) / len(r["steps"]) for l, r in production}
@@ -269,6 +275,7 @@ def _production_table(production: list[tuple[str, dict]]) -> str:
 
 
 def _findings(path: str | None) -> str:
+    """The findings file's '- ' lines as an ordered list."""
     if not path:
         return ""
     with open(path, encoding="utf-8") as f:
@@ -293,6 +300,8 @@ tr.group td {{ font-weight:600; color:var(--ink); padding-top:14px; }}
 
 
 def render(anatomies, kernels, production, findings_path, title, note) -> str:
+    """Render the overheads page from labeled anatomies, ncu summaries, production results and
+    findings."""
     meta = anatomies[0][1]["metadata"] if anatomies else {}
     scene = meta.get("scene", "")
     body = f"""<main>
@@ -335,6 +344,7 @@ their likely caller; this attribution is a heuristic.</p></div>
 
 
 def main():
+    """Command line for the overheads report."""
     parser = argparse.ArgumentParser(description="Report on production step overheads")
     parser.add_argument("--anatomy", action="append", help="LABEL=file.anatomy.json (repeatable).")
     parser.add_argument("--ncu", action="append", help="LABEL=file.ncu.json (repeatable, baseline first).")
