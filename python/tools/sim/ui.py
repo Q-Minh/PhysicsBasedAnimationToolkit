@@ -17,6 +17,7 @@ from pbatoolkit import pbat
 import numpy as np
 from . import config, gpu
 from .panels.common import draw_params, try_draw_tooltip
+from .colliders import collider_faces
 from .panels.kinematics import draw_kinematics_panel
 from .panels.profiling import draw_profiling_panel, profile_step
 from .panels.static import draw_static_panel
@@ -431,6 +432,12 @@ def main():
         mesh_name, fem_cpu.X.T, state.multimesh.data.F.numpy()
     )
     sm.set_enabled(False)
+    # Static colliders never move, so they are drawn once
+    static_faces = collider_faces(
+        fem_cpu.E, state.multimesh.data.F.numpy(), fem_cpu.X.shape[1]
+    )
+    if static_faces.shape[0] > 0:
+        ps.register_surface_mesh("Static colliders", fem_cpu.X.T, static_faces)
 
     if args.sim_params or args.overrides:
         _import_parameters_from_file(
