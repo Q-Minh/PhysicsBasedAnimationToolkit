@@ -103,7 +103,7 @@ def parse_args():
     parser.add_argument("--sim-params", nargs="+", default=[], dest="sim_params",
                         help="Simulation parameters: .toml configs or .h5 files as exported by the GUI "
                         "(file.h5 or file.h5:group), merged left to right (see configs/README.md). "
-                        "Without any, the Dump's parameters and the code defaults apply.")
+                        "Without any, the code defaults apply (configs/defaults.toml).")
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="overrides",
                         help="Override one parameter after --sim-params, as Table.Sub.key=TOML-literal, "
                         "e.g. Solver.Newton.LinearSolver.n_max_iters=3000. Repeatable.")
