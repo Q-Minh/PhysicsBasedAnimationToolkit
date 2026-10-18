@@ -183,6 +183,44 @@ def load_anderson_params(
     return gpu.vbd.params.AndersonCpuParams(vbd_params_cpu)
 
 
+def load_params(
+    fem: pbat.sim.dynamics.FemElastoDynamics,
+) -> dict["SolverType", object]:
+    """CPU parameter objects of every solver, with the GPU simulators' defaults.
+
+    They differ from the C++ defaults (which the CPU editor keeps), as chosen by the maintainer:
+
+    - VBD family: ``n_max_iters = 1`` (one augmented-Lagrangian pass; vertex SDF detection doesn't need
+      several detection passes per step) and ``n_subproblem_max_iters = 100`` sweeps.
+    - AAAVBD: ``gammadown = 0.99``, ``gammadownS = 0.95`` (the paper's values), ``gammaup = gammaupS =
+      0.5``, ``betaG0 = 0.5``, ``rhohat = rhohatS = 0.005``; ``warm_start_beta`` = TimeStep (set in
+      :class:`SimulationState`).
+    - Newton: ``n_max_iters = 1`` outer iteration, 10 Newton steps.
+
+    See the sim-run skill's "Tuning" section for scene-specific budgets.
+    """
+    params = {s: load_vbd_params(fem) for s in [SolverType.VBD, SolverType.AAAVBD]}
+    params[SolverType.Chebyshev] = load_chebyshev_params(fem)
+    params[SolverType.AndersonSolver] = load_anderson_params(fem)
+    params[SolverType.Newton] = load_newton_params(fem)
+    for vbd in [
+        params[SolverType.VBD],
+        params[SolverType.AAAVBD],
+        params[SolverType.Chebyshev].vbd_params,
+        params[SolverType.AndersonSolver].vbd_params,
+    ]:
+        vbd.n_max_iters = 1
+        vbd.n_subproblem_max_iters = 100
+    aaa = params[SolverType.AAAVBD]
+    aaa.betaG0 = 0.5
+    aaa.gammadown, aaa.gammadownS = 0.99, 0.95
+    aaa.gammaup, aaa.gammaupS = 0.5, 0.5
+    aaa.rhohat, aaa.rhohatS = 0.005, 0.005
+    params[SolverType.Newton].n_max_iters = 1
+    params[SolverType.Newton].newton.n_max_iters = 10
+    return params
+
+
 class SolverType(enum.Enum):
     VBD = 0
     AAAVBD = 1

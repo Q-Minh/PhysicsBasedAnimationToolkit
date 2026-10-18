@@ -100,10 +100,7 @@ from .state import (
     SolverType,
     CDType,
     load_fem_dynamics,
-    load_vbd_params,
-    load_chebyshev_params,
-    load_anderson_params,
-    load_newton_params,
+    load_params,
 )
 from . import config, static
 
@@ -181,10 +178,7 @@ def make_spec(args) -> static.StaticSolveSpec:
 def make_state(args, h: float | None = None) -> SimulationState:
     """Build the contact-free simulation; ``h`` set means one-step dynamic problems of that step."""
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
-    params_cpu = {s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]}
-    params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
-    params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
-    params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
+    params_cpu = load_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
     if args.sim_params or args.overrides:
         config.load_sim_params(state, args.sim_params, args.overrides)
