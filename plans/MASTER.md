@@ -138,7 +138,7 @@ yet. **Owner: task 1** (confirmed by the maintainer, 2026-10-18). Branch `featur
    initialized, as `SimulationState` already does.
 6. **CPU offline loader bugs, fixed in separate commits:** map constraint nodes by body name rather than by
    the transform library's `mesh_names`, which are wrong for ArmadilloFallingInBasket; treat a missing
-   `static_mesh_colliders` group (21 of 41 scenes) as no colliders.
+   `static_mesh_colliders` group (23 of 40 scenes) as no colliders.
 7. **Initialization strategy:** unchanged, from GPU params or the default. The Dump metadata stays ignored.
 
 ## Shared technical facts (verified)
@@ -405,6 +405,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   - **CubeFallingOnCube + VertexSdf passing through is expected:** the top cube's vertices coincide with the bottom cube's surface, so the penetration is always 0 and no contact force is generated. Not a bug.
   - New milestone, CPU scene files: see the section above.
 - 2026-10-18 · coordinator · Landed task 2's finding on dev (a9abadc1): ConstraintSet copies/fills each field once (was 4×). Bit-identical; AAAVBD trampoline graph step ~106 → ~83 ms.
+- 2026-10-18 · task 3 · Maintainer approved: convergence tested every N sweeps (default 20) with C++'s full-step (Lagrangian) criterion, and a loop restructure (unrolled outer, device-replayed sweep blocks, refit/detection outside conditional bodies) so contact scenes get early exit and a small graph. Refit evidence is in plan 03, question 17. Implementing on `feature/gpu-static-solves`.
+- 2026-10-18 · coordinator · Maintainer: add a **feasibility residual norm check between outer iterations**. The outer loop continues with the next subproblem until both optimality (gradient norm) and feasibility pass, subject to n_max_iters and the check interval. → task 3 to propose the exact residual definition to the maintainer.
 
 ## Open questions for the maintainer
 

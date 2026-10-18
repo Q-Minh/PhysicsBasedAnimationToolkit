@@ -124,6 +124,12 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 15. ~~Static-tuned solver params?~~ **Answered (2026-10-18):** the maintainer supplies a `--sim-params` file. Until then, runs use the Dump's (dynamics-tuned) params, and reports say so.
 
 16. ~~When to run the full benchmark?~~ **Answered (2026-10-18):** hold it. Task 4 (MCMC sampler) generates the benchmark dataset of problems first; coordinate with task 4 on that dataset before running.
+17. ~~Convergence check interval and the refit blocker?~~ **Answered (2026-10-18):**
+    - Every N VBD sweeps (default 20), test C++'s **full-step** criterion ‖g_L‖ ≤ gtol: the Lagrangian gradient with current multipliers, like `ToGradient(bForAugmentedLagrangian=false)`. Passing it ends the subproblem, then finalize runs, then the outer test.
+    - The GPU check switches to the Lagrangian form; Newton keeps the AL form for its steps.
+    - Restructure the loops: outer iterations unrolled on the host; each subproblem's sweeps replay as one device block inside `capture_if`/`capture_while`; refit/detection stay in the regular graph between conditional nodes.
+    - The maintainer wants graph capture to stay close to the efficiency of capturing the whole step. Explanation: https://claude.ai/artifact/A632yEjdeA2JV1cEMPqmPp
+    - Evidence for the blocker: whole-step capture with VertexSdf works (the allocation becomes a regular graph memory node); only conditional bodies reject it. `scan_device` calls `wp_alloc_device` per call with no cache or option. The scanned average edge length is used only by `mesh_query_point_sign_normal`, while we call `mesh_query_point` (ray-parity sign). Python doesn't expose the mesh's BVH.
 
 ## Progress
 
