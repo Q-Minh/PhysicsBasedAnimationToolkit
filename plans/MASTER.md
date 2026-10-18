@@ -118,7 +118,27 @@ reads (`python/tools/vbd/simulate.py --session/--scene`: tetrahedral elastodynam
 static mesh colliders), not only editor Dumps, so that no Dump has to be created for every run. Building the FEM
 problem follows `tools/vbd/editor.py::make_fem_dynamics_object`, and the transforms map onto the GPU kinematics
 (`TransformLibrary.export_kinematic_constraints`). Open design question: GPU contact has no static-collider support
-yet. **Owner: proposed task 1** (owns `python/tools/vbd` and the kinematics formats), pending maintainer confirmation.
+yet. **Owner: task 1** (confirmed by the maintainer, 2026-10-18). Branch `feature/gpu-scene-ingestion` from dev.
+
+**Maintainer decisions (2026-10-18, asked by task 1):**
+1. **Static colliders:** load the scene, print a clear warning and ignore the colliders on the GPU, with no
+   contact-code changes. Proper GPU static-geometry contact is a possible later milestone. Only 4 small scenes
+   use colliders: CubeFallingOnPlane(Fast), CubeSlidingOnInclinePlane, bending-beam-on-static-beam.
+2. **CLI:** a new `--scene scene.h5` flag in `ui.py` and `simulate.py`, mutually exclusive with
+   `--fem-elasto-dynamics dump.h5:fem`.
+3. **Params:** GPU `--sim-params` format only. The scene provides geometry, materials, initial state and
+   constraints; dt/solver/contact settings come from GPU params or defaults.
+4. **Initial velocity:** keep the loaded initial velocities on reset (the scene's per-body v0, the Dump's v),
+   instead of zeroing them. The current Dumps all have v = 0.
+5. **Code sharing:** move scene loading and the FEM/contact construction (`make_fem_dynamics_object`,
+   `make_contact_dynamics_object`, `load_simulation_scenario_from_scene`) out of `editor.py`/`simulate.py`
+   into a shared `tools/vbd` module used by the editor, the CPU offline simulator and the GPU. It drops the
+   `statemachine`/editor dependency. Polyscope is still imported through the body classes but never
+   initialized, as `SimulationState` already does.
+6. **CPU offline loader bugs, fixed in separate commits:** map constraint nodes by body name rather than by
+   the transform library's `mesh_names`, which are wrong for ArmadilloFallingInBasket; treat a missing
+   `static_mesh_colliders` group (21 of 41 scenes) as no colliders.
+7. **Initialization strategy:** unchanged, from GPU params or the default. The Dump metadata stays ignored.
 
 ## Shared technical facts (verified)
 
@@ -230,7 +250,7 @@ Each session updates only its own row.
 | 1 | merged into dev (`c41bc1ad`) | 2026-10-18 | Waiting on the maintainer's interactive check of the GUI panel (`panels/kinematics.py`); parity details in plan 01 Progress |
 | 2 | milestone 3 in progress (AAAVBD analysis) | 2026-10-18 | Milestones 1–2 merged. M3 tools on branch (anatomy, ncu, overheads report, 7 commits after `92791e16`): [AAAVBD overheads](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Found 4× redundant constraint-set copies (−23% step time with a 2-line fix, awaiting maintainer decision) |
 | 3 | implementing | 2026-10-18 | static solves, convergence loop, benchmark + GUI panel done; preliminary results published; waiting on the maintainer's static params file and full run |
-| 4 | milestones 1–3 + mass-normalized modes merged into dev (`c947de87`) | 2026-10-18 | Waiting on the maintainer's interactive check of the reachability panel. Microcanonical batches need more samples per chain for split-R̂ < 1.05 (τ ≈ 135 steps) |
+| 4 | benchmark generator ready; full dataset on hold | 2026-10-18 | 5 commits (GUI gravity, `make_benchmark.py`) awaiting review. Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data and plot requirements |
 
 ## Coordination log
 
