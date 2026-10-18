@@ -90,7 +90,10 @@ def draw_kinematics_panel(state, ui_state):
                 imgui.TreePop()
             imgui.PopID()
         imgui.TreePop()
-    # Keep the highlighted nodes on the deforming mesh
+    # Keep the highlighted nodes on the deforming mesh. Checkboxes toggled during this frame may have
+    # enabled drawing after the positions were (not) fetched above, so fetch them here if needed.
+    if x is None and (len(_shown) > 0 or _highlight_constrained["enabled"]):
+        x = state.fem.data.x.numpy()
     for k in _shown:
         c = constraints[k]
         _update_cloud(_cloud_name(k, c.name), x[c.nodes], (0.95, 0.55, 0.1))
