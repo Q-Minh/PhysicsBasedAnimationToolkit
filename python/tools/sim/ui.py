@@ -398,14 +398,14 @@ def main():
     # wp.config.cache_kernels = False
     wp.init()
     args = parse_args()
-    fem_cpu, kinematics, contact_mesh = load_problem(args.fem_elasto_dynamics, args.scene)
+    fem_cpu, kinematics, contact_geometry = load_problem(args.fem_elasto_dynamics, args.scene)
     params_cpu = {
         s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]
     }
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
     params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
-    state = SimulationState(fem_cpu, params_cpu, kinematics, contact_mesh)
+    state = SimulationState(fem_cpu, params_cpu, kinematics, contact_geometry)
     ui_state = UIState()
     mesh_name = "Mesh"
 

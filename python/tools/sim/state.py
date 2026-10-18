@@ -70,9 +70,9 @@ def load_scene(path: str) -> tuple[
         float,
         gpu.kinematics.constraints.KinematicAnchors | None,
     ],
-    pbat.sim.contact.MultiMesh | None,
+    "colliders_.ContactGeometry | None",
 ]:
-    """Build the FEM problem, its kinematic constraints and its contact surface from a CPU editor scene
+    """Build the FEM problem, its kinematic constraints and its contact geometry from a CPU editor scene
     file.
 
     Reads the tetrahedral elastodynamic bodies, static mesh and plane colliders and transform library that the CPU
@@ -83,8 +83,8 @@ def load_scene(path: str) -> tuple[
 
     Returns:
         The FEM problem (dmask holds the nodes constrained at t = 0), its kinematic constraints as returned
-        by load_kinematic_constraints, and the contact surface (None without static colliders, i.e. the
-        tetrahedral mesh boundary).
+        by load_kinematic_constraints, and the contact geometry (colliders.ContactGeometry; None without
+        static colliders, i.e. the tetrahedral mesh boundary).
     """
     from ..vbd import scenario
 
@@ -96,29 +96,30 @@ def load_scene(path: str) -> tuple[
         grp = f.create_group("kinematics")
         transform_library.export_kinematic_constraints(grp, names, offsets, 0, 1.0)
         constraints, t0, anchors = gpu.kinematics.constraints.read_kinematic_constraints(grp)
-    contact_mesh = None
+    contact_geometry = None
     if len(colliders) > 0:
-        constraint, contact_mesh = colliders_.add_colliders(fem, offsets, colliders)
+        constraint, contact_geometry = colliders_.add_colliders(fem, offsets, colliders)
         constraints.append(constraint)
     dmask = np.zeros(fem.X.shape[1], dtype=np.int64)
     for c in constraints:
         if c.begin <= 0.0 < c.begin + c.duration:
             dmask[c.nodes] = 1
     fem.constrain(dmask)
-    return fem, (constraints, t0, anchors), contact_mesh
+    return fem, (constraints, t0, anchors), contact_geometry
 
 
 def load_problem(
     fem_spec: str | None = None, scene: str | None = None
-) -> tuple[pbat.sim.dynamics.FemElastoDynamics, tuple, pbat.sim.contact.MultiMesh | None]:
-    """Load the FEM problem, its kinematic constraints and its contact surface from either an editor Dump's
+) -> tuple[pbat.sim.dynamics.FemElastoDynamics, tuple, "colliders_.ContactGeometry | None"]:
+    """Load the FEM problem, its kinematic constraints and its contact geometry from either an editor Dump's
     FEM group (``file.h5:fem``) or a CPU editor scene file. This is what ui.py and simulate.py do for
     ``--fem-elasto-dynamics`` and ``--scene``.
 
     Returns:
-        ``(fem, kinematics, contact_mesh)``, to pass on as ``SimulationState(fem, params, kinematics,
-        contact_mesh)``. ``kinematics`` is ``(constraints, t0, anchors)`` (see load_kinematic_constraints).
-        ``contact_mesh`` is None (the tetrahedral mesh boundary) unless a scene has static colliders.
+        ``(fem, kinematics, contact_geometry)``, to pass on as ``SimulationState(fem, params, kinematics,
+        contact_geometry)``. ``kinematics`` is ``(constraints, t0, anchors)`` (see
+        load_kinematic_constraints). ``contact_geometry`` is None (the tetrahedral mesh boundary) unless a
+        scene has static colliders.
     """
     if (fem_spec is None) == (scene is None):
         raise ValueError("Pass exactly one of fem_spec and scene")
@@ -217,7 +218,7 @@ class SimulationState:
             ]
             | None
         ) = None,
-        contact_mesh: pbat.sim.contact.MultiMesh | None = None,
+        contact_geometry: "colliders_.ContactGeometry | None" = None,
     ):
         """
         Args:
@@ -225,9 +226,10 @@ class SimulationState:
             params_cpu: CPU solver parameters per solver.
             kinematics: Kinematic constraints (see load_kinematic_constraints), defaulting to fem_cpu's
                 dmask as permanently fixed nodes.
-            contact_mesh: Contact surface over fem_cpu's nodes. By default it is the boundary of the
-                tetrahedral mesh, which must then be sorted by connected components. load_scene passes one
-                that also holds the static mesh colliders.
+            contact_geometry: Contact surface over fem_cpu's nodes, with the depths of plane colliders
+                (colliders.ContactGeometry). By default it is the boundary of the tetrahedral mesh, which
+                must then be sorted by connected components. load_scene passes one that also holds the
+                static mesh and plane colliders.
         """
         self.fem_cpu = fem_cpu
         # Initial velocities of the loaded problem (the Dump's v or the scene's per-body v0), restored on reset
@@ -281,7 +283,8 @@ class SimulationState:
         self.capture = None
 
         # Build collision geometry
-        multimesh_cpu = contact_mesh
+        self.contact_geometry = contact_geometry
+        multimesh_cpu = None if contact_geometry is None else contact_geometry.mesh
         if multimesh_cpu is None:
             multimesh_cpu = pbat.sim.contact.MultiMesh()
             Xordering, Eordering, XCC, ECC, n_components = (
@@ -381,6 +384,8 @@ class SimulationState:
             contact_pair_storage,
             self.fem.data.dmask,
         )
+        if self.contact_geometry is not None and self.cd_type == CDType.VertexSdf:
+            detector.set_plane_depths(self.contact_geometry.plane_depths)
         return detector
 
     def _advance(self):

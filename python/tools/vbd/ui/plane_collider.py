@@ -25,6 +25,11 @@ class PlaneCollider:
     rectangle of half-sizes `half_extents` along the in-plane axes `tangent` and normal x tangent, or
     infinite (inf half-extents, the default). Simulators collide with it as a quad: the GPU detects
     contacts with it analytically, and the CPU treats it as a static triangle mesh.
+
+    On the GPU, which resolves penetrations, an infinite plane is a half-space: any depth below it is in
+    contact, so even fast impacts are caught. A finite plane is a plate of `thickness` (default: 10% of
+    its smaller half-extent): only vertices less than that far below it are in contact. Vertices that
+    pass under it, or come back from its sides, are left alone instead of being pushed up through it.
     """
 
     name: str
@@ -32,6 +37,7 @@ class PlaneCollider:
     normal: np.ndarray
     tangent: np.ndarray
     half_extents: np.ndarray
+    thickness: float | None  # finite planes only; None means the default
     _sm: ps.SurfaceMesh
 
     def __init__(
@@ -41,18 +47,28 @@ class PlaneCollider:
         normal=(0.0, 0.0, 1.0),
         tangent=None,
         half_extents=(np.inf, np.inf),
+        thickness: float | None = None,
     ):
         self.name = name
         self.point = np.asarray(point, dtype=float)
         self.normal = np.asarray(normal, dtype=float)
         self.tangent = None if tangent is None else np.asarray(tangent, dtype=float)
         self.half_extents = np.asarray(half_extents, dtype=float)
+        self.thickness = thickness
         self._sm = None
         self.adjust()
 
     @property
     def infinite(self) -> bool:
         return not np.all(np.isfinite(self.half_extents))
+
+    @property
+    def depth(self) -> float:
+        """How far below the plane a vertex is still in contact with it: inf for infinite planes, else
+        the thickness."""
+        if self.infinite:
+            return np.inf
+        return self.thickness if self.thickness is not None else 0.1 * float(self.half_extents.min())
 
     def adjust(self):
         """Normalize the normal and make the tangent a unit vector perpendicular to it."""
@@ -117,6 +133,10 @@ class PlaneCollider:
             c, he = imgui.InputFloat2("Half extents", self.half_extents.tolist())
             changed |= c
             half_extents = np.maximum(np.asarray(he, dtype=float), 1e-6)
+            c, thickness = imgui.InputFloat("Thickness", self.depth)
+            if c:
+                self.thickness = max(float(thickness), 1e-6)
+            changed |= c
         if changed:
             self.point, self.normal = np.asarray(point, dtype=float), np.asarray(normal, dtype=float)
             if np.linalg.norm(self.normal) < 1e-8:
@@ -149,6 +169,8 @@ class PlaneCollider:
         grp.attrs["normal"] = self.normal
         grp.attrs["tangent"] = self.tangent
         grp.attrs["half_extents"] = self.half_extents
+        if self.thickness is not None:
+            grp.attrs["thickness"] = self.thickness
 
     def deserialize(self, grp: h5.Group):
         grp = grp["tools.vbd.ui.PlaneCollider"]
@@ -157,6 +179,7 @@ class PlaneCollider:
         self.normal = np.asarray(grp.attrs["normal"], dtype=float)
         self.tangent = np.asarray(grp.attrs["tangent"], dtype=float)
         self.half_extents = np.asarray(grp.attrs["half_extents"], dtype=float)
+        self.thickness = float(grp.attrs["thickness"]) if "thickness" in grp.attrs else None
         self.adjust()
 
 
@@ -198,6 +221,11 @@ class TestPlaneCollider(unittest.TestCase):
         np.testing.assert_allclose(np.abs(V[:, :2]).max(), INFINITE_SCALE * 3.0)
         self.assertEqual(F.shape, (2, 3))
 
+    def test_depth(self):
+        self.assertEqual(PlaneCollider().depth, np.inf)
+        self.assertAlmostEqual(PlaneCollider(half_extents=(2, 1)).depth, 0.1)
+        self.assertAlmostEqual(PlaneCollider(half_extents=(2, 1), thickness=0.5).depth, 0.5)
+
     def test_tessellation(self):
         plane = PlaneCollider(normal=(1, 1, 0), half_extents=(2, 1))
         V, F = plane.mesh(scene_diameter=1.0, cell_size=0.5)
@@ -209,12 +237,16 @@ class TestPlaneCollider(unittest.TestCase):
             np.testing.assert_allclose(n / np.linalg.norm(n), plane.normal, atol=1e-12)
 
     def test_serialization(self):
-        planes = [PlaneCollider("ground"), PlaneCollider("wall", (1, 0, 0), (-1, 0, 0), half_extents=(1, 2))]
+        planes = [
+            PlaneCollider("ground"),
+            PlaneCollider("wall", (1, 0, 0), (-1, 0, 0), half_extents=(1, 2), thickness=0.3),
+        ]
         with h5.File("planes.h5", "w", driver="core", backing_store=False) as f:
             serialize_plane_colliders(planes, f.create_group("plane_colliders"))
             loaded = deserialize_plane_colliders(f["plane_colliders"])
         for a, b in zip(planes, loaded):
             self.assertEqual(a.name, b.name)
+            self.assertEqual(a.depth, b.depth)
             for attr in ("point", "normal", "tangent", "half_extents"):
                 np.testing.assert_array_equal(getattr(a, attr), getattr(b, attr))
 

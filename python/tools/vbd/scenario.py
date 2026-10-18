@@ -8,6 +8,7 @@ the transform library. Nothing here initializes Polyscope; the body classes only
 """
 
 import itertools
+import typing
 import math
 import h5py as h5
 import numpy as np
@@ -139,25 +140,36 @@ def make_fem_dynamics_object(
     return fem_dynamics
 
 
+class StaticMesh(typing.NamedTuple):
+    """Static collision geometry: a triangle mesh, and how deep below it a vertex is still in contact."""
+
+    V: np.ndarray  # |# vertices| x 3
+    F: np.ndarray  # |# triangles| x 3
+    depth: float = np.inf  # finite planes: their thickness (see PlaneCollider.depth)
+
+
 def static_meshes(
     tet_elastic_bodies: list[TetrahedralElastodynamicsBody],
     static_mesh_colliders: list[StaticMeshCollider],
     plane_colliders: list[PlaneCollider],
     tessellate_planes: bool = False,
-) -> list[tuple[np.ndarray, np.ndarray]]:
-    """The scene's static collision geometry as `(|# vertices| x 3, |# triangles| x 3)` triangle meshes:
-    the static mesh colliders, then each plane collider's rectangle (infinite planes sized by the scene).
+) -> list[StaticMesh]:
+    """The scene's static collision geometry: the static mesh colliders, then each plane collider's
+    rectangle (infinite planes sized by the scene, finite planes with their thickness as depth).
 
     Args:
         tessellate_planes (bool): Split planes into cells about the scene's diameter wide, for the CPU's
             OGC contact. The GPU uses single quads (2 triangles), which it detects analytically.
     """
-    meshes = [(smc.VT, smc.F) for smc in static_mesh_colliders]
+    meshes = [StaticMesh(smc.VT, smc.F) for smc in static_mesh_colliders]
     if len(plane_colliders) > 0:
-        P = np.vstack([b.VT for b in tet_elastic_bodies] + [V for V, _ in meshes])
+        P = np.vstack([b.VT for b in tet_elastic_bodies] + [m.V for m in meshes])
         diameter = float(np.linalg.norm(P.max(axis=0) - P.min(axis=0)))
         cell_size = diameter if tessellate_planes else None
-        meshes += [plane.mesh(diameter, cell_size=cell_size) for plane in plane_colliders]
+        meshes += [
+            StaticMesh(*plane.mesh(diameter, cell_size=cell_size), plane.depth)
+            for plane in plane_colliders
+        ]
     return meshes
 
 
@@ -165,7 +177,7 @@ def make_contact_dynamics_object(
     fem_dynamics: pbat.sim.dynamics.FemElastoDynamics,
     n_bodies: int,
     vert_counts: list[int],
-    static_meshes: list[tuple[np.ndarray, np.ndarray]],
+    static_meshes: list[StaticMesh],
 ):
     """Build the CPU contact problem: each body's boundary as dynamic geometry (one component per body),
     and the static meshes (see `static_meshes`) as static geometry."""
@@ -177,10 +189,10 @@ def make_contact_dynamics_object(
     )
     contact_dynamics.set_dynamic_geometry(fem_dynamics.x, contact_meshes)
     if len(static_meshes) > 0:
-        static_vert_counts = [V.shape[0] for V, _ in static_meshes]
-        Vstatic = np.vstack([V for V, _ in static_meshes])
+        static_vert_counts = [m.V.shape[0] for m in static_meshes]
+        Vstatic = np.vstack([m.V for m in static_meshes])
         VPstatic = [0] + list(itertools.accumulate(static_vert_counts))
-        Fstatic = np.vstack([F + VPstatic[b] for b, (_, F) in enumerate(static_meshes)])
+        Fstatic = np.vstack([m.F + VPstatic[b] for b, m in enumerate(static_meshes)])
         XCCstatic = np.concatenate(
             [np.full(nverts, b) for b, nverts in enumerate(static_vert_counts)]
         )
@@ -194,7 +206,7 @@ def make_contact_dynamics_object(
 
 def read_scene(path: str, tessellate_planes: bool = False) -> tuple[
     list[TetrahedralElastodynamicsBody],
-    list[tuple[np.ndarray, np.ndarray]],
+    list[StaticMesh],
     TransformLibrary,
     list[str],
 ]:
