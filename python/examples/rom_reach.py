@@ -92,7 +92,9 @@ def static_equilibrium(
         u0 (np.ndarray | None): n initial displacement (e.g. the inertial target), or zero.
 
     Returns:
-        typing.Tuple[np.ndarray, dict]: The n equilibrium displacement u, and solve statistics.
+        typing.Tuple[np.ndarray, dict]: The n equilibrium displacement u, and solve statistics: Newton
+        iterations, the last decrement, and the largest entry of the last Newton correction, which estimates
+        how far u is from the exact solution.
     """
     n = x0.shape[0]
     fext = np.zeros(n) if fext is None else fext
@@ -100,7 +102,7 @@ def static_equilibrium(
     unknown = np.setdiff1d(free, handle_dofs)
     u = np.zeros(n) if u0 is None else np.array(u0, dtype=np.float64)
     k, ut = (np.zeros(n), np.zeros(n)) if inertia is None else inertia
-    iterations, decrement = 0, np.inf
+    iterations, decrement, correction = 0, np.inf, np.inf
     for s in range(1, steps + 1):
         scale = s / steps
         if handle_dofs.size:
@@ -117,6 +119,7 @@ def static_equilibrium(
             Huu = H.tocsr()[unknown, :].tocsc()[:, unknown].astype(np.float64)
             Huu = Huu + scipy.sparse.diags(k[unknown])
             du = scipy.sparse.linalg.spsolve(Huu, -r)
+            correction = float(np.abs(du).max())
             iterations += 1
             decrement = -(r @ du)
             if 0.5 * decrement <= rtol * (1.0 + abs(psi)):
@@ -130,7 +133,7 @@ def static_equilibrium(
             else:
                 break
             u += step
-    return u, dict(iterations=iterations, decrement=decrement)
+    return u, dict(iterations=iterations, decrement=decrement, correction=correction)
 
 
 def deformation_energy(potential: typing.Callable, x0: np.ndarray, u: np.ndarray) -> float:

@@ -681,6 +681,7 @@ def write_samples(
     batch: SampleBatch,
     attrs: dict,
     min_det_F: np.ndarray | None = None,
+    extra_samples: dict | None = None,
 ):
     """Write a sample batch to HDF5 (see the sample-file contract in plans/MASTER.md).
 
@@ -692,6 +693,7 @@ def write_samples(
         batch (SampleBatch): The samples.
         attrs (dict): Extra root attributes (input, sampler settings, target energy, seed, ...).
         min_det_F (np.ndarray | None): Per-sample minimum det(F) over the mesh, a diagnostic for inversion.
+        extra_samples (dict | None): Additional per-sample datasets written under samples/, by name.
     """
     import h5py
 
@@ -746,6 +748,8 @@ def write_samples(
             g.create_dataset("qdot", data=batch.qdot)
         if min_det_F is not None:
             g.create_dataset("min_J", data=min_det_F)
+        for name, data in (extra_samples or {}).items():
+            g.create_dataset(name, data=data)
         b = f.create_group("basis")
         b.create_dataset("U", data=model.U)
         b.create_dataset("Q", data=model.Q if model.Q is not None else np.zeros((0, 0, 0)))
