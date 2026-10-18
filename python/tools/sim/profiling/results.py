@@ -58,6 +58,7 @@ class ProfileRecorder:
         self._kernels: dict[tuple[str, str], list] = {}
 
     def add_step(self, t: int, profile: StepProfile):
+        """Add one profiled step's timings and accumulate its per-kernel totals."""
         self.steps.append(
             {
                 "t": t,
@@ -80,6 +81,7 @@ class ProfileRecorder:
         self.steps.append({"t": t, "busy_ms": {}, "launches": {}, "step_timeline_ms": step_timeline_ms})
 
     def to_dict(self) -> dict:
+        """The run as a profiling result dict (schema above), kernels sorted by busy time."""
         kernels = [
             {"path": path, "name": name, "busy_ms": ms, "count": count}
             for (path, name), (ms, count) in self._kernels.items()
@@ -95,11 +97,13 @@ class ProfileRecorder:
 
 
 def save(result: dict, path: str):
+    """Write a profiling result (or any JSON-serializable dict) to path."""
     with open(path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=1)
 
 
 def load(path: str) -> dict:
+    """Read a profiling result, checking its schema."""
     with open(path, encoding="utf-8") as f:
         result = json.load(f)
     if result.get("schema") != SCHEMA:

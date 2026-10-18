@@ -19,6 +19,7 @@ from ..profiling import results
 
 
 class _PanelState:
+    """Persistent panel settings and the rolling window of profiled steps."""
     def __init__(self):
         self.window = 20
         self.by_leaf = True
@@ -45,6 +46,7 @@ def profile_step(state):
 
 
 def _step_dict(profile: profiling.StepProfile) -> dict:
+    """The per-step fields of a StepProfile, as stored in the profiling result schema."""
     return {
         "busy_ms": profile.busy_ms,
         "launches": profile.launches,
@@ -57,6 +59,7 @@ def _step_dict(profile: profiling.StepProfile) -> dict:
 
 
 def _window_result(state) -> dict:
+    """The profiled window as a profiling result (schema of profiling/results.py)."""
     return {
         "schema": results.SCHEMA,
         "source": "kernels",
@@ -67,6 +70,7 @@ def _window_result(state) -> dict:
 
 
 def _export(state):
+    """Ask for a file name and save the profiled window as JSON."""
     root = tk.Tk()
     root.withdraw()
     path = filedialog.asksaveasfilename(
@@ -78,6 +82,8 @@ def _export(state):
 
 
 def draw_profiling_panel(state, ui_state):
+    """Draw the Profiling tree node: backend toggle, window controls and the phase, path or tree
+    table."""
     if not imgui.TreeNode("Profiling"):
         return
     enabled = profiling.get_backend() == profiling.Backend.KERNELS

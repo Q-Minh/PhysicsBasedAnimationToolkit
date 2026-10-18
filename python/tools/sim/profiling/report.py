@@ -2,8 +2,10 @@
 HTML report comparing per-phase GPU cost across solvers.
 
 Takes one profiling result per solver (``simulate.py --profile kernels --profile-out`` or
-``profiling/nsys.py``) and writes a self-contained HTML page: stacked bars of mean GPU busy time per
-step by phase, one part-to-whole donut per solver, a phase-by-solver table and the top kernels.
+``profiling/nsys.py``), plus optional production timings, and writes a self-contained HTML page: a
+summary table (busy and union time, production step time, iterations, cost per iteration), stacked
+bars of mean GPU busy time per step by phase, one part-to-whole donut per solver, a scope tree per
+solver with total (inclusive) and self times, a phase-by-solver table and the top GPU activities.
 
 Usage (from the repo root):
 
@@ -45,6 +47,7 @@ def _mean_calls(result: dict, leaf_name: str) -> float:
 
 
 def _iterations_per_step(result: dict) -> tuple[float, str]:
+    """Mean solver iterations per step (VBD sweeps or Newton iterations) and their unit."""
     for name in _ITERATION_SCOPES:
         n = _mean_calls(result, name)
         if n > 0:
@@ -78,6 +81,7 @@ def _color(phase: str, colored: list[str]) -> str:
 
 
 def _stacked_bars(solvers, folded, colored) -> str:
+    """Horizontal stacked bars of mean busy ms/step by phase, one bar per solver."""
     width, bar_h, gap, label_w, right = 760, 28, 18, 150, 70
     vmax = max(sum(f.values()) for f in folded.values()) or 1.0
     step = 10 ** math.floor(math.log10(vmax))
@@ -122,6 +126,7 @@ def _bar_path(x, y, w, h, r) -> str:
 
 
 def _donut(solver, phases, colored) -> str:
+    """Part-to-whole donut of one solver's phases."""
     size, r_out, r_in = 180, 84, 52
     c = size / 2
     total = sum(phases.values()) or 1.0
@@ -406,6 +411,7 @@ work on concurrent streams counts once per stream; the total union counts overla
 
 
 def main():
+    """Command line for the per-solver cost report."""
     parser = argparse.ArgumentParser(description="Per-phase GPU cost report across solvers")
     parser.add_argument("results", nargs="+", help="Profiling result .json files, one per solver.")
     parser.add_argument("-o", "--out", required=True, help="Output .html.", dest="out")

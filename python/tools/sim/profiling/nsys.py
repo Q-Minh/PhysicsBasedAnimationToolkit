@@ -43,10 +43,12 @@ _STEP = "step"
 
 
 def _tables(db: sqlite3.Connection) -> set[str]:
+    """Names of the tables in an Nsight Systems SQLite export."""
     return {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 
 
 def _strings(db: sqlite3.Connection) -> dict[int, str]:
+    """The StringIds table: string id -> string."""
     return dict(db.execute("SELECT id, value FROM StringIds"))
 
 
@@ -311,6 +313,8 @@ def run(out_prefix: str, simulate_args: list[str], nsys: str) -> dict:
 
 
 def main():
+    """Command line: run (profile simulate.py under nsys and import) or import (an existing SQLite
+    export)."""
     parser = argparse.ArgumentParser(description="Nsight Systems profiling of the GPU simulator")
     sub = parser.add_subparsers(dest="command", required=True)
     p_run = sub.add_parser("run", help="Profile simulate.py under nsys and import the result.")

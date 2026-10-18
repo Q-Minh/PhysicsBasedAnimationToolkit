@@ -21,6 +21,7 @@ import sys
 
 
 def main():
+    """Run the module named on the command line inside the venv, with the remaining arguments."""
     venv, module, *args = sys.argv[1:]
     sys.prefix = sys.exec_prefix = venv
     os.environ["VIRTUAL_ENV"] = venv
