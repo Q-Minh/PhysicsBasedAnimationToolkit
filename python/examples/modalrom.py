@@ -10,7 +10,9 @@ import time
 import meshio
 import argparse
 import os
+import types
 import rom_mcmc
+import rom_reach
 
 
 def mass(
@@ -767,6 +769,161 @@ if __name__ == "__main__":
     sample_idx = 0
     stats = {}
     rng = np.random.default_rng(args.seed)
+    # Shape reachability: full-order static targets authored by loads or handles, and reduced-model fits
+    target_kinds = ["Gravity", "Region force", "Handle displacement"]
+    fit_kinds = [
+        "Linear U fit",
+        "Linear [U Z] fit",
+        "Quadratic fit",
+        "Quadratic energy-regularized fit",
+        "Quadratic ROM equilibrium",
+        "Linear ROM equilibrium",
+    ]
+    m64, x64 = M.diagonal().astype(np.float64), x0.astype(np.float64)
+    U64, UZ64 = U.astype(np.float64), UZ.astype(np.float64)
+    # Mass-weighted handle penalty for ROM equilibria, stiffer than the stiffest mode
+    kappa = 100.0 * float(np.max(w)) ** 2
+    has_dirichlet = len(freedofs) < n
+    reach = types.SimpleNamespace(
+        target_kind=target_kinds[0],
+        gravity=[0.0, 0.0, -0.4],
+        region=[[0.95, 1.0], [0.0, 1.0], [0.0, 1.0]],
+        force=[0.0, 0.0, -50.0],
+        displacement=[0.0, 0.0, -0.3],
+        steps=5,
+        fit_kind=fit_kinds[2],
+        alpha=0.01,
+        target=None,
+        fit=None,
+        show=False,
+        models={},
+    )
+
+    def reach_model(mapping: str):
+        if mapping not in reach.models:
+            reach.models[mapping], _ = reduced_model(
+                mapping, U, Q, w, M.diagonal(), x0, psi, rigid, "uniform"
+            )
+        return reach.models[mapping]
+
+    def region_nodes():
+        lo, hi = np.array(reach.region).T
+        return rom_reach.box_region(X, lo, hi)
+
+    def solve_target():
+        nodes = region_nodes()
+        fext, handle_dofs, handle_u = None, None, None
+        if reach.target_kind == "Gravity":
+            fext = rom_reach.gravity_load(m64, reach.gravity)
+        elif reach.target_kind == "Region force":
+            fext = rom_reach.region_load(m64, nodes, reach.force)
+        else:
+            handle_dofs = np.intersect1d(rom_reach.node_dofs(nodes), freedofs)
+            handle_u = np.asarray(reach.displacement)[handle_dofs % 3]
+        t = time.time()
+        u, info = rom_reach.static_equilibrium(
+            psi, x64, freedofs, fext, handle_dofs, handle_u, reach.steps
+        )
+        reach.target = dict(
+            u=u,
+            fext=fext,
+            handle_dofs=handle_dofs,
+            handle_u=handle_u,
+            energy=rom_reach.deformation_energy(psi, x64, u),
+            info=info,
+            time=time.time() - t,
+        )
+        ps.register_volume_mesh(
+            "target", X.T + u.reshape(X.shape[1], 3), E.T, transparency=0.3
+        )
+
+    def fit_target():
+        tgt, kind = reach.target, reach.fit_kind
+        if kind == "Linear U fit":
+            u, _ = rom_reach.linear_fit(U64, m64, tgt["u"])
+        elif kind == "Linear [U Z] fit":
+            u, _ = rom_reach.linear_fit(UZ64, m64, tgt["u"])
+        elif kind == "Quadratic fit":
+            u, _ = rom_reach.manifold_fit(reach_model("quadratic"), tgt["u"])
+        elif kind == "Quadratic energy-regularized fit":
+            u, _ = rom_reach.manifold_fit(
+                reach_model("quadratic"), tgt["u"], reach.alpha, max(tgt["energy"], 1e-12)
+            )
+        else:
+            u, _ = rom_reach.rom_equilibrium(
+                reach_model("quadratic" if kind.startswith("Quadratic") else "linear"),
+                tgt["fext"],
+                tgt["handle_dofs"],
+                tgt["handle_u"],
+                kappa,
+                reach.steps,
+            )
+        reach.fit = dict(
+            u=u,
+            kind=kind,
+            metrics=rom_reach.fit_metrics(u, tgt["u"], m64),
+            energy=rom_reach.deformation_energy(psi, x64, u),
+        )
+
+    def draw_reachability_panel():
+        imgui.Separator()
+        imgui.Text("Shape reachability: fit reduced models to full-order static targets")
+        changed, idx = imgui.Combo(
+            "Target kind", target_kinds.index(reach.target_kind), target_kinds
+        )
+        reach.target_kind = target_kinds[idx]
+        if reach.target_kind == "Gravity":
+            changed, reach.gravity = imgui.InputFloat3("Gravity (m/s^2)", reach.gravity)
+            if ps.has_point_cloud("region"):
+                ps.remove_point_cloud("region")
+        else:
+            for axis, name in enumerate("xyz"):
+                changed, reach.region[axis] = imgui.SliderFloat2(
+                    f"Region {name} (bounding box fraction)", reach.region[axis], 0.0, 1.0
+                )
+            nodes = region_nodes()
+            imgui.Text(f"{len(nodes)} region nodes")
+            ps.register_point_cloud("region", X.T[nodes], radius=0.004)
+            if reach.target_kind == "Region force":
+                changed, reach.force = imgui.InputFloat3("Force (N)", reach.force)
+            else:
+                changed, reach.displacement = imgui.InputFloat3(
+                    "Displacement (m)", reach.displacement
+                )
+        changed, reach.steps = imgui.InputInt("Load steps", reach.steps)
+        reach.steps = max(reach.steps, 1)
+        if reach.target_kind != "Handle displacement" and not has_dirichlet:
+            imgui.TextColored(
+                (1.0, 0.6, 0.0, 1.0),
+                "Loads need Dirichlet constraints; use handles on unconstrained meshes",
+            )
+        elif imgui.Button("Solve target"):
+            solve_target()
+            fit_target()
+            reach.show = True
+        if reach.target is None:
+            return
+        tgt = reach.target
+        imgui.Text(
+            f"Target: energy {tgt['energy']:.4g} J, {tgt['info']['iterations']} Newton iterations, {tgt['time']:.1f} s"
+        )
+        changed, idx = imgui.Combo("Fit model", fit_kinds.index(reach.fit_kind), fit_kinds)
+        reach.fit_kind = fit_kinds[idx]
+        if reach.fit_kind == "Quadratic energy-regularized fit":
+            changed, reach.alpha = imgui.InputFloat(
+                "Energy weight alpha", reach.alpha, format="%.4g"
+            )
+            reach.alpha = max(reach.alpha, 0.0)
+        if imgui.Button("Fit"):
+            fit_target()
+            reach.show = True
+        if reach.fit is not None:
+            metrics = reach.fit["metrics"]
+            imgui.Text(
+                f"{reach.fit['kind']}: relative M-error {metrics['relative_error']:.3f}, "
+                f"max vertex error {metrics['max_error']:.3g} m, energy {reach.fit['energy']:.4g} J"
+            )
+            changed, reach.show = imgui.Checkbox("Show fit and target", reach.show)
 
     def callback():
         global mode, c, k, q, mapping
@@ -814,6 +971,7 @@ if __name__ == "__main__":
             samples.extend(zip(batch.q, batch.energy, qdots))
             sample_idx = len(samples) - 1
             show_samples = True
+            reach.show = False
         if samples:
             changed, show_samples = imgui.Checkbox("Show samples", show_samples)
             # The slider shares its label with the "Sample" button, so give it its own ID scope
@@ -842,8 +1000,18 @@ if __name__ == "__main__":
                     f"Energy noise limits |Psi - E*| to ~{stats['energy_tolerance']:.2g} J (> 1e-3 E*): use a larger E*",
                 )
 
+        draw_reachability_panel()
+
         qdot = None
-        if show_samples and samples:
+        showing_fit = reach.show and reach.fit is not None
+        if ps.has_volume_mesh("target"):
+            ps.get_volume_mesh("target").set_enabled(showing_fit)
+        if showing_fit:
+            u = reach.fit["u"]
+            vm.add_scalar_quantity(
+                "fit error (m)", reach.fit["metrics"]["vertex_error"], enabled=True
+            )
+        elif show_samples and samples:
             qs, _, qdot = samples[sample_idx]
             u = model.displacement(qs)
             if qdot is not None:
@@ -866,6 +1034,8 @@ if __name__ == "__main__":
 
         if qdot is None:
             vm.remove_quantity("velocity")
+        if not showing_fit:
+            vm.remove_quantity("fit error (m)")
         V = X.T + u.reshape(X.shape[1], 3)
         vm.update_vertex_positions(V)
 
