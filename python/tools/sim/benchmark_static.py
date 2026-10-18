@@ -174,6 +174,8 @@ def main():
     state = make_state(args)
     batch = static.load_sample_batch(spec.sample_file)
     static.check_sample_batch(batch, state.fem)
+    for w in batch.warnings():
+        print(f"Warning: {spec.sample_file}: {w}")
     static.prepare_static_problem(state, spec.fext_scale)
     indices = list(spec.sample_indices(batch.n_samples))
     results = {

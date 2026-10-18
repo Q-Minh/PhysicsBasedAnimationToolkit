@@ -56,6 +56,17 @@ class SampleBatch:
     def n_samples(self) -> int:
         return self.x.shape[0]
 
+    def warnings(self) -> list[str]:
+        """Reasons the batch may not suit the benchmark's statistics (empty if none)."""
+        out = []
+        rhat = self.attrs.get("rhat")
+        if rhat is not None and not float(rhat) < 1.05:
+            out.append(f"split R-hat {float(rhat):.3f} >= 1.05: the chains haven't mixed, sample more or burn in longer")
+        gravity = self.attrs.get("gravity")
+        if gravity is not None and np.any(np.asarray(gravity, dtype=np.float64) != 0):
+            out.append(f"sampled with gravity {gravity}: the benchmark's static problem has no loads")
+        return out
+
 
 def load_sample_batch(path: str) -> SampleBatch:
     """Load an MCMC sample file.

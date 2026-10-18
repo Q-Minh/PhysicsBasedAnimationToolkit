@@ -106,6 +106,8 @@ def draw_static_panel(state, ui_state):
     if panel.batch is not None:
         batch = panel.batch
         imgui.Text(f"{batch.n_samples} samples at E* = {batch.target_energy:g} J")
+        for w in batch.warnings():
+            imgui.TextWrapped(f"Warning: {w}")
         _, panel.sample = imgui.InputInt("Sample", panel.sample)
         panel.sample = max(0, min(batch.n_samples - 1, panel.sample))
         if imgui.Button("Apply sample"):
