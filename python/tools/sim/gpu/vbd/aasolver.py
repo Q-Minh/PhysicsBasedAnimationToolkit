@@ -7,6 +7,7 @@ from python.tools.sim.gpu.vbd.solver import (
     iterate,
     prepare_subproblem,
     solve_outer_loop,
+    IterationSchedule,
 )
 
 from ..contact.mesh.cd import ContactDetection
@@ -376,16 +377,25 @@ class AndersonSolver:
         params: AndersonParams,
     ) -> bool:
         initialize_solve(fem, contact, cd, params)
-
-        def outer_iteration(k: int):
-            prepare_subproblem(fem, contact, cd, params)
-            solve_subproblem(fem, contact, params)
-            finalize_subproblem(fem, contact, cd, params)
-
-        converged = solve_outer_loop(fem, contact, cd, params, outer_iteration)
+        converged = solve_outer_loop(
+            fem, contact, cd, params, self.schedule(fem, contact, params)
+        )
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged
+
+    def schedule(
+        self, fem: FemElastoDynamics, contact: ContactDynamics, params: AndersonParams
+    ) -> IterationSchedule:
+        """Iterations fill the history window for m steps, then repeat with period m."""
+        m = int(params.m)
+        return IterationSchedule(
+            lambda k, kp: subproblem_iteration(fem, contact, params, kp),
+            prefix=m,
+            period=m,
+            sweeps_per_iteration=int(params.vbd_iters_per_anderson_iter),
+            scope="anderson.subproblem",
+        )
 
     @property
     def supports_graph_capture(self):

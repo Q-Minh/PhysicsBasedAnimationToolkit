@@ -294,46 +294,6 @@ class StaticSolveLog:
 # --- Solves ---
 
 
-@dataclass
-class _IterationSchedule:
-    """How a VBD-family solver's subproblem iterations replay.
-
-    Iterations kp < prefix are recorded individually, after which iterations repeat with the given
-    period, so a block of a multiple of ``period`` iterations can be replayed.
-    """
-
-    iteration: object  # Callable[[int], None]
-    prefix: int
-    period: int
-    sweeps_per_iteration: int
-
-
-def _iteration_schedule(state: SimulationState, solver: SolverType) -> _IterationSchedule:
-    fem, contact, params = state.fem, state.contact, state.params[solver]
-    if solver == SolverType.VBD:
-        return _IterationSchedule(
-            lambda kp: gpu.vbd.solver.subproblem_iteration(fem, contact, params, kp), 0, 1, 1
-        )
-    if solver == SolverType.AAAVBD:
-        # One static subproblem (k = 0): only kp == 0 differs.
-        return _IterationSchedule(
-            lambda kp: gpu.vbd.aaasolver.subproblem_iteration(0, fem, contact, params, kp), 1, 1, 1
-        )
-    if solver == SolverType.Chebyshev:
-        return _IterationSchedule(
-            lambda kp: gpu.vbd.chebsolver.subproblem_iteration(fem, contact, params, kp), 2, 1, 1
-        )
-    if solver == SolverType.AndersonSolver:
-        m = int(params.m)
-        return _IterationSchedule(
-            lambda kp: gpu.vbd.aasolver.subproblem_iteration(fem, contact, params, kp),
-            m,
-            m,
-            int(params.vbd_iters_per_anderson_iter),
-        )
-    raise ValueError(f"{solver.name} has no replayable iteration schedule")
-
-
 def prepare_static_problem(state: SimulationState, fext_scale: float) -> np.ndarray:
     """Switch ``state.fem`` to static mode with the external load scaled by ``fext_scale``.
 
@@ -357,7 +317,11 @@ class StaticSolver:
         self.state = state
         self.solver = solver
         self.spec = spec
-        schedule = None if solver == SolverType.Newton else _iteration_schedule(state, solver)
+        schedule = (
+            None
+            if solver == SolverType.Newton
+            else state.solvers[solver].schedule(state.fem, state.contact, state.params[solver])
+        )
         self._schedule = schedule
         if schedule is not None:
             self._block = max(1, math.ceil(spec.block / schedule.period)) * schedule.period
@@ -387,12 +351,12 @@ class StaticSolver:
         log.reset()
         log.record(0)
         for kp in range(schedule.prefix):
-            schedule.iteration(kp)
+            schedule.iteration(0, kp)  # one static subproblem, k = 0
             log.record(schedule.sweeps_per_iteration)
 
         def block():
             for kp in range(schedule.prefix, schedule.prefix + self._block):
-                schedule.iteration(kp)
+                schedule.iteration(0, kp)
                 log.record(schedule.sweeps_per_iteration)
 
         wp.capture_while(log.keep, while_body=block)

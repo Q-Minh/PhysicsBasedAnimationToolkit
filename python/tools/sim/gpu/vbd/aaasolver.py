@@ -18,6 +18,7 @@ from .kernels import (
     integrate_positions,
 )
 from .solver import (
+    IterationSchedule,
     initialize_solve,
     solve_outer_loop,
     linearize_constraints,
@@ -287,16 +288,22 @@ class AaaVbdSolver:
         params: Params,
     ) -> bool:
         initialize_solve(fem, contact, cd, params)
-
-        def outer_iteration(k: int):
-            prepare_subproblem(fem, contact, cd, params)
-            solve_subproblem(k, fem, contact, params)
-            finalize_subproblem(fem, contact, cd, params)
-
-        converged = solve_outer_loop(fem, contact, cd, params, outer_iteration)
+        converged = solve_outer_loop(
+            fem, contact, cd, params, self.schedule(fem, contact, params)
+        )
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged
+
+    def schedule(
+        self, fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+    ) -> IterationSchedule:
+        """Only the first iteration of a subproblem differs (no acceleration adaptation yet)."""
+        return IterationSchedule(
+            lambda k, kp: subproblem_iteration(k, fem, contact, params, kp),
+            prefix=1,
+            scope="aaavbd.subproblem",
+        )
 
     @property
     def supports_graph_capture(self):

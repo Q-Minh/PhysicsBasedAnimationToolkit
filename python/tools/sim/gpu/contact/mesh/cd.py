@@ -97,11 +97,20 @@ class ContactDetection(ABC):
         """
         pass
 
+    def prepare_detection(self):
+        """Work of :meth:`detect_contacts` that a conditional CUDA graph body
+        (``wp.capture_if``/``wp.capture_while``) can't hold, e.g. allocations.
+
+        Solvers that record detection inside conditional bodies call this first, outside them, then
+        ``detect_contacts(prepared=True)``. Does nothing by default.
+        """
+        pass
+
     @property
     def supports_conditional_capture(self) -> bool:
-        """Whether :meth:`detect_contacts` and :meth:`filter_step` can be recorded inside a
-        conditional CUDA graph body (``wp.capture_if``/``wp.capture_while``), which must not
-        allocate. Solvers unroll their loops otherwise. Conservatively False unless verified.
+        """Whether ``detect_contacts(prepared=True)`` and :meth:`filter_step` can be recorded inside
+        a conditional CUDA graph body, after :meth:`prepare_detection` ran outside it. Solvers keep
+        detection outside conditional bodies otherwise. Conservatively False unless verified.
         """
         return False
 

@@ -5,6 +5,8 @@ Mirrors `pbat::sim::algorithm::vbd::Solve` from `source/pbat/sim/algorithm/vbd/C
 Contact constraints are left as placeholders for future implementation.
 """
 
+from dataclasses import dataclass
+import math
 from typing import Callable, Tuple
 import warp as wp
 from ..common import profiling
@@ -170,47 +172,137 @@ def check_convergence(
     return params.convergence.converged(params.data.gtol)
 
 
+@dataclass
+class IterationSchedule:
+    """How a VBD-family solver's subproblem iterations are recorded, for replay.
+
+    ``iteration(k, kp)`` runs iteration ``kp`` of outer iteration ``k``. Iterations ``kp < prefix``
+    record distinct work; later ones repeat with ``period`` (their host-side inputs depend on ``kp``
+    only through ``kp % period``), so a block of a multiple of ``period`` iterations records once and
+    replays. Each iteration applies ``sweeps_per_iteration`` VBD sweeps. ``scope`` names the
+    subproblem's profiling scope.
+    """
+
+    iteration: Callable[[int, int], None]
+    prefix: int = 0
+    period: int = 1
+    sweeps_per_iteration: int = 1
+    scope: str = "vbd.subproblem"
+
+
+def _subproblem_layout(
+    schedule: IterationSchedule, n_sub: int, check_interval: int
+) -> Tuple[int, int, int, int]:
+    """Split a subproblem's ``n_sub`` iterations into (prefix, block, n_blocks, remainder).
+
+    A block holds about ``check_interval`` sweeps, rounded up to a multiple of the period.
+    """
+    prefix = min(schedule.prefix, n_sub)
+    per_block = max(1, math.ceil(check_interval / max(1, schedule.sweeps_per_iteration)))
+    block = math.ceil(per_block / schedule.period) * schedule.period
+    n_blocks = (n_sub - prefix) // block
+    remainder = n_sub - prefix - n_blocks * block
+    return prefix, block, n_blocks, remainder
+
+
 def solve_outer_loop(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
     cd: ContactDetection,
     params: Params,
-    outer_iteration: Callable[[int], None],
+    schedule: IterationSchedule,
 ) -> bool:
     """Run the outer (augmented-Lagrangian) loop shared by the VBD-family solvers.
 
-    Equivalent to ``for k < n_max_iters: if check_convergence(...): break; outer_iteration(k)``. The
-    convergence test runs on the device (:class:`ConvergenceCheck`) and the loop is a
-    ``wp.capture_if`` (k = 0) followed by a ``wp.capture_while`` (k >= 1), so captured graphs stop
-    early too. Each body is recorded once, so ``outer_iteration`` receives ``k = 0`` for the first
-    iteration and ``k = 1`` for every later one; solvers may only distinguish ``k == 0`` from
-    ``k > 0``.
+    Equivalent to C++ ``vbd::Solve``: ``for k < n_max_iters: if converged: break; prepare; sweep;
+    finalize``, plus a convergence test every ``check_interval`` sweeps inside each subproblem
+    (:class:`ConvergenceCheck`). A test that passes inside a subproblem ends it; finalize and the
+    outer test follow, as after a full subproblem.
 
-    Falls back to ``n_max_iters`` unrolled iterations without a convergence test if
-    ``params.convergence`` wasn't built, or if a graph is being captured and ``cd`` can't run inside
-    conditional graph bodies (:attr:`ContactDetection.supports_conditional_capture`).
+    Recording, so that captured graphs stop early and stay small:
+
+    - Outer iterations are unrolled on the host. Each runs inside ``wp.capture_if(active)``, so a
+      converged step skips the rest.
+    - Within a subproblem, the distinct first iterations are recorded once, then a block of identical
+      iterations replays inside ``wp.capture_while``, then any remainder. The graph holds about one
+      block per outer iteration instead of every sweep.
+    - Conditional graph bodies must not allocate. ``cd.prepare_detection()`` (e.g. a BVH refit) runs
+      between the conditional nodes. Detection and the feasibility filter run inside them only if
+      ``cd.supports_conditional_capture``; otherwise they stay outside and also run after convergence,
+      where they leave the solution as it is.
+
+    Without ``params.convergence``, runs all ``n_max_iters`` outer iterations without tests.
 
     Returns:
         bool: Whether the solve converged. Always False while capturing, where the result stays on
-        the device (``params.convergence.keep_iterating``).
+        the device (``params.convergence.keep``).
     """
     check = params.convergence
     n_max_iters = int(params.data.n_max_iters)
-    is_capturing = wp.get_device().is_capturing
-    if check is None or (is_capturing and not cd.supports_conditional_capture):
+    n_sub = int(params.data.n_subproblem_max_iters)
+    if check is None:
         for k in range(n_max_iters):
-            outer_iteration(k)
+            prepare_subproblem(fem, contact, cd, params)
+            with profiling.scope(schedule.scope):
+                for kp in range(n_sub):
+                    schedule.iteration(k, kp)
+            finalize_subproblem(fem, contact, cd, params)
         return False
     gtol = float(params.data.gtol)
+    prefix, block, n_blocks, remainder = _subproblem_layout(
+        schedule, n_sub, int(check.params.check_interval)
+    )
+    detect_inside = cd.supports_conditional_capture
 
-    def body(k: int):
-        outer_iteration(k)
-        check.advance(gtol, n_max_iters)
+    def subproblem(k: int):
+        prepare_subproblem(fem, contact, cd, params)
+        with profiling.scope(schedule.scope):
+            for kp in range(prefix):
+                schedule.iteration(k, kp)
+            if n_blocks == 0:
+                for kp in range(prefix, n_sub):
+                    schedule.iteration(k, kp)
+            else:
+
+                def sweep_block():
+                    for kp in range(prefix, prefix + block):
+                        schedule.iteration(k, kp)
+                    check.after_block(gtol, n_blocks)
+
+                check.begin_inner(n_blocks)
+                wp.capture_while(check.inner_keep, while_body=sweep_block)
+                if remainder > 0:
+                    begin = prefix + n_blocks * block
+
+                    def rest():
+                        for kp in range(begin, begin + remainder):
+                            schedule.iteration(k, kp)
+
+                    wp.capture_if(check.subproblem_keep, on_true=rest)
+        with profiling.scope("solve.finalize_subproblem"):
+            update_dual(fem, contact)
+            if detect_inside:
+                cd.filter_step()
+
+    def update_constraints():
+        with profiling.scope("solve.finalize_subproblem"):
+            if detect_inside:
+                cd.detect_contacts(prepared=True)
+            contact.update_constraint_set()
+        check.end_outer(gtol, n_max_iters)
 
     check.start(gtol, n_max_iters)
-    wp.capture_if(check.keep_iterating, on_true=body, k=0)
-    wp.capture_while(check.keep_iterating, while_body=body, k=1)
-    return False if is_capturing else check.converged(gtol)
+    for k in range(n_max_iters):
+        check.begin_outer()
+        wp.capture_if(check.active, on_true=subproblem, k=k)
+        with profiling.scope("solve.finalize_subproblem"):
+            if detect_inside:
+                cd.prepare_detection()
+            else:
+                cd.filter_step()
+                cd.detect_contacts()
+        wp.capture_if(check.active, on_true=update_constraints)
+    return False if wp.get_device().is_capturing else check.converged(gtol)
 
 
 @profiling.scoped("contact.penalty")
@@ -263,6 +355,17 @@ def initialize_solve(
         compute_augmented_lagrangian_penalty(fem, contact, params)
 
 
+def update_dual(fem: FemElastoDynamics, contact: ContactDynamics):
+    """Full dual update of a finished subproblem: slack, decay and Lagrange multipliers."""
+    contact.update_dual(
+        fem.data.x,
+        fem.xt,
+        request_slack_update=True,
+        request_decay_update=True,
+        request_lagrange_multiplier_update=True,
+    )
+
+
 @profiling.scoped("solve.finalize_subproblem")
 def finalize_subproblem(
     fem: FemElastoDynamics,
@@ -277,13 +380,7 @@ def finalize_subproblem(
       2. Restore feasibility.
       3. Update constraint set for the next subproblem.
     """
-    contact.update_dual(
-        fem.data.x,
-        fem.xt,
-        request_slack_update=True,
-        request_decay_update=True,
-        request_lagrange_multiplier_update=True,
-    )
+    update_dual(fem, contact)
     cd.filter_step()
     cd.detect_contacts()
     contact.update_constraint_set()
@@ -353,17 +450,21 @@ class VbdSolver:
         params: Params,
     ) -> bool:
         initialize_solve(fem, contact, cd, params)
-
-        def outer_iteration(k: int):
-            prepare_subproblem(fem, contact, cd, params)
-            solve_subproblem(fem, contact, params)
-            finalize_subproblem(fem, contact, cd, params)
-
-        converged = solve_outer_loop(fem, contact, cd, params, outer_iteration)
+        converged = solve_outer_loop(
+            fem, contact, cd, params, self.schedule(fem, contact, params)
+        )
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         return converged
-    
+
+    def schedule(
+        self, fem: FemElastoDynamics, contact: ContactDynamics, params: Params
+    ) -> IterationSchedule:
+        """Plain VBD iterations are all alike."""
+        return IterationSchedule(
+            lambda k, kp: subproblem_iteration(fem, contact, params, kp), scope="vbd.subproblem"
+        )
+
     @property
     def supports_graph_capture(self):
         return True

@@ -131,6 +131,11 @@ def make_callback(
                         ):
                             draw_params(state.newton_linear_solver_params)
                             imgui.TreePop()
+                        if state.solver != SolverType.Newton and imgui.TreeNode(
+                            "convergence"
+                        ):
+                            draw_params(state.convergence_params)
+                            imgui.TreePop()
                         imgui.TreePop()
                     imgui.TreePop()
 
