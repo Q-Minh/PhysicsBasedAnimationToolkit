@@ -341,7 +341,8 @@ def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
         energy (pbat.fem.HyperElasticEnergy): Hyper-elastic energy model.
 
     Returns:
-        Tuple: (E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs), with M the lumped mass matrix.
+        Tuple: (E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, gravity), with M the lumped mass matrix
+        and gravity the scene's mean external acceleration (3,), or (0, 0, -9.81) for a mesh.
     """
     file_path, sep, group_path = str(input).rpartition(":")
     if sep and file_path and not (len(file_path) == 1 and file_path.isalpha()):
@@ -364,6 +365,7 @@ def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
             fem.lamegU[1, :],
         )
         freedofs = fem.free_dofs
+        gravity = np.asarray(fem.aext(), dtype=np.float64).mean(axis=1)
     else:
         imesh = meshio.read(input)
         V, C = imesh.points, imesh.cells_dict["tetra"]
@@ -376,7 +378,8 @@ def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
         M = scipy.sparse.diags_array(M.sum(axis=1), shape=(n, n))
         egU, wgU, GNegU, mug, lambdag = potential(E, X, element, Ye, nue)
         freedofs = np.arange(n)
-    return E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs
+        gravity = np.array([0.0, 0.0, -9.81])
+    return E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, gravity
 
 
 def build_rom(
@@ -653,7 +656,7 @@ if __name__ == "__main__":
 
     element = pbat.fem.Element.Tetrahedron
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs = load_model(
+    E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, scene_gravity = load_model(
         args.input, args.rho, args.Y, args.nu, element, energy
     )
     n = X.shape[0] * X.shape[1]
@@ -679,20 +682,19 @@ if __name__ == "__main__":
     psi = elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element)
     # Without Dirichlet constraints, the 6 lowest modes are rigid and the energy level set is unbounded along them
     rigid = 6 if len(freedofs) == n else 0
-    # Gravity M g, with M lumped per DOF and DOFs interleaved per node
-    fext = (
-        M.diagonal() * np.tile(np.asarray(args.gravity), X.shape[1])
-        if args.gravity is not None
-        else None
-    )
-
-    def make_model(mapping: str):
+    def make_model(mapping: str, gravity=None):
+        """The reduced model to sample on, with the gravity potential -(M g)^T u(q) if gravity is given."""
+        fext = (
+            rom_reach.gravity_load(M.diagonal().astype(np.float64), gravity)
+            if gravity is not None
+            else None
+        )
         return reduced_model(
             mapping, U, Q, w, M.diagonal(), x0, psi, rigid, args.weight, fext
         )
 
     if args.headless:
-        model, wr = make_model(args.mapping)
+        model, wr = make_model(args.mapping, args.gravity)
         chains = args.chains or (4 if args.sampler == "microcanonical" else 1)
         t0 = time.time()
         batch = rom_mcmc.run_chains(
@@ -761,6 +763,9 @@ if __name__ == "__main__":
     sampler_kind = samplers[0]
     target_energy = args.energy
     samples_per_click = 10
+    # Gravity potential for sampling, defaulting to the scene's gravity
+    sampling_gravity_on = args.gravity is not None
+    sampling_gravity = list(args.gravity if args.gravity is not None else scene_gravity)
     show_samples = False
     chain = None
     chain_key = None
@@ -928,6 +933,7 @@ if __name__ == "__main__":
     def callback():
         global mode, c, k, q, mapping
         global sampler_kind, target_energy, samples_per_click, show_samples
+        global sampling_gravity_on, sampling_gravity
         global chain, chain_key, model, samples, sample_idx, stats
         changed, map_idx = imgui.Combo("Mapping", mappings.index(mapping), mappings)
         mapping = mappings[map_idx]
@@ -956,10 +962,18 @@ if __name__ == "__main__":
             "Samples per click", samples_per_click
         )
         samples_per_click = max(samples_per_click, 1)
+        changed, sampling_gravity_on = imgui.Checkbox(
+            "Gravity potential -(M g)^T u(q)", sampling_gravity_on
+        )
+        if sampling_gravity_on:
+            changed, sampling_gravity = imgui.InputFloat3(
+                "Gravity acceleration (m/s^2)", sampling_gravity
+            )
         if imgui.Button("Sample"):
-            key = (mapping, target_energy, sampler_kind)
+            gravity = tuple(sampling_gravity) if sampling_gravity_on else None
+            key = (mapping, target_energy, sampler_kind, gravity)
             if key != chain_key:
-                model, _ = make_model(mapping.lower())
+                model, _ = make_model(mapping.lower(), gravity)
                 chain = rom_mcmc.make_sampler(sampler_kind, model, target_energy, rng)
                 chain.burn_in(args.burn_in)
                 chain.estimate_thinning(args.pilot)
@@ -980,6 +994,8 @@ if __name__ == "__main__":
                 "Sample", sample_idx, 0, len(samples) - 1
             )
             imgui.PopID()
+            if chain_key[3] is not None:
+                imgui.Text(f"With gravity {np.round(chain_key[3], 3).tolist()} m/s^2 in U")
             if samples[sample_idx][2] is not None:
                 imgui.Text(
                     f"{chain_key[0]} map, {chain_key[2]} sampler, E {chain_key[1]:.6g} J: "
