@@ -24,6 +24,7 @@ from ..contact.dynamics import (
 )
 from ..contact.mesh.pairs import ContactBasesData
 from ..elasticity.snh import snh_eval, snh_hess
+from ..elasticity.spd import filter_eigenvalues9
 from ..elasticity.chain import hessian_wrt_dofs
 from ..gradient import Gradient
 from ..contact import halfedges
@@ -41,6 +42,7 @@ class ParamsData:
     # Inner Newton iteration control
     n_subproblem_max_iters: wp.int32
     gtol2: wp.float32  # squared gradient-norm convergence threshold
+    spd_correction: wp.int32  # pbat.fem.HyperElasticSpdCorrection of d^2Psi/dF^2 (static problems only)
     n_lin_max_iters: wp.int32
     rel_eps_lin: wp.float32
     abs_eps_lin: wp.float32
@@ -92,8 +94,12 @@ def _energy_inertial(
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):  # type: ignore
         return
-    diff = fem.x[i] - fem.xtilde[i]
-    f_obj_partial[i] = wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff)  # type: ignore
+    if fem.is_static != 0:
+        # Static objective Psi(x) - fext^T x
+        f_obj_partial[i] = -wp.dot(fem.fext[i], fem.x[i])  # type: ignore
+    else:
+        diff = fem.x[i] - fem.xtilde[i]
+        f_obj_partial[i] = wp.float32(0.5) * fem.m[i] * wp.dot(diff, diff)  # type: ignore
 
 
 @wp.kernel
@@ -275,6 +281,8 @@ def _compute_dynamics_hessian_triplets(
         i = tid
         if is_dirichlet_node(fem.dmask, i):  # type: ignore
             params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = identity
+        elif fem.is_static != 0:
+            params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = wp.mat33f()
         else:
             params.Hvals[offsets[K_INERTIAL_TRIPLETS] + i] = fem.m[i] * identity
     if tid < n_elems:
@@ -291,6 +299,9 @@ def _compute_dynamics_hessian_triplets(
                 xe[d, j] = xj[d]
         F = xe @ GP
         HF = snh_hess(F, mu, llambda)
+        if fem.is_static != 0:
+            # Without the mass term, the SNH Hessian can be indefinite
+            HF = filter_eigenvalues9(HF, params.spd_correction)
         He = h2 * wge * hessian_wrt_dofs(HF, GP)
         base = offsets[K_ELASTIC_TRIPLETS] + e * 16
         d0 = is_dirichlet_node(fem.dmask, nodes[0])
@@ -748,6 +759,9 @@ class Params:
         Maximum Newton steps per AL subproblem.
     gtol2:
         Squared gradient-norm convergence threshold.
+    spd_correction:
+        SPD correction of the elastic Hessians d^2Psi/dF^2, from the CPU params' ``spd_correction``.
+        Applied to static problems only, whose Hessians lack the mass term.
     ls_max_iters:
         Maximum backtracking iterations.
     ls_tau:
@@ -774,6 +788,7 @@ class Params:
         self._data.k = 0
         self._data.n_subproblem_max_iters = newton.n_max_iters
         self._data.gtol2 = newton.gtol2
+        self._data.spd_correction = int(params_cpu.spd_correction.value)
         self._data.n_lin_max_iters = 300
         self._data.rel_eps_lin = 1e-5
         self._data.abs_eps_lin = 1e-5
@@ -1007,7 +1022,7 @@ def solve_subproblem(
         stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
-    h2 = wp.float32(fem.bdf.beta_tilde**2)  # type: ignore
+    h2 = wp.float32(fem.h2)  # type: ignore
     params._gradient.compute(main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
         params._gnorm2_reduce(main_stream)
@@ -1151,6 +1166,7 @@ def serialize_newton_cpu_params(params: pbat.sim.algorithm.newton.Params, grp) -
     """Serialize a Newton CPU Params object to an h5py group."""
     grp.attrs["n_max_iters"] = params.n_max_iters
     grp.attrs["linear_solver"] = params.linear_solver.value
+    grp.attrs["spd_correction"] = params.spd_correction.value
     newton = params.newton
     ng = grp.require_group("newton")
     ng.attrs["n_max_iters"] = newton.n_max_iters
@@ -1173,6 +1189,10 @@ def deserialize_newton_cpu_params(
     if "linear_solver" in grp.attrs:
         params.linear_solver = pbat.sim.algorithm.newton.ELinearSolver(
             int(grp.attrs["linear_solver"])
+        )
+    if "spd_correction" in grp.attrs:
+        params.spd_correction = pbat.fem.HyperElasticSpdCorrection(
+            int(grp.attrs["spd_correction"])
         )
     newton = params.newton
     if "newton" in grp:

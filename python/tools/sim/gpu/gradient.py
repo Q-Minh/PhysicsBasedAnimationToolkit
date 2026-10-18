@@ -59,7 +59,11 @@ def _inertial_gradient(
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):
         return
-    wp.atomic_add(g, i, fem.m[i] * (fem.x[i] - fem.xtilde[i]))
+    if fem.is_static != 0:
+        # Static objective Psi(x) - fext^T x
+        wp.atomic_add(g, i, -fem.fext[i])
+    else:
+        wp.atomic_add(g, i, fem.m[i] * (fem.x[i] - fem.xtilde[i]))
 
 
 @wp.kernel
@@ -240,6 +244,8 @@ def _ee_gradient(
 class Gradient:
     """Computes the full FEM elasto-dynamics + augmented-Lagrangian contact gradient.
 
+    For static problems (``fem.static``), the inertial term is replaced by the external load, -fext.
+
     Kernel launches are overlapped across 6 streams (elastic, inertial, vv, ve, vf, ee)
     forked from the active stream, making the computation graph-capturable.
     """
@@ -263,7 +269,7 @@ class Gradient:
         fem = self._fem
         contact = self._contact
         g = self._g
-        h2 = wp.float32(fem.bdf.beta_tilde**2)
+        h2 = wp.float32(fem.h2)
         n_nodes = fem.data.x.shape[0]
         n_elems = fem.data.E.shape[0]
         cd = contact._data
