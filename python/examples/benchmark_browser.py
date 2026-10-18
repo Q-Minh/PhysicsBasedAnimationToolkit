@@ -14,7 +14,7 @@ with the problem's energies (E, U, K = E - U), inversion diagnostics and referen
 quality (split R-hat, ESS) and distribution of U / E, on which the selected problem is marked.
 
 The mesh connectivity isn't stored in the problem files, so it's loaded from the scene recorded in their `input`
-attribute (filepath:h5path of a stored FemElastoDynamics), or from --input.
+attribute (a CPU editor scene file, or filepath:h5path of a stored FemElastoDynamics), or from --input.
 
 Usage:
     python benchmark_browser.py -d C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline-sample
@@ -127,7 +127,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--input",
-        help="filepath:h5path of the stored FemElastoDynamics to take the mesh from. Defaults to the problem files' "
+        help="Scene file, or filepath:h5path of the stored FemElastoDynamics, to take the mesh from. Defaults to the "
+        "problem files' "
         "input attribute",
         type=str,
         dest="input",
