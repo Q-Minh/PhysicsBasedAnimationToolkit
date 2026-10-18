@@ -1,6 +1,6 @@
 ---
 name: sim-sampling
-description: Sample deformed shapes (and velocities) of an elastic body with the quadratic-manifold modal ROM MCMC samplers in python/examples (modalrom.py GUI or headless, rom_mcmc.py), check sample quality, and generate static/dynamic benchmark problem sets with make_benchmark.py. Use when asked to draw shape samples at an energy, pick a sampler, inspect or validate a sample batch, or build benchmark datasets.
+description: Sample deformed shapes (and velocities) of an elastic body with the quadratic-manifold modal ROM MCMC samplers in python/examples (modalrom.py GUI or headless, rom_mcmc.py), check sample quality, and generate static/dynamic benchmark problem sets with make_benchmark.py, and browse them with benchmark_browser.py. Use when asked to draw shape samples at an energy, pick a sampler, inspect or validate a sample batch, build benchmark datasets, or explore/visualize a benchmark dataset.
 ---
 
 # Shape sampling (modal ROM MCMC)
@@ -10,6 +10,7 @@ The sampling tools live in `python/examples`, everything runs on the **CPU**, an
 - `rom_mcmc.py`: samplers and the sample-file contract in `write_samples`.
 - `rom_reach.py`: full-order equilibrium solves.
 - `make_benchmark.py`: problem-file layout.
+- `benchmark_browser.py`: Polyscope browser for a generated dataset.
 
 Read those docstrings for anything not covered here.
 
@@ -45,6 +46,11 @@ python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler polar --ene
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 500 5000 --problems 10 --dt 1e-4 1e-2
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --dt              # static only
 python make_benchmark.py -i <Dump>.h5:fem -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
+
+# Browse a generated dataset: problem set, energy and problem selectors; start state (colored by displacement
+# or det F), rest-shape ghost, velocity arrows, and for dynamic problems the inertial target x~ and reference x*;
+# energies, min det F, reference-solve stats, and the pool's R-hat, ESS and U/E histogram
+python benchmark_browser.py -d C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample
 ```
 
 Translating requests:
@@ -56,10 +62,11 @@ Translating requests:
 - "With gravity": `--gravity gx gy gz` (headless) or the GUI checkbox.
 - "Reproducible": `--seed`.
 - "More modes": `-k`.
+- "Show / explore / visualize the dataset": `benchmark_browser.py -d <dir>`. It takes the mesh from the files' `input` attribute; pass `--input <file.h5:h5path>` if that scene moved.
 
 `make_benchmark.py -h` lists the rest (`--chains`, `--burn-in`, `--pilot`, `--eps`, `--newton-iters`).
 
-**Full benchmark dataset generation is on hold** until the maintainer fixes the data requirements. Small smoke-test sets are fine.
+**Full benchmark dataset generation is on hold** until the maintainer fixes the data requirements. Small smoke-test sets are fine. A sample set (trampoline, 50/500/5000 J × 4 problems, pools of 400, h = 1e-4 and 1e-2) is in `data/benchmarks/trampoline-sample`.
 
 ## Output files
 
