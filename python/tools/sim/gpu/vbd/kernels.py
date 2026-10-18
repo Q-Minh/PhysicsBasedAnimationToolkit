@@ -481,6 +481,28 @@ def add_inertia_derivatives(
 
 
 @wp.func
+def add_inertia_or_external_load_derivatives(
+    is_static: wp.int32,
+    m: wp.float32,
+    xtilde: wp.vec3f,
+    fext: wp.vec3f,
+    x: wp.vec3f,
+    gi: wp.vec3f,
+    Hi: wp.mat33f,
+):
+    """Add the non-elastic, non-contact objective terms of a vertex.
+
+    Dynamic problems add the kinetic energy derivatives (the external load is folded into
+    ``xtilde``). Static problems, whose objective is Psi(x) - fext^T x, add only g -= fext.
+    """
+    if is_static != 0:
+        gi -= fext  # pyright: ignore[reportOperatorIssue]
+    else:
+        gi, Hi = add_inertia_derivatives(m, xtilde, x, gi, Hi)
+    return gi, Hi
+
+
+@wp.func
 def integrate_positions(
     gi: wp.vec3f,
     Hi: wp.mat33f,

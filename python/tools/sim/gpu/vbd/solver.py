@@ -20,7 +20,7 @@ from .kernels import (
     local_elastic_derivatives,
     local_contact_derivatives,
     # local_contact_rayleigh_quotients,
-    add_inertia_derivatives,
+    add_inertia_or_external_load_derivatives,
     integrate_positions,
     local_elastic_hessians,
 )
@@ -92,9 +92,9 @@ def _vertex_solve_kernel(
     )
     if local_tid > 0:
         return
-    # Add inertia derivatives (K = m, already in position space)
-    gi, Hi = add_inertia_derivatives(
-        mi, xtildei, xi, gi, Hi
+    # Add inertia (K = m, already in position space) or, for static problems, external load derivatives
+    gi, Hi = add_inertia_or_external_load_derivatives(
+        fem.is_static, mi, xtildei, fem.fext[i], xi, gi, Hi
     )  # pyright: ignore[reportArgumentType]
     # Solve local system: x -= H^{-1} g
     dxi = integrate_positions(
@@ -115,7 +115,7 @@ def _compute_vertex_hessians(
     Hi: wp.array[wp.mat33f],
     h2: float,
 ):
-    """Compute per-surface-vertex dynamics Hessian blocks (elastic + mass).
+    """Compute per-surface-vertex dynamics Hessian blocks (elastic + mass, or elastic only for static problems).
     Results are stored in Hi[v] for each surface vertex index v.
     """
     tid = wp.tid()
@@ -141,9 +141,10 @@ def _compute_vertex_hessians(
     Hib = wp.tile_sum(His)
     Hil = wp.tile_extract(Hib, 0)  # type: ignore
     if local_tid == 0:
-        mi = fem.m[i]
-        for d in range(3):
-            Hil[d, d] += mi
+        if fem.is_static == 0:
+            mi = fem.m[i]
+            for d in range(3):
+                Hil[d, d] += mi
         Hi[i] = Hil  # type: ignore
 
 
@@ -165,8 +166,7 @@ def check_convergence(
 def compute_augmented_lagrangian_penalty(
     fem: FemElastoDynamics, contact: ContactDynamics, params: Params
 ):
-    h = fem.bdf.beta_tilde
-    h2 = h * h
+    h2 = fem.h2
     n_nodes = fem.data.x.shape[0]
     block_dim = 32
     wp.launch(
@@ -241,8 +241,7 @@ def finalize_subproblem(
 @profiling.scoped("vbd.sweep")
 def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
     """One VBD Gauss-Seidel sweep over all color partitions."""
-    h = fem.bdf.beta_tilde
-    h2 = h * h
+    h2 = fem.h2
     # Copy current positions to buffer (for contact lagging)
     wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially

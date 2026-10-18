@@ -14,7 +14,7 @@ from .params import Params, ParamsData
 from .kernels import (
     local_elastic_derivatives,
     local_contact_derivatives,
-    add_inertia_derivatives,
+    add_inertia_or_external_load_derivatives,
     integrate_positions,
 )
 from .solver import (
@@ -175,9 +175,9 @@ def _accelerated_vertex_solve_kernel(
         ais = wp.tile(ail, preserve_type=True)  # pyright: ignore[reportArgumentType]
         ai = wp.tile_sum(ais)[0]  # pyright: ignore[reportIndexIssue]
     if local_tid == 0:
-        # Add inertia derivatives (K = m, already in position space)
-        gi, Hi = add_inertia_derivatives(
-            mi, xtildei, xi, gi, Hi
+        # Add inertia (K = m, already in position space) or, for static problems, external load derivatives
+        gi, Hi = add_inertia_or_external_load_derivatives(
+            fem.is_static, mi, xtildei, fem.fext[i], xi, gi, Hi
         )  # pyright: ignore[reportArgumentType]
         # Adapt stencil gradient acceleration parameter using the total gradient
         betaG = adapt_stencil_gradient_acceleration_parameter(
@@ -227,8 +227,7 @@ def iterate(
     params: Params,
 ):
     """One VBD Gauss-Seidel sweep over all color partitions."""
-    h = fem.bdf.beta_tilde
-    h2 = h * h
+    h2 = fem.h2
     # Copy current positions to buffer (for contact lagging)
     wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially
