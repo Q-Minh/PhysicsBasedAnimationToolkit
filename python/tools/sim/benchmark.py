@@ -156,7 +156,8 @@ def make_spec(args) -> static.StaticSolveSpec:
     return spec
 
 
-def make_state(args) -> SimulationState:
+def make_state(args, h: float | None = None) -> SimulationState:
+    """Build the contact-free simulation; ``h`` set means one-step dynamic problems of that step."""
     fem_cpu = load_fem_dynamics(args.fem_elasto_dynamics)
     params_cpu = {s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]}
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
@@ -170,7 +171,10 @@ def make_state(args) -> SimulationState:
         if hasattr(cd_params, "deactivate"):
             cd_params.deactivate = True
     state.cd_type = CDType.VertexSdf
-    state.reset()
+    if h is None:
+        state.reset()
+    else:
+        static.prepare_dynamic_problem(state, h)
     return state
 
 
@@ -210,7 +214,10 @@ def aggregate(samples: list[dict]) -> dict:
     for p in PERCENTILES:
         key = f"{p:.2f}"
         t = np.array([s["time_to_reduction"][key] for s in samples if s["time_to_reduction"][key] is not None])
+        bounds = [s["reference"]["relative_error_bound"] for s in samples if "reference" in s]
         out[key] = {
+            # Samples whose reference is accurate enough for this level (dynamic problems only)
+            **({"reliable": int(sum(1.0 - p >= b for b in bounds))} if bounds else {}),
             "reached": int(t.size),
             "fraction_reached": float(t.size / len(samples)) if samples else 0.0,
             "median": _nan_to_none(float(np.median(t)) if t.size else math.nan),
@@ -236,17 +243,24 @@ def main():
         with h5py.File(args.save_spec, "w") as f:
             spec.serialize(f.create_group("StaticSolveSpec"))
     solvers = [SolverType[name] for name in args.solvers.split(",") if name]
-    state = make_state(args)
     batch = static.load_sample_batch(spec.sample_file)
+    dynamic = batch.problem == "dynamic"
+    state = make_state(args, batch.h)
     static.check_sample_batch(batch, state.fem)
     for w in batch.warnings():
         print(f"Warning: {spec.sample_file}: {w}")
-    static.prepare_static_problem(state, spec.fext_scale)
+    if not dynamic:
+        static.prepare_static_problem(state, spec.fext_scale)
+    # Mass-norm bound of a reference whose entries are off by at most ref_newton_correction
+    free = state.fem.data.dmask.numpy() == 0
+    mass_scale = math.sqrt(3.0 * float(state.fem.data.m.numpy()[free].sum()))
     indices = list(spec.sample_indices(batch.n_samples))
     results = {
         "spec": spec.to_dict(),
         "percentiles": PERCENTILES,
         "metadata": {
+            "problem": batch.problem,
+            "h": batch.h,
             "fem_elasto_dynamics": args.fem_elasto_dynamics,
             "sim_params": " + ".join(args.sim_params + [f"--set {o}" for o in args.overrides])
             or "(code defaults)",
@@ -265,13 +279,24 @@ def main():
     h5_path = os.path.splitext(args.output)[0] + ".h5"
     with h5py.File(h5_path, "w") as h5f:
         spec.serialize(h5f.create_group("StaticSolveSpec"))
-        with tqdm(total=len(solvers) * len(indices), desc="Static solves", unit="solve") as pbar:
+        desc = "Dynamic solves" if dynamic else "Static solves"
+        with tqdm(total=len(solvers) * len(indices), desc=desc, unit="solve") as pbar:
             for solver in solvers:
-                runner = static.StaticSolver(state, solver, spec)
+                runner = static.BenchmarkSolver(state, solver, spec)
                 samples = []
                 for s in indices:
-                    log = runner.solve(batch.x[s])
+                    if dynamic:
+                        log = runner.solve(batch.x[s], batch.x_ref[s], batch.v[s], batch.xtilde[s])
+                    else:
+                        log = runner.solve(batch.x[s])
                     summary = summarize(log)
+                    if dynamic:
+                        bound = float(batch.ref_newton_correction[s]) * mass_scale
+                        summary["reference"] = {
+                            "newton_correction": float(batch.ref_newton_correction[s]),
+                            "error_bound": bound,
+                            "relative_error_bound": bound / summary["e0"] if summary["e0"] > 0 else math.inf,
+                        }
                     summary["sample"] = int(s)
                     summary["deformation_energy"] = float(batch.energy[s])
                     if batch.min_J is not None:

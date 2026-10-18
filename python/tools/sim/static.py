@@ -31,8 +31,8 @@ Python usage:
     prepare_static_problem(state, fext_scale=0.0)  # no loads: the equilibrium is X
     spec = StaticSolveSpec()
     spec.max_seconds = 10.0
-    solver = StaticSolver(state, SolverType.AAAVBD, spec)
-    log = solver.solve(batch.x[0])                 # StaticSolveLog
+    solver = BenchmarkSolver(state, SolverType.AAAVBD, spec)
+    log = solver.solve(batch.x[0], batch.reference(0))  # StaticSolveLog
     log.time_to_reduction(0.5), log.relative_error[-1]
 """
 
@@ -444,20 +444,40 @@ def prepare_static_problem(state: SimulationState, fext_scale: float) -> np.ndar
     return fext0
 
 
-class StaticSolver:
-    """Runs logged static solves of one solver on one ``SimulationState``, from given initial shapes.
+def prepare_dynamic_problem(state: SimulationState, h: float) -> None:
+    """Set up ``state`` for one-step dynamic benchmark problems with time step ``h``.
 
-    For VBD-family solvers, the whole solve is captured once (on the first :meth:`solve`) and
-    replayed for every initial shape; the state must not be reset in between. The solver's own outer
-    loop isn't used: a static solve is one subproblem of iterations driven by ``spec``'s budgets, so
-    ``gtol``, ``n_max_iters`` and ``n_subproblem_max_iters`` don't apply.
+    One BDF1 step of size ``h`` and no substeps, so ``fem.h2 = h^2`` and the solvers minimize
+    1/2 |x - xtilde|_M^2 + h^2 Psi(x), the problem files' objective scaled by h^2. Resets the state,
+    which rebuilds its GPU objects in dynamic mode.
+
+    Args:
+        state (SimulationState): The simulation (contact detection should already be deactivated).
+        h (float): The problems' time step (s).
+    """
+    state.dt = float(h)
+    state.substeps = 1
+    state.bdf_scheme = 1
+    state.reset()
+
+
+class BenchmarkSolver:
+    """Runs logged benchmark solves of one solver on one ``SimulationState``, one problem at a time.
+
+    A problem is static (``fem.static``: release ``x0``, error to the rest shape) or dynamic (one BDF1
+    step from ``x0`` with velocity ``v0`` and inertial target ``xtilde``, error to a reference
+    solution). For VBD-family solvers, the whole solve is captured once (on the first :meth:`solve`)
+    and replayed for every problem; the state must not be reset in between. The solver's own outer
+    loop and tests aren't used: a solve is one subproblem of iterations driven by ``spec``'s budgets
+    and stopped by the benchmark's error, so ``gtol``, ``ftol``, ``n_max_iters`` and
+    ``n_subproblem_max_iters`` don't apply.
     """
 
     def __init__(self, state: SimulationState, solver: SolverType, spec: StaticSolveSpec):
         """
         Args:
-            state (SimulationState): A contact-free state, already in static mode
-                (:func:`prepare_static_problem`).
+            state (SimulationState): A contact-free state, prepared for the problems' kind
+                (:func:`prepare_static_problem` or :func:`prepare_dynamic_problem`).
             solver (SolverType): The solver to run.
             spec (StaticSolveSpec): Stopping criteria: ``target_reduction``, ``max_iterations``,
                 ``max_seconds`` and the replay ``block``.
@@ -484,11 +504,13 @@ class StaticSolver:
     def _begin(self):
         """Solver setup before the timed iterations (contact-free here, so cheap).
 
-        The static problem's setup prescribes the Dirichlet nodes, evaluating kinematic constraints
-        at their frozen time.
+        Static problems run the problem's setup, which prescribes the Dirichlet nodes (kinematic
+        constraints at their frozen time). Dynamic problems skip it: their inertial target comes from
+        the problem file (:meth:`solve`), and their Dirichlet nodes are fixed at rest.
         """
         state, params = self.state, self.state.params[self.solver]
-        state.fem.setup_time_integration_optimization()
+        if state.fem.static:
+            state.fem.setup_time_integration_optimization()
         gpu.vbd.solver.initialize_solve(state.fem, state.contact, state.detector, params)
         gpu.vbd.solver.prepare_subproblem(state.fem, state.contact, state.detector, params)
         if self.solver == SolverType.AAAVBD:
@@ -512,10 +534,14 @@ class StaticSolver:
     def _solve_newton(self):
         state, params = self.state, self.state.params[SolverType.Newton]
         newton = gpu.newton.solver
-        state.fem.setup_time_integration_optimization()
+        if state.fem.static:
+            state.fem.setup_time_integration_optimization()
         newton.initialize_solve(state.fem, state.contact, state.detector, params)
-        n_inner = params.data.n_subproblem_max_iters
+        n_inner, gtol2 = params.data.n_subproblem_max_iters, params.data.gtol2
+        # One Newton step per entry, and never Newton's own gradient test: the benchmark's error stops
+        # the solve (with h^2-scaled dynamics at small h, |g| can start below gtol and Newton would idle)
         params.data.n_subproblem_max_iters = 1
+        params.data.gtol2 = 0.0
         try:
             log = self.log
             log.reset()
@@ -524,20 +550,43 @@ class StaticSolver:
                 newton.solve_subproblem(state.fem, state.contact, params)
                 log.record(0)
         finally:
-            params.data.n_subproblem_max_iters = n_inner
+            params.data.n_subproblem_max_iters, params.data.gtol2 = n_inner, gtol2
 
-    def solve(self, x0: np.ndarray) -> StaticSolveLog:
-        """Release an initial shape into the static problem and log until a stop criterion.
+    def _load(self, x0, reference, v0, xtilde) -> None:
+        fem = self.state.fem
+        fem.data.x.assign(np.asarray(x0, dtype=np.float32))
+        self.log.reference.assign(fem.data.X if reference is None else np.asarray(reference, dtype=np.float32))
+        if fem.static:
+            fem.data.v.zero_()
+            return
+        if v0 is None or xtilde is None:
+            raise ValueError("Dynamic problems need v0 and xtilde")
+        fem.data.v.assign(np.asarray(v0, dtype=np.float32))
+        fem.data.xtilde.assign(np.asarray(xtilde, dtype=np.float32))
+        # The step starts from (x0, v0): write the BDF history in place (detection holds xt handles).
+        fem.bdf.xt[0, :] = cp.asarray(np.asarray(x0, dtype=np.float32).ravel())[cp.newaxis, :]
+        fem.bdf.xt[1, :] = cp.asarray(np.asarray(v0, dtype=np.float32).ravel())[cp.newaxis, :]
+
+    def solve(
+        self,
+        x0: np.ndarray,
+        reference: np.ndarray | None = None,
+        v0: np.ndarray | None = None,
+        xtilde: np.ndarray | None = None,
+    ) -> StaticSolveLog:
+        """Solve one problem from ``x0`` and log until a stop criterion.
 
         Args:
             x0 (np.ndarray): (N, 3) initial positions, e.g. ``batch.x[s]``.
+            reference (np.ndarray | None): (N, 3) solution the error is measured against, e.g.
+                ``batch.reference(s)``; the rest shape X if None.
+            v0 (np.ndarray | None): (N, 3) initial velocities (dynamic problems).
+            xtilde (np.ndarray | None): (N, 3) inertial target of the step (dynamic problems).
 
         Returns:
             StaticSolveLog: The solve's per-iteration log.
         """
-        fem = self.state.fem
-        fem.data.x.assign(np.asarray(x0, dtype=np.float32))
-        fem.data.v.zero_()
+        self._load(x0, reference, v0, xtilde)
         if self._schedule is None:
             self._solve_newton()
         else:
@@ -547,7 +596,7 @@ class StaticSolver:
                     self._begin()
                     self._record_vbd_family()
                 self._graph = capture.graph
-                fem.data.x.assign(np.asarray(x0, dtype=np.float32))
+                self._load(x0, reference, v0, xtilde)
             wp.capture_launch(self._graph)
         return self.log.read()
 
