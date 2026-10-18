@@ -38,7 +38,7 @@ them **through that absolute path**, never a copy inside their own worktree.
 | # | Task | Plan | Branch / worktree | Depends on |
 |---|---|---|---|---|
 | 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 | **done** | 2026-10-17 | `state.py` (1d…), `gpu/common/profiling.py` stub, `panels/` package, docs. Rebase onto `dev` now. |
-| 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
+| 2 | on hold: `feature/aaavbd-params` merged into dev (`9598e393`) | 2026-10-18 | All work merged (profiling milestones, contact-gather early-out, AAAVBD load hoisting, AAAVBD-only stencil keys, betaG warm start). No GPU use except logged runs |
 | 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
 | 4 | MCMC sampling of quadratic-manifold shapes (benchmark dataset generator) | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
 | 5 | GPU simulators read CPU scene files (task 1's session) | MASTER.md section "New milestone: GPU simulators read CPU scene files" | `feature/gpu-scene-ingestion` · `C:\git\pbat-kinematics` | dev |
@@ -563,6 +563,17 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   - EVD zeroing is OK. gamman meaning change: document it → task 3 (adaptive-penalty branch).
   - **gtol should be relative to the problem** (design pending with the maintainer).
   - **OPEN, tracked, not now: OGC has no capacity guard on pair writes (overflow writes out of bounds).**
+- 2026-10-18 · task 1 · **GPU run START** (~5 min, correctness only): finite-plane thickness checks (maintainer
+  request: finite planes become plates with a thickness; infinite planes unchanged). Ignore timings. Will log END.
+- 2026-10-18 · task 1 · **GPU run END.** **Ready for review:** `feature/finite-plane-thickness`, 2 commits on dev.
+  Finite plane colliders get a `thickness` (default: 10% of the smaller half-extent, editable, stored in the
+  scene). On the GPU they're plates, while infinite planes stay half-spaces (bit-identical to dev).
+  `SimulationState(..., contact_mesh)` is renamed `contact_geometry` (a `colliders.ContactGeometry`).
+  New test scene: `data/scenarios/planes/CubePartlyOffFiniteInclinedPlane.h5`. The cube starts partly off a
+  finite incline; it used to be launched, and now it slides and falls off.
+- 2026-10-18 · task 2 · **GPU run START** (~15 min, correctness only): `feature/aaavbd-params` bit-identity checks (warm_start_beta = 2 vs dev, then 0 and 1) on the beam and the trampoline, AAAVBD. Ignore timings. Will log END.
+- 2026-10-18 · task 2 · **GPU run END** (bit-identity checks). **Ready for review:** `feature/aaavbd-params` (4 commits on dev `ef2558a1`, head `f46176c6`). warm_start_beta = 2 (default and explicit) is bit-identical to dev on MediumLongBendingBeam (61 frames) and trampoline (31 frames), AAAVBD. Per step on the beam: 1 = 2 after step 1, differs from step 2; 0 differs within step 1.
+- 2026-10-18 · coordinator · Merged `feature/finite-plane-thickness` (task 1, `c06e7c08`) and `feature/aaavbd-params` (task 2, `9598e393`: stencil keys AAAVBD-only; warm_start_beta honoured, GPU default 2). Added the **relative gradient test** `Solver.Convergence.rtol` (`8f9d5329`, off by default; mass-normalized residual vs the free-flight displacement x̃ − xᵗ, the maintainer's design). Regenerated defaults.toml and paper configs (`c4f4249c`, still bit-identical on load). Manual test page v2 published. Default rtol value pending the maintainer.
 
 ## Open questions for the maintainer
 
