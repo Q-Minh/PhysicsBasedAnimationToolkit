@@ -547,13 +547,14 @@ def integrate_positions(
 
     ``hess_zero`` is a pseudo-singularity tolerance relative to the scale of ``H``, so that it holds
     for any mass and time step (at small ``h``, ``H ~ m I`` and an absolute threshold on ``det H ~ m^3``
-    would skip light vertices). Inverse returns a zero step when ``|det H| <= hess_zero |tr(H)/3|^3``;
+    would skip light vertices). Inverse returns a zero step when ``|det H| <= hess_zero (|H|_F / sqrt(3))^3``
+    (equal to ``|tr(H)/3|^3`` for ``H = m I``, and robust to indefinite ``H``, whose trace can vanish);
     EVD zeroes the eigen-components with ``|lambda| <= hess_zero max|lambda|``. QR has no check.
     """
     dxi = wp.vec3f()
     if solver == VLS_SOLVER_INVERSE:
         det = wp.determinant(Hi)  # pyright: ignore[reportArgumentType]
-        scale = wp.abs(wp.trace(Hi)) / wp.float32(3)  # pyright: ignore[reportArgumentType]
+        scale = wp.sqrt(wp.ddot(Hi, Hi) / wp.float32(3))  # |H|_F / sqrt(3)  # pyright: ignore[reportArgumentType]
         if wp.abs(det) > hess_zero * scale * scale * scale:  # pyright: ignore[reportArgumentType]
             dxi = wp.inverse(Hi) * gi  # pyright: ignore
     elif solver == VLS_SOLVER_LLT:
