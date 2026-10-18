@@ -43,7 +43,7 @@ Open it with `python -m python.tools.vbd.editor`. Claude can't drive the editor,
 1. **Scene > Transforms tab:** pick a type (FIXED, TRANSLATE, G_ROTATE, L_ROTATE, L_TRANSLATE), press **Add**, then set the name, `begin`, `duration` and parameters. Note the transform's id; the tree label reads "id - TYPE".
 2. **Selection tab:** set Property to "Dirichlet Group", pick a Box or Cylinder selector, press **Add**, set the value to the transform id, and apply. A value of 0 removes nodes from their group.
 3. **Move, then hold:** use a motion transform plus an overlapping FIXED transform with a longer window, on the same nodes.
-4. **Plane colliders:** they're scene objects, infinite by default (finite on request). Static mesh colliders are also supported.
+4. **Plane colliders:** **Objects tab > Add Plane Collider**, then set `point`, `normal` (pointing to the free side) and `tangent` in the Plane Colliders tree, and choose either Infinite (the default, 20 scene diameters) or half extents. They're saved with the session in a `plane_colliders` group. Static mesh colliders are also supported.
 5. **Saving:** **Session > Save session** gives a scene file that runs directly with `--scene`. Alternatively, simulate and press **Dump**, which writes a `kinematics` group with `t0` and the open anchors, so a Dump taken mid-simulation resumes exactly.
 
 ## Semantics
@@ -57,7 +57,7 @@ Open it with `python -m python.tools.vbd.editor`. Claude can't drive the editor,
   |---|---|---|
   | FIXED | Fixed | Hold in place |
   | TRANSLATE | Translate | Constant velocity |
-  | G_ROTATE / L_ROTATE | Rotate | Angular velocity in rad/s, about a pivot at the origin (G) or at the nodes' centroid (L) |
+  | G_ROTATE / L_ROTATE | Rotate | Angular velocity in rad/s, about the world origin (G) or the transform's `origin` (L). The editor resets an L origin to the nodes' centroid whenever it redraws the transform |
   | L_TRANSLATE | RadialTranslate | Each node moves radially in xy at `speed` |
 
 - **Colliders:**
@@ -73,6 +73,7 @@ Open it with `python -m python.tools.vbd.editor`. Claude can't drive the editor,
 - **Old Dumps:** a Dump without a `kinematics` group treats nonzero `dmask` as fixed forever.
 - **L_ROTATE origin:** the editor resets an L_ROTATE origin to its nodes' centroid whenever it redraws the transform.
 - **Old L_TRANSLATE scenes:** L_TRANSLATE used to be group-normalized, so migrate scenes authored before 2026-10-18 with `migrate_l_translate`.
+- **Finite planes** act like an infinitely deep column under their rectangle. A vertex that drifts back under a finite plane from the side counts as deeply penetrating and gets launched. Start bodies fully over a finite plane, and prefer infinite planes (a fix is being discussed).
 - **Colliders need `--scene`:** plane and static mesh colliders only work from scene files, since Dumps don't carry them.
 - **Hard impacts** currently need an adaptive penalty (`--set Contact.ContactDynamics.penalty_adaptivity=1 --set Contact.ContactDynamics.gamman=1`). The adaptive modes still diverge with VBD-family solvers on some contact scenes until task 3's fix lands, so check the result.
 - **Comparing contact scenes:** they aren't bit-reproducible run to run, so compare constrained-node trajectories or contact sets.
