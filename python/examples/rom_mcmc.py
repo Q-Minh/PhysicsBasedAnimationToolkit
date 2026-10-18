@@ -43,6 +43,7 @@ class QuadraticManifold:
         potential: typing.Callable,
         scale: np.ndarray,
         weight: str = "mass",
+        fext: np.ndarray | None = None,
     ):
         """
         Args:
@@ -53,6 +54,8 @@ class QuadraticManifold:
             potential (typing.Callable): potential(x, gradient) returns Psi(x), or (Psi(x), grad Psi(x)) if gradient.
             scale (np.ndarray): m whitening scales s.t. q = scale * y.
             weight (str): One of WEIGHTS.
+            fext (np.ndarray | None): n constant external force (e.g. gravity M g), adding the potential
+                -fext^T u(q) to the energy. Note that its map u(q) is quadratic in q on a quadratic manifold.
         """
         if weight not in WEIGHTS:
             raise ValueError(f"Unknown weight {weight}, expected one of {WEIGHTS}")
@@ -63,6 +66,7 @@ class QuadraticManifold:
         self.potential = potential
         self.scale = scale
         self.weight = weight
+        self.fext = fext
         self.dims = U.shape[1]
         self.rest_energy = float(potential(x0, False))
         if self.Q is not None:
@@ -83,23 +87,31 @@ class QuadraticManifold:
         return self.U + (self._Qnm_m @ q).reshape(self.U.shape)
 
     def energy(self, q: np.ndarray) -> float:
-        """Deformation energy Psi(x0 + u(q)) - Psi(x0)."""
-        return float(self.potential(self.x0 + self.displacement(q), False)) - self.rest_energy
+        """Potential energy U(q) = Psi(x0 + u(q)) - Psi(x0) - fext^T u(q) (the deformation energy without fext)."""
+        u = self.displacement(q)
+        e = float(self.potential(self.x0 + u, False)) - self.rest_energy
+        return e - self.fext @ u if self.fext is not None else e
 
     def energy_and_gradient(self, q: np.ndarray) -> typing.Tuple[float, np.ndarray]:
-        e, g = self.potential(self.x0 + self.displacement(q), True)
-        return float(e) - self.rest_energy, self.jacobian(q).T @ g
+        u = self.displacement(q)
+        e, g = self.potential(self.x0 + u, True)
+        e = float(e) - self.rest_energy
+        if self.fext is not None:
+            e, g = e - self.fext @ u, g - self.fext
+        return e, self.jacobian(q).T @ g
 
     def ray_energy(self, d: np.ndarray) -> typing.Callable[[float], float]:
         """Returns r -> energy(r * d), using u(r d) = r U d + r^2 (1/2 Q:dd) to avoid the map's products per call."""
         a = self.U @ d
         b = 0.5 * (self._Qnmm @ np.outer(d, d).ravel()) if self.Q is not None else None
+        fa = self.fext @ a if self.fext is not None else 0.0
+        fb = self.fext @ b if self.fext is not None and b is not None else 0.0
 
         def energy(r: float) -> float:
             x = self.x0 + r * a
             if b is not None:
                 x += (r * r) * b
-            return float(self.potential(x, False)) - self.rest_energy
+            return float(self.potential(x, False)) - self.rest_energy - (r * fa + r * r * fb)
 
         return energy
 

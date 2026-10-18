@@ -57,6 +57,31 @@ class TestEnergyNoise(unittest.TestCase):
         self.assertEqual(sampler.star_violations, 0)
 
 
+class TestExternalForce(unittest.TestCase):
+    def test_energy_gradient_and_ray_agree(self):
+        # A 2-node quadratic map in R^4 with energy 1/2 |x|^2 and a constant external force f, so that
+        # U(q) = 1/2 |x0 + u|^2 - 1/2 |x0|^2 - f^T u
+        rng = np.random.default_rng(9)
+        n, m = 4, 2
+        U, Q = rng.standard_normal((n, m)), rng.standard_normal((n, m, m))
+        Q = 0.5 * (Q + Q.transpose(0, 2, 1))
+        x0, f = rng.standard_normal(n), rng.standard_normal(n)
+
+        def potential(x, gradient=False):
+            return (0.5 * x @ x, x) if gradient else 0.5 * x @ x
+
+        model = rom_mcmc.QuadraticManifold(U, Q, np.ones(n), x0, potential, np.ones(m), fext=f)
+        q = rng.standard_normal(m)
+        u = U @ q + 0.5 * np.einsum("nij,i,j->n", Q, q, q)
+        expected = 0.5 * (x0 + u) @ (x0 + u) - 0.5 * x0 @ x0 - f @ u
+        self.assertAlmostEqual(model.energy(q), expected, places=12)
+        e, g = model.energy_and_gradient(q)
+        h = 1e-6
+        fd = [(model.energy(q + h * ei) - model.energy(q - h * ei)) / (2 * h) for ei in np.eye(m)]
+        np.testing.assert_allclose(g, fd, rtol=1e-6)
+        self.assertAlmostEqual(model.ray_energy(q)(1.7), model.energy(1.7 * q), places=12)
+
+
 class TestRadialRoot(unittest.TestCase):
     def test_hits_level_set(self):
         model = QuadraticEnergy(np.array([1.0, 4.0, 9.0]), np.ones(3))
