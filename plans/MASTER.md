@@ -407,6 +407,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · Landed task 2's finding on dev (a9abadc1): ConstraintSet copies/fills each field once (was 4×). Bit-identical; AAAVBD trampoline graph step ~106 → ~83 ms.
 - 2026-10-18 · task 3 · Maintainer approved: convergence tested every N sweeps (default 20) with C++'s full-step (Lagrangian) criterion, and a loop restructure (unrolled outer, device-replayed sweep blocks, refit/detection outside conditional bodies) so contact scenes get early exit and a small graph. Refit evidence is in plan 03, question 17. Implementing on `feature/gpu-static-solves`.
 - 2026-10-18 · coordinator · Maintainer: add a **feasibility residual norm check between outer iterations**. The outer loop continues with the next subproblem until both optimality (gradient norm) and feasibility pass, subject to n_max_iters and the check interval. → task 3 to propose the exact residual definition to the maintainer.
+- 2026-10-18 · coordinator · **GPU run END** (kinematics test scene: headless check plus the maintainer's GUI session).
 
 ## Open questions for the maintainer
 
