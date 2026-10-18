@@ -163,3 +163,5 @@ reset), and validate the old and new CPU paths against each other before relying
     constrained run; per-step kernel sets `dmask`, x, xtilde and v of constrained nodes. The Dump
     exports one constraint per transform, with node indices in global (concatenated) numbering.
 - 2026-10-17 · All open questions answered. Waiting for Phase 0.
+- 2026-10-17 · For task 3's static solves: `KinematicConstraintSet` gets a flag that stops the device step
+  counter from advancing (time frozen), plus a way to set the counter. Agreed via the coordinator.

@@ -125,3 +125,6 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
     `cuda.compute` (cuda.pathfinder can't find nvrtc). The wrapper will be committed with the profiling scripts.
 - 2026-10-17 · All open questions answered (batches 1 to 3, see above). Waiting for Phase 0, then rebase onto
   `dev` and implement milestone 1.
+- 2026-10-17 · Coordinator confirmed the Phase 0 stub contract: `profiling.scope(name: str)` is the only public
+  API, a cheap no-op when off (no allocations, no device work, capture-safe). The coordinator will message when
+  Phase 0 is done.

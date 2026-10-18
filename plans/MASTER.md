@@ -37,7 +37,7 @@ them **through that absolute path**, never a copy inside their own worktree.
 
 | # | Task | Plan | Branch / worktree | Depends on |
 |---|---|---|---|---|
-| 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 |
+| 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 | **done** | 2026-10-17 | `state.py` (1d…), `gpu/common/profiling.py` stub, `panels/` package, docs. Rebase onto `dev` now. |
 | 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
 | 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
 | 4 | MCMC sampling of quadratic-manifold shapes | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
@@ -96,6 +96,7 @@ will instrument).
   worktree when creating it, so every session has the same local allowlist (the venv Python and `dumpbin`).
 - **Context.** `CLAUDE.md`, `python/tools/sim/CLAUDE.md` and the skills (`pbat-build`, `pbat-python-api`,
   `warp-port`) are tracked and available in every worktree. The `cpu-gpu-parity` agent is useful for tasks 1 and 3.
+- **Granular commits (maintainer, 2026-10-17).** One logical, reversible change per commit, each leaving the code working, so any state can be reverted or bisected. Split unrelated hunks.
 - **Commits.** Small commits on your own branch, ending with the Co-Authored-By line. Rebase on `dev` before
   asking for a merge. Never push to `dev` or `master` yourself; the coordinator merges.
 - **Asking the maintainer.** Each plan lists open questions. Ask them in your own session before
@@ -175,7 +176,7 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | questions answered; waiting for Phase 0 | 2026-10-17 | 11/11 answered (plan 01). Closed-form constraints on CPU + GPU, countdown hack removed, `dbc`/`ndbc` dropped from the GPU struct |
 | 2 | questions answered; waiting for Phase 0 | 2026-10-17 | 10/10 answered (plan 02). Milestone 1: scope backend (`off`/`kernels`/`nvtx`), scopes in all solvers, `simulate.py --profile`, nsys importer, HTML report on trampoline. GUI panel in milestone 2 |
-| 3 | answering questions (3 batches done) | 2026-10-17 | 11 of 13 answered; pending: `weight_log` semantics (task 4), `check_convergence` overhead measurement |
+| 3 | answering questions | 2026-10-17 | 12 of 13 answered; prototype measured; pending: maintainer's `check_convergence` decision |
 | 4 | questions answered; ready to implement | 2026-10-17 | MD bug fix + polar & constrained-RW samplers + HDF5 export; only the velocity notes are still pending (not blocking) |
 
 ## Coordination log
@@ -218,6 +219,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
     innermost open scope. Wrap whole phases (e.g. `kinematics.update`, `static.error_log`), not single kernels.
   - **No C++ changes requested.**
   - **GPU:** my only run so far was one short nsys probe (30 AAAVBD steps on the beam) at about 23:12.
+- 2026-10-17 · task 3 · **GPU run END** (capture_while prototype). **FYI tasks 2 and 1 and the coordinator:** on MediumLongBendingBeam (VBD and AAAVBD, 20 outer × 25 sweeps, 9 colors), the current fully unrolled step graph (6669 captured launches) takes **110 / 116 ms**, but the same work with the outer loop in `wp.capture_while` (body of 696 launches) takes **49 / 56 ms**, with bit-identical results. The host-side `capture_launch` alone takes 24.6 ms vs 0.27 ms. So large unrolled graphs are about 2× slower here (Windows/WDDM, driver 610.88). This matters for production speed and for task 2's measurements. Blocker for contact scenes: `wp.Mesh.refit()` (vertex-SDF `detect_contacts`) allocates CUB scan temp storage, and allocation is illegal in conditional graph bodies. OGC's `wp.Bvh.refit/rebuild` is untested. Gradient-norm check (Newton's `Gradient` + `_gnorm2_reduce`) once per outer iteration: no measurable cost.
 
 ## Open questions for the maintainer
 
