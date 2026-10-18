@@ -2,13 +2,14 @@
 """
 Offline (headless) GPU simulation, the batch counterpart of ``ui.py``.
 
-Runs the same ``SimulationState`` as the GUI, configured from the command line and an optional
-parameter file exported from the GUI ("I/O > Export Parameters"), and writes the trajectory in
-the same HDF5 layout as the GUI's "Serialization" feature.
+Runs the same ``SimulationState`` as the GUI, configured from the command line and optional
+parameter files (TOML configs, or HDF5 exported from the GUI's "I/O > Export Parameters"; see
+``configs/README.md``), and writes the trajectory in the same HDF5 layout as the GUI's
+"Serialization" feature.
 
 Usage:
     python -m python.tools.sim.simulate --fem-elasto-dynamics dump.h5:fem -o out.h5 \
-        [--sim-params params.h5] [--solver AAAVBD] [--cd VertexSdf] [--duration 10] [--fps 60] \
+        [--sim-params params.toml ...] [--set Solver.VBD.gtol=1e-4] [--solver AAAVBD] [--cd VertexSdf] [--duration 10] [--fps 60] \
         [--profile kernels --profile-out profile.json --profile-warmup 10]
 
 With ``--profile``, the steps after ``--profile-warmup`` run eagerly (no CUDA graph). ``kernels``
@@ -24,6 +25,7 @@ import h5py
 import warp as wp
 from tqdm import tqdm
 
+from . import config
 from .gpu.common import profiling
 from .profiling import results as profiling_results
 from .state import (
@@ -37,7 +39,6 @@ from .state import (
     load_newton_params,
     init_h5_serialization,
     serialize_params,
-    deserialize_params,
     should_save,
 )
 
@@ -61,9 +62,19 @@ def parse_args():
     parser.add_argument(
         "--sim-params",
         type=str,
-        default=None,
-        help="file.h5 of simulation parameters, as exported by the GUI (optional).",
+        nargs="+",
+        default=[],
+        help="Simulation parameters: .toml configs or HDF5 files as exported by the GUI, merged left "
+        "to right (see python/tools/sim/configs/README.md).",
         dest="sim_params",
+    )
+    parser.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Override one parameter after --sim-params, e.g. --set Solver.VBD.gtol=1e-4 (repeatable).",
+        dest="overrides",
     )
     parser.add_argument(
         "-s",
@@ -154,9 +165,8 @@ def main():
     # detection algorithm or parameters change.
     state.solver = SolverType[args.solver]
     state.cd_type = CDType[args.cd]
-    if args.sim_params:
-        with h5py.File(args.sim_params, "r") as f:
-            deserialize_params(state, f)
+    if args.sim_params or args.overrides:
+        config.load_sim_params(state, args.sim_params, args.overrides)
     state.reset()
     backend = profiling.Backend(args.profile)
     recorder = None

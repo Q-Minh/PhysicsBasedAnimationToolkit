@@ -39,9 +39,8 @@ from .state import (
     load_chebyshev_params,
     load_anderson_params,
     load_newton_params,
-    deserialize_params,
 )
-from . import static
+from . import config, static
 
 PERCENTILES = [p / 100 for p in range(5, 100, 5)]
 _CURVE_POINTS = 400
@@ -52,8 +51,11 @@ def parse_args():
     parser.add_argument("--fem-elasto-dynamics", required=True, dest="fem_elasto_dynamics",
                         help="file.h5:group/path of the serialized FemElastoDynamics (Dump 'fem' group).")
     parser.add_argument("--samples", default=None, help="MCMC sample batch (.h5). Overrides the spec's sample_file.")
-    parser.add_argument("--sim-params", default=None, dest="sim_params",
-                        help="Simulation parameters (.h5), as exported by the GUI.")
+    parser.add_argument("--sim-params", nargs="+", default=[], dest="sim_params",
+                        help="Simulation parameters: .toml configs or .h5 files as exported by the GUI, "
+                        "merged left to right (see configs/README.md).")
+    parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="overrides",
+                        help="Override one parameter after --sim-params, e.g. Solver.VBD.gtol=1e-4.")
     parser.add_argument("--solvers", default=",".join(s.name for s in SolverType),
                         help="Comma-separated solver names.")
     parser.add_argument("--spec", default=None, help="StaticSolveSpec (.h5) to start from.")
@@ -97,9 +99,8 @@ def make_state(args) -> SimulationState:
     params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
-    if args.sim_params:
-        with h5py.File(args.sim_params, "r") as f:
-            deserialize_params(state, f)
+    if args.sim_params or args.overrides:
+        config.load_sim_params(state, args.sim_params, args.overrides)
     # The static benchmark is contact-free.
     for cd_params in state.cd_params.values():
         if hasattr(cd_params, "deactivate"):
@@ -183,7 +184,8 @@ def main():
         "percentiles": PERCENTILES,
         "metadata": {
             "fem_elasto_dynamics": args.fem_elasto_dynamics,
-            "sim_params": args.sim_params or "(Dump parameters)",
+            "sim_params": " + ".join(args.sim_params + [f"--set {o}" for o in args.overrides])
+            or "(Dump parameters)",
             "sample_attrs": {k: v for k, v in batch.attrs.items() if isinstance(v, (int, float, str, bool))},
             "device": wp.get_device().name,
             "git_commit": _git_commit(),
