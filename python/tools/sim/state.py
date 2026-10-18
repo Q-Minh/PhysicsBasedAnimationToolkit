@@ -14,6 +14,7 @@ import warp as wp
 from pbatoolkit import pbat
 import numpy as np
 from . import gpu
+from .gpu.common import profiling
 
 
 def parse_archive_path(spec: str) -> tuple[str, str]:
@@ -229,36 +230,33 @@ class SimulationState:
         )
         return detector
 
-    def step(self):
-        if self.solvers[self.solver].supports_graph_capture:
-            if getattr(self, "capture", None) is None:
-                with wp.ScopedCapture() as capture:
-                    for s in range(self.substeps):
-                        self.fem.setup_time_integration_optimization(self.init_strategy)
-                        self.solvers[self.solver].solve(
-                            self.fem,
-                            self.contact,
-                            self.detector,
-                            self.params[self.solver],
-                        )
-                        self.fem.step()
-                self.capture = capture
-            else:
-                # with wp.ScopedTimer(
-                #     "PBAT Step",
-                #     detailed=True,
-                #     use_nvtx=True,
-                #     synchronize=True,
-                #     cuda_filter=wp.TIMING_ALL,
-                # ):
-                wp.capture_launch(self.capture.graph)  # type: ignore
-        else:
-            for s in range(self.substeps):
+    def _advance(self):
+        """Run ``substeps`` time steps: setup, solve and step for each."""
+        for s in range(self.substeps):
+            with profiling.scope("step.setup"):
                 self.fem.setup_time_integration_optimization(self.init_strategy)
+            with profiling.scope("solve"):
                 self.solvers[self.solver].solve(
                     self.fem, self.contact, self.detector, self.params[self.solver]
                 )
+            with profiling.scope("step.advance"):
                 self.fem.step()
+
+    def step(self):
+        # Profiling times eager launches (see gpu/common/profiling.py), so profiled steps bypass the
+        # captured graph.
+        if (
+            self.solvers[self.solver].supports_graph_capture
+            and not profiling.is_enabled()
+        ):
+            if getattr(self, "capture", None) is None:
+                with wp.ScopedCapture() as capture:
+                    self._advance()
+                self.capture = capture
+            else:
+                wp.capture_launch(self.capture.graph)  # type: ignore
+        else:
+            self._advance()
         self.t += 1
         wp.synchronize()
         self.contact_browser.update(
