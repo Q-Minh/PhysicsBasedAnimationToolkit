@@ -162,6 +162,8 @@ class Simulation:
     def _reset_sim(self):
         self._t = 0
         self._screenshot_t = 0
+        if self._transform_library is not None:
+            self._transform_library.reset_anchors()
         if self._fem_dynamics is not None:
             self._fem_dynamics.set_time_integration_scheme(
                 dt=self._dt, s=self._bdf_scheme
@@ -390,6 +392,8 @@ class Simulation:
                 )
                 self._update_visuals_after_position_change()
                 self._t = self._trajectory.t
+                # Constrained nodes continue from the loaded positions
+                self._transform_library.reset_anchors()
             else:
                 self._trajectory.undirty(lambda archive: None)
 
@@ -549,7 +553,7 @@ class Simulation:
         for start, end, name in zip(
             self._XP[:-1], self._XP[1:], self._tet_elastic_body_names
         ):
-            self._xD[:, start:end] = self._transform_library.apply(
+            self._xD[:, start:end], _, _ = self._transform_library.evaluate(
                 name, self._xD[:, start:end], self._t, self._dt
             )
         fem.x = self._xD
