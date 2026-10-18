@@ -1,0 +1,80 @@
+---
+name: sim-benchmarks
+description: Run the solver convergence benchmarks of the GPU simulator — generate static/dynamic problem sets from MCMC shape samples, run the static benchmark (benchmark_static.py) over solvers and samples with chosen budgets, targets and parameters, and read its results. Use when asked to benchmark solvers, compare convergence or time-to-accuracy, rerun a benchmark case, or vary benchmark parameters.
+---
+
+# Solver benchmarks
+
+**The methodology is still being decided with the maintainer**: what data to report, the exact plot, and how execution time is measured. **Don't launch full benchmark runs or full dataset generation without the maintainer's go-ahead.** Smoke tests on a few samples are fine. The dynamic benchmark runner doesn't exist yet; this skill will be extended once it's agreed.
+
+Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). Scene data lives in the main checkout's `data/`, so use absolute paths from worktrees.
+
+## Pipeline
+
+1. **Problems.** `python/examples/make_benchmark.py` draws microcanonical samples on the quadratic-manifold ROM and writes:
+   - `pool/E{E}.h5`: all the samples.
+   - `static/E{E}.h5`: release the shape with no loads; the solution is the rest shape X.
+   - `dynamic_h{h}/E{E}.h5`: one BDF1 step from (x, v), with Newton reference solutions `samples/x_ref`.
+
+   See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). A small existing test set is `data/benchmarks/trampoline-test`.
+2. **Static benchmark.** `python -m python.tools.sim.benchmark_static` releases each sample with every solver and logs the error to the rest shape after every iteration. It reports the time and iterations needed to reach each 5% level of error reduction.
+3. **Dynamic benchmark.** Not built yet (it compares against `x_ref`).
+
+## Static benchmark
+
+Error: e = sqrt((x − X)ᵀ M (x − X)) over free nodes (lumped mass). Each solve stops at e ≤ (1 − target) e0 or at a cap. VBD-family solves run as one captured CUDA graph. Times come from device timestamps taken around each iteration, so the logging itself is excluded.
+
+```bash
+# One quick solve (smoke test)
+python -m python.tools.sim.benchmark_static --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
+    --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
+    --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
+
+# Every solver x every sample, with a scene's parameters
+python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+    --sim-params python/tools/sim/configs/paper/<scene>.toml --max-seconds 10 -o out/all.json
+
+# Parameter variations: configs layered left to right, then single-key overrides
+python -m python.tools.sim.benchmark_static ... --sim-params base.toml static.toml \
+    --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
+
+# Reproducible case: save the spec, rerun it (pass --samples again)
+python -m python.tools.sim.benchmark_static ... --save-spec out/case.h5 -o out/a.json
+python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --spec out/case.h5 --samples BATCH.h5 -o out/b.json
+```
+
+Translating requests:
+
+| Request | Flag |
+|---|---|
+| "Only solvers X, Y" | `--solvers X,Y` (from VBD, AAAVBD, Chebyshev, AndersonSolver, Newton; default all, in that order) |
+| "Samples i to j" | `--sample-begin i --sample-end j+1` (`-1` = all) |
+| "Time budget T s per solve" | `--max-seconds T` (default 60) |
+| "Iteration budget N" | `--max-iterations N`: counts VBD sweeps, **Anderson steps** (p sweeps each when `vbd_iters_per_anderson_iter = p`) or Newton steps |
+| "Reduce the error by 99%" | `--target-reduction 0.99` (default 0.95) |
+| "With a load" | the StaticSolveSpec's `fext_scale` (via `--spec`). Static benchmark problems are load-free by design |
+| "Use parameters P" / "change key K" | `--sim-params P.toml ...` / `--set K=V` (see the `sim-run` skill; check with `python -m python.tools.sim.config show`) |
+| "Coarser/finer graph blocks" | `--block N` (default 16, rounded up to a multiple of Anderson's m; can overshoot the stop by up to one block) |
+
+`benchmark_static.py`'s module docstring has the full details.
+
+## Outputs
+
+- **`results.json`:**
+  - the spec, plus metadata: scene, sim-params sources, sample attributes, Newton CG limits, device, commit, date;
+  - per solver and sample: e0, iterations, sweeps, solver time, final e/e0, time and iterations to each 5% level (null if never reached), deformation energy, min det F, and a log-spaced curve;
+  - per level: aggregates (median, q25, q75, fraction of solves that reached it).
+- **`results.h5`** next to it: the spec and the full logs at `<solver>/<sample>/{error,time,sweeps}`.
+
+When comparing solvers, use the time to reach each error level, not the time per iteration. Also report iterations and sweeps. Anderson iterations aren't sweeps when p > 1.
+
+## Pitfalls
+
+- **Contact** is always off in the static benchmark.
+- **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Vertex-solve and acceleration parameters still matter.
+- **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 300 leaves Newton steps inexact.
+- **Quiet GPU:** timings are only valid while nothing else runs. Reserve the GPU in `plans/MASTER.md` while parallel sessions are active.
+- **Sample batches:** batches that need importance weights (ray sampler) are refused. R-hat ≥ 1.05 and nonzero gravity only warn. Static problems should be gravity-free.
+- **First solve:** the first solve per solver includes kernel compilation and graph capture in its host time, but not in the reported times.
+- **Not sim-params:** `fem.static` and the StaticSolveSpec aren't part of the config system.
+- **`--spec` reruns** need `--samples` until the string-DocField deserialization fix lands (task 3).
