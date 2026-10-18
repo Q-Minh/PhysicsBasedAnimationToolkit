@@ -68,7 +68,7 @@ Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated 
 - Conditional graph bodies must not allocate. `ContactDetection.prepare_detection()` runs between the conditional nodes; vertex SDF's `wp.Mesh.refit` lives there, since it allocates scan temporaries. A detector without `supports_conditional_capture` (OGC, untested) keeps its whole detection and filter outside conditionals.
 - At equal work, results are bit-identical to the unrolled loop (Anderson within its run-to-run noise), and the graph is smaller and faster.
 
-**Static problems.** With `fem.static` set, the objective is Ψ(x) − fextᵀx: solvers drop the inertia term, use `fem.h2 = 1` instead of `BetaTilde²`, and static Newton SPD-corrects d²Ψ/dF² (`gpu/elasticity/spd.py`). Its CG limits are `newton.solver.LinearSolverParams`.
+**Static problems.** With `fem.static` set, the objective is Ψ(x) − fextᵀx: solvers drop the inertia term, use `fem.h2 = 1` instead of `BetaTilde²`, and Newton SPD-corrects d²Ψ/dF² in every problem (`gpu/elasticity/spd.py`, mode `Solver.Newton.spd_correction`, C++ default Absolute). Its CG limits are `newton.solver.LinearSolverParams`.
 
 **How solver names map between GPU and CPU:**
 - `VbdSolver` is plain VBD.

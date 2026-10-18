@@ -43,7 +43,7 @@ class ParamsData:
     # Inner Newton iteration control
     n_subproblem_max_iters: wp.int32
     gtol2: wp.float32  # squared gradient-norm convergence threshold
-    spd_correction: wp.int32  # pbat.fem.HyperElasticSpdCorrection of d^2Psi/dF^2 (static problems only)
+    spd_correction: wp.int32  # pbat.fem.HyperElasticSpdCorrection of d^2Psi/dF^2
     n_lin_max_iters: wp.int32
     rel_eps_lin: wp.float32
     abs_eps_lin: wp.float32
@@ -300,9 +300,9 @@ def _compute_dynamics_hessian_triplets(
                 xe[d, j] = xj[d]
         F = xe @ GP
         HF = snh_hess(F, mu, llambda)
-        if fem.is_static != 0:
-            # Without the mass term, the SNH Hessian can be indefinite
-            HF = filter_eigenvalues9(HF, params.spd_correction)
+        # As C++ Newton (HyperElasticPotential's eSpdCorrection): Stable Neo-Hookean's d^2Psi/dF^2 can be
+        # indefinite, and without the mass term (static problems) so can the whole Hessian
+        HF = filter_eigenvalues9(HF, params.spd_correction)
         He = h2 * wge * hessian_wrt_dofs(HF, GP)
         base = offsets[K_ELASTIC_TRIPLETS] + e * 16
         d0 = is_dirichlet_node(fem.dmask, nodes[0])
@@ -780,8 +780,9 @@ class Params:
     linear_solver:
         GPU-only CG settings (:class:`LinearSolverParams`); defaults when omitted.
     spd_correction:
-        SPD correction of the elastic Hessians d^2Psi/dF^2, from the CPU params' ``spd_correction``.
-        Applied to static problems only, whose Hessians lack the mass term.
+        SPD correction of the elastic Hessians d^2Psi/dF^2, from the CPU params' ``spd_correction``
+        (``Solver.Newton.spd_correction``; C++ default Absolute, ``NoCorrection`` to disable). Applied to
+        dynamic and static problems, as in C++.
     ls_max_iters:
         Maximum backtracking iterations.
     ls_tau:
