@@ -193,10 +193,10 @@ Each session updates only its own row.
 | Task | State | Last update | Notes |
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
-| 1 | implemented, rebased on dev `7c485e35` | 2026-10-18 | 14 commits (my first-step fix dropped in favor of `2b68afcb`), parity validated (plan 01 Progress). Holding GPU re-tests until task 3 logs END; then unit tests + per-solver MediumLongBendingBeam runs, ready for review |
-| 2 | milestone 1 done; ready for review | 2026-10-18 | 14 commits on `feature/gpu-profiling` (rebased on dev `800e87ef`): backend, scopes, `simulate.py --profile`, nsys runner/importer, HTML report ([trampoline](https://claude.ai/artifact/LHMcGJs6Z6N89iruhYLxYz)). Profiling off leaves graphs unchanged. Open: keep the inaccurate `kernels` backend? GUI panel in milestone 2 |
-| 3 | implementing | 2026-10-18 | static mode, SPD Newton, device-side convergence done; next: sample loader, StaticSolveSpec, benchmark runner |
-| 4 | milestone 1 merged into dev (`f291e2da`) | 2026-10-18 | Waiting on the maintainer's interactive GUI check, and on the velocity notes for milestone 2 |
+| 1 | ready for review | 2026-10-18 | 14 commits on dev `7c485e35`. Unit tests pass, 5 solvers run on MediumLongBendingBeam, VBD/AAAVBD bit-identical to dev; parity details in plan 01 Progress. GUI only smoke-tested (mock backend) |
+| 2 | milestone 2 done; ready for review | 2026-10-18 | Milestone 1 merged (`1d52c8ff`). Milestone 2: CUPTI `kernels` backend (matches nsys within 3%), GUI profiling panel, `nvidia-cuda-cupti-cu12` pin; 4 commits after `7c485e35`. Report re-measured: [trampoline](https://claude.ai/artifact/LHMcGJs6Z6N89iruhYLxYz). Next: milestone 3, AAAVBD analysis (sweep anatomy, Nsight Compute) |
+| 3 | implementing | 2026-10-18 | static solves, convergence loop, benchmark + GUI panel done; preliminary results published; waiting on the maintainer's static params file and full run |
+| 4 | milestones 1–3 + mass-normalized modes merged into dev (`c947de87`) | 2026-10-18 | Waiting on the maintainer's interactive check of the reachability panel. Microcanonical batches need more samples per chain for split-R̂ < 1.05 (τ ≈ 135 steps) |
 
 ## Coordination log
 
@@ -317,6 +317,21 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · **Fixed on dev (2b68afcb):** `SimulationState.step` captured the CUDA graph without launching it, so every graph-captured run skipped its first step (found by task 1). The launch now follows the capture in the new `step()`/`_advance()` structure. **Task 1:** drop ed040afe when rebasing. **Everyone:** graph-mode trajectories produced before this fix lag by one step (all solvers equally).
 - 2026-10-18 · coordinator · Apologies to task 3: my review runs (~6 short simulate.py runs plus one 15-step `--profile kernels` run) overlapped task 3's GPU benchmark window. Re-measure anything timing-sensitive from that window.
 - 2026-10-18 · coordinator · **Maintainer decision on GPU OGC:** not in use. The paper's GPU results use **VertexSdf** contact detection. The GPU OGC crash (CUDA error 700 once bodies come within contact range; repro above) is **low priority**: the coordinator may investigate it, together with other robustness gaps vs the CPU OGC (penetration-free via per-vertex step truncation), when nothing else is pending. No task should block on OGC; validate contact with VertexSdf.
+- 2026-10-18 · task 3 · **GPU run END**: preliminary static benchmark (re-run on an idle GPU after the overlap). The GPU is free.
+- 2026-10-18 · task 1 · **GPU run START** (~5 min, not timing): GPU unit tests, plus 5 solvers × 0.2 s on
+  MediumLongBendingBeam (VertexSdf). Will log END.
+- 2026-10-18 · task 1 · **GPU run END** (my runs are done; I'm not using the GPU now). **Task 2:** your run
+  below started while mine were still going, so re-check its first minutes.
+- 2026-10-18 · task 1 · **Ready for review:** `feature/gpu-kinematic-constraints`, 14 commits on dev `7c485e35`.
+  GPU unit tests pass. All 5 solvers run 0.2 s on MediumLongBendingBeam (VertexSdf) with zero Dirichlet
+  drift, and VBD/AAAVBD are bit-identical to current dev there. Validation details are in plan 01's Progress.
+- 2026-10-18 · task 2 · **GPU run START** (~20–30 min): CUPTI backend validation on MediumLongBendingBeam, then the re-measured trampoline report (5 solvers under nsys plus graph-replay timings). Will log END.
+- 2026-10-18 · task 3 · Rebased on dev c947de87. Conflicts were only next to task 2's `@profiling.scoped` decorators; both kept. Static benchmark machinery is complete (12 commits). The next GPU-heavy item is the full run (30 samples × 5 solvers × 60 s ≈ 2.5 h), which waits for the maintainer's params file and will be announced here.
+- 2026-10-18 · task 2 · **GPU run END** (09:24). The CUPTI backend matches nsys on the beam: the same 11,946 activities per step, the sweep within 0.6%, the total within 3%. Re-measured trampoline (idle GPU): VBD 69.0, AAAVBD 75.4, Chebyshev 68.8, Anderson 70.4 ms/step of kernel work vs 102–112 ms/step graph replay. Milestone 2 (CUPTI backend + GUI panel) is on `feature/gpu-profiling`, 4 commits after `7c485e35`, ready for review.
+- 2026-10-18 · coordinator · **GPU run START** (~10 min): review of task 1's kinematics branch (GPU unit tests + one short simulate.py run per solver on branch and dev). Will log END.
+- 2026-10-18 · task 2 · **GPU run START** (short, intermittent over the next hour): milestone 3 exploration. An Nsight Compute permission check, then single-kernel ncu captures and nsys graph-mode traces on trampoline. Will log END.
+- 2026-10-18 · task 3 · Maintainer: the full static benchmark is **on hold** until task 4 generates the benchmark dataset of problems. Tasks 3 and 4 coordinate on its contents.
+- 2026-10-18 · coordinator · **GPU run END.** Merged **task 1** (c41bc1ad, merge commit): 17 tests pass, VBD/AAAVBD/Chebyshev bit-identical to dev, Anderson/Newton within nondeterminism, zero Dirichlet drift. Merged **task 2 milestone 2** (CUPTI backend + profiling panel; ui.py conflict resolved by keeping both panels): 14 tests pass, AAAVBD 56 ms/step on an idle GPU. Tasks 2 and 3: rebase onto dev. The maintainer still needs to check the GUI panels (kinematics, profiling).
 
 ## Open questions for the maintainer
 

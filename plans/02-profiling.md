@@ -175,3 +175,17 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
     128 registers/thread) and takes ~12.7 µs (VBD) vs ~14.0 µs (AAAVBD), +12%.
   - **Graph replay:** 206 µs/sweep vs 144 µs/sweep of kernel work, so ~60 µs/sweep goes to gaps.
   - **Fixed nodes per sweep:** 4 dual-update kernels (even with no contacts), an `xb` memcpy, and memsets.
+- 2026-10-18 · Milestone 1 merged into dev (`1d52c8ff`). **Milestone 2 implemented** on `feature/gpu-profiling`
+  (4 commits after `7c485e35`):
+  - **CUPTI binding:** `gpu/common/cupti.py`, a ctypes binding to the activity API with external correlation.
+    The DLL is resolved through `importlib.metadata` from `nvidia-cuda-cupti-cu12==12.9.79`, which is pinned.
+  - **Backend switch:** the `kernels` backend now runs on CUPTI and reports union/span like nsys.
+  - **GUI panel:** `panels/profiling.py` (live rolling-window table, JSON export), plus 3 small edits in
+    `ui.py`.
+  - **Validation vs nsys** (beam, AAAVBD, idle GPU):
+    - Activity counts are identical (11,946 per step).
+    - The sweep is within 0.6% (48.06 vs 47.76 ms/step) and the total within 2.9% (55.7 vs 54.1).
+    - Sub-µs activities read ~0.2 µs longer in CUPTI, which makes the tiny-kernel contact phases 27–40% higher.
+      Use nsys for those.
+  - **Tested:** the GUI panel's step hook and export were tested headlessly. Drawing it needs the
+    interactive GUI (maintainer smoke test).

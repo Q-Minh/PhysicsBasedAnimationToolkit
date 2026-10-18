@@ -162,3 +162,22 @@ simulator files.
 - 2026-10-18 · **Mass-normalized modes (maintainer):** switch to UᵢᵀMUᵢ = 1 as the only behavior, with a
   scale-free finite-difference step in `modal_derivatives` and a relative Z cutoff. Files record
   `mode_normalization`. The GUI wave amplitude becomes the peak displacement in metres.
+- 2026-10-18 · Mass normalization committed in `c03f8cd4`. U equals the old U rescaled, Q equals the old Q
+  rescaled entrywise (s_i·s_j) to 0.3% (float32 factorization accuracy), sampled shapes are unchanged, and
+  there are 74 Z modes instead of 75.
+- 2026-10-18 · **Milestone 3 implemented** (`32806b99`, `8817fd36`, `b40545ed`):
+  - `rom_reach.py`: box regions, gravity and region loads, a load-stepped full-order static Newton solve
+    (pbat's Newton bindings are commented out, so it's a short Python loop with backtracking), and the
+    fits `linear_fit`, `manifold_fit` (α = 0: Levenberg–Marquardt; α > 0: energy-regularized L-BFGS) and
+    `rom_equilibrium` (handles by mass-weighted penalty, κ = 100 ω_max²).
+  - GUI panel in `modalrom.py` with the target as a transparent ghost and per-vertex error.
+  - 8 new unit tests: closed-form static solves, recovery of reachable targets, the regularization
+    trade-off, and analytic ROM equilibria.
+  - Beam, gravity 0.4 (tip sag 0.366 m, target 7.87 J):
+    - U best fit: 0.8% error but 152 J of energy.
+    - Quadratic best fit: 0.1% and 8.4 J.
+    - Quadratic ROM equilibrium: 11% error.
+    - Linear ROM equilibrium: 68% error.
+    - Regularized fit: α ≈ 0.001–0.01 is the useful range; α = 1 collapses the shape.
+  - Beam, handle tip −0.5 m: quadratic ROM equilibrium 4.9% error, linear 7.3% but with 97 J against 26 J.
+  - The GUI was only smoke-tested with stubs; the maintainer's interactive check is pending.

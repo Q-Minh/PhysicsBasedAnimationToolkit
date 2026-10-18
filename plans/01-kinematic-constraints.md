@@ -1,6 +1,6 @@
 # Task 1: Kinematic Dirichlet constraints on the GPU
 
-Status: **implemented; final per-solver runs pending** · Branch `feature/gpu-kinematic-constraints` · Worktree `C:\git\pbat-kinematics`
+Status: **ready for review** · Branch `feature/gpu-kinematic-constraints` · Worktree `C:\git\pbat-kinematics`
 Read first: `MASTER.md` (rules, ownership), `python/tools/sim/CLAUDE.md`, `python/tools/vbd/CLAUDE.md`.
 
 ## Goal

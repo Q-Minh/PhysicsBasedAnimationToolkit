@@ -123,6 +123,8 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 14. ~~Benchmark budget?~~ **Answered (2026-10-18):** a per-solve **time cap** (`StaticSolveSpec.max_seconds`, e.g. 60 s). Report the time for each 5% level reached plus the fraction of samples reaching it; unreached levels are NaN. Context: cond(M⁻¹K) = 1.3e7 on MediumLongBendingBeam, so VBD-family solvers need about 80–500 s per sample for 95%, while Newton takes about 3 s.
 15. ~~Static-tuned solver params?~~ **Answered (2026-10-18):** the maintainer supplies a `--sim-params` file. Until then, runs use the Dump's (dynamics-tuned) params, and reports say so.
 
+16. ~~When to run the full benchmark?~~ **Answered (2026-10-18):** hold it. Task 4 (MCMC sampler) generates the benchmark dataset of problems first; coordinate with task 4 on that dataset before running.
+
 ## Progress
 
 - 2026-10-17 · Investigation findings (the code, not the plan text, is the source of truth):
@@ -174,3 +176,16 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
   - (b) The maintainer's static params file.
   - (c) The full benchmark run, 30 samples × 5 solvers × 60 s cap (about 2.5 h exclusive GPU; to be announced).
   - (d) Optional `cpu-gpu-parity` review.
+- 2026-10-18 · Rebased on dev c947de87 (task 2's profiling, the step-skip fix, task 4's samplers). Conflicts were only task 2's `@profiling.scoped` decorators next to the new `subproblem_iteration`s; both kept. Tests pass; `capture_while` is still bit-identical to the unrolled loop. Commit `ff4baab7`: batch warnings for R-hat ≥ 1.05 and nonzero sampling gravity.
+- 2026-10-18 · **Preliminary benchmark** (5 samples, 20 s cap, Dump params, Newton CG ≤ 3000; re-run on an idle GPU after an overlap):
+  - Newton: 95% in a median 3.3 s.
+  - Within 20 s, AAAVBD and Chebyshev remove about 52% (median), VBD about 30%, Anderson about 13%.
+  - Dashboard: https://claude.ai/artifact/9qaUKXA9X4NQwRfipot8Xd
+- **Task 1 note:** set `KinematicConstraintSet.advance_time = False` before a static solve's first capture (it's read on the host at capture time).
+- 2026-10-18 · **Full-run sequencing (coordinator):** start the 2.5 h benchmark only after (1) task 2's CUPTI/trampoline run logs END and (2) the coordinator's ~10 min kinematics review logs END. Announce in MASTER.md and check that neither is running.
+- 2026-10-18 · **Full benchmark on hold** (maintainer): waits for task 4's benchmark dataset. Coordinating with task 4 directly.
+- 2026-10-18 · Task 4's dataset plan:
+  - Scene: `data/scenarios/trampoline.Dump.h5:fem` (6000 nodes, 17,673 tets, 43 rim Dirichlet nodes).
+  - Microcanonical ensemble, pooled draws with an evenly spaced subset (R-hat < 1.05), no gravity.
+  - Proposed location: `data/benchmarks/trampoline/`. E* levels and sample counts are open with the maintainer.
+- 2026-10-18 · **Trampoline conditioning (CPU):** cond(M⁻¹K) at rest = 5.9e8 (λ_min = 9.4, λ_max = 5.6e9), 44× the beam's 1.3e7. Expect much slower VBD-family static convergence than on the beam within the same cap, and Newton's Jacobi-PCG needing far more than 3000 iterations. Raised with task 4 and the maintainer.
