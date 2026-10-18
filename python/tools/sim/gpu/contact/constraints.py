@@ -95,15 +95,15 @@ class ConstraintSet:
     gamma: DoubleBuffer
     lambda_n: DoubleBuffer
     lambda_f: DoubleBuffer
-    _streams: list[list[wp.Stream]]
+    _streams: list[wp.Stream]
     _data: ConstraintSetData  # type: ignore
 
     def __init__(self, n_u: int, capacity: int):
         self.n_u = n_u
         self.capacity = capacity
-        self._streams = [
-            [wp.Stream() for _ in range(6)] for _ in range(4)
-        ]  # list of streams for each field per contact type
+        # One stream per field (u, v, s, gamma, lambda_n, lambda_f). A ConstraintSet holds a single
+        # contact type, so its copies and fills must run exactly once per update.
+        self._streams = [wp.Stream() for _ in range(6)]
 
         def _make(value, dtype):
             return DoubleBuffer(
@@ -148,29 +148,28 @@ class ConstraintSet:
         fields = (self.u, self.v, self.s, self.gamma, self.lambda_n, self.lambda_f)
 
         # Step 1: async-copy current -> alternate on _copy_stream.
-        for streams in self._streams:
-            for buf, stream in zip(fields, streams):
-                stream.wait_stream(main_stream) # Fork to register stream in cuda graph
-                buf.copy_to_alternate(stream)
-                main_stream.wait_stream(stream)
+        for buf, stream in zip(fields, self._streams):
+            stream.wait_stream(main_stream)  # Fork to register stream in cuda graph
+            buf.copy_to_alternate(stream)
+            main_stream.wait_stream(stream)
 
         # Step 2: fill current with defaults on main_stream.
         # Overlaps step 1 safely — current and alternate are distinct allocations.
-        for streams in self._streams:
-            with wp.ScopedStream(streams[0], sync_enter=False):
-                self.u.current.fill_(self.n_u)  # sentinel = n_u (no valid contact)
-            main_stream.wait_stream(streams[0])
-            # NOTE: The self.v doesn't need initialization either, only the self.u is used to determine empty vs filled constraint
-            # NOTE: The slack doesn't need any initialization, it is always updated during before/after solver iterations
-            with wp.ScopedStream(streams[3], sync_enter=False):
-                self.gamma.current.fill_(1.0)
-            main_stream.wait_stream(streams[3])
-            with wp.ScopedStream(streams[4], sync_enter=False):
-                self.lambda_n.current.zero_()
-            main_stream.wait_stream(streams[4])
-            with wp.ScopedStream(streams[5], sync_enter=False):
-                self.lambda_f.current.zero_()
-            main_stream.wait_stream(streams[5])
+        streams = self._streams
+        with wp.ScopedStream(streams[0], sync_enter=False):
+            self.u.current.fill_(self.n_u)  # sentinel = n_u (no valid contact)
+        main_stream.wait_stream(streams[0])
+        # NOTE: The self.v doesn't need initialization either, only the self.u is used to determine empty vs filled constraint
+        # NOTE: The slack doesn't need any initialization, it is always updated during before/after solver iterations
+        with wp.ScopedStream(streams[3], sync_enter=False):
+            self.gamma.current.fill_(1.0)
+        main_stream.wait_stream(streams[3])
+        with wp.ScopedStream(streams[4], sync_enter=False):
+            self.lambda_n.current.zero_()
+        main_stream.wait_stream(streams[4])
+        with wp.ScopedStream(streams[5], sync_enter=False):
+            self.lambda_f.current.zero_()
+        main_stream.wait_stream(streams[5])
 
         # Step 3: warm-start from alternate (previous) into current.
         wp.launch(
