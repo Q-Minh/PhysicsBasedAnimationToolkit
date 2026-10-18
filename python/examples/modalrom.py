@@ -260,16 +260,23 @@ def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1
     """
     flags = pbat.fem.ElementElasticityComputationFlags.Potential
     flags_grad = flags | pbat.fem.ElementElasticityComputationFlags.Gradient
+    # Convert once to the layouts the bindings take without copying (column-major matrices,
+    # contiguous vectors), since the sampler calls potential thousands of times
+    E = np.asfortranarray(E)
+    GNegU = np.asfortranarray(GNegU)
+    egU, wgU, mug, lambdag = (
+        np.ascontiguousarray(np.ravel(a)) for a in (egU, wgU, mug, lambdag)
+    )
 
     def potential(x: np.ndarray, gradient: bool = False):
         U, gradU, _ = pbat.fem.hyper_elastic_potential(
             E=E,
             n_nodes=X.shape[1],
-            eg=np.ravel(egU),
-            wg=np.ravel(wgU),
+            eg=egU,
+            wg=wgU,
             GNeg=GNegU,
-            mug=np.ravel(mug),
-            lambdag=np.ravel(lambdag),
+            mug=mug,
+            lambdag=lambdag,
             x=np.asarray(x, dtype=np.float32),
             energy=energy,
             flags=flags_grad if gradient else flags,
