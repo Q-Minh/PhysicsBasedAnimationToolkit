@@ -43,6 +43,24 @@ class TestStaticEquilibrium(unittest.TestCase):
         np.testing.assert_allclose(u[handles], hu)
         np.testing.assert_array_equal(u[:3], 0.0)
 
+    def test_implicit_euler_step(self):
+        # One BDF1 step with Psi = 1/2 u^T K u solves (K + M/h^2) u = M/h^2 ut on the free DOFs
+        rng = np.random.default_rng(2)
+        n, h = 10, 1e-2
+        K, x0 = random_spd(n, rng), rng.standard_normal(n)
+        mass, ut = rng.uniform(0.5, 2.0, n), rng.standard_normal(n)
+        free = np.arange(2, n)
+        k = mass / h**2
+        u, _ = rom_reach.static_equilibrium(
+            quadratic_potential(K, x0), x0, free, inertia=(k, ut), u0=ut, steps=1
+        )
+        # The fixed DOFs keep their initial displacement u0 = ut and couple to the free ones through K
+        fixed = np.arange(2)
+        Kd = K.toarray()
+        rhs = k[free] * ut[free] - Kd[np.ix_(free, fixed)] @ ut[fixed]
+        np.testing.assert_allclose(u[free], np.linalg.solve(Kd[np.ix_(free, free)] + np.diag(k[free]), rhs), rtol=1e-8)
+        np.testing.assert_array_equal(u[fixed], ut[fixed])
+
     def test_nonlinear_separable(self):
         # Psi = sum 1/2 d^2 + 1/4 d^4, so equilibrium solves d + d^3 = f per DOF
         n, x0 = 6, np.zeros(6)
