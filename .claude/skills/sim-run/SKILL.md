@@ -113,7 +113,10 @@ The GPU defaults (`state.load_params`, listed in `configs/defaults.toml`) follow
 - **Early exit:** `Solver.Convergence.rtol = 1e-2` (default) is a relative, mass-normalized gradient test against the step's free-flight displacement. It's resolution-independent for smooth residuals and stricter on fine meshes for contact or mesh-scale residuals, which is accepted. `ftol = 0.5` (default) allows half the contact margin between outer iterations.
 - **AAAVBD:** the defaults are gammadown 0.99, gammadownS 0.95, gammaup(S) 0.5 and warm_start_beta 2. Make `gammaupS` smaller for contact-rich scenes.
 - **Vertex solve:** Inverse (default). Use EVD only when singular vertex Hessians cause problems.
-- **Contact penalty:** the default is CONSTANT for now. TIMESTEP adaptive (the maintainer's intended default) is being stabilized (it diverged on BeamFallingOnBeam with these defaults).
+- **Contact penalty:** the default is CONSTANT for now. TIMESTEP adaptive (the maintainer's intended default) is being stabilized (it diverged on BeamFallingOnBeam with these defaults). Collider scenes are stable with `penalty_adaptivity=1` and `gamman_adaptive=1` (the adaptive default 0.1 is too soft against colliders).
+- **Friction:** `mu_f` (default 0.2) only limits the multipliers: it enters the dual update's Coulomb cone projection of `lambda_f`. Within a step, the primal friction term `sigma_f c_f - lambda_f` has no cone limit, so the friction penalty acts as viscous drag on tangential motion, whatever `mu_f` is. Bodies that should slide creep instead: a frictionless cube on a slope crept at ~0.1 m/s. C++ has the same primal (`vbd/Core.h`, friction gradient `kf*cf - lambdaf`).
+  - For sliding scenes, lower the friction penalty: `Contact.ContactDynamics.gammaf_adaptive = 0.001` with an adaptive penalty, or `gammaf` with CONSTANT. `gammaf = 0` removes friction altogether, and the cube then slides.
+  - Otherwise keep the defaults: `gammaf = 1e3` (`gammaf * dt^2 = 0.1` at dt 0.01) and `gammaf_adaptive = 0.1`. The drag only matters where bodies should slide.
 
 ## Interactive GPU runs
 
