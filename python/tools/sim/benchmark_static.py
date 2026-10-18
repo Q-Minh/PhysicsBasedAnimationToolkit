@@ -1,5 +1,5 @@
 # type: ignore
-"""
+r"""
 Static convergence benchmark: wall-clock time per percentile of error reduction.
 
 Each MCMC sample of a batch (python/examples/rom_mcmc.py; contract in plans/MASTER.md) is released into
@@ -32,9 +32,10 @@ Representative commands (from the repo root; scenes and samples live in the main
     python -m python.tools.sim.benchmark_static ... --sim-params base.toml static.toml \
         --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
 
-    # Reproducible cases: save the effective StaticSolveSpec, then rerun from it
+    # Reproducible cases: save the effective StaticSolveSpec, then rerun from it (pass --samples again)
     python -m python.tools.sim.benchmark_static ... --samples BATCH.h5 --max-seconds 10 --save-spec case.h5 -o a.json
-    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --spec case.h5 -o b.json
+    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+        --spec case.h5 -o b.json
 
 Outputs:
     ``results.json``: the effective spec; metadata (scene, parameter sources, sample-file attributes,
@@ -60,6 +61,8 @@ Pitfalls:
       only print a warning.
     - Each solver's first solve also compiles kernels and captures its graph. That shows in the host time,
       not in the reported solver time.
+    - ``--spec`` restores the numeric fields of a saved spec but not ``sample_file``: string fields aren't
+      read back by ``SerializableMixin.deserialize`` yet. Pass ``--samples`` with ``--spec``.
 """
 
 import argparse
@@ -98,8 +101,8 @@ def parse_args():
                         help="Scene: file.h5:group/path of the serialized FemElastoDynamics, e.g. an editor "
                         "Dump's 'fem' group. Must be the mesh the samples were drawn on.")
     parser.add_argument("--samples", default=None,
-                        help="MCMC sample batch (.h5) with the initial shapes. Overrides the spec's "
-                        "sample_file; required unless --spec provides one.")
+                        help="MCMC sample batch (.h5) with the initial shapes. Required, also with --spec "
+                        "(a saved spec's sample_file isn't read back).")
     parser.add_argument("--sim-params", nargs="+", default=[], dest="sim_params",
                         help="Simulation parameters: .toml configs or .h5 files as exported by the GUI "
                         "(file.h5 or file.h5:group), merged left to right (see configs/README.md). "
