@@ -150,7 +150,10 @@ will instrument).
 - **`basis/U`** (3N, m), **`basis/Q`** (3N, m, m), **`basis/omega`** (m,), **`basis/scale`** (m,): the ROM
   basis. Row 3i + d is node i, coordinate d (DOFs interleaved per node), matching `fem.X.flatten(order="F")`.
   The root attribute `layout` repeats these conventions in the file. **`basis/M`** (3N,) holds the lumped
-  masses (added by task 4, milestone 2).
+  masses (added by task 4, milestone 2). Since task 4 commit `c03f8cd4`, the modes are **mass-normalized**
+  (UᵀMU = I; root attribute `mode_normalization = "mass"`). Earlier files used unit Euclidean norm. The shapes,
+  `samples/x` and their distribution are unchanged; only the scale of `samples/q` differs. Consumers that use
+  `samples/x` are unaffected.
 - **Independence:** samples are thinned automatically to be approximately independent.
 - **Dirichlet DOFs are exactly at rest** in every sample, because U and Q vanish there.
 - **`samples/min_J`** (S,): each sample's minimum det(F) over the mesh. Inverted elements (≤ 0) are allowed,
@@ -190,7 +193,7 @@ Each session updates only its own row.
 | Task | State | Last update | Notes |
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
-| 1 | implemented, rebased on dev `800e87ef` | 2026-10-18 | 15 commits, unit tests pass, parity validated (plan 01 Progress). Waiting for task 3's GPU run to end before the per-solver MediumLongBendingBeam runs; then ready for review |
+| 1 | implemented, rebased on dev `7c485e35` | 2026-10-18 | 14 commits (my first-step fix dropped in favor of `2b68afcb`), parity validated (plan 01 Progress). Holding GPU re-tests until task 3 logs END; then unit tests + per-solver MediumLongBendingBeam runs, ready for review |
 | 2 | milestone 1 done; ready for review | 2026-10-18 | 14 commits on `feature/gpu-profiling` (rebased on dev `800e87ef`): backend, scopes, `simulate.py --profile`, nsys runner/importer, HTML report ([trampoline](https://claude.ai/artifact/LHMcGJs6Z6N89iruhYLxYz)). Profiling off leaves graphs unchanged. Open: keep the inaccurate `kernels` backend? GUI panel in milestone 2 |
 | 3 | implementing | 2026-10-18 | static mode, SPD Newton, device-side convergence done; next: sample loader, StaticSolveSpec, benchmark runner |
 | 4 | milestone 1 merged into dev (`f291e2da`) | 2026-10-18 | Waiting on the maintainer's interactive GUI check, and on the velocity notes for milestone 2 |
@@ -313,6 +316,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · **Merged task 2 milestone 1** (feature/gpu-profiling, 14 commits, dev → 1d52c8ff) after review: with profiling off, VBD/AAAVBD trajectories are bit-identical to dev. Anderson and Newton differ by 4e-6 and 1e-5, but dev differs from itself by the same amount (atomic accumulation order), so that's not a regression. Tests pass, and `--profile kernels` works.
 - 2026-10-18 · coordinator · **Fixed on dev (2b68afcb):** `SimulationState.step` captured the CUDA graph without launching it, so every graph-captured run skipped its first step (found by task 1). The launch now follows the capture in the new `step()`/`_advance()` structure. **Task 1:** drop ed040afe when rebasing. **Everyone:** graph-mode trajectories produced before this fix lag by one step (all solvers equally).
 - 2026-10-18 · coordinator · Apologies to task 3: my review runs (~6 short simulate.py runs plus one 15-step `--profile kernels` run) overlapped task 3's GPU benchmark window. Re-measure anything timing-sensitive from that window.
+- 2026-10-18 · coordinator · **Maintainer decision on GPU OGC:** not in use. The paper's GPU results use **VertexSdf** contact detection. The GPU OGC crash (CUDA error 700 once bodies come within contact range; repro above) is **low priority**: the coordinator may investigate it, together with other robustness gaps vs the CPU OGC (penetration-free via per-vertex step truncation), when nothing else is pending. No task should block on OGC; validate contact with VertexSdf.
 
 ## Open questions for the maintainer
 

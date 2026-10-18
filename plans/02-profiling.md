@@ -163,3 +163,15 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
   correlation IDs. **DLL source (maintainer): pip `nvidia-cuda-cupti-cu12==12.9.79`**, which matches the venv's
   CUDA 12.9. Add it to `requirements.txt`; the coordinator installs it in the shared venv. This is milestone 2
   work, together with the GUI panel.
+- 2026-10-18 · **Maintainer direction:** iterate on the breakdowns and visuals so the maintainer can suggest data
+  points. The goal is to find AAAVBD's performance overheads and make it faster, since AAAVBD is the technique
+  to publish. **Order: milestone 2 first** (CUPTI backend plus GUI panel), then **milestone 3: AAAVBD analysis**
+  with two new data points, chosen by the maintainer:
+  - **Sweep anatomy:** import an nsys graph-mode trace with node-level timing and show one production sweep as
+    kernel time vs gaps, by node type.
+  - **Nsight Compute** on the VBD and AAAVBD vertex-solve kernels: occupancy, stall reasons, memory traffic.
+  First observations from the trampoline traces (to re-measure, since task 1's runs overlapped):
+  - **Launches:** 9 colors of ~667 vertices. Each color launch is one partial wave (667 blocks × 32 threads,
+    128 registers/thread) and takes ~12.7 µs (VBD) vs ~14.0 µs (AAAVBD), +12%.
+  - **Graph replay:** 206 µs/sweep vs 144 µs/sweep of kernel work, so ~60 µs/sweep goes to gaps.
+  - **Fixed nodes per sweep:** 4 dual-update kernels (even with no contacts), an `xb` memcpy, and memsets.

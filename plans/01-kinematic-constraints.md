@@ -165,16 +165,16 @@ reset), and validate the old and new CPU paths against each other before relying
 - 2026-10-17 · All open questions answered. Waiting for Phase 0.
 - 2026-10-17 · For task 3's static solves: `KinematicConstraintSet` gets a flag that stops the device step
   counter from advancing (time frozen), plus a way to set the counter. Agreed via the coordinator.
-- 2026-10-18 · Implemented on `feature/gpu-kinematic-constraints`, rebased on dev `800e87ef`. 15 commits:
-  - `ddedf9b4` countdown removed (nonzero dmask = fixed) · `d76c1bb1` GPU `dbc`/`ndbc` removed
-  - `a2f60dd7` per-node L_TRANSLATE · `773447d1` GPU contact filters skip Dirichlet nodes (C++ parity)
-  - `4e71f12f` half-open windows · `794f8b47` CPU closed form with anchors · `5e6726fd` CPU prescribed velocity
-  - `bd008675` L_TRANSLATE migration script · `1036b33e` Dump writes the `kinematics` group (format v1, see
+- 2026-10-18 · Implemented on `feature/gpu-kinematic-constraints`, rebased on dev `7c485e35` (task 2 merged).
+  14 commits; my first-step fix was dropped because the coordinator fixed it on dev in `2b68afcb`:
+  - `a4fc5d56` countdown removed (nonzero dmask = fixed) · `89511f67` GPU `dbc`/`ndbc` removed
+  - `59696b7d` per-node L_TRANSLATE · `31ff9a75` GPU contact filters skip Dirichlet nodes (C++ parity)
+  - `0d1c2c33` half-open windows · `60977742` CPU closed form with anchors · `3cd1294c` CPU prescribed velocity
+  - `85b2bb88` L_TRANSLATE migration script · `123aa1ff` Dump writes the `kinematics` group (format v1, see
     `TransformLibrary.export_kinematic_constraints`)
-  - `01781cf4` `gpu/kinematics` (`KinematicConstraint`, `KinematicConstraintSet`, loader)
-  - `46faefcd` FEM evaluates it each step · `a6c330d0` state/ui/simulate load and attach it
-  - `8d5c79ee` GUI panel · `4d5a2e33` first-step fix in `state.step` (unrelated bug found while testing)
-  - `ad775543` docs
+  - `fd498944` `gpu/kinematics` (`KinematicConstraint`, `KinematicConstraintSet`, loader)
+  - `bb3bb070` FEM evaluates it each step · `34a16c28` state/ui/simulate load and attach it
+  - `28a65649` GUI panel · `441e97e6` docs
 - 2026-10-18 · Validation:
   - Unit tests: `gpu.kinematics.constraints` (4: GPU vs CPU editor over 140 steps, max error 3e-7 in x
     and v; graph replay identical; release velocity and frozen time; mid-run anchors and toggling),
