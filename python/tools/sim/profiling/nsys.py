@@ -12,6 +12,7 @@ Per step and scope path, the result holds:
 - ``busy_ms``: sum of activity durations (comparable with the ``kernels`` backend),
 - ``union_ms``: duration of the union of activity intervals, which does not double-count work running
   concurrently on several streams,
+- ``union_incl_ms``: the same union over the path and all paths below it, for every path and ancestor,
 plus ``step_union_ms`` (union over the whole step) and ``step_span_ms`` (first activity start to last
 activity end).
 
@@ -30,7 +31,7 @@ import subprocess
 import sys
 
 from . import results
-from ..gpu.common.profiling import interval_union_ns
+from ..gpu.common.profiling import inclusive_union_ns, interval_union_ns
 
 DEFAULT_NSYS = (
     r"C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.1.3\target-windows-x64\nsys.exe"
@@ -222,6 +223,7 @@ def import_sqlite(path: str, metadata_result: dict | None = None) -> dict:
                 "launches": {p: len(iv) for p, iv in by_path.items()},
                 "calls": calls.get(step, {}),
                 "union_ms": {p: interval_union_ns(iv) * 1e-6 for p, iv in by_path.items()},
+                "union_incl_ms": {p: ns * 1e-6 for p, ns in inclusive_union_ns(by_path).items()},
                 "step_union_ms": interval_union_ns(everything) * 1e-6,
                 "step_span_ms": (max(e for _, e in everything) - min(s for s, _ in everything))
                 * 1e-6,
