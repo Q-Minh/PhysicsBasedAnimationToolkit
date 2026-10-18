@@ -49,7 +49,7 @@ class ConvergenceParams(SerializableMixin):
         20, "VBD sweeps between convergence tests inside a subproblem (each test costs about a quarter sweep)"
     )
     ftol = DocField(
-        0.1,
+        0.5,
         "Feasibility tolerance between outer iterations: largest allowed penetration into the contact margin, as a fraction of dmin",
     )
     rtol = DocField(

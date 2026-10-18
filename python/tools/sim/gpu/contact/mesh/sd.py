@@ -231,7 +231,7 @@ def _mesh_kind(F: np.ndarray, X: np.ndarray) -> int:
 
 
 class Params(SerializableMixin):
-    max_dist = DocField(0.01, "Maximum distance for closest point computations.")
+    max_dist = DocField(0.05, "Maximum distance for closest point computations.")
     dmin = DocField(-0.0001, "Minimum distance threshold for contacts to be created.")
     use_step_filter = DocField(
         False,
