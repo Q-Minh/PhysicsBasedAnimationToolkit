@@ -123,6 +123,9 @@ will instrument).
 patches on the rim) and the same scene stiffer, `data/scenarios/trampoline.Y1e7.h5` (1e7), to compare solvers across
 materials. The paper's trampoline configs (soft-stiff, stiff-soft, stiff_sphere) belong to their own specific trampoline
 scenes in the extras repo, not to these. Reported error reductions go up to 99% at most.
+**Eventually** the benchmark trampolines should use the paper trampolines' mesh (the ~25k-node geometry/topology of the extras
+`final_scenes/trampolines` soft-stiff / stiff-soft / sphere scenes) with homogeneous 1e6 and 1e7 materials. Open: square or
+circle variant, and which fixed rim (the paper scenes' or 4 patches). Authoring → task 1 when decided.
 
 ## New milestone: GPU simulators read CPU scene files (maintainer, 2026-10-18)
 
