@@ -93,6 +93,7 @@ vls_max_iters = 25
 [Solver.Convergence]
 check_interval = 20
 ftol = 0.1
+rtol = 0.0
 
 [Solver.Newton]
 linear_solver = 0

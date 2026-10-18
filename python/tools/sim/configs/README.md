@@ -76,7 +76,7 @@ The conversion followed these rules:
 1. Every value in the source is kept as is. Loading a paper `.toml` gives the same parameters, bit for bit, as loading its `.h5`.
 2. If the source has no `Solver.Chebyshev` / `Solver.AndersonSolver` table, the new table copies the scene's `Solver.VBD` table: the same sweep budget and vertex solve, since both solvers accelerate plain VBD sweeps. It then adds the C++ defaults for `rho` (Chebyshev) and `m`, `beta`, `cod_numerical_zero` (Anderson). These tables are **not hand-tuned**, and each header says so.
 3. Every other key the code serializes but the source lacks takes its code default. The header lists these keys, e.g. `Solver.Convergence.*` (`check_interval`, `ftol`), `Solver.Newton.LinearSolver.*`, `Solver.Newton.spd_correction`, and the GPU-only Anderson keys `linear_solver` and `vbd_iters_per_anderson_iter`.
-4. Keys the code no longer serializes would be dropped and listed in the header. None were.
+4. Keys the code no longer serializes are dropped and listed in the header: since 2026-10-18 the stencil gradient acceleration keys (betaG0, rhohat(S), gammaup(S), gammadown(S), warm_start_beta, surface_stencil_surface_neighbours_only) exist only under `Solver.AAAVBD`, so they're dropped from the VBD, Chebyshev and Anderson tables. The GPU never used them there, so loading is still bit-identical to the `.h5`.
 
 `beam1e6.GroundTruth.toml` comes from the extras working-tree version of its `.h5` (uncommitted when converted). That version already has hand-made Chebyshev and Anderson tables, so rule 2 did not apply to it.
 
