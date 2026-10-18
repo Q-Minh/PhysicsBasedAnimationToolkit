@@ -1,8 +1,8 @@
 """Quadratic-manifold reduced model of an elastic body, with fixed-energy sampling and shape reachability.
 
 Builds a reduced displacement model u(q) = U q + 1/2 Q:qq from mass-normalized vibration modes U and their
-modal derivatives Q (projected M-orthogonally off span(U)), for a tetrahedral mesh or the FemElastoDynamics of a
-Dump, under a Stable Neo-Hookean energy. Then either opens a Polyscope GUI or samples headless.
+modal derivatives Q (projected M-orthogonally off span(U)), for a CPU editor scene file, a stored FemElastoDynamics
+(filepath:h5path, e.g. a Dump's fem group) or a tetrahedral mesh, under a Stable Neo-Hookean energy. Then either opens a Polyscope GUI or samples headless.
 
 GUI panels:
     Modes:              animate one linear mode or its quadratic-manifold counterpart ("Mapping").
@@ -17,14 +17,17 @@ Headless mode (--headless -o <file.h5>) writes one batch of samples in the sampl
 rom_mcmc.write_samples). Benchmark datasets are generated with make_benchmark.py instead.
 
 Usage:
-    # GUI on a Dump (filepath:h5path)
+    # GUI on a CPU editor scene file
+    python modalrom.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.h5
+
+    # GUI on a stored FemElastoDynamics (filepath:h5path), e.g. an editor Dump
     python modalrom.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\MediumLongBendingBeam.Dump.h5:fem
 
     # Headless, 100 shapes at deformation energy E* = 10 J (polar sampler)
-    python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --energy 10 --samples 100
+    python modalrom.py -i <scene>.h5 --headless -o batch.h5 --energy 10 --samples 100
 
     # Headless, 400 states (q, qdot) at total energy E = K + U = 10 J, pooled from 4 chains
-    python modalrom.py -i <Dump>.h5:fem --headless -o batch.h5 --sampler microcanonical --energy 10 --samples 400
+    python modalrom.py -i <scene>.h5 --headless -o batch.h5 --sampler microcanonical --energy 10 --samples 400
 
     # GUI on a tetrahedral mesh with its own material
     python modalrom.py -i mesh.msh -m 1000 -Y 1e6 -n 0.45
@@ -35,6 +38,7 @@ from pbatoolkit import pbat, pypbat
 import numpy as np
 import scipy as sp
 import scipy.sparse
+import scipy.sparse.csgraph
 import scipy.sparse.linalg
 import polyscope as ps
 import polyscope.imgui as imgui
@@ -393,11 +397,155 @@ def quadratic_map(U: np.ndarray, Q: np.ndarray, q: np.ndarray):
     return U @ q + 0.5 * np.einsum("nij,i,j->n", Q, q, q)
 
 
-def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
-    """Loads a tetrahedral mesh, or an FemElastoDynamics from an HDF5 archive.
+def input_kind(input: str) -> str:
+    """Classifies an input path.
 
     Args:
-        input (str): Path to a tetrahedral mesh, or filepath:h5path of an FemElastoDynamics.
+        input (str): A stored FemElastoDynamics as filepath:h5path (e.g. scene.Dump.h5:fem), a CPU editor scene
+            file (.h5 or .hdf5), or a tetrahedral mesh file (anything meshio reads).
+
+    Returns:
+        str: "fem", "scene" or "mesh".
+    """
+    file_path, sep, _ = str(input).rpartition(":")
+    # A lone drive letter (C:...) is part of a Windows path, not a filepath:h5path separator
+    if sep and file_path and not (len(file_path) == 1 and file_path.isalpha()):
+        return "fem"
+    if str(input).lower().endswith((".h5", ".hdf5")):
+        return "scene"
+    return "mesh"
+
+
+def check_scene_constraints(constraints, contact_geometry, path: str, t_end: float = 0.0):
+    """Rejects scenes the sampled states and benchmark problems can't represent.
+
+    The problems live in the time span [0, t_end] (t_end = 0 for sampling and static problems, the largest time
+    step h for dynamic ones). They hold the Dirichlet nodes fixed at rest throughout and have no collision geometry.
+    So every constraint active during the span must be fixed and cover all of it, and the scene can't have static
+    colliders. Constraints entirely outside the span never act on the problems and are ignored.
+
+    Args:
+        constraints: The scene's kinematic constraints (python/tools/sim/gpu/kinematics/constraints.py), each
+            with kind, begin, duration and name members.
+        contact_geometry: The scene's static collider geometry, or None.
+        path (str): The scene file, for error messages.
+        t_end (float): End of the problems' time span in s.
+
+    Raises:
+        ValueError: Listing every unsupported collider or constraint.
+    """
+    problems = []
+    if contact_geometry is not None:
+        problems.append("it has static colliders (the problems have no collision geometry)")
+    for c in constraints:
+        begin, end = c.begin, c.begin + c.duration
+        if begin > t_end or end <= 0.0:
+            continue
+        if c.kind.name != "Fixed":
+            problems.append(f'constraint "{c.name}" moves its nodes ({c.kind.name}) during [0, {t_end:g}] s')
+        elif begin > 0.0 or end <= t_end:
+            problems.append(
+                f'constraint "{c.name}" starts or ends within [0, {t_end:g}] s (active over [{begin:g}, {end:g}) s)'
+            )
+    if problems:
+        raise ValueError(
+            f"{path} can't be used: " + "; ".join(problems) + ". Constraints acting on the problems must keep "
+            "their nodes fixed throughout."
+        )
+
+
+def count_bodies(E: np.ndarray, n_nodes: int) -> int:
+    """Number of connected components (separate bodies) of a tetrahedral mesh.
+
+    Args:
+        E (np.ndarray): |# elem. nodes| x |# elements| element connectivity array.
+        n_nodes (int): Number of nodes.
+
+    Returns:
+        int: The number of connected components of the node graph.
+    """
+    E = np.asarray(E)
+    # Chaining each element's nodes connects all of them
+    rows, cols = E[:-1].ravel(), E[1:].ravel()
+    graph = scipy.sparse.coo_array((np.ones(rows.size), (rows, cols)), shape=(n_nodes, n_nodes))
+    n_components, _ = scipy.sparse.csgraph.connected_components(graph, directed=False)
+    return int(n_components)
+
+
+def load_scene_fem(path: str, t_end: float = 0.0):
+    """Builds the FemElastoDynamics of a CPU editor scene file, the way the editor does.
+
+    Uses python/tools/sim/state.load_scene (which imports Warp but doesn't initialize the GPU), then checks that
+    the constraints acting during [0, t_end] keep their nodes fixed and that there are no static colliders
+    (check_scene_constraints).
+
+    Args:
+        path (str): The scene file (e.g. data/scenarios/trampoline.h5).
+        t_end (float): End of the problems' time span in s (0 for sampling and static problems).
+
+    Returns:
+        pbat.sim.dynamics.FemElastoDynamics: The scene's FEM problem, with its fixed nodes as Dirichlet nodes.
+
+    Raises:
+        ValueError: If the scene has static colliders, constraints acting during [0, t_end] that move their nodes
+            or start or end within it, or more than one body.
+    """
+    import sys
+
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+    from python.tools.sim import state
+
+    fem, (constraints, _, _), contact_geometry = state.load_scene(path)
+    check_scene_constraints(constraints, contact_geometry, path, t_end)
+    n_bodies = count_bodies(fem.E, fem.X.shape[1])
+    if n_bodies > 1:
+        # Rigid modes are only excluded for an unconstrained single body, so a free body next to a fixed one would
+        # leave zero-frequency modes in the reduced model
+        raise ValueError(f"{path} can't be used: it has {n_bodies} separate bodies, and only single-body scenes are supported")
+    return fem
+
+
+def load_fem(input: str):
+    """Deserializes the FemElastoDynamics stored at filepath:h5path (e.g. scene.Dump.h5:fem)."""
+    import gc
+
+    file_path, _, group_path = str(input).rpartition(":")
+    archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
+    fem = pbat.sim.dynamics.FemElastoDynamics()
+    fem.deserialize(archive[group_path] if group_path else "/")
+    archive = None
+    gc.collect()
+    return fem
+
+
+def model_from_fem(fem):
+    """The model arrays of a FemElastoDynamics, as returned by load_model."""
+    n = fem.X.shape[0] * fem.X.shape[1]
+    M = scipy.sparse.diags_array(fem.M(), shape=(n, n))
+    gravity = np.asarray(fem.aext(), dtype=np.float64).mean(axis=1)
+    return (
+        fem.E,
+        fem.X,
+        M,
+        fem.egU,
+        fem.wgU,
+        fem.GNegU,
+        fem.lamegU[0, :],
+        fem.lamegU[1, :],
+        fem.free_dofs,
+        gravity,
+    )
+
+
+def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
+    """Loads a stored FemElastoDynamics, a CPU editor scene file, or a tetrahedral mesh.
+
+    Args:
+        input (str): filepath:h5path of a stored FemElastoDynamics, a scene file (.h5), or a tetrahedral mesh
+            (see input_kind). A scene's constraints active at t = 0 must keep their nodes fixed, and it can't have
+            static colliders (see check_scene_constraints).
         rho (float): Mass density (mesh input only).
         Y (float): Young's modulus (mesh input only).
         nu (float): Poisson's ratio (mesh input only).
@@ -408,28 +556,11 @@ def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
         Tuple: (E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, gravity), with M the lumped mass matrix
         and gravity the scene's mean external acceleration (3,), or (0, 0, -9.81) for a mesh.
     """
-    file_path, sep, group_path = str(input).rpartition(":")
-    if sep and file_path and not (len(file_path) == 1 and file_path.isalpha()):
-        import gc
-
-        archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
-        fem = pbat.sim.dynamics.FemElastoDynamics()
-        fem.deserialize(archive[group_path] if group_path else "/")
-        archive = None
-        gc.collect()
-        n = fem.X.shape[0] * fem.X.shape[1]
-        E = fem.E
-        X = fem.X
-        M = scipy.sparse.diags_array(fem.M(), shape=(n, n))
-        egU, wgU, GNegU, mug, lambdag = (
-            fem.egU,
-            fem.wgU,
-            fem.GNegU,
-            fem.lamegU[0, :],
-            fem.lamegU[1, :],
-        )
-        freedofs = fem.free_dofs
-        gravity = np.asarray(fem.aext(), dtype=np.float64).mean(axis=1)
+    kind = input_kind(input)
+    if kind == "fem":
+        return model_from_fem(load_fem(input))
+    if kind == "scene":
+        return model_from_fem(load_scene_fem(input))
     else:
         imesh = meshio.read(input)
         V, C = imesh.points, imesh.cells_dict["tetra"]
@@ -592,9 +723,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         "--input",
-        help="Path to an input tetrahedral mesh (read with meshio), or a filepath:h5path pair of an hdf5 file "
-        "containing an FemElastoDynamics and the hdf5 group path to it, e.g. scene.Dump.h5:fem. A Dump brings "
-        "its own material, masses and Dirichlet constraints; a mesh uses -m, -Y and -n and has none",
+        help="A CPU editor scene file (.h5, e.g. data/scenarios/trampoline.h5; constraints active at t = 0 must "
+        "keep their nodes fixed, and no static colliders), a filepath:h5path pair of an hdf5 file storing a FemElastoDynamics (e.g. "
+        "scene.Dump.h5:fem), or a tetrahedral mesh (read with meshio). Scenes and stored FEMs bring their own "
+        "material, masses and Dirichlet constraints; a mesh uses -m, -Y and -n and has none",
         type=str,
         dest="input",
         required=True,
