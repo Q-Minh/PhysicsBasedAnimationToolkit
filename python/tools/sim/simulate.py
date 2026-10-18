@@ -8,11 +8,13 @@ the same HDF5 layout as the GUI's "Serialization" feature.
 
 Usage:
     python -m python.tools.sim.simulate --fem-elasto-dynamics dump.h5:fem -o out.h5 \
-        [--sim-params params.h5] [--solver AAAVBD] [--cd VertexSdf] [--duration 10] [--fps 60]         [--profile kernels --profile-out profile.json --profile-warmup 10]
+        [--sim-params params.h5] [--solver AAAVBD] [--cd VertexSdf] [--duration 10] [--fps 60] \
+        [--profile kernels --profile-out profile.json --profile-warmup 10]
 
-With ``--profile``, steps run eagerly (no CUDA graph). ``kernels`` attributes the GPU busy time of every
-Warp launch to the profiling scope that issued it and prints a per-phase summary. ``nvtx`` emits NVTX
-ranges for Nsight Systems (see ``python/tools/sim/profiling/nsys.py``).
+With ``--profile``, the steps after ``--profile-warmup`` run eagerly (no CUDA graph). ``kernels``
+attributes the GPU busy time of every Warp launch to the profiling scope that issued it and prints a
+per-phase summary. ``nvtx`` emits NVTX ranges for Nsight Systems (see
+``python/tools/sim/profiling/nsys.py``).
 """
 
 import argparse
@@ -108,14 +110,16 @@ def parse_args():
         "--profile-out",
         type=str,
         default=None,
-        help="Output file.json for the per-step, per-phase GPU timings (kernels backend).",
+        help="Output file.json for the per-step, per-phase GPU timings (kernels backend), or the "
+        "run metadata that the Nsight Systems importer completes (nvtx backend).",
         dest="profile_out",
     )
     parser.add_argument(
         "--profile-warmup",
         type=int,
         default=10,
-        help="Number of initial steps excluded from profiling (module loading, warm-up).",
+        help="Number of initial steps excluded from profiling (module loading, warm-up). They run "
+        "unprofiled, with graph capture when the solver supports it.",
         dest="profile_warmup",
     )
     return parser.parse_args()
@@ -146,11 +150,11 @@ def main():
         with h5py.File(args.sim_params, "r") as f:
             deserialize_params(state, f)
     state.reset()
-    profiling.set_backend(profiling.Backend(args.profile))
+    backend = profiling.Backend(args.profile)
     recorder = None
-    if profiling.get_backend() == profiling.Backend.KERNELS:
+    if backend != profiling.Backend.OFF:
         recorder = profiling_results.ProfileRecorder(
-            "kernels",
+            args.profile,
             profiling_results.collect_metadata(
                 state, args.fem_elasto_dynamics, args.profile_warmup
             ),
@@ -170,13 +174,19 @@ def main():
         _write_frame(h5f, state, frame)
         frame += 1
         while state.t < n_steps:
-            profile_step = state.t >= args.profile_warmup
+            profile_step = recorder is not None and state.t >= args.profile_warmup
+            if profile_step and not profiling.is_enabled():
+                # Warm-up steps run unprofiled (with graph capture, when supported). Profiling, and an
+                # attached profiler's capture range (nsys --capture-range=cudaProfilerApi), start here.
+                profiling.set_backend(backend)
+                if backend == profiling.Backend.NVTX:
+                    wp.cuda_profiler_start()
             if profile_step:
                 profiling.begin_step()
             state.step()
             if profile_step:
                 step_profile = profiling.end_step()
-                if recorder is not None:
+                if step_profile is not None:
                     recorder.add_step(state.t - 1, step_profile)
             if should_save(state.t, state.dt, args.fps):
                 _write_frame(h5f, state, frame)
@@ -193,6 +203,8 @@ def main():
     except KeyboardInterrupt:
         print("Interrupted, closing output file.")
     finally:
+        if profiling.get_backend() == profiling.Backend.NVTX:
+            wp.cuda_profiler_stop()
         if pbar is not None:
             pbar.close()
         h5f.close()
@@ -201,9 +213,10 @@ def main():
         f"Simulated {state.t} steps ({state.t * state.dt:.4f}s) in {elapsed:.2f}s wall time, "
         f"wrote {frame} frames to {args.output}"
     )
-    if recorder is not None and recorder.steps:
+    if recorder is not None:
         result = recorder.to_dict()
-        print(profiling_results.format_summary(result))
+        if recorder.steps:
+            print(profiling_results.format_summary(result))
         if args.profile_out:
             profiling_results.save(result, args.profile_out)
             print(f"Wrote profile to {args.profile_out}")
