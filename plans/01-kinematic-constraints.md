@@ -1,6 +1,6 @@
 # Task 1: Kinematic Dirichlet constraints on the GPU
 
-Status: **not started** · Branch `feature/gpu-kinematic-constraints` · Worktree `C:\git\pbat-kinematics`
+Status: **questions answered; waiting for Phase 0** · Branch `feature/gpu-kinematic-constraints` · Worktree `C:\git\pbat-kinematics`
 Read first: `MASTER.md` (rules, ownership), `python/tools/sim/CLAUDE.md`, `python/tools/vbd/CLAUDE.md`.
 
 ## Goal
@@ -116,10 +116,16 @@ reset), and validate the old and new CPU paths against each other before relying
 2. ~~Compose overlapping constraints on the same node, or forbid overlaps?~~ **Answered (2026-10-17):** compose,
    in library order, from a per-node anchor, each constraint with its own clamped active time
    (τ_k = clamp(t, b_k, e_k) − clamp(t_a, b_k, e_k)). Existing scenes rely on motion + Fixed overlaps.
-3. Should the GPU GUI edit constraints, or only display and toggle the ones from the Dump?
-4. Keep reading the millisecond-countdown format from existing Dumps, or regenerate them?
-5. At release, should a node keep its prescribed velocity or start at rest? *(discussing: maintainer leans
-   toward zero velocity; Claude explained the trade-off, awaiting final answer)*
+3. ~~Should the GPU GUI edit constraints, or only display and toggle the ones from the Dump?~~
+   **Answered (2026-10-17):** display + toggle. `panels/kinematics.py` lists each constraint (kind, window,
+   parameters), highlights its nodes, enables/disables it (recapture on toggle). Authoring stays in the CPU editor.
+4. ~~Keep reading the millisecond-countdown format from existing Dumps, or regenerate them?~~
+   **Answered (2026-10-17):** drop the countdown hack entirely, with no countdown reader. Fully support what the
+   CPU simulator supports, in a GPU-friendly way. (Follow-up on Dumps without a kinematics group: see 10.)
+5. ~~At release, should a node keep its prescribed velocity or start at rest?~~ **Answered (2026-10-17):**
+   prescribed velocity, in both simulators. Constrained nodes store the analytic prescribed velocity every
+   step (the CPU sets `fem.v` after `constrain()`, which zeroes it). In "move, then hold" scenes this is zero
+   at release anyway; "stop, then release" is authored with a trailing `Fixed` hold.
 6. ~~L_TRANSLATE semantics.~~ **Answered (2026-10-17):** the maintainer let Claude decide the intent.
    Finding: the CPU code divides by the Frobenius norm of the whole `3 x n` group (`np.linalg.norm` without
    `axis`), so it is a uniform xy-scaling about `origin`, not a per-node translation. Decision: L_TRANSLATE /
@@ -129,7 +135,31 @@ reset), and validate the old and new CPU paths against each other before relying
    migration script that rewrites `speed` to speed·mean|r_j|/ρ₀ (exact when the group's nodes share one radius,
    as on rims), backing up the originals. Affected: `cow_on_trampoline`, `octo-sling-1m-tilted`,
    `octopus-trampoline` (in `data/scenarios`, git-ignored).
+8. ~~Window boundaries?~~ **Answered (2026-10-17):** half-open in both simulators. A node is constrained during
+   step n when begin <= t_n < begin + duration, and the motion is clamped so it lasts exactly `duration`. The
+   CPU's current closed interval gives one extra step of motion.
+9. ~~Mid-simulation Dump?~~ **Answered (2026-10-17):** the Dump exports the current simulation time and the
+   anchors of open constraints. The GPU clock starts at that time, so constraints resume exactly.
+10. ~~Dumps without a kinematics group?~~ **Answered (2026-10-17):** a nonzero `dmask` means permanently fixed
+    (C++'s own meaning, no countdown). `MediumLongBendingBeam` and `trampoline` behave as before, and the
+    `dmask = 1` Dumps (`BeamFallingOnBeam`, `CubeFallingOnCube`) are fixed again, as their scenes intend. Re-dump
+    the files that have scenes so they carry the new group.
+11. ~~GPU `dbc`/`ndbc`?~~ **Answered (2026-10-17):** remove them from `FemElastoDynamicsData` (and from the
+    unit-test assertion). No GPU kernel reads them; every solver uses `dmask`.
 
 ## Progress
 
 (update as you go: decisions taken, commits, test results)
+
+- 2026-10-17 · Investigation done; findings and closed forms at https://claude.ai/artifact/35eiBVHW5nDs1qxRH24tNG
+  (the L_TRANSLATE section there describes the *old* behavior; the decision in question 6 replaces it). Key facts:
+  - No GPU kernel reads `dbc`/`ndbc`; Newton and VBD use `dmask` only, so no device-side partition is needed.
+  - C++ `Constrain()` zeroes Dirichlet velocities, and the CPU calls it every step, so both simulators
+    currently release nodes at rest.
+  - The Dump countdown ignores `begin` and takes the max `duration` per node.
+  - Existing scenes overlap motion + `Fixed` on the same nodes ("move, then hold").
+  - Implementation sketch: integer step counter in a device array (time in float64 in-kernel); per-node CSR
+    list of constraint ids; per-node anchor position and anchor step, written on the first step of a
+    constrained run; per-step kernel sets `dmask`, x, xtilde and v of constrained nodes. The Dump
+    exports one constraint per transform, with node indices in global (concatenated) numbering.
+- 2026-10-17 · All open questions answered. Waiting for Phase 0.

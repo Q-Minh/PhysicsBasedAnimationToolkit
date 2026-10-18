@@ -79,10 +79,17 @@ Serialize it to HDF5 so cases are reproducible.
 `gpu/gradient.py`, which already has an elastic gradient), covering the elastic, external and contact terms
 over free DOFs. The same metric then serves dynamic solves too, replacing the fixed iteration counts.
 
-**Benchmark runner** (`python/tools/sim/benchmark_static.py`): for each solver and case, run from the
-identical initial state and record per sweep (or per Newton iteration) ‖∇E‖, E, the cumulative sweep count
-and GPU time, using task 2's `profiling.scope` API. Write JSON; plot residual vs sweeps and residual vs GPU
-time; publish as an HTML artifact.
+**Benchmark runner** (`python/tools/sim/benchmark_static.py`): for each solver and sample, run from the
+identical initial state with profiling **off**.
+- **VBD family:** capture a fixed sweep budget as a CUDA graph. Each sweep, a small kernel writes the
+  mass-weighted error e_k into a preallocated device log, and timestamps come either from per-sweep CUDA
+  event nodes inside the graph (`Stream.record_event(event, external=True)`, supported in Warp 1.17 per task
+  2) or from the replay's total time interpolated by sweep index. Pick between the two after the
+  measurement prototype. Logs are read back only after the replay.
+- **Newton:** runs eagerly, logging per Newton iteration.
+- **Output:** the time at every 5% of error reduction, plus the full e_k (and optionally ‖∇E‖) curve. Write
+  JSON, plot e_k/e₀ vs time and vs sweeps, and publish an HTML artifact.
+- Task 2's `profiling.scope` is used only for an optional per-phase breakdown, in a separate eager run.
 
 ## Validation
 
@@ -100,11 +107,16 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 ## Open questions for the maintainer
 
 1. ~~Proximal term or pure minimization?~~ **Answered:** pure minimization. VBD's pseudo-singularity check is enough; if a safeguard is ever needed, make it adaptive rather than a constant term.
-2. ~~Which convergence metric?~~ **Answered:** wall-clock time per percentile of error reduction, with error = distance to the rest shape. **Norm (2026-10-17): mass-weighted L2 over free nodes**, e = sqrt((x−X)ᵀM(x−X)). **Timing (2026-10-17): graph mode with a device-side error log** for the VBD family: capture a fixed sweep budget, a small kernel writes e_k each sweep into a preallocated device log, CUDA events bracket the replay, and per-percentile times are interpolated from the sweep index. Newton (not capturable) runs eagerly. **Percentiles (2026-10-17): every 5%** (if that's too much data, every 5% from 60% up). The full e_k log is stored either way, so other percentiles can be computed in post-processing.
+2. ~~Which convergence metric?~~ **Answered:** wall-clock time per percentile of error reduction, with error = distance to the rest shape. **Norm (2026-10-17): mass-weighted L2 over free nodes**, e = sqrt((x−X)ᵀM(x−X)). **Timing (2026-10-17): graph mode with a device-side error log** for the VBD family: capture a fixed sweep budget, a small kernel writes e_k each sweep into a preallocated device log, CUDA events bracket the replay, and per-percentile times are interpolated from the sweep index. Newton (not capturable) runs eagerly. **Percentiles (2026-10-17): every 5%** (5..95%; if that's too much data, from 60% up). No 99/99.9% tail, by the maintainer's choice. The full e_k log is stored either way.
 3. ~~Contact?~~ **Answered (2026-10-17):** contact-free only. The paper's static benchmark never uses contact.
 4. ~~CPU parity?~~ **Answered (2026-10-17):** GPU-only. No C++ changes. GPU Newton is the reference solver, and validation checks convergence to X (known exactly).
 7. ~~Static Newton with an indefinite Hessian?~~ **Answered (2026-10-17):** per-element PSD projection of the elastic Hessian (clamp negative eigenvalues, as C++ `HyperElasticSpdCorrection` does), behind a param that defaults to on in static mode.
 8. `check_convergence` in captured dynamic solves: device-side with `wp.capture_while`, or eager only? **Maintainer undecided (2026-10-17):** wants early termination, but not if splitting the captured region adds execution-time overhead. → Measure before deciding (see question 9).
+9. ~~Prototype first?~~ **Answered (2026-10-17):** yes, measure first, comparing a fixed-count captured graph against a `capture_while` graph on MediumLongBendingBeam, with the GPU run announced in the coordination log. **Reuse the GPU Newton's existing convergence check** (`newton/solver.py::check_convergence`: `Gradient.compute` + `_gnorm2_reduce`) instead of writing a new one.
+10. ~~Solver hyperparameters?~~ **Answered (2026-10-17):** the maintainer supplies a params file per solver (the `--sim-params` .h5 layout), fixed across samples. No tuning by this task.
+11. ~~Meshes?~~ **Deferred (2026-10-17):** decide later. The intended scene is the **trampoline with its outer edge fixed**. See the Progress note about the existing `trampoline.Dump.h5`. **Dirichlet set (2026-10-17): keep the Dump's 4 rim patches as they are.** No full-rim override.
+12. ~~Static-mode API?~~ **Answered (2026-10-17):** a flag on the GPU `FemElastoDynamics` (`fem.static`). Setup leaves `xtilde`, `x` and `dmask` untouched. Solvers drop the inertia term, use h² = 1 and add −fext explicitly.
+13. Importance weights (`samples/weight_log`) in the aggregation? **Pending:** the maintainer asked what they mean. Plan 04 says the chain targets π(q) ∝ √det(JᵀMJ)·δ(Ψ̂ − E*) directly. If so, the samples are already π-distributed, `weight_log` is a per-sample diagnostic (presumably log √det(JᵀMJ)), and unweighted statistics are correct. Asked task 4 to confirm the semantics.
 5. ~~Which initial configurations?~~ **Answered:** MCMC samples from task 4.
 6. ~~No gravity, Dirichlet at rest?~~ **Answered (2026-10-17):** yes, the equilibrium is exactly X. Benchmark cases have no external loads, and the Dirichlet nodes are fixed at rest and must pin the rigid modes (validate this). Static mode itself still supports gravity and `f_ext` scaling for other uses.
 
@@ -118,3 +130,5 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
   - GPU Newton has no SPD projection of the elastic Hessian; C++ Newton has `spd_correction`. In dynamics the mass term hides indefiniteness, but in static mode the SNH Hessian can become indefinite.
   - Warp 1.17 (installed) has `wp.capture_while`/`wp.capture_if`, so a device-side stopping test can stay inside a captured graph.
   - The dmask countdown in the setup kernel subtracts `bt·1000` ms each step. A static solve must not advance it.
+- 2026-10-17 · `data/scenarios/trampoline.Dump.h5` exists: one component, a disc of radius 1 m and thickness about 2.6 cm, 6000 nodes, 17673 tets, gravity in `fext`. Its Dirichlet set is **only 4 small rim patches** (43 nodes, about 5° wide, at 0°/90°/180°/270°, active for 36000 s), **not the full outer edge** (about 580 nodes have r > 0.99). It pins the rigid modes, but a benchmark with the "outer edge fixed" needs a new Dump, or a Dirichlet set rebuilt from r ≥ r_rim. Maintainer to decide. (`trampoline.h5` and `trampoline.Y1e7.h5` are editor scenes, not Dumps.)
+- 2026-10-17 · The MCMC sample-file contract (MASTER.md, agreed) fits the benchmark. Mass-weighted error uses the Dump's `m`, and the contract's `X` is checked against the Dump's rest positions. Still waiting for task 4 to state the `X`/`samples/x` layouts.

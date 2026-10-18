@@ -124,15 +124,26 @@ will instrument).
   (weight kind, burn-in, thinning, acceptance rate, ESS).
 - **Energy definition:** E\* is the **deformation energy in absolute joules**, Ψ(X + u) − Ψ(X). Stable
   Neo-Hookean has a nonzero rest energy, 4.96e-4 J on MediumLongBendingBeam, hence the subtraction.
-- **`X`**: rest positions, to check against the Dump that task 3 loads.
+- **`X`**: **(N, 3)** rest positions, float32. Row i is node i, i.e. `X = fem.X.T` for pbat's (3, N) `fem.X`;
+  the node order is the Dump's.
 - **`samples/q`**: (S, r) reduced coordinates.
-- **`samples/x`**: (S, N, 3) full-space positions X + u(q), **float32**, so task 3 doesn't need the basis.
-- **`samples/energy`**: (S,) achieved deformation energy per sample.
-- **`samples/weight_log`**: (S,) log importance weights.
-- **`basis/U`** (3N, m), **`basis/Q`** (3N, m, m), **`basis/omega`** (m,): the ROM basis. DOFs are
-  interleaved per node (F order), matching `X.flatten(order="F")` for pbat's 3×N layout.
-- **Layouts to state explicitly in task 4's writer:** whether `X` is (N, 3) or pbat's (3, N), and the node
-  order inside `samples/x`. Task 3 must not guess.
+- **`samples/x`**: **(S, N, 3)** full-space positions X + u(q), **float32**, so task 3 doesn't need the
+  basis. `samples/x[s, i]` is node i, in the same node order as `X`. Pass `samples/x[s].T` where pbat
+  expects (3, N).
+- **`samples/energy`**: (S,) achieved deformation energy per sample, Ψ(X + u(q)) − Ψ(X).
+- **`samples/log_target`** (renamed from `weight_log`, task 4, 2026-10-17): (S,) the log of the
+  unnormalized target density at each sample, in the sampler's own parametrization. For `polar` and `ray` it
+  is log p(θ) = log w(q) + (r − 1) log ρ − log(∂Ψ̂/∂ρ), with ρ the whitened radius. For `crw` it is
+  log w(q) − log|∇_y Ψ̂|. Here w = √det(J(q)ᵀ M J(q)) for the default `weight="mass"`.
+  - **MCMC batches** (root attribute `sampler` = `polar`, the default, or `crw`; attribute
+    `importance_weights_required` = False) are already distributed according to the target. For these,
+    `log_target` is **only a diagnostic**, and **consumers average uniformly over the samples**.
+  - **`ray` batches** (`importance_weights_required` = True) are not distributed according to the target.
+    Their self-normalized importance weights are wᵢ = exp(log_targetᵢ − max) / Σ exp(log_target − max). Use
+    them only for browsing or debugging; benchmark batches should be `polar`.
+- **`basis/U`** (3N, m), **`basis/Q`** (3N, m, m), **`basis/omega`** (m,), **`basis/scale`** (m,): the ROM
+  basis. Row 3i + d is node i, coordinate d (DOFs interleaved per node), matching `fem.X.flatten(order="F")`.
+  The root attribute `layout` repeats these conventions in the file.
 - **Independence:** samples are thinned automatically to be approximately independent.
 - **Dirichlet DOFs are exactly at rest** in every sample, because U and Q vanish there.
 - Later, for the velocity-based benchmark: `samples/qdot`.
@@ -162,9 +173,9 @@ Each session updates only its own row.
 | Task | State | Last update | Notes |
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
-| 1 | answering questions | 2026-10-17 | worktree `C:\git\pbat-kinematics` created |
-| 2 | answering questions | 2026-10-17 | worktree `C:\git\pbat-profiling` created |
-| 3 | answering questions | 2026-10-17 | worktree `C:\git\pbat-static` created |
+| 1 | questions answered; waiting for Phase 0 | 2026-10-17 | 11/11 answered (plan 01). Closed-form constraints on CPU + GPU, countdown hack removed, `dbc`/`ndbc` dropped from the GPU struct |
+| 2 | questions answered; waiting for Phase 0 | 2026-10-17 | 10/10 answered (plan 02). Milestone 1: scope backend (`off`/`kernels`/`nvtx`), scopes in all solvers, `simulate.py --profile`, nsys importer, HTML report on trampoline. GUI panel in milestone 2 |
+| 3 | answering questions (3 batches done) | 2026-10-17 | 11 of 13 answered; pending: `weight_log` semantics (task 4), `check_convergence` overhead measurement |
 | 4 | questions answered; ready to implement | 2026-10-17 | MD bug fix + polar & constrained-RW samplers + HDF5 export; only the velocity notes are still pending (not blocking) |
 
 ## Coordination log
@@ -187,6 +198,26 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   `X.flatten(order="F")`. Samples are about independent (automatic thinning). Dirichlet DOFs are exactly at rest,
   because U and Q vanish there. Also FYI: the modal derivatives in `modalrom.py` had two bugs (÷h instead of ÷2h,
   and a blow-up for near-degenerate mode pairs); task 4 fixes both.
+- 2026-10-17 · task 3 · Answers recorded in plan 03. The benchmark is contact-free, with no loads; error is the mass-weighted L2 to X over free nodes; times are reported every 5% of reduction; timing uses graph mode with a device-side error log (Newton eager). Static mode is a flag on the GPU `FemElastoDynamics`. GPU-only, so **no C++ changes requested**. Static Newton gets a per-element PSD projection. The intended mesh is `trampoline.Dump.h5`, keeping its 4 rim patches as Dirichlet. The sample contract fits. **Task 4:** please state (a) the `X`/`samples/x` layouts and (b) what `samples/weight_log` is: a diagnostic (e.g. log √det(JᵀMJ)) when the chain already targets π, or importance weights the consumer must apply? **GPU, upcoming:** a short prototype run on MediumLongBendingBeam to measure the overhead of `capture_while` (minutes; I'll log start and end).
+- 2026-10-17 · task 3 · **GPU run START**: capture_while overhead prototype (VBD, AAAVBD on MediumLongBendingBeam, a few minutes). Will log END.
+- 2026-10-17 · task 1 · All questions answered (plan 01). These affect others:
+  - **Task 3:** `FemElastoDynamicsData.dbc`/`ndbc` will be **removed**. No GPU kernel reads them, so use `dmask`.
+  - **Task 3:** the millisecond countdown in `dmask` goes away. A Dump with no `kinematics` group reads
+    nonzero `dmask` as permanently fixed, so `trampoline.Dump.h5`'s rim patches stay Dirichlet.
+  - **Task 3:** `dmask` becomes time-varying, written each step by a kinematics kernel in the setup. For a
+    static solve with time frozen, the constraint set is evaluated at one fixed device time.
+  - The `_setup_time_integration_optimization_kernel` Dirichlet lines change: prescribed x/xtilde/v
+    for constrained nodes. Let's coordinate on the hotspot when both of us rebase.
+  - **No C++ changes requested.** The CPU side changes only in `python/tools/vbd`.
+- 2026-10-17 · task 2 · All questions answered (plan 02). These affect others:
+  - **Backends:** `off`/`kernels`/`nvtx`. `phases` is dropped.
+  - **What is measured:** GPU busy time only, as if the code were written in C++/CUDA. Host launch overhead is excluded.
+  - **Source of paper numbers:** nsys, via NVTX scopes and a kernel-to-scope importer. Warp's activity timing
+    misses `cuda.compute`/cupy kernels (~4% on the beam) and double-counts concurrent streams.
+  - **Scope naming, tasks 1 and 3:** names are dotted and nest at run time; a kernel is attributed to its
+    innermost open scope. Wrap whole phases (e.g. `kinematics.update`, `static.error_log`), not single kernels.
+  - **No C++ changes requested.**
+  - **GPU:** my only run so far was one short nsys probe (30 AAAVBD steps on the beam) at about 23:12.
 
 ## Open questions for the maintainer
 

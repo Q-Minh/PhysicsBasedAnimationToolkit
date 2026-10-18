@@ -73,10 +73,55 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
 
 ## Open questions for the maintainer
 
-1. Which comparisons matter most for the paper: per-step cost at equal accuracy, or time-to-tolerance? The latter needs task 3's convergence metric.
-2. Is installing Nsight Systems acceptable as the reference profiler?
-3. Should the GPU breakdown also include a host-side view (Python/launch overhead), or only GPU work?
+1. ~~Which comparisons matter most?~~ **Answered (2026-10-17): cost breakdown.** Per-step GPU cost by phase at
+   the production parameters, plus normalized cost per VBD sweep / Newton iteration. Time-to-tolerance stays
+   in task 3's graph-mode benchmark.
+2. ~~Nsight Systems as reference?~~ **Answered (2026-10-17):** it is already installed (2026.1.3). **Warp + nsys
+   import:** the in-process `kernels` backend (Warp activity timing plus per-scope event brackets, with the
+   remainder reported as "untimed") serves the GUI and quick runs. **Paper figures come from nsys:** NVTX
+   scopes, then a script attributes every kernel in the nsys sqlite export to its innermost scope. That covers
+   CUB/cupy kernels and concurrent streams exactly. No new dependencies.
+3. ~~Host-side view?~~ **Answered (2026-10-17): GPU only.** Time things as if the code were written directly in
+   C++/CUDA: report GPU busy time per phase, excluding host launch overhead, Python time and host-sync gaps
+   (relevant to Newton). Drop protocol step 3 (eager vs graph replay wall time) as a reported result.
+4. ~~Lock GPU clocks?~~ **Answered (2026-10-17): no lock, validate.** Keep default clocks. Compare per-kernel
+   averages from an eager run against an nsys graph-mode trace (`--cuda-graph-trace=node`) once, and report the
+   difference.
+5. ~~Scenes?~~ **Answered (2026-10-17): mostly trampoline** (`data/scenarios/trampoline.Dump.h5`), but scene
+   choice is deferred: "for now, I just want to see profiling work." Develop on trampoline (MediumLongBendingBeam
+   for quick checks).
+6. ~~Contact detection?~~ **Answered (2026-10-17): VertexSdf only.**
+7. ~~Contact cost inside the fused vertex-solve kernel?~~ **Answered (2026-10-17): one fused slice,**
+   "vertex solve (elastic + contact)". Dual updates, detection, filtering and constraint-set updates get their own
+   slices. No ablation, no split kernels.
+8. ~~Solver parameters?~~ **Answered (2026-10-17): equal sweep budget.** VBD, AAAVBD, Chebyshev and Anderson
+   run the same total number of VBD sweeps per step. Newton keeps its defaults. Default budget: the Dump's
+   `n_max_iters × n_subproblem_max_iters`, with Anderson's `n_subproblem_max_iters` set to budget / `p`.
+9. ~~First milestone?~~ **Answered (2026-10-17): CLI + report first.** Scope backend, scopes in all solvers,
+   `simulate.py --profile`, the nsys importer, and a published HTML report (pies plus stacked bars) on
+   trampoline. The GUI panel (`panels/profiling.py`) comes in milestone 2.
+10. ~~Backend set?~~ **Answered (2026-10-17): `off` / `kernels` / `nvtx`.** `phases` is dropped. Per-scope event
+    brackets are folded into `kernels` as a diagnostic for spotting untimed work.
 
 ## Progress
 
-(update as you go)
+- 2026-10-17 · Investigation findings:
+  - **Warp activity timing** (`warp/native/cuda_util.h:359`) brackets each *Warp* launch, memset and memcpy
+    with a CUDA event pair and skips capturing streams. It returns durations without timestamps.
+    **Not covered:** `cuda.compute` (CCCL) sort, lower_bound, scan and reduce in `contact/mesh/pairs.py`,
+    `contact/dynamics.py` and `contact/mesh/ogc.py`, plus cupy copies.
+  - **First nsys probe** (MediumLongBendingBeam, AAAVBD, VertexSdf, 30 steps, graph mode with node trace):
+    1.70 s of kernel time. `_accelerated_vertex_solve_kernel` is 85.8% (130,500 launches, avg 11.2 µs,
+    ~4,350 per step). Non-Warp kernels (CCCL radix sort and binary search, cupy copies) are ~4%. Contact dual
+    updates are ~5%. Detection is ~1.5%.
+  - **Concurrent streams:** contact work runs on 4×6 `wp.Stream`s (`contact/constraints.py:105`) and Newton
+    triplet assembly on 6 streams, so per-kernel durations summed per scope overcount the timeline.
+  - **Newton** syncs to the host every iteration (`.numpy()` on the gradient norm, slope and energy;
+    `warp.optim.linear.cg` with `use_cuda_graph=False`). Its kernels are all Warp (`warp.sparse`, `warp.optim`).
+  - **In-graph events:** `Stream.record_event(..., external=True)` (`warp/_src/context.py:5335`) records
+    external event nodes during capture. Relayed to task 3 via the coordinator.
+  - **nsys on Windows:** the venv's `python.exe` launcher stub hangs under nsys. Launch the base interpreter
+    with a wrapper that sets `sys.prefix` and calls `site.addsitedir` on the venv. `PYTHONPATH` alone breaks
+    `cuda.compute` (cuda.pathfinder can't find nvrtc). The wrapper will be committed with the profiling scripts.
+- 2026-10-17 · All open questions answered (batches 1 to 3, see above). Waiting for Phase 0, then rebase onto
+  `dev` and implement milestone 1.
