@@ -78,6 +78,6 @@ The conversion followed these rules:
 3. Every other key the code serializes but the source lacks takes its code default. The header lists these keys, e.g. `Solver.Convergence.*` (`check_interval`, `ftol`), `Solver.Newton.LinearSolver.*`, `Solver.Newton.spd_correction`, and the GPU-only Anderson keys `linear_solver` and `vbd_iters_per_anderson_iter`.
 4. Keys the code no longer serializes are dropped and listed in the header: since 2026-10-18 the stencil gradient acceleration keys (betaG0, rhohat(S), gammaup(S), gammadown(S), warm_start_beta, surface_stencil_surface_neighbours_only) exist only under `Solver.AAAVBD`, so they're dropped from the VBD, Chebyshev and Anderson tables. The GPU never used them there, so loading is still bit-identical to the `.h5`.
 
-`beam1e6.GroundTruth.toml` comes from the extras working-tree version of its `.h5` (uncommitted when converted). That version already has hand-made Chebyshev and Anderson tables, so rule 2 did not apply to it.
+Every paper config is converted from the extras repo's **committed** files. Uncommitted local changes there (e.g. to `beam1e6.GroundTruth.h5`) are ignored, by the maintainer's choice.
 
 `parameters/gpu/beam.GroundTruth.Notes.txt` in the extras repository describes how the beam budgets were chosen.

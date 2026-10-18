@@ -1,10 +1,15 @@
 # Paper parameters, converted from accelerated-vbd-extras/parameters/gpu/beam1e6.GroundTruth.h5
-#   (extras commit c2e74d9, uncommitted working-tree version, sha256 9cb061b9b02c5193), 2026-10-18.
+#   (extras commit c2e74d9, sha256 29eebd851c21e5c3), 2026-10-18.
 # Hand-tuned values from the source are unchanged. Edit a copy, not this file (see README.md).
+#
+# Added for the accelerated solvers (not hand-tuned):
+#   Solver.Chebyshev: Solver.VBD's values, plus the default rho
+#   Solver.AndersonSolver: Solver.VBD's values, plus the default m, beta, cod_numerical_zero
 #
 # Not in the source, code defaults:
 #   Contact.ContactDynamics.gammaf_adaptive
 #   Contact.ContactDynamics.gamman_adaptive
+#   Solver.AAAVBD.kp
 #   Solver.AndersonSolver.linear_solver
 #   Solver.AndersonSolver.vbd_iters_per_anderson_iter
 #   Solver.Convergence.check_interval
@@ -15,26 +20,9 @@
 #   Solver.Newton.LinearSolver.n_max_iters
 #   Solver.Newton.LinearSolver.rtol
 #   Solver.Newton.spd_correction
+#   Solver.VBD.kp
 #
 # Dropped (not serialized by the current code):
-#   Solver.AndersonSolver.betaG0
-#   Solver.AndersonSolver.gammadown
-#   Solver.AndersonSolver.gammadownS
-#   Solver.AndersonSolver.gammaup
-#   Solver.AndersonSolver.gammaupS
-#   Solver.AndersonSolver.rhohat
-#   Solver.AndersonSolver.rhohatS
-#   Solver.AndersonSolver.surface_stencil_surface_neighbours_only
-#   Solver.AndersonSolver.warm_start_beta
-#   Solver.Chebyshev.betaG0
-#   Solver.Chebyshev.gammadown
-#   Solver.Chebyshev.gammadownS
-#   Solver.Chebyshev.gammaup
-#   Solver.Chebyshev.gammaupS
-#   Solver.Chebyshev.rhohat
-#   Solver.Chebyshev.rhohatS
-#   Solver.Chebyshev.surface_stencil_surface_neighbours_only
-#   Solver.Chebyshev.warm_start_beta
 #   Solver.VBD.betaG0
 #   Solver.VBD.gammadown
 #   Solver.VBD.gammadownS
@@ -44,6 +32,24 @@
 #   Solver.VBD.rhohatS
 #   Solver.VBD.surface_stencil_surface_neighbours_only
 #   Solver.VBD.warm_start_beta
+#   Solver.Chebyshev.betaG0
+#   Solver.Chebyshev.gammadown
+#   Solver.Chebyshev.gammadownS
+#   Solver.Chebyshev.gammaup
+#   Solver.Chebyshev.gammaupS
+#   Solver.Chebyshev.rhohat
+#   Solver.Chebyshev.rhohatS
+#   Solver.Chebyshev.surface_stencil_surface_neighbours_only
+#   Solver.Chebyshev.warm_start_beta
+#   Solver.AndersonSolver.betaG0
+#   Solver.AndersonSolver.gammadown
+#   Solver.AndersonSolver.gammadownS
+#   Solver.AndersonSolver.gammaup
+#   Solver.AndersonSolver.gammaupS
+#   Solver.AndersonSolver.rhohat
+#   Solver.AndersonSolver.rhohatS
+#   Solver.AndersonSolver.surface_stencil_surface_neighbours_only
+#   Solver.AndersonSolver.warm_start_beta
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -115,9 +121,9 @@ kp = 0
 linear_solver = 0
 m = 5
 n_max_iters = 1
-n_subproblem_max_iters = 100
+n_subproblem_max_iters = 2800
 vbd_iters_per_anderson_iter = 1
-vlinsolve = 0
+vlinsolve = 3
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
@@ -129,9 +135,9 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 200
+n_subproblem_max_iters = 2800
 rho = 0.8999999761581421
-vlinsolve = 0
+vlinsolve = 3
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
