@@ -4,11 +4,13 @@ Static equilibrium solves of the GPU simulator, and their convergence logs.
 
 A static solve releases an initial shape into min_x Psi(x) - s fext^T x (``fem.static``, with load
 scale s), holding the Dirichlet nodes, and records the error to the rest shape after every solver
-iteration. The convergence benchmark (``benchmark_static.py``) uses MCMC shape samples
-(``python/examples/rom_mcmc.py``; contract in plans/MASTER.md) as initial shapes and no loads, so the
-equilibrium is exactly the rest shape X.
+iteration. The convergence benchmark (``benchmark.py``) uses MCMC shape samples
+(``python/examples/make_benchmark.py``; contract in plans/MASTER.md) as initial shapes and no loads,
+so the equilibrium is exactly the rest shape X. The same machinery runs dynamic benchmark problems:
+one BDF1 step (:func:`prepare_dynamic_problem`) measured against the problem's reference solution.
 
-Error: e = sqrt((x - X)^T M (x - X)) over free nodes (lumped mass M).
+Error: e = sqrt((x - x*)^T M (x - x*)) over free nodes (lumped mass M), with x* = X for static
+problems and the reference x_ref for dynamic ones.
 
 Timing: VBD-family solves run as one captured CUDA graph. The distinct first iterations are
 recorded once, then a block of identical iterations is replayed inside ``wp.capture_while`` until
@@ -17,13 +19,13 @@ the error falls below (1 - target_reduction) e0, or a budget runs out. After eve
 itself is excluded from the solver time. Newton isn't capturable and runs eagerly, one Newton step
 per entry, so its time includes host work.
 
-This module has no command line of its own: ``benchmark_static.py`` is the CLI (see its docstring for
+This module has no command line of its own: ``benchmark.py`` is the CLI (see its docstring for
 commands, outputs and pitfalls), and the GUI's "Static Equilibrium" panel (``panels/static.py``) runs
 static solves interactively. ``python -m python.tools.sim.static`` runs this module's tests.
 
 Python usage:
 
-    state = SimulationState(fem_cpu, params_cpu)   # e.g. as benchmark_static.make_state builds it
+    state = SimulationState(fem_cpu, params_cpu)   # e.g. as benchmark.make_state builds it
     state.cd_params[CDType.VertexSdf].deactivate = True
     state.reset()
     batch = load_sample_batch("batch.h5")
@@ -31,8 +33,8 @@ Python usage:
     prepare_static_problem(state, fext_scale=0.0)  # no loads: the equilibrium is X
     spec = StaticSolveSpec()
     spec.max_seconds = 10.0
-    solver = StaticSolver(state, SolverType.AAAVBD, spec)
-    log = solver.solve(batch.x[0])                 # StaticSolveLog
+    solver = BenchmarkSolver(state, SolverType.AAAVBD, spec)
+    log = solver.solve(batch.x[0], batch.reference(0))  # StaticSolveLog
     log.time_to_reduction(0.5), log.relative_error[-1]
 """
 
@@ -58,10 +60,19 @@ from .state import SimulationState, SolverType
 
 @dataclass
 class SampleBatch:
-    """Initial shapes from one MCMC sample file (one target energy).
+    """Benchmark problems from one MCMC sample file (one target energy).
+
+    The file's root attribute ``problem`` gives the kind (``"static"`` when absent):
+
+    - **static**: release ``x`` with no loads; the solution is the rest shape ``X``.
+    - **dynamic**: one implicit-Euler (BDF1) step of size ``h`` from ``x`` with velocity ``v``, i.e.
+      minimize 1/(2 h^2) |y - xtilde|_M^2 + Psi(y) with the Dirichlet DOFs at rest. ``x_ref`` is a
+      reference solution (full-order Newton) and ``ref_newton_correction`` the largest entry (m) of its
+      last Newton correction, an estimate of its accuracy.
 
     ``attrs`` holds the file's root attributes as written by the sampler (e.g. ``target_energy``,
-    ``sampler``, ``ensemble``, ``rhat``, ``gravity``; see the sample-file contract in plans/MASTER.md).
+    ``sampler``, ``ensemble``, ``rhat``, ``gravity``, ``h``; see the sample-file contract in
+    plans/MASTER.md).
     """
 
     path: str
@@ -70,6 +81,20 @@ class SampleBatch:
     energy: np.ndarray  # (S,) achieved deformation energies (J)
     attrs: dict = field(default_factory=dict)
     min_J: np.ndarray | None = None  # (S,) smallest element volume ratio det(F), when the file has it
+    problem: str = "static"  # "static" or "dynamic"
+    v: np.ndarray | None = None  # (S, N, 3) initial velocities (dynamic)
+    xtilde: np.ndarray | None = None  # (S, N, 3) inertial targets x + h v + h^2 aext (dynamic)
+    x_ref: np.ndarray | None = None  # (S, N, 3) reference solutions (dynamic)
+    ref_newton_correction: np.ndarray | None = None  # (S,) reference accuracy estimate (m) (dynamic)
+
+    @property
+    def h(self) -> float | None:
+        """Time step of a dynamic batch (s), from the ``h`` attribute; None for static batches."""
+        return float(self.attrs["h"]) if self.problem == "dynamic" else None
+
+    def reference(self, s: int) -> np.ndarray:
+        """(N, 3) solution sample ``s``'s error is measured against: ``X`` (static) or ``x_ref[s]``."""
+        return self.X if self.problem == "static" else self.x_ref[s]
 
     @property
     def target_energy(self) -> float:
@@ -93,7 +118,7 @@ class SampleBatch:
         if rhat is not None and not float(rhat) < 1.05:
             out.append(f"split R-hat {float(rhat):.3f} >= 1.05: the chains haven't mixed, sample more or burn in longer")
         gravity = self.attrs.get("gravity")
-        if gravity is not None and np.any(np.asarray(gravity, dtype=np.float64) != 0):
+        if self.problem == "static" and gravity is not None and np.any(np.asarray(gravity, dtype=np.float64) != 0):
             out.append(f"sampled with gravity {gravity}: the benchmark's static problem has no loads")
         return out
 
@@ -124,13 +149,31 @@ def load_sample_batch(path: str) -> SampleBatch:
         x = np.asarray(f["samples/x"], dtype=np.float32)
         energy = np.asarray(f["samples/energy"], dtype=np.float64)
         min_J = np.asarray(f["samples/min_J"], dtype=np.float64) if "samples/min_J" in f else None
+        problem = str(attrs.get("problem", "static"))
+        dynamic = {}
+        if problem == "dynamic":
+            for name in ["v", "xtilde", "x_ref"]:
+                dynamic[name] = np.asarray(f[f"samples/{name}"], dtype=np.float32)
+            dynamic["ref_newton_correction"] = np.asarray(
+                f["samples/ref_newton_correction"], dtype=np.float64
+            )
+            if "h" not in attrs:
+                raise ValueError(f"{path}: dynamic problems need the time step attribute h")
+        elif problem != "static":
+            raise ValueError(f"{path}: unknown problem kind {problem!r} (expected static or dynamic)")
     if X.ndim != 2 or X.shape[1] != 3 or x.ndim != 3 or x.shape[1:] != X.shape:
         raise ValueError(f"{path}: expected X (N, 3) and samples/x (S, N, 3), got {X.shape}, {x.shape}")
-    return SampleBatch(path=path, X=X, x=x, energy=energy, attrs=attrs, min_J=min_J)
+    for name, a in dynamic.items():
+        if name != "ref_newton_correction" and a.shape != x.shape:
+            raise ValueError(f"{path}: samples/{name} has shape {a.shape}, expected {x.shape}")
+    return SampleBatch(
+        path=path, X=X, x=x, energy=energy, attrs=attrs, min_J=min_J, problem=problem, **dynamic
+    )
 
 
 def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float = 1e-5) -> None:
-    """Check that the batch was sampled on this FEM mesh and keeps its Dirichlet nodes at rest.
+    """Check that the batch was sampled on this FEM mesh and keeps its Dirichlet nodes at rest
+    (in the initial shapes and, for dynamic batches, in the reference solutions).
 
     Args:
         batch (SampleBatch): The loaded batch.
@@ -145,9 +188,13 @@ def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float =
         raise ValueError(f"{batch.path}: rest positions don't match the FEM's X")
     fixed = fem.data.dmask.numpy() != 0
     if fixed.any():
-        drift = np.abs(batch.x[:, fixed] - X[None, fixed]).max()
-        if drift > atol:
-            raise ValueError(f"{batch.path}: Dirichlet nodes move by up to {drift} in the samples")
+        for name in ["x", "x_ref"]:
+            a = getattr(batch, name)
+            if a is None:
+                continue
+            drift = np.abs(a[:, fixed] - X[None, fixed]).max()
+            if drift > atol:
+                raise ValueError(f"{batch.path}: Dirichlet nodes move by up to {drift} in samples/{name}")
 
 
 # --- Solve specification ---
@@ -156,7 +203,7 @@ def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float =
 class StaticSolveSpec(SerializableMixin):
     """One static benchmark case: initial shapes, loads and stopping criteria.
 
-    Serialized with :meth:`serialize`/:meth:`deserialize` (h5 attributes), which ``benchmark_static.py``
+    Serialized with :meth:`serialize`/:meth:`deserialize` (h5 attributes), which ``benchmark.py``
     exposes as ``--save-spec``/``--spec``. It isn't part of the simulation parameters
     (``state.serialize_params``) and isn't read from ``--sim-params`` configs.
     """
@@ -203,12 +250,14 @@ def _stamp_kernel(t_a: wp.array[wp.int64], count: wp.array[wp.int32]):
 
 
 @wp.kernel
-def _error_terms_kernel(fem: FemElastoDynamicsData, w: wp.array[wp.float32]):
+def _error_terms_kernel(
+    fem: FemElastoDynamicsData, reference: wp.array[wp.vec3f], w: wp.array[wp.float32]
+):
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):
         w[i] = wp.float32(0)
         return
-    d = fem.x[i] - fem.X[i]
+    d = fem.x[i] - reference[i]
     w[i] = fem.m[i] * wp.dot(d, d)
 
 
@@ -245,7 +294,7 @@ def _commit_kernel(
 
 
 class ErrorLog:
-    """Per-iteration log of the squared error, cumulative sweeps and device timestamps.
+    """Per-iteration log of the squared error to :attr:`reference`, cumulative sweeps and device timestamps.
 
     Entry 0 is the initial state. ``record`` appends an entry after a solver iteration and updates
     ``keep`` (1 while the error is above the target and the budgets aren't exhausted). It doesn't
@@ -255,11 +304,13 @@ class ErrorLog:
     def __init__(self, fem: FemElastoDynamics, capacity: int):
         """
         Args:
-            fem (FemElastoDynamics): The problem whose ``x`` is logged against its rest positions ``X``.
+            fem (FemElastoDynamics): The problem whose ``x`` is logged against :attr:`reference`, which
+                starts as its rest positions ``X``.
             capacity (int): Number of entries the device arrays hold (initial state included).
         """
         n_nodes = fem.data.x.shape[0]
         self._fem = fem
+        self.reference = wp.clone(fem.data.X)  # (N,) solution the error is measured against
         self.capacity = int(capacity)
         self.e2 = wp.zeros(self.capacity, dtype=wp.float32)
         self.sweeps = wp.zeros(self.capacity, dtype=wp.int32)
@@ -302,7 +353,7 @@ class ErrorLog:
         """
         fem = self._fem
         wp.launch(_stamp_kernel, dim=1, inputs=[self.t_a, self.count])
-        wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[fem.data, self._w])
+        wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[fem.data, self.reference, self._w])
         self._reduce(wp.get_stream())
         wp.launch(
             _commit_kernel,
@@ -346,7 +397,7 @@ class ErrorLog:
 class StaticSolveLog:
     """Host copy of an :class:`ErrorLog`: entry j is the state after j solver iterations."""
 
-    error: np.ndarray  # (n,) mass-weighted error to the rest shape
+    error: np.ndarray  # (n,) mass-weighted error to the reference (the rest shape for static problems)
     time: np.ndarray  # (n,) cumulative solver wall-clock time (s), logging excluded
     sweeps: np.ndarray  # (n,) cumulative VBD sweeps (0 for Newton)
 
@@ -395,20 +446,40 @@ def prepare_static_problem(state: SimulationState, fext_scale: float) -> np.ndar
     return fext0
 
 
-class StaticSolver:
-    """Runs logged static solves of one solver on one ``SimulationState``, from given initial shapes.
+def prepare_dynamic_problem(state: SimulationState, h: float) -> None:
+    """Set up ``state`` for one-step dynamic benchmark problems with time step ``h``.
 
-    For VBD-family solvers, the whole solve is captured once (on the first :meth:`solve`) and
-    replayed for every initial shape; the state must not be reset in between. The solver's own outer
-    loop isn't used: a static solve is one subproblem of iterations driven by ``spec``'s budgets, so
-    ``gtol``, ``n_max_iters`` and ``n_subproblem_max_iters`` don't apply.
+    One BDF1 step of size ``h`` and no substeps, so ``fem.h2 = h^2`` and the solvers minimize
+    1/2 |x - xtilde|_M^2 + h^2 Psi(x), the problem files' objective scaled by h^2. Resets the state,
+    which rebuilds its GPU objects in dynamic mode.
+
+    Args:
+        state (SimulationState): The simulation (contact detection should already be deactivated).
+        h (float): The problems' time step (s).
+    """
+    state.dt = float(h)
+    state.substeps = 1
+    state.bdf_scheme = 1
+    state.reset()
+
+
+class BenchmarkSolver:
+    """Runs logged benchmark solves of one solver on one ``SimulationState``, one problem at a time.
+
+    A problem is static (``fem.static``: release ``x0``, error to the rest shape) or dynamic (one BDF1
+    step from ``x0`` with velocity ``v0`` and inertial target ``xtilde``, error to a reference
+    solution). For VBD-family solvers, the whole solve is captured once (on the first :meth:`solve`)
+    and replayed for every problem; the state must not be reset in between. The solver's own outer
+    loop and tests aren't used: a solve is one subproblem of iterations driven by ``spec``'s budgets
+    and stopped by the benchmark's error, so ``gtol``, ``ftol``, ``n_max_iters`` and
+    ``n_subproblem_max_iters`` don't apply.
     """
 
     def __init__(self, state: SimulationState, solver: SolverType, spec: StaticSolveSpec):
         """
         Args:
-            state (SimulationState): A contact-free state, already in static mode
-                (:func:`prepare_static_problem`).
+            state (SimulationState): A contact-free state, prepared for the problems' kind
+                (:func:`prepare_static_problem` or :func:`prepare_dynamic_problem`).
             solver (SolverType): The solver to run.
             spec (StaticSolveSpec): Stopping criteria: ``target_reduction``, ``max_iterations``,
                 ``max_seconds`` and the replay ``block``.
@@ -435,11 +506,13 @@ class StaticSolver:
     def _begin(self):
         """Solver setup before the timed iterations (contact-free here, so cheap).
 
-        The static problem's setup prescribes the Dirichlet nodes, evaluating kinematic constraints
-        at their frozen time.
+        Static problems run the problem's setup, which prescribes the Dirichlet nodes (kinematic
+        constraints at their frozen time). Dynamic problems skip it: their inertial target comes from
+        the problem file (:meth:`solve`), and their Dirichlet nodes are fixed at rest.
         """
         state, params = self.state, self.state.params[self.solver]
-        state.fem.setup_time_integration_optimization()
+        if state.fem.static:
+            state.fem.setup_time_integration_optimization()
         gpu.vbd.solver.initialize_solve(state.fem, state.contact, state.detector, params)
         gpu.vbd.solver.prepare_subproblem(state.fem, state.contact, state.detector, params)
         if self.solver == SolverType.AAAVBD:
@@ -463,10 +536,14 @@ class StaticSolver:
     def _solve_newton(self):
         state, params = self.state, self.state.params[SolverType.Newton]
         newton = gpu.newton.solver
-        state.fem.setup_time_integration_optimization()
+        if state.fem.static:
+            state.fem.setup_time_integration_optimization()
         newton.initialize_solve(state.fem, state.contact, state.detector, params)
-        n_inner = params.data.n_subproblem_max_iters
+        n_inner, gtol2 = params.data.n_subproblem_max_iters, params.data.gtol2
+        # One Newton step per entry, and never Newton's own gradient test: the benchmark's error stops
+        # the solve (with h^2-scaled dynamics at small h, |g| can start below gtol and Newton would idle)
         params.data.n_subproblem_max_iters = 1
+        params.data.gtol2 = 0.0
         try:
             log = self.log
             log.reset()
@@ -475,20 +552,43 @@ class StaticSolver:
                 newton.solve_subproblem(state.fem, state.contact, params)
                 log.record(0)
         finally:
-            params.data.n_subproblem_max_iters = n_inner
+            params.data.n_subproblem_max_iters, params.data.gtol2 = n_inner, gtol2
 
-    def solve(self, x0: np.ndarray) -> StaticSolveLog:
-        """Release an initial shape into the static problem and log until a stop criterion.
+    def _load(self, x0, reference, v0, xtilde) -> None:
+        fem = self.state.fem
+        fem.data.x.assign(np.asarray(x0, dtype=np.float32))
+        self.log.reference.assign(fem.data.X if reference is None else np.asarray(reference, dtype=np.float32))
+        if fem.static:
+            fem.data.v.zero_()
+            return
+        if v0 is None or xtilde is None:
+            raise ValueError("Dynamic problems need v0 and xtilde")
+        fem.data.v.assign(np.asarray(v0, dtype=np.float32))
+        fem.data.xtilde.assign(np.asarray(xtilde, dtype=np.float32))
+        # The step starts from (x0, v0): write the BDF history in place (detection holds xt handles).
+        fem.bdf.xt[0, :] = cp.asarray(np.asarray(x0, dtype=np.float32).ravel())[cp.newaxis, :]
+        fem.bdf.xt[1, :] = cp.asarray(np.asarray(v0, dtype=np.float32).ravel())[cp.newaxis, :]
+
+    def solve(
+        self,
+        x0: np.ndarray,
+        reference: np.ndarray | None = None,
+        v0: np.ndarray | None = None,
+        xtilde: np.ndarray | None = None,
+    ) -> StaticSolveLog:
+        """Solve one problem from ``x0`` and log until a stop criterion.
 
         Args:
             x0 (np.ndarray): (N, 3) initial positions, e.g. ``batch.x[s]``.
+            reference (np.ndarray | None): (N, 3) solution the error is measured against, e.g.
+                ``batch.reference(s)``; the rest shape X if None.
+            v0 (np.ndarray | None): (N, 3) initial velocities (dynamic problems).
+            xtilde (np.ndarray | None): (N, 3) inertial target of the step (dynamic problems).
 
         Returns:
             StaticSolveLog: The solve's per-iteration log.
         """
-        fem = self.state.fem
-        fem.data.x.assign(np.asarray(x0, dtype=np.float32))
-        fem.data.v.zero_()
+        self._load(x0, reference, v0, xtilde)
         if self._schedule is None:
             self._solve_newton()
         else:
@@ -498,7 +598,7 @@ class StaticSolver:
                     self._begin()
                     self._record_vbd_family()
                 self._graph = capture.graph
-                fem.data.x.assign(np.asarray(x0, dtype=np.float32))
+                self._load(x0, reference, v0, xtilde)
             wp.capture_launch(self._graph)
         return self.log.read()
 
@@ -564,6 +664,24 @@ class TestErrorLog(unittest.TestCase):
         replay = log.read()
         self.assertEqual(replay.error.size, 6)
         self.assertAlmostEqual(replay.error[0] / e0, 2.0, places=5)
+
+    def test_reference(self):
+        """Errors are measured against the log's reference, e.g. a dynamic step's x_ref."""
+        fem = self._make_fem()
+        X = fem.data.X.numpy()
+        m = fem.data.m.numpy()
+        rng = np.random.default_rng(1)
+        ref = (X + 0.1 * rng.standard_normal(X.shape)).astype(np.float32)
+        x = (X + 0.1 * rng.standard_normal(X.shape)).astype(np.float32)
+        ref[0] = x[0] = X[0]  # the Dirichlet node
+        log = ErrorLog(fem, capacity=4)
+        log.reference.assign(ref)
+        fem.data.x.assign(x)
+        log.reset()
+        log.record(0)
+        e = log.read().error[0]
+        expected = np.sqrt(np.sum(m[1:, None] * (x[1:].astype(np.float64) - ref[1:]) ** 2))
+        self.assertAlmostEqual(e / expected, 1.0, places=5)
 
 
 if __name__ == "__main__":

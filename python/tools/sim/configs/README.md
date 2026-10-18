@@ -1,6 +1,6 @@
 # Simulation-parameter configs
 
-TOML files that set the GPU simulators' parameters (`ui.py`, `simulate.py`, `benchmark_static.py`). The code is in `../config.py`.
+TOML files that set the GPU simulators' parameters (`ui.py`, `simulate.py`, `benchmark.py`). The code is in `../config.py`.
 
 These files are cached here for now. Their long-term home is `C:\git\accelerated-vbd-extras` (the paper's repository), next to the HDF5 originals in `parameters/gpu`.
 
@@ -29,7 +29,7 @@ python -m python.tools.sim.simulate --fem-elasto-dynamics dump.h5:fem -o out.h5 
     --set Solver.VBD.gtol=1e-4 --set Solver.Convergence.check_interval=10
 ```
 
-`--sim-params` and `--set` work the same way in `ui.py` and `benchmark_static.py`. The GUI's I/O panel imports `.toml` and `.h5` files, and exports TOML when the file name ends in `.toml`.
+`--sim-params` and `--set` work the same way in `ui.py` and `benchmark.py`. The GUI's I/O panel imports `.toml` and `.h5` files, and exports TOML when the file name ends in `.toml`.
 
 Sources are merged in this order, with later values winning:
 
