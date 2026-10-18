@@ -21,7 +21,7 @@ python -m python.tools.sim.simulate --scene data/scenarios/prisms/two_het_cubes/
     -o out.h5 --solver VBD --cd VertexSdf --duration 3
 
 # GPU from an editor Dump (its kinematics group is read automatically)
-python -m python.tools.sim.simulate --fem-elasto-dynamics data/scenarios/TwistPullBeam.Dump.h5:fem -o out.h5 --duration 2
+python -m python.tools.sim.simulate --fem-elasto-dynamics dump.h5:fem -o out.h5 --duration 2   # e.g. a Dump taken mid-run to debug a crash
 
 # GUI: the "Kinematic constraints" panel lists constraints, marks active ones, toggles them (no recapture), shows/highlights nodes
 python -m python.tools.sim.ui --scene scene.h5

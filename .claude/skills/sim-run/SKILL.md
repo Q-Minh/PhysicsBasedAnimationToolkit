@@ -25,22 +25,22 @@ The GPU simulators take exactly one of:
 - **`--fem-elasto-dynamics file.h5:fem`**: an editor Dump, written by the CPU editor's **Dump** button. It holds `fem`, `contact`, solver params and the `kinematics` group (procedural constraints).
 - **`--scene scene.h5`**: a CPU editor scene file, built the same way as the CPU editor builds it. Static mesh colliders and plane colliders (infinite by default, authored in the editor's Objects tab) are simulated too. For hard impacts on them, use an adaptive contact penalty (`--set Contact.ContactDynamics.penalty_adaptivity=1 --set Contact.ContactDynamics.gamman=1`). It still diverges on some body-body scenes (BeamFallingOnBeam) until task 3's fix lands.
 
-**Prefer scene files (`--scene`) plus `--sim-params`** (maintainer's preference). Use a Dump mainly to debug a crash that happens mid-simulation: it captures the state at that moment (current x and v, the kinematics' `t0` and open anchors), so the run resumes exactly there. The GPU never reads a Dump's solver parameters. Scenes live in `data/*.h5` and `data/scenarios/`; Dumps are `*.Dump.h5`. `data/` is git-ignored. From a worktree, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`.
+**Prefer scene files (`--scene`) plus `--sim-params`** (maintainer's preference). `python -m python.tools.vbd.dump_to_scene dump.h5 scene.h5` turns a Dump taken at t = 0 back into a scene file. Use a Dump mainly to debug a crash that happens mid-simulation: it captures the state at that moment (current x and v, the kinematics' `t0` and open anchors), so the run resumes exactly there. The GPU never reads a Dump's solver parameters. Scenes live in `data/*.h5` and `data/scenarios/`; Dumps are `*.Dump.h5`. `data/` is git-ignored. From a worktree, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`.
 
 Commonly used scenes:
 
 | Scene | Path | Notes |
 |---|---|---|
-| Bending beam | `--fem-elasto-dynamics data/scenarios/MediumLongBendingBeam.Dump.h5:fem` (scene file coming) | Clamped beam, no contact, deterministic |
+| Bending beam | `--scene data/scenarios/MediumLongBendingBeam.h5` | Clamped beam, no contact, deterministic |
 | Trampoline | `--scene data/scenarios/trampoline.h5` | Contact-free, deterministic, the profiling workhorse |
 | Beam on beam | `--scene data/BeamFallingOnBeam.h5` | Real contacts; not bit-reproducible run to run |
 | Cube on cube | `--scene data/CubeFallingOnCube.h5` | Tiny contact scene. Coincident surfaces pass through with VertexSdf; this is expected |
-| Twist and pull | `--fem-elasto-dynamics data/scenarios/TwistPullBeam.Dump.h5:fem` (scene file coming) | Kinematic constraints: rotating clamp, lifted then released tip |
+| Twist and pull | `--scene data/scenarios/TwistPullBeam.h5` | Kinematic constraints: rotating clamp, lifted then released tip |
 
 ## Headless GPU runs
 
 ```bash
-python -m python.tools.sim.simulate --fem-elasto-dynamics data/scenarios/MediumLongBendingBeam.Dump.h5:fem \
+python -m python.tools.sim.simulate --scene data/scenarios/MediumLongBendingBeam.h5 \
     -o out/beam.h5 --solver AAAVBD --duration 2 --fps 60 \
     --sim-params python/tools/sim/configs/paper/beam1e6.GroundTruth.toml --set Solver.AAAVBD.n_max_iters=2
 ```
@@ -117,7 +117,7 @@ The GPU defaults (`state.load_params`, listed in `configs/defaults.toml`) follow
 ## Interactive GPU runs
 
 ```bash
-python -m python.tools.sim.ui --fem-elasto-dynamics data/scenarios/TwistPullBeam.Dump.h5:fem [--sim-params p.toml ...] [--set KEY=VALUE]
+python -m python.tools.sim.ui --scene data/scenarios/TwistPullBeam.h5 [--sim-params p.toml ...] [--set KEY=VALUE]
 ```
 
 Claude can't drive the GUI. Hand the command to the user and say what to look at. Panels:
