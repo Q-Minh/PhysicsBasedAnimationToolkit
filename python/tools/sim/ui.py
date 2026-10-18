@@ -133,16 +133,19 @@ def make_callback(
                             SOLVER_SUB_PARAMS.get(state.solver),
                             exclude=SOLVER_HIDDEN_PARAMS.get(state.solver, frozenset()),
                         )
-                        if state.solver == SolverType.Newton and imgui.TreeNode(
-                            "linear_solver"
-                        ):
-                            draw_params(state.newton_linear_solver_params)
-                            imgui.TreePop()
-                        if state.solver != SolverType.Newton and imgui.TreeNode(
-                            "convergence"
-                        ):
-                            draw_params(state.convergence_params)
-                            imgui.TreePop()
+                        # Own ID scopes: Newton's params have a linear_solver combo at this level
+                        if state.solver == SolverType.Newton:
+                            imgui.PushID("newton_linear_solver_params")
+                            if imgui.TreeNode("LinearSolver"):
+                                draw_params(state.newton_linear_solver_params)
+                                imgui.TreePop()
+                            imgui.PopID()
+                        else:
+                            imgui.PushID("convergence_params")
+                            if imgui.TreeNode("Convergence"):
+                                draw_params(state.convergence_params)
+                                imgui.TreePop()
+                            imgui.PopID()
                         imgui.TreePop()
                     imgui.TreePop()
 
