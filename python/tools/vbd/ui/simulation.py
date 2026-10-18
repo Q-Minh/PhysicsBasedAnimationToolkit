@@ -550,13 +550,18 @@ class Simulation:
         fem = self._fem_dynamics
         self._constrain()
         self._xD = fem.x
+        v = fem.v
         for start, end, name in zip(
             self._XP[:-1], self._XP[1:], self._tet_elastic_body_names
         ):
-            self._xD[:, start:end], _, _ = self._transform_library.evaluate(
+            self._xD[:, start:end], vD, active = self._transform_library.evaluate(
                 name, self._xD[:, start:end], self._t, self._dt
             )
+            # Constrained nodes move at their prescribed velocity, so that they keep
+            # moving smoothly when released
+            v[:, start:end][:, active] = vD[:, active]
         fem.x = self._xD
+        fem.v = v
 
     def _apply_release_dirichlet_constraints(self):
         fem = self._fem_dynamics
