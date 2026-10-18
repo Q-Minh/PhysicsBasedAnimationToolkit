@@ -18,10 +18,14 @@ gradient is tested: passing ends the subproblem, and both tests follow its final
 
 import warp as wp
 
+import cupy as cp
+import cuda.compute
+
 from ...common.fields import DocField, SerializableMixin
+from ..common.reduce import Reduce
 from ..contact.dynamics import MeshDynamics as ContactDynamics, MeshDynamicsData
 from ..contact import halfedges
-from ..elasticity.fem import FemElastoDynamics
+from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from ..gradient import GradientNorm
 
 
@@ -30,8 +34,15 @@ class ConvergenceParams(SerializableMixin):
 
     Held by ``SimulationState.convergence_params`` (kept across resets) and serialized under
     ``Solver/Convergence``, so configs set them as ``Solver.Convergence.check_interval`` and
-    ``Solver.Convergence.ftol``. The gradient tolerance itself is each solver's ``gtol``
-    (``Solver.<solver>.gtol``), an absolute norm.
+    ``Solver.Convergence.ftol``. The gradient tolerance is either relative (``rtol > 0``, see below) or,
+    by default, each solver's absolute ``gtol`` (``Solver.<solver>.gtol``).
+
+    Relative test (``rtol > 0``): the gradient g of the time step's Lagrangian is turned into a
+    position-like residual by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step
+    would make), and compared with the step's free-flight displacement d = x~ - x^t (h v^t + h^2 a_ext
+    for BDF1): ``RMS_M(M^-1 g) <= rtol * RMS_M(d)``, with mass-weighted RMS over free nodes, i.e.
+    ``sum |g_i|^2 / m_i <= rtol^2 * sum m_i |d_i|^2``. It doesn't depend on the mesh's size or mass. When
+    d is 0 (a body at rest without loads) or for static problems, the absolute ``gtol`` test applies.
     """
 
     check_interval = DocField(
@@ -41,11 +52,45 @@ class ConvergenceParams(SerializableMixin):
         0.1,
         "Feasibility tolerance between outer iterations: largest allowed penetration into the contact margin, as a fraction of dmin",
     )
+    rtol = DocField(
+        0.0,
+        "Relative gradient tolerance (0 = off: the solver's absolute gtol applies). Stops when the mass-normalized "
+        "residual RMS(M^-1 g) is at most rtol times the step's free-flight displacement RMS(x~ - x^t) "
+        "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes",
+    )
 
 
 @wp.func
-def _is_converged(gnorm2: wp.array[wp.float32], gtol2: wp.float32) -> bool:
+def _is_converged(
+    gnorm2: wp.array[wp.float32],
+    gtol2: wp.float32,
+    gm2: wp.array[wp.float32],
+    dm2: wp.array[wp.float32],
+    rtol2: wp.float32,
+) -> bool:
+    """Relative test ``sum |g|^2/m <= rtol^2 sum m |d|^2`` if enabled and d != 0, else ``|g|^2 <= gtol^2``."""
+    if rtol2 > wp.float32(0) and dm2[0] > wp.float32(0):
+        return gm2[0] <= rtol2 * dm2[0]
     return gnorm2[0] <= gtol2
+
+
+@wp.kernel
+def _mass_normalized_residual_terms(
+    g: wp.array[wp.vec3f], fem: FemElastoDynamicsData, terms: wp.array[wp.float32]
+):
+    i = wp.tid()
+    terms[i] = wp.float32(0)
+    if not is_dirichlet_node(fem.dmask, i):
+        terms[i] = wp.dot(g[i], g[i]) / fem.m[i]
+
+
+@wp.kernel
+def _free_flight_displacement_terms(fem: FemElastoDynamicsData, terms: wp.array[wp.float32]):
+    i = wp.tid()
+    terms[i] = wp.float32(0)
+    if fem.is_static == 0 and not is_dirichlet_node(fem.dmask, i):
+        d = fem.xtilde[i] - fem.xt[i]
+        terms[i] = fem.m[i] * wp.dot(d, d)
 
 
 @wp.func
@@ -146,6 +191,9 @@ def _ee_penetration(
 def _start_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
+    gm2: wp.array[wp.float32],
+    dm2: wp.array[wp.float32],
+    rtol2: wp.float32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -154,7 +202,7 @@ def _start_kernel(
     keep: wp.array[wp.int32],
 ):
     k[0] = 0
-    done = _is_converged(gnorm2, gtol2) and _is_feasible(penetration, ftol, contact.dmin)
+    done = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2) and _is_feasible(penetration, ftol, contact.dmin)
     keep[0] = wp.where(n_max_iters > 0 and not done, 1, 0)
 
 
@@ -179,6 +227,9 @@ def _begin_inner_kernel(
 def _after_block_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
+    gm2: wp.array[wp.float32],
+    dm2: wp.array[wp.float32],
+    rtol2: wp.float32,
     n_blocks: wp.int32,
     blocks: wp.array[wp.int32],
     inner_keep: wp.array[wp.int32],
@@ -186,7 +237,7 @@ def _after_block_kernel(
 ):
     b = blocks[0] + 1
     blocks[0] = b
-    converged = _is_converged(gnorm2, gtol2)
+    converged = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2)
     subproblem_keep[0] = wp.where(converged, 0, 1)
     inner_keep[0] = wp.where(not converged and b < n_blocks, 1, 0)
 
@@ -195,6 +246,9 @@ def _after_block_kernel(
 def _end_outer_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
+    gm2: wp.array[wp.float32],
+    dm2: wp.array[wp.float32],
+    rtol2: wp.float32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -204,7 +258,7 @@ def _end_outer_kernel(
 ):
     kk = k[0] + 1
     k[0] = kk
-    done = _is_converged(gnorm2, gtol2) and _is_feasible(penetration, ftol, contact.dmin)
+    done = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2) and _is_feasible(penetration, ftol, contact.dmin)
     keep[0] = wp.where(kk < n_max_iters and not done, 1, 0)
 
 
@@ -239,6 +293,23 @@ class ConvergenceCheck:
         self._fem = fem
         self._contact = contact
         self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False)
+        # Relative test (params.rtol > 0): sum |g_i|^2 / m_i and sum m_i |d_i|^2 over free nodes
+        n_nodes = fem.data.x.shape[0]
+        self._terms = wp.zeros(n_nodes, dtype=wp.float32)
+        self.residual_m2 = wp.zeros(1, dtype=wp.float32)
+        self.displacement_m2 = wp.zeros(1, dtype=wp.float32)
+        self._reduce_residual = Reduce(
+            d_in=cp.asarray(self._terms),
+            d_out=cp.asarray(self.residual_m2),
+            num_items=n_nodes,
+            op=cuda.compute.OpKind.PLUS,
+        )
+        self._reduce_displacement = Reduce(
+            d_in=cp.asarray(self._terms),
+            d_out=cp.asarray(self.displacement_m2),
+            num_items=n_nodes,
+            op=cuda.compute.OpKind.PLUS,
+        )
         self.penetration = wp.zeros(1, dtype=wp.float32)
         self.k = wp.zeros(1, dtype=wp.int32)
         self.keep = wp.zeros(1, dtype=wp.int32)
@@ -247,8 +318,39 @@ class ConvergenceCheck:
         self.inner_keep = wp.zeros(1, dtype=wp.int32)
         self.subproblem_keep = wp.zeros(1, dtype=wp.int32)
 
+    @property
+    def _relative(self) -> bool:
+        return float(self.params.rtol) > 0.0
+
     def _test(self) -> None:
-        self.gradient_norm.compute(wp.get_stream())
+        stream = wp.get_stream()
+        self.gradient_norm.compute(stream)
+        if self._relative:
+            wp.launch(
+                _mass_normalized_residual_terms,
+                dim=self._terms.shape[0],
+                inputs=[self.gradient_norm.g, self._fem.data, self._terms],
+            )
+            self._reduce_residual(stream)
+
+    def _measure_displacement(self) -> None:
+        """The step's sum m_i |x~_i - x^t_i|^2 over free nodes, the relative test's scale."""
+        if self._relative:
+            wp.launch(
+                _free_flight_displacement_terms,
+                dim=self._terms.shape[0],
+                inputs=[self._fem.data, self._terms],
+            )
+            self._reduce_displacement(wp.get_stream())
+
+    def _tolerance_inputs(self, gtol: float) -> list:
+        return [
+            self.gradient_norm.gnorm2,
+            float(gtol) ** 2,
+            self.residual_m2,
+            self.displacement_m2,
+            float(self.params.rtol) ** 2 if self._relative else 0.0,
+        ]
 
     def _measure_penetration(self) -> None:
         self.penetration.zero_()
@@ -261,9 +363,7 @@ class ConvergenceCheck:
             wp.launch(kernel, dim=cs.capacity, inputs=[x, contact.data, cs.n_u, self.penetration])
 
     def _outer_test_inputs(self, gtol: float, n_max_iters: int) -> list:
-        return [
-            self.gradient_norm.gnorm2,
-            float(gtol) ** 2,
+        return self._tolerance_inputs(gtol) + [
             self.penetration,
             float(self.params.ftol),
             self._contact.data,
@@ -276,9 +376,10 @@ class ConvergenceCheck:
         """Test the initial positions: ``k = 0``, ``keep`` = not (optimal and feasible).
 
         Args:
-            gtol (float): Gradient-norm tolerance (absolute).
+            gtol (float): Gradient-norm tolerance (absolute; used when the relative test is off).
             n_max_iters (int): Maximum outer iterations; ``keep`` is 0 if it's 0.
         """
+        self._measure_displacement()
         self._test()
         self._measure_penetration()
         wp.launch(_start_kernel, dim=1, inputs=self._outer_test_inputs(gtol, n_max_iters))
@@ -312,9 +413,8 @@ class ConvergenceCheck:
         wp.launch(
             _after_block_kernel,
             dim=1,
-            inputs=[
-                self.gradient_norm.gnorm2,
-                float(gtol) ** 2,
+            inputs=self._tolerance_inputs(gtol)
+            + [
                 int(n_blocks),
                 self.blocks,
                 self.inner_keep,
@@ -335,7 +435,8 @@ class ConvergenceCheck:
         wp.launch(_end_outer_kernel, dim=1, inputs=self._outer_test_inputs(gtol, n_max_iters))
 
     def converged(self, gtol: float) -> bool:
-        """Host-side ``|g|^2 <= gtol^2`` from the last test. Synchronizes, so not capturable.
+        """Host-side gradient test from the last test (relative or absolute, see
+        :class:`ConvergenceParams`). Synchronizes, so not capturable.
 
         Args:
             gtol (float): Gradient-norm tolerance (absolute).
@@ -343,4 +444,7 @@ class ConvergenceCheck:
         Returns:
             bool: Whether the last gradient test passed (feasibility isn't included).
         """
+        dm2 = float(self.displacement_m2.numpy()[0])
+        if self._relative and dm2 > 0.0:
+            return float(self.residual_m2.numpy()[0]) <= float(self.params.rtol) ** 2 * dm2
         return float(self.gradient_norm.gnorm2.numpy()[0]) <= float(gtol) * float(gtol)
