@@ -34,8 +34,8 @@ class ConvergenceParams(SerializableMixin):
 
     Held by ``SimulationState.convergence_params`` (kept across resets) and serialized under
     ``Solver/Convergence``, so configs set them as ``Solver.Convergence.check_interval`` and
-    ``Solver.Convergence.ftol``. The gradient tolerance is either relative (``rtol > 0``, see below) or,
-    by default, each solver's absolute ``gtol`` (``Solver.<solver>.gtol``).
+    ``Solver.Convergence.ftol``. The gradient tolerance is relative (``rtol > 0``, default 1e-2, see below)
+    or, with ``rtol = 0``, each solver's absolute ``gtol`` (``Solver.<solver>.gtol``).
 
     Relative test (``rtol > 0``): the gradient g of the time step's Lagrangian is turned into a
     position-like residual by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step
@@ -53,7 +53,7 @@ class ConvergenceParams(SerializableMixin):
         "Feasibility tolerance between outer iterations: largest allowed penetration into the contact margin, as a fraction of dmin",
     )
     rtol = DocField(
-        0.0,
+        1e-2,
         "Relative gradient tolerance (0 = off: the solver's absolute gtol applies). Stops when the mass-normalized "
         "residual RMS(M^-1 g) is at most rtol times the step's free-flight displacement RMS(x~ - x^t) "
         "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes",
