@@ -81,6 +81,33 @@ def _export(state):
         results.save(_window_result(state), path)
 
 
+def _tooltip(text: str):
+    """Show ``text`` as a tooltip while the last drawn item is hovered."""
+    if imgui.IsItemHovered():
+        imgui.SetTooltip(text)
+
+
+_FLAT_HEADERS = {
+    "Phase": "Innermost scope name, summed over every place it occurs.\n"
+    "(unscoped) is work launched outside any scope.",
+    "Scope path": "Full scope path, so a phase appears once per caller.\n"
+    "(unscoped) is work launched outside any scope.",
+    "ms/step": "Mean GPU busy time per step of the phase's own work, excluding nested scopes.",
+    "Share": "Fraction of the step's total GPU busy time.",
+    "Launches": "Mean kernel launches, memsets and memcpys per step.",
+    "Calls": "Mean number of times the scope was entered per step (e.g. VBD sweeps per step).",
+}
+_TREE_HEADERS = {
+    "Scope": "Scope name, indented under the scope that encloses it. Hover a name for its full path.",
+    "Total ms": "Mean GPU busy time per step, including all nested scopes.",
+    "Self ms": "Mean GPU busy time per step of the scope's own work, excluding nested scopes.",
+    "Share of step": "Total time as a fraction of the step's GPU busy time.",
+    "Total union ms": "Like Total, but work running concurrently on several streams counts once\n"
+    "(union of activity intervals).",
+    "Calls": _FLAT_HEADERS["Calls"],
+}
+
+
 def draw_profiling_panel(state, ui_state):
     """Draw the Profiling tree node: backend toggle, window controls and the phase, path or tree
     table."""
@@ -88,6 +115,11 @@ def draw_profiling_panel(state, ui_state):
         return
     enabled = profiling.get_backend() == profiling.Backend.KERNELS
     changed, enabled = imgui.Checkbox("Profile GPU phases (steps run eagerly)", enabled)
+    _tooltip(
+        "Time every GPU kernel, memset and memcpy of each step with CUPTI and attribute it to\n"
+        "the profiling scope that launched it. While on, steps run eagerly (without the CUDA\n"
+        "graph), so they are slower than normal; kernel times stay representative."
+    )
     if changed:
         try:
             profiling.set_backend(profiling.Backend.KERNELS if enabled else profiling.Backend.OFF)
@@ -98,23 +130,35 @@ def draw_profiling_panel(state, ui_state):
     if _panel.error:
         imgui.TextColored((1.0, 0.4, 0.4, 1.0), _panel.error)
     changed, window = imgui.InputInt("Window (steps)", _panel.window)
+    _tooltip(
+        "Number of most recent profiled steps the table averages over. Older steps drop out\n"
+        "as new ones arrive; changing it keeps the newest steps."
+    )
     if changed and window > 0:
         _panel.window = window
         _panel.steps = collections.deque(_panel.steps, maxlen=window)
     if imgui.RadioButton("By phase", _panel.by_leaf and not _panel.tree):
         _panel.by_leaf, _panel.tree = True, False
+    _tooltip("One row per innermost scope name (e.g. aaavbd.sweep), summed over every place it occurs.")
     imgui.SameLine()
     if imgui.RadioButton("By scope path", not _panel.by_leaf and not _panel.tree):
         _panel.by_leaf, _panel.tree = False, False
+    _tooltip("One row per full scope path (e.g. solve/aaavbd.subproblem/aaavbd.sweep).")
     imgui.SameLine()
     if imgui.RadioButton("Tree", _panel.tree):
         _panel.tree = True
+    _tooltip("Nested scopes as a tree, with total (including nested scopes) and self (own work) times.")
     imgui.SameLine()
     if imgui.Button("Clear##profiling"):
         _panel.steps.clear()
+    _tooltip("Drop all profiled steps from the window.")
     imgui.SameLine()
     if imgui.Button("Export...##profiling") and _panel.steps:
         _export(state)
+    _tooltip(
+        "Save the profiled steps as JSON. python -m python.tools.sim.profiling.report turns it into an\n"
+        "HTML report."
+    )
 
     n = len(_panel.steps)
     if n == 0:
@@ -126,6 +170,10 @@ def draw_profiling_panel(state, ui_state):
     total = sum(busy.values())
     union = sum(s["step_union_ms"] for s in _panel.steps) / n
     imgui.Text(f"{n} steps: {total:.3f} ms/step GPU busy, {union:.3f} ms/step union over streams")
+    _tooltip(
+        "GPU busy sums the duration of every activity, so work running concurrently on several streams\n"
+        "counts once per stream. The union over streams counts overlapping work once."
+    )
     if _panel.tree:
         _draw_tree(window)
         imgui.TreePop()
@@ -144,6 +192,7 @@ def draw_profiling_panel(state, ui_state):
     imgui.Columns(5, "profiling_table", True)
     for header in ("Phase" if _panel.by_leaf else "Scope path", "ms/step", "Share", "Launches", "Calls"):
         imgui.Text(header)
+        _tooltip(_FLAT_HEADERS[header])
         imgui.NextColumn()
     imgui.Separator()
     for key, ms in sorted(busy.items(), key=lambda kv: -kv[1]):
@@ -170,10 +219,12 @@ def _draw_tree(window: dict):
     imgui.Columns(6, "profiling_tree", True)
     for header in ("Scope", "Total ms", "Self ms", "Share of step", "Total union ms", "Calls"):
         imgui.Text(header)
+        _tooltip(_TREE_HEADERS[header])
         imgui.NextColumn()
     imgui.Separator()
     for r in rows:
         imgui.Text("  " * r["depth"] + (r["name"] if r["path"] else results.UNSCOPED))
+        _tooltip(r["path"] or "Work launched outside any profiling scope.")
         imgui.NextColumn()
         imgui.Text(f"{r['total_ms']:.3f}")
         imgui.NextColumn()
