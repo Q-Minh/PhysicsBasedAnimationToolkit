@@ -18,8 +18,8 @@ use_step_filter = 0
 [Contact.ContactDynamics]
 decay = 0.5
 dmin = 0.002
-gammaf = 1000.0
-gammaf_adaptive = 0.1
+gammaf = 10.0
+gammaf_adaptive = 0.001
 gamman = 10000.0
 gamman_adaptive = 0.1
 min_sigma_n = 1.0
