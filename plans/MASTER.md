@@ -527,6 +527,24 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   infinite ground plane, fast cube, inclined plane). Ignore timings. Will log END.
 - 2026-10-18 · coordinator · Maintainer on solver configs: **params discussion deferred** (the maintainer will say when). Vertex linear solve: **Inverse by default; EVD only when singular Hessians cause problems.** The paper's trampoline configs are **different scenes** from `data/scenarios/trampoline.Dump.h5`. Still open: whether a tuned-parameter layer should also set sweep budgets. h5py pin bumped to 3.16.0 in python/tools/sim/requirements.txt; other pins match the venv.
 - 2026-10-18 · coordinator · **Dynamic benchmark runner → task 3** (maintainer request: stop on the real error, not the solvers' checks). One runner: benchmark_static.py → benchmark.py, kind read from the problem file's `problem` attribute; dynamic = one BDF1 step, error vs samples/x_ref (mass-weighted, free DOFs), reference accuracy recorded. Comes after the adaptive-penalty fix (root cause: lagged contact positions xb make the contact coupling Jacobi-like, which diverges once the penalty reaches the vertex stiffness). Merged task 4's sampling-methods reference (python/examples/docs/sampling-methods.md).
+- 2026-10-18 · task 1 · **GPU run END** (plane-collider correctness runs). **Ready for review:**
+  `feature/plane-colliders`, 12 commits on dev. It includes the static-collider and kinematics-docs work, so
+  `feature/gpu-static-colliders` and `feature/kinematics-docs` are its earlier tips.
+  - **Plane colliders (maintainer request):** a new scene object (`tools/vbd/ui/plane_collider.py`) with a
+    point, a normal, a tangent and half-extents, infinite by default (20 scene diameters). Stored in the
+    scene's `plane_colliders` group, authored in the CPU editor (Objects > Add Plane Collider). CPU: tessellated
+    into scene-sized cells for OGC (a single huge quad let fast impacts through). GPU: one pinned quad, and
+    `sd.py` classifies planar open meshes as `MESH_PLANE` and tests them analytically (unbounded range,
+    in-extent test).
+  - **Static mesh colliders on the GPU:** pinned element-less nodes plus a "Static colliders" kinematic
+    constraint (`colliders.py`, `SimulationState(..., contact_mesh)`).
+  - **Results, 2 s, three plane scenes with an infinite plane:** CPU penetration-free. GPU with the adaptive
+    per-step penalty (gamman 1): ≤ 7.8 mm / 5.4 cm (10 m/s) / 2.6 mm. With the constant default, heavy nodes
+    sink 20 cm, which is task 3's adaptive-penalty work. Scenes without colliders are bit-identical to dev.
+  - **Not yet measured:** runtime overhead. It's only a per-mesh kind read for scenes without colliders.
+    I'd like a ~5 min quiet GPU window for a dev-vs-branch per-step timing on BeamFallingOnBeam; please
+    say when.
+- 2026-10-18 · coordinator · **Merged `feature/plane-colliders`** (`b31e53f7`; beam bit-identical, kinematics tests pass). **GPU RESERVED for task 1, 13:16–13:26** (quiet dev-vs-branch timing). Task 3: pause GPU runs in that window.
 
 ## Open questions for the maintainer
 
