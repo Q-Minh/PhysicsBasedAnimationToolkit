@@ -8,6 +8,7 @@ from python.tools.sim.gpu.vbd.solver import (
     prepare_subproblem,
     solve_outer_loop,
     IterationSchedule,
+    subproblem_iteration as vbd_subproblem_iteration,
 )
 
 from ..contact.mesh.cd import ContactDetection
@@ -267,15 +268,28 @@ def solve_subproblem(
     contact: ContactDynamics,
     params: AndersonParams,
 ):
-    """Run ``n_subproblem_max_iters`` Anderson iterations on the current subproblem.
+    """Run ``n_subproblem_max_iters`` VBD sweeps on the current subproblem, Anderson-accelerated.
 
     The accelerated fixed-point map ``g`` is ``vbd_iters_per_anderson_iter`` consecutive VBD
-    sweeps (each preceded by a slack dual update, as in the plain VBD subproblem loop), so the
-    subproblem runs ``n_subproblem_max_iters * vbd_iters_per_anderson_iter`` sweeps in total.
+    sweeps (each preceded by a slack dual update, as in the plain VBD subproblem loop).
+    ``n_subproblem_max_iters`` counts sweeps, as for the other VBD-family solvers (see
+    :func:`sweep_budget`).
     """
-    n_subproblem_max_iters = params.data.n_subproblem_max_iters
-    for kp in range(n_subproblem_max_iters):
+    n_anderson_iters, n_tail_sweeps = sweep_budget(params)
+    for kp in range(n_anderson_iters):
         subproblem_iteration(fem, contact, params, kp)
+    for kp in range(n_tail_sweeps):
+        vbd_subproblem_iteration(fem, contact, params, kp)
+
+
+def sweep_budget(params: AndersonParams) -> tuple[int, int]:
+    """Split the subproblem's ``n_subproblem_max_iters`` sweeps into Anderson iterations.
+
+    Returns ``(n_anderson_iters, n_tail_sweeps)``: ``n_anderson_iters`` iterations of
+    ``vbd_iters_per_anderson_iter`` sweeps each, then the ``n_tail_sweeps`` leftover sweeps run as
+    plain VBD sweeps, so Anderson runs exactly as many sweeps as plain VBD.
+    """
+    return divmod(int(params.data.n_subproblem_max_iters), int(params.vbd_iters_per_anderson_iter))
 
 
 def subproblem_iteration(
@@ -387,14 +401,23 @@ class AndersonSolver:
     def schedule(
         self, fem: FemElastoDynamics, contact: ContactDynamics, params: AndersonParams
     ) -> IterationSchedule:
-        """Iterations fill the history window for m steps, then repeat with period m."""
+        """Iterations fill the history window for m steps, then repeat with period m. Leftover
+        sweeps of the budget (see :func:`sweep_budget`) run as plain VBD sweeps at the end."""
         m = int(params.m)
+        n_anderson_iters, n_tail_sweeps = sweep_budget(params)
+
+        def tail(k: int):
+            for kp in range(n_tail_sweeps):
+                vbd_subproblem_iteration(fem, contact, params, kp)
+
         return IterationSchedule(
             lambda k, kp: subproblem_iteration(fem, contact, params, kp),
             prefix=m,
             period=m,
             sweeps_per_iteration=int(params.vbd_iters_per_anderson_iter),
             scope="anderson.subproblem",
+            n_iterations=n_anderson_iters,
+            tail=tail if n_tail_sweeps > 0 else None,
         )
 
     @property

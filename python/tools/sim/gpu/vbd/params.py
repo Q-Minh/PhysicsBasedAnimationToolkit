@@ -495,9 +495,9 @@ class AndersonCpuParams:
     @property
     def vbd_iters_per_anderson_iter(self) -> int:
         """Number of VBD sweeps that make up one Anderson iteration (>= 1). Anderson accelerates
-        the fixed-point map made of this many consecutive sweeps, and the subproblem's
-        n_subproblem_max_iters counts Anderson iterations, so each subproblem runs
-        n_subproblem_max_iters * vbd_iters_per_anderson_iter sweeps in total."""
+        the fixed-point map made of this many consecutive sweeps. n_subproblem_max_iters still
+        counts sweeps: a subproblem runs n_subproblem_max_iters // vbd_iters_per_anderson_iter
+        Anderson iterations, then the leftover sweeps as plain VBD sweeps."""
         return self._vbd_iters_per_anderson_iter
 
     @vbd_iters_per_anderson_iter.setter
