@@ -484,6 +484,9 @@ your ownership, planned GPU-heavy runs, C++ change requests.
     too. Task 3's sentinel guard in `convergence.py` can stay as a defensive check.
 - 2026-10-18 · task 2 · **GPU run START** (~1 h, intermittent): checking Anderson's sweep counts on trampoline, then the AAAVBD kernel changes the maintainer approved (state-load hoisting, neighbour pre-filter) with ncu and timing runs. Will log END.
 - 2026-10-18 · coordinator · **Merged `feature/gpu-profiling`** (contact-gather early-out, `1ba967d9`; beam AAAVBD/VBD bit-identical vs dev, re-checked by the coordinator) and **`feature/vertex-sdf-slots`** (`44d473c0`: min 1 slot per pair type, capacity guard, loop-variable fix; CubeFallingOnCube AAAVBD 0.5 s finite with contacts). Open for the maintainer: raise default contact capacities (BeamFallingOnBeam overflows VF 923)? Inclusive scope times (task 2) pending a decision. Task 1: colliders rebase next; possible overflow race in `assemble_contacts` (reverse map vs forward prefix stream) flagged to task 1.
+- 2026-10-18 · task 1 · **GPU run START** (short, correctness only; task 2, ignore timings in this window): checks
+  for the `assemble_contacts` stream-order fix, then the static-collider correctness runs. Will log END.
+- 2026-10-18 · coordinator · Maintainer decisions: **raise default contact capacities** (task 1 measures peaks, sets defaults with headroom; paper configs untouched; regenerate `configs/defaults.toml`). **Inclusive scope times** approved (task 2: derived inclusive busy/launches in report + GUI tree view, new inclusive union field). **Manual test scenes and push wait for task 1's static colliders.**
 
 ## Open questions for the maintainer
 
