@@ -103,12 +103,25 @@ class Params:
         # configuring params_cpu ...
         params = Params(params_cpu)
         # params.data can be passed to warp kernels
+
+    ``warm_start_beta`` says when ``initialize_solve`` and ``prepare_subproblem`` reset the stencil
+    gradient augmentation scales ``betaG`` to ``betaG0``, as in C++ ``InitializeSolve`` and
+    ``PrepareSubproblem``: ``Never`` warm starts them (reset every subproblem), ``Subproblem`` carries
+    them across a time step's subproblems (reset every time step) and ``TimeStep`` never resets them.
+    Only AAAVBD reads ``betaG``, so it is the only solver that passes the CPU params'
+    ``warm_start_beta``. The default, ``TimeStep``, adds no resets.
     """
 
     _data: ParamsData  # pyright: ignore[reportGeneralTypeIssues]
     _Pptr: np.ndarray  # (# colors + 1,) partition pointers on CPU, not part of GPU struct
 
-    def __init__(self, params: pbat.sim.algorithm.vbd.Params):
+    def __init__(
+        self,
+        params: pbat.sim.algorithm.vbd.Params,
+        warm_start_beta: pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask = (
+            pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask.TimeStep
+        ),
+    ):
         self._data = ParamsData()
         # Vertex-element adjacency graph
         self._data.GVGp = wp.array(params.GVGp, dtype=wp.int32)
@@ -141,6 +154,7 @@ class Params:
         self._data.rhohat = (float(params.rhohat), float(params.rhohatS))
         self._data.gammadown = (float(params.gammadown), float(params.gammadownS))
         self._data.gammaup = (float(params.gammaup), float(params.gammaupS))
+        self.warm_start_beta = warm_start_beta  # host-side: decides which resets are recorded
         # Read-write
         n_nodes = params.colors.shape[0]
         self._data.xb = wp.zeros((n_nodes,), dtype=wp.vec3f)  # (N,) vertex positions

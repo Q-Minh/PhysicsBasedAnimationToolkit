@@ -233,6 +233,12 @@ class SimulationState:
         # Initial velocities of the loaded problem (the Dump's v or the scene's per-body v0), restored on reset
         self.v0 = fem_cpu.v.copy()
         self.params_cpu = params_cpu
+        # The GPU AAAVBD warm starts its stencil gradient augmentation scales betaG across time steps
+        # by default, whereas the C++ default (Subproblem) resets them at every time step. Configs
+        # applied after construction (deserialize_params) can still choose another mode.
+        self.params_cpu[SolverType.AAAVBD].warm_start_beta = (
+            pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask.TimeStep
+        )
         # Kinematic constraints (see load_kinematic_constraints), defaulting to fem_cpu's dmask as
         # permanently fixed nodes. Every GPU FEM gets its own KinematicConstraintSet built from them.
         self.kinematic_constraints, self.kinematics_t0, self.kinematics_anchors = (
@@ -264,9 +270,11 @@ class SimulationState:
         self.fem = gpu.elasticity.fem.FemElastoDynamics(fem_cpu)
         self._attach_kinematics()
         self.params = {
-            s: gpu.vbd.params.Params(p)
-            for s, p in params_cpu.items()
-            if s in (SolverType.VBD, SolverType.AAAVBD)
+            SolverType.VBD: gpu.vbd.params.Params(self.params_cpu[SolverType.VBD]),
+            SolverType.AAAVBD: gpu.vbd.params.Params(
+                self.params_cpu[SolverType.AAAVBD],
+                warm_start_beta=self.params_cpu[SolverType.AAAVBD].warm_start_beta,
+            ),
         }
         self.params[SolverType.Chebyshev] = gpu.vbd.params.ChebyshevParams(
             self.params_cpu[SolverType.Chebyshev].vbd_params,
@@ -429,9 +437,11 @@ class SimulationState:
         self.fem = gpu.elasticity.fem.FemElastoDynamics(self.fem_cpu)
         self._attach_kinematics()
         self.params = {
-            s: gpu.vbd.params.Params(p)
-            for s, p in self.params_cpu.items()
-            if s in (SolverType.VBD, SolverType.AAAVBD)
+            SolverType.VBD: gpu.vbd.params.Params(self.params_cpu[SolverType.VBD]),
+            SolverType.AAAVBD: gpu.vbd.params.Params(
+                self.params_cpu[SolverType.AAAVBD],
+                warm_start_beta=self.params_cpu[SolverType.AAAVBD].warm_start_beta,
+            ),
         }
         self.params[SolverType.Chebyshev] = gpu.vbd.params.ChebyshevParams(
             self.params_cpu[SolverType.Chebyshev].vbd_params,

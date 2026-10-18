@@ -56,7 +56,7 @@ surface_stencil_surface_neighbours_only = 1
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
-warm_start_beta = 1
+warm_start_beta = 2
 
 [Solver.AndersonSolver]
 beta = 1.0
