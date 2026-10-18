@@ -14,12 +14,24 @@ import numpy as np
 from pbatoolkit import pbat, pypbat
 from .ui.tetrahedral_elastodynamics_body import TetrahedralElastodynamicsBody
 from .ui.static_mesh_collider import StaticMeshCollider
+from .ui.plane_collider import PlaneCollider, deserialize_plane_colliders
 from .ui.utils.transform_library import TransformLibrary
 
 _archive_tlib_group = "transform_library"
 
 
-def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
+def make_fem_dynamics_object(
+    tet_elastic_bodies, get_external_info=False, static_points: np.ndarray | None = None
+):
+    """Build the FEM elastodynamics problem of the scene's tetrahedral bodies, concatenated in order.
+
+    Args:
+        tet_elastic_bodies: The scene's tetrahedral elastodynamic bodies.
+        get_external_info (bool): Also return the per-body vertex counts and vertex offsets.
+        static_points (np.ndarray | None): `|# points| x 3` extra nodes appended after the bodies' nodes,
+            belonging to no element (zero mass and load, zero initial velocity). The GPU simulators use
+            them for static mesh colliders.
+    """
     vert_counts = [body.VT.shape[0] for body in tet_elastic_bodies]
     tet_counts = [body.T.shape[0] for body in tet_elastic_bodies]
     # Per-body offsets (prefix) array for vertices
@@ -27,6 +39,9 @@ def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
     # Per-body offsets (prefix) array for tets
     TP = np.array([0] + list(itertools.accumulate(tet_counts)))
     V = np.vstack([body.VT for body in tet_elastic_bodies])
+    n_static = 0 if static_points is None else static_points.shape[0]
+    if n_static > 0:
+        V = np.vstack([V, static_points])
     T = np.vstack([body.T + VP[b] for b, body in enumerate(tet_elastic_bodies)])
     # Construct the fem dynamics
     fem_dynamics = pbat.sim.dynamics.FemElastoDynamics(V.T, T.T)
@@ -113,7 +128,9 @@ def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
     )
     # Initial velocity
     x0 = fem_dynamics.X
-    v0 = np.vstack([body.v0 for body in tet_elastic_bodies]).T
+    v0 = np.vstack(
+        [body.v0 for body in tet_elastic_bodies] + [np.zeros((n_static, dims))]
+    ).T
     fem_dynamics.x = x0
     fem_dynamics.v = v0
 
@@ -122,12 +139,36 @@ def make_fem_dynamics_object(tet_elastic_bodies, get_external_info=False):
     return fem_dynamics
 
 
+def static_meshes(
+    tet_elastic_bodies: list[TetrahedralElastodynamicsBody],
+    static_mesh_colliders: list[StaticMeshCollider],
+    plane_colliders: list[PlaneCollider],
+    tessellate_planes: bool = False,
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """The scene's static collision geometry as `(|# vertices| x 3, |# triangles| x 3)` triangle meshes:
+    the static mesh colliders, then each plane collider's rectangle (infinite planes sized by the scene).
+
+    Args:
+        tessellate_planes (bool): Split planes into cells about the scene's diameter wide, for the CPU's
+            OGC contact. The GPU uses single quads (2 triangles), which it detects analytically.
+    """
+    meshes = [(smc.VT, smc.F) for smc in static_mesh_colliders]
+    if len(plane_colliders) > 0:
+        P = np.vstack([b.VT for b in tet_elastic_bodies] + [V for V, _ in meshes])
+        diameter = float(np.linalg.norm(P.max(axis=0) - P.min(axis=0)))
+        cell_size = diameter if tessellate_planes else None
+        meshes += [plane.mesh(diameter, cell_size=cell_size) for plane in plane_colliders]
+    return meshes
+
+
 def make_contact_dynamics_object(
     fem_dynamics: pbat.sim.dynamics.FemElastoDynamics,
     n_bodies: int,
     vert_counts: list[int],
-    static_mesh_colliders: list[StaticMeshCollider],
+    static_meshes: list[tuple[np.ndarray, np.ndarray]],
 ):
+    """Build the CPU contact problem: each body's boundary as dynamic geometry (one component per body),
+    and the static meshes (see `static_meshes`) as static geometry."""
     contact_dynamics = pbat.sim.contact.MeshDynamics()
     XCC = np.concatenate([np.full(nverts, b) for b, nverts in enumerate(vert_counts)])
     contact_meshes = pbat.sim.contact.MultiMesh()
@@ -135,33 +176,34 @@ def make_contact_dynamics_object(
         fem_dynamics.E, XCC, n_components=n_bodies
     )
     contact_dynamics.set_dynamic_geometry(fem_dynamics.x, contact_meshes)
-    static_mesh_colliders = static_mesh_colliders
-    if len(static_mesh_colliders) > 0:
-        static_vert_counts = [smc.VT.shape[0] for smc in static_mesh_colliders]
-        Vstatic = np.vstack([smc.VT for smc in static_mesh_colliders])
+    if len(static_meshes) > 0:
+        static_vert_counts = [V.shape[0] for V, _ in static_meshes]
+        Vstatic = np.vstack([V for V, _ in static_meshes])
         VPstatic = [0] + list(itertools.accumulate(static_vert_counts))
-        Fstatic = np.vstack(
-            [smc.F + VPstatic[b] for b, smc in enumerate(static_mesh_colliders)]
-        )
+        Fstatic = np.vstack([F + VPstatic[b] for b, (_, F) in enumerate(static_meshes)])
         XCCstatic = np.concatenate(
             [np.full(nverts, b) for b, nverts in enumerate(static_vert_counts)]
         )
         static_contact_meshes = pbat.sim.contact.MultiMesh()
         static_contact_meshes.construct_from_triangle_mesh(
-            Fstatic.T, XCCstatic, n_components=len(static_mesh_colliders)
+            Fstatic.T, XCCstatic, n_components=len(static_meshes)
         )
         contact_dynamics.set_static_geometry(Vstatic.T, static_contact_meshes)
     return contact_dynamics
 
 
-def read_scene(path: str) -> tuple[
-    list[TetrahedralElastodynamicsBody], list[StaticMeshCollider], TransformLibrary, list[str]
+def read_scene(path: str, tessellate_planes: bool = False) -> tuple[
+    list[TetrahedralElastodynamicsBody],
+    list[tuple[np.ndarray, np.ndarray]],
+    TransformLibrary,
+    list[str],
 ]:
-    """Read the bodies, static colliders and transform library of a scene file.
+    """Read the bodies, static collision geometry and transform library of a scene file.
 
     Returns:
-        The tetrahedral elastodynamic bodies, the static mesh colliders, the transform library (synced
-        to the body names) and the body names, in body order.
+        The tetrahedral elastodynamic bodies, the static meshes (mesh colliders and plane colliders' quads,
+        see `static_meshes`, which `tessellate_planes` is passed to), the transform library (synced to the
+        body names) and the body names, in body order.
     """
     tet_elastic_bodies = []
     static_mesh_colliders = []
@@ -183,6 +225,7 @@ def read_scene(path: str) -> tuple[
             body.deserialize(body_grp, headless=True)
             static_mesh_colliders.append(body)
 
+        plane_colliders = deserialize_plane_colliders(f.get("plane_colliders", None))
         transform_library = TransformLibrary()
         tlib_h5grp = f[_archive_tlib_group]
         transform_library.deserialize(tlib_h5grp)
@@ -190,19 +233,28 @@ def read_scene(path: str) -> tuple[
     # mesh_names may list other meshes or another order (e.g. ArmadilloFallingInBasket).
     tet_elastic_body_names = [str(body.name) for body in tet_elastic_bodies]
     transform_library.sync_mesh_names(tet_elastic_body_names)
-    return tet_elastic_bodies, static_mesh_colliders, transform_library, tet_elastic_body_names
+    meshes = static_meshes(
+        tet_elastic_bodies, static_mesh_colliders, plane_colliders, tessellate_planes
+    )
+    return tet_elastic_bodies, meshes, transform_library, tet_elastic_body_names
 
 
 def load_simulation_scenario_from_scene(path: str):
+    """Load a scene file into the CPU simulation objects.
+
+    Returns:
+        The FEM problem, the CPU contact problem, the transform library (synced to the body names), the
+        body names and the `|# bodies| + 1` node offsets of the bodies.
+    """
     try:
-        tet_elastic_bodies, static_mesh_colliders, transform_library, tet_elastic_body_names = (
-            read_scene(path)
+        tet_elastic_bodies, meshes, transform_library, tet_elastic_body_names = read_scene(
+            path, tessellate_planes=True
         )
         fem, vert_counts, XP = make_fem_dynamics_object(
             tet_elastic_bodies, get_external_info=True
         )
         contact = make_contact_dynamics_object(
-            fem, len(tet_elastic_bodies), vert_counts, static_mesh_colliders
+            fem, len(tet_elastic_bodies), vert_counts, meshes
         )
         return fem, contact, transform_library, tet_elastic_body_names, XP
     except Exception as e:

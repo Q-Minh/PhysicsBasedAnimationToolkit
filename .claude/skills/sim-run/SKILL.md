@@ -23,7 +23,7 @@ Default to the GPU. Use the CPU side only for authoring and reference runs.
 The GPU simulators take exactly one of:
 
 - **`--fem-elasto-dynamics file.h5:fem`**: an editor Dump, written by the CPU editor's **Dump** button. It holds `fem`, `contact`, solver params and the `kinematics` group (procedural constraints).
-- **`--scene scene.h5`**: a CPU editor scene file, built the same way as the CPU editor builds it. Static mesh colliders are ignored with a warning, because GPU contact has no static geometry yet (task 1 is adding them).
+- **`--scene scene.h5`**: a CPU editor scene file, built the same way as the CPU editor builds it. Static mesh colliders and plane colliders (infinite by default, authored in the editor's Objects tab) are simulated too. For hard impacts on them, use an adaptive contact penalty (`--set Contact.ContactDynamics.penalty_adaptivity=1 --set Contact.ContactDynamics.gamman=1`). It still diverges on some body-body scenes (BeamFallingOnBeam) until task 3's fix lands.
 
 Scenes live in `data/*.h5` / `data/*.Dump.h5` and `data/scenarios/`. `data/` is git-ignored. From a worktree, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`.
 

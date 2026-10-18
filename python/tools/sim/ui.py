@@ -17,6 +17,7 @@ from pbatoolkit import pbat
 import numpy as np
 from . import config, gpu
 from .panels.common import draw_params, try_draw_tooltip
+from .colliders import collider_faces
 from .panels.kinematics import draw_kinematics_panel
 from .panels.profiling import draw_profiling_panel, profile_step
 from .panels.static import draw_static_panel
@@ -397,14 +398,14 @@ def main():
     # wp.config.cache_kernels = False
     wp.init()
     args = parse_args()
-    fem_cpu, kinematics = load_problem(args.fem_elasto_dynamics, args.scene)
+    fem_cpu, kinematics, contact_mesh = load_problem(args.fem_elasto_dynamics, args.scene)
     params_cpu = {
         s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]
     }
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
     params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
-    state = SimulationState(fem_cpu, params_cpu, kinematics)
+    state = SimulationState(fem_cpu, params_cpu, kinematics, contact_mesh)
     ui_state = UIState()
     mesh_name = "Mesh"
 
@@ -431,6 +432,18 @@ def main():
         mesh_name, fem_cpu.X.T, state.multimesh.data.F.numpy()
     )
     sm.set_enabled(False)
+    # Static colliders never move, so they are drawn once
+    static_faces = collider_faces(
+        fem_cpu.E, state.multimesh.data.F.numpy(), fem_cpu.X.shape[1]
+    )
+    if static_faces.shape[0] > 0:
+        ps.register_surface_mesh("Static colliders", fem_cpu.X.T, static_faces)
+        # Frame the bodies, not the (possibly huge, e.g. infinite plane) colliders
+        XB = fem_cpu.X[:, np.unique(fem_cpu.E)]
+        low, high = XB.min(axis=1), XB.max(axis=1)
+        ps.set_automatically_compute_scene_extents(False)
+        ps.set_bounding_box(low, high)
+        ps.set_length_scale(float(np.linalg.norm(high - low)))
 
     if args.sim_params or args.overrides:
         _import_parameters_from_file(

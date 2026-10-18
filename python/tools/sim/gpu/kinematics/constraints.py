@@ -30,8 +30,30 @@ Kinds (T(tau) applied to y):
 - `RadialTranslate`: y + rate tau rhat(y), with rhat the unit xy-component of y - point (the node stays
   put if it lies on the axis through point).
 
-The editor's Dump writes the `kinematics` group read by `read_kinematic_constraints`
-(see `TransformLibrary.export_kinematic_constraints`).
+Where constraints come from (all through `state.load_problem`):
+- an editor Dump's `kinematics` group (`read_kinematic_constraints`, written by
+  `TransformLibrary.export_kinematic_constraints`), with the Dump time t0 and the anchors of open runs;
+- a Dump without that group: its nonzero `dmask` nodes, fixed forever (`fixed_constraints_from_dmask`);
+- a CPU scene file (`state.load_scene`): its transform library, plus a "Static colliders" constraint that
+  pins collider nodes (see `colliders.py`).
+Editor kinds map as FIXED -> Fixed, TRANSLATE -> Translate, G_ROTATE/L_ROTATE -> Rotate (pivot 0 or
+origin, rate in rad/s) and L_TRANSLATE -> RadialTranslate.
+
+Usage (what `state.SimulationState` and `FemElastoDynamics` do):
+
+    kcs = KinematicConstraintSet(constraints, n_nodes, h=fem.bdf.h, t0=t0, anchors=anchors)
+    fem.set_kinematic_constraints(kcs)  # setup_time_integration_optimization() calls kcs.update(...),
+                                        # fem.step() calls kcs.advance()
+
+Pitfalls:
+- The set owns `dmask`: `update` rewrites it for every node each step, so edit constraints (or
+  `set_enabled`) instead of writing `dmask`.
+- Time is the device step counter, so a new set restarts at t0. `SimulationState.reset()` builds a new set
+  (e.g. after changing dt), and the windows are converted to steps with that set's h.
+- `advance_time` is read on the host when the graph is recorded: recapture after changing it.
+  `set_enabled` and `step` writes act on device data and need no recapture.
+- Windows are rounded to the step grid with a 1e-3-step tolerance, the same as the CPU editor, so
+  float32-stored durations land on the grid.
 """
 
 import dataclasses
@@ -43,6 +65,8 @@ import warp as wp
 
 
 class KinematicConstraintKind(enum.Enum):
+    """Kind of prescribed motion. Values are those of the Dump's `kinematics/kind` dataset."""
+
     Fixed = 0
     Translate = 1
     Rotate = 2
@@ -60,7 +84,12 @@ _WINDOW_TOLERANCE = 1e-3  # in steps
 
 @dataclasses.dataclass
 class KinematicConstraint:
-    """Prescribed motion of a group of nodes during the time window [begin, begin + duration)."""
+    """Prescribed motion of a group of nodes during the time window [begin, begin + duration).
+
+    `direction` is used by Translate (motion direction) and Rotate (axis), `point` by Rotate (pivot) and
+    RadialTranslate (origin), and `rate` by every kind but Fixed. `enabled` is toggled through
+    `KinematicConstraintSet.set_enabled`.
+    """
 
     name: str
     kind: KinematicConstraintKind
@@ -154,6 +183,8 @@ def fixed_constraints_from_dmask(dmask: np.ndarray) -> list[KinematicConstraint]
 
 @wp.struct
 class KinematicConstraintSetData:
+    """Device data of a KinematicConstraintSet, passed to its kernels."""
+
     # --- Per constraint (K,) ---
     kind: wp.array[wp.int32]
     enabled: wp.array[wp.int32]
@@ -342,10 +373,12 @@ class KinematicConstraintSet:
 
     @property
     def data(self) -> KinematicConstraintSetData:  # pyright: ignore[reportGeneralTypeIssues]
+        """Device data for kernels."""
         return self._data
 
     @property
     def h(self) -> float:
+        """Time step size the windows were converted with."""
         return self._h
 
     @property
@@ -355,6 +388,7 @@ class KinematicConstraintSet:
 
     @step.setter
     def step(self, n: int):
+        """Jump to time step n (device write, no recapture needed). Open anchors are kept."""
         self._data.step.fill_(n)
 
     def set_enabled(self, k: int, enabled: bool):

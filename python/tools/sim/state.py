@@ -9,12 +9,12 @@ simulation parameters and trajectories. Nothing here depends on Polyscope, imgui
 
 import enum
 import gc
-import warnings
 import h5py
 import warp as wp
 from pbatoolkit import pbat
 import numpy as np
 from . import gpu
+from . import colliders as colliders_
 from .gpu.common import profiling
 
 
@@ -70,51 +70,62 @@ def load_scene(path: str) -> tuple[
         float,
         gpu.kinematics.constraints.KinematicAnchors | None,
     ],
+    pbat.sim.contact.MultiMesh | None,
 ]:
-    """Build the FEM problem and its kinematic constraints from a CPU editor scene file.
+    """Build the FEM problem, its kinematic constraints and its contact surface from a CPU editor scene
+    file.
 
-    Reads the tetrahedral elastodynamic bodies, static mesh colliders and transform library that the CPU
+    Reads the tetrahedral elastodynamic bodies, static mesh and plane colliders and transform library that the CPU
     offline simulator reads (``python -m python.tools.vbd.simulate --scene``), and builds the FEM as the
-    editor does. The transforms become kinematic constraints through the editor Dump's format. GPU
-    contact has no static geometry yet, so static colliders are ignored with a warning.
+    editor does. The transforms become kinematic constraints through the editor Dump's format.
+
+    Static colliders join the contact surface as pinned, element-less FEM nodes (see colliders.py).
 
     Returns:
-        The FEM problem (dmask holds the nodes constrained at t = 0), and its kinematic constraints as
-        returned by load_kinematic_constraints.
+        The FEM problem (dmask holds the nodes constrained at t = 0), its kinematic constraints as returned
+        by load_kinematic_constraints, and the contact surface (None without static colliders, i.e. the
+        tetrahedral mesh boundary).
     """
     from ..vbd import scenario
 
     bodies, colliders, transform_library, names = scenario.read_scene(path)
-    if len(colliders) > 0:
-        warnings.warn(
-            f"{path}: ignoring {len(colliders)} static mesh collider(s), "
-            "GPU contact has no static geometry",
-            stacklevel=2,
-        )
-    fem, _, offsets = scenario.make_fem_dynamics_object(bodies, get_external_info=True)
+    fem, _, offsets = scenario.make_fem_dynamics_object(
+        bodies, get_external_info=True, static_points=colliders_.collider_points(colliders)
+    )
     with h5py.File("kinematics.h5", "w", driver="core", backing_store=False) as f:
         grp = f.create_group("kinematics")
         transform_library.export_kinematic_constraints(grp, names, offsets, 0, 1.0)
-        kinematics = gpu.kinematics.constraints.read_kinematic_constraints(grp)
+        constraints, t0, anchors = gpu.kinematics.constraints.read_kinematic_constraints(grp)
+    contact_mesh = None
+    if len(colliders) > 0:
+        constraint, contact_mesh = colliders_.add_colliders(fem, offsets, colliders)
+        constraints.append(constraint)
     dmask = np.zeros(fem.X.shape[1], dtype=np.int64)
-    for c in kinematics[0]:
+    for c in constraints:
         if c.begin <= 0.0 < c.begin + c.duration:
             dmask[c.nodes] = 1
     fem.constrain(dmask)
-    return fem, kinematics
+    return fem, (constraints, t0, anchors), contact_mesh
 
 
 def load_problem(
     fem_spec: str | None = None, scene: str | None = None
-) -> tuple[pbat.sim.dynamics.FemElastoDynamics, tuple]:
-    """Load the FEM problem and its kinematic constraints from either an editor Dump's FEM group
-    (``file.h5:fem``) or a CPU editor scene file."""
+) -> tuple[pbat.sim.dynamics.FemElastoDynamics, tuple, pbat.sim.contact.MultiMesh | None]:
+    """Load the FEM problem, its kinematic constraints and its contact surface from either an editor Dump's
+    FEM group (``file.h5:fem``) or a CPU editor scene file. This is what ui.py and simulate.py do for
+    ``--fem-elasto-dynamics`` and ``--scene``.
+
+    Returns:
+        ``(fem, kinematics, contact_mesh)``, to pass on as ``SimulationState(fem, params, kinematics,
+        contact_mesh)``. ``kinematics`` is ``(constraints, t0, anchors)`` (see load_kinematic_constraints).
+        ``contact_mesh`` is None (the tetrahedral mesh boundary) unless a scene has static colliders.
+    """
     if (fem_spec is None) == (scene is None):
         raise ValueError("Pass exactly one of fem_spec and scene")
     if scene is not None:
         return load_scene(scene)
     fem_cpu = load_fem_dynamics(fem_spec)
-    return fem_cpu, load_kinematic_constraints(fem_spec, fem_cpu)
+    return fem_cpu, load_kinematic_constraints(fem_spec, fem_cpu), None
 
 
 def load_newton_params(
@@ -206,7 +217,18 @@ class SimulationState:
             ]
             | None
         ) = None,
+        contact_mesh: pbat.sim.contact.MultiMesh | None = None,
     ):
+        """
+        Args:
+            fem_cpu: The FEM problem.
+            params_cpu: CPU solver parameters per solver.
+            kinematics: Kinematic constraints (see load_kinematic_constraints), defaulting to fem_cpu's
+                dmask as permanently fixed nodes.
+            contact_mesh: Contact surface over fem_cpu's nodes. By default it is the boundary of the
+                tetrahedral mesh, which must then be sorted by connected components. load_scene passes one
+                that also holds the static mesh colliders.
+        """
         self.fem_cpu = fem_cpu
         # Initial velocities of the loaded problem (the Dump's v or the scene's per-body v0), restored on reset
         self.v0 = fem_cpu.v.copy()
@@ -259,19 +281,21 @@ class SimulationState:
         self.capture = None
 
         # Build collision geometry
-        multimesh_cpu = pbat.sim.contact.MultiMesh()
-        Xordering, Eordering, XCC, ECC, n_components = (
-            pbat.graph.sorted_connected_component_ordering(fem_cpu.X, fem_cpu.E)
-        )
-        is_X_sorted = np.all(Xordering[:-1] <= Xordering[1:])
-        is_E_sorted = np.all(Eordering[:-1] <= Eordering[1:])
-        if not is_X_sorted or not is_E_sorted:
-            raise ValueError(
-                "The FemElastoDynamics is expected to already be sorted by connected components."
+        multimesh_cpu = contact_mesh
+        if multimesh_cpu is None:
+            multimesh_cpu = pbat.sim.contact.MultiMesh()
+            Xordering, Eordering, XCC, ECC, n_components = (
+                pbat.graph.sorted_connected_component_ordering(fem_cpu.X, fem_cpu.E)
             )
-        multimesh_cpu.construct_from_tetrahedral_mesh(
-            fem_cpu.E, XCC, n_components=n_components
-        )
+            is_X_sorted = np.all(Xordering[:-1] <= Xordering[1:])
+            is_E_sorted = np.all(Eordering[:-1] <= Eordering[1:])
+            if not is_X_sorted or not is_E_sorted:
+                raise ValueError(
+                    "The FemElastoDynamics is expected to already be sorted by connected components."
+                )
+            multimesh_cpu.construct_from_tetrahedral_mesh(
+                fem_cpu.E, XCC, n_components=n_components
+            )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.contact_storage_params = gpu.contact.mesh.pairs.Params()
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(

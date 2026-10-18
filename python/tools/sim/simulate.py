@@ -152,14 +152,14 @@ def _write_frame(h5f: h5py.File, state: SimulationState, frame: int):
 def main():
     args = parse_args()
     wp.init()
-    fem_cpu, kinematics = load_problem(args.fem_elasto_dynamics, args.scene)
+    fem_cpu, kinematics, contact_mesh = load_problem(args.fem_elasto_dynamics, args.scene)
     params_cpu = {
         s: load_vbd_params(fem_cpu) for s in [SolverType.VBD, SolverType.AAAVBD]
     }
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
     params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
-    state = SimulationState(fem_cpu, params_cpu, kinematics)
+    state = SimulationState(fem_cpu, params_cpu, kinematics, contact_mesh)
 
     # Configure the simulation, then reset it, as the GUI does whenever the solver, contact
     # detection algorithm or parameters change.
