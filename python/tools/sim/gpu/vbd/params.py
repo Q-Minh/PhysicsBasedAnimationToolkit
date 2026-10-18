@@ -1,6 +1,7 @@
 import warp as wp
 import numpy as np
 import cupy as cp
+import enum
 from pbatoolkit import pbat
 
 from ...common.fields import DocField
@@ -25,6 +26,19 @@ _VLS_SOLVER_MAP = {
     pbat.sim.algorithm.vbd.VertexIntegrationLinearSolver.QR: VLS_SOLVER_QR,
     pbat.sim.algorithm.vbd.VertexIntegrationLinearSolver.EVD: VLS_SOLVER_EVD,
 }
+
+
+class AndersonLinearSolver(enum.Enum):
+    """GPU Anderson least-squares linear solve method.
+
+    Both methods operate on the Gram matrix of ``[F f]``, formed in a single pass over ``F``:
+      - NormalEquations: Cholesky solve of ``F^T F gamma = F^T f``, regularized only when a
+        pivot falls below the scale-invariant threshold ``cod_numerical_zero``.
+      - ConjugateGradient: Jacobi-preconditioned CG on the same system, without regularization.
+    """
+
+    NormalEquations = 0
+    ConjugateGradient = 1
 
 
 @wp.struct
@@ -307,38 +321,73 @@ class AndersonParams(Params):
       - beta: mixing parameter, read once from the CPU object at construction time
       - xkm1: `(N,)` previous step's positions
       - fk, fkm1: `(N,)` current/past residuals `x - xkm1`
-      - XkT, FkT: `(m, 3N)` C-contiguous CuPy ndarrays. Each row is a window slot and therefore
-        stores one conceptual column of the `(3N, m)` Anderson history matrix contiguously. The
-        bookkeeping kernels use zero-copy `(m, N)` `wp.vec3f` views over these buffers.
-      - gammak: `(m,)` Warp array of subspace mixing coefficients, obtained by the in-kernel
-        LDLT solve in `gpu/vbd/aasolver.py`
-      - FkTfk, FkTFk: GPU-resident normal-equation right-hand side and matrix, respectively
+      - FfT: `(m+1, 3N)` C-contiguous CuPy ndarray. Rows `0..m-1` (`FkT`) are the window slots of
+        the residual-difference history, each storing one conceptual column of the `(3N, m)`
+        Anderson matrix `F` contiguously, and row `m` stores `fk`. The Gram matrix of this buffer
+        therefore holds both `F^T F` and `F^T f`.
+      - XkT: `(m, 3N)` C-contiguous CuPy ndarray of step differences, laid out like `FkT`
+      - Xk, Fk, fk: zero-copy `wp.vec3f` views over `XkT`, `FkT` and the last row of `FfT`
+      - FfT_flat: zero-copy `(m+1, 3N)` `wp.float32` view over `FfT` for tile loads
+      - G: `(m+1, m+1)` Gram matrix of `[F f]`
+      - linear_solver: Cholesky or Jacobi-preconditioned CG solve of the normal equations
+      - gammak: `(m,)` Warp array of subspace mixing coefficients
     """
 
     def __init__(
         self,
         params: pbat.sim.algorithm.vbd.Params,
         anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
+        linear_solver: AndersonLinearSolver = AndersonLinearSolver.NormalEquations,
     ):
         super().__init__(params)
         self.m = int(anderson_params.m)
         self.beta = float(anderson_params.beta)
         self.cod_numerical_zero = float(anderson_params.cod_numerical_zero)
+        self.linear_solver = linear_solver
         n_nodes = params.colors.shape[0]
         self.xkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
-        self.fk: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
         self.fkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
-        self.XkT: cp.ndarray = cp.zeros((self.m, n_nodes*3), dtype=cp.float32)
-        self.FkT: cp.ndarray = cp.zeros((self.m, n_nodes*3), dtype=cp.float32)
+        self.XkT: cp.ndarray = cp.zeros((self.m, n_nodes * 3), dtype=cp.float32)
+        self.FfT: cp.ndarray = cp.zeros((self.m + 1, n_nodes * 3), dtype=cp.float32)
+        self.FkT: cp.ndarray = self.FfT[: self.m]
+        self.Xk: wp.array[wp.vec3f] = wp.array(
+            self.XkT,
+            dtype=wp.vec3f,
+            shape=(self.m, n_nodes),
+            copy=False,
+        )
+        self.Fk: wp.array[wp.vec3f] = wp.array(
+            self.FkT,
+            dtype=wp.vec3f,
+            shape=(self.m, n_nodes),
+            copy=False,
+        )
+        self.fk: wp.array[wp.vec3f] = wp.array(
+            ptr=self.FfT[self.m].data.ptr,
+            dtype=wp.vec3f,
+            shape=(n_nodes,),
+            device=self.Fk.device,
+            copy=False,
+        )
+        self.FfT_flat: wp.array2d[wp.float32] = wp.array(  # pyright: ignore[reportAttributeAccessIssue]
+            self.FfT, dtype=wp.float32, copy=False
+        )
+        self.G: wp.array2d[wp.float32] = wp.zeros(  # pyright: ignore[reportAttributeAccessIssue]
+            (self.m + 1, self.m + 1), dtype=wp.float32
+        )
         self.gammak: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
-        self.FkTfk: cp.ndarray = cp.zeros((self.m,), dtype=cp.float32)
-        self.FkTFk: cp.ndarray = cp.zeros((self.m, self.m), dtype=cp.float32)
+        # Kernels are specialized on the window size m (static tile shapes), and must exist before
+        # any CUDA graph capture starts, so that capture's module force-load includes them.
+        from .aasolver import anderson_kernels
+
+        self.kernels = anderson_kernels(self.m)
 
 
 def serialize_anderson_cpu_params(
     vbd_params: pbat.sim.algorithm.vbd.Params,
     anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
     grp,
+    linear_solver: AndersonLinearSolver = AndersonLinearSolver.NormalEquations,
 ) -> None:
     """Serialize a VBD CPU `Params` object plus an Anderson CPU `AndersonParams` object's
     `m`, `beta`, and `cod_numerical_zero` to an h5py group."""
@@ -346,13 +395,14 @@ def serialize_anderson_cpu_params(
     grp.attrs["m"] = int(anderson_params.m)
     grp.attrs["beta"] = float(anderson_params.beta)
     grp.attrs["cod_numerical_zero"] = float(anderson_params.cod_numerical_zero)
+    grp.attrs["linear_solver"] = linear_solver.value
 
 
 def deserialize_anderson_cpu_params(
     vbd_params: pbat.sim.algorithm.vbd.Params,
     anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
     grp,
-) -> None:
+) -> AndersonLinearSolver | None:
     """Deserialize a VBD CPU `Params` object plus an Anderson CPU `AndersonParams` object's
     `m`, `beta`, and `cod_numerical_zero` from an h5py group, in place. Silently skips keys
     absent from the group."""
@@ -363,6 +413,9 @@ def deserialize_anderson_cpu_params(
         anderson_params.beta = float(grp.attrs["beta"])
     if "cod_numerical_zero" in grp.attrs:
         anderson_params.cod_numerical_zero = float(grp.attrs["cod_numerical_zero"])
+    if "linear_solver" in grp.attrs:
+        return AndersonLinearSolver(int(grp.attrs["linear_solver"]))
+    return None
 
 
 class AndersonCpuParams:
@@ -391,6 +444,7 @@ class AndersonCpuParams:
             if anderson_params is not None
             else pbat.sim.algorithm.vbd.AndersonParams()
         )
+        self._linear_solver = AndersonLinearSolver.NormalEquations
 
     @property
     def anderson_params(self) -> pbat.sim.algorithm.vbd.AndersonParams:
@@ -417,12 +471,24 @@ class AndersonCpuParams:
 
     @property
     def cod_numerical_zero(self) -> float:
-        """Numerical zero threshold for CPU COD and diagonal regularization for GPU normal equations."""
+        """Relative rank threshold: the CPU COD treats pivots below this fraction of the largest
+        pivot as zero. The GPU Cholesky solve uses it the same way, as a relative singular-value
+        cutoff on F, and regularizes only when a pivot falls below it."""
         return self._anderson_params.cod_numerical_zero
 
     @cod_numerical_zero.setter
     def cod_numerical_zero(self, value: float):
         self._anderson_params.cod_numerical_zero = float(value)
+
+    @property
+    def linear_solver(self) -> AndersonLinearSolver:
+        """GPU least-squares solve method: NormalEquations (Cholesky, conditionally regularized)
+        or ConjugateGradient (Jacobi-preconditioned CG, unregularized)."""
+        return self._linear_solver
+
+    @linear_solver.setter
+    def linear_solver(self, value: AndersonLinearSolver):
+        self._linear_solver = AndersonLinearSolver(value)
 
 
 import unittest

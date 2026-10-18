@@ -236,6 +236,7 @@ class SimulationState:
         self.params[SolverType.AndersonSolver] = gpu.vbd.params.AndersonParams(
             self.params_cpu[SolverType.AndersonSolver].vbd_params,
             self.params_cpu[SolverType.AndersonSolver].anderson_params,
+            self.params_cpu[SolverType.AndersonSolver].linear_solver,
         )
         self.capture = None
 
@@ -367,6 +368,7 @@ class SimulationState:
         self.params[SolverType.AndersonSolver] = gpu.vbd.params.AndersonParams(
             self.params_cpu[SolverType.AndersonSolver].vbd_params,
             self.params_cpu[SolverType.AndersonSolver].anderson_params,
+            self.params_cpu[SolverType.AndersonSolver].linear_solver,
         )
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
             self.multimesh, self.contact_storage_params
@@ -435,6 +437,7 @@ def _serialize_params(state: "SimulationState", f: h5py.File) -> None:
         state.params_cpu[SolverType.AndersonSolver].vbd_params,
         state.params_cpu[SolverType.AndersonSolver].anderson_params,
         f.create_group("Solver/AndersonSolver"),
+        state.params_cpu[SolverType.AndersonSolver].linear_solver,
     )
     gpu.newton.solver.serialize_newton_cpu_params(
         state.params_cpu[SolverType.Newton], f.create_group("Solver/Newton")
@@ -474,11 +477,13 @@ def _deserialize_params(state: "SimulationState", f: h5py.File) -> None:
             f["Solver/Chebyshev"],
         )
     if "Solver/AndersonSolver" in f:
-        gpu.vbd.params.deserialize_anderson_cpu_params(
+        linear_solver = gpu.vbd.params.deserialize_anderson_cpu_params(
             state.params_cpu[SolverType.AndersonSolver].vbd_params,
             state.params_cpu[SolverType.AndersonSolver].anderson_params,
             f["Solver/AndersonSolver"],
         )
+        if linear_solver is not None:
+            state.params_cpu[SolverType.AndersonSolver].linear_solver = linear_solver
     if "Solver/Newton" in f:
         gpu.newton.solver.deserialize_newton_cpu_params(
             state.params_cpu[SolverType.Newton], f["Solver/Newton"]
