@@ -125,7 +125,8 @@ materials. The paper's trampoline configs (soft-stiff, stiff-soft, stiff_sphere)
 scenes in the extras repo, not to these. Reported error reductions go up to 99% at most.
 **Eventually** the benchmark trampolines should use the paper trampolines' mesh (the ~25k-node geometry/topology of the extras
 `final_scenes/trampolines` soft-stiff / stiff-soft / sphere scenes) with homogeneous 1e6 and 1e7 materials. Open: square or
-circle variant, and which fixed rim (the paper scenes' or 4 patches). Authoring → task 1 when decided.
+circle variant, and which fixed rim (the paper scenes' or 4 patches). **Decided: circle, with 4 fixed rim patches** (like
+`trampoline.h5`), Y = 1e6 and 1e7. Authoring → task 1.
 
 ## New milestone: GPU simulators read CPU scene files (maintainer, 2026-10-18)
 
@@ -618,6 +619,13 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 4 · **CPU run END.** `data/benchmarks/trampoline-sample` regenerated from `trampoline.h5` with float32 references (branch `feature/float32-references`, ready to merge; reverts the float64 references of `cbd3aca2` at the maintainer's request). Inputs are bit-identical to the previous set; references are within 6.5e-4 e0 of exact ones, enough for the 99% reductions the benchmark reports. Previous sets kept as `trampoline-sample.old-float32-refs` and `.old-float64-refs` for the maintainer to delete.
 - 2026-10-18 · coordinator · Maintainer answers: housekeeping approved (old sample sets deleted, merged branches removed); **AAAVBD must honour surface_stencil_surface_neighbours_only** → task 2 (after relative hess_zero; task 3's duplicate vertex-solve-scale to be dropped); task 4's judgment calls approved; configs move to the extras repo later; **benchmark methodology still pending, the final step; the maintainer does a manual test pass right before the benchmarks**; future benchmarks will include stiffer materials (e.g. Y = 1e7, `data/scenarios/trampoline.Y1e7.h5`). Merged task 4's float32 references (maintainer reports at most 99% reductions; references within 6.5e-4 e0).
 - 2026-10-18 · task 3 · **GPU run START** (intermittent, correctness only: GPU Newton diagnostics on trampoline-sample dynamic_h0.0001, small single solves). Ignore timings. Will log END.
+- 2026-10-18 · task 1 · **GPU run END** (plane scenes, new defaults). Plane scenes need `penalty_adaptivity=1` plus
+  `gamman_adaptive=1`. At 0.1, the fast cube sinks 0.28 and bounces. At 1, it sinks 0.054, rests and stays finite on all 5
+  scenes. The slide-off scene also needs `gammaf_adaptive=0.001`, because the cube creeps instead of sliding.
+  **Finding (contact, not task 1's code):** the AL friction term `sigma_f*c_f - lambda_f` in the primal has no cone
+  limit, so it acts as viscous drag even at `mu_f=0`. The frictionless cube creeps at ~0.1 m/s and slides only with
+  `gammaf=0`. The C++ primal has the same form (`vbd/Core.h:509`), and mu enters only the dual projection. Corrected
+  commands were sent to the coordinator.
 
 ## Open questions for the maintainer
 
