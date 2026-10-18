@@ -10,6 +10,11 @@ from .cd import ContactDetection
 from ...common import reduce, lower_bound
 from ....common.fields import DocField, SerializableMixin
 
+# Kinds of meshes, by how a vertex's signed distance to them is computed (see _mesh_kind)
+MESH_CLOSED = wp.constant(0)  # ray-parity sign
+MESH_OPEN = wp.constant(1)  # sign of the closest face's normal
+MESH_PLANE = wp.constant(2)  # planar and open (plane colliders): analytic plane distance, unbounded range
+
 MAX_VV_PER_THREAD = wp.constant(2)
 MAX_VE_PER_THREAD = wp.constant(2)
 MAX_VF_PER_THREAD = wp.constant(4)
@@ -23,7 +28,7 @@ tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
 @wp.kernel
 def _detect_vertex_mesh_contacts(
     mesh_ids: wp.array[wp.uint64],
-    mesh_closed: wp.array[wp.int32],
+    mesh_kind: wp.array[wp.int32],
     max_dist: wp.float32,
     dmin: wp.float32,
     sds: wp.array[wp.float32],
@@ -57,12 +62,15 @@ def _detect_vertex_mesh_contacts(
     for m in range(local_tid, mesh_ids.shape[0], block_dim):
         if m == b:
             continue
-        # Closed meshes sign the distance by ray parity. Open ones (e.g. a static ground plane) can't,
-        # so they use the closest face's normal.
-        if mesh_closed[m] != 0:
+        # Closed meshes sign the distance by ray parity. Open ones can't, so they use the closest face's
+        # normal. Planes are queried at any distance, so that fast vertices can't tunnel through them.
+        kind = mesh_kind[m]
+        if kind == MESH_CLOSED:
             qp = wp.mesh_query_point(mesh_ids[m], xi, max_dist)  # type: ignore
-        else:
+        elif kind == MESH_OPEN:
             qp = wp.mesh_query_point_sign_normal(mesh_ids[m], xi, max_dist)  # type: ignore
+        else:
+            qp = wp.mesh_query_point_no_sign(mesh_ids[m], xi, wp.float32(1e6))  # type: ignore
         if not qp.result:  # type: ignore
             continue
         f = meshes.FP[m] + qp.face  # type: ignore
@@ -73,6 +81,14 @@ def _detect_vertex_mesh_contacts(
         b0, b1, b2 = qp.u, qp.v, (wp.float32(1) - qp.u - qp.v)  # type: ignore
         xc = b0 * xj + b1 * xk + b2 * xl  # type: ignore
         sd = qp.sign * wp.norm_l2(xi - xc)  # type: ignore
+        if kind == MESH_PLANE:
+            # Signed distance to the plane, for vertices over the plane's extent only (the closest
+            # point is then the vertex's projection)
+            n = wp.normalize(wp.cross(xk - xj, xl - xj))
+            sd = wp.dot(xi - xc, n)
+            tangential = wp.norm_l2(xi - xc - sd * n)
+            if tangential > wp.float32(1e-5) * (wp.float32(1) + wp.abs(sd)):
+                continue
         tsdmin = wp.min(tsdmin, sd)
         if sd < dmin:
             is_j_zero = wp.int32(b0 == wp.float32(0))
@@ -189,11 +205,22 @@ def _filter_initial_step(
         x[i] = xt[i]  # type: ignore
 
 
-def _is_closed(F: np.ndarray) -> bool:
-    """Whether every edge of the triangle mesh F (|# triangles| x 3) is shared by exactly 2 triangles."""
+def _mesh_kind(F: np.ndarray, X: np.ndarray) -> int:
+    """Kind of the triangle mesh F (|# triangles| x 3) over points X (|# points| x 3).
+
+    MESH_CLOSED if every edge is shared by exactly 2 triangles, else MESH_PLANE if all its vertices lie in
+    the plane of its first triangle (plane colliders), else MESH_OPEN.
+    """
     E = np.sort(F[:, [0, 1, 1, 2, 2, 0]].reshape(-1, 2), axis=1)
     _, counts = np.unique(E, axis=0, return_counts=True)
-    return bool(np.all(counts == 2))
+    if np.all(counts == 2):
+        return int(MESH_CLOSED)
+    P = X[np.unique(F)]
+    n = np.cross(X[F[0, 1]] - X[F[0, 0]], X[F[0, 2]] - X[F[0, 0]])
+    n /= np.linalg.norm(n)
+    diameter = np.linalg.norm(P.max(axis=0) - P.min(axis=0))
+    planar = np.all(np.abs((P - X[F[0, 0]]) @ n) <= 1e-6 * diameter)
+    return int(MESH_PLANE) if planar else int(MESH_OPEN)
 
 
 class Params(SerializableMixin):
@@ -211,7 +238,7 @@ class Sd(ContactDetection):
 
     _wp_meshes: list[wp.Mesh]
     _mesh_ids: wp.array[wp.uint64]
-    _mesh_closed: wp.array[wp.int32]  # (# meshes,) 1 if every edge of the mesh has 2 faces
+    _mesh_kind: wp.array[wp.int32]  # (# meshes,) MESH_CLOSED, MESH_OPEN or MESH_PLANE
     _sds: wp.array[wp.float32]  # (# verts,) signed distances
     _mesh_streams: list[wp.Stream]
     _normal_flip_streams: list[wp.Stream]
@@ -247,8 +274,9 @@ class Sd(ContactDetection):
             for b in range(FP.shape[0] - 1)
         ]
         self._mesh_ids = wp.array([m.id for m in self._wp_meshes], dtype=wp.uint64)
-        self._mesh_closed = wp.array(
-            [int(_is_closed(Fb[b].get().reshape(-1, 3))) for b in range(len(Fb))],
+        X = self._x.numpy()
+        self._mesh_kind = wp.array(
+            [_mesh_kind(Fb[b].get().reshape(-1, 3), X) for b in range(len(Fb))],
             dtype=wp.int32,
         )
         self._sds = wp.full(
@@ -287,7 +315,7 @@ class Sd(ContactDetection):
             dim=n_verts * block_dim,
             inputs=[
                 self._mesh_ids,
-                self._mesh_closed,
+                self._mesh_kind,
                 self.params.max_dist,  # max_dist
                 self.params.dmin,  # dmin
                 self._sds,
