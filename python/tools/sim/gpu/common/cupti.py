@@ -12,6 +12,7 @@ Record layouts follow ``cupti_activity.h`` of CUPTI 12.9 (``CUpti_ActivityKernel
 the leading fields are read, which have been stable across recent record versions.
 """
 
+import atexit
 import ctypes
 import dataclasses
 import importlib.metadata
@@ -169,6 +170,9 @@ class ActivityCollector:
         self._complete_cb = _COMPLETE(self._on_complete)
         self._check(self._lib.cuptiActivityRegisterCallbacks(self._request_cb, self._complete_cb))
         self._enabled = False
+        # CUPTI delivers its last buffers through the Python callbacks when the process exits. Deliver
+        # them and detach CUPTI while the interpreter is still alive.
+        atexit.register(self.close)
 
     def _check(self, result: int):
         if result != _SUCCESS:
@@ -237,6 +241,12 @@ class ActivityCollector:
             for kind in _KINDS:
                 self._check(self._lib.cuptiActivityDisable(kind))
             self._enabled = False
+
+    def close(self):
+        """Disable collection, deliver pending records and detach CUPTI from the process."""
+        self.disable()
+        self._lib.cuptiActivityFlushAll(_FLAG_FLUSH_FORCED)
+        self._lib.cuptiFinalize()
 
     def push(self, external_id: int):
         """Correlate launches issued from now on (on this thread) with ``external_id``."""
