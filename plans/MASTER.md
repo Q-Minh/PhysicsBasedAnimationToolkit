@@ -268,7 +268,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | in progress: `feature/aaavbd-surface-neighbours` (honour surface_stencil_surface_neighbours_only) | 2026-10-18 | relative hess_zero merged (`7ee9ee3a`) |
+| 2 | on hold: all branches merged | 2026-10-18 | Merged today: AAAVBD-only stencil keys + betaG warm start, relative hess_zero, surface-neighbours flag, friction tuning guidance. No GPU use except logged runs |
 | 3 | in progress | 2026-10-18 | static/dynamic benchmark, adaptive-penalty fixes merged; `feature/vertex-solve-scale` superseded by task 2's `feature/relative-hess-zero`; now: Newton h = 1e-4 plateau, relative gradient check, termination statuses, `benchmark.py --scene` |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -641,6 +641,13 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   `state.load_scene`, and run finite. The fixed nodes don't move, and the max sag is 0.86 (1e6) and 0.31 (1e7).
   Generator: `python -m python.tools.vbd.rim_patch_scene` (branch `feature/benchmark-trampolines`, 1 commit
   `c288a38a`).
+- 2026-10-18 · task 2 · **GPU run END** (surface-neighbours flag). **Ready for review:** `feature/aaavbd-surface-neighbours` (3 commits on dev `90bc7f54`, head `03a9386d`). AAAVBD, scene files, new defaults: flag 1 (default and explicit) is bit-identical to dev on MediumLongBendingBeam (61 frames) and trampoline (31 frames); flag 0 runs, stays finite and differs from frame 1 (max |dx| 5.8e-2 beam, 8.0e-4 trampoline). Also on the branch, at the maintainer's request: friction tuning guidance in the sim-run skill and python/tools/sim/CLAUDE.md (`03a9386d`).
+- 2026-10-18 · task 1 · **GPU run START** (~20 min, correctness only; started a few minutes before this entry, because
+  my first edit hit a concurrent write): lowering the default friction penalties (`gammaf`, `gammaf_adaptive`),
+  which the maintainer approved. Sweeping them on the plane scenes and on body-body contact scenes. Ignore timings.
+  Will log END.
+- 2026-10-18 · task 4 · **GPU run START**: GUI (`ui.py`, TwistPullBeam) for the maintainer's manual test of kinematic constraints. Timings from other sessions are unreliable while it runs. Will log END when the GUI closes.
+- 2026-10-18 · coordinator · Inverse singularity check scaled by the Frobenius norm (`3e7efa6a`, maintainer OK, bit-identical). Merged task 2's AAAVBD surface_stencil flag (default 1 bit-identical) and friction tuning guidance. Benchmark trampolines merged (rim_patch_scene). **Friction drag:** maintainer says fix only if cheap → task 3, time-boxed lagged-Coulomb cap (mu_f·lambda_n) at the end of its queue; stop and report if it needs real design work.
 
 ## Open questions for the maintainer
 
