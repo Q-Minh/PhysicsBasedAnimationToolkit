@@ -22,6 +22,7 @@ from .state import (
     SolverType,
     CDType,
     load_fem_dynamics,
+    load_kinematic_constraints,
     load_vbd_params,
     load_chebyshev_params,
     load_anderson_params,
@@ -365,7 +366,11 @@ def main():
     params_cpu[SolverType.Chebyshev] = load_chebyshev_params(fem_cpu)
     params_cpu[SolverType.AndersonSolver] = load_anderson_params(fem_cpu)
     params_cpu[SolverType.Newton] = load_newton_params(fem_cpu)
-    state = SimulationState(fem_cpu, params_cpu)
+    state = SimulationState(
+        fem_cpu,
+        params_cpu,
+        load_kinematic_constraints(args.fem_elasto_dynamics, fem_cpu),
+    )
     ui_state = UIState()
     mesh_name = "Mesh"
 
