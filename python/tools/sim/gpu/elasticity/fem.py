@@ -27,6 +27,16 @@ _STRATEGY_MAP = {
 }
 
 
+def _strategy_constant(strategy) -> int:
+    """The kernel constant of a time step initialization strategy, which must be one the GPU implements."""
+    if strategy not in _STRATEGY_MAP:
+        raise ValueError(
+            f"Time step initialization {strategy.name} isn't implemented on the GPU; use one of "
+            f"{', '.join(s.name for s in _STRATEGY_MAP)}"
+        )
+    return _STRATEGY_MAP[strategy]
+
+
 @wp.func
 def is_dirichlet_node(dmask: wp.array[wp.int32], node: int) -> bool:
     return dmask[node] != 0
@@ -273,7 +283,7 @@ class FemElastoDynamics:
                 vtilde_bdf,
                 bt,
                 bt2,
-                _STRATEGY_MAP[strategy],
+                _strategy_constant(strategy),
             ],
         )
 
