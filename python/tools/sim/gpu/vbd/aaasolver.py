@@ -139,7 +139,11 @@ def _accelerated_vertex_solve_kernel(
     Hil *= h2  # type: ignore
     vi = contact.meshes.GXV[i]
     is_surface_node = vi >= 0
+    # Only surface vertices with contact pairs have contact terms (MeshDynamicsData.in_contact).
+    gather_contacts = False
     if is_surface_node:
+        gather_contacts = contact.in_contact[vi] != 0
+    if gather_contacts:
         gil_c, Hil_c = local_contact_derivatives(
             i,
             vi,

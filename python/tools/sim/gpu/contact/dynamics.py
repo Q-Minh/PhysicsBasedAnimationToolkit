@@ -38,6 +38,9 @@ class MeshDynamicsData:
     dmin: wp.float32
     mu_f: wp.float32  # Friction coefficient
     decay: wp.float32  # Rate of decay for deactivating constraints
+    in_contact: wp.array[
+        wp.int32
+    ]  # (# surface vertices,) 1 if the vertex's contact gather has any pair, else 0
 
 
 @wp.func
@@ -306,6 +309,32 @@ def _update_dual_ee(
 
 
 @wp.kernel
+def _flag_contact_vertices(
+    contact: MeshDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
+):
+    """Flag the surface vertices whose contact gather (``vbd.kernels.local_contact_derivatives``)
+    visits at least one pair, from the same forward and reverse prefix ranges it iterates."""
+    i = wp.tid()
+    meshes = contact.meshes
+    vi = meshes.GXV[i]
+    if vi < 0:
+        return
+    fc, rc = contact.contacts, contact.rcontacts
+    n = (fc.vv.prefix[vi + 1] - fc.vv.prefix[vi]) + (rc.rvv.prefix[vi + 1] - rc.rvv.prefix[vi])
+    n += (fc.ve.prefix[vi + 1] - fc.ve.prefix[vi]) + (fc.vf.prefix[vi + 1] - fc.vf.prefix[vi])
+    for k in range(meshes.GVHEp[i], meshes.GVHEp[i + 1]):
+        hei = meshes.GVHEadj[k]
+        hej = halfedges.opposite_half_edge(meshes.F, hei, meshes.GHEF)
+        he = wp.uint32(wp.max(hei, hej))  # type: ignore
+        f = wp.uint32(halfedges.face_of_half_edge(hei))  # type: ignore
+        n += fc.ee.prefix[he + wp.uint32(1)] - fc.ee.prefix[he]
+        n += rc.rve.prefix[he + wp.uint32(1)] - rc.rve.prefix[he]
+        n += rc.rvf.prefix[f + wp.uint32(1)] - rc.rvf.prefix[f]
+        n += rc.ree.prefix[he + wp.uint32(1)] - rc.ree.prefix[he]
+    contact.in_contact[vi] = wp.where(n > wp.uint64(0), 1, 0)
+
+
+@wp.kernel
 def _compute_rayleigh_vv(
     Hi: wp.array[wp.mat33f],
     meshes: MultiMeshData,  # type: ignore
@@ -526,6 +555,7 @@ class MeshDynamics:
         self._data.dmin = self.params.dmin
         self._data.mu_f = self.params.mu_f
         self._data.decay = self.params.decay
+        self._data.in_contact = wp.zeros(n_verts, dtype=wp.int32)
         self.sigma_n_min = self.params.min_sigma_n
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
         n_points = self.meshes.data.GXV.shape[0]
@@ -561,6 +591,8 @@ class MeshDynamics:
             with wp.ScopedStream(stream, sync_enter=False):
                 cset.update_constraint_set(cuv)
             main_stream.wait_stream(stream)
+        # Vertex solves skip the contact gather of vertices without any pair.
+        wp.launch(_flag_contact_vertices, dim=self.meshes.data.GXV.shape[0], inputs=[self._data])
 
     @profiling.scoped("contact.dual")
     def update_dual(
