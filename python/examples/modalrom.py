@@ -154,12 +154,12 @@ def vibration_modes(
         zero (float, optional): Numerical zero used to cull modes. Defaults to 0.
 
     Returns:
-        (np.ndarray, np.ndarray): (w, V) s.t. w is a |# modes| vector of frequencies and V is a n x |# modes| array of mode shapes in columns.
+        (np.ndarray, np.ndarray): (w, V) s.t. w is a |# modes| vector of frequencies and V is a n x |# modes| array of mass-normalized (V^T M V = I) mode shapes in columns.
     """
     n = M.shape[0]
     modes = min(modes, n)
     l, V = sp.sparse.linalg.eigsh(K, k=modes, M=M, sigma=sigma, which="LM")
-    V = V / sp.linalg.norm(V, axis=0, keepdims=True)
+    V = V / np.sqrt(np.einsum("ni,n,ni->i", V, M.diagonal(), V))
     l[l <= zero] = 0
     w = np.sqrt(l)
     return w, V
@@ -199,11 +199,13 @@ def modal_derivatives(
     # dK/d\eta_j depends only on j, so assemble it once per mode and keep its action on all modes
     dKU = np.empty((m, freedofs.shape[0], m), dtype=Ured.dtype)
     for j in range(m):
-        xleft[freedofs] = x[freedofs] - h * Ured[:, j]
-        xright[freedofs] = x[freedofs] + h * Ured[:, j]
+        # Difference along the unit direction, so that h is a length whatever the modes' normalization
+        norm = np.linalg.norm(Ured[:, j])
+        xleft[freedofs] = x[freedofs] - (h / norm) * Ured[:, j]
+        xright[freedofs] = x[freedofs] + (h / norm) * Ured[:, j]
         Kleft = compute_stiffness(xleft)
         Kright = compute_stiffness(xright)
-        dKdetaj = (Kright - Kleft) / (2 * h)
+        dKdetaj = norm * (Kright - Kleft) / (2 * h)
         dKdetajred = dKdetaj.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
         dKU[j] = dKdetajred @ Ured
     for i in range(m):
@@ -371,11 +373,26 @@ def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
 
 
 def build_rom(
-    E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, energy, element, modes, eps
+    E,
+    X,
+    M,
+    egU,
+    wgU,
+    GNegU,
+    mug,
+    lambdag,
+    freedofs,
+    energy,
+    element,
+    modes,
+    eps,
+    z_rtol=0.02,
 ):
-    """Computes vibration modes, modal derivatives and the augmented linear basis.
+    """Computes mass-normalized vibration modes, modal derivatives and the augmented linear basis.
 
-    Modal derivatives are projected M-orthogonally off the span of the vibration modes.
+    Modal derivatives are projected M-orthogonally off the span of the vibration modes. The augmented
+    basis keeps the M-orthogonal SVD directions of the derivatives whose singular values are at least
+    z_rtol times the largest.
 
     Returns:
         Tuple: (w, U, Q, Z, ws), with w the |# modes| mode frequencies, U the n x |# modes|
@@ -427,8 +444,8 @@ def build_rom(
     )
     # Undo the M-norm on the SVD basis
     Zred = Mredinvsqrt @ Zredhat
-    tau = h
-    mz = np.argmax(s2 < tau) if s2[-1] < tau else s2.shape[0]
+    # Keep the derivative directions whose singular values are at least z_rtol times the largest
+    mz = int(np.sum(s2 >= z_rtol * s2[0]))
     Zred = Zred[:, :mz]
     s = np.sqrt(s2)
     ws = np.hstack([w, s[:mz]])
@@ -692,6 +709,7 @@ if __name__ == "__main__":
         attrs = dict(
             input=args.input,
             n_linear_modes=mu,
+            mode_normalization="mass",
             rigid_modes_excluded=rigid,
             modal_derivatives=args.mapping == "quadratic",
             eps=args.eps,
@@ -729,7 +747,7 @@ if __name__ == "__main__":
     q = np.zeros(mu + mz, dtype=U.dtype)
     t0 = time.time()
     t = 0
-    c = 0.15
+    c = 0.03 * np.linalg.norm(X.max(axis=1) - X.min(axis=1))
     k = 0.05
     # Fixed-energy sampling state. The chain restarts whenever its settings change.
     samplers = list(rom_mcmc.SAMPLERS)
@@ -760,7 +778,7 @@ if __name__ == "__main__":
             mode += 1
         imgui.SameLine()
         imgui.Text(f"Mode {mode}/{nrdofs-1}")
-        changed, c = imgui.InputFloat("Wave amplitude", c)
+        changed, c = imgui.InputFloat("Wave amplitude (m)", c)
         changed, k = imgui.InputFloat("Wave frequency", k)
 
         imgui.Separator()
@@ -831,7 +849,9 @@ if __name__ == "__main__":
         else:
             mode = max(0, min(nrdofs - 1, mode))
             t = time.time() - t0
-            etam = signal(ws[mode], t, c, k)
+            # c is the mode's peak (linear) vertex displacement, whatever the modes' normalization
+            peak = np.abs(UZ[:, mode]).max()
+            etam = signal(ws[mode], t, c / peak, k)
             q[:] = 0
             q[mode] = etam
             if mapping == "Quadratic":
