@@ -12,17 +12,17 @@ Profiling has three layers:
 
 Context and the findings so far are in `python/tools/sim/CLAUDE.md` ("Profiling") and `plans/02-profiling.md`.
 
-Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash).
+Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). The `data/...` paths below exist only in the main checkout. In worktrees, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem`.
 
 ## Choose the measurement
 
 | Question | Method | Execution | Pros | Cons |
 |---|---|---|---|---|
-| How long does a step really take? Before/after a change? | **Production timing**: `--profile off --profile-out f.json` | CUDA graph replay | The real cost: includes graph scheduling gaps. Cheap | One number per step, no phases |
+| How long does a step really take? Before/after a change? | **Production timing**: `--profile off --profile-out f.json` | CUDA graph replay | The real cost: includes graph scheduling gaps. Cheap | One number per step, no phases. The CUDA events bracket all of `state.step()`, i.e. replay plus post-step host work (contact browser updates, normally < 1 ms). For clean before/after numbers, time `wp.capture_launch` only |
 | Where does kernel time go, by phase? | **`kernels` backend** (CUPTI, in-process) | Eager | Per-scope busy time, launches, calls, union. Within 0.6% (sweep) / 2.9% (step) of Nsight. Quick, no external tools | Eager, so no graph gaps (a lower bound on cost). Sub-µs kernels read ~0.2 µs long, inflating tiny-kernel contact phases 27–40% |
 | Reference per-phase timings, or a timeline to inspect | **`nvtx` + Nsight Systems** (`profiling.nsys run`) | Eager | Ground truth for kernel durations. Viewable in the Nsight Systems GUI | Needs nsys. Slower turnaround. Still eager |
 | Why is production slower than kernel work? Where are the idle gaps? | **Sweep anatomy** (`profiling.anatomy run`) | Graph replay under nsys | Node-by-node graph timeline: sweep vs boundary, kernels vs gaps, labelled by phase | Needs nsys and an eager profile for labels |
-| Why is one kernel slow (occupancy, stalls, memory, hot lines)? | **Nsight Compute** (`profiling.ncu run`, `--lineinfo`) | Eager | Stall reasons, per-Python-line hotspots. Insensitive to other GPU work | Locked base clocks and cache flushes: compare kernels with each other, not with nsys times |
+| Why is one kernel slow (occupancy, stalls, memory, hot lines)? | **Nsight Compute** (`profiling.ncu run`, `--lineinfo`) | Either (profiles individual kernel launches) | Stall reasons, per-Python-line hotspots. Much less sensitive to other GPU work (replays each kernel with locked clocks) | Locked base clocks and cache flushes: compare kernels with each other, not with nsys times |
 
 Rules of thumb:
 - Quote wall-clock cost from production timing.
@@ -45,11 +45,13 @@ python -m python.tools.sim.profiling.nsys run -o out/aaavbd -- \
     --fem-elasto-dynamics data/scenarios/trampoline.Dump.h5:fem --solver AAAVBD --duration 0.3 -o out/x.h5
 python -m python.tools.sim.profiling.nsys import out/aaavbd.sqlite --metadata out/aaavbd.json -o out/aaavbd.json
 
-# Sweep anatomy of the production graph (label phases with an eager profile)
+# Sweep anatomy of the production graph. --phases takes an eager profile from the same code version;
+# kernels missing from it (e.g. newly fused ones) keep their raw names in the phase column
 python -m python.tools.sim.profiling.anatomy run -o out/aaavbd_graph --phases out/aaavbd.json -- \
     --fem-elasto-dynamics data/scenarios/trampoline.Dump.h5:fem --solver AAAVBD --duration 0.3 --profile-warmup 10 -o out/x.h5
 
-# Nsight Compute on 9 launches (one sweep's colors) of the AAAVBD vertex solve, with per-line hotspots
+# Nsight Compute on 9 launches (one sweep's colors) of the AAAVBD vertex solve, with per-line hotspots.
+# --kernel is a regex on the Warp kernel name, which starts with an underscore; without it nothing matches
 python -m python.tools.sim.profiling.ncu run -o out/aaavbd_ncu --kernel ^_accelerated_vertex_solve --skip 900 --count 9 --lineinfo -- \
     --fem-elasto-dynamics data/scenarios/trampoline.Dump.h5:fem --solver AAAVBD --duration 0.05 -o out/x.h5
 ```
@@ -61,13 +63,15 @@ The `simulate.py` arguments after `--` are passed through unchanged, so `--sim-p
 - **JSON:** every runner writes `pbat-sim-profile/1` results, from the `kernels` backend, nsys import, production runs or the GUI export.
   - `steps[]` hold per-path `busy_ms` (exclusive of nested scopes), `union_ms`, `launches` and `calls`, plus `step_union_ms` and `step_span_ms`. Production runs record `step_timeline_ms` instead.
   - `kernels[]` hold the busy time and count of each kernel.
-- **HTML, per-phase comparison:** pass one result per solver or variant.
+  - `union_incl_ms` holds the inclusive union per path and ancestor path, computed from raw intervals; it can't be summed.
+  - Inclusive (Total) busy time and launches aren't stored: `results.inclusive()` derives them from path prefixes, and `results.scope_tree()` gives the tree rows.
+- **HTML, per-phase comparison:** pass one result per solver or variant. The report also has a collapsible "Scope tree" per solver: Total/Self busy, total share, total union, total/self launches and calls.
 
   ```bash
   python -m python.tools.sim.profiling.report out/vbd.json out/aaavbd.json -o out/report.html --note "trampoline, Dump params"
   ```
 
-- **HTML, overheads:** a production time budget, the anatomy timeline, kernel comparisons and before/after timings.
+- **HTML, overheads:** a production time budget, the anatomy timeline, kernel comparisons and before/after timings, plus "stall hotspots by function" when given `ncu.py --lineinfo` summaries.
 
   ```bash
   python -m python.tools.sim.profiling.overheads --anatomy AAAVBD=out/aaavbd_graph.anatomy.json \
@@ -80,17 +84,17 @@ When the user asks for "HTML output", run the matching measurement (above) to JS
 
 ## GUI
 
-`python -m python.tools.sim.ui ...` → **Profiling** tree node. Enabling it switches on the CUPTI backend, so steps run eagerly. It shows mean GPU busy time per step over a rolling window, by phase or by full path. **Export** writes JSON for `report`.
+`python -m python.tools.sim.ui ...` → **Profiling** tree node. Enabling it switches on the CUPTI backend, so steps run eagerly. It shows mean GPU busy time per step over a rolling window in three views: By phase, By scope path, and Tree (Total, Self, share of step, total union, calls). **Export** writes JSON for `report`. The backend needs `nvidia-cuda-cupti-cu12` installed; without it the panel shows the error.
 
 ## Reading results correctly
 
 - **Stopping rule:** with early exit (`gtol > 0`), ms/step is the time to pass the stopping test at that run's settings, **not** an equal-accuracy solver comparison. Always report sweeps/step (`calls` of `*.sweep`), outer iterations/step (`calls` of `solve.prepare_subproblem`), ms/sweep and whether steps converged or hit the budget, and name the stopping rule. For speed comparisons, set fixed budgets (`--set Solver.<S>.gtol=0`) or use the benchmark tooling (`sim-benchmarks` skill).
-- **Exclusive times:** a parent scope excludes its children, and paths sum to the step. `busy_ms` double-counts streams that run concurrently; `union_ms` doesn't.
+- **Exclusive times:** a parent scope excludes its children, and paths sum to the step. `busy_ms` double-counts streams that run concurrently; `union_ms` doesn't. Inclusive (Total) busy time and launches are derived from the paths, while the inclusive union `union_incl_ms` is stored separately.
 - **Eager vs graph:** eager kernel durations match graph mode within a few percent, but eager runs hide graph gaps.
 
 ## Before measuring
 
 - **The GPU must be quiet.** Other processes (other sessions, the GUI) distort timings badly: an unchanged baseline drifted from 27.6 to 47 ms. While parallel sessions run, reserve a window via `plans/MASTER.md` (`GPU run START`/`END`). `nvidia-smi` shows other users.
 - **Warm-up:** use `--profile-warmup` ≥ 5 so module loading and the first capture are excluded.
-- **Deterministic scenes for before/after:** the beam and the trampoline are bit-reproducible, while contact scenes vary run to run.
+- **Deterministic scenes for before/after:** the beam and the trampoline are bit-reproducible for VBD, AAAVBD and Chebyshev only. Anderson and Newton vary run to run (~2e-4 on the trampoline), and contact scenes vary for every solver, so compare those within noise.
 - **nsys on Windows** needs the base interpreter. The runners handle that through `profiling/venvrun.py`. The default nsys path is in `profiling/nsys.py` (`--nsys` overrides it).
