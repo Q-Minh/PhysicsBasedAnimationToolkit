@@ -120,6 +120,9 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 5. ~~Which initial configurations?~~ **Answered:** MCMC samples from task 4.
 6. ~~No gravity, Dirichlet at rest?~~ **Answered (2026-10-17):** yes, the equilibrium is exactly X. Benchmark cases have no external loads, and the Dirichlet nodes are fixed at rest and must pin the rigid modes (validate this). Static mode itself still supports gravity and `f_ext` scaling for other uses.
 
+14. ~~Benchmark budget?~~ **Answered (2026-10-18):** a per-solve **time cap** (`StaticSolveSpec.max_seconds`, e.g. 60 s). Report the time for each 5% level reached plus the fraction of samples reaching it; unreached levels are NaN. Context: cond(M⁻¹K) = 1.3e7 on MediumLongBendingBeam, so VBD-family solvers need about 80–500 s per sample for 95%, while Newton takes about 3 s.
+15. ~~Static-tuned solver params?~~ **Answered (2026-10-18):** the maintainer supplies a `--sim-params` file. Until then, runs use the Dump's (dynamics-tuned) params, and reports say so.
+
 ## Progress
 
 - 2026-10-17 · Investigation findings (the code, not the plan text, is the source of truth):
@@ -142,3 +145,32 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
   - With identical work and bit-identical results, the loop-structured graph is about 2.2× faster than the unrolled one: 6669 vs 696 captured launches, and host `capture_launch` takes 24.6 vs 0.27 ms.
   - AAAVBD bakes the host `k` into launches (`k > 0` gates the acceleration), so the first outer iteration is peeled into `capture_if`, and the `while` body uses k = 1.
   - Blocker: `wp.Mesh.refit` (vertex-SDF `detect_contacts`) allocates CUB scan temp storage, which conditional bodies reject. OGC's `wp.Bvh` refit/rebuild is untested.
+- 2026-10-18 · **Implementation started** on `feature/gpu-static-solves` (rebased on dev c15c6a11). Commits so far:
+  1. `45df6670`: `FemElastoDynamics.static` flag + `h2` property. Setup forces the Position strategy; back-substitution and the BDF step are no-ops; leaving static mode restarts at rest, in place. **The setup kernel is untouched** (task 1 hotspot).
+  2. `2878b3d8`: VBD/AAAVBD vertex solves use −fext instead of inertia; penalty Hessians drop the mass; sweeps use `fem.h2`. Chebyshev/Anderson inherit via `vbd.iterate`. Dynamics change only by ≤5 ulp of codegen round-off.
+  3. `cba23f65`: `gpu/elasticity/spd.py`, a 9×9 Jacobi eigenvalue filter mirroring C++ `FilterEigenvalues` (NoCorrection/Projection/Absolute).
+  4. `64cbe01d`: static branches in `gradient.py` and Newton (energy −fextᵀx, no mass block). Static Newton SPD-corrects d²Ψ/dF² with the CPU params' `spd_correction` (C++ default: Absolute), now serialized. **Applied in static mode only**, as agreed; C++ Newton also filters in dynamics.
+- 2026-10-18 · Static validation on the bent MediumLongBendingBeam (tip at 0.3 L, no loads, contact off):
+  - VBD-family solvers decrease e monotonically but slowly on the smooth bending mode (3–5% after 1000 sweeps). High-frequency noise drops 94% in 125 sweeps. That's the expected Gauss–Seidel behaviour.
+  - Newton is limited by its **hard-coded CG cap of 300 Jacobi-PCG iterations** (`n_lin_max_iters`, `rel_eps_lin`, `abs_eps_lin` in `newton.Params.__init__`, neither from the CPU params nor serialized). With 300 iterations, e only halves every 10 steps. With 3000 it converges quadratically to e/e0 = 4.7e-6 in about 4 steps (940–1470 CG iterations each).
+  5. `b24ee2b0`: Newton CG limits as a serialized GPU-only `LinearSolverParams` (maintainer decision, 2026-10-18).
+  6. `512d49fb`: `GradientNorm` factored out of Newton (no behaviour change).
+  7. `7ad0b610`: device-side convergence + `capture_if`/`capture_while` outer loop for the VBD family, with an unrolled fallback (`ContactDetection.supports_conditional_capture`). Bit-identical with gtol = 0; about 2× faster.
+  8. `7c1eba28`: `subproblem_iteration(kp)` per VBD-family solver. Chebyshev ω now lives on the device, so iterations are replayable.
+  9. `c6268779`: `static.py`, with the sample loader, `StaticSolveSpec`, `ErrorLog` (globaltimer-bracketed, logging excluded) and `StaticSolver` (capture once, replay per shape).
+- 2026-10-18 · First runs on task 4's 30-sample batch (E* = 10 J, beam, Dump params):
+  - About 93 µs of solver time per sweep.
+  - After 100k sweeps, e/e0 = 0.84 (VBD), 0.67 (AAAVBD), 0.70 (Chebyshev), 0.94 (Anderson).
+  - Newton (CG ≤ 3000) reaches 95% in 3.2–3.9 s.
+  10. `4cabe1e1`: `benchmark_static.py`. It writes results.json (spec, metadata, per-sample time per 5% level, log-spaced curves, aggregates) and results.h5 (full logs).
+  11. `dfad4d6f`: `panels/static.py`, with a static-mode toggle, the load scale and sample loading, and e/e0 shown in the GUI. Logic is tested headlessly; the GUI itself is untested (Claude can't drive it).
+- 2026-10-18 · **Validation:**
+  - Each VBD vertex gradient (elastic − fext) matches the global static gradient (`GradientNorm`, used by Newton and `check_convergence`) to 9e-7 relative, on an MCMC sample with gravity on.
+  - Newton's static energy and gradient agree to <1% by central differences at ε = 3e-5. Below that, float32 energy noise dominates, and it's about 3× larger with the load term −fextᵀx (~10³ J here). Possible improvement, not done: write the load term as −fextᵀ(x − X).
+  - Gravity loads stay finite with static mode on (fext used directly, no fext/m).
+  - Dynamics stay unchanged (bit-identical or round-off, see commits).
+- **Still open:**
+  - (a) Filing the `wp.Mesh.refit` allocation as a Warp issue: outward-facing, needs the maintainer's OK.
+  - (b) The maintainer's static params file.
+  - (c) The full benchmark run, 30 samples × 5 solvers × 60 s cap (about 2.5 h exclusive GPU; to be announced).
+  - (d) Optional `cpu-gpu-parity` review.

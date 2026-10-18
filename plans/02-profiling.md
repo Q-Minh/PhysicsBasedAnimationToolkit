@@ -128,3 +128,38 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
 - 2026-10-17 · Coordinator confirmed the Phase 0 stub contract: `profiling.scope(name: str)` is the only public
   API, a cheap no-op when off (no allocations, no device work, capture-safe). The coordinator will message when
   Phase 0 is done.
+- 2026-10-18 · **Milestone 1 implemented** on `feature/gpu-profiling` (14 commits, rebased on dev `800e87ef`):
+  - **Backend (`gpu/common/profiling.py`):** `scope`, the `scoped` decorator, `push`/`pop`, `set_backend`,
+    `begin_step`/`end_step`, with backends OFF/KERNELS/NVTX. Unit tests are in the module.
+  - **Scopes:** in the contact, VBD-family and Newton files.
+  - **Eager profiling:** `state.step` runs eagerly while profiling. The substep loop moved into
+    `SimulationState._advance`.
+  - **`simulate.py`:** `--profile`, `--profile-out` and `--profile-warmup`. Warm-up runs unprofiled in graph
+    mode. With profiling off, `--profile-out` records production (graph-replay) step times.
+  - **Tools:** `profiling/nsys.py` (runner plus importer), `profiling/venvrun.py`, `profiling/report.py`, and docs
+    in `python/tools/sim/CLAUDE.md`.
+- 2026-10-18 · Validation:
+  - **Kernels backend vs nsys** (beam, AAAVBD, same eager steps): Warp activity timing gives 208 ms/step, nsys
+    54 ms/step. The sweep alone is 110 vs 48 ms, the contact phases 15–30× too high. The cause is launch
+    latency: event pairs start on an idle GPU before the kernel is submitted. Eager nsys sweep time (47.8 ms)
+    matches graph-mode nsys (49 ms), so eager kernel durations are representative. **Quote only nsys numbers.**
+  - **Profiling off leaves production unchanged:** captured graphs have identical node counts and types on the
+    merge base and the branch, for VBD, AAAVBD, Chebyshev and Anderson (11,978–14,898 nodes on the beam), and
+    trajectories are bit-identical. Replay timings agree within run-to-run noise (±5 ms).
+  - **Side finding:** every captured step contains 21 MEM_ALLOC/MEM_FREE node pairs (allocations during capture)
+    and ~2,500 memcpy nodes.
+  - Not done yet: the "per-phase totals within a few percent of nsys" check for the kernels backend. It fails
+    by construction (see above).
+- 2026-10-18 · **Trampoline report** (5 solvers, nsys, steps 10–14, Dump parameters = 500 sweeps/step):
+  https://claude.ai/artifact/LHMcGJs6Z6N89iruhYLxYz
+  - **VBD family:** 65–72 ms/step of kernel work vs ~100 ms/step graph replay, i.e. ~30 ms/step of graph
+    scheduling overhead. The sweep is 78–88% of the work.
+  - **Contact:** VertexSdf detection costs ~6 ms/step even with zero contacts (trampoline has none).
+  - **Anderson:** the Gram matrix plus solve costs 3.4 ms/step.
+  - **Newton:** converged after one outer iteration (13.6 ms/step), so it isn't at equal accuracy.
+- ~~Open: should the inaccurate `kernels` backend stay?~~ **Answered (2026-10-18): switch the in-process
+  backend to CUPTI.** `cupti-python` is Linux-only, so I'll write a small ctypes binding to the CUPTI activity
+  API: kernel, memcpy and memset records with GPU start/end times, attributed to scopes through external
+  correlation IDs. **DLL source (maintainer): pip `nvidia-cuda-cupti-cu12==12.9.79`**, which matches the venv's
+  CUDA 12.9. Add it to `requirements.txt`; the coordinator installs it in the shared venv. This is milestone 2
+  work, together with the GUI panel.

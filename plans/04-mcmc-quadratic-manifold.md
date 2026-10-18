@@ -120,3 +120,45 @@ simulator files.
   On the beam, the noise is about 8e-5 J at every E*, with 0 star violations at 0.1, 2 and 10 J. The warning
   fires below about 0.8 J. Contract wording in MASTER.md corrected.
 - **Merge-ready** (first milestone). Still open: question 4 (velocity notes) for the (q, q̇) milestone.
+- 2026-10-18 · Milestone 1 merged into dev (`f291e2da`). The maintainer found an ImGui ID clash: the "Sample"
+  button and slider shared a label. Fixed with PushID/PopID in `837ab6cf`, also merged into dev.
+- 2026-10-18 · Profile, quadratic-manifold status and velocity plan published:
+  https://claude.ai/artifact/ABsVM6TwtGpAnuEacBVx9w. The quadratic map was already the headless default; only
+  the GUI started on Linear. Fixed in `1e67c1d9` (GUI defaults to Quadratic).
+- 2026-10-18 · **Decisions:**
+  - **Speed-ups:** implement items 1–4. (1) Assemble each dK/dq_j once in `modal_derivatives`. (2) Evaluate
+    u(r d) = r a + r² b in closed form along rays. (3) Shorter warm-up: 300 burn-in + 500 pilot. (4) Radial root
+    tolerance at the noise floor.
+  - **No full Newton solves for sampling.** The maintainer only wants them where sample efficiency justifies
+    it, e.g. sampling loads and solving for equilibria.
+  - **Milestone 2 (fixed total energy):** Liouville measure dq dp, so π(q) ∝ √det M_r (E−U)^((d−2)/2) on
+    U < E, and q̇ = √(2K) L z/|z| with LLᵀ = M_r⁻¹. Gravity is off by default; an opt-in flag adds −f_gᵀu(q)
+    with f_g = M g in full space. Inverted elements are allowed, with each sample's min J recorded.
+  - **Milestone 2 chains and export:** 4 independent chains from q = 0, pooled, with split-R̂ reported. Export
+    `samples/qdot` (S, m) only, with no full-space velocities; consumers lift them with the stored basis.
+- 2026-10-18 · Speed-ups 1–4 merged into dev (`800e87ef`): a 100-sample batch takes ~9–11 s instead of ~31 s.
+- 2026-10-18 · **Milestone 2 implemented** (commits `4ddea087`..`240dcbe1`):
+  - `MicrocanonicalMetropolis` (sampler "microcanonical"), `run_chains` with split-R̂, opt-in gravity via
+    `fext`, and per-sample min det(F). The export adds `samples/qdot`, `samples/min_J` and `basis/M`.
+  - The GUI shows U and K and draws velocity vectors.
+  - 12 unit tests pass, including a configuration-dependent-mass test whose negative control (dropping
+    √det M_r) fails as it should.
+  - On the beam at E = 10 J (200 samples, 4 chains, 16 s): K + U = E to 5e-16 from the file alone;
+    U/E has mean 0.498 and std 0.111, against Beta(10, 10)'s 0.5 and 0.109 for a 20-mode harmonic system;
+    split-R̂ 1.044; no inverted samples.
+  - The chain is cheap per step (~1 ms) but correlated (τ ≈ 135 steps). A better proposal could be a later
+    improvement.
+- 2026-10-18 · **Milestone 3 (shape reachability) added by the maintainer.**
+  - Prototype and design: https://claude.ai/artifact/3JwUPvjYCLm2Q2kUmrH4MQ
+  - Prototype finding on the beam under gravity: the quadratic manifold contains the bent shapes
+    geometrically (best fit within 0.4% M-error at 0.71 m tip sag). The ROM equilibrium is too stiff, though:
+    it sags 33% less, and the geometric best fit carries much more energy (locking-like).
+  - Fitting to linear-mode targets can't enhance them, because Q ⊥_M U; the enhanced shape is just u(η).
+  - **Decisions:** support all three target types: gravity, region force (slab/box region via sliders) and
+    handle displacement. Each is turned into a target by a full-order static solve, reusing
+    `pbat.math.optimization.Newton`. Show three fits: geometric best fits (U, [U Z], quadratic), the
+    energy-regularized fit ½‖u(q)−u_t‖²_M + αΨ̂(q) with an α slider, and the ROM equilibrium under the same
+    load. No headless sweep.
+- 2026-10-18 · **Mass-normalized modes (maintainer):** switch to UᵢᵀMUᵢ = 1 as the only behavior, with a
+  scale-free finite-difference step in `modal_derivatives` and a relative Z cutoff. Files record
+  `mode_normalization`. The GUI wave amplitude becomes the peak displacement in metres.

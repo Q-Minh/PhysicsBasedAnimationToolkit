@@ -1,6 +1,6 @@
 # Task 1: Kinematic Dirichlet constraints on the GPU
 
-Status: **questions answered; waiting for Phase 0** · Branch `feature/gpu-kinematic-constraints` · Worktree `C:\git\pbat-kinematics`
+Status: **implemented; final per-solver runs pending** · Branch `feature/gpu-kinematic-constraints` · Worktree `C:\git\pbat-kinematics`
 Read first: `MASTER.md` (rules, ownership), `python/tools/sim/CLAUDE.md`, `python/tools/vbd/CLAUDE.md`.
 
 ## Goal
@@ -165,3 +165,39 @@ reset), and validate the old and new CPU paths against each other before relying
 - 2026-10-17 · All open questions answered. Waiting for Phase 0.
 - 2026-10-17 · For task 3's static solves: `KinematicConstraintSet` gets a flag that stops the device step
   counter from advancing (time frozen), plus a way to set the counter. Agreed via the coordinator.
+- 2026-10-18 · Implemented on `feature/gpu-kinematic-constraints`, rebased on dev `800e87ef`. 15 commits:
+  - `ddedf9b4` countdown removed (nonzero dmask = fixed) · `d76c1bb1` GPU `dbc`/`ndbc` removed
+  - `a2f60dd7` per-node L_TRANSLATE · `773447d1` GPU contact filters skip Dirichlet nodes (C++ parity)
+  - `4e71f12f` half-open windows · `794f8b47` CPU closed form with anchors · `5e6726fd` CPU prescribed velocity
+  - `bd008675` L_TRANSLATE migration script · `1036b33e` Dump writes the `kinematics` group (format v1, see
+    `TransformLibrary.export_kinematic_constraints`)
+  - `01781cf4` `gpu/kinematics` (`KinematicConstraint`, `KinematicConstraintSet`, loader)
+  - `46faefcd` FEM evaluates it each step · `a6c330d0` state/ui/simulate load and attach it
+  - `8d5c79ee` GUI panel · `4d5a2e33` first-step fix in `state.step` (unrelated bug found while testing)
+  - `ad775543` docs
+- 2026-10-18 · Validation:
+  - Unit tests: `gpu.kinematics.constraints` (4: GPU vs CPU editor over 140 steps, max error 3e-7 in x
+    and v; graph replay identical; release velocity and frozen time; mid-run anchors and toggling),
+    `vbd.ui.utils.transform_library` (5), `gpu.elasticity.fem` (1). All pass.
+  - Old vs new CPU path: the closed form equals the incremental code to 1.5e-14 (float64) for every kind
+    and overlap pattern. With float32 positions, dev's incremental constraints drift 1.6e-5 after 140 steps
+    (compressing beam); the closed form is exact.
+  - Constrained-node trajectories: CPU and GPU are both exact against the closed form, with 0 error at every
+    checked step of the compressing beam (3 s on the GPU). On octo-sling (GPU), held groups match to 3e-8
+    until release, and the translated patch moves at the prescribed 1.000 units/s until it is let go.
+  - Free nodes, qualitative: **the GPU VBD sags about 6× more than the CPU VBD on the same beam even with
+    no motion** (held ends, mean z −0.54 vs −0.08 at 0.5 s), so this is a solver difference unrelated to
+    kinematics. The CPU VBD also hits NaN at 1.43 s on the compressing beam: the 1e-6 differences from the
+    closed form grow chaotically (dev's code survives to 1.6 s with its drifted constraints).
+  - MediumLongBendingBeam (fixed BCs): bit-identical to dev until the first-step fix, which shifts every GPU
+    run by one step. CubeFallingOnCube with VertexSdf: bit-identical to dev with the bottom cube held. OGC
+    crashes once bodies touch, a pre-existing dev bug (coordination log).
+  - Panel smoke-tested with Polyscope's mock backend; the interactive GUI is not tested.
+- 2026-10-18 · Data (git-ignored, backups next to each file): migrated `cow_on_trampoline` (5 → 0.287, old
+  per-node speeds 0.279–0.288), `octo-sling-1m-tilted` (1 → 0.036, old per-node speeds 0.025–0.045, i.e.
+  inexact: its nodes don't share a radius) and `octopus-trampoline` (5 → 0.380). Added `kinematics` to
+  the BeamFallingOnBeam, CubeFallingOnCube and trampoline Dumps. MediumLongBendingBeam has no scene, so it
+  keeps the dmask fallback.
+- Not done / known gaps: the GPU headless output keeps writing only the initial `dmask`; the offline CPU
+  simulator's `-o` drive-letter bug is documented, not fixed; a mid-run `--start-from` resume on the CPU
+  re-anchors at the resumed state (exact unless non-commuting motions overlap).
