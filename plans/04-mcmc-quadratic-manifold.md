@@ -107,3 +107,16 @@ simulator files.
 - 2026-10-17 · Batches 1 and 2 answered (questions 1, 2 and 5–10 above). Only question 4 (the velocity notes) is
   still open, and it doesn't block the first milestone. The proposed contract additions are posted in the
   MASTER.md coordination log for task 3.
+- 2026-10-17 · Decision: keep pbat's float32 energy (no float64 port). Its absolute noise floor is about
+  2–4e-4 J on the beam, so tolerances must account for it. Correction: pbat's 3D Stable NH is exactly 0 at rest,
+  so the 4.96e-4 J "rest energy" is float32 round-off.
+- 2026-10-17 · Committed `2046e73b` (rom_mcmc.py + tests) and `7ab8b152` (MD fix, headless mode, GUI panel),
+  rebased on dev after Phase 0; 6 unit tests pass. On the beam at E*=10 J, polar and crw agree within about
+  2σ, with energies within 5e-5 of E*. A stubbed GUI smoke test passes.
+- 2026-10-18 · Committed `eb6c4785`: noise-aware tolerances. Each chain measures the energy noise (residual
+  of a cubic fit over ±1e-3 relative along a ray; ±1e-6 was too small, since float32 positions didn't change)
+  and keeps tolerances at 10× it. The radial root caches evaluations, fixing a brentq sign-flip failure under
+  noise. Also committed `f291e2da`: GUI/headless report the noise and the chain's settings. 8 unit tests pass.
+  On the beam, the noise is about 8e-5 J at every E*, with 0 star violations at 0.1, 2 and 10 J. The warning
+  fires below about 0.8 J. Contract wording in MASTER.md corrected.
+- **Merge-ready** (first milestone). Still open: question 4 (velocity notes) for the (q, q̇) milestone.

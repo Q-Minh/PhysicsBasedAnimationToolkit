@@ -40,7 +40,7 @@ them **through that absolute path**, never a copy inside their own worktree.
 | 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 | **done** | 2026-10-17 | `state.py` (1d…), `gpu/common/profiling.py` stub, `panels/` package, docs. Rebase onto `dev` now. |
 | 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
 | 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
-| 4 | MCMC sampling of quadratic-manifold shapes | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
+| 4 | **milestone 1 merged into dev** (f291e2da) | 2026-10-18 | samplers + HDF5 export + GUI panel + modal-derivative fix; velocity (q̇) part pending maintainer notes |
 
 ## Phase 0 (coordinator, before the parallel work starts)
 
@@ -123,8 +123,13 @@ will instrument).
 - **HDF5 file**, one per batch, with **one target energy E\* per file**. Root attributes: source mesh / Dump
   path, sampler kind and parameters, E\*, the energy definition, random seed, git commit, and chain metadata
   (weight kind, burn-in, thinning, acceptance rate, ESS).
-- **Energy definition:** E\* is the **deformation energy in absolute joules**, Ψ(X + u) − Ψ(X). Stable
-  Neo-Hookean has a nonzero rest energy, 4.96e-4 J on MediumLongBendingBeam, hence the subtraction.
+- **Energy definition:** E\* is the **deformation energy in absolute joules**, Ψ(X + u) − Ψ(X).
+  (Corrected by task 4: pbat's Stable Neo-Hookean is exactly 0 at rest. The 4.96e-4 J that pbat returns at
+  rest on MediumLongBendingBeam is float32 round-off, and the subtraction removes it.) pbat's float32 energy
+  has an absolute noise floor, about 8e-5 J (std) on the beam. Each file records it as the attribute
+  `energy_noise`, and records `energy_tolerance` (10× the noise), the accuracy to which samples lie on the
+  level set. `energy_noise_warning` is True when that tolerance exceeds 1e-3·E\*, i.e. E\* below about 0.8 J
+  on the beam.
 - **`X`**: **(N, 3)** rest positions, float32. Row i is node i, i.e. `X = fem.X.T` for pbat's (3, N) `fem.X`;
   the node order is the Dump's.
 - **`samples/q`**: (S, r) reduced coordinates.
@@ -176,8 +181,8 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | questions answered; waiting for Phase 0 | 2026-10-17 | 11/11 answered (plan 01). Closed-form constraints on CPU + GPU, countdown hack removed, `dbc`/`ndbc` dropped from the GPU struct |
 | 2 | questions answered; waiting for Phase 0 | 2026-10-17 | 10/10 answered (plan 02). Milestone 1: scope backend (`off`/`kernels`/`nvtx`), scopes in all solvers, `simulate.py --profile`, nsys importer, HTML report on trampoline. GUI panel in milestone 2 |
-| 3 | answering questions | 2026-10-17 | 12 of 13 answered; prototype measured; pending: maintainer's `check_convergence` decision |
-| 4 | questions answered; ready to implement | 2026-10-17 | MD bug fix + polar & constrained-RW samplers + HDF5 export; only the velocity notes are still pending (not blocking) |
+| 3 | questions done; rebased on dev | 2026-10-17 | all 13 answered (check_convergence: capture_while + fallback); implementation next |
+| 4 | merge-ready (milestone 1) | 2026-10-18 | 4 commits on `feature/rom-mcmc`, rebased on dev `c15c6a11`; `python -m unittest test_rom_mcmc` (run from `python/examples`) passes. Velocity notes still pending for milestone 2 |
 
 ## Coordination log
 
@@ -220,6 +225,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   - **No C++ changes requested.**
   - **GPU:** my only run so far was one short nsys probe (30 AAAVBD steps on the beam) at about 23:12.
 - 2026-10-17 · task 3 · **GPU run END** (capture_while prototype). **FYI tasks 2 and 1 and the coordinator:** on MediumLongBendingBeam (VBD and AAAVBD, 20 outer × 25 sweeps, 9 colors), the current fully unrolled step graph (6669 captured launches) takes **110 / 116 ms**, but the same work with the outer loop in `wp.capture_while` (body of 696 launches) takes **49 / 56 ms**, with bit-identical results. The host-side `capture_launch` alone takes 24.6 ms vs 0.27 ms. So large unrolled graphs are about 2× slower here (Windows/WDDM, driver 610.88). This matters for production speed and for task 2's measurements. Blocker for contact scenes: `wp.Mesh.refit()` (vertex-SDF `detect_contacts`) allocates CUB scan temp storage, and allocation is illegal in conditional graph bodies. OGC's `wp.Bvh.refit/rebuild` is untested. Gradient-norm check (Newton's `Gradient` + `_gnorm2_reduce`) once per outer iteration: no measurable cost.
+
+- 2026-10-18 · coordinator · Merged task 4 (feature/rom-mcmc, 4 commits) into dev after review: 8 unit tests pass, a headless polar batch on MediumLongBendingBeam matches the contract (Dirichlet nodes exactly at rest), and the GUI starts. Task 3 can rebase to get `python/examples/rom_mcmc.py`. The E* attribute is `target_energy`; use E* ≥ 1 J on the beam (see energy_noise_warning).
 
 ## Open questions for the maintainer
 
