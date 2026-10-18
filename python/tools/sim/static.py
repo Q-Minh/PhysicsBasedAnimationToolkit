@@ -39,6 +39,7 @@ Python usage:
 """
 
 from dataclasses import dataclass, field
+from enum import IntEnum
 import math
 
 import cuda.compute
@@ -237,9 +238,10 @@ class StaticSolveSpec(SerializableMixin):
 
 
 @wp.kernel
-def _reset_log_kernel(count: wp.array[wp.int32], keep: wp.array[wp.int32]):
+def _reset_log_kernel(count: wp.array[wp.int32], keep: wp.array[wp.int32], stop: wp.array[wp.int32]):
     count[0] = 0
     keep[0] = 1
+    stop[0] = 0
 
 
 @wp.kernel
@@ -274,6 +276,7 @@ def _commit_kernel(
     max_entries: wp.int32,
     max_ns: wp.int64,
     keep: wp.array[wp.int32],
+    stop: wp.array[wp.int32],
 ):
     c = count[0]
     capacity = e2.shape[0]
@@ -285,19 +288,42 @@ def _commit_kernel(
         sweeps[c] = s
     count[0] = c + 1
     elapsed = t_a[wp.min(c, capacity - 1)] - t_a[0]
-    k = wp.int32(0)
-    if c + 1 < max_entries and c + 1 < capacity and e2_new[0] > target_ratio2 * e2[0] and elapsed < max_ns:
-        k = wp.int32(1)
-    keep[0] = k
+    # Stop reason (StopReason), in priority order; 0 keeps going
+    e2c = e2_new[0]
+    reason = wp.int32(0)
+    if not wp.isfinite(e2c):
+        reason = wp.int32(4)
+    elif e2c <= target_ratio2 * e2[0]:
+        reason = wp.int32(1)
+    elif c + 1 >= max_entries or c + 1 >= capacity:
+        reason = wp.int32(2)
+    elif elapsed >= max_ns:
+        reason = wp.int32(3)
+    stop[0] = reason
+    keep[0] = wp.where(reason == 0, wp.int32(1), wp.int32(0))
     if c < capacity:
         t_b[c] = globaltimer()
+
+
+class StopReason(IntEnum):
+    """Why a benchmark solve stopped (``StaticSolveLog.termination`` holds the lowercase name)."""
+
+    RUNNING = 0  # not stopped (the log ended without a stop criterion)
+    TARGET = 1  # the error reached the target reduction
+    ITERATION_CAP = 2  # max_iterations entries
+    TIME_CAP = 3  # max_seconds of device time
+    NON_FINITE = 4  # the error is NaN or infinite
+    NEWTON_NON_DESCENT = 5  # Newton's direction wasn't a descent direction
+    NEWTON_LINE_SEARCH_FAILED = 6  # Newton's line search rejected every step length
+    NEWTON_ZERO_GRADIENT = 7  # Newton's gradient is exactly zero (no step possible)
 
 
 class ErrorLog:
     """Per-iteration log of the squared error to :attr:`reference`, cumulative sweeps and device timestamps.
 
     Entry 0 is the initial state. ``record`` appends an entry after a solver iteration and updates
-    ``keep`` (1 while the error is above the target and the budgets aren't exhausted). It doesn't
+    ``keep`` (1 while the error is above the target and the budgets aren't exhausted) and ``stop``
+    (the :class:`StopReason`, ``RUNNING`` while ``keep`` is 1). It doesn't
     synchronize, so it can be captured, including in ``wp.capture_while`` bodies.
     """
 
@@ -318,6 +344,7 @@ class ErrorLog:
         self.t_b = wp.zeros(self.capacity, dtype=wp.int64)
         self.count = wp.zeros(1, dtype=wp.int32)
         self.keep = wp.zeros(1, dtype=wp.int32)
+        self.stop = wp.zeros(1, dtype=wp.int32)
         self._w = wp.zeros(n_nodes, dtype=wp.float32)
         self._e2_new = wp.zeros(1, dtype=wp.float32)
         self._reduce = Reduce(
@@ -342,8 +369,8 @@ class ErrorLog:
         self._max_ns = int(min(max_seconds * 1e9, 2**62)) if math.isfinite(max_seconds) else 2**62
 
     def reset(self) -> None:
-        """Empty the log and set ``keep`` to 1. Capturable."""
-        wp.launch(_reset_log_kernel, dim=1, inputs=[self.count, self.keep])
+        """Empty the log, set ``keep`` to 1 and ``stop`` to ``RUNNING``. Capturable."""
+        wp.launch(_reset_log_kernel, dim=1, inputs=[self.count, self.keep, self.stop])
 
     def record(self, n_sweeps: int) -> None:
         """Append an entry for the current positions and update ``keep``. Capturable.
@@ -370,6 +397,7 @@ class ErrorLog:
                 self._max_entries,
                 self._max_ns,
                 self.keep,
+                self.stop,
             ],
         )
 
@@ -377,7 +405,8 @@ class ErrorLog:
         """Copy the log to the host (synchronizes).
 
         Returns:
-            StaticSolveLog: Errors, cumulative solver times and cumulative sweeps per entry.
+            StaticSolveLog: Errors, cumulative solver times and cumulative sweeps per entry, and the
+            stop reason.
         """
         n = min(int(self.count.numpy()[0]), self.capacity)
         e2 = self.e2.numpy()[:n].astype(np.float64)
@@ -390,6 +419,7 @@ class ErrorLog:
             error=np.sqrt(np.maximum(e2, 0.0)),
             time=np.cumsum(dt),
             sweeps=self.sweeps.numpy()[:n].astype(np.int64),
+            termination=StopReason(int(self.stop.numpy()[0])).name.lower(),
         )
 
 
@@ -400,6 +430,7 @@ class StaticSolveLog:
     error: np.ndarray  # (n,) mass-weighted error to the reference (the rest shape for static problems)
     time: np.ndarray  # (n,) cumulative solver wall-clock time (s), logging excluded
     sweeps: np.ndarray  # (n,) cumulative VBD sweeps (0 for Newton)
+    termination: str = "running"  # why the solve stopped: a StopReason name, lowercase
 
     @property
     def relative_error(self) -> np.ndarray:
@@ -539,20 +570,32 @@ class BenchmarkSolver:
         if state.fem.static:
             state.fem.setup_time_integration_optimization()
         newton.initialize_solve(state.fem, state.contact, state.detector, params)
-        n_inner, gtol2 = params.data.n_subproblem_max_iters, params.data.gtol2
-        # One Newton step per entry, and never Newton's own gradient test: the benchmark's error stops
-        # the solve (with h^2-scaled dynamics at small h, |g| can start below gtol and Newton would idle)
+        saved = (params.data.n_subproblem_max_iters, params.data.gtol2, params.data.abs_eps_lin)
+        # One Newton step per entry, and no absolute tolerances: the benchmark's error stops the solve.
+        # With h^2-scaled dynamics at small h, |g| can start below gtol, and after a step below CG's
+        # atol, so Newton would idle (gtol) or take zero steps (atol). CG keeps its relative tolerance.
         params.data.n_subproblem_max_iters = 1
         params.data.gtol2 = 0.0
+        params.data.abs_eps_lin = 0.0
         try:
             log = self.log
             log.reset()
             log.record(0)
             while int(log.keep.numpy()[0]) != 0:
-                newton.solve_subproblem(state.fem, state.contact, params)
-                log.record(0)
+                status = newton.solve_subproblem(state.fem, state.contact, params)
+                if status == newton.SubproblemStatus.STEPPED:
+                    log.record(0)
+                    continue
+                # A rejected step (or a zero gradient) leaves x unchanged and is final: stop with that status
+                reason = {
+                    newton.SubproblemStatus.NON_DESCENT: StopReason.NEWTON_NON_DESCENT,
+                    newton.SubproblemStatus.LINE_SEARCH_FAILED: StopReason.NEWTON_LINE_SEARCH_FAILED,
+                    newton.SubproblemStatus.CONVERGED: StopReason.NEWTON_ZERO_GRADIENT,
+                }[status]
+                log.stop.fill_(int(reason))
+                break
         finally:
-            params.data.n_subproblem_max_iters, params.data.gtol2 = n_inner, gtol2
+            (params.data.n_subproblem_max_iters, params.data.gtol2, params.data.abs_eps_lin) = saved
 
     def _load(self, x0, reference, v0, xtilde) -> None:
         fem = self.state.fem
