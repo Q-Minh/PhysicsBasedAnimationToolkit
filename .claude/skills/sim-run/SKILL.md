@@ -109,7 +109,7 @@ Claude can't drive the GUI. Hand the command to the user and say what to look at
 
 ## Kinematic constraints
 
-Procedurally animated Dirichlet nodes (Fixed, Translate, Rotate, RadialTranslate) over half-open time windows. They come from the Dump's `kinematics` group (the editor's transform library) or from a scene file. A Dump without the group treats nonzero `dmask` as permanently fixed. They are evaluated in closed form, so nothing drifts, and released nodes keep their prescribed velocity. GPU and CPU semantics match. Details: `python/tools/sim/CLAUDE.md` ("Kinematic constraints") and the docstring of `gpu/kinematics/constraints.py`. To author constraints, edit the transform library in the CPU editor and Dump again.
+Procedurally animated Dirichlet nodes (Fixed, Translate, Rotate, RadialTranslate) over half-open time windows. They come from the Dump's `kinematics` group (the editor's transform library) or from a scene file. A Dump without the group treats nonzero `dmask` as permanently fixed. They are evaluated in closed form, so nothing drifts, and released nodes keep their prescribed velocity. GPU and CPU semantics match. Details: `python/tools/sim/CLAUDE.md` ("Kinematic constraints") and the docstring of `gpu/kinematics/constraints.py`. To author constraints, edit the transform library in the CPU editor and Dump again. The `sim-kinematics` skill covers authoring, semantics and pitfalls in detail.
 
 ## Outputs
 
