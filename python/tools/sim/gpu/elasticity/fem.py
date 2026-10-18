@@ -114,11 +114,7 @@ class FemElastoDynamicsData:
     lambdag: wp.array[wp.float32]  # (Q,) 2nd Lame parameter at quad pts
 
     # --- Dirichlet BCs ---
-    dmask: wp.array[wp.int32]  # (N,) 0 = free, 1+ = constrained
-    ndbc: wp.int32  # number of dirichlet constrained nodes
-    dbc: wp.array[
-        wp.int32
-    ]  # (N,) concatenated vector of Dirichlet unconstrained and constrained nodes, partitioned as [ dbc[0:N-ndbc], dbc[N-ndbc:] ]
+    dmask: wp.array[wp.int32]  # (N,) 0 = free, nonzero = constrained
 
 
 class FemElastoDynamics:
@@ -155,8 +151,6 @@ class FemElastoDynamics:
         self._data.mug = wp.array(fem.lamegU[0, :], dtype=wp.float32)
         self._data.lambdag = wp.array(fem.lamegU[1, :], dtype=wp.float32)
         self._data.dmask = wp.array(fem.dmask, dtype=wp.int32)
-        self._data.ndbc = int(fem.ndbc)
-        self._data.dbc = wp.array(fem.dbc, dtype=wp.int32)
 
         # BDF integrator (operates on flat 3*N dof vectors)
         bdf: pbat.sim.integration.Bdf = fem.bdf
@@ -295,7 +289,6 @@ class TestFemElastoDynamics(unittest.TestCase):
         self.assertTrue(np.all(fem.data.mug.numpy() == fem_cpu.lamegU[0, :]))
         self.assertTrue(np.all(fem.data.lambdag.numpy() == fem_cpu.lamegU[1, :]))
         self.assertTrue(np.all(fem.data.dmask.numpy() == fem_cpu.dmask))
-        self.assertTrue(np.all(fem.data.dbc.numpy() == fem_cpu.dbc))
 
 
 if __name__ == "__main__":
