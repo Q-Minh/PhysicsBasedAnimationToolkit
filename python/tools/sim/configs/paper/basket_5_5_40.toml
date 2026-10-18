@@ -153,7 +153,7 @@ n_max_iters = 1
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]
-atol = 1e-05
+atol = 1e-10
 n_max_iters = 300
 rtol = 1e-05
 
