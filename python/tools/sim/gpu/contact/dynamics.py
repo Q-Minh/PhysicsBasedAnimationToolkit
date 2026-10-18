@@ -494,9 +494,12 @@ class Params(SerializableMixin):
                       ``gamman * dt^2``.
         gammaf      : Friction AL penalty scaling factor with a constant penalty, ``gammaf * dt^2``.
         gamman_adaptive : Normal AL penalty scaling factor with adaptive penalties, a multiple of
-                      the largest vertex-Hessian Rayleigh quotient over the contacts. Equivalent
-                      to C++ ``MeshDynamics::Params::gamma`` (default 1).
-        gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf`` (default 1).
+                      the largest vertex-Hessian Rayleigh quotient over the contacts, as C++
+                      ``MeshDynamics::Params::gamma``. The default 0.1 (C++: 1) keeps every
+                      VBD-family solver stable with one contact detection per step: at 1, VBD needs
+                      ``n_max_iters >= 2``, Chebyshev ``>= 5``, and AAAVBD diverges on
+                      BeamFallingOnBeam.
+        gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf`` (default 0.1).
         min_sigma_n : Floor of the effective normal penalty ``gamman_adaptive * sigma_n`` in both
                       adaptive modes.
         penalty_adaptivity : CONSTANT: ``sigma_n = sigma_f = dt^2``, so the effective penalties
@@ -515,11 +518,13 @@ class Params(SerializableMixin):
     gamman = DocField(1e4, "Normal contact AL penalty scaling factor (constant penalty: gamman * dt^2)")
     gammaf = DocField(1e3, "Friction contact AL penalty scaling factor (constant penalty: gammaf * dt^2)")
     gamman_adaptive = DocField(
-        1.0,
-        "Normal penalty scaling with adaptive penalties: a multiple of the largest vertex-Hessian Rayleigh quotient (keep near 1)",
+        0.1,
+        "Normal penalty scaling with adaptive penalties: a multiple of the largest vertex-Hessian Rayleigh quotient. "
+        "0.1 is stable for every VBD-family solver at one detection pass per step; around 1 (C++'s default) needs "
+        "n_max_iters >= 2 for VBD and >= 5 for Chebyshev, and stays unstable for AAAVBD",
     )
     gammaf_adaptive = DocField(
-        1.0, "Friction penalty scaling with adaptive penalties, as gamman_adaptive"
+        0.1, "Friction penalty scaling with adaptive penalties, as gamman_adaptive"
     )
     min_sigma_n = DocField(
         1.0, "Floor of the effective normal penalty with adaptive penalties (gamman_adaptive * sigma_n)"
