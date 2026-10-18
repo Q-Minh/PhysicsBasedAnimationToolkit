@@ -12,6 +12,8 @@ import warp as wp
 from ..common import profiling
 import numpy as np
 
+from pbatoolkit import pbat
+
 from ..contact.mesh.cd import ContactDetection
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from .params import (
@@ -31,6 +33,8 @@ from ..contact.dynamics import (
     MeshDynamicsData as ContactDynamicsData,
     PenaltyAdaptivity,
 )
+
+BetaWarmStart = pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask
 
 
 @wp.kernel
@@ -349,9 +353,12 @@ def prepare_subproblem(
     cd: ContactDetection,
     params: Params,
 ):
-    """Assemble block-diagonal Hessian, update penalty parameter."""
+    """Assemble block-diagonal Hessian, update penalty parameter, and reset the stencil gradient
+    augmentation scales unless they are warm started across subproblems (see ``Params``)."""
     if contact.params.penalty_adaptivity == PenaltyAdaptivity.SUBPROBLEM:
         compute_augmented_lagrangian_penalty(fem, contact, params)
+    if params.warm_start_beta.value < BetaWarmStart.Subproblem.value:
+        params.data.betaG.fill_(params.data.betaG0[0])
 
 
 @profiling.scoped("solve.initialize")
@@ -363,7 +370,8 @@ def initialize_solve(
 ):
     """Initialize the VBD solve by updating contact constraint set and restoring feasibility.
 
-    Mirrors ``pbat::sim::algorithm::vbd::InitializeSolve``.
+    Mirrors ``pbat::sim::algorithm::vbd::InitializeSolve``, including its reset of the stencil
+    gradient augmentation scales unless they are warm started across time steps (see ``Params``).
     Called once after :meth:`FemElastoDynamics.setup_time_integration_optimization`,
     before the first call to :func:`solve`.
     """
@@ -374,6 +382,8 @@ def initialize_solve(
     cd.filter_step()
     if contact.params.penalty_adaptivity == PenaltyAdaptivity.TIMESTEP:
         compute_augmented_lagrangian_penalty(fem, contact, params)
+    if params.warm_start_beta.value < BetaWarmStart.TimeStep.value:
+        params.data.betaG.fill_(params.data.betaG0[0])
 
 
 def update_dual(fem: FemElastoDynamics, contact: ContactDynamics):

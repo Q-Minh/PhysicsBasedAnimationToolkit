@@ -103,12 +103,25 @@ class Params:
         # configuring params_cpu ...
         params = Params(params_cpu)
         # params.data can be passed to warp kernels
+
+    ``warm_start_beta`` says when ``initialize_solve`` and ``prepare_subproblem`` reset the stencil
+    gradient augmentation scales ``betaG`` to ``betaG0``, as in C++ ``InitializeSolve`` and
+    ``PrepareSubproblem``: ``Never`` warm starts them (reset every subproblem), ``Subproblem`` carries
+    them across a time step's subproblems (reset every time step) and ``TimeStep`` never resets them.
+    Only AAAVBD reads ``betaG``, so it is the only solver that passes the CPU params'
+    ``warm_start_beta``. The default, ``TimeStep``, adds no resets.
     """
 
     _data: ParamsData  # pyright: ignore[reportGeneralTypeIssues]
     _Pptr: np.ndarray  # (# colors + 1,) partition pointers on CPU, not part of GPU struct
 
-    def __init__(self, params: pbat.sim.algorithm.vbd.Params):
+    def __init__(
+        self,
+        params: pbat.sim.algorithm.vbd.Params,
+        warm_start_beta: pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask = (
+            pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask.TimeStep
+        ),
+    ):
         self._data = ParamsData()
         # Vertex-element adjacency graph
         self._data.GVGp = wp.array(params.GVGp, dtype=wp.int32)
@@ -141,6 +154,7 @@ class Params:
         self._data.rhohat = (float(params.rhohat), float(params.rhohatS))
         self._data.gammadown = (float(params.gammadown), float(params.gammadownS))
         self._data.gammaup = (float(params.gammaup), float(params.gammaupS))
+        self.warm_start_beta = warm_start_beta  # host-side: decides which resets are recorded
         # Read-write
         n_nodes = params.colors.shape[0]
         self._data.xb = wp.zeros((n_nodes,), dtype=wp.vec3f)  # (N,) vertex positions
@@ -172,17 +186,42 @@ class Params:
         return self._Pptr
 
 
-def serialize_vbd_cpu_params(params: pbat.sim.algorithm.vbd.Params, grp) -> None:
+# Fields of pbat.sim.algorithm.vbd.Params that only AAAVBD (stencil gradient acceleration) reads.
+# The GPU VBD, Chebyshev and Anderson solvers ignore them, so their parameter tables and GUI panels
+# leave them out.
+STENCIL_GRADIENT_ACCELERATION_KEYS = frozenset(
+    {
+        "betaG0",
+        "rhohat",
+        "rhohatS",
+        "gammaup",
+        "gammaupS",
+        "gammadown",
+        "gammadownS",
+        "warm_start_beta",
+        "surface_stencil_surface_neighbours_only",
+    }
+)
+
+
+def serialize_vbd_cpu_params(
+    params: pbat.sim.algorithm.vbd.Params,
+    grp,
+    stencil_gradient_acceleration: bool = False,
+) -> None:
     """Serialize the scalar/enum fields of a VBD CPU Params object to an h5py group.
 
     Only settable float, int, bool, and enum properties are written (same set that
-    ``draw_params`` displays in the UI).
+    ``draw_params`` displays in the UI). The ``STENCIL_GRADIENT_ACCELERATION_KEYS`` are written
+    only if ``stencil_gradient_acceleration`` is set (AAAVBD).
     """
     import inspect
     import enum
 
     for name, value in inspect.getmembers(params):
         if name.startswith("_"):
+            continue
+        if not stencil_gradient_acceleration and name in STENCIL_GRADIENT_ACCELERATION_KEYS:
             continue
         descriptor = getattr(type(params), name, None)
         if isinstance(descriptor, property) and descriptor.fset is None:
@@ -197,16 +236,24 @@ def serialize_vbd_cpu_params(params: pbat.sim.algorithm.vbd.Params, grp) -> None
             grp.attrs[name] = value.value
 
 
-def deserialize_vbd_cpu_params(params: pbat.sim.algorithm.vbd.Params, grp) -> None:
+def deserialize_vbd_cpu_params(
+    params: pbat.sim.algorithm.vbd.Params,
+    grp,
+    stencil_gradient_acceleration: bool = False,
+) -> None:
     """Deserialize scalar/enum fields from an h5py group into a VBD CPU Params object.
 
-    Silently skips keys absent in the group or attributes that cannot be set.
+    Silently skips keys absent in the group or attributes that cannot be set. Unless
+    ``stencil_gradient_acceleration`` is set (AAAVBD), the ``STENCIL_GRADIENT_ACCELERATION_KEYS``
+    are ignored too, so older files that store them for every VBD-family solver still load.
     """
     import inspect
     import enum
 
     for name, value in inspect.getmembers(params):
         if name.startswith("_"):
+            continue
+        if not stencil_gradient_acceleration and name in STENCIL_GRADIENT_ACCELERATION_KEYS:
             continue
         descriptor = getattr(type(params), name, None)
         if isinstance(descriptor, property) and descriptor.fset is None:
@@ -568,6 +615,30 @@ class TestParams(unittest.TestCase):
         self.assertEqual(
             params.data.gammaup, (float(params_cpu.gammaup), float(params_cpu.gammaupS))
         )
+
+    def test_stencil_gradient_acceleration_keys_are_aaavbd_only(self):
+        import h5py
+
+        params_cpu = pbat.sim.algorithm.vbd.Params()
+        with h5py.File("params.h5", "w", driver="core", backing_store=False) as f:
+            serialize_vbd_cpu_params(params_cpu, f.create_group("VBD"))
+            serialize_vbd_cpu_params(
+                params_cpu, f.create_group("AAAVBD"), stencil_gradient_acceleration=True
+            )
+            self.assertFalse(STENCIL_GRADIENT_ACCELERATION_KEYS & set(f["VBD"].attrs))
+            self.assertLessEqual(STENCIL_GRADIENT_ACCELERATION_KEYS, set(f["AAAVBD"].attrs))
+            self.assertIn("gtol", f["VBD"].attrs)
+            # Older files store the stencil keys for every VBD-family solver: only AAAVBD reads them.
+            old = f.create_group("old")
+            old.attrs["betaG0"] = 0.25
+            old.attrs["gtol"] = 0.5
+            vbd = pbat.sim.algorithm.vbd.Params()
+            deserialize_vbd_cpu_params(vbd, old)
+            self.assertAlmostEqual(vbd.betaG0, params_cpu.betaG0)
+            self.assertAlmostEqual(vbd.gtol, 0.5)
+            aaavbd = pbat.sim.algorithm.vbd.Params()
+            deserialize_vbd_cpu_params(aaavbd, old, stencil_gradient_acceleration=True)
+            self.assertAlmostEqual(aaavbd.betaG0, 0.25)
 
 
 if __name__ == "__main__":

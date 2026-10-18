@@ -43,6 +43,12 @@ SOLVER_SUB_PARAMS: dict[SolverType, dict] = {
     SolverType.AndersonSolver: {"vbd_params": None},
     SolverType.Newton: {"newton": {"line_search": {}}},
 }
+# Parameters a solver ignores, hidden from its Params panel. The stencil gradient acceleration
+# parameters of pbat.sim.algorithm.vbd.Params belong to AAAVBD only.
+SOLVER_HIDDEN_PARAMS: dict[SolverType, frozenset] = {
+    s: gpu.vbd.params.STENCIL_GRADIENT_ACCELERATION_KEYS
+    for s in (SolverType.VBD, SolverType.Chebyshev, SolverType.AndersonSolver)
+}
 
 
 class UIState:
@@ -128,6 +134,7 @@ def make_callback(
                         draw_params(
                             state.params_cpu[state.solver],
                             SOLVER_SUB_PARAMS.get(state.solver),
+                            exclude=SOLVER_HIDDEN_PARAMS.get(state.solver, frozenset()),
                         )
                         if state.solver == SolverType.Newton and imgui.TreeNode(
                             "linear_solver"

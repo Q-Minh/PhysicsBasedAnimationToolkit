@@ -13,9 +13,12 @@ def try_draw_tooltip(obj, name):
         imgui.EndTooltip()
 
 
-def draw_params(obj, sub_params: dict | None = None, _depth=0):
+def draw_params(obj, sub_params: dict | None = None, _depth=0, exclude=frozenset()):
+    """Draw widgets for the settable scalar and enum attributes of ``obj``, recursing into nested
+    objects (or only into ``sub_params``, if given). Attributes named in ``exclude`` are skipped at
+    every depth."""
     for name, value in inspect.getmembers(obj):
-        if name.startswith("_"):
+        if name.startswith("_") or name in exclude:
             continue
         if (
             isinstance(getattr(type(obj), name, None), property)
@@ -47,7 +50,7 @@ def draw_params(obj, sub_params: dict | None = None, _depth=0):
         elif sub_params is None and _depth < 4 and not isinstance(value, np.ndarray):
             if imgui.TreeNode(name):
                 imgui.PushID(name)
-                draw_params(value, None, _depth + 1)
+                draw_params(value, None, _depth + 1, exclude)
                 imgui.PopID()
                 imgui.TreePop()
     if sub_params:
@@ -57,6 +60,6 @@ def draw_params(obj, sub_params: dict | None = None, _depth=0):
                 continue
             if imgui.TreeNode(sub_name):
                 imgui.PushID(sub_name)
-                draw_params(sub_value, nested_sub_params or None, _depth + 1)
+                draw_params(sub_value, nested_sub_params or None, _depth + 1, exclude)
                 imgui.PopID()
                 imgui.TreePop()
