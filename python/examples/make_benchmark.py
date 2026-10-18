@@ -11,10 +11,16 @@ evenly spaced subset of it becomes the benchmark problems. The same subset is us
                                    xtilde = x + h v + h^2 g. samples/x_ref holds a reference solution from a
                                    converged full-order Newton solve.
 
+The input is any hdf5 file storing a FemElastoDynamics, given as filepath:h5path (e.g. an editor Dump's fem
+group). It provides the mesh, masses, Stable Neo-Hookean material, Dirichlet constraints and gravity. Its
+Dirichlet nodes must sit at rest with zero velocity, since every problem holds them at X. Its time integrator is
+only recorded: the dynamic problems are always BDF1 steps with the --dt time steps.
+
 All files follow the sample-file contract (see rom_mcmc.write_samples), with ensemble = "total" and
 sampler = "microcanonical". Dirichlet DOFs stay at rest in every state. Problem files add:
 
-    root attributes      problem ("pool", "static" or "dynamic"), problem_definition, pool_file, pool_indices.
+    root attributes      problem ("pool", "static" or "dynamic"), problem_definition, pool_file, pool_indices,
+                         scene_dt and scene_bdf_steps (the input's BDF time step in s and step count).
     dynamic files only   root attributes h (s), bdf_order = 1, aext (3,) the scene gravity (m/s^2),
                          reference_time (s), and the datasets
                          samples/v                       (S, N, 3) float32 start velocities J(q) qdot,
@@ -47,6 +53,7 @@ Usage:
 import argparse
 import os
 import time
+import typing
 
 import numpy as np
 from pbatoolkit import pbat
@@ -65,6 +72,64 @@ def subset(batch: rom_mcmc.SampleBatch, indices: np.ndarray) -> rom_mcmc.SampleB
         dict(batch.stats),
         qdot=batch.qdot[indices],
     )
+
+
+def load_scene(input: str):
+    """Deserializes the FemElastoDynamics at filepath:h5path.
+
+    Args:
+        input (str): filepath:h5path of an hdf5 file storing a FemElastoDynamics.
+
+    Returns:
+        pbat.sim.dynamics.FemElastoDynamics: The scene.
+
+    Raises:
+        ValueError: If input isn't of the form filepath:h5path (e.g. a plain mesh file).
+    """
+    file_path, sep, group_path = str(input).rpartition(":")
+    # A lone drive letter (C:...) is part of a Windows path, not a filepath:h5path separator
+    if not sep or not file_path or (len(file_path) == 1 and file_path.isalpha()):
+        raise ValueError(
+            f"{input} isn't filepath:h5path: the benchmark needs an hdf5 file storing a FemElastoDynamics "
+            "(e.g. scene.Dump.h5:fem), not a mesh"
+        )
+    archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
+    fem = pbat.sim.dynamics.FemElastoDynamics()
+    fem.deserialize(archive[group_path] if group_path else "/")
+    return fem
+
+
+def check_scene(fem, atol: float = 1e-6) -> typing.List[str]:
+    """Checks that a scene satisfies the problems' assumptions.
+
+    Args:
+        fem: The FemElastoDynamics (or any object with X, dirichlet_nodes, dirichlet_coordinates,
+            dirichlet_velocities and bdf.s members).
+        atol (float): Absolute tolerance on the Dirichlet positions (m) and velocities (m/s).
+
+    Returns:
+        typing.List[str]: Warnings about assumptions that don't hold but don't invalidate the problems.
+
+    Raises:
+        ValueError: If Dirichlet nodes aren't at rest or move, since every problem holds them at X.
+    """
+    nodes = np.asarray(fem.dirichlet_nodes)
+    X = np.asarray(fem.X)
+    if nodes.size:
+        drift = np.abs(np.asarray(fem.dirichlet_coordinates) - X[:, nodes]).max()
+        speed = np.abs(np.asarray(fem.dirichlet_velocities)).max()
+        if drift > atol or speed > atol:
+            raise ValueError(
+                f"The scene's Dirichlet nodes must be at rest with zero velocity (max displacement {drift:.3g} m, "
+                f"max speed {speed:.3g} m/s), since the problems hold them at X"
+            )
+    warnings = []
+    if fem.bdf.s != 1:
+        warnings.append(
+            f"The scene integrates with BDF{fem.bdf.s}, but the dynamic problems are BDF1 steps (its "
+            "scene_bdf_steps and scene_dt are recorded)"
+        )
+    return warnings
 
 
 def min_det_F(E, egU, GNegU, model, qs) -> np.ndarray:
@@ -187,6 +252,12 @@ if __name__ == "__main__":
         default=0,
     )
     args = parser.parse_args()
+    try:
+        scene = load_scene(args.input)
+        for warning in check_scene(scene):
+            print(f"Warning: {warning}")
+    except ValueError as error:
+        parser.error(str(error))
 
     element = pbat.fem.Element.Tetrahedron
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
@@ -217,6 +288,8 @@ if __name__ == "__main__":
         eps=args.eps,
         sampler="microcanonical",
         gravity=np.zeros(3),
+        scene_dt=float(scene.bdf.h),
+        scene_bdf_steps=int(scene.bdf.s),
         seed=args.seed,
         git_commit=rom_mcmc.git_commit(os.path.dirname(os.path.abspath(__file__))),
     )
@@ -262,7 +335,9 @@ if __name__ == "__main__":
             ),
             start_min_J,
         )
-        # Dynamic problems: one BDF1 step from (x, v) for each time step
+        # Dynamic problems: one BDF1 step from (x, v) for each time step. Future work: BDF schemes with s > 1
+        # steps need s past states per problem, e.g. synthesized by integrating the reduced dynamics backward
+        # from the sample, and the inertial target of that scheme.
         ux = np.array([model.displacement(q) for q in problems.q])
         v = np.array([model.jacobian(q) @ qd for q, qd in zip(problems.q, problems.qdot)])
         for h in args.dt:
