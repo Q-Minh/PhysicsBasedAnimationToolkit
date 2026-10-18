@@ -143,15 +143,47 @@ def _contact_derivatives(
 
 
 @wp.func
+def _contact_position(
+    xb: wp.array[wp.vec3f],
+    xc: wp.array[wp.vec3f],
+    colors: wp.array[wp.int32],
+    color: wp.int32,
+    use_current: wp.int32,
+    k: wp.int32,
+):
+    """Position of contact stencil node ``k`` in the vertex solve of a vertex of color ``color``.
+
+    The current position if ``use_current`` is set and ``k`` has another color, else the sweep's
+    snapshot (see :func:`local_contact_derivatives`).
+    """
+    if use_current != 0 and colors[k] != color:
+        return xc[k]
+    return xb[k]
+
+
+@wp.func
 def local_contact_derivatives(
     i: wp.int32,
     vi: wp.int32,
     xt: wp.array[wp.vec3f],
     x: wp.array[wp.vec3f],
+    xc: wp.array[wp.vec3f],
+    colors: wp.array[wp.int32],
+    color: wp.int32,
+    use_current: wp.int32,
     contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     local_tid: wp.int32,
     block_dims: wp.int32,
 ):
+    """Contact gradient and Hessian block of vertex ``i`` (surface vertex ``vi``).
+
+    Stencil positions are read from the sweep's snapshot ``x`` (``params.xb``), except, when
+    ``use_current`` is set, for nodes of another color than the vertex's own (``color``): those are
+    read from the current positions ``xc``. Earlier colors were written by an earlier, finished
+    launch, so their current positions are final for this sweep (Gauss-Seidel), and later colors
+    still hold their snapshot values. Same-color nodes may be written concurrently by this launch,
+    so they keep the snapshot: reads never race, and results stay deterministic.
+    """
     gi = wp.vec3f()
     Hi = wp.mat33f()
     meshes = contact.meshes
@@ -164,7 +196,7 @@ def local_contact_derivatives(
     cve, ve_bases, ve_bary = contact.cve, fcontacts.ve_bases, fcontacts.ve_bary
     cvf, vf_bases, vf_bary = contact.cvf, fcontacts.vf_bases, fcontacts.vf_bary
     cee, ee_bases, ee_bary = contact.cee, fcontacts.ee_bases, fcontacts.ee_bary
-    xi = x[i]
+    xi = _contact_position(x, xc, colors, color, use_current, i)
     xti = xt[i]
 
     # 1a. Vertex-vertex contacts (forward)
@@ -176,7 +208,7 @@ def local_contact_derivatives(
         vj = fcontacts.vv.v[c]
         j = meshes.V[vj]
         xcp1 = xi
-        xcp2 = x[j]
+        xcp2 = _contact_position(x, xc, colors, color, use_current, j)
         xtcp1 = xti
         xtcp2 = xt[j]
         wi = wp.float32(1)
@@ -208,7 +240,7 @@ def local_contact_derivatives(
         c = rcontacts.rvv2vv[k]
         vj = rcontacts.rvv.v[k]
         j = meshes.V[vj]
-        xcp1 = x[j]
+        xcp1 = _contact_position(x, xc, colors, color, use_current, j)
         xtcp1 = xt[j]
         xcp2 = xi
         xtcp2 = xti
@@ -245,7 +277,7 @@ def local_contact_derivatives(
         b0 = wp.float32(1) - b1
         xcp1 = xi
         xtcp1 = xti
-        xcp2 = b0 * x[a] + b1 * x[b]
+        xcp2 = b0 * _contact_position(x, xc, colors, color, use_current, a) + b1 * _contact_position(x, xc, colors, color, use_current, b)
         xtcp2 = b0 * xt[a] + b1 * xt[b]
         wi = wp.float32(1)
         gic, Hic = _contact_derivatives(
@@ -281,7 +313,7 @@ def local_contact_derivatives(
         b0 = wp.float32(1) - b1 - b2
         xcp1 = xi
         xtcp1 = xti
-        xcp2 = b0 * x[finds[0]] + b1 * x[finds[1]] + b2 * x[finds[2]]
+        xcp2 = b0 * _contact_position(x, xc, colors, color, use_current, finds[0]) + b1 * _contact_position(x, xc, colors, color, use_current, finds[1]) + b2 * _contact_position(x, xc, colors, color, use_current, finds[2])
         xtcp2 = b0 * xt[finds[0]] + b1 * xt[finds[1]] + b2 * xt[finds[2]]
         wi = wp.float32(1)
         gic, Hic = _contact_derivatives(
@@ -324,9 +356,9 @@ def local_contact_derivatives(
             b0 = wp.float32(1) - b1
             b3 = st[1]
             b2 = wp.float32(1) - b3
-            xcp1 = b0 * x[i_he] + b1 * x[j_he]
+            xcp1 = b0 * _contact_position(x, xc, colors, color, use_current, i_he) + b1 * _contact_position(x, xc, colors, color, use_current, j_he)
             xtcp1 = b0 * xt[i_he] + b1 * xt[j_he]
-            xcp2 = b2 * x[i_he2] + b3 * x[j_he2]
+            xcp2 = b2 * _contact_position(x, xc, colors, color, use_current, i_he2) + b3 * _contact_position(x, xc, colors, color, use_current, j_he2)
             xtcp2 = b2 * xt[i_he2] + b3 * xt[j_he2]
             wi = wp.float32(i_he == i) * b0 + wp.float32(j_he == i) * b1
             gic, Hic = _contact_derivatives(
@@ -359,9 +391,9 @@ def local_contact_derivatives(
             _i = meshes.V[_vi]
             b1 = ve_bary[c]
             b0 = wp.float32(1) - b1
-            xcp1 = x[_i]
+            xcp1 = _contact_position(x, xc, colors, color, use_current, _i)
             xtcp1 = xt[_i]
-            xcp2 = b0 * x[i_he] + b1 * x[j_he]
+            xcp2 = b0 * _contact_position(x, xc, colors, color, use_current, i_he) + b1 * _contact_position(x, xc, colors, color, use_current, j_he)
             xtcp2 = b0 * xt[i_he] + b1 * xt[j_he]
             wi = -(wp.float32(i_he == i) * b0 + wp.float32(j_he == i) * b1)
             gic, Hic = _contact_derivatives(
@@ -398,9 +430,9 @@ def local_contact_derivatives(
             b1 = uv[0]
             b2 = uv[1]
             b0 = wp.float32(1) - b1 - b2
-            xcp1 = x[_i]
+            xcp1 = _contact_position(x, xc, colors, color, use_current, _i)
             xtcp1 = xt[_i]
-            xcp2 = b0 * x[finds[0]] + b1 * x[finds[1]] + b2 * x[finds[2]]
+            xcp2 = b0 * _contact_position(x, xc, colors, color, use_current, finds[0]) + b1 * _contact_position(x, xc, colors, color, use_current, finds[1]) + b2 * _contact_position(x, xc, colors, color, use_current, finds[2])
             xtcp2 = b0 * xt[finds[0]] + b1 * xt[finds[1]] + b2 * xt[finds[2]]
             wi = -(
                 wp.float32(finds[0] == i) * b0
@@ -441,9 +473,9 @@ def local_contact_derivatives(
             b0 = wp.float32(1) - b1
             b3 = st[1]
             b2 = wp.float32(1) - b3
-            xcp1 = b0 * x[i_he2] + b1 * x[j_he2]
+            xcp1 = b0 * _contact_position(x, xc, colors, color, use_current, i_he2) + b1 * _contact_position(x, xc, colors, color, use_current, j_he2)
             xtcp1 = b0 * xt[i_he2] + b1 * xt[j_he2]
-            xcp2 = b2 * x[i_he] + b3 * x[j_he]
+            xcp2 = b2 * _contact_position(x, xc, colors, color, use_current, i_he) + b3 * _contact_position(x, xc, colors, color, use_current, j_he)
             xtcp2 = b2 * xt[i_he] + b3 * xt[j_he]
             wi = -(wp.float32(i_he == i) * b2 + wp.float32(j_he == i) * b3)
             gic, Hic = _contact_derivatives(
