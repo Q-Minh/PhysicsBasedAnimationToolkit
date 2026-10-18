@@ -12,7 +12,7 @@ The sampling tools live in `python/examples`, everything runs on the **CPU**, an
 - `make_benchmark.py`: problem-file layout.
 - `benchmark_browser.py`: Polyscope browser for a generated dataset.
 
-Read those docstrings for anything not covered here. The derivations, algorithms, parameters and validation of every sampler and of shape matching are in the maintainer's technical reference, https://claude.ai/artifact/8EuUcmLsX882p2y5Qsh67n (read it with the Artifact tool; update it when the methods change).
+Read those docstrings for anything not covered here. The derivations, algorithms, parameters and validation of every sampler and of shape matching are in `python/examples/docs/sampling-methods.md`, the maintainer's technical reference and the source of truth. Update it in the same change as any sampler, fit or benchmark-definition change, keeping its equation tags and citations consistent. https://claude.ai/artifact/8EuUcmLsX882p2y5Qsh67n is a rendered snapshot of an earlier version.
 
 Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Inputs are an hdf5 file storing a FemElastoDynamics (`filepath:h5path`, e.g. a Dump's `fem` group). `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`. `make_benchmark.py` rejects meshes, and also scenes whose Dirichlet nodes are displaced or moving. Use absolute paths: `data/` exists only in the main checkout.
 
