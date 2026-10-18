@@ -347,9 +347,8 @@ def _compute_rayleigh_vv(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.vv.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -374,9 +373,8 @@ def _compute_rayleigh_ve(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.ve.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -409,9 +407,8 @@ def _compute_rayleigh_vf(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.vf.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -447,9 +444,8 @@ def _compute_rayleigh_ee(
 ):
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.ee.prefix[n_u]:  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_SUBPROBLEM:
-            Qc[offset + c] = wp.float32(0)  # type: ignore
-        if penalty_adaptivity == PENALTY_ADAPTIVITY_TIMESTEP:
+        if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -494,22 +490,45 @@ class Params(SerializableMixin):
         mu_f        : Coulomb friction coefficient.
         decay       : Multiplicative decay applied to the contact-activity weight ``gamma``
                       when a contact is separating (slack growing). Must satisfy ``0 < decay < 1``.
-        gamman      : Normal AL penalty scaling factor, equivalent to
-                      ``MeshDynamics::Params::gamma`` in the C++ side.
-        gammaf      : Friction AL penalty scaling factor, equivalent to
-                      ``MeshDynamics::Params::gammaf`` in the C++ side.
-        min_sigma_n : Floor for the adaptive normal penalty ``sigma_n``.
-        penalty_adaptivity : Strategy for adapting the penalty parameters.
+        gamman      : Normal AL penalty scaling factor with a constant penalty, which is
+                      ``gamman * dt^2``.
+        gammaf      : Friction AL penalty scaling factor with a constant penalty, ``gammaf * dt^2``.
+        gamman_adaptive : Normal AL penalty scaling factor with adaptive penalties, a multiple of
+                      the largest vertex-Hessian Rayleigh quotient over the contacts. Equivalent
+                      to C++ ``MeshDynamics::Params::gamma`` (default 1).
+        gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf`` (default 1).
+        min_sigma_n : Floor of the effective normal penalty ``gamman_adaptive * sigma_n`` in both
+                      adaptive modes.
+        penalty_adaptivity : CONSTANT: ``sigma_n = sigma_f = dt^2``, so the effective penalties
+                      ``gamman * dt^2`` and ``gammaf * dt^2`` are stiffnesses scaled like
+                      ``dt^2 Psi`` (1e4 * 1e-4 = 1 by default). TIMESTEP / SUBPROBLEM:
+                      ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient of the vertex
+                      Hessians (recomputed per time step / per subproblem), so ``gamman_adaptive``
+                      and ``gammaf_adaptive`` are dimensionless multipliers (~1). Adaptive modes
+                      also make the vertex solves read other-color contact partners at current
+                      positions, which keeps such penalties stable.
     """
 
     dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
     mu_f = DocField(0.2, "Coulomb friction coefficient")
     decay = DocField(0.5, "Decay rate for contact deactivation")
-    gamman = DocField(1e4, "Normal contact AL penalty scaling factor")
-    gammaf = DocField(1e3, "Friction contact AL penalty scaling factor")
-    min_sigma_n = DocField(1.0, "Minimum normal penalty")
+    gamman = DocField(1e4, "Normal contact AL penalty scaling factor (constant penalty: gamman * dt^2)")
+    gammaf = DocField(1e3, "Friction contact AL penalty scaling factor (constant penalty: gammaf * dt^2)")
+    gamman_adaptive = DocField(
+        1.0,
+        "Normal penalty scaling with adaptive penalties: a multiple of the largest vertex-Hessian Rayleigh quotient (keep near 1)",
+    )
+    gammaf_adaptive = DocField(
+        1.0, "Friction penalty scaling with adaptive penalties, as gamman_adaptive"
+    )
+    min_sigma_n = DocField(
+        1.0, "Floor of the effective normal penalty with adaptive penalties (gamman_adaptive * sigma_n)"
+    )
     penalty_adaptivity = DocField(
-        PenaltyAdaptivity.CONSTANT, "Strategy for adapting penalty parameters"
+        PenaltyAdaptivity.CONSTANT,
+        "CONSTANT: penalties gamman * dt^2 and gammaf * dt^2. TIMESTEP / SUBPROBLEM: sigma_n = sigma_f = the largest "
+        "contact Rayleigh quotient of the vertex Hessians, recomputed per time step / per subproblem, times "
+        "gamman_adaptive / gammaf_adaptive",
     )
 
 
@@ -548,8 +567,9 @@ class MeshDynamics:
         self._data.Qc = wp.zeros(
             vv_capacity + ve_capacity + vf_capacity + ee_capacity, dtype=wp.float32
         )
-        self._data.gamma_n = self.params.gamman  # type: ignore
-        self._data.gamma_f = self.params.gammaf  # type: ignore
+        adaptive = self.params.penalty_adaptivity != PenaltyAdaptivity.CONSTANT
+        self._data.gamma_n = self.params.gamman_adaptive if adaptive else self.params.gamman  # type: ignore
+        self._data.gamma_f = self.params.gammaf_adaptive if adaptive else self.params.gammaf  # type: ignore
         self._data.sigma_n = wp.array([dt * dt], dtype=wp.float32)
         self._data.sigma_f = wp.array([dt * dt], dtype=wp.float32)
         self._data.dmin = self.params.dmin
@@ -695,6 +715,9 @@ class MeshDynamics:
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
         self._normal_penalty_reduction(main_stream)
+        # As C++ UpdatePenaltyParameter, the friction penalty scales the same Rayleigh quotient
+        # (gamma_f * max Q, while gamma_n * max Q is the normal one).
+        wp.copy(dest=self._data.sigma_f, src=self._data.sigma_n)
 
     @property
     def data(self) -> MeshDynamicsData:  # type: ignore

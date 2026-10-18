@@ -44,8 +44,14 @@ def _vertex_solve_kernel(
     contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     h2: float,
+    color: wp.int32,
+    current_contacts: wp.int32,
 ):
-    """Process one vertex in the current color partition."""
+    """Process one vertex in the current color partition (``color``).
+
+    With ``current_contacts`` set, contact partners of other colors are read at their current
+    positions instead of the sweep's snapshot (see ``kernels.local_contact_derivatives``).
+    """
     tid = wp.tid()
     block_dims = wp.block_dim()
     block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
@@ -86,6 +92,10 @@ def _vertex_solve_kernel(
             vi,
             fem.xt,
             params.xb,
+            fem.x,
+            params.colors,
+            color,
+            current_contacts,
             contact,
             local_tid,  # type: ignore
             block_dims,  # type: ignore
@@ -419,8 +429,14 @@ def finalize_subproblem(
 
 @profiling.scoped("vbd.sweep")
 def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
-    """One VBD Gauss-Seidel sweep over all color partitions."""
+    """One VBD Gauss-Seidel sweep over all color partitions.
+
+    Adaptive contact penalties reach the vertices' own stiffness, where contact partners lagged at
+    the sweep's snapshot make the contact coupling Jacobi-like and diverge, so those modes read
+    partners of other colors at their current positions.
+    """
     h2 = fem.h2
+    current_contacts = contact_partners_current(contact)
     # Copy current positions to buffer (for contact lagging)
     wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially
@@ -435,9 +451,14 @@ def iterate(fem: FemElastoDynamics, contact: ContactDynamics, params: Params):
             wp.launch(
                 kernel=_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[p_begin, fem.data, contact.data, params.data, h2],
+                inputs=[p_begin, fem.data, contact.data, params.data, h2, p, current_contacts],
                 block_dim=block_dim,
             )
+
+
+def contact_partners_current(contact: ContactDynamics) -> int:
+    """1 if vertex solves read other-color contact partners at current positions (adaptive penalties)."""
+    return int(contact.params.penalty_adaptivity != PenaltyAdaptivity.CONSTANT)
 
 
 def subproblem_iteration(

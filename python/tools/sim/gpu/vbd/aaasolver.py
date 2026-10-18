@@ -19,6 +19,7 @@ from .kernels import (
 )
 from .solver import (
     IterationSchedule,
+    contact_partners_current,
     initialize_solve,
     solve_outer_loop,
     linearize_constraints,
@@ -112,8 +113,13 @@ def _accelerated_vertex_solve_kernel(
     contact: ContactDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
     h2: float,
+    color: wp.int32,
+    current_contacts: wp.int32,
 ):
-    """Process one vertex in the current color partition with acceleration."""
+    """Process one vertex in the current color partition (``color``) with acceleration.
+
+    ``current_contacts``: see ``solver._vertex_solve_kernel``.
+    """
     tid = wp.tid()
     block_dims = wp.block_dim()
     block_id = tid // block_dims  # pyright: ignore[reportOperatorIssue]
@@ -162,6 +168,10 @@ def _accelerated_vertex_solve_kernel(
             vi,
             fem.xt,
             params.xb,
+            fem.x,
+            params.colors,
+            color,
+            current_contacts,
             contact,
             local_tid,  # type: ignore
             block_dims,  # type: ignore
@@ -248,8 +258,9 @@ def iterate(
     contact: ContactDynamics,
     params: Params,
 ):
-    """One VBD Gauss-Seidel sweep over all color partitions."""
+    """One VBD Gauss-Seidel sweep over all color partitions (see ``solver.iterate`` on contacts)."""
     h2 = fem.h2
+    current_contacts = contact_partners_current(contact)
     # Copy current positions to buffer (for contact lagging)
     wp.copy(dest=params.data.xb, src=fem.data.x)
     # Process each color partition sequentially
@@ -264,7 +275,7 @@ def iterate(
             wp.launch(
                 kernel=_accelerated_vertex_solve_kernel,
                 dim=n_verts_in_partition * block_dim,
-                inputs=[p_begin, k, kp, fem.data, contact.data, params.data, h2],
+                inputs=[p_begin, k, kp, fem.data, contact.data, params.data, h2, p, current_contacts],
                 block_dim=block_dim,
             )
 
