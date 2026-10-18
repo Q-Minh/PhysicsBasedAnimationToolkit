@@ -131,6 +131,10 @@ class Params:
         self._data.hess_zero = float(params.hess_zero)
         self._data.vls_eps = float(params.vls_eps)
         self._data.vls_max_iters = int(params.vls_max_iters)
+        if params.vlinsolve == pbat.sim.algorithm.vbd.VertexIntegrationLinearSolver.LLT:
+            raise ValueError(
+                "The LLT vertex solve isn't implemented on the GPU; use Inverse (default), QR or EVD"
+            )
         self._data.vls_solver = int(_VLS_SOLVER_MAP[params.vlinsolve])
         # Stencil gradient acceleration
         self._data.betaG0 = (float(params.betaG0), float(params.betaG0))
