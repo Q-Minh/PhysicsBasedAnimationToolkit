@@ -363,56 +363,6 @@ def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1
     return potential
 
 
-def elastic_energy_float64(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1):
-    """Like elastic_energy, but evaluates the energy and its gradient in float64 with NumPy.
-
-    pbat evaluates the energy in float32, which leaves a round-off floor of ~1e-4 J in the energy and ~3 N in the
-    gradient on the test meshes. That floor limits how accurately a solve can be converged; with float64 energies and
-    gradients, Newton converges to ~1e-8 N. The Hessian (only the Newton matrix, so it needn't be exact) still comes
-    from pbat, with its SPD correction.
-
-    Implements pbat's 3D Stable Neo-Hookean energy (StableNeoHookeanEnergy<3>, also the GPU solvers' snh_eval),
-    psi = mu/2 (|F|^2 - 3) - mu (J - 1) + lambda/2 (J - 1)^2, for linear tetrahedra (constant F per element).
-
-    Args:
-        E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order: As for elastic_energy; energy must be
-            StableNeoHookean and element linear (order 1) tetrahedra.
-
-    Returns:
-        typing.Callable: potential(x, gradient, hessian), as returned by elastic_energy.
-    """
-    if energy != pbat.fem.HyperElasticEnergy.StableNeoHookean or order != 1:
-        raise ValueError("elastic_energy_float64 implements Stable Neo-Hookean on linear tetrahedra only")
-    hessian32 = elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order)
-    eg = np.ravel(egU)
-    nodes = np.asarray(E)[:, eg].T  # |# quad.pts.| x 4
-    w = np.ravel(wgU).astype(np.float64)
-    mu, lam = np.ravel(mug).astype(np.float64), np.ravel(lambdag).astype(np.float64)
-    GN = np.asarray(GNegU).astype(np.float64).reshape(GNegU.shape[0], -1, 3).transpose(1, 0, 2)
-    n_nodes = X.shape[1]
-
-    def potential(x: np.ndarray, gradient: bool = False, hessian: bool = False):
-        xe = np.asarray(x, dtype=np.float64).reshape(-1, 3)[nodes]
-        F = np.einsum("gai,gaj->gij", xe, GN)
-        J = np.linalg.det(F)
-        psi = float(np.sum(w * (0.5 * mu * (np.einsum("gij,gij->g", F, F) - 3.0) - mu * (J - 1.0) + 0.5 * lam * (J - 1.0) ** 2)))
-        if not gradient:
-            return psi
-        # dJ/dF = cofactor of F, whose columns are cross products of F's columns
-        cof = np.stack(
-            [np.cross(F[:, :, 1], F[:, :, 2]), np.cross(F[:, :, 2], F[:, :, 0]), np.cross(F[:, :, 0], F[:, :, 1])],
-            axis=2,
-        )
-        P = mu[:, None, None] * F + (lam * (J - 1.0) - mu)[:, None, None] * cof
-        g = np.zeros((n_nodes, 3))
-        np.add.at(g, nodes, w[:, None, None] * np.einsum("gij,gaj->gai", P, GN))
-        if hessian:
-            return psi, g.ravel(), hessian32(x, True, True)[2]
-        return psi, g.ravel()
-
-    return potential
-
-
 def deformation_gradient_determinants(E, egU, GNegU, x):
     """Computes det(F) at the quadrature points of linear elements.
 

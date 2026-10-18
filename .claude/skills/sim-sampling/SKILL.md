@@ -77,7 +77,7 @@ All batches follow the sample-file contract (`rom_mcmc.write_samples`):
 - `basis/{U,Q,omega,M}`.
 - Root attributes: `target_energy`, `rhat`, `ensemble`, `gravity`, `mode_normalization="mass"`, `importance_weights_required`.
 - Problem files add `problem`, `pool_file`, `pool_indices`, `gravity` (the acceleration in the sampled potential; zero without), and `scene_dt`/`scene_bdf_steps` (the input's integrator, recorded only; dynamic problems are always BDF1 steps with the `--dt` values).
-- Dynamic files also add `h`, `aext`, and `samples/{v, xtilde, x_ref, ref_error_mnorm, ref_newton_*, ref_min_J}`. `x_ref` is float64 and exact for the stored (float32) `xtilde`: it comes from Newton with float64 energies and gradients.
+- Dynamic files also add `h`, `aext`, and `samples/{v, xtilde, x_ref, ref_error_mnorm, ref_newton_*, ref_min_J}`. `x_ref` solves the step for the stored `xtilde`, to pbat's float32 energy noise floor: errors of up to about 7e-4 of the initial error e0 on the trampoline, which is enough for error reductions up to 99%. `ref_error_mnorm` estimates each problem's reference error in the benchmark's metric.
 
 Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd4`, so `q` from older files isn't comparable.
 
@@ -88,7 +88,7 @@ Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd
 - **`star_violations = 0`** for polar.
 - **`importance_weights_required = False`**, i.e. not a ray batch.
 - **`samples/min_J`.** Values ≤ 0 mean inverted elements. They're allowed, but report them.
-- **Dynamic files.** `samples/ref_error_mnorm` is each reference's accuracy in the benchmark's error metric (the M-norm of its last Newton correction over free DOFs). Compare it with e0 = |x − x_ref|_M; it's ~1e-9 e0 on the trampoline. Don't compare `ref_newton_correction`, a max entry in m, with M-norms.
+- **Dynamic files.** `samples/ref_error_mnorm` is each reference's accuracy in the benchmark's error metric (the M-norm of its last Newton correction over free DOFs). Compare it with e0 = |x − x_ref|_M; it's up to ~6e-4 e0 on the trampoline (it can underestimate the true error by up to ~3×). Don't report error reductions beyond 99%. Don't compare `ref_newton_correction`, a max entry in m, with M-norms.
 
 ## Pitfalls
 
