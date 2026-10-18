@@ -1,11 +1,11 @@
 ---
 name: sim-benchmarks
-description: Run the solver convergence benchmarks of the GPU simulator — generate static/dynamic problem sets from MCMC shape samples, run the static benchmark (benchmark.py) over solvers and samples with chosen budgets, targets and parameters, and read its results. Use when asked to benchmark solvers, compare convergence or time-to-accuracy, rerun a benchmark case, or vary benchmark parameters.
+description: Run the solver convergence benchmarks of the GPU simulator — generate static/dynamic problem sets from MCMC shape samples, run the static and dynamic benchmark (benchmark.py) over solvers and samples with chosen budgets, targets and parameters, and read its results. Use when asked to benchmark solvers, compare convergence or time-to-accuracy, rerun a benchmark case, or vary benchmark parameters.
 ---
 
 # Solver benchmarks
 
-**The methodology is still being decided with the maintainer**: what data to report, the exact plot, and how execution time is measured. **Don't launch full benchmark runs or full dataset generation without the maintainer's go-ahead.** Smoke tests on a few samples are fine. The dynamic benchmark runner doesn't exist yet; this skill will be extended once it's agreed.
+**The methodology is still being decided with the maintainer**: what data to report, the exact plot, and how execution time is measured. **Don't launch full benchmark runs or full dataset generation without the maintainer's go-ahead.** Smoke tests on a few samples are fine.
 
 Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). Scene data lives in the main checkout's `data/`, so use absolute paths from worktrees.
 
@@ -18,7 +18,7 @@ Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). Scen
 
    See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). A small existing test set is `data/benchmarks/trampoline-test`.
 2. **Static benchmark.** `python -m python.tools.sim.benchmark` releases each sample with every solver and logs the error to the rest shape after every iteration. It reports the time and iterations needed to reach each 5% level of error reduction.
-3. **Dynamic benchmark.** Not built yet (it compares against `x_ref`).
+3. **Dynamic benchmark.** The same runner on a `dynamic_h{h}` file: one BDF1 step of the file's h toward its `xtilde`, with the error measured against `samples/x_ref`. The kind and h come from the file.
 
 ## Static benchmark
 
@@ -64,13 +64,15 @@ Translating requests:
   - the spec, plus metadata: scene, sim-params sources, sample attributes, Newton CG limits, device, commit, date;
   - per solver and sample: e0, iterations, sweeps, solver time, final e/e0, time and iterations to each 5% level (null if never reached), deformation energy, min det F, and a log-spaced curve;
   - per level: aggregates (median, q25, q75, fraction of solves that reached it).
+- **Dynamic batches** add the problem kind and h to the metadata, and to each sample a `reference` with its accuracy (`newton_correction`, `error_bound`, `relative_error_bound`). Per level, `reliable` counts the samples whose reference resolves that level.
 - **`results.h5`** next to it: the spec and the full logs at `<solver>/<sample>/{error,time,sweeps}`.
 
 When comparing solvers, use the time to reach each error level, not the time per iteration. Also report iterations and sweeps. Anderson iterations aren't sweeps when p > 1.
 
 ## Pitfalls
 
-- **Contact** is always off in the static benchmark.
+- **Contact** is always off, for both problem kinds.
+- **Dynamic h:** dynamic problems take h from the file and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution, so float32 limits and the reference's accuracy cap the reduction around 80–95%.
 - **Solver parameters:** without `--sim-params`, only the code defaults apply (`configs/defaults.toml`), not the Dump's `vbd/params`. Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
 - **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Vertex-solve and acceleration parameters still matter.
 - **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 300 leaves Newton steps inexact.

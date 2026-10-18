@@ -1,13 +1,20 @@
 # type: ignore
 r"""
-Static convergence benchmark: wall-clock time per percentile of error reduction.
+Solver convergence benchmark: wall-clock time per percentile of error reduction.
 
-Each MCMC sample of a batch (python/examples/rom_mcmc.py; contract in plans/MASTER.md) is released into
-a static solve with no loads, whose equilibrium is the rest shape X, once per solver. The error
-e = |x - X|_M (lumped-mass norm over free nodes) is logged after every solver iteration (see
-``static.py``). The benchmark reports, per solver and percentile p = 5%, 10%, ..., 95%, the solver time
-until e <= (1 - p) e0. A solve stops at ``--target-reduction`` or at its time/iteration budget, so
-unreached percentiles are reported as missing (``null``).
+Each problem of a batch (python/examples/make_benchmark.py; contract in plans/MASTER.md) is solved
+once per solver. The batch's root attribute ``problem`` gives the kind:
+
+- **static**: release the sample shape x with no loads. The solution is the rest shape X.
+- **dynamic**: one implicit-Euler (BDF1) step of the file's size h from the sample (x, v), toward the
+  file's inertial target xtilde (gravity included). The solution is the file's reference x_ref
+  (full-order Newton); its accuracy estimate ``ref_newton_correction`` is recorded.
+
+The error e = |x - x*|_M (lumped-mass norm over free nodes, x* = X or x_ref) is logged after every
+solver iteration (see ``static.py``). The benchmark reports, per solver and percentile p = 5%, 10%,
+..., 95%, the solver time until e <= (1 - p) e0. Only that error stops a solve, at
+``--target-reduction`` or at its time/iteration budget; the solvers' own convergence and feasibility
+tests are bypassed. Unreached percentiles are reported as missing (``null``).
 
 Usage:
     python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
@@ -18,11 +25,17 @@ Usage:
 
 Representative commands (from the repo root; scenes and samples live in the main checkout's data/):
 
-    # One static solve: one solver, the first sample, a 5 s cap
+    # One static solve: one solver, the first problem, a 5 s cap
     python -m python.tools.sim.benchmark \
         --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
         --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
         --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
+
+    # Dynamic problems: the same command on a dynamic batch (the kind and h come from the file)
+    python -m python.tools.sim.benchmark \
+        --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
+        --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample/dynamic_h0.01/E500.h5 \
+        --max-seconds 5 -o out/dynamic.json
 
     # Every solver on every sample of a batch, with the scene's paper parameters
     python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
@@ -37,17 +50,25 @@ Representative commands (from the repo root; scenes and samples live in the main
     python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --spec case.h5 -o b.json
 
 Outputs:
-    ``results.json``: the effective spec; metadata (scene, parameter sources, sample-file attributes,
-    Newton CG limits, device, git commit, date); and per solver, one summary per sample (e0, iterations,
+    ``results.json``: the effective spec; metadata (problem kind, h, scene, parameter sources, sample-file
+    attributes, Newton CG limits, device, git commit, date); and per solver, one summary per sample (e0, iterations,
     VBD sweeps, solver time, final relative error, time and iterations to each percentile, starting
     deformation energy, min det F, and a log-spaced curve of relative error vs time and sweeps), plus
     aggregates per percentile (median and quartiles of the time over the samples that reached it, and
-    how many did).
+    how many did). Dynamic summaries add ``reference``: the reference's ``newton_correction`` (m), its
+    mass-norm ``error_bound`` (newton_correction * sqrt(3 * sum of free masses)) and
+    ``relative_error_bound`` (over e0). Levels with 1 - p below that bound can't be resolved against
+    this reference, and the per-level aggregates count the samples whose reference allows them
+    (``reliable``).
     ``results.h5`` (same name, next to it): the spec and the full per-iteration logs,
     ``<solver>/<sample>/{error, time, sweeps}``.
 
 Pitfalls:
     - The benchmark is contact-free: contact detection is deactivated whatever the parameters say.
+    - Dynamic problems take their time step from the file: ``Integration.dt``, ``substeps`` and the BDF
+      order from --sim-params are overridden (one BDF1 step of size h).
+    - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 limits and the
+      reference's accuracy (``relative_error_bound``) cap the reachable reduction around 80-95%.
     - Solves run to the target reduction or the caps, not to a solver tolerance: ``Solver.<solver>.gtol``,
       ``n_max_iters`` and ``n_subproblem_max_iters`` don't stop them (a static solve is one long
       subproblem). The vertex-solve and acceleration parameters do matter.
@@ -92,14 +113,15 @@ _CURVE_POINTS = 400
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Static convergence benchmark (GPU): solver time per 5% level of error reduction."
+        description="Solver convergence benchmark (GPU) on static or dynamic problem batches: solver time "
+        "per 5% level of error reduction."
     )
     parser.add_argument("--fem-elasto-dynamics", required=True, dest="fem_elasto_dynamics",
                         help="Scene: file.h5:group/path of the serialized FemElastoDynamics, e.g. an editor "
                         "Dump's 'fem' group. Must be the mesh the samples were drawn on.")
     parser.add_argument("--samples", default=None,
-                        help="MCMC sample batch (.h5) with the initial shapes. Overrides the spec's "
-                        "sample_file; required unless --spec provides one.")
+                        help="Benchmark problem batch (.h5), static or dynamic (read from its 'problem' "
+                        "attribute). Overrides the spec's sample_file; required unless --spec provides one.")
     parser.add_argument("--sim-params", nargs="+", default=[], dest="sim_params",
                         help="Simulation parameters: .toml configs or .h5 files as exported by the GUI "
                         "(file.h5 or file.h5:group), merged left to right (see configs/README.md). "

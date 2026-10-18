@@ -5,10 +5,12 @@ Static equilibrium solves of the GPU simulator, and their convergence logs.
 A static solve releases an initial shape into min_x Psi(x) - s fext^T x (``fem.static``, with load
 scale s), holding the Dirichlet nodes, and records the error to the rest shape after every solver
 iteration. The convergence benchmark (``benchmark.py``) uses MCMC shape samples
-(``python/examples/rom_mcmc.py``; contract in plans/MASTER.md) as initial shapes and no loads, so the
-equilibrium is exactly the rest shape X.
+(``python/examples/make_benchmark.py``; contract in plans/MASTER.md) as initial shapes and no loads,
+so the equilibrium is exactly the rest shape X. The same machinery runs dynamic benchmark problems:
+one BDF1 step (:func:`prepare_dynamic_problem`) measured against the problem's reference solution.
 
-Error: e = sqrt((x - X)^T M (x - X)) over free nodes (lumped mass M).
+Error: e = sqrt((x - x*)^T M (x - x*)) over free nodes (lumped mass M), with x* = X for static
+problems and the reference x_ref for dynamic ones.
 
 Timing: VBD-family solves run as one captured CUDA graph. The distinct first iterations are
 recorded once, then a block of identical iterations is replayed inside ``wp.capture_while`` until
