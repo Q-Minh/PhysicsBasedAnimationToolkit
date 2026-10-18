@@ -8,7 +8,11 @@ the same HDF5 layout as the GUI's "Serialization" feature.
 
 Usage:
     python -m python.tools.sim.simulate --fem-elasto-dynamics dump.h5:fem -o out.h5 \
-        [--sim-params params.h5] [--solver AAAVBD] [--cd VertexSdf] [--duration 10] [--fps 60]
+        [--sim-params params.h5] [--solver AAAVBD] [--cd VertexSdf] [--duration 10] [--fps 60]         [--profile kernels --profile-out profile.json --profile-warmup 10]
+
+With ``--profile``, steps run eagerly (no CUDA graph). ``kernels`` attributes the GPU busy time of every
+Warp launch to the profiling scope that issued it and prints a per-phase summary. ``nvtx`` emits NVTX
+ranges for Nsight Systems (see ``python/tools/sim/profiling/nsys.py``).
 """
 
 import argparse
@@ -18,6 +22,8 @@ import h5py
 import warp as wp
 from tqdm import tqdm
 
+from .gpu.common import profiling
+from .profiling import results as profiling_results
 from .state import (
     SimulationState,
     SolverType,
@@ -90,6 +96,28 @@ def parse_args():
         help="Output file.h5 for the simulated trajectory (overwritten).",
         dest="output",
     )
+    parser.add_argument(
+        "--profile",
+        type=str,
+        choices=[b.value for b in profiling.Backend],
+        default=profiling.Backend.OFF.value,
+        help="Profiling backend. Anything but 'off' disables CUDA graph capture.",
+        dest="profile",
+    )
+    parser.add_argument(
+        "--profile-out",
+        type=str,
+        default=None,
+        help="Output file.json for the per-step, per-phase GPU timings (kernels backend).",
+        dest="profile_out",
+    )
+    parser.add_argument(
+        "--profile-warmup",
+        type=int,
+        default=10,
+        help="Number of initial steps excluded from profiling (module loading, warm-up).",
+        dest="profile_warmup",
+    )
     return parser.parse_args()
 
 
@@ -118,6 +146,15 @@ def main():
         with h5py.File(args.sim_params, "r") as f:
             deserialize_params(state, f)
     state.reset()
+    profiling.set_backend(profiling.Backend(args.profile))
+    recorder = None
+    if profiling.get_backend() == profiling.Backend.KERNELS:
+        recorder = profiling_results.ProfileRecorder(
+            "kernels",
+            profiling_results.collect_metadata(
+                state, args.fem_elasto_dynamics, args.profile_warmup
+            ),
+        )
 
     n_steps = math.ceil(args.duration / state.dt)
     h5f = init_h5_serialization(state.fem_cpu, args.output, args.fps)
@@ -133,7 +170,14 @@ def main():
         _write_frame(h5f, state, frame)
         frame += 1
         while state.t < n_steps:
+            profile_step = state.t >= args.profile_warmup
+            if profile_step:
+                profiling.begin_step()
             state.step()
+            if profile_step:
+                step_profile = profiling.end_step()
+                if recorder is not None:
+                    recorder.add_step(state.t - 1, step_profile)
             if should_save(state.t, state.dt, args.fps):
                 _write_frame(h5f, state, frame)
                 frame += 1
@@ -157,6 +201,12 @@ def main():
         f"Simulated {state.t} steps ({state.t * state.dt:.4f}s) in {elapsed:.2f}s wall time, "
         f"wrote {frame} frames to {args.output}"
     )
+    if recorder is not None and recorder.steps:
+        result = recorder.to_dict()
+        print(profiling_results.format_summary(result))
+        if args.profile_out:
+            profiling_results.save(result, args.profile_out)
+            print(f"Wrote profile to {args.profile_out}")
 
 
 if __name__ == "__main__":
