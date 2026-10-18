@@ -543,11 +543,18 @@ def integrate_positions(
     eps: wp.float32,
     hess_zero: wp.float32,
 ):
-    """Solve x -= H^{-1} g (direct inverse for 3x3)."""
+    """Return the step ``dx = H^{-1} g`` of the vertex solve ``x -= dx``.
+
+    ``hess_zero`` is a pseudo-singularity tolerance relative to the scale of ``H``, so that it holds
+    for any mass and time step (at small ``h``, ``H ~ m I`` and an absolute threshold on ``det H ~ m^3``
+    would skip light vertices). Inverse returns a zero step when ``|det H| <= hess_zero |tr(H)/3|^3``;
+    EVD zeroes the eigen-components with ``|lambda| <= hess_zero max|lambda|``. QR has no check.
+    """
     dxi = wp.vec3f()
     if solver == VLS_SOLVER_INVERSE:
         det = wp.determinant(Hi)  # pyright: ignore[reportArgumentType]
-        if wp.abs(det) > hess_zero:  # pyright: ignore[reportArgumentType]
+        scale = wp.abs(wp.trace(Hi)) / wp.float32(3)  # pyright: ignore[reportArgumentType]
+        if wp.abs(det) > hess_zero * scale * scale * scale:  # pyright: ignore[reportArgumentType]
             dxi = wp.inverse(Hi) * gi  # pyright: ignore
     elif solver == VLS_SOLVER_LLT:
         assert False
@@ -562,9 +569,10 @@ def integrate_positions(
     elif solver == VLS_SOLVER_EVD:
         V, eigs = wp.eig3(Hi)  # pyright: ignore[reportArgumentType]
         dxi = wp.transpose(V) * gi  # pyright: ignore[reportOperatorIssue]
+        eig_zero = hess_zero * wp.max(wp.abs(eigs))  # pyright: ignore[reportArgumentType]
         for d in range(3):
             eigd = wp.abs(eigs[d])  # pyright: ignore[reportIndexIssue]
-            if eigd > hess_zero:
+            if eigd > eig_zero:
                 dxi[d] = dxi[d] / eigd
             else:
                 dxi[d] = wp.float32(0)
@@ -572,3 +580,57 @@ def integrate_positions(
     else:
         assert False
     return dxi
+
+
+import unittest
+import numpy as np
+
+
+@wp.kernel
+def _integrate_positions_kernel(
+    H: wp.array[wp.mat33f],
+    g: wp.array[wp.vec3f],
+    solver: wp.int32,
+    hess_zero: wp.float32,
+    dx: wp.array[wp.vec3f],
+):
+    i = wp.tid()
+    dx[i] = integrate_positions(g[i], H[i], solver, 25, wp.float32(1.19e-7), hess_zero)
+
+
+class TestIntegratePositions(unittest.TestCase):
+    def _solve(self, H: np.ndarray, g: np.ndarray, solver: int) -> np.ndarray:
+        dx = wp.zeros(len(H), dtype=wp.vec3f)
+        wp.launch(
+            _integrate_positions_kernel,
+            dim=len(H),
+            inputs=[
+                wp.array(H, dtype=wp.mat33f),
+                wp.array(g, dtype=wp.vec3f),
+                solver,
+                1.19e-7,
+            ],
+            outputs=[dx],
+        )
+        return dx.numpy()
+
+    def test_singularity_check_is_relative_to_the_hessian_scale(self):
+        # H = m I at small time steps: light vertices must still move (det H = m^3 < hess_zero).
+        masses = np.array([1.3e-5, 4.3e-2, 1.0, 1e3], dtype=np.float32)
+        H = np.stack([m * np.eye(3, dtype=np.float32) for m in masses])
+        g = np.ones((len(H), 3), dtype=np.float32)
+        for solver in (VLS_SOLVER_INVERSE, VLS_SOLVER_EVD):
+            dx = self._solve(H, g, solver)
+            np.testing.assert_allclose(dx, g / masses[:, None], rtol=1e-5)
+        # Pseudo-singular at any scale: Inverse skips the vertex, EVD drops the null direction.
+        for m in (1e-4, 1.0, 1e4):
+            Hs = (m * np.diag([1.0, 1.0, 1e-9])).astype(np.float32)[None]
+            gs = np.ones((1, 3), dtype=np.float32)
+            np.testing.assert_array_equal(self._solve(Hs, gs, VLS_SOLVER_INVERSE), 0.0)
+            dx = self._solve(Hs, gs, VLS_SOLVER_EVD)[0]
+            np.testing.assert_allclose(dx, [1.0 / m, 1.0 / m, 0.0], rtol=1e-5)
+
+
+if __name__ == "__main__":
+    wp.init()
+    unittest.main()
