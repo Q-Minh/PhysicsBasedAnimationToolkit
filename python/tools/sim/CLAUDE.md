@@ -75,6 +75,7 @@ Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated 
 - `AaaVbdSolver` adds per-vertex *stencil gradient acceleration* (`betaG`, `rhohat`, `gammaup`/`gammadown`, separate interior/surface values in `vec2f`). In C++ this acceleration is built into `vbd::Iterate` itself.
   - Only AAAVBD reads the stencil parameters, so `gpu/vbd/params.py::STENCIL_GRADIENT_ACCELERATION_KEYS` lists them once: they are serialized (and so appear in configs) and shown in the GUI for AAAVBD only, and ignored when an older file stores them for VBD, Chebyshev or Anderson.
   - `warm_start_beta` follows C++ `InitializeSolve`/`PrepareSubproblem`: `initialize_solve` and `prepare_subproblem` reset `betaG` to `betaG0` with a capture-safe fill (0 `Never`: every subproblem; 1 `Subproblem`: every time step; 2 `TimeStep`: never). The GPU default is 2 (`SimulationState.__init__`), unlike C++'s 1, so that betaG warm starts across time steps.
+  - `surface_stencil_surface_neighbours_only` (default 1, as in C++): surface vertices sum only their surface neighbours' gradients in the stencil augmentation; 0 makes them use interior neighbours too. Interior vertices always use all neighbours.
 - Chebyshev and Anderson wrap the VBD sweep, matching C++ `Chebyshev.h` and `Anderson.h`. The GPU Anderson solves its least-squares problem by normal equations or CG (`AndersonLinearSolver`), whereas the CPU version uses a COD.
 - `NewtonSolver` assembles the sparse Hessian from triplets and has `supports_graph_capture == False`.
 
