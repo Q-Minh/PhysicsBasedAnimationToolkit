@@ -368,8 +368,13 @@ class StaticSolver:
         self._graph = None
 
     def _begin(self):
-        """Solver setup before the timed iterations (contact-free here, so cheap)."""
+        """Solver setup before the timed iterations (contact-free here, so cheap).
+
+        The static problem's setup prescribes the Dirichlet nodes, evaluating kinematic constraints
+        at their frozen time.
+        """
         state, params = self.state, self.state.params[self.solver]
+        state.fem.setup_time_integration_optimization()
         gpu.vbd.solver.initialize_solve(state.fem, state.contact, state.detector, params)
         gpu.vbd.solver.prepare_subproblem(state.fem, state.contact, state.detector, params)
         if self.solver == SolverType.AAAVBD:
@@ -393,6 +398,7 @@ class StaticSolver:
     def _solve_newton(self):
         state, params = self.state, self.state.params[SolverType.Newton]
         newton = gpu.newton.solver
+        state.fem.setup_time_integration_optimization()
         newton.initialize_solve(state.fem, state.contact, state.detector, params)
         n_inner = params.data.n_subproblem_max_iters
         params.data.n_subproblem_max_iters = 1

@@ -183,8 +183,9 @@ class FemElastoDynamics:
 
         In static mode, solvers drop the inertia term and use :attr:`h2` = 1,
         :meth:`setup_time_integration_optimization` leaves free nodes in place,
-        and :meth:`back_substitute_velocities` and :meth:`step` do nothing. Leaving static mode
-        restarts the time integration from the current positions at rest.
+        and :meth:`back_substitute_velocities` and :meth:`step` do nothing. Since :meth:`step` doesn't
+        advance the kinematic constraints either, they stay evaluated at a frozen time. Leaving static
+        mode restarts the time integration from the current positions at rest.
         """
         return bool(self._data.is_static)
 
