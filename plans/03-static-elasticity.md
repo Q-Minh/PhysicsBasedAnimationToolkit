@@ -227,3 +227,6 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
     - stopping on the error only; contact off;
     - update references (CLAUDE.md, the sim-benchmarks skill). Smoke tests only, on `data/benchmarks/trampoline-sample`.
   - The maintainer approved making the dynamic benchmark error-driven, bypassing the solvers' gtol/ftol checks.
+- 2026-10-18 · **Adaptive-penalty bug fixed and merged:** color-aware current-position contacts in adaptive modes, the SUBPROBLEM floor, friction adaptation, and `gamman_adaptive`/`gammaf_adaptive` = 1. Constant mode is bit-identical.
+- 2026-10-18 · **Newton SPD in dynamics** merged (maintainer request; C++ parity).
+- 2026-10-18 · **Dynamic benchmark runner** on `feature/benchmark-dynamic` (5 commits): one `benchmark.py`, kind read from the file, error against x_ref, the solvers' own tests bypassed (Newton's gtol2 forced to 0), reference-accuracy fields in the results. At h = 1e-4 only levels up to about 80–90% are reachable or resolvable. Waiting for review.

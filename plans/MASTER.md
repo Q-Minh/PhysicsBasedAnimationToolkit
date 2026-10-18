@@ -578,6 +578,10 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 3 · **GPU run START** (~10 min: GPU Newton SPD correction in dynamics, dev vs branch on beam/trampoline, incl. Newton step times). Will log END.
 - 2026-10-18 · task 3 · **GPU run END** (Newton SPD validation).
 - 2026-10-18 · coordinator · Merged `feature/adaptive-penalty` (task 3: other-color contact partners read at current positions in adaptive modes; SUBPROBLEM floored; friction adapted; new gamman_adaptive/gammaf_adaptive = 1; constant mode bit-identical; paper configs regenerated `f327a6c2`) and `feature/newton-spd` (GPU Newton SPD-corrects in dynamics too, default Absolute; old dynamic Newton results change by ~1e-6 to 1e-4). Maintainer: the relative gtol may be stricter on fine meshes (mesh-scale and contact residuals); that's accepted. Task 3 → dynamic benchmark runner next.
+- 2026-10-18 · task 3 · **GPU run START** (~5 min, smoke tests of the dynamic benchmark runner on data/benchmarks/trampoline-sample). Will log END.
+- 2026-10-18 · task 3 · **GPU run END** (dynamic benchmark smoke tests).
+- 2026-10-18 · task 3 · **GPU run START** (intermittent, correctness only: adaptive-penalty stability with the new defaults, BeamFallingOnBeam). Will log END.
+- 2026-10-18 · coordinator · **Maintainer's GPU defaults** (`state.load_params`, used by simulate/ui/benchmark): VBD family n_max_iters 1 × 100 sweeps; AAAVBD gammadown 0.99, gammadownS 0.95, gammaup(S) 0.5; rtol 1e-2 with displacement_floor 1e-6 m (no division by zero); ftol 0.5; check_interval 20; VertexSdf max_dist 0.05; Newton 1 outer × 10 steps; Chebyshev/Anderson unchanged; single-body scenes skip detection automatically. Tuning guidance in the sim-run skill. **TIMESTEP penalty (chosen default) diverges on BeamFallingOnBeam with these defaults → task 3 investigating (Jacobi xb, gamman_adaptive 0.1); default stays CONSTANT until stable.** Task 3 then: relative gradient check for Newton (same criterion and floor). Benchmarks verified to stop on the error only (VBD loop bypassed, Newton gtol2 forced 0). Merged task 3's dynamic runner (benchmark.py).
 
 ## Open questions for the maintainer
 
