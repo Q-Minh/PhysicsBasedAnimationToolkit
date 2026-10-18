@@ -8,6 +8,10 @@
                 "CMAKE_TOOLCHAIN_FILE": {
                     "type": "FILEPATH",
                     "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                },
+                "VCPKG_OVERLAY_TRIPLETS": {
+                    "type": "PATH",
+                    "value": "${sourceDir}/cmake/triplets"
                 }
             }
         },
