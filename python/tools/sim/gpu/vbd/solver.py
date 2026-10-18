@@ -181,6 +181,10 @@ class IterationSchedule:
     only through ``kp % period``), so a block of a multiple of ``period`` iterations records once and
     replays. Each iteration applies ``sweeps_per_iteration`` VBD sweeps. ``scope`` names the
     subproblem's profiling scope.
+
+    A subproblem runs ``n_iterations`` iterations (``n_subproblem_max_iters`` if None), then
+    ``tail(k)`` if given, e.g. the sweeps left over when the sweep budget isn't a multiple of
+    ``sweeps_per_iteration``. A convergence test that ends the subproblem early skips the tail too.
     """
 
     iteration: Callable[[int, int], None]
@@ -188,6 +192,8 @@ class IterationSchedule:
     period: int = 1
     sweeps_per_iteration: int = 1
     scope: str = "vbd.subproblem"
+    n_iterations: int | None = None
+    tail: Callable[[int], None] | None = None
 
 
 def _subproblem_layout(
@@ -239,13 +245,20 @@ def solve_outer_loop(
     """
     check = params.convergence
     n_max_iters = int(params.data.n_max_iters)
-    n_sub = int(params.data.n_subproblem_max_iters)
+    n_sub = (
+        int(params.data.n_subproblem_max_iters)
+        if schedule.n_iterations is None
+        else int(schedule.n_iterations)
+    )
+    tail = schedule.tail
     if check is None:
         for k in range(n_max_iters):
             prepare_subproblem(fem, contact, cd, params)
             with profiling.scope(schedule.scope):
                 for kp in range(n_sub):
                     schedule.iteration(k, kp)
+                if tail is not None:
+                    tail(k)
             finalize_subproblem(fem, contact, cd, params)
         return False
     gtol = float(params.data.gtol)
@@ -262,6 +275,8 @@ def solve_outer_loop(
             if n_blocks == 0:
                 for kp in range(prefix, n_sub):
                     schedule.iteration(k, kp)
+                if tail is not None:
+                    tail(k)
             else:
 
                 def sweep_block():
@@ -271,12 +286,14 @@ def solve_outer_loop(
 
                 check.begin_inner(n_blocks)
                 wp.capture_while(check.inner_keep, while_body=sweep_block)
-                if remainder > 0:
+                if remainder > 0 or tail is not None:
                     begin = prefix + n_blocks * block
 
                     def rest():
                         for kp in range(begin, begin + remainder):
                             schedule.iteration(k, kp)
+                        if tail is not None:
+                            tail(k)
 
                     wp.capture_if(check.subproblem_keep, on_true=rest)
         with profiling.scope("solve.finalize_subproblem"):
