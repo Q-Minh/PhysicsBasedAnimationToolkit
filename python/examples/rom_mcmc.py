@@ -104,7 +104,8 @@ def radial_root(
     r0: float,
     rtol: float = 1e-6,
     max_expansions: int = 60,
-    monotonicity_rtol: float = 1e-4,
+    monotonicity_rtol: float = 1e-6,
+    monotonicity_atol: float = 0.0,
 ) -> typing.Tuple[float, bool]:
     """Find r > 0 s.t. model.energy(r * d) = energy.
 
@@ -118,19 +119,21 @@ def radial_root(
         r0 (float): Initial guess for r.
         rtol (float): Relative tolerance on r.
         max_expansions (int): Maximum number of bracket expansions.
-        monotonicity_rtol (float): Energy decreases along the ray smaller than this times energy
-            are attributed to round-off.
+        monotonicity_rtol (float): Energy decreases along the ray smaller than
+            max(monotonicity_rtol * energy, monotonicity_atol) are attributed to round-off.
+        monotonicity_atol (float): See monotonicity_rtol, e.g. a multiple of the energy's noise floor.
 
     Returns:
         typing.Tuple[float, bool]: The root r, and False if the energy was found to decrease
         along the ray at the evaluated points (the level set may not be star-shaped).
     """
-    evaluations = []
+    # Cached, so that brentq's re-evaluation of the bracket ends can't flip their signs under noise
+    evaluations = {}
 
     def f(r):
-        fr = model.energy(r * d) - energy
-        evaluations.append((r, fr))
-        return fr
+        if r not in evaluations:
+            evaluations[r] = model.energy(r * d) - energy
+        return evaluations[r]
 
     psi0 = f(r0) + energy
     r1 = r0 * np.sqrt(energy / psi0) if psi0 > 0 else r0
@@ -155,9 +158,31 @@ def radial_root(
         else:
             raise StarShapeError(f"Could not bracket energy {energy} along ray")
     root = scipy.optimize.brentq(f, lo, hi, rtol=rtol)
-    fs = np.array([fr for _, fr in sorted(evaluations)])
-    monotone = bool(np.all(np.diff(fs) >= -monotonicity_rtol * energy))
+    fs = np.array([evaluations[r] for r in sorted(evaluations)])
+    monotone = bool(np.all(np.diff(fs) >= -max(monotonicity_rtol * energy, monotonicity_atol)))
     return root, monotone
+
+
+def estimate_energy_noise(model, q: np.ndarray, n: int = 33, rel: float = 1e-3) -> float:
+    """Estimates the round-off noise of model.energy near q.
+
+    Evaluates the energy at (1 + t) q for n values of t in [-rel, rel], over which the exact energy is
+    a smooth function, and returns the standard deviation of the residual of a cubic fit. rel must be
+    large enough for the probed positions to differ in the precision the energy is evaluated in.
+
+    Args:
+        model: Reduced model exposing energy(q).
+        q (np.ndarray): Point to probe, ideally near the level set.
+        n (int): Number of evaluations.
+        rel (float): Relative half-width of the probed segment.
+
+    Returns:
+        float: The estimated (absolute) energy noise standard deviation.
+    """
+    t = np.linspace(-rel, rel, n)
+    e = np.array([model.energy((1 + ti) * q) for ti in t])
+    residual = e - np.polyval(np.polyfit(t, e, 3), t)
+    return float(np.std(residual))
 
 
 def integrated_autocorrelation_time(x: np.ndarray, c: float = 5.0) -> float:
@@ -197,9 +222,20 @@ class _Chain:
 
     Subclasses set self.q, self.e, self.logp and implement _step() -> bool (accepted) and
     _observables() -> np.ndarray, the scalars whose autocorrelation sets the thinning.
+
+    The energy may be noisy (e.g. pbat evaluates it in float32). The noise floor is measured once
+    near the level set, and energy tolerances are kept above noise_factor times it.
     """
 
-    def __init__(self, model, energy: float, rng: np.random.Generator, step: float, target_acceptance: float):
+    def __init__(
+        self,
+        model,
+        energy: float,
+        rng: np.random.Generator,
+        step: float,
+        target_acceptance: float,
+        noise_factor: float = 10.0,
+    ):
         self.model = model
         self.target_energy = energy
         self.rng = rng
@@ -210,6 +246,9 @@ class _Chain:
         self.n_accepted = 0
         self.thin = None
         self.tau = None
+        q = np.sqrt(2 * energy) * model.scale * self._random_direction()
+        self.energy_noise = estimate_energy_noise(model, q)
+        self.energy_atol = noise_factor * self.energy_noise
 
     def _random_direction(self) -> np.ndarray:
         theta = self.rng.standard_normal(self.model.dims)
@@ -218,7 +257,9 @@ class _Chain:
     def _radial_point(self, theta: np.ndarray, r0: float):
         """The level-set point along whitened direction theta, and its polar log density."""
         d = self.model.scale * theta
-        r, monotone = radial_root(self.model, d, self.target_energy, r0)
+        r, monotone = radial_root(
+            self.model, d, self.target_energy, r0, monotonicity_atol=self.energy_atol
+        )
         self.star_violations += not monotone
         q = r * d
         e, gq = self.model.energy_and_gradient(q)
@@ -275,6 +316,9 @@ class _Chain:
             ess=steps / tau,
             star_violations=self.star_violations,
             importance_weights_required=isinstance(self, RaySampler),
+            energy_noise=self.energy_noise,
+            energy_tolerance=self.energy_atol,
+            energy_noise_warning=self.energy_atol > 1e-3 * self.target_energy,
         )
         return SampleBatch(q, e, logp, stats)
 
@@ -327,8 +371,10 @@ class ConstrainedRandomWalk(_Chain):
         max_newton: int = 30,
     ):
         super().__init__(model, energy, rng, step, target_acceptance)
-        self.projection_rtol = projection_rtol
-        self.reverse_rtol = reverse_rtol
+        # Projections can't be more accurate than the energy's noise floor. Since Psi_hat ~ r^2,
+        # an energy band of +-tol around E* is a radial band of relative width ~tol/E*.
+        self.projection_atol = max(projection_rtol * energy, self.energy_atol)
+        self.reverse_rtol = max(reverse_rtol, 10 * self.projection_atol / energy)
         self.max_newton = max_newton
         self.n_projection_failures = 0
         self.n_reverse_failures = 0
@@ -345,7 +391,7 @@ class ConstrainedRandomWalk(_Chain):
     def _project(self, z: np.ndarray, n: np.ndarray):
         """Solve Psi_hat(scale * (z + a n)) = E* for a by Newton's method; returns (y, q, e, gq) or None."""
         a = 0.0
-        tol = self.projection_rtol * self.target_energy
+        tol = self.projection_atol
         for _ in range(self.max_newton):
             y = z + a * n
             q = self.model.scale * y

@@ -25,6 +25,34 @@ class QuadraticEnergy:
         return 0.0
 
 
+class NoisyQuadraticEnergy(QuadraticEnergy):
+    """QuadraticEnergy plus absolute Gaussian noise, like pbat's float32 energy round-off."""
+
+    def __init__(self, a, scale, noise, seed=0):
+        super().__init__(a, scale)
+        self.noise = noise
+        self.rng = np.random.default_rng(seed)
+
+    def energy(self, q):
+        return super().energy(q) + self.noise * self.rng.standard_normal()
+
+    def energy_and_gradient(self, q):
+        return self.energy(q), self.a * q
+
+
+class TestEnergyNoise(unittest.TestCase):
+    def test_estimate(self):
+        model = NoisyQuadraticEnergy(np.array([1.0, 4.0, 9.0]), np.ones(3), noise=1e-4)
+        noise = rom_mcmc.estimate_energy_noise(model, np.array([0.5, 0.2, 0.1]))
+        self.assertAlmostEqual(noise, 1e-4, delta=0.3e-4)
+
+    def test_no_false_star_violations(self):
+        model = NoisyQuadraticEnergy(np.array([1.0, 4.0, 9.0]), np.ones(3), noise=1e-4)
+        sampler = rom_mcmc.make_sampler("polar", model, 1.0, np.random.default_rng(5))
+        sampler.burn_in(300)
+        self.assertEqual(sampler.star_violations, 0)
+
+
 class TestRadialRoot(unittest.TestCase):
     def test_hits_level_set(self):
         model = QuadraticEnergy(np.array([1.0, 4.0, 9.0]), np.ones(3))
