@@ -12,7 +12,7 @@ truncation_strategy = 0
 [Contact.CDType.VertexSdf]
 deactivate = 0
 dmin = -0.0001
-max_dist = 0.01
+max_dist = 0.05
 use_step_filter = 0
 
 [Contact.ContactDynamics]
@@ -94,7 +94,8 @@ vls_max_iters = 25
 
 [Solver.Convergence]
 check_interval = 20
-ftol = 0.1
+displacement_floor = 1e-06
+ftol = 0.5
 rtol = 0.01
 
 [Solver.Newton]

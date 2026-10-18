@@ -13,6 +13,7 @@
 #   Solver.AndersonSolver.linear_solver
 #   Solver.AndersonSolver.vbd_iters_per_anderson_iter
 #   Solver.Convergence.check_interval
+#   Solver.Convergence.displacement_floor
 #   Solver.Convergence.ftol
 #   Solver.Convergence.rtol
 #   Solver.Newton.LinearSolver.atol
@@ -142,7 +143,8 @@ vls_max_iters = 25
 
 [Solver.Convergence]
 check_interval = 20
-ftol = 0.1
+displacement_floor = 1e-06
+ftol = 0.5
 rtol = 0.01
 
 [Solver.Newton]
