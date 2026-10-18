@@ -462,7 +462,10 @@ def main():
     if len(args.overrides) > 0:
         apply_overrides(all_params, args.overrides)
 
-    out_file, out_group = args.output.split(":")[:2]
+    # Split on the last ':' only, so that Windows drive letters (C:/...) stay in the file path
+    out_file, sep, out_group = args.output.rpartition(":")
+    if not sep or len(out_file) <= 1:
+        raise ValueError(f"--output must be file.h5:group, got '{args.output}'")
     # Prepare elasto dynamics problem
     fem_elasto_dynamics.set_time_integration_scheme(dt, bdf_scheme)
     fem_elasto_dynamics.set_initial_conditions(
