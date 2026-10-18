@@ -212,3 +212,19 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
       not by registers.
   - **Possible contact bug on dev** (logged for the coordinator): CubeFallingOnCube + VertexSdf detects 0
     contacts, and the top cube falls through.
+- 2026-10-18 · **Maintainer decisions:** commit the constraint-set fix. The coordinator landed it on dev as
+  `a9abadc1`, using one stream per field. The cube fall-through is expected (coincident surfaces, zero
+  penetration), not a bug. Milestone 3 tools were merged (`7ad6a983`). Next directions: kernel source hotspots
+  and the `capture_while` anatomy.
+- 2026-10-18 · **Kernel source hotspots** (3 commits after `7ad6a983`):
+  - **Tooling:** `ncu.py --lineinfo` (venvrun's `PBAT_WARP_LINEINFO` hook) reports stall samples, stall reasons and
+    instructions per Python line and function, with native builtins folded into their callers by address.
+  - **Finding:** on contact-free trampoline, contact gathering (`local_contact_derivatives` plus half-edge
+    helpers) is ~60% of AAAVBD's kernel stall samples (VBD ~72%) and ~half of its instructions.
+  - **Skip-gather experiment** (bit-identical, contact-free only): AAAVBD 83.8 → 40.6 ms/step (−52%), VBD
+    75.2 → 46.3 (−38%).
+  - **Proposed fix (not implemented, task 3 owns the solver kernels):** a per-vertex contact count per
+    constraint-set update, with an early-out in the vertex solve.
+  - **To recheck:** AAAVBD is faster than VBD with the gather skipped.
+  - **Report:** v2 of https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL
+  - **Pending:** the `capture_while` anatomy waits for task 3's merge.

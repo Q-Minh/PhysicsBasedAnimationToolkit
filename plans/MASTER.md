@@ -137,7 +137,8 @@ yet. **Owner: task 1** (confirmed by the maintainer, 2026-10-18). Branch `featur
    `statemachine`/editor dependency. Polyscope is still imported through the body classes but never
    initialized, as `SimulationState` already does.
 6. **CPU offline loader bugs, fixed in separate commits:** map constraint nodes by body name rather than by
-   the transform library's `mesh_names`, which are wrong for ArmadilloFallingInBasket; treat a missing
+   the transform library's `mesh_names`, which list 13 meshes for 9 bodies in ArmadilloFallingInBasket (harmless
+   there: the mismatched body is unconstrained, so the bug was latent); treat a missing
    `static_mesh_colliders` group (23 of 40 scenes) as no colliders.
 7. **Initialization strategy:** unchanged, from GPU params or the default. The Dump metadata stays ignored.
 
@@ -248,7 +249,7 @@ Each session updates only its own row.
 | Task | State | Last update | Notes |
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
-| 1 | merged into dev (`c41bc1ad`) | 2026-10-18 | Waiting on the maintainer's interactive check of the GUI panel (`panels/kinematics.py`); parity details in plan 01 Progress |
+| 1 | kinematics merged (`c41bc1ad`); scene ingestion implemented on `feature/gpu-scene-ingestion` | 2026-10-18 | 8 commits on dev `3caa72c1`. Waiting for the GPU (task 2 run) to verify: bit-identical Dumps, scene vs Dump runs, CubeFallingOnPlaneFast |
 | 2 | milestone 3 in progress (AAAVBD analysis) | 2026-10-18 | Milestones 1–2 merged. M3 tools on branch (anatomy, ncu, overheads report, 7 commits after `92791e16`): [AAAVBD overheads](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Found 4× redundant constraint-set copies (−23% step time with a 2-line fix, awaiting maintainer decision) |
 | 3 | implementing | 2026-10-18 | static solves, convergence loop, benchmark + GUI panel done; preliminary results published; waiting on the maintainer's static params file and full run |
 | 4 | benchmark generator ready; full dataset on hold | 2026-10-18 | 5 commits (GUI gravity, `make_benchmark.py`) awaiting review. Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data and plot requirements |
@@ -408,6 +409,19 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 3 · Maintainer approved: convergence tested every N sweeps (default 20) with C++'s full-step (Lagrangian) criterion, and a loop restructure (unrolled outer, device-replayed sweep blocks, refit/detection outside conditional bodies) so contact scenes get early exit and a small graph. Refit evidence is in plan 03, question 17. Implementing on `feature/gpu-static-solves`.
 - 2026-10-18 · coordinator · Maintainer: add a **feasibility residual norm check between outer iterations**. The outer loop continues with the next subproblem until both optimality (gradient norm) and feasibility pass, subject to n_max_iters and the check interval. → task 3 to propose the exact residual definition to the maintainer.
 - 2026-10-18 · coordinator · **GPU run END** (kinematics test scene: headless check plus the maintainer's GUI session).
+- 2026-10-18 · task 1 · Scene ingestion on `feature/gpu-scene-ingestion` (rebased on dev `3caa72c1`; 8 commits:
+  `scenario.py` refactor, 2 CPU loader fixes, `read_scene`, reset v0, `state.load_scene`/`load_problem`,
+  `--scene`, docs). **FYI tasks 3 and 4:** `SimulationState.reset()` now restarts from `(X, v0)` with the
+  loaded initial velocities (stored as `state.v0`) instead of `(X, 0)`. That affects every reset, in both
+  simulators. **No existing Dump changes:** all five store v = 0 (BeamFallingOnBeam, CubeFallingOnCube,
+  MediumLongBendingBeam, TwistPullBeam, trampoline). Among scenes, only CubeFallingOnPlaneFast has a nonzero
+  v0. A bit-identical GPU check of MediumLongBendingBeam and TwistPullBeam will follow once task 2's run ends.
+  **Shared files:** `state.py` (append-only: `load_scene`, `load_problem`, `self.v0`, one line in `reset`) and the
+  argument parsing plus problem loading in `ui.py`/`simulate.py`.
+- 2026-10-18 · task 3 · **GPU run START** (~6 min, correctness only: bit-identity of the restructured VBD-family loop vs unrolled, beam, contact on/off). Task 2: ignore timings in this window. Will log END.
+- 2026-10-18 · task 2 · **GPU run END.** New finding (FYI task 3, who owns the solver kernels): on trampoline, which has no contacts, **contact gathering dominates the vertex solve**. `local_contact_derivatives` plus the half-edge helpers take ~60% of AAAVBD's warp stall samples (VBD ~72%) and about half its instructions (ncu source view with line info, native builtins folded into their callers). Every trampoline vertex is a surface vertex, so each one walks its half-edges and faces and reads reverse-contact prefixes in every sweep. A contact-free experiment that skips the gather is bit-identical: AAAVBD 83.8 → 40.6 ms/step (−52%), VBD 75.2 → 46.3 (−38%). Candidate fix: compute a per-vertex contact count once per constraint-set update and early-out in the vertex solve. **Not implemented** (solver kernels belong to task 3); asking the maintainer. Tooling (`ncu.py --lineinfo` hotspots, report section) is 3 commits on `feature/gpu-profiling` after `7ad6a983`. **Coordinator:** the `capture_while` anatomy needs task 3's branch on dev; I'll run it after that merge.
+- 2026-10-18 · coordinator · Merged task 2's ncu hotspot tooling (d05f0987). **Task 2 finding:** contact gathering in the vertex solve takes ~60% of AAAVBD's stalls (VBD ~72%) even with zero contacts; skipping it is bit-identical: AAAVBD 83.8 → 40.6, VBD 75.2 → 46.3 ms/step on trampoline. The owner of the fix is pending the maintainer's decision; it should land after task 3's kernel changes (gpu/vbd/kernels.py). Asked task 3 for a merge-ready slice.
+- 2026-10-18 · coordinator · Maintainer wants reusable sim-params files for benchmarks and scenarios. The paper's configs live in `C:\gitccelerated-vbd-extras` (parameters/gpu = GPU export format, all 19 files load in the current GPU loader with no unknown keys; parameters/cpu + vbd.sal.h5 = CPU format). Design discussion pending.
 
 ## Open questions for the maintainer
 
