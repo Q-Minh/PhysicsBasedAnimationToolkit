@@ -493,13 +493,17 @@ class Params(SerializableMixin):
         gamman      : Normal AL penalty scaling factor with a constant penalty, which is
                       ``gamman * dt^2``.
         gammaf      : Friction AL penalty scaling factor with a constant penalty, ``gammaf * dt^2``.
+                      The default 10 is small: the primal friction term has no Coulomb cone limit
+                      within a step, so a stiff friction penalty acts as viscous drag and sliding
+                      bodies creep (at 1e3, a cube on a 15 degree slope with mu_f 0.2 barely moves).
         gamman_adaptive : Normal AL penalty scaling factor with adaptive penalties, a multiple of
                       the largest vertex-Hessian Rayleigh quotient over the contacts, as C++
                       ``MeshDynamics::Params::gamma``. The default 0.1 (C++: 1) keeps every
                       VBD-family solver stable with one contact detection per step: at 1, VBD needs
                       ``n_max_iters >= 2``, Chebyshev ``>= 5``, and AAAVBD diverges on
                       BeamFallingOnBeam.
-        gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf`` (default 0.1).
+        gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf``. The default
+                      1e-3 is small for the same reason as ``gammaf``'s (at 0.1, sliding bodies creep).
         min_sigma_n : Floor of the effective normal penalty ``gamman_adaptive * sigma_n`` in both
                       adaptive modes.
         penalty_adaptivity : CONSTANT: ``sigma_n = sigma_f = dt^2``, so the effective penalties
@@ -516,7 +520,11 @@ class Params(SerializableMixin):
     mu_f = DocField(0.2, "Coulomb friction coefficient")
     decay = DocField(0.5, "Decay rate for contact deactivation")
     gamman = DocField(1e4, "Normal contact AL penalty scaling factor (constant penalty: gamman * dt^2)")
-    gammaf = DocField(1e3, "Friction contact AL penalty scaling factor (constant penalty: gammaf * dt^2)")
+    gammaf = DocField(
+        10.0,
+        "Friction contact AL penalty scaling factor (constant penalty: gammaf * dt^2). Kept small: the friction "
+        "penalty also acts as viscous drag, so larger values make sliding bodies creep",
+    )
     gamman_adaptive = DocField(
         0.1,
         "Normal penalty scaling with adaptive penalties: a multiple of the largest vertex-Hessian Rayleigh quotient. "
@@ -524,7 +532,7 @@ class Params(SerializableMixin):
         "n_max_iters >= 2 for VBD and >= 5 for Chebyshev, and stays unstable for AAAVBD",
     )
     gammaf_adaptive = DocField(
-        0.1, "Friction penalty scaling with adaptive penalties, as gamman_adaptive"
+        1e-3, "Friction penalty scaling with adaptive penalties, as gamman_adaptive. Kept small, as gammaf"
     )
     min_sigma_n = DocField(
         1.0, "Floor of the effective normal penalty with adaptive penalties (gamman_adaptive * sigma_n)"
