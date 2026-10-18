@@ -16,6 +16,24 @@ the error falls below (1 - target_reduction) e0, or a budget runs out. After eve
 ``ErrorLog`` entry reads the device clock before and after the error reduction, so the logging
 itself is excluded from the solver time. Newton isn't capturable and runs eagerly, one Newton step
 per entry, so its time includes host work.
+
+This module has no command line of its own: ``benchmark_static.py`` is the CLI (see its docstring for
+commands, outputs and pitfalls), and the GUI's "Static Equilibrium" panel (``panels/static.py``) runs
+static solves interactively. ``python -m python.tools.sim.static`` runs this module's tests.
+
+Python usage:
+
+    state = SimulationState(fem_cpu, params_cpu)   # e.g. as benchmark_static.make_state builds it
+    state.cd_params[CDType.VertexSdf].deactivate = True
+    state.reset()
+    batch = load_sample_batch("batch.h5")
+    check_sample_batch(batch, state.fem)
+    prepare_static_problem(state, fext_scale=0.0)  # no loads: the equilibrium is X
+    spec = StaticSolveSpec()
+    spec.max_seconds = 10.0
+    solver = StaticSolver(state, SolverType.AAAVBD, spec)
+    log = solver.solve(batch.x[0])                 # StaticSolveLog
+    log.time_to_reduction(0.5), log.relative_error[-1]
 """
 
 from dataclasses import dataclass, field
@@ -40,7 +58,11 @@ from .state import SimulationState, SolverType
 
 @dataclass
 class SampleBatch:
-    """Initial shapes from one MCMC sample file (one target energy)."""
+    """Initial shapes from one MCMC sample file (one target energy).
+
+    ``attrs`` holds the file's root attributes as written by the sampler (e.g. ``target_energy``,
+    ``sampler``, ``ensemble``, ``rhat``, ``gravity``; see the sample-file contract in plans/MASTER.md).
+    """
 
     path: str
     X: np.ndarray  # (N, 3) float32 rest positions, Dump node order
@@ -51,14 +73,21 @@ class SampleBatch:
 
     @property
     def target_energy(self) -> float:
+        """The energy level E* the batch was sampled at (J), from the ``target_energy`` attribute."""
         return float(self.attrs["target_energy"])
 
     @property
     def n_samples(self) -> int:
+        """Number of samples S."""
         return self.x.shape[0]
 
     def warnings(self) -> list[str]:
-        """Reasons the batch may not suit the benchmark's statistics (empty if none)."""
+        """Reasons the batch may not suit the benchmark's statistics.
+
+        Returns:
+            list[str]: One message per problem (split R-hat >= 1.05, nonzero sampling gravity), or an
+            empty list.
+        """
         out = []
         rhat = self.attrs.get("rhat")
         if rhat is not None and not float(rhat) < 1.05:
@@ -71,6 +100,13 @@ class SampleBatch:
 
 def load_sample_batch(path: str) -> SampleBatch:
     """Load an MCMC sample file.
+
+    Args:
+        path (str): The sample file (.h5).
+
+    Returns:
+        SampleBatch: Rest positions, sample positions, achieved energies, ``min_J`` when present, and
+        the file's attributes.
 
     Raises:
         ValueError: if the batch needs importance weights (``importance_weights_required``, e.g. the
@@ -94,7 +130,16 @@ def load_sample_batch(path: str) -> SampleBatch:
 
 
 def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float = 1e-5) -> None:
-    """Check that the batch was sampled on this FEM mesh and keeps its Dirichlet nodes at rest."""
+    """Check that the batch was sampled on this FEM mesh and keeps its Dirichlet nodes at rest.
+
+    Args:
+        batch (SampleBatch): The loaded batch.
+        fem (FemElastoDynamics): The GPU FEM the samples will be solved on.
+        atol (float): Absolute tolerance on positions (m).
+
+    Raises:
+        ValueError: if the rest positions differ from ``fem``'s, or a Dirichlet node moves in a sample.
+    """
     X = fem.data.X.numpy()
     if X.shape != batch.X.shape or not np.allclose(X, batch.X, atol=atol, rtol=0):
         raise ValueError(f"{batch.path}: rest positions don't match the FEM's X")
@@ -109,7 +154,12 @@ def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float =
 
 
 class StaticSolveSpec(SerializableMixin):
-    """One static benchmark case: initial shapes, loads and stopping criteria."""
+    """One static benchmark case: initial shapes, loads and stopping criteria.
+
+    Serialized with :meth:`serialize`/:meth:`deserialize` (h5 attributes), which ``benchmark_static.py``
+    exposes as ``--save-spec``/``--spec``. It isn't part of the simulation parameters
+    (``state.serialize_params``) and isn't read from ``--sim-params`` configs.
+    """
 
     sample_file = DocField("", "MCMC sample file (.h5) providing the initial shapes")
     sample_begin = DocField(0, "First sample index")
@@ -123,10 +173,12 @@ class StaticSolveSpec(SerializableMixin):
     block = DocField(16, "Solver iterations per replayed graph block (rounded to Anderson's m)")
 
     def sample_indices(self, n_samples: int) -> range:
+        """The sample indices ``[sample_begin, sample_end)`` clipped to a batch of ``n_samples``."""
         end = n_samples if self.sample_end < 0 else min(self.sample_end, n_samples)
         return range(max(0, self.sample_begin), end)
 
     def to_dict(self) -> dict:
+        """The spec's fields as a plain dict, e.g. for JSON."""
         return {
             name: getattr(self, name)
             for name in dir(type(self))
@@ -201,6 +253,11 @@ class ErrorLog:
     """
 
     def __init__(self, fem: FemElastoDynamics, capacity: int):
+        """
+        Args:
+            fem (FemElastoDynamics): The problem whose ``x`` is logged against its rest positions ``X``.
+            capacity (int): Number of entries the device arrays hold (initial state included).
+        """
         n_nodes = fem.data.x.shape[0]
         self._fem = fem
         self.capacity = int(capacity)
@@ -221,15 +278,28 @@ class ErrorLog:
         self.configure(target_reduction=0.95, max_entries=self.capacity, max_seconds=math.inf)
 
     def configure(self, target_reduction: float, max_entries: int, max_seconds: float) -> None:
-        """Set the stopping criteria. Captured graphs bake them in, so recapture after changes."""
+        """Set the stopping criteria. Captured graphs bake them in, so recapture after changes.
+
+        Args:
+            target_reduction (float): ``keep`` drops to 0 once e <= (1 - target_reduction) e0.
+            max_entries (int): ``keep`` drops to 0 at this many entries (clipped to the capacity).
+            max_seconds (float): ``keep`` drops to 0 once this much device time has passed since entry
+                0 (logging included); ``math.inf`` for no limit.
+        """
         self._target_ratio2 = float((1.0 - target_reduction) ** 2)
         self._max_entries = int(min(max_entries, self.capacity))
         self._max_ns = int(min(max_seconds * 1e9, 2**62)) if math.isfinite(max_seconds) else 2**62
 
     def reset(self) -> None:
+        """Empty the log and set ``keep`` to 1. Capturable."""
         wp.launch(_reset_log_kernel, dim=1, inputs=[self.count, self.keep])
 
     def record(self, n_sweeps: int) -> None:
+        """Append an entry for the current positions and update ``keep``. Capturable.
+
+        Args:
+            n_sweeps (int): VBD sweeps done since the previous entry (0 for entry 0 and for Newton).
+        """
         fem = self._fem
         wp.launch(_stamp_kernel, dim=1, inputs=[self.t_a, self.count])
         wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[fem.data, self._w])
@@ -253,7 +323,11 @@ class ErrorLog:
         )
 
     def read(self) -> "StaticSolveLog":
-        """Copy the log to the host (synchronizes)."""
+        """Copy the log to the host (synchronizes).
+
+        Returns:
+            StaticSolveLog: Errors, cumulative solver times and cumulative sweeps per entry.
+        """
         n = min(int(self.count.numpy()[0]), self.capacity)
         e2 = self.e2.numpy()[:n].astype(np.float64)
         t_a = self.t_a.numpy()[:n]
@@ -278,15 +352,24 @@ class StaticSolveLog:
 
     @property
     def relative_error(self) -> np.ndarray:
+        """(n,) error relative to the initial one, e / e0 (zeros if e0 is 0)."""
         e0 = self.error[0] if self.error.size else 1.0
         return self.error / e0 if e0 > 0 else np.zeros_like(self.error)
 
     def time_to_reduction(self, p: float) -> float:
-        """Solver time until the error first drops to (1 - p) e0, or NaN if it never does."""
+        """Solver time until the error first drops to (1 - p) e0.
+
+        Args:
+            p (float): Error reduction, as a fraction (0.95 = 95% of the initial error removed).
+
+        Returns:
+            float: Time in seconds at the first entry that reaches it, or NaN if none does.
+        """
         hit = np.nonzero(self.relative_error <= 1.0 - p)[0]
         return float(self.time[hit[0]]) if hit.size else math.nan
 
     def iterations_to_reduction(self, p: float) -> float:
+        """Like :meth:`time_to_reduction`, but the number of solver iterations (NaN if never reached)."""
         hit = np.nonzero(self.relative_error <= 1.0 - p)[0]
         return float(hit[0]) if hit.size else math.nan
 
@@ -297,7 +380,13 @@ class StaticSolveLog:
 def prepare_static_problem(state: SimulationState, fext_scale: float) -> np.ndarray:
     """Switch ``state.fem`` to static mode with the external load scaled by ``fext_scale``.
 
-    Returns the original external load, (N, 3), so callers can restore it.
+    Args:
+        state (SimulationState): Its GPU FEM is modified in place; a ``reset()`` builds a new, dynamic
+            one.
+        fext_scale (float): Factor on the external load (0 = no loads, so the equilibrium is X).
+
+    Returns:
+        np.ndarray: The original external load, (N, 3), so callers can restore it.
     """
     fem = state.fem
     fext0 = fem.data.fext.numpy().copy()
@@ -310,10 +399,20 @@ class StaticSolver:
     """Runs logged static solves of one solver on one ``SimulationState``, from given initial shapes.
 
     For VBD-family solvers, the whole solve is captured once (on the first :meth:`solve`) and
-    replayed for every initial shape; the state must not be reset in between.
+    replayed for every initial shape; the state must not be reset in between. The solver's own outer
+    loop isn't used: a static solve is one subproblem of iterations driven by ``spec``'s budgets, so
+    ``gtol``, ``n_max_iters`` and ``n_subproblem_max_iters`` don't apply.
     """
 
     def __init__(self, state: SimulationState, solver: SolverType, spec: StaticSolveSpec):
+        """
+        Args:
+            state (SimulationState): A contact-free state, already in static mode
+                (:func:`prepare_static_problem`).
+            solver (SolverType): The solver to run.
+            spec (StaticSolveSpec): Stopping criteria: ``target_reduction``, ``max_iterations``,
+                ``max_seconds`` and the replay ``block``.
+        """
         self.state = state
         self.solver = solver
         self.spec = spec
@@ -379,7 +478,14 @@ class StaticSolver:
             params.data.n_subproblem_max_iters = n_inner
 
     def solve(self, x0: np.ndarray) -> StaticSolveLog:
-        """Release ``x0`` ((N, 3) positions) into the static problem and log until a stop criterion."""
+        """Release an initial shape into the static problem and log until a stop criterion.
+
+        Args:
+            x0 (np.ndarray): (N, 3) initial positions, e.g. ``batch.x[s]``.
+
+        Returns:
+            StaticSolveLog: The solve's per-iteration log.
+        """
         fem = self.state.fem
         fem.data.x.assign(np.asarray(x0, dtype=np.float32))
         fem.data.v.zero_()
