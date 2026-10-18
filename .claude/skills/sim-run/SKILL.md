@@ -91,6 +91,7 @@ Frequently changed keys:
 | `Solver.<S>.vlinsolve` | Per-vertex 3x3 solve: 0 Inverse (**default; use it**), 1 LLT, 2 QR, 3 EVD. Switch to EVD only when singular vertex Hessians cause problems |
 | `Solver.Newton.n_max_iters`, `Solver.Newton.LinearSolver.*` | Newton steps; CG limits |
 | `Contact.ContactDynamics.*`, `Contact.CDType.VertexSdf.*` | Contact penalties, friction `mu_f`, margin `dmin`, detection distance |
+| `Contact.ContactDynamics.penalty_adaptivity`, `.gamman_adaptive` | 0 constant, 1 per time step, 2 per subproblem. Adaptive penalties scale the largest vertex-Hessian Rayleigh quotient by `gamman_adaptive` (default 0.1). **Contact scenes:** more detection passes per step (`Solver.<S>.n_max_iters` ≥ 2) keep contact sets fresh, but at `gamman_adaptive` ≈ 1 AAAVBD diverges even with them; keep 0.1 unless you've checked the scene |
 | `Contact.ContactStorage.n_*_contact_capacity` | Contact-pair capacity multipliers. Contacts beyond capacity are dropped |
 
 ## Interactive GPU runs
