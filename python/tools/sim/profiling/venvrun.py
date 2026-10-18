@@ -9,6 +9,9 @@ re-spawns the base interpreter). Launch the base interpreter on this script inst
 It points ``sys.prefix`` at the venv before adding its site-packages, because ``cuda.pathfinder``
 (used by ``cuda.compute``) locates NVIDIA libraries relative to the prefix; setting ``PYTHONPATH``
 alone is not enough. The current directory is put first on ``sys.path``, as ``python -m`` does.
+
+With ``PBAT_WARP_LINEINFO=1`` in the environment, Warp compiles kernels with line information
+(``warp.config.lineinfo``), so Nsight Compute can correlate samples with the generated CUDA source.
 """
 
 import os
@@ -24,6 +27,10 @@ def main():
     site.PREFIXES[:] = [venv]
     site.addsitedir(os.path.join(venv, "Lib", "site-packages"))
     sys.path.insert(0, os.getcwd())
+    if os.environ.get("PBAT_WARP_LINEINFO") == "1":
+        import warp
+
+        warp.config.lineinfo = True
     sys.argv = [module] + args
     runpy.run_module(module, run_name="__main__", alter_sys=True)
 
