@@ -6,6 +6,40 @@ from ..common.buffer import DoubleBuffer
 
 
 @wp.kernel
+def _snapshot_and_reset_constraints(
+    n_u: wp.uint32,
+    u: wp.array[wp.uint32],
+    v: wp.array[wp.uint32],
+    s: wp.array[wp.float32],
+    gamma: wp.array[wp.float32],
+    lambda_n: wp.array[wp.float32],
+    lambda_f: wp.array[wp.vec2f],
+    u_prev: wp.array[wp.uint32],
+    v_prev: wp.array[wp.uint32],
+    s_prev: wp.array[wp.float32],
+    gamma_prev: wp.array[wp.float32],
+    lambda_n_prev: wp.array[wp.float32],
+    lambda_f_prev: wp.array[wp.vec2f],
+):
+    """Copy slot k of the current arrays to the previous snapshot, then reset it to defaults.
+
+    Only u (empty-slot sentinel n_u), gamma (1) and the multipliers (0) are reset: v is only read
+    where u is valid, and s is recomputed by the solver's dual updates.
+    """
+    k = wp.tid()  # type: ignore
+    u_prev[k] = u[k]
+    v_prev[k] = v[k]
+    s_prev[k] = s[k]
+    gamma_prev[k] = gamma[k]
+    lambda_n_prev[k] = lambda_n[k]
+    lambda_f_prev[k] = lambda_f[k]
+    u[k] = n_u
+    gamma[k] = wp.float32(1)
+    lambda_n[k] = wp.float32(0)
+    lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))
+
+
+@wp.kernel
 def _warm_start_constraints(
     contacts: pairs.PairsData,  # pyright: ignore[reportGeneralTypeIssues]
     n_u: wp.uint32,  # Number of u primitives (also the sentinel value for invalid slots)
@@ -66,9 +100,9 @@ class ConstraintSet:
     * ``buf.current``   — active state for the current step.
     * ``buf.alternate`` — snapshot of the prior step used for warm-starting.
 
-    :meth:`prepare_warm_start` uses :meth:`~DoubleBuffer.copy_to_alternate` (a
-    real ``wp.copy``, not a pointer swap) so the pipeline is compatible with
-    CUDA graph capture.
+    :meth:`update_constraint_set` snapshots current into alternate with a copy
+    kernel (not a pointer swap), so the pipeline is compatible with CUDA graph
+    capture.
 
     Fields
     ------
@@ -95,15 +129,11 @@ class ConstraintSet:
     gamma: DoubleBuffer
     lambda_n: DoubleBuffer
     lambda_f: DoubleBuffer
-    _streams: list[wp.Stream]
     _data: ConstraintSetData  # type: ignore
 
     def __init__(self, n_u: int, capacity: int):
         self.n_u = n_u
         self.capacity = capacity
-        # One stream per field (u, v, s, gamma, lambda_n, lambda_f). A ConstraintSet holds a single
-        # contact type, so its copies and fills must run exactly once per update.
-        self._streams = [wp.Stream() for _ in range(6)]
 
         def _make(value, dtype):
             return DoubleBuffer(
@@ -126,17 +156,15 @@ class ConstraintSet:
     def update_constraint_set(self, contacts: pairs.Pairs):  # type: ignore
         """Prepare the current arrays for a new step, warm-starting from the previous snapshot.
 
-        The four-step pipeline maximises GPU concurrency while remaining
-        compatible with CUDA graph capture:
+        Two kernels, so the update adds only two nodes to a captured graph:
 
-        1. **Async copy** current -> alternate (previous snapshot) on an internal
-           copy stream via :meth:`~DoubleBuffer.copy_to_alternate`.
-        2. **Fill** current arrays to defaults via ``fill_()`` on ``main_stream``.
-           Safely overlaps step 1 — current and alternate are distinct allocations.
-        3. **Fence** — ``main_stream`` waits for the copy stream to finish.
-        4. **Warm-start kernel** — for each valid previous pair whose ``(u, v)``
-           appears in the new forward contact list, copy ``s``, ``gamma``,
-           ``lambda_n``, ``lambda_f`` to the corresponding current slot.
+        1. **Snapshot and reset** (:func:`_snapshot_and_reset_constraints`): copy every field's
+           current slot to alternate (the previous snapshot), then reset u to the empty-slot
+           sentinel ``n_u``, gamma to 1 and the multipliers to 0.
+        2. **Warm start** (:func:`_warm_start_constraints`): for each valid previous pair whose
+           ``(u, v)`` appears in the new forward contact list, copy ``s``, ``gamma``,
+           ``lambda_n``, ``lambda_f`` to the corresponding current slot. It writes arbitrary
+           slots, so it must follow the whole reset.
 
         After this call, current slots that were warm-started have a valid u value;
         new contacts keep the default sentinel ``u.current[k] = n_u``.
@@ -144,34 +172,17 @@ class ConstraintSet:
         Args:
             contacts: Forward contact pairs produced by a collision detector.
         """
-        main_stream = wp.get_stream()
         fields = (self.u, self.v, self.s, self.gamma, self.lambda_n, self.lambda_f)
+        # Step 1: snapshot current into alternate and reset current to defaults.
+        wp.launch(
+            _snapshot_and_reset_constraints,
+            dim=self.capacity,
+            inputs=[self.n_u]
+            + [buf.current for buf in fields]
+            + [buf.alternate for buf in fields],
+        )
 
-        # Step 1: async-copy current -> alternate on _copy_stream.
-        for buf, stream in zip(fields, self._streams):
-            stream.wait_stream(main_stream)  # Fork to register stream in cuda graph
-            buf.copy_to_alternate(stream)
-            main_stream.wait_stream(stream)
-
-        # Step 2: fill current with defaults on main_stream.
-        # Overlaps step 1 safely — current and alternate are distinct allocations.
-        streams = self._streams
-        with wp.ScopedStream(streams[0], sync_enter=False):
-            self.u.current.fill_(self.n_u)  # sentinel = n_u (no valid contact)
-        main_stream.wait_stream(streams[0])
-        # NOTE: The self.v doesn't need initialization either, only the self.u is used to determine empty vs filled constraint
-        # NOTE: The slack doesn't need any initialization, it is always updated during before/after solver iterations
-        with wp.ScopedStream(streams[3], sync_enter=False):
-            self.gamma.current.fill_(1.0)
-        main_stream.wait_stream(streams[3])
-        with wp.ScopedStream(streams[4], sync_enter=False):
-            self.lambda_n.current.zero_()
-        main_stream.wait_stream(streams[4])
-        with wp.ScopedStream(streams[5], sync_enter=False):
-            self.lambda_f.current.zero_()
-        main_stream.wait_stream(streams[5])
-
-        # Step 3: warm-start from alternate (previous) into current.
+        # Step 2: warm-start from alternate (previous) into current.
         wp.launch(
             _warm_start_constraints,
             dim=self.capacity,
@@ -191,7 +202,6 @@ class ConstraintSet:
                 self.lambda_n.current,
                 self.lambda_f.current,
             ],
-            stream=main_stream,
         )
 
     @property
