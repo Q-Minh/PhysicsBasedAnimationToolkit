@@ -330,6 +330,8 @@ class AndersonParams(Params):
       - FfT_flat: zero-copy `(m+1, 3N)` `wp.float32` view over `FfT` for tile loads
       - G: `(m+1, m+1)` Gram matrix of `[F f]`
       - linear_solver: Cholesky or Jacobi-preconditioned CG solve of the normal equations
+      - vbd_iters_per_anderson_iter: number of VBD sweeps composing the fixed-point map that
+        one Anderson iteration applies (GPU only, not part of the CPU `AndersonParams`)
       - gammak: `(m,)` Warp array of subspace mixing coefficients
     """
 
@@ -338,12 +340,14 @@ class AndersonParams(Params):
         params: pbat.sim.algorithm.vbd.Params,
         anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
         linear_solver: AndersonLinearSolver = AndersonLinearSolver.NormalEquations,
+        vbd_iters_per_anderson_iter: int = 1,
     ):
         super().__init__(params)
         self.m = int(anderson_params.m)
         self.beta = float(anderson_params.beta)
         self.cod_numerical_zero = float(anderson_params.cod_numerical_zero)
         self.linear_solver = linear_solver
+        self.vbd_iters_per_anderson_iter = max(1, int(vbd_iters_per_anderson_iter))
         n_nodes = params.colors.shape[0]
         self.xkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
         self.fkm1: wp.array[wp.vec3f] = wp.zeros((n_nodes,), dtype=wp.vec3f)
@@ -383,39 +387,32 @@ class AndersonParams(Params):
         self.kernels = anderson_kernels(self.m)
 
 
-def serialize_anderson_cpu_params(
-    vbd_params: pbat.sim.algorithm.vbd.Params,
-    anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
-    grp,
-    linear_solver: AndersonLinearSolver = AndersonLinearSolver.NormalEquations,
-) -> None:
-    """Serialize a VBD CPU `Params` object plus an Anderson CPU `AndersonParams` object's
-    `m`, `beta`, and `cod_numerical_zero` to an h5py group."""
-    serialize_vbd_cpu_params(vbd_params, grp)
-    grp.attrs["m"] = int(anderson_params.m)
-    grp.attrs["beta"] = float(anderson_params.beta)
-    grp.attrs["cod_numerical_zero"] = float(anderson_params.cod_numerical_zero)
-    grp.attrs["linear_solver"] = linear_solver.value
+def serialize_anderson_cpu_params(params: "AndersonCpuParams", grp) -> None:
+    """Serialize an `AndersonCpuParams` container to an h5py group: the VBD CPU `Params`, the
+    Anderson CPU `AndersonParams`' `m`, `beta` and `cod_numerical_zero`, and the GPU-only
+    `linear_solver` and `vbd_iters_per_anderson_iter`."""
+    serialize_vbd_cpu_params(params.vbd_params, grp)
+    grp.attrs["m"] = int(params.m)
+    grp.attrs["beta"] = float(params.beta)
+    grp.attrs["cod_numerical_zero"] = float(params.cod_numerical_zero)
+    grp.attrs["linear_solver"] = params.linear_solver.value
+    grp.attrs["vbd_iters_per_anderson_iter"] = int(params.vbd_iters_per_anderson_iter)
 
 
-def deserialize_anderson_cpu_params(
-    vbd_params: pbat.sim.algorithm.vbd.Params,
-    anderson_params: pbat.sim.algorithm.vbd.AndersonParams,
-    grp,
-) -> AndersonLinearSolver | None:
-    """Deserialize a VBD CPU `Params` object plus an Anderson CPU `AndersonParams` object's
-    `m`, `beta`, and `cod_numerical_zero` from an h5py group, in place. Silently skips keys
-    absent from the group."""
-    deserialize_vbd_cpu_params(vbd_params, grp)
+def deserialize_anderson_cpu_params(params: "AndersonCpuParams", grp) -> None:
+    """Deserialize an `AndersonCpuParams` container from an h5py group, in place (see
+    `serialize_anderson_cpu_params`). Silently skips keys absent from the group."""
+    deserialize_vbd_cpu_params(params.vbd_params, grp)
     if "m" in grp.attrs:
-        anderson_params.m = int(grp.attrs["m"])
+        params.m = int(grp.attrs["m"])
     if "beta" in grp.attrs:
-        anderson_params.beta = float(grp.attrs["beta"])
+        params.beta = float(grp.attrs["beta"])
     if "cod_numerical_zero" in grp.attrs:
-        anderson_params.cod_numerical_zero = float(grp.attrs["cod_numerical_zero"])
+        params.cod_numerical_zero = float(grp.attrs["cod_numerical_zero"])
     if "linear_solver" in grp.attrs:
-        return AndersonLinearSolver(int(grp.attrs["linear_solver"]))
-    return None
+        params.linear_solver = AndersonLinearSolver(int(grp.attrs["linear_solver"]))
+    if "vbd_iters_per_anderson_iter" in grp.attrs:
+        params.vbd_iters_per_anderson_iter = int(grp.attrs["vbd_iters_per_anderson_iter"])
 
 
 class AndersonCpuParams:
@@ -445,6 +442,7 @@ class AndersonCpuParams:
             else pbat.sim.algorithm.vbd.AndersonParams()
         )
         self._linear_solver = AndersonLinearSolver.NormalEquations
+        self._vbd_iters_per_anderson_iter = 1
 
     @property
     def anderson_params(self) -> pbat.sim.algorithm.vbd.AndersonParams:
@@ -489,6 +487,18 @@ class AndersonCpuParams:
     @linear_solver.setter
     def linear_solver(self, value: AndersonLinearSolver):
         self._linear_solver = AndersonLinearSolver(value)
+
+    @property
+    def vbd_iters_per_anderson_iter(self) -> int:
+        """Number of VBD sweeps that make up one Anderson iteration (>= 1). Anderson accelerates
+        the fixed-point map made of this many consecutive sweeps, and the subproblem's
+        n_subproblem_max_iters counts Anderson iterations, so each subproblem runs
+        n_subproblem_max_iters * vbd_iters_per_anderson_iter sweeps in total."""
+        return self._vbd_iters_per_anderson_iter
+
+    @vbd_iters_per_anderson_iter.setter
+    def vbd_iters_per_anderson_iter(self, value: int):
+        self._vbd_iters_per_anderson_iter = max(1, int(value))
 
 
 import unittest

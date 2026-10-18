@@ -81,6 +81,7 @@ Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated 
 - **Anderson solve modes.**
   - The Gram matrix of `[F f]` comes from one tiled pass. `FfT` stores `F^T` and `f` as one `(m+1, 3N)` buffer.
   - It is then solved by Cholesky, which regularizes only when a pivot falls below the relative threshold `cod_numerical_zero`, or by unregularized Jacobi-PCG.
+  - `vbd_iters_per_anderson_iter` (`p`, GPU only) makes each Anderson iteration apply `p` VBD sweeps. `n_subproblem_max_iters` counts Anderson iterations, so a subproblem runs `n·p` sweeps.
   - Tests: `python -m unittest python.tools.sim.gpu.vbd.aasolver`.
 
 **CUDA graph capture.** `ui.py` records one `wp.ScopedCapture` of `substeps × (setup → solve → step)` and replays it. That means `solve()` on a capturable solver must:

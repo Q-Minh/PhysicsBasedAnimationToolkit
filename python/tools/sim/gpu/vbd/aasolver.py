@@ -264,19 +264,27 @@ def solve_subproblem(
     contact: ContactDynamics,
     params: AndersonParams,
 ):
+    """Run ``n_subproblem_max_iters`` Anderson iterations on the current subproblem.
+
+    The accelerated fixed-point map ``g`` is ``vbd_iters_per_anderson_iter`` consecutive VBD
+    sweeps (each preceded by a slack dual update, as in the plain VBD subproblem loop), so the
+    subproblem runs ``n_subproblem_max_iters * vbd_iters_per_anderson_iter`` sweeps in total.
+    """
     n_subproblem_max_iters = params.data.n_subproblem_max_iters
+    n_vbd_iters = params.vbd_iters_per_anderson_iter
     x = fem.data.x
     n_nodes = x.shape[0]
 
     def _vbd_iterate():
-        contact.update_dual(
-            fem.data.x,
-            fem.xt,
-            request_slack_update=True,
-            request_decay_update=False,
-            request_lagrange_multiplier_update=False,
-        )
-        iterate(fem, contact, params)
+        for _ in range(n_vbd_iters):
+            contact.update_dual(
+                fem.data.x,
+                fem.xt,
+                request_slack_update=True,
+                request_decay_update=False,
+                request_lagrange_multiplier_update=False,
+            )
+            iterate(fem, contact, params)
 
     Xk = params.Xk
     Fk = params.Fk
