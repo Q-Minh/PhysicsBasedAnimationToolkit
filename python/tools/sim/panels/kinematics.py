@@ -1,4 +1,12 @@
-"""GUI panel for kinematic constraints: list, toggle and highlight the constraints loaded from the Dump."""
+"""
+GUI panel for kinematic constraints (see gpu/kinematics/constraints.py).
+
+Lists the constraints loaded with the problem (from a Dump's kinematics group, its dmask, or a scene's
+transform library and static colliders) with their kind, time window and parameters, and marks those
+active at the current device time step. A checkbox per constraint enables or disables it on the device
+(no recapture). Nodes can be shown per constraint, and all currently constrained nodes highlighted, as
+Polyscope point clouds that follow the deforming mesh. Constraints are authored in the CPU editor, not here.
+"""
 
 import numpy as np
 import polyscope as ps
@@ -34,6 +42,15 @@ def _remove_cloud(name: str):
 
 
 def draw_kinematics_panel(state, ui_state):
+    """Draw the kinematic constraints tree node and update the node point clouds.
+
+    Reads the device step and, when point clouds are shown, the positions (and dmask), so it syncs with the
+    device once per frame.
+
+    Args:
+        state: The `state.SimulationState`.
+        ui_state: The `ui.UIState` (unused).
+    """
     kcs = state.kinematics
     constraints = state.kinematic_constraints
     x = None

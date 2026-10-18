@@ -111,8 +111,15 @@ def load_scene(path: str) -> tuple[
 def load_problem(
     fem_spec: str | None = None, scene: str | None = None
 ) -> tuple[pbat.sim.dynamics.FemElastoDynamics, tuple, pbat.sim.contact.MultiMesh | None]:
-    """Load the FEM problem, its kinematic constraints and its contact surface (None for the tetrahedral
-    mesh boundary) from either an editor Dump's FEM group (``file.h5:fem``) or a CPU editor scene file."""
+    """Load the FEM problem, its kinematic constraints and its contact surface from either an editor Dump's
+    FEM group (``file.h5:fem``) or a CPU editor scene file. This is what ui.py and simulate.py do for
+    ``--fem-elasto-dynamics`` and ``--scene``.
+
+    Returns:
+        ``(fem, kinematics, contact_mesh)``, to pass on as ``SimulationState(fem, params, kinematics,
+        contact_mesh)``. ``kinematics`` is ``(constraints, t0, anchors)`` (see load_kinematic_constraints).
+        ``contact_mesh`` is None (the tetrahedral mesh boundary) unless a scene has static colliders.
+    """
     if (fem_spec is None) == (scene is None):
         raise ValueError("Pass exactly one of fem_spec and scene")
     if scene is not None:

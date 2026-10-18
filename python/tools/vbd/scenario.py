@@ -144,6 +144,8 @@ def make_contact_dynamics_object(
     vert_counts: list[int],
     static_mesh_colliders: list[StaticMeshCollider],
 ):
+    """Build the CPU contact problem: each body's boundary as dynamic geometry (one component per body),
+    and the static colliders' triangles as static geometry."""
     contact_dynamics = pbat.sim.contact.MeshDynamics()
     XCC = np.concatenate([np.full(nverts, b) for b, nverts in enumerate(vert_counts)])
     contact_meshes = pbat.sim.contact.MultiMesh()
@@ -210,6 +212,12 @@ def read_scene(path: str) -> tuple[
 
 
 def load_simulation_scenario_from_scene(path: str):
+    """Load a scene file into the CPU simulation objects.
+
+    Returns:
+        The FEM problem, the CPU contact problem, the transform library (synced to the body names), the
+        body names and the `|# bodies| + 1` node offsets of the bodies.
+    """
     try:
         tet_elastic_bodies, static_mesh_colliders, transform_library, tet_elastic_body_names = (
             read_scene(path)

@@ -1,24 +1,32 @@
 # type: ignore
+"""
+Procedural Dirichlet constraints of the CPU editor and offline simulator ("transforms").
+
+A `PrimitiveTransform` prescribes the motion of Dirichlet nodes, per mesh, during the time window
+[begin, begin + duration) in seconds. A `TransformLibrary` holds the transforms of a scene in order. Kinds
+(`TransformType`):
+
+- `FIXED`: hold the nodes.
+- `TRANSLATE`: move along the unit `direction` at `speed` units/s.
+- `G_ROTATE`: rotate about the unit `axis` through the world origin at `degrees_per_second`.
+- `L_ROTATE`: the same about `origin`. The editor resets `origin` to its nodes' centroid whenever it
+  redraws the transform (after loading or editing). The offline simulator uses the stored value.
+- `L_TRANSLATE`: move each node radially away from `origin`, in the xy-plane, at `speed` units/s
+  (scenes authored before this was per-node: see `migrate_l_translate.py`).
+
+`TransformLibrary.evaluate` gives each step's prescribed positions and velocities in closed form. Nodes are
+anchored when their constrained run starts, and overlapping transforms compose in library order, so a
+motion followed by a longer `FIXED` reads as "move, then hold". The editor and `simulate.py` write these into
+the FEM state every step. The GPU simulator's `gpu/kinematics` implements the same semantics.
+`TransformLibrary.export_kinematic_constraints` writes the library into the editor Dump's `kinematics` group
+for it.
+"""
+
 import h5py
 import numpy as np
 from enum import Enum
 import polyscope as ps
 import polyscope.imgui as imgui
-
-"""
-primitive operations
-all primitives require:
-- 1 interval of time (begin + duration in seconds)
-- list of target dirichlet groups
-
-available primitives:
-- rotate about x, y, z
-- revolution (ie rotation about com)
-    -> axis, rev per second
-- translation 
-    -> direction, speed
-- implicit: empty (do nothing)
-"""
 
 
 def _rotate_closed_form(
@@ -52,6 +60,8 @@ def _rotate_closed_form(
 
 
 class TransformType(Enum):
+    """Kind of a PrimitiveTransform. Stored as its value in scene files, so values must not change."""
+
     G_ROTATE = 0
     L_ROTATE = 1
     TRANSLATE = 2
@@ -60,6 +70,12 @@ class TransformType(Enum):
 
 
 class PrimitiveTransform:
+    """Prescribed motion of a node group (per mesh) during [begin, begin + duration) seconds.
+
+    Subclasses implement `closed_form`, the transform after it has been active for a given time, and
+    their own (de)serialization and editor widgets.
+    """
+
     name: str
     begin: float
     duration: float
@@ -478,6 +494,12 @@ class FixedTransform(PrimitiveTransform):
 
 
 class TransformLibrary:
+    """Ordered transforms of a scene, plus the per-mesh anchors of constrained nodes.
+
+    The order is the composition order of overlapping transforms. Mesh names map the transforms' node
+    lists onto bodies; `sync_mesh_names` aligns them with a scene's bodies.
+    """
+
     transforms: list[PrimitiveTransform]
     _recycled_indices: list[int]
     _current_transform_index: int
