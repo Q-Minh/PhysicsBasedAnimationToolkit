@@ -7,8 +7,6 @@ Usage:
 """
 
 import argparse
-import inspect
-import enum
 import h5py
 import tkinter as tk
 from tkinter import filedialog
@@ -18,6 +16,7 @@ import polyscope.imgui as imgui
 from pbatoolkit import pbat
 import numpy as np
 from . import gpu
+from .panels.common import draw_params, try_draw_tooltip
 from .state import (
     SimulationState,
     SolverType,
@@ -32,62 +31,6 @@ from .state import (
     serialize_params,
     deserialize_params,
 )
-
-
-def try_draw_tooltip(obj, name):
-    if imgui.IsItemHovered():
-        imgui.BeginTooltip()
-        imgui.SetTooltip(getattr(type(obj), name, "").__doc__ or "")
-        imgui.EndTooltip()
-
-
-def draw_params(obj, sub_params: dict | None = None, _depth=0):
-    for name, value in inspect.getmembers(obj):
-        if name.startswith("_"):
-            continue
-        if (
-            isinstance(getattr(type(obj), name, None), property)
-            and getattr(type(obj), name).fset is None
-        ):
-            continue
-        if value is None or callable(value):
-            continue
-        if isinstance(value, float):
-            _, new_value = imgui.InputFloat(name, value, format="%.6f")
-            try_draw_tooltip(obj, name)
-            setattr(obj, name, new_value)
-        elif isinstance(value, bool):
-            _, new_value = imgui.Checkbox(name, value)
-            try_draw_tooltip(obj, name)
-            setattr(obj, name, new_value)
-        elif isinstance(value, int):
-            _, new_value = imgui.InputInt(name, value)
-            try_draw_tooltip(obj, name)
-            setattr(obj, name, new_value)
-        elif isinstance(value, enum.Enum):
-            enum_values = list(type(value))
-            selected_idx = enum_values.index(value)
-            _, selected_idx = imgui.Combo(
-                name, selected_idx, [ev.name for ev in enum_values]
-            )
-            try_draw_tooltip(obj, name)
-            setattr(obj, name, enum_values[selected_idx])
-        elif sub_params is None and _depth < 4 and not isinstance(value, np.ndarray):
-            if imgui.TreeNode(name):
-                imgui.PushID(name)
-                draw_params(value, None, _depth + 1)
-                imgui.PopID()
-                imgui.TreePop()
-    if sub_params:
-        for sub_name, nested_sub_params in sub_params.items():
-            sub_value = getattr(obj, sub_name, None)
-            if sub_value is None:
-                continue
-            if imgui.TreeNode(sub_name):
-                imgui.PushID(sub_name)
-                draw_params(sub_value, nested_sub_params or None, _depth + 1)
-                imgui.PopID()
-                imgui.TreePop()
 
 
 SOLVER_SUB_PARAMS: dict[SolverType, dict] = {
@@ -279,6 +222,10 @@ def make_callback(
                             ui_state.serialization_h5 = None
                             ui_state.serialization_path = None
                     imgui.TreePop()
+
+                # --- Feature panels ---
+                # One draw_<feature>_panel(state, ui_state) call per feature, implemented in
+                # python/tools/sim/panels/<feature>.py (see panels/__init__.py).
 
                 # --- Simulation controls ---
                 imgui.Separator()
