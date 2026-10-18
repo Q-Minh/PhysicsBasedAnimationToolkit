@@ -182,17 +182,20 @@ def main():
     t_last_flush = time.perf_counter()
     t_start = t_last_flush
     pbar = None
+    measuring = False
     try:
         _write_frame(h5f, state, frame)
         frame += 1
         while state.t < n_steps:
             profile_step = recorder is not None and state.t >= args.profile_warmup
-            if profile_step and not profiling.is_enabled():
+            if profile_step and not measuring:
                 # Warm-up steps run unprofiled (with graph capture, when supported). Profiling, and an
                 # attached profiler's capture range (nsys --capture-range=cudaProfilerApi), start here.
+                # Production runs open the capture range too, for graph-mode nsys traces.
                 profiling.set_backend(backend)
-                if backend == profiling.Backend.NVTX:
+                if backend != profiling.Backend.KERNELS:
                     wp.cuda_profiler_start()
+                measuring = True
             if profile_step:
                 profiling.begin_step()
                 wp.get_stream().record_event(step_events[0])
@@ -221,7 +224,7 @@ def main():
     except KeyboardInterrupt:
         print("Interrupted, closing output file.")
     finally:
-        if profiling.get_backend() == profiling.Backend.NVTX:
+        if measuring and backend != profiling.Backend.KERNELS:
             wp.cuda_profiler_stop()
         if pbar is not None:
             pbar.close()
