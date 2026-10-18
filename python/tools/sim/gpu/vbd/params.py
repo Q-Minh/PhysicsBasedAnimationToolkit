@@ -72,7 +72,7 @@ class ParamsData:
     betaR: wp.float32  # Rayleigh damping coefficient
 
     # --- Vertex linear solver ---
-    hess_zero: wp.float32  # Hessian determinant zero threshold
+    hess_zero: wp.float32  # pseudo-singularity tolerance relative to H's scale (see kernels.integrate_positions)
     vls_eps: wp.float32  # vertex solver epsilon
     vls_max_iters: wp.int32  # max vertex linear solver iterations
     vls_solver: wp.int32  # vertex linear solver type
