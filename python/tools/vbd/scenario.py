@@ -167,8 +167,9 @@ def load_simulation_scenario_from_scene(path: str):
                 body.deserialize(body_grp, headless=True)
                 tet_elastic_bodies.append(body)
 
-            grp = f["static_mesh_colliders"]
-            num_static_meshes = grp.attrs["num_static_mesh_colliders"]
+            # Scenes saved without colliders may lack the group altogether
+            grp = f.get("static_mesh_colliders", None)
+            num_static_meshes = 0 if grp is None else grp.attrs["num_static_mesh_colliders"]
             for b in range(num_static_meshes):
                 body_grp = grp[f"{b}"]
                 body = StaticMeshCollider()
