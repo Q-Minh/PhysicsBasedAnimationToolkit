@@ -417,7 +417,7 @@ class TranslateTransform(PrimitiveTransform):
 
 
 class LocalTranslateTransform(PrimitiveTransform):
-    """Translate all vertices away from point of origin"""
+    """Translate each vertex radially away from origin, in the xy-plane, at `speed` units per second"""
 
     origin: np.ndarray
     speed: float
@@ -455,8 +455,14 @@ class LocalTranslateTransform(PrimitiveTransform):
         distance = self.speed * dt
         translation_vector = V - self.origin[:, np.newaxis]
         translation_vector[2] = 0
-        translation_vector = (
-            translation_vector / np.linalg.norm(translation_vector) * distance
+        # Each node moves along its own radial direction in the xy-plane. Nodes on
+        # the axis through origin have no radial direction and stay put.
+        radius = np.linalg.norm(translation_vector, axis=0)
+        translation_vector = np.divide(
+            translation_vector * distance,
+            radius,
+            out=np.zeros_like(translation_vector, dtype=float),
+            where=radius > 0,
         )
         # Apply translation
         V_translated = V + translation_vector
