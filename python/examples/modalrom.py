@@ -9,6 +9,8 @@ import polyscope.imgui as imgui
 import time
 import meshio
 import argparse
+import os
+import rom_mcmc
 
 
 def mass(
@@ -166,6 +168,7 @@ def vibration_modes(
 def modal_derivatives(
     x: np.ndarray,
     Ured: np.ndarray,
+    w: np.ndarray,
     Mred: scipy.sparse.dia_array,
     Keqred: scipy.sparse.csr_matrix,
     h: float,
@@ -177,12 +180,12 @@ def modal_derivatives(
     Args:
         x (np.ndarray): 3*|# nodes| array of node positions in F order
         Ured (np.ndarray): |# free dofs| x |# modes| array of vibration modes
+        w (np.ndarray): |# modes| array of vibration mode frequencies
         Mred (scipy.sparse.csr_matrix): |# free dofs| x |# free dofs| mass matrix
         Keqred (scipy.sparse.csr_matrix): |# free dofs| x |# free dofs| stiffness matrix
         h (float): step size for finite difference
         freedofs (np.ndarray): array of free dofs
         compute_stiffness (typing.Callable[[np.ndarray], scipy.sparse.csr_matrix]): function to compute stiffness matrix
-        symmetrize (bool, optional): whether to symmetrize the quadratic manifold. Defaults to True.
 
     Returns:
         np.ndarray: The quadratic manifold rank-3 tensor
@@ -216,7 +219,7 @@ def modal_derivatives(
             xright[freedofs] = x[freedofs] + h * Ured[:, j]
             Kleft = compute_stiffness(xleft)
             Kright = compute_stiffness(xright)
-            dKdetaj = (Kright - Kleft) / h
+            dKdetaj = (Kright - Kleft) / (2 * h)
             dKdetajred = dKdetaj.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
             b[:-1, 0] = -dKdetajred @ Ured[:, i]
             # If Eigen LDLT
@@ -225,6 +228,55 @@ def modal_derivatives(
             # thetaij = Ainv(b).squeeze()[:-1]
             Q[:, i, j] = thetaij
     return Q
+
+
+def m_orthogonal_complement(V: np.ndarray, B: np.ndarray, m: np.ndarray):
+    """Projects the columns of V M-orthogonally off span(B).
+
+    Args:
+        V (np.ndarray): n x k array of vectors to project.
+        B (np.ndarray): n x m basis, not necessarily M-orthonormal.
+        m (np.ndarray): n diagonal of the (lumped) mass matrix M.
+
+    Returns:
+        np.ndarray: V - B (B^T M B)^{-1} B^T M V
+    """
+    MB = m[:, np.newaxis] * B
+    return V - B @ np.linalg.solve(B.T @ MB, MB.T @ V)
+
+
+def elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element, order=1):
+    """Returns potential(x, gradient=False) evaluating the total hyper-elastic energy at positions x.
+
+    Args:
+        x (np.ndarray): 3*|# nodes| array of node positions in F order
+        gradient (bool): if True, also return the 3*|# nodes| energy gradient
+
+    Returns:
+        float | Tuple[float, np.ndarray]: The energy, and its gradient if requested
+    """
+    flags = pbat.fem.ElementElasticityComputationFlags.Potential
+    flags_grad = flags | pbat.fem.ElementElasticityComputationFlags.Gradient
+
+    def potential(x: np.ndarray, gradient: bool = False):
+        U, gradU, _ = pbat.fem.hyper_elastic_potential(
+            E=E,
+            n_nodes=X.shape[1],
+            eg=np.ravel(egU),
+            wg=np.ravel(wgU),
+            GNeg=GNegU,
+            mug=np.ravel(mug),
+            lambdag=np.ravel(lambdag),
+            x=np.asarray(x, dtype=np.float32),
+            energy=energy,
+            flags=flags_grad if gradient else flags,
+            element=element,
+            order=order,
+            dims=X.shape[0],
+        )
+        return (U, gradU.astype(np.float64)) if gradient else U
+
+    return potential
 
 
 def signal(w: float, t: float, c: float, k: float):
@@ -237,6 +289,163 @@ def linear_map(U: np.ndarray, q: np.ndarray):
 
 def quadratic_map(U: np.ndarray, Q: np.ndarray, q: np.ndarray):
     return U @ q + 0.5 * np.einsum("nij,i,j->n", Q, q, q)
+
+
+def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
+    """Loads a tetrahedral mesh, or an FemElastoDynamics from an HDF5 archive.
+
+    Args:
+        input (str): Path to a tetrahedral mesh, or filepath:h5path of an FemElastoDynamics.
+        rho (float): Mass density (mesh input only).
+        Y (float): Young's modulus (mesh input only).
+        nu (float): Poisson's ratio (mesh input only).
+        element (pbat.fem.Element): Element type.
+        energy (pbat.fem.HyperElasticEnergy): Hyper-elastic energy model.
+
+    Returns:
+        Tuple: (E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs), with M the lumped mass matrix.
+    """
+    file_path, sep, group_path = str(input).rpartition(":")
+    if sep and file_path and not (len(file_path) == 1 and file_path.isalpha()):
+        import gc
+
+        archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
+        fem = pbat.sim.dynamics.FemElastoDynamics()
+        fem.deserialize(archive[group_path] if group_path else "/")
+        archive = None
+        gc.collect()
+        n = fem.X.shape[0] * fem.X.shape[1]
+        E = fem.E
+        X = fem.X
+        M = scipy.sparse.diags_array(fem.M(), shape=(n, n))
+        egU, wgU, GNegU, mug, lambdag = (
+            fem.egU,
+            fem.wgU,
+            fem.GNegU,
+            fem.lamegU[0, :],
+            fem.lamegU[1, :],
+        )
+        freedofs = fem.free_dofs
+    else:
+        imesh = meshio.read(input)
+        V, C = imesh.points, imesh.cells_dict["tetra"]
+        X, E = pbat.fem.mesh(V.T, C.T, element=element)
+        n = X.shape[0] * X.shape[1]
+        Ye = np.full(E.shape[1], Y)
+        nue = np.full(E.shape[1], nu)
+        rhoe = np.full(E.shape[1], rho)
+        M = mass(E, X, element, rhoe)
+        M = scipy.sparse.diags_array(M.sum(axis=1), shape=(n, n))
+        egU, wgU, GNegU, mug, lambdag = potential(E, X, element, Ye, nue)
+        freedofs = np.arange(n)
+    return E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs
+
+
+def build_rom(
+    E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs, energy, element, modes, eps
+):
+    """Computes vibration modes, modal derivatives and the augmented linear basis.
+
+    Modal derivatives are projected M-orthogonally off the span of the vibration modes.
+
+    Returns:
+        Tuple: (w, U, Q, Z, ws), with w the |# modes| mode frequencies, U the n x |# modes|
+        vibration modes, Q the n x |# modes| x |# modes| symmetric quadratic manifold tensor,
+        Z the n x |# derivative modes| augmented basis and ws the frequencies of [U Z].
+    """
+    n = X.shape[0] * X.shape[1]
+    nfree = len(freedofs)
+    mu = int(modes)
+    Keq = stiffness(
+        E, X, egU, wgU, GNegU, mug, lambdag, np.ravel(X, order="F"), energy, element
+    )
+    Mred = scipy.sparse.diags_array(M.diagonal()[freedofs], shape=(nfree, nfree))
+    Keqred = Keq.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
+    w, Ured = vibration_modes(Mred, Keqred, modes=modes)
+    U = np.zeros((n, mu), dtype=Ured.dtype)
+    U[freedofs, :] = Ured
+    Xmax, Xmin = np.max(X, axis=1), np.min(X, axis=1)
+    bbdiag = np.linalg.norm(Xmax - Xmin)
+    h = eps * bbdiag
+    Theta = modal_derivatives(
+        X.flatten(order="F"),
+        Ured,
+        w,
+        Mred,
+        Keqred,
+        h,
+        freedofs,
+        lambda x: stiffness(E, X, egU, wgU, GNegU, mug, lambdag, x, energy, element),
+    )
+    # Project out linear basis from modal derivatives. Without this, near-degenerate
+    # mode pairs (w_i ~ w_j) make Theta blow up along their partner modes.
+    Theta = m_orthogonal_complement(
+        Theta.reshape(n, -1), U, M.diagonal().astype(Theta.dtype)
+    ).reshape(n, mu, mu)
+    # Compute rank-3 quadratic manifold tensor
+    Q = (Theta + Theta.transpose(0, 2, 1)) / 2
+    # Compute augmented linear basis
+    Thetared = Theta.reshape(n, -1)[freedofs, :]
+    Mredsqrt = scipy.sparse.diags_array(
+        np.sqrt(M.diagonal()[freedofs]), shape=(nfree, nfree)
+    )
+    Mredinvsqrt = scipy.sparse.diags_array(
+        1.0 / Mredsqrt.diagonal(), shape=(nfree, nfree)
+    )
+    # Compute M-orthogonal SVD
+    Zredhat, s2, _ = np.linalg.svd(
+        Mredsqrt @ Thetared, full_matrices=False, compute_uv=True
+    )
+    # Undo the M-norm on the SVD basis
+    Zred = Mredinvsqrt @ Zredhat
+    tau = h
+    mz = np.argmax(s2 < tau) if s2[-1] < tau else s2.shape[0]
+    Zred = Zred[:, :mz]
+    s = np.sqrt(s2)
+    ws = np.hstack([w, s[:mz]])
+    Z = np.zeros((n, mz), dtype=Zred.dtype)
+    Z[freedofs, :] = Zred
+    return w, U, Q, Z, ws
+
+
+def reduced_model(
+    mapping: str,
+    U: np.ndarray,
+    Q: np.ndarray,
+    w: np.ndarray,
+    m: np.ndarray,
+    x0: np.ndarray,
+    potential: typing.Callable,
+    rigid: int,
+    weight: str,
+):
+    """Builds the reduced model to sample on, excluding the first `rigid` (zero-frequency) modes.
+
+    Args:
+        mapping (str): "quadratic" for u = U q + 1/2 Q:qq, "linear" for u = U q.
+        U (np.ndarray): n x |# modes| vibration modes.
+        Q (np.ndarray): n x |# modes| x |# modes| quadratic manifold tensor.
+        w (np.ndarray): |# modes| mode frequencies.
+        m (np.ndarray): n lumped mass matrix diagonal.
+        x0 (np.ndarray): n rest positions in F order.
+        potential (typing.Callable): Full-space energy, see elastic_energy.
+        rigid (int): Number of leading rigid modes to exclude.
+        weight (str): Sampling weight, see rom_mcmc.WEIGHTS.
+
+    Returns:
+        Tuple[rom_mcmc.QuadraticManifold, np.ndarray]: The model and its mode frequencies.
+    """
+    keep = np.arange(rigid, U.shape[1])
+    Ur = U[:, keep].astype(np.float64)
+    Qr = Q[:, keep][:, :, keep].astype(np.float64) if mapping == "quadratic" else None
+    m = m.astype(np.float64)
+    # Whitening: the linearized energy 1/2 q^T U^T K U q = 1/2 sum_i w_i^2 (U_i^T M U_i) q_i^2
+    mi = np.einsum("ni,n,ni->i", Ur, m, Ur)
+    scale = 1.0 / (w[keep] * np.sqrt(mi))
+    model = rom_mcmc.QuadraticManifold(
+        Ur, Qr, m, x0.astype(np.float64), potential, scale, weight
+    )
+    return model, w[keep]
 
 
 if __name__ == "__main__":
@@ -292,94 +501,147 @@ if __name__ == "__main__":
         dest="eps",
         default=1e-3,
     )
+    parser.add_argument(
+        "--headless",
+        help="Sample without the GUI and write the samples to --output",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Output HDF5 file for --headless sampling",
+        type=str,
+        dest="output",
+    )
+    parser.add_argument(
+        "--energy",
+        help="Target deformation energy E* in J",
+        type=float,
+        dest="energy",
+        default=1.0,
+    )
+    parser.add_argument(
+        "--samples",
+        help="Number of samples",
+        type=int,
+        dest="samples",
+        default=100,
+    )
+    parser.add_argument(
+        "--sampler",
+        help="polar: Metropolis on directions with exact radial solves, "
+        "crw: constrained random walk with projection, "
+        "ray: independent random directions (not distributed as the target)",
+        choices=tuple(rom_mcmc.SAMPLERS),
+        default="polar",
+    )
+    parser.add_argument(
+        "--weight",
+        help="Target distribution on the energy level set (see rom_mcmc)",
+        choices=rom_mcmc.WEIGHTS,
+        default="mass",
+    )
+    parser.add_argument(
+        "--mapping",
+        help="Reduced displacement map to sample on",
+        choices=("quadratic", "linear"),
+        default="quadratic",
+    )
+    parser.add_argument(
+        "--burn-in",
+        help="Number of burn-in steps, during which the step size adapts",
+        type=int,
+        dest="burn_in",
+        default=1000,
+    )
+    parser.add_argument(
+        "--pilot",
+        help="Number of steps used to estimate the autocorrelation time for automatic thinning",
+        type=int,
+        dest="pilot",
+        default=1000,
+    )
+    parser.add_argument(
+        "--thin",
+        help="Keep every thin-th step. Defaults to the estimated autocorrelation time.",
+        type=int,
+        dest="thin",
+        default=None,
+    )
+    parser.add_argument(
+        "--seed",
+        help="Random seed",
+        type=int,
+        dest="seed",
+        default=0,
+    )
     args = parser.parse_args()
+    if args.headless and not args.output:
+        parser.error("--headless requires --output")
 
-    input_tokens = str(args.input).split(":")
     element = pbat.fem.Element.Tetrahedron
     energy = pbat.fem.HyperElasticEnergy.StableNeoHookean
-    if len(input_tokens) == 2:
-        import gc
-
-        file_path, group_path = input_tokens[0], input_tokens[1]
-        archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
-        fem = pbat.sim.dynamics.FemElastoDynamics()
-        fem.deserialize(archive[group_path] if group_path else "/")
-        archive = None
-        gc.collect()
-        n = fem.X.shape[0] * fem.X.shape[1]
-        E = fem.E
-        X = fem.X
-        M = scipy.sparse.diags_array(fem.M(), shape=(n, n))
-        egU, wgU, GNegU, mug, lambdag = (
-            fem.egU,
-            fem.wgU,
-            fem.GNegU,
-            fem.lamegU[0, :],
-            fem.lamegU[1, :],
-        )
-        freedofs = fem.free_dofs
-    else:
-        imesh = meshio.read(args.input)
-        V, C = imesh.points, imesh.cells_dict["tetra"]
-        X, E = pbat.fem.mesh(V.T, C.T, element=element)
-        n = X.shape[0] * X.shape[1]
-        Ye = np.full(E.shape[1], args.Y)
-        nue = np.full(E.shape[1], args.nu)
-        rhoe = np.full(E.shape[1], args.rho)
-        M = mass(E, X, element, rhoe)
-        M = scipy.sparse.diags_array(M.sum(axis=1), shape=(n, n))
-        egU, wgU, GNegU, mug, lambdag = potential(E, X, element, Ye, nue)
-        freedofs = np.arange(n)
-
+    E, X, M, egU, wgU, GNegU, mug, lambdag, freedofs = load_model(
+        args.input, args.rho, args.Y, args.nu, element, energy
+    )
     n = X.shape[0] * X.shape[1]
-    nfree = len(freedofs)
     mu = int(args.modes)
-    Keq = stiffness(
-        E, X, egU, wgU, GNegU, mug, lambdag, np.ravel(X, order="F"), energy, element
-    )
-    Mred = scipy.sparse.diags_array(M.diagonal()[freedofs], shape=(nfree, nfree))
-    Keqred = Keq.tocsr()[freedofs, :].tocsc()[:, freedofs].tocsr()
-    w, Ured = vibration_modes(Mred, Keqred, modes=args.modes)
-    U = np.zeros((n, mu), dtype=Ured.dtype)
-    U[freedofs, :] = Ured
-    Xmax, Xmin = np.max(X, axis=1), np.min(X, axis=1)
-    bbdiag = np.linalg.norm(Xmax - Xmin)
-    h = args.eps * bbdiag
-    Theta = modal_derivatives(
-        X.flatten(order="F"),
-        Ured,
-        Mred,
-        Keqred,
-        h,
+    w, U, Q, Z, ws = build_rom(
+        E,
+        X,
+        M,
+        egU,
+        wgU,
+        GNegU,
+        mug,
+        lambdag,
         freedofs,
-        lambda x: stiffness(E, X, egU, wgU, GNegU, mug, lambdag, x, energy, element),
+        energy,
+        element,
+        args.modes,
+        args.eps,
     )
-    # Compute rank-3 quadratic manifold tensor
-    Q = (Theta + Theta.transpose(0, 2, 1)) / 2
-    # Compute augmented linear basis
-    Thetared = Theta.reshape(n, -1)[freedofs, :]
-    # Project out linear basis from modal derivatives
-    Mredsqrt = scipy.sparse.diags_array(
-        np.sqrt(M.diagonal()[freedofs]), shape=(nfree, nfree)
-    )
-    Mredinvsqrt = scipy.sparse.diags_array(
-        1.0 / Mredsqrt.diagonal(), shape=(nfree, nfree)
-    )
-    Thetared = np.eye(nfree) @ Thetared - Ured @ (Ured.T @ (Mred @ Thetared))
-    # Compute M-orthogonal SVD
-    Zredhat, s2, _ = np.linalg.svd(
-        Mredsqrt @ Thetared, full_matrices=False, compute_uv=True
-    )
-    # Undo the M-norm on the SVD basis
-    Zred = Mredinvsqrt @ Zredhat
-    tau = h
-    mz = np.argmax(s2 < tau) if s2[-1] < tau else s2.shape[0]
-    Zred = Zred[:, :mz]
-    s = np.sqrt(s2)
-    ws = np.hstack([w, s[:mz]])
-    Z = np.zeros((n, mz), dtype=Zred.dtype)
-    Z[freedofs, :] = Zred
+    mz = Z.shape[1]
     UZ = np.hstack([U, Z])
+    x0 = X.flatten(order="F")
+    psi = elastic_energy(E, X, egU, wgU, GNegU, mug, lambdag, energy, element)
+    # Without Dirichlet constraints, the 6 lowest modes are rigid and the energy level set is unbounded along them
+    rigid = 6 if len(freedofs) == n else 0
+
+    def make_model(mapping: str):
+        return reduced_model(
+            mapping, U, Q, w, M.diagonal(), x0, psi, rigid, args.weight
+        )
+
+    if args.headless:
+        model, wr = make_model(args.mapping)
+        rng = np.random.default_rng(args.seed)
+        sampler = rom_mcmc.make_sampler(args.sampler, model, args.energy, rng)
+        t0 = time.time()
+        batch = rom_mcmc.run_chain(
+            sampler, args.samples, args.burn_in, args.pilot, args.thin
+        )
+        elapsed = time.time() - t0
+        attrs = dict(
+            input=args.input,
+            n_linear_modes=mu,
+            rigid_modes_excluded=rigid,
+            modal_derivatives=args.mapping == "quadratic",
+            eps=args.eps,
+            sampler=args.sampler,
+            target_energy=args.energy,
+            seed=args.seed,
+            git_commit=rom_mcmc.git_commit(os.path.dirname(os.path.abspath(__file__))),
+            sampling_time=elapsed,
+        )
+        rom_mcmc.write_samples(args.output, X, model, wr, batch, attrs)
+        s = batch.stats
+        print(
+            f"Wrote {args.samples} samples to {args.output} in {elapsed:.1f} s: "
+            f"acceptance={s['acceptance']:.2f}, thin={s['thin']}, tau={s['tau']:.1f}, "
+            f"ESS={s['ess']:.0f}, star violations={s['star_violations']}"
+        )
+        raise SystemExit(0)
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
@@ -395,9 +657,24 @@ if __name__ == "__main__":
     t = 0
     c = 0.15
     k = 0.05
+    # Fixed-energy sampling state. The chain restarts whenever its settings change.
+    samplers = list(rom_mcmc.SAMPLERS)
+    sampler_kind = samplers[0]
+    target_energy = args.energy
+    samples_per_click = 10
+    show_samples = False
+    chain = None
+    chain_key = None
+    model = None
+    samples = []
+    sample_idx = 0
+    stats = {}
+    rng = np.random.default_rng(args.seed)
 
     def callback():
         global mode, c, k, q, mapping
+        global sampler_kind, target_energy, samples_per_click, show_samples
+        global chain, chain_key, model, samples, sample_idx, stats
         changed, map_idx = imgui.Combo("Mapping", mappings.index(mapping), mappings)
         mapping = mappings[map_idx]
         nrdofs = q.shape[0] if mapping == "Linear" else mu
@@ -412,15 +689,54 @@ if __name__ == "__main__":
         changed, c = imgui.InputFloat("Wave amplitude", c)
         changed, k = imgui.InputFloat("Wave frequency", k)
 
-        mode = max(0, min(nrdofs - 1, mode))
-        t = time.time() - t0
-        etam = signal(ws[mode], t, c, k)
-        q[:] = 0
-        q[mode] = etam
-        if mapping == "Quadratic":
-            u = quadratic_map(U, Q, q[:mu])
+        imgui.Separator()
+        imgui.Text("Fixed-energy sampling (Linear samples on U only)")
+        changed, target_energy = imgui.InputFloat("Energy E* (J)", target_energy)
+        target_energy = max(target_energy, 1e-8)
+        changed, sampler_idx = imgui.Combo(
+            "Sampler", samplers.index(sampler_kind), samplers
+        )
+        sampler_kind = samplers[sampler_idx]
+        changed, samples_per_click = imgui.InputInt(
+            "Samples per click", samples_per_click
+        )
+        samples_per_click = max(samples_per_click, 1)
+        if imgui.Button("Sample"):
+            key = (mapping, target_energy, sampler_kind)
+            if key != chain_key:
+                model, _ = make_model(mapping.lower())
+                chain = rom_mcmc.make_sampler(sampler_kind, model, target_energy, rng)
+                chain.burn_in(args.burn_in)
+                chain.estimate_thinning(args.pilot)
+                chain_key = key
+                samples = []
+            batch = chain.sample(samples_per_click)
+            stats = batch.stats
+            samples.extend(zip(batch.q, batch.energy))
+            sample_idx = len(samples) - 1
+            show_samples = True
+        if samples:
+            changed, show_samples = imgui.Checkbox("Show samples", show_samples)
+            changed, sample_idx = imgui.SliderInt(
+                "Sample", sample_idx, 0, len(samples) - 1
+            )
+            imgui.Text(
+                f"Energy {samples[sample_idx][1]:.6g} J, acceptance {stats['acceptance']:.2f}, "
+                f"thin {stats['thin']}, ESS {stats['ess']:.0f}, star violations {stats['star_violations']}"
+            )
+
+        if show_samples and samples:
+            u = model.displacement(samples[sample_idx][0])
         else:
-            u = linear_map(UZ, q)
+            mode = max(0, min(nrdofs - 1, mode))
+            t = time.time() - t0
+            etam = signal(ws[mode], t, c, k)
+            q[:] = 0
+            q[mode] = etam
+            if mapping == "Quadratic":
+                u = quadratic_map(U, Q, q[:mu])
+            else:
+                u = linear_map(UZ, q)
 
         V = X.T + u.reshape(X.shape[1], 3)
         vm.update_vertex_positions(V)
