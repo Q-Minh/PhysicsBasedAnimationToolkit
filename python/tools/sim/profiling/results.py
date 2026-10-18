@@ -1,7 +1,7 @@
 """
 Profiling result files: collection, JSON (de)serialization and text summaries.
 
-The same schema is written by ``simulate.py --profile kernels`` (Warp activity timing) and by the
+The same schema is written by ``simulate.py --profile kernels`` (CUPTI, in-process) and by the
 Nsight Systems importer, so reports can consume either. Layout::
 
     {
@@ -13,10 +13,12 @@ Nsight Systems importer, so reports can consume either. Layout::
          "busy_ms": {path: ms},        # GPU busy time per scope path, exclusive of nested scopes
          "launches": {path: n},        # timed activities per scope path
          "calls": {path: n},           # times each scope path was entered
-         "timeline_ms": {path: ms},    # optional diagnostic: scope GPU timeline, inclusive
-         "step_timeline_ms": ms}       # step GPU timeline from CUDA events around the step: a
-                                       # diagnostic for profiled (eager) runs, the measurement for
-                                       # production runs (graph replay, no per-phase timings)
+         "union_ms": {path: ms},       # union of activity intervals per path (no double-counting
+                                       # of concurrent streams)
+         "step_union_ms": ms,          # union over the whole step
+         "step_span_ms": ms,           # first activity start to last activity end
+         "step_timeline_ms": ms}       # production runs only (no per-phase timings): step GPU
+                                       # time from CUDA events around it, i.e. graph replay
       ],
       "kernels": [{"path": str, "name": str, "busy_ms": ms, "count": n}]  # summed over steps
     }
@@ -60,8 +62,9 @@ class ProfileRecorder:
                 "busy_ms": profile.busy_ms,
                 "launches": profile.launches,
                 "calls": profile.calls,
-                "timeline_ms": profile.timeline_ms,
-                "step_timeline_ms": profile.step_timeline_ms,
+                "union_ms": profile.union_ms,
+                "step_union_ms": profile.step_union_ms,
+                "step_span_ms": profile.step_span_ms,
             }
         )
         for key, (ms, count) in profile.kernels.items():
@@ -129,6 +132,9 @@ def format_summary(result: dict) -> str:
         for key, ms in rows:
             share = 100.0 * ms / total if total > 0.0 else 0.0
             lines.append(f"  {ms:10.4f} ms  {share:5.1f}%  {key or UNSCOPED}")
+    unions = [s["step_union_ms"] for s in result["steps"] if "step_union_ms" in s]
+    if unions:
+        lines.append(f"\nStep GPU busy time, union over streams: mean {np.mean(unions):.3f} ms/step")
     timelines = [s["step_timeline_ms"] for s in result["steps"] if "step_timeline_ms" in s]
     if timelines:
         execution = meta.get("execution", "eager")

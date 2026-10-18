@@ -9,11 +9,10 @@ Backends (see plans/02-profiling.md):
 
 - ``Backend.OFF`` (default): ``scope`` returns a shared no-op context manager. It performs no allocation
   and no device work, so it is safe inside CUDA graph capture.
-- ``Backend.KERNELS``: Warp activity timing records the GPU duration of every Warp kernel launch, memset
-  and memcpy. Each activity is attributed to the innermost scope that was open when it was launched,
-  giving per-scope GPU busy time. Scope boundaries are also bracketed with CUDA events on the current
-  stream, whose elapsed time (the scope's GPU timeline, including idle gaps) serves as a diagnostic for
-  work Warp does not time (e.g. ``cuda.compute`` and cupy kernels). Requires eager execution.
+- ``Backend.KERNELS``: CUPTI (``gpu/common/cupti.py``) records the GPU start and end of every kernel
+  (Warp, ``cuda.compute``/CUB, cupy), memset and memcpy. Each activity is attributed to the innermost
+  scope that was open when it was launched, through CUPTI external correlation ids, giving per-scope
+  GPU busy time with the same accuracy as Nsight Systems. Requires eager execution.
 - ``Backend.NVTX``: scopes emit NVTX ranges in the ``pbat`` domain, for Nsight Systems. Each profiled
   step is wrapped in a ``step`` range, so the importer (``python/tools/sim/profiling/nsys.py``) can
   tell measured steps from warm-up steps.
@@ -61,103 +60,113 @@ class StepProfile:
     """Number of times each scope path was entered (e.g. VBD sweeps per step)."""
     kernels: dict[tuple[str, str], tuple[float, int]]
     """(scope path, activity name) -> (GPU busy time in ms, count)."""
-    timeline_ms: dict[str, float]
-    """GPU timeline per scope path, inclusive of nested scopes, from CUDA events at scope boundaries.
-    Includes idle gaps where the GPU waits for the host, so it is only a diagnostic in eager mode."""
-    step_timeline_ms: float
-    """GPU timeline of the whole step, from CUDA events around it."""
+    union_ms: dict[str, float]
+    """Duration of the union of activity intervals per scope path, which does not double-count
+    activities running concurrently on several streams."""
+    step_union_ms: float
+    """Duration of the union of all activity intervals in the step."""
+    step_span_ms: float
+    """From the first activity's start to the last activity's end in the step."""
 
     @property
     def total_busy_ms(self) -> float:
         return sum(self.busy_ms.values())
 
 
+def interval_union_ns(intervals: list[tuple[int, int]]) -> int:
+    """Total length of the union of [start, end) intervals."""
+    total, current_start, current_end = 0, None, None
+    for start, end in sorted(intervals):
+        if current_end is None or start > current_end:
+            if current_end is not None:
+                total += current_end - current_start
+            current_start, current_end = start, end
+        else:
+            current_end = max(current_end, end)
+    if current_end is not None:
+        total += current_end - current_start
+    return total
+
+
 class _KernelRecorder:
-    """Attributes Warp activity timings to scope paths for ``Backend.KERNELS``."""
+    """Attributes CUPTI activity records to scope paths for ``Backend.KERNELS``."""
 
     def __init__(self):
+        self._collector = None
         self._stack: list[str] = []
-        self._path = ""
-        # (activity index at which the current path starts, path), in launch order
-        self._marks: list[tuple[int, str]] = []
-        # (path, start event index, end event index), one per closed scope instance
-        self._brackets: list[tuple[str, int, int]] = []
-        self._open: list[int] = []
-        self._events: list[wp.Event] = []
-        self._n_events = 0
+        self._path_ids: dict[str, int] = {}
+        self._calls: dict[str, int] = {}
         self._active = False
 
-    @staticmethod
-    def _activity_count() -> int:
-        # Warp has no public accessor for the number of activities recorded so far.
-        return wp._src.context.runtime.core.wp_cuda_timing_get_result_count()
+    def _push_path(self):
+        path = _PATH_SEPARATOR.join(self._stack)
+        # External ids start at 1, since 0 can't be told apart from "no id".
+        self._collector.push(self._path_ids.setdefault(path, len(self._path_ids) + 1))
+        return path
 
-    def _record_event(self) -> int:
-        if self._n_events == len(self._events):
-            self._events.append(wp.Event(enable_timing=True))
-        index = self._n_events
-        wp.get_stream().record_event(self._events[index])
-        self._n_events += 1
-        return index
+    def load(self):
+        """Load CUPTI (raises RuntimeError if it is not installed)."""
+        if self._collector is None:
+            from .cupti import ActivityCollector
 
-    def _set_path(self):
-        self._path = _PATH_SEPARATOR.join(self._stack)
-        self._marks.append((self._activity_count(), self._path))
+            self._collector = ActivityCollector()
 
     def begin_step(self):
+        self.load()
+        self._collector.enable()
+        wp.synchronize()
+        self._collector.flush()  # discard activity from before the step
         self._stack.clear()
-        self._marks.clear()
-        self._brackets.clear()
-        self._open.clear()
-        self._n_events = 0
-        wp.timing_begin(cuda_filter=wp.TIMING_ALL, synchronize=True)
+        self._calls.clear()
         self._active = True
-        self._set_path()
-        self._step_begin_event = self._record_event()
+        self._push_path()
 
     def end_step(self) -> StepProfile:
-        step_end_event = self._record_event()
-        activities = wp.timing_end(synchronize=True)
+        self._collector.pop()
         self._active = False
-        busy_ms: dict[str, float] = {}
-        launches: dict[str, int] = {}
+        wp.synchronize()
+        activities, external = self._collector.flush()
+        paths = {i: path for path, i in self._path_ids.items()}
+        intervals: dict[str, list[tuple[int, int]]] = {}
         kernels: dict[tuple[str, str], tuple[float, int]] = {}
-        bounds = [index for index, _ in self._marks[1:]] + [len(activities)]
-        for (begin, path), end in zip(self._marks, bounds):
-            for activity in activities[begin:end]:
-                busy_ms[path] = busy_ms.get(path, 0.0) + activity.elapsed
-                launches[path] = launches.get(path, 0) + 1
-                ms, count = kernels.get((path, activity.name), (0.0, 0))
-                kernels[(path, activity.name)] = (ms + activity.elapsed, count + 1)
-        timeline_ms: dict[str, float] = {}
-        calls: dict[str, int] = {}
-        for path, begin, end in self._brackets:
-            elapsed = wp.get_event_elapsed_time(
-                self._events[begin], self._events[end], synchronize=False
-            )
-            timeline_ms[path] = timeline_ms.get(path, 0.0) + elapsed
-            calls[path] = calls.get(path, 0) + 1
-        step_timeline_ms = wp.get_event_elapsed_time(
-            self._events[self._step_begin_event],
-            self._events[step_end_event],
-            synchronize=False,
+        for activity in activities:
+            path = paths.get(external.get(activity.correlation_id))
+            if path is None:
+                continue
+            intervals.setdefault(path, []).append((activity.start, activity.end))
+            ms, count = kernels.get((path, activity.name), (0.0, 0))
+            kernels[(path, activity.name)] = (ms + (activity.end - activity.start) * 1e-6, count + 1)
+        everything = [interval for per_path in intervals.values() for interval in per_path]
+        return StepProfile(
+            busy_ms={p: sum(e - s for s, e in iv) * 1e-6 for p, iv in intervals.items()},
+            launches={p: len(iv) for p, iv in intervals.items()},
+            calls=dict(self._calls),
+            kernels=kernels,
+            union_ms={p: interval_union_ns(iv) * 1e-6 for p, iv in intervals.items()},
+            step_union_ms=interval_union_ns(everything) * 1e-6,
+            step_span_ms=(
+                (max(e for _, e in everything) - min(s for s, _ in everything)) * 1e-6
+                if everything
+                else 0.0
+            ),
         )
-        return StepProfile(busy_ms, launches, calls, kernels, timeline_ms, step_timeline_ms)
+
+    def disable(self):
+        if self._collector is not None:
+            self._collector.disable()
 
     def push(self, name: str):
         if not self._active:
             return
         self._stack.append(name)
-        self._set_path()
-        self._open.append(self._record_event())
+        path = self._push_path()
+        self._calls[path] = self._calls.get(path, 0) + 1
 
     def pop(self):
         if not self._active:
             return
-        end = self._record_event()
-        self._brackets.append((self._path, self._open.pop(), end))
+        self._collector.pop()
         self._stack.pop()
-        self._set_path()
 
 
 _backend = Backend.OFF
@@ -167,6 +176,10 @@ _recorder = _KernelRecorder()
 def set_backend(backend: Backend):
     """Select the profiling backend. Call between steps, not while a step is being profiled."""
     global _backend
+    if backend is Backend.KERNELS:
+        _recorder.load()
+    elif _backend is Backend.KERNELS:
+        _recorder.disable()
     _backend = backend
 
 
@@ -303,8 +316,12 @@ class TestProfiling(unittest.TestCase):
         self.assertEqual(profile.launches, {"": 1, "outer": 2, "outer/inner": 2, "outer/inner.decorated": 1})
         self.assertGreater(profile.total_busy_ms, 0.0)
         self.assertEqual(profile.calls, {"outer": 1, "outer/inner": 1, "outer/inner.decorated": 1})
-        self.assertGreaterEqual(profile.timeline_ms["outer"], profile.timeline_ms["outer/inner"])
-        self.assertGreaterEqual(profile.step_timeline_ms, profile.timeline_ms["outer"])
+        self.assertLessEqual(profile.step_union_ms, profile.step_span_ms)
+        self.assertLessEqual(profile.step_union_ms, profile.total_busy_ms + 1e-9)
+
+    def test_interval_union(self):
+        self.assertEqual(interval_union_ns([(0, 10), (5, 15), (20, 30)]), 25)
+        self.assertEqual(interval_union_ns([]), 0)
 
 
 if __name__ == "__main__":
