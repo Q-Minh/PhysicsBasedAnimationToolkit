@@ -189,3 +189,12 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
   - Microcanonical ensemble, pooled draws with an evenly spaced subset (R-hat < 1.05), no gravity.
   - Proposed location: `data/benchmarks/trampoline/`. E* levels and sample counts are open with the maintainer.
 - 2026-10-18 · **Trampoline conditioning (CPU):** cond(M⁻¹K) at rest = 5.9e8 (λ_min = 9.4, λ_max = 5.6e9), 44× the beam's 1.3e7. Expect much slower VBD-family static convergence than on the beam within the same cap, and Newton's Jacobi-PCG needing far more than 3000 iterations. Raised with task 4 and the maintainer.
+- 2026-10-18 · **Benchmark plan (maintainer, MASTER.md "Benchmark plan"):** task 4 generates the static and dynamic datasets, task 3 runs the static problems, and the coordinator runs the dynamic ones. The full run waits until the maintainer and coordinator fix the data to report and the plot. Until then, only small tests of the machinery.
+- 2026-10-18 · Rebased on dev 91ad5a90 (task 1 kinematics, task 2 milestone 2). Conflicts were in fem.py setup (kinematics update + static Position strategy, both kept), state.py (`_attach_kinematics` + `_construct_convergence_check`, both kept) and ui.py panel hooks (all kept). Commit `Prescribe Dirichlet nodes at a frozen time in static solves`: `StaticSolver` runs setup first, and static `step()` never advances kinematics. Unit tests (including kinematics) pass, and small static solves reproduce the pre-rebase numbers.
+- 2026-10-18 · **Task 4 test dataset** `data/benchmarks/trampoline-test/static/{E50,E5000}.h5` (3 problems each) passes the loader.
+  - X matches the Dump exactly; Dirichlet drift is 0; only the expected R-hat warning (2.7, 3.9) fires.
+  - Deformation energies are 11–26 J (E = 50) and 1.1–1.5 kJ (E = 5000); no inverted tets in these six shapes (min J 0.21).
+  - Maintainer decisions relayed by task 4: E levels 50/500/5000 J, 5–10 problems per level to start, **time cap 5–10 s**.
+- 2026-10-18 · Small trampoline check (E5000 sample 0, 5 s cap, Dump params):
+  - VBD e/e0 = 0.50 (37k sweeps, ~129 µs/sweep); AAAVBD 0.39 (50% at 2.5 s); Newton (CG ≤ 300) 0.35.
+  - Much faster than the conditioning extrapolation suggested: cond(M⁻¹K) overstates the difficulty for these modal shapes.

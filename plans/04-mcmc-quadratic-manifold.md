@@ -181,3 +181,28 @@ simulator files.
     - Regularized fit: α ≈ 0.001–0.01 is the useful range; α = 1 collapses the shape.
   - Beam, handle tip −0.5 m: quadratic ROM equilibrium 4.9% error, linear 7.3% but with 97 J against 26 J.
   - The GUI was only smoke-tested with stubs; the maintainer's interactive check is pending.
+- 2026-10-18 · Milestones 2 and 3 merged into dev (`c947de87`); the maintainer is very satisfied. Gravity is now
+  available in the GUI sampler (`5a4b2d3d` single-crossing star check, `e86d5630` GUI controls).
+- 2026-10-18 · **Next objective: generate the benchmark dataset** (see MASTER.md "Benchmark plan"). Task 3 runs
+  the static problems and the coordinator runs the dynamic ones. No full runs until the reported data is fixed.
+  - Design (prototype): https://claude.ai/artifact/Vo7K55wZefigfxatyBEmCu
+  - **Maintainer decisions:**
+    - Scene `trampoline.Dump.h5:fem`, microcanonical samples, paired across all sets.
+    - **Large energies:** up to ~1e4 J was used on the beam. Static solves from large deformations pass
+      through mid and low deformation, so one benchmark covers all scales.
+    - **Start small:** 5–10 problems per level, then iterate. The solver time cap should be 5–10 s, not
+      60 s (for task 3).
+    - **Time steps h = 1e-4 and 1e-2 s.** 1e-2 is the usual graphics step without substepping; 1e-4
+      corresponds to 100 substeps.
+    - **Dynamic problems:** x̃ = x + h v + h² g with the scene gravity, plus a reference solution x⋆ from a
+      converged full-order CPU Newton solve.
+  - Trampoline at high energy (short chains): at 50 / 500 / 5000 J the median peak displacement is 14 / 24 /
+    36 cm, min det F is 0.82 / 0.69 / −1.6 (5000 J inverts some elements) and U/E ≈ 0.3. These are the default
+    levels.
+  - **Generator implemented** (`d1f03bbe`, `e45a286c`, `391b994f`; `python/examples/make_benchmark.py`).
+    - It writes pooled samples, static problems, and BDF1 dynamic problems per h, all paired.
+    - Small test set: `data\benchmarks\trampoline-test\` (2 energies × 3 problems, 51 s CPU).
+    - Checked: X matches the Dump, Dirichlet DOFs are at rest, x̃ = x + hv + h²g to 6e-8, and the reference
+      gradient drops 3–5 orders to the float32 noise floor (~3 N). Reference accuracy is ~3.5–4 decades of
+      the step size.
+    - Full generation waits until the coordinator relays the data requirements.

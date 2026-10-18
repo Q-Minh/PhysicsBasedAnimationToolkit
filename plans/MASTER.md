@@ -111,6 +111,15 @@ will instrument).
   report** and the specific plot to produce, then the coordinator relays the exact data requirements to tasks 3 and 4.
   Until then, build and test the machinery on small cases only.
 
+## New milestone: GPU simulators read CPU scene files (maintainer, 2026-10-18)
+
+The GPU simulators (`ui.py`, `simulate.py`) should ingest the same scene/session `.h5` files that the CPU simulator
+reads (`python/tools/vbd/simulate.py --session/--scene`: tetrahedral elastodynamic bodies, the transform library,
+static mesh colliders), not only editor Dumps, so that no Dump has to be created for every run. Building the FEM
+problem follows `tools/vbd/editor.py::make_fem_dynamics_object`, and the transforms map onto the GPU kinematics
+(`TransformLibrary.export_kinematic_constraints`). Open design question: GPU contact has no static-collider support
+yet. **Owner: proposed task 1** (owns `python/tools/vbd` and the kinematics formats), pending maintainer confirmation.
+
 ## Shared technical facts (verified)
 
 - **Timing inside CUDA graphs:** Warp 1.17's `Stream.record_event(event, external=True)` records an
@@ -176,6 +185,22 @@ will instrument).
   `ensemble = "potential"` and no `qdot`.
 - **Gravity:** off unless the attribute `gravity` (3,) is nonzero, in which case U(q) includes −(M g)ᵀu(q).
   Task 3's static benchmark should use gravity-free batches.
+- **Benchmark dataset** (task 4, `python/examples/make_benchmark.py`; draft, the reported data is still to be
+  fixed). Under one output directory, for each total energy E there are `pool/E{E}.h5` (all pooled
+  microcanonical samples), `static/E{E}.h5` (an evenly spaced subset of S problems, today's format with
+  `problem = "static"`) and `dynamic_h{h}/E{E}.h5` (the **same** S samples, `problem = "dynamic"`). Problem
+  files carry `pool_file` and `pool_indices`. Dynamic files add:
+  - root attributes `h`, `bdf_order = 1` and `aext` (3,), the scene gravity;
+  - **`samples/v`** (S, N, 3) float32, the full-space start velocities J(q) q̇;
+  - **`samples/xtilde`** (S, N, 3) float32, the inertial targets x + h v + h² aext (aext applied to free DOFs
+    only);
+  - **`samples/x_ref`** (S, N, 3) float32, the solutions of min 1/(2h²)‖x − x̃‖²_M + Ψ(x) with Dirichlet DOFs at
+    rest, from full-order CPU Newton converged to the float32 noise floor;
+  - `samples/ref_newton_iterations`, `samples/ref_newton_decrement`, `samples/ref_newton_correction` (S,) (the
+    last correction's largest entry in m, an accuracy estimate), and `samples/ref_min_J`.
+
+  `samples/x` is the start state x_n. A small test set (E = 50 and 5000 J, 3 problems, pools of 40, so its rhat
+  is not meaningful) is at `C:\git\PhysicsBasedAnimationToolkit\data\benchmarks\trampoline-test\`.
 - **Don't use shapes from the current `modalrom.py` "Quadratic" view as test inputs.** Its modal
   derivatives have two bugs (÷h instead of ÷2h, and a blow-up for near-degenerate mode pairs), which task 4
   is fixing.
@@ -202,8 +227,8 @@ Each session updates only its own row.
 | Task | State | Last update | Notes |
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
-| 1 | ready for review | 2026-10-18 | 14 commits on dev `7c485e35`. Unit tests pass, 5 solvers run on MediumLongBendingBeam, VBD/AAAVBD bit-identical to dev; parity details in plan 01 Progress. GUI only smoke-tested (mock backend) |
-| 2 | milestone 2 done; ready for review | 2026-10-18 | Milestone 1 merged (`1d52c8ff`). Milestone 2: CUPTI `kernels` backend (matches nsys within 3%), GUI profiling panel, `nvidia-cuda-cupti-cu12` pin; 4 commits after `7c485e35`. Report re-measured: [trampoline](https://claude.ai/artifact/LHMcGJs6Z6N89iruhYLxYz). Next: milestone 3, AAAVBD analysis (sweep anatomy, Nsight Compute) |
+| 1 | merged into dev (`c41bc1ad`) | 2026-10-18 | Waiting on the maintainer's interactive check of the GUI panel (`panels/kinematics.py`); parity details in plan 01 Progress |
+| 2 | milestone 3 in progress (AAAVBD analysis) | 2026-10-18 | Milestones 1–2 merged. M3 tools on branch (anatomy, ncu, overheads report, 7 commits after `92791e16`): [AAAVBD overheads](https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL). Found 4× redundant constraint-set copies (−23% step time with a 2-line fix, awaiting maintainer decision) |
 | 3 | implementing | 2026-10-18 | static solves, convergence loop, benchmark + GUI panel done; preliminary results published; waiting on the maintainer's static params file and full run |
 | 4 | milestones 1–3 + mass-normalized modes merged into dev (`c947de87`) | 2026-10-18 | Waiting on the maintainer's interactive check of the reachability panel. Microcanonical batches need more samples per chain for split-R̂ < 1.05 (τ ≈ 135 steps) |
 
@@ -342,6 +367,23 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 3 · Maintainer: the full static benchmark is **on hold** until task 4 generates the benchmark dataset of problems. Tasks 3 and 4 coordinate on its contents.
 - 2026-10-18 · coordinator · **GPU run END.** Merged **task 1** (c41bc1ad, merge commit): 17 tests pass, VBD/AAAVBD/Chebyshev bit-identical to dev, Anderson/Newton within nondeterminism, zero Dirichlet drift. Merged **task 2 milestone 2** (CUPTI backend + profiling panel; ui.py conflict resolved by keeping both panels): 14 tests pass, AAAVBD 56 ms/step on an idle GPU. Tasks 2 and 3: rebase onto dev. The maintainer still needs to check the GUI panels (kinematics, profiling).
 - 2026-10-18 · coordinator · Maintainer refined the benchmark plan (new section "Benchmark plan" above): task 4 builds the static+dynamic dataset, task 3 runs static, the coordinator runs dynamic. **Hold all full benchmark runs** until the maintainer and coordinator fix the reported data and plot.
+- 2026-10-18 · task 3 · **GPU run START** (~2 min, correctness only: unit tests + 2 small static solves after the rebase onto dev 91ad5a90). Task 2: ignore any timing taken in this window. Will log END.
+- 2026-10-18 · task 3 · **GPU run END** (correctness checks after the rebase).
+- 2026-10-18 · coordinator · **GPU run START** (~2 min): headless check of a kinematics test scene (TwistPullBeam), then the maintainer's interactive GUI test of it. Will log END.
+- 2026-10-18 · task 2 · **GPU run END** (milestone 3 exploration). Two findings for everyone:
+  - **Big, solver-independent overhead (FYI coordinator):** `ConstraintSet.update_constraint_set` (`gpu/contact/constraints.py`) loops over all 4 of its stream lists, so each contact type copies its 6 fields and fills its 4 fields 4× per call. In the captured graph, each of the resulting 96 memcpy + 64 fill nodes per subproblem boundary waits ~10 µs: ~30 ms of a ~107 ms trampoline step. A 2-line fix (`self._streams[:1]`, patch kept in my scratchpad) is bit-identical and makes AAAVBD 108.1 → 83.5 ms/step, VBD 98.7 → 74.9. **Not committed** (not my file); asking the maintainer who lands it.
+  - **Possible contact bug on dev (not mine to fix):** CubeFallingOnCube.Dump + VertexSdf (default) with AAAVBD: the top cube falls straight through the fixed bottom cube (z ≈ −43 after 3 s), and 0 contacts are detected at every step. Not caused by the profiling decorators (same result without them) nor by `31ff9a75`'s filter change (it doesn't touch detection). Repro: `simulate.py --fem-elasto-dynamics data/CubeFallingOnCube.Dump.h5:fem --solver AAAVBD --duration 3`.
+  Report: AAAVBD overheads https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL
+- 2026-10-18 · task 3 · **GPU run START** (~3 min, small machinery test: 1 trampoline-test static problem × VBD/AAAVBD/Newton, 5 s cap). Will log END.
+- 2026-10-18 · task 3 · **GPU run END** (trampoline-test machinery check).
+- 2026-10-18 · task 2 · **GPU run START** (~1 h, intermittent): verify the constraint-set fix (maintainer: commit it on `feature/gpu-profiling`), then ncu source hotspots of the AAAVBD vertex solve, and the anatomy of a `capture_while` graph. Will log END.
+- 2026-10-18 · coordinator · Maintainer notes:
+  - **Measurement methodology:** how solver execution is measured will be revisited with the maintainer before the benchmarks (no runs until then).
+  - **Convergence check frequency:** VBD-family solves should not test convergence every iteration. Make the interval a parameter (e.g. every 20 iterations). → task 3.
+  - **Mesh refit and capture:** the maintainer recalls capturing the whole step with VertexSdf. (It is captured today; the limitation is only inside *conditional* bodies, `capture_while`/`capture_if`, where allocations are forbidden.) → task 3 to re-check whether refit can avoid allocating.
+  - **CubeFallingOnCube + VertexSdf passing through is expected:** the top cube's vertices coincide with the bottom cube's surface, so the penetration is always 0 and no contact force is generated. Not a bug.
+  - New milestone, CPU scene files: see the section above.
+- 2026-10-18 · coordinator · Landed task 2's finding on dev (a9abadc1): ConstraintSet copies/fills each field once (was 4×). Bit-identical; AAAVBD trampoline graph step ~106 → ~83 ms.
 
 ## Open questions for the maintainer
 

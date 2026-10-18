@@ -189,3 +189,26 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
       Use nsys for those.
   - **Tested:** the GUI panel's step hook and export were tested headlessly. Drawing it needs the
     interactive GUI (maintainer smoke test).
+- 2026-10-18 · Milestone 2 merged into dev. **Milestone 3 (AAAVBD analysis)** on `feature/gpu-profiling`,
+  7 commits after `92791e16`:
+  - **Tools:** `profiling/anatomy.py` (nsys graph-mode sweep anatomy: per-step budget, boundary phases, steady
+    sweep node by node), `profiling/ncu.py` (Nsight Compute summary), `profiling/overheads.py` (report), and a
+    capture range for production runs in `simulate.py`.
+  - **Report:** https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL
+  - **Findings (trampoline, AAAVBD, 107 ms production step):**
+    - **Step budget:** sweep kernels 65.8 ms, sweep gaps 1.1, boundary kernels 8.1, boundary gaps 29.6,
+      other 2.2.
+    - **Boundary gaps:** almost all of the boundary gap time sits before the constraint-set update's memcpy and fill
+      nodes (~10 µs each).
+    - **Root cause:** `ConstraintSet.update_constraint_set` repeats its copies and fills 4× (loop over all 4
+      stream lists).
+    - **Measured fix:** a 2-line change (one stream list) is bit-identical and gives AAAVBD 108.1 → 83.5 ms
+      (−23%), VBD 98.7 → 74.9 (−24%). **Not committed** (not my file). Patch in scratchpad.
+    - **Remaining:** ~7.6 ms/step of boundary gaps would mostly go with a fused copy/fill kernel.
+    - **Steady sweeps:** nearly gap-free (0.17 µs between color launches).
+    - **AAAVBD vs VBD kernel (ncu, base clocks):** +7% duration, +13% instructions, ~+28% DRAM traffic.
+      Both are latency-bound: 73–74% long-scoreboard stalls, 83% of cycles with no eligible warp.
+    - **Occupancy:** limited by the grid (667 one-warp blocks per color, 0.87 waves, 24% achieved occupancy),
+      not by registers.
+  - **Possible contact bug on dev** (logged for the coordinator): CubeFallingOnCube + VertexSdf detects 0
+    contacts, and the top cube falls through.
