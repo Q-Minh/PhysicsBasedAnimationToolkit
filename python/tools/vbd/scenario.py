@@ -154,36 +154,50 @@ def make_contact_dynamics_object(
     return contact_dynamics
 
 
+def read_scene(path: str) -> tuple[
+    list[TetrahedralElastodynamicsBody], list[StaticMeshCollider], TransformLibrary, list[str]
+]:
+    """Read the bodies, static colliders and transform library of a scene file.
+
+    Returns:
+        The tetrahedral elastodynamic bodies, the static mesh colliders, the transform library (synced
+        to the body names) and the body names, in body order.
+    """
+    tet_elastic_bodies = []
+    static_mesh_colliders = []
+    with h5.File(path, "r") as f:
+        grp = f["fem_tet_elastic_bodies"]
+        num_bodies = grp.attrs["num_tet_elastic_bodies"]
+        for b in range(num_bodies):
+            body_grp = grp[f"{b}"]
+            body = TetrahedralElastodynamicsBody()
+            body.deserialize(body_grp, headless=True)
+            tet_elastic_bodies.append(body)
+
+        # Scenes saved without colliders may lack the group altogether
+        grp = f.get("static_mesh_colliders", None)
+        num_static_meshes = 0 if grp is None else grp.attrs["num_static_mesh_colliders"]
+        for b in range(num_static_meshes):
+            body_grp = grp[f"{b}"]
+            body = StaticMeshCollider()
+            body.deserialize(body_grp, headless=True)
+            static_mesh_colliders.append(body)
+
+        transform_library = TransformLibrary()
+        tlib_h5grp = f[_archive_tlib_group]
+        transform_library.deserialize(tlib_h5grp)
+    # Constraint nodes are mapped onto the FEM mesh by body, in body order. The library's own
+    # mesh_names may list other meshes or another order (e.g. ArmadilloFallingInBasket).
+    tet_elastic_body_names = [str(body.name) for body in tet_elastic_bodies]
+    transform_library.sync_mesh_names(tet_elastic_body_names)
+    return tet_elastic_bodies, static_mesh_colliders, transform_library, tet_elastic_body_names
+
+
 def load_simulation_scenario_from_scene(path: str):
     try:
-        tet_elastic_bodies = []
-        static_mesh_colliders = []
-        with h5.File(path, "r") as f:
-            grp = f["fem_tet_elastic_bodies"]
-            num_bodies = grp.attrs["num_tet_elastic_bodies"]
-            for b in range(num_bodies):
-                body_grp = grp[f"{b}"]
-                body = TetrahedralElastodynamicsBody()
-                body.deserialize(body_grp, headless=True)
-                tet_elastic_bodies.append(body)
-
-            # Scenes saved without colliders may lack the group altogether
-            grp = f.get("static_mesh_colliders", None)
-            num_static_meshes = 0 if grp is None else grp.attrs["num_static_mesh_colliders"]
-            for b in range(num_static_meshes):
-                body_grp = grp[f"{b}"]
-                body = StaticMeshCollider()
-                body.deserialize(body_grp, headless=True)
-                static_mesh_colliders.append(body)
-
-            transform_library = TransformLibrary()
-            tlib_h5grp = f[_archive_tlib_group]
-            transform_library.deserialize(tlib_h5grp)
-        # Constraint nodes are mapped onto the FEM mesh by body, in body order. The library's own
-        # mesh_names may list other meshes or another order (e.g. ArmadilloFallingInBasket).
-        tet_elastic_body_names = [str(body.name) for body in tet_elastic_bodies]
-        transform_library.sync_mesh_names(tet_elastic_body_names)
-
+        tet_elastic_bodies, static_mesh_colliders, transform_library, tet_elastic_body_names = (
+            read_scene(path)
+        )
         fem, vert_counts, XP = make_fem_dynamics_object(
             tet_elastic_bodies, get_external_info=True
         )
