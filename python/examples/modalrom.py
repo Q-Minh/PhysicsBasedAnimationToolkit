@@ -723,9 +723,12 @@ if __name__ == "__main__":
             show_samples = True
         if samples:
             changed, show_samples = imgui.Checkbox("Show samples", show_samples)
+            # The slider shares its label with the "Sample" button, so give it its own ID scope
+            imgui.PushID("sample_slider")
             changed, sample_idx = imgui.SliderInt(
                 "Sample", sample_idx, 0, len(samples) - 1
             )
+            imgui.PopID()
             imgui.Text(
                 f"{chain_key[0]} map, {chain_key[2]} sampler, E* {chain_key[1]:.6g} J: "
                 f"energy {samples[sample_idx][1]:.6g} J"
