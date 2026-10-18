@@ -25,17 +25,17 @@ The GPU simulators take exactly one of:
 - **`--fem-elasto-dynamics file.h5:fem`**: an editor Dump, written by the CPU editor's **Dump** button. It holds `fem`, `contact`, solver params and the `kinematics` group (procedural constraints).
 - **`--scene scene.h5`**: a CPU editor scene file, built the same way as the CPU editor builds it. Static mesh colliders and plane colliders (infinite by default, authored in the editor's Objects tab) are simulated too. For hard impacts on them, use an adaptive contact penalty (`--set Contact.ContactDynamics.penalty_adaptivity=1 --set Contact.ContactDynamics.gamman=1`). It still diverges on some body-body scenes (BeamFallingOnBeam) until task 3's fix lands.
 
-Scenes live in `data/*.h5` / `data/*.Dump.h5` and `data/scenarios/`. `data/` is git-ignored. From a worktree, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`.
+**Prefer scene files (`--scene`) plus `--sim-params`** (maintainer's preference). Use a Dump only to resume a simulation mid-run: it carries the current x and v, the kinematics' `t0` and the open anchors. The GPU never reads a Dump's solver parameters. Scenes live in `data/*.h5` and `data/scenarios/`; Dumps are `*.Dump.h5`. `data/` is git-ignored. From a worktree, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`.
 
 Commonly used scenes:
 
 | Scene | Path | Notes |
 |---|---|---|
-| Bending beam | `data/scenarios/MediumLongBendingBeam.Dump.h5:fem` | Clamped beam, no contact, deterministic |
-| Trampoline | `data/scenarios/trampoline.Dump.h5:fem` | Contact-free, deterministic, the profiling workhorse |
-| Beam on beam | `data/BeamFallingOnBeam.Dump.h5:fem` | Real contacts; not bit-reproducible run to run |
-| Cube on cube | `data/CubeFallingOnCube.Dump.h5:fem` | Tiny contact scene. Coincident surfaces pass through with VertexSdf; this is expected |
-| Twist and pull | `data/scenarios/TwistPullBeam.Dump.h5:fem` | Kinematic constraints: rotating clamp, lifted then released tip |
+| Bending beam | `--fem-elasto-dynamics data/scenarios/MediumLongBendingBeam.Dump.h5:fem` (scene file coming) | Clamped beam, no contact, deterministic |
+| Trampoline | `--scene data/scenarios/trampoline.h5` | Contact-free, deterministic, the profiling workhorse |
+| Beam on beam | `--scene data/BeamFallingOnBeam.h5` | Real contacts; not bit-reproducible run to run |
+| Cube on cube | `--scene data/CubeFallingOnCube.h5` | Tiny contact scene. Coincident surfaces pass through with VertexSdf; this is expected |
+| Twist and pull | `--fem-elasto-dynamics data/scenarios/TwistPullBeam.Dump.h5:fem` (scene file coming) | Kinematic constraints: rotating clamp, lifted then released tip |
 
 ## Headless GPU runs
 

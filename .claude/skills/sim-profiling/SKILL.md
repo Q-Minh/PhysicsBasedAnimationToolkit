@@ -12,7 +12,7 @@ Profiling has three layers:
 
 Context and the findings so far are in `python/tools/sim/CLAUDE.md` ("Profiling") and `plans/02-profiling.md`.
 
-Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). The `data/...` paths below exist only in the main checkout. In worktrees, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem`.
+Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). The `data/...` paths below exist only in the main checkout. In worktrees, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5 (with --scene)`.
 
 ## Choose the measurement
 
@@ -34,7 +34,7 @@ Rules of thumb:
 
 ```bash
 # Production step time (graph replay); 10 warm-up steps excluded
-python -m python.tools.sim.simulate --fem-elasto-dynamics data/scenarios/trampoline.Dump.h5:fem -o out/x.h5 \
+python -m python.tools.sim.simulate --scene data/scenarios/trampoline.h5 -o out/x.h5 \
     --solver AAAVBD --duration 0.3 --profile-warmup 10 --profile-out out/aaavbd_prod.json
 
 # Per-phase breakdown in-process (CUPTI); prints a summary and writes JSON
@@ -42,18 +42,18 @@ python -m python.tools.sim.simulate ... --profile kernels --profile-warmup 10 --
 
 # Nsight Systems reference (runs simulate.py --profile nvtx, imports into the same JSON schema)
 python -m python.tools.sim.profiling.nsys run -o out/aaavbd -- \
-    --fem-elasto-dynamics data/scenarios/trampoline.Dump.h5:fem --solver AAAVBD --duration 0.3 -o out/x.h5
+    --scene data/scenarios/trampoline.h5 --solver AAAVBD --duration 0.3 -o out/x.h5
 python -m python.tools.sim.profiling.nsys import out/aaavbd.sqlite --metadata out/aaavbd.json -o out/aaavbd.json
 
 # Sweep anatomy of the production graph. --phases takes an eager profile from the same code version;
 # kernels missing from it (e.g. newly fused ones) keep their raw names in the phase column
 python -m python.tools.sim.profiling.anatomy run -o out/aaavbd_graph --phases out/aaavbd.json -- \
-    --fem-elasto-dynamics data/scenarios/trampoline.Dump.h5:fem --solver AAAVBD --duration 0.3 --profile-warmup 10 -o out/x.h5
+    --scene data/scenarios/trampoline.h5 --solver AAAVBD --duration 0.3 --profile-warmup 10 -o out/x.h5
 
 # Nsight Compute on 9 launches (one sweep's colors) of the AAAVBD vertex solve, with per-line hotspots.
 # --kernel is a regex on the Warp kernel name, which starts with an underscore; without it nothing matches
 python -m python.tools.sim.profiling.ncu run -o out/aaavbd_ncu --kernel ^_accelerated_vertex_solve --skip 900 --count 9 --lineinfo -- \
-    --fem-elasto-dynamics data/scenarios/trampoline.Dump.h5:fem --solver AAAVBD --duration 0.05 -o out/x.h5
+    --scene data/scenarios/trampoline.h5 --solver AAAVBD --duration 0.05 -o out/x.h5
 ```
 
 The `simulate.py` arguments after `--` are passed through unchanged, so `--sim-params`, `--set`, `--solver` and so on apply as usual (see the `sim-run` skill).
