@@ -21,7 +21,7 @@ class Params(SerializableMixin):
         0.05, "Vertex-edge capacity multiplier (x num_vertices)."
     )
     n_vf_contact_capacity = DocField(
-        0.2, "Vertex-face capacity multiplier (x num_vertices)."
+        0.5, "Vertex-face capacity multiplier (x num_vertices)."
     )
     n_ee_contact_capacity = DocField(
         0.2, "Edge-edge capacity multiplier (x num_edges)."
