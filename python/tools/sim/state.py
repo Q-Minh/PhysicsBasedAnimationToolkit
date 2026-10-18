@@ -206,7 +206,18 @@ class SimulationState:
             ]
             | None
         ) = None,
+        contact_mesh: pbat.sim.contact.MultiMesh | None = None,
     ):
+        """
+        Args:
+            fem_cpu: The FEM problem.
+            params_cpu: CPU solver parameters per solver.
+            kinematics: Kinematic constraints (see load_kinematic_constraints), defaulting to fem_cpu's
+                dmask as permanently fixed nodes.
+            contact_mesh: Contact surface over fem_cpu's nodes. By default it is the boundary of the
+                tetrahedral mesh, which must then be sorted by connected components. load_scene passes one
+                that also holds the static mesh colliders.
+        """
         self.fem_cpu = fem_cpu
         # Initial velocities of the loaded problem (the Dump's v or the scene's per-body v0), restored on reset
         self.v0 = fem_cpu.v.copy()
@@ -259,19 +270,21 @@ class SimulationState:
         self.capture = None
 
         # Build collision geometry
-        multimesh_cpu = pbat.sim.contact.MultiMesh()
-        Xordering, Eordering, XCC, ECC, n_components = (
-            pbat.graph.sorted_connected_component_ordering(fem_cpu.X, fem_cpu.E)
-        )
-        is_X_sorted = np.all(Xordering[:-1] <= Xordering[1:])
-        is_E_sorted = np.all(Eordering[:-1] <= Eordering[1:])
-        if not is_X_sorted or not is_E_sorted:
-            raise ValueError(
-                "The FemElastoDynamics is expected to already be sorted by connected components."
+        multimesh_cpu = contact_mesh
+        if multimesh_cpu is None:
+            multimesh_cpu = pbat.sim.contact.MultiMesh()
+            Xordering, Eordering, XCC, ECC, n_components = (
+                pbat.graph.sorted_connected_component_ordering(fem_cpu.X, fem_cpu.E)
             )
-        multimesh_cpu.construct_from_tetrahedral_mesh(
-            fem_cpu.E, XCC, n_components=n_components
-        )
+            is_X_sorted = np.all(Xordering[:-1] <= Xordering[1:])
+            is_E_sorted = np.all(Eordering[:-1] <= Eordering[1:])
+            if not is_X_sorted or not is_E_sorted:
+                raise ValueError(
+                    "The FemElastoDynamics is expected to already be sorted by connected components."
+                )
+            multimesh_cpu.construct_from_tetrahedral_mesh(
+                fem_cpu.E, XCC, n_components=n_components
+            )
         self.multimesh = gpu.contact.multimesh.MultiMesh(multimesh_cpu)
         self.contact_storage_params = gpu.contact.mesh.pairs.Params()
         contact_pair_storage = gpu.contact.mesh.pairs.ContactPairs(
