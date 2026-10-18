@@ -2,20 +2,64 @@
 """
 Static convergence benchmark: wall-clock time per percentile of error reduction.
 
-Each MCMC sample of a batch (python/examples/rom_mcmc.py) is released into a static solve with no
-loads, whose equilibrium is the rest shape X, once per solver. The error e = |x - X|_M (free nodes) is
-logged after every solver iteration (see ``static.py``), and the benchmark reports, per solver and
-percentile p in 5%, 10%, ..., 95%, the solver time until e <= (1 - p) e0. Solves stop at the target
-reduction or at the time/iteration budget, so unreached percentiles are reported as missing.
+Each MCMC sample of a batch (python/examples/rom_mcmc.py; contract in plans/MASTER.md) is released into
+a static solve with no loads, whose equilibrium is the rest shape X, once per solver. The error
+e = |x - X|_M (lumped-mass norm over free nodes) is logged after every solver iteration (see
+``static.py``). The benchmark reports, per solver and percentile p = 5%, 10%, ..., 95%, the solver time
+until e <= (1 - p) e0. A solve stops at ``--target-reduction`` or at its time/iteration budget, so
+unreached percentiles are reported as missing (``null``).
 
 Usage:
-    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics dump.h5:fem --samples batch.h5 \
-        -o results.json [--sim-params static.h5] [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] \
+    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+        -o results.json [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] \
+        [--sim-params A.toml [B.h5 ...]] [--set Table.key=value ...] [--spec spec.h5] [--save-spec spec.h5] \
         [--sample-begin 0] [--sample-end -1] [--max-seconds 60] [--max-iterations 1000000] \
-        [--target-reduction 0.95] [--spec spec.h5] [--save-spec spec.h5]
+        [--target-reduction 0.95] [--block 16]
 
-Writes ``results.json`` (spec, metadata, per-sample percentile times and log-spaced curves, and
-per-solver aggregates) and ``results.h5`` (the full per-iteration logs).
+Representative commands (from the repo root; scenes and samples live in the main checkout's data/):
+
+    # One static solve: one solver, the first sample, a 5 s cap
+    python -m python.tools.sim.benchmark_static \
+        --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
+        --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
+        --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
+
+    # Every solver on every sample of a batch, with the scene's paper parameters
+    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+        --sim-params python/tools/sim/configs/paper/beam1e6.GroundTruth.toml --max-seconds 10 -o out/all.json
+
+    # Parameter variations: layer configs and override single keys (see python/tools/sim/configs/README.md)
+    python -m python.tools.sim.benchmark_static ... --sim-params base.toml static.toml \
+        --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
+
+    # Reproducible cases: save the effective StaticSolveSpec, then rerun from it
+    python -m python.tools.sim.benchmark_static ... --samples BATCH.h5 --max-seconds 10 --save-spec case.h5 -o a.json
+    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --spec case.h5 -o b.json
+
+Outputs:
+    ``results.json``: the effective spec; metadata (scene, parameter sources, sample-file attributes,
+    Newton CG limits, device, git commit, date); and per solver, one summary per sample (e0, iterations,
+    VBD sweeps, solver time, final relative error, time and iterations to each percentile, starting
+    deformation energy, min det F, and a log-spaced curve of relative error vs time and sweeps), plus
+    aggregates per percentile (median and quartiles of the time over the samples that reached it, and
+    how many did).
+    ``results.h5`` (same name, next to it): the spec and the full per-iteration logs,
+    ``<solver>/<sample>/{error, time, sweeps}``.
+
+Pitfalls:
+    - The benchmark is contact-free: contact detection is deactivated whatever the parameters say.
+    - Solves run to the target reduction or the caps, not to a solver tolerance: ``Solver.<solver>.gtol``,
+      ``n_max_iters`` and ``n_subproblem_max_iters`` don't stop them (a static solve is one long
+      subproblem). The vertex-solve and acceleration parameters do matter.
+    - Newton isn't graph-captured. Each Newton step synchronizes with the host, so its times include host
+      work and vary more between runs. Raise ``Solver.Newton.LinearSolver.n_max_iters`` for static problems:
+      the default 300 leaves Newton steps inexact, and 1500-3000 is typical.
+    - Times are GPU wall-clock from device timestamps, with the logging excluded. Don't run other GPU work
+      meanwhile.
+    - Batches with ``importance_weights_required`` are refused; R-hat >= 1.05 or nonzero sampling gravity
+      only print a warning.
+    - Each solver's first solve also compiles kernels and captures its graph. That shows in the host time,
+      not in the reported solver time.
 """
 
 import argparse
@@ -47,26 +91,46 @@ _CURVE_POINTS = 400
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Static convergence benchmark (GPU)")
+    parser = argparse.ArgumentParser(
+        description="Static convergence benchmark (GPU): solver time per 5% level of error reduction."
+    )
     parser.add_argument("--fem-elasto-dynamics", required=True, dest="fem_elasto_dynamics",
-                        help="file.h5:group/path of the serialized FemElastoDynamics (Dump 'fem' group).")
-    parser.add_argument("--samples", default=None, help="MCMC sample batch (.h5). Overrides the spec's sample_file.")
+                        help="Scene: file.h5:group/path of the serialized FemElastoDynamics, e.g. an editor "
+                        "Dump's 'fem' group. Must be the mesh the samples were drawn on.")
+    parser.add_argument("--samples", default=None,
+                        help="MCMC sample batch (.h5) with the initial shapes. Overrides the spec's "
+                        "sample_file; required unless --spec provides one.")
     parser.add_argument("--sim-params", nargs="+", default=[], dest="sim_params",
-                        help="Simulation parameters: .toml configs or .h5 files as exported by the GUI, "
-                        "merged left to right (see configs/README.md).")
+                        help="Simulation parameters: .toml configs or .h5 files as exported by the GUI "
+                        "(file.h5 or file.h5:group), merged left to right (see configs/README.md). "
+                        "Without any, the Dump's parameters and the code defaults apply.")
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="overrides",
-                        help="Override one parameter after --sim-params, e.g. Solver.VBD.gtol=1e-4.")
+                        help="Override one parameter after --sim-params, as Table.Sub.key=TOML-literal, "
+                        "e.g. Solver.Newton.LinearSolver.n_max_iters=3000. Repeatable.")
     parser.add_argument("--solvers", default=",".join(s.name for s in SolverType),
-                        help="Comma-separated solver names.")
-    parser.add_argument("--spec", default=None, help="StaticSolveSpec (.h5) to start from.")
-    parser.add_argument("--save-spec", default=None, dest="save_spec", help="Write the effective spec (.h5).")
-    parser.add_argument("--sample-begin", type=int, default=None, dest="sample_begin")
-    parser.add_argument("--sample-end", type=int, default=None, dest="sample_end")
-    parser.add_argument("--max-seconds", type=float, default=None, dest="max_seconds")
-    parser.add_argument("--max-iterations", type=int, default=None, dest="max_iterations")
-    parser.add_argument("--target-reduction", type=float, default=None, dest="target_reduction")
-    parser.add_argument("--block", type=int, default=None)
-    parser.add_argument("-o", "--output", required=True, help="Output results.json (results.h5 is written next to it).")
+                        help="Comma-separated solver names to run, in order (default: all, "
+                        + ",".join(s.name for s in SolverType) + ").")
+    parser.add_argument("--spec", default=None,
+                        help="StaticSolveSpec (.h5) to start from. The options below override its fields.")
+    parser.add_argument("--save-spec", default=None, dest="save_spec",
+                        help="Write the effective StaticSolveSpec (.h5), to rerun the same case with --spec.")
+    parser.add_argument("--sample-begin", type=int, default=None, dest="sample_begin",
+                        help="First sample index (spec default: 0).")
+    parser.add_argument("--sample-end", type=int, default=None, dest="sample_end",
+                        help="One past the last sample index; -1 means all samples (spec default: -1).")
+    parser.add_argument("--max-seconds", type=float, default=None, dest="max_seconds",
+                        help="Time cap per solve, in seconds of wall-clock time (spec default: 60).")
+    parser.add_argument("--max-iterations", type=int, default=None, dest="max_iterations",
+                        help="Iteration cap per solve, counting VBD sweeps, Anderson steps or Newton steps "
+                        "(default here: 1,000,000, so the time cap decides).")
+    parser.add_argument("--target-reduction", type=float, default=None, dest="target_reduction",
+                        help="Stop a solve once e <= (1 - target) e0, as a fraction (spec default: 0.95).")
+    parser.add_argument("--block", type=int, default=None,
+                        help="Solver iterations per replayed CUDA-graph block, rounded up to a multiple of "
+                        "Anderson's window m. Larger blocks mean fewer replays but can overshoot the stop "
+                        "by up to one block (spec default: 16).")
+    parser.add_argument("-o", "--output", required=True,
+                        help="Output results.json; results.h5 with the full logs is written next to it.")
     return parser.parse_args()
 
 
