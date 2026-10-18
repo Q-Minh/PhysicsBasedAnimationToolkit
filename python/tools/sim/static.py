@@ -4,7 +4,7 @@ Static equilibrium solves of the GPU simulator, and their convergence logs.
 
 A static solve releases an initial shape into min_x Psi(x) - s fext^T x (``fem.static``, with load
 scale s), holding the Dirichlet nodes, and records the error to the rest shape after every solver
-iteration. The convergence benchmark (``benchmark_static.py``) uses MCMC shape samples
+iteration. The convergence benchmark (``benchmark.py``) uses MCMC shape samples
 (``python/examples/rom_mcmc.py``; contract in plans/MASTER.md) as initial shapes and no loads, so the
 equilibrium is exactly the rest shape X.
 
@@ -17,13 +17,13 @@ the error falls below (1 - target_reduction) e0, or a budget runs out. After eve
 itself is excluded from the solver time. Newton isn't capturable and runs eagerly, one Newton step
 per entry, so its time includes host work.
 
-This module has no command line of its own: ``benchmark_static.py`` is the CLI (see its docstring for
+This module has no command line of its own: ``benchmark.py`` is the CLI (see its docstring for
 commands, outputs and pitfalls), and the GUI's "Static Equilibrium" panel (``panels/static.py``) runs
 static solves interactively. ``python -m python.tools.sim.static`` runs this module's tests.
 
 Python usage:
 
-    state = SimulationState(fem_cpu, params_cpu)   # e.g. as benchmark_static.make_state builds it
+    state = SimulationState(fem_cpu, params_cpu)   # e.g. as benchmark.make_state builds it
     state.cd_params[CDType.VertexSdf].deactivate = True
     state.reset()
     batch = load_sample_batch("batch.h5")
@@ -156,7 +156,7 @@ def check_sample_batch(batch: SampleBatch, fem: FemElastoDynamics, atol: float =
 class StaticSolveSpec(SerializableMixin):
     """One static benchmark case: initial shapes, loads and stopping criteria.
 
-    Serialized with :meth:`serialize`/:meth:`deserialize` (h5 attributes), which ``benchmark_static.py``
+    Serialized with :meth:`serialize`/:meth:`deserialize` (h5 attributes), which ``benchmark.py``
     exposes as ``--save-spec``/``--spec``. It isn't part of the simulation parameters
     (``state.serialize_params``) and isn't read from ``--sim-params`` configs.
     """

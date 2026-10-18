@@ -10,7 +10,7 @@ until e <= (1 - p) e0. A solve stops at ``--target-reduction`` or at its time/it
 unreached percentiles are reported as missing (``null``).
 
 Usage:
-    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+    python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
         -o results.json [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] \
         [--sim-params A.toml [B.h5 ...]] [--set Table.key=value ...] [--spec spec.h5] [--save-spec spec.h5] \
         [--sample-begin 0] [--sample-end -1] [--max-seconds 60] [--max-iterations 1000000] \
@@ -19,22 +19,22 @@ Usage:
 Representative commands (from the repo root; scenes and samples live in the main checkout's data/):
 
     # One static solve: one solver, the first sample, a 5 s cap
-    python -m python.tools.sim.benchmark_static \
+    python -m python.tools.sim.benchmark \
         --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
         --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
         --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
 
     # Every solver on every sample of a batch, with the scene's paper parameters
-    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+    python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
         --sim-params python/tools/sim/configs/paper/beam1e6.GroundTruth.toml --max-seconds 10 -o out/all.json
 
     # Parameter variations: layer configs and override single keys (see python/tools/sim/configs/README.md)
-    python -m python.tools.sim.benchmark_static ... --sim-params base.toml static.toml \
+    python -m python.tools.sim.benchmark ... --sim-params base.toml static.toml \
         --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
 
     # Reproducible cases: save the effective StaticSolveSpec, then rerun from it
-    python -m python.tools.sim.benchmark_static ... --samples BATCH.h5 --max-seconds 10 --save-spec case.h5 -o a.json
-    python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --spec case.h5 -o b.json
+    python -m python.tools.sim.benchmark ... --samples BATCH.h5 --max-seconds 10 --save-spec case.h5 -o a.json
+    python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --spec case.h5 -o b.json
 
 Outputs:
     ``results.json``: the effective spec; metadata (scene, parameter sources, sample-file attributes,

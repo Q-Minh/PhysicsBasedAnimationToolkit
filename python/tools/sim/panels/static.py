@@ -15,7 +15,7 @@ a.toml]``, then the "Static Equilibrium" node in the Simulation tab:
 - **Error to rest shape**: e/e0, with e = |x - X|_M over free nodes and e0 the error of the applied sample.
 
 Both settings survive a GUI reset (they're re-applied to the new FEM), and any change drops the
-captured CUDA graph so the next step records a new one. For timed runs, use ``benchmark_static.py``.
+captured CUDA graph so the next step records a new one. For timed runs, use ``benchmark.py``.
 """
 
 import tkinter as tk

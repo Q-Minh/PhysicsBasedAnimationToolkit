@@ -1,6 +1,6 @@
 ---
 name: sim-benchmarks
-description: Run the solver convergence benchmarks of the GPU simulator — generate static/dynamic problem sets from MCMC shape samples, run the static benchmark (benchmark_static.py) over solvers and samples with chosen budgets, targets and parameters, and read its results. Use when asked to benchmark solvers, compare convergence or time-to-accuracy, rerun a benchmark case, or vary benchmark parameters.
+description: Run the solver convergence benchmarks of the GPU simulator — generate static/dynamic problem sets from MCMC shape samples, run the static benchmark (benchmark.py) over solvers and samples with chosen budgets, targets and parameters, and read its results. Use when asked to benchmark solvers, compare convergence or time-to-accuracy, rerun a benchmark case, or vary benchmark parameters.
 ---
 
 # Solver benchmarks
@@ -17,7 +17,7 @@ Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). Scen
    - `dynamic_h{h}/E{E}.h5`: one BDF1 step from (x, v), with Newton reference solutions `samples/x_ref`.
 
    See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). A small existing test set is `data/benchmarks/trampoline-test`.
-2. **Static benchmark.** `python -m python.tools.sim.benchmark_static` releases each sample with every solver and logs the error to the rest shape after every iteration. It reports the time and iterations needed to reach each 5% level of error reduction.
+2. **Static benchmark.** `python -m python.tools.sim.benchmark` releases each sample with every solver and logs the error to the rest shape after every iteration. It reports the time and iterations needed to reach each 5% level of error reduction.
 3. **Dynamic benchmark.** Not built yet (it compares against `x_ref`).
 
 ## Static benchmark
@@ -26,21 +26,21 @@ Error: e = sqrt((x − X)ᵀ M (x − X)) over free nodes (lumped mass). Each so
 
 ```bash
 # One quick solve (smoke test)
-python -m python.tools.sim.benchmark_static --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
+python -m python.tools.sim.benchmark --fem-elasto-dynamics C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.Dump.h5:fem \
     --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
     --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
 
 # Every solver x every sample, with a scene's parameters
-python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
+python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --samples BATCH.h5 \
     --sim-params python/tools/sim/configs/paper/<scene>.toml --max-seconds 10 -o out/all.json
 
 # Parameter variations: configs layered left to right, then single-key overrides
-python -m python.tools.sim.benchmark_static ... --sim-params base.toml static.toml \
+python -m python.tools.sim.benchmark ... --sim-params base.toml static.toml \
     --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
 
 # Reproducible case: save the spec, rerun it
-python -m python.tools.sim.benchmark_static ... --save-spec out/case.h5 -o out/a.json
-python -m python.tools.sim.benchmark_static --fem-elasto-dynamics DUMP.h5:fem --spec out/case.h5 -o out/b.json
+python -m python.tools.sim.benchmark ... --save-spec out/case.h5 -o out/a.json
+python -m python.tools.sim.benchmark --fem-elasto-dynamics DUMP.h5:fem --spec out/case.h5 -o out/b.json
 ```
 
 Translating requests:
@@ -56,7 +56,7 @@ Translating requests:
 | "Use parameters P" / "change key K" | `--sim-params P.toml ...` / `--set K=V` (see the `sim-run` skill; check with `python -m python.tools.sim.config show`) |
 | "Coarser/finer graph blocks" | `--block N` (default 16, rounded up to a multiple of Anderson's m; can overshoot the stop by up to one block) |
 
-`benchmark_static.py`'s module docstring has the full details.
+`benchmark.py`'s module docstring has the full details.
 
 ## Outputs
 
