@@ -88,6 +88,7 @@ Frequently changed keys:
 | `Solver.Convergence.ftol` | Feasibility tolerance between outer iterations: max penetration into the contact margin ≤ ftol·dmin, normal contact only |
 | `Solver.AndersonSolver.m`, `.vbd_iters_per_anderson_iter` | Anderson window; sweeps per Anderson step (p). The budget stays n sweeps: n // p Anderson steps, then n % p plain sweeps |
 | `Solver.Chebyshev.rho` | Chebyshev spectral radius estimate |
+| `Solver.<S>.vlinsolve` | Per-vertex 3x3 solve: 0 Inverse (**default; use it**), 1 LLT, 2 QR, 3 EVD. Switch to EVD only when singular vertex Hessians cause problems |
 | `Solver.Newton.n_max_iters`, `Solver.Newton.LinearSolver.*` | Newton steps; CG limits |
 | `Contact.ContactDynamics.*`, `Contact.CDType.VertexSdf.*` | Contact penalties, friction `mu_f`, margin `dmin`, detection distance |
 | `Contact.ContactStorage.n_*_contact_capacity` | Contact-pair capacity multipliers. Contacts beyond capacity are dropped |

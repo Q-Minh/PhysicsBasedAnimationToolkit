@@ -522,6 +522,10 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   a 24 kg-node cube dropped on a plane penetrates at most 1.7 or 0.8 cm, against 19.7 cm with the constant
   penalty. Owner to be decided (solver kernels are task 3's).
 - 2026-10-18 · coordinator · **Adaptive contact penalty NaN** (BeamFallingOnBeam, penalty_adaptivity 1/2, VBD/AAAVBD/Chebyshev) assigned to **task 3** (`feature/adaptive-penalty`): root cause plus fix; constant mode must stay bit-identical; propose adaptive-mode gamman defaults and ask the maintainer before changing any default. Merged task 4's benchmark browser and gravity options; h5py added to python/examples/requirements.txt (3.16.0, the venv's version).
+- 2026-10-18 · task 3 · **GPU run START** (intermittent, correctness only: adaptive contact penalty NaN investigation on BeamFallingOnBeam/CubeFallingOnCube). Ignore timings. Will log END.
+- 2026-10-18 · task 1 · **GPU run START** (~10 min, correctness only): plane-collider scenes (cube on an
+  infinite ground plane, fast cube, inclined plane). Ignore timings. Will log END.
+- 2026-10-18 · coordinator · Maintainer on solver configs: **params discussion deferred** (the maintainer will say when). Vertex linear solve: **Inverse by default; EVD only when singular Hessians cause problems.** The paper's trampoline configs are **different scenes** from `data/scenarios/trampoline.Dump.h5`. Still open: whether a tuned-parameter layer should also set sweep budgets. h5py pin bumped to 3.16.0 in python/tools/sim/requirements.txt; other pins match the venv.
 
 ## Open questions for the maintainer
 
