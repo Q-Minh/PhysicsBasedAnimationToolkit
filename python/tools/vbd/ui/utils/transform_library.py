@@ -561,25 +561,101 @@ class TransformLibrary:
                 all_nodes[i] = np.unique(np.concatenate(all_nodes[i]))
         return zip(self._mesh_names, all_nodes)
 
-    def all_transformed_nodes_with_durations(
+    def export_kinematic_constraints(
         self,
-    ) -> list[tuple[str, np.ndarray[int], np.ndarray[float]]]:
-        all_nodes = [[] for _ in range(len(self._mesh_names))]
-        durations = [[] for _ in range(len(self._mesh_names))]
-        for i, name in enumerate(self._mesh_names):
-            for transform in self.transforms:
-                if transform.affects(name):
-                    nodes = transform.nodes(name)
-                    all_nodes[i].append(nodes)
-                    durations[i].append(np.full_like(nodes, transform.duration, dtype=np.float32))
-            if len(all_nodes[i]) > 0:
-                all_nodes_i_cpy = np.concatenate(all_nodes[i])
-                durations[i] = np.concatenate(durations[i])
-                all_nodes[i], indices = np.unique(all_nodes_i_cpy, return_index=True)
-                durations[i] = np.maximum.reduceat(
-                    durations[i][np.argsort(all_nodes_i_cpy)], indices
-                )
-        return zip(self._mesh_names, all_nodes, durations)
+        grp: h5py.Group,
+        mesh_names: list[str],
+        offsets: np.ndarray,
+        t: int,
+        dt: float,
+    ):
+        """Write the library as the GPU simulator's kinematic constraint set.
+
+        This is the `kinematics` group of the editor's Dump, read by
+        `python/tools/sim/gpu/kinematics`. Each transform becomes one constraint, in library order,
+        with its nodes in global (concatenated) numbering. Kinds: 0 = Fixed, 1 = Translate,
+        2 = Rotate (G_ROTATE has pivot 0), 3 = RadialTranslate (L_TRANSLATE). Layout:
+
+        - attrs `version` (1) and `t0`, the simulation time t * dt in seconds at the time of the Dump
+        - `kind` (K,), `name` (K,), `begin` (K,) and `duration` (K,) in seconds
+        - `direction` (K, 3): translation direction or rotation axis (unit length, zero otherwise)
+        - `point` (K, 3): rotation pivot or radial origin (zero otherwise)
+        - `rate` (K,): speed in units/s, or angular velocity in rad/s for Rotate
+        - `node_offsets` (K+1,) and `nodes` (nnz,): CSR list of each constraint's nodes
+        - `anchor_nodes` (A,), `anchor_positions` (A, 3) and `anchor_times` (A,) in seconds: anchors of
+          the nodes that are in a constrained run at time t0
+
+        Args:
+            grp (h5py.Group): Group to write to.
+            mesh_names (list[str]): Names of the simulated meshes, in simulation order.
+            offsets (np.ndarray): `|# meshes| + 1` prefix offsets of the meshes' nodes in global numbering.
+            t (int): Current time step.
+            dt (float): Time step size.
+        """
+        kinds = {
+            TransformType.FIXED: 0,
+            TransformType.TRANSLATE: 1,
+            TransformType.G_ROTATE: 2,
+            TransformType.L_ROTATE: 2,
+            TransformType.L_TRANSLATE: 3,
+        }
+        K = len(self.transforms)
+        kind = np.zeros(K, dtype=np.int32)
+        direction = np.zeros((K, 3))
+        point = np.zeros((K, 3))
+        rate = np.zeros(K)
+        node_offsets = np.zeros(K + 1, dtype=np.int64)
+        nodes = []
+        for k, tr in enumerate(self.transforms):
+            kind[k] = kinds[tr.transform_type]
+            if tr.transform_type == TransformType.TRANSLATE:
+                direction[k], rate[k] = tr.direction, tr.speed
+            elif tr.transform_type in (TransformType.G_ROTATE, TransformType.L_ROTATE):
+                direction[k] = tr.axis
+                rate[k] = np.deg2rad(tr.degrees_per_second)
+                if tr.transform_type == TransformType.L_ROTATE:
+                    point[k] = tr.origin
+            elif tr.transform_type == TransformType.L_TRANSLATE:
+                point[k], rate[k] = tr.origin, tr.speed
+            knodes = [
+                offsets[m] + np.asarray(tr.nodes(name), dtype=np.int64)
+                for m, name in enumerate(mesh_names)
+                if tr.affects(name)
+            ]
+            knodes = np.concatenate(knodes) if knodes else np.zeros(0, dtype=np.int64)
+            nodes.append(knodes)
+            node_offsets[k + 1] = node_offsets[k] + knodes.size
+        anchor_nodes, anchor_positions, anchor_times = [], [], []
+        for m, name in enumerate(mesh_names):
+            XA, TA = self._anchors.get(name, (None, None))
+            if XA is None:
+                continue
+            open_runs = np.flatnonzero(TA >= 0)
+            anchor_nodes.append(offsets[m] + open_runs)
+            anchor_positions.append(XA[:, open_runs].T)
+            anchor_times.append(TA[open_runs] * dt)
+        grp.attrs["version"] = 1
+        grp.attrs["t0"] = t * dt
+        grp["kind"] = kind
+        grp["name"] = [tr.name for tr in self.transforms]
+        grp["begin"] = np.array([tr.begin for tr in self.transforms], dtype=float)
+        grp["duration"] = np.array([tr.duration for tr in self.transforms], dtype=float)
+        grp["direction"] = direction
+        grp["point"] = point
+        grp["rate"] = rate
+        grp["node_offsets"] = node_offsets
+        grp["nodes"] = (
+            np.concatenate(nodes) if nodes else np.zeros(0, dtype=np.int64)
+        )
+        grp["anchor_nodes"] = (
+            np.concatenate(anchor_nodes) if anchor_nodes else np.zeros(0, dtype=np.int64)
+        )
+        grp["anchor_positions"] = (
+            np.concatenate(anchor_positions) if anchor_positions else np.zeros((0, 3))
+        )
+        grp["anchor_times"] = (
+            np.concatenate(anchor_times) if anchor_times else np.zeros(0)
+        )
 
     def evaluate(
         self, name: str, V: np.ndarray, t: int, dt: float
@@ -852,6 +928,39 @@ class TestTransformLibrary(unittest.TestCase):
         # dV is the velocity at t = 51 dt, compare with a central difference of the closed form
         central = (traj[52] - traj[50]) / (2 * self.dt)
         np.testing.assert_allclose(dV, central, atol=1e-3)
+
+    def test_export_kinematic_constraints(self):
+        lib = TransformLibrary()
+        for name in ("a", "b"):
+            lib.on_mesh_added(name)
+        rotate = LocalRotateTransform(
+            "r", 0.5, 2.0, np.array([0.0, 0, 2]), np.array([1.0, 2, 3]), 90.0
+        )
+        fixed = FixedTransform("f", 0.0, np.inf)
+        lib.add_transform(rotate)
+        lib.add_transform(fixed)
+        rotate.on_dirichlet_nodes_added("b", [0, 2])
+        fixed.on_dirichlet_nodes_added("a", [1])
+        fixed.on_dirichlet_nodes_added("b", [2])
+        V = np.arange(9, dtype=float).reshape(3, 3)
+        lib.evaluate("b", V, 60, self.dt)  # opens a constrained run at step 60
+        with h5py.File("export.h5", "w", driver="core", backing_store=False) as f:
+            lib.export_kinematic_constraints(
+                f.create_group("kinematics"), ["a", "b"], np.array([0, 4, 7]), 61, self.dt
+            )
+            g = f["kinematics"]
+            self.assertEqual(g.attrs["version"], 1)
+            self.assertAlmostEqual(g.attrs["t0"], 0.61)
+            np.testing.assert_array_equal(g["kind"][()], [2, 0])
+            np.testing.assert_allclose(g["direction"][0], [0, 0, 1])
+            np.testing.assert_allclose(g["point"][0], [1, 2, 3])
+            self.assertAlmostEqual(g["rate"][0], np.pi / 2)
+            self.assertTrue(np.isinf(g["duration"][1]))
+            np.testing.assert_array_equal(g["node_offsets"][()], [0, 2, 4])
+            np.testing.assert_array_equal(g["nodes"][()], [4, 6, 1, 6])
+            np.testing.assert_array_equal(g["anchor_nodes"][()], [4, 6])
+            np.testing.assert_allclose(g["anchor_positions"][()], V[:, [0, 2]].T)
+            np.testing.assert_allclose(g["anchor_times"][()], [0.6, 0.6])
 
 
 if __name__ == "__main__":

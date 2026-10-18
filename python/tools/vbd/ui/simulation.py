@@ -563,20 +563,6 @@ class Simulation:
         fem.x = self._xD
         fem.v = v
 
-    def _apply_release_dirichlet_constraints(self):
-        fem = self._fem_dynamics
-        fem.dmask = np.zeros_like(fem.dmask, dtype=int)
-        for start, tup in zip(
-            self._XP[:-1],
-            self._transform_library.all_transformed_nodes_with_durations(),
-        ):
-            _, dnodes, durations = tup
-            if len(dnodes) != 0:
-                fem.dmask[start + dnodes] = (durations * 1000).astype(
-                    int
-                )  # Convert durations from seconds to milliseconds for storage in dmask
-        fem.constrain(fem.dmask)
-
     def _serialize_problem(self):
         root = tk.Tk()
         root.withdraw()
@@ -589,10 +575,12 @@ class Simulation:
             if file_path:
                 archive = pbat.io.Archive(file_path, flags=pbat.io.AccessMode.Overwrite)
                 xt = self._fem_dynamics.x.copy()
-                # TODO: Hack the procedural constraint application into writing
-                # "release after X milliseconds" Dirichlet constraints
-                # self._apply_procedural_constraints()
-                self._apply_release_dirichlet_constraints()
+                # dmask holds the nodes constrained at the current time step. The kinematics group
+                # written below has the full prescribed motion. constrain() zeroes the velocities of
+                # constrained nodes, so keep their prescribed velocities.
+                vt = self._fem_dynamics.v.copy()
+                self._constrain()
+                self._fem_dynamics.v = vt
                 self._solver.serialize_problem(
                     archive, self._fem_dynamics, self._contact.contact_dynamics
                 )
@@ -602,6 +590,14 @@ class Simulation:
                 )
                 archive = None
                 gc.collect()  # Force garbage collection to close the archive...
+                with h5.File(file_path, "a") as f:
+                    self._transform_library.export_kinematic_constraints(
+                        f.create_group("kinematics"),
+                        self._tet_elastic_body_names,
+                        self._XP,
+                        self._t,
+                        self._dt,
+                    )
                 self._fem_dynamics.x = xt
         except Exception as e:
             ps.error(f"Error saving problem:\n{e}")
