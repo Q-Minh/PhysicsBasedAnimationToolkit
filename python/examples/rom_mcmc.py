@@ -19,6 +19,21 @@ M_r(q) = J(q)^T M J(q). See MicrocanonicalMetropolis.
 Samplers work in whitened coordinates y = q / scale, in which the linearized energy is |y|^2 / 2.
 They all expose `burn_in`, `estimate_thinning` and `sample`, so that `run_chain` can drive any of them.
 
+Which sampler to use:
+
+- "microcanonical" (the preferred default): states (q, qdot) at total energy E. Shapes span a range of
+  deformation energies below E (U/E averages ~0.5 at small E and ~0.3 at large E), and velocities come for
+  free, which dynamic problems need. Steps are cheap (~1 ms, no root solves) but strongly correlated
+  (tau ~ 100-250 steps), so pool several chains (run_chains, 4 by default) with >= 400 samples and check
+  split R-hat < 1.05. Used for the benchmark datasets (make_benchmark.py).
+- "polar": shapes exactly on the level set U(q) = E*, when every sample must have the same deformation
+  energy. Mixes fast (tau ~ 10-20 steps, ~3 ms/step with the radial root solve). Requires a star-shaped
+  level set; check star_violations = 0.
+- "crw": the same target as polar by an independent method, about 2x costlier per independent sample. Use
+  it to cross-check polar, or if star_violations appear.
+- "ray": independent directions, not distributed as the target (files set importance_weights_required).
+  Only for browsing shapes or debugging, never for statistics.
+
 Energies come from pbat in float32, so they carry an absolute round-off noise floor (about 1e-4 J on
 MediumLongBendingBeam). Each chain measures it and keeps its tolerances above it, and batches report it as
 `energy_noise`, `energy_tolerance` and `energy_noise_warning` (set when the tolerance exceeds 1e-3 E).
