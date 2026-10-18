@@ -9,11 +9,15 @@ class QuadraticEnergy:
     """Psi_hat(q) = 1/2 q^T diag(a) q. Its level set is an ellipsoid, and under the "uniform"
     weight z = sqrt(a) * q is uniformly distributed on a sphere."""
 
-    def __init__(self, a: np.ndarray, scale: np.ndarray):
+    def __init__(self, a: np.ndarray, scale: np.ndarray, mass: np.ndarray | None = None):
         self.a = a
         self.scale = scale
         self.dims = a.shape[0]
         self.weight = "uniform"
+        self.mass = np.ones(self.dims) if mass is None else mass
+
+    def reduced_mass(self, q):
+        return np.diag(self.mass)
 
     def energy(self, q):
         return 0.5 * q @ (self.a * q)
@@ -95,6 +99,71 @@ class TestSamplers(unittest.TestCase):
         z2 = (z / np.linalg.norm(z, axis=1, keepdims=True)) ** 2
         # Uniform directions in q concentrate z along the stiff axis
         self.assertGreater(z2[:, 1].mean(), 0.8)
+
+
+class TestMicrocanonical(unittest.TestCase):
+    """With U = 1/2 q^T A q and a constant mass matrix, the microcanonical (q, p) state is uniform on a
+    sphere of dimension 2d - 1 in whitened phase-space coordinates. Hence U / E ~ Beta(d/2, d/2), and
+    M^(1/2) qdot points in a uniformly random direction."""
+
+    def test_equipartition_and_exact_energy(self):
+        a, mass, E = np.array([1.0, 4.0, 9.0]), np.array([1.0, 2.0, 3.0]), 2.0
+        model = QuadraticEnergy(a, np.ones(3), mass)
+        batch = rom_mcmc.run_chains(
+            lambda rng: rom_mcmc.make_sampler("microcanonical", model, E, rng),
+            n_chains=4,
+            n_samples=4000,
+            burn_in=500,
+            pilot=1000,
+            seed=6,
+        )
+        kinetic = 0.5 * np.sum(mass * batch.qdot**2, axis=1)
+        np.testing.assert_allclose(kinetic + batch.energy, E, rtol=1e-12)
+        # Beta(3/2, 3/2) has mean 1/2 and standard deviation 1/4
+        self.assertAlmostEqual(np.mean(batch.energy / E), 0.5, delta=0.03)
+        self.assertAlmostEqual(np.std(batch.energy / E), 0.25, delta=0.03)
+        w = np.sqrt(mass) * batch.qdot
+        w2 = (w / np.linalg.norm(w, axis=1, keepdims=True)) ** 2
+        np.testing.assert_allclose(w2.mean(axis=0), 1.0 / 3.0, atol=0.03)
+        self.assertLess(batch.stats["rhat"], 1.05)
+
+    def test_configuration_dependent_mass(self):
+        # The harmonic system U = 1/2 |z|^2 with unit mass, written in coordinates z = q + c q^3. Then
+        # M_r(q) = diag((1 + 3 c q^2)^2), and the ensemble is coordinate-independent, so z must show the
+        # same equipartition as above. Without the sqrt(det M_r) factor, mean(U) / E drops to ~0.4.
+        c = 0.5
+
+        class Reparametrized:
+            dims, scale, weight = 3, np.ones(3), "uniform"
+
+            def z(self, q):
+                return q + c * q**3
+
+            def energy(self, q):
+                return 0.5 * self.z(q) @ self.z(q)
+
+            def reduced_mass(self, q):
+                return np.diag((1 + 3 * c * q**2) ** 2)
+
+        model, E = Reparametrized(), 2.0
+        batch = rom_mcmc.run_chains(
+            lambda rng: rom_mcmc.make_sampler("microcanonical", model, E, rng),
+            n_chains=4,
+            n_samples=4000,
+            burn_in=500,
+            pilot=1000,
+            seed=8,
+        )
+        self.assertAlmostEqual(np.mean(batch.energy / E), 0.5, delta=0.03)
+        zdot = (1 + 3 * c * batch.q**2) * batch.qdot
+        np.testing.assert_allclose(0.5 * np.sum(zdot**2, axis=1) + batch.energy, E, rtol=1e-12)
+
+    def test_split_rhat_detects_disagreeing_chains(self):
+        rng = np.random.default_rng(7)
+        same = [rng.standard_normal((2000, 2)) for _ in range(4)]
+        shifted = same[:3] + [same[3] + 1.0]
+        self.assertLess(rom_mcmc.split_rhat(same), 1.01)
+        self.assertGreater(rom_mcmc.split_rhat(shifted), 1.1)
 
 
 class TestAutocorrelation(unittest.TestCase):

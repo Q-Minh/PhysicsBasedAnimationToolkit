@@ -1,13 +1,20 @@
-"""Sampling of fixed-energy shapes on reduced (linear or quadratic) displacement manifolds.
+"""Sampling of fixed-energy states on reduced (linear or quadratic) displacement manifolds.
 
-The target set is the energy level set {q : Psi(x0 + u(q)) - Psi(x0) = E*}, where u(q) is the
-reduced displacement map and Psi the full-space hyperelastic energy. Samples follow the density
-pi(q) ~ w(q) delta(Psi_hat(q) - E*) dq, where the weight w selects the distribution:
+Two ensembles are supported.
+
+Fixed potential energy (samplers "polar", "crw", "ray"): shapes on the energy level set
+{q : Psi(x0 + u(q)) - Psi(x0) = E*}, where u(q) is the reduced displacement map and Psi the
+full-space hyperelastic energy. Samples follow the density pi(q) ~ w(q) delta(Psi_hat(q) - E*) dq,
+where the weight w selects the distribution:
 
 - "mass": sqrt(det(J(q)^T M J(q))), the microcanonical measure in the mass metric of the shapes,
   which does not depend on how q is scaled,
 - "uniform": 1, the microcanonical (coarea) measure in q,
 - "area": |grad_q Psi_hat|, the Euclidean surface measure of the level set in q.
+
+Fixed total energy (sampler "microcanonical"): positions and velocities (q, qdot) of the
+microcanonical ensemble delta(H(q, p) - E) dq dp, with H = 1/2 p^T M_r(q)^{-1} p + U(q) and
+M_r(q) = J(q)^T M J(q). See MicrocanonicalMetropolis.
 
 Samplers work in whitened coordinates y = q / scale, in which the linearized energy is |y|^2 / 2.
 They all expose `burn_in`, `estimate_thinning` and `sample`, so that `run_chain` can drive any of them.
@@ -18,6 +25,7 @@ import subprocess
 import typing
 
 import numpy as np
+import scipy.linalg
 import scipy.optimize
 
 WEIGHTS = ("mass", "uniform", "area")
@@ -95,14 +103,18 @@ class QuadraticManifold:
 
         return energy
 
+    def reduced_mass(self, q: np.ndarray) -> np.ndarray:
+        """The m x m configuration-dependent reduced mass matrix M_r(q) = J(q)^T M J(q)."""
+        J = self.jacobian(q)
+        return J.T @ (self.M[:, np.newaxis] * J)
+
     def log_weight(self, q: np.ndarray, gq: np.ndarray) -> float:
         """Log of the weight w(q), given the reduced energy gradient gq at q."""
         if self.weight == "uniform":
             return 0.0
         if self.weight == "area":
             return float(np.log(np.linalg.norm(gq)))
-        J = self.jacobian(q)
-        _, logdet = np.linalg.slogdet(J.T @ (self.M[:, np.newaxis] * J))
+        _, logdet = np.linalg.slogdet(self.reduced_mass(q))
         return 0.5 * logdet
 
 
@@ -224,12 +236,33 @@ def integrated_autocorrelation_time(x: np.ndarray, c: float = 5.0) -> float:
     return max(float(taus[m]), 1.0)
 
 
+def split_rhat(traces: typing.Sequence[np.ndarray]) -> float:
+    """Split-R-hat (Gelman et al., Bayesian Data Analysis, 3rd ed.) of chains of observables.
+
+    Args:
+        traces (typing.Sequence[np.ndarray]): One |# steps| x |# observables| trace per chain.
+
+    Returns:
+        float: The largest split-R-hat over the observables. Values near 1 (e.g. < 1.05) indicate
+        that the chains sample the same distribution.
+    """
+    n = min(t.shape[0] for t in traces) // 2
+    halves = np.stack([h for t in traces for h in (t[:n], t[n : 2 * n])])
+    W = halves.var(axis=1, ddof=1).mean(axis=0)
+    B = n * halves.mean(axis=1).var(axis=0, ddof=1)
+    var = (n - 1) / n * W + B / n
+    rhat = np.sqrt(np.divide(var, W, out=np.ones_like(W), where=W > 0))
+    return float(rhat.max())
+
+
 @dataclasses.dataclass
 class SampleBatch:
     q: np.ndarray
     energy: np.ndarray
     log_target: np.ndarray
     stats: dict
+    qdot: np.ndarray | None = None
+    trace: np.ndarray | None = None
 
 
 class _Chain:
@@ -329,6 +362,9 @@ class _Chain:
                 q[i], e[i], logp[i] = self.q, self.e, self.logp
         tau = max(integrated_autocorrelation_time(o) for o in obs.T)
         steps = self.n_steps - steps0
+        qdot = None
+        if hasattr(self, "sample_velocity"):
+            qdot = np.array([self.sample_velocity(qi, ei) for qi, ei in zip(q, e)])
         stats = dict(
             acceptance=(self.n_accepted - accepted0) / steps,
             step=self.step,
@@ -341,7 +377,7 @@ class _Chain:
             energy_tolerance=self.energy_atol,
             energy_noise_warning=self.energy_atol > 1e-3 * self.target_energy,
         )
-        return SampleBatch(q, e, logp, stats)
+        return SampleBatch(q, e, logp, stats, qdot=qdot, trace=obs)
 
 
 class PolarMetropolis(_Chain):
@@ -488,10 +524,60 @@ class RaySampler(_Chain):
         return np.append(self.theta, self.logp)
 
 
+class MicrocanonicalMetropolis(_Chain):
+    """Positions and velocities of the microcanonical ensemble at total energy E (Liouville measure dq dp).
+
+    Integrating the momenta out of delta(H(q, p) - E), with H = 1/2 p^T M_r(q)^{-1} p + U(q), leaves
+    the position marginal pi(q) ~ sqrt(det M_r(q)) (E - U(q))^((d-2)/2) on U(q) < E. It is sampled by
+    random-walk Metropolis in whitened coordinates, starting from the rest state q = 0. Given q, the
+    momentum is uniform on the sphere |M_r^{-1/2} p|^2 = 2 (E - U), which sample_velocity draws exactly.
+    The sample energies are the potential energies U(q); the kinetic energies are E - U(q).
+    """
+
+    def __init__(self, model, energy: float, rng: np.random.Generator, step: float = 0.3, target_acceptance: float = 0.25):
+        super().__init__(model, energy, rng, step, target_acceptance)
+        self.y = np.zeros(model.dims)
+        self.q = np.zeros(model.dims)
+        self.e = model.energy(self.q)
+        self.logp = self._log_target(self.q, self.e)
+
+    def _log_target(self, q: np.ndarray, e: float) -> float:
+        kinetic = self.target_energy - e
+        if kinetic <= 0:
+            return -np.inf
+        _, logdet = np.linalg.slogdet(self.model.reduced_mass(q))
+        return 0.5 * logdet + 0.5 * (self.model.dims - 2) * np.log(kinetic)
+
+    def _step(self) -> bool:
+        y = self.y + self.step * self.rng.standard_normal(self.model.dims)
+        q = self.model.scale * y
+        e = self.model.energy(q)
+        if e >= self.target_energy:
+            return False
+        logp = self._log_target(q, e)
+        if np.log(self.rng.uniform()) < logp - self.logp:
+            self.y, self.q, self.e, self.logp = y, q, e, logp
+            return True
+        return False
+
+    def _observables(self) -> np.ndarray:
+        return np.append(self.y, self.logp)
+
+    def sample_velocity(self, q: np.ndarray, e: float) -> np.ndarray:
+        """Draws qdot given q, s.t. 1/2 qdot^T M_r(q) qdot = E - U(q), with U(q) = e."""
+        kinetic = max(self.target_energy - e, 0.0)
+        C = np.linalg.cholesky(self.model.reduced_mass(q))
+        z = self.rng.standard_normal(self.model.dims)
+        z /= np.linalg.norm(z)
+        # With M_r = C C^T, qdot = C^{-T} z sqrt(2K) satisfies qdot^T M_r qdot = 2K
+        return np.sqrt(2.0 * kinetic) * scipy.linalg.solve_triangular(C.T, z, lower=False)
+
+
 SAMPLERS = {
     "polar": PolarMetropolis,
     "crw": ConstrainedRandomWalk,
     "ray": RaySampler,
+    "microcanonical": MicrocanonicalMetropolis,
 }
 
 
@@ -510,6 +596,55 @@ def run_chain(sampler, n_samples: int, burn_in: int, pilot: int, thin: int | Non
     batch = sampler.sample(n_samples, thin)
     batch.stats.update(burn_in=burn_in, pilot=pilot if auto_thin else 0, auto_thin=auto_thin)
     return batch
+
+
+def run_chains(
+    make: typing.Callable[[np.random.Generator], typing.Any],
+    n_chains: int,
+    n_samples: int,
+    burn_in: int,
+    pilot: int,
+    thin: int | None = None,
+    seed: int = 0,
+) -> SampleBatch:
+    """Runs independent chains with run_chain and pools their samples.
+
+    Args:
+        make (typing.Callable): make(rng) creates a sampler using the random generator rng.
+        n_chains (int): Number of independent chains.
+        n_samples (int): Total number of pooled samples, split evenly across the chains.
+        burn_in (int): Burn-in steps per chain.
+        pilot (int): Pilot steps per chain for automatic thinning.
+        thin (int | None): Fixed thinning, or None for automatic thinning per chain.
+        seed (int): Seed from which the chains' independent random streams are spawned.
+
+    Returns:
+        SampleBatch: The pooled samples, with aggregated statistics and the chains' split-R-hat.
+    """
+    per_chain = -(-n_samples // n_chains)
+    rngs = [np.random.default_rng(s) for s in np.random.SeedSequence(seed).spawn(n_chains)]
+    batches = [run_chain(make(rng), per_chain, burn_in, pilot, thin) for rng in rngs]
+
+    def pool(field):
+        arrays = [getattr(b, field) for b in batches]
+        return None if arrays[0] is None else np.concatenate(arrays)[:n_samples]
+
+    stats = [b.stats for b in batches]
+    pooled = dict(stats[0])
+    pooled.update(
+        n_chains=n_chains,
+        acceptance=float(np.mean([s["acceptance"] for s in stats])),
+        step=float(np.mean([s["step"] for s in stats])),
+        thin=int(max(s["thin"] for s in stats)),
+        tau=float(max(s["tau"] for s in stats)),
+        ess=float(sum(s["ess"] for s in stats)),
+        star_violations=int(sum(s["star_violations"] for s in stats)),
+        energy_noise=float(max(s["energy_noise"] for s in stats)),
+        energy_tolerance=float(max(s["energy_tolerance"] for s in stats)),
+        energy_noise_warning=bool(any(s["energy_noise_warning"] for s in stats)),
+        rhat=split_rhat([b.trace for b in batches]),
+    )
+    return SampleBatch(pool("q"), pool("energy"), pool("log_target"), pooled, qdot=pool("qdot"))
 
 
 def git_commit(path: str) -> str:
