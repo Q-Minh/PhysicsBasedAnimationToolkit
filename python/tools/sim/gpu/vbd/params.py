@@ -4,7 +4,7 @@ import cupy as cp
 import enum
 from pbatoolkit import pbat
 
-from ...common.fields import DocField
+from ...common.fields import DocField, SerializableMixin
 
 # --- Vertex linear solver constants ---
 VLS_SOLVER_INVERSE = wp.constant(
@@ -199,9 +199,9 @@ class Params:
         return self._Pptr
 
 
-# Fields of pbat.sim.algorithm.vbd.Params that only AAAVBD (stencil gradient acceleration) reads.
-# The GPU VBD, Chebyshev and Anderson solvers ignore them, so their parameter tables and GUI panels
-# leave them out.
+# Parameters that only AAAVBD (stencil gradient acceleration) reads: fields of
+# pbat.sim.algorithm.vbd.Params, plus AaaVbdCpuParams' GPU-only ones. The GPU VBD, Chebyshev and
+# Anderson solvers ignore them, so their parameter tables and GUI panels leave them out.
 STENCIL_GRADIENT_ACCELERATION_KEYS = frozenset(
     {
         "betaG0",
@@ -288,6 +288,64 @@ def deserialize_vbd_cpu_params(
                 setattr(params, name, int(raw))
         except Exception:
             pass
+
+
+class AaaVbdCpuParams(SerializableMixin):
+    """CPU-side AAAVBD parameters: a `pbat.sim.algorithm.vbd.Params` object plus GPU-only stencil
+    gradient acceleration parameters for ablation studies, stored as a single `params_cpu` entry.
+
+    The C++ object rejects new attributes, so this wrapper holds it as `vbd_params` (drawn as a nested
+    sub-tree in the GUI, see `SOLVER_SUB_PARAMS` in `ui.py`) and forwards every other attribute to it,
+    so `params_cpu[SolverType.AAAVBD].gammadown` and the like keep working. The GPU-only parameters
+    are `DocField`s, serialized next to the VBD fields in the `Solver/AAAVBD` group
+    (`serialize_aaavbd_cpu_params`). C++ `vbd::Iterate` has neither: it behaves as their defaults.
+    """
+
+    betaup = DocField(
+        1.0,
+        "Upper limit of the stencil gradient augmentation scale betaG: on a step with rho > rhohat, "
+        "betaG += (betaup - betaG) * gammaup. C++ hard-codes 1. Values above 1 let betaG exceed 1 "
+        "(over-relaxation). Both interior and surface vertices use it. GPU only.",
+    )
+    lipschitz_normalization = DocField(
+        True,
+        "Normalize the step ratio rho = |g_k - g_k-1| / |x_k - x_k-1| by the vertex Lipschitz estimate "
+        "L = |H_i|_F + |g_k| / |x_k - x_k-1|, as C++ does. Off, rho is not normalized, so rhohat and "
+        "rhohatS have stiffness units and their values aren't comparable with the normalized ones. GPU only.",
+    )
+
+    def __init__(self, vbd_params: pbat.sim.algorithm.vbd.Params | None = None):
+        object.__setattr__(
+            self,
+            "vbd_params",
+            vbd_params if vbd_params is not None else pbat.sim.algorithm.vbd.Params(),
+        )
+
+    def __getattr__(self, name):
+        # Only reached for attributes this wrapper lacks
+        if name == "vbd_params":
+            raise AttributeError(name)
+        return getattr(self.vbd_params, name)
+
+    def __setattr__(self, name, value):
+        if name.startswith("_") or hasattr(type(self), name):
+            object.__setattr__(self, name, value)
+        else:
+            setattr(self.vbd_params, name, value)
+
+
+def serialize_aaavbd_cpu_params(params: AaaVbdCpuParams, grp) -> None:
+    """Serialize an `AaaVbdCpuParams` container to an h5py group: the VBD CPU `Params` with its
+    stencil gradient acceleration fields, then the GPU-only `DocField`s."""
+    serialize_vbd_cpu_params(params.vbd_params, grp, stencil_gradient_acceleration=True)
+    params.serialize(grp)
+
+
+def deserialize_aaavbd_cpu_params(params: AaaVbdCpuParams, grp) -> None:
+    """Deserialize an `AaaVbdCpuParams` container from an h5py group, in place (see
+    `serialize_aaavbd_cpu_params`). Silently skips keys absent from the group."""
+    deserialize_vbd_cpu_params(params.vbd_params, grp, stencil_gradient_acceleration=True)
+    params.deserialize(grp)
 
 
 class ChebyshevParams(Params):
@@ -635,6 +693,12 @@ class TestParams(unittest.TestCase):
         self.assertEqual(
             params.data.gammaup, (float(params_cpu.gammaup), float(params_cpu.gammaupS))
         )
+        # GPU-only AAAVBD parameters: C++ behaviour by default
+        self.assertEqual(params.data.betaup, 1.0)
+        self.assertEqual(params.data.lipschitz_normalization, 1)
+        params = Params(params_cpu, betaup=1.05, lipschitz_normalization=False)
+        self.assertAlmostEqual(params.data.betaup, 1.05, places=6)
+        self.assertEqual(params.data.lipschitz_normalization, 0)
 
     def test_stencil_gradient_acceleration_keys_are_aaavbd_only(self):
         import h5py
@@ -642,9 +706,7 @@ class TestParams(unittest.TestCase):
         params_cpu = pbat.sim.algorithm.vbd.Params()
         with h5py.File("params.h5", "w", driver="core", backing_store=False) as f:
             serialize_vbd_cpu_params(params_cpu, f.create_group("VBD"))
-            serialize_vbd_cpu_params(
-                params_cpu, f.create_group("AAAVBD"), stencil_gradient_acceleration=True
-            )
+            serialize_aaavbd_cpu_params(AaaVbdCpuParams(params_cpu), f.create_group("AAAVBD"))
             self.assertFalse(STENCIL_GRADIENT_ACCELERATION_KEYS & set(f["VBD"].attrs))
             self.assertLessEqual(STENCIL_GRADIENT_ACCELERATION_KEYS, set(f["AAAVBD"].attrs))
             self.assertIn("gtol", f["VBD"].attrs)
@@ -659,6 +721,40 @@ class TestParams(unittest.TestCase):
             aaavbd = pbat.sim.algorithm.vbd.Params()
             deserialize_vbd_cpu_params(aaavbd, old, stencil_gradient_acceleration=True)
             self.assertAlmostEqual(aaavbd.betaG0, 0.25)
+
+    def test_aaavbd_cpu_params(self):
+        import h5py
+
+        params = AaaVbdCpuParams()
+        # GPU-only parameters, with C++ behaviour by default
+        self.assertEqual(params.betaup, 1.0)
+        self.assertIs(params.lipschitz_normalization, True)
+        # Every other attribute is the wrapped C++ object's
+        params.gammadown = 0.9
+        self.assertAlmostEqual(params.vbd_params.gammadown, 0.9, places=6)
+        self.assertAlmostEqual(params.gammadown, 0.9, places=6)
+        with self.assertRaises(AttributeError):
+            params.not_a_parameter = 1
+        # Round trip through HDF5, next to the VBD fields
+        params.betaup = 1.05
+        params.lipschitz_normalization = False
+        with h5py.File("params.h5", "w", driver="core", backing_store=False) as f:
+            serialize_aaavbd_cpu_params(params, f.create_group("AAAVBD"))
+            self.assertEqual(f["AAAVBD"].attrs["lipschitz_normalization"], 0)
+            self.assertIn("gammadown", f["AAAVBD"].attrs)
+            loaded = AaaVbdCpuParams()
+            deserialize_aaavbd_cpu_params(loaded, f["AAAVBD"])
+            self.assertAlmostEqual(loaded.betaup, 1.05)
+            self.assertIs(loaded.lipschitz_normalization, False)
+            self.assertAlmostEqual(loaded.gammadown, 0.9, places=6)
+            # Files without the GPU-only keys keep their defaults
+            old = f.create_group("old")
+            old.attrs["gammadown"] = 0.95
+            loaded = AaaVbdCpuParams()
+            deserialize_aaavbd_cpu_params(loaded, old)
+            self.assertEqual(loaded.betaup, 1.0)
+            self.assertIs(loaded.lipschitz_normalization, True)
+            self.assertAlmostEqual(loaded.gammadown, 0.95, places=6)
 
 
 if __name__ == "__main__":
