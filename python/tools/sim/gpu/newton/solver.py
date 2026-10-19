@@ -966,9 +966,10 @@ def _compute_energy(
     h2: wp.float32,
 ) -> float:
     main_stream = wp.get_stream()
+    # Zero before forking, so the side streams' writes can't race the memset
+    params._data.f_obj_partial.zero_()
     for stream in params._streams[:6]:
         stream.wait_stream(main_stream)
-    params._data.f_obj_partial.zero_()
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
     cd = contact.data
@@ -1086,8 +1087,6 @@ def solve_subproblem(
         leaves ``x`` at the last accepted iterate.
     """
     main_stream = wp.get_stream()
-    for stream in params._streams[:5]:
-        stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
     h2 = wp.float32(fem.h2)  # type: ignore
@@ -1104,7 +1103,10 @@ def solve_subproblem(
                 return SubproblemStatus.CONVERGED
         # Assemble FEM + contact Hessian
         profiling.push("newton.assemble")
+        # Zero before forking, so the side streams' writes can't race the memset
         params._data.Hvals.zero_()
+        for stream in params._streams[:5]:
+            stream.wait_stream(main_stream)
         wp.launch(
             kernel=_compute_dynamics_hessian_triplets,
             dim=max(n_nodes, n_elems),
