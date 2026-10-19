@@ -4,9 +4,9 @@ Static equilibrium solves of the GPU simulator, and their convergence logs.
 
 A static solve releases an initial shape into min_x Psi(x) - s fext^T x (``fem.static``, with load
 scale s), holding the Dirichlet nodes, and records the error to the rest shape after every solver
-iteration. The convergence benchmark (``benchmark.py``) uses MCMC shape samples
-(``python/examples/make_benchmark.py``; contract in plans/MASTER.md) as initial shapes and no loads,
-so the equilibrium is exactly the rest shape X. The same machinery runs dynamic benchmark problems:
+iteration. The convergence benchmark (``benchmark.py``) uses MCMC shape samples from a benchmark
+dataset (``python/examples/make_benchmark.py``; contract in plans/MASTER.md) as initial shapes and no
+loads, so the equilibrium is exactly the rest shape X. The same machinery runs dynamic benchmark problems:
 one BDF1 step (:func:`prepare_dynamic_problem`) measured against the problem's reference solution.
 
 Error: e = sqrt((x - x*)^T M (x - x*)) over free nodes (lumped mass M), with x* = X for static
@@ -28,7 +28,7 @@ Python usage:
     state = SimulationState(fem_cpu, params_cpu)   # e.g. as benchmark.make_state builds it
     state.cd_params[CDType.VertexSdf].deactivate = True
     state.reset()
-    batch = load_sample_batch("batch.h5")
+    batch = load_sample_batch("dataset.h5:static/E50")  # a set of a dataset, or a sample file
     check_sample_batch(batch, state.fem)
     prepare_static_problem(state, fext_scale=0.0)  # no loads: the equilibrium is X
     spec = StaticSolveSpec()
@@ -59,25 +59,55 @@ from .state import SimulationState, SolverType
 # --- MCMC sample batches ---
 
 
+DATASET_FORMAT = "pbat-benchmark-dataset"
+
+
+def split_batch_path(path: str) -> tuple[str, str]:
+    """Split ``file.h5:group`` into the file and the group (``"/"`` when there is none). A drive letter's
+    colon (``C:/...``) isn't a separator."""
+    i = path.rfind(":")
+    return (path[:i], path[i + 1 :] or "/") if i > 1 else (path, "/")
+
+
+def is_dataset(path: str) -> bool:
+    """Whether ``path`` is a benchmark dataset (``make_benchmark.py``), as opposed to a single sample file."""
+    with h5py.File(path, "r") as f:
+        return f.attrs.get("dataset_format") == DATASET_FORMAT
+
+
+def dataset_sets(path: str) -> list[str]:
+    """The problem sets of a benchmark dataset, e.g. ``["static/E50", "dynamic_h0.01/E50"]``, in the
+    order they were written (the root attribute ``sets``).
+
+    Raises:
+        ValueError: if ``path`` isn't a benchmark dataset.
+    """
+    with h5py.File(path, "r") as f:
+        if f.attrs.get("dataset_format") != DATASET_FORMAT:
+            raise ValueError(f"{path}: not a benchmark dataset (no dataset_format = {DATASET_FORMAT!r})")
+        return [str(name) for name in f.attrs["sets"]]
+
+
 @dataclass
 class SampleBatch:
-    """Benchmark problems from one MCMC sample file (one target energy).
+    """Benchmark problems from one MCMC sample batch (one target energy): a problem set of a benchmark
+    dataset, or a sample file's root.
 
-    The file's root attribute ``problem`` gives the kind (``"static"`` when absent):
+    The batch's attribute ``problem`` gives the kind (``"static"`` when absent):
 
     - **static**: release ``x`` with no loads; the solution is the rest shape ``X``.
     - **dynamic**: one implicit-Euler (BDF1) step of size ``h`` from ``x`` with velocity ``v``, i.e.
       minimize 1/(2 h^2) |y - xtilde|_M^2 + Psi(y) with the Dirichlet DOFs at rest. ``x_ref`` is a
       reference solution (full-order Newton). Its accuracy is ``ref_error_mnorm``, the M-norm (free
-      DOFs, as the benchmark's error) of its last Newton correction, in files that have it, and
-      otherwise roughly ``ref_newton_correction``, that correction's largest entry (m).
+      DOFs, as the benchmark's error) of its last Newton correction; ``ref_newton_correction`` is that
+      correction's largest entry (m).
 
-    ``attrs`` holds the file's root attributes as written by the sampler (e.g. ``target_energy``,
+    ``attrs`` holds the batch group's attributes as written by the sampler (e.g. ``target_energy``,
     ``sampler``, ``ensemble``, ``rhat``, ``gravity``, ``h``; see the sample-file contract in
     plans/MASTER.md).
     """
 
-    path: str
+    path: str  # file.h5:group, or the file for a sample file's root
     X: np.ndarray  # (N, 3) float32 rest positions, Dump node order
     x: np.ndarray  # (S, N, 3) float32 sample positions X + u(q)
     energy: np.ndarray  # (S,) achieved deformation energies (J)
@@ -127,21 +157,28 @@ class SampleBatch:
 
 
 def load_sample_batch(path: str) -> SampleBatch:
-    """Load an MCMC sample file.
+    """Load an MCMC sample batch.
 
     Args:
-        path (str): The sample file (.h5).
+        path (str): ``file.h5:group`` for a problem set of a benchmark dataset (e.g.
+            ``trampoline.h5:dynamic_h0.01/E500``, see :func:`dataset_sets`), or a sample file (.h5) whose
+            root is the batch (e.g. from ``python/examples/modalrom.py``).
 
     Returns:
         SampleBatch: Rest positions, sample positions, achieved energies, ``min_J`` when present, and
-        the file's attributes.
+        the batch's attributes.
 
     Raises:
         ValueError: if the batch needs importance weights (``importance_weights_required``, e.g. the
             ray sampler), since the benchmark averages uniformly over samples, or if the layout
             doesn't match the contract.
     """
-    with h5py.File(path, "r") as f:
+    file_path, group = split_batch_path(path)
+    with h5py.File(file_path, "r") as root:
+        if group == "/" and root.attrs.get("dataset_format") == DATASET_FORMAT:
+            sets = [str(name) for name in root.attrs["sets"]]
+            raise ValueError(f"{path}: a benchmark dataset; load one of its sets, e.g. {path}:{sets[0]}")
+        f = root[group]
         attrs = {k: (v.item() if isinstance(v, np.generic) else v) for k, v in f.attrs.items()}
         if bool(attrs.get("importance_weights_required", False)):
             raise ValueError(
@@ -157,11 +194,8 @@ def load_sample_batch(path: str) -> SampleBatch:
         if problem == "dynamic":
             for name in ["v", "xtilde", "x_ref"]:
                 dynamic[name] = np.asarray(f[f"samples/{name}"], dtype=np.float32)
-            dynamic["ref_newton_correction"] = np.asarray(
-                f["samples/ref_newton_correction"], dtype=np.float64
-            )
-            if "samples/ref_error_mnorm" in f:
-                dynamic["ref_error_mnorm"] = np.asarray(f["samples/ref_error_mnorm"], dtype=np.float64)
+            for name in ["ref_newton_correction", "ref_error_mnorm"]:
+                dynamic[name] = np.asarray(f[f"samples/{name}"], dtype=np.float64)
             if "h" not in attrs:
                 raise ValueError(f"{path}: dynamic problems need the time step attribute h")
         elif problem != "static":
@@ -213,7 +247,10 @@ class StaticSolveSpec(SerializableMixin):
     (``state.serialize_params``) and isn't read from ``--sim-params`` configs.
     """
 
-    sample_file = DocField("", "MCMC sample file (.h5) providing the initial shapes")
+    dataset = DocField("", "Benchmark dataset (.h5) providing the problems (python/examples/make_benchmark.py)")
+    sets = DocField(
+        "", "Comma-separated problem sets of the dataset to run, as fnmatch patterns (e.g. static/*); empty = all"
+    )
     sample_begin = DocField(0, "First sample index")
     sample_end = DocField(-1, "One past the last sample index (-1 = all samples)")
     fext_scale = DocField(0.0, "Scale of the external load (0 = no loads, equilibrium at X)")
@@ -736,6 +773,45 @@ class TestErrorLog(unittest.TestCase):
         e = log.read().error[0]
         expected = np.sqrt(np.sum(m[1:, None] * (x[1:].astype(np.float64) - ref[1:]) ** 2))
         self.assertAlmostEqual(e / expected, 1.0, places=5)
+
+
+class TestSampleBatches(unittest.TestCase):
+    def test_split_batch_path(self):
+        self.assertEqual(split_batch_path("C:/data/set.h5"), ("C:/data/set.h5", "/"))
+        self.assertEqual(split_batch_path("C:/data/set.h5:static/E50"), ("C:/data/set.h5", "static/E50"))
+        self.assertEqual(split_batch_path("set.h5:dynamic_h0.01/E5"), ("set.h5", "dynamic_h0.01/E5"))
+
+    def test_dataset_sets(self):
+        import os
+        import tempfile
+
+        rng = np.random.default_rng(0)
+        X = rng.standard_normal((4, 3)).astype(np.float32)
+        x = X[None] + rng.standard_normal((2, 4, 3)).astype(np.float32)
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "dataset.h5")
+            with h5py.File(path, "w") as f:
+                f.attrs.update(dataset_format=DATASET_FORMAT, sets=["static/E50", "dynamic_h0.01/E50"])
+                f.create_dataset("X", data=X)
+                for name, problem in [("static/E50", "static"), ("dynamic_h0.01/E50", "dynamic")]:
+                    g = f.create_group(name)
+                    g.attrs.update(problem=problem, target_energy=50.0, h=0.01)
+                    g["X"] = f["X"]
+                    g.create_dataset("samples/x", data=x)
+                    g.create_dataset("samples/energy", data=np.full(2, 50.0))
+                    if problem == "dynamic":
+                        for d in ["v", "xtilde", "x_ref"]:
+                            g.create_dataset(f"samples/{d}", data=x)
+                        for d in ["ref_newton_correction", "ref_error_mnorm"]:
+                            g.create_dataset(f"samples/{d}", data=np.zeros(2))
+            self.assertTrue(is_dataset(path))
+            self.assertEqual(dataset_sets(path), ["static/E50", "dynamic_h0.01/E50"])
+            batch = load_sample_batch(f"{path}:dynamic_h0.01/E50")
+            self.assertEqual((batch.problem, batch.h, batch.n_samples), ("dynamic", 0.01, 2))
+            np.testing.assert_array_equal(batch.X, X)
+            self.assertEqual(load_sample_batch(f"{path}:static/E50").problem, "static")
+            with self.assertRaises(ValueError):
+                load_sample_batch(path)
 
 
 if __name__ == "__main__":

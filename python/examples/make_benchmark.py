@@ -4,16 +4,24 @@ For each total energy E, a pool of microcanonical samples (q, qdot) is drawn on 
 evenly spaced subset of it becomes the benchmark problems. The total energy E = K + U includes the gravity potential
 -(M g)^T u(q) in U when sampling with gravity: by default the dynamic problems are sampled with gravity (consistent
 with their inertial targets) and the static ones without (--static-gravity, --dynamic-gravity). Sets sampled with
-the same setting share one pool, i.e. the same problems; the dynamic sets always share theirs:
+the same setting share one pool, i.e. the same problems; the dynamic sets always share theirs.
 
-    <output>/pool/E{E}.h5          all pooled samples without gravity.
-    <output>/pool_gravity/E{E}.h5  all pooled samples with gravity.
-    <output>/static/E{E}.h5        static problems: release x = X + u(q) into a static solve with no loads.
-                                   The solution is the rest shape X.
-    <output>/dynamic_h{h}/E{E}.h5  dynamic problems: one implicit Euler (BDF1) step of size h from
-                                   (x, v = J(q) qdot), i.e. min_x 1/(2 h^2) |x - xtilde|_M^2 + Psi(x) with
-                                   xtilde = x + h v + h^2 g. samples/x_ref holds a reference solution from a
-                                   converged full-order Newton solve.
+The whole benchmark is one HDF5 file (--output), which benchmark.py and benchmark_browser.py read:
+
+    fem/                       the input's FemElastoDynamics (pbat.io.Archive), whose Dirichlet nodes are held at rest
+                               by every problem. The benchmark solves on it.
+    X, basis/                  rest positions and the quadratic-manifold basis, stored once (see below).
+    pools/pool/E{E}/           all pooled samples without gravity.
+    pools/pool_gravity/E{E}/   all pooled samples with gravity.
+    static/E{E}/               static problems: release x = X + u(q) into a static solve with no loads. The solution
+                               is the rest shape X.
+    dynamic_h{h}/E{E}/         dynamic problems: one implicit Euler (BDF1) step of size h from (x, v = J(q) qdot),
+                               i.e. min_x 1/(2 h^2) |x - xtilde|_M^2 + Psi(x) with xtilde = x + h v + h^2 g.
+                               samples/x_ref holds a reference solution from a converged full-order Newton solve.
+
+    root attributes            dataset_format = "pbat-benchmark-dataset", dataset_version = 1, sets (the problem set
+                               groups, e.g. ["static/E50", "dynamic_h0.01/E50"]), pools (the pool groups), input,
+                               git_commit, and the generator's settings.
 
 The input is a CPU editor scene file (e.g. data/scenarios/trampoline.h5), whose FemElastoDynamics is built the way
 the editor builds it, or a stored FemElastoDynamics given as filepath:h5path (e.g. an editor Dump's fem group). It
@@ -24,13 +32,15 @@ constraints acting during that span must keep their nodes fixed throughout, and 
 Dirichlet nodes must sit at rest with zero velocity, since every problem holds them at X. Its time integrator is
 only recorded: the dynamic problems are always BDF1 steps with the --dt time steps.
 
-All files follow the sample-file contract (see rom_mcmc.write_samples), with ensemble = "total" and
-sampler = "microcanonical". Dirichlet DOFs stay at rest in every state. Problem files add:
+Every pool and problem set group follows the sample-file contract (see rom_mcmc.write_samples), with
+ensemble = "total" and sampler = "microcanonical"; its X and basis are hard links to the root's, so a group reads
+like a sample file's root. Dirichlet DOFs stay at rest in every state. The groups add:
 
-    root attributes      problem ("pool", "static" or "dynamic"), problem_definition, pool_file, pool_indices,
+    group attributes     problem ("pool", "static" or "dynamic"), problem_definition, pool (the pool group the
+                         problems were drawn from, e.g. "pools/pool/E50"; problem sets only), pool_indices,
                          gravity (3,) the acceleration in the sampled potential (zero without gravity),
                          scene_dt and scene_bdf_steps (the input's BDF time step in s and step count).
-    dynamic files only   root attributes h (s), bdf_order = 1, aext (3,) the scene gravity (m/s^2),
+    dynamic sets only    attributes h (s), bdf_order = 1, aext (3,) the scene gravity (m/s^2),
                          reference_time (s), and the datasets
                          samples/v                       (S, N, 3) float32 start velocities J(q) qdot,
                          samples/xtilde                  (S, N, 3) float32 inertial targets x + h v + h^2 aext
@@ -48,31 +58,33 @@ sampler = "microcanonical". Dirichlet DOFs stay at rest in every state. Problem 
                                                          in the benchmark's own metric,
                          samples/ref_min_J               (S,) minimum det(F) of the reference solutions.
 
-Sampling and the reference solves run on the CPU. The samples' quality is in each pool file: check rhat < 1.05
+Sampling and the reference solves run on the CPU. The samples' quality is in each pool group: check rhat < 1.05
 (otherwise increase --pool or --burn-in) and energy_noise_warning = False.
 
 Usage:
     # Default levels (50, 500, 5000 J), 10 problems each, h = 1e-4 and 1e-2 s
-    python make_benchmark.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.h5 -o C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline
+    python make_benchmark.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.h5 -o C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline.h5
 
     # Chosen energies, problem counts and time steps; e.g. 100 problems at 10000 J from a pool of 2000
-    python make_benchmark.py -i <scene>.h5 -o <dir> --energies 10000 --problems 100 --pool 2000 --dt 1e-4 1e-2
+    python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --energies 10000 --problems 100 --pool 2000 --dt 1e-4 1e-2
 
     # All sets sampled with gravity, sharing one pool (paired static and dynamic problems)
-    python make_benchmark.py -i <scene>.h5 -o <dir> --static-gravity
+    python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --static-gravity
 
     # Static problems only (no dynamic sets)
-    python make_benchmark.py -i <scene>.h5 -o <dir> --dt
+    python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --dt
 
     # Quick test set (rhat isn't meaningful with such small pools)
-    python make_benchmark.py -i <scene>.h5 -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100
+    python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100
 """
 
 import argparse
+import gc
 import os
 import time
 import typing
 
+import h5py
 import numpy as np
 from pbatoolkit import pbat
 
@@ -150,6 +162,19 @@ def check_scene(fem, atol: float = 1e-6) -> typing.List[str]:
     return warnings
 
 
+def write_fem(path: str, fem):
+    """Creates (or overwrites) the dataset file with the FemElastoDynamics in its fem/ group.
+
+    Args:
+        path (str): The dataset file.
+        fem (pbat.sim.dynamics.FemElastoDynamics): The FEM the problems are built on.
+    """
+    archive = pbat.io.Archive(path, flags=pbat.io.AccessMode.Overwrite)
+    fem.serialize(archive["fem"])
+    archive = None
+    gc.collect()  # Closes the archive before h5py opens the file
+
+
 class SamplingPlan(typing.NamedTuple):
     """One pool of samples per energy, and the problem sets drawn from it."""
 
@@ -171,9 +196,10 @@ def sampling_plan(static_gravity: bool, dynamic_gravity: bool, has_dynamic: bool
         has_dynamic (bool): Whether any dynamic set is requested.
 
     Returns:
-        typing.List[SamplingPlan]: The pools, named pool (without gravity) or pool_gravity (with gravity).
+        typing.List[SamplingPlan]: The pools, the groups pools/pool (without gravity) or pools/pool_gravity (with
+        gravity).
     """
-    pool = lambda gravity: "pool_gravity" if gravity else "pool"
+    pool = lambda gravity: "pools/pool_gravity" if gravity else "pools/pool"
     if not has_dynamic:
         return [SamplingPlan(pool(static_gravity), static_gravity, True, False)]
     if static_gravity == dynamic_gravity:
@@ -199,8 +225,8 @@ def min_det_F(E, egU, GNegU, model, qs) -> np.ndarray:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Static and dynamic elasticity benchmark problems from microcanonical ROM samples",
-        description="Writes pool/ (and pool_gravity/), static/ and dynamic_h{h}/ problem files per total energy under "
-        "--output. "
+        description="Writes one benchmark dataset file (--output) holding the input FEM, the pools, and the static "
+        "and dynamic_h{h} problem sets per total energy. "
         "See the module docstring for the file contents and representative commands.",
     )
     parser.add_argument(
@@ -218,14 +244,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o",
         "--output",
-        help="Output directory; existing files with the same names are overwritten",
+        help="Output dataset file (.h5), overwritten",
         type=str,
         dest="output",
         required=True,
     )
     parser.add_argument(
         "--energies",
-        help="Total energies E = K + U in J, one problem file per energy and set. On the trampoline, 50 / 500 / "
+        help="Total energies E = K + U in J, one problem set per energy and kind. On the trampoline, 50 / 500 / "
         "5000 J give median peak displacements of ~14 / 24 / 36 cm (default: %(default)s)",
         type=float,
         nargs="+",
@@ -370,12 +396,29 @@ if __name__ == "__main__":
         git_commit=rom_mcmc.git_commit(os.path.dirname(os.path.abspath(__file__))),
     )
     plans = sampling_plan(args.static_gravity, args.dynamic_gravity, len(args.dt) > 0)
-    directories = [plan.pool for plan in plans] + ["static"] + [f"dynamic_h{h:g}" for h in args.dt]
-    for directory in directories:
-        os.makedirs(os.path.join(args.output, directory), exist_ok=True)
+    write_fem(args.output, scene)
+    dataset = h5py.File(args.output, "a")
+    dataset.attrs.update(
+        common,
+        dataset_format="pbat-benchmark-dataset",
+        dataset_version=1,
+        energies=np.asarray(args.energies, dtype=np.float64),
+        dt=np.asarray(args.dt, dtype=np.float64),
+        problems=args.problems,
+        pool_size=args.pool,
+        chains=args.chains,
+        burn_in=args.burn_in,
+        pilot=args.pilot,
+        newton_iters=args.newton_iters,
+        static_gravity=args.static_gravity,
+        dynamic_gravity=args.dynamic_gravity,
+    )
+    dataset.create_dataset("X", data=np.ascontiguousarray(X.T))
+    rom_mcmc.write_basis(dataset.create_group("basis"), model, wr)
+    sets, pools = [], []
 
     for Etot in args.energies:
-        name = f"E{Etot:g}.h5"
+        name = f"E{Etot:g}"
         for plan in plans:
             sampled_model = model_gravity if plan.gravity else model
             t0 = time.time()
@@ -394,21 +437,23 @@ if __name__ == "__main__":
                 sampling_time=time.time() - t0,
             )
             rom_mcmc.write_samples(
-                os.path.join(args.output, plan.pool, name),
+                dataset.create_group(f"{plan.pool}/{name}"),
                 X,
                 sampled_model,
                 wr,
                 pool,
                 dict(attrs, problem="pool"),
                 min_det_F(E, egU, GNegU, sampled_model, pool.q),
+                shared=dataset,
             )
+            pools.append(f"{plan.pool}/{name}")
             indices = np.round(np.linspace(0, pool.q.shape[0] - 1, args.problems)).astype(np.int64)
             problems = subset(pool, indices)
-            problem_attrs = dict(attrs, pool_file=os.path.join(plan.pool, name), pool_indices=indices)
+            problem_attrs = dict(attrs, pool=f"{plan.pool}/{name}", pool_indices=indices)
             start_min_J = min_det_F(E, egU, GNegU, sampled_model, problems.q)
             if plan.static:
                 rom_mcmc.write_samples(
-                    os.path.join(args.output, "static", name),
+                    dataset.create_group(f"static/{name}"),
                     X,
                     sampled_model,
                     wr,
@@ -420,7 +465,9 @@ if __name__ == "__main__":
                         "Dirichlet DOFs at rest. The solution is X.",
                     ),
                     start_min_J,
+                    shared=dataset,
                 )
+                sets.append(f"static/{name}")
             # Dynamic problems: one BDF1 step from (x, v) for each time step. Future work: BDF schemes with s > 1
             # steps need s past states per problem, e.g. synthesized by integrating the reduced dynamics backward
             # from the sample, and the inertial target of that scheme.
@@ -459,7 +506,7 @@ if __name__ == "__main__":
                         modalrom.deformation_gradient_determinants(E, egU, GNegU, x0 + uref).min()
                     )
                 rom_mcmc.write_samples(
-                    os.path.join(args.output, f"dynamic_h{h:g}", name),
+                    dataset.create_group(f"dynamic_h{h:g}/{name}"),
                     X,
                     sampled_model,
                     wr,
@@ -489,7 +536,9 @@ if __name__ == "__main__":
                         ref_error_mnorm=np.array(errors),
                         ref_min_J=np.array(ref_min_J),
                     ),
+                    shared=dataset,
                 )
+                sets.append(f"dynamic_h{h:g}/{name}")
                 print(
                     f"E={Etot:g} J, h={h:g} s: reference Newton iterations {np.min(iterations)}-{np.max(iterations)}, "
                     f"accuracy |last correction|_M <= {max(e / e0 for e, e0 in zip(errors, e0s)):.1e} of "
@@ -503,3 +552,6 @@ if __name__ == "__main__":
                 f"{stats['rhat']:.3f}, ESS {stats['ess']:.0f}), {args.problems} problems, start min det F "
                 f"{start_min_J.min():.3f}"
             )
+            dataset.attrs["sets"], dataset.attrs["pools"] = sets, pools
+            dataset.flush()
+    dataset.close()

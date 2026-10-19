@@ -223,5 +223,37 @@ class TestAutocorrelation(unittest.TestCase):
         self.assertLess(rom_mcmc.integrated_autocorrelation_time(x), 1.3)
 
 
+class TestWriteSamples(unittest.TestCase):
+    def test_groups_share_rest_positions_and_basis(self):
+        import os
+        import tempfile
+
+        import h5py
+
+        rng = np.random.default_rng(5)
+        N, m = 4, 2
+        X = rng.standard_normal((3, N))
+        x0 = X.flatten(order="F")
+        U = rng.standard_normal((3 * N, m))
+        Q = np.zeros((3 * N, m, m))
+        mass = np.ones(3 * N)
+        model = rom_mcmc.QuadraticManifold(U, Q, mass, x0, lambda x, *_: 0.0, np.ones(m), weight="uniform")
+        q = rng.standard_normal((3, m))
+        batch = rom_mcmc.SampleBatch(q, np.zeros(3), np.zeros(3), {})
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "dataset.h5")
+            with h5py.File(path, "w") as f:
+                f.create_dataset("X", data=X.T)
+                rom_mcmc.write_basis(f.create_group("basis"), model, np.ones(m))
+                for name in ["a/E1", "b/E1"]:
+                    rom_mcmc.write_samples(f.create_group(name), X, model, np.ones(m), batch, {}, shared=f)
+            with h5py.File(path, "r") as f:
+                for name in ["a/E1", "b/E1"]:
+                    g = f[name]
+                    self.assertEqual(g["X"].id, f["X"].id)
+                    self.assertEqual(g["basis/U"].id, f["basis/U"].id)
+                    np.testing.assert_allclose(g["samples/x"][1], (x0 + U @ q[1]).reshape(N, 3), rtol=1e-6)
+
+
 if __name__ == "__main__":
     unittest.main()
