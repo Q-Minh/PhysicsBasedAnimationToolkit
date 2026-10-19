@@ -268,7 +268,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | reported | 2026-10-18 | mat_on_stilts_3 AAAVBD: not a regression (2046e73b explodes the same with the 5-substep paper config); gammadownS 0.90, warm_start_beta 1 or the 10-substep paper config are stable. Awaiting decision |
+| 2 | on hold | 2026-10-18 | mat_on_stilts_3 AAAVBD reported: not a regression; gammadownS 0.90 options logged for the maintainer |
 | 3 | on hold | 2026-10-18 | All work merged (static/dynamic benchmark, Newton relative check + statuses + CG atol, benchmark --scene, Coulomb cap, friction defaults via coordinator). Post-warm-start paper-scene and friction checks reported |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -703,7 +703,9 @@ your ownership, planned GPU-heavy runs, C++ change requests.
   the warm-start merge (ea968473) vs after. Task 2's intermittent runs will add noise, so I'll report medians and
   repeat any outliers. Will log END.
 - 2026-10-18 · task 1 → coordinator · CONSTANT 1e6 (explicit): planes rest at the margin, but BeamFallingOnBeam loses the beam for VBD/AAAVBD (Chebyshev/Anderson rest). Constant isn't a safe body-body fallback; TS1 is the only mode stable across the matrix.
+- 2026-10-18 · task 1 · **GPU run END, timing (cancelled** by the maintainer via the coordinator). The "after" run (feature/al-warm-start head, 80 steps) had already finished. The "before" run (ea968473) never started, so there is no before/after comparison. Steps 0-38 take 377 → 422 ms. From step 39 it breaks down: about 100 s per step, the state is NOT finite, and pairs are saturated at capacity (ve 9703/9703, vf 97032/97032, vv 4538/9703). The step times are invalid for timing anyway, because they overlapped other sessions' runs.
 - 2026-10-18 · coordinator · mat_on_stilts_3 AAAVBD with the 5-substep paper config: **not a regression** (task 2: the Oct-17 code 2046e73b fails the same way; the C++ is identical). The instability is contact-driven stencil acceleration on badly shaped tets next to pinned nodes. Stable: the 10-substep paper config (likely what the paper figure used), gammadownS 0.90, or warm_start_beta 1. Manual test page switched to the 10-substep config. **For the maintainer:** keep it as is, add a per-scene gammadownS 0.90 for the 5-substep config, or consider gammadownS 0.90 as a default (needs a benchmark check).
+- 2026-10-18 · coordinator · **Maintainer:** mat_on_stilts 5-substep uses gammadownS 0.90 → `configs/scenes/mat_on_stilts.5Substeps.toml` (extends the paper config; new `configs/scenes/` for per-scene adjustments, `a2aabe8d`). Manual test page uses it. Basket timing cancelled (too heavy for the payoff). **Open:** ThingsFallingInBasket with the defaults goes non-finite at step ~39 on the warm-start head; not known whether it predates the merge. Maintainer to decide whether to check.
 
 ## Open questions for the maintainer
 

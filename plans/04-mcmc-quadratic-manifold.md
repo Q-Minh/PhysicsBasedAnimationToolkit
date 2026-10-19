@@ -215,3 +215,7 @@ simulator files.
     deformation energy; crw to cross-check polar; ray only for browsing.
   - The CLI default of `modalrom.py --sampler` is unchanged (polar), since this was a docs-only pass.
   - Skill summary sent to the coordinator.
+- 2026-10-18 · **Benchmark references back to float32** (maintainer: no error reductions tighter than 99%), merged
+  as `feature/float32-references`. References are within 6.5e-4 e0 of exact ones; `trampoline-sample` regenerated
+  from `trampoline.h5`. **Maintainer confirmed** two judgment calls: scene constraints are checked by the time-span
+  rule (active during [0, max dt] ⇒ Fixed and covering the span), and multi-body scenes are rejected. On hold.
