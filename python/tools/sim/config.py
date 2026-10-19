@@ -15,7 +15,8 @@ Loading (:func:`load_sim_params`) merges sources left to right, later values win
 
 The merged config is then checked against the keys the current code serializes. Unknown keys are
 ignored and missing keys keep their current values (the code defaults); both are reported as
-:class:`ConfigWarning`.
+:class:`ConfigWarning`. Keys that a newer parameter replaced (:data:`DEPRECATED`) are ignored too,
+with a warning that says what replaced them.
 
 Command line::
 
@@ -39,6 +40,15 @@ if TYPE_CHECKING:
     from .state import SimulationState
 
 EXTENDS = "extends"
+
+# Keys replaced by newer parameters: ignored when loading, with a ConfigWarning naming the replacement
+DEPRECATED = {
+    "Contact.CDType.VertexSdf.dmin": (
+        "replaced by Contact.CDType.VertexSdf.band: contacts are now detected below Contact.ContactDynamics.dmin "
+        "+ band, so that resting contacts stay detected and their multipliers persist. The old absolute "
+        "threshold (-1e-4 detected penetrating vertices only) is ignored, and band keeps its value"
+    ),
+}
 
 
 class ConfigWarning(UserWarning):
@@ -189,6 +199,9 @@ def apply(state: "SimulationState", cfg: dict, source: str = "sim-params") -> No
 
     reference = params_dict(state)
     unknown, missing = check(cfg, reference)
+    for key in [k for k in unknown if k in DEPRECATED]:
+        unknown.remove(key)
+        warnings.warn(f"{source}: {key} is deprecated, ignored: {DEPRECATED[key]}", ConfigWarning, stacklevel=2)
     if unknown:
         warnings.warn(
             f"{source}: unknown keys, ignored: {', '.join(unknown)}", ConfigWarning, stacklevel=2
