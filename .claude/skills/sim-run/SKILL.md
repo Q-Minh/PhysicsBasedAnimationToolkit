@@ -89,7 +89,7 @@ Frequently changed keys:
 | `Solver.AndersonSolver.m`, `.vbd_iters_per_anderson_iter` | Anderson window; sweeps per Anderson step (p). The budget stays n sweeps: n // p Anderson steps, then n % p plain sweeps |
 | `Solver.Chebyshev.rho` | Chebyshev spectral radius estimate |
 | `Solver.<S>.vlinsolve` | Per-vertex 3x3 solve: 0 Inverse (**default; use it**), 1 LLT, 2 QR, 3 EVD. Switch to EVD only when singular vertex Hessians cause problems |
-| `Solver.Newton.n_max_iters`, `Solver.Newton.LinearSolver.*` | Newton steps; CG limits |
+| `Solver.Newton.n_max_iters`, `Solver.Newton.newton.n_max_iters`, `Solver.Newton.LinearSolver.*` | Newton's outer (AL) iterations; Newton steps per outer iteration; CG limits |
 | `Contact.ContactDynamics.*`, `Contact.CDType.VertexSdf.*` | Contact penalties, friction `mu_f`, AL margin `dmin`; vertex SDF detects below `dmin + VertexSdf.band` (`VertexSdf.dmin` is deprecated) |
 | `Contact.ContactDynamics.penalty_adaptivity`, `.gamman_adaptive` | 0 constant, 1 per time step, 2 per subproblem. Default: 1 (TIMESTEP), with `gamman_adaptive` 1. Adaptive penalties scale the largest vertex-Hessian Rayleigh quotient by `gamman_adaptive` (C++'s default 1). The contact multipliers are warm-started across steps, so softer penalties (`gamman_adaptive` 0.1, or CONSTANT at `gamman` 1e4) eject resting bodies |
 | `Contact.ContactStorage.n_*_contact_capacity` | Contact-pair capacity multipliers. Contacts beyond capacity are dropped |
@@ -112,6 +112,7 @@ The GPU defaults (`state.load_params`, listed in `configs/defaults.toml`) follow
   With substeps, count the sweeps across all of them.
 - **Early exit:** `Solver.Convergence.rtol = 1e-2` (default) is a relative, mass-normalized gradient test against the step's free-flight displacement, for the VBD family and Newton. It's resolution-independent for smooth residuals and stricter on fine meshes for contact or mesh-scale residuals, which is accepted. `ftol = 0.5` (default) allows half the contact margin between outer iterations.
 - **AAAVBD:** the defaults are gammadown 0.99, gammadownS 0.95, gammaup(S) 0.5 and warm_start_beta 2. Make `gammaupS` smaller for contact-rich scenes.
+- **Newton:** 1 outer iteration x 10 Newton steps by default (contact-free scenes, benchmarks). With contact, use 5 outer iterations x 2 Newton steps (more contact detection passes, the same step count), as the scene configs do.
 - **Vertex solve:** Inverse (default). Use EVD only when singular vertex Hessians cause problems.
 - **Paper scenes:** `configs/scenes/*.toml` apply this guidance to the paper's contact scenes (1 substep, 5 x 80 sweeps for the stiff heterogeneous ones, Inverse), keeping the paper files' contact parameters. Several `configs/paper` files don't follow it (fewer sweeps, EVD), so prefer the scene config when one exists.
 - **Contact penalty:** the default is TIMESTEP adaptive at `gamman_adaptive = 1`. Resting contacts settle at the margin `dmin` (2 mm). SUBPROBLEM gives the same results on the test scenes. As a constant reference, `penalty_adaptivity = 0` needs `gamman` around 1e6.

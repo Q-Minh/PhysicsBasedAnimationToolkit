@@ -2,7 +2,7 @@
 # scenes: no substeps, 5 x 80 = 400 sweeps per step, and the Inverse vertex solve. The paper's
 # 5-substep file gives only 125 sweeps per frame, with EVD and gammaup/gammaupS 0.9/0.85, and AAAVBD
 # blows up once the mat lands on the stilts. 10 x 20 and 10 x 40 were also stable.
-# The contact parameters are the paper file's.
+# Newton: 5 outer iterations x 2 Newton steps. The contact parameters are the paper file's.
 extends = ["../paper/mat_on_stilts.Params.5Substeps.toml"]
 
 [Integration]
@@ -31,3 +31,9 @@ vlinsolve = 0
 n_max_iters = 5
 n_subproblem_max_iters = 80
 vlinsolve = 0
+
+[Solver.Newton]
+n_max_iters = 5  # outer iterations (contact detection passes); maintainer's guidance for contact scenes
+
+[Solver.Newton.newton]
+n_max_iters = 2  # Newton steps per outer iteration

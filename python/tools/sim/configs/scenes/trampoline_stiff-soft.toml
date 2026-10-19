@@ -1,7 +1,7 @@
 # The stiff-soft trampolines (Young's modulus 1e6 to 1e8) with the maintainer's settings for stiff heterogeneous scenes: no substeps, 5 x 80 = 400
 # sweeps per step, the Inverse vertex solve, and AAAVBD gammaup/gammaupS 0.5/0.3 with
 # gammadown/gammadownS 0.99/0.95. The paper file gives 5 substeps of 1 x 25 AAAVBD sweeps (1 x 100 for VBD), with EVD.
-# The contact parameters are the paper file's.
+# Newton: 5 outer iterations x 2 Newton steps. The contact parameters are the paper file's.
 extends = ["../paper/trampoline_stiff-soft.Params.5Substeps.toml"]
 
 [Integration]
@@ -30,3 +30,9 @@ vlinsolve = 0
 n_max_iters = 5
 n_subproblem_max_iters = 80
 vlinsolve = 0
+
+[Solver.Newton]
+n_max_iters = 5  # outer iterations (contact detection passes); maintainer's guidance for contact scenes
+
+[Solver.Newton.newton]
+n_max_iters = 2  # Newton steps per outer iteration
