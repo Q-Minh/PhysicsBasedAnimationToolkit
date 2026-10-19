@@ -41,6 +41,7 @@ substeps = 1
 [Solver.AAAVBD]
 betaG0 = 0.5
 betaR = 0.0
+betaup = 1.0
 e_penalty_stiffness = 0
 gammadown = 0.9900000095367432
 gammadownS = 0.949999988079071
@@ -50,6 +51,7 @@ gtol = 0.0010000000474974513
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
+lipschitz_normalization = 1
 n_max_iters = 1
 n_subproblem_max_iters = 100
 rhohat = 0.004999999888241291
