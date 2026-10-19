@@ -48,5 +48,6 @@ Rebuilding the Python extension is covered by the `pbat-build` skill.
 ## Maintainer preferences
 
 - Don't implement anything that wasn't explicitly requested, and don't add speculative abstractions. If unsure, ask.
+- Check with the maintainer before starting long-running tasks or experiments (parameter sweeps, full benchmarks, long simulations). Validate with the smallest run that answers the question, e.g. one static and one dynamic benchmark problem rather than whole sets.
 - Before writing new code, check whether PBAT, Warp, cupy/cuda-cccl, Eigen, etc. already provide the functionality.
 - When a C++ API changes, keep its bindings, the Warp mirrors in `python/tools/sim/gpu`, and any Python callers in sync, or say clearly which ones were left stale.

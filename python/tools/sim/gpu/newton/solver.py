@@ -13,6 +13,7 @@ from ..common import profiling
 import warp.sparse
 import warp.optim.linear
 import cupy as cp
+import numpy as np
 
 from pbatoolkit import pbat
 
@@ -771,6 +772,11 @@ class LinearSolverParams(SerializableMixin):
     )
 
 
+# Safety factor on the float32 roundoff of the elastic energy, eps * h^2 sum_e w_e mu_e, that the
+# Armijo test tolerates (measured noise: about 1x it on the inclined-plane cube)
+_ENERGY_ROUNDOFF_FACTOR = 8.0
+
+
 class Params:
     """Python wrapper that builds and owns the GPU :class:`ParamsData` struct.
 
@@ -888,6 +894,15 @@ class Params:
         self._data.f_obj_partial = wp.zeros(n_energy_items, dtype=wp.float32)
         self._energy_scalar = wp.zeros(1, dtype=wp.float32)
         f_partial_cp = cp.asarray(self._data.f_obj_partial)
+        # Armijo's roundoff tolerance (see solve_subproblem): float32 evaluates Stable Neo-Hookean's
+        # Psi(F) near rest with cancellation (I_C - 3, J - 1), so the objective's error is about
+        # eps * h^2 sum_e w_e mu_e. Without a tolerance, steps near convergence whose decrease is below
+        # it fail the line search on noise.
+        self._energy_roundoff = (
+            _ENERGY_ROUNDOFF_FACTOR
+            * float(np.finfo(np.float32).eps)
+            * float((fem.data.wg.numpy().astype(np.float64) * fem.data.mug.numpy()).sum())
+        )
         self._energy_reduce = Reduce(
             d_in=f_partial_cp,
             d_out=cp.asarray(self._energy_scalar),
@@ -947,12 +962,15 @@ def initialize_solve(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    """Detect contacts, initialise the constraint set for the time step and measure the relative
+    """Detect contacts, initialise the constraint set for the time step, adapt the contact
+    penalties once per step (``TIMESTEP`` adaptivity, as the VBD family) and measure the relative
     gradient test's scale."""
     cd.on_time_step_started()
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
     cd.filter_step()
+    if contact.params.penalty_adaptivity == PenaltyAdaptivity.TIMESTEP:
+        adapt_penalty_parameters(fem, contact, params)
     check = _relative_check(params)
     if check is not None:
         check.measure_scale()
@@ -966,9 +984,10 @@ def _compute_energy(
     h2: wp.float32,
 ) -> float:
     main_stream = wp.get_stream()
+    # Zero before forking, so the side streams' writes can't race the memset
+    params._data.f_obj_partial.zero_()
     for stream in params._streams[:6]:
         stream.wait_stream(main_stream)
-    params._data.f_obj_partial.zero_()
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
     cd = contact.data
@@ -1036,13 +1055,16 @@ def check_convergence(
     """Outer test between AL iterations.
 
     With the shared convergence check's relative test on (``Solver.Convergence.rtol > 0``, dynamic
-    problems), it's the VBD family's test of the Lagrangian gradient,
-    ``sum |g_i|^2 / m_i <= rtol^2 max(sum m_i |x~_i - x^t_i|^2, M floor^2)``. Otherwise it's
-    ``|g|^2 <= gtol2`` on the augmented-Lagrangian gradient, as in C++.
+    problems), it's the VBD family's outer test: the Lagrangian gradient,
+    ``sum |g_i|^2 / m_i <= rtol^2 max(sum m_i |x~_i - x^t_i|^2, M floor^2)``, and feasibility
+    (penetration into the contact margin at most ``ftol * dmin``). The Lagrangian gradient has no
+    term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
+    guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
+    augmented-Lagrangian gradient, as in C++.
     """
     check = _relative_check(params)
     if check is not None:
-        return check.test_gradient()
+        return check.test_outer()
     main_stream = wp.get_stream()
     params._gradient_norm.compute(main_stream)
     return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
@@ -1054,8 +1076,23 @@ def prepare_subproblem(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    # TODO: Support penalty adaptation?
-    pass
+    """Adapt the contact penalties every subproblem (``SUBPROBLEM`` adaptivity), as C++
+    ``PrepareSubproblem``: see :func:`adapt_penalty_parameters`."""
+    if contact.params.penalty_adaptivity == PenaltyAdaptivity.SUBPROBLEM:
+        adapt_penalty_parameters(fem, contact, params)
+
+
+@profiling.scoped("newton.adapt_penalty")
+def adapt_penalty_parameters(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+) -> None:
+    """C++ ``MeshDynamics::UpdatePenaltyParameter(H)``: assemble the Hessian without contact terms
+    at the current positions and set the penalties to the largest contact Rayleigh quotient in it
+    (:meth:`MeshDynamics.adapt_penalty_parameters_to_hessian`)."""
+    _assemble_hessian(fem, contact, params, wp.float32(fem.h2), with_contacts=False)
+    contact.adapt_penalty_parameters_to_hessian(params._H, fem.data.dmask)
 
 
 class SubproblemStatus(IntEnum):
@@ -1067,47 +1104,30 @@ class SubproblemStatus(IntEnum):
     LINE_SEARCH_FAILED = 3  # no step length passed the Armijo test; x is restored
 
 
-@profiling.scoped("newton.subproblem")
-def solve_subproblem(
+def _assemble_hessian(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
     params: Params,
-) -> SubproblemStatus:
-    """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
-
-    The subproblem converges when its augmented-Lagrangian gradient passes the shared relative test
-    (``Solver.Convergence.rtol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
-
-    Returns:
-        SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
-        leaves ``x`` at the last accepted iterate.
-    """
+    h2: wp.float32,
+    with_contacts: bool = True,
+) -> None:
+    """Assemble the Newton Hessian ``params._H`` (mass + elastic, plus the contact terms with
+    ``with_contacts``) at the current positions. Without contact terms, their triplets stay 0 and
+    are pruned."""
     main_stream = wp.get_stream()
+    # Zero before forking, so the side streams' writes can't race the memset
+    params._data.Hvals.zero_()
     for stream in params._streams[:5]:
         stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
-    h2 = wp.float32(fem.h2)  # type: ignore
-    check = _relative_check(params)
-    params._gradient_norm.compute_gradient(main_stream)
-    for _ in range(int(params.data.n_subproblem_max_iters)):
-        if check is not None:
-            if check.relative_test(params._g):
-                return SubproblemStatus.CONVERGED
-        else:
-            params._gradient_norm.reduce(main_stream)
-            gnorm2 = float(params._gnorm2.numpy()[0])
-            if gnorm2 <= float(params.data.gtol2):
-                return SubproblemStatus.CONVERGED
-        # Assemble FEM + contact Hessian
-        profiling.push("newton.assemble")
-        params._data.Hvals.zero_()
-        wp.launch(
-            kernel=_compute_dynamics_hessian_triplets,
-            dim=max(n_nodes, n_elems),
-            inputs=[fem.data, h2, params._data, params._hessian_triplet_offsets],
-            stream=params._streams[0],
-        )
+    wp.launch(
+        kernel=_compute_dynamics_hessian_triplets,
+        dim=max(n_nodes, n_elems),
+        inputs=[fem.data, h2, params._data, params._hessian_triplet_offsets],
+        stream=params._streams[0],
+    )
+    if with_contacts:
         wp.launch(
             kernel=_compute_vv_contact_hessian_triplets,
             dim=contact.cvv.capacity,
@@ -1156,17 +1176,51 @@ def solve_subproblem(
             ],
             stream=params._streams[4],
         )
-        for stream in params._streams[:5]:
-            main_stream.wait_stream(stream)
-        warp.sparse.bsr_set_from_triplets(
-            dest=params._H,
-            rows=params._data.Hrows,
-            columns=params._data.Hcols,
-            values=params._data.Hvals,
-            count=None,
-            prune_numerical_zeros=True,
-            masked=False,
-        )
+    for stream in params._streams[:5]:
+        main_stream.wait_stream(stream)
+    warp.sparse.bsr_set_from_triplets(
+        dest=params._H,
+        rows=params._data.Hrows,
+        columns=params._data.Hcols,
+        values=params._data.Hvals,
+        count=None,
+        prune_numerical_zeros=True,
+        masked=False,
+    )
+
+
+@profiling.scoped("newton.subproblem")
+def solve_subproblem(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+) -> SubproblemStatus:
+    """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
+
+    The subproblem converges when its augmented-Lagrangian gradient passes the shared relative test
+    (``Solver.Convergence.rtol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
+
+    Returns:
+        SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
+        leaves ``x`` at the last accepted iterate.
+    """
+    main_stream = wp.get_stream()
+    n_nodes = fem.data.x.shape[0]
+    h2 = wp.float32(fem.h2)  # type: ignore
+    check = _relative_check(params)
+    params._gradient_norm.compute_gradient(main_stream)
+    for _ in range(int(params.data.n_subproblem_max_iters)):
+        if check is not None:
+            if check.relative_test(params._g):
+                return SubproblemStatus.CONVERGED
+        else:
+            params._gradient_norm.reduce(main_stream)
+            gnorm2 = float(params._gnorm2.numpy()[0])
+            if gnorm2 <= float(params.data.gtol2):
+                return SubproblemStatus.CONVERGED
+        # Assemble FEM + contact Hessian
+        profiling.push("newton.assemble")
+        _assemble_hessian(fem, contact, params, h2)
         profiling.pop()
         profiling.push("newton.linear_solve")
         M = warp.optim.linear.preconditioner(params._H, "diag")
@@ -1196,11 +1250,15 @@ def solve_subproblem(
         alpha = float(params.data.ls_alpha)
         wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, -alpha])
         c = float(params.data.ls_c)
+        # Accept energy changes within float32 roundoff of the objective (Params._energy_roundoff),
+        # as in approximate Wolfe line searches: near convergence, the predicted decrease is below what
+        # float32 resolves. GPU-only; C++ Newton rejects those steps.
+        tol = params._energy_roundoff * float(h2)
         accepted = False
         for _ in range(int(params.data.ls_max_iters)):
             # wp.copy(fem.data.x, x_backup)
             E_trial = _compute_energy(fem, contact, params, h2)
-            if E_trial <= E0 + c * alpha * slope:
+            if E_trial <= E0 + c * alpha * slope + tol:
                 accepted = True
                 break
             # Move x from x0 - alpha*ndx back to x0 - alpha_next*ndx

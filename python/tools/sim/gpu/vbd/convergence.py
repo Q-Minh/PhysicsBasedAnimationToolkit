@@ -504,6 +504,20 @@ class ConvergenceCheck:
         self._test()
         return self._relative_passes()
 
+    def test_outer(self) -> bool:
+        """Host-side outer test of the current positions, as the VBD family's between outer
+        iterations: the relative gradient test (:meth:`test_gradient`) and feasibility, the largest
+        penetration into the contact margin at most ``ftol * dmin``. Synchronizes, so not capturable.
+
+        Returns:
+            bool: Whether both pass (False if the relative test is off).
+        """
+        if not self.test_gradient():
+            return False
+        self._measure_penetration()
+        ftol, dmin = float(self.params.ftol), float(self._contact.data.dmin)
+        return float(self.penetration.numpy()[0]) <= ftol * dmin
+
     def relative_test(self, g: wp.array) -> bool:
         """Host-side relative test of a given gradient, ``sum |g_i|^2 / m_i <= rtol^2 * scale``, against
         the scale from the last :meth:`measure_scale`. Synchronizes, so not capturable.
