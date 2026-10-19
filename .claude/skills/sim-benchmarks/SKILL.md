@@ -85,7 +85,7 @@ When comparing solvers, use the time to reach each error level, not the time per
 - **Dynamic h:** dynamic problems take h from the set and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution (e0 ~ 1e-3), so float32 rounding floors the error around e/e0 ~ 1e-5 to 1e-4.
 - **Solver parameters:** they come only from `--sim-params` and `--set`; without them, the code defaults apply (`configs/defaults.toml`). Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
 - **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Newton's CG absolute tolerance is set to 0 (its relative one stays), since in h²-scaled units at small h the gradient drops below it after one step. Vertex-solve and acceleration parameters still matter.
-- **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 300 leaves Newton steps inexact.
+- **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 500 leaves Newton steps inexact.
 - **Quiet GPU:** timings are only valid while nothing else runs. Reserve the GPU in `plans/MASTER.md` while parallel sessions are active.
 - **Problem sets:** sets that need importance weights (ray sampler) are refused. R-hat ≥ 1.05 and nonzero gravity only warn. Static problems should be gravity-free.
 - **First solve:** the first solve per solver and set includes kernel compilation and graph capture in its host time, but not in the reported times.

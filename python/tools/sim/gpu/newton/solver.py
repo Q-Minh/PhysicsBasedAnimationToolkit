@@ -755,15 +755,15 @@ class LinearSolverParams(SerializableMixin):
 
     The C++ Newton solver uses a direct solver (``ELinearSolver``), so these have no CPU counterpart.
     Static problems lack the mass term and are far worse conditioned, so they typically need many
-    more CG iterations than dynamic ones (e.g. 1500-3000 instead of the default 300).
+    more CG iterations than dynamic ones (e.g. 1500-3000 instead of the default 500).
 
     Held by ``SimulationState.newton_linear_solver_params`` (kept across resets) and serialized under
     ``Solver/Newton/LinearSolver``: configs set ``Solver.Newton.LinearSolver.n_max_iters``, ``rtol``
     and ``atol``. A change takes effect at the next reset, which rebuilds the GPU Newton params.
     """
 
-    n_max_iters = DocField(300, "Maximum CG iterations per Newton step")
-    rtol = DocField(1e-5, "Relative CG residual tolerance")
+    n_max_iters = DocField(500, "Maximum CG iterations per Newton step")
+    rtol = DocField(1e-6, "Relative CG residual tolerance")
     atol = DocField(
         1e-10,
         "Absolute CG residual tolerance, in the units of the h^2-scaled objective's gradient. Keep it "
