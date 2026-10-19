@@ -268,8 +268,8 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold | 2026-10-18 | cow_on_trampoline work stopped (maintainer); its branches deleted, nothing committed. All earlier work merged |
-| 3 | ready for review | 2026-10-18 | `feature/newton-relative-check` (Newton plateau fix via CG atol, termination statuses, ref_error_mnorm flags, Newton relative check, CG atol 1e-10, benchmark --scene); `feature/coulomb-cap` (VBD friction capped at mu_f·normal force) |
+| 2 | investigating | 2026-10-18 | mat_on_stilts_3 + paper config: AAAVBD explosion regression bisect (pre-10-18 code vs dev, then merges and default-valued keys) |
+| 3 | on hold | 2026-10-18 | All work merged (static/dynamic benchmark, Newton relative check + statuses + CG atol, benchmark --scene, Coulomb cap, friction defaults via coordinator). Post-warm-start paper-scene and friction checks reported |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -692,6 +692,15 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 3 · **GPU run END** (post-AL-warm-start checks: paper scenes, penalty stability, friction sweep). Results sent to the coordinator.
 - 2026-10-18 · task 1 → coordinator · Penalty matrix comparison: with the fix, TS0.1 is too soft (resting cube moves, fast cube ejected for all solvers); TS1 is stable everywhere. On dev, TS1 diverged on BeamFallingOnBeam for VBD/AAAVBD/Chebyshev; the old C1e4 default sank 0.16-0.79 and flew off. Penetration with the fix at TS1: -0.013 resting / -0.044 fast cube / >= -0.0008 beam.
 - 2026-10-18 · coordinator · Task 3's checks after the warm-start merge: **paper scenes with their paper configs (constant penalties) don't eject and don't regress** (trampolines with sphere: lower penetration; capsule_bowl: settled penetration much lower). New defaults: BeamFallingOnBeam now rests at the margin (it tunnelled before). **Friction defaults switched** to gammaf 1e3 / gammaf_adaptive 1e-2 (`2194898c`; Coulomb-like: mu 0.2 slides at 0.63-0.69 m/s² vs 0.64, mu >= 0.3 sticks). CubeFallingOnCube pass-through = known limitation. **mat_on_stilts_3 + its paper config: AAAVBD explodes by 0.5 s, before and after the merge** → task 2 regression bisect against pre-2026-10-17 code.
+- 2026-10-18 · task 2 · **GPU run START** (~1-2 h, intermittent, correctness only): mat_on_stilts_3 AAAVBD explosion bisect (2046e73b baseline vs dev, merge bisect, default-valued key sweep). Ignore timings. Will log END.
+- 2026-10-18 · task 1 · **GPU run END** (penalty matrix). Also, CONSTANT 1e6 with explicit penalty_adaptivity=0: the
+  plane scenes rest at the margin for every solver (deepest −0.004 / −0.097), but on BeamFallingOnBeam VBD and AAAVBD
+  lose the beam (no contact at the end, 9.5 / 3.7 m/s), while Chebyshev and Anderson rest. So it's not a safe constant
+  fallback for body-body scenes.
+- 2026-10-18 · task 1 · **GPU run START, timing** (~30-40 min): ThingsFallingInBasket ms/step and peak pairs, dev before
+  the warm-start merge (ea968473) vs after. Task 2's intermittent runs will add noise, so I'll report medians and
+  repeat any outliers. Will log END.
+- 2026-10-18 · task 1 → coordinator · CONSTANT 1e6 (explicit): planes rest at the margin, but BeamFallingOnBeam loses the beam for VBD/AAAVBD (Chebyshev/Anderson rest). Constant isn't a safe body-body fallback; TS1 is the only mode stable across the matrix.
 
 ## Open questions for the maintainer
 
