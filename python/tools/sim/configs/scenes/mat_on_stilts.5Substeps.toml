@@ -1,0 +1,7 @@
+# mat_on_stilts with the paper's 5-substep parameters, plus a smaller AAAVBD stencil-acceleration
+# shrink factor. With the paper's gammadownS (0.95), AAAVBD blows up once the mat lands on the
+# stilts: free stilt-top nodes between pinned ones, in badly shaped tets, start oscillating.
+extends = ["../paper/mat_on_stilts.Params.5Substeps.toml"]
+
+[Solver.AAAVBD]
+gammadownS = 0.9

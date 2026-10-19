@@ -10,6 +10,7 @@ These files are cached here for now. Their long-term home is `C:\git\accelerated
 |---|---|
 | `defaults.toml` | Every parameter the code serializes, with its code default. Use it as a reference or as an `extends` base. |
 | `paper/*.toml` | The paper's GPU parameter files (`accelerated-vbd-extras/parameters/gpu/*.h5`), converted and completed. See "Paper configs". |
+| `scenes/*.toml` | Per-scene adjustments: each `extends` a paper config and changes a few keys. The header says why. |
 
 ## Format
 
