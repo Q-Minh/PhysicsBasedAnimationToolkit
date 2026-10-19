@@ -90,19 +90,19 @@ class TestSamplingPlan(unittest.TestCase):
         self.assertEqual(
             plans,
             [
-                make_benchmark.SamplingPlan("pool", False, True, False),
-                make_benchmark.SamplingPlan("pool_gravity", True, False, True),
+                make_benchmark.SamplingPlan("pools/pool", False, True, False),
+                make_benchmark.SamplingPlan("pools/pool_gravity", True, False, True),
             ],
         )
 
     def test_same_setting_shares_one_pool(self):
-        for gravity, pool in [(True, "pool_gravity"), (False, "pool")]:
+        for gravity, pool in [(True, "pools/pool_gravity"), (False, "pools/pool")]:
             plans = make_benchmark.sampling_plan(gravity, gravity, has_dynamic=True)
             self.assertEqual(plans, [make_benchmark.SamplingPlan(pool, gravity, True, True)])
 
     def test_static_only(self):
         plans = make_benchmark.sampling_plan(static_gravity=False, dynamic_gravity=True, has_dynamic=False)
-        self.assertEqual(plans, [make_benchmark.SamplingPlan("pool", False, True, False)])
+        self.assertEqual(plans, [make_benchmark.SamplingPlan("pools/pool", False, True, False)])
 
 
 if __name__ == "__main__":
