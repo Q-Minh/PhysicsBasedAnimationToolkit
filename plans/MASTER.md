@@ -295,7 +295,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold | 2026-10-18 | mat_on_stilts_3 AAAVBD reported: not a regression; gammadownS 0.90 options logged for the maintainer |
+| 2 | ready to merge | 2026-10-18 | feature/aaavbd-ablation-params (5 commits on dev 0c92b14b): GPU-only AAAVBD betaup and lipschitz_normalization; bit-identical at defaults; configs/paper/* untouched |
 | 3 | on hold | 2026-10-18 | All work merged, including GPU Newton contact fixes (fa325a89: feasibility outer test, stream-race fix, Hessian-based penalty adaptation, roundoff-tolerant Armijo; friction stays C++'s) |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -752,6 +752,9 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 3 · **GPU run START** (~20 min, correctness only): Newton penalty adaptation + friction cap variants on the incline and BeamFallingOnBeam, then the contact-free benchmark bit-identity. Will log END.
 - 2026-10-18 · task 3 · **GPU run END.** Newton, defaults, incline 125 steps: mu_f 0.2 and 0.3 both stick (uncapped friction, maintainer's choice), 0 line-search failures (122/122 subproblems converge, 1.08 Newton steps per time step); BeamFallingOnBeam 300 steps finite and resting (mean |v| 0.004 m/s; VBD 0.011), 0 failures. Contact-free trampoline-test static/E50 + dynamic_h0.01/E50, sample 0: not bit-identical vs dev (relative 1e-4 static, 1e-7 dynamic, from the race fix and/or the roundoff tolerance). Also found: GPU Newton's Hessian/energy assembly raced its memsets (fixed).
 - 2026-10-18 · coordinator · **Maintainer (after a manual Newton test):** with contact, Newton runs 5 outer iterations x 2 Newton steps (default 1 x 10 kept for contact-free scenes and benchmarks). Added to the scene configs and the sim-run skill. Task 2 is adding GPU-only AAAVBD `betaup` and `lipschitz_normalization` for the ablations.
+- 2026-10-18 · task 2 · **GPU run START** (~10 min, a few steps each, correctness only): AAAVBD ablation params checks: bit-identity vs dev on BeamFallingOnBeam and trampoline, tiny smoke runs with betaup 1.05 and lipschitz_normalization 0. Will log END.
+- 2026-10-18 · task 2 · **GPU run END** (AAAVBD ablation params checks).
+- 2026-10-19 · coordinator · **Merged `feature/aaavbd-ablation-params`** (task 2, `30fe7778`): GPU-only AAAVBD `betaup` (default 1) and `lipschitz_normalization` (default on) via `AaaVbdCpuParams`; defaults bit-identical on the beam and trampoline. Newton CG defaults are now rtol 1e-6 / 500 iterations (maintainer). Paper configs regenerated for both (`167b661c`, `0c92b14b`); 19/19 load bit-identically, raw audit clean. End of the 2026-10-18 session: all tasks on hold.
 
 ## Open questions for the maintainer
 
