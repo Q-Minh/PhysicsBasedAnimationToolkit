@@ -7,6 +7,7 @@
 #   Solver.AndersonSolver: Solver.VBD's values, plus the default m, beta, cod_numerical_zero
 #
 # Not in the source, code defaults:
+#   Contact.CDType.VertexSdf.band
 #   Contact.ContactDynamics.gammaf_adaptive
 #   Contact.ContactDynamics.gamman_adaptive
 #   Solver.AAAVBD.kp
@@ -23,6 +24,7 @@
 #   Solver.VBD.kp
 #
 # Dropped (not serialized by the current code):
+#   Contact.CDType.VertexSdf.dmin
 #   Solver.VBD.betaG0
 #   Solver.VBD.gammadown
 #   Solver.VBD.gammadownS
@@ -59,8 +61,8 @@ r = 0.003
 truncation_strategy = 0
 
 [Contact.CDType.VertexSdf]
+band = 0.001
 deactivate = 0
-dmin = -9.999999747378752e-05
 max_dist = 0.05000000074505806
 use_step_filter = 0
 
@@ -70,7 +72,7 @@ dmin = -9.999999747378752e-05
 gammaf = 10000.0
 gammaf_adaptive = 0.001
 gamman = 20000.0
-gamman_adaptive = 0.1
+gamman_adaptive = 1.0
 min_sigma_n = 1.0
 mu_f = 0.30000001192092896
 penalty_adaptivity = 0
