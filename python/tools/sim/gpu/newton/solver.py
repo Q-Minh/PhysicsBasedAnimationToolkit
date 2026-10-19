@@ -1036,13 +1036,16 @@ def check_convergence(
     """Outer test between AL iterations.
 
     With the shared convergence check's relative test on (``Solver.Convergence.rtol > 0``, dynamic
-    problems), it's the VBD family's test of the Lagrangian gradient,
-    ``sum |g_i|^2 / m_i <= rtol^2 max(sum m_i |x~_i - x^t_i|^2, M floor^2)``. Otherwise it's
-    ``|g|^2 <= gtol2`` on the augmented-Lagrangian gradient, as in C++.
+    problems), it's the VBD family's outer test: the Lagrangian gradient,
+    ``sum |g_i|^2 / m_i <= rtol^2 max(sum m_i |x~_i - x^t_i|^2, M floor^2)``, and feasibility
+    (penetration into the contact margin at most ``ftol * dmin``). The Lagrangian gradient has no
+    term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
+    guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
+    augmented-Lagrangian gradient, as in C++.
     """
     check = _relative_check(params)
     if check is not None:
-        return check.test_gradient()
+        return check.test_outer()
     main_stream = wp.get_stream()
     params._gradient_norm.compute(main_stream)
     return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
