@@ -13,6 +13,7 @@ from ..common import profiling
 import warp.sparse
 import warp.optim.linear
 import cupy as cp
+import numpy as np
 
 from pbatoolkit import pbat
 
@@ -771,6 +772,11 @@ class LinearSolverParams(SerializableMixin):
     )
 
 
+# Safety factor on the float32 roundoff of the elastic energy, eps * h^2 sum_e w_e mu_e, that the
+# Armijo test tolerates (measured noise: about 1x it on the inclined-plane cube)
+_ENERGY_ROUNDOFF_FACTOR = 8.0
+
+
 class Params:
     """Python wrapper that builds and owns the GPU :class:`ParamsData` struct.
 
@@ -888,6 +894,15 @@ class Params:
         self._data.f_obj_partial = wp.zeros(n_energy_items, dtype=wp.float32)
         self._energy_scalar = wp.zeros(1, dtype=wp.float32)
         f_partial_cp = cp.asarray(self._data.f_obj_partial)
+        # Armijo's roundoff tolerance (see solve_subproblem): float32 evaluates Stable Neo-Hookean's
+        # Psi(F) near rest with cancellation (I_C - 3, J - 1), so the objective's error is about
+        # eps * h^2 sum_e w_e mu_e. Without a tolerance, steps near convergence whose decrease is below
+        # it fail the line search on noise.
+        self._energy_roundoff = (
+            _ENERGY_ROUNDOFF_FACTOR
+            * float(np.finfo(np.float32).eps)
+            * float((fem.data.wg.numpy().astype(np.float64) * fem.data.mug.numpy()).sum())
+        )
         self._energy_reduce = Reduce(
             d_in=f_partial_cp,
             d_out=cp.asarray(self._energy_scalar),
@@ -1235,11 +1250,15 @@ def solve_subproblem(
         alpha = float(params.data.ls_alpha)
         wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, -alpha])
         c = float(params.data.ls_c)
+        # Accept energy changes within float32 roundoff of the objective (Params._energy_roundoff),
+        # as in approximate Wolfe line searches: near convergence, the predicted decrease is below what
+        # float32 resolves. GPU-only; C++ Newton rejects those steps.
+        tol = params._energy_roundoff * float(h2)
         accepted = False
         for _ in range(int(params.data.ls_max_iters)):
             # wp.copy(fem.data.x, x_backup)
             E_trial = _compute_energy(fem, contact, params, h2)
-            if E_trial <= E0 + c * alpha * slope:
+            if E_trial <= E0 + c * alpha * slope + tol:
                 accepted = True
                 break
             # Move x from x0 - alpha*ndx back to x0 - alpha_next*ndx
