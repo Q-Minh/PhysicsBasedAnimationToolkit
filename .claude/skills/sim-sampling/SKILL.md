@@ -42,17 +42,18 @@ python modalrom.py -i <scene>.h5 --headless -o batch.h5 --sampler microcanonical
 # Headless fixed-potential batch, every shape at U = E* (ensemble="potential")
 python modalrom.py -i <scene>.h5 --headless -o batch.h5 --sampler polar --energy 10 --samples 100
 
-# Benchmark problem sets: pool/E{E}.h5 (sampled without gravity) and pool_gravity/E{E}.h5 (with gravity), static/E{E}.h5,
-# dynamic_h{h}/E{E}.h5. By default static problems are sampled without gravity and dynamic ones with it, from separate pools;
-# the dynamic h sets always share samples, and all sets share them when both gravity settings match
-python make_benchmark.py -i <scene>.h5 -o <dir> --energies 50 500 5000 --problems 10 --dt 1e-4 1e-2
-python make_benchmark.py -i <scene>.h5 -o <dir> --dt              # static only
-python make_benchmark.py -i <scene>.h5 -o <dir> --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
+# Benchmark dataset: ONE file with the input FEM (fem/), pools/pool/E{E} (sampled without gravity) and
+# pools/pool_gravity/E{E} (with gravity), and the problem sets static/E{E} and dynamic_h{h}/E{E}. By default static
+# problems are sampled without gravity and dynamic ones with it, from separate pools; the dynamic h sets always share
+# samples, and all sets share them when both gravity settings match
+python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --energies 50 500 5000 --problems 10 --dt 1e-4 1e-2
+python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --dt              # static only
+python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --energies 50 5000 --problems 3 --pool 40 --chains 2 --burn-in 100 --pilot 100   # ~1 min smoke test
 
 # Browse a generated dataset: problem set, energy and problem selectors; start state (colored by displacement
 # or det F), rest-shape ghost, velocity arrows, and for dynamic problems the inertial target x~ and reference x*;
 # energies, min det F, reference-solve stats, and the pool's R-hat, ESS and U/E histogram
-python benchmark_browser.py -d C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample
+python benchmark_browser.py -d C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample.h5
 ```
 
 Translating requests:
@@ -64,20 +65,24 @@ Translating requests:
 - "With gravity": `--gravity gx gy gz` (headless) or the GUI checkbox. In `make_benchmark.py`, use `--static-gravity`/`--no-static-gravity` (default off) and `--dynamic-gravity`/`--no-dynamic-gravity` (default on); they add the scene's gravity potential to the sampled total energy.
 - "Reproducible": `--seed`.
 - "More modes": `-k`.
-- "Show / explore / visualize the dataset": `benchmark_browser.py -d <dir>`. It takes the mesh from the files' `input` attribute; pass `--input <file.h5:h5path>` if that scene moved.
+- "Show / explore / visualize the dataset": `benchmark_browser.py -d <dataset>.h5`. The mesh comes from the dataset's stored FEM.
 
 `make_benchmark.py -h` lists the rest (`--chains`, `--burn-in`, `--pilot`, `--eps`, `--newton-iters`).
 
-**Full benchmark dataset generation is on hold** until the maintainer fixes the data requirements. Small smoke-test sets are fine. A sample set (trampoline, 50/500/5000 J × 4 problems, pools of 400, h = 1e-4 and 1e-2) is in `data/benchmarks/trampoline-sample`.
+**Full benchmark dataset generation is on hold** until the maintainer fixes the data requirements. Small smoke-test sets are fine. A sample dataset (trampoline, 50/500/5000 J × 4 problems, pools of 400, h = 1e-4 and 1e-2, no gravity) is `data/benchmarks/trampoline-sample.h5`; `trampoline-test.h5` is a smaller one (50/5000 J × 3 problems).
 
 ## Output files
 
-All batches follow the sample-file contract (`rom_mcmc.write_samples`):
+A batch is a `modalrom.py` sample file's root, or a pool or problem set group of a benchmark dataset. Every batch follows the sample-file contract (`rom_mcmc.write_samples`):
 - `X` (N,3) rest positions, `samples/x` (S,N,3) float32 positions, plus `samples/q`, `energy`, `log_target`, `samples/min_J`.
 - `basis/{U,Q,omega,M}`.
-- Root attributes: `target_energy`, `rhat`, `ensemble`, `gravity`, `mode_normalization="mass"`, `importance_weights_required`.
-- Problem files add `problem`, `pool_file`, `pool_indices`, `gravity` (the acceleration in the sampled potential; zero without), and `scene_dt`/`scene_bdf_steps` (the input's integrator, recorded only; dynamic problems are always BDF1 steps with the `--dt` values).
-- Dynamic files also add `h`, `aext`, and `samples/{v, xtilde, x_ref, ref_error_mnorm, ref_newton_*, ref_min_J}`. `x_ref` solves the step for the stored `xtilde`, to pbat's float32 energy noise floor: errors of up to about 7e-4 of the initial error e0 on the trampoline, which is enough for error reductions up to 99%. `ref_error_mnorm` estimates each problem's reference error in the benchmark's metric.
+- Attributes: `target_energy`, `rhat`, `ensemble`, `gravity`, `mode_normalization="mass"`, `importance_weights_required`.
+
+A benchmark dataset (`make_benchmark.py`) is one file:
+- `fem/` (the input FemElastoDynamics, which the benchmark solves on), and `X`, `basis/` stored once; each group's `X` and `basis` are hard links to them.
+- Root attributes `dataset_format = "pbat-benchmark-dataset"`, `sets` (e.g. `static/E50`, `dynamic_h0.01/E50`), `pools`, and the generator's settings.
+- Problem sets add `problem`, `pool` (the pool group, e.g. `pools/pool/E50`), `pool_indices`, `gravity` (the acceleration in the sampled potential; zero without), and `scene_dt`/`scene_bdf_steps` (the input's integrator, recorded only; dynamic problems are always BDF1 steps with the `--dt` values).
+- Dynamic sets also add `h`, `aext`, and `samples/{v, xtilde, x_ref, ref_error_mnorm, ref_newton_*, ref_min_J}`. `x_ref` solves the step for the stored `xtilde`, to pbat's float32 energy noise floor: errors of up to about 7e-4 of the initial error e0 on the trampoline, which is enough for error reductions up to 99%. `ref_error_mnorm` estimates each problem's reference error in the benchmark's metric.
 
 Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd4`, so `q` from older files isn't comparable.
 
@@ -88,13 +93,14 @@ Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd
 - **`star_violations = 0`** for polar.
 - **`importance_weights_required = False`**, i.e. not a ray batch.
 - **`samples/min_J`.** Values ≤ 0 mean inverted elements. They're allowed, but report them.
-- **Dynamic files.** `samples/ref_error_mnorm` is each reference's accuracy in the benchmark's error metric (the M-norm of its last Newton correction over free DOFs). Compare it with e0 = |x − x_ref|_M; it's up to ~6e-4 e0 on the trampoline (it can underestimate the true error by up to ~3×). Don't report error reductions beyond 99%. Don't compare `ref_newton_correction`, a max entry in m, with M-norms.
+- **Dynamic sets.** `samples/ref_error_mnorm` is each reference's accuracy in the benchmark's error metric (the M-norm of its last Newton correction over free DOFs). Compare it with e0 = |x − x_ref|_M; it's up to ~6e-4 e0 on the trampoline (it can underestimate the true error by up to ~3×). Don't report error reductions beyond 99%. Don't compare `ref_newton_correction`, a max entry in m, with M-norms.
 
 ## Pitfalls
 
 - **Gravity** is off in `modalrom.py` unless `--gravity` (or the GUI checkbox). In `make_benchmark.py`, the default is sampling without gravity for static problems and with gravity for dynamic ones. Static problems are always solved without loads (equilibrium exactly X); dynamic `xtilde` always includes the scene's gravity. With gravity in the sampled potential, U and U/E can be negative (sagged shapes), and K = E − U can exceed E.
 - **Mesh inputs** work in `modalrom.py` only (`-m`/`-Y`/`-n` set the material). They have no Dirichlet constraints: the 6 rigid modes are excluded, and reachability load targets need constraints. `make_benchmark.py` needs a scene file or a stored FemElastoDynamics.
 - **Scene loading** imports `python/tools/sim/state.py` (and Warp, without initializing the GPU) and the editor's `python/tools/vbd` modules, so the tools must run from a full checkout.
-- **`make_benchmark.py` overwrites** existing files in `--output`.
+- **`make_benchmark.py` overwrites** the `--output` file.
+- **Loading a set elsewhere:** `static.load_sample_batch("<dataset>.h5:static/E500")` (GPU tools); the GUI's Static Equilibrium panel lists a dataset's sets.
 - **GUI costs:** the first Sample click pays for burn-in and the pilot run, and "Solve target" blocks the UI for 2–6 s.
 - **Shared venv:** never reinstall pbatoolkit from a worktree.

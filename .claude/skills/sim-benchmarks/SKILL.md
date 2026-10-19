@@ -11,14 +11,17 @@ Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). Scen
 
 ## Pipeline
 
-1. **Problems.** `python/examples/make_benchmark.py` draws microcanonical samples on the quadratic-manifold ROM and writes:
-   - `pool/E{E}.h5`: all the samples.
-   - `static/E{E}.h5`: release the shape with no loads; the solution is the rest shape X.
-   - `dynamic_h{h}/E{E}.h5`: one BDF1 step from (x, v), with Newton reference solutions `samples/x_ref`.
+1. **Problems.** `python/examples/make_benchmark.py` draws microcanonical samples on the quadratic-manifold ROM and writes **one dataset file** holding:
+   - `fem/`: the FemElastoDynamics the problems are posed on. The benchmark solves on it, so it needs no scene.
+   - `pools/pool/E{E}`, `pools/pool_gravity/E{E}`: all the samples.
+   - `static/E{E}`: release the shape with no loads; the solution is the rest shape X.
+   - `dynamic_h{h}/E{E}`: one BDF1 step from (x, v), with Newton reference solutions `samples/x_ref`.
 
-   See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). A small existing test set is `data/benchmarks/trampoline-test`.
+   The root attribute `sets` lists the problem sets. See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). Small existing datasets: `data/benchmarks/trampoline-test.h5` (3 problems per set) and `trampoline-sample.h5` (4).
 2. **Static benchmark.** `python -m python.tools.sim.benchmark` releases each sample with every solver and logs the error to the rest shape after every iteration. It reports the time and iterations needed to reach each 5% level of error reduction.
-3. **Dynamic benchmark.** The same runner on a `dynamic_h{h}` file: one BDF1 step of the file's h toward its `xtilde`, with the error measured against `samples/x_ref`. The kind and h come from the file.
+3. **Dynamic benchmark.** The same runner on a `dynamic_h{h}` set: one BDF1 step of the set's h toward its `xtilde`, with the error measured against `samples/x_ref`. The kind and h come from the set.
+
+One run covers every set of the dataset, or those matching `--sets`.
 
 ## Static benchmark
 
@@ -26,31 +29,34 @@ Error: e = sqrt((x − X)ᵀ M (x − X)) over free nodes (lumped mass). Each so
 
 ```bash
 # One quick solve (smoke test)
-python -m python.tools.sim.benchmark --scene C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5 \
-    --samples C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test/static/E50.h5 \
-    --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
+python -m python.tools.sim.benchmark --dataset C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test.h5 \
+    --sets static/E50 --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
 
-# Every solver x every sample, with a scene's parameters
-python -m python.tools.sim.benchmark --scene SCENE.h5 --samples BATCH.h5 \
+# Every solver x every problem of every set, with a scene's parameters
+python -m python.tools.sim.benchmark --dataset DATASET.h5 \
     --sim-params python/tools/sim/configs/paper/<scene>.toml --max-seconds 10 -o out/all.json
+
+# Only some sets (fnmatch patterns over the names in the dataset's `sets` attribute)
+python -m python.tools.sim.benchmark --dataset DATASET.h5 --sets "static/*" "dynamic_h0.01/E500" -o out/some.json
 
 # Parameter variations: configs layered left to right, then single-key overrides
 python -m python.tools.sim.benchmark ... --sim-params base.toml static.toml \
     --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
 
-# Reproducible case: save the spec, rerun it
+# Reproducible case: save the spec (dataset, sets, sample range, budgets), rerun it
 python -m python.tools.sim.benchmark ... --save-spec out/case.h5 -o out/a.json
-python -m python.tools.sim.benchmark --scene SCENE.h5 --spec out/case.h5 -o out/b.json
+python -m python.tools.sim.benchmark --spec out/case.h5 -o out/b.json
 ```
 
-The problem comes from a scene file (`--scene`, preferred) or an editor Dump (`--fem-elasto-dynamics file.h5:fem`, for debugging). Either way, the constrained nodes stay fixed at rest, and colliders and kinematic animation are ignored.
+The problems are posed on the dataset's stored FEM, whose Dirichlet nodes stay fixed at rest. No scene or Dump is passed.
 
 Translating requests:
 
 | Request | Flag |
 |---|---|
+| "Only the static problems" / "only h = 0.01 at 500 J" | `--sets "static/*"` / `--sets dynamic_h0.01/E500` (default: every set) |
 | "Only solvers X, Y" | `--solvers X,Y` (from VBD, AAAVBD, Chebyshev, AndersonSolver, Newton; default all, in that order) |
-| "Samples i to j" | `--sample-begin i --sample-end j+1` (`-1` = all) |
+| "Samples i to j" | `--sample-begin i --sample-end j+1` (`-1` = all), in every selected set |
 | "Time budget T s per solve" | `--max-seconds T` (default 60) |
 | "Iteration budget N" | `--max-iterations N`: counts VBD sweeps, **Anderson steps** (p sweeps each when `vbd_iters_per_anderson_iter = p`) or Newton steps |
 | "Reduce the error by 99%" | `--target-reduction 0.99` (default 0.95) |
@@ -63,23 +69,24 @@ Translating requests:
 ## Outputs
 
 - **`results.json`:**
-  - the spec, plus metadata: scene, sim-params sources, sample attributes, Newton CG limits, device, commit, date;
+  - the spec, plus metadata: dataset, sim-params sources, dataset attributes, Newton CG limits, device, commit, date;
+  - `sets`, per problem set: its kind, h and attributes, and `solvers`, with the entries below;
   - per solver and sample: e0, iterations, sweeps, solver time, final e/e0, time and iterations to each 5% level (null if never reached), deformation energy, min det F, and a log-spaced curve;
   - per level: aggregates (median, q25, q75, fraction of solves that reached it);
   - per sample, `termination`, and per solver, the count per reason: `target`, `iteration_cap`, `time_cap`, `non_finite`, or Newton's `newton_non_descent`, `newton_line_search_failed` or `newton_zero_gradient`. Newton stops at its first rejected step; at the float32 floor that is usually `newton_line_search_failed`.
-- **Dynamic batches** add the problem kind and h to the metadata, and to each sample a `reference` with its accuracy in the error's M-norm (`error_bound`, `relative_error_bound`). It comes from the file's `samples/ref_error_mnorm`, or for older files without it from a loose worst case on `newton_correction` (`error_bound_source` says which). Per level, `reliable` counts the samples whose reference resolves that level.
-- **`results.h5`** next to it: the spec and the full logs at `<solver>/<sample>/{error,time,sweeps}`.
+- **Dynamic sets** add to each sample a `reference` with its accuracy in the error's M-norm (`error_bound`, `relative_error_bound`), from the set's `samples/ref_error_mnorm`. Per level, `reliable` counts the samples whose reference resolves that level.
+- **`results.h5`** next to it: the spec and the full logs at `<set>/<solver>/<sample>/{error,time,sweeps}`.
 
 When comparing solvers, use the time to reach each error level, not the time per iteration. Also report iterations and sweeps. Anderson iterations aren't sweeps when p > 1.
 
 ## Pitfalls
 
 - **Contact** is always off, for both problem kinds.
-- **Dynamic h:** dynamic problems take h from the file and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution (e0 ~ 1e-3), so float32 rounding floors the error around e/e0 ~ 1e-5 to 1e-4.
-- **Solver parameters:** without `--sim-params`, only the code defaults apply (`configs/defaults.toml`), not the scene's or Dump's solver parameters. Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
+- **Dynamic h:** dynamic problems take h from the set and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution (e0 ~ 1e-3), so float32 rounding floors the error around e/e0 ~ 1e-5 to 1e-4.
+- **Solver parameters:** they come only from `--sim-params` and `--set`; without them, the code defaults apply (`configs/defaults.toml`). Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
 - **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Newton's CG absolute tolerance is set to 0 (its relative one stays), since in h²-scaled units at small h the gradient drops below it after one step. Vertex-solve and acceleration parameters still matter.
 - **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 300 leaves Newton steps inexact.
 - **Quiet GPU:** timings are only valid while nothing else runs. Reserve the GPU in `plans/MASTER.md` while parallel sessions are active.
-- **Sample batches:** batches that need importance weights (ray sampler) are refused. R-hat ≥ 1.05 and nonzero gravity only warn. Static problems should be gravity-free.
-- **First solve:** the first solve per solver includes kernel compilation and graph capture in its host time, but not in the reported times.
+- **Problem sets:** sets that need importance weights (ray sampler) are refused. R-hat ≥ 1.05 and nonzero gravity only warn. Static problems should be gravity-free.
+- **First solve:** the first solve per solver and set includes kernel compilation and graph capture in its host time, but not in the reported times.
 - **Not sim-params:** `fem.static` and the StaticSolveSpec aren't part of the config system.
