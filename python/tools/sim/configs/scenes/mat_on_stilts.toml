@@ -1,0 +1,33 @@
+# mat_on_stilts (Young's modulus 1e6 to 1e8) with the maintainer's settings for stiff heterogeneous
+# scenes: no substeps, 10 x 40 = 400 sweeps per step, and the Inverse vertex solve. The paper's
+# 5-substep file gives only 125 sweeps per frame, with EVD and gammaup/gammaupS 0.9/0.85, and AAAVBD
+# blows up once the mat lands on the stilts. 10 x 20 sweeps was also stable in the maintainer's test.
+# The contact parameters are the paper file's.
+extends = ["../paper/mat_on_stilts.Params.5Substeps.toml"]
+
+[Integration]
+substeps = 1
+
+[Solver.AAAVBD]
+n_max_iters = 10
+n_subproblem_max_iters = 40
+vlinsolve = 0
+gammadown = 0.99
+gammadownS = 0.95
+gammaup = 0.5
+gammaupS = 0.3
+
+[Solver.VBD]
+n_max_iters = 10
+n_subproblem_max_iters = 40
+vlinsolve = 0
+
+[Solver.Chebyshev]
+n_max_iters = 10
+n_subproblem_max_iters = 40
+vlinsolve = 0
+
+[Solver.AndersonSolver]
+n_max_iters = 10
+n_subproblem_max_iters = 40
+vlinsolve = 0
