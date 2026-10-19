@@ -1,0 +1,32 @@
+# The soft-stiff trampolines (Young's modulus 1e6 to 1e8) with the maintainer's settings for stiff heterogeneous scenes: no substeps, 5 x 80 = 400
+# sweeps per step, the Inverse vertex solve, and AAAVBD gammaup/gammaupS 0.5/0.3 with
+# gammadown/gammadownS 0.99/0.95. The paper file gives 5 substeps of 1 x 100 sweeps, with EVD and AAAVBD gammaup/gammaupS 0.9/0.85.
+# The contact parameters are the paper file's.
+extends = ["../paper/trampoline_soft-stiff.Params.5Substeps.toml"]
+
+[Integration]
+substeps = 1
+
+[Solver.AAAVBD]
+n_max_iters = 5
+n_subproblem_max_iters = 80
+vlinsolve = 0
+gammadown = 0.99
+gammadownS = 0.95
+gammaup = 0.5
+gammaupS = 0.3
+
+[Solver.VBD]
+n_max_iters = 5
+n_subproblem_max_iters = 80
+vlinsolve = 0
+
+[Solver.Chebyshev]
+n_max_iters = 5
+n_subproblem_max_iters = 80
+vlinsolve = 0
+
+[Solver.AndersonSolver]
+n_max_iters = 5
+n_subproblem_max_iters = 80
+vlinsolve = 0
