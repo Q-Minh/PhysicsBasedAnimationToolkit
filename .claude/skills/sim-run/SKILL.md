@@ -98,7 +98,7 @@ Frequently changed keys:
 
 The GPU defaults (`state.load_params`, listed in `configs/defaults.toml`) follow this guidance. Use it when writing scene configs:
 
-- **Outer iterations:** `Solver.<S>.n_max_iters = 1` for the VBD family (the default). Use more only when a step needs several contact detection passes to resolve the constraint set without tunnelling. Vertex SDF detection doesn't truncate steps the way OGC did, so it rarely needs more.
+- **Outer iterations:** `Solver.<S>.n_max_iters = 1` for the VBD family (the default). Use more when a step needs several contact detection passes to resolve the constraint set without tunnelling, e.g. fast impacts or contact-rich scenes. The paper's contact scenes use 5 outer iterations (5 x 80 sweeps). Keep the total sweep budget below in mind.
 - **Contact-free scenes:** keep `n_max_iters = 1` and turn contact detection off. Single-body scenes without colliders do this automatically, because vertex SDF has no self-contact. Otherwise set `--set Contact.CDType.VertexSdf.deactivate=1`.
 - **Sweep budget:** the total over all outer iterations, subproblems and Anderson steps (`n_subproblem_max_iters` when `n_max_iters = 1`; default 100).
 
