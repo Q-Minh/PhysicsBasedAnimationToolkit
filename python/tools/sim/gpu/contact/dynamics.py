@@ -521,9 +521,9 @@ class Params(SerializableMixin):
     decay = DocField(0.5, "Decay rate for contact deactivation")
     gamman = DocField(1e4, "Normal contact AL penalty scaling factor (constant penalty: gamman * dt^2)")
     gammaf = DocField(
-        10.0,
-        "Friction contact AL penalty scaling factor (constant penalty: gammaf * dt^2). Kept small: the friction "
-        "penalty also acts as viscous drag, so larger values make sliding bodies creep",
+        1e3,
+        "Friction contact AL penalty scaling factor (constant penalty: gammaf * dt^2). The vertex solves cap the "
+        "friction force at mu_f times the normal force, so a stiff value gives Coulomb sliding/sticking",
     )
     gamman_adaptive = DocField(
         1.0,
@@ -531,7 +531,7 @@ class Params(SerializableMixin):
         "(C++'s default). Much smaller values let the warm-started multipliers eject resting bodies",
     )
     gammaf_adaptive = DocField(
-        1e-3, "Friction penalty scaling with adaptive penalties, as gamman_adaptive. Kept small, as gammaf"
+        1e-2, "Friction penalty scaling with adaptive penalties, as gamman_adaptive (see gammaf on the Coulomb cap)"
     )
     min_sigma_n = DocField(
         1.0, "Floor of the effective normal penalty with adaptive penalties (gamman_adaptive * sigma_n)"
