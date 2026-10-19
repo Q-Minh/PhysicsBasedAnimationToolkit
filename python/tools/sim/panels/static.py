@@ -9,8 +9,10 @@ a.toml]``, then the "Static Equilibrium" node in the Simulation tab:
   kinematic constraints frozen, so stepping watches the solve converge. Turning it off restarts the
   dynamics at rest from the current positions.
 - **External load scale**: s, the factor on the external load in static mode (0 = no loads).
-- **Load samples...**: loads an MCMC sample batch (.h5) and checks it against the mesh. Its warnings
-  (unmixed chains, sampling gravity) are shown.
+- **Load samples...**: loads a benchmark dataset (``python/examples/make_benchmark.py``) or an MCMC sample
+  file (.h5), and checks the batch against the mesh. Its warnings (unmixed chains, sampling gravity) are
+  shown.
+- **Problem set**: for a dataset, the set whose samples are shown (e.g. ``static/E500``).
 - **Sample / Apply sample**: sets the positions to one sample and remembers its error to the rest shape.
 - **Error to rest shape**: e/e0, with e = |x - X|_M over free nodes and e0 the error of the applied sample.
 
@@ -34,6 +36,9 @@ class _StaticPanelState:
         self.enabled = False
         self.fext_scale = 0.0
         self.batch: static.SampleBatch | None = None
+        self.dataset: str | None = None  # dataset file whose sets are listed, if one is loaded
+        self.sets: list[str] = []
+        self.set_index = 0
         self.sample = 0
         self.error_message = ""
         self.e0: float | None = None
@@ -58,6 +63,16 @@ class _StaticPanelState:
         scale = self.fext_scale if enabled else 1.0
         fem.data.fext.assign((self._fext0 * np.float32(scale)).astype(np.float32))
         state.capture = None
+
+    def load(self, state, path: str):
+        """Load and check the batch at ``path`` (``file.h5:set`` or a sample file), keeping the previous
+        batch and showing the error if that fails."""
+        try:
+            batch = static.load_sample_batch(path)
+            static.check_sample_batch(batch, state.fem)
+            self.batch, self.sample, self.error_message = batch, 0, ""
+        except (OSError, KeyError, ValueError) as e:
+            self.error_message = str(e)
 
     def relative_error(self, state) -> float | None:
         """e/e0 for the current positions, or None until a sample has been applied."""
@@ -117,11 +132,19 @@ def draw_static_panel(state, ui_state):
         root.destroy()
         if path:
             try:
-                batch = static.load_sample_batch(path)
-                static.check_sample_batch(batch, state.fem)
-                panel.batch, panel.sample, panel.error_message = batch, 0, ""
-            except (OSError, KeyError, ValueError) as e:
+                dataset = static.is_dataset(path)
+                panel.dataset, panel.sets, panel.set_index = None, [], 0
+                if dataset:
+                    panel.dataset, panel.sets = path, static.dataset_sets(path)
+                panel.load(state, f"{path}:{panel.sets[0]}" if dataset else path)
+            except (OSError, KeyError, ValueError, IndexError) as e:
                 panel.error_message = str(e)
+    if panel.sets:
+        changed, panel.set_index = imgui.Combo("Problem set", panel.set_index, panel.sets)
+        if imgui.IsItemHovered():
+            imgui.SetTooltip(f"Problem set of {panel.dataset} whose samples are shown")
+        if changed:
+            panel.load(state, f"{panel.dataset}:{panel.sets[panel.set_index]}")
     if panel.error_message:
         imgui.TextWrapped(panel.error_message)
     if panel.batch is not None:
