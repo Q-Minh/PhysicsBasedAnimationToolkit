@@ -46,6 +46,8 @@ def adapt_stencil_gradient_acceleration_parameter(
     rhohat: wp.vec2f,
     gammaup: wp.vec2f,
     gammadown: wp.vec2f,
+    betaup: wp.float32,
+    lipschitz_normalization: wp.int32,
     grp: wp.int32,
     eps: wp.float32,
 ) -> wp.float32:
@@ -53,6 +55,12 @@ def adapt_stencil_gradient_acceleration_parameter(
 
     ``xki``, ``gkm1``, ``Hnki`` and ``betaGi`` are vertex i's stored state, which the caller loads early so
     the loads overlap the derivative gathers; ``grp`` selects the interior (0) or surface (1) parameters.
+
+    Beta shrinks by ``gammadown`` when the gradient grows, and otherwise grows toward ``betaup`` by
+    ``gammaup`` when ``rho > rhohat``. ``rho = |g_k - g_{k-1}| / (L |x_k - x_{k-1}|)`` with the Lipschitz
+    estimate ``L = |H_i|_F + |g_k| / |x_k - x_{k-1}|``, or ``|g_k - g_{k-1}| / |x_k - x_{k-1}|`` without
+    ``lipschitz_normalization`` (then ``rhohat`` has stiffness units). C++ ``vbd::Iterate`` has
+    ``betaup = 1`` and always normalizes.
     """
     if kp > 0:
         rhohati = rhohat[grp]  # type: ignore
@@ -65,12 +73,14 @@ def adapt_stencil_gradient_acceleration_parameter(
             wp.norm_l2(xi - xki),
             eps,  # pyright: ignore[reportCallIssue, reportArgumentType]
         )
-        L = Hnki + ngk / wp.max(ndxkm1, eps)
-        rho = ndgkm1 / wp.max(L * ndxkm1, eps)
+        rho = ndgkm1 / ndxkm1
+        if lipschitz_normalization != 0:
+            L = Hnki + ngk / wp.max(ndxkm1, eps)
+            rho = ndgkm1 / wp.max(L * ndxkm1, eps)
         if ngk > ngkm1:
             betaGi *= gammadowni
         elif rho > rhohati:  # type: ignore
-            betaGi += (wp.float32(1) - betaGi) * gammaupi
+            betaGi += (betaup - betaGi) * gammaupi
         betaG[i, grp] = betaGi  # type: ignore
     gk[i] = gi  # Store current gradient # type: ignore
     xk[i] = xi  # Store current position # type: ignore
@@ -229,6 +239,8 @@ def _accelerated_vertex_solve_kernel(
             rhohat=params.rhohat,
             gammaup=params.gammaup,
             gammadown=params.gammadown,
+            betaup=params.betaup,
+            lipschitz_normalization=params.lipschitz_normalization,
             grp=grp,
             eps=eps,
         )

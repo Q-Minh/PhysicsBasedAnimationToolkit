@@ -84,6 +84,8 @@ class ParamsData:
     rhohat: wp.vec2f  # Lipschitz-normalized step thresholds (0: interior, 1: surface)
     gammadown: wp.vec2f  # beta reduction factors (0: interior, 1: surface)
     gammaup: wp.vec2f  # beta increase factors (0: interior, 1: surface)
+    betaup: wp.float32  # upper limit that beta grows toward (GPU only; C++ hard-codes 1)
+    lipschitz_normalization: wp.int32  # normalize rho by the vertex Lipschitz estimate (GPU only; C++ always does)
     surface_stencil_surface_neighbours_only: wp.int32  # surface vertices skip interior neighbours
 
     # --- Read-write ---
@@ -111,6 +113,9 @@ class Params:
     them across a time step's subproblems (reset every time step) and ``TimeStep`` never resets them.
     Only AAAVBD reads ``betaG``, so it is the only solver that passes the CPU params'
     ``warm_start_beta``. The default, ``TimeStep``, adds no resets.
+
+    ``betaup`` and ``lipschitz_normalization`` are GPU-only AAAVBD parameters for ablation studies
+    (see `AaaVbdCpuParams`). Their defaults reproduce C++ ``vbd::Iterate``.
     """
 
     _data: ParamsData  # pyright: ignore[reportGeneralTypeIssues]
@@ -122,6 +127,8 @@ class Params:
         warm_start_beta: pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask = (
             pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask.TimeStep
         ),
+        betaup: float = 1.0,
+        lipschitz_normalization: bool = True,
     ):
         self._data = ParamsData()
         # Vertex-element adjacency graph
@@ -155,6 +162,8 @@ class Params:
         self._data.rhohat = (float(params.rhohat), float(params.rhohatS))
         self._data.gammadown = (float(params.gammadown), float(params.gammadownS))
         self._data.gammaup = (float(params.gammaup), float(params.gammaupS))
+        self._data.betaup = float(betaup)
+        self._data.lipschitz_normalization = int(bool(lipschitz_normalization))
         self._data.surface_stencil_surface_neighbours_only = int(
             params.surface_stencil_surface_neighbours_only
         )
@@ -204,6 +213,9 @@ STENCIL_GRADIENT_ACCELERATION_KEYS = frozenset(
         "gammadownS",
         "warm_start_beta",
         "surface_stencil_surface_neighbours_only",
+        # GPU-only (AaaVbdCpuParams)
+        "betaup",
+        "lipschitz_normalization",
     }
 )
 
