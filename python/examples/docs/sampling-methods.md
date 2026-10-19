@@ -322,6 +322,8 @@ positions unchanged and underestimate it. Tolerances then follow $\varepsilon$:
 
 For each total energy $E$, a pool of microcanonical samples is drawn, and an evenly spaced subset of it becomes the
 problems. A sample $(q_s, \dot q_s)$ gives the start state $x_s = X + u(q_s)$ and velocity $v_s = J(q_s)\, \dot q_s$.
+A benchmark dataset is one HDF5 file: the FEM the problems are posed on, the pools, and one problem set per kind and
+energy (`make_benchmark.py`'s docstring has the layout).
 
 - **Static problem.** Start from $x_s$ and minimize $\Psi(x)$ with Dirichlet nodes at rest. The solution is exactly
   $X$, so errors are $\lVert x_k - X \rVert$. Static pools are sampled without gravity by default.
@@ -522,7 +524,7 @@ linear-mode ROM is within 7.3%, but stores 97 J against the target's 26 J.
 | Adaptation, thinning, $\hat R$ (Section 5) | `rom_mcmc._Chain`, `integrated_autocorrelation_time`, `split_rhat`, `run_chain`, `run_chains` |
 | Noise floor (Section 6) | `rom_mcmc.estimate_energy_noise` |
 | Sample files | `rom_mcmc.write_samples` (the file contract) |
-| Benchmark problems (Section 8) | `make_benchmark.py`, `rom_reach.static_equilibrium` (with inertia) |
+| Benchmark problems and the dataset file (Section 8) | `make_benchmark.py`, `rom_reach.static_equilibrium` (with inertia) |
 | Shape matching (Section 9) | `rom_reach.py`, and the reachability panel in `modalrom.py` |
 | Browsing datasets | `benchmark_browser.py` |
 
