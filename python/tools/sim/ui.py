@@ -35,7 +35,7 @@ from .state import (
 
 SOLVER_SUB_PARAMS: dict[SolverType, dict] = {
     SolverType.VBD: {},
-    SolverType.AAAVBD: {},
+    SolverType.AAAVBD: {"vbd_params": None},
     SolverType.Chebyshev: {"vbd_params": None},
     SolverType.AndersonSolver: {"vbd_params": None},
     SolverType.Newton: {"newton": {"line_search": {}}},
