@@ -268,7 +268,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | in progress: `feature/cow-scene-config` (cow AAAVBD scene config + tuning guidance) | 2026-10-18 | Paper defaults kept; no kernel changes |
+| 2 | on hold | 2026-10-18 | cow_on_trampoline work stopped (maintainer); its branches deleted, nothing committed. All earlier work merged |
 | 3 | ready for review | 2026-10-18 | `feature/newton-relative-check` (Newton plateau fix via CG atol, termination statuses, ref_error_mnorm flags, Newton relative check, CG atol 1e-10, benchmark --scene); `feature/coulomb-cap` (VBD friction capped at mu_f·normal force) |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -681,6 +681,13 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 2 · **GPU run END** (cow 300-step candidates): every near-default AAAVBD setting diverges contact-free between steps 109 and 235; VBD also diverges at step 201 (drifting from ~step 100), 0 contacts throughout. Scene config on hold; details sent to the coordinator and tasks 1/3.
 - 2026-10-18 · task 2 · **GPU run START** (~30 min, correctness only): cow_on_trampoline with substeps = 5 and n_max_iters = 2 (maintainer's suggestions), VBD and AAAVBD, 300 steps. Will log END.
 - 2026-10-18 · coordinator · **STOP: no work on `cow_on_trampoline`** (maintainer: known poorly shaped elements; don't use it in tests). The cow scene config, tuning bullet and divergence investigation are cancelled. Use BeamFallingOnBeam or mat_on_stilts_3 (with its paper config) as multi-body contact test scenes.
+- 2026-10-18 · task 2 · **GPU run END** (cow_on_trampoline jobs aborted on the maintainer's instruction). Branches `feature/aaavbd-cow-divergence` and `feature/cow-scene-config` deleted (no commits); nothing added to docs or skills.
+- 2026-10-18 · task 1 · **GPU run (cont., correctness only):** penalty matrix on `feature/al-warm-start` and dev
+  (~1 h): TIMESTEP/SUBPROBLEM at gamman_adaptive 1 and 0.1, CONSTANT 1e6, on CubeOnInfinitePlane,
+  FastCubeOnInfinitePlane, BeamFallingOnBeam and CubeFallingOnCube, for VBD/AAAVBD/Chebyshev/Anderson. After that,
+  a **timing** run (dense ThingsFallingInBasket, dev vs fix). Others, please keep timing runs off the GPU until then.
+  Will log END.
+- 2026-10-18 · coordinator · **Merged `feature/al-warm-start`** (task 1): multipliers persist (keys recorded), VE/VF dual gaps at current positions, VertexSdf detects below ContactDynamics.dmin + band (band 1e-3, sign-aware normals; VertexSdf.dmin deprecated with a warning), **default penalty now TIMESTEP at gamman_adaptive 1** (TS1 matrix: finite, resting at the 2 mm margin for all 4 solvers on the planes, BeamFallingOnBeam and CubeFallingOnCube; contact-free scenes bit-identical). Paper configs regenerated (they keep their constant penalties). Spaghetti: +14% step time, pairs far below capacity. The basket slowdown once contacts form also happens on dev. **Open risk:** paper configs' soft constant penalties plus persistent lambda may eject → task 3 checks the paper scenes, then the friction defaults.
 
 ## Open questions for the maintainer
 
