@@ -31,7 +31,7 @@ def _detect_vertex_mesh_contacts(
     mesh_kind: wp.array[wp.int32],
     mesh_depth: wp.array[wp.float32],
     max_dist: wp.float32,
-    dmin: wp.float32,
+    threshold: wp.float32,
     sds: wp.array[wp.float32],
     x: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # type: ignore
@@ -97,7 +97,7 @@ def _detect_vertex_mesh_contacts(
             if sd < -mesh_depth[m]:
                 continue
         tsdmin = wp.min(tsdmin, sd)
-        if sd < dmin:
+        if sd < threshold:
             is_j_zero = wp.int32(b0 == wp.float32(0))
             is_k_zero = wp.int32(b1 == wp.float32(0))
             is_l_zero = wp.int32(b2 == wp.float32(0))
@@ -182,17 +182,111 @@ def _detect_vertex_mesh_contacts(
     sds[v] = sdmin  # type: ignore
 
 
+@wp.func
+def _face_normal(x: wp.array[wp.vec3f], F: wp.array[wp.vec3i], f: wp.int32) -> wp.vec3f:
+    """Unnormalized normal of face f, of length twice its area."""
+    finds = F[f]
+    xj = x[finds[0]]
+    return wp.cross(x[finds[1]] - xj, x[finds[2]] - xj)
+
+
+@wp.func
+def _unit_face_normal(x: wp.array[wp.vec3f], F: wp.array[wp.vec3i], f: wp.int32) -> wp.vec3f:
+    return wp.normalize(_face_normal(x, F, f))
+
+
+@wp.func
+def _oriented_normal(d: wp.vec3f, pseudonormal: wp.vec3f) -> wp.vec3f:
+    """The contact normal: d (from the partner's closest point to the vertex) normalized and signed by the
+    partner's pseudonormal, which tells the outside of its surface. For a vertex on the surface (d ~ 0), the
+    pseudonormal itself."""
+    if wp.length(d) <= wp.float32(1e-7) * (wp.float32(1) + wp.length(pseudonormal)):
+        return wp.normalize(pseudonormal)
+    n = wp.normalize(d)
+    if wp.dot(d, pseudonormal) < wp.float32(0):
+        n = -n
+    return n
+
+
 @wp.kernel
-def _flip_contact_normals(
+def _orient_vv_contact_normals(
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # type: ignore
     cpairs: pairs.PairsData,  # type: ignore
     bases: pairs.ContactBasesData,  # type: ignore
     n_u: wp.int32,
 ):
     k = wp.tid()
-    n_uv = cpairs.prefix[n_u]
-    if wp.uint64(k) >= n_uv:  # type: ignore
+    if wp.uint64(k) >= cpairs.prefix[n_u]:  # type: ignore
         return
-    bases.n[k] = -bases.n[k]
+    i, j = meshes.V[wp.int32(cpairs.u[k])], meshes.V[wp.int32(cpairs.v[k])]
+    # Angle-weighted vertex pseudonormal of j: the sign of d against it is exact
+    pn = wp.vec3f(0.0)
+    for a in range(meshes.GVHEp[j], meshes.GVHEp[j + 1]):
+        f = halfedges.face_of_half_edge(meshes.GVHEadj[a])
+        finds = meshes.F[f]
+        p, q = finds[1], finds[2]
+        if finds[1] == j:
+            p, q = finds[2], finds[0]
+        elif finds[2] == j:
+            p, q = finds[0], finds[1]
+        e1, e2 = wp.normalize(x[p] - x[j]), wp.normalize(x[q] - x[j])
+        angle = wp.acos(wp.clamp(wp.dot(e1, e2), wp.float32(-1), wp.float32(1)))
+        pn += angle * _unit_face_normal(x, meshes.F, f)
+    n = _oriented_normal(x[i] - x[j], pn)
+    t, b = pairs._build_contact_basis(n)
+    bases.n[k] = n
+    bases.t[k] = t
+    bases.b[k] = b
+
+
+@wp.kernel
+def _orient_ve_contact_normals(
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # type: ignore
+    cpairs: pairs.PairsData,  # type: ignore
+    bases: pairs.ContactBasesData,  # type: ignore
+    bary: wp.array[wp.float32],
+    n_u: wp.int32,
+):
+    k = wp.tid()
+    if wp.uint64(k) >= cpairs.prefix[n_u]:  # type: ignore
+        return
+    i = meshes.V[wp.int32(cpairs.u[k])]
+    he = wp.int32(cpairs.v[k])
+    xa = x[halfedges.incoming_vertex(meshes.F, he)]
+    xb = x[halfedges.outgoing_vertex(meshes.F, he)]
+    xc = (wp.float32(1) - bary[k]) * xa + bary[k] * xb
+    # Edge pseudonormal: the sum of its faces' unit normals
+    pn = _unit_face_normal(x, meshes.F, halfedges.face_of_half_edge(he))
+    fo = meshes.GHEF[he][1]
+    if fo >= 0:
+        pn += _unit_face_normal(x, meshes.F, fo)
+    n = _oriented_normal(x[i] - xc, pn)
+    t, b = pairs._build_contact_basis(n)
+    bases.n[k] = n
+    bases.t[k] = t
+    bases.b[k] = b
+
+
+@wp.kernel
+def _orient_vf_contact_normals(
+    x: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # type: ignore
+    cpairs: pairs.PairsData,  # type: ignore
+    bases: pairs.ContactBasesData,  # type: ignore
+    n_u: wp.int32,
+):
+    k = wp.tid()
+    if wp.uint64(k) >= cpairs.prefix[n_u]:  # type: ignore
+        return
+    # The closest point is inside the face, so the face's (outward) normal is the contact normal on both
+    # sides of the surface
+    n = _unit_face_normal(x, meshes.F, wp.int32(cpairs.v[k]))
+    t, b = pairs._build_contact_basis(n)
+    bases.n[k] = n
+    bases.t[k] = t
+    bases.b[k] = b
 
 
 @wp.kernel
@@ -231,8 +325,18 @@ def _mesh_kind(F: np.ndarray, X: np.ndarray) -> int:
 
 
 class Params(SerializableMixin):
-    max_dist = DocField(0.05, "Maximum distance for closest point computations.")
-    dmin = DocField(-0.0001, "Minimum distance threshold for contacts to be created.")
+    max_dist = DocField(
+        0.05,
+        "Maximum distance for closest point computations. It must exceed the detection threshold "
+        "Contact.ContactDynamics.dmin + band, and bounds the signed distances that are tracked.",
+    )
+    band = DocField(
+        1e-3,
+        "Contacts are created for vertices closer than Contact.ContactDynamics.dmin + band to another mesh "
+        "(or inside it). The band above the AL margin dmin keeps resting contacts, which the AL pushes to dmin, "
+        "detected, so their multipliers persist. (Replaces the creation threshold `dmin`, an absolute signed "
+        "distance whose default -1e-4 detected penetrating vertices only.)",
+    )
     use_step_filter = DocField(
         False,
         "Whether to apply initial step filter.",
@@ -249,10 +353,15 @@ class Sd(ContactDetection):
     _mesh_depth: wp.array[wp.float32]  # (# meshes,) contact depth of plane meshes (inf: half-space)
     _sds: wp.array[wp.float32]  # (# verts,) signed distances
     _mesh_streams: list[wp.Stream]
-    _normal_flip_streams: list[wp.Stream]
+    _normal_streams: list[wp.Stream]
 
     def __init__(self, params: Params | None):
         self.params = params or Params()
+        self._contact_dmin = 0.0
+
+    def set_contact_margin(self, dmin: float):
+        """Set the AL contact margin (Contact.ContactDynamics.dmin): contacts are detected below dmin + band."""
+        self._contact_dmin = float(dmin)
 
     def register_handles(
         self,
@@ -292,7 +401,7 @@ class Sd(ContactDetection):
             (self._meshes.n_verts,), self.params.max_dist, dtype=wp.float32
         )
         self._mesh_streams = [wp.Stream() for _ in range(len(self._wp_meshes))]
-        self._normal_flip_streams = [wp.Stream() for _ in range(3)]  # (vv, ve, vf)
+        self._normal_streams = [wp.Stream() for _ in range(3)]  # (vv, ve, vf)
 
     def set_plane_depths(self, depths: np.ndarray):
         """Set how far below each plane mesh a vertex is still in contact with it.
@@ -346,7 +455,7 @@ class Sd(ContactDetection):
                 self._mesh_kind,
                 self._mesh_depth,
                 self.params.max_dist,  # max_dist
-                self.params.dmin,  # dmin
+                self._contact_dmin + self.params.band,  # detection threshold
                 self._sds,
                 self._x,
                 self._meshes.data,  # type: ignore
@@ -356,18 +465,24 @@ class Sd(ContactDetection):
             stream=main_stream,
         )
         self._contacts.assemble_contacts(self._x, with_reverse_contacts=True)
+        # Normals point from the partner surface to the vertex, on both sides of the surface: assemble_contacts
+        # computes them as from outside (OGC's convention)
         contact_data = self._contacts.read_data[0]
-        for capacity, cpairs, bases, stream in zip(
+        for kernel, capacity, extra, stream in zip(
+            (_orient_vv_contact_normals, _orient_ve_contact_normals, _orient_vf_contact_normals),
             self._contacts.capacity[:3],
-            [contact_data.vv, contact_data.ve, contact_data.vf],
-            [contact_data.vv_bases, contact_data.ve_bases, contact_data.vf_bases],
-            self._normal_flip_streams,
+            (
+                [contact_data.vv, contact_data.vv_bases],
+                [contact_data.ve, contact_data.ve_bases, contact_data.ve_bary],
+                [contact_data.vf, contact_data.vf_bases],
+            ),
+            self._normal_streams,
         ):  # (vv, ve, vf)
             stream.wait_stream(main_stream)
             wp.launch(
-                kernel=_flip_contact_normals,
+                kernel=kernel,
                 dim=capacity,
-                inputs=[cpairs, bases, self._meshes.n_verts],
+                inputs=[self._x, self._meshes.data] + extra + [self._meshes.n_verts],
                 stream=stream,
             )
             main_stream.wait_stream(stream)
