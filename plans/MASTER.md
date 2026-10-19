@@ -213,6 +213,18 @@ yet. **Owner: task 1** (confirmed by the maintainer, 2026-10-18). Branch `featur
   `samples/x` and their distribution are unchanged; only the scale of `samples/q` differs. Consumers that use
   `samples/x` are unaffected.
 - **Independence:** samples are thinned automatically to be approximately independent.
+- **Benchmark datasets (maintainer, 2026-10-18; task 4 writes, `benchmark.py`, the GUI static panel and the
+  browser read).** One HDF5 file per benchmark (`make_benchmark.py -o dataset.h5`), replacing the per-set
+  directories (no compatibility code):
+  - `fem/`: the input FemElastoDynamics (pbat Archive). `benchmark.py --dataset` solves on it (no `--scene`);
+    solver parameters still come only from `--sim-params`/`--set`.
+  - `X`, `basis/`: stored once. Every batch group's `X` and `basis` are HDF5 hard links to them.
+  - `pools/{pool,pool_gravity}/E{E}`, `static/E{E}`, `dynamic_h{h}/E{E}`: batch groups, each following the
+    contract above as a file root does. Problem sets carry `pool` (the pool group) instead of `pool_file`.
+  - Root attributes: `dataset_format = "pbat-benchmark-dataset"`, `dataset_version = 1`, `sets` (problem set
+    groups), `pools`, `input`, `git_commit` and the generator's settings.
+  - A batch is addressed as `dataset.h5:static/E50` (`static.load_sample_batch`); a `modalrom.py` sample file is
+    still a batch at its root.
 - **Dirichlet DOFs are exactly at rest** in every sample, because U and Q vanish there.
 - **`samples/min_J`** (S,): each sample's minimum det(F) over the mesh. Inverted elements (≤ 0) are allowed,
   because Stable NH is defined there; this records them.
@@ -713,6 +725,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · coordinator · **Maintainer:** keep the guidance-based `configs/scenes/` in this repo. Which paper configs to replace or keep will be settled later with Melissa. Paper tomls stay untouched.
 - 2026-10-18 · coordinator · **GPU run START** (~15 min, correctness only): n_max_iters = 5 tests (5 x 80, AAAVBD): mat_on_stilts (also 10 x 40), trampolines, celebration 4 s, basket_of_fruit (4 min cap). Will log END.
 - 2026-10-18 · task 4 · **CPU run START** (~12 min): regenerating trampoline-sample and trampoline-test as single-file datasets (`data/benchmarks/trampoline-sample.h5`, `trampoline-test.h5`; branch `feature/benchmark-dataset-file`). A short GPU check (old vs new benchmark format) follows. Will log END.
+- 2026-10-18 · task 4 · **CPU run END**; datasets regenerated (trampoline-sample.h5 bit-identical to the old directory, 161 MB vs 786 MB). **GPU run START** (~5 min, correctness only, ignore timings): old vs new benchmark format on the same solves, plus the maintainer's benchmark_browser session. Will log END.
+- 2026-10-18 · task 4 · **GPU run END.** `feature/benchmark-dataset-file` ready to merge: one-file benchmark datasets (contract above). Old vs new benchmark format: bit-identical per-iteration error logs (VBD, AAAVBD; static/E500 and dynamic_h0.01/E500, 2 samples each); every set of both datasets loads in the static panel code. The old per-set directories `trampoline-sample/` and `trampoline-test/` can't be read any more; delete them after the merge.
 
 ## Open questions for the maintainer
 
