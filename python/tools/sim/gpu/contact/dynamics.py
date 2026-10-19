@@ -171,7 +171,7 @@ def _update_dual_ve(
     xti, xtj, xtk = xt[i], xt[j], xt[k]
     xc = b0 * xj + b1 * xk
     xtc = b0 * xtj + b1 * xtk
-    dx = xi - xtc
+    dx = xi - xc
     du = (xi - xti) - (xc - xtc)
     c_n = wp.dot(dx, n) - contact.dmin  # type: ignore
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
@@ -225,7 +225,7 @@ def _update_dual_vf(
     b0 = wp.float32(1) - b1 - b2
     xc = b0 * xj + b1 * xk + b2 * xl
     xtc = b0 * xtj + b1 * xtk + b2 * xtl
-    dx = xi - xtc
+    dx = xi - xc
     du = (xi - xti) - (xc - xtc)
     c_n = wp.dot(dx, n) - contact.dmin  # type: ignore
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
