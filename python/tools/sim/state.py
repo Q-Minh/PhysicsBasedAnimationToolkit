@@ -194,18 +194,22 @@ def load_params(
       several detection passes per step) and ``n_subproblem_max_iters = 100`` sweeps.
     - AAAVBD: ``gammadown = 0.99``, ``gammadownS = 0.95`` (the paper's values), ``gammaup = gammaupS =
       0.5``, ``betaG0 = 0.5``, ``rhohat = rhohatS = 0.005``; ``warm_start_beta`` = TimeStep (set in
-      :class:`SimulationState`).
+      :class:`SimulationState`). Its params are a :class:`gpu.vbd.params.AaaVbdCpuParams`, which adds the
+      GPU-only ``betaup`` and ``lipschitz_normalization`` (defaults as in C++).
     - Newton: ``n_max_iters = 1`` outer iteration, 10 Newton steps.
 
     See the sim-run skill's "Tuning" section for scene-specific budgets.
     """
-    params = {s: load_vbd_params(fem) for s in [SolverType.VBD, SolverType.AAAVBD]}
+    params = {
+        SolverType.VBD: load_vbd_params(fem),
+        SolverType.AAAVBD: gpu.vbd.params.AaaVbdCpuParams(load_vbd_params(fem)),
+    }
     params[SolverType.Chebyshev] = load_chebyshev_params(fem)
     params[SolverType.AndersonSolver] = load_anderson_params(fem)
     params[SolverType.Newton] = load_newton_params(fem)
     for vbd in [
         params[SolverType.VBD],
-        params[SolverType.AAAVBD],
+        params[SolverType.AAAVBD].vbd_params,
         params[SolverType.Chebyshev].vbd_params,
         params[SolverType.AndersonSolver].vbd_params,
     ]:
@@ -261,7 +265,9 @@ class SimulationState:
         """
         Args:
             fem_cpu: The FEM problem.
-            params_cpu: CPU solver parameters per solver.
+            params_cpu: CPU solver parameters per solver (see load_params). A plain
+                ``pbat.sim.algorithm.vbd.Params`` for AAAVBD is wrapped in a ``gpu.vbd.params.AaaVbdCpuParams``
+                with the GPU-only parameters' defaults.
             kinematics: Kinematic constraints (see load_kinematic_constraints), defaulting to fem_cpu's
                 dmask as permanently fixed nodes.
             contact_geometry: Contact surface over fem_cpu's nodes, with the depths of plane colliders
@@ -273,6 +279,8 @@ class SimulationState:
         # Initial velocities of the loaded problem (the Dump's v or the scene's per-body v0), restored on reset
         self.v0 = fem_cpu.v.copy()
         self.params_cpu = params_cpu
+        if not isinstance(params_cpu[SolverType.AAAVBD], gpu.vbd.params.AaaVbdCpuParams):
+            params_cpu[SolverType.AAAVBD] = gpu.vbd.params.AaaVbdCpuParams(params_cpu[SolverType.AAAVBD])
         # The GPU AAAVBD warm starts its stencil gradient augmentation scales betaG across time steps
         # by default, whereas the C++ default (Subproblem) resets them at every time step. Configs
         # applied after construction (deserialize_params) can still choose another mode.
@@ -312,8 +320,10 @@ class SimulationState:
         self.params = {
             SolverType.VBD: gpu.vbd.params.Params(self.params_cpu[SolverType.VBD]),
             SolverType.AAAVBD: gpu.vbd.params.Params(
-                self.params_cpu[SolverType.AAAVBD],
+                self.params_cpu[SolverType.AAAVBD].vbd_params,
                 warm_start_beta=self.params_cpu[SolverType.AAAVBD].warm_start_beta,
+                betaup=self.params_cpu[SolverType.AAAVBD].betaup,
+                lipschitz_normalization=self.params_cpu[SolverType.AAAVBD].lipschitz_normalization,
             ),
         }
         self.params[SolverType.Chebyshev] = gpu.vbd.params.ChebyshevParams(
@@ -491,8 +501,10 @@ class SimulationState:
         self.params = {
             SolverType.VBD: gpu.vbd.params.Params(self.params_cpu[SolverType.VBD]),
             SolverType.AAAVBD: gpu.vbd.params.Params(
-                self.params_cpu[SolverType.AAAVBD],
+                self.params_cpu[SolverType.AAAVBD].vbd_params,
                 warm_start_beta=self.params_cpu[SolverType.AAAVBD].warm_start_beta,
+                betaup=self.params_cpu[SolverType.AAAVBD].betaup,
+                lipschitz_normalization=self.params_cpu[SolverType.AAAVBD].lipschitz_normalization,
             ),
         }
         self.params[SolverType.Chebyshev] = gpu.vbd.params.ChebyshevParams(
@@ -562,12 +574,12 @@ def serialize_params(state: "SimulationState", f: h5py.File) -> None:
     intg.attrs["substeps"] = state.substeps
     intg.attrs["bdf_scheme"] = state.bdf_scheme
     intg.attrs["init_strategy"] = state.init_strategy.value
-    for stype in [SolverType.VBD, SolverType.AAAVBD]:
-        gpu.vbd.params.serialize_vbd_cpu_params(
-            state.params_cpu[stype],
-            f.create_group(f"Solver/{stype.name}"),
-            stencil_gradient_acceleration=stype == SolverType.AAAVBD,
-        )
+    gpu.vbd.params.serialize_vbd_cpu_params(
+        state.params_cpu[SolverType.VBD], f.create_group("Solver/VBD")
+    )
+    gpu.vbd.params.serialize_aaavbd_cpu_params(
+        state.params_cpu[SolverType.AAAVBD], f.create_group("Solver/AAAVBD")
+    )
     gpu.vbd.params.serialize_chebyshev_cpu_params(
         state.params_cpu[SolverType.Chebyshev].vbd_params,
         state.params_cpu[SolverType.Chebyshev].cheb_params,
@@ -607,14 +619,12 @@ def deserialize_params(state: "SimulationState", f: h5py.File) -> None:
                     int(intg.attrs["init_strategy"])
                 )
             )
-    for stype in [SolverType.VBD, SolverType.AAAVBD]:
-        key = f"Solver/{stype.name}"
-        if key in f:
-            gpu.vbd.params.deserialize_vbd_cpu_params(
-                state.params_cpu[stype],
-                f[key],
-                stencil_gradient_acceleration=stype == SolverType.AAAVBD,
-            )
+    if "Solver/VBD" in f:
+        gpu.vbd.params.deserialize_vbd_cpu_params(state.params_cpu[SolverType.VBD], f["Solver/VBD"])
+    if "Solver/AAAVBD" in f:
+        gpu.vbd.params.deserialize_aaavbd_cpu_params(
+            state.params_cpu[SolverType.AAAVBD], f["Solver/AAAVBD"]
+        )
     if "Solver/Chebyshev" in f:
         gpu.vbd.params.deserialize_chebyshev_cpu_params(
             state.params_cpu[SolverType.Chebyshev].vbd_params,
