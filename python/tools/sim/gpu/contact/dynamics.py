@@ -171,7 +171,7 @@ def _update_dual_ve(
     xti, xtj, xtk = xt[i], xt[j], xt[k]
     xc = b0 * xj + b1 * xk
     xtc = b0 * xtj + b1 * xtk
-    dx = xi - xtc
+    dx = xi - xc
     du = (xi - xti) - (xc - xtc)
     c_n = wp.dot(dx, n) - contact.dmin  # type: ignore
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
@@ -225,7 +225,7 @@ def _update_dual_vf(
     b0 = wp.float32(1) - b1 - b2
     xc = b0 * xj + b1 * xk + b2 * xl
     xtc = b0 * xtj + b1 * xtk + b2 * xtl
-    dx = xi - xtc
+    dx = xi - xc
     du = (xi - xti) - (xc - xtc)
     c_n = wp.dot(dx, n) - contact.dmin  # type: ignore
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
@@ -498,15 +498,15 @@ class Params(SerializableMixin):
                       bodies creep (at 1e3, a cube on a 15 degree slope with mu_f 0.2 barely moves).
         gamman_adaptive : Normal AL penalty scaling factor with adaptive penalties, a multiple of
                       the largest vertex-Hessian Rayleigh quotient over the contacts, as C++
-                      ``MeshDynamics::Params::gamma``. The default 0.1 (C++: 1) keeps every
-                      VBD-family solver stable with one contact detection per step: at 1, VBD needs
-                      ``n_max_iters >= 2``, Chebyshev ``>= 5``, and AAAVBD diverges on
-                      BeamFallingOnBeam.
+                      ``MeshDynamics::Params::gamma``. The default 1 is C++'s. With warm-started
+                      multipliers the penalty must be near the vertex stiffness: softer ones let
+                      lambda integrate over deep penetrations and eject resting bodies (the slack
+                      lets lambda push until the gap reaches lambda / sigma).
         gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf``. The default
                       1e-3 is small for the same reason as ``gammaf``'s (at 0.1, sliding bodies creep).
         min_sigma_n : Floor of the effective normal penalty ``gamman_adaptive * sigma_n`` in both
                       adaptive modes.
-        penalty_adaptivity : CONSTANT: ``sigma_n = sigma_f = dt^2``, so the effective penalties
+        penalty_adaptivity : TIMESTEP (default), SUBPROBLEM or CONSTANT. CONSTANT: ``sigma_n = sigma_f = dt^2``, so the effective penalties
                       ``gamman * dt^2`` and ``gammaf * dt^2`` are stiffnesses scaled like
                       ``dt^2 Psi`` (1e4 * 1e-4 = 1 by default). TIMESTEP / SUBPROBLEM:
                       ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient of the vertex
@@ -526,10 +526,9 @@ class Params(SerializableMixin):
         "penalty also acts as viscous drag, so larger values make sliding bodies creep",
     )
     gamman_adaptive = DocField(
-        0.1,
-        "Normal penalty scaling with adaptive penalties: a multiple of the largest vertex-Hessian Rayleigh quotient. "
-        "0.1 is stable for every VBD-family solver at one detection pass per step; around 1 (C++'s default) needs "
-        "n_max_iters >= 2 for VBD and >= 5 for Chebyshev, and stays unstable for AAAVBD",
+        1.0,
+        "Normal penalty scaling with adaptive penalties: a multiple of the largest vertex-Hessian Rayleigh quotient "
+        "(C++'s default). Much smaller values let the warm-started multipliers eject resting bodies",
     )
     gammaf_adaptive = DocField(
         1e-3, "Friction penalty scaling with adaptive penalties, as gamman_adaptive. Kept small, as gammaf"
@@ -538,7 +537,7 @@ class Params(SerializableMixin):
         1.0, "Floor of the effective normal penalty with adaptive penalties (gamman_adaptive * sigma_n)"
     )
     penalty_adaptivity = DocField(
-        PenaltyAdaptivity.CONSTANT,
+        PenaltyAdaptivity.TIMESTEP,
         "CONSTANT: penalties gamman * dt^2 and gammaf * dt^2. TIMESTEP / SUBPROBLEM: sigma_n = sigma_f = the largest "
         "contact Rayleigh quotient of the vertex Hessians, recomputed per time step / per subproblem, times "
         "gamman_adaptive / gammaf_adaptive",

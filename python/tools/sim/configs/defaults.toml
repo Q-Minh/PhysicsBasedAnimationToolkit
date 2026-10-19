@@ -10,8 +10,8 @@ r = 0.003
 truncation_strategy = 0
 
 [Contact.CDType.VertexSdf]
+band = 0.001
 deactivate = 0
-dmin = -0.0001
 max_dist = 0.05
 use_step_filter = 0
 
@@ -21,10 +21,10 @@ dmin = 0.002
 gammaf = 10.0
 gammaf_adaptive = 0.001
 gamman = 10000.0
-gamman_adaptive = 0.1
+gamman_adaptive = 1.0
 min_sigma_n = 1.0
 mu_f = 0.2
-penalty_adaptivity = 0
+penalty_adaptivity = 1
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.2

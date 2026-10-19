@@ -431,6 +431,8 @@ class SimulationState:
             contact_pair_storage,
             self.fem.data.dmask,
         )
+        if self.cd_type == CDType.VertexSdf:
+            detector.set_contact_margin(self.contact.params.dmin)
         if self.contact_geometry is not None and self.cd_type == CDType.VertexSdf:
             detector.set_plane_depths(self.contact_geometry.plane_depths)
         if self.cd_type == CDType.VertexSdf and self.multimesh.data.FP.shape[0] - 1 <= 1:
