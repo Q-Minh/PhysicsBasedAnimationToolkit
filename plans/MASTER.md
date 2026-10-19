@@ -268,7 +268,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | reported: AAAVBD cow divergence root cause (parameters, no code bug); waiting for the maintainer's decision | 2026-10-18 | No code changes. Maintainer: don't change the betaG shrinking approach |
+| 2 | in progress: `feature/cow-scene-config` (cow AAAVBD scene config + tuning guidance) | 2026-10-18 | Paper defaults kept; no kernel changes |
 | 3 | ready for review | 2026-10-18 | `feature/newton-relative-check` (Newton plateau fix via CG atol, termination statuses, ref_error_mnorm flags, Newton relative check, CG atol 1e-10, benchmark --scene); `feature/coulomb-cap` (VBD friction capped at mu_f·normal force) |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -676,6 +676,11 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 2 · **GPU run END** (AAAVBD cow_on_trampoline bisection). Cause: the beta controls with the new defaults (gammadown 0.99 / gammadownS 0.95, gammaup 0.5). Reverting either gammadown to 0.5 or using gammadown 0.9 is stable for 100 steps; no code change (singularity check, load hoisting, surface flag) is involved; warm start, surface flag, sweep budget and rtol don't matter. Report sent to the coordinator; nothing committed.
 - 2026-10-18 · task 2 · **GPU run START** (~15 min, correctness only): cow_on_trampoline AAAVBD with the maintainer's near-default tuning (gammadown 0.95/0.90 steps, gammaup 0.3). Ignore timings. Will log END.
 - 2026-10-18 · coordinator · AAAVBD divergence on cow_on_trampoline (task 2): parameter-level. betaG climbs fast (gammaup 0.5, rhohat 0.005) and brakes slowly (gammadown 0.99/0.95) at stiff, light, poorly shaped vertices in a heterogeneous scene; no code regression. **Maintainer: keep the paper defaults; add a scene config (configs/scenes/cow_on_trampoline.toml) plus tuning guidance** → task 2. Research option noted, not pursued: cap the augmentation in the H⁻¹ norm (λ² aᵀH⁻¹a ≤ gᵀH⁻¹g) so the local model still decreases. The maintainer won't change the betaG shrinking rule.
+- 2026-10-18 · task 2 · **GPU run END** (near-default tuning on the cow): stable for 100 steps with gammadownS 0.90 only, gammadown 0.90 only, 0.95/0.90, 0.90/0.90, gammaup(S) 0.3, gammaup(S) 0.3 + 0.95/0.95; still diverging: 0.95/0.95 (step 95), gammaupS 0.3 only (step 96).
+- 2026-10-18 · task 2 · **GPU run START** (~25 min): cow_on_trampoline 300-step stability plus production ms/step and kernels-backend sweeps/step for 4 candidate AAAVBD settings. Timings used for ranking only; will log END.
+- 2026-10-18 · task 2 · **GPU run END** (cow 300-step candidates): every near-default AAAVBD setting diverges contact-free between steps 109 and 235; VBD also diverges at step 201 (drifting from ~step 100), 0 contacts throughout. Scene config on hold; details sent to the coordinator and tasks 1/3.
+- 2026-10-18 · task 2 · **GPU run START** (~30 min, correctness only): cow_on_trampoline with substeps = 5 and n_max_iters = 2 (maintainer's suggestions), VBD and AAAVBD, 300 steps. Will log END.
+- 2026-10-18 · coordinator · **STOP: no work on `cow_on_trampoline`** (maintainer: known poorly shaped elements; don't use it in tests). The cow scene config, tuning bullet and divergence investigation are cancelled. Use BeamFallingOnBeam or mat_on_stilts_3 (with its paper config) as multi-body contact test scenes.
 
 ## Open questions for the maintainer
 
