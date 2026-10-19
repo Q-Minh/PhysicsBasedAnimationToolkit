@@ -947,12 +947,15 @@ def initialize_solve(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    """Detect contacts, initialise the constraint set for the time step and measure the relative
+    """Detect contacts, initialise the constraint set for the time step, adapt the contact
+    penalties once per step (``TIMESTEP`` adaptivity, as the VBD family) and measure the relative
     gradient test's scale."""
     cd.on_time_step_started()
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
     cd.filter_step()
+    if contact.params.penalty_adaptivity == PenaltyAdaptivity.TIMESTEP:
+        adapt_penalty_parameters(fem, contact, params)
     check = _relative_check(params)
     if check is not None:
         check.measure_scale()
@@ -1058,8 +1061,23 @@ def prepare_subproblem(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    # TODO: Support penalty adaptation?
-    pass
+    """Adapt the contact penalties every subproblem (``SUBPROBLEM`` adaptivity), as C++
+    ``PrepareSubproblem``: see :func:`adapt_penalty_parameters`."""
+    if contact.params.penalty_adaptivity == PenaltyAdaptivity.SUBPROBLEM:
+        adapt_penalty_parameters(fem, contact, params)
+
+
+@profiling.scoped("newton.adapt_penalty")
+def adapt_penalty_parameters(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+) -> None:
+    """C++ ``MeshDynamics::UpdatePenaltyParameter(H)``: assemble the Hessian without contact terms
+    at the current positions and set the penalties to the largest contact Rayleigh quotient in it
+    (:meth:`MeshDynamics.adapt_penalty_parameters_to_hessian`)."""
+    _assemble_hessian(fem, contact, params, wp.float32(fem.h2), with_contacts=False)
+    contact.adapt_penalty_parameters_to_hessian(params._H, fem.data.dmask)
 
 
 class SubproblemStatus(IntEnum):
@@ -1071,48 +1089,30 @@ class SubproblemStatus(IntEnum):
     LINE_SEARCH_FAILED = 3  # no step length passed the Armijo test; x is restored
 
 
-@profiling.scoped("newton.subproblem")
-def solve_subproblem(
+def _assemble_hessian(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
     params: Params,
-) -> SubproblemStatus:
-    """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
-
-    The subproblem converges when its augmented-Lagrangian gradient passes the shared relative test
-    (``Solver.Convergence.rtol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
-
-    Returns:
-        SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
-        leaves ``x`` at the last accepted iterate.
-    """
+    h2: wp.float32,
+    with_contacts: bool = True,
+) -> None:
+    """Assemble the Newton Hessian ``params._H`` (mass + elastic, plus the contact terms with
+    ``with_contacts``) at the current positions. Without contact terms, their triplets stay 0 and
+    are pruned."""
     main_stream = wp.get_stream()
+    # Zero before forking, so the side streams' writes can't race the memset
+    params._data.Hvals.zero_()
+    for stream in params._streams[:5]:
+        stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
-    h2 = wp.float32(fem.h2)  # type: ignore
-    check = _relative_check(params)
-    params._gradient_norm.compute_gradient(main_stream)
-    for _ in range(int(params.data.n_subproblem_max_iters)):
-        if check is not None:
-            if check.relative_test(params._g):
-                return SubproblemStatus.CONVERGED
-        else:
-            params._gradient_norm.reduce(main_stream)
-            gnorm2 = float(params._gnorm2.numpy()[0])
-            if gnorm2 <= float(params.data.gtol2):
-                return SubproblemStatus.CONVERGED
-        # Assemble FEM + contact Hessian
-        profiling.push("newton.assemble")
-        # Zero before forking, so the side streams' writes can't race the memset
-        params._data.Hvals.zero_()
-        for stream in params._streams[:5]:
-            stream.wait_stream(main_stream)
-        wp.launch(
-            kernel=_compute_dynamics_hessian_triplets,
-            dim=max(n_nodes, n_elems),
-            inputs=[fem.data, h2, params._data, params._hessian_triplet_offsets],
-            stream=params._streams[0],
-        )
+    wp.launch(
+        kernel=_compute_dynamics_hessian_triplets,
+        dim=max(n_nodes, n_elems),
+        inputs=[fem.data, h2, params._data, params._hessian_triplet_offsets],
+        stream=params._streams[0],
+    )
+    if with_contacts:
         wp.launch(
             kernel=_compute_vv_contact_hessian_triplets,
             dim=contact.cvv.capacity,
@@ -1161,17 +1161,51 @@ def solve_subproblem(
             ],
             stream=params._streams[4],
         )
-        for stream in params._streams[:5]:
-            main_stream.wait_stream(stream)
-        warp.sparse.bsr_set_from_triplets(
-            dest=params._H,
-            rows=params._data.Hrows,
-            columns=params._data.Hcols,
-            values=params._data.Hvals,
-            count=None,
-            prune_numerical_zeros=True,
-            masked=False,
-        )
+    for stream in params._streams[:5]:
+        main_stream.wait_stream(stream)
+    warp.sparse.bsr_set_from_triplets(
+        dest=params._H,
+        rows=params._data.Hrows,
+        columns=params._data.Hcols,
+        values=params._data.Hvals,
+        count=None,
+        prune_numerical_zeros=True,
+        masked=False,
+    )
+
+
+@profiling.scoped("newton.subproblem")
+def solve_subproblem(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+) -> SubproblemStatus:
+    """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
+
+    The subproblem converges when its augmented-Lagrangian gradient passes the shared relative test
+    (``Solver.Convergence.rtol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
+
+    Returns:
+        SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
+        leaves ``x`` at the last accepted iterate.
+    """
+    main_stream = wp.get_stream()
+    n_nodes = fem.data.x.shape[0]
+    h2 = wp.float32(fem.h2)  # type: ignore
+    check = _relative_check(params)
+    params._gradient_norm.compute_gradient(main_stream)
+    for _ in range(int(params.data.n_subproblem_max_iters)):
+        if check is not None:
+            if check.relative_test(params._g):
+                return SubproblemStatus.CONVERGED
+        else:
+            params._gradient_norm.reduce(main_stream)
+            gnorm2 = float(params._gnorm2.numpy()[0])
+            if gnorm2 <= float(params.data.gtol2):
+                return SubproblemStatus.CONVERGED
+        # Assemble FEM + contact Hessian
+        profiling.push("newton.assemble")
+        _assemble_hessian(fem, contact, params, h2)
         profiling.pop()
         profiling.push("newton.linear_solve")
         M = warp.optim.linear.preconditioner(params._H, "diag")

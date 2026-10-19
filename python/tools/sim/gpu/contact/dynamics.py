@@ -470,6 +470,126 @@ def _compute_rayleigh_ee(
     )
 
 
+@wp.func
+def _bsr_block(
+    offsets: wp.array[wp.int32],
+    columns: wp.array[wp.int32],
+    values: wp.array[wp.mat33f],
+    row: wp.int32,
+    col: wp.int32,
+):
+    """Block (row, col) of a 3x3-block BSR matrix, or 0 if it isn't stored."""
+    block = wp.mat33f()
+    for k in range(offsets[row], offsets[row + 1]):
+        if columns[k] == col:
+            block = values[k]
+    return block
+
+
+@wp.func
+def _bsr_rayleigh_quotient(
+    offsets: wp.array[wp.int32],
+    columns: wp.array[wp.int32],
+    values: wp.array[wp.mat33f],
+    dmask: wp.array[wp.int32],
+    nodes: wp.vec4i,
+    w: wp.vec4f,
+    n_nodes: wp.int32,
+    n: wp.vec3f,
+):
+    """Rayleigh quotient grad c^T H grad c / |grad c|^2 of a contact whose gradient is w_a n at
+    stencil node a, over the stencil's blocks of H, as C++ ``MeshDynamics::RayleighQuotient``.
+    Dirichlet nodes' blocks are skipped (C++'s static nodes aren't in H), but their weights still
+    count in |grad c|^2."""
+    gHg = wp.float32(0)
+    gg = wp.float32(0)
+    for a in range(n_nodes):
+        gg += w[a] * w[a]
+        if dmask[nodes[a]] != 0:
+            continue
+        for b in range(n_nodes):
+            if dmask[nodes[b]] != 0:
+                continue
+            Hab = _bsr_block(offsets, columns, values, nodes[a], nodes[b])
+            gHg += w[a] * w[b] * wp.dot(n, Hab @ n)
+    return gHg / gg
+
+
+@wp.kernel
+def _compute_hessian_rayleigh(
+    offsets: wp.array[wp.int32],
+    columns: wp.array[wp.int32],
+    values: wp.array[wp.mat33f],
+    dmask: wp.array[wp.int32],
+    meshes: MultiMeshData,  # type: ignore
+    contacts: pairs.ContactPairsData,  # type: ignore
+    kind: wp.int32,  # 0 vv, 1 ve, 2 vf, 3 ee
+    n_u: wp.int32,
+    Qc: wp.array[wp.float32],
+    offset: wp.int32,
+    Qcmin: wp.float32,
+):
+    c = wp.tid()  # type: ignore
+    one = wp.float32(1)
+    nodes = wp.vec4i()
+    w = wp.vec4f()
+    n_nodes = wp.int32(0)
+    n = wp.vec3f()
+    if kind == 0:
+        if wp.uint64(c) >= contacts.vv.prefix[n_u]:  # type: ignore
+            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
+            Qc[offset + c] = Qcmin  # type: ignore
+            return
+        n = contacts.vv_bases.n[c]
+        nodes = wp.vec4i(meshes.V[contacts.vv.u[c]], meshes.V[contacts.vv.v[c]], 0, 0)
+        w = wp.vec4f(one, -one, wp.float32(0), wp.float32(0))
+        n_nodes = wp.int32(2)
+    elif kind == 1:
+        if wp.uint64(c) >= contacts.ve.prefix[n_u]:  # type: ignore
+            Qc[offset + c] = Qcmin  # type: ignore
+            return
+        he = contacts.ve.v[c]
+        b1 = contacts.ve_bary[c]
+        n = contacts.ve_bases.n[c]
+        nodes = wp.vec4i(
+            meshes.V[contacts.ve.u[c]],
+            halfedges.incoming_vertex(meshes.F, he),  # type: ignore
+            halfedges.outgoing_vertex(meshes.F, he),  # type: ignore
+            0,
+        )
+        w = wp.vec4f(one, b1 - one, -b1, wp.float32(0))
+        n_nodes = wp.int32(3)
+    elif kind == 2:
+        if wp.uint64(c) >= contacts.vf.prefix[n_u]:  # type: ignore
+            Qc[offset + c] = Qcmin  # type: ignore
+            return
+        f = meshes.F[contacts.vf.v[c]]
+        uv = contacts.vf_bary[c]
+        n = contacts.vf_bases.n[c]
+        nodes = wp.vec4i(meshes.V[contacts.vf.u[c]], f[0], f[1], f[2])
+        w = wp.vec4f(one, uv[0] + uv[1] - one, -uv[0], -uv[1])
+        n_nodes = wp.int32(4)
+    else:
+        if wp.uint64(c) >= contacts.ee.prefix[n_u]:  # type: ignore
+            Qc[offset + c] = Qcmin  # type: ignore
+            return
+        he1 = contacts.ee.u[c]
+        he2 = contacts.ee.v[c]
+        st = contacts.ee_bary[c]
+        n = contacts.ee_bases.n[c]
+        nodes = wp.vec4i(
+            halfedges.incoming_vertex(meshes.F, he1),  # type: ignore
+            halfedges.outgoing_vertex(meshes.F, he1),  # type: ignore
+            halfedges.incoming_vertex(meshes.F, he2),  # type: ignore
+            halfedges.outgoing_vertex(meshes.F, he2),  # type: ignore
+        )
+        w = wp.vec4f(one - st[0], st[0], st[1] - one, -st[1])
+        n_nodes = wp.int32(4)
+    Qc[offset + c] = _bsr_rayleigh_quotient(  # type: ignore
+        offsets, columns, values, dmask, nodes, w, n_nodes, n
+    )
+
+
 class PenaltyAdaptivity(enum.Enum):
     CONSTANT = 0
     TIMESTEP = 1
@@ -726,6 +846,57 @@ class MeshDynamics:
         # Join
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
+        self._reduce_penalty_parameters(main_stream)
+
+    def adapt_penalty_parameters_to_hessian(self, H, dmask: wp.array):
+        """Adapt the penalties to an assembled Hessian, as C++ ``MeshDynamics::UpdatePenaltyParameter``
+        (GPU Newton): ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient
+        ``grad c^T H grad c / |grad c|^2`` over the stencil's blocks of ``H``, floored at
+        ``min_sigma_n / gamma_n``. :meth:`adapt_penalty_parameters` (the VBD family) uses the vertex
+        Hessians ``Hi`` instead, i.e. only the diagonal blocks.
+
+        Args:
+            H (warp.sparse.BsrMatrix): Hessian with 3x3 blocks, one block row per node, without contact
+                terms. Blocks of Dirichlet nodes (``dmask``) are skipped.
+            dmask (wp.array): (N,) int32 Dirichlet mask.
+        """
+        if self.params.penalty_adaptivity == PenaltyAdaptivity.CONSTANT:
+            return
+        vv_cap, ve_cap, vf_cap, _ = self.contacts.capacity
+        contacts = self.contacts._data
+        meshes = self.meshes.data
+        main_stream = wp.get_stream()
+        for stream in self._streams[:4]:
+            stream.wait_stream(main_stream)
+        for kind, cs, stream, offset in zip(
+            range(4),
+            [self.cvv, self.cve, self.cvf, self.cee],
+            self._streams[:4],
+            [0, vv_cap, vv_cap + ve_cap, vv_cap + ve_cap + vf_cap],
+        ):
+            wp.launch(
+                _compute_hessian_rayleigh,
+                dim=cs.capacity,
+                inputs=[
+                    H.offsets,
+                    H.columns,
+                    H.values,
+                    dmask,
+                    meshes,
+                    contacts,
+                    kind,
+                    cs.n_u,
+                    self._data.Qc,
+                    offset,
+                    self.sigma_n_min / self._data.gamma_n,
+                ],
+                stream=stream,
+            )
+        for stream in self._streams[:4]:
+            main_stream.wait_stream(stream)
+        self._reduce_penalty_parameters(main_stream)
+
+    def _reduce_penalty_parameters(self, main_stream: wp.Stream):
         self._normal_penalty_reduction(main_stream)
         # As C++ UpdatePenaltyParameter, the friction penalty scales the same Rayleigh quotient
         # (gamma_f * max Q, while gamma_n * max Q is the normal one).
