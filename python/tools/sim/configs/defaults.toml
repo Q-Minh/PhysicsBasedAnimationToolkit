@@ -1,5 +1,5 @@
 # Every parameter the GPU simulators serialize, with its code default.
-# Generated 2026-10-18 with config.params_dict on a default SimulationState. Regenerate it when
+# Generated 2026-10-19 with config.params_dict on a default SimulationState. Regenerate it when
 # parameters are added (see README.md). Useful as a reference or as an `extends` base.
 
 [Contact.CDType.OGC]
