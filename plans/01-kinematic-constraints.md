@@ -1,6 +1,108 @@
 # Task 1: Kinematic Dirichlet constraints on the GPU
 
-Status: **merged into dev (`c41bc1ad`); GUI panel check by the maintainer pending** · Branch `feature/gpu-kinematic-constraints` · Worktree `C:\git\pbat-kinematics`
+## Handoff (2026-10-20)
+
+Read first: `MASTER.md` (rules), `python/tools/sim/CLAUDE.md` ("Kinematic constraints", contact), `python/tools/vbd/CLAUDE.md`,
+skills `sim-kinematics` and `sim-run`. Local locations (venv, extras repo, main checkout with `data/`) are in `CLAUDE.local.md`.
+
+### 1. Scope and ownership
+- **Kinematic constraints:** `python/tools/sim/gpu/kinematics/constraints.py`, `python/tools/sim/panels/kinematics.py`, the Dirichlet
+  parts of `gpu/elasticity/fem.py`; CPU side `python/tools/vbd/ui/utils/transform_library.py` (closed form, Dump export),
+  `vbd/migrate_l_translate.py`.
+- **Scene ingestion and colliders:** `state.load_scene`/`load_problem`, `python/tools/sim/colliders.py`, `vbd/scenario.py`
+  (`read_scene`, `make_fem_dynamics_object`, `static_meshes`), `vbd/ui/plane_collider.py`, `vbd/dump_to_scene.py`,
+  `vbd/rim_patch_scene.py` (benchmark trampolines).
+- **AL contact warm start and VertexSdf detection** (shared with task 3): `gpu/contact/constraints.py` (multiplier snapshot by
+  (u, v) key), `gpu/contact/mesh/sd.py` (detection band, sign-aware normals), the `gpu/contact/dynamics.py` penalty defaults.
+- **Editor trajectory viewer:** `vbd/ui/trajectory.py`, `vbd/ui/simulation.py::_draw_trajectory_ui`/`_set_trajectory_fields`.
+- **Scene configs' contact margin:** `python/tools/sim/configs/scenes/*.toml` (`[Contact.ContactDynamics] dmin`).
+
+### 2. Current state
+- Everything is merged into dev. My merges: `c41bc1ad` kinematic constraints · `65fc5fe1` GPU reads CPU scene files ·
+  `b31e53f7` plane/static mesh colliders · `c06e7c08` finite planes are plates · `b1cfe462` dump_to_scene · `0d1ad502`
+  rim_patch_scene · `bb05a622` lower friction penalties · `ae0b35b5` AL warm start + detection band + TIMESTEP default ·
+  `6d29fbe0` and `148d9113` viewer plays GPU outputs · `42c4e719` scene-config margin 1e-3.
+- No unmerged branches and no uncommitted changes. The task 1 worktree (`pbat-kinematics`) sits on the merged
+  `feature/scene-config-margin` (`df03c2a1`). To resume: `git switch -c feature/<new> dev` there. The scratch worktree is removed.
+
+### 3. Key decisions (maintainer's unless noted)
+- **Constraints** (Q1-Q11 below): closed form from per-node anchors, composed in library order; half-open windows on the step
+  grid; released nodes keep the prescribed velocity; per-node `L_TRANSLATE`; the GPU GUI only displays and toggles (authoring
+  stays in the CPU editor); no countdown reader; a nonzero `dmask` without a `kinematics` group means fixed forever.
+- **Contact:** the multipliers persist across steps, which needs a stiff penalty, so the default is TIMESTEP adaptive at
+  `gamman_adaptive = 1`, C++'s value. Softer penalties (0.1, CONSTANT 1e4) eject resting bodies, because λ/σ sets the reach.
+  The friction model is known to be erroneous, so the maintainer chose small friction penalties (gammaf 10, adaptive 1e-3) to
+  limit their effect; task 3 then added the Coulomb cap.
+- **Scene configs:** `dmin = 1e-3` in `configs/scenes/` (maintainer approved 1-2 mm). Never edit `configs/paper/*`.
+- **Viewer:** keep it simple (read `x` with h5py); the partial-frames warning is fixed text and doesn't name the missing members.
+- **Scenes:** don't use `cow_on_trampoline` or the octopus scenes. No heavy scenes (ThingsFallingInBasket, celebration,
+  basket_of_fruit) without the maintainer; the basket timing was cancelled. For demos, launch the GUI right away, without long
+  offline pre-checks.
+
+### 4. Verified facts and gotchas
+- **Node order:** GPU FEM = the bodies' nodes in scene file order (the editor loads them the same way), then the static
+  colliders' element-less nodes. Planes add nodes too (CubeOnInfinitePlane: 8 + 4). `SimulationState` never reorders; without
+  collider geometry it only asserts that the input is sorted by connected component.
+- **VertexSdf:** detects below `ContactDynamics.dmin + VertexSdf.band` (defaults 2e-3 + 1e-3). `VertexSdf.dmin` is deprecated:
+  it warns and is ignored (`config.DEPRECATED`). `detector._sds` holds end-of-step per-vertex signed distances, and `max_dist`
+  (0.05) where nothing is near. There is no self-contact, so single-body scenes without colliders turn detection off.
+- **Normals:** VF uses the face normal, VE the edge pseudonormal, VV the angle-weighted vertex pseudonormal. A blanket flip
+  made near-surface contacts attractive (that was the reason for the old penetration-only `dmin = -1e-4`).
+- **Scene vs Dump:** scenes carry the transform library and colliders, and colliders only work via `--scene`. Dumps carry a
+  `kinematics` group (t0 + open anchors) and no colliders. The output's `FemElastoDynamics/dmask` is only the initial set.
+- **Viewer formats:** CPU frames are `sim/<f>/pbat.sim.dynamics.FemElastoDynamics` (deserialized). GPU frames are
+  `sim/<f>/x` plus a `solve_status` subgroup, with the FEM once at the root (`FemElastoDynamics/{X,E,...}`). Load the
+  scene in the editor before the trajectory.
+- **Same mesh:** TwistPullBeam and MediumLongBendingBeam share the same 1804-node mesh, so either scene accepts the other's outputs.
+- **Contact runs** aren't bit-reproducible (atomics). Contact-free scenes are bit-identical across the contact changes.
+- **Warp:** a multiple-return `wp.func` can't be unpacked into indexed targets (`a[k], b[k] = f()`). Use separate statements.
+- **CPU reference runs** (`vbd.simulate`) need `-p` with root attrs `dt`, `bdf_scheme`, `fem_dynamics_init_strategy` plus
+  `Solver/VBD` and `Contact` groups. None ships in the repo, so serialize `pbat.sim.algorithm.vbd.Params()` and
+  `pbat.sim.contact.MeshDynamicsParams()` into a scratch file.
+- **Windows:** stopping a background shell can leave its `python.exe` child running. Check for and kill orphaned processes
+  before the next GPU run.
+
+### 5. Open items (each with a next step)
+1. **mat_on_stilts_3 with `configs/scenes/mat_on_stilts.toml`** (AAAVBD, 1 substep, 5 x 80): after the 2 s release, the mat
+   penetrates about 2 cm, loses contact by about 3.5 s and falls (z −26 m at 5 s). This happens at dmin 1e-3 and −1e-4, and
+   with the TIMESTEP penalty, while the config header says it was stable. Next: check whether it tunnels or slides off
+   (play the output in the editor); compare with the 10-substep paper config; bisect from `ff63102b`/`78232143`, the commits that introduced it and changed it to 5 x 80.
+2. **Paper penalty too soft:** CONSTANT `gamman` 2e4 (σ = 2 at dt 0.01) gives 1-5 cm impact penetration on the circle
+   trampolines with sphere. TIMESTEP 1 fixes stiff-soft (deepest +0.4 mm, rests at +1.0 mm) but goes non-finite on
+   soft-stiff at step 258, just after the impact. Next: maintainer decision; investigate the soft-stiff blow-up (substeps,
+   gammaupS).
+3. **ThingsFallingInBasket** with the defaults goes non-finite at about step 39 on the warm-start head (ve/vf at capacity,
+   about 100 s per step). Whether this predates the merge is unknown. Next: only with the maintainer; 45 steps of `ea968473`
+   would settle it.
+4. **CubeFallingOnCube** passes through with VertexSdf on both dev and the fix (a known limitation of vertex-only detection).
+5. **CONSTANT 1e6** isn't a safe body-body fallback: BeamFallingOnBeam loses the beam with VBD/AAAVBD.
+6. **Older gaps** (still open): GPU outputs store only the initial `dmask`; GPU VBD sags about 6x more than CPU VBD on the
+   held beam (a solver difference, not kinematics); OGC crashes once bodies touch (low priority).
+
+### 6. How to resume
+- Run from the repo root with the venv's python; `data/` lives in the main checkout.
+- Tests: `python -m unittest python.tools.sim.gpu.kinematics.constraints python.tools.vbd.ui.utils.transform_library
+  python.tools.vbd.ui.plane_collider python.tools.sim.gpu.elasticity.fem python.tools.sim.config python.tools.sim.status`.
+  The contact modules have no unit tests; use the scene checks below.
+- Smallest checks:
+  - `python -m python.tools.sim.simulate --scene data/scenarios/MediumLongBendingBeam.h5 -o out.h5 -d 0.2` (contact-free; the
+    output can be played in the editor).
+  - `data/scenarios/planes/{CubeOnInfinitePlane,FastCubeOnInfinitePlane}.h5` should rest at +2 mm.
+  - `--fem data/BeamFallingOnBeam.Dump.h5:fem` (body-body).
+  - Kinematics: `data/scenarios/TwistPullBeam.h5`, `prisms/*/twisting_beam_*.h5`, `spaghetti/spaghetti-tangle-het_block_*.h5`.
+- Cheap contact scenes (about 50-100 ms/step): `path/to/accelerated-vbd-extras/final_scenes/trampolines/trampoline_circle_{soft-stiff,stiff-soft}__with_sphere.h5`
+  with `configs/scenes/trampoline_{soft-stiff,stiff-soft}.toml`, and `final_scenes/mat_on_stilts_3.h5` with
+  `configs/scenes/mat_on_stilts.toml`. The sphere or mat is released at 2 s, so simulate about 5 s.
+- Measuring (scratch scripts are gone; rebuild them from these APIs):
+  - Deepest and resting gaps: `state.detector._sds`.
+  - Pair counts vs capacity: `state.contact.contacts.read_data[0].{vv,ve,vf,ee}.prefix[-1]` and `.capacity`.
+  - Solve statuses: `state.status_log.format_summary()`.
+  - Overrides: `config.load_sim_params(state, [toml], ["Table.key=value"])`.
+- Log GPU START/END in `MASTER.md`. Timing runs need a quiet GPU.
+
+---
+
+Status (superseded by the Handoff above): **merged into dev (`c41bc1ad`); GUI panel check by the maintainer pending** · Branch `feature/gpu-kinematic-constraints` · Worktree `pbat-kinematics`
 Read first: `MASTER.md` (rules, ownership), `python/tools/sim/CLAUDE.md`, `python/tools/vbd/CLAUDE.md`.
 
 ## Goal
@@ -11,6 +113,8 @@ per-step CPU/GPU round trips). Replace the current "release after X ms" hack. Gi
 in the new simulator.
 
 ## What exists today
+
+> Superseded (2026-10-20): describes the pre-implementation code (countdown hack, incremental motion), all replaced.
 
 **CPU editor** (`python/tools/vbd/ui/utils/transform_library.py`, `TransformLibrary`):
 - Each `PrimitiveTransform` has a name, a time window `[begin, begin + duration]` in seconds, and per-mesh
@@ -52,6 +156,8 @@ the device too.
 
 ## Proposed design (to confirm with the maintainer)
 
+> Superseded (2026-10-20): implemented as answered in the questions below; current semantics in `python/tools/sim/CLAUDE.md` and the `sim-kinematics` skill.
+
 **Naming.** In the new simulator, call these *kinematic constraints*: a `KinematicConstraint` is a prescribed
 motion of a node group over a time window, and a `KinematicConstraintSet` holds all of them. Kinds: `Fixed`,
 `Translate`, `Rotate` (an axis plus a pivot; the world-origin version is just pivot 0), `RadialTranslate`.
@@ -89,6 +195,8 @@ Editing constraints inside the GPU UI is optional; ask the maintainer.
 
 ## Validation
 
+> Superseded (2026-10-20): done, see Progress; current checks are in Handoff §6.
+
 - Unit tests: each kind's kernel against a NumPy closed form; window boundaries; the release velocity.
 - Graph-capture replay over many steps: positions follow the closed form (this catches frozen-time bugs).
 - Parity: a scene with rotating and translating constraints, run with the CPU `tools/vbd/simulate.py` and
@@ -97,6 +205,8 @@ Editing constraints inside the GPU UI is optional; ask the maintainer.
 - `MediumLongBendingBeam` (fixed BCs) behaves as before.
 
 ## Files
+
+> Superseded (2026-10-20): see Handoff §1.
 
 Own: new `python/tools/sim/gpu/kinematics/`, `panels/kinematics.py`, the Dirichlet parts of
 `gpu/elasticity/fem.py`, `python/tools/vbd/` (the closed-form fix in `ui/utils/transform_library.py`, the
@@ -198,6 +308,6 @@ reset), and validate the old and new CPU paths against each other before relying
   inexact: its nodes don't share a radius) and `octopus-trampoline` (5 → 0.380). Added `kinematics` to
   the BeamFallingOnBeam, CubeFallingOnCube and trampoline Dumps. MediumLongBendingBeam has no scene, so it
   keeps the dmask fallback.
-- Not done / known gaps: the GPU headless output keeps writing only the initial `dmask`; the offline CPU
+- (Superseded 2026-10-20 by Handoff §5.) Not done / known gaps: the GPU headless output keeps writing only the initial `dmask`; the offline CPU
   simulator's `-o` drive-letter bug is documented, not fixed; a mid-run `--start-from` resume on the CPU
   re-anchors at the resumed state (exact unless non-commuting motions overlap).
