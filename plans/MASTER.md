@@ -51,9 +51,13 @@ Read this section first. Older sections below are history; where they conflict w
 5. **ThingsFallingInBasket** went non-finite around step 39 under the default contact settings (2026-10-18). Not investigated; possibly the same undersized-detection-band problem the trampolines had. Heavy scene: only with the maintainer.
 6. Smaller tracked items: OGC capacity guard (OGC isn't used for the paper); C++ CUDA build fails with CUDA 13.3; GPU vs CPU VBD sag on one test (low priority); move the configs to `accelerated-vbd-extras` once settled; delete `plans/` when the effort ends.
 
-### Scratch tools (not in the repo)
+### Paper-config tools
 
-The coordinator's session kept these in its scratchpad, so a new session won't have them unless they are added to the repo: `make_paper_configs.py` (regenerates `configs/paper/*.toml` and `configs/defaults.toml` from the extras repo's committed `.h5` files via `state.load_params`), `check_paper_configs.py` (each paper `.toml` loads bit-identically to its `.h5`), and `audit_raw.py` (raw `.h5` attributes vs the loaded state).
+`python -m python.tools.sim.paper_configs make|check --extras path/to/accelerated-vbd-extras` regenerates `configs/paper/*.toml` and `configs/defaults.toml` from the extras repo's committed `.h5` files, and verifies them (bit-identical loads, raw `.h5` attributes vs the loaded state). Temporary: remove it once the paper configs are final, or generalize its reusable parts (see its docstring).
+
+### Durable rules
+
+Rules that outlive this effort are in the root `CLAUDE.md` (maintainer preferences) and `python/tools/sim/CLAUDE.md` (configs, contact parameters, AAAVBD), not only here.
 
 ## How each session starts (read this first) (historical: the 2026-10-17 kickoff)
 
