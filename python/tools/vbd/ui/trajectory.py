@@ -9,10 +9,25 @@ import h5py as h5
 import typing
 import gc
 import time
+import numpy as np
+
+# C++ FemElastoDynamics archive group of a frame in the CPU simulators' trajectories
+_FEM_GROUP = "pbat.sim.dynamics.FemElastoDynamics"
 
 
 class Trajectory:
+    """Plays a trajectory file frame by frame: a CPU simulator's, where each frame is a C++
+    FemElastoDynamics archive, or a field trajectory, where each frame holds some of the FEM's nodal fields
+    as |# nodes| x 3 datasets (python.tools.sim.simulate and its GUI's Serialization write ``x`` only) and
+    the FEM is stored once, in the root ``FemElastoDynamics`` group.
+    """
+
     _archive: pbat.io.Archive
+    _path: str | None
+    _field_frames: bool
+    _note: str
+    _rest_positions: np.ndarray | None
+    _n_element_nodes: int
     _t: int
     _n_frames: int
     _dirty: bool
@@ -26,6 +41,11 @@ class Trajectory:
 
     def __init__(self):
         self._archive = None
+        self._path = None
+        self._field_frames = False
+        self._note = ""
+        self._rest_positions = None
+        self._n_element_nodes = 0
         self._t = 0
         self._n_frames = 0
         self._dirty = False
@@ -46,7 +66,7 @@ class Trajectory:
         imgui.SameLine()
         imgui.SetNextItemWidth(button_size[0] * 0.8)
         _, self._group = imgui.InputText("Group", self._group)
-        if self._archive is not None:
+        if self._path is not None:
             imgui.SetNextItemWidth(width * 0.7)
             _, t = imgui.SliderInt("Frame", self._t, self._tmin, self._tmax)
             imgui.SameLine()
@@ -57,6 +77,8 @@ class Trajectory:
             )
             imgui.SameLine()
             _, self._screenshot = imgui.Checkbox("Screenshot", self._screenshot)
+            if self._note:
+                imgui.TextWrapped(self._note)
 
             if t != self._t or sync:
                 self._t = t
@@ -83,6 +105,39 @@ class Trajectory:
         self._dt = dt
 
     @property
+    def rest_positions(self) -> np.ndarray | None:
+        """|# nodes| x 3 rest positions of a field trajectory's FEM (None otherwise, or if the file has no
+        root FemElastoDynamics group). The GPU simulators' nodes are the bodies' nodes, in scene order, then
+        the static colliders' (element-less) nodes."""
+        return self._rest_positions
+
+    @property
+    def n_element_nodes(self) -> int:
+        """1 + the largest node index of a field trajectory's elements (0 if unknown)."""
+        return self._n_element_nodes
+
+    @property
+    def note(self) -> str:
+        return self._note
+
+    @note.setter
+    def note(self, value: str):
+        """A note shown under the frame slider, e.g. which fields the current frame had."""
+        self._note = value
+
+    def close(self):
+        """Forget the loaded trajectory."""
+        self._archive = None
+        self._path = None
+        self._field_frames = False
+        self._note = ""
+        self._rest_positions = None
+        self._n_element_nodes = 0
+        self._dirty = False
+        self._autoplay = False
+        gc.collect()
+
+    @property
     def dirty(self) -> bool:
         return self._dirty
 
@@ -94,9 +149,26 @@ class Trajectory:
     def t(self, value: int):
         self._t = min(max(value, self._tmin), self._tmax)
 
-    def undirty(self, callback: typing.Callable[[pbat.io.Archive], None]):
+    def undirty(
+        self,
+        callback: typing.Callable[[pbat.io.Archive], None],
+        fields_callback: typing.Callable[[dict[str, np.ndarray]], None] | None = None,
+    ):
+        """Load the current frame: pass its archive to `callback`, or, for a field trajectory, all of its
+        datasets by name to `fields_callback` (subgroups, e.g. ``solve_status``, are skipped)."""
         if self._dirty:
-            callback(self._archive.get(f"{self._group}/{self._t:08d}"))
+            frame = f"{self._group}/{self._t:08d}"
+            if self._field_frames:
+                with h5.File(self._path, "r") as f:
+                    fields = {
+                        name: obj[()]
+                        for name, obj in f[frame].items()
+                        if isinstance(obj, h5.Dataset)
+                    }
+                if fields_callback is not None:
+                    fields_callback(fields)
+            else:
+                callback(self._archive.get(frame))
             self._dirty = False
 
     def _load_trajectory(self):
@@ -127,9 +199,22 @@ class Trajectory:
                 self._tmin = min(frame_indices)
                 self._tmax = max(frame_indices)
                 self._n_frames = self._tmax - self._tmin + 1
-            self._archive = pbat.io.Archive(
-                file_path, flags=pbat.io.AccessMode.ReadOnly
+                first = f[self._group][f"{self._tmin:08d}"]
+                field_frames = _FEM_GROUP not in first
+                rest_positions, n_element_nodes = None, 0
+                if field_frames and "FemElastoDynamics/X" in f:
+                    rest_positions = f["FemElastoDynamics/X"][()]
+                    n_element_nodes = int(f["FemElastoDynamics/E"][()].max()) + 1
+            self._field_frames = field_frames
+            self._note = ""
+            self._rest_positions = rest_positions
+            self._n_element_nodes = n_element_nodes
+            self._archive = (
+                None
+                if field_frames
+                else pbat.io.Archive(file_path, flags=pbat.io.AccessMode.ReadOnly)
             )
+            self._path = file_path
             gc.collect()
             self._t = self._tmin
             self._dirty = True
