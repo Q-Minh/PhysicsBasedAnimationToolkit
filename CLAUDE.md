@@ -52,6 +52,10 @@ Rebuilding the Python extension is covered by the `pbat-build` skill.
 - **This machine's locations** (the Python venv, the paper's extras repository) live in the git-ignored `CLAUDE.local.md` at the repo root, which Claude Code loads automatically. If it's missing, ask the user and create it; never copy its contents into tracked files.
 
 - Don't implement anything that wasn't explicitly requested, and don't add speculative abstractions. If unsure, ask.
+- **Commits** are small, self-contained and bisectable: split unrelated hunks into separate commits.
+- **Python dependencies:** a new third-party import goes in the nearest `requirements.txt`, pinned to the installed version.
+- **Relative tolerances never divide by zero.** A test or ratio relative to some scale uses `max(relative scale, small positive absolute floor)`, so a vanishing scale can't produce `inf`, `NaN` or a test that can never pass.
+- **The paper's `accelerated-vbd-extras` repository is read-only** (collaborators' hand-tuned files): derive anything you need from its committed versions, never modify it.
 - Check with the maintainer before starting long-running tasks or experiments (parameter sweeps, full benchmarks, long simulations). Validate with the smallest run that answers the question, e.g. one static and one dynamic benchmark problem rather than whole sets.
 - Before writing new code, check whether PBAT, Warp, cupy/cuda-cccl, Eigen, etc. already provide the functionality.
 - When a C++ API changes, keep its bindings, the Warp mirrors in `python/tools/sim/gpu`, and any Python callers in sync, or say clearly which ones were left stale.
