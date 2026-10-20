@@ -9,7 +9,8 @@ so the test means the same inside a subproblem as between subproblems.
 
 The test runs between outer iterations, as in C++, and also every ``check_interval`` sweeps inside a
 subproblem. Between outer iterations, the step must also be feasible: no contact may penetrate its
-margin by more than ``ftol * dmin``, i.e. ``max_j max(0, dmin - c_j(x)) <= ftol * dmin`` over the
+margin by more than ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``, i.e.
+``max_j max(0, dmin - c_j(x)) <= ftol * max(|dmin|, FEASIBILITY_FLOOR)`` over the
 current contacts (the maintainer's choice; C++ has no feasibility test). Inside a subproblem only the
 gradient is tested: passing ends the subproblem, and both tests follow its finalization. Its outcome stays on the device in flags that conditional graph nodes
 (``wp.capture_if``/``wp.capture_while``) read, so a captured step stops early too. See
@@ -61,7 +62,8 @@ class ConvergenceParams(SerializableMixin):
     )
     ftol = DocField(
         0.5,
-        "Feasibility tolerance between outer iterations: largest allowed penetration into the contact margin, as a fraction of dmin",
+        "Feasibility tolerance between outer iterations: largest allowed penetration into the contact margin, as a "
+        "fraction of |dmin| (at least 1e-6 m, so a zero or negative margin still has a positive tolerance)",
     )
     rtol = DocField(
         1e-2,
@@ -102,7 +104,7 @@ class SolveStatus:
     sweeps: wp.int32  # VBD sweeps used (each Anderson step counts its p sweeps)
     reason: wp.int32  # SolveEnd
     gradient_ratio: wp.float32  # gradient measure / tolerance at the end (<= 1 passes)
-    feasibility_ratio: wp.float32  # penetration / (ftol dmin) at the end (<= 1 passes)
+    feasibility_ratio: wp.float32  # penetration / (ftol max(|dmin|, floor)) at the end (<= 1 passes)
 
 
 class SweepLayout(NamedTuple):
@@ -157,12 +159,29 @@ def _gradient_ratio(
     return ratio
 
 
+FEASIBILITY_FLOOR = 1e-6
+"""Smallest length scale (m) of the feasibility tolerance, ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``:
+a zero or negative contact margin (the paper configs use dmin = -1e-4) still gets a positive tolerance."""
+
+
+def feasibility_tolerance(ftol: float, dmin: float) -> float:
+    """Host-side ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``, as :func:`_feasibility_tolerance`."""
+    return float(ftol) * max(abs(float(dmin)), FEASIBILITY_FLOOR)
+
+
+@wp.func
+def _feasibility_tolerance(ftol: wp.float32, dmin: wp.float32) -> wp.float32:
+    """Largest allowed penetration into the contact margin, ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``.
+    Equals ``ftol * dmin`` for a margin of at least the floor."""
+    return ftol * wp.max(wp.abs(dmin), wp.float32(FEASIBILITY_FLOOR))
+
+
 @wp.func
 def _feasibility_ratio(
     penetration: wp.array[wp.float32], ftol: wp.float32, dmin: wp.float32
 ) -> wp.float32:
-    """Largest penetration over its tolerance ftol * dmin: at most 1 when feasible."""
-    tol = ftol * dmin
+    """Largest penetration over its tolerance (:func:`_feasibility_tolerance`): at most 1 when feasible."""
+    tol = _feasibility_tolerance(ftol, dmin)
     p = penetration[0]
     ratio = wp.float32(0)
     if tol > wp.float32(0):
@@ -233,7 +252,7 @@ def _floor_displacement_scale(
 
 @wp.func
 def _is_feasible(penetration: wp.array[wp.float32], ftol: wp.float32, dmin: wp.float32) -> bool:
-    return penetration[0] <= ftol * dmin
+    return penetration[0] <= _feasibility_tolerance(ftol, dmin)
 
 
 # --- Feasibility: largest penetration into the contact margin, max_j max(0, dmin - c_j(x)) ---
@@ -717,7 +736,8 @@ class ConvergenceCheck:
     def test_outer(self) -> bool:
         """Host-side outer test of the current positions, as the VBD family's between outer
         iterations: the relative gradient test (:meth:`test_gradient`) and feasibility, the largest
-        penetration into the contact margin at most ``ftol * dmin``. Synchronizes, so not capturable.
+        penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``.
+        Synchronizes, so not capturable.
 
         Returns:
             bool: Whether both pass (False if the relative test is off).
@@ -725,8 +745,8 @@ class ConvergenceCheck:
         if not self.test_gradient():
             return False
         self._measure_penetration()
-        ftol, dmin = float(self.params.ftol), float(self._contact.data.dmin)
-        return float(self.penetration.numpy()[0]) <= ftol * dmin
+        tol = feasibility_tolerance(self.params.ftol, self._contact.data.dmin)
+        return float(self.penetration.numpy()[0]) <= tol
 
     def relative_test(self, g: wp.array) -> bool:
         """Host-side relative test of a given gradient, ``sum |g_i|^2 / m_i <= rtol^2 * scale``, against
@@ -744,3 +764,60 @@ class ConvergenceCheck:
             return False
         self._measure_residual(g)
         return self._relative_passes()
+
+
+import unittest
+
+
+class TestFeasibilityTolerance(unittest.TestCase):
+    def test_tolerance(self):
+        wp.init()
+
+        @wp.kernel
+        def k(
+            ftol: wp.array[wp.float32],
+            dmin: wp.array[wp.float32],
+            penetration: wp.array[wp.float32],
+            tol: wp.array[wp.float32],
+            ratio: wp.array[wp.float32],
+            feasible: wp.array[wp.int32],
+        ):
+            i = wp.tid()
+            p = wp.array(ptr=penetration.ptr + wp.uint64(i * 4), shape=(1,), dtype=wp.float32)
+            tol[i] = _feasibility_tolerance(ftol[i], dmin[i])
+            ratio[i] = _feasibility_ratio(p, ftol[i], dmin[i])
+            feasible[i] = wp.where(_is_feasible(p, ftol[i], dmin[i]), 1, 0)
+
+        cases = [  # (ftol, dmin, penetration)
+            (0.5, 2e-3, 0.0),  # default margin: unchanged
+            (0.5, 2e-3, 1.5e-3),
+            (0.5, -1e-4, 0.0),  # negative margin (paper configs): |dmin|
+            (0.5, -1e-4, 4e-5),
+            (0.5, -1e-4, 6e-5),
+            (0.5, 0.0, 0.0),  # zero margin: the floor
+            (0.5, 0.0, 1e-6),
+        ]
+        f, d, pen = (np.array(c, dtype=np.float32) for c in zip(*cases))
+        n = len(cases)
+        tol, ratio, feasible = (wp.zeros(n, dtype=t) for t in (wp.float32, wp.float32, wp.int32))
+        wp.launch(k, dim=n, inputs=[wp.array(f), wp.array(d), wp.array(pen), tol, ratio, feasible])
+        tol, ratio, feasible = tol.numpy(), ratio.numpy(), feasible.numpy()
+        self.assertTrue(np.isfinite(ratio).all())
+        # dmin > 0: bit-identical to ftol * dmin
+        self.assertEqual(tol[0], np.float32(0.5) * np.float32(2e-3))
+        self.assertEqual(feasible[:2].tolist(), [1, 0])
+        # dmin < 0: |dmin|, so zero penetration passes
+        self.assertAlmostEqual(float(tol[2]), 5e-5, delta=1e-6 * 5e-5)
+        self.assertEqual(feasible[2:5].tolist(), [1, 1, 0])
+        self.assertAlmostEqual(float(ratio[3]), 0.8, places=5)
+        # dmin = 0: the floor
+        self.assertAlmostEqual(float(tol[5]), 0.5 * FEASIBILITY_FLOOR, delta=1e-6 * 0.5 * FEASIBILITY_FLOOR)
+        self.assertEqual(feasible[5:].tolist(), [1, 0])
+        self.assertAlmostEqual(float(ratio[6]), 2.0, places=5)
+        # Host side agrees
+        for (fi, di, _), t in zip(cases, tol):
+            self.assertAlmostEqual(feasibility_tolerance(fi, di), float(t), delta=1e-7 * float(t))
+
+
+if __name__ == "__main__":
+    unittest.main()
