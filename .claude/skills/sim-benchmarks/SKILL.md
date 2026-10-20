@@ -17,7 +17,7 @@ Run from the repo root with the dev venv's Python (Python <= 3.12; its location 
    - `<scene>/static/E{E}`: release the shape with no loads; the solution is the rest shape X.
    - `<scene>/dynamic_h{h}/E{E}`: one BDF1 step from (x, v), with Newton reference solutions `samples/x_ref`.
 
-   The root attribute `sets` lists the problem sets (full paths), and a scene group's optional `label` names it in the figures. Version-1 files (one scene at the root, e.g. `data/benchmarks/trampoline-test.h5`) still run. See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). Small existing dataset: `data/benchmarks/trampolines-test.h5` (scenes Y1e6 and Y1e7, 2 problems per set).
+   The root attribute `sets` lists the problem sets (full paths), and a scene group's optional `label` names it in the figures. Version-1 files (one scene at the root) still run, but none are kept. See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). Small existing dataset: `data/benchmarks/trampolines-test.h5` (scenes Y1e6 and Y1e7, 2 problems per set).
 2. **Static benchmark.** `python -m python.tools.sim.benchmark` releases each sample with every solver and logs the error to the rest shape after every iteration. Per solve it records when each accuracy level (error reduction 1 − e/e0, default 50, 60, 70, 80, 85, 90, 95, 99%) is first crossed and the incremental time per level.
 3. **Dynamic benchmark.** The same runner on a `dynamic_h{h}` set: one BDF1 step of the set's h toward its `xtilde`, with the error measured against `samples/x_ref`. The kind and h come from the set.
 4. **Figures.** `python -m python.tools.sim.benchmark_plot results.h5 -o out/fig/benchmark` draws one 3D grouped bar chart per benchmark (static, each dynamic h).

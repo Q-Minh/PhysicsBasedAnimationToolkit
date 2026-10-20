@@ -71,7 +71,7 @@ Translating requests:
 
 `make_benchmark.py -h` lists the rest (`--chains`, `--burn-in`, `--pilot`, `--eps`, `--newton-iters`).
 
-**Full benchmark dataset generation is on hold** until the maintainer fixes the data requirements. Small smoke-test sets are fine. A sample dataset (trampoline, 50/500/5000 J × 4 problems, pools of 400, h = 1e-4 and 1e-2, no gravity) is `data/benchmarks/trampoline-sample.h5`; `trampoline-test.h5` is a smaller one (50/5000 J × 3 problems).
+**Full benchmark dataset generation waits for the maintainer's go-ahead** on the number of problems per scene and the pool sizes (MASTER.md "Benchmark design"). Small smoke-test sets are fine. The small multi-scene test set is `data/benchmarks/trampolines-test.h5` (Y1e6 and Y1e7, 10000 J, 2 problems per set).
 
 ## Output files
 

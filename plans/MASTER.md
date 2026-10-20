@@ -209,7 +209,7 @@ Supersedes the earlier "Benchmark plan" details where they differ.
 - **Three separate benchmarks, one figure each:** elastostatics, elastodynamics h = 1e-4, elastodynamics h = 1e-2.
 - **Scenarios (x axis):** five circle trampolines, same mesh and 4 fixed rim patches, differing only in material: Y = 1e5,
   1e6, 1e7, 1e8, and heterogeneous (stiff 1e8 center disk, soft 1e6 outer ring; the paper names its trampolines outer-inner, so this
-  is the paper's soft-stiff material layout; `data/scenarios/trampoline_circle_het.h5`, pending the maintainer's confirmation).
+  is the paper's soft-stiff material layout; `data/scenarios/trampoline_circle_het.h5`; confirmed by the maintainer 2026-10-20).
 - **Samples:** one energy level for every scene, **10000 J** (large deformation, so solves pass from large to small
   deformation regimes). Many MCMC samples per scene; each is one problem of that scene's benchmark.
 - **Accuracy levels (z axis):** error reduction 1 − e/e0 at 50, 60, 70, 80, 85, 90, 95, 99%.
