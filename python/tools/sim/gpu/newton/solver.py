@@ -26,6 +26,8 @@ from ..contact.dynamics import (
     MeshDynamics as ContactDynamics,
     MeshDynamicsData as ContactDynamicsData,
     PenaltyAdaptivity,
+    capped_friction_energy,
+    capped_friction_scale,
 )
 from ..contact.mesh.pairs import ContactBasesData
 from ..elasticity.snh import snh_eval, snh_hess
@@ -113,6 +115,7 @@ def _energy_vv(
     xt: wp.array[wp.vec3f],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     f_obj_partial: wp.array[wp.float32],
 ):
     c = wp.tid()
@@ -134,8 +137,7 @@ def _energy_vv(
     E = contact.cvv.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvv.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
-        - wp.dot(contact.cvv.lambda_f[c], c_f)  # type: ignore
+        + capped_friction_energy(c_f, contact.cvv.lambda_f[c], sigma_f, friction_limit[c])
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -146,6 +148,7 @@ def _energy_ve(
     xt: wp.array[wp.vec3f],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
@@ -174,8 +177,7 @@ def _energy_ve(
     E = contact.cve.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cve.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
-        - wp.dot(contact.cve.lambda_f[c], c_f)  # type: ignore
+        + capped_friction_energy(c_f, contact.cve.lambda_f[c], sigma_f, friction_limit[c])
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -186,6 +188,7 @@ def _energy_vf(
     xt: wp.array[wp.vec3f],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
@@ -214,8 +217,7 @@ def _energy_vf(
     E = contact.cvf.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvf.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
-        - wp.dot(contact.cvf.lambda_f[c], c_f)  # type: ignore
+        + capped_friction_energy(c_f, contact.cvf.lambda_f[c], sigma_f, friction_limit[c])
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -226,6 +228,7 @@ def _energy_ee(
     xt: wp.array[wp.vec3f],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
@@ -257,8 +260,7 @@ def _energy_ee(
     E = contact.cee.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cee.lambda_n[c] * c_n
-        + wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f)  # type: ignore
-        - wp.dot(contact.cee.lambda_f[c], c_f)  # type: ignore
+        + capped_friction_energy(c_f, contact.cee.lambda_f[c], sigma_f, friction_limit[c])
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -369,9 +371,12 @@ def _barycentrically_unscaled_contact_hessian(
 
 @wp.kernel
 def _compute_vv_contact_hessian_triplets(
+    x: wp.array[wp.vec3f],
+    xt: wp.array[wp.vec3f],
     dmask: wp.array[wp.int32],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     params: ParamsData,  # type: ignore
     offsets: wp.array[wp.int32],
 ):
@@ -387,13 +392,18 @@ def _compute_vv_contact_hessian_triplets(
     bases = contact.contacts.vv_bases
     n, t, b = bases.n[c], bases.t[c], bases.b[c]
     gamma = contact.cvv.gamma[c]
+    du = (x[i] - xt[i]) - (x[j] - xt[j])
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
+    friction_scale = capped_friction_scale(
+        c_f, contact.cvv.lambda_f[c], sigma_f, friction_limit[c]
+    )
     Hvv_base = _barycentrically_unscaled_contact_hessian(
         n,
         t,
         b,
         gamma,
         sigma_n,
-        sigma_f,
+        friction_scale * sigma_f,
     )
     d0 = is_dirichlet_node(dmask, i)
     d1 = is_dirichlet_node(dmask, j)
@@ -420,9 +430,12 @@ def _compute_vv_contact_hessian_triplets(
 
 @wp.kernel
 def _compute_ve_contact_hessian_triplets(
+    x: wp.array[wp.vec3f],
+    xt: wp.array[wp.vec3f],
     dmask: wp.array[wp.int32],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     params: ParamsData,  # type: ignore
     offsets: wp.array[wp.int32],
 ):
@@ -444,13 +457,18 @@ def _compute_ve_contact_hessian_triplets(
     eb = halfedges.outgoing_vertex(contact.meshes.F, he)
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
+    du = (x[i] - xt[i]) - ((b0 * x[ea] + b1 * x[eb]) - (b0 * xt[ea] + b1 * xt[eb]))
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
+    friction_scale = capped_friction_scale(
+        c_f, contact.cve.lambda_f[c], sigma_f, friction_limit[c]
+    )
     Hve_base = _barycentrically_unscaled_contact_hessian(
         n,
         t,
         b,
         gamma,
         sigma_n,
-        sigma_f,
+        friction_scale * sigma_f,
     )
     d0 = is_dirichlet_node(dmask, i)
     d1 = is_dirichlet_node(dmask, ea)  # type: ignore
@@ -499,9 +517,12 @@ def _compute_ve_contact_hessian_triplets(
 
 @wp.kernel
 def _compute_vf_contact_hessian_triplets(
+    x: wp.array[wp.vec3f],
+    xt: wp.array[wp.vec3f],
     dmask: wp.array[wp.int32],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     params: ParamsData,  # type: ignore
     offsets: wp.array[wp.int32],
 ):
@@ -524,13 +545,20 @@ def _compute_vf_contact_hessian_triplets(
     j, k, l = finds[0], finds[1], finds[2]
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
+    du = (x[i] - xt[i]) - (
+        (b0 * x[j] + b1 * x[k] + b2 * x[l]) - (b0 * xt[j] + b1 * xt[k] + b2 * xt[l])
+    )
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
+    friction_scale = capped_friction_scale(
+        c_f, contact.cvf.lambda_f[c], sigma_f, friction_limit[c]
+    )
     Hvf_base = _barycentrically_unscaled_contact_hessian(
         n,
         t,
         b,
         gamma,
         sigma_n,
-        sigma_f,
+        friction_scale * sigma_f,
     )
     d0 = is_dirichlet_node(dmask, i)
     d1 = is_dirichlet_node(dmask, j)
@@ -609,9 +637,12 @@ def _compute_vf_contact_hessian_triplets(
 
 @wp.kernel
 def _compute_ee_contact_hessian_triplets(
+    x: wp.array[wp.vec3f],
+    xt: wp.array[wp.vec3f],
     dmask: wp.array[wp.int32],
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
+    friction_limit: wp.array[wp.float32],
     params: ParamsData,  # type: ignore
     offsets: wp.array[wp.int32],
 ):
@@ -635,13 +666,20 @@ def _compute_ee_contact_hessian_triplets(
     gamma = contact.cvf.gamma[c]
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
+    du = ((b0 * x[ia] + b1 * x[ib]) - (b0 * xt[ia] + b1 * xt[ib])) - (
+        (b2 * x[ic] + b3 * x[id]) - (b2 * xt[ic] + b3 * xt[id])
+    )
+    c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
+    friction_scale = capped_friction_scale(
+        c_f, contact.cee.lambda_f[c], sigma_f, friction_limit[c]
+    )
     Hee_base = _barycentrically_unscaled_contact_hessian(
         n,
         t,
         b,
         gamma,
         sigma_n,
-        sigma_f,
+        friction_scale * sigma_f,
     )
     d0 = is_dirichlet_node(dmask, ia)  # type: ignore
     d1 = is_dirichlet_node(dmask, ib)  # type: ignore
@@ -997,6 +1035,8 @@ def _compute_energy(
     n_elems = fem.data.E.shape[0]
     cd = contact.data
     x, xt = fem.data.x, fem.data.xt
+    # Coulomb limits of the step's iterate, recorded by its augmented gradient (held for the step)
+    limits = params._gradient_norm.friction_limits
     offsets = params._energy_offsets
     f_cp = cp.asarray(params._data.f_obj_partial)
     f_inertial = wp.array(
@@ -1024,25 +1064,25 @@ def _compute_energy(
     wp.launch(
         _energy_vv,
         dim=contact.cvv.capacity,
-        inputs=[x, xt, cd, contact.cvv.n_u, f_vv],
+        inputs=[x, xt, cd, contact.cvv.n_u, limits.vv, f_vv],
         stream=params._streams[2],
     )
     wp.launch(
         _energy_ve,
         dim=contact.cve.capacity,
-        inputs=[x, xt, cd, contact.cve.n_u, f_ve],
+        inputs=[x, xt, cd, contact.cve.n_u, limits.ve, f_ve],
         stream=params._streams[3],
     )
     wp.launch(
         _energy_vf,
         dim=contact.cvf.capacity,
-        inputs=[x, xt, cd, contact.cvf.n_u, f_vf],
+        inputs=[x, xt, cd, contact.cvf.n_u, limits.vf, f_vf],
         stream=params._streams[4],
     )
     wp.launch(
         _energy_ee,
         dim=contact.cee.capacity,
-        inputs=[x, xt, cd, contact.cee.n_u, f_ee],
+        inputs=[x, xt, cd, contact.cee.n_u, limits.ee, f_ee],
         stream=params._streams[5],
     )
     for stream in params._streams:
@@ -1144,6 +1184,8 @@ def _assemble_hessian(
         stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
+    # Coulomb limits of the step's iterate, recorded by its augmented gradient (held for the step)
+    limits = params._gradient_norm.friction_limits
     wp.launch(
         kernel=_compute_dynamics_hessian_triplets,
         dim=max(n_nodes, n_elems),
@@ -1155,9 +1197,12 @@ def _assemble_hessian(
             kernel=_compute_vv_contact_hessian_triplets,
             dim=contact.cvv.capacity,
             inputs=[
+                fem.data.x,
+                fem.data.xt,
                 fem.data.dmask,
                 contact.data,
                 contact.cvv.n_u,
+                limits.vv,
                 params._data,
                 params._hessian_triplet_offsets,
             ],
@@ -1167,9 +1212,12 @@ def _assemble_hessian(
             kernel=_compute_ve_contact_hessian_triplets,
             dim=contact.cve.capacity,
             inputs=[
+                fem.data.x,
+                fem.data.xt,
                 fem.data.dmask,
                 contact.data,
                 contact.cve.n_u,
+                limits.ve,
                 params._data,
                 params._hessian_triplet_offsets,
             ],
@@ -1179,9 +1227,12 @@ def _assemble_hessian(
             kernel=_compute_vf_contact_hessian_triplets,
             dim=contact.cvf.capacity,
             inputs=[
+                fem.data.x,
+                fem.data.xt,
                 fem.data.dmask,
                 contact.data,
                 contact.cvf.n_u,
+                limits.vf,
                 params._data,
                 params._hessian_triplet_offsets,
             ],
@@ -1191,9 +1242,12 @@ def _assemble_hessian(
             kernel=_compute_ee_contact_hessian_triplets,
             dim=contact.cee.capacity,
             inputs=[
+                fem.data.x,
+                fem.data.xt,
                 fem.data.dmask,
                 contact.data,
                 contact.cee.n_u,
+                limits.ee,
                 params._data,
                 params._hessian_triplet_offsets,
             ],

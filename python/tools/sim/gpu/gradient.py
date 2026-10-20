@@ -1,16 +1,31 @@
 # type: ignore
+from typing import NamedTuple
+
 import cuda.compute
 import cupy as cp
 import warp as wp
 from .common import profiling
 
-from .contact.dynamics import MeshDynamics as ContactDynamics, MeshDynamicsData
+from .contact.dynamics import (
+    MeshDynamics as ContactDynamics,
+    MeshDynamicsData,
+    capped_friction_scale,
+)
 from .elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from .elasticity.snh import snh_grad
 from .elasticity.chain import gradient_wrt_dofs
 from .contact import halfedges
 from .common.reduce import Reduce
 from . import types
+
+
+class FrictionLimits(NamedTuple):
+    """Per-contact Coulomb limits ``mu_f max(lambda_n - sigma_n c_n, 0)`` of each contact type."""
+
+    vv: wp.array
+    ve: wp.array
+    vf: wp.array
+    ee: wp.array
 
 
 @wp.kernel
@@ -77,6 +92,7 @@ def _vv_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    friction_limit: wp.array[wp.float32],
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -103,6 +119,10 @@ def _vv_gradient(
     if augmented != 0:
         dEn += sigma_n * c_n
         dEf += sigma_f * c_f
+        # Coulomb limit at the normal force of this iterate, held for the Newton step
+        C = contact.mu_f * wp.max(-dEn, wp.float32(0))
+        friction_limit[c] = C
+        dEf *= capped_friction_scale(c_f, contact.cvv.lambda_f[c], sigma_f, C)
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
@@ -118,6 +138,7 @@ def _ve_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    friction_limit: wp.array[wp.float32],
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -148,6 +169,10 @@ def _ve_gradient(
     if augmented != 0:
         dEn += sigma_n * c_n
         dEf += sigma_f * c_f
+        # Coulomb limit at the normal force of this iterate, held for the Newton step
+        C = contact.mu_f * wp.max(-dEn, wp.float32(0))
+        friction_limit[c] = C
+        dEf *= capped_friction_scale(c_f, contact.cve.lambda_f[c], sigma_f, C)
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
@@ -165,6 +190,7 @@ def _vf_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    friction_limit: wp.array[wp.float32],
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -196,6 +222,10 @@ def _vf_gradient(
     if augmented != 0:
         dEn += sigma_n * c_n
         dEf += sigma_f * c_f
+        # Coulomb limit at the normal force of this iterate, held for the Newton step
+        C = contact.mu_f * wp.max(-dEn, wp.float32(0))
+        friction_limit[c] = C
+        dEf *= capped_friction_scale(c_f, contact.cvf.lambda_f[c], sigma_f, C)
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, i):
         wp.atomic_add(g, i, gamma * grad)
@@ -215,6 +245,7 @@ def _ee_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    friction_limit: wp.array[wp.float32],
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -249,6 +280,10 @@ def _ee_gradient(
     if augmented != 0:
         dEn += sigma_n * c_n
         dEf += sigma_f * c_f
+        # Coulomb limit at the normal force of this iterate, held for the Newton step
+        C = contact.mu_f * wp.max(-dEn, wp.float32(0))
+        friction_limit[c] = C
+        dEf *= capped_friction_scale(c_f, contact.cee.lambda_f[c], sigma_f, C)
     grad = dEn * n + dEf[0] * t + dEf[1] * b
     if not is_dirichlet_node(dmask, ia):
         wp.atomic_add(g, ia, gamma * b0 * grad)
@@ -268,6 +303,12 @@ class Gradient:
     the current multipliers (``-lambda grad c``), as C++ ``MeshDynamics::ToGradient`` with
     ``bForAugmentedLagrangian``. Without contact both are the objective's gradient.
 
+    The augmented friction force ``f = sigma_f c_f - lambda_f`` is capped at the Coulomb limit
+    ``C = mu_f max(lambda_n - sigma_n c_n, 0)`` of the current normal force, ``f min(1, C / |f|)``
+    (C++ has no cap). Each augmented gradient evaluation records C per contact in
+    :attr:`friction_limits`, which GPU Newton holds fixed for the step's Hessian and line-search
+    energies. The Lagrangian gradient is uncapped.
+
     For static problems (``fem.static``), the inertial term is replaced by the external load, -fext.
 
     Kernel launches are overlapped across 6 streams (elastic, inertial, vv, ve, vf, ee)
@@ -285,6 +326,13 @@ class Gradient:
         self._contact = contact
         self._g = g
         self._augmented = 1 if augmented_lagrangian else 0
+        # Only the augmented kernels write the limits; the Lagrangian ones get 1-entry placeholders.
+        self.friction_limits = FrictionLimits(
+            *(
+                wp.zeros(cs.capacity if augmented_lagrangian else 1, dtype=wp.float32)
+                for cs in (contact.cvv, contact.cve, contact.cvf, contact.cee)
+            )
+        )
         self._streams = [
             wp.Stream() for _ in range(6)
         ]  # elastic, inertial, vv, ve, vf, ee
@@ -316,15 +364,16 @@ class Gradient:
             inputs=[fem.data, g],
             stream=self._streams[1],
         )
-        for stream, kernel, cs in zip(
+        for stream, kernel, cs, limits in zip(
             self._streams[2:],
             [_vv_gradient, _ve_gradient, _vf_gradient, _ee_gradient],
             [contact.cvv, contact.cve, contact.cvf, contact.cee],
+            self.friction_limits,
         ):
             wp.launch(
                 kernel,
                 dim=cs.capacity,
-                inputs=[x, xt, dmask, cd, cs.n_u, self._augmented, g],
+                inputs=[x, xt, dmask, cd, cs.n_u, self._augmented, limits, g],
                 stream=stream,
             )
         for stream in self._streams:
@@ -355,6 +404,11 @@ class GradientNorm:
             num_items=3 * n_nodes,
             op=cuda.compute.OpKind.PLUS,
         )
+
+    @property
+    def friction_limits(self) -> FrictionLimits:
+        """The Coulomb limits recorded by the last augmented :meth:`compute_gradient`."""
+        return self._gradient.friction_limits
 
     def compute_gradient(self, main_stream: wp.Stream) -> None:
         """Recompute ``g`` at the current positions."""
