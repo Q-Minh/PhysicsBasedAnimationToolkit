@@ -202,6 +202,26 @@ Not started; no runs until the maintainer agrees on the protocol (scenes, metric
    (1 - betaG) gammaup). Justify it by showing divergence for beta > 1 (e.g. 1.05). The analogy is SOR: beta = 0 corresponds
    to omega = 1, beta = 1 to omega = 2. Needs a configurable upper limit (or a fixed beta) in place of the 1.
 
+## Benchmark design (maintainer, 2026-10-20) — current
+
+Supersedes the earlier "Benchmark plan" details where they differ.
+
+- **Three separate benchmarks, one figure each:** elastostatics, elastodynamics h = 1e-4, elastodynamics h = 1e-2.
+- **Scenarios (x axis):** five circle trampolines, same mesh and 4 fixed rim patches, differing only in material: Y = 1e5,
+  1e6, 1e7, 1e8, and heterogeneous (stiff 1e8 center, soft 1e6 outer region, as in the paper's stiff-soft trampoline).
+- **Samples:** one energy level for every scene, **10000 J** (large deformation, so solves pass from large to small
+  deformation regimes). Many MCMC samples per scene; each is one problem of that scene's benchmark.
+- **Accuracy levels (z axis):** error reduction 1 − e/e0 at 50, 60, 70, 80, 85, 90, 95, 99%.
+- **Bar height (y axis):** incremental time from the previous level to this one (from the start for 50%), as a fraction
+  of the scene's time budget. An iteration's time goes to the **highest level it crosses**; skipped levels get no time.
+- **Statistics:** per (scene, level, solver), the solid bar is the **mean** over samples, with translucent **min/max** bars.
+  Samples that don't reach a level are **excluded** from that level's statistics, and the bar is labeled with the
+  fraction that reached it.
+- **Bar groups:** one bar per solver in each (scene, level) cell, colored by solver, legend top right.
+- **Time budget:** per scene (and benchmark), a multiple of Newton's time to solution (99%), 1.5–2x; default 2x, from a pilot.
+- Work: task 1 scenes; task 4 multi-scene datasets (format, maker, browser); task 3 runner (level crossings, per-scene
+  budgets and params, HDF5 results with per-sample data and aggregates) and the plot script. Pilot before any full run.
+
 ## New milestone: GPU simulators read CPU scene files (maintainer, 2026-10-18)
 
 The GPU simulators (`ui.py`, `simulate.py`) should ingest the same scene/session `.h5` files that the CPU simulator
