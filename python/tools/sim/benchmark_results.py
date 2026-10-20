@@ -13,6 +13,8 @@ per-iteration log (entry j is the state after j iterations, with cumulative solv
   time goes only to the **highest** level it crosses: levels it jumps over are reached with a zero
   increment (``skipped``). Newton's first iteration reaching 80% thus puts all of its time on 80%.
   The increments of the reached levels sum to the time of the highest one.
+- a level crossed after the solve's **time budget** isn't reached: the budget is tested after each
+  iteration, so the last one can end past it (by up to one Newton step).
 
 Results file layout (HDF5, ``FORMAT``):
 
@@ -74,20 +76,23 @@ class LevelCrossings:
     skipped: np.ndarray  # (L,) bool: reached by an iteration that also crossed a higher level
 
 
-def level_crossings(relative_error: np.ndarray, time: np.ndarray, levels) -> LevelCrossings:
+def level_crossings(
+    relative_error: np.ndarray, time: np.ndarray, levels, time_limit: float = math.inf
+) -> LevelCrossings:
     """Crossings and incremental times of a solve's log.
 
     Args:
         relative_error (np.ndarray): (n,) e_j / e0 per log entry (entry 0 = the initial state).
         time (np.ndarray): (n,) cumulative solver time per entry (s), with time[0] = 0.
         levels: Increasing error reductions in (0, 1).
+        time_limit (float): The solve's time budget (s): entries after it don't count.
 
     Returns:
         LevelCrossings: Per level, the first crossing and the time attributed to it.
     """
     levels = np.asarray(levels, dtype=np.float64)
-    r = np.asarray(relative_error, dtype=np.float64)
     t = np.asarray(time, dtype=np.float64)
+    r = np.asarray(relative_error, dtype=np.float64)[: np.searchsorted(t, time_limit, side="right")]
     L = levels.size
     iteration = np.full(L, -1, dtype=np.int64)
     for i, level in enumerate(levels):
@@ -303,6 +308,14 @@ class TestLevelCrossings(unittest.TestCase):
         self.assertTrue(np.isnan(c.increment[2:]).all() and np.isnan(c.time[2:]).all())
         self.assertTrue((c.iteration[2:] == -1).all())
         self.assertFalse(c.skipped[1])  # 70% isn't reached, so 60% is the highest crossed
+
+    def test_time_limit(self):
+        # The second iteration ends past the 2.5 s budget: its crossings don't count
+        c = level_crossings(np.array([1.0, 0.45, 0.005]), np.array([0.0, 1.0, 3.0]), self.levels, 2.5)
+        np.testing.assert_array_equal(c.reached, [1, 0, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(c.increment[0], 1.0)
+        c = level_crossings(np.array([1.0, 0.45, 0.005]), np.array([0.0, 1.0, 3.0]), self.levels, 3.0)
+        self.assertTrue(c.reached.all())
 
     def test_non_finite(self):
         c = level_crossings(np.array([1.0, np.nan]), np.array([0.0, 1.0]), self.levels)
