@@ -387,8 +387,8 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold | 2026-10-19 | feature/sd-detect-scope merged (15340ab4). Waiting for the next task |
-| 3 | benchmark runner + bar plot ready for review (feature/benchmark-bars) | 2026-10-20 | Level crossings, pilot budgets, per-scene params, HDF5 results, 3D bar figures; tiny run on trampolines-test.h5 |
+| 2 | on hold | 2026-10-20 | Anderson outlier diagnosis reported (no code change); fix proposals await the maintainer |
+| 3 | on hold | 2026-10-20 | Benchmark runner and bar plot (07b4ee56), trajectory snapshots (62af8d55) merged; Newton pilot done |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -881,6 +881,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run START** (intermittent, ~15 min, correctness + snapshot-overhead timing; ignore other timings): snapshot ring tests on trampolines-test.h5 (1 sample per set, all solvers, snapshots on vs off). Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (snapshot ring tests). The GPU is free.
 - 2026-10-20 · task 4 · **CPU run END**: pool-sizing study (circle Y1e6/Y1e7, with and without gravity, 8 chains x ~25k steps each, 10000 J). tau 200-500 steps (generator pilot thin ~65); split R-hat with 4 chains: ~3k steps/chain 1.11-1.21, ~6k 1.05-1.07, ~12k 1.027-1.035, ~24k 1.011-1.015; ~5.5-5.9 ms/step uncontended; no inversions (min det F >= 0.57). Supports pending decision #6.
+- 2026-10-20 · task 2 · **GPU run START** (intermittent, small runs, correctness only): Anderson outlier diagnosis, repeated ~1 s benchmark solves on trampolines-test Y1e7/dynamic_h0.01. Ignore timings. Will log END.
+- 2026-10-20 · task 2 · **GPU run END** (Anderson outlier diagnosis): cause found, report sent to the coordinator; no code changed.
 
 ## Open questions for the maintainer
 
@@ -920,3 +922,15 @@ Answer when back; each has the coordinator's recommendation.
 9. ~~Snapshot GPU cap~~ **Answered:** 32 MB default (64 MB would also be fine).
 10. ~~Snapshot which samples~~ **Answered:** all samples by default, with a fraction parameter to snapshot fewer; the run
     prints the estimated disk size (~36 GB for a full run at 120 frames).
+11. **Anderson's float32 floor at ~1% error** (task 2's diagnosis, 2026-10-20; no code changed). On Y1e7 at h = 1e-2,
+    Anderson's fast phase stops between ~0.5% and ~1.8% error: one sweep's displacement (~5e-5 m) is ~2 float32 ulps of
+    the positions (~1.4 m), so the least-squares mixing fits rounding noise. Run-to-run atomics in the Gram decide which
+    side of 1% a run lands on: 11/40 solves slow (up to 13x) on Y1e7, 0/40 on Y1e6. Options:
+    - A. Deterministic Gram (fixed-order two-pass reduction): bit-reproducible Anderson, negligible cost; doesn't remove
+      the floor (a slow problem would then be slow every time).
+    - B1. Benchmark parameter `vbd_iters_per_anderson_iter = 2` (more sweeps per Anderson step, larger residual): removes
+      the outliers here; +12% median time on Y1e7 (p = 4: +28%, +43% on Y1e6). A baseline parameter, no code change.
+    - B2. Adapt p (or restart the history) once the residual nears its float32 resolution: algorithm change to a baseline.
+    - C. Note in the figures that Anderson's 99% numbers on stiff scenes hit a precision floor.
+    **Recommendation:** A (reproducibility) + B1 with p = 2, after checking p = 2 on every pilot set (cheap). B2 changes a
+    competitor's algorithm, which the paper would have to justify.
