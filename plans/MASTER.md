@@ -874,7 +874,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 4 · **CPU run START** (~20-30 min, CPU only, alongside the pool-sizing study): 5-scene PILOT dataset data/benchmarks/trampolines-pilot.h5 (circle trampolines Y1e5/Y1e6/Y1e7/Y1e8/het, 10000 J, 2 problems per set, pools of 160 from 4 chains; R-hat not required). Will log END.
 - 2026-10-20 · task 3 · **GPU run START** (~1 min, correctness only): benchmark-bars review changes, 1 problem x AAAVBD/Newton on trampolines-test.h5. Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (benchmark-bars review checks).
-- 2026-10-20 · coordinator · **Maintainer: trajectory snapshots must not use GPU memory for frames.** Task 3 tries mapped (zero-copy) pinned host memory written by a kernel between iterations, in the normal benchmark run (feasibility spike after the pilot); fallback, approved: an opt-in replay run with host copies.
+- 2026-10-20 · coordinator · **Maintainer: trajectory snapshots may use only a fixed, small amount of GPU memory** (never growing, insignificant next to the solvers). Task 3: a fixed device ring capped at 16 MB by default (configurable), stride doubling inside it, copies outside the timed span, in the normal benchmark run, after the pilot. Fallback, approved: an opt-in replay run.
 
 ## Open questions for the maintainer
 
