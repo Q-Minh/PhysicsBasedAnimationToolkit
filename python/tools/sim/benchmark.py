@@ -27,19 +27,25 @@ Only that error stops a solve, at
 ``--target-reduction`` (default: the highest level) or at its time budget or iteration cap; the solvers'
 own convergence and feasibility tests are bypassed.
 
-Time budgets: ``--budget-from pilot.h5`` sets each case's budget to ``--budget-factor`` (default 2) times
-the ``--budget-statistic`` (default median) of Newton's time to the pilot's highest level in that case.
-The pilot is an earlier results file with Newton, e.g. a Newton-only run with a generous
-``--max-seconds``. Without a pilot, ``--max-seconds`` is every case's budget, as it is for cases where no
-pilot Newton solve reached the level (with a warning; each case records its ``budget_source``). The median
-is the default since Newton's times vary between runs (host synchronization every step) and a single
-slow sample would move the mean.
+Time budgets, per case, in order of precedence (each case records its ``budget`` and ``budget_source``):
+
+1. ``--budget [BENCHMARK[/CASE]=]SECONDS`` (repeatable), the most specific entry first: e.g.
+   ``--budget static=5 --budget static/Y1e8=10``, or ``--budget 5`` for every case.
+2. With ``--budget-from pilot.h5``: ``--budget-factor`` (default 1) times the ``--budget-statistic`` (default
+   median) of Newton's time to the pilot's highest level in that case, at most ``--budget-cap
+   [BENCHMARK[/CASE]=]SECONDS`` (repeatable, same matching). The pilot is an earlier results file with
+   Newton, e.g. a Newton-only run with a generous ``--max-seconds``. The median is the default since
+   Newton's times vary between runs (host synchronization every step) and a single slow sample would
+   move the mean.
+3. ``--max-seconds``: cases with neither, e.g. those where no pilot Newton solve reached the level (with a
+   warning).
 
 Usage:
     python -m python.tools.sim.benchmark --dataset DATASET.h5 [--sets PATTERN ...] -o results.h5 \
         [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] [--levels 0.5,0.6,...,0.99] \
         [--sim-params A.toml [B.h5 ...]] [--scene-params SCENE=C.toml[,D.toml] ...] [--set Table.key=value ...] \
-        [--budget-from pilot.h5 [--budget-factor 2] [--budget-statistic median]] [--max-seconds 60] \
+        [--budget [BENCHMARK[/CASE]=]SECONDS ...] [--budget-from pilot.h5 [--budget-factor 1] \
+        [--budget-statistic median] [--budget-cap [BENCHMARK[/CASE]=]SECONDS ...]] [--max-seconds 60] \
         [--spec spec.h5] [--save-spec spec.h5] [--sample-begin 0] [--sample-end -1] \
         [--max-iterations 1000000] [--target-reduction 0.99] [--block 16]
 
@@ -49,11 +55,13 @@ Representative commands (from the repo root; datasets live in the main checkout'
     python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-test.h5 \
         --sets static/E50 --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.h5
 
-    # Pilot: Newton alone, generous budget; then the benchmark with budgets of 2x Newton's median time to 99%
+    # Pilot: Newton alone, generous budget; then the benchmark with budgets of Newton's median time to 99%,
+    # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere
     python -m python.tools.sim.benchmark --dataset DATASET.h5 --solvers Newton --max-seconds 60 \
         --sim-params python/tools/sim/configs/benchmark/shared.toml -o out/pilot.h5
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 \
-        --sim-params python/tools/sim/configs/benchmark/shared.toml --scene-params Y1e8=y1e8.toml -o out/results.h5
+    python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 --budget static=5 \
+        --budget-cap 3 --sim-params python/tools/sim/configs/benchmark/shared.toml --scene-params Y1e8=y1e8.toml \
+        -o out/results.h5
 
     # The figures
     python -m python.tools.sim.benchmark_plot out/results.h5 -o out/figures/benchmark
@@ -68,7 +76,8 @@ Representative commands (from the repo root; datasets live in the main checkout'
 
 Output: one HDF5 results file (layout in ``benchmark_results.py``'s docstring): the spec, levels, budgets,
 dataset, device, commit and parameter sources; per benchmark, case and solver, each sample's crossing
-times, increments, reached and skipped flags, e0, iterations, sweeps, solver time, final relative error,
+times, increments, reached and skipped flags, e0, iterations, sweeps, solver time, host time (the solve's
+wall-clock time, including loading and reading back), final relative error,
 termination and full per-iteration log; and per level, the mean, std, min, max, median, quartiles and
 count of the increments and crossing times over the samples that reached it. A solve's ``termination`` is
 ``target`` (reached --target-reduction), ``iteration_cap``, ``time_cap`` (its budget), ``non_finite`` (NaN or
@@ -155,12 +164,19 @@ def parse_args():
     parser.add_argument("--levels", default=",".join(f"{v:g}" for v in results.DEFAULT_LEVELS),
                         help="Accuracy levels, as comma-separated error reductions 1 - e/e0 in (0, 1) "
                         "(default: %(default)s).")
+    parser.add_argument("--budget", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
+                        help="Time budget per solve, in seconds of solver time, for every case, a benchmark (e.g. "
+                        "static=5) or one case (static/Y1e8=10). Repeatable; the most specific entry wins. "
+                        "Takes precedence over --budget-from, which takes precedence over --max-seconds.")
     parser.add_argument("--budget-from", default=None, dest="budget_from",
-                        help="Pilot results file (.h5) with Newton's solves of every case: each case's time "
-                        "budget is --budget-factor times Newton's --budget-statistic time to the pilot's highest "
-                        "level. Without it, --max-seconds is every case's budget.")
-    parser.add_argument("--budget-factor", type=float, default=2.0, dest="budget_factor",
+                        help="Pilot results file (.h5) with Newton's solves: the budget of a case without --budget "
+                        "is --budget-factor times Newton's --budget-statistic time to the pilot's highest level, "
+                        "at most --budget-cap. Cases the pilot lacks get --max-seconds.")
+    parser.add_argument("--budget-factor", type=float, default=1.0, dest="budget_factor",
                         help="Multiple of the pilot's Newton time (default: %(default)s).")
+    parser.add_argument("--budget-cap", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
+                        dest="budget_cap",
+                        help="Upper limit on the pilot-derived budgets, matched like --budget. Repeatable.")
     parser.add_argument("--budget-statistic", choices=results.BUDGET_STATISTICS, default="median",
                         dest="budget_statistic",
                         help="Statistic of the pilot's Newton times over its samples that reached the level "
@@ -174,8 +190,8 @@ def parse_args():
     parser.add_argument("--sample-end", type=int, default=None, dest="sample_end",
                         help="One past the last sample index; -1 means all samples (spec default: -1).")
     parser.add_argument("--max-seconds", type=float, default=None, dest="max_seconds",
-                        help="Time budget per solve without --budget-from, in seconds of solver time "
-                        "(spec default: 60).")
+                        help="Time budget per solve of the cases without --budget or a pilot time, in seconds of "
+                        "solver time (spec default: 60).")
     parser.add_argument("--max-iterations", type=int, default=None, dest="max_iterations",
                         help="Iteration cap per solve, counting VBD sweeps, Anderson steps or Newton steps "
                         "(default here: 1,000,000, so the time budget decides).")
@@ -344,17 +360,26 @@ def main():
     unknown = set(scene_params) - {c.scene for c in cases}
     if unknown:
         raise SystemExit(f"--scene-params for scenes not in the run: {', '.join(sorted(unknown))}")
-    # Budgets per (benchmark, case)
+    # Budgets per (benchmark, case): --budget, else the pilot's (capped), else --max-seconds
+    try:
+        direct = results.parse_budget_options(args.budget, "--budget")
+        caps = results.parse_budget_options(args.budget_cap, "--budget-cap")
+    except ValueError as e:
+        raise SystemExit(str(e))
+    pilot = {}
+    pilot_label = ""
     if args.budget_from:
         pilot = results.budgets_from_pilot(args.budget_from, args.budget_factor, args.budget_statistic)
-        missing = [f"{c.benchmark}/{c.case}" for c in cases if (c.benchmark, c.case) not in pilot]
-        if missing:
-            print(f"Warning: {args.budget_from} has no Newton solve reaching its highest level for "
-                  f"{', '.join(missing)}; their budget is --max-seconds ({spec.max_seconds:g} s)")
-        pilot_source = f"{args.budget_factor:g} x {args.budget_statistic} Newton time in {args.budget_from}"
-    else:
-        pilot = {}
-        pilot_source = ""
+        pilot_label = f"{args.budget_factor:g} x {args.budget_statistic} Newton time in {args.budget_from}"
+    budgets = {}
+    for c in cases:
+        budgets[(c.benchmark, c.case)] = results.resolve_budget(
+            c.benchmark, c.case, direct, caps, pilot, spec.max_seconds, pilot_label
+        )
+    missing = [f"{b}/{c}" for (b, c), (_, source) in budgets.items() if args.budget_from and source == "--max-seconds"]
+    if missing:
+        print(f"Warning: {args.budget_from} has no Newton solve reaching its highest level for "
+              f"{', '.join(missing)}; their budget is --max-seconds ({spec.max_seconds:g} s)")
     with h5py.File(spec.dataset, "r") as f:
         dataset_attrs = {k: _attr(v) for k, v in f.attrs.items()}
 
@@ -367,7 +392,8 @@ def main():
             levels=np.array(levels),
             budget_factor=args.budget_factor if args.budget_from else math.nan,
             budget_statistic=args.budget_statistic if args.budget_from else "",
-            budget_source=pilot_source or "--max-seconds",
+            budget_pilot=args.budget_from or "",
+            budget_options=" ".join([f"--budget {b}" for b in args.budget] + [f"--budget-cap {b}" for b in args.budget_cap]),
             dataset=spec.dataset,
             device=wp.get_device().name,
             git_commit=_git_commit(),
@@ -383,6 +409,7 @@ def main():
         groups = {}
         for c in cases:
             budget = pilot.get((c.benchmark, c.case))
+            seconds, source = budgets[(c.benchmark, c.case)]
             groups[c.set_name] = results.require_case(h5f, c.benchmark, c.case, {
                 "benchmark": c.benchmark,
                 "problem": c.batch.problem,
@@ -391,11 +418,8 @@ def main():
                 "label": c.label,
                 "energy": c.batch.target_energy,
                 "set": c.set_name,
-                "budget": budget["budget"] if budget else float(spec.max_seconds),
-                "budget_source": (
-                    f"{args.budget_factor:g} x {args.budget_statistic} Newton time to {budget['level']:g} "
-                    f"in {args.budget_from}" if budget else "--max-seconds"
-                ),
+                "budget": seconds,
+                "budget_source": source,
                 "budget_reference_time": budget["reference_time"] if budget else None,
                 "budget_reference_reached": f"{budget['reached']}/{budget['n_samples']}" if budget else None,
                 "scene_params": ",".join(scene_params.get(c.scene, [])),
@@ -420,11 +444,14 @@ def main():
                     runner = static.BenchmarkSolver(state, solver, case_spec)
                     summaries, logs = [], []
                     for s in indices:
+                        t_host = time.perf_counter()
                         if batch.problem == "dynamic":
                             log = runner.solve(batch.x[s], batch.x_ref[s], batch.v[s], batch.xtilde[s])
                         else:
                             log = runner.solve(batch.x[s])
+                        t_host = time.perf_counter() - t_host
                         summary = summarize(log, levels, case_spec.max_seconds)
+                        summary["host_time"] = t_host
                         summary["sample"] = int(s)
                         summary["deformation_energy"] = float(batch.energy[s])
                         if batch.min_J is not None:
