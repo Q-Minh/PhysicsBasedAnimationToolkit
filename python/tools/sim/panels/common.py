@@ -13,12 +13,12 @@ def try_draw_tooltip(obj, name):
         imgui.EndTooltip()
 
 
-def draw_params(obj, sub_params: dict | None = None, _depth=0, exclude=frozenset()):
+def draw_params(obj, sub_params: dict | None = None, _depth=0, exclude=frozenset(), only=None):
     """Draw widgets for the settable scalar and enum attributes of ``obj``, recursing into nested
     objects (or only into ``sub_params``, if given). Attributes named in ``exclude`` are skipped at
-    every depth."""
+    every depth. If ``only`` is given, ``obj``'s own attributes outside it are skipped too."""
     for name, value in inspect.getmembers(obj):
-        if name.startswith("_") or name in exclude:
+        if name.startswith("_") or name in exclude or (only is not None and name not in only):
             continue
         if (
             isinstance(getattr(type(obj), name, None), property)

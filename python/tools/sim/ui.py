@@ -129,11 +129,21 @@ def make_callback(
                         state.reset()
                         ui_state.request_reset = True
                     if imgui.TreeNode("Params"):
-                        draw_params(
-                            state.params_cpu[state.solver],
-                            SOLVER_SUB_PARAMS.get(state.solver),
-                            exclude=SOLVER_HIDDEN_PARAMS.get(state.solver, frozenset()),
-                        )
+                        params_cpu = state.params_cpu[state.solver]
+                        if state.solver == SolverType.AAAVBD:
+                            # AAAVBD's own parameters at the top (its GPU-only fields, then the stencil
+                            # gradient acceleration fields of the wrapped vbd::Params); the fields it
+                            # shares with VBD stay in the vbd_params sub-tree
+                            stencil = gpu.vbd.params.STENCIL_GRADIENT_ACCELERATION_KEYS
+                            draw_params(params_cpu, exclude=frozenset({"vbd_params"}))
+                            draw_params(params_cpu.vbd_params, only=stencil)
+                            draw_params(params_cpu, SOLVER_SUB_PARAMS[state.solver], exclude=stencil)
+                        else:
+                            draw_params(
+                                params_cpu,
+                                SOLVER_SUB_PARAMS.get(state.solver),
+                                exclude=SOLVER_HIDDEN_PARAMS.get(state.solver, frozenset()),
+                            )
                         # Own ID scopes: Newton's params have a linear_solver combo at this level
                         if state.solver == SolverType.Newton:
                             imgui.PushID("newton_linear_solver_params")
