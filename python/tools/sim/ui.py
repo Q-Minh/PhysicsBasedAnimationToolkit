@@ -141,12 +141,12 @@ def make_callback(
                                 draw_params(state.newton_linear_solver_params)
                                 imgui.TreePop()
                             imgui.PopID()
-                        else:
-                            imgui.PushID("convergence_params")
-                            if imgui.TreeNode("Convergence"):
-                                draw_params(state.convergence_params)
-                                imgui.TreePop()
-                            imgui.PopID()
+                        # Shared by every solver, Newton included (check_interval is VBD-family only)
+                        imgui.PushID("convergence_params")
+                        if imgui.TreeNode("Convergence"):
+                            draw_params(state.convergence_params)
+                            imgui.TreePop()
+                        imgui.PopID()
                         imgui.TreePop()
                     imgui.TreePop()
 
