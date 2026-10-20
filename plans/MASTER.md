@@ -295,8 +295,8 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold | 2026-10-19 | feature/profiling-tool-discovery merged (006e7450). Waiting for the next task |
-| 3 | on hold | 2026-10-18 | All work merged, including GPU Newton contact fixes (fa325a89: feasibility outer test, stream-race fix, Hessian-based penalty adaptation, roundoff-tolerant Armijo; friction stays C++'s) |
+| 2 | ready to merge | 2026-10-19 | feature/report-without-gpu (2 commits): profiling report/overheads load no warp/cupy/pbatoolkit/h5py/nvtx; reports byte-identical |
+| 3 | in progress | 2026-10-19 | Per-step solve statuses in the GUI and headless runs, branch `feature/solve-status` |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -757,6 +757,10 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-19 · coordinator · **Merged `feature/aaavbd-ablation-params`** (task 2, `30fe7778`): GPU-only AAAVBD `betaup` (default 1) and `lipschitz_normalization` (default on) via `AaaVbdCpuParams`; defaults bit-identical on the beam and trampoline. Newton CG defaults are now rtol 1e-6 / 500 iterations (maintainer). Paper configs regenerated for both (`167b661c`, `0c92b14b`); 19/19 load bit-identically, raw audit clean. End of the 2026-10-18 session: all tasks on hold.
 - 2026-10-19 · task 2 · **GPU run START** (~5 min, correctness only): tiny nsys run and ncu run/summarize (a few beam steps) to check the nsys/ncu discovery. Will log END.
 - 2026-10-19 · task 2 · **GPU run END** (nsys/ncu discovery checks).
+- 2026-10-19 · task 3 · **GPU run START** (short, ~10 min total; correctness + an nsys API count and production timing, so please keep the GPU quiet briefly): solve-status checks, VBD/AAAVBD bit-identity vs dev on the beam and BeamFallingOnBeam (20-30 steps each). Will log END.
+- 2026-10-19 · task 2 · **GPU run START** (~2 min, correctness only): one tiny simulate.py --profile kernels run (report-without-gpu check). Will log END.
+- 2026-10-19 · task 3 · **GPU run END** (solve-status checks): VBD/AAAVBD positions bit-identical to dev (beam 20 steps, BeamFallingOnBeam 30); nsys, 10 graph-replayed VBD beam steps: identical sync calls (40 cudaStreamSynchronize, 11 cuCtxSynchronize, 10 cuEventSynchronize), graph launches (10) and kernels (14340), plus 1 async 24-byte D2H memcpy per step; production step time unchanged (median 4.0/4.0 ms dev vs 3.8/4.0 ms branch).
+- 2026-10-19 · task 2 · **GPU run END** (report-without-gpu check).
 
 ## Open questions for the maintainer
 
