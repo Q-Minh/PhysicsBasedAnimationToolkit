@@ -16,6 +16,9 @@ Per step and scope path, the result holds:
 plus ``step_union_ms`` (union over the whole step) and ``step_span_ms`` (first activity start to last
 activity end).
 
+``nsys`` is located by :func:`nsight.find_tool`: ``--nsys path/to/nsys``, else the ``NSYS`` environment
+variable, else ``PATH``, else the standard install locations.
+
 Usage (from the repo root):
 
     python -m python.tools.sim.profiling.nsys run -o out/aaavbd -- \\
@@ -31,11 +34,9 @@ import subprocess
 import sys
 
 from . import results
+from .nsight import find_tool
 from ..gpu.common.profiling import inclusive_union_ns, interval_union_ns
 
-DEFAULT_NSYS = (
-    r"C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.1.3\target-windows-x64\nsys.exe"
-)
 _NVTX_PUSH_POP_RANGE = 59
 _NVTX_DOMAIN_CREATE = 75
 _DOMAIN = "pbat"
@@ -251,20 +252,21 @@ def _base_python() -> str:
 
 
 def profile(
-    out_prefix: str, simulate_args: list[str], nsys: str, graph: bool = False
+    out_prefix: str, simulate_args: list[str], nsys: str | None = None, graph: bool = False
 ) -> tuple[str, str]:
     """Run ``simulate.py`` under Nsight Systems, limited to the measured steps, and export SQLite.
 
     Args:
         out_prefix (str): Prefix for the outputs ``.nsys-rep``, ``.sqlite`` and ``.json``.
         simulate_args (list[str]): Arguments for ``python.tools.sim.simulate``.
-        nsys (str): Path to ``nsys.exe``.
+        nsys (str | None): Path to the ``nsys`` executable, or None to locate it (:func:`nsight.find_tool`).
         graph (bool): Profile production steps (CUDA graph replay, profiling off) with per-node
             graph tracing, instead of eager NVTX-scoped steps.
 
     Returns:
         tuple[str, str]: The SQLite export and the JSON that ``simulate.py --profile-out`` wrote.
     """
+    nsys = find_tool("nsys", nsys)
     out_json = out_prefix + ".json"
     profile_args = ["--profile-out", out_json] + ([] if graph else ["--profile", "nvtx"])
     venvrun = os.path.join(os.path.dirname(__file__), "venvrun.py")
@@ -303,7 +305,7 @@ def profile(
     return out_prefix + ".sqlite", out_json
 
 
-def run(out_prefix: str, simulate_args: list[str], nsys: str) -> dict:
+def run(out_prefix: str, simulate_args: list[str], nsys: str | None = None) -> dict:
     """Profile ``simulate.py --profile nvtx`` under Nsight Systems and import the result into
     ``out_prefix.json`` (see :func:`profile`)."""
     sqlite, out_json = profile(out_prefix, simulate_args, nsys)
@@ -319,7 +321,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     p_run = sub.add_parser("run", help="Profile simulate.py under nsys and import the result.")
     p_run.add_argument("-o", "--out", required=True, help="Output prefix.", dest="out")
-    p_run.add_argument("--nsys", default=DEFAULT_NSYS, help="Path to nsys.exe.")
+    p_run.add_argument("--nsys", default=None, help="Path to the nsys executable (default: $NSYS, PATH, then the standard install locations).")
     p_run.add_argument("simulate_args", nargs=argparse.REMAINDER, help="-- simulate.py arguments")
     p_import = sub.add_parser("import", help="Import an nsys SQLite export.")
     p_import.add_argument("sqlite")

@@ -12,6 +12,9 @@ With ``--lineinfo``, kernels are compiled with line information, and the summary
 warp stall samples, stall reasons and executed instructions per line of the Warp (Python) source,
 including inlined helper functions, and per source file.
 
+``ncu`` is located by :func:`nsight.find_tool`: ``--ncu path/to/ncu``, else the ``NCU`` environment
+variable, else ``PATH``, else the standard install locations.
+
 Usage (from the repo root; Warp kernel names start with an underscore):
 
     python -m python.tools.sim.profiling.ncu run -o out/aaavbd_ncu --kernel ^_accelerated_vertex_solve \\
@@ -29,9 +32,7 @@ import statistics
 import subprocess
 import sys
 
-DEFAULT_NCU = (
-    r"C:\Program Files\NVIDIA Corporation\Nsight Compute 2026.2.1\target\windows-desktop-win7-x64\ncu.exe"
-)
+from .nsight import find_tool
 
 # (label, section, metric) from the "details" page.
 _DETAILS = [
@@ -78,8 +79,10 @@ def _csv(ncu: str, report: str, page: str, *extra: str) -> list[list[str]]:
     return list(csv.reader(io.StringIO(out)))
 
 
-def summarize(report: str, ncu: str = DEFAULT_NCU) -> dict:
-    """Mean metrics over the profiled launches of an ``.ncu-rep`` report."""
+def summarize(report: str, ncu: str | None = None) -> dict:
+    """Mean metrics over the profiled launches of an ``.ncu-rep`` report. ``ncu`` is the executable's
+    path, or None to locate it (:func:`nsight.find_tool`)."""
+    ncu = find_tool("ncu", ncu)
     rows = _csv(ncu, report, "details")
     header = rows[0]
     col = {name: i for i, name in enumerate(header)}
@@ -149,7 +152,7 @@ def _enclosing_function(path: str, line: int) -> str:
     return next((name for lo, hi, name in _function_cache[path] if lo <= line <= hi), "(module)")
 
 
-def source_hotspots(report: str, ncu: str = DEFAULT_NCU, top: int = 30) -> dict:
+def source_hotspots(report: str, ncu: str | None = None, top: int = 30) -> dict:
     """Stall samples, stall reasons and executed instructions by source location, from the source page
     of a report recorded with line information. Values are summed over launches.
 
@@ -157,7 +160,9 @@ def source_hotspots(report: str, ncu: str = DEFAULT_NCU, top: int = 30) -> dict:
     header. ``python_lines`` and ``functions`` instead fold each native-header instruction into the
     nearest preceding instruction (by address) that maps to a simulator source line, its likely
     caller, since inlined code is laid out next to the code that calls it. That folding is a heuristic.
+    ``ncu`` is the executable's path, or None to locate it (:func:`nsight.find_tool`).
     """
+    ncu = find_tool("ncu", ncu)
     rows = _csv(ncu, report, "source", "--print-source", "cuda,sass")
     keys = ("samples", "instructions") + _STALL_COLUMNS
     col: dict[str, int] = {}
@@ -243,11 +248,13 @@ def run(
     skip: int,
     count: int,
     simulate_args: list[str],
-    ncu: str,
+    ncu: str | None = None,
     lineinfo: bool = False,
 ) -> dict:
     """Profile matching kernel launches of simulate.py under Nsight Compute and summarize them, with
-    source hotspots if ``lineinfo``."""
+    source hotspots if ``lineinfo``. ``ncu`` is the executable's path, or None to locate it
+    (:func:`nsight.find_tool`)."""
+    ncu = find_tool("ncu", ncu)
     venvrun = os.path.join(os.path.dirname(__file__), "venvrun.py")
     subprocess.run(
         [
@@ -279,6 +286,9 @@ def run(
     return summary
 
 
+_NCU_HELP = "Path to the ncu executable (default: $NCU, PATH, then the standard install locations)."
+
+
 def main():
     """Command line: run (profile and summarize) or summarize (an existing report)."""
     parser = argparse.ArgumentParser(description="Nsight Compute metrics for one simulator kernel")
@@ -288,13 +298,13 @@ def main():
     p_run.add_argument("--kernel", required=True, help="Regex matching the kernel name.")
     p_run.add_argument("--skip", type=int, default=0, help="Matching launches to skip first.")
     p_run.add_argument("--count", type=int, default=1, help="Matching launches to profile.")
-    p_run.add_argument("--ncu", default=DEFAULT_NCU, help="Path to ncu.exe.")
+    p_run.add_argument("--ncu", default=None, help=_NCU_HELP)
     p_run.add_argument("--lineinfo", action="store_true", help="Add per-source-line hotspots.")
     p_run.add_argument("simulate_args", nargs=argparse.REMAINDER, help="-- simulate.py arguments")
     p_sum = sub.add_parser("summarize", help="Summarize an existing .ncu-rep report.")
     p_sum.add_argument("report")
     p_sum.add_argument("-o", "--out", required=True, help="Output .json.", dest="out")
-    p_sum.add_argument("--ncu", default=DEFAULT_NCU, help="Path to ncu.exe.")
+    p_sum.add_argument("--ncu", default=None, help=_NCU_HELP)
     p_sum.add_argument("--lineinfo", action="store_true", help="Add hotspots (report recorded with line info).")
     args = parser.parse_args()
     if args.command == "run":

@@ -223,7 +223,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     p_run = sub.add_parser("run", help="Profile production steps under nsys and analyze them.")
     p_run.add_argument("-o", "--out", required=True, help="Output prefix.", dest="out")
-    p_run.add_argument("--nsys", default=nsys.DEFAULT_NSYS, help="Path to nsys.exe.")
+    p_run.add_argument("--nsys", default=None, help="Path to the nsys executable (default: $NSYS, PATH, then the standard install locations).")
     p_run.add_argument("--phases", default=None, help="Eager profile .json to label phases.")
     p_run.add_argument("simulate_args", nargs=argparse.REMAINDER, help="-- simulate.py arguments")
     p_analyze = sub.add_parser("analyze", help="Analyze a graph-mode nsys SQLite export.")
