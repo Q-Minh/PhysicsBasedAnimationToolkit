@@ -2,12 +2,23 @@
 """
 Write a scene of a plate (in the xy-plane) held by fixed patches on its rim, e.g. the benchmark trampolines.
 
-The plate's mesh is the first body of a source scene. The output has a homogeneous material, gravity along z,
-and one Fixed transform, active forever, on the rim nodes (nodes of sideways boundary faces) within
---half-angle degrees of --patches evenly spaced angles around the plate's center, starting at angle 0.
+The plate's mesh is the first body of a source scene. The output has a homogeneous material (or one Young's
+modulus per region, with --regions-from and --region-youngs), gravity along z, and one Fixed transform, active
+forever, on the rim nodes (nodes of sideways boundary faces) within --half-angle degrees of --patches evenly
+spaced angles around the plate's center, starting at angle 0.
 
 Usage (from the repo root):
-    python -m python.tools.vbd.rim_patch_scene source.h5 scene.h5 --youngs 1e6 [--patches 4] [--half-angle 4]
+    python -m python.tools.vbd.rim_patch_scene source.h5 scene.h5 --youngs 1e6 [--patches 4] [--half-angle 4]         [--regions-from regions.h5 --region-youngs 2=1e8]
+
+The benchmark trampolines (data/scenarios), from the paper's circle trampoline mesh
+(path/to/accelerated-vbd-extras/final_scenes/trampolines; the circle files share one mesh and one region layout:
+region 1 is the outer ring, r > 1, and region 2 the center, r < 1):
+    S=path/to/accelerated-vbd-extras/final_scenes/trampolines/trampoline_circle_stiff-soft.h5
+    for Y in 1e5 1e6 1e7 1e8; do
+        python -m python.tools.vbd.rim_patch_scene $S data/scenarios/trampoline_circle_Y$Y.h5 --youngs $Y
+    done
+    # Heterogeneous: stiff 1e8 center, soft 1e6 outer ring
+    python -m python.tools.vbd.rim_patch_scene $S data/scenarios/trampoline_circle_het.h5 --youngs 1e6         --regions-from $S --region-youngs 2=1e8
 """
 
 import argparse
@@ -44,7 +55,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("source")
     parser.add_argument("output")
-    parser.add_argument("--youngs", type=float, required=True)
+    parser.add_argument(
+        "--youngs", type=float, required=True, help="Young's modulus of the elements not set by --region-youngs"
+    )
+    parser.add_argument(
+        "--regions-from", help="Scene with the same mesh (first body) whose per-element region ids to copy"
+    )
+    parser.add_argument(
+        "--region-youngs", nargs="+", default=[], metavar="R=Y", help="Young's modulus Y of region id R"
+    )
     parser.add_argument("--poisson", type=float, default=0.45)
     parser.add_argument("--density", type=float, default=1000.0)
     parser.add_argument("--gravity", type=float, default=-9.81)
@@ -54,13 +73,25 @@ def main():
     with h5.File(args.source, "r") as f:
         name = str(f[BODY].attrs["name"])
         V, T = f[BODY]["V"][()].astype(float), f[BODY]["T"][()].astype(np.int64)
+    n_elements = T.shape[0]
+    R, Ye = None, np.full(n_elements, args.youngs)
+    if args.regions_from is not None:
+        with h5.File(args.regions_from, "r") as f:
+            same = f[BODY]["V"].shape == V.shape and f[BODY]["T"].shape == T.shape
+            if not (same and np.array_equal(f[BODY]["V"][()], V) and np.array_equal(f[BODY]["T"][()], T)):
+                raise ValueError(f"{args.regions_from}: its first body's mesh differs from {args.source}'s")
+            R = f[BODY]["R"][()].astype(np.int64)
+    elif args.region_youngs:
+        raise ValueError("--region-youngs needs --regions-from")
+    for item in args.region_youngs:
+        r, y = item.split("=")
+        Ye[R == int(r)] = float(y)
     rim = rim_nodes(V, T)
     groups = patches(V, rim, args.patches, args.half_angle)
     fixed = np.sort(np.concatenate(groups))
-    n_elements = T.shape[0]
     body = TetrahedralElastodynamicsBody()
     body.on_mesh_loaded(
-        name, V, T, None, np.full(n_elements, args.youngs), np.full(n_elements, args.poisson),
+        name, V, T, R, Ye, np.full(n_elements, args.poisson),
         np.full(n_elements, args.density), np.zeros((n_elements, 3)), np.array([0.0, 0.0, args.gravity]),
         np.zeros_like(V), headless=True,
     )
@@ -82,6 +113,9 @@ def main():
         f"Wrote {args.output}: {V.shape[0]} nodes, {n_elements} elements, {rim.size} rim nodes, "
         f"{fixed.size} fixed ({fixed.size / rim.size:.1%} of the rim) in patches of {[g.size for g in groups]}"
     )
+    if R is not None:
+        for r in np.unique(R):
+            print(f"  region {r}: {(R == r).sum()} elements, Young's modulus {np.unique(Ye[R == r])}")
 
 
 if __name__ == "__main__":
