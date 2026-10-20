@@ -1,6 +1,6 @@
 """Browses a benchmark dataset file written by make_benchmark.py in Polyscope.
 
-Pick a problem set (static, or dynamic with time step h), a total energy E and a problem, and see:
+Pick a scene, a problem set (static, or dynamic with time step h), a total energy E and a problem, and see:
 
     start state x       the problem's initial shape, colored by displacement |x - X| or by det(F) (red/blue
                         diverging around 1; values <= 0 are inverted elements),
@@ -13,10 +13,10 @@ Pick a problem set (static, or dynamic with time step h), a total energy E and a
 with the problem's energies (E, U, K = E - U), inversion diagnostics and reference-solve statistics, and the pool's
 quality (split R-hat, ESS) and distribution of U / E, on which the selected problem is marked.
 
-The mesh connectivity and Dirichlet nodes come from the dataset's stored FemElastoDynamics (its fem group).
+The mesh connectivity and Dirichlet nodes come from the scene's stored FemElastoDynamics (its <scene>/fem group).
 
 Usage:
-    python benchmark_browser.py -d path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample.h5
+    python benchmark_browser.py -d path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5
 """
 
 import argparse
@@ -30,25 +30,38 @@ import polyscope.imgui as imgui
 import modalrom
 
 
-def scan_dataset(path: str) -> typing.Dict[str, typing.List[typing.Tuple[float, str]]]:
-    """Lists the problem sets of a dataset file by kind.
+def scan_dataset(path: str) -> typing.Dict[str, typing.Dict[str, typing.List[typing.Tuple[float, str]]]]:
+    """Lists the problem sets of a dataset file by scene and kind.
 
     Args:
         path (str): Dataset file, as written by make_benchmark.py's --output.
 
     Returns:
-        typing.Dict[str, typing.List[typing.Tuple[float, str]]]: Problem kind ("static", "dynamic_h{h}") to its
-        (total energy, set group) pairs sorted by energy, e.g. "static" to [(50.0, "static/E50")]. Static comes
-        first, then dynamic kinds by increasing h.
+        typing.Dict[str, typing.Dict[str, typing.List[typing.Tuple[float, str]]]]: Scene name (in the dataset's
+        order) to problem kind ("static", "dynamic_h{h}") to its (total energy, set group) pairs sorted by energy,
+        e.g. "Y1e6" to "static" to [(10000.0, "Y1e6/static/E10000")]. Static comes first, then dynamic kinds by
+        increasing h.
     """
-    kinds = {}
+    scenes = {}
     with h5py.File(path, "r") as f:
+        for name in f.attrs.get("scenes", []):
+            scenes[str(name)] = {}
         for group in f.attrs.get("sets", []):
             group = str(group)
-            kind = group.rpartition("/")[0]
-            kinds.setdefault(kind, []).append((float(f[group].attrs["target_energy"]), group))
+            scene = str(f[group].attrs["scene"])
+            kind = group[len(scene) + 1 :].rpartition("/")[0]
+            scenes.setdefault(scene, {}).setdefault(kind, []).append((float(f[group].attrs["target_energy"]), group))
     order = lambda kind: (kind != "static", float(kind[len("dynamic_h") :]) if kind != "static" else 0.0)
-    return {kind: sorted(kinds[kind]) for kind in sorted(kinds, key=order)}
+    return {
+        scene: {kind: sorted(kinds[kind]) for kind in sorted(kinds, key=order)} for scene, kinds in scenes.items() if kinds
+    }
+
+
+def scene_label(path: str, scene: str) -> str:
+    """The scene's display label: its name, followed by its label attribute when it has one."""
+    with h5py.File(path, "r") as f:
+        label = f[scene].attrs.get("label")
+    return scene if label is None else f"{scene} ({label})"
 
 
 def load_problems(path: str, group: str) -> dict:
@@ -117,36 +130,52 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    sets = scan_dataset(args.dataset)
-    if not sets:
+    scenes = scan_dataset(args.dataset)
+    if not scenes:
         parser.error(f"{args.dataset} has no problem sets (not a make_benchmark.py dataset?)")
-    set_names = list(sets)
-    fem = modalrom.load_fem(f"{args.dataset}:fem")
-    E, X = np.asarray(fem.E), np.asarray(fem.X)
-    mass = np.asarray(fem.M()).reshape(-1, 3)  # lumped mass per node and coordinate
-    egU, GNegU = fem.egU, fem.GNegU
-    dirichlet = np.asarray(fem.dirichlet_nodes)
+    scene_names = list(scenes)
+    scene_labels = [scene_label(args.dataset, name) for name in scene_names]
 
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
-    start = ps.register_volume_mesh("start state x", X.T, E.T)
-    rest = ps.register_volume_mesh("rest shape X", X.T, E.T, transparency=0.2, color=(0.6, 0.6, 0.6))
-    target = ps.register_volume_mesh(
-        "inertial target x~", X.T, E.T, transparency=0.35, color=(0.95, 0.6, 0.2), enabled=False
-    )
-    reference = ps.register_volume_mesh(
-        "reference x*", X.T, E.T, transparency=0.5, color=(0.2, 0.75, 0.4), enabled=False
-    )
-    if dirichlet.size:
-        ps.register_point_cloud("Dirichlet nodes", X.T[dirichlet], radius=0.003, color=(0.1, 0.1, 0.1))
-
     colorings = ["Displacement |x - X| (m)", "det F"]
-    state = dict(set_idx=0, energy_idx=0, problem=0, coloring=0, data=None, key=None, shares=None)
+    state = dict(scene_idx=0, set_idx=0, energy_idx=0, problem=0, coloring=0, data=None, key=None, shares=None,
+                 scene=None)
+    mesh = {}
+
+    def show_scene(name: str, fem_group: str):
+        """Loads the scene's FEM and registers its meshes, replacing the previous scene's."""
+        fem = modalrom.load_fem(f"{args.dataset}:{fem_group}")
+        E, X = np.asarray(fem.E), np.asarray(fem.X)
+        mesh.update(
+            E=E,
+            mass=np.asarray(fem.M()).reshape(-1, 3),  # lumped mass per node and coordinate
+            egU=fem.egU,
+            GNegU=fem.GNegU,
+            start=ps.register_volume_mesh("start state x", X.T, E.T),
+            rest=ps.register_volume_mesh("rest shape X", X.T, E.T, transparency=0.2, color=(0.6, 0.6, 0.6)),
+            target=ps.register_volume_mesh(
+                "inertial target x~", X.T, E.T, transparency=0.35, color=(0.95, 0.6, 0.2), enabled=False
+            ),
+            reference=ps.register_volume_mesh(
+                "reference x*", X.T, E.T, transparency=0.5, color=(0.2, 0.75, 0.4), enabled=False
+            ),
+        )
+        dirichlet = np.asarray(fem.dirichlet_nodes)
+        if dirichlet.size:
+            ps.register_point_cloud("Dirichlet nodes", X.T[dirichlet], radius=0.003, color=(0.1, 0.1, 0.1))
+        elif ps.has_point_cloud("Dirichlet nodes"):
+            ps.remove_point_cloud("Dirichlet nodes")
+        state["scene"] = name
 
     def select():
-        """Loads the selected file if it changed and updates the meshes for the selected problem."""
+        """Loads the selected scene and set if they changed and updates the meshes for the selected problem."""
+        scene = scene_names[state["scene_idx"]]
+        sets = scenes[scene]
+        set_names = list(sets)
+        state["set_idx"] = min(state["set_idx"], len(set_names) - 1)
         name = set_names[state["set_idx"]]
         state["energy_idx"] = min(state["energy_idx"], len(sets[name]) - 1)
         energy, group = sets[name][state["energy_idx"]]
@@ -154,17 +183,20 @@ if __name__ == "__main__":
             state["data"] = load_problems(args.dataset, group)
             state["key"] = group
             state["shares"] = pool_energy_shares(args.dataset, str(state["data"]["attrs"].get("pool", "")), energy)
+        if state["scene"] != scene:
+            show_scene(scene, str(state["data"]["attrs"]["fem"]))
         data = state["data"]
         state["problem"] = min(state["problem"], data["x"].shape[0] - 1)
         s = state["problem"]
         x = data["x"][s]
+        start = mesh["start"]
         start.update_vertex_positions(x)
         if state["coloring"] == 0:
             start.add_scalar_quantity(
                 "color", np.linalg.norm(x - data["X"], axis=1), defined_on="vertices", enabled=True, cmap="viridis"
             )
         else:
-            detF = modalrom.deformation_gradient_determinants(E, egU, GNegU, x.ravel())
+            detF = modalrom.deformation_gradient_determinants(mesh["E"], mesh["egU"], mesh["GNegU"], x.ravel())
             start.add_scalar_quantity(
                 "color", detF, defined_on="cells", enabled=True, cmap="coolwarm", vminmax=(0.0, 2.0)
             )
@@ -172,14 +204,19 @@ if __name__ == "__main__":
             start.add_vector_quantity("velocity v", data["v"][s], defined_on="vertices", enabled=True)
         dynamic = "xtilde" in data
         if dynamic:
-            target.update_vertex_positions(data["xtilde"][s])
-            reference.update_vertex_positions(data["x_ref"][s])
+            mesh["target"].update_vertex_positions(data["xtilde"][s])
+            mesh["reference"].update_vertex_positions(data["x_ref"][s])
         else:
-            target.set_enabled(False)
-            reference.set_enabled(False)
+            mesh["target"].set_enabled(False)
+            mesh["reference"].set_enabled(False)
 
     def callback():
         changed_any = False
+        changed, state["scene_idx"] = imgui.Combo("Scene", state["scene_idx"], scene_labels)
+        changed_any |= changed
+        sets = scenes[scene_names[state["scene_idx"]]]
+        set_names = list(sets)
+        state["set_idx"] = min(state["set_idx"], len(set_names) - 1)
         changed, state["set_idx"] = imgui.Combo("Problem set", state["set_idx"], set_names)
         changed_any |= changed
         name = set_names[state["set_idx"]]
@@ -216,15 +253,15 @@ if __name__ == "__main__":
             v = data["v"][s]
             step = np.linalg.norm(data["x_ref"][s] - data["x"][s], axis=1).max()
             imgui.Text(f"h = {h:g} s: |h v| max {h * np.linalg.norm(v, axis=1).max():.3g} m, |x* - x| max {step:.3g} m")
-            e0 = np.sqrt(np.sum(mass * (data["x"][s] - data["x_ref"][s]) ** 2))
+            e0 = np.sqrt(np.sum(mesh["mass"] * (data["x"][s] - data["x_ref"][s]) ** 2))
             imgui.Text(
                 f"Reference: {int(data['ref_newton_iterations'][s])} Newton iterations, accuracy "
                 f"{float(data['ref_error_mnorm'][s]) / e0:.1e} e0 (e0 = |x - x*|_M), "
                 f"min det F {float(data['ref_min_J'][s]):.3f}"
             )
-            target.set_enabled(imgui.Checkbox("Show inertial target x~", target.is_enabled())[1])
-            reference.set_enabled(imgui.Checkbox("Show reference x*", reference.is_enabled())[1])
-        rest.set_enabled(imgui.Checkbox("Show rest shape X", rest.is_enabled())[1])
+            for key, label in [("target", "Show inertial target x~"), ("reference", "Show reference x*")]:
+                mesh[key].set_enabled(imgui.Checkbox(label, mesh[key].is_enabled())[1])
+        mesh["rest"].set_enabled(imgui.Checkbox("Show rest shape X", mesh["rest"].is_enabled())[1])
 
         imgui.Separator()
         rhat = attrs.get("rhat")

@@ -105,5 +105,17 @@ class TestSamplingPlan(unittest.TestCase):
         self.assertEqual(plans, [make_benchmark.SamplingPlan("pools/pool", False, True, False)])
 
 
+class TestParseScene(unittest.TestCase):
+    def test_named_and_default_names(self):
+        self.assertEqual(make_benchmark.parse_scene("Y1e6=C:/data/t.h5"), ("Y1e6", "C:/data/t.h5"))
+        self.assertEqual(make_benchmark.parse_scene("C:/data/trampoline_circle_Y1e6.h5"), ("trampoline_circle_Y1e6", "C:/data/trampoline_circle_Y1e6.h5"))
+        self.assertEqual(make_benchmark.parse_scene("C:/data/beam.Dump.h5:fem"), ("beam.Dump", "C:/data/beam.Dump.h5:fem"))
+
+    def test_rejects_names_reserved_by_paths(self):
+        for spec in ["a/b=t.h5", "a:b=t.h5", "=t.h5"]:
+            with self.assertRaises(ValueError):
+                make_benchmark.parse_scene(spec)
+
+
 if __name__ == "__main__":
     unittest.main()
