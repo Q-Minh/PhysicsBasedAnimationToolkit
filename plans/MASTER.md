@@ -295,8 +295,8 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | ready to merge | 2026-10-19 | feature/report-without-gpu (2 commits): profiling report/overheads load no warp/cupy/pbatoolkit/h5py/nvtx; reports byte-identical |
-| 3 | in progress | 2026-10-19 | Per-step solve statuses in the GUI and headless runs, branch `feature/solve-status` |
+| 2 | on hold | 2026-10-19 | feature/report-without-gpu merged (feb00581). Waiting for the next task |
+| 3 | ready to merge | 2026-10-19 | `feature/solve-status` (6 commits on dev c36cf8ce): per-solve statuses recorded by the existing convergence kernels (no new nodes/syncs), Newton host records, StatusLog, simulate.py solve_status/ + summary, GUI panel, docs |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
