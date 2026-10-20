@@ -19,14 +19,14 @@ per-iteration log (entry j is the state after j iterations, with cumulative solv
 Results file layout (HDF5, ``FORMAT``):
 
     /                                attrs: format, version, levels, budget_factor, budget_statistic,
-                                     budget_source, dataset, device, git_commit, date, sim_params,
-                                     newton_cg_* (Newton's CG limits)
+                                     budget_pilot, budget_options, dataset, device, git_commit, date,
+                                     sim_params, solvers, newton_cg_* (Newton's CG limits)
     /StaticSolveSpec                 the run's spec (static.StaticSolveSpec), attributes
     /dataset_attrs                   the dataset's scalar attributes
     /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, budget,
                                      budget_source, scene_params
     /<benchmark>/<case>/<solver>     attrs: solver, n_samples
-        sample, e0, iterations, sweeps, solver_time, final_relative_error, termination,
+        sample, e0, iterations, sweeps, solver_time, host_time, final_relative_error, termination,
         deformation_energy, [min_J], [reference_error_bound, reference_relative_error_bound]   (S,)
         crossing_time, crossing_iteration, increment, reached, skipped, [resolvable]           (S, L)
         aggregate/{increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}           (L,)
@@ -36,7 +36,10 @@ Results file layout (HDF5, ``FORMAT``):
 entry of the benchmark's figure: a scene, or ``<scene>_E<E>`` when the run holds several energy levels
 of a scene. Times are seconds of solver time. NaN marks unreached levels (``reached`` False); an
 unreached level's ``crossing_iteration`` is -1. Aggregates are over the samples that reached the
-level (``count``); a skipped level counts with a zero increment.
+level (``count``); a skipped level counts with a zero increment. ``host_time`` is the solve's host
+wall-clock time (loading the problem, the replay or Newton loop, reading the log back); minus
+``solver_time``, it is the per-solve overhead outside the timed solve. New per-solve data (e.g. position
+snapshots of an opt-in replay run) goes in new datasets or groups under the solver's group.
 """
 
 from dataclasses import dataclass
@@ -190,6 +193,69 @@ def budgets_from_pilot(
     return out
 
 
+def parse_budget_options(entries: list[str], option: str = "--budget") -> dict:
+    """``[BENCHMARK[/CASE]=]SECONDS`` entries -> {key: seconds}, with key ``None`` for an entry without a
+    target (every case), ``"static"`` for a benchmark, ``"static/Y1e6"`` for one case."""
+    out = {}
+    for entry in entries:
+        key, sep, value = entry.rpartition("=")
+        key = key if sep else None
+        try:
+            seconds = float(value)
+        except ValueError:
+            raise ValueError(f"{option} expects [BENCHMARK[/CASE]=]SECONDS, got {entry!r}") from None
+        if not seconds > 0:
+            raise ValueError(f"{option} needs a positive number of seconds, got {entry!r}")
+        if key in out:
+            raise ValueError(f"{option} given twice for {key or 'every case'}")
+        out[key] = seconds
+    return out
+
+
+def _lookup(table: dict, benchmark: str, case: str):
+    """The most specific entry of a :func:`parse_budget_options` table: case, then benchmark, then all."""
+    for key in (f"{benchmark}/{case}", benchmark, None):
+        if key in table:
+            return key, table[key]
+    return None, None
+
+
+def resolve_budget(
+    benchmark: str,
+    case: str,
+    budgets: dict,
+    caps: dict,
+    pilot: dict,
+    max_seconds: float,
+    pilot_label: str = "pilot",
+) -> tuple[float, str]:
+    """A case's time budget and where it comes from, in order of precedence:
+
+    1. a direct budget (``--budget``), the most specific entry: the case's, its benchmark's, then every case's;
+    2. the pilot's Newton time times the factor (``budgets_from_pilot``), at most the most specific cap
+       (``--budget-cap``);
+    3. ``max_seconds`` (``--max-seconds``).
+
+    Args:
+        budgets, caps: :func:`parse_budget_options` tables.
+        pilot: :func:`budgets_from_pilot` (empty without a pilot).
+
+    Returns:
+        tuple[float, str]: The budget (s) and its source, as stored in the case's ``budget_source``.
+    """
+    key, seconds = _lookup(budgets, benchmark, case)
+    if seconds is not None:
+        return seconds, f"--budget {key + '=' if key else ''}{seconds:g}"
+    entry = pilot.get((benchmark, case))
+    if entry is not None:
+        source = f"{pilot_label}: {entry['reference_time']:g} s to {entry['level']:g}"
+        key, cap = _lookup(caps, benchmark, case)
+        if cap is not None and cap < entry["budget"]:
+            return cap, f"--budget-cap {key + '=' if key else ''}{cap:g} (below {source})"
+        return entry["budget"], source
+    return float(max_seconds), "--max-seconds"
+
+
 # --- Results file ---
 
 
@@ -237,7 +303,7 @@ def write_solver(group: h5py.Group, solver: str, levels, summaries: list[dict], 
     """
     g = group.create_group(solver)
     g.attrs.update(solver=solver, n_samples=len(summaries))
-    scalar_keys = ["sample", "e0", "iterations", "sweeps", "solver_time", "final_relative_error",
+    scalar_keys = ["sample", "e0", "iterations", "sweeps", "solver_time", "host_time", "final_relative_error",
                    "deformation_energy", "min_J", "reference_error_bound", "reference_relative_error_bound"]
     for key in scalar_keys:
         if summaries and all(key in s for s in summaries):
@@ -339,6 +405,29 @@ class TestLevelCrossings(unittest.TestCase):
         self.assertEqual(parse_levels("0.9, 0.5,0.99"), (0.5, 0.9, 0.99))
         with self.assertRaises(ValueError):
             parse_levels("0.5,1.0")
+
+    def test_budget_precedence(self):
+        budgets = parse_budget_options(["static=5", "static/Y1e8=10"])
+        caps = parse_budget_options(["2", "dynamic_h0.01=0.5"], "--budget-cap")
+        pilot = {
+            ("static", "Y1e6"): {"budget": 3.0, "reference_time": 3.0, "level": 0.99},
+            ("dynamic_h0.01", "Y1e6"): {"budget": 0.8, "reference_time": 0.8, "level": 0.99},
+            ("dynamic_h0.0001", "Y1e6"): {"budget": 0.02, "reference_time": 0.02, "level": 0.99},
+            ("dynamic_h0.0001", "Y1e7"): {"budget": 4.0, "reference_time": 4.0, "level": 0.99},
+        }
+        def budget(b, c):
+            return resolve_budget(b, c, budgets, caps, pilot, 60.0)[0]
+        self.assertEqual(budget("static", "Y1e6"), 5.0)  # direct budget over the pilot
+        self.assertEqual(budget("static", "Y1e8"), 10.0)  # the case's own entry first
+        self.assertEqual(budget("dynamic_h0.01", "Y1e6"), 0.5)  # the benchmark's cap
+        self.assertEqual(budget("dynamic_h0.0001", "Y1e6"), 0.02)  # below every cap
+        self.assertEqual(budget("dynamic_h0.0001", "Y1e7"), 2.0)  # the global cap
+        self.assertEqual(budget("dynamic_h0.01", "Y1e7"), 60.0)  # not in the pilot
+        self.assertIn("--budget-cap", resolve_budget("dynamic_h0.01", "Y1e6", budgets, caps, pilot, 60.0)[1])
+        with self.assertRaises(ValueError):
+            parse_budget_options(["static=0"])
+        with self.assertRaises(ValueError):
+            parse_budget_options(["5", "5"])
 
     def test_file_and_budgets(self):
         import os
