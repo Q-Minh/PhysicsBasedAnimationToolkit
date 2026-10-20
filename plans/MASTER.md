@@ -877,6 +877,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · coordinator · **Maintainer: trajectory snapshots may use only a fixed, small amount of GPU memory** (never growing, insignificant next to the solvers). Task 3: a fixed device ring capped at 16 MB by default (configurable), stride doubling inside it, copies outside the timed span, in the normal benchmark run, after the pilot. Fallback, approved: an opt-in replay run.
 - 2026-10-20 · task 4 · **CPU run END** (09:09): data/benchmarks/trampolines-pilot.h5 complete and validated (910 MB; 5 scenes Y1e5/Y1e6/Y1e7/Y1e8/het, 10000 J, 2 problems each in static, dynamic_h0.0001, dynamic_h0.01; pools of 160, split R-hat 1.11-1.28 as expected for pilot pools; reference accuracy <= 1.4e-3 e0; no inverted starts; pool inversions only on Y1e5: 1% static pool, 7% gravity pool). The pool-sizing study is still running (CPU).
 - 2026-10-20 · task 3 · **GPU run START** (~15 min, TIMING: please keep the GPU quiet): static Newton pilot on trampolines-pilot.h5, Newton only, all sets, 30 s budget per solve, CG n_max_iters 500 then 1000. Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (Newton pilot, 2 x ~3.5 min). Results sent to the coordinator.
+- 2026-10-20 · task 3 · **GPU run START** (intermittent, ~15 min, correctness + snapshot-overhead timing; ignore other timings): snapshot ring tests on trampolines-test.h5 (1 sample per set, all solvers, snapshots on vs off). Will log END.
 
 ## Open questions for the maintainer
 
@@ -888,9 +890,18 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 
 Answer when back; each has the coordinator's recommendation.
 
-4. **Static benchmark budget: 5 s or 10 s per solve?** Waits on the static Newton pilot (Newton's time to each level
-   at 10000 J, CG 500 vs 1000). Recommendation: the smallest budget in which Newton reaches 99% on most samples.
-5. **Newton CG cap for the benchmarks: 500 or 1000?** The pilot reports which gives the faster time to 99%.
+4. **Static benchmark budget.** Newton pilot (2 problems/scene, 10000 J), median time to 99%: Y1e5 4.30 s, Y1e6 4.13,
+   Y1e7 3.92, Y1e8 4.12 (3.33 at CG 1000), **het 17.0 s** (14.6 at CG 1000; it reaches ~90% at 4.2 s, 95% at 7 s). A fixed
+   5 s budget leaves het's Newton at 0/N for 99%. **Recommendation:** per-scene budgets = 1x Newton's median time to 99%
+   from the pilot (the default rule, which encodes "must beat Newton"): ~4 s for the homogeneous scenes, ~17 s for het.
+   Static worst case at N = 32: sum of budgets ~33.5 s × 5 solvers × 32 ≈ 1.5 h. Alternatively a fixed 5 s, accepting
+   het's 0/N at 99%, or 5 s with het at 17 s via `--budget static/het=17`.
+5. **Newton CG cap.** **CG 500 wins overall** (sum of 99% medians 33.5 s vs 38.7 s; ~2x faster on Y1e5-Y1e7); CG 1000 is
+   faster only on Y1e8 and het, where inexact steps need many more iterations (het: 52-101 steps at CG 500). Dynamic: same
+   step counts, CG 500 never slower. **Recommendation:** CG 500 everywhere (a per-scene cap or trying 250-300 is possible,
+   but adds tuning). Dynamic 1x budgets at CG 500: h = 1e-2: 0.11 / 0.31 / 0.89 / 0.86 / 0.74 s (Y1e5..het);
+   h = 1e-4: 8-22 ms (one Newton step), where per-solve host overhead (6-16 ms) roughly doubles wall time but not the
+   reported times. Full benchmark run at N = 32, worst case: ~1.5 h static + ~8 min h = 1e-2 + a few min h = 1e-4.
 6. **Problems per scene: N = 16 or 32?** Task 4's estimate (5 scenes, 10000 J, static + both h, pools of 800 from
    4 chains for split R-hat ~1.03; one CPU process): N = 16 ~1.6 h, ~1.8 GB; N = 32 ~2.3 h, ~1.9 GB (pools dominate
    both time, ~11 min/scene, and size). References ~15 s per problem per h. Inversions: only Y1e5 (~2 inverted dynamic
