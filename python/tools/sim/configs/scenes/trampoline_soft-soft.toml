@@ -1,0 +1,18 @@
+# The soft-soft trampolines (homogeneous, Young's modulus 1e6; circle and square, with or without the
+# sphere). The paper has no parameter file for them, so this extends the soft-stiff scene config: the same
+# contact detection scaled to the metre-scale geometry (band 2 cm, max_dist 30 cm), 1 mm margin, adaptive
+# (TIMESTEP) penalty and Inverse vertex solve. The material is homogeneous and soft, so the maintainer's
+# guidance gives about 100 sweeps per step: 5 x 20 (5 outer iterations for contact detection passes).
+extends = ["trampoline_soft-stiff.toml"]
+
+[Solver.AAAVBD]
+n_subproblem_max_iters = 20
+
+[Solver.VBD]
+n_subproblem_max_iters = 20
+
+[Solver.Chebyshev]
+n_subproblem_max_iters = 20
+
+[Solver.AndersonSolver]
+n_subproblem_max_iters = 20
