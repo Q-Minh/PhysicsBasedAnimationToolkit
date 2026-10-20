@@ -63,7 +63,7 @@ python -m python.tools.sim.config show a.toml b.toml --set Solver.VBD.gtol=1e-4
 - **From an HDF5 file**, e.g. a GUI export: `python -m python.tools.sim.config convert params.h5 params.toml`.
 - **From the GUI:** I/O > Export Parameters, with a `.toml` file name.
 
-The checks compare against the code's keys, not against `defaults.toml`. Even so, regenerate `defaults.toml` when you add a parameter, so it stays a complete reference. To regenerate it, write `config.dumps(config.params_dict(state))` from a `SimulationState` built with `state.load_params` (the GPU defaults, which differ from the C++ ones).
+The checks compare against the code's keys, not against `defaults.toml`. Even so, regenerate `defaults.toml` when you add a parameter, so it stays a complete reference. To regenerate it, together with the paper configs: `python -m python.tools.sim.paper_configs make --extras path/to/accelerated-vbd-extras` (it writes `config.dumps(config.params_dict(state))` for a `SimulationState` built with `state.load_params`, i.e. the GPU defaults, which differ from the C++ ones). `python -m python.tools.sim.paper_configs check --extras ...` then verifies the paper configs. That module is temporary (see its docstring).
 
 ## Paper configs
 
@@ -79,6 +79,6 @@ The conversion followed these rules:
 3. Every other key the code serializes but the source lacks takes its code default. The header lists these keys, e.g. `Solver.Convergence.*` (`check_interval`, `ftol`), `Solver.Newton.LinearSolver.*`, `Solver.Newton.spd_correction`, and the GPU-only Anderson keys `linear_solver` and `vbd_iters_per_anderson_iter`.
 4. Keys the code no longer serializes are dropped and listed in the header: since 2026-10-18 the stencil gradient acceleration keys (betaG0, rhohat(S), gammaup(S), gammadown(S), warm_start_beta, surface_stencil_surface_neighbours_only) exist only under `Solver.AAAVBD`, so they're dropped from the VBD, Chebyshev and Anderson tables. The GPU never used them there, so loading is still bit-identical to the `.h5`.
 
-Every paper config is converted from the extras repo's **committed** files. Uncommitted local changes there (e.g. to `beam1e6.GroundTruth.h5`) are ignored, by the maintainer's choice.
+Every paper config is converted, by `python/tools/sim/paper_configs.py`, from the extras repo's **committed** files. Uncommitted local changes there (e.g. to `beam1e6.GroundTruth.h5`) are ignored, by the maintainer's choice.
 
 `parameters/gpu/beam.GroundTruth.Notes.txt` in the extras repository describes how the beam budgets were chosen.
