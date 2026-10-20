@@ -5,6 +5,8 @@
 # positive AL contact margin dmin = 1 mm (the paper file's -1e-4 dates from penetration-only VertexSdf
 # detection): resting vertices stay outside their partner, where the SDF sign is reliable, detection
 # (below dmin + band) starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
+# The penalty is adaptive per time step (the code default, per the maintainer) instead of the paper
+# file's constant gamman.
 extends = ["../paper/celebration.Params_1_5_30.toml"]
 
 [Integration]
@@ -12,6 +14,7 @@ substeps = 1
 
 [Contact.ContactDynamics]
 dmin = 1e-3
+penalty_adaptivity = 1  # TIMESTEP, with the code's gamman_adaptive / gammaf_adaptive
 
 [Solver.AAAVBD]
 n_max_iters = 5
