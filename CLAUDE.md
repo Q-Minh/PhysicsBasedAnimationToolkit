@@ -47,6 +47,10 @@ Rebuilding the Python extension is covered by the `pbat-build` skill.
 
 ## Maintainer preferences
 
+- **No machine-specific absolute paths in tracked files** (code, docstrings, docs, skills, configs, tests): no drive letters, home or install directories, and no backslash-escaped Windows paths. Write repo-relative paths with forward slashes, or `path/to/PhysicsBasedAnimationToolkit/...` when the reader may be elsewhere (e.g. a worktree or `python/examples`), and `path/to/thing` for anything outside the repo (e.g. `path/to/accelerated-vbd-extras/final_scenes/...`).
+- **Find external tools instead of hard-coding them**: a command-line argument, then an environment variable, then `PATH`, then the standard install locations (built from environment variables such as `ProgramFiles`), with a clear error naming the argument if nothing is found.
+- **This machine's locations** (the Python venv, the paper's extras repository) live in the git-ignored `CLAUDE.local.md` at the repo root, which Claude Code loads automatically. If it's missing, ask the user and create it; never copy its contents into tracked files.
+
 - Don't implement anything that wasn't explicitly requested, and don't add speculative abstractions. If unsure, ask.
 - Check with the maintainer before starting long-running tasks or experiments (parameter sweeps, full benchmarks, long simulations). Validate with the smallest run that answers the question, e.g. one static and one dynamic benchmark problem rather than whole sets.
 - Before writing new code, check whether PBAT, Warp, cupy/cuda-cccl, Eigen, etc. already provide the functionality.
