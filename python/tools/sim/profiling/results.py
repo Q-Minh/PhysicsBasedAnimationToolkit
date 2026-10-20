@@ -33,11 +33,14 @@ import enum
 import inspect
 import json
 import subprocess
+from typing import TYPE_CHECKING
 
 import numpy as np
-import warp as wp
 
-from ..gpu.common.profiling import StepProfile, path_ancestors
+from .scope_paths import path_ancestors
+
+if TYPE_CHECKING:
+    from ..gpu.common.profiling import StepProfile
 
 SCHEMA = "pbat-sim-profile/1"
 UNSCOPED = "(unscoped)"
@@ -57,7 +60,7 @@ class ProfileRecorder:
         self.steps: list[dict] = []
         self._kernels: dict[tuple[str, str], list] = {}
 
-    def add_step(self, t: int, profile: StepProfile):
+    def add_step(self, t: int, profile: "StepProfile"):
         """Add one profiled step's timings and accumulate its per-kernel totals."""
         self.steps.append(
             {
@@ -252,6 +255,8 @@ def collect_metadata(state, scene: str, warmup_steps: int) -> dict:
         scene (str): The scene specification (``file.h5:group``).
         warmup_steps (int): Number of initial steps excluded from the measurement.
     """
+    import warp as wp  # only when recording: reading results and reports needs no GPU stack
+
     device = wp.get_device()
     runtime = wp._src.context.runtime
     return {
@@ -310,6 +315,27 @@ class TestScopeTree(unittest.TestCase):
         s = rows[0]
         self.assertEqual((s["self_ms"], s["total_ms"], s["total_launches"], s["union_incl_ms"]), (1.0, 10.0, 13.0, 9.0))
         self.assertEqual(rows[1]["calls"], 3.0)
+
+
+class TestReportImports(unittest.TestCase):
+
+    def test_reports_load_no_gpu_stack(self):
+        """Reading results and writing reports must not import the GPU stack: an older pbatoolkit that
+        ships its own hdf5.dll then breaks h5py, and reporting needs none of it."""
+        import os
+        import sys
+
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), *[os.pardir] * 4))
+        heavy = ["warp", "cupy", "pbatoolkit", "h5py", "nvtx"]
+        code = (
+            "import sys; "
+            "import python.tools.sim.profiling.report, python.tools.sim.profiling.overheads; "
+            f"print([m for m in {heavy!r} if m in sys.modules])"
+        )
+        out = subprocess.run(
+            [sys.executable, "-c", code], cwd=repo_root, capture_output=True, text=True, check=True
+        ).stdout
+        self.assertEqual(out.strip(), "[]")
 
 
 if __name__ == "__main__":
