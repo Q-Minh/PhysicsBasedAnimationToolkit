@@ -18,10 +18,10 @@ rom_mcmc.write_samples). Benchmark datasets are generated with make_benchmark.py
 
 Usage:
     # GUI on a CPU editor scene file
-    python modalrom.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.h5
+    python modalrom.py -i path/to/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5
 
     # GUI on a stored FemElastoDynamics (filepath:h5path), e.g. an editor Dump
-    python modalrom.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\MediumLongBendingBeam.Dump.h5:fem
+    python modalrom.py -i path/to/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem
 
     # Headless, 100 shapes at deformation energy E* = 10 J (polar sampler)
     python modalrom.py -i <scene>.h5 --headless -o batch.h5 --energy 10 --samples 100

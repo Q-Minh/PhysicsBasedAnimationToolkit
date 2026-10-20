@@ -63,7 +63,7 @@ Sampling and the reference solves run on the CPU. The samples' quality is in eac
 
 Usage:
     # Default levels (50, 500, 5000 J), 10 problems each, h = 1e-4 and 1e-2 s
-    python make_benchmark.py -i C:\\git\\PhysicsBasedAnimationToolkit\\data\\scenarios\\trampoline.h5 -o C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline.h5
+    python make_benchmark.py -i path/to/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5 -o path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline.h5
 
     # Chosen energies, problem counts and time steps; e.g. 100 problems at 10000 J from a pool of 2000
     python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --energies 10000 --problems 100 --pool 2000 --dt 1e-4 1e-2

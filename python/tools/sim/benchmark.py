@@ -28,11 +28,11 @@ Usage:
 Representative commands (from the repo root; datasets live in the main checkout's data/benchmarks):
 
     # One static solve: one set, one solver, the first problem, a 5 s cap
-    python -m python.tools.sim.benchmark --dataset C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test.h5 \
+    python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-test.h5 \
         --sets static/E50 --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
 
     # Every dynamic set of one time step (the kind and h come from each set)
-    python -m python.tools.sim.benchmark --dataset C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample.h5 \
+    python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-sample.h5 \
         --sets "dynamic_h0.01/*" --max-seconds 5 -o out/dynamic.json
 
     # Every solver on every problem of the dataset, with the scene's paper parameters

@@ -2,7 +2,7 @@
 
 TOML files that set the GPU simulators' parameters (`ui.py`, `simulate.py`, `benchmark.py`). The code is in `../config.py`.
 
-These files are cached here for now. Their long-term home is `C:\git\accelerated-vbd-extras` (the paper's repository), next to the HDF5 originals in `parameters/gpu`.
+These files are cached here for now. Their long-term home is the paper's repository, `path/to/accelerated-vbd-extras`, next to the HDF5 originals in `parameters/gpu`.
 
 ## Layout
 

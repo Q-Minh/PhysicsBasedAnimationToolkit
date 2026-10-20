@@ -99,12 +99,12 @@ class TestSerializableMixin(unittest.TestCase):
             color = DocField(Color.RED, "An enum")
 
         a = Params()
-        a.name, a.count, a.scale, a.flag, a.color = "C:/data/batch.h5", 7, 0.25, True, Color.BLUE
+        a.name, a.count, a.scale, a.flag, a.color = "path/to/batch.h5", 7, 0.25, True, Color.BLUE
         with h5py.File(f"{uuid.uuid4().hex}.h5", "w", driver="core", backing_store=False) as f:
             a.serialize(f.create_group("p"))
             b = Params()
             b.deserialize(f["p"])
-        self.assertEqual(b.name, "C:/data/batch.h5")
+        self.assertEqual(b.name, "path/to/batch.h5")
         self.assertIsInstance(b.name, str)
         self.assertEqual((b.count, b.scale, b.flag, b.color), (7, 0.25, True, Color.BLUE))
 

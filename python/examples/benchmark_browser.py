@@ -16,7 +16,7 @@ quality (split R-hat, ESS) and distribution of U / E, on which the selected prob
 The mesh connectivity and Dirichlet nodes come from the dataset's stored FemElastoDynamics (its fem group).
 
 Usage:
-    python benchmark_browser.py -d C:\\git\\PhysicsBasedAnimationToolkit\\data\\benchmarks\\trampoline-sample.h5
+    python benchmark_browser.py -d path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample.h5
 """
 
 import argparse
