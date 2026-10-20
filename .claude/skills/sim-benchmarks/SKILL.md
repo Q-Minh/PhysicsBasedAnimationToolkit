@@ -79,6 +79,7 @@ Translating requests:
 | "Use parameters P" / "change key K" / "for scene S" | `--sim-params P.toml ...` / `--set K=V` / `--scene-params S=P.toml` (see the `sim-run` skill; check with `python -m python.tools.sim.config show`) |
 | "Coarser/finer graph blocks" | `--block N` (default 16, rounded up to a multiple of Anderson's m). Iterations a block runs past the stop are dropped, so it doesn't change the results |
 | "Other camera" | `benchmark_plot --elev E --azim A` (defaults 28, -62) |
+| "Trajectories for a video" | `--snapshots`: F = `--snapshot-video-seconds` x `--snapshot-fps` frames (default 5 s x 24 = 120; `--snapshot-frames F` overrides) at equal solver-time intervals over the budget, plus level crossings, for `--snapshot-fraction` of each set's samples (default 1: all; ~F x N x 12 bytes each, ~15 MB on the trampolines; the run prints its disk estimate first). `--snapshot-memory-mb` (default 32) caps the device ring of `--snapshot-ring-ratio` x F slots (default 2) |
 
 `benchmark.py`'s module docstring has the full details.
 
@@ -91,6 +92,7 @@ Translating requests:
   - `aggregate/{increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}` per level, over the samples that reached it;
   - `logs/<sample>/{error,time,sweeps}`: the full per-iteration logs.
 - **Dynamic cases** add each sample's reference accuracy in the error's M-norm (`reference_error_bound`, `reference_relative_error_bound`), from the set's `samples/ref_error_mnorm`, and `resolvable`: the levels that accuracy resolves.
+- **Trajectories** (`--snapshots`): `/<benchmark>/<case>/<solver>/trajectories/<sample>/{iteration, t, t_target, x, level_frames, level_exact}`, with the attribute `playback_factor` = video seconds / budget (how much the video slows solver time down, e.g. 200 at a 25 ms budget), frame k of every solver at solver time k x budget / F (true-speed side-by-side playback), plus the end and each level crossing. About F x N x 12 bytes per solve on disk. Snapshots are taken in the same timed run, outside the timed span, from a fixed device ring (at most `--snapshot-memory-mb`); results are unchanged.
 - **Figures** (`benchmark_plot.py`): per benchmark, `<prefix>_<benchmark>.pdf` and `.png`. x = case, depth = level, height = mean increment / budget, one bar per solver per cell, translucent min-max boxes, `n/N` labels where not every sample reached the level and always at the highest level (also `0/N`, so a stalled solver shows), empty cells where no sample reached the level or every one that did jumped over it.
 
 When comparing solvers, use the time to reach each error level, not the time per iteration. Also report iterations and sweeps. Anderson iterations aren't sweeps when p > 1.
