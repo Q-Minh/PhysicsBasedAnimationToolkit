@@ -13,6 +13,7 @@ import numpy as np
 
 # C++ FemElastoDynamics archive group of a frame in the CPU simulators' trajectories
 _FEM_GROUP = "pbat.sim.dynamics.FemElastoDynamics"
+_WARNING_COLOR = (1.0, 0.75, 0.2, 1.0)
 
 
 class Trajectory:
@@ -25,7 +26,6 @@ class Trajectory:
     _archive: pbat.io.Archive
     _path: str | None
     _field_frames: bool
-    _note: str
     _rest_positions: np.ndarray | None
     _n_element_nodes: int
     _t: int
@@ -43,7 +43,6 @@ class Trajectory:
         self._archive = None
         self._path = None
         self._field_frames = False
-        self._note = ""
         self._rest_positions = None
         self._n_element_nodes = 0
         self._t = 0
@@ -77,8 +76,13 @@ class Trajectory:
             )
             imgui.SameLine()
             _, self._screenshot = imgui.Checkbox("Screenshot", self._screenshot)
-            if self._note:
-                imgui.TextWrapped(self._note)
+            if self._field_frames:
+                imgui.PushStyleColor(imgui.ImGuiCol_Text, _WARNING_COLOR)
+                imgui.TextWrapped(
+                    "Partial frames: only some FemElastoDynamics members are stored. The others are left "
+                    "as they are, except velocities, which are zero when absent."
+                )
+                imgui.PopStyleColor()
 
             if t != self._t or sync:
                 self._t = t
@@ -116,21 +120,11 @@ class Trajectory:
         """1 + the largest node index of a field trajectory's elements (0 if unknown)."""
         return self._n_element_nodes
 
-    @property
-    def note(self) -> str:
-        return self._note
-
-    @note.setter
-    def note(self, value: str):
-        """A note shown under the frame slider, e.g. which fields the current frame had."""
-        self._note = value
-
     def close(self):
         """Forget the loaded trajectory."""
         self._archive = None
         self._path = None
         self._field_frames = False
-        self._note = ""
         self._rest_positions = None
         self._n_element_nodes = 0
         self._dirty = False
@@ -206,7 +200,6 @@ class Trajectory:
                     rest_positions = f["FemElastoDynamics/X"][()]
                     n_element_nodes = int(f["FemElastoDynamics/E"][()].max()) + 1
             self._field_frames = field_frames
-            self._note = ""
             self._rest_positions = rest_positions
             self._n_element_nodes = n_element_nodes
             self._archive = (

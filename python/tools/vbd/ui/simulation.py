@@ -428,22 +428,11 @@ class Simulation:
                 "the trajectory's rest positions differ from the loaded scene's (max difference "
                 f"{np.abs(X[:n] - fem.X.T).max():.3g}). Load the scene that the trajectory was simulated from."
             )
-        loaded, ignored = [], [name for name in fields if name not in _TRAJECTORY_NODAL_FIELDS]
-        for name in present:
-            if fields[name].shape != (n_file, dims):
-                ignored.append(f"{name} {fields[name].shape}")
-                continue
+        loaded = [name for name in present if fields[name].shape == (n_file, dims)]
+        for name in loaded:
             setattr(fem, name, np.asfortranarray(fields[name][:n].T, dtype=fem.x.dtype))
-            loaded.append(name)
-        notes = [f"Frame has {', '.join(loaded) if loaded else 'no FEM fields'}."]
-        if "x" not in loaded:
-            notes.append("Positions unchanged.")
         if "v" not in loaded:
             fem.v = np.zeros_like(fem.v)
-            notes.append("Velocities zero: kinetic energy not meaningful.")
-        if ignored:
-            notes.append(f"Ignored: {', '.join(ignored)}.")
-        self._trajectory.note = " ".join(notes)
 
     def _record_energy(self):
         if self._fem_dynamics is None:
