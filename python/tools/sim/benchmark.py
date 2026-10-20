@@ -52,8 +52,8 @@ Usage:
 Representative commands (from the repo root; datasets live in the main checkout's data/benchmarks):
 
     # One static solve: one set, one solver, the first problem, a 5 s budget
-    python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-test.h5 \
-        --sets static/E50 --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.h5
+    python -m python.tools.sim.benchmark --dataset data/benchmarks/trampolines-test.h5 \
+        --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
     # Pilot: Newton alone, generous budget; then the benchmark with budgets of Newton's median time to 99%,
     # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere
