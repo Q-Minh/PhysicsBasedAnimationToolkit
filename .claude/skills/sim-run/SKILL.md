@@ -144,7 +144,15 @@ Procedurally animated Dirichlet nodes (Fixed, Translate, Rotate, RadialTranslate
 FemElastoDynamics/{X (N,3), E (E,4), lame_mu, lame_lambda, m, dmask}
 sim/<frame:08d>/x                     (N,3) positions per saved frame
 params/                               attrs fps, solver, cd + every parameter group (convertible to TOML)
+solve_status/                         simulate.py only: one row per solve (time step or substep)
+  vbd                                 VBD family: step, substep, solver, outer, sweeps, reason, gradient_ratio,
+                                      feasibility_ratio, max_outer, max_sweeps
+  newton_solves, newton_subproblems   Newton: outer, converged; per subproblem status, newton_steps,
+                                      max_cg_iters, cg_capped, backtracks (+ budgets)
+  attrs solve_end, subproblem_status  enum names of reason / status; lost (solves the ring overwrote)
 ```
+
+**Solve status, for tuning budgets and tolerances.** `simulate.py` prints a summary at the end: how many VBD-family solves converged early vs hit the outer-iteration budget (and whether the gradient test, feasibility or both were unmet), mean/max outer iterations and sweeps against the budget, and the worst final ratios to the tolerances (gradient measure / tolerance, penetration / (`ftol * dmin`); at most 1 passes). For Newton: subproblem statuses (stepped, converged, non-descent, line-search failed), Newton steps, CG iterations and cap hits, and line-search backtracks. The GUI's "Solve status" panel shows the last step per substep and the same summary over a rolling window. A solve that keeps hitting the budget with `gradient_ratio` well above 1 needs more sweeps or outer iterations (or a looser `Solver.Convergence.rtol`); a feasibility ratio above 1 points at contact (penalty, detection). GPU Newton's outer test runs only before each subproblem, so with `n_max_iters = 1` its solves end "not passed" even when the subproblem converged: read the subproblem statuses.
 
 ```python
 import h5py
