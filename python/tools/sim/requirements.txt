@@ -14,3 +14,4 @@ python-statemachine==2.5.0
 tqdm==4.67.1
 gpytoolbox==0.3.7
 tomli-w==1.2.0
+matplotlib==3.11.2
