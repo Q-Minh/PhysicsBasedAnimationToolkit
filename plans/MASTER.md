@@ -305,8 +305,10 @@ yet. **Owner: task 1** (confirmed by the maintainer, 2026-10-18). Branch `featur
   `ensemble = "potential"` and no `qdot`.
 - **Gravity:** off unless the attribute `gravity` (3,) is nonzero, in which case U(q) includes −(M g)ᵀu(q).
   Task 3's static benchmark should use gravity-free batches.
-- **Benchmark dataset** (task 4, `python/examples/make_benchmark.py`; draft, the reported data is still to be
-  fixed). Under one output directory, for each total energy E there are `pool/E{E}.h5` (all pooled
+- **Superseded (2026-10-19) for the file layout** by "Benchmark datasets" above: one file, with pools and sets as
+  groups and `pool` instead of `pool_file`. The per-sample datasets listed here still apply inside each dynamic
+  batch group, plus `samples/ref_error_mnorm`. Old text: **Benchmark dataset** (task 4,
+  `python/examples/make_benchmark.py`; draft, the reported data is still to be fixed). Under one output directory, for each total energy E there are `pool/E{E}.h5` (all pooled
   microcanonical samples), `static/E{E}.h5` (an evenly spaced subset of S problems, today's format with
   `problem = "static"`) and `dynamic_h{h}/E{E}.h5` (the **same** S samples, `problem = "dynamic"`). Problem
   files carry `pool_file` and `pool_indices`. Dynamic files add:
@@ -824,6 +826,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-19 · task 1 · **GPU run START** (~10-15 min, correctness only; ignore timings): scene-config margin (feature/scene-config-margin). AAAVBD with the scene configs, 5 s each, dmin 1e-3 vs -1e-4, on trampoline_circle_soft-stiff/stiff-soft__with_sphere and mat_on_stilts_3 only (no celebration/basket). Will log END.
 - 2026-10-19 · task 1 · **GPU run END** (scene-config margin; also TIMESTEP-penalty probes of the same three scenes). Results sent to the coordinator.
 - 2026-10-20 · coordinator · **Maintainer direction: new paper scenes.** The current set over-indexes on stiff/heterogeneous materials; AAAVBD shines on soft, rubber-like materials (competitive with the VBD family and Newton). Collect ideas for soft scenes (e.g. spaghetti-like strands tangling around an object) and for scenes with many kinematic constraints plus contact, now feasible after the fixes. Melissa is asked to think about it (19-Oct report).
+- 2026-10-20 · task 4 · **GPU run END** (late entry): the trampoline-demo.h5 browser session closed on 2026-10-18.
 
 ## Open questions for the maintainer
 

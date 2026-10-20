@@ -1,6 +1,95 @@
 # Task 4: MCMC sampling of quadratic-manifold shapes at fixed energy
 
-Status: **not started** · Branch `feature/rom-mcmc` · Worktree `C:\git\pbat-mcmc`
+## Handoff (2026-10-20)
+
+Read with: `python/examples/docs/sampling-methods.md` (methods, §8 benchmark problems, §11 code map), the skills
+`.claude/skills/sim-sampling` and `sim-benchmarks`, and the MASTER.md contract sections ("MCMC sample files",
+"Benchmark datasets"). This handoff only records what those don't.
+
+**1. Scope and ownership** (all under `python/examples/`):
+- `rom_mcmc.py`: samplers (polar, crw, ray, microcanonical), `run_chains` + split-R̂, energy-noise
+  estimation, `write_samples`/`write_basis` (the sample-file contract).
+- `modalrom.py`: ROM setup (mass-normalized modes, modal derivatives), GUI, headless sampling, `load_fem`
+  (scene files and `file.h5:fem`).
+- `rom_reach.py`: shape reachability (full-order static Newton, fits, ROM equilibria) and the
+  `static_equilibrium` solver reused for the dynamic-benchmark references.
+- `make_benchmark.py`: the benchmark dataset generator; `benchmark_browser.py`: the Polyscope dataset browser.
+- Tests: `test_rom_mcmc.py`, `test_rom_reach.py`, `test_make_benchmark.py`, `test_benchmark_browser.py`.
+- Reader side of the dataset format I wrote, now shared with task 3: `python/tools/sim/static.py`
+  (`split_batch_path`, `is_dataset`, `dataset_sets`, `load_sample_batch`, `TestSampleBatches`),
+  `python/tools/sim/benchmark.py` (`--dataset`/`--sets`), `python/tools/sim/panels/static.py` (set combo).
+
+**2. Current state**
+- Everything is merged into dev. Merges: `4029072e` (rom-mcmc: milestones 1–3, BDF1 references, generator),
+  `3a975263` (sampler-docs), `8bf175b0` (benchmark-input), `534bdcd3` (browser), `45d38f60` (per-set gravity),
+  `863b1b2b` (sampler-param-docs), `22220cec` (scene files), `cbd3aca2` (float64 references) reverted by
+  `f17533d1` (float32 references), `0947c3fd` (single-file datasets).
+- Worktree `pbat-mcmc` (location in CLAUDE.local.md), branch `feature/benchmark-dataset-file` at `eea8601d`
+  (= dev at the time, no unmerged commits). Resume from a fresh branch off dev.
+- Untracked `plans/mcmc-sampling-conservative-system.txt` in the worktree is the maintainer's notes: leave it.
+- Datasets in the main checkout's `data/benchmarks/` (all trampoline, `data/scenarios/trampoline.h5`):
+  - `trampoline-sample.h5`: 50/500/5000 J × 4 problems, static + `dynamic_h0.0001` + `dynamic_h0.01`, pools of 400.
+  - `trampoline-test.h5`: 50/5000 J × 3 problems, pools of 40 (R̂ meaningless; for quick checks).
+  - `trampoline-demo.h5`: 10/100/1000/10000 J × 10 problems, static + `dynamic_h0.01`; the maintainer's demo
+    for collaborators, **not for the paper**.
+
+**3. Key decisions (maintainer unless noted)**
+- Target: the Liouville-measure microcanonical ensemble over (q, q̇) at total energy E (K + U); velocities
+  exported as `samples/qdot` only. Microcanonical is the preferred sampler; polar for fixed deformation
+  energy; crw only to cross-check polar; ray only for browsing.
+- Quadratic map over mass-normalized non-rigid modes; pbat float32 energies (no float64 port), so all
+  tolerances are noise-aware. No full-order Newton inside sampling.
+- 4 chains from q = 0, pooled; problems are evenly spaced pool subsets, **paired** across static and dynamic
+  sets. Static sets sample without gravity (`pools/pool`), dynamic sets with the scene gravity
+  (`pools/pool_gravity`), so they are different pools when gravity is on.
+- Dynamic problems: one BDF1 step, x̃ = x + h v + h² g; h = 1e-4 and 1e-2. Energies up to ~1e4 J, since
+  static solves from large deformations pass through all scales.
+- **Float32 references:** reported error reductions stop at 99%, so float32 Newton references (within
+  6.5e-4 e0 of exact ones, recorded per sample in `ref_error_mnorm`) suffice. The float64 port was reverted.
+- **One HDF5 file per benchmark**, pools inside, the FemElastoDynamics stored as `fem/`, old directory format
+  dropped with no compatibility code. `benchmark.py` takes solver parameters only from `--sim-params`/`--set`.
+- Scene inputs: scene files preferred over Dumps. Constraints are checked by the time-span rule (active over
+  [0, max dt] ⇒ Fixed and covering the span); multi-body scenes are rejected.
+
+**4. Verified facts and gotchas**
+- R̂ is not yet good enough for a real dataset: pools of 400 give split-R̂ 1.05 / 1.26 / 1.14 at 50 / 500 /
+  5000 J (trampoline-sample), 1.04–1.21 on the demo. The microcanonical chain is cheap (~1 ms/step) but
+  correlated (τ ≈ 135 steps on the beam). Target R̂ < 1.05 means larger pools or more/longer chains.
+- Inversions: min det F < 0 from ~5000 J (5000 J: some starts; 10000 J: 3/10 static, 4/10 dynamic starts on the
+  demo). Allowed by design (Stable NH), recorded in `samples/min_J`.
+- With gravity in U, dynamic low-energy sets have U < 0 (demo 10 J: U/E from −4.4 to −1.55); this is expected.
+- Reference accuracy (float32, demo): ≤ 4.8e-4 e0 at 10 J, decreasing to ≤ 8.4e-5 e0 at 10000 J.
+- The h = 1e-4 plateau seen earlier was GPU-side, not the reference (float64 re-solve agreed to 0.04% e0).
+- Energy noise floor: ~8e-5 J on the beam; sampling below ~0.8 J there triggers the noise warning.
+- Dataset format: `X` and `basis/` are HDF5 hard links in every batch group; `make_benchmark.py` writes `fem/`
+  through `pbat.io.Archive` first and must release it (`gc.collect()`) before h5py reopens the file.
+  `split_batch_path` ignores a drive-letter colon; `load_sample_batch` refuses a dataset root and names a set.
+- **Stale contract text:** MASTER.md's older "Benchmark dataset (task 4 …)" bullet (directory layout,
+  `pool_file`, `ref_newton_correction`, an absolute path) predates the single-file format; the "Benchmark
+  datasets" bullet is current. The coordinator should drop or mark the old one.
+
+**5. Open items** (each waits on the maintainer)
+- **Full benchmark dataset:** on hold until the benchmark design is fixed (MASTER.md "Benchmark plan"). Next:
+  get the energies, problems per level, sets (h values) and scenes (`trampoline.h5`, `trampoline.Y1e7.h5`,
+  circle variants `trampoline_circle_Y1e6/Y1e7.h5`), then size pools/chains for R̂ < 1.05 and validate on
+  1 static + 1 dynamic problem before the full run (announce CPU runs in MASTER.md).
+- `modalrom.py --sampler` CLI default is still polar while the docs prefer microcanonical: ask whether to switch.
+- Question 4 (velocity notes) is moot unless the maintainer still has notes; milestone 2 used the decisions above.
+- Optional: a better microcanonical proposal to cut τ (only if requested).
+
+**6. How to resume**
+- Tests (venv Python, see CLAUDE.local.md): from `python/examples`,
+  `python -m unittest test_rom_mcmc test_rom_reach test_make_benchmark test_benchmark_browser` (38 tests,
+  ~11 s); from the repo root, `python -m unittest python.tools.sim.static.TestSampleBatches`.
+- Smallest generator check (CPU, ~1 min): `python make_benchmark.py -i path/to/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5
+  -o out.h5 --energies 50 --problems 1 --pool 40 --dt 1e-2`. `--pool`, `--chains`, `--burn-in` and `--pilot`
+  size the chains (defaults: pools of 400, 4 chains).
+- Browse a dataset: `python benchmark_browser.py -d path/to/dataset.h5`. Benchmark one: see the
+  `sim-benchmarks` skill (`benchmark.py --dataset … --sets 'static/*'`).
+
+---
+
+Status: ~~not started · Branch `feature/rom-mcmc`~~ (superseded by the Handoff above) · Worktree `pbat-mcmc`
 Read first: `MASTER.md` (rules). This task is independent of the GPU simulator work.
 
 ## Goal (first milestone)
@@ -29,6 +118,8 @@ benchmark batches.
   (amplitude and frequency inputs).
 
 ## Proposed design (to confirm with the maintainer)
+
+*Superseded: see the answered questions below and `python/examples/docs/sampling-methods.md`.*
 
 **Target set:** the level set {q : Ψ(u(q)) = E*}, where u(q) is the quadratic-manifold displacement and Ψ the
 full-space hyperelastic energy.
@@ -91,6 +182,7 @@ simulator files.
    **absolute joules**. Velocities come later.
 3. ~~Save samples for task 3?~~ **Answered:** yes, samples seed task 3's static benchmark. Agree on the sample-file contract in `MASTER.md` with the maintainer and task 3.
 4. Please share the notes from your earlier discussion when it's time for the velocity part.
+   *Superseded: milestone 2 was built on the 2026-10-18 decisions; see the Handoff.*
 
 ## Progress
 
@@ -119,7 +211,7 @@ simulator files.
   noise. Also committed `f291e2da`: GUI/headless report the noise and the chain's settings. 8 unit tests pass.
   On the beam, the noise is about 8e-5 J at every E*, with 0 star violations at 0.1, 2 and 10 J. The warning
   fires below about 0.8 J. Contract wording in MASTER.md corrected.
-- **Merge-ready** (first milestone). Still open: question 4 (velocity notes) for the (q, q̇) milestone.
+- *(Superseded: everything is merged; see the Handoff.)* **Merge-ready** (first milestone). Still open: question 4 (velocity notes) for the (q, q̇) milestone.
 - 2026-10-18 · Milestone 1 merged into dev (`f291e2da`). The maintainer found an ImGui ID clash: the "Sample"
   button and slider shared a label. Fixed with PushID/PopID in `837ab6cf`, also merged into dev.
 - 2026-10-18 · Profile, quadratic-manifold status and velocity plan published:
@@ -202,6 +294,7 @@ simulator files.
   - **Generator implemented** (`d1f03bbe`, `e45a286c`, `391b994f`; `python/examples/make_benchmark.py`).
     - It writes pooled samples, static problems, and BDF1 dynamic problems per h, all paired.
     - Small test set: `data\benchmarks\trampoline-test\` (2 energies × 3 problems, 51 s CPU).
+      *Superseded: now the single file `data/benchmarks/trampoline-test.h5`.*
     - Checked: X matches the Dump, Dirichlet DOFs are at rest, x̃ = x + hv + h²g to 6e-8, and the reference
       gradient drops 3–5 orders to the float32 noise floor (~3 N). Reference accuracy is ~3.5–4 decades of
       the step size.
