@@ -296,7 +296,7 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
 | 2 | on hold | 2026-10-19 | feature/sd-detect-scope merged (15340ab4). Waiting for the next task |
-| 3 | on hold | 2026-10-19 | All work merged, incl. the Solve status panel layout (e9248ec2) |
+| 3 | ready to merge | 2026-10-19 | `feature/feasibility-abs-dmin` (3 commits): feasibility tolerance ftol*max(abs(dmin), 1e-6 m) for zero and negative margins |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -766,6 +766,9 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-19 · task 3 · **Decision (maintainer):** GPU Newton caps friction at the Coulomb limit, frozen at each Newton step's iterate (C = mu_f max(lambda_n - sigma_n c_n, 0) recorded by the augmented gradient), with a Huber-like energy so the line search is consistent; no line-search failures allowed. Short GPU checks (seconds each): incline at defaults 0.60 m/s^2 at mu_f 0.2 (Coulomb 0.64), sticks at 0.3, 0 line-search failures and 0 backtracks, outer test passed 120/125 (8 before); BeamFallingOnBeam 30 steps 0 failures. The 27 failures measured earlier came from the since-fixed stream race and float32 noise at optimal iterates (roundoff-tolerant Armijo). Branch `feature/newton-coulomb-cap`.
 - 2026-10-19 · task 2 · **GPU run START** (~3 min, correctness only): tiny BeamFallingOnBeam simulate.py runs, --profile kernels and off, before/after the sd.py contact.detect scope (feature/sd-detect-scope). Will log END.
 - 2026-10-19 · task 2 · **GPU run END** (sd.py scope check): positions bit-identical before/after with profiling off and with kernels; detection kernels moved from the parents' self time to contact.detect.
+- 2026-10-19 · task 3 · **GPU run START** (~3 min, correctness only): BeamFallingOnBeam VBD/AAAVBD 30 steps dev vs branch; trampoline_soft-stiff (circle, with sphere) AAAVBD 0.2 s dev vs branch. Will log END.
+- 2026-10-19 · task 3 · **GPU run END.** BeamFallingOnBeam VBD/AAAVBD 30 steps: positions bit-identical to dev; status rows identical except gradient_ratio in the last float32 digit, which dev also varies run to run (atomics). trampoline_circle_soft-stiff (paper dmin = -1e-4), AAAVBD 0.2 s: dev 21/21 'both unmet' (feasibility impossible), branch 21/21 'gradient unmet', feasibility ratio finite (0). Beam with dmin = -1e-4, VBD 2000 sweeps: dev 0/20 early exits (19 'feasibility unmet'), branch 19/20 converged early.
+- 2026-10-19 · task 1 · **GPU run START** (~10-15 min, correctness only; ignore timings): scene-config margin (feature/scene-config-margin). AAAVBD with the scene configs, 5 s each, dmin 1e-3 vs -1e-4, on trampoline_circle_soft-stiff/stiff-soft__with_sphere and mat_on_stilts_3 only (no celebration/basket). Will log END.
 
 ## Open questions for the maintainer
 
