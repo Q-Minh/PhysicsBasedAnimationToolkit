@@ -879,6 +879,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run START** (~15 min, TIMING: please keep the GPU quiet): static Newton pilot on trampolines-pilot.h5, Newton only, all sets, 30 s budget per solve, CG n_max_iters 500 then 1000. Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (Newton pilot, 2 x ~3.5 min). Results sent to the coordinator.
 - 2026-10-20 · task 3 · **GPU run START** (intermittent, ~15 min, correctness + snapshot-overhead timing; ignore other timings): snapshot ring tests on trampolines-test.h5 (1 sample per set, all solvers, snapshots on vs off). Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (snapshot ring tests). The GPU is free.
+- 2026-10-20 · task 4 · **CPU run END**: pool-sizing study (circle Y1e6/Y1e7, with and without gravity, 8 chains x ~25k steps each, 10000 J). tau 200-500 steps (generator pilot thin ~65); split R-hat with 4 chains: ~3k steps/chain 1.11-1.21, ~6k 1.05-1.07, ~12k 1.027-1.035, ~24k 1.011-1.015; ~5.5-5.9 ms/step uncontended; no inversions (min det F >= 0.57). Supports pending decision #6.
 
 ## Open questions for the maintainer
 
