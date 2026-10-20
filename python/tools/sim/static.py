@@ -258,7 +258,7 @@ class StaticSolveSpec(SerializableMixin):
         0.95, "Stop once the error drops below (1 - target_reduction) of the initial error"
     )
     max_iterations = DocField(20000, "Maximum solver iterations (sweeps, or Anderson/Newton steps)")
-    max_seconds = DocField(60.0, "Maximum wall-clock time per solve (s)")
+    max_seconds = DocField(60.0, "Maximum solver time per solve (s): device time, logging excluded")
     block = DocField(16, "Solver iterations per replayed graph block (rounded to Anderson's m)")
 
     def sample_indices(self, n_samples: int) -> range:
@@ -279,10 +279,19 @@ class StaticSolveSpec(SerializableMixin):
 
 
 @wp.kernel
-def _reset_log_kernel(count: wp.array[wp.int32], keep: wp.array[wp.int32], stop: wp.array[wp.int32]):
+def _reset_log_kernel(
+    count: wp.array[wp.int32],
+    keep: wp.array[wp.int32],
+    stop: wp.array[wp.int32],
+    first_stop: wp.array[wp.int32],
+    solver_ns: wp.array[wp.int64],
+):
     count[0] = 0
     keep[0] = 1
     stop[0] = 0
+    first_stop[0] = -1
+    first_stop[1] = 0
+    solver_ns[0] = wp.int64(0)
 
 
 @wp.kernel
@@ -318,6 +327,8 @@ def _commit_kernel(
     max_ns: wp.int64,
     keep: wp.array[wp.int32],
     stop: wp.array[wp.int32],
+    first_stop: wp.array[wp.int32],
+    solver_ns: wp.array[wp.int64],
 ):
     c = count[0]
     capacity = e2.shape[0]
@@ -328,7 +339,10 @@ def _commit_kernel(
             s += sweeps[c - 1]
         sweeps[c] = s
     count[0] = c + 1
-    elapsed = t_a[wp.min(c, capacity - 1)] - t_a[0]
+    # Solver time, logging excluded: from the end of the previous entry's logging to this entry's start
+    if c > 0 and c < capacity:
+        solver_ns[0] = solver_ns[0] + (t_a[c] - t_b[c - 1])
+    elapsed = solver_ns[0]
     # Stop reason (StopReason), in priority order; 0 keeps going
     e2c = e2_new[0]
     reason = wp.int32(0)
@@ -342,6 +356,10 @@ def _commit_kernel(
         reason = wp.int32(3)
     stop[0] = reason
     keep[0] = wp.where(reason == 0, wp.int32(1), wp.int32(0))
+    # The first stop, before a replayed graph block's remaining iterations run past it
+    if reason != 0 and first_stop[0] < 0:
+        first_stop[0] = c
+        first_stop[1] = reason
     if c < capacity:
         t_b[c] = globaltimer()
 
@@ -352,7 +370,7 @@ class StopReason(IntEnum):
     RUNNING = 0  # not stopped (the log ended without a stop criterion)
     TARGET = 1  # the error reached the target reduction
     ITERATION_CAP = 2  # max_iterations entries
-    TIME_CAP = 3  # max_seconds of device time
+    TIME_CAP = 3  # max_seconds of solver time (logging excluded)
     NON_FINITE = 4  # the error is NaN or infinite
     NEWTON_NON_DESCENT = 5  # Newton's direction wasn't a descent direction
     NEWTON_LINE_SEARCH_FAILED = 6  # Newton's line search rejected every step length
@@ -366,6 +384,10 @@ class ErrorLog:
     ``keep`` (1 while the error is above the target and the budgets aren't exhausted) and ``stop``
     (the :class:`StopReason`, ``RUNNING`` while ``keep`` is 1). It doesn't
     synchronize, so it can be captured, including in ``wp.capture_while`` bodies.
+
+    ``wp.capture_while`` tests ``keep`` only between replayed blocks, so a block's remaining iterations
+    still run and log entries after a stop. ``first_stop`` holds the entry and reason of the first stop,
+    and :meth:`read` drops the entries after it.
     """
 
     def __init__(self, fem: FemElastoDynamics, capacity: int):
@@ -386,6 +408,8 @@ class ErrorLog:
         self.count = wp.zeros(1, dtype=wp.int32)
         self.keep = wp.zeros(1, dtype=wp.int32)
         self.stop = wp.zeros(1, dtype=wp.int32)
+        self.first_stop = wp.zeros(2, dtype=wp.int32)  # entry and StopReason of the first stop (-1: none)
+        self.solver_ns = wp.zeros(1, dtype=wp.int64)  # solver time so far (ns), logging excluded
         self._w = wp.zeros(n_nodes, dtype=wp.float32)
         self._e2_new = wp.zeros(1, dtype=wp.float32)
         self._reduce = Reduce(
@@ -402,8 +426,8 @@ class ErrorLog:
         Args:
             target_reduction (float): ``keep`` drops to 0 once e <= (1 - target_reduction) e0.
             max_entries (int): ``keep`` drops to 0 at this many entries (clipped to the capacity).
-            max_seconds (float): ``keep`` drops to 0 once this much device time has passed since entry
-                0 (logging included); ``math.inf`` for no limit.
+            max_seconds (float): ``keep`` drops to 0 once the solver time (device time since entry 0,
+                logging excluded, as :attr:`StaticSolveLog.time`) reaches it; ``math.inf`` for no limit.
         """
         self._target_ratio2 = float((1.0 - target_reduction) ** 2)
         self._max_entries = int(min(max_entries, self.capacity))
@@ -411,7 +435,9 @@ class ErrorLog:
 
     def reset(self) -> None:
         """Empty the log, set ``keep`` to 1 and ``stop`` to ``RUNNING``. Capturable."""
-        wp.launch(_reset_log_kernel, dim=1, inputs=[self.count, self.keep, self.stop])
+        wp.launch(
+            _reset_log_kernel, dim=1, inputs=[self.count, self.keep, self.stop, self.first_stop, self.solver_ns]
+        )
 
     def record(self, n_sweeps: int) -> None:
         """Append an entry for the current positions and update ``keep``. Capturable.
@@ -439,6 +465,8 @@ class ErrorLog:
                 self._max_ns,
                 self.keep,
                 self.stop,
+                self.first_stop,
+                self.solver_ns,
             ],
         )
 
@@ -446,10 +474,15 @@ class ErrorLog:
         """Copy the log to the host (synchronizes).
 
         Returns:
-            StaticSolveLog: Errors, cumulative solver times and cumulative sweeps per entry, and the
-            stop reason.
+            StaticSolveLog: Errors, cumulative solver times and cumulative sweeps per entry up to the
+            first stop, and its reason.
         """
         n = min(int(self.count.numpy()[0]), self.capacity)
+        first, reason = (int(v) for v in self.first_stop.numpy())
+        if first >= 0:
+            n = min(n, first + 1)
+        else:
+            reason = int(self.stop.numpy()[0])  # e.g. a Newton stop set on the host
         e2 = self.e2.numpy()[:n].astype(np.float64)
         t_a = self.t_a.numpy()[:n]
         t_b = self.t_b.numpy()[:n]
@@ -460,7 +493,7 @@ class ErrorLog:
             error=np.sqrt(np.maximum(e2, 0.0)),
             time=np.cumsum(dt),
             sweeps=self.sweeps.numpy()[:n].astype(np.int64),
-            termination=StopReason(int(self.stop.numpy()[0])).name.lower(),
+            termination=StopReason(reason).name.lower(),
         )
 
 
@@ -755,6 +788,33 @@ class TestErrorLog(unittest.TestCase):
         replay = log.read()
         self.assertEqual(replay.error.size, 6)
         self.assertAlmostEqual(replay.error[0] / e0, 2.0, places=5)
+
+    def test_block_overshoot(self):
+        """Iterations a replayed block runs after the stop aren't part of the log."""
+        fem = self._make_fem()
+        X = fem.data.X.numpy()
+        u = np.random.default_rng(0).standard_normal(X.shape).astype(np.float32)
+        u[0] = 0
+        log = ErrorLog(fem, capacity=64)
+        log.configure(target_reduction=0.95, max_entries=64, max_seconds=math.inf)
+
+        def block():
+            for _ in range(4):
+                wp.launch(_halve_displacement_kernel, dim=X.shape[0], inputs=[fem.data])
+                log.record(1)
+
+        fem.data.x.assign(X + u)
+        with wp.ScopedCapture() as capture:
+            log.reset()
+            log.record(0)
+            wp.capture_while(log.keep, while_body=block)
+        wp.capture_launch(capture.graph)
+        # The target falls on iteration 5, in the second block of 4, which runs to iteration 8
+        self.assertEqual(int(log.count.numpy()[0]), 9)
+        result = log.read()
+        self.assertEqual(result.error.size, 6)
+        self.assertEqual(result.termination, "target")
+        self.assertTrue(np.allclose(result.relative_error, 0.5 ** np.arange(6), rtol=1e-5))
 
     def test_reference(self):
         """Errors are measured against the log's reference, e.g. a dynamic step's x_ref."""
