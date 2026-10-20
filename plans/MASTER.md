@@ -388,7 +388,7 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
 | 2 | on hold | 2026-10-19 | feature/sd-detect-scope merged (15340ab4). Waiting for the next task |
-| 3 | on hold | 2026-10-20 | All work merged; handoff written at the top of plan 03 |
+| 3 | benchmark runner + bar plot ready for review (feature/benchmark-bars) | 2026-10-20 | Level crossings, pilot budgets, per-scene params, HDF5 results, 3D bar figures; tiny run on trampolines-test.h5 |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -866,6 +866,12 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 4 · **GPU run END** (late entry): the trampoline-demo.h5 browser session closed on 2026-10-18.
 - 2026-10-20 · task 1 · **GPU run START** (~3 min, correctness only): 1 s contact-free simulate.py runs of the new benchmark trampolines (Y1e5, Y1e8, het). Will log END.
 - 2026-10-20 · task 1 · **GPU run END** (benchmark trampolines: all finite over 1 s).
+- 2026-10-20 · task 3 · **GPU run START** (intermittent, correctness only, ignore timings): unit tests and tiny benchmark runs on trampoline-test (1-2 samples, all solvers, short budgets) for feature/benchmark-bars. Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (benchmark-bars checks: Newton pilot + all-solver tiny runs on trampolines-test.h5, 2 samples per set, static budget 4 s).
+- 2026-10-20 · task 4 · **CPU run START** (~10 min, CPU only): 2-scene test dataset (trampoline_circle Y1e6 + Y1e7, 10000 J, 2 problems, small pools) into data/benchmarks/trampolines-test.h5 (format v2, branch feature/multi-scene-datasets). Will log END.
+- 2026-10-20 · task 4 · **CPU run END**: data/benchmarks/trampolines-test.h5 written (format v2: scenes Y1e6, Y1e7; 10000 J; 2 problems; pools of 40, so R-hat is meaningless; 2 min). Loads via static.load_sample_batch and the browser; reference accuracy <= 9.2e-5 e0.
+- 2026-10-20 · task 4 · **CPU run START** (~30 min, CPU only): pool-sizing study for split R-hat < 1.05 at 10000 J (circle trampolines Y1e6/Y1e7, with and without gravity, 8 long chains each). Will log END.
+- 2026-10-20 · task 4 · **CPU run START** (~20-30 min, CPU only, alongside the pool-sizing study): 5-scene PILOT dataset data/benchmarks/trampolines-pilot.h5 (circle trampolines Y1e5/Y1e6/Y1e7/Y1e8/het, 10000 J, 2 problems per set, pools of 160 from 4 chains; R-hat not required). Will log END.
 
 ## Open questions for the maintainer
 
