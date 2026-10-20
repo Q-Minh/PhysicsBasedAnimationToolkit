@@ -1410,6 +1410,9 @@ class NewtonSolver:
             solve_subproblem(fem, contact, params)
             subproblems.append(params.last_subproblem)
             finalize_subproblem(fem, contact, cd, params)
+        if not converged:
+            # As C++ newton::Solve: test the last subproblem's result too (a test, not a step)
+            converged = check_convergence(fem, contact, params)
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         # Host-side status of the solve, drained by SimulationState.step
