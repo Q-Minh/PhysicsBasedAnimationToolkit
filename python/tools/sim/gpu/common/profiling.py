@@ -33,10 +33,11 @@ import functools
 import nvtx
 import warp as wp
 
+from ...profiling.scope_paths import PATH_SEPARATOR as _PATH_SEPARATOR, path_ancestors
+
 _NO_OP_SCOPE = contextlib.nullcontext()
 _NVTX_DOMAIN = "pbat"
 _NVTX_STEP = "step"
-_PATH_SEPARATOR = "/"
 
 
 class Backend(enum.Enum):
@@ -91,15 +92,6 @@ def interval_union_ns(intervals: list[tuple[int, int]]) -> int:
     if current_end is not None:
         total += current_end - current_start
     return total
-
-
-def path_ancestors(path: str) -> list[str]:
-    """The path and its ancestor paths: ``"a/b/c"`` -> ``["a", "a/b", "a/b/c"]``. Work outside any
-    scope (``""``) has no ancestors."""
-    if not path:
-        return [path]
-    parts = path.split(_PATH_SEPARATOR)
-    return [_PATH_SEPARATOR.join(parts[: n + 1]) for n in range(len(parts))]
 
 
 def inclusive_union_ns(intervals: dict[str, list[tuple[int, int]]]) -> dict[str, int]:
