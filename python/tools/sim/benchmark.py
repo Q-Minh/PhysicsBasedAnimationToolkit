@@ -1,6 +1,6 @@
 # type: ignore
 r"""
-Solver convergence benchmark: wall-clock time per percentile of error reduction.
+Solver convergence benchmark: solver time per accuracy level of error reduction.
 
 The problems come from one benchmark dataset file (python/examples/make_benchmark.py; contract in
 plans/MASTER.md), which holds the FEM they are posed on and its problem sets (e.g. ``static/E50``,
@@ -12,66 +12,87 @@ plans/MASTER.md), which holds the FEM they are posed on and its problem sets (e.
   set's inertial target xtilde (gravity included). The solution is the set's reference x_ref
   (full-order Newton); its accuracy ``ref_error_mnorm`` is recorded.
 
+Benchmarks and cases: the sets of one kind and time step form a benchmark (``static``,
+``dynamic_h0.0001``, ``dynamic_h0.01``), one figure each (``benchmark_plot.py``). Within a benchmark, each
+scene is a case (an x-axis entry); a scene with several selected energy levels gives one case per level
+(``<scene>_E<E>``). A set's scene is its ``scene`` attribute, or for datasets without one (version 1),
+the stem of the dataset's ``input`` scene file.
+
 The error e = |x - x*|_M (lumped-mass norm over free nodes, x* = X or x_ref) is logged after every
-solver iteration (see ``static.py``). The benchmark reports, per set, solver and percentile p = 5%, 10%,
-..., 95%, the solver time until e <= (1 - p) e0. Only that error stops a solve, at
-``--target-reduction`` or at its time/iteration budget; the solvers' own convergence and feasibility
-tests are bypassed. Unreached percentiles are reported as missing (``null``).
+solver iteration (see ``static.py``). For accuracy levels l (error reductions 1 - e/e0, ``--levels``,
+default 50, 60, 70, 80, 85, 90, 95, 99%), the benchmark records per solve the time each level is first
+crossed and its incremental time: an iteration's time goes to the highest level it crosses, and the
+levels it jumps over get none; levels crossed after the budget aren't reached (``benchmark_results.py``).
+Only that error stops a solve, at
+``--target-reduction`` (default: the highest level) or at its time budget or iteration cap; the solvers'
+own convergence and feasibility tests are bypassed.
+
+Time budgets, per case, in order of precedence (each case records its ``budget`` and ``budget_source``):
+
+1. ``--budget [BENCHMARK[/CASE]=]SECONDS`` (repeatable), the most specific entry first: e.g.
+   ``--budget static=5 --budget static/Y1e8=10``, or ``--budget 5`` for every case.
+2. With ``--budget-from pilot.h5``: ``--budget-factor`` (default 1) times the ``--budget-statistic`` (default
+   median) of Newton's time to the pilot's highest level in that case, at most ``--budget-cap
+   [BENCHMARK[/CASE]=]SECONDS`` (repeatable, same matching). The pilot is an earlier results file with
+   Newton, e.g. a Newton-only run with a generous ``--max-seconds``. The median is the default since
+   Newton's times vary between runs (host synchronization every step) and a single slow sample would
+   move the mean.
+3. ``--max-seconds``: cases with neither, e.g. those where no pilot Newton solve reached the level (with a
+   warning).
 
 Usage:
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 [--sets PATTERN ...] -o results.json \
-        [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] \
-        [--sim-params A.toml [B.h5 ...]] [--set Table.key=value ...] [--spec spec.h5] [--save-spec spec.h5] \
-        [--sample-begin 0] [--sample-end -1] [--max-seconds 60] [--max-iterations 1000000] \
-        [--target-reduction 0.95] [--block 16]
+    python -m python.tools.sim.benchmark --dataset DATASET.h5 [--sets PATTERN ...] -o results.h5 \
+        [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] [--levels 0.5,0.6,...,0.99] \
+        [--sim-params A.toml [B.h5 ...]] [--scene-params SCENE=C.toml[,D.toml] ...] [--set Table.key=value ...] \
+        [--budget [BENCHMARK[/CASE]=]SECONDS ...] [--budget-from pilot.h5 [--budget-factor 1] \
+        [--budget-statistic median] [--budget-cap [BENCHMARK[/CASE]=]SECONDS ...]] [--max-seconds 60] \
+        [--spec spec.h5] [--save-spec spec.h5] [--sample-begin 0] [--sample-end -1] \
+        [--max-iterations 1000000] [--target-reduction 0.99] [--block 16]
 
 Representative commands (from the repo root; datasets live in the main checkout's data/benchmarks):
 
-    # One static solve: one set, one solver, the first problem, a 5 s cap
-    python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-test.h5 \
-        --sets static/E50 --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
+    # One static solve: one set, one solver, the first problem, a 5 s budget
+    python -m python.tools.sim.benchmark --dataset data/benchmarks/trampolines-test.h5 \
+        --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
-    # Every dynamic set of one time step (the kind and h come from each set)
-    python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-sample.h5 \
-        --sets "dynamic_h0.01/*" --max-seconds 5 -o out/dynamic.json
+    # Pilot: Newton alone, generous budget; then the benchmark with budgets of Newton's median time to 99%,
+    # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere
+    python -m python.tools.sim.benchmark --dataset DATASET.h5 --solvers Newton --max-seconds 60 \
+        --sim-params python/tools/sim/configs/benchmark/shared.toml -o out/pilot.h5
+    python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 --budget static=5 \
+        --budget-cap 3 --sim-params python/tools/sim/configs/benchmark/shared.toml --scene-params Y1e8=y1e8.toml \
+        -o out/results.h5
 
-    # Every solver on every problem of the dataset, with the scene's paper parameters
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 \
-        --sim-params python/tools/sim/configs/paper/beam1e6.GroundTruth.toml --max-seconds 10 -o out/all.json
+    # The figures
+    python -m python.tools.sim.benchmark_plot out/results.h5 -o out/figures/benchmark
 
     # Parameter variations: layer configs and override single keys (see python/tools/sim/configs/README.md)
     python -m python.tools.sim.benchmark ... --sim-params base.toml static.toml \
         --set Solver.Newton.LinearSolver.n_max_iters=3000 --set Solver.AAAVBD.rhohat=0.9
 
-    # Reproducible cases: save the effective StaticSolveSpec (dataset, sets, budgets), then rerun from it
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 --sets static/E500 --max-seconds 10 --save-spec case.h5 -o a.json
-    python -m python.tools.sim.benchmark --spec case.h5 -o b.json
+    # Reproducible cases: save the effective StaticSolveSpec (dataset, sets, caps), then rerun from it
+    python -m python.tools.sim.benchmark --dataset DATASET.h5 --sets static/E500 --max-seconds 10 --save-spec case.h5 -o a.h5
+    python -m python.tools.sim.benchmark --spec case.h5 -o b.h5
 
-Outputs:
-    ``results.json``: the effective spec; metadata (dataset, parameter sources, the dataset's attributes,
-    Newton CG limits, device, git commit, date); and ``sets``, per problem set: its kind, h and attributes,
-    and per solver, one summary per sample (e0, iterations, VBD sweeps, solver time, final relative error,
-    termination, time and iterations to each percentile, starting deformation energy, min det F, and a
-    log-spaced curve of relative error vs time and sweeps), aggregates per percentile (median and quartiles
-    of the time over the samples that reached it, and how many did), and ``termination``, the number of
-    samples per stop reason. A solve's ``termination`` is ``target`` (reached --target-reduction),
-    ``iteration_cap``, ``time_cap``, ``non_finite`` (NaN or infinite error), or for Newton
-    ``newton_non_descent``, ``newton_line_search_failed`` or ``newton_zero_gradient``: Newton stops at its
-    first rejected step, since x doesn't change after it. Dynamic summaries add ``reference``: the
-    reference's ``newton_correction`` (m) and its accuracy in the error's M-norm, ``error_bound`` (the set's
-    ``samples/ref_error_mnorm``, the M-norm of the reference's last Newton correction) and
-    ``relative_error_bound`` (over e0). Levels with 1 - p below that bound can't be resolved against this
-    reference, and the per-level aggregates count the samples whose reference allows them (``reliable``).
-    ``results.h5`` (same name, next to it): the spec and the full per-iteration logs,
-    ``<set>/<solver>/<sample>/{error, time, sweeps}``.
+Output: one HDF5 results file (layout in ``benchmark_results.py``'s docstring): the spec, levels, budgets,
+dataset, device, commit and parameter sources; per benchmark, case and solver, each sample's crossing
+times, increments, reached and skipped flags, e0, iterations, sweeps, solver time, host time (the solve's
+wall-clock time, including loading and reading back), final relative error,
+termination and full per-iteration log; and per level, the mean, std, min, max, median, quartiles and
+count of the increments and crossing times over the samples that reached it. A solve's ``termination`` is
+``target`` (reached --target-reduction), ``iteration_cap``, ``time_cap`` (its budget), ``non_finite`` (NaN or
+infinite error), or for Newton ``newton_non_descent``, ``newton_line_search_failed`` or
+``newton_zero_gradient``: Newton stops at its first rejected step, since x doesn't change after it.
+Dynamic cases add the reference's accuracy (``reference_error_bound``, the set's ``samples/ref_error_mnorm``,
+and ``reference_relative_error_bound``, over e0) and ``resolvable``, the levels that accuracy resolves.
 
 Pitfalls:
     - The benchmark is contact-free: contact detection is deactivated whatever the parameters say.
-    - The problems are posed on the dataset's FEM (its ``fem`` group): its Dirichlet nodes stay fixed at
-      rest. Solver parameters come only from --sim-params and --set (otherwise the code defaults,
-      configs/defaults.toml).
+    - The problems are posed on the dataset's FEM (its ``fem`` group, or the set's ``fem`` attribute): its
+      Dirichlet nodes stay fixed at rest. Solver parameters come only from --sim-params, then the case's
+      --scene-params, then --set (otherwise the code defaults, configs/defaults.toml).
     - Dynamic problems take their time step from the set: ``Integration.dt``, ``substeps`` and the BDF
-      order from --sim-params are overridden (one BDF1 step of size h).
+      order from the parameters are overridden (one BDF1 step of size h).
     - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 rounding
       floors the error around e/e0 ~ 1e-5 to 1e-4. Newton usually ends there with
       ``newton_line_search_failed``: the energy decrease is below float32 resolution.
@@ -81,9 +102,10 @@ Pitfalls:
       to 0: in h^2-scaled units at small h, |g| drops below it after one step. The vertex-solve and acceleration parameters do matter.
     - Newton isn't graph-captured. Each Newton step synchronizes with the host, so its times include host
       work and vary more between runs. Raise ``Solver.Newton.LinearSolver.n_max_iters`` for static problems:
-      the default 300 leaves Newton steps inexact, and 1500-3000 is typical.
-    - Times are GPU wall-clock from device timestamps, with the logging excluded. Don't run other GPU work
-      meanwhile.
+      the default 500 leaves Newton steps inexact, and 1500-3000 is typical.
+    - Times are solver time from device timestamps, logging excluded; the budget counts the same time.
+      Every iteration is timed on its own, also inside replayed graph blocks, and iterations a block runs
+      past the stop are dropped, so --block doesn't change the crossings. Don't run other GPU work meanwhile.
     - Sets with ``importance_weights_required`` are refused; R-hat >= 1.05 or nonzero sampling gravity
       only print a warning.
     - Each solver's first solve on a set also compiles kernels and captures its graph. That shows in the host
@@ -92,11 +114,11 @@ Pitfalls:
 
 import argparse
 import fnmatch
-import json
 import math
 import os
 import subprocess
 import time
+from dataclasses import dataclass
 
 import h5py
 import numpy as np
@@ -110,16 +132,14 @@ from .state import (
     load_params,
     load_problem,
 )
+from . import benchmark_results as results
 from . import config, static
-
-PERCENTILES = [p / 100 for p in range(5, 100, 5)]
-_CURVE_POINTS = 400
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Solver convergence benchmark (GPU) on the static and dynamic problem sets of a benchmark "
-        "dataset: solver time per 5% level of error reduction."
+        "dataset: solver time per accuracy level of error reduction."
     )
     parser.add_argument("--dataset", default=None,
                         help="Benchmark dataset (.h5) from python/examples/make_benchmark.py: the FEM and the "
@@ -128,15 +148,39 @@ def parse_args():
                         help="Problem sets to run, as fnmatch patterns over the dataset's set names (e.g. "
                         "static/E50 'dynamic_h0.01/*'). Overrides the spec's sets (spec default: all sets).")
     parser.add_argument("--sim-params", nargs="+", default=[], dest="sim_params",
-                        help="Simulation parameters: .toml configs or .h5 files as exported by the GUI "
-                        "(file.h5 or file.h5:group), merged left to right (see configs/README.md). "
+                        help="Simulation parameters for every scene: .toml configs or .h5 files as exported by "
+                        "the GUI (file.h5 or file.h5:group), merged left to right (see configs/README.md). "
                         "Without any, the code defaults apply (configs/defaults.toml).")
+    parser.add_argument("--scene-params", action="append", default=[], metavar="SCENE=A.toml[,B.toml]",
+                        dest="scene_params",
+                        help="Parameters for one scene's problems, merged after --sim-params and before --set. "
+                        "Repeatable, once per scene.")
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="overrides",
-                        help="Override one parameter after --sim-params, as Table.Sub.key=TOML-literal, "
+                        help="Override one parameter after the parameter files, as Table.Sub.key=TOML-literal, "
                         "e.g. Solver.Newton.LinearSolver.n_max_iters=3000. Repeatable.")
     parser.add_argument("--solvers", default=",".join(s.name for s in SolverType),
                         help="Comma-separated solver names to run, in order (default: all, "
                         + ",".join(s.name for s in SolverType) + ").")
+    parser.add_argument("--levels", default=",".join(f"{v:g}" for v in results.DEFAULT_LEVELS),
+                        help="Accuracy levels, as comma-separated error reductions 1 - e/e0 in (0, 1) "
+                        "(default: %(default)s).")
+    parser.add_argument("--budget", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
+                        help="Time budget per solve, in seconds of solver time, for every case, a benchmark (e.g. "
+                        "static=5) or one case (static/Y1e8=10). Repeatable; the most specific entry wins. "
+                        "Takes precedence over --budget-from, which takes precedence over --max-seconds.")
+    parser.add_argument("--budget-from", default=None, dest="budget_from",
+                        help="Pilot results file (.h5) with Newton's solves: the budget of a case without --budget "
+                        "is --budget-factor times Newton's --budget-statistic time to the pilot's highest level, "
+                        "at most --budget-cap. Cases the pilot lacks get --max-seconds.")
+    parser.add_argument("--budget-factor", type=float, default=1.0, dest="budget_factor",
+                        help="Multiple of the pilot's Newton time (default: %(default)s).")
+    parser.add_argument("--budget-cap", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
+                        dest="budget_cap",
+                        help="Upper limit on the pilot-derived budgets, matched like --budget. Repeatable.")
+    parser.add_argument("--budget-statistic", choices=results.BUDGET_STATISTICS, default="median",
+                        dest="budget_statistic",
+                        help="Statistic of the pilot's Newton times over its samples that reached the level "
+                        "(default: %(default)s).")
     parser.add_argument("--spec", default=None,
                         help="StaticSolveSpec (.h5) to start from. The options below override its fields.")
     parser.add_argument("--save-spec", default=None, dest="save_spec",
@@ -146,24 +190,25 @@ def parse_args():
     parser.add_argument("--sample-end", type=int, default=None, dest="sample_end",
                         help="One past the last sample index; -1 means all samples (spec default: -1).")
     parser.add_argument("--max-seconds", type=float, default=None, dest="max_seconds",
-                        help="Time cap per solve, in seconds of wall-clock time (spec default: 60).")
+                        help="Time budget per solve of the cases without --budget or a pilot time, in seconds of "
+                        "solver time (spec default: 60).")
     parser.add_argument("--max-iterations", type=int, default=None, dest="max_iterations",
                         help="Iteration cap per solve, counting VBD sweeps, Anderson steps or Newton steps "
-                        "(default here: 1,000,000, so the time cap decides).")
+                        "(default here: 1,000,000, so the time budget decides).")
     parser.add_argument("--target-reduction", type=float, default=None, dest="target_reduction",
-                        help="Stop a solve once e <= (1 - target) e0, as a fraction (spec default: 0.95).")
+                        help="Stop a solve once e <= (1 - target) e0, as a fraction (default: the highest level).")
     parser.add_argument("--block", type=int, default=None,
                         help="Solver iterations per replayed CUDA-graph block, rounded up to a multiple of "
-                        "Anderson's window m. Larger blocks mean fewer replays but can overshoot the stop "
-                        "by up to one block (spec default: 16).")
-    parser.add_argument("-o", "--output", required=True,
-                        help="Output results.json; results.h5 with the full logs is written next to it.")
+                        "Anderson's window m. Larger blocks mean fewer replays; iterations past the stop are "
+                        "dropped (spec default: 16).")
+    parser.add_argument("-o", "--output", required=True, help="Output results file (.h5).")
     return parser.parse_args()
 
 
-def make_spec(args) -> static.StaticSolveSpec:
+def make_spec(args, levels) -> static.StaticSolveSpec:
     spec = static.StaticSolveSpec()
     spec.max_iterations = 1_000_000
+    spec.target_reduction = levels[-1]
     if args.spec:
         with h5py.File(args.spec, "r") as f:
             spec.deserialize(f["StaticSolveSpec"] if "StaticSolveSpec" in f else f)
@@ -184,6 +229,13 @@ def make_spec(args) -> static.StaticSolveSpec:
     return spec
 
 
+def copy_spec(spec: static.StaticSolveSpec, **changes) -> static.StaticSolveSpec:
+    out = static.StaticSolveSpec()
+    for name, value in {**spec.to_dict(), **changes}.items():
+        setattr(out, name, value)
+    return out
+
+
 def select_sets(spec: static.StaticSolveSpec) -> list[str]:
     """The dataset's problem sets matching the spec's patterns (all when empty), in dataset order."""
     names = static.dataset_sets(spec.dataset)
@@ -194,17 +246,71 @@ def select_sets(spec: static.StaticSolveSpec) -> list[str]:
     return selected
 
 
-def make_state(args, dataset: str, h: float | None = None) -> SimulationState:
-    """Build the contact-free simulation on the dataset's FEM; ``h`` set means one-step dynamic problems of
-    that step."""
+def parse_scene_params(entries: list[str]) -> dict[str, list[str]]:
+    """``SCENE=A.toml,B.toml`` entries -> {scene: [A.toml, B.toml]}."""
+    out = {}
+    for entry in entries:
+        scene, sep, files = entry.partition("=")
+        if not sep or not scene or not files:
+            raise SystemExit(f"--scene-params expects SCENE=A.toml[,B.toml], got {entry!r}")
+        if scene in out:
+            raise SystemExit(f"--scene-params given twice for scene {scene!r}")
+        out[scene] = [p for p in files.split(",") if p]
+    return out
+
+
+# --- Scenes and cases (the dataset-format-specific layer) ---
+
+
+@dataclass
+class Case:
+    """One selected problem set, placed in its benchmark (figure) and case (x-axis entry)."""
+
+    set_name: str  # the set's path in the dataset
+    batch: static.SampleBatch
+    scene: str
+    label: str  # the scene's display name
+    fem: str  # the FEM group's path in the dataset
+    benchmark: str  # benchmark_results.benchmark_name
+    case: str = ""  # filled by make_cases
+
+
+def _scene_of(dataset: str, f: h5py.File, batch: static.SampleBatch) -> tuple[str, str, str]:
+    """(scene, label, FEM group) of a batch: its ``scene``/``fem`` attributes, else (version-1 datasets)
+    the dataset's ``input`` scene file stem and the root FEM."""
+    scene = batch.attrs.get("scene")
+    if scene is None:
+        source = f.attrs.get("input") or dataset
+        scene = os.path.splitext(os.path.basename(str(source).replace("\\", "/")))[0]
+        return str(scene), str(scene), "fem"
+    scene = str(scene)
+    label = f[scene].attrs.get("label", scene) if scene in f else scene
+    return scene, str(label), str(batch.attrs.get("fem", f"{scene}/fem"))
+
+
+def make_cases(dataset: str, set_names: list[str]) -> list[Case]:
+    cases = []
+    with h5py.File(dataset, "r") as f:
+        for name in set_names:
+            batch = static.load_sample_batch(f"{dataset}:{name}")
+            scene, label, fem = _scene_of(dataset, f, batch)
+            cases.append(Case(name, batch, scene, label, fem, results.benchmark_name(batch.problem, batch.h)))
+    for c in cases:
+        energies = {o.batch.target_energy for o in cases if (o.benchmark, o.scene) == (c.benchmark, c.scene)}
+        c.case = c.scene if len(energies) == 1 else f"{c.scene}_E{c.batch.target_energy:g}"
+    return cases
+
+
+def make_state(args, dataset: str, fem: str, h: float | None, sim_params: list[str]) -> SimulationState:
+    """Build the contact-free simulation on a FEM of the dataset; ``h`` set means one-step dynamic problems
+    of that step."""
     # The dataset's FEM has no kinematics group: its Dirichlet nodes stay fixed at rest
     # (check_sample_batch checks the samples against that), and the benchmark is contact-free.
-    fem_cpu, _, _ = load_problem(f"{dataset}:fem")
+    fem_cpu, _, _ = load_problem(f"{dataset}:{fem}")
     params_cpu = load_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
-    if args.sim_params or args.overrides:
-        config.load_sim_params(state, args.sim_params, args.overrides)
-    # The static benchmark is contact-free.
+    if sim_params or args.overrides:
+        config.load_sim_params(state, sim_params, args.overrides)
     for cd_params in state.cd_params.values():
         if hasattr(cd_params, "deactivate"):
             cd_params.deactivate = True
@@ -216,60 +322,16 @@ def make_state(args, dataset: str, h: float | None = None) -> SimulationState:
     return state
 
 
-def _log_spaced(n: int, k: int) -> np.ndarray:
-    if n <= k:
-        return np.arange(n)
-    return np.unique(np.concatenate([[0], np.geomspace(1, n - 1, k - 1).astype(np.int64)]))
-
-
-def _nan_to_none(v: float):
-    return None if (v is None or not math.isfinite(v)) else float(v)
-
-
-def summarize(log: static.StaticSolveLog) -> dict:
-    idx = _log_spaced(log.error.size, _CURVE_POINTS)
+def summarize(log: static.StaticSolveLog, levels, budget: float) -> dict:
     return {
         "e0": float(log.error[0]),
         "iterations": int(log.error.size - 1),
         "sweeps": int(log.sweeps[-1]),
-        "time": float(log.time[-1]),
+        "solver_time": float(log.time[-1]),
         "final_relative_error": float(log.relative_error[-1]),
         "termination": log.termination,
-        "time_to_reduction": {f"{p:.2f}": _nan_to_none(log.time_to_reduction(p)) for p in PERCENTILES},
-        "iterations_to_reduction": {
-            f"{p:.2f}": _nan_to_none(log.iterations_to_reduction(p)) for p in PERCENTILES
-        },
-        "curve": {
-            "iteration": idx.tolist(),
-            "time": log.time[idx].tolist(),
-            "sweeps": log.sweeps[idx].tolist(),
-            "relative_error": log.relative_error[idx].tolist(),
-        },
+        "crossings": results.level_crossings(log.relative_error, log.time, levels, budget),
     }
-
-
-def count_terminations(samples: list[dict]) -> dict:
-    """Number of samples per stop reason (lowercase ``static.StopReason`` names)."""
-    reasons = [s["termination"] for s in samples]
-    return {reason: reasons.count(reason) for reason in sorted(set(reasons))}
-
-
-def aggregate(samples: list[dict]) -> dict:
-    out = {}
-    for p in PERCENTILES:
-        key = f"{p:.2f}"
-        t = np.array([s["time_to_reduction"][key] for s in samples if s["time_to_reduction"][key] is not None])
-        bounds = [s["reference"]["relative_error_bound"] for s in samples if "reference" in s]
-        out[key] = {
-            # Samples whose reference is accurate enough for this level (dynamic problems only)
-            **({"reliable": int(sum(1.0 - p >= b for b in bounds))} if bounds else {}),
-            "reached": int(t.size),
-            "fraction_reached": float(t.size / len(samples)) if samples else 0.0,
-            "median": _nan_to_none(float(np.median(t)) if t.size else math.nan),
-            "q25": _nan_to_none(float(np.quantile(t, 0.25)) if t.size else math.nan),
-            "q75": _nan_to_none(float(np.quantile(t, 0.75)) if t.size else math.nan),
-        }
-    return out
 
 
 def _git_commit() -> str:
@@ -280,98 +342,135 @@ def _git_commit() -> str:
         return ""
 
 
+def _attr(v):
+    return v.item() if isinstance(v, np.generic) else v
+
+
 def main():
     args = parse_args()
+    levels = results.parse_levels(args.levels)
     wp.init()
-    spec = make_spec(args)
+    spec = make_spec(args, levels)
     if args.save_spec:
         with h5py.File(args.save_spec, "w") as f:
             spec.serialize(f.create_group("StaticSolveSpec"))
     solvers = [SolverType[name] for name in args.solvers.split(",") if name]
-    set_names = select_sets(spec)
-    batches = {name: static.load_sample_batch(f"{spec.dataset}:{name}") for name in set_names}
+    cases = make_cases(spec.dataset, select_sets(spec))
+    scene_params = parse_scene_params(args.scene_params)
+    unknown = set(scene_params) - {c.scene for c in cases}
+    if unknown:
+        raise SystemExit(f"--scene-params for scenes not in the run: {', '.join(sorted(unknown))}")
+    # Budgets per (benchmark, case): --budget, else the pilot's (capped), else --max-seconds
+    try:
+        direct = results.parse_budget_options(args.budget, "--budget")
+        caps = results.parse_budget_options(args.budget_cap, "--budget-cap")
+    except ValueError as e:
+        raise SystemExit(str(e))
+    pilot = {}
+    pilot_label = ""
+    if args.budget_from:
+        pilot = results.budgets_from_pilot(args.budget_from, args.budget_factor, args.budget_statistic)
+        pilot_label = f"{args.budget_factor:g} x {args.budget_statistic} Newton time in {args.budget_from}"
+    budgets = {}
+    for c in cases:
+        budgets[(c.benchmark, c.case)] = results.resolve_budget(
+            c.benchmark, c.case, direct, caps, pilot, spec.max_seconds, pilot_label
+        )
+    missing = [f"{b}/{c}" for (b, c), (_, source) in budgets.items() if args.budget_from and source == "--max-seconds"]
+    if missing:
+        print(f"Warning: {args.budget_from} has no Newton solve reaching its highest level for "
+              f"{', '.join(missing)}; their budget is --max-seconds ({spec.max_seconds:g} s)")
     with h5py.File(spec.dataset, "r") as f:
-        dataset_attrs = {k: (v.item() if isinstance(v, np.generic) else v) for k, v in f.attrs.items()}
-    # One simulation per time step (static sets share one), reused across its sets
-    states = {}
-    for batch in batches.values():
-        if batch.h not in states:
-            states[batch.h] = make_state(args, spec.dataset, batch.h)
-            if batch.h is None:
-                static.prepare_static_problem(states[None], spec.fext_scale)
-    state = next(iter(states.values()))
-    results = {
-        "spec": spec.to_dict(),
-        "percentiles": PERCENTILES,
-        "metadata": {
-            "dataset": spec.dataset,
-            "sim_params": " + ".join(args.sim_params + [f"--set {o}" for o in args.overrides])
-            or "(code defaults)",
-            "dataset_attrs": {k: v for k, v in dataset_attrs.items() if isinstance(v, (int, float, str, bool))},
-            "device": wp.get_device().name,
-            "git_commit": _git_commit(),
-            "date": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "newton_linear_solver": {
-                "n_max_iters": state.newton_linear_solver_params.n_max_iters,
-                "rtol": state.newton_linear_solver_params.rtol,
-                "atol": state.newton_linear_solver_params.atol,
-            },
-        },
-        "sets": {},
-    }
-    total = len(solvers) * sum(len(spec.sample_indices(b.n_samples)) for b in batches.values())
-    h5_path = os.path.splitext(args.output)[0] + ".h5"
-    with h5py.File(h5_path, "w") as h5f, tqdm(total=total, desc="Solves", unit="solve") as pbar:
+        dataset_attrs = {k: _attr(v) for k, v in f.attrs.items()}
+
+    total = len(solvers) * sum(len(spec.sample_indices(c.batch.n_samples)) for c in cases)
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+    with h5py.File(args.output, "w") as h5f, tqdm(total=total, desc="Solves", unit="solve") as pbar:
+        h5f.attrs.update(
+            format=results.FORMAT,
+            version=results.VERSION,
+            levels=np.array(levels),
+            budget_factor=args.budget_factor if args.budget_from else math.nan,
+            budget_statistic=args.budget_statistic if args.budget_from else "",
+            budget_pilot=args.budget_from or "",
+            budget_options=" ".join([f"--budget {b}" for b in args.budget] + [f"--budget-cap {b}" for b in args.budget_cap]),
+            dataset=spec.dataset,
+            device=wp.get_device().name,
+            git_commit=_git_commit(),
+            date=time.strftime("%Y-%m-%d %H:%M:%S"),
+            sim_params=" + ".join(args.sim_params + [f"--set {o}" for o in args.overrides]) or "(code defaults)",
+            solvers=[s.name for s in solvers],
+        )
         spec.serialize(h5f.create_group("StaticSolveSpec"))
-        for name, batch in batches.items():
-            dynamic = batch.problem == "dynamic"
-            state = states[batch.h]
-            static.check_sample_batch(batch, state.fem)
-            for w in batch.warnings():
-                print(f"Warning: {batch.path}: {w}")
-            indices = list(spec.sample_indices(batch.n_samples))
-            set_results = {
-                "problem": batch.problem,
-                "h": batch.h,
-                "sample_attrs": {k: v for k, v in batch.attrs.items() if isinstance(v, (int, float, str, bool))},
-                "solvers": {},
-            }
-            for solver in solvers:
-                runner = static.BenchmarkSolver(state, solver, spec)
-                samples = []
-                for s in indices:
-                    if dynamic:
-                        log = runner.solve(batch.x[s], batch.x_ref[s], batch.v[s], batch.xtilde[s])
-                    else:
-                        log = runner.solve(batch.x[s])
-                    summary = summarize(log)
-                    if dynamic:
-                        bound = float(batch.ref_error_mnorm[s])
-                        summary["reference"] = {
-                            "newton_correction": float(batch.ref_newton_correction[s]),
-                            "error_bound": bound,
-                            "relative_error_bound": bound / summary["e0"] if summary["e0"] > 0 else math.inf,
-                        }
-                    summary["sample"] = int(s)
-                    summary["deformation_energy"] = float(batch.energy[s])
-                    if batch.min_J is not None:
-                        summary["min_J"] = float(batch.min_J[s])
-                    samples.append(summary)
-                    g = h5f.create_group(f"{name}/{solver.name}/{s:06d}")
-                    g.create_dataset("error", data=log.error)
-                    g.create_dataset("time", data=log.time)
-                    g.create_dataset("sweeps", data=log.sweeps)
-                    pbar.set_postfix(set=name, solver=solver.name, e=f"{summary['final_relative_error']:.2e}")
-                    pbar.update(1)
-                set_results["solvers"][solver.name] = {
-                    "samples": samples,
-                    "aggregate": aggregate(samples),
-                    "termination": count_terminations(samples),
-                }
-            results["sets"][name] = set_results
-    with open(args.output, "w") as f:
-        json.dump(results, f, indent=1)
-    print(f"Wrote {args.output} and {h5_path}")
+        h5f.create_group("dataset_attrs").attrs.update(
+            {k: v for k, v in dataset_attrs.items() if isinstance(v, (int, float, str, bool))}
+        )
+        # Case groups in dataset order, so the figures' axes follow it
+        groups = {}
+        for c in cases:
+            budget = pilot.get((c.benchmark, c.case))
+            seconds, source = budgets[(c.benchmark, c.case)]
+            groups[c.set_name] = results.require_case(h5f, c.benchmark, c.case, {
+                "benchmark": c.benchmark,
+                "problem": c.batch.problem,
+                "h": c.batch.h if c.batch.h is not None else math.nan,
+                "scene": c.scene,
+                "label": c.label,
+                "energy": c.batch.target_energy,
+                "set": c.set_name,
+                "budget": seconds,
+                "budget_source": source,
+                "budget_reference_time": budget["reference_time"] if budget else None,
+                "budget_reference_reached": f"{budget['reached']}/{budget['n_samples']}" if budget else None,
+                "scene_params": ",".join(scene_params.get(c.scene, [])),
+            })
+        # One simulation per (scene, time step) at a time, reused across its sets
+        keys = list(dict.fromkeys((c.scene, c.fem, c.batch.h) for c in cases))
+        for scene, fem, h in keys:
+            state = make_state(args, spec.dataset, fem, h, args.sim_params + scene_params.get(scene, []))
+            if h is None:
+                static.prepare_static_problem(state, spec.fext_scale)
+            if "newton_cg_n_max_iters" not in h5f.attrs:
+                cg = state.newton_linear_solver_params
+                h5f.attrs.update(newton_cg_n_max_iters=cg.n_max_iters, newton_cg_rtol=cg.rtol, newton_cg_atol=cg.atol)
+            for c in (c for c in cases if (c.scene, c.fem, c.batch.h) == (scene, fem, h)):
+                batch, group = c.batch, groups[c.set_name]
+                static.check_sample_batch(batch, state.fem)
+                for w in batch.warnings():
+                    print(f"Warning: {batch.path}: {w}")
+                case_spec = copy_spec(spec, max_seconds=float(group.attrs["budget"]))
+                indices = list(case_spec.sample_indices(batch.n_samples))
+                for solver in solvers:
+                    runner = static.BenchmarkSolver(state, solver, case_spec)
+                    summaries, logs = [], []
+                    for s in indices:
+                        t_host = time.perf_counter()
+                        if batch.problem == "dynamic":
+                            log = runner.solve(batch.x[s], batch.x_ref[s], batch.v[s], batch.xtilde[s])
+                        else:
+                            log = runner.solve(batch.x[s])
+                        t_host = time.perf_counter() - t_host
+                        summary = summarize(log, levels, case_spec.max_seconds)
+                        summary["host_time"] = t_host
+                        summary["sample"] = int(s)
+                        summary["deformation_energy"] = float(batch.energy[s])
+                        if batch.min_J is not None:
+                            summary["min_J"] = float(batch.min_J[s])
+                        if batch.problem == "dynamic":
+                            bound = float(batch.ref_error_mnorm[s])
+                            summary["reference_error_bound"] = bound
+                            summary["reference_relative_error_bound"] = (
+                                bound / summary["e0"] if summary["e0"] > 0 else math.inf
+                            )
+                        summaries.append(summary)
+                        logs.append((log.error, log.time, log.sweeps))
+                        pbar.set_postfix(case=f"{c.benchmark}/{c.case}", solver=solver.name,
+                                         e=f"{summary['final_relative_error']:.2e}")
+                        pbar.update(1)
+                    results.write_solver(group, solver.name, levels, summaries, logs)
+                    h5f.flush()
+            del state
+    print(f"Wrote {args.output}")
 
 
 if __name__ == "__main__":
