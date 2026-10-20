@@ -21,6 +21,7 @@ from .colliders import collider_faces
 from .panels.kinematics import draw_kinematics_panel
 from .panels.profiling import draw_profiling_panel, profile_step
 from .panels.static import draw_static_panel
+from .panels.status import draw_status_panel
 from .state import (
     SimulationState,
     SolverType,
@@ -256,6 +257,7 @@ def make_callback(
                 draw_kinematics_panel(state, ui_state)
                 draw_profiling_panel(state, ui_state)
                 draw_static_panel(state, ui_state)
+                draw_status_panel(state, ui_state)
 
                 # --- Simulation controls ---
                 imgui.Separator()

@@ -33,6 +33,7 @@ from ..contact.dynamics import (
     MeshDynamicsData as ContactDynamicsData,
     PenaltyAdaptivity,
 )
+from .convergence import SweepLayout
 
 BetaWarmStart = pbat.sim.algorithm.vbd.StencilGradientBetaWarmStartMask
 
@@ -284,6 +285,13 @@ def solve_outer_loop(
         schedule, n_sub, int(check.params.check_interval)
     )
     detect_inside = cd.supports_conditional_capture
+    # Sweeps a subproblem uses, for the status rows (an Anderson step applies its p sweeps, and the
+    # tail runs the sweeps left over from the budget)
+    spi = int(schedule.sweeps_per_iteration)
+    tail_sweeps = (
+        max(0, int(params.data.n_subproblem_max_iters) - n_sub * spi) if tail is not None else 0
+    )
+    layout = SweepLayout(n_sub * spi + tail_sweeps, prefix * spi, block * spi, n_blocks)
 
     def subproblem(k: int):
         prepare_subproblem(fem, contact, cd, params)
@@ -324,7 +332,7 @@ def solve_outer_loop(
             if detect_inside:
                 cd.detect_contacts(prepared=True)
             contact.update_constraint_set()
-        check.end_outer(gtol, n_max_iters)
+        check.end_outer(gtol, n_max_iters, layout)
 
     check.start(gtol, n_max_iters)
     for k in range(n_max_iters):

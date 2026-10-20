@@ -6,6 +6,7 @@ Outer loop mirrors ``gpu/vbd/solver.py``.  Newton-specific work lives in
 """
 
 from enum import IntEnum
+from typing import NamedTuple
 
 import cuda.compute
 import warp as wp
@@ -837,6 +838,10 @@ class Params:
         # Shared device-side convergence test (gpu.vbd.convergence.ConvergenceCheck), set by
         # SimulationState. With its relative test on, it replaces gtol2 (see check_convergence).
         self.convergence = None
+        # Host-side solve statuses: the last solve_subproblem's record, and one NewtonSolveRecord per
+        # NewtonSolver.solve until a consumer (SimulationState.step) drains them
+        self.last_subproblem: NewtonSubproblemRecord | None = None
+        self.solve_records: list[NewtonSolveRecord] = []
 
     def construct(self, fem: FemElastoDynamics, contact: ContactDynamics):
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = (
@@ -1104,6 +1109,24 @@ class SubproblemStatus(IntEnum):
     LINE_SEARCH_FAILED = 3  # no step length passed the Armijo test; x is restored
 
 
+class NewtonSubproblemRecord(NamedTuple):
+    """How one :func:`solve_subproblem` call went (``Params.last_subproblem``)."""
+
+    status: SubproblemStatus
+    newton_steps: int  # Newton directions computed (one CG solve each)
+    max_cg_iters: int  # most CG iterations of one solve
+    cg_capped: bool  # a CG solve stopped at its iteration cap (LinearSolverParams.n_max_iters)
+    backtracks: int  # line-search step-size reductions, over all steps
+
+
+class NewtonSolveRecord(NamedTuple):
+    """One Newton solve (time step or substep): outer iterations and their subproblems."""
+
+    outer: int  # outer (augmented-Lagrangian) iterations run
+    converged: bool  # the outer test passed within the budget
+    subproblems: tuple[NewtonSubproblemRecord, ...]
+
+
 def _assemble_hessian(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
@@ -1202,22 +1225,32 @@ def solve_subproblem(
 
     Returns:
         SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
-        leaves ``x`` at the last accepted iterate.
+        leaves ``x`` at the last accepted iterate. ``params.last_subproblem`` holds its
+        :class:`NewtonSubproblemRecord`, from values the loop reads anyway (no extra synchronization).
     """
     main_stream = wp.get_stream()
     n_nodes = fem.data.x.shape[0]
     h2 = wp.float32(fem.h2)  # type: ignore
     check = _relative_check(params)
+    n_lin_max_iters = int(params.data.n_lin_max_iters)
+    steps, max_cg, cg_capped, backtracks = 0, 0, False, 0
+
+    def done(status: SubproblemStatus) -> SubproblemStatus:
+        params.last_subproblem = NewtonSubproblemRecord(
+            status, steps, max_cg, cg_capped, backtracks
+        )
+        return status
+
     params._gradient_norm.compute_gradient(main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
         if check is not None:
             if check.relative_test(params._g):
-                return SubproblemStatus.CONVERGED
+                return done(SubproblemStatus.CONVERGED)
         else:
             params._gradient_norm.reduce(main_stream)
             gnorm2 = float(params._gnorm2.numpy()[0])
             if gnorm2 <= float(params.data.gtol2):
-                return SubproblemStatus.CONVERGED
+                return done(SubproblemStatus.CONVERGED)
         # Assemble FEM + contact Hessian
         profiling.push("newton.assemble")
         _assemble_hessian(fem, contact, params, h2)
@@ -1237,12 +1270,16 @@ def solve_subproblem(
             use_cuda_graph=False,  # True
         )
         profiling.pop()
+        # With check_every > 0 (the default), cg returns its iteration count as an int
+        steps += 1
+        max_cg = max(max_cg, int(final_iteration))
+        cg_capped = cg_capped or int(final_iteration) >= n_lin_max_iters
         # Check descent direction slope=dot(g, dx) < 0.
         # Since we compute ndx=-dx, we check -dot(g, ndx) < 0.
         params._nslope_reduce(main_stream)
         slope = -params._nslope.numpy()[0]
         if slope >= 0.0:
-            return SubproblemStatus.NON_DESCENT
+            return done(SubproblemStatus.NON_DESCENT)
         # Armijo backtracking line search
         profiling.push("newton.line_search")
         x_backup = wp.clone(fem.data.x)
@@ -1265,12 +1302,13 @@ def solve_subproblem(
             alpha_next = alpha * float(params.data.ls_tau)
             wp.launch(_axpy, dim=n_nodes, inputs=[fem.data.x, params._ndx, alpha - alpha_next])
             alpha = alpha_next
+            backtracks += 1
         profiling.pop()
         if not accepted:
             wp.copy(fem.data.x, x_backup)
-            return SubproblemStatus.LINE_SEARCH_FAILED
+            return done(SubproblemStatus.LINE_SEARCH_FAILED)
         params._gradient_norm.compute_gradient(main_stream)
-    return SubproblemStatus.STEPPED
+    return done(SubproblemStatus.STEPPED)
 
 
 @profiling.scoped("solve.finalize_subproblem")
@@ -1362,6 +1400,7 @@ class NewtonSolver:
         params: Params,
     ) -> bool:
         converged = False
+        subproblems = []
         initialize_solve(fem, contact, cd, params)
         for _ in range(int(params.data.n_max_iters)):
             if check_convergence(fem, contact, params):
@@ -1369,9 +1408,14 @@ class NewtonSolver:
                 break
             prepare_subproblem(fem, contact, cd, params)
             solve_subproblem(fem, contact, params)
+            subproblems.append(params.last_subproblem)
             finalize_subproblem(fem, contact, cd, params)
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
+        # Host-side status of the solve, drained by SimulationState.step
+        params.solve_records.append(
+            NewtonSolveRecord(len(subproblems), converged, tuple(subproblems))
+        )
         return converged
 
     @property

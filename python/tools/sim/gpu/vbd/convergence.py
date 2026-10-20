@@ -14,8 +14,17 @@ current contacts (the maintainer's choice; C++ has no feasibility test). Inside 
 gradient is tested: passing ends the subproblem, and both tests follow its finalization. Its outcome stays on the device in flags that conditional graph nodes
 (``wp.capture_if``/``wp.capture_while``) read, so a captured step stops early too. See
 ``vbd.solver.solve_outer_loop`` for how the flags drive the loops.
+
+The same kernels record each solve's outcome (:class:`SolveStatus`: outer iterations and sweeps used,
+how it ended, and how far from the tolerances) in a small device ring, one row per solve. The host
+reads it back with data it already synchronizes on (``SimulationState.step``), see
+:meth:`ConvergenceCheck.enqueue_status_readback`.
 """
 
+import enum
+from typing import NamedTuple
+
+import numpy as np
 import warp as wp
 
 import cupy as cp
@@ -65,6 +74,116 @@ class ConvergenceParams(SerializableMixin):
         "Smallest displacement scale (m) of the relative gradient test: the scale is max(RMS(x~ - x^t), "
         "displacement_floor), so it never vanishes for bodies at rest",
     )
+
+
+class SolveEnd(enum.IntEnum):
+    """How a VBD-family solve ended (:attr:`SolveStatus.reason`)."""
+
+    RUNNING = 0  # not finished: an unwritten row (no convergence check)
+    CONVERGED = 1  # gradient test and feasibility met, within the outer-iteration budget
+    GRADIENT_UNMET = 2  # outer iterations exhausted with the gradient test unmet (feasible)
+    FEASIBILITY_UNMET = 3  # outer iterations exhausted, gradient test met but infeasible
+    BOTH_UNMET = 4  # outer iterations exhausted with neither met
+
+
+SOLVE_RUNNING = wp.constant(int(SolveEnd.RUNNING))
+SOLVE_CONVERGED = wp.constant(int(SolveEnd.CONVERGED))
+SOLVE_GRADIENT_UNMET = wp.constant(int(SolveEnd.GRADIENT_UNMET))
+SOLVE_FEASIBILITY_UNMET = wp.constant(int(SolveEnd.FEASIBILITY_UNMET))
+SOLVE_BOTH_UNMET = wp.constant(int(SolveEnd.BOTH_UNMET))
+
+
+@wp.struct
+class SolveStatus:
+    """One VBD-family solve (time step or substep), as the convergence kernels record it."""
+
+    solve: wp.int32  # index of the solve since the check was built (ConvergenceCheck.solves)
+    outer: wp.int32  # outer iterations used
+    sweeps: wp.int32  # VBD sweeps used (each Anderson step counts its p sweeps)
+    reason: wp.int32  # SolveEnd
+    gradient_ratio: wp.float32  # gradient measure / tolerance at the end (<= 1 passes)
+    feasibility_ratio: wp.float32  # penetration / (ftol dmin) at the end (<= 1 passes)
+
+
+class SweepLayout(NamedTuple):
+    """How many sweeps a subproblem used, from its recorded layout (``solve_outer_loop``)."""
+
+    full: int  # sweeps of a subproblem that ran its whole budget
+    prefix: int  # sweeps before the first tested block
+    block: int  # sweeps per tested block
+    n_blocks: int  # tested blocks (0: no test inside the subproblem, so it always runs in full)
+
+
+def select_new_status_rows(rows: np.ndarray, next_solve: int) -> tuple[np.ndarray, int, int]:
+    """Pick the finished solves at or after ``next_solve`` from a copy of the status ring.
+
+    Args:
+        rows (np.ndarray): Structured array of :class:`SolveStatus` rows (the ring, in any order).
+        next_solve (int): First solve index not read yet.
+
+    Returns:
+        tuple[np.ndarray, int, int]: The new rows by solve index, the next unread solve index, and how
+        many solves were lost to the ring wrapping between reads.
+    """
+    new = rows[(rows["reason"] != int(SolveEnd.RUNNING)) & (rows["solve"] >= next_solve)]
+    new = np.sort(new, order="solve")
+    if new.shape[0] == 0:
+        return new, next_solve, 0
+    first, last = int(new["solve"][0]), int(new["solve"][-1])
+    lost = (first - next_solve) + (last - first + 1 - new.shape[0])
+    return new, last + 1, lost
+
+
+@wp.func
+def _gradient_ratio(
+    gnorm2: wp.array[wp.float32],
+    gtol2: wp.float32,
+    gm2: wp.array[wp.float32],
+    dm2: wp.array[wp.float32],
+    rtol2: wp.float32,
+) -> wp.float32:
+    """The gradient test's measure over its tolerance, sqrt(sum |g|^2/m / (rtol^2 scale)) or
+    |g| / gtol (see :func:`_is_converged`): at most 1 when it passes."""
+    num = gnorm2[0]
+    den = gtol2
+    if rtol2 > wp.float32(0):
+        num = gm2[0]
+        den = rtol2 * dm2[0]
+    ratio = wp.float32(0)
+    if den > wp.float32(0):
+        ratio = wp.sqrt(num / den)
+    elif num > wp.float32(0):
+        ratio = wp.float32(wp.inf)
+    return ratio
+
+
+@wp.func
+def _feasibility_ratio(
+    penetration: wp.array[wp.float32], ftol: wp.float32, dmin: wp.float32
+) -> wp.float32:
+    """Largest penetration over its tolerance ftol * dmin: at most 1 when feasible."""
+    tol = ftol * dmin
+    p = penetration[0]
+    ratio = wp.float32(0)
+    if tol > wp.float32(0):
+        ratio = p / tol
+    elif p > wp.float32(0):
+        ratio = wp.float32(wp.inf)
+    return ratio
+
+
+@wp.func
+def _solve_end(converged: bool, feasible: bool, iterations_left: bool) -> wp.int32:
+    reason = SOLVE_BOTH_UNMET
+    if converged and feasible:
+        reason = SOLVE_CONVERGED
+    elif iterations_left:
+        reason = SOLVE_RUNNING
+    elif feasible:
+        reason = SOLVE_GRADIENT_UNMET
+    elif converged:
+        reason = SOLVE_FEASIBILITY_UNMET
+    return reason
 
 
 @wp.func
@@ -219,10 +338,25 @@ def _start_kernel(
     n_max_iters: wp.int32,
     k: wp.array[wp.int32],
     keep: wp.array[wp.int32],
+    status: wp.array[SolveStatus],
+    solves: wp.array[wp.int32],
 ):
     k[0] = 0
-    done = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2) and _is_feasible(penetration, ftol, contact.dmin)
+    converged = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2)
+    feasible = _is_feasible(penetration, ftol, contact.dmin)
+    done = converged and feasible
     keep[0] = wp.where(n_max_iters > 0 and not done, 1, 0)
+    # A new solve: advance the counter and start its status row
+    n = solves[0]
+    solves[0] = n + 1
+    row = SolveStatus()
+    row.solve = n
+    row.outer = 0
+    row.sweeps = 0
+    row.reason = _solve_end(converged, feasible, n_max_iters > 0)
+    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, dm2, rtol2)
+    row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
+    status[n % status.shape[0]] = row
 
 
 @wp.kernel
@@ -274,11 +408,33 @@ def _end_outer_kernel(
     n_max_iters: wp.int32,
     k: wp.array[wp.int32],
     keep: wp.array[wp.int32],
+    status: wp.array[SolveStatus],
+    solves: wp.array[wp.int32],
+    sweeps_full: wp.int32,
+    sweeps_prefix: wp.int32,
+    sweeps_block: wp.int32,
+    n_blocks: wp.int32,
+    blocks: wp.array[wp.int32],
+    subproblem_keep: wp.array[wp.int32],
 ):
     kk = k[0] + 1
     k[0] = kk
-    done = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2) and _is_feasible(penetration, ftol, contact.dmin)
+    converged = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2)
+    feasible = _is_feasible(penetration, ftol, contact.dmin)
+    done = converged and feasible
     keep[0] = wp.where(kk < n_max_iters and not done, 1, 0)
+    # Update the solve's status row with the subproblem that just ended (see SweepLayout)
+    idx = (solves[0] - 1) % status.shape[0]
+    row = status[idx]
+    row.outer = kk
+    if n_blocks == 0 or subproblem_keep[0] != 0:
+        row.sweeps = row.sweeps + sweeps_full
+    else:
+        row.sweeps = row.sweeps + sweeps_prefix + blocks[0] * sweeps_block
+    row.reason = _solve_end(converged, feasible, kk < n_max_iters)
+    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, dm2, rtol2)
+    row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
+    status[idx] = row
 
 
 class ConvergenceCheck:
@@ -293,6 +449,10 @@ class ConvergenceCheck:
 
     ``k`` counts the outer iterations done, ``penetration`` holds the last feasibility measure.
     :meth:`converged` reads the last gradient test on the host.
+
+    ``solves`` counts the solves started (:meth:`start`), and ``status`` is a ring of
+    ``status_capacity`` :class:`SolveStatus` rows, row ``solve % status_capacity`` per solve. The
+    kernels that run anyway write them, so recording adds no graph nodes.
     """
 
     def __init__(
@@ -300,6 +460,7 @@ class ConvergenceCheck:
         fem: FemElastoDynamics,
         contact: ContactDynamics,
         params: ConvergenceParams | None = None,
+        status_capacity: int = 1,
     ):
         """
         Args:
@@ -307,8 +468,15 @@ class ConvergenceCheck:
             contact (ContactDynamics): Its contact model (multipliers for the gradient, contact sets
                 for the feasibility test).
             params (ConvergenceParams | None): Check interval and feasibility tolerance; defaults if None.
+            status_capacity (int): Rows of the status ring: at least the solves between two
+                :meth:`read_status` calls (``SimulationState`` reads every step: its substeps).
         """
         self.params = params or ConvergenceParams()
+        capacity = max(1, int(status_capacity))
+        self.status = wp.zeros(capacity, dtype=SolveStatus)
+        self.solves = wp.zeros(1, dtype=wp.int32)
+        self._status_host = wp.zeros(capacity, dtype=SolveStatus, device="cpu", pinned=True)
+        self._next_solve = 0
         self._fem = fem
         self._contact = contact
         self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False)
@@ -422,7 +590,11 @@ class ConvergenceCheck:
         self.measure_scale()
         self._test()
         self._measure_penetration()
-        wp.launch(_start_kernel, dim=1, inputs=self._outer_test_inputs(gtol, n_max_iters))
+        wp.launch(
+            _start_kernel,
+            dim=1,
+            inputs=self._outer_test_inputs(gtol, n_max_iters) + [self.status, self.solves],
+        )
 
     def begin_outer(self) -> None:
         """Latch ``keep`` into ``active`` for the outer iteration that starts."""
@@ -462,17 +634,55 @@ class ConvergenceCheck:
             ],
         )
 
-    def end_outer(self, gtol: float, n_max_iters: int) -> None:
+    def end_outer(
+        self, gtol: float, n_max_iters: int, layout: SweepLayout | None = None
+    ) -> None:
         """Test after an outer iteration (C++'s check before the next one, plus feasibility):
-        ``k += 1``, update ``keep``.
+        ``k += 1``, update ``keep`` and the solve's status row.
 
         Args:
             gtol (float): Gradient-norm tolerance (absolute).
             n_max_iters (int): Maximum outer iterations.
+            layout (SweepLayout | None): The subproblem's sweep layout, to count the sweeps it used;
+                None counts none.
         """
+        layout = layout or SweepLayout(0, 0, 0, 0)
         self._test()
         self._measure_penetration()
-        wp.launch(_end_outer_kernel, dim=1, inputs=self._outer_test_inputs(gtol, n_max_iters))
+        wp.launch(
+            _end_outer_kernel,
+            dim=1,
+            inputs=self._outer_test_inputs(gtol, n_max_iters)
+            + [
+                self.status,
+                self.solves,
+                int(layout.full),
+                int(layout.prefix),
+                int(layout.block),
+                int(layout.n_blocks),
+                self.blocks,
+                self.subproblem_keep,
+            ],
+        )
+
+    def enqueue_status_readback(self) -> None:
+        """Queue an asynchronous copy of the status ring into pinned host memory on the current
+        stream. Doesn't synchronize: :meth:`read_status` is valid after the next synchronization of
+        that stream (``SimulationState.step`` queues it right before its own)."""
+        wp.copy(self._status_host, self.status)
+
+    def read_status(self) -> tuple[np.ndarray, int]:
+        """The solves finished since the last call, from the last :meth:`enqueue_status_readback`
+        (after a synchronization). Host-only, no GPU calls.
+
+        Returns:
+            tuple[np.ndarray, int]: :class:`SolveStatus` rows by solve index, and how many solves were
+            lost because the ring wrapped between reads.
+        """
+        rows, self._next_solve, lost = select_new_status_rows(
+            np.array(self._status_host.numpy()), self._next_solve
+        )
+        return rows, lost
 
     def converged(self, gtol: float) -> bool:
         """Host-side gradient test from the last test (relative or absolute, see
