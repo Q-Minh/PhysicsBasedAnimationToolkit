@@ -1,7 +1,152 @@
 # Task 2: Solver profiling and cost breakdowns
 
-Status: **not started** · Branch `feature/gpu-profiling` · Worktree `C:\git\pbat-profiling`
+Status: **on hold** (see Handoff) · Worktree `pbat-profiling` (location in `CLAUDE.local.md`)
 Read first: `MASTER.md` (rules, ownership, GPU-sharing rule), `python/tools/sim/CLAUDE.md`.
+
+## Handoff (2026-10-20)
+
+Task 2 is **on hold**: no open branches, no uncommitted worktree changes. The how-to lives in
+`python/tools/sim/CLAUDE.md` ("Profiling", AAAVBD bullets) and `.claude/skills/sim-profiling/SKILL.md`. This section
+records state, decisions and gotchas only.
+
+### 1. Scope and ownership
+
+- **Profiling stack:**
+  - `gpu/common/profiling.py` (scopes; backends `off`/`kernels`/`nvtx`) and `gpu/common/cupti.py` (ctypes CUPTI binding);
+  - `panels/profiling.py`;
+  - `profiling/` (`results`, `scope_paths`, `report`, `nsys`, `venvrun`, `anatomy`, `ncu`, `nsight`, `overheads`);
+  - `simulate.py`'s `--profile*` flags;
+  - the scope lines in the solver and contact files.
+- **AAAVBD GPU code I changed:**
+  - `gpu/vbd/aaasolver.py`: loads hoisted, `betaup`, `lipschitz_normalization`;
+  - the contact-gather early-out (`MeshDynamicsData.in_contact`);
+  - the relative `hess_zero` check;
+  - `surface_stencil_surface_neighbours_only` on the GPU;
+  - `gpu/vbd/params.py`: `AaaVbdCpuParams`, `STENCIL_GRADIENT_ACCELERATION_KEYS`;
+  - the AAAVBD groups in `state.py` and `configs/defaults.toml`.
+
+### 2. Current state
+
+- **Merged into dev:**
+  - Profiling milestones: M1 (`1d52c8ff`), M2 `02d75771`, M3 (`7ad6a983`).
+  - feature/gpu-profiling follow-ups:
+    - ncu hotspots `d05f0987`;
+    - gather early-out `1ba967d9`;
+    - CUPTI exit `5035b905`;
+    - AAAVBD load hoisting `d61ee145`;
+    - inclusive scopes `ff3c486a`;
+    - docs `abe37d42`;
+    - tooltips `b5a5450c`.
+  - aaavbd-params `9598e393`, relative-hess-zero `7ee9ee3a`, aaavbd-surface-neighbours `9a62fcf6`, aaavbd-ablation-params `30fe7778`.
+  - profiling-tool-discovery `006e7450`, report-without-gpu `feb00581`, sd-detect-scope `15340ab4`.
+- **Unmerged:** nothing.
+- **Leftovers:** the local branches `feature/relative-hess-zero` and `feature/aaavbd-surface-neighbours` are merged and can be deleted with `git branch -d`.
+- **Resume from:** worktree `pbat-profiling` (location in `CLAUDE.local.md`), detached at dev. Branch `feature/<topic>` from the latest dev.
+- **Reports:**
+  - trampoline breakdown https://claude.ai/artifact/LHMcGJs6Z6N89iruhYLxYz
+  - AAAVBD overheads v3 https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL
+  - solver-costs sample https://claude.ai/artifact/9RuazLzk7xVFNzB2DFZRLH
+  - collaborator index https://claude.ai/artifact/57XN1mBRfqnYHfMRdhuays
+
+### 3. Key decisions (maintainer)
+
+- **What to report:** GPU busy time per phase only (as if written in CUDA), with no host, Python or launch overhead. Profiling runs eagerly.
+- **Measurement tools:**
+  - The `kernels` backend is CUPTI: it replaced Warp activity timing, which was 4x off from launch latency.
+  - Paper figures come from nsys.
+  - Clocks are unlocked; validate against nsys instead.
+- **Contact:** VertexSdf only. The fused vertex solve is one slice, "elastic + contact".
+- **Goal:** find AAAVBD's overheads and make it faster. The cheap kernel changes were approved and are done.
+- **AAAVBD parameters:**
+  - Stencil keys are AAAVBD-only on the GPU.
+  - `warm_start_beta` GPU default: 2.
+  - `betaup` (1) and `lipschitz_normalization` (on) are GPU-only ablation switches, bit-identical at their defaults.
+- **Tuning:**
+  - Never change the betaG shrink rule.
+  - Tune near the defaults: gammadown 0.99 → 0.95 → 0.90, gammaup no lower than ~0.3.
+  - For contact instabilities, change mainly gammadownS and gammaupS.
+  - No per-scene tuning.
+  - Defaults are the maintainer's call: report, don't change.
+- **cow_on_trampoline:** stopped. Don't resume it or mention it in docs or skills.
+
+### 4. Verified facts and gotchas
+
+- **Eager vs graph.** Profiles are eager, so they include no graph gaps. Production cost is graph replay (`--profile off --profile-out`). `profiling.anatomy` explains the difference: steady `capture_while` sweeps are nearly gap-free, and the gaps sit at the boundary phases.
+- **CUPTI vs nsys** (beam, AAAVBD): identical activity counts. Sweep within 0.6%, step within 2.9%.
+  - Sub-µs activities read ~0.2 µs long, so the contact phases come out 27–40% high: use nsys for those.
+  - `kernels` and nsys can't share a process: use `--profile nvtx` under nsys.
+- **Busy vs union time.** `busy_ms` double-counts concurrent streams (contact uses 4x6, Newton assembly 6); `union_ms` doesn't.
+- **Scope attribution:**
+  - A kernel goes to the innermost scope open at its launch.
+  - Off-mode scopes leave graphs and positions identical.
+  - Never nest a scope inside a same-named scope: use an unscoped helper (`Sd._refit`).
+  - VertexSdf's detection is all under `<phase>/contact.detect`. Under `solve.finalize_subproblem` that's 2 calls per outer iteration (prepare + detect).
+- **Nsight on Windows:**
+  - The venv's `python.exe` stub hangs under nsys, hence `profiling/venvrun.py`.
+  - `PYTHONPATH` alone breaks `cuda.compute`.
+  - `ncu.bat` goes through cmd.exe, which strips `^` from kernel regexes, so `find_tool` uses `ncu.exe`.
+  - ncu runs at base clocks: compare kernels with each other only.
+- **Reading results needs no GPU.** `profiling/results.py` and `report.py` must not import warp, cupy, pbatoolkit, h5py or nvtx (enforced by `TestReportImports`).
+- **Per-step times mean "time to pass gtol", not equal accuracy.** Show sweeps/step, outer iterations, ms/sweep and the exit reason.
+- **AAAVBD now:**
+  - per sweep: ~1.17x VBD;
+  - vertex solve (ncu): 9.2 µs vs VBD 7.6 µs;
+  - latency-bound: ~74% long-scoreboard stalls;
+  - grid-limited occupancy: 667 one-warp blocks per color.
+- **Speedups since 2026-10-17** (trampoline AAAVBD graph replay): ~108 → ~26 ms/step. They came from:
+  - the constraint-set copy fix (`a9abadc1`, −23%);
+  - the gather early-out (−52%);
+  - `capture_while`;
+  - the load hoisting (−5%);
+  - the fused constraint-set update (`ae18a043`, −2…3%).
+- **Determinism.** The beam and the trampoline are bit-reproducible for VBD, AAAVBD and Chebyshev. BeamFallingOnBeam VBD/AAAVBD was also bit-identical run to run in 10–30-step checks.
+- **mat_on_stilts_3, AAAVBD, 5-substep paper config: not a regression.** The Oct-17 code fails the same way.
+  - Cause: free stilt-top nodes between pinned nodes (tet quality 0.05–0.1), plus contact, destabilize the stencil acceleration.
+  - Stable: the 10-substep config, gammadownS 0.90, or warm_start_beta 1.
+  - `surface_stencil_surface_neighbours_only` 0 diverges.
+- **Parameter plumbing:**
+  - nanobind `vbd::Params` rejects new attributes, hence the `AaaVbdCpuParams` wrapper, which forwards to `.vbd_params`. A Python subclass leaks warnings at exit.
+  - Use `state.load_params(fem)`.
+- **Windows shell:** pass h5 paths in Windows drive form with forward slashes, not Git Bash's `/<drive>/...` form. Heredocs mangle backslashes, so write scripts to files.
+
+### 5. Open items (all wait for the maintainer)
+
+1. **AAAVBD ablations** (MASTER.md, "Planned: AAAVBD ablation studies"):
+   - The switches exist: `lipschitz_normalization`, `betaup` (beta > 1, e.g. 1.05), `warm_start_beta`, and the gammas.
+   - Next: propose a protocol, e.g. `python.tools.sim.benchmark` time-to-error-level with `--set Solver.AAAVBD.<key>=...` on 1 static + 1 dynamic set.
+2. **H⁻¹-norm augmentation cap** (idea, not pursued): scale the stencil augmentation `a` so that `λ² aᵀH⁻¹a ≤ gᵀH⁻¹g`, so the local model still decreases. The shrink rule stays untouched.
+   - Next, only if asked: a GPU-only AAAVBD switch using the vertex solve's 3x3 H, tried on mat_on_stilts_3 with the 5-substep config.
+3. **mat_on_stilts_3, 5-substep config:** the maintainer picks one:
+   - leave it as is;
+   - add a per-scene gammadownS 0.90;
+   - make gammadownS 0.90 the default (benchmark check first).
+4. **Performance ideas:**
+   - an early-out for the per-sweep dual updates (4 kernels even with no contacts);
+   - pre-filtering the AAAVBD surface neighbours;
+   - fusing the remaining boundary copies and fills;
+   - the acceleration functions (~25% of vertex-solve stalls).
+
+   Next: size them with `profiling.anatomy` and `ncu --lineinfo` on dev.
+5. **Recheck on dev:** 21 MEM_ALLOC/MEM_FREE node pairs and ~2,500 memcpy nodes per captured step. These were measured before the later changes.
+6. **Manual test for the maintainer:** the GUI profiling panel's Tree mode.
+
+### 6. How to resume
+
+- Use the venv from `CLAUDE.local.md`. Scene data is in the main checkout's `data/`.
+- **Cheap scenes:** `data/scenarios/MediumLongBendingBeam.h5` (contact-free), `data/BeamFallingOnBeam.h5` (contact), `data/scenarios/trampoline.h5`.
+- No heavy scenes or long runs without the maintainer. Log GPU runs (START/END) in MASTER.md.
+- **Tests:**
+  ```bash
+  python -m unittest python.tools.sim.gpu.common.profiling python.tools.sim.gpu.common.cupti \
+      python.tools.sim.profiling.results python.tools.sim.profiling.nsight python.tools.sim.gpu.vbd.params
+  ```
+- **Smallest profile check** (seconds; read the JSON with `results.scope_tree`):
+  ```bash
+  python -m python.tools.sim.simulate --scene path/to/PhysicsBasedAnimationToolkit/data/BeamFallingOnBeam.h5 \
+      --solver AAAVBD --duration 0.1 --profile kernels --profile-warmup 2 --profile-out out/k.json -o out/k.h5
+  ```
+- **Bit-identity:** the same run with profiling off, before (`git checkout HEAD~1 -- <file>`) and after. Then compare every float dataset of the two `.h5` files with `np.array_equal`.
+- **More recipes:** nsys, anatomy, ncu, report and production timing are in the sim-profiling skill; benchmarks in sim-benchmarks.
 
 ## Goal
 
@@ -9,6 +154,8 @@ Measure where a time step's GPU time goes, by algorithm phase, for every GPU sol
 Chebyshev, Anderson). Produce per-solver pie charts and cross-solver comparisons that hold up in a paper.
 
 ## Facts that shape the design
+
+> Superseded (2026-10-20): the in-process backend uses CUPTI, not Warp activity timing (Handoff §4).
 
 - **Warp activity timing** (`wp.timing_begin`/`wp.timing_end`, or `wp.ScopedTimer(cuda_filter=...)`)
   records the GPU duration of each *eager* kernel launch, memset and memcpy, in launch order. A captured CUDA
@@ -26,6 +173,8 @@ Chebyshev, Anderson). Produce per-solver pie charts and cross-solver comparisons
   must account for that, for example by reporting Newton's eager GPU busy time next to the others' graph times.
 
 ## Proposed design
+
+> Superseded (2026-10-20): backends are off / kernels (CUPTI) / nvtx, see `python/tools/sim/CLAUDE.md` and Handoff.
 
 **Scope API** (the stub lands in Phase 0, in `python/tools/sim/gpu/common/profiling.py`):
 `with profiling.scope("anderson.gram"):` with hierarchical dotted names, a no-op when profiling is off, so
@@ -62,11 +211,15 @@ Record GPU model, driver, Warp version and solver parameters with every result.
 
 ## Validation
 
+> Superseded (2026-10-20): done; CUPTI is within 0.6% (sweep) / 2.9% (step) of nsys (Handoff §4).
+
 - Per step, the sum of phase busy times plus unattributed time equals the activity-timing total.
 - On one scene, compare against Nsight Systems: per-phase totals within a few percent.
 - With profiling off, captured graphs and step times are unchanged (no overhead).
 
 ## Files
+
+> Superseded (2026-10-20): see Handoff §1.
 
 Own: `gpu/common/profiling.py`, `panels/profiling.py`, report scripts, `--profile` flags. Add `scope(...)`
 lines in solver and contact files, but don't restructure those files. Tasks 1 and 3 instrument their own new code.
@@ -104,6 +257,8 @@ lines in solver and contact files, but don't restructure those files. Tasks 1 an
     brackets are folded into `kernels` as a diagnostic for spotting untimed work.
 
 ## Progress
+
+> Superseded (2026-10-20): history up to the 2026-10-18 docs pass; later work and the current state are in Handoff §2.
 
 - 2026-10-17 · Investigation findings:
   - **Warp activity timing** (`warp/native/cuda_util.h:359`) brackets each *Warp* launch, memset and memcpy
