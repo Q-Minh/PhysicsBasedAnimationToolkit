@@ -11,7 +11,8 @@ Each solve is one time step, or one substep with ``SimulationState.substeps > 1`
   :class:`gpu.newton.solver.NewtonSolveRecord` on the host.
 
 :class:`StatusLog` keeps every solve (a few dozen bytes each), summarizes a rolling window and writes
-the log to HDF5 (``sim/status`` in ``simulate.py`` outputs).
+ranges of time steps to HDF5 (``sim/<frame>/solve_status`` in ``simulate.py`` outputs: the steps since
+the previous frame).
 """
 
 import numpy as np
@@ -167,6 +168,13 @@ class StatusLog:
         # Rows are appended in step order, so the window is a suffix
         return rows[np.searchsorted(rows["step"], first, side="left") :]
 
+    @staticmethod
+    def _steps(rows: np.ndarray, steps: tuple[int, int] | None) -> np.ndarray:
+        if steps is None:
+            return rows
+        lo, hi = np.searchsorted(rows["step"], steps, side="left")
+        return rows[lo:hi]
+
     @property
     def last_step(self) -> int | None:
         """The last recorded time step, or None."""
@@ -256,13 +264,18 @@ class StatusLog:
             ]
         return lines
 
-    def write_h5(self, group) -> None:
+    def write_h5(self, group, steps: tuple[int, int] | None = None) -> None:
         """Write the log under an h5py group: datasets ``vbd``, ``newton_solves`` and
-        ``newton_subproblems`` (structured, empty ones omitted), with enum names as attributes."""
+        ``newton_subproblems`` (structured, empty ones omitted), with enum names as attributes.
+
+        Args:
+            group: The h5py group.
+            steps (tuple[int, int] | None): Time steps ``[first, last)`` to write; all if None.
+        """
         for name, a in (
-            ("vbd", self.vbd),
-            ("newton_solves", self.newton_solves),
-            ("newton_subproblems", self.newton_subproblems),
+            ("vbd", self._steps(self.vbd, steps)),
+            ("newton_solves", self._steps(self.newton_solves, steps)),
+            ("newton_subproblems", self._steps(self.newton_subproblems, steps)),
         ):
             if a.shape[0]:
                 if name in group:
@@ -337,6 +350,17 @@ class TestStatusLog(unittest.TestCase):
                 np.testing.assert_array_equal(g["vbd"][()], log.vbd)
                 self.assertEqual(g["newton_subproblems"][()]["backtracks"].tolist(), [12])
                 self.assertEqual(int(g.attrs["lost"]), 1)
+            # Ranges of steps, as simulate.py writes them per frame
+            with h5py.File(path, "w") as f:
+                log.write_h5(f.require_group("sim/00000001/solve_status"), steps=(0, 2))
+                log.write_h5(f.require_group("sim/00000002/solve_status"), steps=(2, 3))
+                log.write_h5(f.require_group("sim/00000003/solve_status"), steps=(3, 3))
+            with h5py.File(path, "r") as f:
+                self.assertEqual(f["sim/00000001/solve_status/vbd"][()]["step"].tolist(), [0, 0, 1, 1])
+                self.assertNotIn("newton_solves", f["sim/00000001/solve_status"])
+                self.assertEqual(f["sim/00000002/solve_status/newton_solves"][()]["step"].tolist(), [2])
+                self.assertNotIn("vbd", f["sim/00000002/solve_status"])
+                self.assertEqual(len(f["sim/00000003/solve_status"]), 0)
         for t in range(3, 103):  # grows past the initial capacity
             log.add_vbd(t, 1, self._rows([2 * t, 2 * t + 1]), 0, 5, 400)
         self.assertEqual(log.vbd.shape[0], 204)
