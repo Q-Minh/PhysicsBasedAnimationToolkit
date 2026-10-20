@@ -872,6 +872,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 4 · **CPU run END**: data/benchmarks/trampolines-test.h5 written (format v2: scenes Y1e6, Y1e7; 10000 J; 2 problems; pools of 40, so R-hat is meaningless; 2 min). Loads via static.load_sample_batch and the browser; reference accuracy <= 9.2e-5 e0.
 - 2026-10-20 · task 4 · **CPU run START** (~30 min, CPU only): pool-sizing study for split R-hat < 1.05 at 10000 J (circle trampolines Y1e6/Y1e7, with and without gravity, 8 long chains each). Will log END.
 - 2026-10-20 · task 4 · **CPU run START** (~20-30 min, CPU only, alongside the pool-sizing study): 5-scene PILOT dataset data/benchmarks/trampolines-pilot.h5 (circle trampolines Y1e5/Y1e6/Y1e7/Y1e8/het, 10000 J, 2 problems per set, pools of 160 from 4 chains; R-hat not required). Will log END.
+- 2026-10-20 · task 3 · **GPU run START** (~1 min, correctness only): benchmark-bars review changes, 1 problem x AAAVBD/Newton on trampolines-test.h5. Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (benchmark-bars review checks).
 
 ## Open questions for the maintainer
 
