@@ -31,6 +31,7 @@ Results file layout (HDF5, ``FORMAT``):
         crossing_time, crossing_iteration, increment, reached, skipped, [resolvable]           (S, L)
         aggregate/{increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}           (L,)
         logs/<sample:06d>/{error,time,sweeps}
+        trajectories/<sample:06d>/{iteration,t,t_target,x,level_frames,level_exact}   (opt-in, --snapshots)
 
 ``<benchmark>`` is ``static`` or ``dynamic_h<h>`` (e.g. ``dynamic_h0.0001``). A ``<case>`` is one x-axis
 entry of the benchmark's figure: a scene, or ``<scene>_E<E>`` when the run holds several energy levels
@@ -38,8 +39,21 @@ of a scene. Times are seconds of solver time. NaN marks unreached levels (``reac
 unreached level's ``crossing_iteration`` is -1. Aggregates are over the samples that reached the
 level (``count``); a skipped level counts with a zero increment. ``host_time`` is the solve's host
 wall-clock time (loading the problem, the replay or Newton loop, reading the log back); minus
-``solver_time``, it is the per-solve overhead outside the timed solve. New per-solve data (e.g. position
-snapshots of an opt-in replay run) goes in new datasets or groups under the solver's group.
+``solver_time``, it is the per-solve overhead outside the timed solve.
+
+Trajectories (``benchmark.py --snapshots``): positions at chosen log entries of each solve, for videos.
+``iteration`` (F',) are the log entries (sorted), ``t`` (F',) their solver times, ``t_target`` (F',) the
+solver time each frame stands for (NaN for frames kept only as level crossings; |t - t_target| is the
+spacing error, at most half a ring stride of iterations), ``x`` (F', N, 3) float32
+the positions in the dataset FEM's node order. The frames are the snapshots nearest to the solver times
+k * budget / F (k = 0, 1, ..., up to the solve's end) and to its end, so frame k of every solver shows the
+same solver time and side-by-side playback runs at true speed; plus each reached level's crossing.
+``level_frames`` (L,) indexes the frame of each level's crossing (-1: not reached), and ``level_exact``
+says whether it is the crossing's own state (else the nearest snapshot). Attributes: ``requested_frames``,
+``ring_slots`` (fewer than ``requested_frames`` when the memory cap is too small), ``stride`` (log entries
+between ring snapshots at the end of the solve), ``device_bytes`` (the snapshots' device memory),
+``video_seconds`` (the duration the frames play in) and ``playback_factor`` = video_seconds / budget: how
+many times slower than solver time the video plays (1: real time; 200: slowed down 200x; below 1: sped up).
 """
 
 from dataclasses import dataclass
@@ -256,6 +270,46 @@ def resolve_budget(
     return float(max_seconds), "--max-seconds"
 
 
+def select_frames(
+    time: np.ndarray, entries: np.ndarray, n_frames: int, span: float, return_targets: bool = False
+):
+    """Snapshots to keep as video frames: the nearest in solver time to k * span / n_frames for k = 0, 1, ...
+    up to the solve's end time, and to the end time itself.
+
+    Args:
+        time (np.ndarray): (n,) cumulative solver time per log entry.
+        entries (np.ndarray): Sorted log entries that have a snapshot.
+        n_frames (int): Frames over ``span``.
+        span (float): Solver time the frames are spread over (the budget; the solve's end if not finite).
+
+        return_targets (bool): Also return each target time and the index picked for it.
+
+    Returns:
+        np.ndarray: Sorted, unique indices into ``entries``; with ``return_targets``, (indices, targets)
+        with one picked index per target time instead (duplicates kept).
+    """
+    entries = np.asarray(entries, dtype=np.int64)
+    if entries.size == 0 or n_frames <= 0:
+        empty = np.zeros(0, dtype=np.int64)
+        return (empty, np.zeros(0)) if return_targets else empty
+    t = np.asarray(time, dtype=np.float64)[entries]
+    end = float(time[-1])
+    span = span if math.isfinite(span) and span > 0 else end
+    targets = span * np.arange(n_frames + 1) / n_frames
+    targets = np.append(targets[targets <= end], end)
+    pick = np.abs(t[None, :] - targets[:, None]).argmin(axis=1)
+    return (pick, targets) if return_targets else np.unique(pick)
+
+
+def write_trajectory(group: h5py.Group, trajectory: dict) -> None:
+    """Write one solve's frames (:func:`select_frames`, plus level crossings) under ``group``."""
+    for key in ("iteration", "t", "t_target", "level_frames", "level_exact"):
+        group.create_dataset(key, data=trajectory[key])
+    group.create_dataset("x", data=np.asarray(trajectory["x"], dtype=np.float32))
+    keys = ("requested_frames", "ring_slots", "stride", "device_bytes", "video_seconds", "playback_factor")
+    group.attrs.update({k: trajectory[k] for k in keys})
+
+
 # --- Results file ---
 
 
@@ -288,7 +342,9 @@ def require_case(f: h5py.File, benchmark: str, case: str, attrs: dict) -> h5py.G
     return g
 
 
-def write_solver(group: h5py.Group, solver: str, levels, summaries: list[dict], logs: list) -> h5py.Group:
+def write_solver(
+    group: h5py.Group, solver: str, levels, summaries: list[dict], logs: list, trajectories: list | None = None
+) -> h5py.Group:
     """Write one solver's samples of a case: per-sample arrays, crossings, aggregates and logs.
 
     Args:
@@ -300,6 +356,7 @@ def write_solver(group: h5py.Group, solver: str, levels, summaries: list[dict], 
             ``crossings`` (:class:`LevelCrossings`), and optionally ``min_J``,
             ``reference_error_bound`` and ``reference_relative_error_bound``.
         logs (list): Per sample, (error, time, sweeps) arrays.
+        trajectories (list | None): Per sample, a trajectory dict (:func:`write_trajectory`), if any.
     """
     g = group.create_group(solver)
     g.attrs.update(solver=solver, n_samples=len(summaries))
@@ -332,6 +389,8 @@ def write_solver(group: h5py.Group, solver: str, levels, summaries: list[dict], 
         lg.create_dataset("error", data=error)
         lg.create_dataset("time", data=time)
         lg.create_dataset("sweeps", data=sweeps)
+    for s, trajectory in zip(summaries, trajectories or []):
+        write_trajectory(g.create_group(f"trajectories/{int(s['sample']):06d}"), trajectory)
     return g
 
 
@@ -400,6 +459,19 @@ class TestLevelCrossings(unittest.TestCase):
         a = aggregate(values, np.zeros_like(reached))
         self.assertTrue(np.isnan(a["mean"]).all())
         np.testing.assert_array_equal(a["count"], [0, 0])
+
+    def test_select_frames(self):
+        time = np.arange(101) * 0.1  # 10 s over 100 iterations
+        entries = np.arange(0, 101, 4)  # a snapshot every 4 iterations
+        # 5 frames over a 20 s budget: targets 0, 4, 8 s (12+ are after the end) and the end, 10 s
+        pick = select_frames(time, entries, 5, 20.0)
+        np.testing.assert_array_equal(entries[pick], [0, 40, 80, 100])
+        # Over the solve itself (no finite budget): 0, 2, 4, 6, 8, 10 s -> nearest snapshots
+        pick = select_frames(time, entries, 5, math.inf)
+        np.testing.assert_array_equal(entries[pick], [0, 20, 40, 60, 80, 100])
+        # Few snapshots: duplicates collapse
+        np.testing.assert_array_equal(select_frames(time, np.array([0, 100]), 10, 10.0), [0, 1])
+        self.assertEqual(select_frames(time, np.array([], dtype=np.int64), 5, 1.0).size, 0)
 
     def test_parse_levels(self):
         self.assertEqual(parse_levels("0.9, 0.5,0.99"), (0.5, 0.9, 0.99))

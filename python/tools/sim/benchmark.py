@@ -47,7 +47,9 @@ Usage:
         [--budget [BENCHMARK[/CASE]=]SECONDS ...] [--budget-from pilot.h5 [--budget-factor 1] \
         [--budget-statistic median] [--budget-cap [BENCHMARK[/CASE]=]SECONDS ...]] [--max-seconds 60] \
         [--spec spec.h5] [--save-spec spec.h5] [--sample-begin 0] [--sample-end -1] \
-        [--max-iterations 1000000] [--target-reduction 0.99] [--block 16]
+        [--max-iterations 1000000] [--target-reduction 0.99] [--block 16] \
+        [--snapshots [--snapshot-video-seconds 5] [--snapshot-fps 24] [--snapshot-frames F] \
+         [--snapshot-fraction 1] [--snapshot-memory-mb 32] [--snapshot-ring-ratio 2]]
 
 Representative commands (from the repo root; datasets live in the main checkout's data/benchmarks):
 
@@ -85,6 +87,22 @@ infinite error), or for Newton ``newton_non_descent``, ``newton_line_search_fail
 ``newton_zero_gradient``: Newton stops at its first rejected step, since x doesn't change after it.
 Dynamic cases add the reference's accuracy (``reference_error_bound``, the set's ``samples/ref_error_mnorm``,
 and ``reference_relative_error_bound``, over e0) and ``resolvable``, the levels that accuracy resolves.
+
+Trajectories (opt-in, for videos): ``--snapshots`` stores the positions at F equal solver-time intervals over
+the budget, plus each level crossing, in the same run (``benchmark_results.py`` documents the layout).
+F = ``--snapshot-video-seconds`` x ``--snapshot-fps`` (default 5 s x 24 fps = 120 frames), unless
+``--snapshot-frames`` sets it; each trajectory stores its ``playback_factor`` = video seconds / budget, the
+video's slow-down relative to solver time (e.g. 200 for a 25 ms budget). ``--snapshot-fraction`` (default 1:
+every sample) picks evenly spaced samples of each set. The run prints the estimated disk size first:
+about F x N x 12 bytes per solve (~15 MB for 120 frames of the 10643-node trampolines).
+
+During the solve, every log entry may copy x into a fixed device ring (``static.SnapshotRing``): between the
+entry's timestamps, so outside the solver time, and without touching the solver's state. The ring holds
+min(``--snapshot-ring-ratio`` x F, what ``--snapshot-memory-mb`` holds) frames (default 2 x F within 32 MB:
+248 frames of the trampolines, i.e. 240 ring slots and 8 level slots), allocated once per solver and case;
+when it fills, every other snapshot is dropped and the stride between snapshots doubles, so it spans any
+solve length. A cap that holds fewer than 2 F slots prints a warning, and frames fall up to a ring stride from
+their target times (each trajectory stores them). After the solve, only the chosen frames are downloaded.
 
 Pitfalls:
     - The benchmark is contact-free: contact detection is deactivated whatever the parameters say.
@@ -201,6 +219,25 @@ def parse_args():
                         help="Solver iterations per replayed CUDA-graph block, rounded up to a multiple of "
                         "Anderson's window m. Larger blocks mean fewer replays; iterations past the stop are "
                         "dropped (spec default: 16).")
+    parser.add_argument("--snapshots", action="store_true",
+                        help="Store trajectories for videos: F frames at equal solver-time intervals over the budget, "
+                        "plus each level crossing. Snapshots are copied on the device between iterations, outside "
+                        "the timed span, and leave the solves unchanged.")
+    parser.add_argument("--snapshot-video-seconds", type=float, default=5.0, dest="snapshot_video_seconds",
+                        help="Video duration a trajectory plays in (default: %(default)s s); F = duration x fps.")
+    parser.add_argument("--snapshot-fps", type=float, default=24.0, dest="snapshot_fps",
+                        help="Video frame rate (default: %(default)s).")
+    parser.add_argument("--snapshot-frames", type=int, default=None, dest="snapshot_frames", metavar="F",
+                        help="Frames per trajectory, instead of duration x fps.")
+    parser.add_argument("--snapshot-fraction", type=float, default=1.0, dest="snapshot_fraction",
+                        help="Fraction of each set's samples to store trajectories for, evenly spaced (default: "
+                        "%(default)s, every sample). A trajectory is ~F x N x 12 bytes on disk.")
+    parser.add_argument("--snapshot-ring-ratio", type=float, default=2.0, dest="snapshot_ring_ratio",
+                        help="Ring slots per requested frame (default: %(default)s), within --snapshot-memory-mb.")
+    parser.add_argument("--snapshot-memory-mb", type=float, default=32.0, dest="snapshot_memory_mb",
+                        help="Device memory cap for the snapshots, allocated once per solver and case (default: "
+                        "%(default)s MB). The ring holds min(ratio x F, what fits) frames; fewer than ratio x F, with a "
+                        "warning, place frames up to a ring stride from their target times.")
     parser.add_argument("-o", "--output", required=True, help="Output results file (.h5).")
     return parser.parse_args()
 
@@ -334,6 +371,85 @@ def summarize(log: static.StaticSolveLog, levels, budget: float) -> dict:
     }
 
 
+def snapshot_frames(args) -> int:
+    """Frames per trajectory: --snapshot-frames, else video seconds x fps (0 without --snapshots)."""
+    if not args.snapshots:
+        return 0
+    if args.snapshot_frames is not None:
+        return max(1, int(args.snapshot_frames))
+    return max(1, int(round(args.snapshot_video_seconds * args.snapshot_fps)))
+
+
+def snapshot_samples(fraction: float, indices: list[int]) -> list[int]:
+    """Evenly spaced ``fraction`` of the sample indices (at least one; all for fraction >= 1)."""
+    if not indices or fraction <= 0:
+        return []
+    k = min(len(indices), max(1, int(round(fraction * len(indices)))))
+    picks = np.unique(np.round(np.linspace(0, len(indices) - 1, k)).astype(np.int64))
+    return [indices[i] for i in picks]
+
+
+def trajectory(
+    ring: static.SnapshotRing,
+    log: static.StaticSolveLog,
+    crossings,
+    n_frames: int,
+    budget: float,
+    video_seconds: float,
+) -> dict:
+    """The solve's video frames from its snapshots: ring snapshots nearest to evenly spaced solver times
+    (benchmark_results.select_frames), and each reached level's crossing (its own snapshot when the device
+    detected the same entry, else the nearest ring snapshot)."""
+    n = log.error.size
+    entries, slots = ring.stored()
+    keep = entries < n  # not the iterations a block ran past the stop
+    entries, slots = entries[keep], slots[keep]
+    picks, targets = results.select_frames(log.time, entries, n_frames, budget, return_targets=True)
+    frames = {}
+    target_of = {}
+    for i, target in zip(picks, targets):
+        frames[int(entries[i])] = ("ring", int(slots[i]))
+        target_of.setdefault(int(entries[i]), target)
+    level_entry = ring.level_entries()
+    L = len(crossings.reached)
+    level_at = np.full(L, -1, dtype=np.int64)
+    level_exact = np.zeros(L, dtype=bool)
+    for l in range(L):
+        if not crossings.reached[l]:
+            continue
+        e = int(crossings.iteration[l])
+        if level_entry[l] == e:
+            frames[e] = ("level", l)
+            level_at[l], level_exact[l] = e, True
+        elif entries.size:
+            i = int(np.abs(entries - e).argmin())
+            frames.setdefault(int(entries[i]), ("ring", int(slots[i])))
+            level_at[l] = entries[i]
+    order = sorted(frames)
+    x = np.zeros((len(order), ring.x.shape[1], 3), dtype=np.float32)
+    for kind, fetch in (("ring", ring.fetch), ("level", ring.fetch_levels)):
+        rows = [j for j, e in enumerate(order) if frames[e][0] == kind]
+        if rows:
+            x[rows] = fetch([frames[order[j]][1] for j in rows])
+    index = {e: j for j, e in enumerate(order)}
+    return {
+        "iteration": np.array(order, dtype=np.int64),
+        "t": log.time[np.array(order, dtype=np.int64)],
+        # The solver time each frame stands for (NaN for frames kept only as level crossings)
+        "t_target": np.array([target_of.get(e, np.nan) for e in order], dtype=np.float64),
+        "x": x,
+        "level_frames": np.array([index[e] if e >= 0 else -1 for e in level_at], dtype=np.int64),
+        "level_exact": level_exact,
+        "requested_frames": int(n_frames),
+        "ring_slots": int(ring.slots),
+        "stride": int(ring.state.numpy()[1]),
+        "device_bytes": int(ring.device_bytes),
+        "video_seconds": float(video_seconds),
+        # The video's slow-down relative to solver time: video seconds per second of solver time
+        "playback_factor": float(video_seconds / budget) if budget > 0 and math.isfinite(budget) else math.nan,
+    }
+
+
 def _git_commit() -> str:
     try:
         root = os.path.dirname(os.path.abspath(__file__))
@@ -384,6 +500,19 @@ def main():
         dataset_attrs = {k: _attr(v) for k, v in f.attrs.items()}
 
     total = len(solvers) * sum(len(spec.sample_indices(c.batch.n_samples)) for c in cases)
+    n_frames = snapshot_frames(args)
+    if n_frames:
+        # Video duration of the trajectories: the frames over the budget, at the video's frame rate
+        video_seconds = (args.snapshot_video_seconds if args.snapshot_frames is None
+                         else n_frames / args.snapshot_fps)
+        frames_max = n_frames + 2 + len(levels)  # the targets, the end, the level crossings
+        estimate = sum(
+            len(snapshot_samples(args.snapshot_fraction, list(spec.sample_indices(c.batch.n_samples))))
+            * len(solvers) * frames_max * 12 * c.batch.X.shape[0]
+            for c in cases
+        )
+        print(f"Snapshots: {n_frames} frames per trajectory ({video_seconds:g} s of video), at most "
+              f"~{estimate / 2**30:.2f} GiB on disk for this run")
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with h5py.File(args.output, "w") as h5f, tqdm(total=total, desc="Solves", unit="solve") as pbar:
         h5f.attrs.update(
@@ -441,8 +570,21 @@ def main():
                 case_spec = copy_spec(spec, max_seconds=float(group.attrs["budget"]))
                 indices = list(case_spec.sample_indices(batch.n_samples))
                 for solver in solvers:
-                    runner = static.BenchmarkSolver(state, solver, case_spec)
-                    summaries, logs = [], []
+                    ring = None
+                    if n_frames:
+                        n_nodes = state.fem.data.x.shape[0]
+                        slots = static.SnapshotRing.slots_for(
+                            n_frames, n_nodes, len(levels), int(args.snapshot_memory_mb * 2**20),
+                            args.snapshot_ring_ratio,
+                        )
+                        ring = static.SnapshotRing(n_nodes, slots, levels)
+                        if slots < args.snapshot_ring_ratio * n_frames:
+                            print(f"Warning: {args.snapshot_memory_mb:g} MB holds {slots} ring slots of {n_nodes} "
+                                  f"nodes, fewer than {args.snapshot_ring_ratio:g} x {n_frames} frames: frames fall "
+                                  "up to a ring stride from their target times")
+                    runner = static.BenchmarkSolver(state, solver, case_spec, snapshots=ring)
+                    summaries, logs, trajectories = [], [], []
+                    snapshot_set = set(snapshot_samples(args.snapshot_fraction, indices)) if n_frames else set()
                     for s in indices:
                         t_host = time.perf_counter()
                         if batch.problem == "dynamic":
@@ -464,11 +606,16 @@ def main():
                             )
                         summaries.append(summary)
                         logs.append((log.error, log.time, log.sweeps))
+                        if ring is not None and s in snapshot_set:
+                            trajectories.append(trajectory(
+                                ring, log, summary["crossings"], n_frames, case_spec.max_seconds, video_seconds
+                            ))
                         pbar.set_postfix(case=f"{c.benchmark}/{c.case}", solver=solver.name,
                                          e=f"{summary['final_relative_error']:.2e}")
                         pbar.update(1)
-                    results.write_solver(group, solver.name, levels, summaries, logs)
+                    results.write_solver(group, solver.name, levels, summaries, logs, trajectories)
                     h5f.flush()
+                    del runner, ring
             del state
     print(f"Wrote {args.output}")
 
