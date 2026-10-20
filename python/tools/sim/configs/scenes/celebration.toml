@@ -7,6 +7,8 @@
 # (below dmin + band) starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
 # The penalty is adaptive per time step (the code default, per the maintainer) instead of the paper
 # file's constant gamman.
+# Detection is scaled to the geometry (maintainer): the base plate is 10 cm thick, so the default 1 mm
+# band missed contacts and let vertices reach the plate's far side. band = 1 cm and max_dist = 30 cm fix it.
 extends = ["../paper/celebration.Params_1_5_30.toml"]
 
 [Integration]
@@ -15,6 +17,10 @@ substeps = 1
 [Contact.ContactDynamics]
 dmin = 1e-3
 penalty_adaptivity = 1  # TIMESTEP, with the code's gamman_adaptive / gammaf_adaptive
+
+[Contact.CDType.VertexSdf]
+band = 0.01  # 1 cm: metre-scale scene (10 cm thick base plate, ~4 cm edges)
+max_dist = 0.3
 
 [Solver.AAAVBD]
 n_max_iters = 5
