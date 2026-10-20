@@ -208,7 +208,8 @@ Supersedes the earlier "Benchmark plan" details where they differ.
 
 - **Three separate benchmarks, one figure each:** elastostatics, elastodynamics h = 1e-4, elastodynamics h = 1e-2.
 - **Scenarios (x axis):** five circle trampolines, same mesh and 4 fixed rim patches, differing only in material: Y = 1e5,
-  1e6, 1e7, 1e8, and heterogeneous (stiff 1e8 center, soft 1e6 outer region, as in the paper's stiff-soft trampoline).
+  1e6, 1e7, 1e8, and heterogeneous (stiff 1e8 center disk, soft 1e6 outer ring; the paper names its trampolines outer-inner, so this
+  is the paper's soft-stiff material layout; `data/scenarios/trampoline_circle_het.h5`, pending the maintainer's confirmation).
 - **Samples:** one energy level for every scene, **10000 J** (large deformation, so solves pass from large to small
   deformation regimes). Many MCMC samples per scene; each is one problem of that scene's benchmark.
 - **Accuracy levels (z axis):** error reduction 1 − e/e0 at 50, 60, 70, 80, 85, 90, 95, 99%.
@@ -305,18 +306,30 @@ yet. **Owner: task 1** (confirmed by the maintainer, 2026-10-18). Branch `featur
   `samples/x` and their distribution are unchanged; only the scale of `samples/q` differs. Consumers that use
   `samples/x` are unaffected.
 - **Independence:** samples are thinned automatically to be approximately independent.
-- **Benchmark datasets (maintainer, 2026-10-18; task 4 writes, `benchmark.py`, the GUI static panel and the
-  browser read).** One HDF5 file per benchmark (`make_benchmark.py -o dataset.h5`), replacing the per-set
-  directories (no compatibility code):
-  - `fem/`: the input FemElastoDynamics (pbat Archive). `benchmark.py --dataset` solves on it (no `--scene`);
-    solver parameters still come only from `--sim-params`/`--set`.
-  - `X`, `basis/`: stored once. Every batch group's `X` and `basis` are HDF5 hard links to them.
-  - `pools/{pool,pool_gravity}/E{E}`, `static/E{E}`, `dynamic_h{h}/E{E}`: batch groups, each following the
-    contract above as a file root does. Problem sets carry `pool` (the pool group) instead of `pool_file`.
-  - Root attributes: `dataset_format = "pbat-benchmark-dataset"`, `dataset_version = 1`, `sets` (problem set
-    groups), `pools`, `input`, `git_commit` and the generator's settings.
-  - A batch is addressed as `dataset.h5:static/E50` (`static.load_sample_batch`); a `modalrom.py` sample file is
-    still a batch at its root.
+- **Benchmark datasets, version 2: several scenes per file (maintainer, 2026-10-20; task 4 writes,
+  `benchmark.py`, the GUI static panel and the browser read).** One HDF5 file per benchmark
+  (`make_benchmark.py -i Y1e6=scene.h5 -i ... -o dataset.h5`). Version 1 (one scene at the file root,
+  2026-10-18) is dropped with no compatibility code; v1 files must be regenerated.
+  - `<scene>/`: one group per named scene (e.g. `Y1e5`, `Y1e6`, `het`; no `/` or `:`), holding what a v1 root held:
+    - `<scene>/fem/`: the scene's FemElastoDynamics (pbat Archive), which its problems are solved on.
+    - `<scene>/X`, `<scene>/basis/`: stored once per scene. Every batch group's `X` and `basis` in the scene are
+      HDF5 hard links to them.
+    - `<scene>/pools/{pool,pool_gravity}/E{E}`, `<scene>/static/E{E}`, `<scene>/dynamic_h{h}/E{E}`: batch
+      groups, each following the contract above as a file root does.
+    - Scene attributes: `input` (the scene file), optional `label` (display name for plots, e.g. "Y = 1e6";
+      requested by task 3), `sets` and `pools` (that scene's groups, as full paths from the file root),
+      `scene_dt`, `scene_bdf_steps`, `n_linear_modes`, `rigid_modes_excluded`.
+  - **Batch group attributes added in v2:** `scene` (its scene name) and `fem` (the path of its FEM group, e.g.
+    `Y1e6/fem`). Problem sets' `pool` is the full path of their pool (e.g. `Y1e6/pools/pool_gravity/E10000`).
+  - Root attributes: `dataset_format = "pbat-benchmark-dataset"`, `dataset_version = 2`, `scenes` (names, in
+    the order given), `sets` and `pools` (all scenes' groups, full paths), `git_commit` and the generator's
+    settings (`energies`, `dt`, `problems`, `pool_size`, `chains`, ...).
+  - **Addressing:** a problem set is `dataset.h5:<scene>/<set>/E{E}`, e.g. `dataset.h5:Y1e6/static/E10000` or
+    `dataset.h5:Y1e6/dynamic_h0.0001/E10000` (`static.load_sample_batch`, unchanged). Its FEM is
+    `dataset.h5:<attrs["fem"]>`. The root `sets` lists every set; filter by the `scene` attribute or the path
+    prefix (`benchmark.py --sets 'Y1e6/static/*'`). A `modalrom.py` sample file is still a batch at its root.
+  - Static sets sample without gravity (`pools/pool`) and dynamic sets with the scene gravity
+    (`pools/pool_gravity`); the dynamic sets of a scene share their problems across h (paired).
 - **Dirichlet DOFs are exactly at rest** in every sample, because U and Q vanish there.
 - **`samples/min_J`** (S,): each sample's minimum det(F) over the mesh. Inverted elements (≤ 0) are allowed,
   because Stable NH is defined there; this records them.
@@ -851,6 +864,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-19 · task 1 · **GPU run END** (scene-config margin; also TIMESTEP-penalty probes of the same three scenes). Results sent to the coordinator.
 - 2026-10-20 · coordinator · **Maintainer direction: new paper scenes.** The current set over-indexes on stiff/heterogeneous materials; AAAVBD shines on soft, rubber-like materials (competitive with the VBD family and Newton). Collect ideas for soft scenes (e.g. spaghetti-like strands tangling around an object) and for scenes with many kinematic constraints plus contact, now feasible after the fixes. Melissa is asked to think about it (19-Oct report).
 - 2026-10-20 · task 4 · **GPU run END** (late entry): the trampoline-demo.h5 browser session closed on 2026-10-18.
+- 2026-10-20 · task 1 · **GPU run START** (~3 min, correctness only): 1 s contact-free simulate.py runs of the new benchmark trampolines (Y1e5, Y1e8, het). Will log END.
+- 2026-10-20 · task 1 · **GPU run END** (benchmark trampolines: all finite over 1 s).
 
 ## Open questions for the maintainer
 
