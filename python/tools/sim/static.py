@@ -418,7 +418,13 @@ class ErrorLog:
             num_items=n_nodes,
             op=cuda.compute.OpKind.PLUS,
         )
+        self.snapshots: "SnapshotRing | None" = None  # position snapshots, see attach_snapshots
         self.configure(target_reduction=0.95, max_entries=self.capacity, max_seconds=math.inf)
+
+    def attach_snapshots(self, snapshots: "SnapshotRing | None") -> None:
+        """Snapshot the positions in :meth:`record`, between the entry's timestamps (outside the solver
+        time). Captured graphs bake it in, so recapture after changes."""
+        self.snapshots = snapshots
 
     def configure(self, target_reduction: float, max_entries: int, max_seconds: float) -> None:
         """Set the stopping criteria. Captured graphs bake them in, so recapture after changes.
@@ -438,6 +444,8 @@ class ErrorLog:
         wp.launch(
             _reset_log_kernel, dim=1, inputs=[self.count, self.keep, self.stop, self.first_stop, self.solver_ns]
         )
+        if self.snapshots is not None:
+            self.snapshots.reset()
 
     def record(self, n_sweeps: int) -> None:
         """Append an entry for the current positions and update ``keep``. Capturable.
@@ -449,6 +457,8 @@ class ErrorLog:
         wp.launch(_stamp_kernel, dim=1, inputs=[self.t_a, self.count])
         wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[fem.data, self.reference, self._w])
         self._reduce(wp.get_stream())
+        if self.snapshots is not None:
+            self.snapshots.record(self, fem.data.x)
         wp.launch(
             _commit_kernel,
             dim=1,
@@ -530,6 +540,203 @@ class StaticSolveLog:
         return float(hit[0]) if hit.size else math.nan
 
 
+# --- Position snapshots (opt-in, for trajectory videos) ---
+
+
+@wp.kernel
+def _snap_reset_kernel(free_list: wp.array[wp.int32], tags: wp.array[wp.int32], state: wp.array[wp.int32]):
+    i = wp.tid()
+    K = free_list.shape[0]
+    free_list[i] = K - 1 - i  # slots are taken from the end of the free list: 0, 1, 2, ... first
+    tags[i] = -1
+    if i == 0:
+        state[0] = K  # free slots
+        state[1] = 1  # stride: entries that are multiples of it are stored
+        state[2] = -1  # slot the current entry is copied to (-1: none)
+
+
+@wp.kernel
+def _snap_reset_levels_kernel(level_entry: wp.array[wp.int32]):
+    level_entry[wp.tid()] = -1
+
+
+@wp.kernel
+def _snap_schedule_kernel(
+    count: wp.array[wp.int32],
+    capacity: wp.int32,
+    e2_new: wp.array[wp.float32],
+    e2: wp.array[wp.float32],
+    ratio2: wp.array[wp.float32],
+    tags: wp.array[wp.int32],
+    free_list: wp.array[wp.int32],
+    state: wp.array[wp.int32],
+    level_entry: wp.array[wp.int32],
+    level_new: wp.array[wp.int32],
+):
+    # One thread: which ring slot and level slots the current entry is copied to
+    c = count[0]
+    state[2] = -1
+    for l in range(level_new.shape[0]):
+        level_new[l] = 0
+    if c >= capacity:
+        return
+    s = state[1]
+    if c % s == 0 and state[0] == 0:
+        # Full and due: free the slots of the entries the doubled stride skips (odd multiples of the
+        # stride), K / 2 of them. No data moves.
+        n = wp.int32(0)
+        for i in range(tags.shape[0]):
+            t = tags[i]
+            if t >= 0 and (t / s) % 2 == 1:
+                free_list[n] = i
+                tags[i] = -1
+                n += 1
+        state[0] = n
+        s = 2 * s
+        state[1] = s
+    if c % s == 0 and state[0] > 0:
+        n = state[0] - 1
+        slot = free_list[n]
+        state[0] = n
+        tags[slot] = c
+        state[2] = slot
+    # The first entry at or below each level, e^2 <= (1 - level)^2 e0^2, compared as the stop test does
+    e0 = e2_new[0]
+    if c > 0:
+        e0 = e2[0]
+    for l in range(ratio2.shape[0]):
+        if level_entry[l] < 0 and e2_new[0] <= ratio2[l] * e0:
+            level_entry[l] = c
+            level_new[l] = 1
+
+
+@wp.kernel
+def _snap_copy_kernel(
+    x: wp.array[wp.vec3f],
+    state: wp.array[wp.int32],
+    level_new: wp.array[wp.int32],
+    snaps: wp.array2d[wp.vec3f],
+    level_x: wp.array2d[wp.vec3f],
+):
+    i = wp.tid()
+    slot = state[2]
+    if slot >= 0:
+        snaps[slot, i] = x[i]
+    for l in range(level_new.shape[0]):
+        if level_new[l] != 0:
+            level_x[l, i] = x[i]
+
+
+class SnapshotRing:
+    """Device copies of the positions at log entries, for trajectory videos of benchmark solves.
+
+    :meth:`record` runs inside :meth:`ErrorLog.record`, between the entry's two timestamps, so it is
+    excluded from the solver time, and it only reads ``x``: solves are unchanged. It keeps:
+
+    - a ring of ``K`` slots holding the entries that are multiples of a stride. The stride starts at 1;
+      when the ring is full, the entries the doubled stride skips are dropped (their slots freed, no data
+      moved) and the stride doubles. So between K/2 and K snapshots, evenly spaced in entries, cover the
+      whole solve, however long it runs. All of it is device state, so it replays inside
+      ``wp.capture_while``;
+    - one slot per accuracy level: the positions at the first entry at or below the level, tested as the
+      log's stop test (squared errors in float32).
+
+    Device memory is allocated once, at a fixed size: (K + L) frames of N * 12 bytes, at most
+    ``memory_bytes`` (:meth:`slots_for`), plus a few K-sized integer arrays. It never grows: a longer solve
+    only spaces the snapshots further apart.
+    """
+
+    @staticmethod
+    def slots_for(n_frames: int, n_nodes: int, n_levels: int, memory_bytes: int, ratio: float = 2.0) -> int:
+        """Ring size K for ``n_frames`` requested frames: ``ratio * n_frames``, at most what ``memory_bytes``
+        holds next to the level slots, made even and at least 2. The ring keeps between K/2 and K
+        snapshots evenly spaced in iterations, so K >= 2 n_frames keeps at least one per frame."""
+        frame = 12 * n_nodes
+        fit = int(memory_bytes) // frame - n_levels
+        k = min(int(math.ceil(ratio * n_frames)), fit)
+        return max(2, k - k % 2)
+
+    def __init__(self, n_nodes: int, slots: int, levels):
+        """
+        Args:
+            n_nodes (int): Positions per snapshot.
+            slots (int): Ring size K (made even, at least 2), e.g. from :meth:`slots_for`.
+            levels: Accuracy levels (error reductions) whose first crossing is copied.
+        """
+        self.slots = max(2, int(slots) + int(slots) % 2)
+        self.levels = np.asarray(levels, dtype=np.float64)
+        self.x = wp.zeros((self.slots, n_nodes), dtype=wp.vec3f)
+        self.tags = wp.zeros(self.slots, dtype=wp.int32)  # entry stored in each slot (-1: free)
+        self.free_list = wp.zeros(self.slots, dtype=wp.int32)
+        self.state = wp.zeros(3, dtype=wp.int32)  # free slots, stride, current slot
+        n_levels = max(1, self.levels.size)
+        # Squared error ratios (1 - level)^2; without levels, one that no error reaches
+        ratio2 = ((1.0 - self.levels) ** 2) if self.levels.size else np.full(1, -1.0)
+        self.ratio2 = wp.array(ratio2.astype(np.float32), dtype=wp.float32)
+        self.level_x = wp.zeros((n_levels, n_nodes), dtype=wp.vec3f)
+        self.level_entry = wp.zeros(n_levels, dtype=wp.int32)
+        self._level_new = wp.zeros(n_levels, dtype=wp.int32)
+
+    def reset(self) -> None:
+        """Empty the ring and the level slots. Capturable."""
+        wp.launch(_snap_reset_kernel, dim=self.slots, inputs=[self.free_list, self.tags, self.state])
+        wp.launch(_snap_reset_levels_kernel, dim=self.level_entry.shape[0], inputs=[self.level_entry])
+
+    def record(self, log: "ErrorLog", x: wp.array) -> None:
+        """Snapshot ``x`` for the log's current entry, if due. Called by :meth:`ErrorLog.record` after the
+        entry's squared error is reduced and before it is committed. Capturable."""
+        wp.launch(
+            _snap_schedule_kernel,
+            dim=1,
+            inputs=[
+                log.count,
+                log.capacity,
+                log._e2_new,
+                log.e2,
+                self.ratio2,
+                self.tags,
+                self.free_list,
+                self.state,
+                self.level_entry,
+                self._level_new,
+            ],
+        )
+        wp.launch(
+            _snap_copy_kernel, dim=x.shape[0], inputs=[x, self.state, self._level_new, self.x, self.level_x]
+        )
+
+    def stored(self) -> tuple[np.ndarray, np.ndarray]:
+        """(entries, slots) of the ring's snapshots, sorted by entry (synchronizes)."""
+        tags = self.tags.numpy()
+        slots = np.nonzero(tags >= 0)[0]
+        order = np.argsort(tags[slots])
+        return tags[slots][order].astype(np.int64), slots[order]
+
+    def level_entries(self) -> np.ndarray:
+        """(L,) entry of each level's snapshot, -1 if none (synchronizes)."""
+        return self.level_entry.numpy()[: self.levels.size].astype(np.int64)
+
+    def fetch(self, slots) -> np.ndarray:
+        """(len(slots), N, 3) float32 positions of ring slots, downloading only those (synchronizes)."""
+        return self._fetch(self.x, slots)
+
+    def fetch_levels(self, levels) -> np.ndarray:
+        """(len(levels), N, 3) float32 positions of level slots, as :meth:`fetch`."""
+        return self._fetch(self.level_x, levels)
+
+    def _fetch(self, frames: wp.array, rows) -> np.ndarray:
+        out = np.zeros((len(rows), frames.shape[1], 3), dtype=np.float32)
+        for j, k in enumerate(rows):
+            out[j] = frames[int(k)].numpy()
+        return out
+
+    @property
+    def device_bytes(self) -> int:
+        """Device memory of the snapshot frames and their bookkeeping."""
+        arrays = [self.x, self.level_x, self.tags, self.free_list, self.state, self.ratio2, self.level_entry]
+        return sum(a.capacity for a in arrays + [self._level_new])
+
+
 # --- Solves ---
 
 
@@ -580,7 +787,13 @@ class BenchmarkSolver:
     ``n_subproblem_max_iters`` don't apply.
     """
 
-    def __init__(self, state: SimulationState, solver: SolverType, spec: StaticSolveSpec):
+    def __init__(
+        self,
+        state: SimulationState,
+        solver: SolverType,
+        spec: StaticSolveSpec,
+        snapshots: "SnapshotRing | None" = None,
+    ):
         """
         Args:
             state (SimulationState): A contact-free state, prepared for the problems' kind
@@ -588,6 +801,8 @@ class BenchmarkSolver:
             solver (SolverType): The solver to run.
             spec (StaticSolveSpec): Stopping criteria: ``target_reduction``, ``max_iterations``,
                 ``max_seconds`` and the replay ``block``.
+            snapshots (SnapshotRing | None): Position snapshots taken at every log entry, if given
+                (:meth:`ErrorLog.attach_snapshots`); read them after each :meth:`solve`.
         """
         self.state = state
         self.solver = solver
@@ -606,6 +821,7 @@ class BenchmarkSolver:
             capacity = int(spec.max_iterations) + 1
         self.log = ErrorLog(state.fem, capacity)
         self.log.configure(spec.target_reduction, int(spec.max_iterations) + 1, spec.max_seconds)
+        self.log.attach_snapshots(snapshots)
         self._graph = None
 
     def _begin(self):
@@ -815,6 +1031,54 @@ class TestErrorLog(unittest.TestCase):
         self.assertEqual(result.error.size, 6)
         self.assertEqual(result.termination, "target")
         self.assertTrue(np.allclose(result.relative_error, 0.5 ** np.arange(6), rtol=1e-5))
+
+    def test_snapshots(self):
+        """The ring keeps evenly strided snapshots in fixed memory, the level slots the first crossings, and
+        the log is unchanged."""
+        fem = self._make_fem()
+        X = fem.data.X.numpy()
+        u = np.random.default_rng(0).standard_normal(X.shape).astype(np.float32)
+        u[0] = 0
+        levels = (0.4, 0.9, 0.99)
+        logs = {}
+        for snapshots in (None, SnapshotRing(X.shape[0], 4, levels)):
+            log = ErrorLog(fem, capacity=64)
+            # 0.5^7 > 0.005 >= 0.5^8: entries 0..8, with the stop at entry 8 (99.5%)
+            log.configure(target_reduction=0.995, max_entries=64, max_seconds=math.inf)
+            log.attach_snapshots(snapshots)
+
+            def block():
+                for _ in range(3):
+                    wp.launch(_halve_displacement_kernel, dim=X.shape[0], inputs=[fem.data])
+                    log.record(1)
+
+            fem.data.x.assign(X + u)
+            with wp.ScopedCapture() as capture:
+                log.reset()
+                log.record(0)
+                wp.capture_while(log.keep, while_body=block)
+            wp.capture_launch(capture.graph)
+            logs[snapshots is not None] = (log.read(), log.e2.numpy().copy())
+            ring = snapshots
+        (off, e2_off), (on, e2_on) = logs[False], logs[True]
+        np.testing.assert_array_equal(e2_off, e2_on)  # bit-identical errors
+        self.assertEqual(on.error.size, 9)
+        # 4 slots: strides 1, 2, 4 over entries 0..8 (the block ran on to entry 9)
+        entries, slots = ring.stored()
+        stride = int(ring.state.numpy()[1])
+        self.assertEqual(stride, 4)
+        self.assertTrue(np.all(entries % stride == 0))
+        np.testing.assert_array_equal(entries, [0, 4, 8])
+        x = ring.fetch(slots)
+        for e, xe in zip(entries, x):
+            np.testing.assert_allclose(xe, X + 0.5**e * u, rtol=1e-5, atol=1e-6)
+        # Levels: 40% at entry 1 (e/e0 = 0.5), 90% at 4 (0.0625), 99% at 7 (0.0078)
+        np.testing.assert_array_equal(ring.level_entries(), [1, 4, 7])
+        lx = ring.fetch_levels([0, 1, 2])
+        for e, xe in zip([1, 4, 7], lx):
+            np.testing.assert_allclose(xe, X + 0.5**e * u, rtol=1e-5, atol=1e-6)
+        self.assertEqual(ring.slots_for(60, 10643, 8, 16 * 2**20), 120)
+        self.assertEqual(ring.slots_for(60, 10643, 8, 4 * 2**20), 24)
 
     def test_reference(self):
         """Errors are measured against the log's reference, e.g. a dynamic step's x_ref."""
