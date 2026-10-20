@@ -32,7 +32,7 @@ _RESULT = {
     SolveEnd.FEASIBILITY_UNMET: (
         "Budget: feasibility unmet",
         "The outer iterations ran out with the gradient test met but a contact penetrating its margin\n"
-        "by more than ftol * dmin. Look at the contact penalty and detection.",
+        "by more than ftol * max(|dmin|, 1e-6 m). Look at the contact penalty and detection.",
     ),
     SolveEnd.BOTH_UNMET: (
         "Budget: both unmet",
@@ -63,8 +63,8 @@ _RESIDUAL_TIP = (
     "with g the gradient of the step's Lagrangian. Absolute test: |g| / gtol."
 )
 _PENETRATION_TIP = (
-    "Largest penetration into the contact margin over its tolerance ftol * dmin, at the end of the solve;\n"
-    "at most 1 is feasible."
+    "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
+    "at the end of the solve; at most 1 is feasible."
 )
 
 
@@ -362,7 +362,7 @@ class TestStatusPanel(unittest.TestCase):
         # No comma-delimited lists in the visible values
         self.assertFalse(any("," in t for t in shown if not t.startswith("Time steps")))
         tips = " ".join(str(c.args[0]) for c in fake.SetTooltip.call_args_list)
-        self.assertIn("ftol * dmin", tips)
+        self.assertIn("ftol * max(|dmin|", tips)
         self.assertNotIn("%", tips)
 
 
