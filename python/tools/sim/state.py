@@ -16,6 +16,7 @@ import numpy as np
 from . import gpu
 from . import colliders as colliders_
 from .gpu.common import profiling
+from .status import StatusLog
 
 
 def parse_archive_path(spec: str) -> tuple[str, str]:
@@ -371,6 +372,8 @@ class SimulationState:
         )
         newton_params.construct(self.fem, self.contact)
         self.params[SolverType.Newton] = newton_params
+        # Per-solve statuses, recorded by step() (see status.py)
+        self.status_log = StatusLog()
         self._construct_convergence_check()
         # Contact detection algorithm selection
         self.cd_type: CDType = CDType.VertexSdf
@@ -410,8 +413,9 @@ class SimulationState:
 
     def _construct_convergence_check(self):
         """Share one device-side convergence test among the VBD-family and Newton solvers' params."""
+        # step() reads the status ring every step, so it needs one row per substep
         self.convergence = gpu.vbd.convergence.ConvergenceCheck(
-            self.fem, self.contact, self.convergence_params
+            self.fem, self.contact, self.convergence_params, status_capacity=self.substeps
         )
         for s in (
             SolverType.VBD,
@@ -482,8 +486,13 @@ class SimulationState:
                 wp.capture_launch(self.capture.graph)  # type: ignore
         else:
             self._advance()
+        vbd_family = self.solver != SolverType.Newton
+        if vbd_family:
+            # Async copy into pinned memory, covered by the synchronization below
+            self.convergence.enqueue_status_readback()
         self.t += 1
         wp.synchronize()
+        self._record_status(vbd_family)
         self.contact_browser.update(
             self.fem.data.x, self.multimesh, self.contact.contacts
         )
@@ -491,8 +500,33 @@ class SimulationState:
             self.fem.data.x, self.multimesh, self.contact.contacts
         )
 
+    def _record_status(self, vbd_family: bool):
+        """Append this step's solve statuses to ``status_log`` (host-only, after the step's sync)."""
+        params = self.params[self.solver]
+        if vbd_family:
+            rows, lost = self.convergence.read_status()
+            n_max = int(params.data.n_max_iters)
+            self.status_log.add_vbd(
+                self.t - 1,
+                int(self.solver.value),
+                rows,
+                lost,
+                n_max,
+                n_max * int(params.data.n_subproblem_max_iters),
+            )
+        else:
+            records, params.solve_records = params.solve_records, []
+            self.status_log.add_newton(
+                self.t - 1,
+                records,
+                int(params.data.n_max_iters),
+                int(params.data.n_subproblem_max_iters),
+                int(params.data.n_lin_max_iters),
+            )
+
     def reset(self):
         self.t = 0
+        self.status_log.clear()
         sdt = self.dt / self.substeps
         self.fem_cpu.set_time_integration_scheme(sdt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.v0)
