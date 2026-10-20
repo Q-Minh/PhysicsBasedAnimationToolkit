@@ -296,7 +296,7 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
 | 2 | on hold | 2026-10-19 | feature/report-without-gpu merged (feb00581). Waiting for the next task |
-| 3 | on hold | 2026-10-19 | All work merged (solve status 574c3912, Newton final check 535a2a11, per-frame statuses 085000a5) |
+| 3 | ready to merge | 2026-10-19 | `feature/newton-coulomb-cap` (2 commits on dev 5db52bfa): GPU Newton's Coulomb friction cap with a frozen per-step limit and matching Huber energy (maintainer decision) |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -763,6 +763,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-19 · task 2 · **GPU run END** (report-without-gpu check).
 - 2026-10-19 · task 1 · **GPU run START** (~5 min, correctness only): short simulate.py outputs (MediumLongBendingBeam and CubeOnInfinitePlane, 0.2 s) for the editor's GPU trajectory playback (feature/viewer-gpu-trajectories). Will log END.
 - 2026-10-19 · task 1 · **GPU run END** (viewer playback outputs).
+- 2026-10-19 · task 3 · **Decision (maintainer):** GPU Newton caps friction at the Coulomb limit, frozen at each Newton step's iterate (C = mu_f max(lambda_n - sigma_n c_n, 0) recorded by the augmented gradient), with a Huber-like energy so the line search is consistent; no line-search failures allowed. Short GPU checks (seconds each): incline at defaults 0.60 m/s^2 at mu_f 0.2 (Coulomb 0.64), sticks at 0.3, 0 line-search failures and 0 backtracks, outer test passed 120/125 (8 before); BeamFallingOnBeam 30 steps 0 failures. The 27 failures measured earlier came from the since-fixed stream race and float32 noise at optimal iterates (roundoff-tolerant Armijo). Branch `feature/newton-coulomb-cap`.
 
 ## Open questions for the maintainer
 
