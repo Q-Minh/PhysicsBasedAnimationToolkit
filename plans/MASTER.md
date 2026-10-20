@@ -387,7 +387,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold | 2026-10-20 | Anderson outlier diagnosis reported (no code change); fix proposals await the maintainer |
+| 2 | on hold | 2026-10-20 | Anderson outlier diagnosis and p = 1 vs 2 pilot check reported (no code change); decision #11 awaits the maintainer |
 | 3 | on hold | 2026-10-20 | Benchmark runner and bar plot (07b4ee56), trajectory snapshots (62af8d55) merged; Newton pilot done |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -883,6 +883,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 4 · **CPU run END**: pool-sizing study (circle Y1e6/Y1e7, with and without gravity, 8 chains x ~25k steps each, 10000 J). tau 200-500 steps (generator pilot thin ~65); split R-hat with 4 chains: ~3k steps/chain 1.11-1.21, ~6k 1.05-1.07, ~12k 1.027-1.035, ~24k 1.011-1.015; ~5.5-5.9 ms/step uncontended; no inversions (min det F >= 0.57). Supports pending decision #6.
 - 2026-10-20 · task 2 · **GPU run START** (intermittent, small runs, correctness only): Anderson outlier diagnosis, repeated ~1 s benchmark solves on trampolines-test Y1e7/dynamic_h0.01. Ignore timings. Will log END.
 - 2026-10-20 · task 2 · **GPU run END** (Anderson outlier diagnosis): cause found, report sent to the coordinator; no code changed.
+- 2026-10-20 · task 2 · **GPU run START** (~15 min, benchmark.py processes back to back; please keep the GPU quiet, timings are compared): Anderson p = 1 vs p = 2 on trampolines-pilot (all scenes; static once, h = 1e-2 x5, h = 1e-4 x2; 1x Newton pilot budgets). Will log END.
+- 2026-10-20 · task 2 · **GPU run END** (Anderson p = 1 vs p = 2 on trampolines-pilot): results sent to the coordinator.
 
 ## Open questions for the maintainer
 
@@ -932,5 +934,11 @@ Answer when back; each has the coordinator's recommendation.
       the outliers here; +12% median time on Y1e7 (p = 4: +28%, +43% on Y1e6). A baseline parameter, no code change.
     - B2. Adapt p (or restart the history) once the residual nears its float32 resolution: algorithm change to a baseline.
     - C. Note in the figures that Anderson's 99% numbers on stiff scenes hit a precision floor.
-    **Recommendation:** A (reproducibility) + B1 with p = 2, after checking p = 2 on every pilot set (cheap). B2 changes a
-    competitor's algorithm, which the paper would have to justify.
+    **Pilot check of p = 1 vs 2** (all 5 scenes; 1x Newton budgets): p = 2 doesn't remove the ~1% floor (Y1e7 h = 1e-2
+    lands in a ~1.8x slower mode in 6/10 solves) but bounds the tail (no >= 4x outliers in 60+ solves; p = 1's worst was
+    13-15x). On the hard sets it is clearly better within Newton's budget: Y1e8 dynamic 90% vs 70%, het dynamic 95% vs 85%,
+    lower final errors on every static scene (Anderson misses 99% on all static scenes at 1x Newton with either p). Cost on
+    the easy dynamic sets: +7-25% at 95%, +14-78% at 99%.
+    **Recommendation:** A (deterministic Gram) + p = 2 as Anderson's benchmark default, plus a footnote that Anderson's 99% on
+    h = 1e-2 Y1e6/Y1e7 sits at a float32 precision floor. Optional: prototype B2 (adaptive p) if Anderson should look its best;
+    it changes a competitor's algorithm, which the paper would have to justify.
