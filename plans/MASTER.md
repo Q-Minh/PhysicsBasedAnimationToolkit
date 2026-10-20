@@ -1,8 +1,61 @@
 # Master plan: GPU simulator roadmap (4 parallel tasks)
 
-Status: **worktrees created; answering open questions (no implementation yet)** · Created 2026-10-17 · Coordinator: the original Claude session in the main checkout
+Status: **all four tasks merged and on hold; dev pushed** · Created 2026-10-17 · Coordinator: the session in the main checkout · Handoff written 2026-10-20
 
-## How each session starts (read this first)
+## Coordinator handoff (2026-10-20)
+
+Read this section first. Older sections below are history; where they conflict with this one, this one wins.
+
+### Sessions and state
+
+| Session (SendMessage name) | Worktree | Plan | Area | State |
+|---|---|---|---|---|
+| coordinator | main checkout | this file | reviews, merges, pushes, plans, skills, reports | active |
+| `pbat-kinematic-constraints` (task 1) | `pbat-kinematics` | `01-kinematic-constraints.md` | kinematics, scenes, colliders, VertexSdf, CPU editor/viewer | on hold |
+| `pbat-profiling` (task 2) | `pbat-profiling` | `02-profiling.md` | profiling, AAAVBD kernels, ablation params | on hold |
+| `pbat-static-elasticity` (task 3) | `pbat-static` | `03-static-elasticity.md` | static mode, benchmark runner, convergence, Newton, solve status, friction | on hold |
+| `pbat-mcmc` (task 4) | `pbat-mcmc` | `04-mcmc-quadratic-manifold.md` | samplers, benchmark datasets, browser (CPU only) | on hold |
+
+- **Everything is merged into `dev`**; `dev` was pushed at `69bd404d` (later local commits are plan logs only). No feature branch has unmerged work.
+- Each task plan starts with its own "Handoff (2026-10-20)" section.
+- Locations (main checkout, worktrees, venv, extras repo) are in the git-ignored `CLAUDE.local.md`, copied into each worktree.
+
+### How the coordinator works
+
+- **Messaging:** `ListAgents`, then `SendMessage` by session name. Tell the maintainer when a prompt must be relayed by hand.
+- **Merging a task branch:** read `git log`/`git diff --stat dev...branch` and the key hunks, check `git merge-tree` for conflicts (ask the task to rebase if any), `git merge --no-ff`, run the relevant unit tests (`python -m unittest python.tools.sim.<module>`), then commit the task's `plans/MASTER.md` edits on `dev`. Plans are edited only in the main checkout and committed only by the coordinator.
+- **Pushing:** only when the maintainer says so. Check `git fetch` first (the remote must not be ahead).
+- **GPU:** shared. Every session logs GPU run START/END in the coordination log. Heavy scenes (basket_of_fruit, celebration, ThingsFallingInBasket) run only interactively with the maintainer, one at a time, after asking; agents run short checks on cheap scenes only (beams, trampolines, mat_on_stilts).
+- **Long-running tasks or experiments:** ask the maintainer first, and validate with the smallest run (root `CLAUDE.md`).
+- **Reports for people** go in claude.ai artifacts: main progress report https://claude.ai/artifact/YArcnGXUULHaVdwmqwmT6g, the 19-Oct update for Melissa https://claude.ai/artifact/ArPNmk1utzE4hVHom2hez7, manual test checklist https://claude.ai/artifact/HBK31qw1PTh2yhFZLMoJgr (the checklist predates 19 Oct).
+
+### Standing maintainer rules (beyond the root CLAUDE.md)
+
+- Granular, bisectable commits. Nothing unrequested; ask when unsure. Check dependency APIs before writing code. New third-party imports go in the nearest `requirements.txt`.
+- Configs are TOML, data is HDF5. Prefer scene files plus `--sim-params`; Dumps are for debugging mid-simulation crashes.
+- Never modify `accelerated-vbd-extras` (read-only). Never edit `configs/paper/*.toml` by hand; regenerate them with the script (see "Scratch tools").
+- The paper parameter files are not authoritative: check them against the tuning guidance (sim-run skill). Guidance-based configs live in `configs/scenes/`; which to keep per scene is to be settled with Melissa.
+- Relative residual checks never divide by zero: max(relative scale, small absolute floor).
+- Benchmarks have no contact, never rely on gradient checks, and stop on the error only; error reductions go up to 99%.
+- Contact: adaptive penalty (TIMESTEP) by default; CONSTANT only with a stated justification. Scale VertexSdf `band`/`max_dist` to the geometry (metre-scale scenes with 10 cm plates need 1-2 cm bands).
+- AAAVBD's own parameters preferably stay one shared set across scenes (problem invariance via the Lipschitz normalization); tune budgets, thresholds and detection first.
+- cow_on_trampoline is out of scope (poorly shaped elements): don't work on it.
+- Long or math-heavy explanations go in rendered HTML artifacts.
+
+### Open items and next milestones
+
+1. **Benchmarks (next big milestone):** agree with the maintainer on data, plots and timing methodology; then generate the full dataset (task 4: larger pools needed at 500 J and above for R-hat < 1.05), run the static/dynamic benchmarks on the circle trampolines (`data/scenarios/trampoline_circle_Y1e6.h5`, `_Y1e7.h5`), and build the results-to-figures pipeline.
+2. **Re-run the paper's GPU results and timings** with the fixed code.
+3. **AAAVBD ablation studies:** Lipschitz normalization, gammaup/gammadown, betaG warm start, betaup > 1 (switches exist: `betaup`, `lipschitz_normalization`, `warm_start_beta`). Protocol still to agree.
+4. **With Melissa:** detection settings for basket_of_fruit and capsule_bowl; switch the remaining paper scenes from CONSTANT to TIMESTEP; per-scene tuning of budgets/thresholds; new soft and kinematic-plus-contact scenes (see the 2026-10-20 log entry).
+5. **ThingsFallingInBasket** went non-finite around step 39 under the default contact settings (2026-10-18). Not investigated; possibly the same undersized-detection-band problem the trampolines had. Heavy scene: only with the maintainer.
+6. Smaller tracked items: OGC capacity guard (OGC isn't used for the paper); C++ CUDA build fails with CUDA 13.3; GPU vs CPU VBD sag on one test (low priority); move the configs to `accelerated-vbd-extras` once settled; delete `plans/` when the effort ends.
+
+### Scratch tools (not in the repo)
+
+The coordinator's session kept these in its scratchpad, so a new session won't have them unless they are added to the repo: `make_paper_configs.py` (regenerates `configs/paper/*.toml` and `configs/defaults.toml` from the extras repo's committed `.h5` files via `state.load_params`), `check_paper_configs.py` (each paper `.toml` loads bit-identically to its `.h5`), and `audit_raw.py` (raw `.h5` attributes vs the loaded state).
+
+## How each session starts (read this first) (historical: the 2026-10-17 kickoff)
 
 1. **Questions first, no code.** Read this file and your task plan (absolute paths below). Ask the
    maintainer your plan's open questions, plus anything else you need decided, and record the answers in
@@ -15,7 +68,7 @@ Status: **worktrees created; answering open questions (no implementation yet)** 
 4. **Keep the board current.** Update your status-board row and append to the coordination log when you
    reach milestones or need something from another task.
 
-Plan files: `C:\git\PhysicsBasedAnimationToolkit\plans\MASTER.md` and `...\plans\0N-*.md`.
+Plan files: `plans/MASTER.md` and `plans/0N-*.md` in the main checkout (its location is in the git-ignored `CLAUDE.local.md`).
 
 ## Decisions
 
@@ -30,18 +83,18 @@ Plan files: `C:\git\PhysicsBasedAnimationToolkit\plans\MASTER.md` and `...\plans
   release bug).
 
 The canonical copies of these plan files live in the main checkout at
-`C:\git\PhysicsBasedAnimationToolkit\plans\`. Sessions working in other git worktrees read and update
+`plans/` of the main checkout (location in `CLAUDE.local.md`). Sessions working in other git worktrees read and update
 them **through that absolute path**, never a copy inside their own worktree.
 
 ## Tasks
 
 | # | Task | Plan | Branch / worktree | Depends on |
 |---|---|---|---|---|
-| 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · `C:\git\pbat-kinematics` | Phase 0 | **done** | 2026-10-17 | `state.py` (1d…), `gpu/common/profiling.py` stub, `panels/` package, docs. Rebase onto `dev` now. |
-| 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · `C:\git\pbat-profiling` | Phase 0 |
-| 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · `C:\git\pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
-| 4 | MCMC sampling of quadratic-manifold shapes (benchmark dataset generator) | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · `C:\git\pbat-mcmc` | none |
-| 5 | GPU simulators read CPU scene files (task 1's session) | MASTER.md section "New milestone: GPU simulators read CPU scene files" | `feature/gpu-scene-ingestion` · `C:\git\pbat-kinematics` | dev |
+| 1 | Kinematic (procedural) Dirichlet constraints on the GPU | [01-kinematic-constraints.md](01-kinematic-constraints.md) | `feature/gpu-kinematic-constraints` · worktree `pbat-kinematics` | Phase 0 | **done** | 2026-10-17 | `state.py` (1d…), `gpu/common/profiling.py` stub, `panels/` package, docs. Rebase onto `dev` now. |
+| 2 | Solver profiling and cost breakdowns | [02-profiling.md](02-profiling.md) | `feature/gpu-profiling` · worktree `pbat-profiling` | Phase 0 |
+| 3 | Static (equilibrium) solves and convergence benchmark | [03-static-elasticity.md](03-static-elasticity.md) | `feature/gpu-static-solves` · worktree `pbat-static` | Phase 0; task 4's sample files (benchmark inputs); task 2's scope API |
+| 4 | MCMC sampling of quadratic-manifold shapes (benchmark dataset generator) | [04-mcmc-quadratic-manifold.md](04-mcmc-quadratic-manifold.md) | `feature/rom-mcmc` · worktree `pbat-mcmc` | none |
+| 5 | GPU simulators read CPU scene files (task 1's session) | MASTER.md section "New milestone: GPU simulators read CPU scene files" | `feature/gpu-scene-ingestion` · worktree `pbat-kinematics` | dev |
 
 ## Phase 0 (coordinator, before the parallel work starts)
 
@@ -84,14 +137,14 @@ will instrument).
 
 ## Rules for every session
 
-- **Shared Python environment.** All worktrees share the venv `C:\git\python-3.12`, which has exactly one
+- **Shared Python environment.** All worktrees share the dev venv (location in `CLAUDE.local.md`), which has exactly one
   installed `pbatoolkit`. **Do not reinstall pbatoolkit from a worktree.** If a task needs C++ or binding
   changes, describe them in the coordination log; the coordinator builds and installs them.
 - **Shared GPU.** There is one RTX 5070. Long GPU runs from several sessions distort each other's timings.
   Task 2's measurements (and task 3's timing curves) must be taken when no other session is using the GPU;
   announce them in the coordination log first.
 - **Scene data is not in worktrees.** `data/` is git-ignored, so use absolute paths such as
-  `C:\git\PhysicsBasedAnimationToolkit\data\scenarios\MediumLongBendingBeam.Dump.h5:fem`. Absolute
+  `path/to/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`. Absolute
   Windows paths work since the `parse_archive_path` fix.
 - **Permissions.** `.claude/settings.local.json` is git-ignored. The coordinator copied it into each
   worktree when creating it, so every session has the same local allowlist (the venv Python and `dumpbin`).
@@ -267,7 +320,7 @@ yet. **Owner: task 1** (confirmed by the maintainer, 2026-10-18). Branch `featur
     last correction's largest entry in m, an accuracy estimate), and `samples/ref_min_J`.
 
   `samples/x` is the start state x_n. A small test set (E = 50 and 5000 J, 3 problems, pools of 40, so its rhat
-  is not meaningful) is at `C:\git\PhysicsBasedAnimationToolkit\data\benchmarks\trampoline-test\`.
+  is not meaningful) is at `data/benchmarks/trampoline-test/` (now `trampoline-test.h5`).
 - **Don't use shapes from the current `modalrom.py` "Quadratic" view as test inputs.** Its modal
   derivatives have two bugs (÷h instead of ÷2h, and a blow-up for near-degenerate mode pairs), which task 4
   is fixing.
@@ -466,7 +519,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-18 · task 3 · **GPU run START** (~6 min, correctness only: bit-identity of the restructured VBD-family loop vs unrolled, beam, contact on/off). Task 2: ignore timings in this window. Will log END.
 - 2026-10-18 · task 2 · **GPU run END.** New finding (FYI task 3, who owns the solver kernels): on trampoline, which has no contacts, **contact gathering dominates the vertex solve**. `local_contact_derivatives` plus the half-edge helpers take ~60% of AAAVBD's warp stall samples (VBD ~72%) and about half its instructions (ncu source view with line info, native builtins folded into their callers). Every trampoline vertex is a surface vertex, so each one walks its half-edges and faces and reads reverse-contact prefixes in every sweep. A contact-free experiment that skips the gather is bit-identical: AAAVBD 83.8 → 40.6 ms/step (−52%), VBD 75.2 → 46.3 (−38%). Candidate fix: compute a per-vertex contact count once per constraint-set update and early-out in the vertex solve. **Not implemented** (solver kernels belong to task 3); asking the maintainer. Tooling (`ncu.py --lineinfo` hotspots, report section) is 3 commits on `feature/gpu-profiling` after `7ad6a983`. **Coordinator:** the `capture_while` anatomy needs task 3's branch on dev; I'll run it after that merge.
 - 2026-10-18 · coordinator · Merged task 2's ncu hotspot tooling (d05f0987). **Task 2 finding:** contact gathering in the vertex solve takes ~60% of AAAVBD's stalls (VBD ~72%) even with zero contacts; skipping it is bit-identical: AAAVBD 83.8 → 40.6, VBD 75.2 → 46.3 ms/step on trampoline. The owner of the fix is pending the maintainer's decision; it should land after task 3's kernel changes (gpu/vbd/kernels.py). Asked task 3 for a merge-ready slice.
-- 2026-10-18 · coordinator · Maintainer wants reusable sim-params files for benchmarks and scenarios. The paper's configs live in `C:\git\accelerated-vbd-extras` (parameters/gpu = GPU export format, all 19 files load in the current GPU loader with no unknown keys; parameters/cpu + vbd.sal.h5 = CPU format). Design discussion pending.
+- 2026-10-18 · coordinator · Maintainer wants reusable sim-params files for benchmarks and scenarios. The paper's configs live in `path/to/accelerated-vbd-extras` (parameters/gpu = GPU export format, all 19 files load in the current GPU loader with no unknown keys; parameters/cpu + vbd.sal.h5 = CPU format). Design discussion pending.
 - 2026-10-18 · task 1 · **GPU run (correctness only, ~8 min, just finished; logged afterwards because my START
   edit didn't get written).** It overlapped task 3's correctness window only; no timings were affected.
   **START/END.** Results for `feature/gpu-scene-ingestion`:
