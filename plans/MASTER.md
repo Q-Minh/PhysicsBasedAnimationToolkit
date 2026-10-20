@@ -296,7 +296,7 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
 | 2 | on hold | 2026-10-19 | feature/report-without-gpu merged (feb00581). Waiting for the next task |
-| 3 | ready to merge | 2026-10-19 | `feature/solve-status-per-frame` (3 commits on dev 535a2a11): simulate.py stores solve statuses per frame in sim/<frame>/solve_status. Newton final check merged (535a2a11) |
+| 3 | on hold | 2026-10-19 | All work merged (solve status 574c3912, Newton final check 535a2a11, per-frame statuses 085000a5) |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -761,6 +761,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-19 · task 2 · **GPU run START** (~2 min, correctness only): one tiny simulate.py --profile kernels run (report-without-gpu check). Will log END.
 - 2026-10-19 · task 3 · **GPU run END** (solve-status checks): VBD/AAAVBD positions bit-identical to dev (beam 20 steps, BeamFallingOnBeam 30); nsys, 10 graph-replayed VBD beam steps: identical sync calls (40 cudaStreamSynchronize, 11 cuCtxSynchronize, 10 cuEventSynchronize), graph launches (10) and kernels (14340), plus 1 async 24-byte D2H memcpy per step; production step time unchanged (median 4.0/4.0 ms dev vs 3.8/4.0 ms branch).
 - 2026-10-19 · task 2 · **GPU run END** (report-without-gpu check).
+- 2026-10-19 · task 1 · **GPU run START** (~5 min, correctness only): short simulate.py outputs (MediumLongBendingBeam and CubeOnInfinitePlane, 0.2 s) for the editor's GPU trajectory playback (feature/viewer-gpu-trajectories). Will log END.
+- 2026-10-19 · task 1 · **GPU run END** (viewer playback outputs).
 
 ## Open questions for the maintainer
 
