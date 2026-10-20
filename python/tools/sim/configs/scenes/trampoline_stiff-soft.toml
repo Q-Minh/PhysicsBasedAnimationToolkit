@@ -1,11 +1,17 @@
 # The stiff-soft trampolines (Young's modulus 1e6 to 1e8) with the maintainer's settings for stiff heterogeneous scenes: no substeps, 5 x 80 = 400
 # sweeps per step, the Inverse vertex solve, and AAAVBD gammaup/gammaupS 0.5/0.3 with
 # gammadown/gammadownS 0.99/0.95. The paper file gives 5 substeps of 1 x 25 AAAVBD sweeps (1 x 100 for VBD), with EVD.
-# Newton: 5 outer iterations x 2 Newton steps. The contact parameters are the paper file's.
+# Newton: 5 outer iterations x 2 Newton steps. The contact parameters are the paper file's, except for a
+# positive AL contact margin dmin = 1 mm (the paper file's -1e-4 dates from penetration-only VertexSdf
+# detection): resting vertices stay outside their partner, where the SDF sign is reliable, detection
+# (below dmin + band) starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
 extends = ["../paper/trampoline_stiff-soft.Params.5Substeps.toml"]
 
 [Integration]
 substeps = 1
+
+[Contact.ContactDynamics]
+dmin = 1e-3
 
 [Solver.AAAVBD]
 n_max_iters = 5
