@@ -322,8 +322,9 @@ positions unchanged and underestimate it. Tolerances then follow $\varepsilon$:
 
 For each total energy $E$, a pool of microcanonical samples is drawn, and an evenly spaced subset of it becomes the
 problems. A sample $(q_s, \dot q_s)$ gives the start state $x_s = X + u(q_s)$ and velocity $v_s = J(q_s)\, \dot q_s$.
-A benchmark dataset is one HDF5 file: the FEM the problems are posed on, the pools, and one problem set per kind and
-energy (`make_benchmark.py`'s docstring has the layout).
+A benchmark dataset is one HDF5 file with a group per named scene (e.g. the trampoline at several Young's moduli),
+each holding the FEM its problems are posed on, its pools, and one problem set per kind and energy
+(`make_benchmark.py`'s docstring has the layout). Each scene gets its own reduced model and pools.
 
 - **Static problem.** Start from $x_s$ and minimize $\Psi(x)$ with Dirichlet nodes at rest. The solution is exactly
   $X$, so errors are $\lVert x_k - X \rVert$. Static pools are sampled without gravity by default.
