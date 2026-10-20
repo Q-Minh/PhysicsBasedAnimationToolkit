@@ -431,6 +431,9 @@ class Sd(ContactDetection):
         conditional graph body."""
         if self.inactive:
             return
+        self._refit()
+
+    def _refit(self):
         main_stream = wp.get_stream()
         for mesh, stream in zip(self._wp_meshes, self._mesh_streams):
             stream.wait_stream(main_stream)
@@ -438,11 +441,12 @@ class Sd(ContactDetection):
                 mesh.refit()
             main_stream.wait_stream(stream)
 
+    @profiling.scoped("contact.detect")
     def detect_contacts(self, from_xt: bool = False, prepared: bool = False):
         if self.inactive:
             return
         if not prepared:
-            self.prepare_detection()
+            self._refit()  # unscoped, so the refit doesn't nest as contact.detect/contact.detect
         main_stream = wp.get_stream()
         self._contacts.clear()
         n_verts = self._meshes.data.V.shape[0]
