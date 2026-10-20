@@ -232,12 +232,17 @@ def main():
             wp.cuda_profiler_stop()
         if pbar is not None:
             pbar.close()
+        # Per-solve statuses (status.StatusLog), outside sim/ so that sim/ holds only frames
+        state.status_log.write_h5(h5f.require_group("solve_status"))
         h5f.close()
     elapsed = time.perf_counter() - t_start
     print(
         f"Simulated {state.t} steps ({state.t * state.dt:.4f}s) in {elapsed:.2f}s wall time, "
         f"wrote {frame} frames to {args.output}"
     )
+    print("Solve status:")
+    for line in state.status_log.format_summary():
+        print("  " + line)
     if recorder is not None:
         result = recorder.to_dict()
         if recorder.steps:
