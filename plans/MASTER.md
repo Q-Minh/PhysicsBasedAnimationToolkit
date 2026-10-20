@@ -896,7 +896,10 @@ Answer when back; each has the coordinator's recommendation.
    both time, ~11 min/scene, and size). References ~15 s per problem per h. Inversions: only Y1e5 (~2 inverted dynamic
    starts expected at N = 32). Options: (a) a longer pilot (`--pilot ~3000`) so thinning matches the autocorrelation
    time: ~150 MB smaller per scene, same R-hat and time; (b) parallel chain processes, ~1 h total (code change).
-   **Recommendation:** N = 32 with option (a); (b) isn't needed for a CPU-only job of ~2.3 h.
+   **Recommendation:** N = 32 with `--pool 200 --chains 4 --pilot 3000` (option a: `--pool` counts thinned samples,
+   so with thinning ~ tau, 200 samples cover the same ~13.6k steps per chain as 800 at the short pilot; same R-hat ~1.03 and
+   ~2.3 h, ~50 MB of pool samples per scene instead of ~205 MB; check R-hat in the pool attributes afterwards). Without
+   (a): `--pool 800 --chains 4`. (b) isn't needed for a CPU-only job of ~2.3 h.
 7. **Go-ahead for the full dataset generation**, then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
