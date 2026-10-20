@@ -893,3 +893,9 @@ Answer when back; each has the coordinator's recommendation.
    at 10000 J needs ~10k steps per chain at ~5 ms/step).
 7. **Go-ahead for the full dataset generation**, then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
+8. **Snapshot frames:** a fixed count per solve over the budget (recommended: 120 frames, i.e. 5 s at 24 fps; static plays
+   at true speed, h = 1e-2 ~2.5x slow motion, h = 1e-4 ~200x), or another count?
+9. **Snapshot GPU cap:** raise to ~32 MB for 120 frames with a 2x ring (~0.25% of 12 GB), or keep 16 MB with a smaller
+   ring (coarser spacing)?
+10. **Snapshot which samples:** only chosen samples per scene (recommended: 2, via a flag; ~0.75 GB per benchmark)
+    rather than all (~36 GB for a full run).
