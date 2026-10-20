@@ -15,6 +15,10 @@ from .trajectory import Trajectory
 from .utils import transform_library as tlib
 from . import material
 
+# FemElastoDynamics nodal fields (kDims x |# nodes|) that a field trajectory's frames may hold, as
+# |# nodes| x kDims datasets of the same names
+_TRAJECTORY_NODAL_FIELDS = ("x", "v", "atfd", "fext", "xtilde")
+
 
 class Simulation:
     _fem_dynamics: pbat.sim.dynamics.FemElastoDynamics
@@ -387,15 +391,59 @@ class Simulation:
         self._trajectory.draw()
         if self._trajectory.dirty:
             if self._fem_dynamics is not None:
-                self._trajectory.undirty(
-                    lambda archive: self._fem_dynamics.deserialize(archive)
-                )
+                try:
+                    self._trajectory.undirty(
+                        lambda archive: self._fem_dynamics.deserialize(archive),
+                        self._set_trajectory_fields,
+                    )
+                except ValueError as e:
+                    self._trajectory.close()
+                    ps.error(f"Cannot play this trajectory: {e}")
+                    return
                 self._update_visuals_after_position_change()
                 self._t = self._trajectory.t
                 # Constrained nodes continue from the loaded positions
                 self._transform_library.reset_anchors()
             else:
                 self._trajectory.undirty(lambda archive: None)
+
+    def _set_trajectory_fields(self, fields: dict[str, np.ndarray]):
+        """Show a field trajectory frame (see Trajectory): load each of the FEM's nodal fields that the frame
+        has and leave the others as they are, except velocities, which are zero when absent. The GPU
+        simulators' nodes are this scene's nodes (built the same way, in the same order), then its static
+        colliders' nodes, which are dropped.
+        """
+        fem = self._fem_dynamics
+        dims, n = fem.x.shape
+        X = self._trajectory.rest_positions
+        present = [name for name in _TRAJECTORY_NODAL_FIELDS if name in fields]
+        n_file = X.shape[0] if X is not None else (fields[present[0]].shape[0] if present else n)
+        if not (self._trajectory.n_element_nodes <= n <= n_file):
+            raise ValueError(
+                f"the trajectory has {n_file} nodes ({self._trajectory.n_element_nodes} in elements), "
+                f"but the loaded scene has {n}. Load the scene that the trajectory was simulated from."
+            )
+        if X is not None and not np.allclose(X[:n], fem.X.T, atol=1e-6):
+            raise ValueError(
+                "the trajectory's rest positions differ from the loaded scene's (max difference "
+                f"{np.abs(X[:n] - fem.X.T).max():.3g}). Load the scene that the trajectory was simulated from."
+            )
+        loaded, ignored = [], [name for name in fields if name not in _TRAJECTORY_NODAL_FIELDS]
+        for name in present:
+            if fields[name].shape != (n_file, dims):
+                ignored.append(f"{name} {fields[name].shape}")
+                continue
+            setattr(fem, name, np.asfortranarray(fields[name][:n].T, dtype=fem.x.dtype))
+            loaded.append(name)
+        notes = [f"Frame has {', '.join(loaded) if loaded else 'no FEM fields'}."]
+        if "x" not in loaded:
+            notes.append("Positions unchanged.")
+        if "v" not in loaded:
+            fem.v = np.zeros_like(fem.v)
+            notes.append("Velocities zero: kinetic energy not meaningful.")
+        if ignored:
+            notes.append(f"Ignored: {', '.join(ignored)}.")
+        self._trajectory.note = " ".join(notes)
 
     def _record_energy(self):
         if self._fem_dynamics is None:
