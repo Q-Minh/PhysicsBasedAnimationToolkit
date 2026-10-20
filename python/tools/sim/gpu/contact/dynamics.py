@@ -95,6 +95,46 @@ def _apply_dual_update(
             lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))  # type: ignore
 
 
+@wp.func
+def capped_friction_scale(
+    c_f: wp.vec2f,
+    lambda_f: wp.vec2f,
+    sigma_f: wp.float32,
+    friction_limit: wp.float32,
+):
+    """min(1, C / |f|) for the friction force f = sigma_f c_f - lambda_f capped at the Coulomb
+    limit C. Scales the augmented friction gradient and the friction Hessian block of
+    :func:`capped_friction_energy`."""
+    f = sigma_f * c_f - lambda_f
+    f_norm = wp.length(f)
+    scale = wp.float32(1)
+    if sigma_f > wp.float32(0) and f_norm > friction_limit:
+        scale = friction_limit / f_norm
+    return scale
+
+
+@wp.func
+def capped_friction_energy(
+    c_f: wp.vec2f,
+    lambda_f: wp.vec2f,
+    sigma_f: wp.float32,
+    friction_limit: wp.float32,
+):
+    """Huber-like augmented friction energy whose gradient f = sigma_f c_f - lambda_f is capped at
+    a fixed Coulomb limit C: 1/2 sigma_f |c_f|^2 - lambda_f . c_f = (|f|^2 - |lambda_f|^2) /
+    (2 sigma_f) for |f| <= C, continued linearly as (C |f| - C^2/2 - |lambda_f|^2/2) / sigma_f
+    above it (C^1). sigma_f = 0 (no friction penalty) keeps the uncapped form."""
+    f = sigma_f * c_f - lambda_f
+    f_norm = wp.length(f)
+    if sigma_f > wp.float32(0) and f_norm > friction_limit:
+        return (
+            friction_limit * f_norm
+            - wp.float32(0.5) * friction_limit * friction_limit
+            - wp.float32(0.5) * wp.dot(lambda_f, lambda_f)  # type: ignore
+        ) / sigma_f
+    return wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f) - wp.dot(lambda_f, c_f)  # type: ignore
+
+
 @wp.kernel
 def _update_dual_vv(
     x: wp.array[wp.vec3f],
