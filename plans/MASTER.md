@@ -875,6 +875,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run START** (~1 min, correctness only): benchmark-bars review changes, 1 problem x AAAVBD/Newton on trampolines-test.h5. Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (benchmark-bars review checks).
 - 2026-10-20 · coordinator · **Maintainer: trajectory snapshots may use only a fixed, small amount of GPU memory** (never growing, insignificant next to the solvers). Task 3: a fixed device ring capped at 16 MB by default (configurable), stride doubling inside it, copies outside the timed span, in the normal benchmark run, after the pilot. Fallback, approved: an opt-in replay run.
+- 2026-10-20 · task 4 · **CPU run END** (09:09): data/benchmarks/trampolines-pilot.h5 complete and validated (910 MB; 5 scenes Y1e5/Y1e6/Y1e7/Y1e8/het, 10000 J, 2 problems each in static, dynamic_h0.0001, dynamic_h0.01; pools of 160, split R-hat 1.11-1.28 as expected for pilot pools; reference accuracy <= 1.4e-3 e0; no inverted starts; pool inversions only on Y1e5: 1% static pool, 7% gravity pool). The pool-sizing study is still running (CPU).
+- 2026-10-20 · task 3 · **GPU run START** (~15 min, TIMING: please keep the GPU quiet): static Newton pilot on trampolines-pilot.h5, Newton only, all sets, 30 s budget per solve, CG n_max_iters 500 then 1000. Will log END.
 
 ## Open questions for the maintainer
 
@@ -889,8 +891,12 @@ Answer when back; each has the coordinator's recommendation.
 4. **Static benchmark budget: 5 s or 10 s per solve?** Waits on the static Newton pilot (Newton's time to each level
    at 10000 J, CG 500 vs 1000). Recommendation: the smallest budget in which Newton reaches 99% on most samples.
 5. **Newton CG cap for the benchmarks: 500 or 1000?** The pilot reports which gives the faster time to 99%.
-6. **Problems per scene: N = 16 or 32?** Waits on task 4's full-dataset estimate (CPU time, file size, R-hat < 1.05
-   at 10000 J needs ~10k steps per chain at ~5 ms/step).
+6. **Problems per scene: N = 16 or 32?** Task 4's estimate (5 scenes, 10000 J, static + both h, pools of 800 from
+   4 chains for split R-hat ~1.03; one CPU process): N = 16 ~1.6 h, ~1.8 GB; N = 32 ~2.3 h, ~1.9 GB (pools dominate
+   both time, ~11 min/scene, and size). References ~15 s per problem per h. Inversions: only Y1e5 (~2 inverted dynamic
+   starts expected at N = 32). Options: (a) a longer pilot (`--pilot ~3000`) so thinning matches the autocorrelation
+   time: ~150 MB smaller per scene, same R-hat and time; (b) parallel chain processes, ~1 h total (code change).
+   **Recommendation:** N = 32 with option (a); (b) isn't needed for a CPU-only job of ~2.3 h.
 7. **Go-ahead for the full dataset generation**, then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
