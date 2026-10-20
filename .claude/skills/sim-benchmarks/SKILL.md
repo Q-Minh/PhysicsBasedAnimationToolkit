@@ -30,17 +30,22 @@ Error: e = sqrt((x − x*)ᵀ M (x − x*)) over free nodes (lumped mass), with 
 
 **Level attribution:** an iteration's time goes to the highest level it crosses. The levels it jumps over are reached with zero time (`skipped`), e.g. a Newton step from 0 to 80% puts its whole time on the 80% bar. A level crossed after the budget doesn't count as reached.
 
-**Budgets:** with `--budget-from pilot.h5`, each case's budget is `--budget-factor` (default 2) times the `--budget-statistic` (default median) of Newton's time to the pilot's highest level in that case. Without a pilot, or for cases where no pilot Newton solve reached that level (with a warning), the budget is `--max-seconds`. Each case records its `budget` and `budget_source`. The pilot is an ordinary results file, from a Newton-only run with a generous `--max-seconds`.
+**Budgets**, per case, in order of precedence (each case records its `budget` and `budget_source`):
+
+1. `--budget [BENCHMARK[/CASE]=]SECONDS` (repeatable; the case's entry, then its benchmark's, then a bare number for every case), e.g. the maintainer's fixed `--budget static=5` for every solver.
+2. With `--budget-from pilot.h5`: `--budget-factor` (default 1: for the paper, a solver needing more than Newton's time makes no sense) times the `--budget-statistic` (default median) of Newton's time to the pilot's highest level in that case, at most `--budget-cap [BENCHMARK[/CASE]=]SECONDS`. The pilot is an ordinary results file, from a Newton-only run with a generous `--max-seconds`.
+3. `--max-seconds`: cases with neither, e.g. where no pilot Newton solve reached the level (with a warning).
 
 ```bash
 # One quick solve (smoke test)
 python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-test.h5 \
     --sets static/E50 --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.h5
 
-# Pilot (Newton only), then every solver with budgets of 2x Newton's median time to 99%
+# Pilot (Newton only), then every solver: a fixed 5 s for the static benchmark, Newton's median time
+# to 99% for the dynamic ones, at most 3 s
 python -m python.tools.sim.benchmark --dataset DATASET.h5 --solvers Newton --max-seconds 60 \
     --sim-params python/tools/sim/configs/benchmark/shared.toml -o out/pilot.h5
-python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 \
+python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 --budget static=5 --budget-cap 3 \
     --sim-params python/tools/sim/configs/benchmark/shared.toml --scene-params Y1e8=y1e8.toml -o out/results.h5
 python -m python.tools.sim.benchmark_plot out/results.h5 -o out/fig/benchmark
 
@@ -66,8 +71,8 @@ Translating requests:
 | "Only solvers X, Y" | `--solvers X,Y` (from VBD, AAAVBD, Chebyshev, AndersonSolver, Newton; default all, in that order) |
 | "Samples i to j" | `--sample-begin i --sample-end j+1` (`-1` = all), in every selected set |
 | "Accuracy levels L1, L2, ..." | `--levels 0.5,0.9,0.99` (error reductions; the highest is the default target) |
-| "Budget k x Newton" | `--budget-from pilot.h5 --budget-factor k` (`--budget-statistic mean` for the mean) |
-| "Time budget T s per solve" | `--max-seconds T` (default 60), without a pilot |
+| "Budget k x Newton" | `--budget-from pilot.h5 --budget-factor k` (`--budget-statistic mean` for the mean; `--budget-cap C` limits it) |
+| "Time budget T s per solve" | `--budget T`, or per benchmark/case `--budget static=T`, `--budget static/Y1e8=T` (overrides the pilot) |
 | "Iteration budget N" | `--max-iterations N`: counts VBD sweeps, **Anderson steps** (p sweeps each when `vbd_iters_per_anderson_iter = p`) or Newton steps |
 | "Stop at 95%" | `--target-reduction 0.95` (default: the highest level) |
 | "With a load" | the StaticSolveSpec's `fext_scale` (via `--spec`). Static benchmark problems are load-free by design |
@@ -80,13 +85,13 @@ Translating requests:
 ## Outputs
 
 - **`results.h5`** (layout in `benchmark_results.py`'s docstring):
-  - root attributes: levels, budget factor, statistic and source, dataset, device, commit, date, parameter sources, solvers, Newton CG limits; the `StaticSolveSpec` and `dataset_attrs` groups;
+  - root attributes: levels, budget factor, statistic, pilot and options, dataset, device, commit, date, parameter sources, solvers, Newton CG limits; the `StaticSolveSpec` and `dataset_attrs` groups;
   - `/<benchmark>/<case>`: the case's scene, label, energy, set, `budget` and `budget_source`;
-  - `/<benchmark>/<case>/<solver>`: per sample, e0, iterations, sweeps, solver time, final e/e0, `termination` (`target`, `iteration_cap`, `time_cap`, `non_finite`, or Newton's `newton_non_descent`, `newton_line_search_failed` or `newton_zero_gradient`; Newton stops at its first rejected step, at the float32 floor usually `newton_line_search_failed`), and per sample and level `crossing_time`, `crossing_iteration`, `increment`, `reached` and `skipped` (NaN or -1 when not reached);
+  - `/<benchmark>/<case>/<solver>`: per sample, e0, iterations, sweeps, solver time, host time (the solve's wall-clock time: minus the solver time, the per-solve overhead), final e/e0, `termination` (`target`, `iteration_cap`, `time_cap`, `non_finite`, or Newton's `newton_non_descent`, `newton_line_search_failed` or `newton_zero_gradient`; Newton stops at its first rejected step, at the float32 floor usually `newton_line_search_failed`), and per sample and level `crossing_time`, `crossing_iteration`, `increment`, `reached` and `skipped` (NaN or -1 when not reached);
   - `aggregate/{increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}` per level, over the samples that reached it;
   - `logs/<sample>/{error,time,sweeps}`: the full per-iteration logs.
 - **Dynamic cases** add each sample's reference accuracy in the error's M-norm (`reference_error_bound`, `reference_relative_error_bound`), from the set's `samples/ref_error_mnorm`, and `resolvable`: the levels that accuracy resolves.
-- **Figures** (`benchmark_plot.py`): per benchmark, `<prefix>_<benchmark>.pdf` and `.png`. x = case, depth = level, height = mean increment / budget, one bar per solver per cell, translucent min-max boxes, `n/N` labels where not every sample reached the level, no bar where none did.
+- **Figures** (`benchmark_plot.py`): per benchmark, `<prefix>_<benchmark>.pdf` and `.png`. x = case, depth = level, height = mean increment / budget, one bar per solver per cell, translucent min-max boxes, `n/N` labels where not every sample reached the level and always at the highest level (also `0/N`, so a stalled solver shows), empty cells where no sample reached the level or every one that did jumped over it.
 
 When comparing solvers, use the time to reach each error level, not the time per iteration. Also report iterations and sweeps. Anderson iterations aren't sweeps when p > 1.
 
