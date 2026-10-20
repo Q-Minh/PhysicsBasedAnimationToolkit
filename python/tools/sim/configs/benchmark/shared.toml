@@ -1,0 +1,23 @@
+# Parameters shared by every scene of the convergence benchmark (benchmark.py --sim-params), under the
+# per-scene files (--scene-params).
+# - AAAVBD: the shared parameter set of configs/scenes (gammaup/gammaupS 0.5/0.3, gammadown/gammadownS
+#   0.99/0.95), the same for every scene: the Lipschitz normalization is meant to make them
+#   problem-invariant. Its other parameters keep their code defaults.
+# - Every VBD-family solver uses the Inverse vertex solve (vlinsolve = 0).
+# Sweep budgets and convergence tests don't apply: benchmark solves stop on the error and the time budget.
+
+[Solver.AAAVBD]
+vlinsolve = 0
+gammadown = 0.99
+gammadownS = 0.95
+gammaup = 0.5
+gammaupS = 0.3
+
+[Solver.VBD]
+vlinsolve = 0
+
+[Solver.Chebyshev]
+vlinsolve = 0
+
+[Solver.AndersonSolver]
+vlinsolve = 0
