@@ -14,7 +14,7 @@ The sampling tools live in `python/examples`, everything runs on the **CPU**, an
 
 Read those docstrings for anything not covered here. The derivations, algorithms, parameters and validation of every sampler and of shape matching are in `python/examples/docs/sampling-methods.md`, the maintainer's technical reference and the source of truth. Update it in the same change as any sampler, fit or benchmark-definition change, keeping its equation tags and citations consistent. https://claude.ai/artifact/8EuUcmLsX882p2y5Qsh67n is a rendered snapshot of an earlier version.
 
-Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `/c/git/python-3.12/Scripts/python.exe`). Prefer **scene files** (e.g. `data/scenarios/trampoline.h5`), which are built into a FemElastoDynamics the way the CPU editor builds them. A stored FemElastoDynamics (`filepath:h5path`, e.g. `trampoline.Dump.h5:fem`) works too and gives identical results. `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`; `make_benchmark.py` rejects meshes. Scenes are rejected, with a message naming the culprit, when they have static colliders, more than one body, or constraints that move nodes or start or end during the problems' time span [0, max(`--dt`)]. Constraints entirely outside that span are ignored. Of the current scenarios, `trampoline.h5` and `trampoline.Y1e7.h5` qualify. Use absolute paths: `data/` exists only in the main checkout.
+Run from `python/examples` with the dev venv's Python (Python <= 3.12; its location is machine-specific, see `CLAUDE.local.md`). Prefer **scene files** (e.g. `data/scenarios/trampoline.h5`), which are built into a FemElastoDynamics the way the CPU editor builds them. A stored FemElastoDynamics (`filepath:h5path`, e.g. `trampoline.Dump.h5:fem`) works too and gives identical results. `modalrom.py` also accepts a tetrahedral mesh, with material set by `-m`/`-Y`/`-n`; `make_benchmark.py` rejects meshes. Scenes are rejected, with a message naming the culprit, when they have static colliders, more than one body, or constraints that move nodes or start or end during the problems' time span [0, max(`--dt`)]. Constraints entirely outside that span are ignored. Of the current scenarios, `trampoline.h5` and `trampoline.Y1e7.h5` qualify. `data/` exists only in the main checkout, so from `python/examples` or a worktree point to it as `path/to/PhysicsBasedAnimationToolkit/data/...`.
 
 ## Which sampler
 
@@ -34,7 +34,7 @@ Run from `python/examples` with `C:\git\python-3.12\Scripts\python.exe` (Bash: `
 ```bash
 # GUI: mode animation, fixed-energy sampling (energy, sampler, gravity, Sample, slider, velocity arrows),
 # shape reachability (load or handle target -> "Solve target" -> linear/quadratic fits and ROM equilibrium)
-python modalrom.py -i C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5
+python modalrom.py -i path/to/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5
 
 # Headless microcanonical batch (ensemble="total", writes samples/qdot), prints acceptance, thinning, tau, ESS, split R-hat
 python modalrom.py -i <scene>.h5 --headless -o batch.h5 --sampler microcanonical --energy 10 --samples 400
@@ -53,7 +53,7 @@ python make_benchmark.py -i <scene>.h5 -o <dataset>.h5 --energies 50 5000 --prob
 # Browse a generated dataset: problem set, energy and problem selectors; start state (colored by displacement
 # or det F), rest-shape ghost, velocity arrows, and for dynamic problems the inertial target x~ and reference x*;
 # energies, min det F, reference-solve stats, and the pool's R-hat, ESS and U/E histogram
-python benchmark_browser.py -d C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample.h5
+python benchmark_browser.py -d path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-sample.h5
 ```
 
 Translating requests:

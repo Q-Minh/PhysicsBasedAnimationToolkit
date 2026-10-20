@@ -11,7 +11,7 @@ Constraints are procedurally animated Dirichlet nodes. They are authored in the 
 
 The exact semantics are in those module docstrings and in `python/tools/sim/CLAUDE.md` ("Kinematic constraints"). For general run options, see the `sim-run` skill.
 
-Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). `data/` exists only in the main checkout, so use absolute paths from worktrees.
+Run from the repo root with the dev venv's Python (Python <= 3.12; its location is machine-specific, see `CLAUDE.local.md`). `data/` exists only in the main checkout; from a worktree, point to it as `path/to/PhysicsBasedAnimationToolkit/data/...`.
 
 ## Commands
 

@@ -5,7 +5,7 @@ description: Run regular elastodynamics simulations with the GPU simulator (pyth
 
 # Running simulations
 
-Run everything from the repo root with the venv's Python: `/c/git/python-3.12/Scripts/python.exe` in Bash, `C:\git\python-3.12\Scripts\python.exe` in PowerShell. Module names below are run with `python -m`.
+Run everything from the repo root with the dev venv's Python (Python <= 3.12; its location is machine-specific, see `CLAUDE.local.md`). Module names below are run with `python -m`.
 
 ## GPU or CPU?
 
@@ -25,7 +25,7 @@ The GPU simulators take exactly one of:
 - **`--fem-elasto-dynamics file.h5:fem`**: an editor Dump, written by the CPU editor's **Dump** button. It holds `fem`, `contact`, solver params and the `kinematics` group (procedural constraints).
 - **`--scene scene.h5`**: a CPU editor scene file, built the same way as the CPU editor builds it. Static mesh colliders and plane colliders (infinite by default, authored in the editor's Objects tab) are simulated too. The default adaptive contact penalty handles hard impacts on them.
 
-**Prefer scene files (`--scene`) plus `--sim-params`** (maintainer's preference). `python -m python.tools.vbd.dump_to_scene dump.h5 scene.h5` turns a Dump taken at t = 0 back into a scene file. Use a Dump mainly to debug a crash that happens mid-simulation: it captures the state at that moment (current x and v, the kinematics' `t0` and open anchors), so the run resumes exactly there. The GPU never reads a Dump's solver parameters. Scenes live in `data/*.h5` and `data/scenarios/`; Dumps are `*.Dump.h5`. `data/` is git-ignored. From a worktree, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`.
+**Prefer scene files (`--scene`) plus `--sim-params`** (maintainer's preference). `python -m python.tools.vbd.dump_to_scene dump.h5 scene.h5` turns a Dump taken at t = 0 back into a scene file. Use a Dump mainly to debug a crash that happens mid-simulation: it captures the state at that moment (current x and v, the kinematics' `t0` and open anchors), so the run resumes exactly there. The GPU never reads a Dump's solver parameters. Scenes live in `data/*.h5` and `data/scenarios/`; Dumps are `*.Dump.h5`. `data/` is git-ignored. From a worktree, point to the main checkout's data, e.g. `path/to/PhysicsBasedAnimationToolkit/data/scenarios/MediumLongBendingBeam.Dump.h5:fem`.
 
 Commonly used scenes:
 

@@ -7,7 +7,7 @@ description: Run the solver convergence benchmarks of the GPU simulator — gene
 
 **The methodology is still being decided with the maintainer**: what data to report, the exact plot, and how execution time is measured. **Don't launch full benchmark runs or full dataset generation without the maintainer's go-ahead.** Smoke tests on a few samples are fine.
 
-Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). Scene data lives in the main checkout's `data/`, so use absolute paths from worktrees.
+Run from the repo root with the dev venv's Python (Python <= 3.12; its location is machine-specific, see `CLAUDE.local.md`). Scene data lives in the main checkout's git-ignored `data/`; from a worktree, point to it as `path/to/PhysicsBasedAnimationToolkit/data/...`.
 
 ## Pipeline
 
@@ -29,7 +29,7 @@ Error: e = sqrt((x − X)ᵀ M (x − X)) over free nodes (lumped mass). Each so
 
 ```bash
 # One quick solve (smoke test)
-python -m python.tools.sim.benchmark --dataset C:/git/PhysicsBasedAnimationToolkit/data/benchmarks/trampoline-test.h5 \
+python -m python.tools.sim.benchmark --dataset data/benchmarks/trampoline-test.h5 \
     --sets static/E50 --solvers AAAVBD --sample-end 1 --max-seconds 5 -o out/one.json
 
 # Every solver x every problem of every set, with a scene's parameters

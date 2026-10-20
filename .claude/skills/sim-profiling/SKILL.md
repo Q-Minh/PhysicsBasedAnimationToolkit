@@ -12,7 +12,7 @@ Profiling has three layers:
 
 Context and the findings so far are in `python/tools/sim/CLAUDE.md` ("Profiling") and `plans/02-profiling.md`.
 
-Run from the repo root with `/c/git/python-3.12/Scripts/python.exe` (Bash). The `data/...` paths below exist only in the main checkout. In worktrees, use absolute paths such as `C:/git/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5 (with --scene)`.
+Run from the repo root with the dev venv's Python (Python <= 3.12; its location is machine-specific, see `CLAUDE.local.md`). The `data/...` paths below exist only in the main checkout; from a worktree, point to them as `path/to/PhysicsBasedAnimationToolkit/data/scenarios/trampoline.h5` (with `--scene`).
 
 ## Choose the measurement
 

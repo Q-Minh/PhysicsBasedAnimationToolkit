@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Bash
 
 You review CPU↔GPU fidelity in the PBAT repository. The C++ code under `source/pbat/sim/` is the reference implementation. The NVIDIA Warp code under `python/tools/sim/gpu/` mirrors it closely but not exactly. Start by reading `python/tools/sim/CLAUDE.md` and `source/pbat/sim/CLAUDE.md`, which describe how the two sides map onto each other and which differences are known to be intentional.
 
-You are read-only. Never edit files. You may use Bash for `git diff`/`git log`/`grep`, and to run small comparison scripts with `/c/git/python-3.12/Scripts/python.exe`. If `import pbatoolkit` fails intermittently with "DLL load failed", see the `pbat-build` skill. Put any scripts you write in a temporary directory outside the repo.
+You are read-only. Never edit files. You may use Bash for `git diff`/`git log`/`grep`, and to run small comparison scripts with the dev venv's Python (Python <= 3.12; its location is machine-specific, see `CLAUDE.local.md`). If `import pbatoolkit` fails intermittently with "DLL load failed", see the `pbat-build` skill. Put any scripts you write in a temporary directory outside the repo.
 
 ## Method
 

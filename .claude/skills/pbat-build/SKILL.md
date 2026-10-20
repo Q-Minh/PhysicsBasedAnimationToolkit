@@ -7,13 +7,11 @@ description: Build the PBAT C++ library/tests, or rebuild and reinstall the pbat
 
 ## Python environment
 
-- Use the venv at **`C:\git\python-3.12`**. pbatoolkit supports Python ≤ 3.12, so the system `python` (3.14) won't work.
-  - Bash: `/c/git/python-3.12/Scripts/python.exe`
-  - PowerShell: `& C:\git\python-3.12\Scripts\Activate.ps1`
-- The installed `pbatoolkit` is a CUDA build, but its CUDA runtime is linked statically, so CUDA doesn't need to be on `PATH`. Smoke test: `/c/git/python-3.12/Scripts/python.exe -c "from pbatoolkit import pbat; print(pbat.gpu)"`.
+- Use the dev venv. pbatoolkit supports Python ≤ 3.12, so a newer system `python` won't work. The venv's location is machine-specific: it is recorded in the git-ignored `CLAUDE.local.md` at the repo root (ask the user and create that file if it's missing). Below, `python` means that venv's interpreter (`path/to/venv/Scripts/python.exe` on Windows, `path/to/venv/bin/python` elsewhere).
+- The installed `pbatoolkit` is a CUDA build, but its CUDA runtime is linked statically, so CUDA doesn't need to be on `PATH`. Smoke test: `python -c "from pbatoolkit import pbat; print(pbat.gpu)"`.
 - **Former intermittent import failure, fixed 2026-10-17.** About 5% of imports used to fail with `DLL load failed while importing _pbat`, because Embree's `/DEPENDENTLOADFLAG:0x2000` hid the package directory from embree4's lookup of `tbb12.dll`.
   - `cmake/dependencies.cmake` now resets the flag on the `embree` target.
-  - To check a build: `dumpbin /loadconfig <site-packages>\pbatoolkit\embree4.dll` should show `0000 Dependent Load Flag`, and `ctypes.WinDLL(r"<...>\embree4.dll")` should succeed.
+  - To check a build: `dumpbin /loadconfig path/to/site-packages/pbatoolkit/embree4.dll` should show `0000 Dependent Load Flag`, and `ctypes.WinDLL("path/to/site-packages/pbatoolkit/embree4.dll")` should succeed.
   - If the failure ever comes back, suspect a new dependency built with a nonzero DependentLoadFlags value.
 - **HDF5/zlib are linked statically.** This comes from `cmake/triplets/x64-windows.cmake`. pbatoolkit therefore ships no `hdf5.dll`/`z.dll`, and it no longer collides with h5py's copies in either import order. If an `hdf5.dll` reappears in the package, it's probably stale and was copied from the build tree's `lib/Release/`.
 
@@ -33,7 +31,7 @@ cmake --build build --target PhysicsBasedAnimationToolkit_Tests --config Release
 The Python package installs through scikit-build-core (`pyproject.toml`, which builds `PhysicsBasedAnimationToolkit_Python` into `build/{wheel_tag}`). Run from the repo root with the venv's pip:
 
 ```bash
-/c/git/python-3.12/Scripts/python.exe -m pip install . -v --config-settings cmake.args="--preset=user"
+python -m pip install . -v --config-settings cmake.args="--preset=user"
 ```
 
 - **What the preset provides.** The `user` preset (in `CMakeUserPresets.json`, which is local and not tracked by git) enables SuiteSparse, METIS, Tracy and the MSVC `/WX` warnings. It does **not** enable CUDA. The CUDA C++ path (`pbat.gpu`) doesn't currently build against CUDA 13.3: CCCL requires `/Zc:preprocessor`, and cuda-api-wrappers v0.8.1 predates CUDA 13. The GPU work in `python/tools/sim` uses Warp and doesn't need it. Don't add extra `-D` flags on the command line. If the configuration needs to change, change the preset.
