@@ -9,8 +9,10 @@ Figures of a convergence benchmark results file (``benchmark.py``): one 3D group
 
 Each (case, level) cell has one bar per solver, colored by solver. A translucent box around each mean bar
 spans the min and max increments over the same samples. A bar whose level not every sample reached is
-labeled with the fraction that did (e.g. 28/32); a level no sample reached has no bar. Bars are drawn back
-to front for the chosen camera, so nearer bars cover farther ones.
+labeled with the fraction that did (e.g. 28/32), and the highest level always is, also with 0/N, so a
+solver that stalled shows. A level no sample reached has no bar, nor has a level every sample that
+reached it jumped over (zero time). Bars are drawn back to front for the chosen camera, so nearer bars
+cover farther ones.
 
 Usage:
     python -m python.tools.sim.benchmark_plot results.h5 -o out/figures/benchmark \
@@ -78,7 +80,8 @@ def plot_benchmark(f: h5py.File, benchmark: str, solvers: list[str], elev: float
     x_range, y_range = (-0.6, len(cases) - 0.4), (-0.6, n_l - 0.4)
     aspect = (max(1.6, 1.1 * len(cases)), 1.8, 1.0)
 
-    bars = []  # (x, y, z0, dx, dy, dz, color, alpha, label, is_box)
+    bars = []  # (x, y, z0, dz, color, label, is_box, width, depth)
+    floating = []  # (x, y, z, label): labels of empty cells
     z_top = 0.0
     for i, (case, g) in enumerate(cases):
         budget = float(g.attrs["budget"])
@@ -91,9 +94,14 @@ def plot_benchmark(f: h5py.File, benchmark: str, solvers: list[str], elev: float
             color = solver_color(solver, solvers)
             xc = i + (k - (n_s - 1) / 2) * slot
             for j in range(n_l):
-                if count[j] == 0:
-                    continue  # no sample reached the level
-                label = f"{count[j]}/{n}" if count[j] < n else None
+                top = j == n_l - 1
+                # The highest level always says how many samples reached it, also 0/N (a stalled solver)
+                label = f"{count[j]}/{n}" if top or count[j] < n else None
+                if count[j] == 0 or not hi[j] > 0:
+                    # Not reached, or skipped by every sample that reached it: an empty cell
+                    if top:
+                        floating.append((xc, j, 0.0, label))
+                    continue
                 bars.append((xc, j, lo[j], hi[j] - lo[j], color, label, True, box_w, box_d))
                 bars.append((xc, j, 0.0, mean[j], color, None, False, bar_w, bar_d))
                 z_top = max(z_top, hi[j])
@@ -117,6 +125,7 @@ def plot_benchmark(f: h5py.File, benchmark: str, solvers: list[str], elev: float
             ax.bar3d(x - w / 2, y - d / 2, 0.0, w, d, max(dz, 1e-9), color=color, alpha=1.0,
                      edgecolor="white", linewidth=0.2, shade=True, zorder=order)
     z_max = 1.08 * z_top if z_top > 0 else 1.0
+    labels += [(x, y, z, label, len(bars)) for x, y, z, label in floating]
     for x, y, z, label, order in labels:
         ax.text(x, y, z + 0.015 * z_max, label, fontsize=6, ha="center", va="bottom", color="#333333",
                 zorder=len(bars) + order)
@@ -140,7 +149,8 @@ def plot_benchmark(f: h5py.File, benchmark: str, solvers: list[str], elev: float
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
     fig.legend(handles=handles, loc="upper right", fontsize=8, frameon=False)
     fig.suptitle(benchmark_title(benchmark), x=0.02, ha="left", fontsize=11)
-    fig.text(0.02, 0.02, "Bars: mean over the samples that reached the level; n/N: samples that reached it",
+    fig.text(0.02, 0.02, "Bars: mean over the samples that reached the level; n/N: samples that reached it "
+             f"(always shown at {100 * levels[-1]:g}%)",
              fontsize=7, color="#555555")
     return fig
 
