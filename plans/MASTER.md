@@ -770,6 +770,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-19 · task 3 · **GPU run END.** BeamFallingOnBeam VBD/AAAVBD 30 steps: positions bit-identical to dev; status rows identical except gradient_ratio in the last float32 digit, which dev also varies run to run (atomics). trampoline_circle_soft-stiff (paper dmin = -1e-4), AAAVBD 0.2 s: dev 21/21 'both unmet' (feasibility impossible), branch 21/21 'gradient unmet', feasibility ratio finite (0). Beam with dmin = -1e-4, VBD 2000 sweeps: dev 0/20 early exits (19 'feasibility unmet'), branch 19/20 converged early.
 - 2026-10-19 · task 1 · **GPU run START** (~10-15 min, correctness only; ignore timings): scene-config margin (feature/scene-config-margin). AAAVBD with the scene configs, 5 s each, dmin 1e-3 vs -1e-4, on trampoline_circle_soft-stiff/stiff-soft__with_sphere and mat_on_stilts_3 only (no celebration/basket). Will log END.
 - 2026-10-19 · task 1 · **GPU run END** (scene-config margin; also TIMESTEP-penalty probes of the same three scenes). Results sent to the coordinator.
+- 2026-10-20 · coordinator · **Maintainer direction: new paper scenes.** The current set over-indexes on stiff/heterogeneous materials; AAAVBD shines on soft, rubber-like materials (competitive with the VBD family and Newton). Collect ideas for soft scenes (e.g. spaghetti-like strands tangling around an object) and for scenes with many kinematic constraints plus contact, now feasible after the fixes. Melissa is asked to think about it (19-Oct report).
 
 ## Open questions for the maintainer
 
