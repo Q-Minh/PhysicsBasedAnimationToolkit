@@ -2,11 +2,17 @@
 # scenes: no substeps, 5 x 80 = 400 sweeps per step, and the Inverse vertex solve. The paper's
 # 5-substep file gives only 125 sweeps per frame, with EVD and gammaup/gammaupS 0.9/0.85, and AAAVBD
 # blows up once the mat lands on the stilts. 10 x 20 and 10 x 40 were also stable.
-# Newton: 5 outer iterations x 2 Newton steps. The contact parameters are the paper file's.
+# Newton: 5 outer iterations x 2 Newton steps. The contact parameters are the paper file's, except for a
+# positive AL contact margin dmin = 1 mm (the paper file's -1e-4 dates from penetration-only VertexSdf
+# detection): resting vertices stay outside their partner, where the SDF sign is reliable, detection
+# (below dmin + band) starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
 extends = ["../paper/mat_on_stilts.Params.5Substeps.toml"]
 
 [Integration]
 substeps = 1
+
+[Contact.ContactDynamics]
+dmin = 1e-3
 
 [Solver.AAAVBD]
 n_max_iters = 5
