@@ -141,9 +141,18 @@ def parse_args():
     return parser.parse_args()
 
 
-def _write_frame(h5f: h5py.File, state: SimulationState, frame: int):
-    """Same layout as ui._serialize_simulation."""
+def _write_frame(h5f: h5py.File, state: SimulationState, frame: int, status_from: int) -> int:
+    """Same layout as ui._serialize_simulation, plus ``sim/<frame>/solve_status``: the statuses of the
+    time steps since the previous frame, ``[status_from, state.t)`` (see status.StatusLog).
+
+    Returns:
+        int: The first time step of the next frame's statuses.
+    """
     h5f.create_dataset(f"sim/{frame:08d}/x", data=state.fem.data.x.numpy())
+    state.status_log.write_h5(
+        h5f.require_group(f"sim/{frame:08d}/solve_status"), steps=(status_from, state.t)
+    )
+    return state.t
 
 
 def main():
@@ -187,8 +196,9 @@ def main():
     t_start = t_last_flush
     pbar = None
     measuring = False
+    status_from = 0
     try:
-        _write_frame(h5f, state, frame)
+        status_from = _write_frame(h5f, state, frame, status_from)
         frame += 1
         while state.t < n_steps:
             profile_step = recorder is not None and state.t >= args.profile_warmup
@@ -214,7 +224,7 @@ def main():
                         state.t - 1, wp.get_event_elapsed_time(*step_events)
                     )
             if should_save(state.t, state.dt, args.fps):
-                _write_frame(h5f, state, frame)
+                status_from = _write_frame(h5f, state, frame, status_from)
                 frame += 1
             if time.perf_counter() - t_last_flush >= 1.0:
                 h5f.flush()
@@ -232,8 +242,9 @@ def main():
             wp.cuda_profiler_stop()
         if pbar is not None:
             pbar.close()
-        # Per-solve statuses (status.StatusLog), outside sim/ so that sim/ holds only frames
-        state.status_log.write_h5(h5f.require_group("solve_status"))
+        # The statuses of the steps after the last written frame (from status_from on) are not stored:
+        # no use case needs the final partial interval, and every frame keeps one layout without a
+        # trailing table. The summary printed below still covers every step.
         h5f.close()
     elapsed = time.perf_counter() - t_start
     print(
