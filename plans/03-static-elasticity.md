@@ -1,7 +1,130 @@
 # Task 3: Static (equilibrium) solves and a convergence benchmark
 
-Status: **merged (static machinery); benchmark runs on hold** · Branch `feature/gpu-static-solves` · Worktree `C:\git\pbat-static`
-Read first: `MASTER.md`, `python/tools/sim/CLAUDE.md`, `source/pbat/sim/CLAUDE.md`.
+Status: **all work merged into dev; on hold** (full static benchmark run waits for the maintainer) · Worktree `pbat-static` (location in CLAUDE.local.md)
+Read first: `MASTER.md`, `python/tools/sim/CLAUDE.md`, `source/pbat/sim/CLAUDE.md`, the `sim-benchmarks` and `sim-run` skills.
+
+## Handoff (2026-10-20)
+
+Everything below "Handoff" is history. The code, module docstrings, `python/tools/sim/CLAUDE.md` and the skills are
+the source of truth; this section says what isn't written there.
+
+### 1. Scope (what task 3 owns or knows best)
+- **Static mode:** `FemElastoDynamics.static` + `h2` (`gpu/elasticity/fem.py`), static branches in the VBD vertex
+  solves (`gpu/vbd/kernels.py`), `gpu/gradient.py` and Newton; `gpu/elasticity/spd.py` (9x9 eigenvalue filter).
+- **Static solves and the benchmark:** `static.py` (loader, `StaticSolveSpec`, `ErrorLog`, `StaticSolver`),
+  `benchmark.py` (static and dynamic problems, one runner), `panels/static.py`.
+- **Convergence:** `gpu/vbd/convergence.py` (`ConvergenceCheck`: Lagrangian gradient test every N sweeps, feasibility
+  test, `SolveStatus` ring, `SweepLayout`) and the loop structure in `gpu/vbd/solver.py::solve_outer_loop`
+  (unrolled outer loop, `capture_if`/`capture_while` sweep blocks, refit in `prepare_detection`).
+- **GPU Newton** (`gpu/newton/solver.py`): CG `LinearSolverParams`, SPD correction, relative outer test with
+  feasibility, final check after the loop, penalty adaptation (Rayleigh quotient on the BSR Hessian,
+  `contact/dynamics.py::adapt_penalty_parameters_to_hessian`), roundoff-tolerant Armijo, Coulomb cap, subproblem
+  records/statuses.
+- **Friction caps:** VBD (`kernels._contact_derivatives`) and Newton (`contact/dynamics.py::capped_friction_scale`,
+  `capped_friction_energy`; `gradient.py::FrictionLimits`).
+- **Adaptive penalties** (`contact/dynamics.py`): color-aware current-position contacts, SUBPROBLEM floor.
+- **Solve statuses:** `status.py` (`StatusLog`), `panels/status.py`, `state.py::step` readback, `simulate.py`
+  per-frame `sim/<frame>/solve_status`.
+
+### 2. Current state
+- **Merged into dev** (merge commits): static solves `3aae8ba5`; docs `4236deff`; DocField strings `56a80513`;
+  default-params labels `20ccb4bf`; adaptive penalty `68405d62`; Newton SPD in dynamics `ab4589ee`; one benchmark
+  runner `7366422a`; adaptive factors 0.1 `e42e05b2`; Newton relative check + termination statuses `3ec857a1`;
+  `--scene` + CG atol 1e-10 `99361a66`; VBD Coulomb cap `ecb2d823`; Newton contact fixes (feasibility, stream race,
+  penalty adaptation, Armijo roundoff) `fa325a89`; solve statuses `574c3912`; Newton final check `535a2a11`;
+  per-frame statuses `085000a5`; Newton Coulomb cap `9a4ad637`; status panel layout `e9248ec2`; feasibility
+  tolerance for zero/negative margins `3a712121`.
+- **Unmerged work: none.** No stashes, saved patches or uncommitted changes. The worktree is detached at dev
+  `5929751e`, clean. `feature/docfield-strings` shows as unmerged, but its two extra commits are patch-equivalent
+  to `20ccb4bf` (`git cherry` prints `-`), so the ref can be deleted, like the other merged task-3 refs.
+- **Resume from:** a new branch off dev in the `pbat-static` worktree (`git checkout -b feature/<name> dev`).
+
+### 3. Key decisions (maintainer's unless noted) and why
+- **Static mode is a flag, pure minimization:** no inertia term, no regularization (VBD's relative singularity check
+  suffices), h² = 1, explicit −fext; SPD correction of d²Ψ/dF² (C++ default Absolute), later in dynamics too.
+- **Benchmark:** mass-weighted L2 error over free nodes against X (static) or `samples/x_ref` (dynamic); every 5%
+  level, at most 99% reported, hence float32 references; graph mode with a device error log (Newton eager);
+  per-solve time cap; contact-free; **stopping on the error only** (solvers' gtol/ftol bypassed, Newton CG atol 0);
+  parameters from `--sim-params` only, else code defaults. **The full run is on hold** until the maintainer and
+  coordinator fix the data, plot and methodology (MASTER.md "Benchmark plan"); the maintainer does a manual test pass first.
+- **Convergence:** C++'s full-step criterion ‖g_L‖ ≤ gtol (Lagrangian gradient at current multipliers) every N = 20
+  sweeps, on the device, keeping the graph close to whole-step capture. Feasibility is penetration-only:
+  max_j max(0, dmin − c_j) ≤ ftol·max(|dmin|, 1e-6 m), ftol default 0.5. The |dmin| and floor make the paper configs'
+  dmin = −1e-4 testable (before, `ftol*dmin < 0` made every solve "feasibility unmet").
+- **Newton friction:** cap at the Coulomb limit **frozen at each Newton step's iterate**, C = mu_f·max(λ_n − σ_n c_n, 0)
+  recorded by the augmented gradient, with a consistent Huber-like energy and a min(1, C/|f|)-scaled Hessian
+  block. Requirement: **zero line-search failures**; friction accuracy is secondary to visually plausible.
+  Rejected: capped gradient with uncapped energy (113 LS failures), and **float64 (the maintainer refused it)**.
+- **Newton penalties** adapt as C++ `UpdatePenaltyParameter(H)` (max Rayleigh quotient, Hessian without contact
+  terms), TIMESTEP in `initialize_solve`, SUBPROBLEM in `prepare_subproblem`. With contact, scene configs use 5 outer
+  × 2 Newton steps; contact-free keeps 1 × 10. CG defaults rtol 1e-6, 500 iterations, atol 1e-10.
+- **VBD friction cap** at mu_f·max(λ_n − σ_n c_n, 0); friction defaults gammaf 1e3, gammaf_adaptive 1e-2
+  (Coulomb-like on the incline). Default penalty TIMESTEP, gamman_adaptive 1 (task 1).
+- **Solve statuses must add no GPU overhead:** rows are written by the existing convergence kernels; one async 24-byte
+  D2H per step into pinned memory, queued before `state.step`'s existing `wp.synchronize()` (nsys-verified: same
+  syncs, launches and kernels). Per-frame groups inside `sim/<frame>/` (the trajectory viewer int-parses `sim/`
+  children); the final partial interval after the last frame is dropped by design.
+- **No Warp issue** about `wp.Mesh.refit` allocating (the restructured loop keeps refit outside conditional bodies).
+
+### 4. Verified non-obvious facts and gotchas
+- **Conditional graph bodies must not allocate.** `wp.Mesh.refit` (CUB scan temp) does, so detection stays in the
+  regular graph between conditional nodes. AAAVBD bakes the host `k` into launches, so its first outer iteration is
+  peeled into `capture_if`.
+- **Stream race (fixed):** Newton zeroed `f_obj_partial`/`Hvals` after forking its streams with `wait_stream`, wiping
+  energy/Hessian terms. Zero buffers *before* forking. Watch for this in any new multi-stream assembly.
+- **Armijo in float32:** at an optimal iterate (e.g. a resting, sticking cube) energy differences are pure roundoff;
+  the test allows E_trial ≤ E0 + c·α·slope + 8·eps·h²·Σ w_e μ_e. Most "line-search failures" seen earlier were this
+  plus the race, not friction.
+- **Outer vs subproblem tests under friction:** subproblems can converge while the outer (Lagrangian) test fails, since
+  λ_f keeps moving until it reaches the cone. With the consistent cap the incline passes the outer test 120/125
+  steps (8/125 before). "Gradient unmet" statuses on friction scenes aren't necessarily a bug.
+- **New contacts (λ = 0) pass a gradient-only test at the free-flight guess,** so every outer test needs the
+  feasibility part (Newton lacked it: bodies fell through colliders).
+- **Atomic-add nondeterminism:** Newton on BeamFallingOnBeam and the statuses' `gradient_ratio` vary by ~1 ulp run to
+  run, on dev too. VBD-family positions are bit-identical; compare Newton with tolerances.
+- Contact-free Newton benchmark results moved by ~1e-4 relative (static) / 1e-7 (dynamic) with `fa325a89` (race fix,
+  roundoff tolerance): expected, not a regression.
+- **Benchmark:** Newton stops at its first rejected step, so `newton_line_search_failed` at the float32 floor is
+  normal; at h = 1e-4 the floor is e/e0 ~ 1e-5–1e-4. Static Newton needs CG n_max_iters ~1500–3000. cond(M⁻¹K)
+  overstates the trampoline's difficulty for modal shapes.
+- Static solves: set `KinematicConstraintSet.advance_time = False` before the first capture (read on the host).
+- `from __future__ import annotations` breaks Warp kernel annotations; don't add it to Warp modules.
+- Before the VBD cap, mu_f 0.2 and 0.5 gave identical trajectories (friction was pure penalty drag).
+- Windows: staging scripts that write files must use explicit UTF-8 (a codepage error once truncated a doc).
+
+### 5. Open items (each with a next step)
+- **Full static benchmark run** (on hold): when released, confirm the dataset, params and cap with the maintainer, do
+  one static + one dynamic problem first, then announce the GPU run in MASTER.md.
+- **Static params file:** comes from the maintainer via the coordinator; if delegated, build it as a TOML layer
+  (`configs/README.md`).
+- **Optional `cpu-gpu-parity` review** of `gpu/newton/solver.py` (cap, penalty adaptation, final check) and
+  `gpu/vbd/convergence.py`: run the agent and report intentional vs suspicious differences.
+- **Static load term in float32:** −fextᵀx is noisy (~10³ J); writing it as −fextᵀ(x − X) would reduce the
+  noise. Not requested; propose it only if static Newton line searches stall.
+- **Known contact issues, not task 3's:** OGC CUDA 700 on CubeFallingOnCube (parked, not used by the paper);
+  CubeFallingOnCube pass-through (coincident surfaces); slight jitter at touching interfaces (deferred by the maintainer).
+- **GUI panels** (`panels/status.py`, `panels/static.py`) are only tested with stubbed imgui. Ask the maintainer for a
+  visual check if they change.
+- **Housekeeping:** delete the merged task-3 branch refs, including `feature/docfield-strings` (coordinator).
+
+### 6. How to resume
+- Venv, extras and data locations: CLAUDE.local.md. Run from the worktree root, with scene files from the main
+  checkout's `data/`. Never reinstall pbatoolkit; request C++ changes in MASTER.md.
+- Unit tests: `python -m unittest python.tools.sim.gpu.vbd.convergence python.tools.sim.status
+  python.tools.sim.panels.status python.tools.sim.static python.tools.sim.gpu.elasticity.spd
+  python.tools.sim.gpu.vbd.kernels python.tools.sim.config python.tools.sim.common.fields`.
+- **Cheap scenes** (seconds each; log START/END in MASTER.md anyway):
+  - `data/scenarios/MediumLongBendingBeam.Dump.h5:fem`: contact-free, VBD/AAAVBD bit-identity vs dev (20 steps).
+  - `data/BeamFallingOnBeam.h5` (`--scene`): body-body contact, 30 steps, VBD/AAAVBD bit-identity, Newton tolerances.
+  - `data/scenarios/planes/CubeSlidingOffFiniteInclinedPlane.h5`: friction; mu_f 0.2 slides (~0.60 m/s² vs Coulomb
+    0.64), 0.3 sticks; check 0 Newton line-search failures in the printed solve-status summary.
+  - `data/benchmarks/trampoline-test.h5`: benchmark smoke test, `--sets static/E50 dynamic_h0.01/E50 --sample-end 1`.
+  - Negative margin (paper dmin = −1e-4): `path/to/accelerated-vbd-extras/final_scenes/trampolines/
+    trampoline_circle_soft-stiff__with_sphere.h5` with `configs/scenes/trampoline_soft-stiff.toml`, AAAVBD 0.2 s.
+- Commands: `python -m python.tools.sim.simulate` (statuses printed at the end) and `python -m python.tools.sim.benchmark`;
+  see the `sim-run` and `sim-benchmarks` skills.
+- **No heavy scenes** (basket_of_fruit, celebration, spaghetti, full benchmark) without asking the maintainer;
+  **no cow_on_trampoline** at all. Check with the maintainer before anything long.
 
 ## Goal
 
@@ -35,6 +158,8 @@ Consequences for the design:
 
 ## What exists today (the hack)
 
+*Superseded (2026-10-18): replaced by `fem.static` static mode; see Handoff §1.*
+
 - **CPU editor** (`tools/vbd/ui/simulation.py:322` and `:194`): the "Static Elasticity" checkbox sets the
   lumped masses to zero (`fem.m = 0`), switches initialization to `Position`, and (commented out) sets
   `xtilde = X`. The time step and BDF order still apply even though they're meaningless for a static problem.
@@ -53,6 +178,8 @@ Problems with the hack:
 4. Initial configurations, Dirichlet sets and loads are scattered between tools.
 
 ## Proposed design (to confirm with the maintainer)
+
+*Superseded: implemented and merged (`3aae8ba5` and later); the code and Handoff §3 are current.*
 
 **Explicit problem kind.** Add `ProblemKind {Dynamic, Static}` to the GPU FEM problem, or a thin `StaticProblem`
 that shares the FEM data. In static mode the objective is E(x) = Ψ(x) − f_extᵀx + contact, with no kinetic
@@ -93,6 +220,8 @@ identical initial state with profiling **off**.
 
 ## Validation
 
+*Superseded: done (see Progress, 2026-10-18).*
+
 - Static mode on the bending beam under gravity with fixed BCs: all solvers reach the same equilibrium,
   matching Newton to tolerance.
 - Gravity loads are unchanged by static mode (no division by zero, no vanishing `m·g`).
@@ -100,11 +229,15 @@ identical initial state with profiling **off**.
 
 ## Files
 
+*Superseded by Handoff §1.*
+
 Own: the objective/inertia/time-integration parts of `gpu/elasticity/fem.py`, the static-mode branches in
 the solver files, `check_convergence`, `benchmark_static.py`, `panels/static.py`. Coordinate with task 1 on
 the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 
 ## Open questions for the maintainer
+
+*All answered. Q18's ftol default 0.1 and `ftol · dmin` are superseded by ftol 0.5 and ftol·max(|dmin|, 1e-6 m) (Handoff §3).*
 
 1. ~~Proximal term or pure minimization?~~ **Answered:** pure minimization. VBD's pseudo-singularity check is enough; if a safeguard is ever needed, make it adaptive rather than a constant term.
 2. ~~Which convergence metric?~~ **Answered:** wall-clock time per percentile of error reduction, with error = distance to the rest shape. **Norm (2026-10-17): mass-weighted L2 over free nodes**, e = sqrt((x−X)ᵀM(x−X)). **Timing (2026-10-17): graph mode with a device-side error log** for the VBD family: capture a fixed sweep budget, a small kernel writes e_k each sweep into a preallocated device log, CUDA events bracket the replay, and per-percentile times are interpolated from the sweep index. Newton (not capturable) runs eagerly. **Percentiles (2026-10-17): every 5%** (5..95%; if that's too much data, from 60% up). No 99/99.9% tail, by the maintainer's choice. The full e_k log is stored either way.
@@ -133,6 +266,8 @@ the Dirichlet lines of the setup kernel, and with task 2 on scope names.
 18. ~~Feasibility test?~~ **Answered (2026-10-18):** penetration only, over normal contacts (friction ignored): max_j max(0, dmin − c_j(x)) ≤ ftol · dmin, with ftol relative to dmin (`ConvergenceParams.ftol`, default 0.1, under Solver/Convergence). It's tested between outer iterations together with the gradient test; if it fails, the next subproblem runs. The maintainer asked whether AL complementarity is already enforced by the dual update. Answer given: the update keeps s ≥ 0 and λ ≥ 0, but λĉ = 0 is only its fixed point; the multiplier part is bounded by ‖g_L‖ at converged subproblems, while penetration needs the separate length test.
 
 ## Progress
+
+*History up to 2026-10-18; later work (Newton contact, friction caps, statuses, feasibility floor) is summarized in the Handoff.*
 
 - 2026-10-17 · Investigation findings (the code, not the plan text, is the source of truth):
   - `fext` is integrated from the body-force density (`fext = bg·wg·N` in C++ `SetExternalLoad`) and doesn't depend on `m`. Static mode can use `fext` directly. Zeroing `m` breaks only the `h²·fext/m` term of `xtilde` (division by zero in `_setup_time_integration_optimization_kernel` and in C++ `aext()`).
