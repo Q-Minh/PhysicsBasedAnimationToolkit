@@ -880,3 +880,15 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 1. ~~Approve Phase 0?~~ **Answered:** yes, but only after all task-level open questions are answered.
 2. ~~Commit `plans/`?~~ **Answered:** track them in git during the effort, delete at the end.
 3. ~~Branch names?~~ **Answered:** spell out `feature/`; worktree names are fine.
+
+### Pending maintainer decisions (2026-10-20, maintainer away; the coordinator keeps this list current)
+
+Answer when back; each has the coordinator's recommendation.
+
+4. **Static benchmark budget: 5 s or 10 s per solve?** Waits on the static Newton pilot (Newton's time to each level
+   at 10000 J, CG 500 vs 1000). Recommendation: the smallest budget in which Newton reaches 99% on most samples.
+5. **Newton CG cap for the benchmarks: 500 or 1000?** The pilot reports which gives the faster time to 99%.
+6. **Problems per scene: N = 16 or 32?** Waits on task 4's full-dataset estimate (CPU time, file size, R-hat < 1.05
+   at 10000 J needs ~10k steps per chain at ~5 ms/step).
+7. **Go-ahead for the full dataset generation**, then **scheduling the full benchmark run** (quiet GPU, one benchmark
+   at a time).
