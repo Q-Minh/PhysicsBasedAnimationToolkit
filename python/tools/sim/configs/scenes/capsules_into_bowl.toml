@@ -1,7 +1,7 @@
 # Scene config: capsules_into_bowl, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/capsule_bowl.h5 (Young's modulus 1e5 to 1e6).
 # Source: configs/paper/capsules_into_bowl.toml. Keys not listed below have the source's values.
-# Generated 2026-10-20 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).

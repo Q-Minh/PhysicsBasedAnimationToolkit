@@ -1,7 +1,7 @@
 # Scene config: trampoline_soft-stiff, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8).
 # Source: configs/paper/trampoline_soft-stiff.Params.5Substeps.toml. Keys not listed below have the source's values.
-# Generated 2026-10-20 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
@@ -38,11 +38,13 @@
 #     Solver.Newton.n_max_iters = 30 (source 20)
 #     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
-# - max_dist 30 cm, scaled to the metre-scale trampoline geometry (10 cm plate; maintainer).
-#     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
-# - VertexSdf band 5 mm for the sphere falling on the trampolines (maintainer, 2026-10-20): at 2 mm the sphere's
-#   impact on the heterogeneous circle trampoline exploded.
-#     Contact.CDType.VertexSdf.band = 0.005 (source 0.001)
+# - max_dist 50 cm, scaled to the metre-scale trampoline geometry (10 cm plate) and the sphere's impacts
+#   (maintainer, 2026-10-21; was 30 cm).
+#     Contact.CDType.VertexSdf.max_dist = 0.5 (source 0.05000000074505806)
+# - VertexSdf band 1 cm for the sphere falling on the trampolines (maintainer, 2026-10-21): at 2 mm the sphere's
+#   impact on the heterogeneous circle trampoline exploded, and at 5 mm VBD and AAAVBD still exploded on the
+#   second bounce without substeps.
+#     Contact.CDType.VertexSdf.band = 0.01 (source 0.001)
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -52,9 +54,9 @@ r = 0.003
 truncation_strategy = 0
 
 [Contact.CDType.VertexSdf]
-band = 0.005
+band = 0.01
 deactivate = 0
-max_dist = 0.3
+max_dist = 0.5
 use_step_filter = 0
 
 [Contact.ContactDynamics]

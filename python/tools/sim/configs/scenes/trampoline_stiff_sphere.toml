@@ -1,7 +1,7 @@
 # Scene config: trampoline_stiff_sphere, every serialized parameter written out (diff it against configs/paper).
 # For: the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded).
 # Source: configs/paper/trampoline_stiff_sphere.Params.5Substeps.toml. Keys not listed below have the source's values.
-# Generated 2026-10-20 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -23,11 +23,13 @@
 #     Solver.Newton.n_max_iters = 30 (source 20)
 #     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
-# - max_dist 30 cm, scaled to the metre-scale trampoline geometry (10 cm plate; maintainer).
-#     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
-# - VertexSdf band 5 mm for the sphere falling on the trampolines (maintainer, 2026-10-20): at 2 mm the sphere's
-#   impact on the heterogeneous circle trampoline exploded.
-#     Contact.CDType.VertexSdf.band = 0.005 (source 0.001)
+# - max_dist 50 cm, scaled to the metre-scale trampoline geometry (10 cm plate) and the sphere's impacts
+#   (maintainer, 2026-10-21; was 30 cm).
+#     Contact.CDType.VertexSdf.max_dist = 0.5 (source 0.05000000074505806)
+# - VertexSdf band 1 cm for the sphere falling on the trampolines (maintainer, 2026-10-21): at 2 mm the sphere's
+#   impact on the heterogeneous circle trampoline exploded, and at 5 mm VBD and AAAVBD still exploded on the
+#   second bounce without substeps.
+#     Contact.CDType.VertexSdf.band = 0.01 (source 0.001)
 #
 # Notes:
 # - Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per substep.
@@ -41,9 +43,9 @@ r = 0.003
 truncation_strategy = 0
 
 [Contact.CDType.VertexSdf]
-band = 0.005
+band = 0.01
 deactivate = 0
-max_dist = 0.3
+max_dist = 0.5
 use_step_filter = 0
 
 [Contact.ContactDynamics]

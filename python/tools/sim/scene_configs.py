@@ -118,13 +118,15 @@ def _stiff_budget(paper: str) -> Rule:
 
 
 TRAMPOLINE_DETECTION = Rule(
-    "max_dist 30 cm, scaled to the metre-scale trampoline geometry (10 cm plate; maintainer).",
-    {"Contact.CDType.VertexSdf.max_dist": 0.3},
+    "max_dist 50 cm, scaled to the metre-scale trampoline geometry (10 cm plate) and the sphere's impacts "
+    "(maintainer, 2026-10-21; was 30 cm).",
+    {"Contact.CDType.VertexSdf.max_dist": 0.5},
 )
 SPHERE_BAND = Rule(
-    "VertexSdf band 5 mm for the sphere falling on the trampolines (maintainer, 2026-10-20): at 2 mm the sphere's "
-    "impact on the heterogeneous circle trampoline exploded.",
-    {"Contact.CDType.VertexSdf.band": 5e-3},
+    "VertexSdf band 1 cm for the sphere falling on the trampolines (maintainer, 2026-10-21): at 2 mm the sphere's "
+    "impact on the heterogeneous circle trampoline exploded, and at 5 mm VBD and AAAVBD still exploded on the "
+    "second bounce without substeps.",
+    {"Contact.CDType.VertexSdf.band": 1e-2},
 )
 TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
 
