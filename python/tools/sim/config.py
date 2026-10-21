@@ -235,6 +235,16 @@ def load_sim_params(
 DEFAULTS_TOML = pathlib.Path(__file__).parent / "configs" / "defaults.toml"
 # Enums of keys whose parameter objects don't hold them as enums
 _ENUM_KEYS = {"Integration.init_strategy": ("pbatoolkit", "pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization")}
+# Keys the GPU solvers ignore (checked in gpu/: vbd/params.py's Params copies neither k, kp nor e_penalty_stiffness,
+# and no kernel reads its betaR; gpu/newton/solver.py's Params never reads linear_solver)
+_VBD_FAMILY = ("VBD", "AAAVBD", "Chebyshev", "AndersonSolver")
+GPU_IGNORED = {
+    "Solver.Newton.linear_solver": "GPU: ignored; always Warp's Jacobi-preconditioned CG (Solver.Newton.LinearSolver)",
+    **{f"Solver.{s}.e_penalty_stiffness": "GPU: ignored; the GPU's contact penalty is "
+       "Contact.ContactDynamics.penalty_adaptivity" for s in _VBD_FAMILY},
+    **{f"Solver.{s}.betaR": "GPU: ignored; copied to the GPU params but no kernel reads it" for s in _VBD_FAMILY},
+    **{f"Solver.{s}.{k}": "GPU: ignored; a C++ runtime counter, not copied to the GPU" for s in _VBD_FAMILY for k in ("k", "kp")},
+}
 # SimulationState attributes that serialize_params writes directly, with no parameter object (or docs) behind them
 _STATE_KEYS = {"Integration.dt", "Integration.substeps", "Integration.bdf_scheme", "Integration.init_strategy"}
 
@@ -297,7 +307,8 @@ def flatten(cfg: dict, prefix: str = ""):
 def describe_params(prefix: str = "") -> list[dict]:
     """Every key a config can set (``configs/defaults.toml``) under ``prefix``: ``key`` (dotted TOML path),
     ``default``, ``type`` (int, float, bool or enum), ``enum`` ({value: name} or None), ``description`` ("" when
-    the code has none) and ``found`` (whether a parameter object holds the key)."""
+    the code has none), ``gpu`` (a note when the GPU solvers ignore the key, ``GPU_IGNORED``, else "") and
+    ``found`` (whether a parameter object holds the key)."""
     import enum
     import importlib
 
@@ -328,7 +339,7 @@ def describe_params(prefix: str = "") -> list[dict]:
                     kind = "bool (0/1)"
                     break
         rows.append({"key": key, "default": default, "type": kind, "enum": names, "description": description,
-                     "found": found})
+                     "gpu": GPU_IGNORED.get(key, ""), "found": found})
     return rows
 
 
@@ -339,7 +350,8 @@ def format_params(rows: list[dict]) -> str:
         kind = r["type"]
         if r["enum"]:
             kind += ": " + ", ".join(f"{v} {n}" for v, n in sorted(r["enum"].items()))
-        lines.append(f"{r['key']} = {r['default']!r}  ({kind})  {r['description'] or '(no description in the code)'}")
+        gpu = f" ({r['gpu']})" if r.get("gpu") else ""
+        lines.append(f"{r['key']} = {r['default']!r}  ({kind})  {r['description'] or '(no description in the code)'}{gpu}")
     return "\n".join(lines)
 
 
@@ -427,6 +439,11 @@ class TestConfig(unittest.TestCase):
         self.assertTrue(newton and all(r["key"].startswith("Solver.Newton.") for r in newton))
         self.assertEqual(describe_params("Solver.Newt"), [])  # whole table names only
         self.assertIn("(no description in the code)", format_params([rows["Integration.dt"]]))
+        # GPU notes name keys that exist
+        self.assertLessEqual(set(GPU_IGNORED), set(rows))
+        self.assertIn("(GPU: ignored; always Warp's Jacobi-preconditioned CG",
+                      format_params([rows["Solver.Newton.linear_solver"]]))
+        self.assertEqual(rows["Solver.Newton.LinearSolver.rtol"]["gpu"], "")
 
     def test_override_values_are_toml_literals(self):
         self.assertEqual(parse_override("A.b = true"), {"A": {"b": True}})
