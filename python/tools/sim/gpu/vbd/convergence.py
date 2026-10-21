@@ -51,13 +51,14 @@ class ConvergenceParams(SerializableMixin):
 
     Stationarity test: the gradient g of the time step's Lagrangian is turned into a position-like residual
     by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step would make), and passes
-    when ``RMS_M(M^-1 g) <= max(rstol * RMS_M(d), astol)``, with d = x~ - x^t the step's free-flight
-    displacement (h v^t + h^2 a_ext for BDF1) and mass-weighted RMS over free nodes, i.e.
-    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, astol^2 sum m_i)``. Neither term depends on the
-    mesh's size or mass. ``astol`` (m) is the residual float32 can still resolve: near rest the free-flight
-    displacement is tiny (h^2 g), while the elastic gradient's round-off grows with stiffness, so the
-    relative term alone can ask for less than float32 resolves. Static problems have no inertial
-    displacement and use the absolute ``gtol``.
+    when ``RMS_M(M^-1 g) <= max(rstol * RMS_M(d), astol * L)``, with d = x~ - x^t the step's free-flight
+    displacement (h v^t + h^2 a_ext for BDF1), mass-weighted RMS over free nodes, and L the mean
+    bounding-box diagonal of the scene's bodies at rest (:func:`mean_body_diagonal`), i.e.
+    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, (astol L)^2 sum m_i)``. Neither term depends on the
+    mesh's resolution or mass, and both rstol and astol are dimensionless. The absolute term is the residual
+    float32 can still resolve: near rest the free-flight displacement is tiny (h^2 g), while the elastic
+    gradient's round-off grows with stiffness, so the relative term alone can ask for less than float32
+    resolves. Static problems have no inertial displacement and use the absolute ``gtol``.
     """
 
     check_interval = DocField(
@@ -71,17 +72,18 @@ class ConvergenceParams(SerializableMixin):
     rstol = DocField(
         1e-2,
         "Relative stationarity tolerance: the gradient test passes when the mass-normalized residual RMS(M^-1 g) is "
-        "at most max(rstol * RMS(x~ - x^t), astol), x~ - x^t being the step's free-flight displacement "
+        "at most max(rstol * RMS(x~ - x^t), astol * L), x~ - x^t being the step's free-flight displacement "
         "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes. With rstol = astol = 0, the solver's "
         "absolute gtol applies instead",
     )
     astol = DocField(
-        1e-6,
-        "Absolute stationarity tolerance (m) on the mass-normalized residual RMS(M^-1 g): the gradient test passes "
-        "below max(rstol * RMS(x~ - x^t), astol). The default is about float32's position resolution for scenes "
-        "up to ~10 m (ulp(8 m) = 9.5e-7 m). The float32 floor of the residual grows with stiffness, roughly "
-        "(h omega)^2 ulp(x) for a node's stiffness-to-mass frequency omega, so stiff scenes near rest can need more "
-        "(~1e-3 m on the Y = 1e8 trampoline regions at h = 1e-2)",
+        5e-4,
+        "Absolute stationarity tolerance, relative to the scene's size: the gradient test passes when the "
+        "mass-normalized residual RMS(M^-1 g) is at most max(rstol * RMS(x~ - x^t), astol * L), L being the mean "
+        "bounding-box diagonal of the scene's bodies at rest. The float32 floor of the residual grows with "
+        "stiffness, roughly (h omega)^2 ulp(x) for a node's stiffness-to-mass frequency omega, and near rest the "
+        "relative term alone can ask for less (the default passes the Y = 1e8 square trampoline's first step, "
+        "whose residual stalls near 1.5e-3 m with L = 4.4 m)",
     )
 
     def deserialize(self, grp) -> None:
@@ -183,6 +185,36 @@ def feasibility_tolerance(ftol: float, dmin: float) -> float:
     return float(ftol) * max(abs(float(dmin)), FEASIBILITY_FLOOR)
 
 
+def mean_body_diagonal(X: np.ndarray, E: np.ndarray) -> float:
+    """Mean bounding-box diagonal (m) of a mesh's bodies, the connected components of its elements, at
+    the given positions. Nodes in no element (e.g. static colliders' contact nodes) belong to no body.
+
+    Args:
+        X (np.ndarray): (N, 3) positions.
+        E (np.ndarray): (|# elements|, 4) element nodes.
+
+    Returns:
+        float: The mean diagonal over bodies (0 without elements).
+    """
+    import scipy.sparse
+    import scipy.sparse.csgraph
+
+    E = np.asarray(E).reshape(-1, 4)
+    if E.shape[0] == 0:
+        return 0.0
+    n = X.shape[0]
+    rows = np.repeat(E[:, 0], 3)
+    cols = E[:, 1:].reshape(-1)
+    graph = scipy.sparse.coo_matrix((np.ones(rows.shape[0]), (rows, cols)), shape=(n, n))
+    _, labels = scipy.sparse.csgraph.connected_components(graph, directed=False)
+    nodes = np.unique(E)
+    diagonals = []
+    for body in np.unique(labels[nodes]):
+        P = X[nodes[labels[nodes] == body]]
+        diagonals.append(float(np.linalg.norm(P.max(axis=0) - P.min(axis=0))))
+    return float(np.mean(diagonals))
+
+
 def ratio_to_tolerance(value: float, tolerance: float) -> float:
     """Host-side ``value / tolerance`` as the status kernels compute their ratios (:func:`_gradient_ratio`,
     :func:`_feasibility_ratio`): 0 for a zero value, inf for a positive value over a zero tolerance."""
@@ -235,7 +267,7 @@ def _is_converged(
     stol2: wp.array[wp.float32],
     relative: wp.int32,
 ) -> bool:
-    """Stationarity test ``sum |g|^2/m <= stol2 = max(rstol^2 sum m |d|^2, astol^2 M)`` if enabled
+    """Stationarity test ``sum |g|^2/m <= stol2 = max(rstol^2 sum m |d|^2, (astol L)^2 M)`` if enabled
     (``relative``), else ``|g|^2 <= gtol^2``."""
     if relative != 0:
         return gm2[0] <= stol2[0]
@@ -267,10 +299,11 @@ def _free_flight_displacement_terms(
 
 @wp.func
 def _stationarity_tol2(
-    dm2: wp.float32, free_mass: wp.float32, rstol2: wp.float32, astol2: wp.float32
+    dm2: wp.float32, free_mass: wp.float32, rstol2: wp.float32, atol2: wp.float32
 ) -> wp.float32:
-    """Squared stationarity tolerance on sum |g|^2/m: max(rstol^2 sum m |d|^2, astol^2 sum m)."""
-    return wp.max(rstol2 * dm2, astol2 * free_mass)
+    """Squared stationarity tolerance on sum |g|^2/m: max(rstol^2 sum m |d|^2, atol^2 sum m), atol = astol L
+    being the absolute tolerance in m."""
+    return wp.max(rstol2 * dm2, atol2 * free_mass)
 
 
 @wp.kernel
@@ -278,10 +311,10 @@ def _stationarity_tolerance(
     dm2: wp.array[wp.float32],
     free_mass: wp.array[wp.float32],
     rstol2: wp.float32,
-    astol2: wp.float32,
+    atol2: wp.float32,
     stol2: wp.array[wp.float32],
 ):
-    stol2[0] = _stationarity_tol2(dm2[0], free_mass[0], rstol2, astol2)
+    stol2[0] = _stationarity_tol2(dm2[0], free_mass[0], rstol2, atol2)
 
 
 @wp.func
@@ -514,6 +547,7 @@ class ConvergenceCheck:
         contact: ContactDynamics,
         params: ConvergenceParams | None = None,
         status_capacity: int = 1,
+        length_scale: float | None = None,
     ):
         """
         Args:
@@ -523,8 +557,14 @@ class ConvergenceCheck:
             params (ConvergenceParams | None): Check interval and feasibility tolerance; defaults if None.
             status_capacity (int): Rows of the status ring: at least the solves between two
                 :meth:`read_status` calls (``SimulationState`` reads every step: its substeps).
+            length_scale (float | None): The scene's size L (m) that scales ``astol``: the mean
+                bounding-box diagonal of its bodies (:func:`mean_body_diagonal`), computed from the rest
+                positions if None.
         """
         self.params = params or ConvergenceParams()
+        if length_scale is None:
+            length_scale = mean_body_diagonal(fem.data.X.numpy(), fem.data.E.numpy())
+        self.length_scale = float(length_scale)
         capacity = max(1, int(status_capacity))
         self.status = wp.zeros(capacity, dtype=SolveStatus)
         self.solves = wp.zeros(1, dtype=wp.int32)
@@ -534,7 +574,7 @@ class ConvergenceCheck:
         self._contact = contact
         self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False)
         # Stationarity test (rstol or astol > 0): sum |g_i|^2 / m_i against
-        # stol2 = max(rstol^2 sum m_i |d_i|^2, astol^2 sum m_i), sums over free nodes
+        # stol2 = max(rstol^2 sum m_i |d_i|^2, (astol L)^2 sum m_i), sums over free nodes
         n_nodes = fem.data.x.shape[0]
         self._terms = wp.zeros(n_nodes, dtype=wp.float32)
         self._masses = wp.zeros(n_nodes, dtype=wp.float32)
@@ -591,7 +631,7 @@ class ConvergenceCheck:
 
     def measure_scale(self) -> None:
         """Measure the stationarity tolerance for the time step, ``stol2 = max(rstol^2 sum m_i |x~_i -
-        x^t_i|^2, astol^2 sum m_i)`` over free nodes. No-op unless :attr:`relative`. Capturable."""
+        x^t_i|^2, (astol L)^2 sum m_i)`` over free nodes. No-op unless :attr:`relative`. Capturable."""
         if self.relative:
             stream = wp.get_stream()
             wp.launch(
@@ -608,7 +648,7 @@ class ConvergenceCheck:
                     self.displacement_m2,
                     self.free_mass,
                     float(self.params.rstol) ** 2,
-                    float(self.params.astol) ** 2,
+                    (float(self.params.astol) * self.length_scale) ** 2,
                     self.stationarity_tol2,
                 ],
             )
@@ -900,7 +940,7 @@ class TestStationarityTolerance(unittest.TestCase):
             free_mass: wp.array[wp.float32],
             gm2: wp.array[wp.float32],
             rstol2: wp.float32,
-            astol2: wp.float32,
+            atol2: wp.float32,
             stol2: wp.array[wp.float32],
             converged: wp.array[wp.int32],
             ratio: wp.array[wp.float32],
@@ -908,13 +948,13 @@ class TestStationarityTolerance(unittest.TestCase):
             i = wp.tid()
             g = wp.array(ptr=gm2.ptr + wp.uint64(i * 4), shape=(1,), dtype=wp.float32)
             s = wp.array(ptr=stol2.ptr + wp.uint64(i * 4), shape=(1,), dtype=wp.float32)
-            s[0] = _stationarity_tol2(dm2[i], free_mass[i], rstol2, astol2)
+            s[0] = _stationarity_tol2(dm2[i], free_mass[i], rstol2, atol2)
             # The absolute-test inputs (gnorm2, gtol2) are unused by the stationarity branch
             converged[i] = wp.where(_is_converged(g, wp.float32(0), g, s, 1), 1, 0)
             ratio[i] = _gradient_ratio(g, wp.float32(0), g, s, 1)
 
         # Free mass 2 kg; RMS residual r and RMS free-flight displacement D give gm2 = 2 r^2, dm2 = 2 D^2
-        rstol, astol = 1e-2, 1e-4
+        rstol, atol = 1e-2, 1e-4  # atol = astol * L, in m
         cases = [  # (D, r)
             (1e-1, 0.9e-3),  # relative term (1e-3) dominates: passes
             (1e-1, 1.1e-3),
@@ -927,10 +967,19 @@ class TestStationarityTolerance(unittest.TestCase):
         dm2, gm2 = wp.array((2 * D**2).astype(np.float32)), wp.array((2 * r**2).astype(np.float32))
         mass = wp.array(np.full(n, 2.0, dtype=np.float32))
         stol2, converged, ratio = wp.zeros(n, dtype=wp.float32), wp.zeros(n, dtype=wp.int32), wp.zeros(n, dtype=wp.float32)
-        wp.launch(k, dim=n, inputs=[dm2, mass, gm2, rstol**2, astol**2, stol2, converged, ratio])
+        wp.launch(k, dim=n, inputs=[dm2, mass, gm2, rstol**2, atol**2, stol2, converged, ratio])
         self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 0, 1])
-        expected = r / np.maximum(rstol * D, astol)
+        expected = r / np.maximum(rstol * D, atol)
         np.testing.assert_allclose(ratio.numpy(), expected, rtol=1e-5)
+
+    def test_mean_body_diagonal(self):
+        # Two bodies: a unit tet (diagonal sqrt 3) and a tet of edge 2 sharing no node with it (2 sqrt 3),
+        # plus a node in no element (a collider's contact node), which belongs to no body
+        unit = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+        X = np.vstack([unit, 10 + 2 * unit, [[100.0, 100.0, 100.0]]])
+        E = np.array([[0, 1, 2, 3], [4, 5, 6, 7]])
+        self.assertAlmostEqual(mean_body_diagonal(X, E), 1.5 * np.sqrt(3))
+        self.assertEqual(mean_body_diagonal(X, np.zeros((0, 4), dtype=int)), 0.0)
 
 
 if __name__ == "__main__":

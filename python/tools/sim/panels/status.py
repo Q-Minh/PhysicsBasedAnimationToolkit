@@ -61,8 +61,9 @@ _SUBPROBLEM = {
 
 _RESIDUAL_TIP = (
     "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol),\n"
-    "mass-weighted, with g the gradient of the step's Lagrangian. Absolute test (both 0, or static): |g| / gtol."
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * L),\n"
+    "mass-weighted, g the gradient of the step's Lagrangian, L the scene's mean body bounding-box diagonal.\n"
+    "Absolute test (both 0, or static): |g| / gtol."
 )
 _PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
@@ -71,7 +72,8 @@ _PENETRATION_TIP = (
 _NEWTON_RESIDUAL_TIP = (
     "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
-    "RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol), mass-weighted, g the gradient of the step's Lagrangian.\n"
+    "RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * L), mass-weighted, g the gradient of the step's Lagrangian,\n"
+    "L the scene's mean body bounding-box diagonal.\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
 )
 _NEWTON_PENETRATION_TIP = (
@@ -347,6 +349,14 @@ def draw_status_panel(state, ui_state):
     if not imgui.TreeNode("Solve status"):
         return
     imgui.PushID("solve_status")
+    check = getattr(state, "convergence", None)
+    if check is not None:
+        astol, L = float(check.params.astol), check.length_scale
+        imgui.Text(f"Absolute stationarity tolerance: {astol * L:.3g} m")
+        _tooltip(
+            f"astol * L = {astol:.3g} * {L:.3g} m: the residual RMS(M^-1 g) below which the gradient test always\n"
+            "passes (dynamic problems), L being the mean bounding-box diagonal of the scene's bodies at rest."
+        )
     log = state.status_log
     if log.last_step is None:
         imgui.Text("No solves recorded yet")
