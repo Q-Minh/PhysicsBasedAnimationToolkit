@@ -22,6 +22,7 @@ from .panels.kinematics import draw_kinematics_panel
 from .panels.profiling import draw_profiling_panel, profile_step
 from .panels.static import draw_static_panel
 from .panels.status import draw_status_panel
+from ..vbd.ui import material
 from .state import (
     SimulationState,
     SolverType,
@@ -433,15 +434,13 @@ def main():
     ps.init()
 
     vm = ps.register_volume_mesh(mesh_name, fem_cpu.X.T, fem_cpu.E.T)
-    vm.add_scalar_quantity(
-        "mug", fem_cpu.lamegU[0, :], defined_on="cells", enabled=True, cmap="blues"
-    )
-    vm.add_scalar_quantity(
-        "lambdag", fem_cpu.lamegU[1, :], defined_on="cells", enabled=False, cmap="blues"
-    )
-    vm.add_scalar_quantity(
-        "m(i)", fem_cpu.m, defined_on="vertices", enabled=False, cmap="reds"
-    )
+    # The materials and lumped masses, as the CPU editor shows them
+    for name, values, location, options in material.fem_quantities(
+        fem_cpu.lamegU, fem_cpu.egU, fem_cpu.E.shape[1], fem_cpu.m
+    ):
+        vm.add_scalar_quantity(
+            name, values, defined_on=location, enabled=name == material.LAME_MU, **options
+        )
     sm = ps.register_surface_mesh(
         mesh_name, fem_cpu.X.T, state.multimesh.data.F.numpy()
     )
