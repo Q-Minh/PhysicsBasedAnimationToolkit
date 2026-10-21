@@ -147,6 +147,9 @@ def make_callback(
                             )
                         # Own ID scopes: Newton's params have a linear_solver combo at this level
                         if state.solver == SolverType.Newton:
+                            imgui.PushID("newton_gpu_params")
+                            draw_params(state.newton_gpu_params)
+                            imgui.PopID()
                             imgui.PushID("newton_linear_solver_params")
                             if imgui.TreeNode("LinearSolver"):
                                 draw_params(state.newton_linear_solver_params)

@@ -812,6 +812,23 @@ class LinearSolverParams(SerializableMixin):
     )
 
 
+class NewtonGpuParams(SerializableMixin):
+    """GPU-only Newton settings, serialized next to the C++ Newton params under ``Solver/Newton``.
+
+    Held by ``SimulationState.newton_gpu_params`` (kept across resets): configs set
+    ``Solver.Newton.init_strategy``. It takes effect at the next time step.
+    """
+
+    init_strategy = DocField(
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position,
+        "Newton's initial guess for each time step, used instead of Integration.init_strategy whenever Newton is "
+        "the active solver (the VBD family keeps the shared one). Position (x_t) by default: Newton's first step "
+        "linearizes at the initial guess, and an extrapolated guess (e.g. TrajectoryWithExternalLoad) can start "
+        "deep inside a contact partner at an impact, where that linearization is poor (Newton went unstable at the "
+        "sphere's impact on the soft-stiff trampoline)",
+    )
+
+
 # Safety factor on the float32 roundoff of the elastic energy, eps * h^2 sum_e w_e mu_e, that the
 # Armijo test tolerates (measured noise: about 1x it on the inclined-plane cube)
 _ENERGY_ROUNDOFF_FACTOR = 8.0

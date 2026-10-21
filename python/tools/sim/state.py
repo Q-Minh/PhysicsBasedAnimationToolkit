@@ -366,6 +366,7 @@ class SimulationState:
             self.dt, contact_pair_storage, self.contact_params
         )
         self.newton_linear_solver_params = gpu.newton.solver.LinearSolverParams()
+        self.newton_gpu_params = gpu.newton.solver.NewtonGpuParams()
         self.convergence_params = gpu.vbd.convergence.ConvergenceParams()
         # The scene's size L, scaling the stationarity test's absolute tolerance (astol * L): the mean
         # bounding-box diagonal of its bodies at rest, fixed for the problem (kept across resets)
@@ -466,11 +467,19 @@ class SimulationState:
                 self._reported_contact_free = True
         return detector
 
+    def step_init_strategy(self) -> "pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization":
+        """The time step's initial-guess strategy: Newton's own (``Solver.Newton.init_strategy``) when Newton
+        is the active solver, else the shared ``Integration.init_strategy``."""
+        if self.solver == SolverType.Newton:
+            return self.newton_gpu_params.init_strategy
+        return self.init_strategy
+
     def _advance(self):
         """Run ``substeps`` time steps: setup, solve and step for each."""
+        init_strategy = self.step_init_strategy()
         for s in range(self.substeps):
             with profiling.scope("step.setup"):
-                self.fem.setup_time_integration_optimization(self.init_strategy)
+                self.fem.setup_time_integration_optimization(init_strategy)
             with profiling.scope("solve"):
                 self.solvers[self.solver].solve(
                     self.fem, self.contact, self.detector, self.params[self.solver]
@@ -634,6 +643,7 @@ def serialize_params(state: "SimulationState", f: h5py.File) -> None:
     gpu.newton.solver.serialize_newton_cpu_params(
         state.params_cpu[SolverType.Newton], f.create_group("Solver/Newton")
     )
+    state.newton_gpu_params.serialize(f["Solver/Newton"])
     state.newton_linear_solver_params.serialize(
         f.create_group("Solver/Newton/LinearSolver")
     )
@@ -682,6 +692,7 @@ def deserialize_params(state: "SimulationState", f: h5py.File) -> None:
         gpu.newton.solver.deserialize_newton_cpu_params(
             state.params_cpu[SolverType.Newton], f["Solver/Newton"]
         )
+        state.newton_gpu_params.deserialize(f["Solver/Newton"])
     if "Solver/Newton/LinearSolver" in f:
         state.newton_linear_solver_params.deserialize(f["Solver/Newton/LinearSolver"])
     if "Solver/Convergence" in f:
@@ -694,3 +705,65 @@ def deserialize_params(state: "SimulationState", f: h5py.File) -> None:
         state.contact_storage_params.deserialize(f["Contact/ContactStorage"])
     if "Contact/ContactDynamics" in f:
         state.contact_params.deserialize(f["Contact/ContactDynamics"])
+
+
+import unittest
+
+
+class TestNewtonInitStrategy(unittest.TestCase):
+    """Newton's own initial guess (``Solver.Newton.init_strategy``) vs the shared ``Integration.init_strategy``."""
+
+    @staticmethod
+    def _make_state() -> SimulationState:
+        from pbatoolkit import pypbat
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        C = np.array([[0, 1, 2, 3]])
+        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(V.T, C.T)
+        fem_cpu.set_mass_matrix(1e3)
+        mu, llambda = pypbat.fem.lame_coefficients(1e6, 0.45)
+        fem_cpu.set_elastic_energy(mu, llambda)  # pyright: ignore[reportArgumentType]
+        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
+        return SimulationState(fem_cpu, load_params(fem_cpu))
+
+    def test_newton_uses_its_own_strategy(self):
+        from unittest import mock
+
+        Init = pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
+        state = self._make_state()
+        self.assertEqual(state.newton_gpu_params.init_strategy, Init.Position)  # the default
+        state.init_strategy = Init.TrajectoryWithExternalLoad
+        for solver in SolverType:
+            state.solver = solver
+            expected = Init.Position if solver == SolverType.Newton else Init.TrajectoryWithExternalLoad
+            # The strategy _advance hands to the time step's setup, with the solve and step stubbed out
+            with (
+                mock.patch.object(state.fem, "setup_time_integration_optimization") as setup,
+                mock.patch.object(state.fem, "step"),
+                mock.patch.dict(state.solvers, {solver: mock.Mock()}),
+            ):
+                state._advance()
+            setup.assert_called_once_with(expected)
+
+    def test_serialization_round_trip(self):
+        import uuid
+
+        Init = pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
+        a, b = self._make_state(), self._make_state()
+        a.newton_gpu_params.init_strategy = Init.FreeTrajectory
+        with h5py.File(f"{uuid.uuid4().hex}.h5", "w", driver="core", backing_store=False) as f:
+            serialize_params(a, f)
+            self.assertEqual(int(f["Solver/Newton"].attrs["init_strategy"]), Init.FreeTrajectory.value)
+            deserialize_params(b, f)
+            self.assertEqual(b.newton_gpu_params.init_strategy, Init.FreeTrajectory)
+            self.assertEqual(b.init_strategy, a.init_strategy)
+            # Files that predate the parameter load with the default
+            del f["Solver/Newton"].attrs["init_strategy"]
+            c = self._make_state()
+            deserialize_params(c, f)
+            self.assertEqual(c.newton_gpu_params.init_strategy, Init.Position)
+
+
+if __name__ == "__main__":
+    unittest.main()

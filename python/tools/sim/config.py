@@ -298,7 +298,7 @@ def _param_sources() -> dict:
         "Solver.AAAVBD": [gpu.vbd.params.AaaVbdCpuParams, vbd],
         "Solver.Chebyshev": [pbat.sim.algorithm.vbd.ChebyshevParams(), vbd],
         "Solver.AndersonSolver": [gpu.vbd.params.AndersonCpuParams(pbat.sim.algorithm.vbd.Params()), vbd],
-        "Solver.Newton": [newton],
+        "Solver.Newton": [gpu.newton.solver.NewtonGpuParams, newton],
         "Solver.Newton.newton": [newton.newton],
         # A default Params has no line search; serialize_params writes the one SimulationState sets
         "Solver.Newton.newton.line_search": [pbat.math.optimization.BackTrackingLineSearch()],
