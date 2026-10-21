@@ -89,7 +89,7 @@ Translating requests:
 - **`results.h5`** (layout in `benchmark_results.py`'s docstring):
   - root attributes: the `--levels` options, budget factor and options, Newton's stall test, dataset, device, commit, date, parameter sources, solvers; the `StaticSolveSpec` and `dataset_attrs` groups;
   - `/<benchmark>`: its `levels`;
-  - `/<benchmark>/<case>`: the case's scene, label, energy, set, `budget` (fixed budgets only), `budget_source`, `max_seconds` (Newton's cap), `scene_params` and Newton's CG limits (`newton_cg_*`);
+  - `/<benchmark>/<case>`: the case's scene, label, energy, set, `budget` (fixed budgets only), `budget_source`, `max_seconds` (Newton's cap), `scene_params`, Newton's CG limits (`newton_cg_*`), and the GPU's state at the case's start and end (`gpu_start_*`, `gpu_end_*`: clocks, temperature, power, pstate and active clock-event (throttle) reasons, from nvidia-smi, found via `--nvidia-smi`, `NVIDIA_SMI`, `PATH` or the standard install locations);
   - `/<benchmark>/<case>/<solver>`: per sample, e0, iterations, sweeps, solver time, host time (the solve's wall-clock time: minus the solver time, the per-solve overhead), `budget`, `normalization` (T_N), final e/e0, `termination` (`target`, `iteration_cap`, `time_cap`, `non_finite`, `stalled` (Newton's stall test), or Newton's `newton_non_descent`, `newton_line_search_failed` or `newton_zero_gradient`), and per sample and level `crossing_time`, `crossing_iteration`, `increment`, `normalized_increment`, `reached` and `skipped` (NaN or -1 when not reached);
   - `aggregate/{increment,normalized_increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}` per level, over the samples that reached it;
   - `logs/<sample>/{error,time,sweeps}`: the full per-iteration logs.
