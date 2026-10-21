@@ -1026,7 +1026,7 @@ def initialize_solve(
     params: Params,
 ) -> None:
     """Detect contacts, initialise the constraint set for the time step, unfreeze the contacts'
-    Coulomb limits (each is frozen again at its first augmented gradient evaluation of the step, see
+    Coulomb limits (each is frozen again at its first positive estimate of the step, see
     :class:`gpu.gradient.Gradient`), adapt the contact penalties once per step (``TIMESTEP``
     adaptivity, as the VBD family) and measure the relative gradient test's scale."""
     cd.on_time_step_started()

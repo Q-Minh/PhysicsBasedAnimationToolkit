@@ -18,12 +18,15 @@ def frozen_friction_limit(
     estimate: wp.float32,
 ):
     """Contact k's Coulomb limit for the rest of the time step: ``estimate`` (the limit at the current
-    normal force) at the contact's first evaluation in the step, which it stores in ``friction_limit[k]``,
-    then the stored value until :meth:`ConstraintSet.reset_friction_limits` (GPU Newton)."""
+    normal force) while no positive estimate is stored, then, from the contact's first strictly positive
+    estimate in the step, which it stores in ``friction_limit[k]``, the stored value until
+    :meth:`ConstraintSet.reset_friction_limits` (GPU Newton). A contact detected but not yet pressed
+    (estimate 0) thus gets friction once it carries load, within the same step."""
     C = friction_limit[k]
     if C < wp.float32(0):
         C = estimate
-        friction_limit[k] = C
+        if estimate > wp.float32(0):
+            friction_limit[k] = C
     return C
 
 
@@ -149,7 +152,7 @@ class ConstraintSet:
     lambda_n  : float32 normal Lagrange multiplier.
     lambda_f  : vec2f   friction Lagrange multiplier (tangential plane).
     friction_limit : float32 GPU Newton's Coulomb limit of the primal friction force, frozen for the
-                time step at the contact's first evaluation in it (:func:`frozen_friction_limit`;
+                time step at the contact's first positive estimate in it (:func:`frozen_friction_limit`;
                 ``FRICTION_LIMIT_UNSET`` before it). It is carried across re-detection with the rest of
                 the state, so a contact found again keeps its limit, while a contact dropped by one
                 detection and found by a later one starts over, like its multipliers. Newton resets it
@@ -256,7 +259,7 @@ class ConstraintSet:
 
     def reset_friction_limits(self):
         """Unfreeze every contact's Coulomb limit (GPU Newton, at the start of each time step), so each
-        contact's first evaluation in the step freezes it again (:func:`frozen_friction_limit`). A
+        contact's first positive estimate in the step freezes it again (:func:`frozen_friction_limit`). A
         capture-safe fill, no host synchronization."""
         self.friction_limit.current.fill_(FRICTION_LIMIT_UNSET)
 
@@ -336,7 +339,16 @@ class TestFrozenFrictionLimit(unittest.TestCase):
         self._detect([(0, 1), (0, 3), (1, 2)])
         self.cs.reset_friction_limits()
         self.assertEqual(self._evaluate([0.5, 0.0, 3.0]), [0.5, 0.0, 3.0])
-        self.assertEqual(self._evaluate([4.0, 4.0, 4.0]), [0.5, 0.0, 3.0])
+        # A contact not yet pressed (estimate 0) isn't frozen: it freezes at its first positive estimate
+        self.assertEqual(self._evaluate([4.0, 0.0, 4.0]), [0.5, 0.0, 3.0])
+        self.assertEqual(self._evaluate([4.0, 2.5, 4.0]), [0.5, 2.5, 3.0])
+        self.assertEqual(self._evaluate([4.0, 6.0, 4.0]), [0.5, 2.5, 3.0])
+        # ... also across a re-detection within the step
+        self._detect([(0, 1), (0, 2), (0, 3), (1, 2)])
+        self.assertEqual(self._evaluate([1.0, 0.0, 1.0, 1.0]), [0.5, 0.0, 2.5, 3.0])
+        self._detect([(0, 1), (0, 2), (0, 3), (1, 2)])
+        self.assertEqual(self._evaluate([1.0, 0.75, 1.0, 1.0]), [0.5, 0.75, 2.5, 3.0])
+        self.assertEqual(self._evaluate([1.0, 9.0, 1.0, 1.0]), [0.5, 0.75, 2.5, 3.0])
 
 
 if __name__ == "__main__":

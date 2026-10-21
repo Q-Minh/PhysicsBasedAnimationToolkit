@@ -299,9 +299,10 @@ class Gradient:
 
     The augmented friction force ``f = sigma_f c_f - lambda_f`` is capped at the Coulomb limit
     ``C = mu_f max(lambda_n - sigma_n c_n, 0)``, ``f min(1, C / |f|)`` (C++ has no cap). C is frozen for
-    the time step at each contact's first augmented evaluation in it, at that evaluation's normal force
-    (``contact.constraints.frozen_friction_limit``): contacts present at the step's first detection get
-    it from the step's first estimate, later ones from the first estimate after their detection. It is
+    the time step at each contact's first strictly positive estimate in it, i.e. its first augmented
+    evaluation with a positive normal force (``contact.constraints.frozen_friction_limit``; while the
+    estimate is 0, it is recomputed at each evaluation): contacts pressed at the step's first detection
+    get it from the step's first estimate, later ones from their first positive one. It is
     stored per contact next to the multipliers (``ConstraintSet.friction_limit``, reset by GPU Newton at
     each time step), and GPU Newton's Hessian and line-search energies use the same values
     (:attr:`friction_limits`). The Lagrangian gradient is uncapped.
