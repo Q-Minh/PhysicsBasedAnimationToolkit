@@ -18,24 +18,33 @@ per-iteration log (entry j is the state after j iterations, with cumulative solv
 
 Results file layout (HDF5, ``FORMAT``):
 
-    /                                attrs: format, version, levels, budget_factor, budget_statistic,
-                                     budget_pilot, budget_options, dataset, device, git_commit, date,
-                                     sim_params, solvers
+    /                                attrs: format, version, levels_options, budget_factor, budget_options,
+                                     newton_stall_iterations, newton_stall_reduction, dataset, device,
+                                     git_commit, date, sim_params, solvers
     /StaticSolveSpec                 the run's spec (static.StaticSolveSpec), attributes
     /dataset_attrs                   the dataset's scalar attributes
-    /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, budget,
-                                     budget_source, scene_params, newton_cg_* (Newton's CG limits)
+    /<benchmark>                     attrs: levels (the benchmark's), cases
+    /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, [budget] (a
+                                     fixed --budget), budget_source, max_seconds (Newton's cap),
+                                     scene_params, newton_cg_* (Newton's CG limits)
     /<benchmark>/<case>/<solver>     attrs: solver, n_samples
         sample, e0, iterations, sweeps, solver_time, host_time, final_relative_error, termination,
-        deformation_energy, [min_J], [reference_error_bound, reference_relative_error_bound]   (S,)
-        crossing_time, crossing_iteration, increment, reached, skipped, [resolvable]           (S, L)
-        aggregate/{increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}           (L,)
+        deformation_energy, budget, normalization, [min_J],
+        [reference_error_bound, reference_relative_error_bound]                                 (S,)
+        crossing_time, crossing_iteration, increment, normalized_increment, reached, skipped,
+        [resolvable]                                                                            (S, L)
+        aggregate/{increment,normalized_increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}
+                                                                                                (L,)
         logs/<sample:06d>/{error,time,sweeps}
         trajectories/<sample:06d>/{iteration,t,t_target,x,level_frames,level_exact}   (opt-in, --snapshots)
 
 ``<benchmark>`` is ``static`` or ``dynamic_h<h>`` (e.g. ``dynamic_h0.0001``). A ``<case>`` is one x-axis
 entry of the benchmark's figure: a scene, or ``<scene>_E<E>`` when the run holds several energy levels
-of a scene. Times are seconds of solver time. NaN marks unreached levels (``reached`` False); an
+of a scene. Times are seconds of solver time. ``budget`` is each solve's time budget: Newton's cap for
+Newton, ``budget_factor`` x T_N for the others, or the fixed ``--budget``; ``normalization`` is the time
+the sample's increments are divided by (``normalized_increment``): T_N, Newton's crossing time of the
+highest level it reached on that problem (the same for every solver), or the fixed budget. Files written
+before per-benchmark levels have the run's ``levels`` at the root instead (:func:`benchmark_levels`). NaN marks unreached levels (``reached`` False); an
 unreached level's ``crossing_iteration`` is -1. Aggregates are over the samples that reached the
 level (``count``); a skipped level counts with a zero increment. ``host_time`` is the solve's host
 wall-clock time (loading the problem, the replay or Newton loop, reading the log back); minus
@@ -66,7 +75,6 @@ FORMAT = "pbat-benchmark-results"
 VERSION = 1
 DEFAULT_LEVELS = (0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99)
 STATISTICS = ("count", "mean", "std", "min", "max", "median", "q25", "q75")
-BUDGET_STATISTICS = ("median", "mean")
 
 
 def parse_levels(text: str) -> tuple[float, ...]:
@@ -200,48 +208,6 @@ def aggregate(values: np.ndarray, reached: np.ndarray) -> dict[str, np.ndarray]:
     return out
 
 
-def budgets_from_pilot(
-    path: str, factor: float, statistic: str = "median", solver: str = "Newton"
-) -> dict[tuple[str, str], dict]:
-    """Time budgets per (benchmark, case): ``factor`` times a pilot run's time to its highest level.
-
-    Args:
-        path (str): A results file holding ``solver``'s solves for the cases (e.g. a Newton-only run
-            with a generous time cap).
-        factor (float): Multiple of the statistic.
-        statistic (str): ``median`` or ``mean`` of ``solver``'s crossing times of the pilot's highest
-            level, over the samples that reached it.
-        solver (str): The reference solver.
-
-    Returns:
-        dict: (benchmark, case) -> {budget, reference_time, reached, n_samples, level}. Cases where no
-        sample reached the level are left out.
-    """
-    if statistic not in BUDGET_STATISTICS:
-        raise ValueError(f"Budget statistic must be one of {BUDGET_STATISTICS}, got {statistic!r}")
-    out = {}
-    with h5py.File(path, "r") as f:
-        check_format(f, path)
-        level = float(np.asarray(f.attrs["levels"])[-1])
-        for benchmark, case, group in iter_cases(f):
-            if solver not in group:
-                continue
-            g = group[solver]
-            reached = np.asarray(g["reached"])[:, -1]
-            if not reached.any():
-                continue
-            t = np.asarray(g["crossing_time"])[reached, -1]
-            reference = float(np.median(t) if statistic == "median" else np.mean(t))
-            out[(benchmark, case)] = {
-                "budget": factor * reference,
-                "reference_time": reference,
-                "reached": int(reached.sum()),
-                "n_samples": int(reached.size),
-                "level": level,
-            }
-    return out
-
-
 def parse_budget_options(entries: list[str], option: str = "--budget") -> dict:
     """``[BENCHMARK[/CASE]=]SECONDS`` entries -> {key: seconds}, with key ``None`` for an entry without a
     target (every case), ``"static"`` for a benchmark, ``"static/Y1e6"`` for one case."""
@@ -269,40 +235,20 @@ def _lookup(table: dict, benchmark: str, case: str):
     return None, None
 
 
-def resolve_budget(
-    benchmark: str,
-    case: str,
-    budgets: dict,
-    caps: dict,
-    pilot: dict,
-    max_seconds: float,
-    pilot_label: str = "pilot",
-) -> tuple[float, str]:
-    """A case's time budget and where it comes from, in order of precedence:
-
-    1. a direct budget (``--budget``), the most specific entry: the case's, its benchmark's, then every case's;
-    2. the pilot's Newton time times the factor (``budgets_from_pilot``), at most the most specific cap
-       (``--budget-cap``);
-    3. ``max_seconds`` (``--max-seconds``).
+def fixed_budget(budgets: dict, benchmark: str, case: str) -> tuple[float | None, str]:
+    """A case's fixed budget (``--budget``), the most specific entry: the case's, its benchmark's, then
+    every case's; (None, "") if none applies (Newton's times set the budgets).
 
     Args:
-        budgets, caps: :func:`parse_budget_options` tables.
-        pilot: :func:`budgets_from_pilot` (empty without a pilot).
+        budgets: :func:`parse_budget_options` table.
 
     Returns:
-        tuple[float, str]: The budget (s) and its source, as stored in the case's ``budget_source``.
+        tuple[float | None, str]: The budget (s) and its source, as stored in the case's ``budget_source``.
     """
     key, seconds = _lookup(budgets, benchmark, case)
-    if seconds is not None:
-        return seconds, f"--budget {key + '=' if key else ''}{seconds:g}"
-    entry = pilot.get((benchmark, case))
-    if entry is not None:
-        source = f"{pilot_label}: {entry['reference_time']:g} s to {entry['level']:g}"
-        key, cap = _lookup(caps, benchmark, case)
-        if cap is not None and cap < entry["budget"]:
-            return cap, f"--budget-cap {key + '=' if key else ''}{cap:g} (below {source})"
-        return entry["budget"], source
-    return float(max_seconds), "--max-seconds"
+    if seconds is None:
+        return None, ""
+    return seconds, f"--budget {key + '=' if key else ''}{seconds:g}"
 
 
 def parse_scene_params(entries: list[str]) -> dict[str, list[str]]:
@@ -576,22 +522,10 @@ class TestLevelCrossings(unittest.TestCase):
 
     def test_budget_precedence(self):
         budgets = parse_budget_options(["static=5", "static/Y1e8=10"])
-        caps = parse_budget_options(["2", "dynamic_h0.01=0.5"], "--budget-cap")
-        pilot = {
-            ("static", "Y1e6"): {"budget": 3.0, "reference_time": 3.0, "level": 0.99},
-            ("dynamic_h0.01", "Y1e6"): {"budget": 0.8, "reference_time": 0.8, "level": 0.99},
-            ("dynamic_h0.0001", "Y1e6"): {"budget": 0.02, "reference_time": 0.02, "level": 0.99},
-            ("dynamic_h0.0001", "Y1e7"): {"budget": 4.0, "reference_time": 4.0, "level": 0.99},
-        }
-        def budget(b, c):
-            return resolve_budget(b, c, budgets, caps, pilot, 60.0)[0]
-        self.assertEqual(budget("static", "Y1e6"), 5.0)  # direct budget over the pilot
-        self.assertEqual(budget("static", "Y1e8"), 10.0)  # the case's own entry first
-        self.assertEqual(budget("dynamic_h0.01", "Y1e6"), 0.5)  # the benchmark's cap
-        self.assertEqual(budget("dynamic_h0.0001", "Y1e6"), 0.02)  # below every cap
-        self.assertEqual(budget("dynamic_h0.0001", "Y1e7"), 2.0)  # the global cap
-        self.assertEqual(budget("dynamic_h0.01", "Y1e7"), 60.0)  # not in the pilot
-        self.assertIn("--budget-cap", resolve_budget("dynamic_h0.01", "Y1e6", budgets, caps, pilot, 60.0)[1])
+        self.assertEqual(fixed_budget(budgets, "static", "Y1e6"), (5.0, "--budget static=5"))
+        self.assertEqual(fixed_budget(budgets, "static", "Y1e8")[0], 10.0)  # the case's own entry first
+        self.assertEqual(fixed_budget(budgets, "dynamic_h0.01", "Y1e6"), (None, ""))  # Newton's times
+        self.assertEqual(fixed_budget(parse_budget_options(["2"]), "dynamic_h0.01", "Y1e6")[0], 2.0)
         with self.assertRaises(ValueError):
             parse_budget_options(["static=0"])
         with self.assertRaises(ValueError):
@@ -610,7 +544,7 @@ class TestLevelCrossings(unittest.TestCase):
             with self.assertRaises(ValueError):
                 parse_scene_params(bad)
 
-    def test_file_and_budgets(self):
+    def test_file(self):
         import os
         import tempfile
 
@@ -643,10 +577,6 @@ class TestLevelCrossings(unittest.TestCase):
                 np.testing.assert_allclose(g["aggregate/normalized_increment/mean"][()], [5 / 6, 1 / 3])
                 np.testing.assert_array_equal(benchmark_levels(f, "static"), levels)
                 self.assertEqual(list(g["termination"].asstr()[()]), ["target", "target"])
-            budgets = budgets_from_pilot(path, factor=2.0)
-            # Newton reached 99% in one sample, at 3 s
-            self.assertEqual(budgets[("static", "Y1e6")]["budget"], 6.0)
-            self.assertEqual(budgets[("static", "Y1e6")]["reached"], 1)
 
 
 if __name__ == "__main__":
