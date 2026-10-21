@@ -901,6 +901,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run START** (~6 min, one benchmark.py process; timings secondary, task 4's CPU job is active): demo results file with snapshots for the viewer, all 5 solvers, trampolines-pilot het/Y1e6 static + Y1e7 dynamic_h0.01, sample 0. Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (demo results file, data/benchmarks/results/snapshots-demo.h5). The GPU is free.
 - 2026-10-20 · task 2 · **GPU run START** (~30 min, benchmark.py processes back to back; please keep the GPU quiet, timings are compared; task 4's CPU job is active): Newton CG cap sweep (500/1000/2000/4000, het static 8000), trampolines-pilot sample 0, all static scenes + Y1e8/het dynamic_h0.01, followed by CG rtol 1e-2/1e-3 at cap 4000 (het 8000); ~45 min in total. Will log END.
+- 2026-10-20 · task 2 · **GPU run END** (Newton CG cap/rtol sweep, 19:03-19:26). The GPU is free. Winners get re-timed after task 4's CPU job ends.
 
 ## Open questions for the maintainer
 
@@ -996,6 +997,13 @@ Answer when back; each has the coordinator's recommendation.
     **Newton setup:** (a) a fixed CG setup per case, also trying looser rtol with large caps (early termination when
     possible, many iterations when needed); task 2 extends the sweep. Full run after the dataset; GPU clock locking not
     required by the maintainer (task 3's audit may still recommend it with evidence).
+    **CG sweep (task 2, sample 0, CPU loaded):** best by time to the top level. Static, rtol 1e-6 (default) with caps
+    Y1e5 500, Y1e6 1000, Y1e7 2000, Y1e8 2000, het 4000: times to 99.999% 11.1 / 11.6 / 9.2 / 6.6 / 37.5 s (het was 73 s at
+    cap 1000); caps >= 2000 converge superlinearly at the end. Dynamic h = 1e-2 Y1e8/het: rtol 1e-2, cap 4000 (+25-32% faster
+    than rtol 1e-6 cap 500; same steps: float32 CG can't reach 1e-6 anyway). rtol 1e-2 on static stalls a decade short.
+    The per-step stall rule never fires at the winning configs. Pending (after task 4's END): static rtol 1e-3 x caps
+    1000/2000, dynamic h = 1e-2 Y1e5-Y1e7 and h = 1e-4, re-timing close calls; then per-case --scene-params files (task 3).
+    GPU state recording removed and versions trimmed (maintainer: overkill).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
