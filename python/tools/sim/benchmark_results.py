@@ -437,7 +437,8 @@ def write_solver(
             ``normalized_increment`` and its aggregates are written).
         logs (list): Per sample, (error, time, sweeps) arrays, optionally followed by a dict of further
             per-sample arrays written next to them (e.g. Newton's per-step records, ``newton/cg_iterations``).
-        trajectories (list | None): Per sample, a trajectory dict (:func:`write_trajectory`), if any.
+        trajectories (list | None): Per sample, aligned with ``summaries``, a trajectory dict
+            (:func:`write_trajectory`) or None for a sample without one.
     """
     g = group.create_group(solver)
     g.attrs.update(solver=solver, n_samples=len(summaries))
@@ -484,8 +485,12 @@ def write_solver(
                 lg.create_dataset(name, data=values.astype(object), dtype=h5py.string_dtype())
             else:
                 lg.create_dataset(name, data=values)
+    if trajectories is not None and len(trajectories) != len(summaries):
+        raise ValueError(f"{len(trajectories)} trajectories for {len(summaries)} samples: pass one per sample (None "
+                         "for samples without one)")
     for s, trajectory in zip(summaries, trajectories or []):
-        write_trajectory(g.create_group(f"trajectories/{int(s['sample']):06d}"), trajectory)
+        if trajectory is not None:
+            write_trajectory(g.create_group(f"trajectories/{int(s['sample']):06d}"), trajectory)
     return g
 
 
@@ -662,6 +667,30 @@ class TestLevelCrossings(unittest.TestCase):
                 self.assertEqual(list(g["logs/000001/newton/status"].asstr()[()]), ["stepped", "stepped"])
                 self.assertNotIn("newton", cases[0][2]["VBD/logs/000000"])
                 self.assertEqual(list(g["termination"].asstr()[()]), ["target", "target"])
+
+    def test_trajectory_sample(self):
+        """A trajectory is written under its own sample, also when earlier samples have none."""
+        import os
+        import tempfile
+
+        levels = (0.5,)
+        times = np.array([0.0, 1.0])
+        summaries, logs = [], []
+        for s in (3, 7):
+            c = level_crossings(np.array([1.0, 0.1]), times, levels)
+            summaries.append(dict(sample=s, e0=1.0, iterations=1, sweeps=1, solver_time=1.0, final_relative_error=0.1,
+                                  termination="target", deformation_energy=1.0, crossings=c))
+            logs.append((np.array([1.0, 0.1]), times, np.array([0, 1])))
+        trajectory = dict(iteration=np.array([0, 1]), t=times, t_target=times, x=np.zeros((2, 4, 3)),
+                          level_frames=np.array([1]), level_exact=np.array([True]), requested_frames=2, ring_slots=2,
+                          stride=1, device_bytes=96, video_seconds=1.0, playback_factor=1.0)
+        with tempfile.TemporaryDirectory() as root:
+            with h5py.File(os.path.join(root, "results.h5"), "w") as f:
+                case = require_case(f, "static", "Y1e6", {"scene": "Y1e6"}, levels=levels)
+                g = write_solver(case, "VBD", levels, summaries, logs, [None, trajectory])
+                self.assertEqual(list(g["trajectories"].keys()), ["000007"])
+                with self.assertRaises(ValueError):  # one per sample
+                    write_solver(case, "AAAVBD", levels, summaries, logs, [trajectory])
 
 
 if __name__ == "__main__":

@@ -901,6 +901,8 @@ def main():
                             trajectories.append(trajectory(
                                 ring, log, summary["crossings"], n_frames, span, video_seconds
                             ))
+                        else:
+                            trajectories.append(None)  # one entry per sample, so each is written under its own
                         pbar.set_postfix(case=f"{c.benchmark}/{c.case}", solver=solver.name,
                                          e=f"{summary['final_relative_error']:.2e}")
                         pbar.update(1)
