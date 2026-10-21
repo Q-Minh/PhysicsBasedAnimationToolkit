@@ -20,11 +20,11 @@ Results file layout (HDF5, ``FORMAT``):
 
     /                                attrs: format, version, levels, budget_factor, budget_statistic,
                                      budget_pilot, budget_options, dataset, device, git_commit, date,
-                                     sim_params, solvers, newton_cg_* (Newton's CG limits)
+                                     sim_params, solvers
     /StaticSolveSpec                 the run's spec (static.StaticSolveSpec), attributes
     /dataset_attrs                   the dataset's scalar attributes
     /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, budget,
-                                     budget_source, scene_params
+                                     budget_source, scene_params, newton_cg_* (Newton's CG limits)
     /<benchmark>/<case>/<solver>     attrs: solver, n_samples
         sample, e0, iterations, sweeps, solver_time, host_time, final_relative_error, termination,
         deformation_energy, [min_J], [reference_error_bound, reference_relative_error_bound]   (S,)

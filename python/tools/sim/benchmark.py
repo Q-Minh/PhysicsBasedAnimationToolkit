@@ -554,11 +554,11 @@ def main():
             )
             if h is None:
                 static.prepare_static_problem(state, spec.fext_scale)
-            if "newton_cg_n_max_iters" not in h5f.attrs:
-                cg = state.newton_linear_solver_params
-                h5f.attrs.update(newton_cg_n_max_iters=cg.n_max_iters, newton_cg_rtol=cg.rtol, newton_cg_atol=cg.atol)
+            cg = state.newton_linear_solver_params
             for c in (c for c in cases if (c.scene, c.fem, c.batch.h, c.benchmark) == (scene, fem, h, benchmark)):
                 batch, group = c.batch, groups[c.set_name]
+                # Newton's CG limits, per case: --scene-params may set them per scene and benchmark
+                group.attrs.update(newton_cg_n_max_iters=cg.n_max_iters, newton_cg_rtol=cg.rtol, newton_cg_atol=cg.atol)
                 static.check_sample_batch(batch, state.fem)
                 for w in batch.warnings():
                     print(f"Warning: {batch.path}: {w}")
