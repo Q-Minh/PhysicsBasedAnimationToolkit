@@ -114,6 +114,12 @@ TRAMPOLINE_DETECTION = Rule(
     "max_dist 30 cm, scaled to the metre-scale trampoline geometry (10 cm plate; maintainer).",
     {"Contact.CDType.VertexSdf.max_dist": 0.3},
 )
+SPHERE_BAND = Rule(
+    "VertexSdf band 5 mm for the sphere falling on the trampolines (maintainer, 2026-10-20): at 2 mm the sphere's "
+    "impact on the heterogeneous circle trampoline exploded.",
+    {"Contact.CDType.VertexSdf.band": 5e-3},
+)
+TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
 
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus astol and the 2 mm band.
@@ -156,13 +162,13 @@ SCENES = {
     "trampoline_soft-stiff": Scene(
         "trampoline_soft-stiff.Params.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
-        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *CONTACT, TRAMPOLINE_DETECTION, ASTOL_STIFF],
+        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *CONTACT, *TRAMPOLINE, ASTOL_STIFF],
     ),
     "trampoline_stiff-soft": Scene(
         "trampoline_stiff-soft.Params.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *CONTACT,
-         TRAMPOLINE_DETECTION, ASTOL_STIFF],
+         *TRAMPOLINE, ASTOL_STIFF],
     ),
     "trampoline_soft-soft": Scene(
         "trampoline_soft-stiff.Params.5Substeps",
@@ -173,7 +179,7 @@ SCENES = {
                     "5 substeps of 1 x 100 sweeps, for the soft-stiff trampolines"),
             *SOLVERS,
             *CONTACT,
-            TRAMPOLINE_DETECTION,
+            *TRAMPOLINE,
         ],
         ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's.",
          "astol keeps the default 1e-4 (soft, homogeneous), unlike the soft-stiff trampolines' 5e-4."],
@@ -182,7 +188,7 @@ SCENES = {
     "trampoline_stiff_sphere": Scene(
         "trampoline_stiff_sphere.Params.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *CONTACT, TRAMPOLINE_DETECTION, ASTOL_STIFF],
+        [*SOLVERS, *CONTACT, *TRAMPOLINE, ASTOL_STIFF],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),

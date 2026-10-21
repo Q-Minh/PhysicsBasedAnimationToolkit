@@ -32,14 +32,14 @@
 #   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
 #   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
 #     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
-# - VertexSdf band 2 mm, close to dmin (maintainer): a 2 cm band made the sphere stick to the trampolines under
-#   Newton, and the 1 mm default once let bodies pass through 10 cm plates. max_dist is kept.
-#     Contact.CDType.VertexSdf.band = 0.002 (source 0.001)
 # - Newton with contact: 5 outer iterations (contact detection passes) x 2 Newton steps (maintainer).
 #     Solver.Newton.n_max_iters = 5 (source 20)
 #     Solver.Newton.newton.n_max_iters = 2 (source 1)
 # - max_dist 30 cm, scaled to the metre-scale trampoline geometry (10 cm plate; maintainer).
 #     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
+# - VertexSdf band 5 mm for the sphere falling on the trampolines (maintainer, 2026-10-20): at 2 mm the sphere's
+#   impact on the heterogeneous circle trampoline exploded.
+#     Contact.CDType.VertexSdf.band = 0.005 (source 0.001)
 #
 # Notes:
 # - The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's.
@@ -53,7 +53,7 @@ r = 0.003
 truncation_strategy = 0
 
 [Contact.CDType.VertexSdf]
-band = 0.002
+band = 0.005
 deactivate = 0
 max_dist = 0.3
 use_step_filter = 0
