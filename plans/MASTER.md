@@ -917,7 +917,21 @@ Answer when back; each has the coordinator's recommendation.
    so with thinning ~ tau, 200 samples cover the same ~13.6k steps per chain as 800 at the short pilot; same R-hat ~1.03 and
    ~2.3 h, ~50 MB of pool samples per scene instead of ~205 MB; check R-hat in the pool attributes afterwards). Without
    (a): `--pool 800 --chains 4`. (b) isn't needed for a CPU-only job of ~2.3 h.
-7. **Go-ahead for the full dataset generation**, then **scheduling the full benchmark run** (quiet GPU, one benchmark
+   **Maintainer (evening 2026-10-20):** CG cap per scene: 500 where Newton is faster with it, 1000 where 1000 was
+   faster (static Y1e8 and het); sent to task 3. N = 32 accepted (pool/chains/pilot explained). #4: wants no duplicated
+   solver runs; the coordinator proposed a Newton-first single run (below, #12).
+12. **Tail accuracy levels 99.9 / 99.99 / 99.999%** (maintainer, 2026-10-20): 1% error drifts visibly (objects look
+    softer), and the VBD family's sub-linear tail is where it spends its compute, so the figures must show it honestly
+    against Newton. Measured limits (task 2's pilot files, p = 2): the dynamic references are float32-noise-floor Newton
+    solves whose relative accuracy bound is h = 1e-2: Y1e5 1e-5, Y1e6 3e-5, Y1e7 1.5e-4, Y1e8 7e-4 (max 1.4e-3), het 8e-5;
+    h = 1e-4: 5e-6 to 1e-4 (Y1e8). So 99.99% is resolvable only on some sets and 99.999% on almost none; static
+    references (rest shape) are exact. The float32 GPU solvers' own floors are unmeasured. Proposal: (a) a short
+    floor-measuring run (1 problem per set, all solvers, deep target); (b) float64-residual references (mixed-precision
+    iterative refinement in make_benchmark, task 4); (c) cells beyond a set's resolvable accuracy marked in the figure.
+    Newton-first single run for #4: Newton solves each case first with a generous cap, the budget is set from its own
+    times on the same problems, its crossings are re-evaluated against that budget from its logs, then the other solvers
+    run. Note: a median budget leaves Newton itself at ~N/2 at the top level by construction; `max` avoids that.
+7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
    trajectory records its playback factor (video duration / budget) so videos can be annotated, e.g. "slowed down 200x".
@@ -942,3 +956,6 @@ Answer when back; each has the coordinator's recommendation.
     **Recommendation:** A (deterministic Gram) + p = 2 as Anderson's benchmark default, plus a footnote that Anderson's 99% on
     h = 1e-2 Y1e6/Y1e7 sits at a float32 precision floor. Optional: prototype B2 (adaptive p) if Anderson should look its best;
     it changes a competitor's algorithm, which the paper would have to justify.
+    **Answered (2026-10-20):** A (deterministic Gram, if the cost is negligible; sent to task 2) and more than one sweep per
+    Anderson step (p = 2; sent to task 3; cf. "Periodic Anderson Acceleration", which uses many sweeps per step). Adaptive
+    p is out of scope (it would be a new Anderson-VBD method). Anderson's stalls are a weakness to highlight, not hide.
