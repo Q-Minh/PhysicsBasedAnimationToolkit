@@ -3,6 +3,8 @@
 # Command-line options win over [run] (e.g. --dataset path/to/trampolines.h5 from a worktree, --sets, --solvers);
 # python -m python.tools.sim.benchmark --run ... --dry-run prints each case's effective settings without solving.
 # Format: python/tools/sim/benchmark_run.py.
+# Run it on a quiet GPU and a quiet CPU: Newton's CG syncs with the host every 10 iterations, so Newton's times,
+# and the budgets T_N they set, slow down under CPU load.
 #
 # Writing a run file:
 # - Solver parameters for every case are top-level tables, e.g. [Solver.Newton.LinearSolver] rtol = 1e-6.
