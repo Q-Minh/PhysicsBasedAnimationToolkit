@@ -3,8 +3,10 @@ Polyscope viewer of a benchmark results file's trajectories (``benchmark.py --sn
 does to the shape during a benchmark solve, side by side and in sync.
 
 Pick a benchmark, case and sample. Every solver with a trajectory for that sample is drawn as an offset copy
-of the body's boundary surface, labeled with its name, optionally over a translucent ghost of the reference
-solution x* (the rest shape X for static problems, the set's ``x_ref`` for dynamic ones).
+of the body's boundary surface, labeled with its name. Translucent overlays in light colors, each with its own
+checkbox and a color legend in the panel, show the problem at every copy: for dynamic problems the reference
+solution x* (the set's ``x_ref``, on by default), the inertial target x~ (``xtilde``) and the start state x
+(``samples/x``); for static problems the rest shape X, which is the solution x* (off by default).
 
 - **Frames.** The controls are the CPU editor's trajectory viewer's (``python/tools/vbd/ui/trajectory.py``):
   Load, a frame slider, Autoplay and Screenshot. Frame k stands for the solver time t_k = k x budget / F,
@@ -192,6 +194,36 @@ def load_trajectory(g: h5py.Group, solver: str, sample: int) -> Trajectory | Non
 
 
 @dataclass
+class Overlay:
+    """A shape of the problem drawn translucent at every solver's copy."""
+
+    name: str  # the checkbox and legend label
+    positions: np.ndarray  # (N, 3)
+    color: tuple[float, float, float]  # light, so the overlays don't hide the copies
+    enabled: bool  # shown by default
+
+
+# Light colors, distinct from each other and from the solvers' (Okabe-Ito) colors
+REFERENCE_COLOR = (0.55, 0.85, 0.95)
+TARGET_COLOR = (1.0, 0.8, 0.55)
+START_COLOR = (0.72, 0.92, 0.62)
+REST_COLOR = (0.8, 0.8, 0.8)
+
+
+def problem_overlays(problem: str, X: np.ndarray, samples: h5py.Group | None, sample: int) -> list[Overlay]:
+    """The overlays of a problem: x*, x~ and x for a dynamic problem (from its set's ``samples``), X for a
+    static one (whose solution it is)."""
+    if problem == "static":
+        return [Overlay("Rest shape X = x*", X, REST_COLOR, False)]
+    load = lambda key: samples[key][sample].astype(np.float64)
+    return [
+        Overlay("Reference x* (x_ref)", load("x_ref"), REFERENCE_COLOR, True),
+        Overlay("Inertial target x~ (xtilde)", load("xtilde"), TARGET_COLOR, False),
+        Overlay("Start state x", load("x"), START_COLOR, False),
+    ]
+
+
+@dataclass
 class Selection:
     """One sample of one case: the mesh, the reference and every solver's trajectory."""
 
@@ -203,6 +235,7 @@ class Selection:
     X: np.ndarray  # (N, 3) rest positions
     triangles: np.ndarray  # (K, 3) boundary triangles
     reference: np.ndarray  # (N, 3) x*: X (static) or x_ref (dynamic)
+    overlays: list[Overlay]
     levels: np.ndarray  # (L,) error reductions
     T_N: float  # the problem's normalization time (Newton's time to its highest level, or the fixed budget)
     span: float  # the solver time the frames span (the problem's budget)
@@ -275,12 +308,13 @@ def load_selection(path: str, benchmark: str, case: str, sample: int, dataset: s
         fem = d[problem_fem_group(d, set_name)][FEM_GROUP]
         X = fem[f"{MESH_GROUP}/X"][()].T.astype(np.float64)
         T = fem[f"{MESH_GROUP}/E"][()].T
-        reference = X if problem == "static" else d[set_name]["samples/x_ref"][sample].astype(np.float64)
+        overlays = problem_overlays(problem, X, d[set_name]["samples"] if problem != "static" else None, sample)
+    reference = X if problem == "static" else overlays[0].positions
     for tr in trajectories:
         if tr.x.shape[1] != X.shape[0]:
             raise ValueError(f"{tr.solver}'s frames have {tr.x.shape[1]} nodes, the dataset's FEM {X.shape[0]}: "
                              f"wrong --dataset?")
-    return Selection(benchmark, case, sample, problem, label, X, boundary_triangles(X, T), reference, levels, T_N,
+    return Selection(benchmark, case, sample, problem, label, X, boundary_triangles(X, T), reference, overlays, levels, T_N,
                      span, video_seconds, n_frames, trajectories)
 
 
@@ -337,9 +371,11 @@ class Viewer:
         self.autoplay, self.screenshot = False, False
         self.clock_time, self.clock_lag = time.time(), 0.0
         self.color_mode, self.scale_mode, self.fixed_max, self.vmax = 0, 0, 1.0, 0.0
-        self.show_reference, self.spacing = True, 1.15
+        self.spacing = 1.15
+        self.show_overlay: dict[str, bool] = {}  # by overlay name, kept across selections
         self.visible: dict[str, bool] = {}
-        self.meshes, self.ghosts, self.offsets = {}, {}, {}
+        self.meshes, self.offsets = {}, {}
+        self.ghosts = {}  # (solver, overlay name) -> the overlay's mesh at the solver's copy
         self.vertices: np.ndarray | None = None  # boundary vertex indices
         self.faces: np.ndarray | None = None  # boundary triangles over them
         self.shown: dict[str, int] = {}
@@ -405,10 +441,12 @@ class Viewer:
         for tr in s.trajectories:
             name = display_name(tr.solver)
             self.visible.setdefault(tr.solver, True)
-            ghost = ps.register_surface_mesh(f"{name} reference x*", s.reference[self.vertices] + self.offsets[tr.solver],
-                                             self.faces, color=(0.6, 0.6, 0.6), transparency=0.25)
-            self.ghosts[tr.solver] = ghost
-            mesh = ps.register_surface_mesh(name, tr.x[0][self.vertices] + self.offsets[tr.solver], self.faces,
+            for overlay in s.overlays:
+                self.show_overlay.setdefault(overlay.name, overlay.enabled)
+                self.ghosts[tr.solver, overlay.name] = ps.register_surface_mesh(
+                    f"{name} {overlay.name}", self.copy_positions(overlay.positions, tr.solver), self.faces,
+                    color=overlay.color, transparency=0.3)
+            mesh = ps.register_surface_mesh(name, self.copy_positions(tr.x[0], tr.solver), self.faces,
                                             color=_rgb(solver_color(tr.solver, names)))
             self.meshes[tr.solver] = mesh
         if new_scene:
@@ -431,6 +469,10 @@ class Viewer:
         # Horizontal half-angle of polyscope's default 45 degree vertical field of view, at a 16:10 window
         distance = 0.6 * width / math.tan(math.atan(math.tan(math.radians(22.5)) * 1.6))
         ps.look_at(center + distance * np.array([0.0, -0.9, 0.45]), center)
+
+    def copy_positions(self, x: np.ndarray, solver: str) -> np.ndarray:
+        """Positions x (N, 3) of the body, at a solver's copy: its boundary vertices, offset."""
+        return x[self.vertices] + self.offsets[solver]
 
     def place(self):
         """The copies' offsets: side by side along x, ``spacing`` body widths apart."""
@@ -456,10 +498,11 @@ class Viewer:
         for tr in s.trajectories:
             mesh = self.meshes[tr.solver]
             mesh.set_enabled(self.visible[tr.solver])
-            mesh.update_vertex_positions(tr.x[frames[tr.solver]][self.vertices] + self.offsets[tr.solver])
-            ghost = self.ghosts[tr.solver]
-            ghost.set_enabled(self.show_reference and self.visible[tr.solver])
-            ghost.update_vertex_positions(s.reference[self.vertices] + self.offsets[tr.solver])
+            mesh.update_vertex_positions(self.copy_positions(tr.x[frames[tr.solver]], tr.solver))
+            for overlay in s.overlays:
+                ghost = self.ghosts[tr.solver, overlay.name]
+                ghost.set_enabled(self.show_overlay[overlay.name] and self.visible[tr.solver])
+                ghost.update_vertex_positions(self.copy_positions(overlay.positions, tr.solver))
         if self.color_mode < 2 and shown:
             values = {tr.solver: self.vertex_values(tr, frames[tr.solver]) for tr in shown}
             if self.scale_mode == 0:
@@ -515,6 +558,19 @@ class Viewer:
         else:
             self.clock_lag = 0.0
         self.clock_time = now
+
+    def draw_overlays(self):
+        """One checkbox per overlay, labeled in the overlay's color (the legend)."""
+        import polyscope.imgui as imgui
+
+        imgui.TextDisabled("Overlays, at every copy:")
+        for overlay in self.selection.overlays:
+            imgui.PushID(overlay.name)
+            changed, self.show_overlay[overlay.name] = imgui.Checkbox("##overlay", self.show_overlay[overlay.name])
+            self.dirty |= changed
+            imgui.SameLine()
+            imgui.TextColored((*overlay.color, 1.0), overlay.name)
+            imgui.PopID()
 
     def draw_solvers(self):
         """Per solver: visibility, e/e0, the level reached, iterations and jumps to the level crossings."""
@@ -678,14 +734,12 @@ class Viewer:
                 changed, self.fixed_max = imgui.InputFloat("Max (m)", self.fixed_max, format="%.4g")
                 self.dirty |= changed
             imgui.TextDisabled(f"Color scale 0 to {self.vmax:.4g} m")
-        changed, self.show_reference = imgui.Checkbox("Reference x*", self.show_reference)
-        self.dirty |= changed
-        imgui.SameLine()
         imgui.SetNextItemWidth(width * 0.3)
         changed, self.spacing = imgui.SliderFloat("Spacing", self.spacing, 1.0, 3.0, format="%.2f")
         if changed:
             self.place()
             self.dirty = True
+        self.draw_overlays()
         self.update_meshes()
         imgui.Separator()
         self.draw_solvers()
@@ -769,6 +823,68 @@ class TestBenchmarkViewer(unittest.TestCase):
         y = log_curve(tr, np.array([0.0, 0.3, 0.5, 0.75, 1.0, 2.0]))
         np.testing.assert_allclose(y[:5], [0.0, -1.0, -2.0, math.log10(ERROR_FLOOR), 0.0])
         self.assertTrue(math.isnan(y[5]))  # after the solve's end
+
+    def test_overlays(self):
+        """A dataset and a results file of one cube scene: each problem's overlays load from its set and sit
+        at every solver's copy, as the solvers' frames."""
+        import tempfile
+
+        X, T = self.cube()
+        rng = np.random.default_rng(0)
+        shapes = {key: rng.standard_normal((2, 8, 3)).astype(np.float32) for key in ("x", "xtilde", "x_ref")}
+        levels = (0.5,)
+        sample = 1  # not the first, so the sample (not its position) must select the shapes
+        with tempfile.TemporaryDirectory() as root:
+            dataset, path = os.path.join(root, "dataset.h5"), os.path.join(root, "results.h5")
+            with h5py.File(dataset, "w") as d:
+                mesh = d.create_group(f"S/fem/{FEM_GROUP}/{MESH_GROUP}")
+                mesh.create_dataset("X", data=X.T.astype(np.float32))
+                mesh.create_dataset("E", data=T.T)
+                for name in ("S/static/E1", "S/dynamic_h0.01/E1"):
+                    d.create_group(name).attrs["scene"] = "S"
+                for key, value in shapes.items():
+                    d.create_dataset(f"S/dynamic_h0.01/E1/samples/{key}", data=value)
+            with h5py.File(path, "w") as f:
+                f.attrs.update(format=results.FORMAT, version=results.VERSION, dataset=dataset,
+                               solvers=["VBD", "Newton"])
+                for benchmark, problem in (("static", "static"), ("dynamic_h0.01", "dynamic")):
+                    case = results.require_case(f, benchmark, "S", {"set": f"S/{benchmark}/E1", "problem": problem},
+                                                levels=levels)
+                    for solver in ("VBD", "Newton"):
+                        c = results.level_crossings(np.array([1.0, 0.4]), np.array([0.0, 1.0]), levels)
+                        summary = dict(sample=sample, e0=1.0, iterations=1, sweeps=1, solver_time=1.0,
+                                       final_relative_error=0.4, termination="target", deformation_energy=0.0,
+                                       crossings=c, budget=1.0, normalization=1.0)
+                        trajectory = dict(iteration=np.array([0, 1]), t=np.array([0.0, 1.0]),
+                                          t_target=np.array([0.0, 1.0]), level_frames=np.array([1]),
+                                          level_exact=np.array([True]), x=np.stack([X, X]), requested_frames=1,
+                                          ring_slots=2, stride=1, device_bytes=0, video_seconds=2.0,
+                                          playback_factor=2.0)
+                        log = (np.array([1.0, 0.4]), np.array([0.0, 1.0]), np.array([0, 1]))
+                        results.write_solver(case, solver, levels, [summary], [log], [trajectory])
+            self.assertEqual([(b, c, n) for b, c, _, n in list_cases(path)], [("static", "S", [1]),
+                                                                                ("dynamic_h0.01", "S", [1])])
+            static = load_selection(path, "static", "S", sample)
+            dynamic = load_selection(path, "dynamic_h0.01", "S", sample)
+        self.assertEqual([(o.name, o.enabled) for o in static.overlays], [("Rest shape X = x*", False)])
+        np.testing.assert_array_equal(static.overlays[0].positions, X)
+        self.assertEqual([o.enabled for o in dynamic.overlays], [True, False, False])
+        for overlay, key in zip(dynamic.overlays, ("x_ref", "xtilde", "x")):
+            np.testing.assert_array_equal(overlay.positions, shapes[key][sample])
+        np.testing.assert_array_equal(dynamic.reference, shapes["x_ref"][sample])
+        self.assertEqual(dynamic.span, 1.0)
+        # Positioned like the copies: the second solver's overlays and frames share its offset
+        viewer = Viewer(None)
+        viewer.selection = dynamic
+        viewer.vertices, faces = np.unique(dynamic.triangles, return_inverse=True)
+        viewer.place()
+        self.assertEqual(len(viewer.vertices), 8)
+        for overlay in dynamic.overlays:
+            shift = viewer.copy_positions(overlay.positions, "Newton") - overlay.positions[viewer.vertices]
+            np.testing.assert_allclose(shift, np.tile([viewer.spacing * 1.0, 0.0, 0.0], (8, 1)))
+            np.testing.assert_allclose(viewer.copy_positions(overlay.positions, "VBD"), overlay.positions)
+        frame = dynamic.trajectories[1].x[1]
+        np.testing.assert_allclose(viewer.copy_positions(frame, "Newton") - frame, shift)
 
 
 if __name__ == "__main__":
