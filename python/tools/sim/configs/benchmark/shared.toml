@@ -4,6 +4,9 @@
 #   0.99/0.95), the same for every scene: the Lipschitz normalization is meant to make them
 #   problem-invariant. Its other parameters keep their code defaults.
 # - Every VBD-family solver uses the Inverse vertex solve (vlinsolve = 0).
+# - Anderson takes 2 VBD sweeps per Anderson step (vbd_iters_per_anderson_iter = 2; plans/MASTER.md, decision #11):
+#   it bounds the float32-floor outliers of 1 sweep per step and is closer to how periodic Anderson
+#   acceleration is used for soft bodies.
 # Sweep budgets and convergence tests don't apply: benchmark solves stop on the error and the time budget.
 
 [Solver.AAAVBD]
@@ -21,3 +24,4 @@ vlinsolve = 0
 
 [Solver.AndersonSolver]
 vlinsolve = 0
+vbd_iters_per_anderson_iter = 2
