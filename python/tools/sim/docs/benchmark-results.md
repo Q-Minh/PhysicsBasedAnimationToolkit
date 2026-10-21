@@ -2,16 +2,18 @@
 
 The solver convergence benchmark compares five GPU solvers (VBD, AAAVBD, Chebyshev, Anderson and Newton) on many
 sampled problems. It measures how much solver time each needs to remove a given fraction of its initial error. This
-note describes the two files a run involves and the scripts that read them. It applies to the full run of
+note describes the files a run involves and the scripts that read them. It applies to the full run of
 21 October 2026, on the five circle trampolines.
 
 | File | What it holds | Size |
 |---|---|---|
-| `data/benchmarks/trampolines.h5` | **Dataset:** the problems (start states, inertial targets, reference solutions), per scene and problem set | 1.1 GB |
-| `data/benchmarks/results/trampolines.h5` | **Results:** per problem and solver, the full per-iteration error log, level crossings, budgets, terminations, Newton's per-step records, and video frames for some problems | 8.8 GB |
+| `data/benchmarks/results/trampolines-thin.h5` | **Thin results, for sharing:** every number of the full results, with each solve's log thinned and no video frames (see 2.6). The plotting and table scripts read it like the full file and give the same bars and tables. | 42 MB |
+| `data/benchmarks/results/trampolines.h5` | **Full results:** per problem and solver, the full per-iteration error log, level crossings, budgets, terminations, Newton's per-step records, and video frames for some problems | 8.8 GB |
+| `data/benchmarks/trampolines.h5` | **Dataset:** the problems (start states, inertial targets, reference solutions), per scene and problem set. Only the viewers need it. | 1.1 GB |
 
-Both are HDF5 and need only `h5py` and `numpy` to read. Neither is in git (`data/` is git-ignored), so they're
+All are HDF5 and need only `h5py` and `numpy` to read. None is in git (`data/` is git-ignored), so they're
 shared as files. The scripts are in this repository and run from its root as modules (`python -m python.tools.sim.<name>`).
+**If you received the thin file,** sections 2.1 to 2.4 and 2.6 describe it, and section 6 lists the plotting scripts.
 
 ## 1. Concepts
 
@@ -59,8 +61,8 @@ shared as files. The scripts are in this repository and run from its root as mod
 /<benchmark>/<case>/<solver>        VBD | AAAVBD | Chebyshev | AndersonSolver | Newton; attrs: solver, n_samples
     per-problem arrays (2.3)
     aggregate/<quantity>/<statistic>
-    logs/<sample:06d>/...           the full per-iteration log of each solve (2.4)
-    trajectories/<sample:06d>/...   video frames, for 8 of the 32 problems (2.5)
+    logs/<sample:06d>/...           the per-iteration log of each solve (2.4; thinned in the thin file, 2.6)
+    trajectories/<sample:06d>/...   video frames, for 8 of the 32 problems (2.5; not in the thin file)
 ```
 
 Iterate cases in file order through the `benchmarks` and `cases` attributes (`benchmark_results.iter_cases`).
@@ -79,6 +81,7 @@ Iterate cases in file order through the `benchmarks` and `cases` attributes (`be
 | `sim_params`, `budget_options` | the parameter sources and fixed budgets given on the command line (none here) |
 | `date`, `device`, `git_commit`, `git_dirty`, `version_warp`, `version_cuda_driver`, `version_cuda_toolkit`, `version_pbatoolkit` | provenance |
 | `note_trajectories_relabelled` | trajectories were renamed to their own samples after the run (see 4) |
+| `thin` | thin file only: how it was thinned (2.6) |
 
 ### 2.2 Case attributes
 
@@ -144,6 +147,28 @@ spaced in solver time over the 2 × T_N budget, plus each level's crossing.
 | attrs `video_seconds`, `playback_factor` | the frames play in 5 s, i.e. slowed down `playback_factor` times relative to solver time |
 | attrs `requested_frames`, `ring_slots`, `stride`, `device_bytes` | snapshot-ring bookkeeping |
 
+### 2.6 The thin file
+
+`trampolines-thin.h5` (`python -m python.tools.sim.benchmark_thin`) has the same layout and every attribute and
+per-problem array of the full file, with two differences:
+
+- **No `trajectories/`** (video frames).
+- **Thinned logs.** A log of more than 1000 entries keeps:
+  - its start and end;
+  - each level's first crossing;
+  - the entries nearest to 1000 times spaced evenly on a log-time axis.
+
+  Shorter logs, Newton's included, are whole, and Newton's per-step records are copied as they are.
+  `logs/<sample>/entry` gives each kept entry's index in the full log. In total, 846k of 143M entries are kept.
+
+What stays exact and what doesn't:
+- **Exact:** level crossings, so re-scoring at any budget factor gives the same bars, and the iteration tables
+  are identical. `benchmark_thin` checks both when it writes the file.
+- **Approximate:** curves are exact at the kept entries and only skip points between them. At about 1000 points
+  per solve, the plots look identical.
+- **`crossing_iteration` keeps its meaning,** the full log's entry (iteration count) at each crossing. Its row in a
+  thinned log is `np.searchsorted(entry, crossing_iteration)`.
+
 ## 3. Dataset layout (briefly)
 
 `data/benchmarks/trampolines.h5` has one group per scene. Each holds:
@@ -191,7 +216,9 @@ with h5py.File("data/benchmarks/results/trampolines.h5", "r") as f:
     e = log["error"][()] / log["error"][0]                # e/e0 per iterate
     t = log["time"][()] / t_n[0]                          # solver time over T_N
     sweeps = log["sweeps"][()]
-    j = g["crossing_iteration"][0, 3]                     # log entry of the 99.9% crossing (-1: not reached)
+    j = g["crossing_iteration"][0, 3]                     # full-log entry of the 99.9% crossing (-1: not reached)
+    if j >= 0 and "entry" in log:                         # thin file: the crossing's row in the thinned log
+        j = np.searchsorted(log["entry"][()], j)
     print("sweeps to 99.9%:", sweeps[j] if j >= 0 else None)
 ```
 
@@ -201,7 +228,8 @@ at another budget factor) and `aggregate`. It has no GPU dependencies.
 ## 6. Scripts
 
 Every script below reads existing files: none of them re-runs solves, and only the benchmark itself needs a GPU.
-Commands run from the repository root.
+Commands run from the repository root. The plot, curve and table scripts work on the thin file as on the full one;
+the viewers need the full results and the dataset.
 
 | Script | Output | Command |
 |---|---|---|
@@ -209,6 +237,7 @@ Commands run from the repository root.
 | `benchmark_plot.py` | 3D bar charts, one per benchmark: per scene × level × solver, the mean incremental time over T_N, with min–max boxes and n/N labels | `python -m python.tools.sim.benchmark_plot RESULTS.h5 -o FIGURES/trampolines_bars [--budget-factor 1] [--elev 28 --azim -62]` |
 | `benchmark_curves.py` | convergence curves, e/e0 against time over T_N on log-log axes, one panel per problem: one sample, or with `--all-samples` the min–max band and median over all problems | `python -m python.tools.sim.benchmark_curves RESULTS.h5 -o FIGURES/trampolines_curves_Y1e6 --problems static/Y1e6 dynamic_h0.01/Y1e6 dynamic_h0.0001/Y1e6 [--sample 0 \| --all-samples] [--xscale linear]` |
 | `benchmark_iterations.py` | tables of iterations to each level, median [25th–75th percentile] VBD sweeps, or Newton steps and CG iterations, with n/N, as Markdown and LaTeX | `python -m python.tools.sim.benchmark_iterations RESULTS.h5 -o TABLES/iterations [--budget-factor 2]` |
+| `benchmark_thin.py` | the thin copy of a results file (2.6), checked against the full one | `python -m python.tools.sim.benchmark_thin RESULTS.h5 -o RESULTS-thin.h5 [--max-entries 1000]` |
 | `benchmark_viewer.py` | interactive Polyscope viewer of the trajectories: the solvers side by side, in sync, with the reference, inertial target and start-state overlays, error colors and per-level jumps | `python -m python.tools.sim.benchmark_viewer RESULTS.h5 [--dataset path/to/trampolines.h5]` |
 | `python/examples/benchmark_browser.py` | interactive Polyscope browser of the dataset: each problem's start state, velocities, inertial target and reference, with energies and sampler diagnostics | `cd python/examples && python benchmark_browser.py -d path/to/trampolines.h5` |
 
