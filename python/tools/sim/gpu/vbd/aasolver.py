@@ -462,7 +462,7 @@ import unittest
 class TestAndersonMix(unittest.TestCase):
     """Checks the Gram-based least-squares solves against float64 least squares."""
 
-    n_nodes = 2000
+    n_nodes = 3000  # 36 Gram tiles, the last one partial: more than one per lane of the Gram reduction
     m = 5
 
     def _make_params(self, linear_solver):
@@ -548,6 +548,23 @@ class TestAndersonMix(unittest.TestCase):
         for solver in AndersonLinearSolver:
             params, _ = self._solve(solver, F, f, X, self.m)
             self.assertTrue(np.all(params.gammak.numpy() == 0.0), solver.name)
+
+    def test_gram_is_deterministic(self):
+        import numpy as np
+
+        F, f, X = self._histories(seed=6)
+        Ff = np.column_stack([F, f])
+        G_ref = Ff.T @ Ff
+        params = self._make_params(AndersonLinearSolver.NormalEquations)
+        self._fill(params, F, f, X)
+        x = wp.zeros((self.n_nodes,), dtype=wp.vec3f)
+        Gs = []
+        for _ in range(3):
+            anderson_mix(x, params, self.m)
+            Gs.append(params.G.numpy())
+        self.assertLess(np.abs(Gs[0] - G_ref).max() / np.abs(G_ref).max(), 1e-5)
+        for G in Gs[1:]:
+            self.assertTrue(np.array_equal(G, Gs[0]))
 
     def test_mixing_and_graph_capture(self):
         import numpy as np
