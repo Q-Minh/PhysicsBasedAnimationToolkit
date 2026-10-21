@@ -896,6 +896,9 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 1 · **GPU run START** (~3 min, one benchmark.py process, timings not compared): a tiny `--snapshots` file for the benchmark viewer, all 5 solvers on trampolines-test Y1e6 static and dynamic_h0.01, sample 0. Will log END.
 - 2026-10-20 · task 1 · **GPU run END** (tiny snapshots file). The GPU is free of task 1.
 - 2026-10-20 · task 2 · **GPU run START** (intermittent, short single-problem runs, correctness only, timings not compared): static Newton convergence diagnosis, trampolines-pilot het and Y1e6 static, sample 0. Will log END.
+- 2026-10-20 · task 2 · **GPU run END** (static Newton diagnosis). Late entry: it was followed by an unlogged ~5 min timing run (het static Newton vs CG cap), my START edit failed; it overlapped no other GPU run, but task 4's CPU job was active. The GPU is free.
+- 2026-10-20 · task 4 · **CPU run START** (~2.3 h, one make_benchmark.py process, no GPU; maintainer-approved): full benchmark dataset, from `python/examples`: `python make_benchmark.py -i Y1e5=<D>/trampoline_circle_Y1e5.h5 -i Y1e6=<D>/trampoline_circle_Y1e6.h5 -i Y1e7=<D>/trampoline_circle_Y1e7.h5 -i Y1e8=<D>/trampoline_circle_Y1e8.h5 -i het=<D>/trampoline_circle_het.h5 --label "Y1e5=Y = 1e5" --label "Y1e6=Y = 1e6" --label "Y1e7=Y = 1e7" --label "Y1e8=Y = 1e8" --label "het=heterogeneous" --problems 32 --pool 200 --chains 4 --pilot 3000 -o path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5` (`<D>` = `path/to/PhysicsBasedAnimationToolkit/data/scenarios`; defaults: 10000 J, h = 1e-4 and 1e-2, burn-in 300, seed 0). Will log END.
+- 2026-10-20 · task 3 · **GPU run START** (~6 min, one benchmark.py process; timings secondary, task 4's CPU job is active): demo results file with snapshots for the viewer, all 5 solvers, trampolines-pilot het/Y1e6 static + Y1e7 dynamic_h0.01, sample 0. Will log END.
 
 ## Open questions for the maintainer
 
@@ -979,6 +982,13 @@ Answer when back; each has the coordinator's recommendation.
     stable. Before the full benchmark run: task 3 audits that timings are representative (logging overhead inside the
     graphs, benchmark vs simulator per-sweep time, warm-up, GPU clocks/thermals recorded per case) and that the results
     store everything the bar plots, curve figure and snapshot viewer need.
+    **Newton static diagnosis (task 2):** no bug. Dirichlet handling correct (GPU: I diagonal, zeroed blocks; C++: equivalent).
+    Line search always accepts alpha = 1. Slow linear convergence comes from Jacobi-CG hitting its cap (500/1000) with
+    relative residuals 1e-2 to 1 (het needs 4000-8000 CG iterations per step), plus a projected-Hessian phase far from the
+    solution (20-35% per step even with exact solves). Exact solves: het 99.999% in 15 steps (quadratic at the end).
+    het time to 99% / 99.999%: CG 1000 8.1 / 73.3 s; 2000 15.8 / 54.7 s; 5000 36.7 / 45.8 s: small caps win early, large
+    caps win the tail. Task 2 running a CG cap sweep (static 5 scenes, dynamic Y1e8/het). Options for the maintainer:
+    per-case best fixed cap; Eisenstat-Walker forcing (rtol tied to |g|); a 3x3 block-Jacobi preconditioner.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
