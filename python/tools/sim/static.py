@@ -324,7 +324,7 @@ def _commit_kernel(
     t_b: wp.array[wp.int64],
     target_ratio2: wp.float32,
     max_entries: wp.int32,
-    max_ns: wp.int64,
+    max_ns: wp.array[wp.int64],
     keep: wp.array[wp.int32],
     stop: wp.array[wp.int32],
     first_stop: wp.array[wp.int32],
@@ -352,7 +352,7 @@ def _commit_kernel(
         reason = wp.int32(1)
     elif c + 1 >= max_entries or c + 1 >= capacity:
         reason = wp.int32(2)
-    elif elapsed >= max_ns:
+    elif elapsed >= max_ns[0]:
         reason = wp.int32(3)
     stop[0] = reason
     keep[0] = wp.where(reason == 0, wp.int32(1), wp.int32(0))
@@ -410,6 +410,7 @@ class ErrorLog:
         self.stop = wp.zeros(1, dtype=wp.int32)
         self.first_stop = wp.zeros(2, dtype=wp.int32)  # entry and StopReason of the first stop (-1: none)
         self.solver_ns = wp.zeros(1, dtype=wp.int64)  # solver time so far (ns), logging excluded
+        self.max_ns = wp.zeros(1, dtype=wp.int64)  # solver time cap (ns), read at replay: see set_max_seconds
         self._w = wp.zeros(n_nodes, dtype=wp.float32)
         self._e2_new = wp.zeros(1, dtype=wp.float32)
         self._reduce = Reduce(
@@ -427,7 +428,8 @@ class ErrorLog:
         self.snapshots = snapshots
 
     def configure(self, target_reduction: float, max_entries: int, max_seconds: float) -> None:
-        """Set the stopping criteria. Captured graphs bake them in, so recapture after changes.
+        """Set the stopping criteria. Captured graphs bake the target and the entry cap in, so recapture
+        after changing them; the time cap is device state (:meth:`set_max_seconds`).
 
         Args:
             target_reduction (float): ``keep`` drops to 0 once e <= (1 - target_reduction) e0.
@@ -437,7 +439,13 @@ class ErrorLog:
         """
         self._target_ratio2 = float((1.0 - target_reduction) ** 2)
         self._max_entries = int(min(max_entries, self.capacity))
-        self._max_ns = int(min(max_seconds * 1e9, 2**62)) if math.isfinite(max_seconds) else 2**62
+        self.set_max_seconds(max_seconds)
+
+    def set_max_seconds(self, max_seconds: float) -> None:
+        """Set the solver time cap (see :meth:`configure`). A device write, outside any capture: captured
+        graphs read it when they run, so each solve can have its own budget without a recapture."""
+        ns = int(min(max_seconds * 1e9, 2**62)) if math.isfinite(max_seconds) else 2**62
+        self.max_ns.fill_(ns)
 
     def reset(self) -> None:
         """Empty the log, set ``keep`` to 1 and ``stop`` to ``RUNNING``. Capturable."""
@@ -472,7 +480,7 @@ class ErrorLog:
                 self.t_b,
                 self._target_ratio2,
                 self._max_entries,
-                self._max_ns,
+                self.max_ns,
                 self.keep,
                 self.stop,
                 self.first_stop,
@@ -915,6 +923,7 @@ class BenchmarkSolver:
         reference: np.ndarray | None = None,
         v0: np.ndarray | None = None,
         xtilde: np.ndarray | None = None,
+        max_seconds: float | None = None,
     ) -> StaticSolveLog:
         """Solve one problem from ``x0`` and log until a stop criterion.
 
@@ -924,10 +933,13 @@ class BenchmarkSolver:
                 ``batch.reference(s)``; the rest shape X if None.
             v0 (np.ndarray | None): (N, 3) initial velocities (dynamic problems).
             xtilde (np.ndarray | None): (N, 3) inertial target of the step (dynamic problems).
+            max_seconds (float | None): This solve's time budget (solver time); the spec's
+                ``max_seconds`` if None. Changing it needs no recapture.
 
         Returns:
             StaticSolveLog: The solve's per-iteration log.
         """
+        self.log.set_max_seconds(self.spec.max_seconds if max_seconds is None else max_seconds)
         self._load(x0, reference, v0, xtilde)
         if self._schedule is None:
             self._solve_newton()
@@ -1004,6 +1016,16 @@ class TestErrorLog(unittest.TestCase):
         replay = log.read()
         self.assertEqual(replay.error.size, 6)
         self.assertAlmostEqual(replay.error[0] / e0, 2.0, places=5)
+        # The time cap is read at replay: a zero budget stops the same graph at entry 0
+        log.set_max_seconds(0.0)
+        fem.data.x.assign(X + u)
+        wp.capture_launch(capture.graph)
+        capped = log.read()
+        self.assertEqual((capped.error.size, capped.termination), (1, "time_cap"))
+        log.set_max_seconds(math.inf)
+        fem.data.x.assign(X + u)
+        wp.capture_launch(capture.graph)
+        self.assertEqual((log.read().error.size, log.read().termination), (6, "target"))
 
     def test_block_overshoot(self):
         """Iterations a replayed block runs after the stop aren't part of the log."""
