@@ -10,7 +10,7 @@ These files are cached here for now. Their long-term home is the paper's reposit
 |---|---|
 | `defaults.toml` | Every parameter the code serializes, with its code default. Use it as a reference or as an `extends` base. |
 | `paper/*.toml` | The paper's GPU parameter files (`accelerated-vbd-extras/parameters/gpu/*.h5`), converted and completed. See "Paper configs". |
-| `benchmark/*.toml` | The convergence benchmark's parameters (`benchmark.py --sim-params`). `shared.toml` holds what every scene shares: AAAVBD's shared parameter set and the Inverse vertex solve. Per-scene files go after it (`--scene-params SCENE=`, or `BENCHMARK/SCENE=` for one benchmark's problems), e.g. `newton_cg1000.toml` (Newton's CG cap of 1000) for `static/Y1e8` and `static/het`. |
+| `benchmark/*.toml` | The convergence benchmark's parameters (`benchmark.py --run` / `--sim-params`). `shared.toml` holds what every scene shares: AAAVBD's shared parameter set and the Inverse vertex solve. `trampolines.toml` is the full run's run file (`benchmark.py --run`, format in `benchmark_run.py`): it extends `shared.toml` and adds the run's options and per-case parameters (`[case."BENCHMARK/SCENE"]`, e.g. Newton's CG settings per scene). |
 | `scenes/*.toml` | Per-scene configs that follow the maintainer's tuning guidance (sweep budget by stiffness, Inverse vertex solve). Each `extends` a paper config, keeps its contact parameters and says in its header what it changes. Where they differ from the paper configs, which to keep is still to be settled with the paper's collaborator. |
 
 ## Format

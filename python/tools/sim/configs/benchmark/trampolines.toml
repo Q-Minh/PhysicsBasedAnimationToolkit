@@ -1,0 +1,57 @@
+# The convergence benchmark's full run on the trampolines dataset (benchmark.py --run, from the repo root):
+#   python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.toml -o out/results.h5
+# Command-line options win over [run] (e.g. --dataset path/to/trampolines.h5 from a worktree, --sets, --solvers);
+# python -m python.tools.sim.benchmark --run ... --dry-run prints each case's effective settings without solving.
+# Format: python/tools/sim/benchmark_run.py.
+extends = ["shared.toml"]
+
+[run]
+dataset = "data/benchmarks/trampolines.h5"  # relative to the current directory (the repo root)
+solvers = ["VBD", "AAAVBD", "Chebyshev", "AndersonSolver", "Newton"]
+max_seconds = 60.0  # Newton's cap per problem (a practical cap); T_N sets every other solver's budget
+budget_factor = 1.0
+newton_stall_iterations = 2
+newton_stall_reduction = 0.02
+
+[run.levels]
+static = [0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999]
+all = [0.5, 0.9, 0.99, 0.999, 0.9999]  # the dynamic benchmarks
+
+[run.snapshots]
+enabled = true
+fraction = 0.25
+video_seconds = 5.0
+fps = 24.0
+memory_mb = 32.0
+
+# Newton's CG per case. PROVISIONAL: task 2's provisional winners (2026-10-20), to be replaced by its final
+# table. Static: rtol 1e-6 (the default) with caps per scene; dynamic h = 1e-2 Y1e8 and het: rtol 1e-2,
+# cap 4000. Every other case keeps the defaults (rtol 1e-6, cap 500).
+
+[case."static/Y1e5".Solver.Newton.LinearSolver]
+n_max_iters = 500
+rtol = 1e-6
+
+[case."static/Y1e6".Solver.Newton.LinearSolver]
+n_max_iters = 1000
+rtol = 1e-6
+
+[case."static/Y1e7".Solver.Newton.LinearSolver]
+n_max_iters = 2000
+rtol = 1e-6
+
+[case."static/Y1e8".Solver.Newton.LinearSolver]
+n_max_iters = 2000
+rtol = 1e-6
+
+[case."static/het".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-6
+
+[case."dynamic_h0.01/Y1e8".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.01/het".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
