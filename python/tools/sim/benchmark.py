@@ -41,8 +41,17 @@ reached increments sum to 1. A case needs Newton among ``--solvers``, unless
 static=5 --budget static/Y1e8=10``, or ``--budget 5`` for every case) gives it a fixed budget: then every
 solver, Newton included, gets that budget, and the increments are divided by it.
 
+Run files: ``--run RUN.toml`` (``benchmark_run.py``) holds a run's options ([run]: dataset, sets, solvers,
+levels per benchmark, Newton's cap, budget factor, stall test, snapshots), the solver parameters every case
+shares, and per-case ones ([case."SCENE"], [case."BENCHMARK/SCENE"]); the full run is
+``configs/benchmark/trampolines.toml``. Command-line options and parameter files win over it, then --set.
+The results store the run file's text (``run_toml``) and its resolved form, and each case its parameters
+(``sim_params_toml``). ``--dry-run`` prints each case's sets, levels, budget and Newton CG settings without
+solving, and fails on unknown solver parameters.
+
 Usage:
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 [--sets PATTERN ...] -o results.h5 \
+    python -m python.tools.sim.benchmark [--run RUN.toml] [--dry-run] \
+        --dataset DATASET.h5 [--sets PATTERN ...] -o results.h5 \
         [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] [--levels [BENCHMARK=]0.5,0.6,...,0.99 ...] \
         [--sim-params A.toml [B.h5 ...]] [--scene-params [BENCHMARK/]SCENE=C.toml[,D.toml] ...] \
         [--set Table.key=value ...] \
@@ -60,10 +69,14 @@ Representative commands (from the repo root; datasets live in the main checkout'
         --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
     # The benchmark: per problem, Newton first (at most 60 s), then every other solver within Newton's time
-    # T_N to its highest level; Newton's CG cap is 1000 for the static Y1e8 problems only
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 \
-        --sim-params python/tools/sim/configs/benchmark/shared.toml \
-        --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml -o out/results.h5
+    # T_N to its highest level, with the run file's levels, snapshots and per-case Newton CG settings; check
+    # it first with --dry-run, and point --dataset at the main checkout's data from a worktree
+    python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.toml --dry-run -o out/results.h5
+    python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.toml -o out/results.h5
+
+    # The same with one change, e.g. two scenes and another CG cap (the command line wins over the run file)
+    python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.toml \
+        --sets "Y1e6/*" "het/*" --set Solver.Newton.LinearSolver.n_max_iters=3000 -o out/variant.h5
 
     # The figures
     python -m python.tools.sim.benchmark_plot out/results.h5 -o out/figures/benchmark
@@ -109,9 +122,10 @@ their target times (each trajectory stores them). After the solve, only the chos
 Pitfalls:
     - The benchmark is contact-free: contact detection is deactivated whatever the parameters say.
     - The problems are posed on the dataset's FEM (its ``fem`` group, or the set's ``fem`` attribute): its
-      Dirichlet nodes stay fixed at rest. Solver parameters come only from --sim-params, then the scene's
-      --scene-params (``SCENE=``, then ``BENCHMARK/SCENE=``, e.g. ``static/Y1e8=``), then --set (otherwise
-      the code defaults, configs/defaults.toml).
+      Dirichlet nodes stay fixed at rest. Solver parameters come only from the run file (shared, then its
+      cases), then --sim-params, then the scene's --scene-params (``SCENE=``, then ``BENCHMARK/SCENE=``,
+      e.g. ``static/Y1e8=``), then --set (otherwise the code defaults, configs/defaults.toml). Unknown keys
+      stop the run.
     - Dynamic problems take their time step from the set: ``Integration.dt``, ``substeps`` and the BDF
       order from the parameters are overridden (one BDF1 step of size h).
     - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 rounding
@@ -125,9 +139,9 @@ Pitfalls:
       subproblem). Newton's CG keeps its relative tolerance, but its absolute one (``atol``) is set
       to 0: in h^2-scaled units at small h, |g| drops below it after one step. The vertex-solve and acceleration parameters do matter.
     - Newton isn't graph-captured. Each Newton step synchronizes with the host, so its times include host
-      work and vary more between runs, and so do the budgets T_N it sets. Its CG cap
-      (``Solver.Newton.LinearSolver.n_max_iters``) trades exact steps for time: see
-      ``configs/benchmark/newton_cg1000.toml``.
+      work and vary more between runs, and so do the budgets T_N it sets. Its CG cap and tolerance
+      (``Solver.Newton.LinearSolver.n_max_iters``, ``rtol``) trade exact steps for time: see the per-case
+      table in ``configs/benchmark/trampolines.toml``.
     - Times are solver time from device timestamps, logging excluded; the budget counts the same time.
       Every iteration is timed on its own, also inside replayed graph blocks, and iterations a block runs
       past the stop are dropped, so --block doesn't change the crossings. Don't run other GPU work meanwhile.
@@ -143,6 +157,7 @@ import math
 import os
 import subprocess
 import time
+import warnings
 from dataclasses import dataclass
 
 import h5py
@@ -158,7 +173,23 @@ from .state import (
     load_problem,
 )
 from . import benchmark_results as results
-from . import config, static
+from . import benchmark_run, config, static
+
+# Code defaults of the options a run file can set (benchmark_run.RUN_OPTIONS, SNAPSHOT_OPTIONS): the command
+# line's value wins, then the run file's, then these
+DEFAULTS = {
+    "solvers": ",".join(s.name for s in SolverType),
+    "budget_factor": 1.0,
+    "newton_stall_iterations": 2,
+    "newton_stall_reduction": 0.02,
+    "snapshots": False,
+    "snapshot_video_seconds": 5.0,
+    "snapshot_fps": 24.0,
+    "snapshot_frames": None,
+    "snapshot_fraction": 1.0,
+    "snapshot_ring_ratio": 2.0,
+    "snapshot_memory_mb": 32.0,
+}
 
 
 def parse_args():
@@ -166,6 +197,13 @@ def parse_args():
         description="Solver convergence benchmark (GPU) on the static and dynamic problem sets of a benchmark "
         "dataset: solver time per accuracy level of error reduction."
     )
+    parser.add_argument("--run", default=None, metavar="RUN.toml",
+                        help="Run file (benchmark_run.py): the run's options ([run]), shared and per-case solver "
+                        "parameters ([case.\"SCENE\"], [case.\"BENCHMARK/SCENE\"]). Options given here win over it, "
+                        "then --sim-params / --scene-params, then --set.")
+    parser.add_argument("--dry-run", action="store_true", dest="dry_run",
+                        help="Print each case's sets, levels, budget and effective Newton CG settings, and exit "
+                        "without solving (no GPU).")
     parser.add_argument("--dataset", default=None,
                         help="Benchmark dataset (.h5) from python/examples/make_benchmark.py: the FEM and the "
                         "problem sets. Overrides the spec's dataset; required unless --spec provides one.")
@@ -184,27 +222,26 @@ def parse_args():
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="overrides",
                         help="Override one parameter after the parameter files, as Table.Sub.key=TOML-literal, "
                         "e.g. Solver.Newton.LinearSolver.n_max_iters=3000. Repeatable.")
-    parser.add_argument("--solvers", default=",".join(s.name for s in SolverType),
-                        help="Comma-separated solver names to run, in order (default: all, "
-                        + ",".join(s.name for s in SolverType) + ").")
+    parser.add_argument("--solvers", default=None,
+                        help=f"Comma-separated solver names to run, in order (default: all, {DEFAULTS['solvers']}).")
     parser.add_argument("--levels", action="append", default=[], metavar="[BENCHMARK=]L1,L2,...",
                         help="Accuracy levels, as comma-separated error reductions 1 - e/e0 in (0, 1), for every "
                         "benchmark or one (e.g. static=0.5,0.9,0.99,0.999). Repeatable; a benchmark's own entry "
                         "wins (default: static " + ",".join(f"{v:g}" for v in results.STATIC_LEVELS) + ", dynamic "
                         + ",".join(f"{v:g}" for v in results.DYNAMIC_LEVELS) + ").")
-    parser.add_argument("--budget-factor", type=float, default=1.0, dest="budget_factor",
+    parser.add_argument("--budget-factor", type=float, default=None, dest="budget_factor",
                         help="Every other solver's budget on a problem: this multiple of Newton's time T_N to its "
-                        "highest level there (default: %(default)s).")
-    parser.add_argument("--newton-stall-iterations", type=int, default=2, dest="newton_stall_iterations",
+                        f"highest level there (default: {DEFAULTS['budget_factor']:g}).")
+    parser.add_argument("--newton-stall-iterations", type=int, default=None, dest="newton_stall_iterations",
                         metavar="K",
                         help="Newton's stall test: stop once the last K iterations improved the best error by less "
-                        "than (1 - DELTA)^K (default: %(default)s; 0 = off, Newton then runs to the target or "
-                        "--max-seconds).")
-    parser.add_argument("--newton-stall-reduction", type=float, default=0.02, dest="newton_stall_reduction",
+                        f"than (1 - DELTA)^K (default: {DEFAULTS['newton_stall_iterations']}; 0 = off, Newton then "
+                        "runs to the target or --max-seconds).")
+    parser.add_argument("--newton-stall-reduction", type=float, default=None, dest="newton_stall_reduction",
                         metavar="DELTA",
                         help="The stall test's average per-iteration reduction of the best error (default: "
-                        "%(default)s). On the floor check, 0.04 was the largest that lost no level (static het "
-                        "and Y1e5).")
+                        f"{DEFAULTS['newton_stall_reduction']:g}). On the floor check, 0.04 was the largest that lost "
+                        "no level (static het and Y1e5).")
     parser.add_argument("--budget", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
                         help="A fixed time budget per solve instead of Newton's, in seconds of solver time, for every "
                         "case, a benchmark (e.g. static=5) or one case (static/Y1e8=10): every solver gets it and "
@@ -230,24 +267,26 @@ def parse_args():
                         help="Solver iterations per replayed CUDA-graph block, rounded up to a multiple of "
                         "Anderson's window m. Larger blocks mean fewer replays; iterations past the stop are "
                         "dropped (spec default: 16).")
-    parser.add_argument("--snapshots", action="store_true",
+    parser.add_argument("--snapshots", action="store_true", default=None,
                         help="Store trajectories for videos: F frames at equal solver-time intervals over the budget, "
                         "plus each level crossing. Snapshots are copied on the device between iterations, outside "
                         "the timed span, and leave the solves unchanged.")
-    parser.add_argument("--snapshot-video-seconds", type=float, default=5.0, dest="snapshot_video_seconds",
-                        help="Video duration a trajectory plays in (default: %(default)s s); F = duration x fps.")
-    parser.add_argument("--snapshot-fps", type=float, default=24.0, dest="snapshot_fps",
-                        help="Video frame rate (default: %(default)s).")
+    parser.add_argument("--snapshot-video-seconds", type=float, default=None, dest="snapshot_video_seconds",
+                        help=f"Video duration a trajectory plays in (default: {DEFAULTS['snapshot_video_seconds']:g} s); "
+                        "F = duration x fps.")
+    parser.add_argument("--snapshot-fps", type=float, default=None, dest="snapshot_fps",
+                        help=f"Video frame rate (default: {DEFAULTS['snapshot_fps']:g}).")
     parser.add_argument("--snapshot-frames", type=int, default=None, dest="snapshot_frames", metavar="F",
                         help="Frames per trajectory, instead of duration x fps.")
-    parser.add_argument("--snapshot-fraction", type=float, default=1.0, dest="snapshot_fraction",
+    parser.add_argument("--snapshot-fraction", type=float, default=None, dest="snapshot_fraction",
                         help="Fraction of each set's samples to store trajectories for, evenly spaced (default: "
-                        "%(default)s, every sample). A trajectory is ~F x N x 12 bytes on disk.")
-    parser.add_argument("--snapshot-ring-ratio", type=float, default=2.0, dest="snapshot_ring_ratio",
-                        help="Ring slots per requested frame (default: %(default)s), within --snapshot-memory-mb.")
-    parser.add_argument("--snapshot-memory-mb", type=float, default=32.0, dest="snapshot_memory_mb",
+                        f"{DEFAULTS['snapshot_fraction']:g}, every sample). A trajectory is ~F x N x 12 bytes on disk.")
+    parser.add_argument("--snapshot-ring-ratio", type=float, default=None, dest="snapshot_ring_ratio",
+                        help=f"Ring slots per requested frame (default: {DEFAULTS['snapshot_ring_ratio']:g}), within "
+                        "--snapshot-memory-mb.")
+    parser.add_argument("--snapshot-memory-mb", type=float, default=None, dest="snapshot_memory_mb",
                         help="Device memory cap for the snapshots, allocated once per solver and case (default: "
-                        "%(default)s MB). The ring holds min(ratio x F, what fits) frames; fewer than ratio x F, with a "
+                        f"{DEFAULTS['snapshot_memory_mb']:g} MB). The ring holds min(ratio x F, what fits) frames; fewer than ratio x F, with a "
                         "warning, place frames up to a ring stride from their target times.")
     parser.add_argument("-o", "--output", required=True, help="Output results file (.h5).")
     return parser.parse_args()
@@ -311,17 +350,17 @@ class Case:
     case: str = ""  # filled by make_cases
 
 
-def _scene_of(dataset: str, f: h5py.File, batch: static.SampleBatch) -> tuple[str, str, str]:
-    """(scene, label, FEM group) of a batch: its ``scene``/``fem`` attributes, else (version-1 datasets)
-    the dataset's ``input`` scene file stem and the root FEM."""
-    scene = batch.attrs.get("scene")
+def _scene_of(dataset: str, f: h5py.File, attrs: dict) -> tuple[str, str, str]:
+    """(scene, label, FEM group) of a problem set, from its attributes: its ``scene``/``fem`` attributes, else
+    (version-1 datasets) the dataset's ``input`` scene file stem and the root FEM."""
+    scene = attrs.get("scene")
     if scene is None:
         source = f.attrs.get("input") or dataset
         scene = os.path.splitext(os.path.basename(str(source).replace("\\", "/")))[0]
         return str(scene), str(scene), "fem"
     scene = str(scene)
     label = f[scene].attrs.get("label", scene) if scene in f else scene
-    return scene, str(label), str(batch.attrs.get("fem", f"{scene}/fem"))
+    return scene, str(label), str(attrs.get("fem", f"{scene}/fem"))
 
 
 def make_cases(dataset: str, set_names: list[str]) -> list[Case]:
@@ -329,7 +368,7 @@ def make_cases(dataset: str, set_names: list[str]) -> list[Case]:
     with h5py.File(dataset, "r") as f:
         for name in set_names:
             batch = static.load_sample_batch(f"{dataset}:{name}")
-            scene, label, fem = _scene_of(dataset, f, batch)
+            scene, label, fem = _scene_of(dataset, f, batch.attrs)
             cases.append(Case(name, batch, scene, label, fem, results.benchmark_name(batch.problem, batch.h)))
     for c in cases:
         energies = {o.batch.target_energy for o in cases if (o.benchmark, o.scene) == (c.benchmark, c.scene)}
@@ -337,16 +376,41 @@ def make_cases(dataset: str, set_names: list[str]) -> list[Case]:
     return cases
 
 
-def make_state(args, dataset: str, fem: str, h: float | None, sim_params: list[str]) -> SimulationState:
-    """Build the contact-free simulation on a FEM of the dataset; ``h`` set means one-step dynamic problems
-    of that step."""
+def case_config(args, run_file, benchmark: str, scene: str, scene_params: dict) -> dict:
+    """A case's solver parameters: the run file's (shared, case.SCENE, case.BENCHMARK/SCENE), then
+    --sim-params and the case's --scene-params files, then --set."""
+    sources = args.sim_params + results.scene_params_for(scene_params, benchmark, scene)
+    return config.merge(benchmark_run.case_parameters(run_file, benchmark, scene), config.resolve(sources, args.overrides))
+
+
+def dataset_benchmark_scenes(dataset: str) -> list[tuple[str, str]]:
+    """(benchmark, scene) of every problem set of the dataset, from the sets' attributes (no samples loaded)."""
+    out = []
+    with h5py.File(dataset, "r") as f:
+        for name in static.dataset_sets(dataset):
+            attrs = dict(f[name].attrs)
+            problem = str(attrs.get("problem", "static"))
+            h = float(attrs["h"]) if problem != "static" and "h" in attrs else None
+            out.append((results.benchmark_name(problem, h), _scene_of(dataset, f, attrs)[0]))
+    return out
+
+
+def make_state(dataset: str, fem: str, h: float | None, cfg: dict, source: str = "") -> SimulationState:
+    """Build the contact-free simulation on a FEM of the dataset with the solver parameters ``cfg``
+    (:func:`case_config`; unknown keys exit); ``h`` set means one-step dynamic problems of that step."""
     # The dataset's FEM has no kinematics group: its Dirichlet nodes stay fixed at rest
     # (check_sample_batch checks the samples against that), and the benchmark is contact-free.
     fem_cpu, _, _ = load_problem(f"{dataset}:{fem}")
     params_cpu = load_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu)
-    if sim_params or args.overrides:
-        config.load_sim_params(state, sim_params, args.overrides)
+    if cfg:
+        unknown = benchmark_run.unknown_parameters(cfg, config.params_dict(state))
+        if unknown:
+            raise SystemExit(f"{source or 'solver parameters'}: unknown keys: {', '.join(unknown)}")
+        with warnings.catch_warnings():
+            # A run file or config sets only some keys; the others keep their code defaults
+            warnings.filterwarnings("ignore", message=".*keys not set.*", category=config.ConfigWarning)
+            config.apply(state, cfg, source=source or "solver parameters")
     for cd_params in state.cd_params.values():
         if hasattr(cd_params, "deactivate"):
             cd_params.deactivate = True
@@ -356,6 +420,29 @@ def make_state(args, dataset: str, fem: str, h: float | None, sim_params: list[s
     else:
         static.prepare_dynamic_problem(state, h)
     return state
+
+
+def dry_run(args, spec, run_file, cases, levels_table, budgets, scene_params) -> None:
+    """Print each case's sets, levels, budget and effective Newton CG settings (the case's parameters over
+    configs/defaults.toml), checking its parameters against those defaults. No GPU."""
+    defaults = config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs", "defaults.toml"))
+    print(f"Solvers {args.solvers}; budget factor {args.budget_factor:g}; Newton cap {spec.max_seconds:g} s; "
+          f"stall K = {args.newton_stall_iterations}, delta = {args.newton_stall_reduction:g}; snapshots "
+          + (f"{args.snapshot_fraction:g} of the samples" if args.snapshots else "off"))
+    failed = False
+    for c in cases:
+        cfg = case_config(args, run_file, c.benchmark, c.scene, scene_params)
+        unknown = benchmark_run.unknown_parameters(cfg, defaults)
+        failed = failed or bool(unknown)
+        cg = config.merge(defaults, cfg)["Solver"]["Newton"]["LinearSolver"]
+        seconds = budgets[(c.benchmark, c.case)][0]
+        budget = f"fixed {seconds:g} s" if seconds is not None else "Newton's T_N"
+        levels = ",".join(f"{v:g}" for v in results.levels_for(levels_table, c.benchmark))
+        print(f"{c.benchmark + '/' + c.case:28s} {c.set_name:30s} {c.batch.n_samples:3d} samples, levels {levels}, "
+              f"budget {budget}; Newton CG n_max_iters {cg['n_max_iters']}, rtol {cg['rtol']:g}"
+              + (f"; UNKNOWN KEYS {', '.join(unknown)}" if unknown else ""))
+    if failed:
+        raise SystemExit("Unknown solver parameters (see above)")
 
 
 def summarize(log: static.StaticSolveLog, levels, budget: float) -> dict:
@@ -504,10 +591,14 @@ def _attr(v):
 def main():
     args = parse_args()
     try:
+        run_file = benchmark_run.read_run_file(args.run) if args.run else None
+    except (OSError, ValueError) as e:
+        raise SystemExit(str(e))
+    benchmark_run.apply_run_options(args, run_file.run if run_file else {}, DEFAULTS)
+    try:
         levels_table = results.parse_levels_options(args.levels)
     except ValueError as e:
         raise SystemExit(str(e))
-    wp.init()
     spec = make_spec(args)
     if args.save_spec:
         with h5py.File(args.save_spec, "w") as f:
@@ -521,6 +612,10 @@ def main():
     unknown = results.unmatched_scene_params(scene_params, [(c.benchmark, c.scene) for c in cases])
     if unknown:
         raise SystemExit(f"--scene-params for scenes not in the run: {', '.join(unknown)}")
+    # Run file cases may name problems --sets leaves out, but each must exist in the dataset (typos fail)
+    unknown = benchmark_run.unmatched_cases(run_file, dataset_benchmark_scenes(spec.dataset)) if run_file else []
+    if unknown:
+        raise SystemExit(f"{args.run}: cases for scenes not in {spec.dataset}: {', '.join(unknown)}")
     unknown = sorted({k for k in levels_table if k is not None} - {c.benchmark for c in cases})
     if unknown:
         raise SystemExit(f"--levels for benchmarks not in the run: {', '.join(unknown)}")
@@ -534,6 +629,10 @@ def main():
     if newton_cases and SolverType.Newton not in solvers:
         raise SystemExit(f"Budgets come from Newton's solves, but Newton isn't in --solvers: add it, or give "
                          f"{', '.join(newton_cases)} a fixed --budget")
+    if args.dry_run:
+        dry_run(args, spec, run_file, cases, levels_table, budgets, scene_params)
+        return
+    wp.init()
     with h5py.File(spec.dataset, "r") as f:
         dataset_attrs = {k: _attr(v) for k, v in f.attrs.items()}
 
@@ -568,7 +667,11 @@ def main():
             git_dirty=_git_dirty(),
             **software_versions(),
             date=time.strftime("%Y-%m-%d %H:%M:%S"),
-            sim_params=" + ".join(args.sim_params + [f"--set {o}" for o in args.overrides]) or "(code defaults)",
+            sim_params=" + ".join(([f"--run {args.run}"] if args.run else []) + args.sim_params
+                                  + [f"--set {o}" for o in args.overrides]) or "(code defaults)",
+            run_file=args.run or "",
+            run_toml=run_file.text if run_file else "",
+            run_toml_resolved=config.dumps(run_file.resolved) if run_file else "",
             solvers=[s.name for s in solvers],
         )
         spec.serialize(h5f.create_group("StaticSolveSpec"))
@@ -599,7 +702,8 @@ def main():
         keys = list(dict.fromkeys((c.scene, c.fem, c.batch.h, c.benchmark) for c in cases))
         for scene, fem, h, benchmark in keys:
             state = make_state(
-                args, spec.dataset, fem, h, args.sim_params + results.scene_params_for(scene_params, benchmark, scene)
+                spec.dataset, fem, h, case_config(args, run_file, benchmark, scene, scene_params),
+                f"{benchmark}/{scene} parameters",
             )
             if h is None:
                 static.prepare_static_problem(state, spec.fext_scale)
