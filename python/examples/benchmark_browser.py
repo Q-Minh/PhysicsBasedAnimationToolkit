@@ -5,7 +5,7 @@ Pick a scene, a problem set (static, or dynamic with time step h), a total energ
     start state x       the problem's initial shape, colored by displacement |x - X|, by det(F) (red/blue
                         diverging around 1; values <= 0 are inverted elements), or by the scene's materials (Lame
                         mu, lambda, Young's modulus per element) or lumped masses per node, named and colored as
-                        in the CPU editor (log10(value + 1)),
+                        in the CPU editor (log10(value + 1); masses: log10(m) over their 2nd-98th percentiles),
     rest shape X        a transparent ghost: the static problems' solution,
     velocity v          the start velocity J(q) qdot as vectors (dynamic problems' samples/v; for static problems
                         it's reconstructed from the shared microcanonical sample),
@@ -246,8 +246,9 @@ if __name__ == "__main__":
         if state["coloring"] >= 2:
             name = colorings[state["coloring"]]
             raw = mesh["materials"][name]
-            unit = "kg per node" if material.is_nodal(name) else "Pa"
-            imgui.TextDisabled(f"{name}: {raw.min():.4g} to {raw.max():.4g} {unit}, shown as log10(value + 1)")
+            unit, scale = ("kg per node", "log10(m), 2-98th percentiles") if material.is_nodal(name) else (
+                "Pa", "log10(value + 1)")
+            imgui.TextDisabled(f"{name}: {raw.min():.4g} to {raw.max():.4g} {unit}, shown as {scale}")
 
         attrs, s = data["attrs"], state["problem"]
         energy = float(attrs["target_energy"])

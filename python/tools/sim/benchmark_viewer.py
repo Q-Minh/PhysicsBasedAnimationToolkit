@@ -26,7 +26,8 @@ overlays alone, which are then drawn more opaque (opaque when only one is shown)
   the colors show where each solver's error concentrates while e/e0 gives its size), each solver's color, or
   a material parameter (the dataset FEM's Lame mu, lambda or Young's modulus, per boundary face from its
   tetrahedron) or the lumped mass per node, named and colored as in the CPU editor, by default in
-  log10(value + 1), so heterogeneous scenes show their regions.
+  log10(value + 1), so heterogeneous scenes show their regions (masses: log10(m) over their 2nd-98th
+  percentiles).
 - **Plot:** log10(e/e0) against solver time for every shown solver, with the levels and a marker at t.
 
 The mesh comes from the dataset the results were run on (the root attribute ``dataset``, or ``--dataset``
@@ -395,7 +396,7 @@ class Viewer:
         self.color_mode, self.scale_mode, self.fixed_max, self.vmax = 0, 0, 1.0, 0.0
         self.spacing = 1.15
         self.show_solvers = True  # every solver mesh, above the per-solver checkboxes
-        self.log_material = True  # material colors in log10(value + 1), as the CPU editor
+        self.log_material = True  # material colors in log10(value + 1), as the CPU editor (masses: log10(m))
         self.show_overlay: dict[str, bool] = {}  # by overlay name, kept across selections
         self.visible: dict[str, bool] = {}
         self.meshes, self.offsets = {}, {}
@@ -528,8 +529,8 @@ class Viewer:
 
     def material_values(self) -> tuple[np.ndarray, tuple[float, float], str]:
         """The color mode's material parameter per boundary face (or mass per boundary vertex), its color range and
-        colormap: the CPU editor's (log10(value + 1), and its fixed range for Young's modulus), or linear over the
-        mesh's values."""
+        colormap: ``material.display``'s (the CPU editor's log10(value + 1), its fixed range for Young's modulus,
+        masses' percentiles), or linear over the mesh's values."""
         values, options = material.display(COLOR_MODES[self.color_mode], self.material_raw(), self.log_material)
         if "vminmax" in options:
             return values, options["vminmax"], options["cmap"]
@@ -989,9 +990,12 @@ class TestBenchmarkViewer(unittest.TestCase):
         viewer.color_mode = COLOR_MODES.index("Mass")
         values, vminmax, cmap = viewer.material_values()
         np.testing.assert_allclose(values, masses[viewer.vertices])
+        np.testing.assert_allclose(vminmax, np.percentile(masses[viewer.vertices], material.MASS_PERCENTILES))
         self.assertEqual(cmap, material.mass_density_log10_cmap())
         viewer.log_material = True
-        np.testing.assert_allclose(viewer.material_values()[0], np.log10(masses[viewer.vertices] + 1))
+        values, vminmax, _ = viewer.material_values()
+        np.testing.assert_allclose(values, np.log10(masses[viewer.vertices]))
+        np.testing.assert_allclose(vminmax, np.percentile(values, material.MASS_PERCENTILES))
 
 
 if __name__ == "__main__":
