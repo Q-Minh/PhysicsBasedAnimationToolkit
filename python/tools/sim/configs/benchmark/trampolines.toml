@@ -34,9 +34,10 @@ video_seconds = 5.0
 fps = 24.0
 memory_mb = 32.0
 
-# Newton's CG per case. PROVISIONAL: task 2's provisional winners (2026-10-20), to be replaced by its final
-# table. Static: rtol 1e-6 (the default) with caps per scene; dynamic h = 1e-2 Y1e8 and het: rtol 1e-2,
-# cap 4000. Every other case keeps the defaults (rtol 1e-6, cap 500).
+# Newton's CG per case: task 2's per-case winners (2026-10-20, re-timed on a quiet machine; differences under
+# ~10% are ties). Static: rtol 1e-6 (the default) with caps per scene. Dynamic h = 1e-2: rtol 1e-2 at cap 4000,
+# except Y1e8, where the defaults were fastest (rtol 1e-2 at 4000 is +9%). Dynamic h = 1e-4 and every other case
+# keep the defaults (rtol 1e-6, cap 500).
 
 [case."static/Y1e5".Solver.Newton.LinearSolver]
 n_max_iters = 500
@@ -47,18 +48,26 @@ n_max_iters = 1000
 rtol = 1e-6
 
 [case."static/Y1e7".Solver.Newton.LinearSolver]
-n_max_iters = 2000
+n_max_iters = 1000
 rtol = 1e-6
 
 [case."static/Y1e8".Solver.Newton.LinearSolver]
-n_max_iters = 2000
+n_max_iters = 1000
 rtol = 1e-6
 
 [case."static/het".Solver.Newton.LinearSolver]
 n_max_iters = 4000
 rtol = 1e-6
 
-[case."dynamic_h0.01/Y1e8".Solver.Newton.LinearSolver]
+[case."dynamic_h0.01/Y1e5".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.01/Y1e6".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.01/Y1e7".Solver.Newton.LinearSolver]
 n_max_iters = 4000
 rtol = 1e-2
 
