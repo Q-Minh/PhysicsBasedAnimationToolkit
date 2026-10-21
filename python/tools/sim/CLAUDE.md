@@ -99,6 +99,7 @@ Shared steps are defined in `gpu/vbd/solver.py` and imported by the accelerated 
   - It is then solved by Cholesky, which regularizes only when a pivot falls below the relative threshold `cod_numerical_zero`, or by unregularized Jacobi-PCG.
   - `vbd_iters_per_anderson_iter` (`p`, GPU only) makes each Anderson iteration apply `p` VBD sweeps. `n_subproblem_max_iters` still counts sweeps, as for every VBD-family solver: a subproblem runs `n // p` Anderson iterations, then the `n % p` leftover sweeps as plain VBD sweeps (`aasolver.sweep_budget`, `IterationSchedule.tail`).
   - Tests: `python -m unittest python.tools.sim.gpu.vbd.aasolver`.
+  - `docs/anderson-implementation-notes.md` records the pitfalls behind these choices (relative regularization, deterministic Gram, the float32 floor), with evidence, for the paper. Add an entry when a new one comes up.
 
 **CUDA graph capture.** `state.SimulationState.step` records one `wp.ScopedCapture` of `substeps × (setup → solve → step)` and replays it. Capturing doesn't execute anything, so the first step launches the graph right after recording it. That means `solve()` on a capturable solver must:
 - not allocate,
