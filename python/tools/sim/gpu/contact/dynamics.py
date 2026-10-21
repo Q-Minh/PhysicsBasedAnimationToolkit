@@ -663,7 +663,7 @@ class Params(SerializableMixin):
                       lambda integrate over deep penetrations and eject resting bodies (the slack
                       lets lambda push until the gap reaches lambda / sigma).
         gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf``. The default
-                      1e-3 is small for the same reason as ``gammaf``'s (at 0.1, sliding bodies creep).
+                      1e-2 is small for the same reason as ``gammaf``'s (at 0.1, sliding bodies creep).
         min_sigma_n : Floor of the effective normal penalty ``gamman_adaptive * sigma_n`` in both
                       adaptive modes.
         penalty_adaptivity : TIMESTEP (default), SUBPROBLEM or CONSTANT. CONSTANT: ``sigma_n = sigma_f = dt^2``, so the effective penalties
