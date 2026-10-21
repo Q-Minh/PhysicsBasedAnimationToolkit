@@ -890,6 +890,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run START** (~5 min, short in-process solves; please keep the GPU quiet, timings are compared): float32 vs float64 benchmark error log, per-iteration cost, AAAVBD + Newton on trampolines-test Y1e6 static and dynamic_h0.01 (sample 0). Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (float64 error log cost): solver time unchanged; logging span 4.6 -> 7.7 us per entry.
 - 2026-10-20 · task 3 · **GPU run START** (<= 15 min, one benchmark.py process; please keep the GPU quiet, timings are compared): floor check (maintainer-approved), AAAVBD + Newton, 1 problem per set of trampolines-pilot, levels to 1 - 1e-6, caps 60 s static / 10 s dynamic. Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (floor check): report sent to the coordinator. The GPU is free.
 
 ## Open questions for the maintainer
 
@@ -947,6 +948,15 @@ Answer when back; each has the coordinator's recommendation.
     (keep float32, mark unresolvable cells). Newton completion: stop when it stalls (T_N = time to its best level),
     confirmed after the check. Budget factor: keep, default 1x T_N. First full run: --snapshot-fraction 0.25 (~9 GB).
     Global Newton cap value: to choose after the check.
+    **Floor check done (task 3, sample 0 of each pilot set, AAAVBD + Newton, levels to 99.9999%):** Newton never stops on
+    its own (Armijo roundoff tolerance accepts noise steps); it wanders at its float32 floor until the cap. Newton reaches
+    99.9% on 15/15 sets, 99.99% on 13/15, 99.999% on static Y1e5-Y1e8 + h = 1e-2 Y1e6, 99.9999% on static Y1e5 only.
+    Static floors ~1e-6 to 6e-6 (solvers' own); h = 1e-2 floors ~1-2x the reference bound (reference-limited); h = 1e-4
+    floors 1e-5 to 1.6e-4, the same for both solvers (float32 iterate floor, e0 ~ 1e-3). AAAVBD reaches 99.999% on static
+    Y1e5-Y1e8 in 16-32 s (~2-3x Newton); static het: AAAVBD only 99% in 60 s, Newton 99.99% at 55.8 s, still improving.
+    Proposed stall test (Newton only, no new syncs): stop when the best error hasn't dropped by delta = 10% over K = 5
+    entries; T_N = crossing time of Newton's highest reached level; lost no level on any set for K in {3, 5, 10}.
+    Open for the maintainer: stall test OK; T_N when the cap stops a still-improving Newton; levels per figure; cap value.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
