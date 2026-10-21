@@ -957,6 +957,11 @@ Answer when back; each has the coordinator's recommendation.
     Proposed stall test (Newton only, no new syncs): stop when the best error hasn't dropped by delta = 10% over K = 5
     entries; T_N = crossing time of Newton's highest reached level; lost no level on any set for K in {3, 5, 10}.
     Open for the maintainer: stall test OK; T_N when the cap stops a still-improving Newton; levels per figure; cap value.
+    **Answered:** stall test on the error itself: stop when it fails to drop by delta per iteration over the last K
+    iterations, both parameters (defaults delta = 0.1, K = 1; task 3 simulates K 1-3 on the floor logs first). T_N = time
+    to Newton's highest reached level. Global cap 60 s. Levels per figure; maintainer suggested 60/75/90/99/99.9/...
+    (drop 60% and 95%), coordinator suggested decade spacing 50/90/99/99.9/99.99[/99.999]; to settle. Step 3 sent to
+    task 3. Float64 references: not needed (h = 1e-2 reference-limited by only 1-2x; h = 1e-4 limited by float32 iterates).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
