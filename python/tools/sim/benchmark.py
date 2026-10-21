@@ -296,8 +296,12 @@ def parse_args():
                         help="Device memory cap for the snapshots, allocated once per solver and case (default: "
                         f"{DEFAULTS['snapshot_memory_mb']:g} MB). The ring holds min(ratio x F, what fits) frames; fewer than ratio x F, with a "
                         "warning, place frames up to a ring stride from their target times.")
-    parser.add_argument("-o", "--output", required=True, help="Output results file (.h5).")
-    return parser.parse_args()
+    parser.add_argument("-o", "--output", default=None,
+                        help="Output results file (.h5); required unless --list or --dry-run.")
+    args = parser.parse_args()
+    if args.output is None and not (args.list_cases or args.dry_run):
+        parser.error("the following arguments are required to solve: -o/--output")
+    return args
 
 
 def make_spec(args) -> static.StaticSolveSpec:
@@ -698,6 +702,9 @@ def main():
     except ValueError as e:
         raise SystemExit(str(e))
     spec = make_spec(args)
+    if not os.path.isfile(spec.dataset):
+        raise SystemExit(f"Dataset not found: {spec.dataset} (relative paths are relative to the current directory; "
+                         "pass --dataset path/to/dataset.h5, e.g. the main checkout's data/benchmarks/ from a worktree)")
     if args.list_cases:
         try:
             fixed_budgets = results.parse_budget_options(args.budget, "--budget")
