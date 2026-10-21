@@ -140,16 +140,18 @@ def make_callback(
                             draw_params(params_cpu.vbd_params, only=stencil)
                             draw_params(params_cpu, SOLVER_SUB_PARAMS[state.solver], exclude=stencil)
                         else:
+                            # Newton's GPU-only parameters (init_strategy) first, in their own ID scope:
+                            # Newton's params have a linear_solver combo at this level
+                            if state.solver == SolverType.Newton:
+                                imgui.PushID("newton_gpu_params")
+                                draw_params(state.newton_gpu_params)
+                                imgui.PopID()
                             draw_params(
                                 params_cpu,
                                 SOLVER_SUB_PARAMS.get(state.solver),
                                 exclude=SOLVER_HIDDEN_PARAMS.get(state.solver, frozenset()),
                             )
-                        # Own ID scopes: Newton's params have a linear_solver combo at this level
                         if state.solver == SolverType.Newton:
-                            imgui.PushID("newton_gpu_params")
-                            draw_params(state.newton_gpu_params)
-                            imgui.PopID()
                             imgui.PushID("newton_linear_solver_params")
                             if imgui.TreeNode("LinearSolver"):
                                 draw_params(state.newton_linear_solver_params)
