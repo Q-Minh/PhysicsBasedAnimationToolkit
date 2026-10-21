@@ -902,6 +902,10 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run END** (demo results file, data/benchmarks/results/snapshots-demo.h5). The GPU is free.
 - 2026-10-20 · task 2 · **GPU run START** (~30 min, benchmark.py processes back to back; please keep the GPU quiet, timings are compared; task 4's CPU job is active): Newton CG cap sweep (500/1000/2000/4000, het static 8000), trampolines-pilot sample 0, all static scenes + Y1e8/het dynamic_h0.01, followed by CG rtol 1e-2/1e-3 at cap 4000 (het 8000); ~45 min in total. Will log END.
 - 2026-10-20 · task 2 · **GPU run END** (Newton CG cap/rtol sweep, 19:03-19:26). The GPU is free. Winners get re-timed after task 4's CPU job ends.
+- 2026-10-20 · task 4 · **GPU run START** (maintainer's request; one headless AAAVBD run, then the GPU GUI for the maintainer's manual testing, one scene at a time): the extras repo's october-changes configs on the square trampolines with sphere (Newton's sticking). Will log END.
+- 2026-10-20 · task 4 · **CPU run END** (full benchmark dataset, 18:50-20:41, 1 h 51 min): `data/benchmarks/trampolines.h5`, 1.13 GB. Split R-hat over 1.05 on 4 of 10 pools (Y1e5 static 1.062, Y1e5 gravity 1.050, Y1e7 gravity 1.063, het static 1.053); report and fix proposal to the coordinator. The CPU is free.
+- 2026-10-20 · task 4 · **GPU run END** (the maintainer's GUI sessions on the october-changes trampolines, plus seconds-long CubeFallingOnCube smoke runs). The GPU is free.
+- 2026-10-20 · task 2 · **GPU run START** (~15 min from 20:52, benchmark.py processes back to back; please keep the GPU and CPU quiet, timings are compared): final Newton CG table re-time on trampolines-pilot sample 0 (winners, runners-up and close calls; static rtol 1e-3 at caps 1000/2000; dynamic h = 1e-2 and 1e-4 default vs rtol 1e-2 cap 4000). Will log END; task 3 queues after it.
 
 ## Open questions for the maintainer
 
@@ -1011,6 +1015,11 @@ Answer when back; each has the coordinator's recommendation.
     reads it, so a config's betaR silently does nothing on the GPU (no config sets it nonzero today). Also not on the GPU:
     e_penalty_stiffness (GPU uses Contact.ContactDynamics.penalty_adaptivity), Newton linear_solver (always Jacobi-PCG).
     `config params` annotates these. Maintainer: leave betaR as a documented gap (sim CLAUDE.md).
+    **Dataset final (maintainer, via task 4):** data/benchmarks/trampolines.h5 accepted as is (R-hat 1.050-1.063 on 4/10
+    pools: Y1e5 static/gravity, Y1e7 gravity, het static; problems checked in the browser); energy-noise attributes
+    recomputed. Task 4 also: VertexSdf band 2 cm -> 2 mm fixed Newton sticking on Melissa's sphere-trampoline configs
+    (scope of config changes being confirmed with the maintainer: our trampolines got 2 cm on 10-19 for a reason);
+    feature/newton-status-residuals (Newton outer residuals in Solve status; Convergence rtol split into rstol/astol).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
