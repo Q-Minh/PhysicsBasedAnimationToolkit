@@ -10,9 +10,10 @@ Figures of a convergence benchmark results file (``benchmark.py``): one 3D group
   case's fixed budget (``benchmark.py --budget``).
 
 Each (case, level) cell has one bar per solver, colored by solver. A translucent box around each mean bar
-spans the min and max normalized increments over the same samples. A bar whose level not every sample
-reached is labeled with the fraction that did (e.g. 28/32), and the highest level always is, also with
-0/N, so a solver that stalled shows. A level no sample reached has no bar, nor has a level every sample
+spans the min and max normalized increments over the same samples. With ``--counts``, a bar whose level not
+every sample reached is labeled with the fraction that did (e.g. 28/32), and the highest level always is,
+also with 0/N, so a solver that stalled shows; by default there are no labels (visually noisy; maintainer),
+and ``benchmark_iterations.py``'s tables give the counts. A level no sample reached has no bar, nor has a level every sample
 that reached it jumped over (zero time). Dynamic references are float32 solves of limited accuracy
 (``resolvable``, per sample and level): a cell whose level the reference can't resolve for most samples
 (no strict majority) is left empty, since its errors would measure the reference, not the solvers, and in
@@ -167,11 +168,12 @@ def budget_factor(f: h5py.File, factor: float | None) -> float:
 
 def plot_benchmark(
     f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None,
-    factor: float | None = None,
+    factor: float | None = None, counts: bool = False,
 ):
     """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
     ``solver_order`` (back to front) overrides :func:`depth_order`. ``factor``: the budget factor the bars
-    score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs."""
+    score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs. ``counts``
+    labels the bars with n/N (see the module docstring)."""
     levels = results.benchmark_levels(f, benchmark)
     factor = budget_factor(f, factor)
     run = float(f.attrs.get("budget_factor", 1.0))
@@ -218,10 +220,10 @@ def plot_benchmark(
                 # The highest drawn level always says how many samples reached it, also 0/N (a stalled
                 # solver); N counts the samples whose reference resolves the level
                 n = int(counted[j])
-                label = f"{count[j]}/{n}" if top or count[j] < n else None
+                label = f"{count[j]}/{n}" if counts and (top or count[j] < n) else None
                 if count[j] == 0 or not hi[j] > 0:
                     # Not reached, or skipped by every sample that reached it: an empty cell
-                    if top:
+                    if label:
                         floating.append((xc, j, 0.0, label))
                     continue
                 bars.append((xc, j, lo[j], hi[j] - lo[j], color, label, True, box_w, box_d))
@@ -277,11 +279,11 @@ def plot_benchmark(
     within = "" if all(fixed) else f" within {factor:g} x T_N"
     unresolved = any(resolvable_samples(g, solvers) is not None for _, g in cases)
     reference = (
-        "; empty cells: beyond the reference's accuracy for most samples (elsewhere, the samples it can't "
-        "resolve are left out)" if unresolved else ""
+        "; no bar: not reached, or beyond the reference's accuracy for most samples (elsewhere, the samples it "
+        "can't resolve are left out)" if unresolved else "; no bar: not reached"
     )
-    fig.text(0.02, 0.02, f"Bars: mean over the samples that reached the level{within}; n/N: samples that reached "
-             f"it (always shown at the highest level drawn){reference}",
+    count_text = "; n/N: samples that reached it (always shown at the highest level drawn)" if counts else ""
+    fig.text(0.02, 0.02, f"Bars: mean over the samples that reached the level{within}{count_text}{reference}",
              fontsize=7, color="#555555")
     return fig
 
@@ -301,6 +303,8 @@ def main():
     parser.add_argument("--budget-factor", type=float, default=None, dest="budget_factor",
                         help="Score the bars within this factor x Newton's T_N, at most the run's factor (a run at a "
                         "larger one is re-scored from its logs). Default: 1, or the run's factor when smaller.")
+    parser.add_argument("--counts", action="store_true",
+                        help="Label the bars with n/N, the samples that reached the level (see the module docstring).")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -316,7 +320,7 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         for benchmark in benchmarks:
             order = args.solver_order.split(",") if args.solver_order else None
-            fig = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor)
+            fig = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor, args.counts)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches="tight")
