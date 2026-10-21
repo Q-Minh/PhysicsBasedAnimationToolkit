@@ -918,6 +918,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 2 · **GPU run START** (< 5 min from 22:44, coordinator-approved, no simulations): astol 1e-6, `paper_configs make`/`check` (state construction only) and GPU unit tests. Will log END.
 - 2026-10-20 · task 2 · **GPU run END** (astol config regeneration and unit tests, 22:44-22:45, ~1.5 min; the maintainer's "no GPU unit tests" arrived after they ran). The GPU is free.
 
+- 2026-10-21 · coordinator · **GPU+CPU run START** (01:05, ~5-6 h, maintainer-approved; keep the GPU and CPU quiet, timings are measured): full benchmark run, `python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.toml -o data/benchmarks/results/trampolines.h5` at dev 280513d7 (budget factor 2, snapshots 0.25). Trial run (Y1e6 static + h = 1e-2, sample 0) passed. Will log END.
 ## Open questions for the maintainer
 
 1. ~~Approve Phase 0?~~ **Answered:** yes, but only after all task-level open questions are answered.
