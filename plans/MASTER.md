@@ -1004,6 +1004,9 @@ Answer when back; each has the coordinator's recommendation.
     The per-step stall rule never fires at the winning configs. Pending (after task 4's END): static rtol 1e-3 x caps
     1000/2000, dynamic h = 1e-2 Y1e5-Y1e7 and h = 1e-4, re-timing close calls; then per-case --scene-params files (task 3).
     GPU state recording removed and versions trimmed (maintainer: overkill).
+    **Run file approved (maintainer):** `benchmark.py --run configs/benchmark/trampolines.toml` holds the dataset, solvers,
+    levels, cap, factor, snapshots, shared params and per-case overrides inline; CLI flags override it; its text is stored
+    in the results (task 3). The final per-case CG table goes there.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
