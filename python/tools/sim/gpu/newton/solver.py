@@ -29,6 +29,7 @@ from ..contact.dynamics import (
     capped_friction_energy,
     capped_friction_scale,
 )
+from ..contact.constraints import stored_friction_limit
 from ..contact.mesh.pairs import ContactBasesData
 from ..elasticity.snh import snh_eval, snh_hess
 from ..elasticity.spd import filter_eigenvalues9
@@ -138,7 +139,7 @@ def _energy_vv(
     E = contact.cvv.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvv.lambda_n[c] * c_n
-        + capped_friction_energy(c_f, contact.cvv.lambda_f[c], sigma_f, friction_limit[c])
+        + capped_friction_energy(c_f, contact.cvv.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -178,7 +179,7 @@ def _energy_ve(
     E = contact.cve.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cve.lambda_n[c] * c_n
-        + capped_friction_energy(c_f, contact.cve.lambda_f[c], sigma_f, friction_limit[c])
+        + capped_friction_energy(c_f, contact.cve.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -218,7 +219,7 @@ def _energy_vf(
     E = contact.cvf.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvf.lambda_n[c] * c_n
-        + capped_friction_energy(c_f, contact.cvf.lambda_f[c], sigma_f, friction_limit[c])
+        + capped_friction_energy(c_f, contact.cvf.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -261,7 +262,7 @@ def _energy_ee(
     E = contact.cee.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cee.lambda_n[c] * c_n
-        + capped_friction_energy(c_f, contact.cee.lambda_f[c], sigma_f, friction_limit[c])
+        + capped_friction_energy(c_f, contact.cee.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
 
@@ -396,7 +397,7 @@ def _compute_vv_contact_hessian_triplets(
     du = (x[i] - xt[i]) - (x[j] - xt[j])
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     friction_scale = capped_friction_scale(
-        c_f, contact.cvv.lambda_f[c], sigma_f, friction_limit[c]
+        c_f, contact.cvv.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c)
     )
     Hvv_base = _barycentrically_unscaled_contact_hessian(
         n,
@@ -461,7 +462,7 @@ def _compute_ve_contact_hessian_triplets(
     du = (x[i] - xt[i]) - ((b0 * x[ea] + b1 * x[eb]) - (b0 * xt[ea] + b1 * xt[eb]))
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     friction_scale = capped_friction_scale(
-        c_f, contact.cve.lambda_f[c], sigma_f, friction_limit[c]
+        c_f, contact.cve.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c)
     )
     Hve_base = _barycentrically_unscaled_contact_hessian(
         n,
@@ -551,7 +552,7 @@ def _compute_vf_contact_hessian_triplets(
     )
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     friction_scale = capped_friction_scale(
-        c_f, contact.cvf.lambda_f[c], sigma_f, friction_limit[c]
+        c_f, contact.cvf.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c)
     )
     Hvf_base = _barycentrically_unscaled_contact_hessian(
         n,
@@ -672,7 +673,7 @@ def _compute_ee_contact_hessian_triplets(
     )
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     friction_scale = capped_friction_scale(
-        c_f, contact.cee.lambda_f[c], sigma_f, friction_limit[c]
+        c_f, contact.cee.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c)
     )
     Hee_base = _barycentrically_unscaled_contact_hessian(
         n,
