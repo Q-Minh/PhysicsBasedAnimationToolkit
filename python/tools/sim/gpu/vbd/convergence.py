@@ -77,13 +77,13 @@ class ConvergenceParams(SerializableMixin):
         "absolute gtol applies instead",
     )
     astol = DocField(
-        5e-4,
+        1e-4,
         "Absolute stationarity tolerance, relative to the scene's size: the gradient test passes when the "
         "mass-normalized residual RMS(M^-1 g) is at most max(rstol * RMS(x~ - x^t), astol * L), L being the mean "
         "bounding-box diagonal of the scene's bodies at rest. The float32 floor of the residual grows with "
         "stiffness, roughly (h omega)^2 ulp(x) for a node's stiffness-to-mass frequency omega, and near rest the "
-        "relative term alone can ask for less (the default passes the Y = 1e8 square trampoline's first step, "
-        "whose residual stalls near 1.5e-3 m with L = 4.4 m)",
+        "relative term alone can ask for less. Stiff scenes near rest may need 5e-4 to 1e-3 (the Y = 1e8 square "
+        "trampoline's first step stalls near 1.5e-3 m with L = 4.4 m, which 5e-4 passes)",
     )
 
     def deserialize(self, grp) -> None:
