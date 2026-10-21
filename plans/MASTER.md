@@ -887,6 +887,9 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 2 · **GPU run END** (Anderson p = 1 vs p = 2 on trampolines-pilot): results sent to the coordinator.
 - 2026-10-20 · task 2 · **GPU run START** (intermittent, ~20 min, short in-process solves; please keep the GPU quiet, timings are compared): Anderson deterministic Gram (decision #11 A), per-iteration time before/after on trampolines-test Y1e7 static + dynamic_h0.01, and reproducibility. Will log END.
 - 2026-10-20 · task 2 · **GPU run END** (Anderson deterministic Gram): results sent to the coordinator. The GPU is free.
+- 2026-10-20 · task 3 · **GPU run START** (~5 min, short in-process solves; please keep the GPU quiet, timings are compared): float32 vs float64 benchmark error log, per-iteration cost, AAAVBD + Newton on trampolines-test Y1e6 static and dynamic_h0.01 (sample 0). Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (float64 error log cost): solver time unchanged; logging span 4.6 -> 7.7 us per entry.
+- 2026-10-20 · task 3 · **GPU run START** (<= 15 min, one benchmark.py process; please keep the GPU quiet, timings are compared): floor check (maintainer-approved), AAAVBD + Newton, 1 problem per set of trampolines-pilot, levels to 1 - 1e-6, caps 60 s static / 10 s dynamic. Will log END.
 
 ## Open questions for the maintainer
 
@@ -940,6 +943,10 @@ Answer when back; each has the coordinator's recommendation.
     stays per trajectory, stored for a renderer. All sent to task 3 (float64 error, floor check, then per-sample
     normalization). Open: Newton's "completion" if it stalls in float32 before the top level; float64 references
     (task 4, re-explained, awaiting the maintainer).
+    **Answers (later, 2026-10-20):** float64 references: wait for the floor check, maintainer leaning strongly to no
+    (keep float32, mark unresolvable cells). Newton completion: stop when it stalls (T_N = time to its best level),
+    confirmed after the check. Budget factor: keep, default 1x T_N. First full run: --snapshot-fraction 0.25 (~9 GB).
+    Global Newton cap value: to choose after the check.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
