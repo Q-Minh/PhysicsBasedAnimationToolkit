@@ -235,6 +235,8 @@ def load_sim_params(
 DEFAULTS_TOML = pathlib.Path(__file__).parent / "configs" / "defaults.toml"
 # Enums of keys whose parameter objects don't hold them as enums
 _ENUM_KEYS = {"Integration.init_strategy": ("pbatoolkit", "pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization")}
+# SimulationState attributes that serialize_params writes directly, with no parameter object (or docs) behind them
+_STATE_KEYS = {"Integration.dt", "Integration.substeps", "Integration.bdf_scheme", "Integration.init_strategy"}
 
 
 def _param_sources() -> dict:
@@ -255,7 +257,8 @@ def _param_sources() -> dict:
         "Solver.AndersonSolver": [gpu.vbd.params.AndersonCpuParams(pbat.sim.algorithm.vbd.Params()), vbd],
         "Solver.Newton": [newton],
         "Solver.Newton.newton": [newton.newton],
-        "Solver.Newton.newton.line_search": [newton.newton.line_search],
+        # A default Params has no line search; serialize_params writes the one SimulationState sets
+        "Solver.Newton.newton.line_search": [pbat.math.optimization.BackTrackingLineSearch()],
         "Solver.Newton.LinearSolver": [gpu.newton.solver.LinearSolverParams],
         "Solver.Convergence": [gpu.vbd.convergence.ConvergenceParams],
         "Contact.CDType.OGC": [ogc.OgcParams],
@@ -305,6 +308,7 @@ def describe_params(prefix: str = "") -> list[dict]:
             continue
         table, _, name = key.rpartition(".")
         found, enum_type, description = _describe(sources.get(table, []), name)
+        found = found or key in _STATE_KEYS
         if key in _ENUM_KEYS:
             module, path = _ENUM_KEYS[key]
             enum_type = importlib.import_module(module)
