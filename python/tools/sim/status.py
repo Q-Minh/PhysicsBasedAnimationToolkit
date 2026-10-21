@@ -43,6 +43,11 @@ NEWTON_SOLVE_DTYPE = np.dtype(
         ("outer", np.int32),
         ("converged", np.bool_),
         ("max_outer", np.int32),
+        # Ratios to their tolerances (at most 1 passes) of the first outer test and of the last one (the result)
+        ("initial_gradient_ratio", np.float32),
+        ("initial_feasibility_ratio", np.float32),
+        ("gradient_ratio", np.float32),
+        ("feasibility_ratio", np.float32),
     ]
 )
 """One Newton solve."""
@@ -59,6 +64,9 @@ NEWTON_SUBPROBLEM_DTYPE = np.dtype(
         ("backtracks", np.int32),
         ("max_newton_steps", np.int32),  # n_subproblem_max_iters
         ("cg_cap", np.int32),  # LinearSolverParams.n_max_iters
+        # Ratios to their tolerances of the outer test after the subproblem (at most 1 passes)
+        ("gradient_ratio", np.float32),
+        ("feasibility_ratio", np.float32),
     ]
 )
 """One Newton subproblem."""
@@ -137,12 +145,15 @@ class StatusLog:
             return
         solves = np.zeros(len(records), dtype=NEWTON_SOLVE_DTYPE)
         subs = []
+        nan = (np.nan, np.nan)
         for s, r in enumerate(records):
-            solves[s] = (step, s, r.outer, r.converged, max_outer)
+            tests = r.outer_tests or (nan,)
+            solves[s] = (step, s, r.outer, r.converged, max_outer, *tests[0], *tests[-1])
             for k, sp in enumerate(r.subproblems):
+                after = tests[k + 1] if k + 1 < len(tests) else nan
                 subs.append(
                     (step, s, k, int(sp.status), sp.newton_steps, sp.max_cg_iters, sp.cg_capped,
-                     sp.backtracks, max_newton_steps, cg_cap)
+                     sp.backtracks, max_newton_steps, cg_cap, *after)
                 )
         self._newton_solves.append(solves)
         if subs:
@@ -225,6 +236,8 @@ class StatusLog:
                 "cg_cap": int(sp["cg_cap"][-1]) if sp.shape[0] else 0,
                 "cg_capped": int(sp["cg_capped"].sum()),
                 "backtracks": int(sp["backtracks"].sum()),
+                "gradient_ratio_max": float(np.nanmax(n["gradient_ratio"], initial=0.0)),
+                "feasibility_ratio_max": float(np.nanmax(n["feasibility_ratio"], initial=0.0)),
             }
         return out
 
@@ -261,6 +274,8 @@ class StatusLog:
                 f"{n['newton_steps_max']} / {n['newton_steps_budget']}",
                 f"  CG: max {n['cg_iters_max']} / {n['cg_cap']} iterations, {n['cg_capped']} subproblems "
                 f"hit the cap; line-search backtracks: {n['backtracks']}",
+                f"  worst ratios to tolerance: gradient {n['gradient_ratio_max']:.3g}, feasibility "
+                f"{n['feasibility_ratio_max']:.3g}",
             ]
         return lines
 
@@ -329,8 +344,13 @@ class TestStatusLog(unittest.TestCase):
         log.add_vbd(0, 1, self._rows([0, 1], [int(SolveEnd.CONVERGED), int(SolveEnd.GRADIENT_UNMET)]), 0, 5, 400)
         log.add_vbd(1, 1, self._rows([2, 3]), 1, 5, 400)
         sub = NewtonSubproblemRecord(SubproblemStatus.LINE_SEARCH_FAILED, 3, 300, True, 12)
-        log.add_newton(2, [NewtonSolveRecord(1, False, (sub,))], 5, 10, 300)
+        log.add_newton(2, [NewtonSolveRecord(1, False, (sub,), ((40.0, 3.0), (2.5, 0.5)))], 5, 10, 300)
         s = log.summary()
+        n = log.newton_solves[0]
+        self.assertEqual((n["initial_gradient_ratio"], n["initial_feasibility_ratio"]), (40.0, 3.0))
+        self.assertEqual((n["gradient_ratio"], n["feasibility_ratio"]), (2.5, 0.5))
+        self.assertEqual(log.newton_subproblems[0]["gradient_ratio"], 2.5)
+        self.assertEqual((s["newton"]["gradient_ratio_max"], s["newton"]["feasibility_ratio_max"]), (2.5, 0.5))
         self.assertEqual(s["steps"], 3)
         self.assertEqual(s["vbd"]["reasons"]["CONVERGED"], 3)
         self.assertEqual(s["vbd"]["reasons"]["GRADIENT_UNMET"], 1)

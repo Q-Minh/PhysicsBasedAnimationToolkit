@@ -922,16 +922,16 @@ class BenchmarkSolver:
         newton.initialize_solve(state.fem, state.contact, state.detector, params)
         check = params.convergence
         saved = (params.data.n_subproblem_max_iters, params.data.gtol2, params.data.abs_eps_lin)
-        rtol = check.params.rtol if check is not None else None
+        stol = (check.params.rstol, check.params.astol) if check is not None else None
         # One Newton step per entry, and no gradient tests: the benchmark's error stops the solve.
-        # The relative test is off (rtol 0) and so are the absolute tolerances.
+        # The stationarity test is off (rstol = astol = 0) and so are the absolute tolerances.
         # With h^2-scaled dynamics at small h, |g| can start below gtol, and after a step below CG's
         # atol, so Newton would idle (gtol) or take zero steps (atol). CG keeps its relative tolerance.
         params.data.n_subproblem_max_iters = 1
         params.data.gtol2 = 0.0
         params.data.abs_eps_lin = 0.0
         if check is not None:
-            check.params.rtol = 0.0
+            check.params.rstol, check.params.astol = 0.0, 0.0
         try:
             log = self.log
             log.reset()
@@ -954,7 +954,7 @@ class BenchmarkSolver:
         finally:
             (params.data.n_subproblem_max_iters, params.data.gtol2, params.data.abs_eps_lin) = saved
             if check is not None:
-                check.params.rtol = rtol
+                check.params.rstol, check.params.astol = stol
 
     def _load(self, x0, reference, v0, xtilde) -> None:
         fem = self.state.fem

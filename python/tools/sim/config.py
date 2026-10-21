@@ -16,7 +16,8 @@ Loading (:func:`load_sim_params`) merges sources left to right, later values win
 The merged config is then checked against the keys the current code serializes. Unknown keys are
 ignored and missing keys keep their current values (the code defaults); both are reported as
 :class:`ConfigWarning`. Keys that a newer parameter replaced (:data:`DEPRECATED`) are ignored too,
-with a warning that says what replaced them.
+with a warning that says what replaced them, and renamed keys (:data:`RENAMED`) are read under their
+new names, with a warning.
 
 Command line::
 
@@ -53,6 +54,16 @@ DEPRECATED = {
         "+ band, so that resting contacts stay detected and their multipliers persist. The old absolute "
         "threshold (-1e-4 detected penetrating vertices only) is ignored, and band keeps its value"
     ),
+    "Solver.Convergence.displacement_floor": (
+        "replaced by Solver.Convergence.astol, the absolute stationarity tolerance relative to the scene's size L "
+        "(the mean bounding-box diagonal of its bodies): the gradient test now passes below max(rstol * "
+        "RMS(x~ - x^t), astol * L), so the former floor f corresponds to astol = rstol * f / L"
+    ),
+}
+
+# Keys renamed without a change of meaning: their values move to the new key, with a ConfigWarning
+RENAMED = {
+    "Solver.Convergence.rtol": "Solver.Convergence.rstol",
 }
 
 
@@ -187,6 +198,27 @@ def check(cfg: dict, reference: dict) -> tuple[list[str], list[str]]:
     return unknown, missing
 
 
+def _rename(cfg: dict, source: str) -> dict:
+    """A copy of ``cfg`` with the :data:`RENAMED` keys moved to their new names (an explicit new key wins),
+    warning about each."""
+    cfg = copy.deepcopy(cfg)
+    for old, new in RENAMED.items():
+        *old_tables, old_key = old.split(".")
+        table = cfg
+        for t in old_tables:
+            table = table.get(t) if isinstance(table, dict) else None
+        if not isinstance(table, dict) or old_key not in table:
+            continue
+        value = table.pop(old_key)
+        *new_tables, new_key = new.split(".")
+        target = cfg
+        for t in new_tables:
+            target = target.setdefault(t, {})
+        target.setdefault(new_key, value)
+        warnings.warn(f"{source}: {old} is renamed {new}; using its value", ConfigWarning, stacklevel=3)
+    return cfg
+
+
 def _known(cfg: dict, reference: dict) -> dict:
     return {
         k: _known(v, reference[k]) if isinstance(v, dict) else v
@@ -203,6 +235,7 @@ def apply(state: "SimulationState", cfg: dict, source: str = "sim-params") -> No
     from .state import deserialize_params
 
     reference = params_dict(state)
+    cfg = _rename(cfg, source)
     unknown, missing = check(cfg, reference)
     for key in [k for k in unknown if k in DEPRECATED]:
         unknown.remove(key)
@@ -444,6 +477,17 @@ class TestConfig(unittest.TestCase):
         self.assertIn("(GPU: ignored; always Warp's Jacobi-preconditioned CG",
                       format_params([rows["Solver.Newton.linear_solver"]]))
         self.assertEqual(rows["Solver.Newton.LinearSolver.rtol"]["gpu"], "")
+
+    def test_renamed_keys_move_to_their_new_names(self):
+        cfg = {"Solver": {"Convergence": {"rtol": 0.05, "ftol": 0.5}}}
+        with self.assertWarns(ConfigWarning):
+            renamed = _rename(cfg, "test")
+        self.assertEqual(renamed, {"Solver": {"Convergence": {"rstol": 0.05, "ftol": 0.5}}})
+        self.assertIn("rtol", cfg["Solver"]["Convergence"])  # the input is left as is
+        # An explicit new key wins over the renamed one
+        with self.assertWarns(ConfigWarning):
+            both = _rename({"Solver": {"Convergence": {"rtol": 0.05, "rstol": 0.2}}}, "test")
+        self.assertEqual(both["Solver"]["Convergence"], {"rstol": 0.2})
 
     def test_override_values_are_toml_literals(self):
         self.assertEqual(parse_override("A.b = true"), {"A": {"b": True}})

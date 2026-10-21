@@ -901,6 +901,11 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run START** (~6 min, one benchmark.py process; timings secondary, task 4's CPU job is active): demo results file with snapshots for the viewer, all 5 solvers, trampolines-pilot het/Y1e6 static + Y1e7 dynamic_h0.01, sample 0. Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (demo results file, data/benchmarks/results/snapshots-demo.h5). The GPU is free.
 - 2026-10-20 · task 2 · **GPU run START** (~30 min, benchmark.py processes back to back; please keep the GPU quiet, timings are compared; task 4's CPU job is active): Newton CG cap sweep (500/1000/2000/4000, het static 8000), trampolines-pilot sample 0, all static scenes + Y1e8/het dynamic_h0.01, followed by CG rtol 1e-2/1e-3 at cap 4000 (het 8000); ~45 min in total. Will log END.
+- 2026-10-20 · task 2 · **GPU run END** (Newton CG cap/rtol sweep, 19:03-19:26). The GPU is free. Winners get re-timed after task 4's CPU job ends.
+- 2026-10-20 · task 4 · **GPU run START** (maintainer's request; one headless AAAVBD run, then the GPU GUI for the maintainer's manual testing, one scene at a time): the extras repo's october-changes configs on the square trampolines with sphere (Newton's sticking). Will log END.
+- 2026-10-20 · task 4 · **CPU run END** (full benchmark dataset, 18:50-20:41, 1 h 51 min): `data/benchmarks/trampolines.h5`, 1.13 GB. Split R-hat over 1.05 on 4 of 10 pools (Y1e5 static 1.062, Y1e5 gravity 1.050, Y1e7 gravity 1.063, het static 1.053); report and fix proposal to the coordinator. The CPU is free.
+- 2026-10-20 · task 4 · **GPU run END** (the maintainer's GUI sessions on the october-changes trampolines, plus seconds-long CubeFallingOnCube smoke runs). The GPU is free.
+- 2026-10-20 · task 2 · **GPU run START** (~15 min from 20:52, benchmark.py processes back to back; please keep the GPU and CPU quiet, timings are compared): final Newton CG table re-time on trampolines-pilot sample 0 (winners, runners-up and close calls; static rtol 1e-3 at caps 1000/2000; dynamic h = 1e-2 and 1e-4 default vs rtol 1e-2 cap 4000). Will log END; task 3 queues after it.
 
 ## Open questions for the maintainer
 
@@ -996,6 +1001,29 @@ Answer when back; each has the coordinator's recommendation.
     **Newton setup:** (a) a fixed CG setup per case, also trying looser rtol with large caps (early termination when
     possible, many iterations when needed); task 2 extends the sweep. Full run after the dataset; GPU clock locking not
     required by the maintainer (task 3's audit may still recommend it with evidence).
+    **CG sweep (task 2, sample 0, CPU loaded):** best by time to the top level. Static, rtol 1e-6 (default) with caps
+    Y1e5 500, Y1e6 1000, Y1e7 2000, Y1e8 2000, het 4000: times to 99.999% 11.1 / 11.6 / 9.2 / 6.6 / 37.5 s (het was 73 s at
+    cap 1000); caps >= 2000 converge superlinearly at the end. Dynamic h = 1e-2 Y1e8/het: rtol 1e-2, cap 4000 (+25-32% faster
+    than rtol 1e-6 cap 500; same steps: float32 CG can't reach 1e-6 anyway). rtol 1e-2 on static stalls a decade short.
+    The per-step stall rule never fires at the winning configs. Pending (after task 4's END): static rtol 1e-3 x caps
+    1000/2000, dynamic h = 1e-2 Y1e5-Y1e7 and h = 1e-4, re-timing close calls; then per-case --scene-params files (task 3).
+    GPU state recording removed and versions trimmed (maintainer: overkill).
+    **Run file approved (maintainer):** `benchmark.py --run configs/benchmark/trampolines.toml` holds the dataset, solvers,
+    levels, cap, factor, snapshots, shared params and per-case overrides inline; CLI flags override it; its text is stored
+    in the results (task 3). The final per-case CG table goes there.
+    **GPU/CPU gap found (task 3):** Rayleigh damping betaR is copied into the GPU VBD-family params but no GPU kernel
+    reads it, so a config's betaR silently does nothing on the GPU (no config sets it nonzero today). Also not on the GPU:
+    e_penalty_stiffness (GPU uses Contact.ContactDynamics.penalty_adaptivity), Newton linear_solver (always Jacobi-PCG).
+    `config params` annotates these. Maintainer: leave betaR as a documented gap (sim CLAUDE.md).
+    **Dataset final (maintainer, via task 4):** data/benchmarks/trampolines.h5 accepted as is (R-hat 1.050-1.063 on 4/10
+    pools: Y1e5 static/gravity, Y1e7 gravity, het static; problems checked in the browser); energy-noise attributes
+    recomputed. Task 4 also: VertexSdf band 2 cm -> 2 mm fixed Newton sticking on Melissa's sphere-trampoline configs
+    (scope of config changes being confirmed with the maintainer: our trampolines got 2 cm on 10-19 for a reason);
+    feature/newton-status-residuals (Newton outer residuals in Solve status; Convergence rtol split into rstol/astol).
+    Band: maintainer asked to change all 2 cm bands (soft-stiff, stiff-soft) to 2 mm, near dmin; celebration (1 cm) open.
+    astol becomes a dimensionless epsilon x mean body bounding-box diagonal (task 4). Material + per-node mass views in
+    all mesh GUIs (benchmark_viewer, benchmark_browser, sim ui, editor, modalrom) and a pass-through check of the two
+    trampolines at 2 mm: task 1 (check after the timed GPU runs).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
