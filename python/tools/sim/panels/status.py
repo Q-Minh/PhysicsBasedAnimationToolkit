@@ -29,7 +29,7 @@ _RESULT = {
     SolveEnd.GRADIENT_UNMET: (
         "Budget: gradient unmet",
         "The outer iterations ran out with the gradient test unmet (the step is feasible).\n"
-        "More sweeps or outer iterations, or a looser Solver.Convergence.rtol, would help.",
+        "More sweeps or outer iterations, or looser Solver.Convergence.rstol/astol, would help.",
     ),
     SolveEnd.FEASIBILITY_UNMET: (
         "Budget: feasibility unmet",
@@ -61,8 +61,8 @@ _SUBPROBLEM = {
 
 _RESIDUAL_TIP = (
     "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
-    "Relative test (Solver.Convergence.rtol > 0): sqrt(sum |g_i|^2 / m_i) / (rtol * RMS displacement scale),\n"
-    "with g the gradient of the step's Lagrangian. Absolute test: |g| / gtol."
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol),\n"
+    "mass-weighted, with g the gradient of the step's Lagrangian. Absolute test (both 0, or static): |g| / gtol."
 )
 _PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
@@ -70,13 +70,13 @@ _PENETRATION_TIP = (
 )
 _NEWTON_RESIDUAL_TIP = (
     "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
-    "Relative test (Solver.Convergence.rtol > 0, dynamic problems), as the VBD family's:\n"
-    "sqrt(sum |g_i|^2 / m_i) / (rtol * RMS displacement scale), with g the gradient of the step's Lagrangian.\n"
-    "Absolute test (rtol = 0 or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
+    "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
+    "RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol), mass-weighted, g the gradient of the step's Lagrangian.\n"
+    "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
 )
 _NEWTON_PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
-    "{when}; at most 1 is feasible. Part of the relative outer test only (the absolute test, as C++'s,\n"
+    "{when}; at most 1 is feasible. Part of the stationarity outer test only (the absolute test, as C++'s,\n"
     "checks the gradient alone)."
 )
 

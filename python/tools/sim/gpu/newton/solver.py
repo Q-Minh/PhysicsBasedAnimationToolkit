@@ -830,7 +830,7 @@ class Params:
         Maximum Newton steps per AL subproblem.
     gtol2:
         Squared gradient-norm convergence threshold. Dynamic problems use the shared relative test
-        instead when ``Solver.Convergence.rtol > 0`` (see :func:`check_convergence`).
+        instead when ``Solver.Convergence.rstol`` or ``astol > 0`` (see :func:`check_convergence`).
     linear_solver:
         GPU-only CG settings (:class:`LinearSolverParams`); defaults when omitted.
     spd_correction:
@@ -1102,9 +1102,9 @@ def check_convergence(
 ) -> bool:
     """Outer test between AL iterations.
 
-    With the shared convergence check's relative test on (``Solver.Convergence.rtol > 0``, dynamic
-    problems), it's the VBD family's outer test: the Lagrangian gradient,
-    ``sum |g_i|^2 / m_i <= rtol^2 max(sum m_i |x~_i - x^t_i|^2, M floor^2)``, and feasibility
+    With the shared convergence check's stationarity test on (``Solver.Convergence.rstol`` or ``astol > 0``,
+    dynamic problems), it's the VBD family's outer test: the Lagrangian gradient,
+    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |x~_i - x^t_i|^2, astol^2 sum m_i)``, and feasibility
     (penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``). The Lagrangian gradient has no
     term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
     guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
@@ -1290,8 +1290,8 @@ def solve_subproblem(
 ) -> SubproblemStatus:
     """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
 
-    The subproblem converges when its augmented-Lagrangian gradient passes the shared relative test
-    (``Solver.Convergence.rtol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
+    The subproblem converges when its augmented-Lagrangian gradient passes the shared stationarity test
+    (``Solver.Convergence.rstol`` or ``astol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
 
     Returns:
         SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)

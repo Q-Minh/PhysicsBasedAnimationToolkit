@@ -44,17 +44,20 @@ class ConvergenceParams(SerializableMixin):
 
     Held by ``SimulationState.convergence_params`` (kept across resets) and serialized under
     ``Solver/Convergence``, so configs set them as ``Solver.Convergence.check_interval`` and
-    ``Solver.Convergence.ftol``. The gradient tolerance is relative (``rtol > 0``, default 1e-2, see below)
-    or, with ``rtol = 0``, each solver's absolute ``gtol`` (``Solver.<solver>.gtol``; Newton's ``gtol2``). GPU Newton
-    uses the same relative test (see ``gpu.newton.solver.check_convergence``).
+    ``Solver.Convergence.ftol``. The stationarity (gradient) test of dynamic problems uses the relative and
+    absolute stationarity tolerances ``rstol`` and ``astol`` (see below); with both 0, and for static
+    problems, each solver's absolute ``gtol`` applies instead (``Solver.<solver>.gtol``; Newton's ``gtol2``).
+    GPU Newton uses the same test (see ``gpu.newton.solver.check_convergence``).
 
-    Relative test (``rtol > 0``): the gradient g of the time step's Lagrangian is turned into a
-    position-like residual by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step
-    would make), and compared with the step's free-flight displacement d = x~ - x^t (h v^t + h^2 a_ext
-    for BDF1): ``RMS_M(M^-1 g) <= rtol * RMS_M(d)``, with mass-weighted RMS over free nodes, i.e.
-    ``sum |g_i|^2 / m_i <= rtol^2 * sum m_i |d_i|^2``. It doesn't depend on the mesh's size or mass. The
-    scale is floored, ``max(RMS_M(d), displacement_floor)``, so it never vanishes (e.g. for a body at
-    rest without loads). Static problems have no inertial displacement and use the absolute ``gtol``.
+    Stationarity test: the gradient g of the time step's Lagrangian is turned into a position-like residual
+    by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step would make), and passes
+    when ``RMS_M(M^-1 g) <= max(rstol * RMS_M(d), astol)``, with d = x~ - x^t the step's free-flight
+    displacement (h v^t + h^2 a_ext for BDF1) and mass-weighted RMS over free nodes, i.e.
+    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, astol^2 sum m_i)``. Neither term depends on the
+    mesh's size or mass. ``astol`` (m) is the residual float32 can still resolve: near rest the free-flight
+    displacement is tiny (h^2 g), while the elastic gradient's round-off grows with stiffness, so the
+    relative term alone can ask for less than float32 resolves. Static problems have no inertial
+    displacement and use the absolute ``gtol``.
     """
 
     check_interval = DocField(
@@ -65,17 +68,28 @@ class ConvergenceParams(SerializableMixin):
         "Feasibility tolerance between outer iterations: largest allowed penetration into the contact margin, as a "
         "fraction of |dmin| (at least 1e-6 m, so a zero or negative margin still has a positive tolerance)",
     )
-    rtol = DocField(
+    rstol = DocField(
         1e-2,
-        "Relative gradient tolerance (0 = off: the solver's absolute gtol applies). Stops when the mass-normalized "
-        "residual RMS(M^-1 g) is at most rtol times the step's free-flight displacement RMS(x~ - x^t) "
-        "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes",
+        "Relative stationarity tolerance: the gradient test passes when the mass-normalized residual RMS(M^-1 g) is "
+        "at most max(rstol * RMS(x~ - x^t), astol), x~ - x^t being the step's free-flight displacement "
+        "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes. With rstol = astol = 0, the solver's "
+        "absolute gtol applies instead",
     )
-    displacement_floor = DocField(
+    astol = DocField(
         1e-6,
-        "Smallest displacement scale (m) of the relative gradient test: the scale is max(RMS(x~ - x^t), "
-        "displacement_floor), so it never vanishes for bodies at rest",
+        "Absolute stationarity tolerance (m) on the mass-normalized residual RMS(M^-1 g): the gradient test passes "
+        "below max(rstol * RMS(x~ - x^t), astol). The default is about float32's position resolution for scenes "
+        "up to ~10 m (ulp(8 m) = 9.5e-7 m). The float32 floor of the residual grows with stiffness, roughly "
+        "(h omega)^2 ulp(x) for a node's stiffness-to-mass frequency omega, so stiff scenes near rest can need more "
+        "(~1e-3 m on the Y = 1e8 trampoline regions at h = 1e-2)",
     )
+
+    def deserialize(self, grp) -> None:
+        """Read the parameters, taking ``rstol`` from the former ``rtol`` in files that predate it (configs
+        go through ``config.RENAMED`` instead)."""
+        super().deserialize(grp)
+        if "rstol" not in grp.attrs and "rtol" in grp.attrs:
+            self.rstol = float(grp.attrs["rtol"])
 
 
 class SolveEnd(enum.IntEnum):
@@ -141,16 +155,16 @@ def _gradient_ratio(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
     gm2: wp.array[wp.float32],
-    dm2: wp.array[wp.float32],
-    rtol2: wp.float32,
+    stol2: wp.array[wp.float32],
+    relative: wp.int32,
 ) -> wp.float32:
-    """The gradient test's measure over its tolerance, sqrt(sum |g|^2/m / (rtol^2 scale)) or
-    |g| / gtol (see :func:`_is_converged`): at most 1 when it passes."""
+    """The gradient test's measure over its tolerance, sqrt(sum |g|^2/m / stol2) or |g| / gtol (see
+    :func:`_is_converged`): at most 1 when it passes."""
     num = gnorm2[0]
     den = gtol2
-    if rtol2 > wp.float32(0):
+    if relative != 0:
         num = gm2[0]
-        den = rtol2 * dm2[0]
+        den = stol2[0]
     ratio = wp.float32(0)
     if den > wp.float32(0):
         ratio = wp.sqrt(num / den)
@@ -218,13 +232,13 @@ def _is_converged(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
     gm2: wp.array[wp.float32],
-    dm2: wp.array[wp.float32],
-    rtol2: wp.float32,
+    stol2: wp.array[wp.float32],
+    relative: wp.int32,
 ) -> bool:
-    """Relative test ``sum |g|^2/m <= rtol^2 max(sum m |d|^2, M floor^2)`` if enabled (``rtol2 > 0``;
-    ``dm2`` holds the floored scale), else ``|g|^2 <= gtol^2``."""
-    if rtol2 > wp.float32(0):
-        return gm2[0] <= rtol2 * dm2[0]
+    """Stationarity test ``sum |g|^2/m <= stol2 = max(rstol^2 sum m |d|^2, astol^2 M)`` if enabled
+    (``relative``), else ``|g|^2 <= gtol^2``."""
+    if relative != 0:
+        return gm2[0] <= stol2[0]
     return gnorm2[0] <= gtol2
 
 
@@ -251,11 +265,23 @@ def _free_flight_displacement_terms(
         masses[i] = fem.m[i]
 
 
+@wp.func
+def _stationarity_tol2(
+    dm2: wp.float32, free_mass: wp.float32, rstol2: wp.float32, astol2: wp.float32
+) -> wp.float32:
+    """Squared stationarity tolerance on sum |g|^2/m: max(rstol^2 sum m |d|^2, astol^2 sum m)."""
+    return wp.max(rstol2 * dm2, astol2 * free_mass)
+
+
 @wp.kernel
-def _floor_displacement_scale(
-    dm2: wp.array[wp.float32], free_mass: wp.array[wp.float32], floor2: wp.float32
+def _stationarity_tolerance(
+    dm2: wp.array[wp.float32],
+    free_mass: wp.array[wp.float32],
+    rstol2: wp.float32,
+    astol2: wp.float32,
+    stol2: wp.array[wp.float32],
 ):
-    dm2[0] = wp.max(dm2[0], free_mass[0] * floor2)
+    stol2[0] = _stationarity_tol2(dm2[0], free_mass[0], rstol2, astol2)
 
 
 @wp.func
@@ -357,8 +383,8 @@ def _start_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
     gm2: wp.array[wp.float32],
-    dm2: wp.array[wp.float32],
-    rtol2: wp.float32,
+    stol2: wp.array[wp.float32],
+    relative: wp.int32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -369,7 +395,7 @@ def _start_kernel(
     solves: wp.array[wp.int32],
 ):
     k[0] = 0
-    converged = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2)
+    converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
     done = converged and feasible
     keep[0] = wp.where(n_max_iters > 0 and not done, 1, 0)
@@ -381,7 +407,7 @@ def _start_kernel(
     row.outer = 0
     row.sweeps = 0
     row.reason = _solve_end(converged, feasible, n_max_iters > 0)
-    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, dm2, rtol2)
+    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, stol2, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
     status[n % status.shape[0]] = row
 
@@ -408,8 +434,8 @@ def _after_block_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
     gm2: wp.array[wp.float32],
-    dm2: wp.array[wp.float32],
-    rtol2: wp.float32,
+    stol2: wp.array[wp.float32],
+    relative: wp.int32,
     n_blocks: wp.int32,
     blocks: wp.array[wp.int32],
     inner_keep: wp.array[wp.int32],
@@ -417,7 +443,7 @@ def _after_block_kernel(
 ):
     b = blocks[0] + 1
     blocks[0] = b
-    converged = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2)
+    converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
     subproblem_keep[0] = wp.where(converged, 0, 1)
     inner_keep[0] = wp.where(not converged and b < n_blocks, 1, 0)
 
@@ -427,8 +453,8 @@ def _end_outer_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
     gm2: wp.array[wp.float32],
-    dm2: wp.array[wp.float32],
-    rtol2: wp.float32,
+    stol2: wp.array[wp.float32],
+    relative: wp.int32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -446,7 +472,7 @@ def _end_outer_kernel(
 ):
     kk = k[0] + 1
     k[0] = kk
-    converged = _is_converged(gnorm2, gtol2, gm2, dm2, rtol2)
+    converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
     done = converged and feasible
     keep[0] = wp.where(kk < n_max_iters and not done, 1, 0)
@@ -459,7 +485,7 @@ def _end_outer_kernel(
     else:
         row.sweeps = row.sweeps + sweeps_prefix + blocks[0] * sweeps_block
     row.reason = _solve_end(converged, feasible, kk < n_max_iters)
-    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, dm2, rtol2)
+    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, stol2, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
     status[idx] = row
 
@@ -507,12 +533,14 @@ class ConvergenceCheck:
         self._fem = fem
         self._contact = contact
         self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False)
-        # Relative test (params.rtol > 0): sum |g_i|^2 / m_i and sum m_i |d_i|^2 over free nodes
+        # Stationarity test (rstol or astol > 0): sum |g_i|^2 / m_i against
+        # stol2 = max(rstol^2 sum m_i |d_i|^2, astol^2 sum m_i), sums over free nodes
         n_nodes = fem.data.x.shape[0]
         self._terms = wp.zeros(n_nodes, dtype=wp.float32)
         self._masses = wp.zeros(n_nodes, dtype=wp.float32)
         self.residual_m2 = wp.zeros(1, dtype=wp.float32)
-        self.displacement_m2 = wp.zeros(1, dtype=wp.float32)  # floored scale, see ConvergenceParams
+        self.displacement_m2 = wp.zeros(1, dtype=wp.float32)  # sum m_i |d_i|^2, the relative term's scale
+        self.stationarity_tol2 = wp.zeros(1, dtype=wp.float32)  # stol2, see ConvergenceParams
         self.free_mass = wp.zeros(1, dtype=wp.float32)
         self._reduce_residual = Reduce(
             d_in=cp.asarray(self._terms),
@@ -542,8 +570,10 @@ class ConvergenceCheck:
 
     @property
     def relative(self) -> bool:
-        """Whether the relative test applies: enabled, and not a static problem."""
-        return float(self.params.rtol) > 0.0 and not self._fem.static
+        """Whether the stationarity test with ``rstol``/``astol`` applies (rather than the solvers'
+        absolute ``gtol``): either is positive, and the problem isn't static."""
+        enabled = float(self.params.rstol) > 0.0 or float(self.params.astol) > 0.0
+        return enabled and not self._fem.static
 
     def _test(self) -> None:
         stream = wp.get_stream()
@@ -560,9 +590,8 @@ class ConvergenceCheck:
         self._reduce_residual(wp.get_stream())
 
     def measure_scale(self) -> None:
-        """Measure the relative test's scale for the time step: the step's sum m_i |x~_i - x^t_i|^2
-        over free nodes, floored at (free mass) * displacement_floor^2. No-op unless :attr:`relative`.
-        Capturable."""
+        """Measure the stationarity tolerance for the time step, ``stol2 = max(rstol^2 sum m_i |x~_i -
+        x^t_i|^2, astol^2 sum m_i)`` over free nodes. No-op unless :attr:`relative`. Capturable."""
         if self.relative:
             stream = wp.get_stream()
             wp.launch(
@@ -573,9 +602,15 @@ class ConvergenceCheck:
             self._reduce_displacement(stream)
             self._reduce_free_mass(stream)
             wp.launch(
-                _floor_displacement_scale,
+                _stationarity_tolerance,
                 dim=1,
-                inputs=[self.displacement_m2, self.free_mass, float(self.params.displacement_floor) ** 2],
+                inputs=[
+                    self.displacement_m2,
+                    self.free_mass,
+                    float(self.params.rstol) ** 2,
+                    float(self.params.astol) ** 2,
+                    self.stationarity_tol2,
+                ],
             )
 
     def _tolerance_inputs(self, gtol: float) -> list:
@@ -583,8 +618,8 @@ class ConvergenceCheck:
             self.gradient_norm.gnorm2,
             float(gtol) ** 2,
             self.residual_m2,
-            self.displacement_m2,
-            float(self.params.rtol) ** 2 if self.relative else 0.0,
+            self.stationarity_tol2,
+            int(self.relative),
         ]
 
     def _measure_penetration(self) -> None:
@@ -726,8 +761,7 @@ class ConvergenceCheck:
         return float(self.gradient_norm.gnorm2.numpy()[0]) <= float(gtol) * float(gtol)
 
     def _relative_passes(self) -> bool:
-        dm2 = float(self.displacement_m2.numpy()[0])
-        return float(self.residual_m2.numpy()[0]) <= float(self.params.rtol) ** 2 * dm2
+        return float(self.residual_m2.numpy()[0]) <= float(self.stationarity_tol2.numpy()[0])
 
     def test_gradient(self) -> bool:
         """Host-side gradient test of the current positions (relative or absolute with ``gtol``
@@ -757,15 +791,15 @@ class ConvergenceCheck:
         return gradient_passes and float(self.penetration.numpy()[0]) <= tol
 
     def gradient_ratio(self) -> float:
-        """Host-side relative gradient measure of the last test over its tolerance,
-        ``sqrt(sum |g_i|^2 / m_i / (rtol^2 scale))``, as the status ring's ``gradient_ratio``: at most 1
-        when it passes. Synchronizes.
+        """Host-side stationarity measure of the last test over its tolerance,
+        ``sqrt(sum |g_i|^2 / m_i / stol2)``, as the status ring's ``gradient_ratio``: at most 1 when it
+        passes. Synchronizes.
 
         Returns:
             float: The ratio (from the last :meth:`test_gradient`, :meth:`test_outer` or
             :meth:`relative_test`).
         """
-        den = float(self.params.rtol) ** 2 * float(self.displacement_m2.numpy()[0])
+        den = float(self.stationarity_tol2.numpy()[0])
         return float(np.sqrt(ratio_to_tolerance(float(self.residual_m2.numpy()[0]), den)))
 
     def feasibility_ratio(self, measure: bool = False) -> float:
@@ -786,8 +820,8 @@ class ConvergenceCheck:
         return ratio_to_tolerance(float(self.penetration.numpy()[0]), tol)
 
     def relative_test(self, g: wp.array) -> bool:
-        """Host-side relative test of a given gradient, ``sum |g_i|^2 / m_i <= rtol^2 * scale``, against
-        the scale from the last :meth:`measure_scale`. Synchronizes, so not capturable.
+        """Host-side stationarity test of a given gradient, ``sum |g_i|^2 / m_i <= stol2``, against the
+        tolerance from the last :meth:`measure_scale`. Synchronizes, so not capturable.
 
         Newton uses it for its augmented-Lagrangian subproblem gradient.
 
@@ -854,6 +888,49 @@ class TestFeasibilityTolerance(unittest.TestCase):
         # Host side agrees
         for (fi, di, _), t in zip(cases, tol):
             self.assertAlmostEqual(feasibility_tolerance(fi, di), float(t), delta=1e-7 * float(t))
+
+
+class TestStationarityTolerance(unittest.TestCase):
+    def test_relative_and_absolute_terms(self):
+        wp.init()
+
+        @wp.kernel
+        def k(
+            dm2: wp.array[wp.float32],
+            free_mass: wp.array[wp.float32],
+            gm2: wp.array[wp.float32],
+            rstol2: wp.float32,
+            astol2: wp.float32,
+            stol2: wp.array[wp.float32],
+            converged: wp.array[wp.int32],
+            ratio: wp.array[wp.float32],
+        ):
+            i = wp.tid()
+            g = wp.array(ptr=gm2.ptr + wp.uint64(i * 4), shape=(1,), dtype=wp.float32)
+            s = wp.array(ptr=stol2.ptr + wp.uint64(i * 4), shape=(1,), dtype=wp.float32)
+            s[0] = _stationarity_tol2(dm2[i], free_mass[i], rstol2, astol2)
+            # The absolute-test inputs (gnorm2, gtol2) are unused by the stationarity branch
+            converged[i] = wp.where(_is_converged(g, wp.float32(0), g, s, 1), 1, 0)
+            ratio[i] = _gradient_ratio(g, wp.float32(0), g, s, 1)
+
+        # Free mass 2 kg; RMS residual r and RMS free-flight displacement D give gm2 = 2 r^2, dm2 = 2 D^2
+        rstol, astol = 1e-2, 1e-4
+        cases = [  # (D, r)
+            (1e-1, 0.9e-3),  # relative term (1e-3) dominates: passes
+            (1e-1, 1.1e-3),
+            (1e-3, 0.9e-4),  # near rest: the absolute term (1e-4) dominates over rstol D = 1e-5
+            (1e-3, 1.1e-4),
+            (0.0, 0.5e-4),  # no displacement at all: astol alone
+        ]
+        D, r = (np.array(c, dtype=np.float64) for c in zip(*cases))
+        n = len(cases)
+        dm2, gm2 = wp.array((2 * D**2).astype(np.float32)), wp.array((2 * r**2).astype(np.float32))
+        mass = wp.array(np.full(n, 2.0, dtype=np.float32))
+        stol2, converged, ratio = wp.zeros(n, dtype=wp.float32), wp.zeros(n, dtype=wp.int32), wp.zeros(n, dtype=wp.float32)
+        wp.launch(k, dim=n, inputs=[dm2, mass, gm2, rstol**2, astol**2, stol2, converged, ratio])
+        self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 0, 1])
+        expected = r / np.maximum(rstol * D, astol)
+        np.testing.assert_allclose(ratio.numpy(), expected, rtol=1e-5)
 
 
 if __name__ == "__main__":
