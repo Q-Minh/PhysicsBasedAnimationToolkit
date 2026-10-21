@@ -1,8 +1,8 @@
 # Master plan: GPU simulator roadmap (4 parallel tasks)
 
-Status: **all four tasks merged and on hold; dev pushed** · Created 2026-10-17 · Coordinator: the session in the main checkout · Handoff written 2026-10-20
+Status: **benchmark run done; tasks 1-3 idle, task 4 signed off; dev pushed** · Created 2026-10-17 · Coordinator: the session in the main checkout · Handoff updated 2026-10-21
 
-## Coordinator handoff (2026-10-20)
+## Coordinator handoff (updated 2026-10-21)
 
 Read this section first. Older sections below are history; where they conflict with this one, this one wins.
 
@@ -11,23 +11,24 @@ Read this section first. Older sections below are history; where they conflict w
 | Session (SendMessage name) | Worktree | Plan | Area | State |
 |---|---|---|---|---|
 | coordinator | main checkout | this file | reviews, merges, pushes, plans, skills, reports | active |
-| `pbat-kinematic-constraints` (task 1) | `pbat-kinematics` | `01-kinematic-constraints.md` | kinematics, scenes, colliders, VertexSdf, CPU editor/viewer | on hold |
-| `pbat-profiling` (task 2) | `pbat-profiling` | `02-profiling.md` | profiling, AAAVBD kernels, ablation params | on hold |
-| `pbat-static-elasticity` (task 3) | `pbat-static` | `03-static-elasticity.md` | static mode, benchmark runner, convergence, Newton, solve status, friction | on hold |
-| `pbat-mcmc` (task 4) | `pbat-mcmc` | `04-mcmc-quadratic-manifold.md` | samplers, benchmark datasets, browser (CPU only) | on hold |
+| `pbat-kinematic-constraints` (task 1) | `pbat-kinematics` | `01-kinematic-constraints.md` | viewers and GUIs (benchmark viewer, browser, modal ROM GUI, editor), kinematics, scenes, colliders | idle |
+| `pbat-profiling` (task 2) | `pbat-profiling` | `02-profiling.md` | profiling, Newton/CG diagnosis, convergence test, configs, ablation params | idle |
+| `pbat-static-elasticity` (task 3) | `pbat-static` | `03-static-elasticity.md` | benchmark runner and plots, static mode, Newton, friction | idle |
+| `pbat-mcmc` (task 4) | `pbat-mcmc` | `04-mcmc-quadratic-manifold.md` | samplers, benchmark datasets, browser (CPU only) | signed off (maintainer) |
 
-- **Everything is merged into `dev`**; `dev` was pushed at `69bd404d` (later local commits are plan logs only). No feature branch has unmerged work.
-- Each task plan starts with its own "Handoff (2026-10-20)" section.
+- **Everything is merged into `dev` and pushed** (2026-10-21). No feature branch has unmerged work; the worktrees may sit behind dev, so a task pulls/rebases before new work.
+- Each task plan starts with its own "Handoff" section; the coordinator's 2026-10-21 work (benchmark figures, tables, thin file, videos, viewer fixes) is summarized in "Open items" below and in the coordination log.
+- **Benchmark tools, all in `python/tools/sim/`:** `benchmark` (run), `benchmark_plot` (bars), `benchmark_curves` (curves, `--all-samples` bands), `benchmark_iterations` (tables), `benchmark_thin` (thin copy), `benchmark_viewer` (trajectories), `benchmark_video` (MP4s via imageio-ffmpeg). Data and outputs are in the main checkout's git-ignored `data/benchmarks/` (results, figures as PDFs only, tables, videos). Reference: `python/tools/sim/docs/benchmark-results.md`.
 - Locations (main checkout, worktrees, venv, extras repo) are in the git-ignored `CLAUDE.local.md`, copied into each worktree.
 
 ### How the coordinator works
 
 - **Messaging:** `ListAgents`, then `SendMessage` by session name. Tell the maintainer when a prompt must be relayed by hand.
 - **Merging a task branch:** read `git log`/`git diff --stat dev...branch` and the key hunks, check `git merge-tree` for conflicts (ask the task to rebase if any), `git merge --no-ff`, run the relevant unit tests (`python -m unittest python.tools.sim.<module>`), then commit the task's `plans/MASTER.md` edits on `dev`. Plans are edited only in the main checkout and committed only by the coordinator.
-- **Pushing:** only when the maintainer says so. Check `git fetch` first (the remote must not be ahead).
+- **Pushing:** the maintainer approved pushing `dev` after merges and commits (2026-10-20). Check `git fetch` first (the remote must not be ahead).
 - **GPU:** shared. Every session logs GPU run START/END in the coordination log. Heavy scenes (basket_of_fruit, celebration, ThingsFallingInBasket) run only interactively with the maintainer, one at a time, after asking; agents run short checks on cheap scenes only (beams, trampolines, mat_on_stilts).
-- **Long-running tasks or experiments:** ask the maintainer first, and validate with the smallest run (root `CLAUDE.md`).
-- **Reports for people** go in claude.ai artifacts: main progress report https://claude.ai/artifact/YArcnGXUULHaVdwmqwmT6g, the 19-Oct update for Melissa https://claude.ai/artifact/ArPNmk1utzE4hVHom2hez7, manual test checklist https://claude.ai/artifact/HBK31qw1PTh2yhFZLMoJgr (the checklist predates 19 Oct).
+- **Long-running tasks or experiments:** any GPU/CPU work over ~5 min in total (batches count as one run) needs the maintainer's approval first; validate with the smallest run (root `CLAUDE.md`). No GPU tests for trivial changes. Manual GUI tests start only on the maintainer's word.
+- **Reports for people** go in claude.ai artifacts: current progress report (20-21 Oct, with an "Iteration counts" tab) https://claude.ai/artifact/96sei64SAnxqiseoah8zRM; collaborator reference for the benchmark data https://claude.ai/artifact/Cmy2NbVJMzkNSLHxqT66VD (private until the maintainer shares it). Older: progress report https://claude.ai/artifact/YArcnGXUULHaVdwmqwmT6g, the 19-Oct update for Melissa https://claude.ai/artifact/ArPNmk1utzE4hVHom2hez7, manual test checklist https://claude.ai/artifact/HBK31qw1PTh2yhFZLMoJgr.
 
 ### Standing maintainer rules (beyond the root CLAUDE.md)
 
@@ -36,7 +37,8 @@ Read this section first. Older sections below are history; where they conflict w
 - Never modify `accelerated-vbd-extras` (read-only). Never edit `configs/paper/*.toml` by hand; regenerate them with the script (see "Scratch tools").
 - The paper parameter files are not authoritative: check them against the tuning guidance (sim-run skill). Guidance-based configs live in `configs/scenes/`; which to keep per scene is to be settled with Melissa.
 - Relative residual checks never divide by zero: max(relative scale, small absolute floor).
-- Benchmarks have no contact, never rely on gradient checks, and stop on the error only; error reductions go up to 99%.
+- Benchmarks have no contact, never rely on gradient checks, and stop on the error only; levels are decades up to 99.999% (static) and 99.99% (dynamic). Design: "Benchmark design (maintainer, 2026-10-20)" below.
+- Polyscope data viewers start without a ground plane and with 4x SSAA (root `CLAUDE.md`). Figures are kept as PDFs only (the maintainer deletes PNGs); no single-sample curve figures are needed.
 - Contact: adaptive penalty (TIMESTEP) by default; CONSTANT only with a stated justification. Scale VertexSdf `band`/`max_dist` to the geometry (metre-scale scenes with 10 cm plates need 1-2 cm bands).
 - AAAVBD's own parameters preferably stay one shared set across scenes (problem invariance via the Lipschitz normalization); tune budgets, thresholds and detection first.
 - cow_on_trampoline is out of scope (poorly shaped elements): don't work on it.
