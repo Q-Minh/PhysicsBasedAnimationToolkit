@@ -1045,6 +1045,8 @@ Answer when back; each has the coordinator's recommendation.
     Manual tests with the maintainer, one at a time on their word: 1 soft-soft trampoline (astol 1e-4) looked good;
     2 soft-stiff / stiff-soft trampolines with Newton (2 mm band); 3 capsules_into_bowl; 4 celebration; 5 basket_of_fruit.
     max_dist candidates: basket_of_fruit (2 cm vs ~4.4 cm/substep at 1 m fall), empty_basket (borderline), capsules.
+    Snapshot videos stay 5 s at 24 fps over 2x T_N (playback twice as fast as a 1x run; playback_factor per trajectory).
+    Sphere-on-trampoline bands 5 mm (2 mm exploded on het); Newton CG default cap 2000 (benchmark table pinned).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
