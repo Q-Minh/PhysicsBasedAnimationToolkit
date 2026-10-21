@@ -812,6 +812,24 @@ class LinearSolverParams(SerializableMixin):
     )
 
 
+class NewtonGpuParams(SerializableMixin):
+    """GPU-only Newton settings, serialized next to the C++ Newton params under ``Solver/Newton``.
+
+    Held by ``SimulationState.newton_gpu_params`` (kept across resets): configs set
+    ``Solver.Newton.init_strategy``. It takes effect at the next time step.
+    """
+
+    init_strategy = DocField(
+        pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position,
+        "Newton's initial guess for each time step, used instead of Integration.init_strategy whenever Newton is "
+        "the active solver (the VBD family keeps the shared one). Position (x_t) by default: Newton's first step "
+        "linearizes at the initial guess, and an extrapolated guess (e.g. TrajectoryWithExternalLoad) can start "
+        "deep inside a contact partner at an impact, where that linearization is poor (Newton went unstable at the "
+        "sphere's impact on the soft-stiff trampoline). Newton always runs at least one subproblem per step, so a guess "
+        "that already passes the outer test (x_t at rest is within astol * L of the free flight) still moves",
+    )
+
+
 # Safety factor on the float32 roundoff of the elastic energy, eps * h^2 sum_e w_e mu_e, that the
 # Armijo test tolerates (measured noise: about 1x it on the inclined-plane cube)
 _ENERGY_ROUNDOFF_FACTOR = 8.0
@@ -1478,8 +1496,11 @@ class NewtonSolver:
         converged = False
         subproblems, outer_tests = [], []
         initialize_solve(fem, contact, cd, params)
-        for _ in range(int(params.data.n_max_iters)):
-            converged = check_convergence(fem, contact, params)
+        for k in range(int(params.data.n_max_iters)):
+            # At least one subproblem per step (maintainer; C++ tests first): from x_t (init_strategy
+            # Position) at rest, the residual is the free flight h^2 a_ext, which the absolute floor astol * L
+            # can pass before any step, so nothing would ever move. The first test still runs, for the status.
+            converged = check_convergence(fem, contact, params) and k > 0
             outer_tests.append(params.last_outer_ratios)
             if converged:
                 break
@@ -1502,3 +1523,33 @@ class NewtonSolver:
     @property
     def supports_graph_capture(self):
         return False
+
+
+import unittest
+
+
+class TestNewtonSolveLoop(unittest.TestCase):
+    def test_at_least_one_subproblem(self):
+        """A step whose initial guess already passes the outer test still runs one subproblem."""
+        from unittest import mock
+
+        params = mock.Mock(solve_records=[], last_outer_ratios=(0.5, 0.0))
+        params.data.n_max_iters = 5
+        module = __name__
+        with (
+            mock.patch(f"{module}.initialize_solve"),
+            mock.patch(f"{module}.check_convergence", return_value=True) as check,
+            mock.patch(f"{module}.prepare_subproblem"),
+            mock.patch(f"{module}.solve_subproblem") as solve_subproblem,
+            mock.patch(f"{module}.finalize_subproblem"),
+        ):
+            converged = NewtonSolver().solve(mock.Mock(), mock.Mock(), mock.Mock(), params)
+        self.assertTrue(converged)
+        self.assertEqual(solve_subproblem.call_count, 1)
+        self.assertEqual(check.call_count, 2)  # before the subproblem (ignored), then after it
+        record = params.solve_records[0]
+        self.assertEqual((record.outer, len(record.outer_tests)), (1, 2))
+
+
+if __name__ == "__main__":
+    unittest.main()

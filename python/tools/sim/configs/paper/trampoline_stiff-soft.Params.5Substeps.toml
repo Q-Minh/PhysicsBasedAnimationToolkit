@@ -22,6 +22,7 @@
 #   Solver.Newton.LinearSolver.atol
 #   Solver.Newton.LinearSolver.n_max_iters
 #   Solver.Newton.LinearSolver.rtol
+#   Solver.Newton.init_strategy
 #   Solver.Newton.spd_correction
 #   Solver.VBD.kp
 #
@@ -154,6 +155,7 @@ ftol = 0.5
 rstol = 0.01
 
 [Solver.Newton]
+init_strategy = 0
 linear_solver = 1
 n_max_iters = 20
 spd_correction = 2
