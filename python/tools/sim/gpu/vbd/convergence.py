@@ -55,10 +55,13 @@ class ConvergenceParams(SerializableMixin):
     displacement (h v^t + h^2 a_ext for BDF1), mass-weighted RMS over free nodes, and L the mean
     bounding-box diagonal of the scene's bodies at rest (:func:`mean_body_diagonal`), i.e.
     ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, (astol L)^2 sum m_i)``. Neither term depends on the
-    mesh's resolution or mass, and both rstol and astol are dimensionless. The absolute term is the residual
-    float32 can still resolve: near rest the free-flight displacement is tiny (h^2 g), while the elastic
-    gradient's round-off grows with stiffness, so the relative term alone can ask for less than float32
-    resolves. Static problems have no inertial displacement and use the absolute ``gtol``.
+    mesh's resolution or mass, and both rstol and astol are dimensionless. The absolute term is a float32-noise
+    fallback for steps with almost no motion (RMS_M(d) ~ 0), where the relative term would ask for a zero
+    residual: astol = 1e-6 is about 8 float32 ulps of L. It must stay well below the step's motion, or the test
+    passes on a step that hasn't moved, so it isn't a per-scene tuning knob. Stiff scenes near rest may then
+    run their full budget, since their float32 residual floor, about (h omega)^2 ulps for a node's
+    stiffness-to-mass frequency omega, can exceed rstol * RMS_M(d). Static problems have no inertial
+    displacement and use the absolute ``gtol``.
     """
 
     check_interval = DocField(
@@ -77,13 +80,14 @@ class ConvergenceParams(SerializableMixin):
         "absolute gtol applies instead",
     )
     astol = DocField(
-        1e-4,
+        1e-6,
         "Absolute stationarity tolerance, relative to the scene's size: the gradient test passes when the "
         "mass-normalized residual RMS(M^-1 g) is at most max(rstol * RMS(x~ - x^t), astol * L), L being the mean "
-        "bounding-box diagonal of the scene's bodies at rest. The float32 floor of the residual grows with "
-        "stiffness, roughly (h omega)^2 ulp(x) for a node's stiffness-to-mass frequency omega, and near rest the "
-        "relative term alone can ask for less. Stiff scenes near rest may need 5e-4 to 1e-3 (the Y = 1e8 square "
-        "trampoline's first step stalls near 1.5e-3 m with L = 4.4 m, which 5e-4 passes)",
+        "bounding-box diagonal of the scene's bodies at rest. astol * L is a float32-noise fallback for steps with "
+        "almost no motion (RMS(x~ - x^t) ~ 0); the default 1e-6 is about 8 float32 ulps of L. It must stay well "
+        "below the step's motion, or the test passes on a step that hasn't moved, so it isn't a per-scene tuning "
+        "knob (a former astol = 5e-4 passed the square trampoline's ~1.5 mm residual against ~1 mm of gravity "
+        "sag per step)",
     )
 
     def deserialize(self, grp) -> None:
