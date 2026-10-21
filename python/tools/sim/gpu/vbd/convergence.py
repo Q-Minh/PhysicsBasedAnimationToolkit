@@ -57,8 +57,10 @@ class ConvergenceParams(SerializableMixin):
     ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, (astol L)^2 sum m_i)``. Neither term depends on the
     mesh's resolution or mass, and both rstol and astol are dimensionless. The absolute term is a float32-noise
     fallback for steps with almost no motion (RMS_M(d) ~ 0), where the relative term would ask for a zero
-    residual: astol = 1e-6 is about 8 float32 ulps of L. It must stay well below the step's motion, or the test
-    passes on a step that hasn't moved, so it isn't a per-scene tuning knob. Stiff scenes near rest may then
+    residual. The default astol = 1e-4 (maintainer: 1e-6, about 8 float32 ulps of L, made runs much too slow) is
+    0.57 mm on the 5.66 m trampolines, below their ~1 mm of gravity sag per step at h = 1e-2. astol L must stay
+    below the step's motion, or the test passes on a step that hasn't moved (with substeps, h^2 g shrinks: 0.04 mm
+    at h = 2e-3), so it isn't a per-scene tuning knob. Stiff scenes near rest may then
     run their full budget, since their float32 residual floor, about (h omega)^2 ulps for a node's
     stiffness-to-mass frequency omega, can exceed rstol * RMS_M(d). Static problems have no inertial
     displacement and use the absolute ``gtol``.
@@ -80,12 +82,12 @@ class ConvergenceParams(SerializableMixin):
         "absolute gtol applies instead",
     )
     astol = DocField(
-        1e-6,
+        1e-4,
         "Absolute stationarity tolerance, relative to the scene's size: the gradient test passes when the "
         "mass-normalized residual RMS(M^-1 g) is at most max(rstol * RMS(x~ - x^t), astol * L), L being the mean "
         "bounding-box diagonal of the scene's bodies at rest. astol * L is a float32-noise fallback for steps with "
-        "almost no motion (RMS(x~ - x^t) ~ 0); the default 1e-6 is about 8 float32 ulps of L. It must stay well "
-        "below the step's motion, or the test passes on a step that hasn't moved, so it isn't a per-scene tuning "
+        "almost no motion (RMS(x~ - x^t) ~ 0); default 1e-4 (1e-6 made runs much too slow). It must stay "
+        "below the step's motion (e.g. h^2 g, ~1 mm at h = 1e-2 but 0.04 mm at h = 2e-3), or the test passes on a step that hasn't moved, so it isn't a per-scene tuning "
         "knob (a former astol = 5e-4 passed the square trampoline's ~1.5 mm residual against ~1 mm of gravity "
         "sag per step)",
     )
