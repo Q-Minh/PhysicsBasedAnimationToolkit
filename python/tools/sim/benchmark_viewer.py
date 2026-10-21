@@ -22,8 +22,11 @@ overlays alone, which are then drawn more opaque (opaque when only one is shown)
   sweeps, how its solve ended, and buttons that jump to each level's crossing (``level_frames``): the
   shared time becomes that frame's, between the grid frames when the crossing isn't on one.
 - **Colors:** the per-vertex error |x_i - x*_i| or the displacement from the start |x_i - x_i(0)|, on one
-  color scale shared by the shown solvers (by default the largest value among them at the current time, so
-  the colors show where each solver's error concentrates while e/e0 gives its size), each solver's color, or
+  color scale shared by the shown solvers: by default from 0 to the problem's initial error max_i |x_i(0) - x*_i|
+  (the start is the same for every solver), so the range is fixed for the sample and each solver's colors decay
+  smoothly as it converges, whatever the others do (maintainer); or the largest value among them at the current
+  time, which shows where each solver's error concentrates while e/e0 gives its size; or a fixed max. Also each
+  solver's color, or
   a material parameter (the dataset FEM's Lame mu, lambda or Young's modulus, per boundary face from its
   tetrahedron) or the lumped mass per node, named and colored as in the CPU editor, by default in
   log10(value + 1), so heterogeneous scenes show their regions (masses: log10(m) over their 2nd-98th
@@ -364,7 +367,7 @@ def _level_text(level: float) -> str:
 
 
 COLOR_MODES = ("Error |x - x*|", "Displacement |x - x(0)|", "Solver color") + MATERIAL_MODES
-SCALE_MODES = ("Shared max at the frame", "Shared max at the start", "Fixed max")
+SCALE_MODES = ("Initial error", "Shared max at the frame", "Fixed max")
 _WARNING_COLOR = (1.0, 0.75, 0.2, 1.0)  # as the CPU editor's trajectory viewer
 
 
@@ -514,6 +517,11 @@ class Viewer:
             return np.linalg.norm(x - self.selection.reference[self.vertices], axis=1)
         return np.linalg.norm(x - tr.x[0][self.vertices], axis=1)
 
+    def initial_error(self) -> float:
+        """The problem's initial error max_i |x_i(0) - x*_i| over the boundary vertices (every solver starts at x(0))."""
+        x0 = self.selection.trajectories[0].x[0][self.vertices].astype(np.float64)
+        return float(np.linalg.norm(x0 - self.selection.reference[self.vertices], axis=1).max())
+
     def overlay_opacity(self) -> float:
         """Translucent over the solver meshes; without them, more opaque, and opaque if it is the only one."""
         if self.show_solvers:
@@ -558,9 +566,9 @@ class Viewer:
         if self.color_mode < 2 and shown:
             values = {tr.solver: self.vertex_values(tr, frames[tr.solver]) for tr in shown}
             if self.scale_mode == 0:
-                vmax = max(float(v.max()) for v in values.values())
+                vmax = self.initial_error()
             elif self.scale_mode == 1:
-                vmax = max(float(self.vertex_values(tr, 0).max()) for tr in shown)
+                vmax = max(float(v.max()) for v in values.values())
             else:
                 vmax = self.fixed_max
             self.vmax = max(vmax, 1e-12)
