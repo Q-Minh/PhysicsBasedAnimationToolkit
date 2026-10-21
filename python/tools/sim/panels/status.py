@@ -20,7 +20,7 @@ import polyscope.imgui as imgui
 from ..gpu.newton.solver import SubproblemStatus
 from ..gpu.vbd.convergence import SolveEnd
 
-_window = {"steps": 100}
+_window = {"steps": 10}
 _GOOD = (0.4, 0.85, 0.4, 1.0)
 _WARN = (1.0, 0.6, 0.2, 1.0)
 
@@ -231,7 +231,7 @@ def _draw_last_step(log):
 
 
 def _draw_window(log):
-    _, _window["steps"] = imgui.SliderInt("Window (steps)", _window["steps"], 10, 1000)
+    _, _window["steps"] = imgui.SliderInt("Window (steps)", _window["steps"], 1, 1000)
     _tooltip("How many of the most recent time steps the summary below covers.")
     summary = log.summary(_window["steps"])
     imgui.Text(f"Time steps: {summary['steps']}")
