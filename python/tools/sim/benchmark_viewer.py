@@ -25,8 +25,8 @@ overlays alone, which are then drawn more opaque (opaque when only one is shown)
   color scale shared by the shown solvers (by default the largest value among them at the current time, so
   the colors show where each solver's error concentrates while e/e0 gives its size), each solver's color, or
   a material parameter (the dataset FEM's Lame mu, lambda or Young's modulus, per boundary face from its
-  tetrahedron), named and colored as in the CPU editor, by default in log10(value + 1), so heterogeneous
-  scenes show their regions.
+  tetrahedron) or the lumped mass per node, named and colored as in the CPU editor, by default in
+  log10(value + 1), so heterogeneous scenes show their regions.
 - **Plot:** log10(e/e0) against solver time for every shown solver, with the levels and a marker at t.
 
 The mesh comes from the dataset the results were run on (the root attribute ``dataset``, or ``--dataset``
@@ -85,28 +85,8 @@ def boundary_triangles(X: np.ndarray, T: np.ndarray, return_elements: bool = Fal
     return faces[boundary]
 
 
-# The CPU editor's names for the material quantities (python/tools/vbd/ui/simulation.py, tetrahedral_elastodynamics_body.py)
-MATERIAL_MODES = ("Lame mu", "Lame lambda", "Young's Modulus")
-
-
-def element_materials(lame: np.ndarray, quadrature_elements: np.ndarray, n_elements: int) -> dict[str, np.ndarray]:
-    """Per-element material parameters of a FemElastoDynamics (Pa).
-
-    Args:
-        lame (np.ndarray): (2, Q) Lame mu and lambda per quadrature point (``lamegU``).
-        quadrature_elements (np.ndarray): (Q,) the element of each quadrature point (``egU``).
-        n_elements (int): M.
-
-    Returns:
-        dict[str, np.ndarray]: ``MATERIAL_MODES`` -> (M,): mu and lambda (the mean over the element's quadrature
-        points) and Young's modulus mu (3 lambda + 2 mu) / (lambda + mu).
-    """
-    e = np.asarray(quadrature_elements, dtype=np.int64).ravel()
-    count = np.maximum(np.bincount(e, minlength=n_elements), 1)
-    mu = np.bincount(e, np.asarray(lame[0], dtype=np.float64), n_elements) / count
-    lam = np.bincount(e, np.asarray(lame[1], dtype=np.float64), n_elements) / count
-    young = mu * (3 * lam + 2 * mu) / np.maximum(lam + mu, 1e-30)
-    return dict(zip(MATERIAL_MODES, (mu, lam, young)))
+# The CPU editor's material and mass quantities (python/tools/vbd/ui/material.py)
+MATERIAL_MODES = material.FEM_QUANTITIES
 
 
 def problem_fem_group(dataset: h5py.File, set_name: str) -> str:
@@ -271,7 +251,8 @@ class Selection:
     label: str
     X: np.ndarray  # (N, 3) rest positions
     triangles: np.ndarray  # (K, 3) boundary triangles
-    face_materials: dict[str, np.ndarray]  # MATERIAL_MODES -> (K,): each boundary triangle's tetrahedron's value
+    # MATERIAL_MODES -> (K,) each boundary triangle's tetrahedron's value, or (N,) per node (the lumped mass)
+    materials: dict[str, np.ndarray]
     reference: np.ndarray  # (N, 3) x*: X (static) or x_ref (dynamic)
     overlays: list[Overlay]
     levels: np.ndarray  # (L,) error reductions
@@ -346,16 +327,16 @@ def load_selection(path: str, benchmark: str, case: str, sample: int, dataset: s
         fem = d[problem_fem_group(d, set_name)][FEM_GROUP]
         X = fem[f"{MESH_GROUP}/X"][()].T.astype(np.float64)
         T = fem[f"{MESH_GROUP}/E"][()].T
-        materials = element_materials(fem["lamegU"][()], fem["egU"][()], len(T))
+        materials = material.fem_parameters(fem["lamegU"][()], fem["egU"][()], len(T), fem["m"][()])
         overlays = problem_overlays(problem, X, d[set_name]["samples"] if problem != "static" else None, sample)
     reference = X if problem == "static" else overlays[0].positions
     triangles, elements = boundary_triangles(X, T, return_elements=True)
-    face_materials = {name: values[elements] for name, values in materials.items()}
+    materials = {name: values if material.is_nodal(name) else values[elements] for name, values in materials.items()}
     for tr in trajectories:
         if tr.x.shape[1] != X.shape[0]:
             raise ValueError(f"{tr.solver}'s frames have {tr.x.shape[1]} nodes, the dataset's FEM {X.shape[0]}: "
                              f"wrong --dataset?")
-    return Selection(benchmark, case, sample, problem, label, X, triangles, face_materials, reference, overlays, levels, T_N,
+    return Selection(benchmark, case, sample, problem, label, X, triangles, materials, reference, overlays, levels, T_N,
                      span, video_seconds, n_frames, trajectories)
 
 
@@ -539,18 +520,21 @@ class Viewer:
         shown = sum(self.show_overlay.get(o.name, o.enabled) for o in self.selection.overlays)
         return 1.0 if shown <= 1 else OVERLAY_OPACITY_ALONE
 
-    def material_values(self) -> tuple[np.ndarray, tuple[float, float], str]:
-        """The color mode's material parameter per boundary face, its color range and colormap: the CPU editor's
-        (log10(value + 1), and its fixed range for Young's modulus), or linear over the mesh's values."""
+    def material_raw(self) -> np.ndarray:
+        """The color mode's material parameter per boundary face, or the mass per boundary vertex."""
         name = COLOR_MODES[self.color_mode]
-        values = self.selection.face_materials[name]
-        cmap = material.young_modulus_log10_cmap() if name == "Young's Modulus" else material.lame_parameters_cmap()
-        if self.log_material:
-            values = np.log10(values + 1)
-            if name == "Young's Modulus":
-                return values, material.young_modulus_log10_range(), cmap
+        values = self.selection.materials[name]
+        return values[self.vertices] if material.is_nodal(name) else values
+
+    def material_values(self) -> tuple[np.ndarray, tuple[float, float], str]:
+        """The color mode's material parameter per boundary face (or mass per boundary vertex), its color range and
+        colormap: the CPU editor's (log10(value + 1), and its fixed range for Young's modulus), or linear over the
+        mesh's values."""
+        values, options = material.display(COLOR_MODES[self.color_mode], self.material_raw(), self.log_material)
+        if "vminmax" in options:
+            return values, options["vminmax"], options["cmap"]
         lo, hi = float(values.min()), float(values.max())
-        return values, (lo, hi if hi > lo else lo + max(abs(lo), 1.0) * 1e-6), cmap
+        return values, (lo, hi if hi > lo else lo + max(abs(lo), 1.0) * 1e-6), options["cmap"]
 
     def update_meshes(self):
         s = self.selection
@@ -583,10 +567,12 @@ class Viewer:
                 self.meshes[solver].add_scalar_quantity(COLOR_MODES[self.color_mode], v, vminmax=(0.0, self.vmax),
                                                         cmap="viridis", enabled=True)
         elif self.color_mode >= 3 and self.dirty:  # the material doesn't change with the frames
+            name = COLOR_MODES[self.color_mode]
             values, vminmax, cmap = self.material_values()
+            location = "vertices" if material.is_nodal(name) else "faces"
             for tr in s.trajectories:
-                self.meshes[tr.solver].add_scalar_quantity(COLOR_MODES[self.color_mode], values, defined_on="faces",
-                                                           vminmax=vminmax, cmap=cmap, enabled=True)
+                self.meshes[tr.solver].add_scalar_quantity(name, values, defined_on=location, vminmax=vminmax,
+                                                           cmap=cmap, enabled=True)
         self.shown = frames
         self.dirty = False
 
@@ -811,9 +797,11 @@ class Viewer:
         elif self.color_mode >= 3:
             changed, self.log_material = imgui.Checkbox("Log10 scale", self.log_material)
             self.dirty |= changed
-            raw = s.face_materials[COLOR_MODES[self.color_mode]]
+            raw = self.material_raw()
+            where, unit = ("boundary nodes", "kg") if material.is_nodal(COLOR_MODES[self.color_mode]) else (
+                "boundary faces", "Pa")
             imgui.SameLine()
-            imgui.TextDisabled(f"boundary faces: {raw.min():.4g} to {raw.max():.4g} Pa")
+            imgui.TextDisabled(f"{where}: {raw.min():.4g} to {raw.max():.4g} {unit}")
         imgui.SetNextItemWidth(width * 0.3)
         changed, self.spacing = imgui.SliderFloat("Spacing", self.spacing, 1.0, 3.0, format="%.2f")
         if changed:
@@ -912,6 +900,7 @@ class TestBenchmarkViewer(unittest.TestCase):
         X, T = self.cube()
         rng = np.random.default_rng(0)
         shapes = {key: rng.standard_normal((2, 8, 3)).astype(np.float32) for key in ("x", "xtilde", "x_ref")}
+        masses = np.linspace(0.1, 0.8, 8)  # lumped mass per node
         levels = (0.5,)
         sample = 1  # not the first, so the sample (not its position) must select the shapes
         with tempfile.TemporaryDirectory() as root:
@@ -924,6 +913,7 @@ class TestBenchmarkViewer(unittest.TestCase):
                 lame = np.array([[1e7] * 3 + [1e5] * 3, [4e7] * 3 + [4e5] * 3], dtype=np.float32)
                 d[f"S/fem/{FEM_GROUP}"].create_dataset("lamegU", data=lame)
                 d[f"S/fem/{FEM_GROUP}"].create_dataset("egU", data=np.arange(6)[:, None])
+                d[f"S/fem/{FEM_GROUP}"].create_dataset("m", data=masses[:, None])
                 for name in ("S/static/E1", "S/dynamic_h0.01/E1"):
                     d.create_group(name).attrs["scene"] = "S"
                 for key, value in shapes.items():
@@ -960,11 +950,11 @@ class TestBenchmarkViewer(unittest.TestCase):
         _, elements = boundary_triangles(X, T, return_elements=True)
         stiff = elements < 3
         self.assertEqual(int(stiff.sum()), 6)
-        mu = dynamic.face_materials["Lame mu"]
+        mu = dynamic.materials["Lame mu"]
         np.testing.assert_allclose(mu[stiff], 1e7)
         np.testing.assert_allclose(mu[~stiff], 1e5)
-        np.testing.assert_allclose(dynamic.face_materials["Lame lambda"][stiff], 4e7)
-        young = dynamic.face_materials["Young's Modulus"]
+        np.testing.assert_allclose(dynamic.materials["Lame lambda"][stiff], 4e7)
+        young = dynamic.materials["Young's Modulus"]
         np.testing.assert_allclose(young[stiff], 1e7 * (3 * 4e7 + 2e7) / 5e7, rtol=1e-6)  # nu = 0.4: E = 2.8 mu
         self.assertEqual(dynamic.span, 1.0)
         # Positioned like the copies: the second solver's overlays and frames share its offset
@@ -995,6 +985,13 @@ class TestBenchmarkViewer(unittest.TestCase):
         self.assertEqual(viewer.material_values()[1], material.young_modulus_log10_range())
         viewer.log_material = False
         np.testing.assert_allclose(viewer.material_values()[1], (young.min(), young.max()))
+        # The lumped mass per boundary vertex
+        viewer.color_mode = COLOR_MODES.index("Mass")
+        values, vminmax, cmap = viewer.material_values()
+        np.testing.assert_allclose(values, masses[viewer.vertices])
+        self.assertEqual(cmap, material.mass_density_log10_cmap())
+        viewer.log_material = True
+        np.testing.assert_allclose(viewer.material_values()[0], np.log10(masses[viewer.vertices] + 1))
 
 
 if __name__ == "__main__":
