@@ -28,7 +28,8 @@ def draw_params(obj, sub_params: dict | None = None, _depth=0, exclude=frozenset
         if value is None or callable(value):
             continue
         if isinstance(value, float):
-            _, new_value = imgui.InputFloat(name, value, format="%.6f")
+            # 8 significant digits, in scientific notation when small (e.g. rtol 1e-08), not 6 fixed decimals
+            _, new_value = imgui.InputFloat(name, value, format="%.8g")
             try_draw_tooltip(obj, name)
             setattr(obj, name, new_value)
         elif isinstance(value, bool):
