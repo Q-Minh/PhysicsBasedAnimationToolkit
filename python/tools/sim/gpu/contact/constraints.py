@@ -30,6 +30,17 @@ def frozen_friction_limit(
     return C
 
 
+@wp.func
+def stored_friction_limit(friction_limit: wp.array[wp.float32], k: wp.int32):
+    """Contact k's Coulomb limit for GPU Newton's Hessian and line-search energies, read-only: the frozen
+    value, or 0 while it is unset. The augmented gradient at the step's base point runs first
+    (:func:`frozen_friction_limit`) and stores every positive estimate, so an unset limit means its
+    estimate there was 0, and all three use the same C. ``FRICTION_LIMIT_UNSET`` itself is not a limit:
+    read as one, it gave the Hessian a friction scale -1/|f| (-inf at f = 0, NaN blocks, CG at its cap)
+    and the energy a -|f| / sigma_f term."""
+    return wp.max(friction_limit[k], wp.float32(0))
+
+
 @wp.kernel
 def _snapshot_and_reset_constraints(
     contacts: pairs.PairsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -153,7 +164,8 @@ class ConstraintSet:
     lambda_f  : vec2f   friction Lagrange multiplier (tangential plane).
     friction_limit : float32 GPU Newton's Coulomb limit of the primal friction force, frozen for the
                 time step at the contact's first positive estimate in it (:func:`frozen_friction_limit`;
-                ``FRICTION_LIMIT_UNSET`` before it). It is carried across re-detection with the rest of
+                ``FRICTION_LIMIT_UNSET`` before it, which the Hessian and energies read as 0 through
+                :func:`stored_friction_limit`). It is carried across re-detection with the rest of
                 the state, so a contact found again keeps its limit, while a contact dropped by one
                 detection and found by a later one starts over, like its multipliers. Newton resets it
                 at the start of each time step (:meth:`reset_friction_limits`); the VBD family doesn't

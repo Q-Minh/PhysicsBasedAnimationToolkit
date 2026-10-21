@@ -1,4 +1,5 @@
 import enum
+import unittest
 
 from ...common.fields import DocField, SerializableMixin
 
@@ -9,7 +10,13 @@ import cuda.compute
 import numpy as np
 
 from .mesh import pairs
-from .constraints import ConstraintSet, ConstraintSetData
+from .constraints import (
+    FRICTION_LIMIT_UNSET,
+    ConstraintSet,
+    ConstraintSetData,
+    frozen_friction_limit,
+    stored_friction_limit,
+)
 from .multimesh import MultiMesh, MultiMeshData
 from . import halfedges
 from .. import common
@@ -951,3 +958,82 @@ class MeshDynamics:
     @property
     def data(self) -> MeshDynamicsData:  # type: ignore
         return self._data
+
+
+@wp.kernel
+def _friction_newton_step_terms(
+    c_f: wp.array[wp.vec2f],
+    d: wp.array[wp.vec2f],
+    lambda_f: wp.array[wp.vec2f],
+    estimate: wp.array[wp.float32],
+    sigma_f: wp.float32,
+    alpha: wp.float32,
+    friction_limit: wp.array[wp.float32],
+    slope: wp.array[wp.float32],
+    fd_slope: wp.array[wp.float32],
+    hessian_scale: wp.array[wp.float32],
+):
+    """One Newton step's friction terms of contact k, in its tangent coordinates c_f (the kernels' x
+    derivatives are these times the constant basis): the augmented gradient at the base point c_f
+    (freezing the limit, as gpu/gradient.py), its slope along d, the line-search energy's central
+    difference along d (as newton/solver.py's energy kernels) and the Hessian's friction scale."""
+    k = wp.tid()
+    C = frozen_friction_limit(friction_limit, k, estimate[k])
+    f = sigma_f * c_f[k] - lambda_f[k]
+    slope[k] = capped_friction_scale(c_f[k], lambda_f[k], sigma_f, C) * wp.dot(f, d[k])
+    Cs = stored_friction_limit(friction_limit, k)
+    E_plus = capped_friction_energy(c_f[k] + alpha * d[k], lambda_f[k], sigma_f, Cs)
+    E_minus = capped_friction_energy(c_f[k] - alpha * d[k], lambda_f[k], sigma_f, Cs)
+    fd_slope[k] = (E_plus - E_minus) / (wp.float32(2) * alpha)
+    hessian_scale[k] = capped_friction_scale(c_f[k], lambda_f[k], sigma_f, Cs)
+
+
+class TestNewtonFrictionConsistency(unittest.TestCase):
+    """GPU Newton's gradient, line-search energy and Hessian use the same Coulomb limit per contact,
+    set or unset (Warp's CPU device)."""
+
+    def test_energy_matches_gradient(self):
+        sigma_f, alpha = 10.0, 1e-3
+        # (c_f, d, lambda_f, estimate, stored limit before the step)
+        cases = [
+            ((0.0, 0.0), (1.0, 0.5), (0.0, 0.0), 0.0, -1.0),  # new, unpressed, at x_t: f = 0
+            ((0.05, -0.02), (-1.0, 0.3), (0.0, 0.0), 0.0, -1.0),  # unpressed, slipping
+            ((0.05, -0.02), (-1.0, 0.3), (0.1, 0.0), 0.2, -1.0),  # first positive estimate, slip (|f| > C)
+            ((0.01, 0.0), (0.2, 1.0), (0.0, 0.0), 0.5, -1.0),  # first positive estimate, stick (|f| <= C)
+            ((0.05, -0.02), (-1.0, 0.3), (0.1, 0.0), 3.0, 0.3),  # frozen earlier in the step, slip
+            ((0.01, 0.0), (0.2, 1.0), (0.0, 0.0), 0.0, 0.5),  # frozen earlier, estimate now 0, stick
+        ]
+        with wp.ScopedDevice("cpu"):
+            n = len(cases)
+            limit = wp.array([c[4] for c in cases], dtype=wp.float32)
+            slope, fd_slope, hessian_scale = (wp.zeros(n, dtype=wp.float32) for _ in range(3))
+            wp.launch(
+                _friction_newton_step_terms,
+                dim=n,
+                inputs=[
+                    wp.array([c[0] for c in cases], dtype=wp.vec2f),
+                    wp.array([c[1] for c in cases], dtype=wp.vec2f),
+                    wp.array([c[2] for c in cases], dtype=wp.vec2f),
+                    wp.array([c[3] for c in cases], dtype=wp.float32),
+                    sigma_f,
+                    alpha,
+                    limit,
+                    slope,
+                    fd_slope,
+                    hessian_scale,
+                ],
+            )
+            slope, fd_slope, hessian_scale = slope.numpy(), fd_slope.numpy(), hessian_scale.numpy()
+            limit = limit.numpy()
+        for k, (_, _, _, estimate, before) in enumerate(cases):
+            with self.subTest(case=k):
+                self.assertAlmostEqual(fd_slope[k], slope[k], delta=1e-3 * max(abs(slope[k]), 1.0))
+                self.assertTrue(0.0 <= hessian_scale[k] <= 1.0, hessian_scale[k])
+                # Only the gradient stores, and only a positive estimate into an unset limit
+                expected = before if before >= 0 else (estimate if estimate > 0 else float(FRICTION_LIMIT_UNSET))
+                self.assertAlmostEqual(limit[k], expected, places=6)
+
+
+if __name__ == "__main__":
+    wp.init()
+    unittest.main()
