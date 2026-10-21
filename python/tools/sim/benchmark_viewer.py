@@ -6,7 +6,9 @@ Pick a benchmark, case and sample. Every solver with a trajectory for that sampl
 of the body's boundary surface, labeled with its name. Translucent overlays in light colors, each with its own
 checkbox and a color legend in the panel, show the problem at every copy: for dynamic problems the reference
 solution x* (the set's ``x_ref``, on by default), the inertial target x~ (``xtilde``) and the start state x
-(``samples/x``); for static problems the rest shape X, which is the solution x* (off by default).
+(``samples/x``); for static problems the rest shape X, which is the solution x* (off by default). "Show solver
+meshes" hides every solver mesh at once (the per-solver checkboxes still choose the copies), to see the
+overlays alone, which are then drawn more opaque (opaque when only one is shown).
 
 - **Frames.** The controls are the CPU editor's trajectory viewer's (``python/tools/vbd/ui/trajectory.py``):
   Load, a frame slider, Autoplay and Screenshot. Frame k stands for the solver time t_k = k x budget / F,
@@ -208,6 +210,8 @@ REFERENCE_COLOR = (0.55, 0.85, 0.95)
 TARGET_COLOR = (1.0, 0.8, 0.55)
 START_COLOR = (0.72, 0.92, 0.62)
 REST_COLOR = (0.8, 0.8, 0.8)
+# Overlay opacity over the solver meshes, and without them (several overlays; a single one is opaque)
+OVERLAY_OPACITY, OVERLAY_OPACITY_ALONE = 0.3, 0.6
 
 
 def problem_overlays(problem: str, X: np.ndarray, samples: h5py.Group | None, sample: int) -> list[Overlay]:
@@ -372,6 +376,7 @@ class Viewer:
         self.clock_time, self.clock_lag = time.time(), 0.0
         self.color_mode, self.scale_mode, self.fixed_max, self.vmax = 0, 0, 1.0, 0.0
         self.spacing = 1.15
+        self.show_solvers = True  # every solver mesh, above the per-solver checkboxes
         self.show_overlay: dict[str, bool] = {}  # by overlay name, kept across selections
         self.visible: dict[str, bool] = {}
         self.meshes, self.offsets = {}, {}
@@ -445,7 +450,7 @@ class Viewer:
                 self.show_overlay.setdefault(overlay.name, overlay.enabled)
                 self.ghosts[tr.solver, overlay.name] = ps.register_surface_mesh(
                     f"{name} {overlay.name}", self.copy_positions(overlay.positions, tr.solver), self.faces,
-                    color=overlay.color, transparency=0.3)
+                    color=overlay.color, transparency=self.overlay_opacity())
             mesh = ps.register_surface_mesh(name, self.copy_positions(tr.x[0], tr.solver), self.faces,
                                             color=_rgb(solver_color(tr.solver, names)))
             self.meshes[tr.solver] = mesh
@@ -489,6 +494,13 @@ class Viewer:
             return np.linalg.norm(x - self.selection.reference[self.vertices], axis=1)
         return np.linalg.norm(x - tr.x[0][self.vertices], axis=1)
 
+    def overlay_opacity(self) -> float:
+        """Translucent over the solver meshes; without them, more opaque, and opaque if it is the only one."""
+        if self.show_solvers:
+            return OVERLAY_OPACITY
+        shown = sum(self.show_overlay.get(o.name, o.enabled) for o in self.selection.overlays)
+        return 1.0 if shown <= 1 else OVERLAY_OPACITY_ALONE
+
     def update_meshes(self):
         s = self.selection
         frames = {tr.solver: tr.frame_at(self.t) for tr in s.trajectories}
@@ -497,11 +509,12 @@ class Viewer:
         shown = [tr for tr in s.trajectories if self.visible[tr.solver]]
         for tr in s.trajectories:
             mesh = self.meshes[tr.solver]
-            mesh.set_enabled(self.visible[tr.solver])
+            mesh.set_enabled(self.show_solvers and self.visible[tr.solver])
             mesh.update_vertex_positions(self.copy_positions(tr.x[frames[tr.solver]], tr.solver))
             for overlay in s.overlays:
                 ghost = self.ghosts[tr.solver, overlay.name]
                 ghost.set_enabled(self.show_overlay[overlay.name] and self.visible[tr.solver])
+                ghost.set_transparency(self.overlay_opacity())
                 ghost.update_vertex_positions(self.copy_positions(overlay.positions, tr.solver))
         if self.color_mode < 2 and shown:
             values = {tr.solver: self.vertex_values(tr, frames[tr.solver]) for tr in shown}
@@ -563,6 +576,11 @@ class Viewer:
         """One checkbox per overlay, labeled in the overlay's color (the legend)."""
         import polyscope.imgui as imgui
 
+        changed, self.show_solvers = imgui.Checkbox("Show solver meshes", self.show_solvers)
+        self.dirty |= changed
+        if imgui.IsItemHovered():
+            imgui.SetTooltip("Hide every solver mesh to see the overlays alone (the per-solver checkboxes still choose "
+                             "the copies); the overlays are then drawn more opaque")
         imgui.TextDisabled("Overlays, at every copy:")
         for overlay in self.selection.overlays:
             imgui.PushID(overlay.name)
@@ -885,6 +903,13 @@ class TestBenchmarkViewer(unittest.TestCase):
             np.testing.assert_allclose(viewer.copy_positions(overlay.positions, "VBD"), overlay.positions)
         frame = dynamic.trajectories[1].x[1]
         np.testing.assert_allclose(viewer.copy_positions(frame, "Newton") - frame, shift)
+        # Overlays alone: more opaque without the solver meshes, opaque when only one is shown
+        viewer.show_overlay = {o.name: o.enabled for o in dynamic.overlays}
+        self.assertEqual(viewer.overlay_opacity(), OVERLAY_OPACITY)
+        viewer.show_solvers = False
+        self.assertEqual(viewer.overlay_opacity(), 1.0)
+        viewer.show_overlay["Start state x"] = True
+        self.assertEqual(viewer.overlay_opacity(), OVERLAY_OPACITY_ALONE)
 
 
 if __name__ == "__main__":
