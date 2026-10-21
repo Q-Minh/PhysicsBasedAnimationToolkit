@@ -51,19 +51,19 @@ class ConvergenceParams(SerializableMixin):
 
     Stationarity test: the gradient g of the time step's Lagrangian is turned into a position-like residual
     by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step would make), and passes
-    when ``RMS_M(M^-1 g) <= max(rstol * RMS_M(d), astol * L)``, with d = x~ - x^t the step's free-flight
-    displacement (h v^t + h^2 a_ext for BDF1), mass-weighted RMS over free nodes, and L the mean
-    bounding-box diagonal of the scene's bodies at rest (:func:`mean_body_diagonal`), i.e.
-    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, (astol L)^2 sum m_i)``. Neither term depends on the
-    mesh's resolution or mass, and both rstol and astol are dimensionless. The absolute term is a float32-noise
-    fallback for steps with almost no motion (RMS_M(d) ~ 0), where the relative term would ask for a zero
-    residual. The default astol = 1e-4 (maintainer: 1e-6, about 8 float32 ulps of L, made runs much too slow) is
-    0.57 mm on the 5.66 m trampolines, below their ~1 mm of gravity sag per step at h = 1e-2. astol L must stay
-    below the step's motion, or the test passes on a step that hasn't moved (with substeps, h^2 g shrinks: 0.04 mm
-    at h = 2e-3), so it isn't a per-scene tuning knob. Stiff scenes near rest may then
-    run their full budget, since their float32 residual floor, about (h omega)^2 ulps for a node's
-    stiffness-to-mass frequency omega, can exceed rstol * RMS_M(d). Static problems have no inertial
-    displacement and use the absolute ``gtol``.
+    when ``RMS_M(M^-1 g) <= max(rstol * RMS_M(d), astol * |a| * h^2)``, with d = x~ - x^t the step's
+    free-flight displacement (h v^t + h^2 a_ext for BDF1), mass-weighted RMS over free nodes, h the solve's
+    time step (dt / substeps) and |a| the scene's external acceleration (:func:`external_acceleration`: the
+    gravity's norm, or :data:`STANDARD_GRAVITY` without a load), i.e.
+    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, (astol |a| h^2)^2 sum m_i)``. Neither term depends on
+    the mesh's resolution, mass or size, and both rstol and astol are dimensionless: astol |a| is the tolerated
+    residual acceleration (unbalanced force per mass). The absolute term is a fallback for steps with little
+    free-flight motion, where the relative term would ask for a zero residual. It scales with h^2 like the
+    step's gravity sag (h^2 |a|) and like the float32 noise floor of stiff scenes, about (h omega)^2 ulps for a
+    node's stiffness-to-mass frequency omega, so it's time-step and scene-size invariant, and a step that
+    hasn't moved can't pass with astol < 1, with or without substeps. The default 0.5 matches the former
+    astol * L = 0.57 mm of the 5.66 m trampolines at h = 1e-2. Static problems have no inertial displacement
+    and use the absolute ``gtol``.
     """
 
     check_interval = DocField(
@@ -77,19 +77,19 @@ class ConvergenceParams(SerializableMixin):
     rstol = DocField(
         1e-2,
         "Relative stationarity tolerance: the gradient test passes when the mass-normalized residual RMS(M^-1 g) is "
-        "at most max(rstol * RMS(x~ - x^t), astol * L), x~ - x^t being the step's free-flight displacement "
+        "at most max(rstol * RMS(x~ - x^t), astol * |a| * h^2), x~ - x^t being the step's free-flight displacement "
         "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes. With rstol = astol = 0, the solver's "
         "absolute gtol applies instead",
     )
     astol = DocField(
-        1e-4,
-        "Absolute stationarity tolerance, relative to the scene's size: the gradient test passes when the "
-        "mass-normalized residual RMS(M^-1 g) is at most max(rstol * RMS(x~ - x^t), astol * L), L being the mean "
-        "bounding-box diagonal of the scene's bodies at rest. astol * L is a float32-noise fallback for steps with "
-        "almost no motion (RMS(x~ - x^t) ~ 0); default 1e-4 (1e-6 made runs much too slow). It must stay "
-        "below the step's motion (e.g. h^2 g, ~1 mm at h = 1e-2 but 0.04 mm at h = 2e-3), or the test passes on a step that hasn't moved, so it isn't a per-scene tuning "
-        "knob (a former astol = 5e-4 passed the square trampoline's ~1.5 mm residual against ~1 mm of gravity "
-        "sag per step)",
+        0.5,
+        "Absolute stationarity tolerance, as a fraction of the scene's external acceleration |a| (its gravity's "
+        "norm, or 9.81 m/s^2 without a load): the gradient test passes when the mass-normalized residual "
+        "RMS(M^-1 g) is at most max(rstol * RMS(x~ - x^t), astol * |a| * h^2), h being the solve's time step. "
+        "astol * |a| is the tolerated residual acceleration. The term scales with h^2 like the step's gravity sag, "
+        "so it's time-step and scene-size invariant, and with astol < 1 a step that hasn't moved can't pass. "
+        "Changed meaning (2026-10-20): astol used to be a fraction of the scene's size L (astol * L), so an old "
+        "file's astol = 1e-4 is now extremely strict",
     )
 
     def deserialize(self, grp) -> None:
@@ -191,34 +191,35 @@ def feasibility_tolerance(ftol: float, dmin: float) -> float:
     return float(ftol) * max(abs(float(dmin)), FEASIBILITY_FLOOR)
 
 
-def mean_body_diagonal(X: np.ndarray, E: np.ndarray) -> float:
-    """Mean bounding-box diagonal (m) of a mesh's bodies, the connected components of its elements, at
-    the given positions. Nodes in no element (e.g. static colliders' contact nodes) belong to no body.
+STANDARD_GRAVITY = 9.81
+"""External acceleration (m/s^2) the absolute stationarity tolerance uses for a scene without a load."""
+
+
+def external_acceleration(fext: np.ndarray, m: np.ndarray, dmask: np.ndarray) -> float:
+    """The scene's external acceleration |a| (m/s^2), the scale of the absolute stationarity tolerance
+    ``astol * |a| * h^2``: the mass-weighted RMS of f_i / m_i over free nodes, sqrt(sum |f_i|^2 / m_i /
+    sum m_i), which is the gravity's norm for a uniform gravity; :data:`STANDARD_GRAVITY` without a load.
 
     Args:
-        X (np.ndarray): (N, 3) positions.
-        E (np.ndarray): (|# elements|, 4) element nodes.
+        fext (np.ndarray): (N, 3) external forces.
+        m (np.ndarray): (N,) lumped masses.
+        dmask (np.ndarray): (N,) Dirichlet mask (nonzero: fixed node, excluded).
 
     Returns:
-        float: The mean diagonal over bodies (0 without elements).
+        float: |a|.
     """
-    import scipy.sparse
-    import scipy.sparse.csgraph
+    m = np.asarray(m, dtype=np.float64).reshape(-1)
+    free = (np.asarray(dmask).reshape(-1) == 0) & (m > 0)
+    f = np.asarray(fext, dtype=np.float64).reshape(-1, 3)[free]
+    mass = m[free].sum()
+    a = np.sqrt(np.sum(f * f, axis=1) @ (1.0 / m[free]) / mass) if mass > 0 else 0.0
+    return float(a) if a > 0 else STANDARD_GRAVITY
 
-    E = np.asarray(E).reshape(-1, 4)
-    if E.shape[0] == 0:
-        return 0.0
-    n = X.shape[0]
-    rows = np.repeat(E[:, 0], 3)
-    cols = E[:, 1:].reshape(-1)
-    graph = scipy.sparse.coo_matrix((np.ones(rows.shape[0]), (rows, cols)), shape=(n, n))
-    _, labels = scipy.sparse.csgraph.connected_components(graph, directed=False)
-    nodes = np.unique(E)
-    diagonals = []
-    for body in np.unique(labels[nodes]):
-        P = X[nodes[labels[nodes] == body]]
-        diagonals.append(float(np.linalg.norm(P.max(axis=0) - P.min(axis=0))))
-    return float(np.mean(diagonals))
+
+def absolute_stationarity_tolerance(astol: float, acceleration: float, h: float) -> float:
+    """The absolute term of the stationarity test, ``astol * |a| * h^2`` (m), for the external
+    acceleration ``acceleration`` (m/s^2) and the time step ``h`` (s)."""
+    return float(astol) * float(acceleration) * float(h) ** 2
 
 
 def ratio_to_tolerance(value: float, tolerance: float) -> float:
@@ -273,7 +274,7 @@ def _is_converged(
     stol2: wp.array[wp.float32],
     relative: wp.int32,
 ) -> bool:
-    """Stationarity test ``sum |g|^2/m <= stol2 = max(rstol^2 sum m |d|^2, (astol L)^2 M)`` if enabled
+    """Stationarity test ``sum |g|^2/m <= stol2 = max(rstol^2 sum m |d|^2, (astol |a| h^2)^2 M)`` if enabled
     (``relative``), else ``|g|^2 <= gtol^2``."""
     if relative != 0:
         return gm2[0] <= stol2[0]
@@ -307,7 +308,7 @@ def _free_flight_displacement_terms(
 def _stationarity_tol2(
     dm2: wp.float32, free_mass: wp.float32, rstol2: wp.float32, atol2: wp.float32
 ) -> wp.float32:
-    """Squared stationarity tolerance on sum |g|^2/m: max(rstol^2 sum m |d|^2, atol^2 sum m), atol = astol L
+    """Squared stationarity tolerance on sum |g|^2/m: max(rstol^2 sum m |d|^2, atol^2 sum m), atol = astol |a| h^2
     being the absolute tolerance in m."""
     return wp.max(rstol2 * dm2, atol2 * free_mass)
 
@@ -553,7 +554,7 @@ class ConvergenceCheck:
         contact: ContactDynamics,
         params: ConvergenceParams | None = None,
         status_capacity: int = 1,
-        length_scale: float | None = None,
+        acceleration: float | None = None,
     ):
         """
         Args:
@@ -563,14 +564,15 @@ class ConvergenceCheck:
             params (ConvergenceParams | None): Check interval and feasibility tolerance; defaults if None.
             status_capacity (int): Rows of the status ring: at least the solves between two
                 :meth:`read_status` calls (``SimulationState`` reads every step: its substeps).
-            length_scale (float | None): The scene's size L (m) that scales ``astol``: the mean
-                bounding-box diagonal of its bodies (:func:`mean_body_diagonal`), computed from the rest
-                positions if None.
+            acceleration (float | None): The scene's external acceleration |a| (m/s^2) that scales
+                ``astol`` (:func:`external_acceleration`), computed from ``fem``'s loads if None.
         """
         self.params = params or ConvergenceParams()
-        if length_scale is None:
-            length_scale = mean_body_diagonal(fem.data.X.numpy(), fem.data.E.numpy())
-        self.length_scale = float(length_scale)
+        if acceleration is None:
+            acceleration = external_acceleration(
+                fem.data.fext.numpy(), fem.data.m.numpy(), fem.data.dmask.numpy()
+            )
+        self.acceleration = float(acceleration)
         capacity = max(1, int(status_capacity))
         self.status = wp.zeros(capacity, dtype=SolveStatus)
         self.solves = wp.zeros(1, dtype=wp.int32)
@@ -580,7 +582,7 @@ class ConvergenceCheck:
         self._contact = contact
         self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False)
         # Stationarity test (rstol or astol > 0): sum |g_i|^2 / m_i against
-        # stol2 = max(rstol^2 sum m_i |d_i|^2, (astol L)^2 sum m_i), sums over free nodes
+        # stol2 = max(rstol^2 sum m_i |d_i|^2, (astol |a| h^2)^2 sum m_i), sums over free nodes
         n_nodes = fem.data.x.shape[0]
         self._terms = wp.zeros(n_nodes, dtype=wp.float32)
         self._masses = wp.zeros(n_nodes, dtype=wp.float32)
@@ -621,6 +623,12 @@ class ConvergenceCheck:
         enabled = float(self.params.rstol) > 0.0 or float(self.params.astol) > 0.0
         return enabled and not self._fem.static
 
+    @property
+    def absolute_tolerance(self) -> float:
+        """The stationarity test's absolute term ``astol * |a| * h^2`` (m), h being the time step of
+        ``fem``'s integrator (dt / substeps)."""
+        return absolute_stationarity_tolerance(self.params.astol, self.acceleration, self._fem.bdf.h)
+
     def _test(self) -> None:
         stream = wp.get_stream()
         self.gradient_norm.compute(stream)
@@ -637,7 +645,7 @@ class ConvergenceCheck:
 
     def measure_scale(self) -> None:
         """Measure the stationarity tolerance for the time step, ``stol2 = max(rstol^2 sum m_i |x~_i -
-        x^t_i|^2, (astol L)^2 sum m_i)`` over free nodes. No-op unless :attr:`relative`. Capturable."""
+        x^t_i|^2, (astol |a| h^2)^2 sum m_i)`` over free nodes. No-op unless :attr:`relative`. Capturable."""
         if self.relative:
             stream = wp.get_stream()
             wp.launch(
@@ -654,7 +662,7 @@ class ConvergenceCheck:
                     self.displacement_m2,
                     self.free_mass,
                     float(self.params.rstol) ** 2,
-                    (float(self.params.astol) * self.length_scale) ** 2,
+                    self.absolute_tolerance**2,
                     self.stationarity_tol2,
                 ],
             )
@@ -960,7 +968,7 @@ class TestStationarityTolerance(unittest.TestCase):
             ratio[i] = _gradient_ratio(g, wp.float32(0), g, s, 1)
 
         # Free mass 2 kg; RMS residual r and RMS free-flight displacement D give gm2 = 2 r^2, dm2 = 2 D^2
-        rstol, atol = 1e-2, 1e-4  # atol = astol * L, in m
+        rstol, atol = 1e-2, 1e-4  # atol = astol |a| h^2, in m
         cases = [  # (D, r)
             (1e-1, 0.9e-3),  # relative term (1e-3) dominates: passes
             (1e-1, 1.1e-3),
@@ -978,14 +986,24 @@ class TestStationarityTolerance(unittest.TestCase):
         expected = r / np.maximum(rstol * D, atol)
         np.testing.assert_allclose(ratio.numpy(), expected, rtol=1e-5)
 
-    def test_mean_body_diagonal(self):
-        # Two bodies: a unit tet (diagonal sqrt 3) and a tet of edge 2 sharing no node with it (2 sqrt 3),
-        # plus a node in no element (a collider's contact node), which belongs to no body
-        unit = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
-        X = np.vstack([unit, 10 + 2 * unit, [[100.0, 100.0, 100.0]]])
-        E = np.array([[0, 1, 2, 3], [4, 5, 6, 7]])
-        self.assertAlmostEqual(mean_body_diagonal(X, E), 1.5 * np.sqrt(3))
-        self.assertEqual(mean_body_diagonal(X, np.zeros((0, 4), dtype=int)), 0.0)
+    def test_external_acceleration(self):
+        # Uniform gravity on unequal masses: its norm; fixed and massless nodes don't count
+        m = np.array([1.0, 3.0, 2.0, 0.0])
+        fext = m[:, None] * np.array([0.0, 0.0, -9.81])
+        fext[2] = [100.0, 0.0, 0.0]  # a fixed node's load
+        self.assertAlmostEqual(external_acceleration(fext, m, np.array([0, 0, 1, 0])), 9.81, places=12)
+        # No load: standard gravity
+        self.assertEqual(external_acceleration(np.zeros((4, 3)), m, np.zeros(4)), STANDARD_GRAVITY)
+
+    def test_absolute_tolerance_scales_with_h2(self):
+        astol = ConvergenceParams().astol
+        # The default matches the former astol * L = 1e-4 * 5.66 m of the trampolines at h = 1e-2
+        self.assertAlmostEqual(absolute_stationarity_tolerance(astol, 9.81, 1e-2), 0.5 * 9.81e-4)
+        tol = [absolute_stationarity_tolerance(astol, 9.81, h) for h in (1e-2, 2e-3)]
+        self.assertAlmostEqual(tol[0] / tol[1], 25.0)
+        # Below one step's gravity sag h^2 |a| at any h, so a step that hasn't moved can't pass
+        for h in (1e-2, 2e-3, 1e-4):
+            self.assertLess(absolute_stationarity_tolerance(astol, 9.81, h), 9.81 * h * h)
 
 
 if __name__ == "__main__":
