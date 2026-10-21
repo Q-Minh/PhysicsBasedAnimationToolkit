@@ -24,9 +24,6 @@
 # - VertexSdf band 5 mm for the sphere falling on the trampolines (maintainer, 2026-10-20): at 2 mm the sphere's
 #   impact on the heterogeneous circle trampoline exploded.
 #     Contact.CDType.VertexSdf.band = 0.005 (source 0.001)
-# - astol = 5e-4: Young's modulus 1e8 regions resting in contact. Near rest the default 1e-4 can ask for less
-#   than float32 resolves (the Y = 1e8 square trampoline's first step stalled near 1.5e-3 m with L = 4.39 m).
-#     Solver.Convergence.astol = 0.0005 (source 0.0001)
 #
 # Notes:
 # - Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per substep.
@@ -125,7 +122,7 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
-astol = 0.0005
+astol = 1e-06
 check_interval = 20
 ftol = 0.5
 rstol = 0.01
