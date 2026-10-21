@@ -50,6 +50,39 @@ class TestEnergyNoise(unittest.TestCase):
         noise = rom_mcmc.estimate_energy_noise(model, np.array([0.5, 0.2, 0.1]))
         self.assertAlmostEqual(noise, 1e-4, delta=0.3e-4)
 
+    def test_microcanonical_measures_noise_at_its_samples(self):
+        # A stiffening energy U = 1/2 |q|^2 + b |q|^8 with float32-like round-off relative to U. The probe on the
+        # linearized level set |q| = sqrt(2 E) sits at U ~ b 2^4 E^4 >> E, like soft trampolines at 1e4 J, while the
+        # chain stays at U < E, where the noise is tiny
+        b, rel, E = 10.0, 1e-6, 2.0
+
+        class Stiffening:
+            dims, scale, weight = 3, np.ones(3), "uniform"
+
+            def energy(self, q):
+                r2 = q @ q
+                u = 0.5 * r2 + b * r2**4
+                return u * (1 + rel * np.sin(1e6 * q.sum()))  # deterministic pseudo-random round-off
+
+            def reduced_mass(self, q):
+                return np.eye(3)
+
+        model = Stiffening()
+        probe = np.sqrt(2 * E) * np.ones(3) / np.sqrt(3)
+        self.assertTrue(rom_mcmc.energy_noise_stats(rom_mcmc.estimate_energy_noise(model, probe), E)["energy_noise_warning"])
+        batch = rom_mcmc.run_chains(
+            lambda rng: rom_mcmc.make_sampler("microcanonical", model, E, rng),
+            n_chains=2,
+            n_samples=40,
+            burn_in=200,
+            pilot=200,
+            seed=3,
+        )
+        self.assertFalse(batch.stats["energy_noise_warning"])
+        self.assertLess(batch.stats["energy_noise"], rel * E)
+        # Recomputing from the stored pool reproduces the recorded statistics
+        self.assertEqual(rom_mcmc.pool_energy_noise(model, batch.q, 2), batch.stats["energy_noise"])
+
     def test_no_false_star_violations(self):
         model = NoisyQuadraticEnergy(np.array([1.0, 4.0, 9.0]), np.ones(3), noise=1e-4)
         sampler = rom_mcmc.make_sampler("polar", model, 1.0, np.random.default_rng(5))

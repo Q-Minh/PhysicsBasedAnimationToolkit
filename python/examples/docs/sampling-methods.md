@@ -301,7 +301,12 @@ $1.3$–$4 \times 10^{-5}$ J on the trampoline.
 
 Each chain estimates it once, as the residual standard deviation $\varepsilon$ of a cubic fit to
 $\mathcal{U}\big((1+t) q\big)$ over $t \in [-10^{-3}, 10^{-3}]$ (33 points). A narrower range would leave the float32
-positions unchanged and underestimate it. Tolerances then follow $\varepsilon$:
+positions unchanged and underestimate it. The fixed-potential samplers measure it at a random point
+$q = \sqrt{2E}\, s \odot \theta$ of the linearized level set, near where they sample. The microcanonical sampler
+re-measures it at its samples instead, as the largest $\varepsilon$ over 4 evenly spaced samples of each chain
+(`rom_mcmc.samples_energy_noise`). On soft scenes that probe point lies far outside $\mathcal{U} < E$, e.g. at
+$10^{13}$ J for $E = 10^4$ J on the $Y = 10^5$ circle trampoline, and overstated the noise by up to $10^9$×.
+Tolerances then follow $\varepsilon$:
 
 - the star-shape crossing check ignores points within $10\varepsilon$ of $E^\star$;
 - radial roots stop at a relative tolerance $\max(10^{-6}, \varepsilon / 2E^\star)$, since $\mathcal{U} \sim r^2$;
@@ -523,7 +528,7 @@ linear-mode ROM is within 7.3%, but stores 97 J against the target's 26 J.
 | Level-set samplers (Section 3) | `rom_mcmc.PolarMetropolis`, `radial_root`, `ConstrainedRandomWalk`, `RaySampler` |
 | Microcanonical sampler (Section 4) | `rom_mcmc.MicrocanonicalMetropolis` |
 | Adaptation, thinning, $\hat R$ (Section 5) | `rom_mcmc._Chain`, `integrated_autocorrelation_time`, `split_rhat`, `run_chain`, `run_chains` |
-| Noise floor (Section 6) | `rom_mcmc.estimate_energy_noise` |
+| Noise floor (Section 6) | `rom_mcmc.estimate_energy_noise`, `samples_energy_noise`, `pool_energy_noise` |
 | Sample files | `rom_mcmc.write_samples` (the file contract) |
 | Benchmark problems and the dataset file (Section 8) | `make_benchmark.py`, `rom_reach.static_equilibrium` (with inertia) |
 | Shape matching (Section 9) | `rom_reach.py`, and the reachability panel in `modalrom.py` |
