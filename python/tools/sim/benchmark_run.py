@@ -9,10 +9,19 @@ A run file is a config (``config.py``: ``extends`` resolves relative to it) with
   ``[run.snapshots]`` (``SNAPSHOT_OPTIONS``). Relative paths (the dataset) are relative to the current
   directory, the repo root for the commands of ``benchmark.py``.
 - ``[case."<KEY>"]``: solver parameters for some problems, keyed like ``--scene-params``: ``SCENE`` for
-  every benchmark of a scene, ``BENCHMARK/SCENE`` for one benchmark's (e.g. ``[case."static/het".Solver.
-  Newton.LinearSolver]``), merged in that order.
+  every benchmark of a scene, ``BENCHMARK/SCENE`` for one benchmark's, merged in that order. The full form is
+  ``[case."<benchmark>/<scene>".<Table.path>]``, the table path as in any config, e.g.::
+
+      [case."static/het".Solver.Newton.LinearSolver]
+      n_max_iters = 4000
 
 Every other table (``Solver``, ``Contact``, ``Integration``) holds the solver parameters shared by every case.
+
+Finding the keys: ``python -m python.tools.sim.benchmark --dataset DATASET.h5 --list`` prints a dataset's case
+keys with each set's kind, h, scene, energy, problem count, mesh, materials, Dirichlet nodes and reference
+accuracy (and with ``--run``, the levels, budget and case parameters the run gives it);
+``python -m python.tools.sim.config params [PREFIX]`` prints every solver parameter with its default, type, enum
+values by name and description.
 
 Precedence, lowest first: the code defaults, the run file, the command line's options and parameter files
 (``--sim-params``, ``--scene-params``), then ``--set``. Unknown run options fail here; unknown solver

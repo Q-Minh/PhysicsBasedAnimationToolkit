@@ -47,10 +47,13 @@ shares, and per-case ones ([case."SCENE"], [case."BENCHMARK/SCENE"]); the full r
 ``configs/benchmark/trampolines.toml``. Command-line options and parameter files win over it, then --set.
 The results store the run file's text (``run_toml``) and its resolved form, and each case its parameters
 (``sim_params_toml``). ``--dry-run`` prints each case's sets, levels, budget and Newton CG settings without
-solving, and fails on unknown solver parameters.
+solving, and fails on unknown solver parameters. To write a run file: ``--list`` prints the dataset's case keys
+(BENCHMARK/SCENE, for ``[case."<benchmark>/<scene>".<Table.path>]``) with each set's kind, h, scene, energy,
+problem count, mesh, materials, Dirichlet nodes and reference accuracy, without the GPU; ``python -m
+python.tools.sim.config params [PREFIX]`` lists every solver parameter (default, type, enum names, description).
 
 Usage:
-    python -m python.tools.sim.benchmark [--run RUN.toml] [--dry-run] \
+    python -m python.tools.sim.benchmark [--run RUN.toml] [--dry-run | --list] \
         --dataset DATASET.h5 [--sets PATTERN ...] -o results.h5 \
         [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] [--levels [BENCHMARK=]0.5,0.6,...,0.99 ...] \
         [--sim-params A.toml [B.h5 ...]] [--scene-params [BENCHMARK/]SCENE=C.toml[,D.toml] ...] \

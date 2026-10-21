@@ -10,7 +10,7 @@ These files are cached here for now. Their long-term home is the paper's reposit
 |---|---|
 | `defaults.toml` | Every parameter the code serializes, with its code default. Use it as a reference or as an `extends` base. |
 | `paper/*.toml` | The paper's GPU parameter files (`accelerated-vbd-extras/parameters/gpu/*.h5`), converted and completed. See "Paper configs". |
-| `benchmark/*.toml` | The convergence benchmark's parameters (`benchmark.py --run` / `--sim-params`). `shared.toml` holds what every scene shares: AAAVBD's shared parameter set and the Inverse vertex solve. `trampolines.toml` is the full run's run file (`benchmark.py --run`, format in `benchmark_run.py`): it extends `shared.toml` and adds the run's options and per-case parameters (`[case."BENCHMARK/SCENE"]`, e.g. Newton's CG settings per scene). |
+| `benchmark/*.toml` | The convergence benchmark's parameters (`benchmark.py --run` / `--sim-params`). `shared.toml` holds what every scene shares: AAAVBD's shared parameter set and the Inverse vertex solve. `trampolines.toml` is the full run's run file (`benchmark.py --run`, format in `benchmark_run.py`): it extends `shared.toml` and adds the run's options and per-case parameters (`[case."<benchmark>/<scene>".<Table.path>]`, e.g. Newton's CG settings per scene). `benchmark.py --dataset D.h5 --list` prints a dataset's case keys. |
 | `scenes/*.toml` | Per-scene configs that follow the maintainer's tuning guidance (sweep budget by stiffness, Inverse vertex solve). Each `extends` a paper config, keeps its contact parameters and says in its header what it changes. Where they differ from the paper configs, which to keep is still to be settled with the paper's collaborator. |
 
 ## Format
@@ -48,6 +48,12 @@ To make warnings fatal, run with `python -W error::python.tools.sim.config.Confi
 
 ```bash
 python -m python.tools.sim.config show a.toml b.toml --set Solver.VBD.gtol=1e-4
+```
+
+To list every key a config can set, with its default, type, enum values by name (e.g. `vlinsolve`: 0 Inverse, 1 LLT, ...) and the description the code gives it ("(no description in the code)" where there is none), optionally under one table:
+
+```bash
+python -m python.tools.sim.config params Solver.Newton
 ```
 
 ## Making a config
