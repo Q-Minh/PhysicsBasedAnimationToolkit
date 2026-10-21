@@ -13,9 +13,12 @@ Each (case, level) cell has one bar per solver, colored by solver. A translucent
 spans the min and max normalized increments over the same samples. A bar whose level not every sample
 reached is labeled with the fraction that did (e.g. 28/32), and the highest level always is, also with
 0/N, so a solver that stalled shows. A level no sample reached has no bar, nor has a level every sample
-that reached it jumped over (zero time). A cell beyond the reference's accuracy (a dynamic case's
-``resolvable`` is False for some sample) gets a red x instead of bars: its errors measure the reference,
-not the solvers. Bars are drawn back to front for the chosen camera, so nearer bars cover farther ones.
+that reached it jumped over (zero time). Dynamic references are float32 solves of limited accuracy
+(``resolvable``, per sample and level): a cell whose level the reference can't resolve for most samples
+(no strict majority) is left empty, since its errors would measure the reference, not the solvers, and in
+the other cells the samples it can't resolve are left out of the statistics and of N. The highest level
+labeled is then the highest drawn one. Bars are drawn back to front for the chosen camera, so nearer bars
+cover farther ones.
 
 Budget: the bars score each solve within ``--budget-factor F`` x T_N. The default is 1 (the paper's bars), or
 the run's factor when that is smaller. A run at a larger factor (``benchmark.py --budget-factor``, e.g. 2, so
@@ -46,7 +49,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
 
 from . import benchmark_results as results  # noqa: E402
@@ -61,7 +63,6 @@ SOLVER_COLORS = {
 }
 SOLVER_NAMES = {"AndersonSolver": "Anderson"}
 OTHER_COLORS = ["#56B4E9", "#F0E442", "#000000"]
-UNRESOLVABLE_COLOR = "#C00000"  # the red x of cells beyond the reference's accuracy
 
 
 def benchmark_title(benchmark: str) -> str:
@@ -86,22 +87,41 @@ def case_label(group: h5py.Group, case: str) -> str:
     return label
 
 
-def unresolvable_levels(g: h5py.Group, solvers: list[str], n_levels: int) -> np.ndarray:
-    """(L,) bool: the levels some sample's reference can't resolve (any solver's ``resolvable``; all False
-    for static cases, whose reference is exact)."""
+def resolvable_samples(g: h5py.Group, solvers: list[str]) -> np.ndarray | None:
+    """(S, L) bool: the levels each sample's reference resolves (any solver's ``resolvable``, the same for
+    all); None for static cases, whose reference is exact."""
     for solver in solvers:
         if solver in g and "resolvable" in g[solver]:
-            return ~np.asarray(g[solver]["resolvable"], dtype=bool).all(axis=0)
-    return np.zeros(n_levels, dtype=bool)
+            return np.asarray(g[solver]["resolvable"], dtype=bool)
+    return None
 
 
-def normalized_aggregate(g: h5py.Group, solver: str, rescore: tuple | None = None) -> dict:
+def unresolvable_levels(g: h5py.Group, solvers: list[str], n_levels: int) -> np.ndarray:
+    """(L,) bool: the levels the reference can't resolve for a strict majority of the samples (all False
+    for static cases)."""
+    resolvable = resolvable_samples(g, solvers)
+    if resolvable is None:
+        return np.zeros(n_levels, dtype=bool)
+    return ~(2 * resolvable.sum(axis=0) > resolvable.shape[0])
+
+
+def normalized_aggregate(
+    g: h5py.Group, solver: str, rescore: tuple | None = None, counted: np.ndarray | None = None
+) -> dict:
     """The solver's per-level statistics of normalized increments: ``normalized_increment`` (increment /
     T_N or the fixed budget), or for files without it, the increments over the case's budget. ``rescore``
-    = (levels, factor) re-scores a T_N case at factor x T_N (:func:`benchmark_results.rescore`)."""
+    = (levels, factor) re-scores a T_N case at factor x T_N (:func:`benchmark_results.rescore`). ``counted``
+    (S, L) bool restricts each level's statistics to those samples (e.g. :func:`resolvable_samples`)."""
     sg = g[solver]
     if rescore is not None and "budget" not in g.attrs and "normalization" in sg:
-        a = results.rescore(sg, *rescore)
+        a = results.rescore(sg, *rescore, counted=counted)
+        return {s: a[s] for s in ("count", "mean", "min", "max")}
+    if counted is not None:
+        if "normalized_increment" in sg:
+            values = np.asarray(sg["normalized_increment"])
+        else:
+            values = np.asarray(sg["increment"]) / float(g.attrs["budget"])
+        a = results.aggregate(values, np.asarray(sg["reached"], dtype=bool) & counted)
         return {s: a[s] for s in ("count", "mean", "min", "max")}
     if "aggregate/normalized_increment" in sg:
         a = sg["aggregate/normalized_increment"]
@@ -122,7 +142,8 @@ def depth_order(cases, solvers: list[str], n_levels: int, rescore: tuple | None 
     key = {}
     for solver in solvers:
         heights = [
-            drawn_heights(normalized_aggregate(g, solver, rescore), unresolvable_levels(g, solvers, n_levels))
+            drawn_heights(normalized_aggregate(g, solver, rescore, resolvable_samples(g, solvers)),
+                          unresolvable_levels(g, solvers, n_levels))
             for _, g in cases
             if solver in g
         ]
@@ -175,24 +196,28 @@ def plot_benchmark(
 
     bars = []  # (x, y, z0, dz, color, label, is_box, width, depth)
     floating = []  # (x, y, z, label): labels of empty cells
-    crosses = []  # (x, y): cells beyond the reference's accuracy
     z_top = 0.0
     for i, (case, g) in enumerate(cases):
         unresolvable = unresolvable_levels(g, solvers, n_l)
-        crosses += [(i, j) for j in np.nonzero(unresolvable)[0]]
+        resolvable = resolvable_samples(g, solvers)
+        top_level = int(np.nonzero(~unresolvable)[0][-1]) if (~unresolvable).any() else -1
         for k, solver in enumerate(solvers):
             if solver not in g:
                 continue
-            a = normalized_aggregate(g, solver, rescore)
-            count, n = a["count"], int(g[solver].attrs["n_samples"])
+            a = normalized_aggregate(g, solver, rescore, resolvable)
+            n_samples = int(g[solver].attrs["n_samples"])
+            counted = resolvable.sum(axis=0) if resolvable is not None else np.full(n_l, n_samples)
+            count = a["count"]
             mean, lo, hi = a["mean"], a["min"], a["max"]
             color = solver_color(solver, solvers)
             xc = i - x_sign * (k - (n_s - 1) / 2) * slot
             for j in range(n_l):
                 if unresolvable[j]:
                     continue
-                top = j == n_l - 1
-                # The highest level always says how many samples reached it, also 0/N (a stalled solver)
+                top = j == top_level
+                # The highest drawn level always says how many samples reached it, also 0/N (a stalled
+                # solver); N counts the samples whose reference resolves the level
+                n = int(counted[j])
                 label = f"{count[j]}/{n}" if top or count[j] < n else None
                 if count[j] == 0 or not hi[j] > 0:
                     # Not reached, or skipped by every sample that reached it: an empty cell
@@ -227,11 +252,6 @@ def plot_benchmark(
     for x, y, z, label, order in labels:
         ax.text(x, y, z + 0.015 * z_max, label, fontsize=6, ha="center", va="bottom", color="#333333",
                 zorder=len(bars) + order)
-    # Each x in the back-to-front order of the bars, so nearer bars cover it
-    keys = [depth(b[0], b[1]) for b in bars]
-    for x, y in crosses:
-        ax.scatter([x], [y], [0.0], marker="x", s=60, linewidths=2.0, color=UNRESOLVABLE_COLOR, depthshade=False,
-                   zorder=int(np.searchsorted(keys, depth(x, y))) - 0.5)
 
     ax.set_xticks(range(len(cases)))
     ax.set_xticklabels([case_label(g, c) for c, g in cases], fontsize=8)
@@ -252,14 +272,16 @@ def plot_benchmark(
         axis._axinfo["grid"]["color"] = (0.85, 0.85, 0.85, 1)
     handles = [Patch(color=solver_color(s, solvers), label=SOLVER_NAMES.get(s, s)) for s in solvers]
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
-    if crosses:
-        handles.append(Line2D([], [], marker="x", linestyle="none", markersize=7, markeredgewidth=2.0,
-                              color=UNRESOLVABLE_COLOR, label="beyond the reference's accuracy"))
     fig.legend(handles=handles, loc="upper right", fontsize=8, frameon=False)
     fig.suptitle(benchmark_title(benchmark), x=0.02, ha="left", fontsize=11)
     within = "" if all(fixed) else f" within {factor:g} x T_N"
+    unresolved = any(resolvable_samples(g, solvers) is not None for _, g in cases)
+    reference = (
+        "; empty cells: beyond the reference's accuracy for most samples (elsewhere, the samples it can't "
+        "resolve are left out)" if unresolved else ""
+    )
     fig.text(0.02, 0.02, f"Bars: mean over the samples that reached the level{within}; n/N: samples that reached "
-             f"it (always shown at {100 * levels[-1]:g}%)",
+             f"it (always shown at the highest level drawn){reference}",
              fontsize=7, color="#555555")
     return fig
 

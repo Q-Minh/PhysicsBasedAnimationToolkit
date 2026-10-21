@@ -235,7 +235,9 @@ def relative_error(error: np.ndarray) -> np.ndarray:
     return error / e0 if e0 > 0 else np.zeros_like(error)
 
 
-def rescore(solver_group: h5py.Group, levels, factor: float) -> dict[str, np.ndarray]:
+def rescore(
+    solver_group: h5py.Group, levels, factor: float, counted: np.ndarray | None = None
+) -> dict[str, np.ndarray]:
     """A solver's ``aggregate/normalized_increment`` re-scored at a budget of ``factor`` x T_N.
 
     Per sample, the crossings of its log (``logs/<sample>``) within min(``factor`` x ``normalization``, the
@@ -247,6 +249,8 @@ def rescore(solver_group: h5py.Group, levels, factor: float) -> dict[str, np.nda
         solver_group (h5py.Group): ``/<benchmark>/<case>/<solver>`` of a run with T_N budgets (``normalization``).
         levels: The benchmark's levels.
         factor (float): The budget factor to score at, in (0, the run's factor].
+        counted (np.ndarray | None): (S, L) bool, the samples each level's statistics count (e.g. those whose
+            reference resolves it); all of them by default.
 
     Returns:
         dict[str, np.ndarray]: ``STATISTICS`` -> (L,) arrays, as :func:`aggregate`.
@@ -261,7 +265,7 @@ def rescore(solver_group: h5py.Group, levels, factor: float) -> dict[str, np.nda
         limit = min(factor * normalization[row], budget[row])
         c = level_crossings(relative_error(log["error"][()]), log["time"][()], levels, limit)
         increments[row], reached[row] = c.increment / normalization[row], c.reached
-    return aggregate(increments, reached)
+    return aggregate(increments, reached if counted is None else reached & counted)
 
 
 def parse_budget_options(entries: list[str], option: str = "--budget") -> dict:
