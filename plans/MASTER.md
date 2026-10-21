@@ -919,6 +919,7 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 2 · **GPU run END** (astol config regeneration and unit tests, 22:44-22:45, ~1.5 min; the maintainer's "no GPU unit tests" arrived after they ran). The GPU is free.
 
 - 2026-10-21 · coordinator · **GPU+CPU run START** (01:05, ~5-6 h, maintainer-approved; keep the GPU and CPU quiet, timings are measured): full benchmark run, `python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.toml -o data/benchmarks/results/trampolines.h5` at dev 280513d7 (budget factor 2, snapshots 0.25). Trial run (Y1e6 static + h = 1e-2, sample 0) passed. Will log END.
+- 2026-10-21 · coordinator · **GPU+CPU run END** (01:05-05:49, 4 h 44 min): full benchmark run finished, 2400/2400 solves (15 cases x 32 problems x 5 solvers), no errors, results in `data/benchmarks/results/trampolines.h5` (8.8 GB, at d2007e00; its `git_dirty = True` comes only from the untracked `SESSION.md`, since `git status --porcelain` counts untracked files: tracked files were clean). The GPU is free.
 ## Open questions for the maintainer
 
 1. ~~Approve Phase 0?~~ **Answered:** yes, but only after all task-level open questions are answered.
