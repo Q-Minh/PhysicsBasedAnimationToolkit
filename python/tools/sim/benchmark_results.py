@@ -20,11 +20,11 @@ Results file layout (HDF5, ``FORMAT``):
 
     /                                attrs: format, version, levels, budget_factor, budget_statistic,
                                      budget_pilot, budget_options, dataset, device, git_commit, date,
-                                     sim_params, solvers, newton_cg_* (Newton's CG limits)
+                                     sim_params, solvers
     /StaticSolveSpec                 the run's spec (static.StaticSolveSpec), attributes
     /dataset_attrs                   the dataset's scalar attributes
     /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, budget,
-                                     budget_source, scene_params
+                                     budget_source, scene_params, newton_cg_* (Newton's CG limits)
     /<benchmark>/<case>/<solver>     attrs: solver, n_samples
         sample, e0, iterations, sweeps, solver_time, host_time, final_relative_error, termination,
         deformation_energy, [min_J], [reference_error_bound, reference_relative_error_bound]   (S,)
@@ -270,6 +270,34 @@ def resolve_budget(
     return float(max_seconds), "--max-seconds"
 
 
+def parse_scene_params(entries: list[str]) -> dict[str, list[str]]:
+    """``[BENCHMARK/]SCENE=A.toml[,B.toml]`` entries -> {key: [A.toml, B.toml]}, with key ``"Y1e8"`` for
+    every benchmark of a scene and ``"static/Y1e8"`` for one benchmark's problems of it."""
+    out = {}
+    for entry in entries:
+        key, sep, files = entry.partition("=")
+        if not sep or not key or not files:
+            raise ValueError(f"--scene-params expects [BENCHMARK/]SCENE=A.toml[,B.toml], got {entry!r}")
+        if key in out:
+            raise ValueError(f"--scene-params given twice for {key!r}")
+        out[key] = [p for p in files.split(",") if p]
+    return out
+
+
+def scene_params_for(table: dict, benchmark: str, scene: str) -> list[str]:
+    """A scene's parameter files in one benchmark (:func:`parse_scene_params` table): the scene's entry,
+    then its ``benchmark/scene`` entry, merged in that order (later files win)."""
+    return table.get(scene, []) + table.get(f"{benchmark}/{scene}", [])
+
+
+def unmatched_scene_params(table: dict, benchmark_scenes) -> list[str]:
+    """The table's keys that match none of the (benchmark, scene) pairs, sorted."""
+    known = set()
+    for benchmark, scene in benchmark_scenes:
+        known.update((scene, f"{benchmark}/{scene}"))
+    return sorted(set(table) - known)
+
+
 def select_frames(
     time: np.ndarray, entries: np.ndarray, n_frames: int, span: float, return_targets: bool = False
 ):
@@ -500,6 +528,19 @@ class TestLevelCrossings(unittest.TestCase):
             parse_budget_options(["static=0"])
         with self.assertRaises(ValueError):
             parse_budget_options(["5", "5"])
+
+    def test_scene_params(self):
+        table = parse_scene_params(["Y1e8=a.toml,b.toml", "static/Y1e8=c.toml", "static/het=c.toml"])
+        self.assertEqual(scene_params_for(table, "static", "Y1e8"), ["a.toml", "b.toml", "c.toml"])
+        self.assertEqual(scene_params_for(table, "dynamic_h0.01", "Y1e8"), ["a.toml", "b.toml"])
+        self.assertEqual(scene_params_for(table, "static", "het"), ["c.toml"])
+        self.assertEqual(scene_params_for(table, "dynamic_h0.01", "het"), [])
+        pairs = [(b, s) for b in ("static", "dynamic_h0.01") for s in ("Y1e8", "het")]
+        self.assertEqual(unmatched_scene_params(table, pairs), [])
+        self.assertEqual(unmatched_scene_params(table, pairs[2:]), ["static/Y1e8", "static/het"])
+        for bad in (["Y1e8"], ["=a.toml"], ["Y1e8="], ["static/Y1e8=a.toml", "static/Y1e8=b.toml"]):
+            with self.assertRaises(ValueError):
+                parse_scene_params(bad)
 
     def test_file_and_budgets(self):
         import os

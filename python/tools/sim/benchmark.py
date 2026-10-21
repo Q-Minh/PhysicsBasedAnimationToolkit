@@ -43,7 +43,8 @@ Time budgets, per case, in order of precedence (each case records its ``budget``
 Usage:
     python -m python.tools.sim.benchmark --dataset DATASET.h5 [--sets PATTERN ...] -o results.h5 \
         [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] [--levels 0.5,0.6,...,0.99] \
-        [--sim-params A.toml [B.h5 ...]] [--scene-params SCENE=C.toml[,D.toml] ...] [--set Table.key=value ...] \
+        [--sim-params A.toml [B.h5 ...]] [--scene-params [BENCHMARK/]SCENE=C.toml[,D.toml] ...] \
+        [--set Table.key=value ...] \
         [--budget [BENCHMARK[/CASE]=]SECONDS ...] [--budget-from pilot.h5 [--budget-factor 1] \
         [--budget-statistic median] [--budget-cap [BENCHMARK[/CASE]=]SECONDS ...]] [--max-seconds 60] \
         [--spec spec.h5] [--save-spec spec.h5] [--sample-begin 0] [--sample-end -1] \
@@ -58,12 +59,13 @@ Representative commands (from the repo root; datasets live in the main checkout'
         --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
     # Pilot: Newton alone, generous budget; then the benchmark with budgets of Newton's median time to 99%,
-    # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere
+    # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere; Newton's CG cap is 1000 for the
+    # static Y1e8 problems only
     python -m python.tools.sim.benchmark --dataset DATASET.h5 --solvers Newton --max-seconds 60 \
         --sim-params python/tools/sim/configs/benchmark/shared.toml -o out/pilot.h5
     python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 --budget static=5 \
-        --budget-cap 3 --sim-params python/tools/sim/configs/benchmark/shared.toml --scene-params Y1e8=y1e8.toml \
-        -o out/results.h5
+        --budget-cap 3 --sim-params python/tools/sim/configs/benchmark/shared.toml \
+        --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml -o out/results.h5
 
     # The figures
     python -m python.tools.sim.benchmark_plot out/results.h5 -o out/figures/benchmark
@@ -107,8 +109,9 @@ their target times (each trajectory stores them). After the solve, only the chos
 Pitfalls:
     - The benchmark is contact-free: contact detection is deactivated whatever the parameters say.
     - The problems are posed on the dataset's FEM (its ``fem`` group, or the set's ``fem`` attribute): its
-      Dirichlet nodes stay fixed at rest. Solver parameters come only from --sim-params, then the case's
-      --scene-params, then --set (otherwise the code defaults, configs/defaults.toml).
+      Dirichlet nodes stay fixed at rest. Solver parameters come only from --sim-params, then the scene's
+      --scene-params (``SCENE=``, then ``BENCHMARK/SCENE=``, e.g. ``static/Y1e8=``), then --set (otherwise
+      the code defaults, configs/defaults.toml).
     - Dynamic problems take their time step from the set: ``Integration.dt``, ``substeps`` and the BDF
       order from the parameters are overridden (one BDF1 step of size h).
     - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 rounding
@@ -169,10 +172,11 @@ def parse_args():
                         help="Simulation parameters for every scene: .toml configs or .h5 files as exported by "
                         "the GUI (file.h5 or file.h5:group), merged left to right (see configs/README.md). "
                         "Without any, the code defaults apply (configs/defaults.toml).")
-    parser.add_argument("--scene-params", action="append", default=[], metavar="SCENE=A.toml[,B.toml]",
+    parser.add_argument("--scene-params", action="append", default=[], metavar="[BENCHMARK/]SCENE=A.toml[,B.toml]",
                         dest="scene_params",
-                        help="Parameters for one scene's problems, merged after --sim-params and before --set. "
-                        "Repeatable, once per scene.")
+                        help="Parameters for one scene's problems, merged after --sim-params and before --set: "
+                        "SCENE= for every benchmark of the scene, BENCHMARK/SCENE= (e.g. static/Y1e8=) for one "
+                        "benchmark's, merged after the scene's. Repeatable, once per key.")
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="overrides",
                         help="Override one parameter after the parameter files, as Table.Sub.key=TOML-literal, "
                         "e.g. Solver.Newton.LinearSolver.n_max_iters=3000. Repeatable.")
@@ -281,19 +285,6 @@ def select_sets(spec: static.StaticSolveSpec) -> list[str]:
     if not selected:
         raise SystemExit(f"No set of {spec.dataset} matches {spec.sets!r}; its sets are {', '.join(names)}")
     return selected
-
-
-def parse_scene_params(entries: list[str]) -> dict[str, list[str]]:
-    """``SCENE=A.toml,B.toml`` entries -> {scene: [A.toml, B.toml]}."""
-    out = {}
-    for entry in entries:
-        scene, sep, files = entry.partition("=")
-        if not sep or not scene or not files:
-            raise SystemExit(f"--scene-params expects SCENE=A.toml[,B.toml], got {entry!r}")
-        if scene in out:
-            raise SystemExit(f"--scene-params given twice for scene {scene!r}")
-        out[scene] = [p for p in files.split(",") if p]
-    return out
 
 
 # --- Scenes and cases (the dataset-format-specific layer) ---
@@ -472,10 +463,13 @@ def main():
             spec.serialize(f.create_group("StaticSolveSpec"))
     solvers = [SolverType[name] for name in args.solvers.split(",") if name]
     cases = make_cases(spec.dataset, select_sets(spec))
-    scene_params = parse_scene_params(args.scene_params)
-    unknown = set(scene_params) - {c.scene for c in cases}
+    try:
+        scene_params = results.parse_scene_params(args.scene_params)
+    except ValueError as e:
+        raise SystemExit(str(e))
+    unknown = results.unmatched_scene_params(scene_params, [(c.benchmark, c.scene) for c in cases])
     if unknown:
-        raise SystemExit(f"--scene-params for scenes not in the run: {', '.join(sorted(unknown))}")
+        raise SystemExit(f"--scene-params for scenes not in the run: {', '.join(unknown)}")
     # Budgets per (benchmark, case): --budget, else the pilot's (capped), else --max-seconds
     try:
         direct = results.parse_budget_options(args.budget, "--budget")
@@ -551,19 +545,21 @@ def main():
                 "budget_source": source,
                 "budget_reference_time": budget["reference_time"] if budget else None,
                 "budget_reference_reached": f"{budget['reached']}/{budget['n_samples']}" if budget else None,
-                "scene_params": ",".join(scene_params.get(c.scene, [])),
+                "scene_params": ",".join(results.scene_params_for(scene_params, c.benchmark, c.scene)),
             })
         # One simulation per (scene, time step) at a time, reused across its sets
-        keys = list(dict.fromkeys((c.scene, c.fem, c.batch.h) for c in cases))
-        for scene, fem, h in keys:
-            state = make_state(args, spec.dataset, fem, h, args.sim_params + scene_params.get(scene, []))
+        keys = list(dict.fromkeys((c.scene, c.fem, c.batch.h, c.benchmark) for c in cases))
+        for scene, fem, h, benchmark in keys:
+            state = make_state(
+                args, spec.dataset, fem, h, args.sim_params + results.scene_params_for(scene_params, benchmark, scene)
+            )
             if h is None:
                 static.prepare_static_problem(state, spec.fext_scale)
-            if "newton_cg_n_max_iters" not in h5f.attrs:
-                cg = state.newton_linear_solver_params
-                h5f.attrs.update(newton_cg_n_max_iters=cg.n_max_iters, newton_cg_rtol=cg.rtol, newton_cg_atol=cg.atol)
-            for c in (c for c in cases if (c.scene, c.fem, c.batch.h) == (scene, fem, h)):
+            cg = state.newton_linear_solver_params
+            for c in (c for c in cases if (c.scene, c.fem, c.batch.h, c.benchmark) == (scene, fem, h, benchmark)):
                 batch, group = c.batch, groups[c.set_name]
+                # Newton's CG limits, per case: --scene-params may set them per scene and benchmark
+                group.attrs.update(newton_cg_n_max_iters=cg.n_max_iters, newton_cg_rtol=cg.rtol, newton_cg_atol=cg.atol)
                 static.check_sample_batch(batch, state.fem)
                 for w in batch.warnings():
                     print(f"Warning: {batch.path}: {w}")
