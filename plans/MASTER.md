@@ -899,6 +899,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 2 · **GPU run END** (static Newton diagnosis). Late entry: it was followed by an unlogged ~5 min timing run (het static Newton vs CG cap), my START edit failed; it overlapped no other GPU run, but task 4's CPU job was active. The GPU is free.
 - 2026-10-20 · task 4 · **CPU run START** (~2.3 h, one make_benchmark.py process, no GPU; maintainer-approved): full benchmark dataset, from `python/examples`: `python make_benchmark.py -i Y1e5=<D>/trampoline_circle_Y1e5.h5 -i Y1e6=<D>/trampoline_circle_Y1e6.h5 -i Y1e7=<D>/trampoline_circle_Y1e7.h5 -i Y1e8=<D>/trampoline_circle_Y1e8.h5 -i het=<D>/trampoline_circle_het.h5 --label "Y1e5=Y = 1e5" --label "Y1e6=Y = 1e6" --label "Y1e7=Y = 1e7" --label "Y1e8=Y = 1e8" --label "het=heterogeneous" --problems 32 --pool 200 --chains 4 --pilot 3000 -o path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5` (`<D>` = `path/to/PhysicsBasedAnimationToolkit/data/scenarios`; defaults: 10000 J, h = 1e-4 and 1e-2, burn-in 300, seed 0). Will log END.
 - 2026-10-20 · task 3 · **GPU run START** (~6 min, one benchmark.py process; timings secondary, task 4's CPU job is active): demo results file with snapshots for the viewer, all 5 solvers, trampolines-pilot het/Y1e6 static + Y1e7 dynamic_h0.01, sample 0. Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (demo results file, data/benchmarks/results/snapshots-demo.h5). The GPU is free.
+- 2026-10-20 · task 2 · **GPU run START** (~30 min, benchmark.py processes back to back; please keep the GPU quiet, timings are compared; task 4's CPU job is active): Newton CG cap sweep (500/1000/2000/4000, het static 8000), trampolines-pilot sample 0, all static scenes + Y1e8/het dynamic_h0.01. Will log END.
 
 ## Open questions for the maintainer
 
@@ -991,6 +993,9 @@ Answer when back; each has the coordinator's recommendation.
     per-case best fixed cap; Eisenstat-Walker forcing (rtol tied to |g|); a 3x3 block-Jacobi preconditioner.
     **Maintainer:** keep the window stall rule (no switch unless necessary); energy_noise_warning fix approved (task 4,
     recompute the dataset's attributes in place after the run).
+    **Newton setup:** (a) a fixed CG setup per case, also trying looser rtol with large caps (early termination when
+    possible, many iterations when needed); task 2 extends the sweep. Full run after the dataset; GPU clock locking not
+    required by the maintainer (task 3's audit may still recommend it with evidence).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each

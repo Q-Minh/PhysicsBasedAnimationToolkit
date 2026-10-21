@@ -55,6 +55,7 @@ Rebuilding the Python extension is covered by the `pbat-build` skill.
 - **Commits** are small, self-contained and bisectable: split unrelated hunks into separate commits.
 - **Python dependencies:** a new third-party import goes in the nearest `requirements.txt`, pinned to the installed version.
 - **Relative tolerances never divide by zero.** A test or ratio relative to some scale uses `max(relative scale, small positive absolute floor)`, so a vanishing scale can't produce `inf`, `NaN` or a test that can never pass.
+- **Don't commit generated files** (benchmark datasets and results, figures, simulation outputs): keep them in the git-ignored `data/`. A small sample used by tests may be committed, in a location that belongs to those tests.
 - **The paper's `accelerated-vbd-extras` repository is read-only** (collaborators' hand-tuned files): derive anything you need from its committed versions, never modify it.
 - Check with the maintainer before starting long-running tasks or experiments (parameter sweeps, full benchmarks, long simulations). Validate with the smallest run that answers the question, e.g. one static and one dynamic benchmark problem rather than whole sets.
 - Before writing new code, check whether PBAT, Warp, cupy/cuda-cccl, Eigen, etc. already provide the functionality.
