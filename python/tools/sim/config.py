@@ -55,9 +55,9 @@ DEPRECATED = {
         "threshold (-1e-4 detected penetrating vertices only) is ignored, and band keeps its value"
     ),
     "Solver.Convergence.displacement_floor": (
-        "replaced by Solver.Convergence.astol, the absolute stationarity tolerance relative to the scene's size L "
-        "(the mean bounding-box diagonal of its bodies): the gradient test now passes below max(rstol * "
-        "RMS(x~ - x^t), astol * L), so the former floor f corresponds to astol = rstol * f / L"
+        "replaced by Solver.Convergence.astol, the absolute stationarity tolerance as a fraction of the scene's "
+        "external acceleration |a|: the gradient test now passes below max(rstol * RMS(x~ - x^t), astol * |a| * "
+        "h^2), so the former floor f corresponds to astol = rstol * f / (|a| h^2)"
     ),
 }
 

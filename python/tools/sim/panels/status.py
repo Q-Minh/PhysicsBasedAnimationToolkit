@@ -61,8 +61,8 @@ _SUBPROBLEM = {
 
 _RESIDUAL_TIP = (
     "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * L),\n"
-    "mass-weighted, g the gradient of the step's Lagrangian, L the scene's mean body bounding-box diagonal.\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * |a| * h^2),\n"
+    "mass-weighted, g the gradient of the step's Lagrangian, |a| the scene's gravity, h the time step.\n"
     "Absolute test (both 0, or static): |g| / gtol."
 )
 _PENETRATION_TIP = (
@@ -72,8 +72,8 @@ _PENETRATION_TIP = (
 _NEWTON_RESIDUAL_TIP = (
     "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
-    "RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * L), mass-weighted, g the gradient of the step's Lagrangian,\n"
-    "L the scene's mean body bounding-box diagonal.\n"
+    "RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * |a| * h^2), mass-weighted, g the gradient of the step's Lagrangian,\n"
+    "|a| the scene's gravity, h the time step.\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
 )
 _NEWTON_PENETRATION_TIP = (
@@ -351,12 +351,13 @@ def draw_status_panel(state, ui_state):
     imgui.PushID("solve_status")
     check = getattr(state, "convergence", None)
     if check is not None:
-        astol, L = float(check.params.astol), check.length_scale
-        imgui.Text(f"Absolute stationarity tolerance: {astol * L:.3g} m")
+        astol, a = float(check.params.astol), check.acceleration
+        imgui.Text(f"Absolute stationarity tolerance: {check.absolute_tolerance:.3g} m ({astol * a:.3g} m/s^2)")
         _tooltip(
-            f"astol * L = {astol:.3g} * {L:.3g} m: the residual RMS(M^-1 g) below which the gradient test always\n"
-            "passes (dynamic problems), L being the mean bounding-box diagonal of the scene's bodies at rest:\n"
-            "a float32-noise fallback for steps with almost no motion, not a tuning knob."
+            f"astol * |a| * h^2 = {astol:.3g} * {a:.3g} m/s^2 * h^2: the residual RMS(M^-1 g) below which the\n"
+            "gradient test always passes (dynamic problems), |a| being the scene's external acceleration (its\n"
+            "gravity, or 9.81 m/s^2 without a load) and h the solve's time step; astol * |a| is the tolerated\n"
+            "residual acceleration. It scales with h^2 like a step's gravity sag, so it's time-step invariant."
         )
     log = state.status_log
     if log.last_step is None:

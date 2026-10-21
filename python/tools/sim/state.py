@@ -368,11 +368,6 @@ class SimulationState:
         self.newton_linear_solver_params = gpu.newton.solver.LinearSolverParams()
         self.newton_gpu_params = gpu.newton.solver.NewtonGpuParams()
         self.convergence_params = gpu.vbd.convergence.ConvergenceParams()
-        # The scene's size L, scaling the stationarity test's absolute tolerance (astol * L): the mean
-        # bounding-box diagonal of its bodies at rest, fixed for the problem (kept across resets)
-        self.length_scale = gpu.vbd.convergence.mean_body_diagonal(
-            np.asarray(fem_cpu.X).T, np.asarray(fem_cpu.E).T
-        )
         newton_params = gpu.newton.solver.Params(
             self.params_cpu[SolverType.Newton], self.newton_linear_solver_params
         )
@@ -425,7 +420,6 @@ class SimulationState:
             self.contact,
             self.convergence_params,
             status_capacity=self.substeps,
-            length_scale=self.length_scale,
         )
         for s in (
             SolverType.VBD,
