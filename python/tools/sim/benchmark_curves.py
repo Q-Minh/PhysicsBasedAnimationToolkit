@@ -12,12 +12,19 @@ bar charts score by default (``benchmark_plot.py --budget-factor``), from the sa
 
 - dotted horizontal lines: the benchmark's accuracy levels (e/e0 = 1 - level);
 - dashed vertical line: t = T_N;
-- shaded band (dynamic problems): errors below the reference's relative accuracy, which the reference
+- grey band (dynamic problems): errors below the reference's relative accuracy, which the reference
   can't resolve.
+
+``--all-samples`` aggregates a problem's samples instead of drawing one: per solver, a translucent band spans
+the min and max of e/e0 over the samples at each time t / T_N (each sample on its own T_N), and a line their
+median. A sample's error at time t is that of its last logged iterate at or before t (1 before its first),
+held after its solve ends, i.e. the error it reached by t. The grey band is darker below every sample's
+reference accuracy and lighter where only some samples' references can't resolve the error.
 
 Usage:
     python -m python.tools.sim.benchmark_curves results.h5 -o out/figures/curves \
-        [--problems static/Y1e6 dynamic_h0.01/Y1e7] [--sample 0] [--solvers VBD,AAAVBD,...] [--xscale log]         [--dpi 200]
+        [--problems static/Y1e6 dynamic_h0.01/Y1e7] [--sample 0 | --all-samples] [--solvers VBD,AAAVBD,...] \
+        [--xscale log] [--dpi 200]
 
 Writes ``<prefix>.pdf`` and ``.png``: one panel per problem (default: the first case of each benchmark).
 """
@@ -44,48 +51,69 @@ def sample_index(g: h5py.Group, sample: int) -> int:
     return int(rows[0])
 
 
+def solve_curve(g: h5py.Group, solver: str, sample: int) -> tuple[np.ndarray, np.ndarray]:
+    """(x, e/e0) of one solve's log, x = t / its normalization (T_N or the fixed budget)."""
+    sg = g[solver]
+    row = sample_index(sg, sample)
+    normalization = float(sg["normalization"][row]) if "normalization" in sg else float(g.attrs["budget"])
+    log = sg[f"logs/{sample:06d}"]
+    e, t = np.asarray(log["error"], dtype=np.float64), np.asarray(log["time"], dtype=np.float64)
+    return t / normalization, results.relative_error(e)
+
+
+def error_reached(x: np.ndarray, e: np.ndarray, grid: np.ndarray) -> np.ndarray:
+    """e/e0 at each ``grid`` time: that of the last iterate at or before it (1 before the first, the last
+    one's after the solve ends)."""
+    i = np.searchsorted(x, grid, side="right") - 1
+    return np.where(i >= 0, e[np.maximum(i, 0)], 1.0)
+
+
 def plot_problem(
-    ax, f: h5py.File, benchmark: str, case: str, sample: int, solvers: list[str], xscale: str = "log"
+    ax, f: h5py.File, benchmark: str, case: str, sample: int | None, solvers: list[str], xscale: str = "log"
 ) -> list[str]:
-    """One panel: e/e0 against t / T_N (``xscale`` "log" or "linear") for each solver of the case. Returns
-    the solvers drawn."""
+    """One panel: e/e0 against t / T_N (``xscale`` "log" or "linear") for each solver of the case, for one
+    ``sample``, or over all of them (None: min-max band and median). Returns the solvers drawn."""
     g = f[f"{benchmark}/{case}"]
     levels = results.benchmark_levels(f, benchmark)
-    drawn = []
-    t_end = 1.0
-    t_start = 1.0  # the earliest first iterate, for the log axis
-    reference_bound = None
-    for solver in solvers:
-        if solver not in g:
-            continue
-        sg = g[solver]
-        row = sample_index(sg, sample)
-        normalization = float(sg["normalization"][row]) if "normalization" in sg else float(g.attrs["budget"])
-        log = sg[f"logs/{sample:06d}"]
-        e, t = np.asarray(log["error"]), np.asarray(log["time"])
-        x = t / normalization
-        if xscale == "log":
-            x, e = x[1:], e[1:] / e[0]
-            t_start = min(t_start, float(x[0])) if x.size else t_start
-        else:
-            e = e / e[0]
+    present = [s for s in solvers if s in g]
+    samples = [sample] if sample is not None else [int(v) for v in np.asarray(g[present[0]]["sample"])]
+    curves = {s: [solve_curve(g, s, k) for k in samples] for s in present}
+    first = [x[1] for runs in curves.values() for x, _ in runs if x.size > 1]
+    t_start = min([1.0] + first)  # the earliest first iterate, for the log axis
+    t_end = max([1.0] + [float(x[-1]) for runs in curves.values() for x, _ in runs])
+    for solver, runs in curves.items():
         color = solver_color(solver, solvers)
-        ax.plot(x, e, color=color, linewidth=1.5, label=SOLVER_NAMES.get(solver, solver))
-        # A dot at the first iterate: a solve whose first logged iterate already ends it (Newton at small h)
-        # is a single point on the log axis
-        ax.plot(x[:1], e[:1], "o", color=color, markersize=3)
-        t_end = max(t_end, float(x[-1]))
-        if "reference_relative_error_bound" in sg:
-            reference_bound = float(sg["reference_relative_error_bound"][row])
-        drawn.append(solver)
+        if sample is not None:
+            x, e = runs[0]
+            if xscale == "log":
+                x, e = x[1:], e[1:]
+            ax.plot(x, e, color=color, linewidth=1.5, label=SOLVER_NAMES.get(solver, solver))
+            # A dot at the first iterate: a solve whose first logged iterate already ends it (Newton at small h)
+            # is a single point on the log axis
+            ax.plot(x[:1], e[:1], "o", color=color, markersize=3)
+            continue
+        grid = np.geomspace(t_start, t_end, 400) if xscale == "log" else np.linspace(0.0, t_end, 400)
+        reached = np.array([error_reached(x, e, grid) for x, e in runs])
+        ax.fill_between(grid, reached.min(axis=0), reached.max(axis=0), color=color, alpha=0.15, linewidth=0)
+        ax.plot(grid, np.median(reached, axis=0), color=color, linewidth=1.5, label=SOLVER_NAMES.get(solver, solver))
+    bounds = None
+    for solver in present:
+        if "reference_relative_error_bound" in g[solver]:
+            sg = g[solver]
+            bounds = np.array([float(sg["reference_relative_error_bound"][sample_index(sg, k)]) for k in samples])
+            break
     # The log axis ends a little past the last iterate, so a curve's last point isn't cut by the frame
     x_end = t_end * (1.15 if xscale == "log" else 1.0)
     for level in levels:
         ax.axhline(1.0 - level, color="#BBBBBB", linewidth=0.6, linestyle=":", zorder=0)
         ax.text(x_end * (1.04 if xscale == "log" else 1.01), 1.0 - level, f"{100 * level:g}%", fontsize=6, color="#777777", va="center")
     ax.axvline(1.0, color="#777777", linewidth=0.8, linestyle="--", zorder=0)
-    if reference_bound is not None:
-        ax.axhspan(1e-12, reference_bound, color="#DDDDDD", alpha=0.6, zorder=0, linewidth=0)
+    if bounds is not None:
+        # Darker below every sample's reference accuracy, lighter where only some can't resolve the error
+        ax.axhspan(1e-12, bounds.min(), color="#DDDDDD", alpha=0.6, zorder=0, linewidth=0)
+        if bounds.max() > bounds.min():
+            ax.axhspan(bounds.min(), bounds.max(), color="#DDDDDD", alpha=0.3, zorder=0, linewidth=0)
+    reference_bound = float(bounds.min()) if bounds is not None else None
     floor = min(1.0 - levels[-1], reference_bound or 1.0) * 0.1
     ax.set_yscale("log")
     ax.set_ylim(floor, 1.5)
@@ -95,10 +123,10 @@ def plot_problem(
     else:
         ax.set_xlim(0.0, x_end)
     ax.set_xlabel("Solver time / T_N")
-    ax.set_title(f"{benchmark_title(benchmark)}: {case_label(g, case).replace(chr(10), ', ')}, sample {sample}",
-                 fontsize=9)
+    which = f"sample {sample}" if sample is not None else f"{len(samples)} samples"
+    ax.set_title(f"{benchmark_title(benchmark)}: {case_label(g, case).replace(chr(10), ', ')}, {which}", fontsize=9)
     ax.grid(True, which="major", color="#EEEEEE", linewidth=0.5)
-    return drawn
+    return present
 
 
 def main():
@@ -107,7 +135,10 @@ def main():
     parser.add_argument("-o", "--output", required=True, help="Output prefix: writes <prefix>.pdf and .png.")
     parser.add_argument("--problems", nargs="+", default=None, metavar="BENCHMARK/CASE",
                         help="Problems to draw, one panel each (default: the first case of each benchmark).")
-    parser.add_argument("--sample", type=int, default=0, help="Sample index (default: %(default)s).")
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument("--sample", type=int, default=0, help="Sample index (default: %(default)s).")
+    which.add_argument("--all-samples", action="store_true", dest="all_samples",
+                       help="Every sample: per solver, the min-max band and the median of e/e0 over the samples.")
     parser.add_argument("--solvers", default=None, help="Comma-separated solvers (default: the file's).")
     parser.add_argument("--xscale", choices=("log", "linear"), default="log",
                         help="Time axis scale (default: %(default)s).")
@@ -128,10 +159,14 @@ def main():
             benchmark, _, case = problem.partition("/")
             if benchmark not in f or case not in f[benchmark]:
                 raise SystemExit(f"{args.results} has no {problem}")
-            drawn += [s for s in plot_problem(ax, f, benchmark, case, args.sample, solvers, args.xscale) if s not in drawn]
+            drawn += [s for s in plot_problem(ax, f, benchmark, case, None if args.all_samples else args.sample, solvers,
+                                                     args.xscale) if s not in drawn]
         axes[0][0].set_ylabel("Relative error e / e0")
         handles = [plt.Line2D([], [], color=solver_color(s, solvers), linewidth=1.5, label=SOLVER_NAMES.get(s, s))
                    for s in drawn]
+        if args.all_samples:
+            handles.append(matplotlib.patches.Patch(facecolor=(0.5, 0.5, 0.5, 0.15), edgecolor="none",
+                                                    label="min-max over samples (line: median)"))
         handles.append(matplotlib.patches.Patch(color="#DDDDDD", label="below the reference's accuracy"))
         fig.legend(handles=handles, loc="upper center", ncol=len(handles), fontsize=8, frameon=False,
                    bbox_to_anchor=(0.5, 1.04))
