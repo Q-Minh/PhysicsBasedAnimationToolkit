@@ -532,6 +532,53 @@ def _git_commit() -> str:
         return ""
 
 
+def _git_dirty() -> bool:
+    """Whether the checkout has uncommitted changes, i.e. the code that ran differs from git_commit."""
+    try:
+        root = os.path.dirname(os.path.abspath(__file__))
+        return bool(subprocess.check_output(["git", "-C", root, "status", "--porcelain"], text=True).strip())
+    except Exception:
+        return False
+
+
+def software_versions(nvidia_smi: str | None) -> dict:
+    """Versions of what the timings depend on: Warp, the CUDA driver and toolkit Warp uses, the GPU driver
+    (from nvidia-smi, "" without it), Python and the GPU/array libraries; "" where unknown."""
+    import importlib.metadata
+    import platform
+
+    def package(name: str) -> str:
+        try:
+            return importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            return ""
+
+    gpu_driver = ""
+    if nvidia_smi:
+        try:
+            gpu_driver = subprocess.check_output(
+                [nvidia_smi, f"--id={wp.get_device().uuid}", "--query-gpu=driver_version", "--format=csv,noheader"],
+                text=True,
+                timeout=10,
+            ).strip()
+        except (OSError, subprocess.SubprocessError):
+            pass
+    import cupy
+
+    return {
+        "version_warp": wp.__version__,
+        "version_cuda_driver": ".".join(str(v) for v in wp.get_cuda_driver_version()),
+        "version_cuda_toolkit": ".".join(str(v) for v in wp.get_cuda_toolkit_version()),
+        "version_gpu_driver": gpu_driver,
+        "version_python": platform.python_version(),
+        "version_numpy": np.__version__,
+        "version_cupy": cupy.__version__,
+        "version_cuda_cccl": package("cuda-cccl"),
+        "version_pbatoolkit": package("pbatoolkit"),
+        "version_h5py": h5py.__version__,
+    }
+
+
 def _attr(v):
     return v.item() if isinstance(v, np.generic) else v
 
@@ -604,6 +651,8 @@ def main():
             dataset=spec.dataset,
             device=wp.get_device().name,
             git_commit=_git_commit(),
+            git_dirty=_git_dirty(),
+            **software_versions(nvidia_smi),
             date=time.strftime("%Y-%m-%d %H:%M:%S"),
             sim_params=" + ".join(args.sim_params + [f"--set {o}" for o in args.overrides]) or "(code defaults)",
             solvers=[s.name for s in solvers],
@@ -731,6 +780,37 @@ def main():
                 group.attrs.update({f"gpu_end_{k}": v for k, v in gpu_state(nvidia_smi, gpu_uuid).items()})
             del state
     print(f"Wrote {args.output}")
+
+
+import unittest
+
+
+class TestRecords(unittest.TestCase):
+    def test_newton_step_arrays(self):
+        from .gpu.newton.solver import NewtonSubproblemRecord, SubproblemStatus
+
+        records = [
+            NewtonSubproblemRecord(SubproblemStatus.STEPPED, 1, 500, True, 2, 1e-3, 1e-4),
+            NewtonSubproblemRecord(SubproblemStatus.LINE_SEARCH_FAILED, 1, 120, False, 20),
+        ]
+        a = newton_step_arrays(records)
+        self.assertEqual(list(a["newton/status"]), ["stepped", "line_search_failed"])
+        np.testing.assert_array_equal(a["newton/cg_iterations"], [500, 120])
+        np.testing.assert_array_equal(a["newton/cg_capped"], [True, False])
+        np.testing.assert_array_equal(a["newton/backtracks"], [2, 20])
+        self.assertEqual(a["newton/cg_residual"][0], 1e-3)
+        self.assertTrue(np.isnan(a["newton/cg_tolerance"][1]))  # the record's default
+        self.assertEqual(newton_step_arrays([])["newton/cg_iterations"].size, 0)
+
+    def test_versions_and_gpu_state(self):
+        wp.init()
+        v = software_versions(None)
+        self.assertEqual(v["version_warp"], wp.__version__)
+        self.assertRegex(v["version_cuda_driver"], r"^\d+\.\d+$")
+        self.assertEqual(v["version_gpu_driver"], "")  # no nvidia-smi given
+        self.assertTrue(all(isinstance(x, str) for x in v.values()))
+        self.assertEqual(gpu_state(None, "GPU-0"), {})
+        self.assertEqual(gpu_state("path/to/missing/nvidia-smi", "GPU-0"), {})
 
 
 if __name__ == "__main__":

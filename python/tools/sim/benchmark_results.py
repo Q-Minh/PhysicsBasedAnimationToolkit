@@ -20,7 +20,9 @@ Results file layout (HDF5, ``FORMAT``):
 
     /                                attrs: format, version, levels_options, budget_factor, budget_options,
                                      newton_stall_iterations, newton_stall_reduction, dataset, device,
-                                     git_commit, date, sim_params, solvers
+                                     git_commit, git_dirty, date, sim_params, solvers, version_* (warp,
+                                     cuda_driver, cuda_toolkit, gpu_driver, python, numpy, cupy,
+                                     cuda_cccl, pbatoolkit, h5py)
     /StaticSolveSpec                 the run's spec (static.StaticSolveSpec), attributes
     /dataset_attrs                   the dataset's scalar attributes
     /<benchmark>                     attrs: levels (the benchmark's), cases
