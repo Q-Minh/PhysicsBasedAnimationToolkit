@@ -786,6 +786,12 @@ class MeshDynamics:
         # Vertex solves skip the contact gather of vertices without any pair.
         wp.launch(_flag_contact_vertices, dim=self.meshes.data.GXV.shape[0], inputs=[self._data])
 
+    def reset_friction_limits(self):
+        """Unfreeze every contact's Coulomb limit for a new time step (GPU Newton; see
+        :meth:`ConstraintSet.reset_friction_limits`)."""
+        for cset in (self.cvv, self.cve, self.cvf, self.cee):
+            cset.reset_friction_limits()
+
     @profiling.scoped("contact.dual")
     def update_dual(
         self,
