@@ -387,7 +387,7 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold (merged c0d38305) | 2026-10-20 | Deterministic Anderson Gram (decision #11 A) merged: bit-reproducible, ~2% per Anderson iteration |
+| 2 | on hold (merged c0d38305) | 2026-10-20 | Deterministic Anderson Gram (decision #11 A) merged: bit-reproducible, ~2% per Anderson iteration. Static Newton slowness diagnosed (inexact Jacobi-CG + projected-Newton phase, no bug); final per-case Newton CG table sent to the coordinator (quiet-machine re-time, 21:08) |
 | 3 | ready to merge | 2026-10-20 | `feature/newton-normalization` (bda948da): per-sample Newton normalization (Newton first, T_N budgets, stall test, per-benchmark levels, red x); stall defaults (2, 0.03) and x rule await the maintainer |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
@@ -906,6 +906,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 4 · **CPU run END** (full benchmark dataset, 18:50-20:41, 1 h 51 min): `data/benchmarks/trampolines.h5`, 1.13 GB. Split R-hat over 1.05 on 4 of 10 pools (Y1e5 static 1.062, Y1e5 gravity 1.050, Y1e7 gravity 1.063, het static 1.053); report and fix proposal to the coordinator. The CPU is free.
 - 2026-10-20 · task 4 · **GPU run END** (the maintainer's GUI sessions on the october-changes trampolines, plus seconds-long CubeFallingOnCube smoke runs). The GPU is free.
 - 2026-10-20 · task 2 · **GPU run START** (~15 min from 20:52, benchmark.py processes back to back; please keep the GPU and CPU quiet, timings are compared): final Newton CG table re-time on trampolines-pilot sample 0 (winners, runners-up and close calls; static rtol 1e-3 at caps 1000/2000; dynamic h = 1e-2 and 1e-4 default vs rtol 1e-2 cap 4000). Will log END; task 3 queues after it.
+- 2026-10-20 · task 2 · **GPU run END** (Newton CG table re-time, 20:51-21:08, including a repeat of the close calls; the configs that overlapped the coordinator's 21:03-21:04 tests were re-run). The GPU is free.
+- 2026-10-20 · task 3 · **GPU run START** (~30-40 min from 21:10, short processes; please keep the GPU quiet, the audit compares timings): GPU unit tests (benchmark TestRecords, static, status), a smoke run of the new records with `--run trampolines.toml` (1 static + 1 dynamic problem, sample 0, trampolines-pilot), timing audit points 1-3 (logging overhead, simulator per-sweep, Newton loop) and the warm-up check, on the dev-merged branch and the current CG table. Will log END.
 
 ## Open questions for the maintainer
 
@@ -1024,6 +1026,11 @@ Answer when back; each has the coordinator's recommendation.
     astol becomes a dimensionless epsilon x mean body bounding-box diagonal (task 4). Material + per-node mass views in
     all mesh GUIs (benchmark_viewer, benchmark_browser, sim ui, editor, modalrom) and a pass-through check of the two
     trampolines at 2 mm: task 1 (check after the timed GPU runs).
+    **Final Newton CG table (task 2, quiet machine, 20:51-21:08):** static rtol 1e-6, caps Y1e5 500, Y1e6/Y1e7/Y1e8 1000,
+    het 4000 (T_top 8.9 / 7.4 / 6.7 / 5.3 / 25.8 s); dynamic h = 1e-2 rtol 1e-2 cap 4000 for Y1e5/Y1e6/Y1e7/het (1.8-3x faster
+    than the default), Y1e8 default; h = 1e-4 default. Static rtol 1e-3 gains nothing and stalls on Y1e8/het. Timing noise
+    2-9% (ties under ~10%). The CPU-loaded sweep had inflated large caps (CG syncs every 10 iterations): Newton timings
+    need a quiet CPU too. Sent to task 3 for trampolines.toml.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
