@@ -1025,12 +1025,14 @@ def initialize_solve(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    """Detect contacts, initialise the constraint set for the time step, adapt the contact
-    penalties once per step (``TIMESTEP`` adaptivity, as the VBD family) and measure the relative
-    gradient test's scale."""
+    """Detect contacts, initialise the constraint set for the time step, unfreeze the contacts'
+    Coulomb limits (each is frozen again at its first augmented gradient evaluation of the step, see
+    :class:`gpu.gradient.Gradient`), adapt the contact penalties once per step (``TIMESTEP``
+    adaptivity, as the VBD family) and measure the relative gradient test's scale."""
     cd.on_time_step_started()
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
+    contact.reset_friction_limits()
     cd.filter_step()
     if contact.params.penalty_adaptivity == PenaltyAdaptivity.TIMESTEP:
         adapt_penalty_parameters(fem, contact, params)
@@ -1055,7 +1057,7 @@ def _compute_energy(
     n_elems = fem.data.E.shape[0]
     cd = contact.data
     x, xt = fem.data.x, fem.data.xt
-    # Coulomb limits of the step's iterate, recorded by its augmented gradient (held for the step)
+    # Coulomb limits frozen for the time step by the augmented gradient
     limits = params._gradient_norm.friction_limits
     offsets = params._energy_offsets
     f_cp = cp.asarray(params._data.f_obj_partial)
@@ -1221,7 +1223,7 @@ def _assemble_hessian(
         stream.wait_stream(main_stream)
     n_nodes = fem.data.x.shape[0]
     n_elems = fem.data.E.shape[0]
-    # Coulomb limits of the step's iterate, recorded by its augmented gradient (held for the step)
+    # Coulomb limits frozen for the time step by the augmented gradient
     limits = params._gradient_norm.friction_limits
     wp.launch(
         kernel=_compute_dynamics_hessian_triplets,
