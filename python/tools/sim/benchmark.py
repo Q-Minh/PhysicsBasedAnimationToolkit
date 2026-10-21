@@ -378,6 +378,19 @@ def summarize(log: static.StaticSolveLog, levels, budget: float) -> dict:
     }
 
 
+def newton_step_arrays(records) -> dict:
+    """Newton's per-step records of one solve (``BenchmarkSolver.newton_records``) as arrays for
+    ``logs/<sample>/newton/``."""
+    return {
+        "newton/status": np.array([r.status.name.lower() for r in records], dtype=str),
+        "newton/cg_iterations": np.array([r.max_cg_iters for r in records], dtype=np.int64),
+        "newton/cg_capped": np.array([r.cg_capped for r in records], dtype=bool),
+        "newton/cg_residual": np.array([r.cg_residual for r in records], dtype=np.float64),
+        "newton/cg_tolerance": np.array([r.cg_tolerance for r in records], dtype=np.float64),
+        "newton/backtracks": np.array([r.backtracks for r in records], dtype=np.int64),
+    }
+
+
 def snapshot_frames(args) -> int:
     """Frames per trajectory: --snapshot-frames, else video seconds x fps (0 without --snapshots)."""
     if not args.snapshots:
@@ -699,7 +712,8 @@ def main():
                                 bound / summary["e0"] if summary["e0"] > 0 else math.inf
                             )
                         summaries.append(summary)
-                        logs.append((log.error, log.time, log.sweeps))
+                        extra = newton_step_arrays(runner.newton_records) if solver == SolverType.Newton else {}
+                        logs.append((log.error, log.time, log.sweeps, extra))
                         if ring is not None and s in snapshot_set:
                             span = normalization if fixed_seconds is not None else args.budget_factor * normalization
                             trajectories.append(trajectory(
