@@ -893,6 +893,9 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run END** (floor check): report sent to the coordinator. The GPU is free.
 - 2026-10-20 · task 3 · **GPU run START** (~2 min, one benchmark.py process): Newton-normalization validation, AAAVBD + Newton on trampolines-test Y1e6 static and dynamic_h0.01, sample 0. Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (Newton-normalization validation). The GPU is free.
+- 2026-10-20 · task 1 · **GPU run START** (~3 min, one benchmark.py process, timings not compared): a tiny `--snapshots` file for the benchmark viewer, all 5 solvers on trampolines-test Y1e6 static and dynamic_h0.01, sample 0. Will log END.
+- 2026-10-20 · task 1 · **GPU run END** (tiny snapshots file). The GPU is free of task 1.
+- 2026-10-20 · task 2 · **GPU run START** (intermittent, short single-problem runs, correctness only, timings not compared): static Newton convergence diagnosis, trampolines-pilot het and Y1e6 static, sample 0. Will log END.
 
 ## Open questions for the maintainer
 
@@ -971,6 +974,11 @@ Answer when back; each has the coordinator's recommendation.
     convergence-curve figure on one static + one dynamic problem to show sub-linear tails, instead of a larger budget
     factor in the bar plots (task 3); a polyscope viewer for benchmark snapshots (task 1); diagnosis of GPU Newton's slow
     static convergence (maintainer suspects a bug, e.g. Dirichlet handling) (task 2). Push approved.
+    **Dataset approved (maintainer, 2026-10-20 night):** task 4 generates data/benchmarks/trampolines.h5 (5 scenes, N = 32,
+    10000 J, --pool 200 --chains 4 --pilot 3000, float32 references), after a smoke run of the exact command; run once,
+    stable. Before the full benchmark run: task 3 audits that timings are representative (logging overhead inside the
+    graphs, benchmark vs simulator per-sweep time, warm-up, GPU clocks/thermals recorded per case) and that the results
+    store everything the bar plots, curve figure and snapshot viewer need.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
