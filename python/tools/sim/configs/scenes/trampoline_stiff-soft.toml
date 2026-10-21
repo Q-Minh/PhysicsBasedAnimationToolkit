@@ -19,6 +19,9 @@ substeps = 1
 dmin = 1e-3
 penalty_adaptivity = 1  # TIMESTEP, with the code's gamman_adaptive / gammaf_adaptive
 
+[Solver.Convergence]
+astol = 5e-4  # Young's modulus 1e8 regions resting in contact (the default is 1e-4)
+
 [Contact.CDType.VertexSdf]
 band = 0.002  # 2 mm, close to dmin (a 2 cm band made the sphere stick under Newton)
 max_dist = 0.3

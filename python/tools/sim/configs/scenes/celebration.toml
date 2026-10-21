@@ -8,7 +8,8 @@
 # The penalty is adaptive per time step (the code default, per the maintainer) instead of the paper
 # file's constant gamman.
 # Detection is scaled to the geometry (maintainer): the base plate is 10 cm thick, so the default 1 mm
-# band missed contacts and let vertices reach the plate's far side. band = 1 cm and max_dist = 30 cm fix it.
+# band missed contacts and let vertices reach the plate's far side, so band = 1 cm and max_dist = 30 cm
+# were set; the band is now 2 mm, close to dmin, as in every scene config (maintainer).
 extends = ["../paper/celebration.Params_1_5_30.toml"]
 
 [Integration]
@@ -19,8 +20,11 @@ dmin = 1e-3
 penalty_adaptivity = 1  # TIMESTEP, with the code's gamman_adaptive / gammaf_adaptive
 
 [Contact.CDType.VertexSdf]
-band = 0.01  # 1 cm: metre-scale scene (10 cm thick base plate, ~4 cm edges)
+band = 0.002  # 2 mm, close to dmin (maintainer)
 max_dist = 0.3
+
+[Solver.Convergence]
+astol = 5e-4  # Young's modulus 1e8 regions resting in contact (the default is 1e-4)
 
 [Solver.AAAVBD]
 n_max_iters = 5

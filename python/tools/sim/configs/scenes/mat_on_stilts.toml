@@ -17,6 +17,12 @@ substeps = 1
 dmin = 1e-3
 penalty_adaptivity = 1  # TIMESTEP, with the code's gamman_adaptive / gammaf_adaptive
 
+[Contact.CDType.VertexSdf]
+band = 0.002  # 2 mm, close to dmin (maintainer)
+
+[Solver.Convergence]
+astol = 5e-4  # Young's modulus 1e8 regions resting in contact (the default is 1e-4)
+
 [Solver.AAAVBD]
 n_max_iters = 5
 n_subproblem_max_iters = 80
