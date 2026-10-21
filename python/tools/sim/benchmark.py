@@ -984,12 +984,12 @@ class TestListSets(unittest.TestCase):
         self.assertAlmostEqual(r["reference_accuracy"], float(np.median(1e-4 / e0)))
         self.assertNotIn("reference_accuracy", rows[0])
 
-    def test_pilot_dataset(self):
-        # The repo's git-ignored data/ (the main checkout), or PBAT_BENCHMARK_PILOT (e.g. from a worktree)
+    def test_trampolines_dataset(self):
+        # The repo's git-ignored data/ (the main checkout), or PBAT_BENCHMARK_DATASET (e.g. from a worktree)
         repo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-        path = os.environ.get("PBAT_BENCHMARK_PILOT", os.path.join(repo, "data", "benchmarks", "trampolines-pilot.h5"))
+        path = os.environ.get("PBAT_BENCHMARK_DATASET", os.path.join(repo, "data", "benchmarks", "trampolines.h5"))
         if not os.path.isfile(path):
-            self.skipTest("trampolines-pilot.h5 not found (set PBAT_BENCHMARK_PILOT to path/to/trampolines-pilot.h5)")
+            self.skipTest("trampolines.h5 not found (set PBAT_BENCHMARK_DATASET to path/to/trampolines.h5)")
         (row,) = list_sets(path, ["het/static/E10000"])
         self.assertEqual(row["key"], "static/het")
         self.assertEqual(row["materials"], "E 1e6 (31539 tets), E 1e8 (10049 tets); nu 0.45")
