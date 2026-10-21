@@ -1031,6 +1031,10 @@ Answer when back; each has the coordinator's recommendation.
     than the default), Y1e8 default; h = 1e-4 default. Static rtol 1e-3 gains nothing and stalls on Y1e8/het. Timing noise
     2-9% (ties under ~10%). The CPU-loaded sweep had inflated large caps (CG syncs every 10 iterations): Newton timings
     need a quiet CPU too. Sent to task 3 for trampolines.toml.
+    **Maintainer (via task 4):** astol default 1e-4, 5e-4 to 1e-3 where relevant (stiff scenes near rest); one fully
+    explicit scene config per scene (configs/scenes/, diffable against configs/paper/), applying only the durable rules;
+    every scene's band near dmin (~2 mm), celebration included. All assigned to task 4; heavy scenes need interactive
+    checks with the maintainer.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
