@@ -1020,6 +1020,10 @@ Answer when back; each has the coordinator's recommendation.
     recomputed. Task 4 also: VertexSdf band 2 cm -> 2 mm fixed Newton sticking on Melissa's sphere-trampoline configs
     (scope of config changes being confirmed with the maintainer: our trampolines got 2 cm on 10-19 for a reason);
     feature/newton-status-residuals (Newton outer residuals in Solve status; Convergence rtol split into rstol/astol).
+    Band: maintainer asked to change all 2 cm bands (soft-stiff, stiff-soft) to 2 mm, near dmin; celebration (1 cm) open.
+    astol becomes a dimensionless epsilon x mean body bounding-box diagonal (task 4). Material + per-node mass views in
+    all mesh GUIs (benchmark_viewer, benchmark_browser, sim ui, editor, modalrom) and a pass-through check of the two
+    trampolines at 2 mm: task 1 (check after the timed GPU runs).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
