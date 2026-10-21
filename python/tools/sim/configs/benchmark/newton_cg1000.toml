@@ -1,0 +1,8 @@
+# Newton's CG cap of 1000 iterations, for the static problems of the stiff and heterogeneous scenes:
+#   --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml
+#   --scene-params static/het=python/tools/sim/configs/benchmark/newton_cg1000.toml
+# The Newton pilot (2026-10-20) found CG 1000 faster than the default 500 only there: static Y1e8 3.3 vs 4.1 s
+# and het 14.6 vs 17.0 s median to 99%; on the dynamic problems, 500 was never slower.
+
+[Solver.Newton.LinearSolver]
+n_max_iters = 1000

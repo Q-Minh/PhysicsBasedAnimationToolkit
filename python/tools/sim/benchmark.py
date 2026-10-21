@@ -59,12 +59,13 @@ Representative commands (from the repo root; datasets live in the main checkout'
         --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
     # Pilot: Newton alone, generous budget; then the benchmark with budgets of Newton's median time to 99%,
-    # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere
+    # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere; Newton's CG cap is 1000 for the
+    # static Y1e8 problems only
     python -m python.tools.sim.benchmark --dataset DATASET.h5 --solvers Newton --max-seconds 60 \
         --sim-params python/tools/sim/configs/benchmark/shared.toml -o out/pilot.h5
     python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 --budget static=5 \
-        --budget-cap 3 --sim-params python/tools/sim/configs/benchmark/shared.toml --scene-params Y1e8=y1e8.toml \
-        -o out/results.h5
+        --budget-cap 3 --sim-params python/tools/sim/configs/benchmark/shared.toml \
+        --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml -o out/results.h5
 
     # The figures
     python -m python.tools.sim.benchmark_plot out/results.h5 -o out/figures/benchmark
