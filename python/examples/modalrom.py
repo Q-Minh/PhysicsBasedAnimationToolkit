@@ -472,6 +472,15 @@ def count_bodies(E: np.ndarray, n_nodes: int) -> int:
     return int(n_components)
 
 
+def add_repository_to_path():
+    """Puts this repository's root on sys.path, for its python.tools packages."""
+    import sys
+
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+
 def load_scene_fem(path: str, t_end: float = 0.0):
     """Builds the FemElastoDynamics of a CPU editor scene file, the way the editor does.
 
@@ -490,11 +499,7 @@ def load_scene_fem(path: str, t_end: float = 0.0):
         ValueError: If the scene has static colliders, constraints acting during [0, t_end] that move their nodes
             or start or end within it, or more than one body.
     """
-    import sys
-
-    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    if repo_root not in sys.path:
-        sys.path.insert(0, repo_root)
+    add_repository_to_path()
     from python.tools.sim import state
 
     fem, (constraints, _, _), contact_geometry = state.load_scene(path)
@@ -967,6 +972,13 @@ if __name__ == "__main__":
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
     vm = ps.register_volume_mesh("model", X.T, E.T)
+    # The materials and lumped masses, as the CPU editor shows them
+    add_repository_to_path()
+    from python.tools.vbd.ui import material
+
+    lamegU = np.vstack([np.ravel(mug), np.ravel(lambdag)])
+    for name, values, location, options in material.fem_quantities(lamegU, egU, E.shape[1], M.diagonal()[0::3]):
+        vm.add_scalar_quantity(name, values, defined_on=location, **options)
     # drop-down to select mapping type (linear/quadratic)
     mappings = ["Linear", "Quadratic"]
     mapping = mappings[1]
