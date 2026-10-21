@@ -3,11 +3,12 @@
 Status: **on hold** (see Handoff) · Worktree `pbat-profiling` (location in `CLAUDE.local.md`)
 Read first: `MASTER.md` (rules, ownership, GPU-sharing rule), `python/tools/sim/CLAUDE.md`.
 
-## Handoff (2026-10-20)
+## Handoff (2026-10-21)
 
-Task 2 is **on hold**: no open branches, no uncommitted worktree changes. The how-to lives in
-`python/tools/sim/CLAUDE.md` ("Profiling", AAAVBD bullets) and `.claude/skills/sim-profiling/SKILL.md`. This section
-records state, decisions and gotchas only.
+Task 2 is **on hold**: no unmerged work, no uncommitted worktree changes. The how-to lives in
+`python/tools/sim/CLAUDE.md` ("Profiling", AAAVBD bullets, convergence paragraph) and
+`.claude/skills/sim-profiling/SKILL.md`. This section records state, decisions and gotchas only. Since 2026-10-20 task 2
+also did Newton CG tuning for the benchmark, the stationarity test (rstol/astol) and the scene configs (§2, §5).
 
 ### 1. Scope and ownership
 
@@ -39,9 +40,16 @@ records state, decisions and gotchas only.
     - tooltips `b5a5450c`.
   - aaavbd-params `9598e393`, relative-hess-zero `7ee9ee3a`, aaavbd-surface-neighbours `9a62fcf6`, aaavbd-ablation-params `30fe7778`.
   - profiling-tool-discovery `006e7450`, report-without-gpu `feb00581`, sd-detect-scope `15340ab4`.
+  - 2026-10-20/21: anderson-deterministic-gram `c0d38305` (MASTER decision #11 A), anderson-notes `836eb1e4`,
+    scene-configs `b6ba92da`, newton-init-strategy `2a2b61dc`, astol-noise-floor `90efbda5` (also reverts Newton's
+    forced first subproblem), astol-acceleration `38385d36`.
 - **Unmerged:** nothing.
-- **Leftovers:** the local branches `feature/relative-hess-zero` and `feature/aaavbd-surface-neighbours` are merged and can be deleted with `git branch -d`.
-- **Resume from:** worktree `pbat-profiling` (location in `CLAUDE.local.md`), detached at dev. Branch `feature/<topic>` from the latest dev.
+- **Leftovers:** my local branches `feature/anderson-deterministic-gram`, `feature/anderson-notes`,
+  `feature/scene-configs`, `feature/newton-init-strategy`, `feature/astol-noise-floor` and `feature/astol-acceleration`
+  are merged into dev and can be deleted with `git branch -d`.
+- **Worktree vs dev:** `pbat-profiling` is on `feature/astol-acceleration` at `bf346098`, clean, 0 commits ahead and 32
+  behind dev (`b4e73feb`). **Resume from:** `git checkout --detach dev` there (location in `CLAUDE.local.md`), then branch
+  `feature/<topic>` from the latest dev.
 - **Reports:**
   - trampoline breakdown https://claude.ai/artifact/LHMcGJs6Z6N89iruhYLxYz
   - AAAVBD overheads v3 https://claude.ai/artifact/NngLUsxKfkhZz4Fzmx9XuL
@@ -109,8 +117,64 @@ records state, decisions and gotchas only.
   - Use `state.load_params(fem)`.
 - **Windows shell:** pass h5 paths in Windows drive form with forward slashes, not Git Bash's `/<drive>/...` form. Heredocs mangle backslashes, so write scripts to files.
 
-### 5. Open items (all wait for the maintainer)
+### 5. Newton CG and the convergence test (2026-10-20/21)
 
+- **Final Newton CG table** (benchmark trampolines; pinned per case in `configs/benchmark/trampolines.toml`; quiet-machine
+  re-time at 21:08 on 2026-10-20; noise 2–9%, so differences under ~10% are ties):
+
+  | Benchmark | Y1e5 | Y1e6 | Y1e7 | Y1e8 | het |
+  |---|---|---|---|---|---|
+  | static (rtol 1e-6) | cap 500 | cap 1000 | cap 1000 | cap 1000 | cap 4000 |
+  | dynamic h = 1e-2 | rtol 1e-2, cap 4000 | rtol 1e-2, cap 4000 | rtol 1e-2, cap 4000 | default (rtol 1e-6, cap 500; 1e-2/4000 is +9%) | rtol 1e-2, cap 4000 |
+  | dynamic h = 1e-4 | default | default | default | default | default |
+
+  - Static rtol 1e-3 gains nothing and stalls on Y1e8 and het. At h = 1e-4 Newton takes 1–3 steps, so CG settings barely
+    matter.
+  - Newton timings need a quiet CPU as well as a quiet GPU: CG syncs with the host every 10 iterations, and a CPU-loaded
+    sweep inflated the large caps.
+  - Static Newton's slowness is diagnosed, not a bug: inexact Jacobi-CG steps plus a long projected-Newton phase (static
+    het's damped steps reduce the error by only 4–9% for ~60 steps).
+  - The default CG cap is now 2000 (task 3, `b48ab7f0`); the benchmark cases stay pinned.
+- **Stationarity test** (`gpu/vbd/convergence.py`, VBD family and Newton, dynamic problems): passes when
+  RMS_M(M⁻¹g) ≤ max(rstol · RMS_M(x̃ − xᵗ), astol · |a| · h²).
+  - |a| is the mass-weighted RMS of fext/m over free nodes (`external_acceleration`; 9.81 without a load), and h is
+    `fem.bdf.h` (dt / substeps).
+  - Defaults rstol 1e-2, astol 0.5: the absolute term scales like one step's gravity sag, so it's time-step and
+    scene-size invariant, and with astol < 1 a step that hasn't moved can't pass.
+  - Only the host-side tolerance changed; the device kernels didn't. Static problems use `gtol`. The benchmark runs
+    with the test off.
+  - History: astol·L (scene bounding box) let Newton pass from xᵗ before any step (2.8 mm > h²g ≈ 1 mm); 1e-6 was much
+    too slow; 1e-4·L was not time-step invariant. A forced first Newton subproblem was added and reverted.
+  - **Changed meaning:** astol used to be a fraction of L. Generated configs were regenerated, but a hand-written file
+    with astol = 1e-4 is now extremely strict.
+  - Stiff scenes near rest may still run their full budget when their float32 floor, about (h ω)² ulps, exceeds both
+    terms.
+- **Newton init:** `Solver.Newton.init_strategy` (default Position) through `SimulationState.step_init_strategy()`.
+- **Scene configs:** `scene_configs.py` (temporary, CPU-only, `make`/`check`) writes `configs/scenes/*.toml` from the
+  paper configs plus the durable rules. Regenerate with CUDA hidden (`CUDA_VISIBLE_DEVICES=`): first `paper_configs
+  make`, then `scene_configs make`, then both `check`s.
+
+### 6. Instabilities: heterogeneous trampoline + sphere
+
+These weren't diagnosed by task 2; this is what I know, with the sources.
+
+- At the 2 mm VertexSdf band, the sphere impact exploded on the heterogeneous trampoline; at 5 mm (`c2b6223b`) VBD and
+  AAAVBD still exploded on the second bounce without substeps. The sphere-trampoline configs now use a 1 cm band with
+  max_dist 50 cm (maintainer, 2026-10-21; `scene_configs.py` rules `SPHERE_BAND`, `TRAMPOLINE_DETECTION`). In my
+  cheap-scene check (2026-10-20), the stiff sphere didn't pass through at 2 mm.
+- Newton on the heterogeneous trampoline + sphere is unstable from the second contact frame, also at mu_f = 0 (MASTER.md
+  open item 1b). The heterogeneous soft-stiff contact scenes use Newton 30 × 1 with strict CG (rtol 1e-9, 4000
+  iterations; `9a43b8e4`).
+- For the friction instability at the stiff center, task 3's frozen Coulomb limit is merged (`3fbd1caf`), frozen at
+  each contact's first positive estimate (`4841ae50`), with the unset-limit fix (`39a629a9`; plan 03 has the details).
+  Since the instability also happens at mu_f = 0, friction isn't the whole story.
+- Next, with the maintainer: a short headless Newton run of that scene with per-step diagnostics (line-search
+  failures, CG exit, contact count and penetration at the second contact frame).
+
+### 7. Open items (all wait for the maintainer)
+
+0. **Next work once the maintainer is back** (MASTER.md "Open items"): refine the benchmark figures; AAAVBD ablations
+   (protocol not agreed yet, item 1 below); the instabilities on the paper scenes (§6).
 1. **AAAVBD ablations** (MASTER.md, "Planned: AAAVBD ablation studies"):
    - The switches exist: `lipschitz_normalization`, `betaup` (beta > 1, e.g. 1.05), `warm_start_beta`, and the gammas.
    - Next: propose a protocol, e.g. `python.tools.sim.benchmark` time-to-error-level with `--set Solver.AAAVBD.<key>=...` on 1 static + 1 dynamic set.
@@ -129,8 +193,15 @@ records state, decisions and gotchas only.
    Next: size them with `profiling.anatomy` and `ncu --lineinfo` on dev.
 5. **Recheck on dev:** 21 MEM_ALLOC/MEM_FREE node pairs and ~2,500 memcpy nodes per captured step. These were measured before the later changes.
 6. **Manual test for the maintainer:** the GUI profiling panel's Tree mode.
+7. **Residual-based float32 noise floor** for the stationarity test (future work, not implemented): a backward-error
+   estimate from the absolute values of the force terms (inertial, elastic, contact) that sum to g. Only if the
+   maintainer asks.
+8. **Not checked on the GPU:** the astol·|a|·h² change was validated by CPU tests and config checks only (maintainer
+   rule for config/default changes). The first interactive scene run should look at the Solve status ratios.
+9. **Unanswered:** whether to delete the old collaborator-index artifact (57XN1mBRfqnYHfMRdhuays). Do nothing unless the
+   maintainer answers.
 
-### 6. How to resume
+### 8. How to resume
 
 - Use the venv from `CLAUDE.local.md`. Scene data is in the main checkout's `data/`.
 - **Cheap scenes:** `data/scenarios/MediumLongBendingBeam.h5` (contact-free), `data/BeamFallingOnBeam.h5` (contact), `data/scenarios/trampoline.h5`.
@@ -139,7 +210,10 @@ records state, decisions and gotchas only.
   ```bash
   python -m unittest python.tools.sim.gpu.common.profiling python.tools.sim.gpu.common.cupti \
       python.tools.sim.profiling.results python.tools.sim.profiling.nsight python.tools.sim.gpu.vbd.params
+  # convergence test and configs (CPU, with CUDA hidden: CUDA_VISIBLE_DEVICES=)
+  python -m unittest python.tools.sim.gpu.vbd.convergence python.tools.sim.config
   ```
+  pytest isn't installed; use `unittest`.
 - **Smallest profile check** (seconds; read the JSON with `results.scope_tree`):
   ```bash
   python -m python.tools.sim.simulate --scene path/to/PhysicsBasedAnimationToolkit/data/BeamFallingOnBeam.h5 \
