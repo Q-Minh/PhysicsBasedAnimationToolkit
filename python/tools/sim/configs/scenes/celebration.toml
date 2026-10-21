@@ -31,9 +31,6 @@
 # - max_dist 30 cm, scaled to the geometry (maintainer): the base plate is 10 cm thick and the letters' edges ~4
 #   cm.
 #     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
-# - astol = 5e-4: Young's modulus 1e8 regions resting in contact. Near rest the default 1e-4 can ask for less
-#   than float32 resolves (the Y = 1e8 square trampoline's first step stalled near 1.5e-3 m with L = 4.39 m).
-#     Solver.Convergence.astol = 0.0005 (source 0.0001)
 #
 # Notes:
 # - The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's.
@@ -131,7 +128,7 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
-astol = 0.0005
+astol = 1e-06
 check_interval = 20
 ftol = 0.5
 rstol = 0.01

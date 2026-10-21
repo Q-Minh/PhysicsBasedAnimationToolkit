@@ -43,7 +43,6 @@
 #
 # Notes:
 # - The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's.
-# - astol keeps the default 1e-4 (soft, homogeneous), unlike the soft-stiff trampolines' 5e-4.
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -138,7 +137,7 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
-astol = 0.0001
+astol = 1e-06
 check_interval = 20
 ftol = 0.5
 rstol = 0.01

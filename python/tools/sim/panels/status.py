@@ -29,7 +29,7 @@ _RESULT = {
     SolveEnd.GRADIENT_UNMET: (
         "Budget: gradient unmet",
         "The outer iterations ran out with the gradient test unmet (the step is feasible).\n"
-        "More sweeps or outer iterations, or looser Solver.Convergence.rstol/astol, would help.",
+        "More sweeps or outer iterations, or a looser Solver.Convergence.rstol, would help.",
     ),
     SolveEnd.FEASIBILITY_UNMET: (
         "Budget: feasibility unmet",
@@ -355,7 +355,9 @@ def draw_status_panel(state, ui_state):
         imgui.Text(f"Absolute stationarity tolerance: {astol * L:.3g} m")
         _tooltip(
             f"astol * L = {astol:.3g} * {L:.3g} m: the residual RMS(M^-1 g) below which the gradient test always\n"
-            "passes (dynamic problems), L being the mean bounding-box diagonal of the scene's bodies at rest."
+            "passes (dynamic problems), L being the mean bounding-box diagonal of the scene's bodies at rest:
+"
+            "a float32-noise fallback for steps with almost no motion, not a tuning knob."
         )
     log = state.status_log
     if log.last_step is None:

@@ -88,11 +88,6 @@ GAMMAS = Rule(
         "Solver.AAAVBD.gammaupS": 0.3,
     },
 )
-ASTOL_STIFF = Rule(
-    "astol = 5e-4: Young's modulus 1e8 regions resting in contact. Near rest the default 1e-4 can ask for less "
-    "than float32 resolves (the Y = 1e8 square trampoline's first step stalled near 1.5e-3 m with L = 4.39 m).",
-    {"Solver.Convergence.astol": 5e-4},
-)
 CONTACT = [PENALTY, DMIN, BAND, NEWTON_CONTACT]
 SOLVERS = [INVERSE, GAMMAS]
 
@@ -122,11 +117,11 @@ SPHERE_BAND = Rule(
 TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
 
 SCENES = {
-    # The six scene configs that predate the explicit form: their values are kept, plus astol and the 2 mm band.
+    # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "basket_of_fruit": Scene(
         "basket_of_fruit.Params_3_10_15",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
-        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *CONTACT, ASTOL_STIFF],
+        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *CONTACT],
     ),
     "celebration": Scene(
         "celebration.Params_1_5_30",
@@ -140,7 +135,6 @@ SCENES = {
                 "letters' edges ~4 cm.",
                 {"Contact.CDType.VertexSdf.max_dist": 0.3},
             ),
-            ASTOL_STIFF,
         ],
         ["The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's."],
     ),
@@ -154,7 +148,6 @@ SCENES = {
             ),
             *SOLVERS,
             *CONTACT,
-            ASTOL_STIFF,
         ],
         ["The paper's 10-substep file (mat_on_stilts.Params.10Substeps) differs from the 5-substep one only in "
          "substeps, which this config overrides."],
@@ -162,13 +155,13 @@ SCENES = {
     "trampoline_soft-stiff": Scene(
         "trampoline_soft-stiff.Params.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
-        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *CONTACT, *TRAMPOLINE, ASTOL_STIFF],
+        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *CONTACT, *TRAMPOLINE],
     ),
     "trampoline_stiff-soft": Scene(
         "trampoline_stiff-soft.Params.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *CONTACT,
-         *TRAMPOLINE, ASTOL_STIFF],
+         *TRAMPOLINE],
     ),
     "trampoline_soft-soft": Scene(
         "trampoline_soft-stiff.Params.5Substeps",
@@ -181,14 +174,13 @@ SCENES = {
             *CONTACT,
             *TRAMPOLINE,
         ],
-        ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's.",
-         "astol keeps the default 1e-4 (soft, homogeneous), unlike the soft-stiff trampolines' 5e-4."],
+        ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's."],
     ),
     # The other paper configs: the durable rules only, budgets unchanged
     "trampoline_stiff_sphere": Scene(
         "trampoline_stiff_sphere.Params.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *CONTACT, *TRAMPOLINE, ASTOL_STIFF],
+        [*SOLVERS, *CONTACT, *TRAMPOLINE],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
@@ -205,13 +197,12 @@ SCENES = {
         "recorded)",
         [*SOLVERS, *CONTACT],
         ["Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for "
-         "Young's modulus ~1e7.",
-         "astol keeps the default 1e-4 (no 1e8 regions); raise it to 5e-4 if the resting basket stalls."],
+         "Young's modulus ~1e7."],
     ),
     "basket_5_5_40": Scene(
         "basket_5_5_40",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
-        [*SOLVERS, *CONTACT, ASTOL_STIFF],
+        [*SOLVERS, *CONTACT],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget
