@@ -1007,6 +1007,10 @@ Answer when back; each has the coordinator's recommendation.
     **Run file approved (maintainer):** `benchmark.py --run configs/benchmark/trampolines.toml` holds the dataset, solvers,
     levels, cap, factor, snapshots, shared params and per-case overrides inline; CLI flags override it; its text is stored
     in the results (task 3). The final per-case CG table goes there.
+    **GPU/CPU gap found (task 3):** Rayleigh damping betaR is copied into the GPU VBD-family params but no GPU kernel
+    reads it, so a config's betaR silently does nothing on the GPU (no config sets it nonzero today). Also not on the GPU:
+    e_penalty_stiffness (GPU uses Contact.ContactDynamics.penalty_adaptivity), Newton linear_solver (always Jacobi-PCG).
+    `config params` annotates these. Ask the maintainer whether betaR should be ported.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
