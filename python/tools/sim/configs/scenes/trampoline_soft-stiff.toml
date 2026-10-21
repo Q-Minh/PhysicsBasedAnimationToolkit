@@ -1,54 +1,175 @@
-# The soft-stiff trampolines (Young's modulus 1e6 to 1e8) with the maintainer's settings for stiff heterogeneous scenes: no substeps, 5 x 80 = 400
-# sweeps per step, the Inverse vertex solve, and AAAVBD gammaup/gammaupS 0.5/0.3 with
-# gammadown/gammadownS 0.99/0.95. The paper file gives 5 substeps of 1 x 100 sweeps, with EVD and AAAVBD gammaup/gammaupS 0.9/0.85.
-# Newton: 5 outer iterations x 2 Newton steps. The contact parameters are the paper file's, except for a
-# positive AL contact margin dmin = 1 mm (the paper file's -1e-4 dates from penetration-only VertexSdf
-# detection): resting vertices stay outside their partner, where the SDF sign is reliable, detection
-# (below dmin + band) starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
-# The penalty is adaptive per time step (the code default, per the maintainer) instead of the paper
-# file's constant gamman.
-# Detection band (maintainer): the default 1 mm band missed contacts on the 10 cm plate and let sphere vertices
-# reach its far side, whose contacts then pulled the sphere through; a 2 cm band fixed that but made the sphere
-# stick to the trampoline under Newton. band = 2 mm, close to dmin, fixes the sticking; max_dist = 30 cm.
-extends = ["../paper/trampoline_soft-stiff.Params.5Substeps.toml"]
+# Scene config: trampoline_soft-stiff, every serialized parameter written out (diff it against configs/paper).
+# For: final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8).
+# Source: configs/paper/trampoline_soft-stiff.Params.5Substeps.toml. Keys not listed below have the source's values.
+# Generated 2026-10-20 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+#
+# Differs from the source:
+# - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
+#   VBD-family solver (the paper file gives 5 substeps of 1 x 100 sweeps).
+#     Integration.substeps = 1 (source 5)
+#     Solver.AAAVBD.n_max_iters = 5 (source 1)
+#     Solver.AAAVBD.n_subproblem_max_iters = 80 (source 100)
+#     Solver.AndersonSolver.n_max_iters = 5 (source 1)
+#     Solver.AndersonSolver.n_subproblem_max_iters = 80 (source 100)
+#     Solver.Chebyshev.n_max_iters = 5 (source 1)
+#     Solver.Chebyshev.n_subproblem_max_iters = 80 (source 100)
+#     Solver.VBD.n_max_iters = 5 (source 1)
+#     Solver.VBD.n_subproblem_max_iters = 80 (source 100)
+# - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
+#     Solver.AAAVBD.vlinsolve = 0 (source 3)
+#     Solver.AndersonSolver.vlinsolve = 0 (source 3)
+#     Solver.Chebyshev.vlinsolve = 0 (source 3)
+#     Solver.VBD.vlinsolve = 0 (source 3)
+# - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
+#   0.5/0.3): the Lipschitz normalization is meant to make them problem-invariant.
+#     Solver.AAAVBD.gammaup = 0.5 (source 0.8999999761581421)
+#     Solver.AAAVBD.gammaupS = 0.3 (source 0.8500000238418579)
+# - Adaptive contact penalty per time step (TIMESTEP, the code default; maintainer: CONSTANT only with a stated
+#   justification), with the code's gamman_adaptive / gammaf_adaptive, instead of the paper's constant gamman.
+#     Contact.ContactDynamics.penalty_adaptivity = 1 (source 0)
+# - Positive AL contact margin dmin = 1 mm (the paper's -1e-4 dates from penetration-only VertexSdf detection):
+#   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
+#   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
+#     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
+# - VertexSdf band 2 mm, close to dmin (maintainer): a 2 cm band made the sphere stick to the trampolines under
+#   Newton, and the 1 mm default once let bodies pass through 10 cm plates. max_dist is kept.
+#     Contact.CDType.VertexSdf.band = 0.002 (source 0.001)
+# - Newton with contact: 5 outer iterations (contact detection passes) x 2 Newton steps (maintainer).
+#     Solver.Newton.n_max_iters = 5 (source 20)
+#     Solver.Newton.newton.n_max_iters = 2 (source 1)
+# - max_dist 30 cm, scaled to the metre-scale trampoline geometry (10 cm plate; maintainer).
+#     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
+# - astol = 5e-4: Young's modulus 1e8 regions resting in contact. Near rest the default 1e-4 can ask for less
+#   than float32 resolves (the Y = 1e8 square trampoline's first step stalled near 1.5e-3 m with L = 4.39 m).
+#     Solver.Convergence.astol = 0.0005 (source 0.0001)
 
-[Integration]
-substeps = 1
-
-[Contact.ContactDynamics]
-dmin = 1e-3
-penalty_adaptivity = 1  # TIMESTEP, with the code's gamman_adaptive / gammaf_adaptive
+[Contact.CDType.OGC]
+arq = 1.0
+deactivate = 0
+gammap = 0.45
+r = 0.003
+truncation_strategy = 0
 
 [Contact.CDType.VertexSdf]
-band = 0.002  # 2 mm, close to dmin (a 2 cm band made the sphere stick under Newton)
+band = 0.002
+deactivate = 0
 max_dist = 0.3
+use_step_filter = 0
+
+[Contact.ContactDynamics]
+decay = 0.5
+dmin = 0.001
+gammaf = 10000.0
+gammaf_adaptive = 0.01
+gamman = 20000.0
+gamman_adaptive = 1.0
+min_sigma_n = 1.0
+mu_f = 0.30000001192092896
+penalty_adaptivity = 1
+
+[Contact.ContactStorage]
+n_ee_contact_capacity = 0.20000000298023224
+n_ve_contact_capacity = 0.05000000074505806
+n_vf_contact_capacity = 0.20000000298023224
+n_vv_contact_capacity = 0.05000000074505806
+
+[Integration]
+bdf_scheme = 1
+dt = 0.009999999776482582
+init_strategy = 2
+substeps = 1
 
 [Solver.AAAVBD]
-n_max_iters = 5
-n_subproblem_max_iters = 80
-vlinsolve = 0
-gammadown = 0.99
-gammadownS = 0.95
+betaG0 = 0.5
+betaR = 0.0
+betaup = 1.0
+e_penalty_stiffness = 0
+gammadown = 0.9900000095367432
+gammadownS = 0.949999988079071
 gammaup = 0.5
 gammaupS = 0.3
-
-[Solver.VBD]
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+lipschitz_normalization = 1
 n_max_iters = 5
 n_subproblem_max_iters = 80
+rhohat = 0.004999999888241291
+rhohatS = 0.004999999888241291
+surface_stencil_surface_neighbours_only = 1
 vlinsolve = 0
-
-[Solver.Chebyshev]
-n_max_iters = 5
-n_subproblem_max_iters = 80
-vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+warm_start_beta = 2
 
 [Solver.AndersonSolver]
+beta = 1.0
+betaR = 0.0
+cod_numerical_zero = 1.000000013351432e-10
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+linear_solver = 0
+m = 5
+n_max_iters = 5
+n_subproblem_max_iters = 80
+vbd_iters_per_anderson_iter = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Chebyshev]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 5
+n_subproblem_max_iters = 80
+rho = 0.8999999761581421
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Convergence]
+astol = 0.0005
+check_interval = 20
+ftol = 0.5
+rstol = 0.01
+
+[Solver.Newton]
+linear_solver = 1
+n_max_iters = 5
+spd_correction = 2
+
+[Solver.Newton.LinearSolver]
+atol = 1e-10
+n_max_iters = 500
+rtol = 1e-06
+
+[Solver.Newton.newton]
+gtol2 = 9.999999974752427e-07
+n_max_iters = 2
+
+[Solver.Newton.newton.line_search]
+alpha = 1.0
+c = 9.999999747378752e-05
+n_max_iters = 20
+tau = 0.5
+
+[Solver.VBD]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
 n_max_iters = 5
 n_subproblem_max_iters = 80
 vlinsolve = 0
-
-[Solver.Newton]
-n_max_iters = 5  # outer iterations (contact detection passes); maintainer's guidance for contact scenes
-
-[Solver.Newton.newton]
-n_max_iters = 2  # Newton steps per outer iteration
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
