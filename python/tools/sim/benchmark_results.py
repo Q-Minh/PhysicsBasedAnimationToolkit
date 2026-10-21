@@ -28,10 +28,7 @@ Results file layout (HDF5, ``FORMAT``):
     /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, [budget] (a
                                      fixed --budget), budget_source, max_seconds (Newton's cap),
                                      scene_params, sim_params_toml (every solver parameter of the
-                                     case's simulation, TOML), newton_cg_* (Newton's CG limits), gpu_start_*,
-                                     gpu_end_* (the GPU's state, nvidia-smi: time, pstate, clocks_sm,
-                                     clocks_mem, clocks_max_sm, temperature_gpu, power_draw,
-                                     power_limit, clocks_event_reasons_active)
+                                     case's simulation, TOML), newton_cg_* (Newton's CG limits)
     /<benchmark>/<case>/<solver>     attrs: solver, n_samples
         sample, e0, iterations, sweeps, solver_time, host_time, final_relative_error, termination,
         deformation_energy, budget, normalization, [min_J],

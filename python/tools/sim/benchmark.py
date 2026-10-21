@@ -131,10 +131,6 @@ Pitfalls:
     - Times are solver time from device timestamps, logging excluded; the budget counts the same time.
       Every iteration is timed on its own, also inside replayed graph blocks, and iterations a block runs
       past the stop are dropped, so --block doesn't change the crossings. Don't run other GPU work meanwhile.
-    - GPU state: each case records the GPU's clocks, temperature, power and active clock-event (throttle)
-      reasons at its start and end (``gpu_start_*``, ``gpu_end_*`` attributes, from nvidia-smi), so throttling
-      over a long run shows. nvidia-smi is found from ``--nvidia-smi``, the ``NVIDIA_SMI`` environment
-      variable, ``PATH``, then the standard install locations; without it, the run warns and records nothing.
     - Sets with ``importance_weights_required`` are refused; R-hat >= 1.05 or nonzero sampling gravity
       only print a warning.
     - Each solver's first solve on a set also compiles kernels and captures its graph. That shows in the host
@@ -145,7 +141,6 @@ import argparse
 import fnmatch
 import math
 import os
-import shutil
 import subprocess
 import time
 from dataclasses import dataclass
@@ -254,9 +249,6 @@ def parse_args():
                         help="Device memory cap for the snapshots, allocated once per solver and case (default: "
                         "%(default)s MB). The ring holds min(ratio x F, what fits) frames; fewer than ratio x F, with a "
                         "warning, place frames up to a ring stride from their target times.")
-    parser.add_argument("--nvidia-smi", default=None, dest="nvidia_smi",
-                        help="nvidia-smi executable, to record the GPU state per case (default: the NVIDIA_SMI "
-                        "environment variable, PATH, then the standard install locations).")
     parser.add_argument("-o", "--output", required=True, help="Output results file (.h5).")
     return parser.parse_args()
 
@@ -471,59 +463,6 @@ def trajectory(
     }
 
 
-# nvidia-smi --query-gpu fields recorded per case (attribute names replace '.' with '_')
-GPU_STATE_FIELDS = (
-    "pstate",
-    "clocks.sm",
-    "clocks.mem",
-    "clocks.max.sm",
-    "temperature.gpu",
-    "power.draw",
-    "power.limit",
-    "clocks_event_reasons.active",
-)
-
-
-def find_nvidia_smi(path: str | None = None) -> str | None:
-    """nvidia-smi: ``path`` (--nvidia-smi), the NVIDIA_SMI environment variable, PATH, then the standard
-    install locations; None if found nowhere."""
-    if path:
-        return path
-    if os.environ.get("NVIDIA_SMI"):
-        return os.environ["NVIDIA_SMI"]
-    on_path = shutil.which("nvidia-smi")
-    if on_path:
-        return on_path
-    candidates = [
-        os.path.join(os.environ.get("SystemRoot", ""), "System32", "nvidia-smi.exe"),
-        os.path.join(os.environ.get("ProgramFiles", ""), "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"),
-        "/usr/bin/nvidia-smi",
-    ]
-    return next((c for c in candidates if os.path.isfile(c)), None)
-
-
-def gpu_state(nvidia_smi: str | None, uuid: str) -> dict:
-    """The GPU's clocks, temperature, power and clock-event reasons now (``GPU_STATE_FIELDS``, numbers where
-    numeric, plus ``time``), or {} if nvidia-smi is missing or fails."""
-    if not nvidia_smi:
-        return {}
-    try:
-        out = subprocess.check_output(
-            [nvidia_smi, f"--id={uuid}", f"--query-gpu={','.join(GPU_STATE_FIELDS)}", "--format=csv,noheader,nounits"],
-            text=True,
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return {}
-    state = {"time": time.strftime("%Y-%m-%d %H:%M:%S")}
-    for field, value in zip(GPU_STATE_FIELDS, (v.strip() for v in out.strip().split(","))):
-        try:
-            state[field.replace(".", "_")] = float(value)
-        except ValueError:
-            state[field.replace(".", "_")] = value
-    return state
-
-
 def _git_commit() -> str:
     try:
         root = os.path.dirname(os.path.abspath(__file__))
@@ -613,10 +552,6 @@ def main():
         )
         print(f"Snapshots: {n_frames} frames per trajectory ({video_seconds:g} s of video), at most "
               f"~{estimate / 2**30:.2f} GiB on disk for this run")
-    nvidia_smi = find_nvidia_smi(args.nvidia_smi)
-    if nvidia_smi is None:
-        print("Warning: nvidia-smi not found (pass --nvidia-smi or set NVIDIA_SMI): the GPU state isn't recorded")
-    gpu_uuid = str(wp.get_device().uuid)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with h5py.File(args.output, "w") as h5f, tqdm(total=total, desc="Solves", unit="solve") as pbar:
         h5f.attrs.update(
@@ -690,7 +625,6 @@ def main():
                 if fixed_seconds is None:
                     order = [SolverType.Newton] + [s for s in solvers if s != SolverType.Newton]
                 newton_time = {}
-                group.attrs.update({f"gpu_start_{k}": v for k, v in gpu_state(nvidia_smi, gpu_uuid).items()})
                 for solver in order:
                     ring = None
                     if n_frames:
@@ -756,7 +690,6 @@ def main():
                     results.write_solver(group, solver.name, levels, summaries, logs, trajectories)
                     h5f.flush()
                     del runner, ring
-                group.attrs.update({f"gpu_end_{k}": v for k, v in gpu_state(nvidia_smi, gpu_uuid).items()})
             del state
     print(f"Wrote {args.output}")
 
@@ -781,15 +714,13 @@ class TestRecords(unittest.TestCase):
         self.assertTrue(np.isnan(a["newton/cg_tolerance"][1]))  # the record's default
         self.assertEqual(newton_step_arrays([])["newton/cg_iterations"].size, 0)
 
-    def test_versions_and_gpu_state(self):
+    def test_versions(self):
         wp.init()
         v = software_versions()
         self.assertEqual(set(v), {"version_warp", "version_cuda_driver", "version_cuda_toolkit", "version_pbatoolkit"})
         self.assertEqual(v["version_warp"], wp.__version__)
         self.assertRegex(v["version_cuda_driver"], r"^\d+\.\d+$")
         self.assertTrue(all(isinstance(x, str) for x in v.values()))
-        self.assertEqual(gpu_state(None, "GPU-0"), {})
-        self.assertEqual(gpu_state("path/to/missing/nvidia-smi", "GPU-0"), {})
 
 
 if __name__ == "__main__":
