@@ -387,8 +387,8 @@ Each session updates only its own row.
 |---|---|---|---|
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
-| 2 | on hold | 2026-10-20 | Anderson outlier diagnosis and p = 1 vs 2 pilot check reported (no code change); decision #11 awaits the maintainer |
-| 3 | on hold | 2026-10-20 | Benchmark runner and bar plot (07b4ee56), trajectory snapshots (62af8d55) merged; Newton pilot done |
+| 2 | on hold (merged c0d38305) | 2026-10-20 | Deterministic Anderson Gram (decision #11 A) merged: bit-reproducible, ~2% per Anderson iteration |
+| 3 | merged 87060f67 | 2026-10-20 | `feature/benchmark-config` (cccbcd6b): Anderson p = 2 in shared.toml, `--scene-params BENCHMARK/SCENE=` keys, per-case newton_cg_*, newton_cg1000.toml for static/Y1e8 and het; budgets wait for the maintainer |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -885,6 +885,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 2 · **GPU run END** (Anderson outlier diagnosis): cause found, report sent to the coordinator; no code changed.
 - 2026-10-20 · task 2 · **GPU run START** (~15 min, benchmark.py processes back to back; please keep the GPU quiet, timings are compared): Anderson p = 1 vs p = 2 on trampolines-pilot (all scenes; static once, h = 1e-2 x5, h = 1e-4 x2; 1x Newton pilot budgets). Will log END.
 - 2026-10-20 · task 2 · **GPU run END** (Anderson p = 1 vs p = 2 on trampolines-pilot): results sent to the coordinator.
+- 2026-10-20 · task 2 · **GPU run START** (intermittent, ~20 min, short in-process solves; please keep the GPU quiet, timings are compared): Anderson deterministic Gram (decision #11 A), per-iteration time before/after on trampolines-test Y1e7 static + dynamic_h0.01, and reproducibility. Will log END.
+- 2026-10-20 · task 2 · **GPU run END** (Anderson deterministic Gram): results sent to the coordinator. The GPU is free.
 
 ## Open questions for the maintainer
 
