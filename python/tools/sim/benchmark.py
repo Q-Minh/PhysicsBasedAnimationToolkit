@@ -30,8 +30,9 @@ convergence and feasibility tests are bypassed.
 
 Time budgets, per sample (Newton normalization, the default): Newton solves each problem first, to the
 target, until its stall test stops it (``--newton-stall-iterations`` K, ``--newton-stall-reduction`` delta:
-each of the last K iterations reduced the error by less than the fraction delta, e_j > (1 - delta)
-e_{j-1}), or at most ``--max-seconds`` (default 60 s, a practical cap). Its time to the highest level it
+the last K iterations improved the best error by less than delta per iteration on average,
+min_{j<=c} e_j > (1 - delta)^K min_{j<=c-K} e_j), or at most ``--max-seconds`` (default 60 s, a practical
+cap). Its time to the highest level it
 reached, T_N, sets that problem's budget for every other solver: ``--budget-factor`` (default 1) x T_N.
 Every solver's increments on that problem are divided by T_N (``normalized_increment``), so Newton's
 reached increments sum to 1. A case needs Newton among ``--solvers``, unless
@@ -194,13 +195,14 @@ def parse_args():
                         "highest level there (default: %(default)s).")
     parser.add_argument("--newton-stall-iterations", type=int, default=2, dest="newton_stall_iterations",
                         metavar="K",
-                        help="Newton's stall test: stop once each of the last K iterations reduced the error by less "
-                        "than --newton-stall-reduction (default: %(default)s; 0 = off, Newton then runs to the "
-                        "target or --max-seconds).")
-    parser.add_argument("--newton-stall-reduction", type=float, default=0.03, dest="newton_stall_reduction",
+                        help="Newton's stall test: stop once the last K iterations improved the best error by less "
+                        "than (1 - DELTA)^K (default: %(default)s; 0 = off, Newton then runs to the target or "
+                        "--max-seconds).")
+    parser.add_argument("--newton-stall-reduction", type=float, default=0.02, dest="newton_stall_reduction",
                         metavar="DELTA",
-                        help="The stall test's per-iteration error reduction: an iteration fails it when "
-                        "e_j > (1 - DELTA) e_{j-1} (default: %(default)s).")
+                        help="The stall test's average per-iteration reduction of the best error (default: "
+                        "%(default)s). On the floor check, 0.04 was the largest that lost no level (static het "
+                        "and Y1e5).")
     parser.add_argument("--budget", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
                         help="A fixed time budget per solve instead of Newton's, in seconds of solver time, for every "
                         "case, a benchmark (e.g. static=5) or one case (static/Y1e8=10): every solver gets it and "

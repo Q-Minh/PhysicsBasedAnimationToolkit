@@ -262,10 +262,10 @@ class StaticSolveSpec(SerializableMixin):
     block = DocField(16, "Solver iterations per replayed graph block (rounded to Anderson's m)")
     newton_stall_iterations = DocField(
         0,
-        "Newton only: stop once each of the last K iterations failed to reduce the error by the fraction "
-        "newton_stall_reduction, e_j > (1 - delta) e_{j-1} (0 = off)",
+        "Newton only: stop once the best error of the last K iterations improved on the best before them by "
+        "less than (1 - delta)^K, delta = newton_stall_reduction per iteration on average (0 = off)",
     )
-    newton_stall_reduction = DocField(0.1, "Newton only: the stall test's per-iteration error reduction delta")
+    newton_stall_reduction = DocField(0.1, "Newton only: the stall test's average per-iteration error reduction delta")
 
     def sample_indices(self, n_samples: int) -> range:
         """The sample indices ``[sample_begin, sample_end)`` clipped to a batch of ``n_samples``."""
@@ -291,7 +291,6 @@ def _reset_log_kernel(
     stop: wp.array[wp.int32],
     first_stop: wp.array[wp.int32],
     solver_ns: wp.array[wp.int64],
-    stall_run: wp.array[wp.int32],
 ):
     count[0] = 0
     keep[0] = 1
@@ -299,7 +298,6 @@ def _reset_log_kernel(
     first_stop[0] = -1
     first_stop[1] = 0
     solver_ns[0] = wp.int64(0)
-    stall_run[0] = 0
 
 
 @wp.kernel
@@ -339,7 +337,7 @@ def _commit_kernel(
     stop: wp.array[wp.int32],
     first_stop: wp.array[wp.int32],
     solver_ns: wp.array[wp.int64],
-    stall_run: wp.array[wp.int32],
+    e2_best: wp.array[wp.float32],
 ):
     c = count[0]
     capacity = e2.shape[0]
@@ -356,18 +354,22 @@ def _commit_kernel(
     elapsed = solver_ns[0]
     # Stop reason (StopReason), in priority order; 0 keeps going
     e2c = e2_new[0]
-    # Stall: consecutive iterations that failed to reduce the error by the fraction delta, e_c > (1 - delta) e_{c-1}
-    if stall_iterations > 0 and c > 0 and c < capacity:
-        if e2c > stall_ratio2 * e2[c - 1]:
-            stall_run[0] = stall_run[0] + 1
-        else:
-            stall_run[0] = 0
+    # Stall: the best error so far improved on the best K entries ago by less than (1 - delta)^K (stall_ratio2
+    # holds its square); best-so-far, so a noisy iteration can't restart the count
+    stalled = False
+    if stall_iterations > 0 and c < capacity:
+        best = e2c
+        if c > 0:
+            best = wp.min(e2c, e2_best[c - 1])
+        e2_best[c] = best
+        if c >= stall_iterations:
+            stalled = best > stall_ratio2 * e2_best[c - stall_iterations]
     reason = wp.int32(0)
     if not wp.isfinite(e2c):
         reason = wp.int32(4)
     elif e2c <= target_ratio2 * e2[0]:
         reason = wp.int32(1)
-    elif stall_iterations > 0 and stall_run[0] >= stall_iterations:
+    elif stalled:
         reason = wp.int32(8)
     elif c + 1 >= max_entries or c + 1 >= capacity:
         reason = wp.int32(2)
@@ -394,7 +396,7 @@ class StopReason(IntEnum):
     NEWTON_NON_DESCENT = 5  # Newton's direction wasn't a descent direction
     NEWTON_LINE_SEARCH_FAILED = 6  # Newton's line search rejected every step length
     NEWTON_ZERO_GRADIENT = 7  # Newton's gradient is exactly zero (no step possible)
-    STALLED = 8  # the stall test: K consecutive iterations each reduced the error by less than delta
+    STALLED = 8  # the stall test: the last K iterations reduced the best error by less than delta per iteration
 
 
 class ErrorLog:
@@ -431,7 +433,6 @@ class ErrorLog:
         self.first_stop = wp.zeros(2, dtype=wp.int32)  # entry and StopReason of the first stop (-1: none)
         self.solver_ns = wp.zeros(1, dtype=wp.int64)  # solver time so far (ns), logging excluded
         self.max_ns = wp.zeros(1, dtype=wp.int64)  # solver time cap (ns), read at replay: see set_max_seconds
-        self.stall_run = wp.zeros(1, dtype=wp.int32)  # consecutive iterations that failed the stall test
         self._w = wp.zeros(n_nodes, dtype=wp.float32)
         self._e2_new = wp.zeros(1, dtype=wp.float32)
         self._reduce = Reduce(
@@ -441,6 +442,7 @@ class ErrorLog:
             op=cuda.compute.OpKind.PLUS,
         )
         self.snapshots: "SnapshotRing | None" = None  # position snapshots, see attach_snapshots
+        self._e2_best = wp.zeros(1, dtype=wp.float32)  # running min of e2; capacity-sized once the stall test is on
         self.configure(target_reduction=0.95, max_entries=self.capacity, max_seconds=math.inf)
 
     def attach_snapshots(self, snapshots: "SnapshotRing | None") -> None:
@@ -464,15 +466,18 @@ class ErrorLog:
             max_entries (int): ``keep`` drops to 0 at this many entries (clipped to the capacity).
             max_seconds (float): ``keep`` drops to 0 once the solver time (device time since entry 0,
                 logging excluded, as :attr:`StaticSolveLog.time`) reaches it; ``math.inf`` for no limit.
-            stall_iterations (int): K; ``keep`` drops to 0 (``STALLED``) once each of the last K
-                iterations failed to reduce the error by the fraction ``stall_reduction``, i.e.
-                e_j > (1 - delta) e_{j-1} for the last K entries j. 0 disables the test.
-            stall_reduction (float): delta, the per-iteration error reduction the stall test asks for.
+            stall_iterations (int): K; ``keep`` drops to 0 (``STALLED``) once the best error of the last
+                K iterations improved on the best before them by less than a factor (1 - delta)^K, i.e.
+                min_{j<=c} e_j > (1 - delta)^K min_{j<=c-K} e_j: less than delta per iteration on average.
+                Best-so-far errors, so noise at a float32 floor can't restart it. 0 disables the test.
+            stall_reduction (float): delta, the average per-iteration error reduction the test asks for.
         """
         self._target_ratio2 = float((1.0 - target_reduction) ** 2)
         self._max_entries = int(min(max_entries, self.capacity))
         self._stall_iterations = int(max(stall_iterations, 0))
-        self._stall_ratio2 = float((1.0 - stall_reduction) ** 2)
+        self._stall_ratio2 = float((1.0 - stall_reduction) ** (2 * self._stall_iterations))
+        if self._stall_iterations > 0 and self._e2_best.shape[0] != self.capacity:
+            self._e2_best = wp.zeros(self.capacity, dtype=wp.float32)  # running min of e2, for the stall test
         self.set_max_seconds(max_seconds)
 
     def set_max_seconds(self, max_seconds: float) -> None:
@@ -486,7 +491,7 @@ class ErrorLog:
         wp.launch(
             _reset_log_kernel,
             dim=1,
-            inputs=[self.count, self.keep, self.stop, self.first_stop, self.solver_ns, self.stall_run],
+            inputs=[self.count, self.keep, self.stop, self.first_stop, self.solver_ns],
         )
         if self.snapshots is not None:
             self.snapshots.reset()
@@ -523,7 +528,7 @@ class ErrorLog:
                 self.stop,
                 self.first_stop,
                 self.solver_ns,
-                self.stall_run,
+                self._e2_best,
             ],
         )
 
@@ -1071,7 +1076,7 @@ class TestErrorLog(unittest.TestCase):
         self.assertEqual((log.read().error.size, log.read().termination), (6, "target"))
 
     def test_stall(self):
-        """The stall test stops after K consecutive iterations with less than the delta reduction."""
+        """The stall test stops once K iterations reduced the best error by less than delta per iteration."""
         fem = self._make_fem()
         X = fem.data.X.numpy()
         u = np.random.default_rng(0).standard_normal(X.shape).astype(np.float32)
@@ -1090,7 +1095,7 @@ class TestErrorLog(unittest.TestCase):
         # Halving reduces the error by 50% per iteration: it passes delta = 0.4 ...
         log.configure(0.995, 64, math.inf, stall_iterations=1, stall_reduction=0.4)
         self.assertEqual((solve().error.size, log.read().termination), (9, "target"))
-        # ... and fails delta = 0.6 every iteration, so it stalls at entry K
+        # ... and fails delta = 0.6, so it stalls at the first entry it can test, K
         for K in (1, 3):
             log.configure(0.995, 64, math.inf, stall_iterations=K, stall_reduction=0.6)
             result = solve()
