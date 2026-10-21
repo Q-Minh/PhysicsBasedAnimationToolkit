@@ -260,6 +260,12 @@ class StaticSolveSpec(SerializableMixin):
     max_iterations = DocField(20000, "Maximum solver iterations (sweeps, or Anderson/Newton steps)")
     max_seconds = DocField(60.0, "Maximum solver time per solve (s): device time, logging excluded")
     block = DocField(16, "Solver iterations per replayed graph block (rounded to Anderson's m)")
+    newton_stall_iterations = DocField(
+        0,
+        "Newton only: stop once each of the last K iterations failed to reduce the error by the fraction "
+        "newton_stall_reduction, e_j > (1 - delta) e_{j-1} (0 = off)",
+    )
+    newton_stall_reduction = DocField(0.1, "Newton only: the stall test's per-iteration error reduction delta")
 
     def sample_indices(self, n_samples: int) -> range:
         """The sample indices ``[sample_begin, sample_end)`` clipped to a batch of ``n_samples``."""
@@ -285,6 +291,7 @@ def _reset_log_kernel(
     stop: wp.array[wp.int32],
     first_stop: wp.array[wp.int32],
     solver_ns: wp.array[wp.int64],
+    stall_run: wp.array[wp.int32],
 ):
     count[0] = 0
     keep[0] = 1
@@ -292,6 +299,7 @@ def _reset_log_kernel(
     first_stop[0] = -1
     first_stop[1] = 0
     solver_ns[0] = wp.int64(0)
+    stall_run[0] = 0
 
 
 @wp.kernel
@@ -324,11 +332,14 @@ def _commit_kernel(
     t_b: wp.array[wp.int64],
     target_ratio2: wp.float32,
     max_entries: wp.int32,
-    max_ns: wp.int64,
+    max_ns: wp.array[wp.int64],
+    stall_iterations: wp.int32,
+    stall_ratio2: wp.float32,
     keep: wp.array[wp.int32],
     stop: wp.array[wp.int32],
     first_stop: wp.array[wp.int32],
     solver_ns: wp.array[wp.int64],
+    stall_run: wp.array[wp.int32],
 ):
     c = count[0]
     capacity = e2.shape[0]
@@ -345,14 +356,22 @@ def _commit_kernel(
     elapsed = solver_ns[0]
     # Stop reason (StopReason), in priority order; 0 keeps going
     e2c = e2_new[0]
+    # Stall: consecutive iterations that failed to reduce the error by the fraction delta, e_c > (1 - delta) e_{c-1}
+    if stall_iterations > 0 and c > 0 and c < capacity:
+        if e2c > stall_ratio2 * e2[c - 1]:
+            stall_run[0] = stall_run[0] + 1
+        else:
+            stall_run[0] = 0
     reason = wp.int32(0)
     if not wp.isfinite(e2c):
         reason = wp.int32(4)
     elif e2c <= target_ratio2 * e2[0]:
         reason = wp.int32(1)
+    elif stall_iterations > 0 and stall_run[0] >= stall_iterations:
+        reason = wp.int32(8)
     elif c + 1 >= max_entries or c + 1 >= capacity:
         reason = wp.int32(2)
-    elif elapsed >= max_ns:
+    elif elapsed >= max_ns[0]:
         reason = wp.int32(3)
     stop[0] = reason
     keep[0] = wp.where(reason == 0, wp.int32(1), wp.int32(0))
@@ -375,6 +394,7 @@ class StopReason(IntEnum):
     NEWTON_NON_DESCENT = 5  # Newton's direction wasn't a descent direction
     NEWTON_LINE_SEARCH_FAILED = 6  # Newton's line search rejected every step length
     NEWTON_ZERO_GRADIENT = 7  # Newton's gradient is exactly zero (no step possible)
+    STALLED = 8  # the stall test: K consecutive iterations each reduced the error by less than delta
 
 
 class ErrorLog:
@@ -410,6 +430,8 @@ class ErrorLog:
         self.stop = wp.zeros(1, dtype=wp.int32)
         self.first_stop = wp.zeros(2, dtype=wp.int32)  # entry and StopReason of the first stop (-1: none)
         self.solver_ns = wp.zeros(1, dtype=wp.int64)  # solver time so far (ns), logging excluded
+        self.max_ns = wp.zeros(1, dtype=wp.int64)  # solver time cap (ns), read at replay: see set_max_seconds
+        self.stall_run = wp.zeros(1, dtype=wp.int32)  # consecutive iterations that failed the stall test
         self._w = wp.zeros(n_nodes, dtype=wp.float32)
         self._e2_new = wp.zeros(1, dtype=wp.float32)
         self._reduce = Reduce(
@@ -426,23 +448,45 @@ class ErrorLog:
         time). Captured graphs bake it in, so recapture after changes."""
         self.snapshots = snapshots
 
-    def configure(self, target_reduction: float, max_entries: int, max_seconds: float) -> None:
-        """Set the stopping criteria. Captured graphs bake them in, so recapture after changes.
+    def configure(
+        self,
+        target_reduction: float,
+        max_entries: int,
+        max_seconds: float,
+        stall_iterations: int = 0,
+        stall_reduction: float = 0.1,
+    ) -> None:
+        """Set the stopping criteria. Captured graphs bake the target, the entry cap and the stall test in,
+        so recapture after changing them; the time cap is device state (:meth:`set_max_seconds`).
 
         Args:
             target_reduction (float): ``keep`` drops to 0 once e <= (1 - target_reduction) e0.
             max_entries (int): ``keep`` drops to 0 at this many entries (clipped to the capacity).
             max_seconds (float): ``keep`` drops to 0 once the solver time (device time since entry 0,
                 logging excluded, as :attr:`StaticSolveLog.time`) reaches it; ``math.inf`` for no limit.
+            stall_iterations (int): K; ``keep`` drops to 0 (``STALLED``) once each of the last K
+                iterations failed to reduce the error by the fraction ``stall_reduction``, i.e.
+                e_j > (1 - delta) e_{j-1} for the last K entries j. 0 disables the test.
+            stall_reduction (float): delta, the per-iteration error reduction the stall test asks for.
         """
         self._target_ratio2 = float((1.0 - target_reduction) ** 2)
         self._max_entries = int(min(max_entries, self.capacity))
-        self._max_ns = int(min(max_seconds * 1e9, 2**62)) if math.isfinite(max_seconds) else 2**62
+        self._stall_iterations = int(max(stall_iterations, 0))
+        self._stall_ratio2 = float((1.0 - stall_reduction) ** 2)
+        self.set_max_seconds(max_seconds)
+
+    def set_max_seconds(self, max_seconds: float) -> None:
+        """Set the solver time cap (see :meth:`configure`). A device write, outside any capture: captured
+        graphs read it when they run, so each solve can have its own budget without a recapture."""
+        ns = int(min(max_seconds * 1e9, 2**62)) if math.isfinite(max_seconds) else 2**62
+        self.max_ns.fill_(ns)
 
     def reset(self) -> None:
         """Empty the log, set ``keep`` to 1 and ``stop`` to ``RUNNING``. Capturable."""
         wp.launch(
-            _reset_log_kernel, dim=1, inputs=[self.count, self.keep, self.stop, self.first_stop, self.solver_ns]
+            _reset_log_kernel,
+            dim=1,
+            inputs=[self.count, self.keep, self.stop, self.first_stop, self.solver_ns, self.stall_run],
         )
         if self.snapshots is not None:
             self.snapshots.reset()
@@ -472,11 +516,14 @@ class ErrorLog:
                 self.t_b,
                 self._target_ratio2,
                 self._max_entries,
-                self._max_ns,
+                self.max_ns,
+                self._stall_iterations,
+                self._stall_ratio2,
                 self.keep,
                 self.stop,
                 self.first_stop,
                 self.solver_ns,
+                self.stall_run,
             ],
         )
 
@@ -820,7 +867,11 @@ class BenchmarkSolver:
             self._block = 1
             capacity = int(spec.max_iterations) + 1
         self.log = ErrorLog(state.fem, capacity)
-        self.log.configure(spec.target_reduction, int(spec.max_iterations) + 1, spec.max_seconds)
+        # The stall test applies to Newton only (spec.newton_stall_*)
+        stall = int(spec.newton_stall_iterations) if solver == SolverType.Newton else 0
+        self.log.configure(
+            spec.target_reduction, int(spec.max_iterations) + 1, spec.max_seconds, stall, spec.newton_stall_reduction
+        )
         self.log.attach_snapshots(snapshots)
         self._graph = None
 
@@ -915,6 +966,7 @@ class BenchmarkSolver:
         reference: np.ndarray | None = None,
         v0: np.ndarray | None = None,
         xtilde: np.ndarray | None = None,
+        max_seconds: float | None = None,
     ) -> StaticSolveLog:
         """Solve one problem from ``x0`` and log until a stop criterion.
 
@@ -924,10 +976,13 @@ class BenchmarkSolver:
                 ``batch.reference(s)``; the rest shape X if None.
             v0 (np.ndarray | None): (N, 3) initial velocities (dynamic problems).
             xtilde (np.ndarray | None): (N, 3) inertial target of the step (dynamic problems).
+            max_seconds (float | None): This solve's time budget (solver time); the spec's
+                ``max_seconds`` if None. Changing it needs no recapture.
 
         Returns:
             StaticSolveLog: The solve's per-iteration log.
         """
+        self.log.set_max_seconds(self.spec.max_seconds if max_seconds is None else max_seconds)
         self._load(x0, reference, v0, xtilde)
         if self._schedule is None:
             self._solve_newton()
@@ -1004,6 +1059,42 @@ class TestErrorLog(unittest.TestCase):
         replay = log.read()
         self.assertEqual(replay.error.size, 6)
         self.assertAlmostEqual(replay.error[0] / e0, 2.0, places=5)
+        # The time cap is read at replay: a zero budget stops the same graph at entry 0
+        log.set_max_seconds(0.0)
+        fem.data.x.assign(X + u)
+        wp.capture_launch(capture.graph)
+        capped = log.read()
+        self.assertEqual((capped.error.size, capped.termination), (1, "time_cap"))
+        log.set_max_seconds(math.inf)
+        fem.data.x.assign(X + u)
+        wp.capture_launch(capture.graph)
+        self.assertEqual((log.read().error.size, log.read().termination), (6, "target"))
+
+    def test_stall(self):
+        """The stall test stops after K consecutive iterations with less than the delta reduction."""
+        fem = self._make_fem()
+        X = fem.data.X.numpy()
+        u = np.random.default_rng(0).standard_normal(X.shape).astype(np.float32)
+        u[0] = 0
+        log = ErrorLog(fem, capacity=64)
+
+        def solve():
+            fem.data.x.assign(X + u)
+            log.reset()
+            log.record(0)
+            while int(log.keep.numpy()[0]):
+                wp.launch(_halve_displacement_kernel, dim=X.shape[0], inputs=[fem.data])
+                log.record(1)
+            return log.read()
+
+        # Halving reduces the error by 50% per iteration: it passes delta = 0.4 ...
+        log.configure(0.995, 64, math.inf, stall_iterations=1, stall_reduction=0.4)
+        self.assertEqual((solve().error.size, log.read().termination), (9, "target"))
+        # ... and fails delta = 0.6 every iteration, so it stalls at entry K
+        for K in (1, 3):
+            log.configure(0.995, 64, math.inf, stall_iterations=K, stall_reduction=0.6)
+            result = solve()
+            self.assertEqual((result.error.size, result.termination), (K + 1, "stalled"))
 
     def test_block_overshoot(self):
         """Iterations a replayed block runs after the stop aren't part of the log."""

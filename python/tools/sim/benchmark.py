@@ -19,34 +19,33 @@ scene is a case (an x-axis entry); a scene with several selected energy levels g
 the stem of the dataset's ``input`` scene file.
 
 The error e = |x - x*|_M (lumped-mass norm over free nodes, x* = X or x_ref) is logged after every
-solver iteration (see ``static.py``). For accuracy levels l (error reductions 1 - e/e0, ``--levels``,
-default 50, 60, 70, 80, 85, 90, 95, 99%), the benchmark records per solve the time each level is first
-crossed and its incremental time: an iteration's time goes to the highest level it crosses, and the
-levels it jumps over get none; levels crossed after the budget aren't reached (``benchmark_results.py``).
-Only that error stops a solve, at
-``--target-reduction`` (default: the highest level) or at its time budget or iteration cap; the solvers'
-own convergence and feasibility tests are bypassed.
+solver iteration (see ``static.py``). For accuracy levels l (error reductions 1 - e/e0), the benchmark
+records per solve the time each level is first crossed and its incremental time: an iteration's time goes
+to the highest level it crosses, and the levels it jumps over get none; levels crossed after the budget
+aren't reached (``benchmark_results.py``). ``--levels [BENCHMARK=]L1,L2,...`` (repeatable) sets them per
+benchmark, e.g. ``--levels 0.5,0.9,0.99 --levels static=0.5,0.9,0.99,0.999``; the default is 50, 60, 70,
+80, 85, 90, 95, 99%. Only that error stops a solve, at ``--target-reduction`` (default: the benchmark's
+highest level), at its time budget or iteration cap, or for Newton at its stall test; the solvers' own
+convergence and feasibility tests are bypassed.
 
-Time budgets, per case, in order of precedence (each case records its ``budget`` and ``budget_source``):
-
-1. ``--budget [BENCHMARK[/CASE]=]SECONDS`` (repeatable), the most specific entry first: e.g.
-   ``--budget static=5 --budget static/Y1e8=10``, or ``--budget 5`` for every case.
-2. With ``--budget-from pilot.h5``: ``--budget-factor`` (default 1) times the ``--budget-statistic`` (default
-   median) of Newton's time to the pilot's highest level in that case, at most ``--budget-cap
-   [BENCHMARK[/CASE]=]SECONDS`` (repeatable, same matching). The pilot is an earlier results file with
-   Newton, e.g. a Newton-only run with a generous ``--max-seconds``. The median is the default since
-   Newton's times vary between runs (host synchronization every step) and a single slow sample would
-   move the mean.
-3. ``--max-seconds``: cases with neither, e.g. those where no pilot Newton solve reached the level (with a
-   warning).
+Time budgets, per sample (Newton normalization, the default): Newton solves each problem first, to the
+target, until its stall test stops it (``--newton-stall-iterations`` K, ``--newton-stall-reduction`` delta:
+each of the last K iterations reduced the error by less than the fraction delta, e_j > (1 - delta)
+e_{j-1}), or at most ``--max-seconds`` (default 60 s, a practical cap). Its time to the highest level it
+reached, T_N, sets that problem's budget for every other solver: ``--budget-factor`` (default 1) x T_N.
+Every solver's increments on that problem are divided by T_N (``normalized_increment``), so Newton's
+reached increments sum to 1. A case needs Newton among ``--solvers``, unless
+``--budget [BENCHMARK[/CASE]=]SECONDS`` (repeatable, the most specific entry first: e.g. ``--budget
+static=5 --budget static/Y1e8=10``, or ``--budget 5`` for every case) gives it a fixed budget: then every
+solver, Newton included, gets that budget, and the increments are divided by it.
 
 Usage:
     python -m python.tools.sim.benchmark --dataset DATASET.h5 [--sets PATTERN ...] -o results.h5 \
-        [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] [--levels 0.5,0.6,...,0.99] \
+        [--solvers VBD,AAAVBD,Chebyshev,AndersonSolver,Newton] [--levels [BENCHMARK=]0.5,0.6,...,0.99 ...] \
         [--sim-params A.toml [B.h5 ...]] [--scene-params [BENCHMARK/]SCENE=C.toml[,D.toml] ...] \
         [--set Table.key=value ...] \
-        [--budget [BENCHMARK[/CASE]=]SECONDS ...] [--budget-from pilot.h5 [--budget-factor 1] \
-        [--budget-statistic median] [--budget-cap [BENCHMARK[/CASE]=]SECONDS ...]] [--max-seconds 60] \
+        [--max-seconds 60] [--budget-factor 1] [--newton-stall-iterations K] [--newton-stall-reduction D] \
+        [--budget [BENCHMARK[/CASE]=]SECONDS ...] \
         [--spec spec.h5] [--save-spec spec.h5] [--sample-begin 0] [--sample-end -1] \
         [--max-iterations 1000000] [--target-reduction 0.99] [--block 16] \
         [--snapshots [--snapshot-video-seconds 5] [--snapshot-fps 24] [--snapshot-frames F] \
@@ -54,17 +53,14 @@ Usage:
 
 Representative commands (from the repo root; datasets live in the main checkout's data/benchmarks):
 
-    # One static solve: one set, one solver, the first problem, a 5 s budget
+    # One static solve: one set, one solver, the first problem, a fixed 5 s budget
     python -m python.tools.sim.benchmark --dataset data/benchmarks/trampolines-test.h5 \
         --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
-    # Pilot: Newton alone, generous budget; then the benchmark with budgets of Newton's median time to 99%,
-    # except a fixed 5 s for the static benchmark, and at most 3 s elsewhere; Newton's CG cap is 1000 for the
-    # static Y1e8 problems only
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 --solvers Newton --max-seconds 60 \
-        --sim-params python/tools/sim/configs/benchmark/shared.toml -o out/pilot.h5
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 --budget static=5 \
-        --budget-cap 3 --sim-params python/tools/sim/configs/benchmark/shared.toml \
+    # The benchmark: per problem, Newton first (at most 60 s), then every other solver within Newton's time
+    # T_N to its highest level; Newton's CG cap is 1000 for the static Y1e8 problems only
+    python -m python.tools.sim.benchmark --dataset DATASET.h5 --levels 0.5,0.9,0.99,0.999,0.9999 \
+        --sim-params python/tools/sim/configs/benchmark/shared.toml \
         --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml -o out/results.h5
 
     # The figures
@@ -78,23 +74,25 @@ Representative commands (from the repo root; datasets live in the main checkout'
     python -m python.tools.sim.benchmark --dataset DATASET.h5 --sets static/E500 --max-seconds 10 --save-spec case.h5 -o a.h5
     python -m python.tools.sim.benchmark --spec case.h5 -o b.h5
 
-Output: one HDF5 results file (layout in ``benchmark_results.py``'s docstring): the spec, levels, budgets,
-dataset, device, commit and parameter sources; per benchmark, case and solver, each sample's crossing
-times, increments, reached and skipped flags, e0, iterations, sweeps, solver time, host time (the solve's
-wall-clock time, including loading and reading back), final relative error,
-termination and full per-iteration log; and per level, the mean, std, min, max, median, quartiles and
-count of the increments and crossing times over the samples that reached it. A solve's ``termination`` is
-``target`` (reached --target-reduction), ``iteration_cap``, ``time_cap`` (its budget), ``non_finite`` (NaN or
-infinite error), or for Newton ``newton_non_descent``, ``newton_line_search_failed`` or
+Output: one HDF5 results file (layout in ``benchmark_results.py``'s docstring): the spec, levels per
+benchmark, budget options, dataset, device, commit and parameter sources; per benchmark, case and solver,
+each sample's budget and normalization time (T_N), crossing times, increments (also over T_N), reached and
+skipped flags, e0, iterations, sweeps, solver time, host time (the solve's wall-clock time, including
+loading and reading back), final relative error, termination and full per-iteration log; and per level,
+the mean, std, min, max, median, quartiles and count of the increments, normalized increments and
+crossing times over the samples that reached it. A solve's ``termination`` is ``target`` (reached
+--target-reduction), ``iteration_cap``, ``time_cap`` (its budget), ``non_finite`` (NaN or infinite error),
+``stalled`` (Newton's stall test), or for Newton ``newton_non_descent``, ``newton_line_search_failed`` or
 ``newton_zero_gradient``: Newton stops at its first rejected step, since x doesn't change after it.
 Dynamic cases add the reference's accuracy (``reference_error_bound``, the set's ``samples/ref_error_mnorm``,
 and ``reference_relative_error_bound``, over e0) and ``resolvable``, the levels that accuracy resolves.
 
 Trajectories (opt-in, for videos): ``--snapshots`` stores the positions at F equal solver-time intervals over
-the budget, plus each level crossing, in the same run (``benchmark_results.py`` documents the layout).
+the problem's budget (``--budget-factor`` x T_N, also for Newton, whose frames stop there; or the fixed
+budget), plus each level crossing, in the same run (``benchmark_results.py`` documents the layout).
 F = ``--snapshot-video-seconds`` x ``--snapshot-fps`` (default 5 s x 24 fps = 120 frames), unless
 ``--snapshot-frames`` sets it; each trajectory stores its ``playback_factor`` = video seconds / budget, the
-video's slow-down relative to solver time (e.g. 200 for a 25 ms budget). ``--snapshot-fraction`` (default 1:
+video's slow-down relative to solver time (e.g. 200 for a 25 ms budget), per problem. ``--snapshot-fraction`` (default 1:
 every sample) picks evenly spaced samples of each set. The run prints the estimated disk size first:
 about F x N x 12 bytes per solve (~15 MB for 120 frames of the 10643-node trampolines).
 
@@ -115,15 +113,19 @@ Pitfalls:
     - Dynamic problems take their time step from the set: ``Integration.dt``, ``substeps`` and the BDF
       order from the parameters are overridden (one BDF1 step of size h).
     - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 rounding
-      floors the error around e/e0 ~ 1e-5 to 1e-4. Newton usually ends there with
-      ``newton_line_search_failed``: the energy decrease is below float32 resolution.
+      floors the error around e/e0 ~ 1e-5 to 1e-4. Newton's line search accepts steps within float32
+      roundoff of the energy, so at a floor Newton keeps stepping on noise: its stall test ends it.
+    - The stall test measures the error, not the energy: Newton's damped steps on large deformations can
+      reduce e by only a few percent per step (static het: 4-9% for ~60 steps), so a large delta stops it
+      early and loses levels (plans/MASTER.md, the floor check).
     - Solves run to the target reduction or the caps, not to a solver tolerance: ``Solver.<solver>.gtol``,
       ``n_max_iters`` and ``n_subproblem_max_iters`` don't stop them (a static solve is one long
       subproblem). Newton's CG keeps its relative tolerance, but its absolute one (``atol``) is set
       to 0: in h^2-scaled units at small h, |g| drops below it after one step. The vertex-solve and acceleration parameters do matter.
     - Newton isn't graph-captured. Each Newton step synchronizes with the host, so its times include host
-      work and vary more between runs. Raise ``Solver.Newton.LinearSolver.n_max_iters`` for static problems:
-      the default 500 leaves Newton steps inexact, and 1500-3000 is typical.
+      work and vary more between runs, and so do the budgets T_N it sets. Its CG cap
+      (``Solver.Newton.LinearSolver.n_max_iters``) trades exact steps for time: see
+      ``configs/benchmark/newton_cg1000.toml``.
     - Times are solver time from device timestamps, logging excluded; the budget counts the same time.
       Every iteration is timed on its own, also inside replayed graph blocks, and iterations a block runs
       past the stop are dropped, so --block doesn't change the crossings. Don't run other GPU work meanwhile.
@@ -183,26 +185,26 @@ def parse_args():
     parser.add_argument("--solvers", default=",".join(s.name for s in SolverType),
                         help="Comma-separated solver names to run, in order (default: all, "
                         + ",".join(s.name for s in SolverType) + ").")
-    parser.add_argument("--levels", default=",".join(f"{v:g}" for v in results.DEFAULT_LEVELS),
-                        help="Accuracy levels, as comma-separated error reductions 1 - e/e0 in (0, 1) "
-                        "(default: %(default)s).")
-    parser.add_argument("--budget", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
-                        help="Time budget per solve, in seconds of solver time, for every case, a benchmark (e.g. "
-                        "static=5) or one case (static/Y1e8=10). Repeatable; the most specific entry wins. "
-                        "Takes precedence over --budget-from, which takes precedence over --max-seconds.")
-    parser.add_argument("--budget-from", default=None, dest="budget_from",
-                        help="Pilot results file (.h5) with Newton's solves: the budget of a case without --budget "
-                        "is --budget-factor times Newton's --budget-statistic time to the pilot's highest level, "
-                        "at most --budget-cap. Cases the pilot lacks get --max-seconds.")
+    parser.add_argument("--levels", action="append", default=[], metavar="[BENCHMARK=]L1,L2,...",
+                        help="Accuracy levels, as comma-separated error reductions 1 - e/e0 in (0, 1), for every "
+                        "benchmark or one (e.g. static=0.5,0.9,0.99,0.999). Repeatable; a benchmark's own entry "
+                        "wins (default: " + ",".join(f"{v:g}" for v in results.DEFAULT_LEVELS) + ").")
     parser.add_argument("--budget-factor", type=float, default=1.0, dest="budget_factor",
-                        help="Multiple of the pilot's Newton time (default: %(default)s).")
-    parser.add_argument("--budget-cap", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
-                        dest="budget_cap",
-                        help="Upper limit on the pilot-derived budgets, matched like --budget. Repeatable.")
-    parser.add_argument("--budget-statistic", choices=results.BUDGET_STATISTICS, default="median",
-                        dest="budget_statistic",
-                        help="Statistic of the pilot's Newton times over its samples that reached the level "
-                        "(default: %(default)s).")
+                        help="Every other solver's budget on a problem: this multiple of Newton's time T_N to its "
+                        "highest level there (default: %(default)s).")
+    parser.add_argument("--newton-stall-iterations", type=int, default=2, dest="newton_stall_iterations",
+                        metavar="K",
+                        help="Newton's stall test: stop once each of the last K iterations reduced the error by less "
+                        "than --newton-stall-reduction (default: %(default)s; 0 = off, Newton then runs to the "
+                        "target or --max-seconds).")
+    parser.add_argument("--newton-stall-reduction", type=float, default=0.03, dest="newton_stall_reduction",
+                        metavar="DELTA",
+                        help="The stall test's per-iteration error reduction: an iteration fails it when "
+                        "e_j > (1 - DELTA) e_{j-1} (default: %(default)s).")
+    parser.add_argument("--budget", action="append", default=[], metavar="[BENCHMARK[/CASE]=]SECONDS",
+                        help="A fixed time budget per solve instead of Newton's, in seconds of solver time, for every "
+                        "case, a benchmark (e.g. static=5) or one case (static/Y1e8=10): every solver gets it and "
+                        "the increments are divided by it. Repeatable; the most specific entry wins.")
     parser.add_argument("--spec", default=None,
                         help="StaticSolveSpec (.h5) to start from. The options below override its fields.")
     parser.add_argument("--save-spec", default=None, dest="save_spec",
@@ -212,13 +214,14 @@ def parse_args():
     parser.add_argument("--sample-end", type=int, default=None, dest="sample_end",
                         help="One past the last sample index; -1 means all samples (spec default: -1).")
     parser.add_argument("--max-seconds", type=float, default=None, dest="max_seconds",
-                        help="Time budget per solve of the cases without --budget or a pilot time, in seconds of "
-                        "solver time (spec default: 60).")
+                        help="Newton's time cap per solve, in seconds of solver time, for the cases without --budget "
+                        "(spec default: 60).")
     parser.add_argument("--max-iterations", type=int, default=None, dest="max_iterations",
                         help="Iteration cap per solve, counting VBD sweeps, Anderson steps or Newton steps "
                         "(default here: 1,000,000, so the time budget decides).")
     parser.add_argument("--target-reduction", type=float, default=None, dest="target_reduction",
-                        help="Stop a solve once e <= (1 - target) e0, as a fraction (default: the highest level).")
+                        help="Stop a solve once e <= (1 - target) e0, as a fraction (default: the benchmark's "
+                        "highest level).")
     parser.add_argument("--block", type=int, default=None,
                         help="Solver iterations per replayed CUDA-graph block, rounded up to a multiple of "
                         "Anderson's window m. Larger blocks mean fewer replays; iterations past the stop are "
@@ -246,10 +249,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def make_spec(args, levels) -> static.StaticSolveSpec:
+def make_spec(args) -> static.StaticSolveSpec:
     spec = static.StaticSolveSpec()
     spec.max_iterations = 1_000_000
-    spec.target_reduction = levels[-1]
     if args.spec:
         with h5py.File(args.spec, "r") as f:
             spec.deserialize(f["StaticSolveSpec"] if "StaticSolveSpec" in f else f)
@@ -262,6 +264,8 @@ def make_spec(args, levels) -> static.StaticSolveSpec:
         ("max_iterations", args.max_iterations),
         ("target_reduction", args.target_reduction),
         ("block", args.block),
+        ("newton_stall_iterations", args.newton_stall_iterations),
+        ("newton_stall_reduction", args.newton_stall_reduction),
     ]:
         if value is not None:
             setattr(spec, name, value)
@@ -395,7 +399,8 @@ def trajectory(
     entries, slots = ring.stored()
     keep = entries < n  # not the iterations a block ran past the stop
     entries, slots = entries[keep], slots[keep]
-    picks, targets = results.select_frames(log.time, entries, n_frames, budget, return_targets=True)
+    # Frames over the problem's budget, and not past it (Newton runs on past T_N to its stall test)
+    picks, targets = results.select_frames(log.time, entries, n_frames, budget, return_targets=True, end=budget)
     frames = {}
     target_of = {}
     for i, target in zip(picks, targets):
@@ -406,7 +411,7 @@ def trajectory(
     level_at = np.full(L, -1, dtype=np.int64)
     level_exact = np.zeros(L, dtype=bool)
     for l in range(L):
-        if not crossings.reached[l]:
+        if not crossings.reached[l] or crossings.time[l] > budget:
             continue
         e = int(crossings.iteration[l])
         if level_entry[l] == e:
@@ -455,9 +460,12 @@ def _attr(v):
 
 def main():
     args = parse_args()
-    levels = results.parse_levels(args.levels)
+    try:
+        levels_table = results.parse_levels_options(args.levels)
+    except ValueError as e:
+        raise SystemExit(str(e))
     wp.init()
-    spec = make_spec(args, levels)
+    spec = make_spec(args)
     if args.save_spec:
         with h5py.File(args.save_spec, "w") as f:
             spec.serialize(f.create_group("StaticSolveSpec"))
@@ -470,26 +478,19 @@ def main():
     unknown = results.unmatched_scene_params(scene_params, [(c.benchmark, c.scene) for c in cases])
     if unknown:
         raise SystemExit(f"--scene-params for scenes not in the run: {', '.join(unknown)}")
-    # Budgets per (benchmark, case): --budget, else the pilot's (capped), else --max-seconds
+    unknown = sorted({k for k in levels_table if k is not None} - {c.benchmark for c in cases})
+    if unknown:
+        raise SystemExit(f"--levels for benchmarks not in the run: {', '.join(unknown)}")
+    # Budgets per (benchmark, case): a fixed --budget, else Newton's T_N per problem
     try:
-        direct = results.parse_budget_options(args.budget, "--budget")
-        caps = results.parse_budget_options(args.budget_cap, "--budget-cap")
+        fixed = results.parse_budget_options(args.budget, "--budget")
     except ValueError as e:
         raise SystemExit(str(e))
-    pilot = {}
-    pilot_label = ""
-    if args.budget_from:
-        pilot = results.budgets_from_pilot(args.budget_from, args.budget_factor, args.budget_statistic)
-        pilot_label = f"{args.budget_factor:g} x {args.budget_statistic} Newton time in {args.budget_from}"
-    budgets = {}
-    for c in cases:
-        budgets[(c.benchmark, c.case)] = results.resolve_budget(
-            c.benchmark, c.case, direct, caps, pilot, spec.max_seconds, pilot_label
-        )
-    missing = [f"{b}/{c}" for (b, c), (_, source) in budgets.items() if args.budget_from and source == "--max-seconds"]
-    if missing:
-        print(f"Warning: {args.budget_from} has no Newton solve reaching its highest level for "
-              f"{', '.join(missing)}; their budget is --max-seconds ({spec.max_seconds:g} s)")
+    budgets = {(c.benchmark, c.case): results.fixed_budget(fixed, c.benchmark, c.case) for c in cases}
+    newton_cases = [f"{b}/{c}" for (b, c), (seconds, _) in budgets.items() if seconds is None]
+    if newton_cases and SolverType.Newton not in solvers:
+        raise SystemExit(f"Budgets come from Newton's solves, but Newton isn't in --solvers: add it, or give "
+                         f"{', '.join(newton_cases)} a fixed --budget")
     with h5py.File(spec.dataset, "r") as f:
         dataset_attrs = {k: _attr(v) for k, v in f.attrs.items()}
 
@@ -499,7 +500,8 @@ def main():
         # Video duration of the trajectories: the frames over the budget, at the video's frame rate
         video_seconds = (args.snapshot_video_seconds if args.snapshot_frames is None
                          else n_frames / args.snapshot_fps)
-        frames_max = n_frames + 2 + len(levels)  # the targets, the end, the level crossings
+        n_levels = max(len(results.levels_for(levels_table, c.benchmark)) for c in cases)
+        frames_max = n_frames + 2 + n_levels  # the targets, the end, the level crossings
         estimate = sum(
             len(snapshot_samples(args.snapshot_fraction, list(spec.sample_indices(c.batch.n_samples))))
             * len(solvers) * frames_max * 12 * c.batch.X.shape[0]
@@ -512,11 +514,11 @@ def main():
         h5f.attrs.update(
             format=results.FORMAT,
             version=results.VERSION,
-            levels=np.array(levels),
-            budget_factor=args.budget_factor if args.budget_from else math.nan,
-            budget_statistic=args.budget_statistic if args.budget_from else "",
-            budget_pilot=args.budget_from or "",
-            budget_options=" ".join([f"--budget {b}" for b in args.budget] + [f"--budget-cap {b}" for b in args.budget_cap]),
+            levels_options=" ".join(f"--levels {v}" for v in args.levels),
+            budget_factor=args.budget_factor,
+            budget_options=" ".join(f"--budget {b}" for b in args.budget),
+            newton_stall_iterations=spec.newton_stall_iterations,
+            newton_stall_reduction=spec.newton_stall_reduction,
             dataset=spec.dataset,
             device=wp.get_device().name,
             git_commit=_git_commit(),
@@ -531,8 +533,10 @@ def main():
         # Case groups in dataset order, so the figures' axes follow it
         groups = {}
         for c in cases:
-            budget = pilot.get((c.benchmark, c.case))
             seconds, source = budgets[(c.benchmark, c.case)]
+            if seconds is None:
+                source = (f"{args.budget_factor:g} x Newton's time to its highest level (T_N) per problem; Newton "
+                          f"at most {spec.max_seconds:g} s")
             groups[c.set_name] = results.require_case(h5f, c.benchmark, c.case, {
                 "benchmark": c.benchmark,
                 "problem": c.batch.problem,
@@ -541,12 +545,11 @@ def main():
                 "label": c.label,
                 "energy": c.batch.target_energy,
                 "set": c.set_name,
-                "budget": seconds,
+                "budget": seconds,  # the fixed budget; per problem otherwise (each solver's "budget")
                 "budget_source": source,
-                "budget_reference_time": budget["reference_time"] if budget else None,
-                "budget_reference_reached": f"{budget['reached']}/{budget['n_samples']}" if budget else None,
+                "max_seconds": spec.max_seconds,
                 "scene_params": ",".join(results.scene_params_for(scene_params, c.benchmark, c.scene)),
-            })
+            }, levels=results.levels_for(levels_table, c.benchmark))
         # One simulation per (scene, time step) at a time, reused across its sets
         keys = list(dict.fromkeys((c.scene, c.fem, c.batch.h, c.benchmark) for c in cases))
         for scene, fem, h, benchmark in keys:
@@ -563,9 +566,18 @@ def main():
                 static.check_sample_batch(batch, state.fem)
                 for w in batch.warnings():
                     print(f"Warning: {batch.path}: {w}")
-                case_spec = copy_spec(spec, max_seconds=float(group.attrs["budget"]))
+                levels = results.levels_for(levels_table, c.benchmark)
+                fixed_seconds = budgets[(c.benchmark, c.case)][0]
+                target = args.target_reduction if args.target_reduction is not None else levels[-1]
+                case_spec = copy_spec(spec, target_reduction=target,
+                                      max_seconds=fixed_seconds if fixed_seconds is not None else spec.max_seconds)
                 indices = list(case_spec.sample_indices(batch.n_samples))
-                for solver in solvers:
+                # Newton first: its times T_N set the other solvers' budgets, per problem
+                order = solvers
+                if fixed_seconds is None:
+                    order = [SolverType.Newton] + [s for s in solvers if s != SolverType.Newton]
+                newton_time = {}
+                for solver in order:
                     ring = None
                     if n_frames:
                         n_nodes = state.fem.data.x.shape[0]
@@ -582,13 +594,29 @@ def main():
                     summaries, logs, trajectories = [], [], []
                     snapshot_set = set(snapshot_samples(args.snapshot_fraction, indices)) if n_frames else set()
                     for s in indices:
+                        if fixed_seconds is not None:
+                            budget = fixed_seconds
+                        elif solver == SolverType.Newton:
+                            budget = spec.max_seconds
+                        else:
+                            budget = args.budget_factor * newton_time[s]
                         t_host = time.perf_counter()
                         if batch.problem == "dynamic":
-                            log = runner.solve(batch.x[s], batch.x_ref[s], batch.v[s], batch.xtilde[s])
+                            log = runner.solve(batch.x[s], batch.x_ref[s], batch.v[s], batch.xtilde[s], budget)
                         else:
-                            log = runner.solve(batch.x[s])
+                            log = runner.solve(batch.x[s], max_seconds=budget)
                         t_host = time.perf_counter() - t_host
-                        summary = summarize(log, levels, case_spec.max_seconds)
+                        summary = summarize(log, levels, budget)
+                        if fixed_seconds is None and solver == SolverType.Newton:
+                            tn, _ = results.normalization_time(summary["crossings"])
+                            if not math.isfinite(tn):
+                                tn = spec.max_seconds
+                                print(f"Warning: {c.benchmark}/{c.case} sample {s}: Newton reached no level within "
+                                      f"{spec.max_seconds:g} s; T_N = {tn:g} s")
+                            newton_time[s] = tn
+                        normalization = fixed_seconds if fixed_seconds is not None else newton_time[s]
+                        summary["budget"] = budget
+                        summary["normalization"] = normalization
                         summary["host_time"] = t_host
                         summary["sample"] = int(s)
                         summary["deformation_energy"] = float(batch.energy[s])
@@ -603,8 +631,9 @@ def main():
                         summaries.append(summary)
                         logs.append((log.error, log.time, log.sweeps))
                         if ring is not None and s in snapshot_set:
+                            span = normalization if fixed_seconds is not None else args.budget_factor * normalization
                             trajectories.append(trajectory(
-                                ring, log, summary["crossings"], n_frames, case_spec.max_seconds, video_seconds
+                                ring, log, summary["crossings"], n_frames, span, video_seconds
                             ))
                         pbar.set_postfix(case=f"{c.benchmark}/{c.case}", solver=solver.name,
                                          e=f"{summary['final_relative_error']:.2e}")
