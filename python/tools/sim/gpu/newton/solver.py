@@ -1169,6 +1169,10 @@ class NewtonSubproblemRecord(NamedTuple):
     max_cg_iters: int  # most CG iterations of one solve
     cg_capped: bool  # a CG solve stopped at its iteration cap (LinearSolverParams.n_max_iters)
     backtracks: int  # line-search step-size reductions, over all steps
+    # The last CG solve's residual norm and the absolute tolerance it was tested against (host values cg
+    # returns anyway); NaN before any solve
+    cg_residual: float = float("nan")
+    cg_tolerance: float = float("nan")
 
 
 class NewtonSolveRecord(NamedTuple):
@@ -1304,10 +1308,11 @@ def solve_subproblem(
     check = _relative_check(params)
     n_lin_max_iters = int(params.data.n_lin_max_iters)
     steps, max_cg, cg_capped, backtracks = 0, 0, False, 0
+    cg_residual, cg_tolerance = float("nan"), float("nan")
 
     def done(status: SubproblemStatus) -> SubproblemStatus:
         params.last_subproblem = NewtonSubproblemRecord(
-            status, steps, max_cg, cg_capped, backtracks
+            status, steps, max_cg, cg_capped, backtracks, cg_residual, cg_tolerance
         )
         return status
 
@@ -1344,6 +1349,7 @@ def solve_subproblem(
         steps += 1
         max_cg = max(max_cg, int(final_iteration))
         cg_capped = cg_capped or int(final_iteration) >= n_lin_max_iters
+        cg_residual, cg_tolerance = float(residual_norm), float(absolute_tolerance)
         # Check descent direction slope=dot(g, dx) < 0.
         # Since we compute ndx=-dx, we check -dot(g, ndx) < 0.
         params._nslope_reduce(main_stream)

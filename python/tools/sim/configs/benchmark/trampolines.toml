@@ -1,0 +1,78 @@
+# The convergence benchmark's full run on the trampolines dataset (benchmark.py --run, from the repo root):
+#   python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.toml -o out/results.h5
+# Command-line options win over [run] (e.g. --dataset path/to/trampolines.h5 from a worktree, --sets, --solvers);
+# python -m python.tools.sim.benchmark --run ... --dry-run prints each case's effective settings without solving.
+# Format: python/tools/sim/benchmark_run.py.
+# Run it on a quiet GPU and a quiet CPU: Newton's CG syncs with the host every 10 iterations, so Newton's times,
+# and the budgets T_N they set, slow down under CPU load.
+#
+# Writing a run file:
+# - Solver parameters for every case are top-level tables, e.g. [Solver.Newton.LinearSolver] rtol = 1e-6.
+# - Parameters for some problems go in [case."<benchmark>/<scene>".<Table.path>], e.g.
+#   [case."static/het".Solver.Newton.LinearSolver] n_max_iters = 4000, or [case."<scene>".<Table.path>] for every
+#   benchmark of a scene; the scene's table is merged first, then the benchmark/scene one.
+# - The case keys of a dataset, with each set's kind, h, mesh, materials and reference accuracy:
+#     python -m python.tools.sim.benchmark --dataset path/to/dataset.h5 --list   (add --run this.toml for its settings)
+# - Every settable parameter, with its default, type, enum values by name and description:
+#     python -m python.tools.sim.config params [Solver.Newton]
+extends = ["shared.toml"]
+
+[run]
+dataset = "data/benchmarks/trampolines.h5"  # relative to the current directory (the repo root)
+solvers = ["VBD", "AAAVBD", "Chebyshev", "AndersonSolver", "Newton"]
+max_seconds = 60.0  # Newton's cap per problem (a practical cap); T_N sets every other solver's budget
+budget_factor = 1.0
+newton_stall_iterations = 2
+newton_stall_reduction = 0.02
+
+[run.levels]
+static = [0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999]
+all = [0.5, 0.9, 0.99, 0.999, 0.9999]  # the dynamic benchmarks
+
+[run.snapshots]
+enabled = true
+fraction = 0.25
+video_seconds = 5.0
+fps = 24.0
+memory_mb = 32.0
+
+# Newton's CG per case: task 2's per-case winners (2026-10-20, re-timed on a quiet machine; differences under
+# ~10% are ties). Static: rtol 1e-6 (the default) with caps per scene. Dynamic h = 1e-2: rtol 1e-2 at cap 4000,
+# except Y1e8, where the defaults were fastest (rtol 1e-2 at 4000 is +9%). Dynamic h = 1e-4 and every other case
+# keep the defaults (rtol 1e-6, cap 500).
+
+[case."static/Y1e5".Solver.Newton.LinearSolver]
+n_max_iters = 500
+rtol = 1e-6
+
+[case."static/Y1e6".Solver.Newton.LinearSolver]
+n_max_iters = 1000
+rtol = 1e-6
+
+[case."static/Y1e7".Solver.Newton.LinearSolver]
+n_max_iters = 1000
+rtol = 1e-6
+
+[case."static/Y1e8".Solver.Newton.LinearSolver]
+n_max_iters = 1000
+rtol = 1e-6
+
+[case."static/het".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-6
+
+[case."dynamic_h0.01/Y1e5".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.01/Y1e6".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.01/Y1e7".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.01/het".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2

@@ -879,6 +879,10 @@ class BenchmarkSolver:
         )
         self.log.attach_snapshots(snapshots)
         self._graph = None
+        # Newton only: each solve's NewtonSubproblemRecord per solve_subproblem call (one Newton step each:
+        # CG iterations, cap, residual, line-search backtracks), in order; the log's entry j + 1 follows
+        # call j when it stepped
+        self.newton_records: list = []
 
     def _begin(self):
         """Solver setup before the timed iterations (contact-free here, so cheap).
@@ -932,8 +936,10 @@ class BenchmarkSolver:
             log = self.log
             log.reset()
             log.record(0)
+            self.newton_records = []
             while int(log.keep.numpy()[0]) != 0:
                 status = newton.solve_subproblem(state.fem, state.contact, params)
+                self.newton_records.append(params.last_subproblem)
                 if status == newton.SubproblemStatus.STEPPED:
                     log.record(0)
                     continue

@@ -20,16 +20,15 @@ Results file layout (HDF5, ``FORMAT``):
 
     /                                attrs: format, version, levels_options, budget_factor, budget_options,
                                      newton_stall_iterations, newton_stall_reduction, dataset, device,
-                                     git_commit, date, sim_params, solvers
+                                     git_commit, git_dirty, date, sim_params, solvers, version_* (warp,
+                                     cuda_driver, cuda_toolkit, pbatoolkit)
     /StaticSolveSpec                 the run's spec (static.StaticSolveSpec), attributes
     /dataset_attrs                   the dataset's scalar attributes
     /<benchmark>                     attrs: levels (the benchmark's), cases
     /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, [budget] (a
                                      fixed --budget), budget_source, max_seconds (Newton's cap),
-                                     scene_params, newton_cg_* (Newton's CG limits), gpu_start_*,
-                                     gpu_end_* (the GPU's state, nvidia-smi: time, pstate, clocks_sm,
-                                     clocks_mem, clocks_max_sm, temperature_gpu, power_draw,
-                                     power_limit, clocks_event_reasons_active)
+                                     scene_params, sim_params_toml (every solver parameter of the
+                                     case's simulation, TOML), newton_cg_* (Newton's CG limits)
     /<benchmark>/<case>/<solver>     attrs: solver, n_samples
         sample, e0, iterations, sweeps, solver_time, host_time, final_relative_error, termination,
         deformation_energy, budget, normalization, [min_J],
@@ -39,6 +38,8 @@ Results file layout (HDF5, ``FORMAT``):
         aggregate/{increment,normalized_increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}
                                                                                                 (L,)
         logs/<sample:06d>/{error,time,sweeps}
+        logs/<sample:06d>/newton/{status,cg_iterations,cg_capped,cg_residual,cg_tolerance,backtracks}
+                                                                                (Newton, per step)
         trajectories/<sample:06d>/{iteration,t,t_target,x,level_frames,level_exact}   (opt-in, --snapshots)
 
 ``<benchmark>`` is ``static`` or ``dynamic_h<h>`` (e.g. ``dynamic_h0.0001``). A ``<case>`` is one x-axis
@@ -47,7 +48,11 @@ of a scene. Times are seconds of solver time. ``budget`` is each solve's time bu
 Newton, ``budget_factor`` x T_N for the others, or the fixed ``--budget``; ``normalization`` is the time
 the sample's increments are divided by (``normalized_increment``): T_N, Newton's crossing time of the
 highest level it reached on that problem (the same for every solver), or the fixed budget. Files written
-before per-benchmark levels have the run's ``levels`` at the root instead (:func:`benchmark_levels`). NaN marks unreached levels (``reached`` False); an
+before per-benchmark levels have the run's ``levels`` at the root instead (:func:`benchmark_levels`).
+Newton's ``logs/<sample>/newton/*`` hold one entry per Newton step attempted (one ``solve_subproblem`` call):
+its ``status`` (``stepped``, or why the last one was rejected), the CG iterations, whether CG stopped at its
+cap, the CG residual norm and the absolute tolerance it was tested against, and the line-search
+backtracks; log entry j + 1 follows step j when it stepped. NaN marks unreached levels (``reached`` False); an
 unreached level's ``crossing_iteration`` is -1. Aggregates are over the samples that reached the
 level (``count``); a skipped level counts with a zero increment. ``host_time`` is the solve's host
 wall-clock time (loading the problem, the replay or Newton loop, reading the log back); minus
@@ -386,7 +391,8 @@ def write_solver(
             ``reference_error_bound``, ``reference_relative_error_bound``, ``budget`` (the solve's time
             budget) and ``normalization`` (the time the sample's increments are divided by, T_N; with it,
             ``normalized_increment`` and its aggregates are written).
-        logs (list): Per sample, (error, time, sweeps) arrays.
+        logs (list): Per sample, (error, time, sweeps) arrays, optionally followed by a dict of further
+            per-sample arrays written next to them (e.g. Newton's per-step records, ``newton/cg_iterations``).
         trajectories (list | None): Per sample, a trajectory dict (:func:`write_trajectory`), if any.
     """
     g = group.create_group(solver)
@@ -423,11 +429,17 @@ def write_solver(
         a = g.create_group(f"aggregate/{name}")
         for stat, v in aggregate(values, stacked["reached"]).items():
             a.create_dataset(stat, data=v)
-    for s, (error, time, sweeps) in zip(summaries, logs):
+    for s, (error, time, sweeps, *extra) in zip(summaries, logs):
         lg = g.create_group(f"logs/{int(s['sample']):06d}")
         lg.create_dataset("error", data=error)
         lg.create_dataset("time", data=time)
         lg.create_dataset("sweeps", data=sweeps)
+        for name, values in (extra[0] if extra else {}).items():
+            values = np.asarray(values)
+            if values.dtype.kind == "U":
+                lg.create_dataset(name, data=values.astype(object), dtype=h5py.string_dtype())
+            else:
+                lg.create_dataset(name, data=values)
     for s, trajectory in zip(summaries, trajectories or []):
         write_trajectory(g.create_group(f"trajectories/{int(s['sample']):06d}"), trajectory)
     return g
@@ -576,7 +588,9 @@ class TestLevelCrossings(unittest.TestCase):
                                               final_relative_error=r[-1], termination="target",
                                               deformation_energy=1.0, crossings=c, budget=10.0,
                                               normalization=[3.0, 2.0][s]))
-                        logs.append((np.array(r), np.array(times), np.zeros(3, dtype=np.int64)))
+                        extra = {"newton/cg_iterations": [40, 60], "newton/status": ["stepped", "stepped"]}
+                        extra = extra if solver == "Newton" else {}
+                        logs.append((np.array(r), np.array(times), np.zeros(3, dtype=np.int64), extra))
                     write_solver(case, solver, levels, summaries, logs)
             with h5py.File(path, "r") as f:
                 cases = list(iter_cases(f))
@@ -588,6 +602,9 @@ class TestLevelCrossings(unittest.TestCase):
                 np.testing.assert_allclose(g["normalized_increment"][()], [[2 / 3, 1 / 3], [1.0, np.nan]])
                 np.testing.assert_allclose(g["aggregate/normalized_increment/mean"][()], [5 / 6, 1 / 3])
                 np.testing.assert_array_equal(benchmark_levels(f, "static"), levels)
+                np.testing.assert_array_equal(g["logs/000001/newton/cg_iterations"][()], [40, 60])
+                self.assertEqual(list(g["logs/000001/newton/status"].asstr()[()]), ["stepped", "stepped"])
+                self.assertNotIn("newton", cases[0][2]["VBD/logs/000000"])
                 self.assertEqual(list(g["termination"].asstr()[()]), ["target", "target"])
 
 

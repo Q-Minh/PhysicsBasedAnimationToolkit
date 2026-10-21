@@ -23,6 +23,11 @@ Command line::
 
     python -m python.tools.sim.config convert params.h5 params.toml   # HDF5 parameter file -> TOML
     python -m python.tools.sim.config show a.toml [b.toml ...] [--set Solver.VBD.gtol=1e-4]
+    python -m python.tools.sim.config params [Solver.Newton]   # every settable key: default, type, enum names, docs
+
+``params`` lists the keys of ``configs/defaults.toml`` (every key the code serializes) with their default,
+type, enum values by name, and the description the code gives them (``DocField`` docs, the C++ bindings'
+property docs), "(no description in the code)" otherwise.
 """
 
 import argparse
@@ -260,6 +265,129 @@ def load_sim_params(
     return cfg
 
 
+DEFAULTS_TOML = pathlib.Path(__file__).parent / "configs" / "defaults.toml"
+# Enums of keys whose parameter objects don't hold them as enums
+_ENUM_KEYS = {"Integration.init_strategy": ("pbatoolkit", "pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization")}
+# Keys the GPU solvers ignore (checked in gpu/: vbd/params.py's Params copies neither k, kp nor e_penalty_stiffness,
+# and no kernel reads its betaR; gpu/newton/solver.py's Params never reads linear_solver)
+_VBD_FAMILY = ("VBD", "AAAVBD", "Chebyshev", "AndersonSolver")
+GPU_IGNORED = {
+    "Solver.Newton.linear_solver": "GPU: ignored; always Warp's Jacobi-preconditioned CG (Solver.Newton.LinearSolver)",
+    **{f"Solver.{s}.e_penalty_stiffness": "GPU: ignored; the GPU's contact penalty is "
+       "Contact.ContactDynamics.penalty_adaptivity" for s in _VBD_FAMILY},
+    **{f"Solver.{s}.betaR": "GPU: ignored; copied to the GPU params but no kernel reads it" for s in _VBD_FAMILY},
+    **{f"Solver.{s}.{k}": "GPU: ignored; a C++ runtime counter, not copied to the GPU" for s in _VBD_FAMILY for k in ("k", "kp")},
+}
+# SimulationState attributes that serialize_params writes directly, with no parameter object (or docs) behind them
+_STATE_KEYS = {"Integration.dt", "Integration.substeps", "Integration.bdf_scheme", "Integration.init_strategy"}
+
+
+def _param_sources() -> dict:
+    """Table path -> the parameter objects (or DocField classes) its keys come from, as serialize_params
+    writes them; looked up in order. CPU objects only."""
+    from pbatoolkit import pbat
+
+    from . import gpu
+    from .gpu.contact.mesh import ogc, pairs, sd
+
+    vbd = pbat.sim.algorithm.vbd.Params()
+    newton = pbat.sim.algorithm.newton.Params()
+    return {
+        "Integration": [],
+        "Solver.VBD": [vbd],
+        "Solver.AAAVBD": [gpu.vbd.params.AaaVbdCpuParams, vbd],
+        "Solver.Chebyshev": [pbat.sim.algorithm.vbd.ChebyshevParams(), vbd],
+        "Solver.AndersonSolver": [gpu.vbd.params.AndersonCpuParams(pbat.sim.algorithm.vbd.Params()), vbd],
+        "Solver.Newton": [newton],
+        "Solver.Newton.newton": [newton.newton],
+        # A default Params has no line search; serialize_params writes the one SimulationState sets
+        "Solver.Newton.newton.line_search": [pbat.math.optimization.BackTrackingLineSearch()],
+        "Solver.Newton.LinearSolver": [gpu.newton.solver.LinearSolverParams],
+        "Solver.Convergence": [gpu.vbd.convergence.ConvergenceParams],
+        "Contact.CDType.OGC": [ogc.OgcParams],
+        "Contact.CDType.VertexSdf": [sd.Params],
+        "Contact.ContactStorage": [pairs.Params],
+        "Contact.ContactDynamics": [gpu.contact.dynamics.Params],
+    }
+
+
+def _describe(sources: list, name: str) -> tuple[bool, type | None, str]:
+    """(found, enum type, description) of key ``name`` from the first source that has it."""
+    import enum
+
+    from .common.fields import DocField
+
+    for source in sources:
+        cls = source if isinstance(source, type) else type(source)
+        attr = getattr(cls, name, None)
+        if isinstance(attr, DocField):
+            default = attr.default
+            return True, type(default) if isinstance(default, enum.Enum) else None, (attr.__doc__ or "").strip()
+        if attr is not None and not isinstance(source, type):
+            value = getattr(source, name)
+            return True, type(value) if isinstance(value, enum.Enum) else None, (attr.__doc__ or "").strip()
+    return False, None, ""
+
+
+def flatten(cfg: dict, prefix: str = ""):
+    for k, v in cfg.items():
+        if isinstance(v, dict):
+            yield from flatten(v, f"{prefix}{k}.")
+        else:
+            yield f"{prefix}{k}", v
+
+
+def describe_params(prefix: str = "") -> list[dict]:
+    """Every key a config can set (``configs/defaults.toml``) under ``prefix``: ``key`` (dotted TOML path),
+    ``default``, ``type`` (int, float, bool or enum), ``enum`` ({value: name} or None), ``description`` ("" when
+    the code has none), ``gpu`` (a note when the GPU solvers ignore the key, ``GPU_IGNORED``, else "") and
+    ``found`` (whether a parameter object holds the key)."""
+    import enum
+    import importlib
+
+    sources = _param_sources()
+    rows = []
+    for key, default in flatten(read(DEFAULTS_TOML)):
+        if prefix and not (key == prefix or key.startswith(prefix.rstrip(".") + ".")):
+            continue
+        table, _, name = key.rpartition(".")
+        found, enum_type, description = _describe(sources.get(table, []), name)
+        found = found or key in _STATE_KEYS
+        if key in _ENUM_KEYS:
+            module, path = _ENUM_KEYS[key]
+            enum_type = importlib.import_module(module)
+            for part in path.split("."):
+                enum_type = getattr(enum_type, part)
+            found = True
+        names = None
+        if enum_type is not None and issubclass(enum_type, enum.Enum):
+            names = {int(m.value): n for n, m in enum_type.__members__.items()}
+        kind = "enum" if names else "float" if isinstance(default, float) else "int"
+        if not names and isinstance(default, int):
+            # Bools serialize as 0/1: a DocField or binding default tells them apart
+            for source in sources.get(table, []):
+                value = getattr(source, name, None)
+                value = getattr(value, "default", value)
+                if isinstance(value, bool):
+                    kind = "bool (0/1)"
+                    break
+        rows.append({"key": key, "default": default, "type": kind, "enum": names, "description": description,
+                     "gpu": GPU_IGNORED.get(key, ""), "found": found})
+    return rows
+
+
+def format_params(rows: list[dict]) -> str:
+    """One line per key: ``key = default  (type[: enum values])  description``."""
+    lines = []
+    for r in rows:
+        kind = r["type"]
+        if r["enum"]:
+            kind += ": " + ", ".join(f"{v} {n}" for v, n in sorted(r["enum"].items()))
+        gpu = f" ({r['gpu']})" if r.get("gpu") else ""
+        lines.append(f"{r['key']} = {r['default']!r}  ({kind})  {r['description'] or '(no description in the code)'}{gpu}")
+    return "\n".join(lines)
+
+
 def dumps(cfg: dict, header: Iterable[str] = ()) -> str:
     """Format a config as TOML, preceded by ``header`` lines as comments."""
     lines = "".join(f"# {line}\n" if line else "#\n" for line in header)
@@ -275,10 +403,17 @@ def main():
     show = sub.add_parser("show", help="Print the merged config of the sources and overrides")
     show.add_argument("sources", nargs="+", help=".toml configs or HDF5 parameter files, merged left to right")
     show.add_argument("--set", action="append", default=[], dest="overrides", metavar="KEY=VALUE")
+    params = sub.add_parser("params", help="List every settable key: default, type, enum values, description")
+    params.add_argument("prefix", nargs="?", default="", help="Only keys under this table path, e.g. Solver.Newton")
     args = parser.parse_args()
     if args.command == "convert":
         text = dumps(read(args.input), [f"Converted from {args.input}"])
         pathlib.Path(args.output).write_text(text, encoding="utf-8")
+    elif args.command == "params":
+        rows = describe_params(args.prefix)
+        if not rows:
+            raise SystemExit(f"No keys under {args.prefix!r}; tables: {', '.join(sorted(_param_sources()))}")
+        print(format_params(rows))
     else:
         print(dumps(resolve(args.sources, args.overrides)), end="")
 
@@ -321,6 +456,27 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(unknown, ["Solver.VBD.typo", "Integration.dt"])
         self.assertEqual(missing, ["Solver.VBD.k", "Solver.Newton (whole table)", "Integration.dt"])
         self.assertEqual(_known(cfg, reference), {"Solver": {"VBD": {"gtol": 2.0}}, "Integration": {}})
+
+    def test_describe_params(self):
+        rows = {r["key"]: r for r in describe_params()}
+        # Every serialized key maps to a parameter object, so the listing follows the serializers
+        self.assertEqual([k for k, r in rows.items() if not r["found"]], [])
+        self.assertEqual(set(rows), {k for k, _ in flatten(read(DEFAULTS_TOML))})
+        vlinsolve = rows["Solver.AAAVBD.vlinsolve"]
+        self.assertEqual((vlinsolve["type"], vlinsolve["enum"][0]), ("enum", "Inverse"))
+        self.assertIn("Relative", rows["Solver.Newton.LinearSolver.rtol"]["description"])
+        self.assertEqual(rows["Solver.Newton.spd_correction"]["type"], "enum")
+        self.assertEqual(rows["Integration.init_strategy"]["type"], "enum")
+        self.assertEqual(rows["Contact.CDType.VertexSdf.deactivate"]["type"], "bool (0/1)")
+        newton = describe_params("Solver.Newton")
+        self.assertTrue(newton and all(r["key"].startswith("Solver.Newton.") for r in newton))
+        self.assertEqual(describe_params("Solver.Newt"), [])  # whole table names only
+        self.assertIn("(no description in the code)", format_params([rows["Integration.dt"]]))
+        # GPU notes name keys that exist
+        self.assertLessEqual(set(GPU_IGNORED), set(rows))
+        self.assertIn("(GPU: ignored; always Warp's Jacobi-preconditioned CG",
+                      format_params([rows["Solver.Newton.linear_solver"]]))
+        self.assertEqual(rows["Solver.Newton.LinearSolver.rtol"]["gpu"], "")
 
     def test_renamed_keys_move_to_their_new_names(self):
         cfg = {"Solver": {"Convergence": {"rtol": 0.05, "ftol": 0.5}}}

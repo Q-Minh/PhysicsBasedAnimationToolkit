@@ -1,5 +1,5 @@
-# Parameters shared by every scene of the convergence benchmark (benchmark.py --sim-params), under the
-# per-scene files (--scene-params).
+# Parameters shared by every scene of the convergence benchmark: extended by the run files (trampolines.toml,
+# benchmark.py --run), whose per-case tables go over it; also usable as benchmark.py --sim-params.
 # - AAAVBD: the shared parameter set of configs/scenes (gammaup/gammaupS 0.5/0.3, gammadown/gammadownS
 #   0.99/0.95), the same for every scene: the Lipschitz normalization is meant to make them
 #   problem-invariant. Its other parameters keep their code defaults.
