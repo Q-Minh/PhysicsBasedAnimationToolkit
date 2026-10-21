@@ -17,9 +17,15 @@ that reached it jumped over (zero time). A cell beyond the reference's accuracy 
 ``resolvable`` is False for some sample) gets a red x instead of bars: its errors measure the reference,
 not the solvers. Bars are drawn back to front for the chosen camera, so nearer bars cover farther ones.
 
+Solver order within a cell: the solvers with taller bars stand further back, so shorter ones in front stay
+visible. Per figure, solvers are sorted by the 75th percentile of their mean bar heights over the figure's
+drawn cells (a percentile rather than the mean, so a single tall cell doesn't decide), tallest at the
+back; the legend lists them in the same order, back to front. ``--solver-order`` overrides it.
+
 Usage:
     python -m python.tools.sim.benchmark_plot results.h5 -o out/figures/benchmark \
-        [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--elev 28] [--azim -62] [--dpi 200]
+        [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--solver-order Newton,VBD,...] \
+        [--elev 28] [--azim -62] [--dpi 200]
 
 Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark.
 """
@@ -93,17 +99,50 @@ def normalized_aggregate(g: h5py.Group, solver: str) -> dict:
     return {"count": np.asarray(a["count"]), **{s: np.asarray(a[s]) / budget for s in ("mean", "min", "max")}}
 
 
-def plot_benchmark(f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float):
-    """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes."""
+def drawn_heights(a: dict, unresolvable: np.ndarray) -> np.ndarray:
+    """The mean bar heights a solver draws in a case: reached, not skipped by every sample, resolvable."""
+    drawn = (a["count"] > 0) & (a["max"] > 0) & ~unresolvable
+    return a["mean"][drawn]
+
+
+def depth_order(cases, solvers: list[str], n_levels: int) -> list[str]:
+    """Solvers back to front: descending 75th percentile of their drawn bar heights over the figure
+    (0 for a solver without bars), ties in the given order."""
+    key = {}
+    for solver in solvers:
+        heights = [
+            drawn_heights(normalized_aggregate(g, solver), unresolvable_levels(g, solvers, n_levels))
+            for _, g in cases
+            if solver in g
+        ]
+        heights = np.concatenate(heights) if heights else np.zeros(0)
+        key[solver] = float(np.percentile(heights, 75)) if heights.size else 0.0
+    return sorted(solvers, key=lambda s: -key[s])
+
+
+def plot_benchmark(
+    f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None
+):
+    """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
+    ``solver_order`` (back to front) overrides :func:`depth_order`."""
     levels = results.benchmark_levels(f, benchmark)
     cases = [(c, g) for b, c, g in results.iter_cases(f) if b == benchmark]
     solvers = [s for s in solvers if any(s in g for _, g in cases)]
     n_s, n_l = len(solvers), len(levels)
+    # Back to front: the solvers with taller bars further from the camera
+    if solver_order:
+        solvers = [s for s in solver_order if s in solvers] + [s for s in solvers if s not in solver_order]
+    else:
+        solvers = depth_order(cases, solvers, n_l)
     slot = 0.84 / max(n_s, 1)  # bar footprint along x within a case
     bar_w, bar_d = 0.8 * slot, 0.4
     box_w, box_d = slot, 0.5  # min/max box footprint, around the mean bar
     x_range, y_range = (-0.6, len(cases) - 0.4), (-0.6, n_l - 0.4)
     aspect = (max(1.6, 1.1 * len(cases)), max(1.8, 0.3 * n_l), 1.0)
+    a_el, a_az = np.radians(elev), np.radians(azim)
+    toward_camera = np.array([np.cos(a_el) * np.cos(a_az), np.cos(a_el) * np.sin(a_az)])
+    # Slots along x within a case: the first solver at the slot furthest from the camera
+    x_sign = -1.0 if toward_camera[0] >= 0 else 1.0
 
     bars = []  # (x, y, z0, dz, color, label, is_box, width, depth)
     floating = []  # (x, y, z, label): labels of empty cells
@@ -119,7 +158,7 @@ def plot_benchmark(f: h5py.File, benchmark: str, solvers: list[str], elev: float
             count, n = a["count"], int(g[solver].attrs["n_samples"])
             mean, lo, hi = a["mean"], a["min"], a["max"]
             color = solver_color(solver, solvers)
-            xc = i + (k - (n_s - 1) / 2) * slot
+            xc = i - x_sign * (k - (n_s - 1) / 2) * slot
             for j in range(n_l):
                 if unresolvable[j]:
                     continue
@@ -139,8 +178,6 @@ def plot_benchmark(f: h5py.File, benchmark: str, solvers: list[str], elev: float
     ax = fig.add_subplot(projection="3d", computed_zorder=False)
     ax.view_init(elev=elev, azim=azim)
     # Back to front: position along the direction toward the camera, in displayed (box-aspect) units
-    a_el, a_az = np.radians(elev), np.radians(azim)
-    toward_camera = np.array([np.cos(a_el) * np.cos(a_az), np.cos(a_el) * np.sin(a_az)])
     scale = np.array([aspect[0] / (x_range[1] - x_range[0]), aspect[1] / (y_range[1] - y_range[0])])
     def depth(x, y):
         return toward_camera @ (np.array([x, y]) * scale)
@@ -205,7 +242,10 @@ def main():
     parser.add_argument("--benchmarks", nargs="+", default=None,
                         help="Benchmarks to plot (default: all in the file, e.g. static dynamic_h0.01).")
     parser.add_argument("--solvers", default=None,
-                        help="Comma-separated solvers, in bar order (default: the file's).")
+                        help="Comma-separated solvers to draw (default: the file's).")
+    parser.add_argument("--solver-order", default=None, dest="solver_order",
+                        help="Comma-separated solvers, back to front within a cell (default: per figure, taller bars "
+                        "further back; see the module docstring).")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -216,7 +256,8 @@ def main():
         benchmarks = args.benchmarks or [str(b) for b in f.attrs["benchmarks"]]
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         for benchmark in benchmarks:
-            fig = plot_benchmark(f, benchmark, solvers, args.elev, args.azim)
+            order = args.solver_order.split(",") if args.solver_order else None
+            fig = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches="tight")

@@ -78,7 +78,7 @@ Translating requests:
 | "With a load" | the StaticSolveSpec's `fext_scale` (via `--spec`). Static benchmark problems are load-free by design |
 | "Use parameters P" / "change key K" / "for scene S" / "for scene S, static only" | `--sim-params P.toml ...` / `--set K=V` / `--scene-params S=P.toml` / `--scene-params static/S=P.toml` (see the `sim-run` skill; check with `python -m python.tools.sim.config show`) |
 | "Coarser/finer graph blocks" | `--block N` (default 16, rounded up to a multiple of Anderson's m). Iterations a block runs past the stop are dropped, so it doesn't change the results |
-| "Other camera" | `benchmark_plot --elev E --azim A` (defaults 28, -62) |
+| "Other camera" / "solver X in front" | `benchmark_plot --elev E --azim A` (defaults 28, -62) / `--solver-order A,B,...` (back to front; default: taller bars further back, by the 75th percentile of each solver's bar heights per figure) |
 | "Trajectories for a video" | `--snapshots`: F = `--snapshot-video-seconds` x `--snapshot-fps` frames (default 5 s x 24 = 120; `--snapshot-frames F` overrides) at equal solver-time intervals over the problem's budget (factor x T_N, Newton's frames included; or the fixed budget), plus level crossings, for `--snapshot-fraction` of each set's samples (default 1: all; ~F x N x 12 bytes each, ~15 MB on the trampolines; the run prints its disk estimate first). `--snapshot-memory-mb` (default 32) caps the device ring of `--snapshot-ring-ratio` x F slots (default 2) |
 
 `benchmark.py`'s module docstring has the full details.
