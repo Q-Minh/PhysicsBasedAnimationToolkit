@@ -178,6 +178,59 @@ SCENES = {
         ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's.",
          "astol keeps the default 1e-4 (soft, homogeneous), unlike the soft-stiff trampolines' 5e-4."],
     ),
+    # The other paper configs: the durable rules only, budgets unchanged
+    "trampoline_stiff_sphere": Scene(
+        "trampoline_stiff_sphere.Params.5Substeps",
+        "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
+        [*SOLVERS, *CONTACT, TRAMPOLINE_DETECTION, ASTOL_STIFF],
+        ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
+         "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
+    ),
+    "capsules_into_bowl": Scene(
+        "capsules_into_bowl",
+        "final_scenes/capsule_bowl.h5 (Young's modulus 1e5 to 1e6)",
+        [*SOLVERS, *CONTACT],
+        ["Budgets kept: 5 substeps of 3 x 3 = 45 sweeps per frame, below the guidance's ~100 for soft higher-res "
+         "meshes (230k tets), though not a stiff scene."],
+    ),
+    "empty_basket": Scene(
+        "empty_basket.Params_3_10_5",
+        "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
+        "recorded)",
+        [*SOLVERS, *CONTACT],
+        ["Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for "
+         "Young's modulus ~1e7.",
+         "astol keeps the default 1e-4 (no 1e8 regions); raise it to 5e-4 if the resting basket stalls."],
+    ),
+    "basket_5_5_40": Scene(
+        "basket_5_5_40",
+        "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
+        [*SOLVERS, *CONTACT, ASTOL_STIFF],
+        ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
+    ),
+    # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget
+    "birthday_banner": Scene(
+        "birthday_banner.Params_1_2000",
+        "the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh)",
+        [*SOLVERS],
+        ["Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters are kept.",
+         "Budgets kept: 1 x 2000 sweeps per step."],
+    ),
+    **{
+        f"beam{y}": Scene(
+            f"beam{y}.GroundTruth",
+            f"final_scenes/bending_beams/small_beam{'_het' if y == '_het' else 'Y' + y}.h5 ("
+            + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
+            + ")",
+            [*SOLVERS],
+            ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
+             "Budgets kept: the paper's ground-truth budgets, chosen to match Newton's behaviour "
+             "(accelerated-vbd-extras/parameters/gpu/beam.GroundTruth.Notes.txt)."]
+            + (["The paper's beam1e7.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant "
+                "of this scene."] if y == "1e7" else []),
+        )
+        for y in ("1e5", "1e6", "1e7", "1e8", "_het")
+    },
 }
 
 
