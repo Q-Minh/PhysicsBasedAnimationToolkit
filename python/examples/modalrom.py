@@ -575,7 +575,7 @@ def load_model(input: str, rho: float, Y: float, nu: float, element, energy):
         nue = np.full(E.shape[1], nu)
         rhoe = np.full(E.shape[1], rho)
         M = mass(E, X, element, rhoe)
-        M = scipy.sparse.diags_array(M.sum(axis=1), shape=(n, n))
+        M = scipy.sparse.diags_array(np.asarray(M.sum(axis=1)).ravel(), shape=(n, n))  # lumped
         egU, wgU, GNegU, mug, lambdag = potential(E, X, element, Ye, nue)
         freedofs = np.arange(n)
         gravity = np.array([0.0, 0.0, -9.81])
