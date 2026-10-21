@@ -127,6 +127,7 @@ ftol = 0.5
 rstol = 0.01
 
 [Solver.Newton]
+init_strategy = 0
 linear_solver = 1
 n_max_iters = 5
 spd_correction = 2
