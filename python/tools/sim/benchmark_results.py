@@ -15,6 +15,9 @@ per-iteration log (entry j is the state after j iterations, with cumulative solv
   The increments of the reached levels sum to the time of the highest one.
 - a level crossed after the solve's **time budget** isn't reached: the budget is tested after each
   iteration, so the last one can end past it (by up to one Newton step).
+- **re-scoring** (:func:`rescore`): a run at budget factor F0 can be scored at any smaller factor F from its
+  logs, as if the budgets had been F x T_N; one run at F0 = 2 gives the bars at 1 x T_N and the convergence
+  curves up to 2 x T_N.
 
 Results file layout (HDF5, ``FORMAT``):
 
@@ -222,6 +225,43 @@ def aggregate(values: np.ndarray, reached: np.ndarray) -> dict[str, np.ndarray]:
         out["q25"][j] = np.quantile(v, 0.25)
         out["q75"][j] = np.quantile(v, 0.75)
     return out
+
+
+def relative_error(error: np.ndarray) -> np.ndarray:
+    """(n,) e / e0 of a logged error (zeros if e0 is 0), as the benchmark scores it
+    (``static.StaticSolveLog.relative_error``)."""
+    error = np.asarray(error, dtype=np.float64)
+    e0 = error[0] if error.size else 1.0
+    return error / e0 if e0 > 0 else np.zeros_like(error)
+
+
+def rescore(solver_group: h5py.Group, levels, factor: float) -> dict[str, np.ndarray]:
+    """A solver's ``aggregate/normalized_increment`` re-scored at a budget of ``factor`` x T_N.
+
+    Per sample, the crossings of its log (``logs/<sample>``) within min(``factor`` x ``normalization``, the
+    solve's ``budget``): levels crossed later count as unreached, and the increments, aggregates and counts
+    follow. At the run's own budget factor this reproduces the stored aggregate. Newton's highest level is
+    crossed at T_N, so Newton's is unchanged for ``factor`` >= 1.
+
+    Args:
+        solver_group (h5py.Group): ``/<benchmark>/<case>/<solver>`` of a run with T_N budgets (``normalization``).
+        levels: The benchmark's levels.
+        factor (float): The budget factor to score at, in (0, the run's factor].
+
+    Returns:
+        dict[str, np.ndarray]: ``STATISTICS`` -> (L,) arrays, as :func:`aggregate`.
+    """
+    g = solver_group
+    L = len(levels)
+    normalization = np.asarray(g["normalization"], dtype=np.float64)
+    budget = np.asarray(g["budget"], dtype=np.float64) if "budget" in g else np.full(normalization.shape, math.inf)
+    increments, reached = np.full((normalization.size, L), math.nan), np.zeros((normalization.size, L), dtype=bool)
+    for row, sample in enumerate(np.asarray(g["sample"])):
+        log = g[f"logs/{int(sample):06d}"]
+        limit = min(factor * normalization[row], budget[row])
+        c = level_crossings(relative_error(log["error"][()]), log["time"][()], levels, limit)
+        increments[row], reached[row] = c.increment / normalization[row], c.reached
+    return aggregate(increments, reached)
 
 
 def parse_budget_options(entries: list[str], option: str = "--budget") -> dict:
@@ -601,6 +641,18 @@ class TestLevelCrossings(unittest.TestCase):
                 # Over each sample's T_N (3 s and 2 s): Newton's reached increments sum to 1 per sample
                 np.testing.assert_allclose(g["normalized_increment"][()], [[2 / 3, 1 / 3], [1.0, np.nan]])
                 np.testing.assert_allclose(g["aggregate/normalized_increment/mean"][()], [5 / 6, 1 / 3])
+                # Re-scored: at budgets covering every crossing, the stored aggregate; at 0.8 x T_N (2.4 s and
+                # 1.6 s), sample 0 keeps 50% (crossed at 2 s), sample 1 reaches nothing
+                for factor in (1.0, 3.0):
+                    a = rescore(g, levels, factor)
+                    for stat in STATISTICS:
+                        np.testing.assert_array_equal(a[stat], g[f"aggregate/normalized_increment/{stat}"][()])
+                a = rescore(g, levels, 0.8)
+                np.testing.assert_array_equal(a["count"], [1, 0])
+                np.testing.assert_allclose(a["mean"], [2 / 3, np.nan])
+                # VBD's 50% at 3 s: reached within 1 x T_N (3 s), not within 0.9 x T_N
+                np.testing.assert_array_equal(rescore(cases[0][2]["VBD"], levels, 1.0)["count"], [1, 0])
+                np.testing.assert_array_equal(rescore(cases[0][2]["VBD"], levels, 0.9)["count"], [0, 0])
                 np.testing.assert_array_equal(benchmark_levels(f, "static"), levels)
                 np.testing.assert_array_equal(g["logs/000001/newton/cg_iterations"][()], [40, 60])
                 self.assertEqual(list(g["logs/000001/newton/status"].asstr()[()]), ["stepped", "stepped"])
