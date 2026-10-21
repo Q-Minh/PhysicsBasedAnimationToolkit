@@ -137,25 +137,11 @@ class Simulation:
         self._fem_dynamics_vm = ps.register_volume_mesh(
             "FEM Elasto Dynamics", self._fem_dynamics.X.T, self._fem_dynamics.E.T
         )
-        self._fem_dynamics_vm.add_scalar_quantity(
-            "Mass",
-            np.log10(self._fem_dynamics.m + 1),
-            defined_on="vertices",
-            cmap=material.mass_density_log10_cmap(),
-        )
-        self._fem_dynamics_vm.add_scalar_quantity(
-            "Lame mu",
-            np.log10(self._fem_dynamics.lamegU[0, :] + 1),
-            defined_on="cells",
-            cmap=material.lame_parameters_cmap(),
-            enabled=True,
-        )
-        self._fem_dynamics_vm.add_scalar_quantity(
-            "Lame lambda",
-            np.log10(self._fem_dynamics.lamegU[1, :] + 1),
-            defined_on="cells",
-            cmap=material.lame_parameters_cmap(),
-        )
+        fem = self._fem_dynamics
+        for name, values, location, options in material.fem_quantities(fem.lamegU, fem.egU, fem.E.shape[1], fem.m):
+            self._fem_dynamics_vm.add_scalar_quantity(
+                name, values, defined_on=location, enabled=name == material.LAME_MU, **options
+            )
         self._constrain()
         d_nodes = self._fem_dynamics.dirichlet_nodes
         self._fem_dynamics_dirichlet_pc = ps.register_point_cloud(

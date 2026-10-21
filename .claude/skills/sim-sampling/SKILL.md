@@ -67,7 +67,7 @@ Translating requests:
 - "Reproducible": `--seed`.
 - "More modes": `-k`.
 - "Scenes A and B": `-i A=<a>.h5 -i B=<b>.h5`; a plot label per scene: `--label "A=..."`.
-- "Show / explore / visualize the dataset": `benchmark_browser.py -d <dataset>.h5`. The mesh comes from the selected scene's stored FEM.
+- "Show / explore / visualize the dataset": `benchmark_browser.py -d <dataset>.h5`. The mesh comes from the selected scene's stored FEM; the start state can be colored by displacement, det F, or the scene's materials (Lame mu, lambda, Young's modulus) and lumped masses.
 
 `make_benchmark.py -h` lists the rest (`--chains`, `--burn-in`, `--pilot`, `--eps`, `--newton-iters`).
 

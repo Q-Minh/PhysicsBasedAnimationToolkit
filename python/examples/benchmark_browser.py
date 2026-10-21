@@ -2,8 +2,10 @@
 
 Pick a scene, a problem set (static, or dynamic with time step h), a total energy E and a problem, and see:
 
-    start state x       the problem's initial shape, colored by displacement |x - X| or by det(F) (red/blue
-                        diverging around 1; values <= 0 are inverted elements),
+    start state x       the problem's initial shape, colored by displacement |x - X|, by det(F) (red/blue
+                        diverging around 1; values <= 0 are inverted elements), or by the scene's materials (Lame
+                        mu, lambda, Young's modulus per element) or lumped masses per node, named and colored as
+                        in the CPU editor (log10(value + 1)),
     rest shape X        a transparent ghost: the static problems' solution,
     velocity v          the start velocity J(q) qdot as vectors (dynamic problems' samples/v; for static problems
                         it's reconstructed from the shared microcanonical sample),
@@ -28,6 +30,9 @@ import polyscope as ps
 import polyscope.imgui as imgui
 
 import modalrom
+
+modalrom.add_repository_to_path()
+from python.tools.vbd.ui import material
 
 
 def scan_dataset(path: str) -> typing.Dict[str, typing.Dict[str, typing.List[typing.Tuple[float, str]]]]:
@@ -140,7 +145,7 @@ if __name__ == "__main__":
     ps.set_front_dir("neg_y_front")
     ps.set_ground_plane_mode("shadow_only")
     ps.init()
-    colorings = ["Displacement |x - X| (m)", "det F"]
+    colorings = ["Displacement |x - X| (m)", "det F", *material.FEM_QUANTITIES]
     state = dict(scene_idx=0, set_idx=0, energy_idx=0, problem=0, coloring=0, data=None, key=None, shares=None,
                  scene=None)
     mesh = {}
@@ -154,6 +159,7 @@ if __name__ == "__main__":
             mass=np.asarray(fem.M()).reshape(-1, 3),  # lumped mass per node and coordinate
             egU=fem.egU,
             GNegU=fem.GNegU,
+            materials=material.fem_parameters(fem.lamegU, fem.egU, E.shape[1], fem.m),
             start=ps.register_volume_mesh("start state x", X.T, E.T),
             rest=ps.register_volume_mesh("rest shape X", X.T, E.T, transparency=0.2, color=(0.6, 0.6, 0.6)),
             target=ps.register_volume_mesh(
@@ -195,11 +201,16 @@ if __name__ == "__main__":
             start.add_scalar_quantity(
                 "color", np.linalg.norm(x - data["X"], axis=1), defined_on="vertices", enabled=True, cmap="viridis"
             )
-        else:
+        elif state["coloring"] == 1:
             detF = modalrom.deformation_gradient_determinants(mesh["E"], mesh["egU"], mesh["GNegU"], x.ravel())
             start.add_scalar_quantity(
                 "color", detF, defined_on="cells", enabled=True, cmap="coolwarm", vminmax=(0.0, 2.0)
             )
+        else:
+            name = colorings[state["coloring"]]
+            values, options = material.display(name, mesh["materials"][name])
+            location = "vertices" if material.is_nodal(name) else "cells"
+            start.add_scalar_quantity("color", values, defined_on=location, enabled=True, **options)
         if data["v"] is not None:
             start.add_vector_quantity("velocity v", data["v"][s], defined_on="vertices", enabled=True)
         dynamic = "xtilde" in data
@@ -232,6 +243,11 @@ if __name__ == "__main__":
         changed_c, state["coloring"] = imgui.Combo("Color start state by", state["coloring"], colorings)
         if changed or changed_c:
             select()
+        if state["coloring"] >= 2:
+            name = colorings[state["coloring"]]
+            raw = mesh["materials"][name]
+            unit = "kg per node" if material.is_nodal(name) else "Pa"
+            imgui.TextDisabled(f"{name}: {raw.min():.4g} to {raw.max():.4g} {unit}, shown as log10(value + 1)")
 
         attrs, s = data["attrs"], state["problem"]
         energy = float(attrs["target_energy"])
