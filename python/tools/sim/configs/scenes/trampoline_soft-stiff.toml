@@ -31,9 +31,13 @@
 #   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
 #   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
 #     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
-# - Newton with contact: 5 outer iterations (contact detection passes) x 2 Newton steps (maintainer).
-#     Solver.Newton.n_max_iters = 5 (source 20)
-#     Solver.Newton.newton.n_max_iters = 2 (source 1)
+# - Newton on heterogeneous soft-stiff contact: 30 outer iterations (contact detection passes) x 1 Newton step,
+#   with strict CG (rtol 1e-9, at most 4000 iterations) (maintainer, 2026-10-20): with 5 x 2 and the default CG,
+#   the sphere's contact with the stiff trampoline center was unstable; 30 x 1 with strict CG is stable, if
+#   slow.
+#     Solver.Newton.n_max_iters = 30 (source 20)
+#     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
+#     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
 # - max_dist 30 cm, scaled to the metre-scale trampoline geometry (10 cm plate; maintainer).
 #     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
 # - VertexSdf band 5 mm for the sphere falling on the trampolines (maintainer, 2026-10-20): at 2 mm the sphere's
@@ -141,17 +145,17 @@ rstol = 0.01
 [Solver.Newton]
 init_strategy = 0
 linear_solver = 1
-n_max_iters = 5
+n_max_iters = 30
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]
 atol = 1e-10
-n_max_iters = 2000
-rtol = 1e-06
+n_max_iters = 4000
+rtol = 1e-09
 
 [Solver.Newton.newton]
 gtol2 = 9.999999974752427e-07
-n_max_iters = 2
+n_max_iters = 1
 
 [Solver.Newton.newton.line_search]
 alpha = 1.0

@@ -89,6 +89,18 @@ GAMMAS = Rule(
     },
 )
 CONTACT = [PENALTY, DMIN, BAND, NEWTON_CONTACT]
+NEWTON_HET_CONTACT = Rule(
+    "Newton on heterogeneous soft-stiff contact: 30 outer iterations (contact detection passes) x 1 Newton step, "
+    "with strict CG (rtol 1e-9, at most 4000 iterations) (maintainer, 2026-10-20): with 5 x 2 and the default CG, "
+    "the sphere's contact with the stiff trampoline center was unstable; 30 x 1 with strict CG is stable, if slow.",
+    {
+        "Solver.Newton.n_max_iters": 30,
+        "Solver.Newton.newton.n_max_iters": 1,
+        "Solver.Newton.LinearSolver.rtol": 1e-9,
+        "Solver.Newton.LinearSolver.n_max_iters": 4000,
+    },
+)
+HET_CONTACT = [*CONTACT, NEWTON_HET_CONTACT]
 SOLVERS = [INVERSE, GAMMAS]
 
 
@@ -121,7 +133,7 @@ SCENES = {
     "basket_of_fruit": Scene(
         "basket_of_fruit.Params_3_10_15",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
-        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *CONTACT],
+        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT],
     ),
     "celebration": Scene(
         "celebration.Params_1_5_30",
@@ -129,7 +141,7 @@ SCENES = {
         [
             _stiff_budget("1 x 5 x 30 = 150 sweeps"),
             *SOLVERS,
-            *CONTACT,
+            *HET_CONTACT,
             Rule(
                 "max_dist 30 cm, scaled to the geometry (maintainer): the base plate is 10 cm thick and the "
                 "letters' edges ~4 cm.",
@@ -147,7 +159,7 @@ SCENES = {
                 "once the mat lands on the stilts. 10 x 20 and 10 x 40 were also stable"
             ),
             *SOLVERS,
-            *CONTACT,
+            *HET_CONTACT,
         ],
         ["The paper's 10-substep file (mat_on_stilts.Params.10Substeps) differs from the 5-substep one only in "
          "substeps, which this config overrides."],
@@ -155,12 +167,12 @@ SCENES = {
     "trampoline_soft-stiff": Scene(
         "trampoline_soft-stiff.Params.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
-        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *CONTACT, *TRAMPOLINE],
+        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE],
     ),
     "trampoline_stiff-soft": Scene(
         "trampoline_stiff-soft.Params.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
-        [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *CONTACT,
+        [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
          *TRAMPOLINE],
     ),
     "trampoline_soft-soft": Scene(
@@ -180,7 +192,7 @@ SCENES = {
     "trampoline_stiff_sphere": Scene(
         "trampoline_stiff_sphere.Params.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *CONTACT, *TRAMPOLINE],
+        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
@@ -202,7 +214,7 @@ SCENES = {
     "basket_5_5_40": Scene(
         "basket_5_5_40",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
-        [*SOLVERS, *CONTACT],
+        [*SOLVERS, *HET_CONTACT],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget
