@@ -23,7 +23,10 @@ overlays alone, which are then drawn more opaque (opaque when only one is shown)
   shared time becomes that frame's, between the grid frames when the crossing isn't on one.
 - **Colors:** the per-vertex error |x_i - x*_i| or the displacement from the start |x_i - x_i(0)|, on one
   color scale shared by the shown solvers (by default the largest value among them at the current time, so
-  the colors show where each solver's error concentrates while e/e0 gives its size), or each solver's color.
+  the colors show where each solver's error concentrates while e/e0 gives its size), each solver's color, or
+  a material parameter (the dataset FEM's Lame mu, lambda or Young's modulus, per boundary face from its
+  tetrahedron), named and colored as in the CPU editor, by default in log10(value + 1), so heterogeneous
+  scenes show their regions.
 - **Plot:** log10(e/e0) against solver time for every shown solver, with the levels and a marker at t.
 
 The mesh comes from the dataset the results were run on (the root attribute ``dataset``, or ``--dataset``
@@ -50,21 +53,24 @@ import numpy as np
 
 from . import benchmark_results as results
 from .benchmark_plot import SOLVER_NAMES, solver_color
+from ..vbd.ui import material
 
 FEM_GROUP = "pbat.sim.dynamics.FemElastoDynamics"  # the dataset's stored FemElastoDynamics (pbat Archive)
 MESH_GROUP = "pbat.fem.Mesh"
 ERROR_FLOOR = 1e-12  # e/e0 below this plots at the floor (log scale)
 
 
-def boundary_triangles(X: np.ndarray, T: np.ndarray) -> np.ndarray:
+def boundary_triangles(X: np.ndarray, T: np.ndarray, return_elements: bool = False):
     """The boundary triangles of a tetrahedral mesh, counter-clockwise seen from outside.
 
     Args:
         X (np.ndarray): (N, 3) vertex positions.
         T (np.ndarray): (M, 4) tetrahedra, of either orientation.
+        return_elements (bool): Also return the tetrahedron each triangle belongs to.
 
     Returns:
-        np.ndarray: (K, 3) the faces that belong to a single tetrahedron.
+        np.ndarray: (K, 3) the faces that belong to a single tetrahedron; with ``return_elements``,
+        (faces, (K,) their tetrahedra).
     """
     T = np.asarray(T, dtype=np.int64).copy()
     a, b, c, d = (X[T[:, i]] for i in range(4))
@@ -73,7 +79,34 @@ def boundary_triangles(X: np.ndarray, T: np.ndarray) -> np.ndarray:
     # Outward faces of a positively oriented tetrahedron, each opposite one of its vertices
     faces = T[:, [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]].reshape(-1, 3)
     _, inverse, counts = np.unique(np.sort(faces, axis=1), axis=0, return_inverse=True, return_counts=True)
-    return faces[counts[inverse.ravel()] == 1]
+    boundary = counts[inverse.ravel()] == 1
+    if return_elements:
+        return faces[boundary], np.repeat(np.arange(len(T)), 4)[boundary]
+    return faces[boundary]
+
+
+# The CPU editor's names for the material quantities (python/tools/vbd/ui/simulation.py, tetrahedral_elastodynamics_body.py)
+MATERIAL_MODES = ("Lame mu", "Lame lambda", "Young's Modulus")
+
+
+def element_materials(lame: np.ndarray, quadrature_elements: np.ndarray, n_elements: int) -> dict[str, np.ndarray]:
+    """Per-element material parameters of a FemElastoDynamics (Pa).
+
+    Args:
+        lame (np.ndarray): (2, Q) Lame mu and lambda per quadrature point (``lamegU``).
+        quadrature_elements (np.ndarray): (Q,) the element of each quadrature point (``egU``).
+        n_elements (int): M.
+
+    Returns:
+        dict[str, np.ndarray]: ``MATERIAL_MODES`` -> (M,): mu and lambda (the mean over the element's quadrature
+        points) and Young's modulus mu (3 lambda + 2 mu) / (lambda + mu).
+    """
+    e = np.asarray(quadrature_elements, dtype=np.int64).ravel()
+    count = np.maximum(np.bincount(e, minlength=n_elements), 1)
+    mu = np.bincount(e, np.asarray(lame[0], dtype=np.float64), n_elements) / count
+    lam = np.bincount(e, np.asarray(lame[1], dtype=np.float64), n_elements) / count
+    young = mu * (3 * lam + 2 * mu) / np.maximum(lam + mu, 1e-30)
+    return dict(zip(MATERIAL_MODES, (mu, lam, young)))
 
 
 def problem_fem_group(dataset: h5py.File, set_name: str) -> str:
@@ -238,6 +271,7 @@ class Selection:
     label: str
     X: np.ndarray  # (N, 3) rest positions
     triangles: np.ndarray  # (K, 3) boundary triangles
+    face_materials: dict[str, np.ndarray]  # MATERIAL_MODES -> (K,): each boundary triangle's tetrahedron's value
     reference: np.ndarray  # (N, 3) x*: X (static) or x_ref (dynamic)
     overlays: list[Overlay]
     levels: np.ndarray  # (L,) error reductions
@@ -312,13 +346,16 @@ def load_selection(path: str, benchmark: str, case: str, sample: int, dataset: s
         fem = d[problem_fem_group(d, set_name)][FEM_GROUP]
         X = fem[f"{MESH_GROUP}/X"][()].T.astype(np.float64)
         T = fem[f"{MESH_GROUP}/E"][()].T
+        materials = element_materials(fem["lamegU"][()], fem["egU"][()], len(T))
         overlays = problem_overlays(problem, X, d[set_name]["samples"] if problem != "static" else None, sample)
     reference = X if problem == "static" else overlays[0].positions
+    triangles, elements = boundary_triangles(X, T, return_elements=True)
+    face_materials = {name: values[elements] for name, values in materials.items()}
     for tr in trajectories:
         if tr.x.shape[1] != X.shape[0]:
             raise ValueError(f"{tr.solver}'s frames have {tr.x.shape[1]} nodes, the dataset's FEM {X.shape[0]}: "
                              f"wrong --dataset?")
-    return Selection(benchmark, case, sample, problem, label, X, boundary_triangles(X, T), reference, overlays, levels, T_N,
+    return Selection(benchmark, case, sample, problem, label, X, triangles, face_materials, reference, overlays, levels, T_N,
                      span, video_seconds, n_frames, trajectories)
 
 
@@ -344,7 +381,7 @@ def _level_text(level: float) -> str:
     return f"{100 * level:.10g}%"
 
 
-COLOR_MODES = ("Error |x - x*|", "Displacement |x - x(0)|", "Solver color")
+COLOR_MODES = ("Error |x - x*|", "Displacement |x - x(0)|", "Solver color") + MATERIAL_MODES
 SCALE_MODES = ("Shared max at the frame", "Shared max at the start", "Fixed max")
 _WARNING_COLOR = (1.0, 0.75, 0.2, 1.0)  # as the CPU editor's trajectory viewer
 
@@ -377,6 +414,7 @@ class Viewer:
         self.color_mode, self.scale_mode, self.fixed_max, self.vmax = 0, 0, 1.0, 0.0
         self.spacing = 1.15
         self.show_solvers = True  # every solver mesh, above the per-solver checkboxes
+        self.log_material = True  # material colors in log10(value + 1), as the CPU editor
         self.show_overlay: dict[str, bool] = {}  # by overlay name, kept across selections
         self.visible: dict[str, bool] = {}
         self.meshes, self.offsets = {}, {}
@@ -501,6 +539,19 @@ class Viewer:
         shown = sum(self.show_overlay.get(o.name, o.enabled) for o in self.selection.overlays)
         return 1.0 if shown <= 1 else OVERLAY_OPACITY_ALONE
 
+    def material_values(self) -> tuple[np.ndarray, tuple[float, float], str]:
+        """The color mode's material parameter per boundary face, its color range and colormap: the CPU editor's
+        (log10(value + 1), and its fixed range for Young's modulus), or linear over the mesh's values."""
+        name = COLOR_MODES[self.color_mode]
+        values = self.selection.face_materials[name]
+        cmap = material.young_modulus_log10_cmap() if name == "Young's Modulus" else material.lame_parameters_cmap()
+        if self.log_material:
+            values = np.log10(values + 1)
+            if name == "Young's Modulus":
+                return values, material.young_modulus_log10_range(), cmap
+        lo, hi = float(values.min()), float(values.max())
+        return values, (lo, hi if hi > lo else lo + max(abs(lo), 1.0) * 1e-6), cmap
+
     def update_meshes(self):
         s = self.selection
         frames = {tr.solver: tr.frame_at(self.t) for tr in s.trajectories}
@@ -516,6 +567,9 @@ class Viewer:
                 ghost.set_enabled(self.show_overlay[overlay.name] and self.visible[tr.solver])
                 ghost.set_transparency(self.overlay_opacity())
                 ghost.update_vertex_positions(self.copy_positions(overlay.positions, tr.solver))
+        if self.dirty:  # the color mode may have changed
+            for tr in s.trajectories:
+                self.meshes[tr.solver].remove_all_quantities()
         if self.color_mode < 2 and shown:
             values = {tr.solver: self.vertex_values(tr, frames[tr.solver]) for tr in shown}
             if self.scale_mode == 0:
@@ -528,9 +582,11 @@ class Viewer:
             for solver, v in values.items():
                 self.meshes[solver].add_scalar_quantity(COLOR_MODES[self.color_mode], v, vminmax=(0.0, self.vmax),
                                                         cmap="viridis", enabled=True)
-        else:
+        elif self.color_mode >= 3 and self.dirty:  # the material doesn't change with the frames
+            values, vminmax, cmap = self.material_values()
             for tr in s.trajectories:
-                self.meshes[tr.solver].remove_all_quantities()
+                self.meshes[tr.solver].add_scalar_quantity(COLOR_MODES[self.color_mode], values, defined_on="faces",
+                                                           vminmax=vminmax, cmap=cmap, enabled=True)
         self.shown = frames
         self.dirty = False
 
@@ -752,6 +808,12 @@ class Viewer:
                 changed, self.fixed_max = imgui.InputFloat("Max (m)", self.fixed_max, format="%.4g")
                 self.dirty |= changed
             imgui.TextDisabled(f"Color scale 0 to {self.vmax:.4g} m")
+        elif self.color_mode >= 3:
+            changed, self.log_material = imgui.Checkbox("Log10 scale", self.log_material)
+            self.dirty |= changed
+            raw = s.face_materials[COLOR_MODES[self.color_mode]]
+            imgui.SameLine()
+            imgui.TextDisabled(f"boundary faces: {raw.min():.4g} to {raw.max():.4g} Pa")
         imgui.SetNextItemWidth(width * 0.3)
         changed, self.spacing = imgui.SliderFloat("Spacing", self.spacing, 1.0, 3.0, format="%.2f")
         if changed:
@@ -858,6 +920,10 @@ class TestBenchmarkViewer(unittest.TestCase):
                 mesh = d.create_group(f"S/fem/{FEM_GROUP}/{MESH_GROUP}")
                 mesh.create_dataset("X", data=X.T.astype(np.float32))
                 mesh.create_dataset("E", data=T.T)
+                # Two materials: the first three tetrahedra 100x stiffer (mu, lambda per quadrature point)
+                lame = np.array([[1e7] * 3 + [1e5] * 3, [4e7] * 3 + [4e5] * 3], dtype=np.float32)
+                d[f"S/fem/{FEM_GROUP}"].create_dataset("lamegU", data=lame)
+                d[f"S/fem/{FEM_GROUP}"].create_dataset("egU", data=np.arange(6)[:, None])
                 for name in ("S/static/E1", "S/dynamic_h0.01/E1"):
                     d.create_group(name).attrs["scene"] = "S"
                 for key, value in shapes.items():
@@ -890,6 +956,16 @@ class TestBenchmarkViewer(unittest.TestCase):
         for overlay, key in zip(dynamic.overlays, ("x_ref", "xtilde", "x")):
             np.testing.assert_array_equal(overlay.positions, shapes[key][sample])
         np.testing.assert_array_equal(dynamic.reference, shapes["x_ref"][sample])
+        # Each boundary face has its tetrahedron's material: 2 faces per tetrahedron on the cube's boundary
+        _, elements = boundary_triangles(X, T, return_elements=True)
+        stiff = elements < 3
+        self.assertEqual(int(stiff.sum()), 6)
+        mu = dynamic.face_materials["Lame mu"]
+        np.testing.assert_allclose(mu[stiff], 1e7)
+        np.testing.assert_allclose(mu[~stiff], 1e5)
+        np.testing.assert_allclose(dynamic.face_materials["Lame lambda"][stiff], 4e7)
+        young = dynamic.face_materials["Young's Modulus"]
+        np.testing.assert_allclose(young[stiff], 1e7 * (3 * 4e7 + 2e7) / 5e7, rtol=1e-6)  # nu = 0.4: E = 2.8 mu
         self.assertEqual(dynamic.span, 1.0)
         # Positioned like the copies: the second solver's overlays and frames share its offset
         viewer = Viewer(None)
@@ -910,6 +986,15 @@ class TestBenchmarkViewer(unittest.TestCase):
         self.assertEqual(viewer.overlay_opacity(), 1.0)
         viewer.show_overlay["Start state x"] = True
         self.assertEqual(viewer.overlay_opacity(), OVERLAY_OPACITY_ALONE)
+        # Material colors: log10(value + 1) over the mesh's range, Young's modulus on the CPU editor's range
+        viewer.color_mode = COLOR_MODES.index("Lame mu")
+        values, vminmax, cmap = viewer.material_values()
+        np.testing.assert_allclose(vminmax, (math.log10(1e5 + 1), math.log10(1e7 + 1)))
+        self.assertEqual(len(values), len(dynamic.triangles))
+        viewer.color_mode = COLOR_MODES.index("Young's Modulus")
+        self.assertEqual(viewer.material_values()[1], material.young_modulus_log10_range())
+        viewer.log_material = False
+        np.testing.assert_allclose(viewer.material_values()[1], (young.min(), young.max()))
 
 
 if __name__ == "__main__":
