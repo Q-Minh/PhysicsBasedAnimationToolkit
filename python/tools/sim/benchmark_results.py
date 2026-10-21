@@ -73,7 +73,10 @@ import numpy as np
 
 FORMAT = "pbat-benchmark-results"
 VERSION = 1
-DEFAULT_LEVELS = (0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99)
+# Default levels, decades of error reduction: the static references (the rest shape) are exact; the dynamic
+# references resolve about 99.99% at best (float32 Newton solves)
+STATIC_LEVELS = (0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999)
+DYNAMIC_LEVELS = (0.5, 0.9, 0.99, 0.999, 0.9999)
 STATISTICS = ("count", "mean", "std", "min", "max", "median", "q25", "q75")
 
 
@@ -98,10 +101,15 @@ def parse_levels_options(entries: list[str]) -> dict:
     return out
 
 
+def default_levels(benchmark: str) -> tuple[float, ...]:
+    """``STATIC_LEVELS`` for the static benchmark, ``DYNAMIC_LEVELS`` for the dynamic ones."""
+    return STATIC_LEVELS if benchmark == "static" else DYNAMIC_LEVELS
+
+
 def levels_for(table: dict, benchmark: str) -> tuple[float, ...]:
     """A benchmark's levels (:func:`parse_levels_options` table): its own entry, else the unkeyed one,
-    else ``DEFAULT_LEVELS``."""
-    return table.get(benchmark, table.get(None, DEFAULT_LEVELS))
+    else :func:`default_levels`."""
+    return table.get(benchmark, table.get(None, default_levels(benchmark)))
 
 
 def benchmark_levels(f: h5py.File, benchmark: str) -> np.ndarray:
@@ -511,7 +519,8 @@ class TestLevelCrossings(unittest.TestCase):
         table = parse_levels_options(["0.5,0.9", "static=0.5,0.99,0.999"])
         self.assertEqual(levels_for(table, "static"), (0.5, 0.99, 0.999))
         self.assertEqual(levels_for(table, "dynamic_h0.01"), (0.5, 0.9))
-        self.assertEqual(levels_for({}, "static"), DEFAULT_LEVELS)
+        self.assertEqual(levels_for({}, "static"), STATIC_LEVELS)
+        self.assertEqual(levels_for({}, "dynamic_h0.01"), DYNAMIC_LEVELS)
         with self.assertRaises(ValueError):
             parse_levels_options(["static=0.5", "static=0.9"])
 

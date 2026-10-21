@@ -18,7 +18,7 @@ Run from the repo root with the dev venv's Python (Python <= 3.12; its location 
    - `<scene>/dynamic_h{h}/E{E}`: one BDF1 step from (x, v), with Newton reference solutions `samples/x_ref`.
 
    The root attribute `sets` lists the problem sets (full paths), and a scene group's optional `label` names it in the figures. Version-1 files (one scene at the root) still run, but none are kept. See the `sim-sampling` skill for options and quality checks (R-hat < 1.05). Small existing dataset: `data/benchmarks/trampolines-test.h5` (scenes Y1e6 and Y1e7, 2 problems per set).
-2. **Static benchmark.** `python -m python.tools.sim.benchmark` releases each sample with every solver and logs the error to the rest shape after every iteration. Per solve it records when each accuracy level (error reduction 1 − e/e0, default 50, 60, 70, 80, 85, 90, 95, 99%; per benchmark with `--levels static=...`) is first crossed and the incremental time per level.
+2. **Static benchmark.** `python -m python.tools.sim.benchmark` releases each sample with every solver and logs the error to the rest shape after every iteration. Per solve it records when each accuracy level (error reduction 1 − e/e0, default decades: 50, 90, 99, 99.9, 99.99, 99.999% static, up to 99.99% dynamic; per benchmark with `--levels static=...`) is first crossed and the incremental time per level.
 3. **Dynamic benchmark.** The same runner on a `dynamic_h{h}` set: one BDF1 step of the set's h toward its `xtilde`, with the error measured against `samples/x_ref`. The kind and h come from the set.
 4. **Figures.** `python -m python.tools.sim.benchmark_plot results.h5 -o out/fig/benchmark` draws one 3D grouped bar chart per benchmark (static, each dynamic h).
 
@@ -40,10 +40,9 @@ Error: e = sqrt((x − x*)ᵀ M (x − x*)) over free nodes (lumped mass), with 
 python -m python.tools.sim.benchmark --dataset data/benchmarks/trampolines-test.h5 \
     --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
-# The benchmark: per problem, Newton first, then every other solver within Newton's time T_N; the static
-# figure goes to 99.999%, the dynamic ones to 99.99%; Newton's CG cap is 1000 for the static Y1e8 and het problems
-python -m python.tools.sim.benchmark --dataset DATASET.h5 --levels 0.5,0.9,0.99,0.999,0.9999 \
-    --levels static=0.5,0.9,0.99,0.999,0.9999,0.99999 --sim-params python/tools/sim/configs/benchmark/shared.toml \
+# The benchmark: per problem, Newton first, then every other solver within Newton's time T_N; the default
+# levels (static to 99.999%, dynamic to 99.99%); Newton's CG cap is 1000 for the static Y1e8 and het problems
+python -m python.tools.sim.benchmark --dataset DATASET.h5 --sim-params python/tools/sim/configs/benchmark/shared.toml \
     --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml \
     --scene-params static/het=python/tools/sim/configs/benchmark/newton_cg1000.toml -o out/results.h5
 python -m python.tools.sim.benchmark_plot out/results.h5 -o out/fig/benchmark
@@ -78,7 +77,7 @@ Translating requests:
 | "With a load" | the StaticSolveSpec's `fext_scale` (via `--spec`). Static benchmark problems are load-free by design |
 | "Use parameters P" / "change key K" / "for scene S" / "for scene S, static only" | `--sim-params P.toml ...` / `--set K=V` / `--scene-params S=P.toml` / `--scene-params static/S=P.toml` (see the `sim-run` skill; check with `python -m python.tools.sim.config show`) |
 | "Coarser/finer graph blocks" | `--block N` (default 16, rounded up to a multiple of Anderson's m). Iterations a block runs past the stop are dropped, so it doesn't change the results |
-| "Other camera" | `benchmark_plot --elev E --azim A` (defaults 28, -62) |
+| "Other camera" / "solver X in front" | `benchmark_plot --elev E --azim A` (defaults 28, -62) / `--solver-order A,B,...` (back to front; default: taller bars further back, by the 75th percentile of each solver's bar heights per figure) |
 | "Trajectories for a video" | `--snapshots`: F = `--snapshot-video-seconds` x `--snapshot-fps` frames (default 5 s x 24 = 120; `--snapshot-frames F` overrides) at equal solver-time intervals over the problem's budget (factor x T_N, Newton's frames included; or the fixed budget), plus level crossings, for `--snapshot-fraction` of each set's samples (default 1: all; ~F x N x 12 bytes each, ~15 MB on the trampolines; the run prints its disk estimate first). `--snapshot-memory-mb` (default 32) caps the device ring of `--snapshot-ring-ratio` x F slots (default 2) |
 
 `benchmark.py`'s module docstring has the full details.

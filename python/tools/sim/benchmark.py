@@ -23,8 +23,9 @@ solver iteration (see ``static.py``). For accuracy levels l (error reductions 1 
 records per solve the time each level is first crossed and its incremental time: an iteration's time goes
 to the highest level it crosses, and the levels it jumps over get none; levels crossed after the budget
 aren't reached (``benchmark_results.py``). ``--levels [BENCHMARK=]L1,L2,...`` (repeatable) sets them per
-benchmark, e.g. ``--levels 0.5,0.9,0.99 --levels static=0.5,0.9,0.99,0.999``; the default is 50, 60, 70,
-80, 85, 90, 95, 99%. Only that error stops a solve, at ``--target-reduction`` (default: the benchmark's
+benchmark, e.g. ``--levels 0.5,0.9,0.99 --levels static=0.5,0.9,0.99,0.999``; the defaults are decades,
+50, 90, 99, 99.9, 99.99 and 99.999% for the static benchmark and up to 99.99% for the dynamic ones (their
+float32 references resolve about that much at best). Only that error stops a solve, at ``--target-reduction`` (default: the benchmark's
 highest level), at its time budget or iteration cap, or for Newton at its stall test; the solvers' own
 convergence and feasibility tests are bypassed.
 
@@ -60,7 +61,7 @@ Representative commands (from the repo root; datasets live in the main checkout'
 
     # The benchmark: per problem, Newton first (at most 60 s), then every other solver within Newton's time
     # T_N to its highest level; Newton's CG cap is 1000 for the static Y1e8 problems only
-    python -m python.tools.sim.benchmark --dataset DATASET.h5 --levels 0.5,0.9,0.99,0.999,0.9999 \
+    python -m python.tools.sim.benchmark --dataset DATASET.h5 \
         --sim-params python/tools/sim/configs/benchmark/shared.toml \
         --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml -o out/results.h5
 
@@ -189,7 +190,8 @@ def parse_args():
     parser.add_argument("--levels", action="append", default=[], metavar="[BENCHMARK=]L1,L2,...",
                         help="Accuracy levels, as comma-separated error reductions 1 - e/e0 in (0, 1), for every "
                         "benchmark or one (e.g. static=0.5,0.9,0.99,0.999). Repeatable; a benchmark's own entry "
-                        "wins (default: " + ",".join(f"{v:g}" for v in results.DEFAULT_LEVELS) + ").")
+                        "wins (default: static " + ",".join(f"{v:g}" for v in results.STATIC_LEVELS) + ", dynamic "
+                        + ",".join(f"{v:g}" for v in results.DYNAMIC_LEVELS) + ").")
     parser.add_argument("--budget-factor", type=float, default=1.0, dest="budget_factor",
                         help="Every other solver's budget on a problem: this multiple of Newton's time T_N to its "
                         "highest level there (default: %(default)s).")
