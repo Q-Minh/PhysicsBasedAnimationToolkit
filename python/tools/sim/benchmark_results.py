@@ -77,6 +77,31 @@ def parse_levels(text: str) -> tuple[float, ...]:
     return levels
 
 
+def parse_levels_options(entries: list[str]) -> dict:
+    """``[BENCHMARK=]L1,L2,...`` entries -> {key: levels}, with key ``None`` for an entry without a
+    benchmark (every benchmark without its own) and e.g. ``"static"`` for one benchmark."""
+    out = {}
+    for entry in entries:
+        key, sep, text = entry.rpartition("=")
+        key = key if sep else None
+        if key in out:
+            raise ValueError(f"--levels given twice for {key or 'every benchmark'}")
+        out[key] = parse_levels(text)
+    return out
+
+
+def levels_for(table: dict, benchmark: str) -> tuple[float, ...]:
+    """A benchmark's levels (:func:`parse_levels_options` table): its own entry, else the unkeyed one,
+    else ``DEFAULT_LEVELS``."""
+    return table.get(benchmark, table.get(None, DEFAULT_LEVELS))
+
+
+def benchmark_levels(f: h5py.File, benchmark: str) -> np.ndarray:
+    """The levels of a benchmark in a results file: its group's ``levels`` (else the file's)."""
+    b = f[benchmark]
+    return np.asarray(b.attrs["levels"] if "levels" in b.attrs else f.attrs["levels"], dtype=np.float64)
+
+
 def benchmark_name(problem: str, h: float | None) -> str:
     """``static`` or ``dynamic_h<h>`` (as the dataset's set names, e.g. ``dynamic_h0.0001``)."""
     return "static" if problem == "static" else f"dynamic_h{h:g}"
@@ -133,6 +158,16 @@ def level_crossings(
         increment[i] = crossing[i] - previous
         previous = crossing[i]
     return LevelCrossings(crossing, iteration, increment, reached, skipped)
+
+
+def normalization_time(crossings: LevelCrossings) -> tuple[float, int]:
+    """T_N: the crossing time of the highest level a (Newton) solve reached, and that level's index;
+    (NaN, -1) if it reached none."""
+    reached = np.nonzero(crossings.reached)[0]
+    if reached.size == 0:
+        return math.nan, -1
+    top = int(reached[-1])
+    return float(crossings.time[top]), top
 
 
 def aggregate(values: np.ndarray, reached: np.ndarray) -> dict[str, np.ndarray]:
@@ -299,18 +334,24 @@ def unmatched_scene_params(table: dict, benchmark_scenes) -> list[str]:
 
 
 def select_frames(
-    time: np.ndarray, entries: np.ndarray, n_frames: int, span: float, return_targets: bool = False
+    time: np.ndarray,
+    entries: np.ndarray,
+    n_frames: int,
+    span: float,
+    return_targets: bool = False,
+    end: float | None = None,
 ):
     """Snapshots to keep as video frames: the nearest in solver time to k * span / n_frames for k = 0, 1, ...
-    up to the solve's end time, and to the end time itself.
+    up to the end time, and to the end time itself.
 
     Args:
         time (np.ndarray): (n,) cumulative solver time per log entry.
         entries (np.ndarray): Sorted log entries that have a snapshot.
         n_frames (int): Frames over ``span``.
         span (float): Solver time the frames are spread over (the budget; the solve's end if not finite).
-
         return_targets (bool): Also return each target time and the index picked for it.
+        end (float | None): The last time to show, at most the solve's end (default: the solve's end),
+            e.g. the span, for a solve that ran past it.
 
     Returns:
         np.ndarray: Sorted, unique indices into ``entries``; with ``return_targets``, (indices, targets)
@@ -321,7 +362,7 @@ def select_frames(
         empty = np.zeros(0, dtype=np.int64)
         return (empty, np.zeros(0)) if return_targets else empty
     t = np.asarray(time, dtype=np.float64)[entries]
-    end = float(time[-1])
+    end = float(time[-1]) if end is None else min(float(end), float(time[-1]))
     span = span if math.isfinite(span) and span > 0 else end
     targets = span * np.arange(n_frames + 1) / n_frames
     targets = np.append(targets[targets <= end], end)
@@ -360,10 +401,13 @@ def _append_name(group: h5py.Group, attr: str, name: str) -> None:
         group.attrs[attr] = names + [name]
 
 
-def require_case(f: h5py.File, benchmark: str, case: str, attrs: dict) -> h5py.Group:
-    """The ``/<benchmark>/<case>`` group with ``attrs``, recorded in the file's order attributes."""
+def require_case(f: h5py.File, benchmark: str, case: str, attrs: dict, levels=None) -> h5py.Group:
+    """The ``/<benchmark>/<case>`` group with ``attrs``, recorded in the file's order attributes;
+    ``levels`` sets the benchmark's levels (its group's ``levels`` attribute)."""
     _append_name(f, "benchmarks", benchmark)
     b = f.require_group(benchmark)
+    if levels is not None:
+        b.attrs["levels"] = np.asarray(levels, dtype=np.float64)
     _append_name(b, "cases", case)
     g = b.require_group(case)
     g.attrs.update({k: v for k, v in attrs.items() if v is not None})
@@ -382,14 +426,17 @@ def write_solver(
         summaries (list[dict]): Per sample: ``sample``, ``e0``, ``iterations``, ``sweeps``,
             ``solver_time``, ``final_relative_error``, ``termination``, ``deformation_energy``,
             ``crossings`` (:class:`LevelCrossings`), and optionally ``min_J``,
-            ``reference_error_bound`` and ``reference_relative_error_bound``.
+            ``reference_error_bound``, ``reference_relative_error_bound``, ``budget`` (the solve's time
+            budget) and ``normalization`` (the time the sample's increments are divided by, T_N; with it,
+            ``normalized_increment`` and its aggregates are written).
         logs (list): Per sample, (error, time, sweeps) arrays.
         trajectories (list | None): Per sample, a trajectory dict (:func:`write_trajectory`), if any.
     """
     g = group.create_group(solver)
     g.attrs.update(solver=solver, n_samples=len(summaries))
     scalar_keys = ["sample", "e0", "iterations", "sweeps", "solver_time", "host_time", "final_relative_error",
-                   "deformation_energy", "min_J", "reference_error_bound", "reference_relative_error_bound"]
+                   "deformation_energy", "min_J", "reference_error_bound", "reference_relative_error_bound",
+                   "budget", "normalization"]
     for key in scalar_keys:
         if summaries and all(key in s for s in summaries):
             g.create_dataset(key, data=np.array([s[key] for s in summaries]))
@@ -408,7 +455,14 @@ def write_solver(
         # Levels the reference resolves: 1 - level at least the reference's relative accuracy
         bound = np.array([s["reference_relative_error_bound"] for s in summaries])[:, None]
         g.create_dataset("resolvable", data=(1.0 - np.asarray(levels)[None, :]) >= bound)
-    for name, values in [("increment", stacked["increment"]), ("crossing_time", stacked["time"])]:
+    aggregated = [("increment", stacked["increment"]), ("crossing_time", stacked["time"])]
+    if summaries and all("normalization" in s for s in summaries):
+        # Increments over the sample's T_N, e.g. a Newton solve's reached increments sum to 1
+        normalization = np.array([s["normalization"] for s in summaries], dtype=np.float64)[:, None]
+        normalized = stacked["increment"] / normalization
+        g.create_dataset("normalized_increment", data=normalized)
+        aggregated.append(("normalized_increment", normalized))
+    for name, values in aggregated:
         a = g.create_group(f"aggregate/{name}")
         for stat, v in aggregate(values, stacked["reached"]).items():
             a.create_dataset(stat, data=v)
@@ -499,12 +553,26 @@ class TestLevelCrossings(unittest.TestCase):
         np.testing.assert_array_equal(entries[pick], [0, 20, 40, 60, 80, 100])
         # Few snapshots: duplicates collapse
         np.testing.assert_array_equal(select_frames(time, np.array([0, 100]), 10, 10.0), [0, 1])
+        # A solve that ran past its span: frames up to the span only
+        np.testing.assert_array_equal(entries[select_frames(time, entries, 5, 4.0)], [0, 8, 16, 24, 32, 40, 100])
+        np.testing.assert_array_equal(entries[select_frames(time, entries, 5, 4.0, end=4.0)], [0, 8, 16, 24, 32, 40])
         self.assertEqual(select_frames(time, np.array([], dtype=np.int64), 5, 1.0).size, 0)
 
     def test_parse_levels(self):
         self.assertEqual(parse_levels("0.9, 0.5,0.99"), (0.5, 0.9, 0.99))
         with self.assertRaises(ValueError):
             parse_levels("0.5,1.0")
+        table = parse_levels_options(["0.5,0.9", "static=0.5,0.99,0.999"])
+        self.assertEqual(levels_for(table, "static"), (0.5, 0.99, 0.999))
+        self.assertEqual(levels_for(table, "dynamic_h0.01"), (0.5, 0.9))
+        self.assertEqual(levels_for({}, "static"), DEFAULT_LEVELS)
+        with self.assertRaises(ValueError):
+            parse_levels_options(["static=0.5", "static=0.9"])
+
+    def test_normalization_time(self):
+        c = level_crossings(np.array([1.0, 0.45, 0.05, 0.02]), np.array([0.0, 1.0, 3.0, 5.0]), (0.5, 0.9, 0.99))
+        self.assertEqual(normalization_time(c), (3.0, 1))  # 90% at 3 s; 99% never
+        self.assertTrue(math.isnan(normalization_time(level_crossings(np.ones(2), np.arange(2.0), (0.5,)))[0]))
 
     def test_budget_precedence(self):
         budgets = parse_budget_options(["static=5", "static/Y1e8=10"])
@@ -553,14 +621,15 @@ class TestLevelCrossings(unittest.TestCase):
             path = os.path.join(root, "results.h5")
             with h5py.File(path, "w") as f:
                 f.attrs.update(format=FORMAT, version=VERSION, levels=levels)
-                case = require_case(f, "static", "Y1e6", {"scene": "Y1e6", "budget": 10.0})
+                case = require_case(f, "static", "Y1e6", {"scene": "Y1e6", "budget": 10.0}, levels=levels)
                 for solver, errors in runs.items():
                     summaries, logs = [], []
                     for s, r in enumerate(errors):
                         c = level_crossings(np.array(r), np.array(times), levels)
                         summaries.append(dict(sample=s, e0=1.0, iterations=2, sweeps=0, solver_time=3.0,
                                               final_relative_error=r[-1], termination="target",
-                                              deformation_energy=1.0, crossings=c))
+                                              deformation_energy=1.0, crossings=c, budget=10.0,
+                                              normalization=[3.0, 2.0][s]))
                         logs.append((np.array(r), np.array(times), np.zeros(3, dtype=np.int64)))
                     write_solver(case, solver, levels, summaries, logs)
             with h5py.File(path, "r") as f:
@@ -569,6 +638,10 @@ class TestLevelCrossings(unittest.TestCase):
                 g = cases[0][2]["Newton"]
                 np.testing.assert_array_equal(g["aggregate/increment/count"][()], [2, 1])
                 np.testing.assert_allclose(g["aggregate/increment/mean"][()], [2.0, 1.0])
+                # Over each sample's T_N (3 s and 2 s): Newton's reached increments sum to 1 per sample
+                np.testing.assert_allclose(g["normalized_increment"][()], [[2 / 3, 1 / 3], [1.0, np.nan]])
+                np.testing.assert_allclose(g["aggregate/normalized_increment/mean"][()], [5 / 6, 1 / 3])
+                np.testing.assert_array_equal(benchmark_levels(f, "static"), levels)
                 self.assertEqual(list(g["termination"].asstr()[()]), ["target", "target"])
             budgets = budgets_from_pilot(path, factor=2.0)
             # Newton reached 99% in one sample, at 3 s
