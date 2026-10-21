@@ -34,6 +34,7 @@ from ..elasticity.snh import snh_eval, snh_hess
 from ..elasticity.spd import filter_eigenvalues9
 from ..elasticity.chain import hessian_wrt_dofs
 from ..gradient import GradientNorm
+from ..vbd.convergence import ratio_to_tolerance
 from ..contact import halfedges
 from .. import types
 
@@ -880,6 +881,8 @@ class Params:
         # NewtonSolver.solve until a consumer (SimulationState.step) drains them
         self.last_subproblem: NewtonSubproblemRecord | None = None
         self.solve_records: list[NewtonSolveRecord] = []
+        # (gradient, feasibility) ratios to their tolerances of the last check_convergence
+        self.last_outer_ratios: tuple[float, float] = (float("nan"), float("nan"))
 
     def construct(self, fem: FemElastoDynamics, contact: ContactDynamics):
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = (
@@ -1106,13 +1109,22 @@ def check_convergence(
     term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
     guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
     augmented-Lagrangian gradient, as in C++.
+
+    Sets ``params.last_outer_ratios`` to the test's (gradient, feasibility) measures over their
+    tolerances, as the VBD family's status ratios (at most 1 passes). The absolute test doesn't include
+    feasibility, but its ratio is still measured when the shared check exists (NaN otherwise).
     """
     check = _relative_check(params)
     if check is not None:
-        return check.test_outer()
+        passed = check.test_outer()
+        params.last_outer_ratios = (check.gradient_ratio(), check.feasibility_ratio())
+        return passed
     main_stream = wp.get_stream()
     params._gradient_norm.compute(main_stream)
-    return float(params._gnorm2.numpy()[0]) <= float(params.data.gtol2)
+    gnorm2, gtol2 = float(params._gnorm2.numpy()[0]), float(params.data.gtol2)
+    feasibility = params.convergence.feasibility_ratio(measure=True) if params.convergence is not None else float("nan")
+    params.last_outer_ratios = (float(np.sqrt(ratio_to_tolerance(gnorm2, gtol2))), feasibility)
+    return gnorm2 <= gtol2
 
 
 def prepare_subproblem(
@@ -1160,11 +1172,15 @@ class NewtonSubproblemRecord(NamedTuple):
 
 
 class NewtonSolveRecord(NamedTuple):
-    """One Newton solve (time step or substep): outer iterations and their subproblems."""
+    """One Newton solve (time step or substep): outer iterations, their subproblems, and the
+    (gradient, feasibility) ratios to their tolerances of every outer test (``check_convergence``), in
+    order: the test before each subproblem, then the final one, so ``len(outer_tests) ==
+    len(subproblems) + 1``. The last entry is the solve's result."""
 
     outer: int  # outer (augmented-Lagrangian) iterations run
     converged: bool  # the outer test passed within the budget
     subproblems: tuple[NewtonSubproblemRecord, ...]
+    outer_tests: tuple[tuple[float, float], ...] = ()
 
 
 def _assemble_hessian(
@@ -1454,11 +1470,12 @@ class NewtonSolver:
         params: Params,
     ) -> bool:
         converged = False
-        subproblems = []
+        subproblems, outer_tests = [], []
         initialize_solve(fem, contact, cd, params)
         for _ in range(int(params.data.n_max_iters)):
-            if check_convergence(fem, contact, params):
-                converged = True
+            converged = check_convergence(fem, contact, params)
+            outer_tests.append(params.last_outer_ratios)
+            if converged:
                 break
             prepare_subproblem(fem, contact, cd, params)
             solve_subproblem(fem, contact, params)
@@ -1467,11 +1484,12 @@ class NewtonSolver:
         if not converged:
             # As C++ newton::Solve: test the last subproblem's result too (a test, not a step)
             converged = check_convergence(fem, contact, params)
+            outer_tests.append(params.last_outer_ratios)
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         # Host-side status of the solve, drained by SimulationState.step
         params.solve_records.append(
-            NewtonSolveRecord(len(subproblems), converged, tuple(subproblems))
+            NewtonSolveRecord(len(subproblems), converged, tuple(subproblems), tuple(outer_tests))
         )
         return converged
 

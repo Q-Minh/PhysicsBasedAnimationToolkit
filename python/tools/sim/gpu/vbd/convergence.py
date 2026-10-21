@@ -169,6 +169,14 @@ def feasibility_tolerance(ftol: float, dmin: float) -> float:
     return float(ftol) * max(abs(float(dmin)), FEASIBILITY_FLOOR)
 
 
+def ratio_to_tolerance(value: float, tolerance: float) -> float:
+    """Host-side ``value / tolerance`` as the status kernels compute their ratios (:func:`_gradient_ratio`,
+    :func:`_feasibility_ratio`): 0 for a zero value, inf for a positive value over a zero tolerance."""
+    if tolerance > 0.0:
+        return value / tolerance
+    return float("inf") if value > 0.0 else 0.0
+
+
 @wp.func
 def _feasibility_tolerance(ftol: wp.float32, dmin: wp.float32) -> wp.float32:
     """Largest allowed penetration into the contact margin, ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``.
@@ -737,16 +745,45 @@ class ConvergenceCheck:
         """Host-side outer test of the current positions, as the VBD family's between outer
         iterations: the relative gradient test (:meth:`test_gradient`) and feasibility, the largest
         penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``.
-        Synchronizes, so not capturable.
+        Both are always measured, so :meth:`gradient_ratio` and :meth:`feasibility_ratio` describe
+        this test. Synchronizes, so not capturable.
 
         Returns:
             bool: Whether both pass (False if the relative test is off).
         """
-        if not self.test_gradient():
-            return False
+        gradient_passes = self.test_gradient()
         self._measure_penetration()
         tol = feasibility_tolerance(self.params.ftol, self._contact.data.dmin)
-        return float(self.penetration.numpy()[0]) <= tol
+        return gradient_passes and float(self.penetration.numpy()[0]) <= tol
+
+    def gradient_ratio(self) -> float:
+        """Host-side relative gradient measure of the last test over its tolerance,
+        ``sqrt(sum |g_i|^2 / m_i / (rtol^2 scale))``, as the status ring's ``gradient_ratio``: at most 1
+        when it passes. Synchronizes.
+
+        Returns:
+            float: The ratio (from the last :meth:`test_gradient`, :meth:`test_outer` or
+            :meth:`relative_test`).
+        """
+        den = float(self.params.rtol) ** 2 * float(self.displacement_m2.numpy()[0])
+        return float(np.sqrt(ratio_to_tolerance(float(self.residual_m2.numpy()[0]), den)))
+
+    def feasibility_ratio(self, measure: bool = False) -> float:
+        """Host-side largest penetration into the contact margin over its tolerance
+        ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``, as the status ring's ``feasibility_ratio``: at most 1
+        when feasible. Synchronizes.
+
+        Args:
+            measure (bool): Measure the penetration at the current positions first; otherwise use
+                the last :meth:`test_outer`'s.
+
+        Returns:
+            float: The ratio.
+        """
+        if measure:
+            self._measure_penetration()
+        tol = feasibility_tolerance(self.params.ftol, self._contact.data.dmin)
+        return ratio_to_tolerance(float(self.penetration.numpy()[0]), tol)
 
     def relative_test(self, g: wp.array) -> bool:
         """Host-side relative test of a given gradient, ``sum |g_i|^2 / m_i <= rtol^2 * scale``, against
