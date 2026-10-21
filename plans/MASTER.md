@@ -989,6 +989,8 @@ Answer when back; each has the coordinator's recommendation.
     het time to 99% / 99.999%: CG 1000 8.1 / 73.3 s; 2000 15.8 / 54.7 s; 5000 36.7 / 45.8 s: small caps win early, large
     caps win the tail. Task 2 running a CG cap sweep (static 5 scenes, dynamic Y1e8/het). Options for the maintainer:
     per-case best fixed cap; Eisenstat-Walker forcing (rtol tied to |g|); a 3x3 block-Jacobi preconditioner.
+    **Maintainer:** keep the window stall rule (no switch unless necessary); energy_noise_warning fix approved (task 4,
+    recompute the dataset's attributes in place after the run).
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
