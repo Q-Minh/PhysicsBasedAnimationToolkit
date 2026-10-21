@@ -21,7 +21,9 @@ extends = ["shared.toml"]
 dataset = "data/benchmarks/trampolines.h5"  # relative to the current directory (the repo root)
 solvers = ["VBD", "AAAVBD", "Chebyshev", "AndersonSolver", "Newton"]
 max_seconds = 60.0  # Newton's cap per problem (a practical cap); T_N sets every other solver's budget
-budget_factor = 1.0
+# 2 x T_N: benchmark_plot.py scores the bars at 1 x T_N by default (re-scored from the logs) and
+# benchmark_curves.py draws the whole 2 x T_N, from the same results file
+budget_factor = 2.0
 newton_stall_iterations = 2
 newton_stall_reduction = 0.02
 

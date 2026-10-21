@@ -17,6 +17,13 @@ that reached it jumped over (zero time). A cell beyond the reference's accuracy 
 ``resolvable`` is False for some sample) gets a red x instead of bars: its errors measure the reference,
 not the solvers. Bars are drawn back to front for the chosen camera, so nearer bars cover farther ones.
 
+Budget: the bars score each solve within ``--budget-factor F`` x T_N. The default is 1 (the paper's bars), or
+the run's factor when that is smaller. A run at a larger factor (``benchmark.py --budget-factor``, e.g. 2, so
+that ``benchmark_curves.py`` shows the convergence past T_N) is re-scored from its logs: levels crossed after
+F x T_N count as unreached, and the increments, aggregates and n/N follow (``benchmark_results.rescore``).
+F larger than the run's factor is refused: its logs end there. Cases with a fixed ``--budget`` are scored
+as run.
+
 Solver order within a cell: the solvers with taller bars stand further back, so shorter ones in front stay
 visible. Per figure, solvers are sorted by the 75th percentile of their mean bar heights over the figure's
 drawn cells (a percentile rather than the mean, so a single tall cell doesn't decide), tallest at the
@@ -25,7 +32,7 @@ back; the legend lists them in the same order, back to front. ``--solver-order``
 Usage:
     python -m python.tools.sim.benchmark_plot results.h5 -o out/figures/benchmark \
         [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--solver-order Newton,VBD,...] \
-        [--elev 28] [--azim -62] [--dpi 200]
+        [--budget-factor 1] [--elev 28] [--azim -62] [--dpi 200]
 
 Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark.
 """
@@ -88,10 +95,14 @@ def unresolvable_levels(g: h5py.Group, solvers: list[str], n_levels: int) -> np.
     return np.zeros(n_levels, dtype=bool)
 
 
-def normalized_aggregate(g: h5py.Group, solver: str) -> dict:
+def normalized_aggregate(g: h5py.Group, solver: str, rescore: tuple | None = None) -> dict:
     """The solver's per-level statistics of normalized increments: ``normalized_increment`` (increment /
-    T_N or the fixed budget), or for files without it, the increments over the case's budget."""
+    T_N or the fixed budget), or for files without it, the increments over the case's budget. ``rescore``
+    = (levels, factor) re-scores a T_N case at factor x T_N (:func:`benchmark_results.rescore`)."""
     sg = g[solver]
+    if rescore is not None and "budget" not in g.attrs and "normalization" in sg:
+        a = results.rescore(sg, *rescore)
+        return {s: a[s] for s in ("count", "mean", "min", "max")}
     if "aggregate/normalized_increment" in sg:
         a = sg["aggregate/normalized_increment"]
         return {s: np.asarray(a[s]) for s in ("count", "mean", "min", "max")}
@@ -105,13 +116,13 @@ def drawn_heights(a: dict, unresolvable: np.ndarray) -> np.ndarray:
     return a["mean"][drawn]
 
 
-def depth_order(cases, solvers: list[str], n_levels: int) -> list[str]:
+def depth_order(cases, solvers: list[str], n_levels: int, rescore: tuple | None = None) -> list[str]:
     """Solvers back to front: descending 75th percentile of their drawn bar heights over the figure
     (0 for a solver without bars), ties in the given order."""
     key = {}
     for solver in solvers:
         heights = [
-            drawn_heights(normalized_aggregate(g, solver), unresolvable_levels(g, solvers, n_levels))
+            drawn_heights(normalized_aggregate(g, solver, rescore), unresolvable_levels(g, solvers, n_levels))
             for _, g in cases
             if solver in g
         ]
@@ -120,12 +131,30 @@ def depth_order(cases, solvers: list[str], n_levels: int) -> list[str]:
     return sorted(solvers, key=lambda s: -key[s])
 
 
+def budget_factor(f: h5py.File, factor: float | None) -> float:
+    """The factor the bars score at: ``factor``, by default 1 or the run's factor when that is smaller.
+    ValueError for one above the run's factor (its logs end there) or not positive."""
+    run = float(f.attrs.get("budget_factor", 1.0))
+    if factor is None:
+        return min(1.0, run)
+    if not factor > 0:
+        raise ValueError(f"--budget-factor must be positive, got {factor:g}")
+    if factor > run * (1 + 1e-9):
+        raise ValueError(f"--budget-factor {factor:g} is above the run's {run:g}: its logs end at {run:g} x T_N")
+    return factor
+
+
 def plot_benchmark(
-    f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None
+    f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None,
+    factor: float | None = None,
 ):
     """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
-    ``solver_order`` (back to front) overrides :func:`depth_order`."""
+    ``solver_order`` (back to front) overrides :func:`depth_order`. ``factor``: the budget factor the bars
+    score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs."""
     levels = results.benchmark_levels(f, benchmark)
+    factor = budget_factor(f, factor)
+    run = float(f.attrs.get("budget_factor", 1.0))
+    rescore = (levels, factor) if factor < run * (1 - 1e-9) else None
     cases = [(c, g) for b, c, g in results.iter_cases(f) if b == benchmark]
     solvers = [s for s in solvers if any(s in g for _, g in cases)]
     n_s, n_l = len(solvers), len(levels)
@@ -133,7 +162,7 @@ def plot_benchmark(
     if solver_order:
         solvers = [s for s in solver_order if s in solvers] + [s for s in solvers if s not in solver_order]
     else:
-        solvers = depth_order(cases, solvers, n_l)
+        solvers = depth_order(cases, solvers, n_l, rescore)
     slot = 0.84 / max(n_s, 1)  # bar footprint along x within a case
     bar_w, bar_d = 0.8 * slot, 0.4
     box_w, box_d = slot, 0.5  # min/max box footprint, around the mean bar
@@ -154,7 +183,7 @@ def plot_benchmark(
         for k, solver in enumerate(solvers):
             if solver not in g:
                 continue
-            a = normalized_aggregate(g, solver)
+            a = normalized_aggregate(g, solver, rescore)
             count, n = a["count"], int(g[solver].attrs["n_samples"])
             mean, lo, hi = a["mean"], a["min"], a["max"]
             color = solver_color(solver, solvers)
@@ -228,8 +257,9 @@ def plot_benchmark(
                               color=UNRESOLVABLE_COLOR, label="beyond the reference's accuracy"))
     fig.legend(handles=handles, loc="upper right", fontsize=8, frameon=False)
     fig.suptitle(benchmark_title(benchmark), x=0.02, ha="left", fontsize=11)
-    fig.text(0.02, 0.02, "Bars: mean over the samples that reached the level; n/N: samples that reached it "
-             f"(always shown at {100 * levels[-1]:g}%)",
+    within = "" if all(fixed) else f" within {factor:g} x T_N"
+    fig.text(0.02, 0.02, f"Bars: mean over the samples that reached the level{within}; n/N: samples that reached "
+             f"it (always shown at {100 * levels[-1]:g}%)",
              fontsize=7, color="#555555")
     return fig
 
@@ -246,6 +276,9 @@ def main():
     parser.add_argument("--solver-order", default=None, dest="solver_order",
                         help="Comma-separated solvers, back to front within a cell (default: per figure, taller bars "
                         "further back; see the module docstring).")
+    parser.add_argument("--budget-factor", type=float, default=None, dest="budget_factor",
+                        help="Score the bars within this factor x Newton's T_N, at most the run's factor (a run at a "
+                        "larger one is re-scored from its logs). Default: 1, or the run's factor when smaller.")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -254,10 +287,14 @@ def main():
         results.check_format(f, args.results)
         solvers = args.solvers.split(",") if args.solvers else [str(s) for s in f.attrs["solvers"]]
         benchmarks = args.benchmarks or [str(b) for b in f.attrs["benchmarks"]]
+        try:
+            factor = budget_factor(f, args.budget_factor)
+        except ValueError as e:
+            raise SystemExit(str(e))
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         for benchmark in benchmarks:
             order = args.solver_order.split(",") if args.solver_order else None
-            fig = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order)
+            fig = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches="tight")
