@@ -388,7 +388,7 @@ Each session updates only its own row.
 | Phase 0 | not started | 2026-10-17 | waiting until all task questions are answered |
 | 1 | on hold (all merged) | 2026-10-18 | Merged: kinematics, scene ingestion, VertexSdf slot/barycentric/stream-order fixes, VF capacity, static and plane colliders (finite planes with thickness), CPU `-o` fix, Dump-to-scene converter + beam/TwistPull scenes. Worktree rebased on dev. Waiting for the maintainer |
 | 2 | on hold (merged c0d38305) | 2026-10-20 | Deterministic Anderson Gram (decision #11 A) merged: bit-reproducible, ~2% per Anderson iteration |
-| 3 | merged 87060f67 | 2026-10-20 | `feature/benchmark-config` (cccbcd6b): Anderson p = 2 in shared.toml, `--scene-params BENCHMARK/SCENE=` keys, per-case newton_cg_*, newton_cg1000.toml for static/Y1e8 and het; budgets wait for the maintainer |
+| 3 | ready to merge | 2026-10-20 | `feature/newton-normalization` (bda948da): per-sample Newton normalization (Newton first, T_N budgets, stall test, per-benchmark levels, red x); stall defaults (2, 0.03) and x rule await the maintainer |
 | 4 | benchmark generator merged into dev (`4029072e`); full dataset on hold | 2026-10-18 | Test set in `data/benchmarks/trampoline-test` passes task 3's loader. Full generation waits for the coordinator's data, plot and measurement requirements |
 
 ## Coordination log
@@ -891,6 +891,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-20 · task 3 · **GPU run END** (float64 error log cost): solver time unchanged; logging span 4.6 -> 7.7 us per entry.
 - 2026-10-20 · task 3 · **GPU run START** (<= 15 min, one benchmark.py process; please keep the GPU quiet, timings are compared): floor check (maintainer-approved), AAAVBD + Newton, 1 problem per set of trampolines-pilot, levels to 1 - 1e-6, caps 60 s static / 10 s dynamic. Will log END.
 - 2026-10-20 · task 3 · **GPU run END** (floor check): report sent to the coordinator. The GPU is free.
+- 2026-10-20 · task 3 · **GPU run START** (~2 min, one benchmark.py process): Newton-normalization validation, AAAVBD + Newton on trampolines-test Y1e6 static and dynamic_h0.01, sample 0. Will log END.
+- 2026-10-20 · task 3 · **GPU run END** (Newton-normalization validation). The GPU is free.
 
 ## Open questions for the maintainer
 
@@ -962,6 +964,13 @@ Answer when back; each has the coordinator's recommendation.
     to Newton's highest reached level. Global cap 60 s. Levels per figure; maintainer suggested 60/75/90/99/99.9/...
     (drop 60% and 95%), coordinator suggested decade spacing 50/90/99/99.9/99.99[/99.999]; to settle. Step 3 sent to
     task 3. Float64 references: not needed (h = 1e-2 reference-limited by only 1-2x; h = 1e-4 limited by float32 iterates).
+    **Merged 84467e35 (pushed):** per-sample Newton budgets/normalization, stall test, per-benchmark levels, red x.
+    **Next (maintainer, 2026-10-20 night):** stall rule = average per step over a window on the best-so-far error,
+    min_{j<=c} e_j > (1 - delta)^K min_{j<=c-K} e_j, smallest K without losses (task 3); decade levels (static to
+    99.999%, dynamic to 99.99%); solver depth order in the bars, tallest furthest back (task 3); a separate
+    convergence-curve figure on one static + one dynamic problem to show sub-linear tails, instead of a larger budget
+    factor in the bar plots (task 3); a polyscope viewer for benchmark snapshots (task 1); diagnosis of GPU Newton's slow
+    static convergence (maintainer suspects a bug, e.g. Dirichlet handling) (task 2). Push approved.
 7. **Go-ahead for the full dataset generation** (maintainer: wait until the other questions are settled), then **scheduling the full benchmark run** (quiet GPU, one benchmark
    at a time).
 8. ~~Snapshot frames~~ **Answered:** frames = video duration × fps, defaults 5 s and 24 fps (120), both parameters; each
