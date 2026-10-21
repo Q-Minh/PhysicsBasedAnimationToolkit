@@ -1,8 +1,30 @@
+import unittest
+
+import numpy as np
 import warp as wp
 
 from . import pairs
 from .. import common
 from ..common.buffer import DoubleBuffer
+
+# friction_limit of a contact whose Coulomb limit isn't frozen yet in this time step (limits are >= 0)
+FRICTION_LIMIT_UNSET = wp.constant(-1.0)
+
+
+@wp.func
+def frozen_friction_limit(
+    friction_limit: wp.array[wp.float32],
+    k: wp.int32,
+    estimate: wp.float32,
+):
+    """Contact k's Coulomb limit for the rest of the time step: ``estimate`` (the limit at the current
+    normal force) at the contact's first evaluation in the step, which it stores in ``friction_limit[k]``,
+    then the stored value until :meth:`ConstraintSet.reset_friction_limits` (GPU Newton)."""
+    C = friction_limit[k]
+    if C < wp.float32(0):
+        C = estimate
+        friction_limit[k] = C
+    return C
 
 
 @wp.kernel
@@ -15,18 +37,20 @@ def _snapshot_and_reset_constraints(
     gamma: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
+    friction_limit: wp.array[wp.float32],
     u_prev: wp.array[wp.uint32],
     v_prev: wp.array[wp.uint32],
     s_prev: wp.array[wp.float32],
     gamma_prev: wp.array[wp.float32],
     lambda_n_prev: wp.array[wp.float32],
     lambda_f_prev: wp.array[wp.vec2f],
+    friction_limit_prev: wp.array[wp.float32],
 ):
     """Copy slot k of the current arrays to the previous snapshot, then reset it to defaults.
 
     Slot k gets the key (u, v) of the new contact k, or the empty-slot sentinel u = n_u past the
-    contacts, so that the next update can find it. gamma (1) and the multipliers (0) are reset, and
-    s is recomputed by the solver's dual updates.
+    contacts, so that the next update can find it. gamma (1), the multipliers (0) and the frozen
+    Coulomb limit (unset) are reset, and s is recomputed by the solver's dual updates.
     """
     k = wp.tid()  # type: ignore
     u_prev[k] = u[k]
@@ -35,6 +59,7 @@ def _snapshot_and_reset_constraints(
     gamma_prev[k] = gamma[k]
     lambda_n_prev[k] = lambda_n[k]
     lambda_f_prev[k] = lambda_f[k]
+    friction_limit_prev[k] = friction_limit[k]
     n_contacts = contacts.prefix[n_u]
     if wp.uint64(k) < n_contacts:  # type: ignore
         u[k] = contacts.u[k]
@@ -44,6 +69,7 @@ def _snapshot_and_reset_constraints(
     gamma[k] = wp.float32(1)
     lambda_n[k] = wp.float32(0)
     lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))
+    friction_limit[k] = FRICTION_LIMIT_UNSET
 
 
 @wp.kernel
@@ -56,18 +82,20 @@ def _warm_start_constraints(
     gamma_prev: wp.array[wp.float32],
     lambda_n_prev: wp.array[wp.float32],
     lambda_f_prev: wp.array[wp.vec2f],
+    friction_limit_prev: wp.array[wp.float32],
     u: wp.array[wp.uint32],
     v: wp.array[wp.uint32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
+    friction_limit: wp.array[wp.float32],
 ):
     """Restore persisting AL state from the previous snapshot into the current arrays.
 
     Thread k reads previous slot k. If it holds a valid contact pair (u, v) >= 0
     that can be located in the new forward contact list, the AL state
-    (s, gamma, lambda_n, lambda_f) is copied to its new position.
+    (s, gamma, lambda_n, lambda_f, friction_limit) is copied to its new position.
     """
     k = wp.tid()  # type: ignore
     pu = u_prev[k]
@@ -84,6 +112,7 @@ def _warm_start_constraints(
     gamma[l] = gamma_prev[k]  # type: ignore
     lambda_n[l] = lambda_n_prev[k]  # type: ignore
     lambda_f[l] = lambda_f_prev[k]  # type: ignore
+    friction_limit[l] = friction_limit_prev[k]  # type: ignore
 
 
 @wp.struct
@@ -97,6 +126,7 @@ class ConstraintSetData:
     gamma: wp.array[wp.float32]
     lambda_n: wp.array[wp.float32]
     lambda_f: wp.array[wp.vec2f]
+    friction_limit: wp.array[wp.float32]
 
 
 class ConstraintSet:
@@ -118,6 +148,13 @@ class ConstraintSet:
     gamma     : float32 constraint decay factor (default 1).
     lambda_n  : float32 normal Lagrange multiplier.
     lambda_f  : vec2f   friction Lagrange multiplier (tangential plane).
+    friction_limit : float32 GPU Newton's Coulomb limit of the primal friction force, frozen for the
+                time step at the contact's first evaluation in it (:func:`frozen_friction_limit`;
+                ``FRICTION_LIMIT_UNSET`` before it). It is carried across re-detection with the rest of
+                the state, so a contact found again keeps its limit, while a contact dropped by one
+                detection and found by a later one starts over, like its multipliers. Newton resets it
+                at the start of each time step (:meth:`reset_friction_limits`); the VBD family doesn't
+                use it.
 
     Parameters
     ----------
@@ -136,6 +173,7 @@ class ConstraintSet:
     gamma: DoubleBuffer
     lambda_n: DoubleBuffer
     lambda_f: DoubleBuffer
+    friction_limit: DoubleBuffer
     _data: ConstraintSetData  # type: ignore
 
     def __init__(self, n_u: int, capacity: int):
@@ -154,11 +192,13 @@ class ConstraintSet:
         self.gamma = _make(1.0, wp.float32)
         self.lambda_n = _make(0.0, wp.float32)
         self.lambda_f = _make(0.0, wp.vec2f)
+        self.friction_limit = _make(FRICTION_LIMIT_UNSET, wp.float32)
         self._data = ConstraintSetData()
         self._data.s = self.s.current
         self._data.gamma = self.gamma.current
         self._data.lambda_n = self.lambda_n.current
         self._data.lambda_f = self.lambda_f.current
+        self._data.friction_limit = self.friction_limit.current
 
     def update_constraint_set(self, contacts: pairs.Pairs):  # type: ignore
         """Prepare the current arrays for a new step, warm-starting from the previous snapshot.
@@ -167,11 +207,11 @@ class ConstraintSet:
 
         1. **Snapshot and reset** (:func:`_snapshot_and_reset_constraints`): copy every field's
            current slot to alternate (the previous snapshot), then set each slot's key ``(u, v)``
-           to its new contact's (``u = n_u`` past the contacts), gamma to 1 and the multipliers
-           to 0.
+           to its new contact's (``u = n_u`` past the contacts), gamma to 1, the multipliers
+           to 0 and the frozen Coulomb limit to unset.
         2. **Warm start** (:func:`_warm_start_constraints`): for each valid previous pair whose
            ``(u, v)`` appears in the new forward contact list, copy ``s``, ``gamma``,
-           ``lambda_n``, ``lambda_f`` to the corresponding current slot. It writes arbitrary
+           ``lambda_n``, ``lambda_f``, ``friction_limit`` to the corresponding current slot. It writes arbitrary
            slots, so it must follow the whole reset.
 
         After this call, every contact's slot holds its key, so the next update can warm-start
@@ -180,7 +220,7 @@ class ConstraintSet:
         Args:
             contacts: Forward contact pairs produced by a collision detector.
         """
-        fields = (self.u, self.v, self.s, self.gamma, self.lambda_n, self.lambda_f)
+        fields = (self.u, self.v, self.s, self.gamma, self.lambda_n, self.lambda_f, self.friction_limit)
         # Step 1: snapshot current into alternate and reset current to defaults.
         wp.launch(
             _snapshot_and_reset_constraints,
@@ -203,16 +243,102 @@ class ConstraintSet:
                 self.gamma.alternate,
                 self.lambda_n.alternate,
                 self.lambda_f.alternate,
+                self.friction_limit.alternate,
                 self.u.current,
                 self.v.current,
                 self.s.current,
                 self.gamma.current,
                 self.lambda_n.current,
                 self.lambda_f.current,
+                self.friction_limit.current,
             ],
         )
+
+    def reset_friction_limits(self):
+        """Unfreeze every contact's Coulomb limit (GPU Newton, at the start of each time step), so each
+        contact's first evaluation in the step freezes it again (:func:`frozen_friction_limit`). A
+        capture-safe fill, no host synchronization."""
+        self.friction_limit.current.fill_(FRICTION_LIMIT_UNSET)
 
     @property
     def data(self) -> ConstraintSetData:  # type: ignore
         """Struct of arrays for kernel inputs/outputs."""
         return self._data
+
+
+@wp.kernel
+def _evaluate_friction_limits(
+    cs: ConstraintSetData,  # pyright: ignore[reportGeneralTypeIssues]
+    estimate: wp.array[wp.float32],
+    n_contacts: wp.int32,
+    limit: wp.array[wp.float32],
+):
+    k = wp.tid()
+    if k < n_contacts:
+        limit[k] = frozen_friction_limit(cs.friction_limit, k, estimate[k])
+
+
+class TestFrozenFrictionLimit(unittest.TestCase):
+    """GPU Newton's frozen Coulomb limits across re-detections and time steps (Warp's CPU device)."""
+
+    n_u = 4
+    capacity = 8
+
+    def setUp(self):
+        self._device = wp.ScopedDevice("cpu")
+        self._device.__enter__()
+        self.contacts = pairs.PairsData()
+        self.cs = ConstraintSet(self.n_u, self.capacity)
+
+    def tearDown(self):
+        self._device.__exit__(None, None, None)
+
+    def _detect(self, uv):
+        """Set the forward contacts (sorted (u, v) pairs) and update the constraint set."""
+        u = np.full(self.capacity, self.n_u, dtype=np.uint32)
+        v = np.full(self.capacity, self.n_u, dtype=np.uint32)
+        u[: len(uv)] = [p[0] for p in uv]
+        v[: len(uv)] = [p[1] for p in uv]
+        prefix = np.zeros(self.n_u + 1, dtype=np.uint64)
+        np.add.at(prefix, u[: len(uv)].astype(np.int64) + 1, 1)
+        self.contacts.prefix = wp.array(np.cumsum(prefix).astype(np.uint64), dtype=wp.uint64)
+        self.contacts.u = wp.array(u, dtype=wp.uint32)
+        self.contacts.v = wp.array(v, dtype=wp.uint32)
+        self.cs.update_constraint_set(self.contacts)
+        self.n_contacts = len(uv)
+
+    def _evaluate(self, estimates):
+        """The limits a gradient evaluation uses when the current normal forces give ``estimates``."""
+        limit = wp.zeros(self.capacity, dtype=wp.float32)
+        wp.launch(
+            _evaluate_friction_limits,
+            dim=self.capacity,
+            inputs=[self.cs.data, wp.array(estimates, dtype=wp.float32), self.n_contacts, limit],
+        )
+        return limit.numpy()[: self.n_contacts].tolist()
+
+    def test_frozen_for_the_time_step(self):
+        # Time step 1: the first detection's contacts freeze at the first evaluation
+        self._detect([(0, 1), (1, 2)])
+        self.cs.reset_friction_limits()
+        self.assertEqual(self._evaluate([1.0, 2.0]), [1.0, 2.0])
+        self.assertEqual(self._evaluate([5.0, 6.0]), [1.0, 2.0])
+        # Second outer iteration: (0, 3) appears between them, moving (1, 2) to another slot
+        self._detect([(0, 1), (0, 3), (1, 2)])
+        self.assertEqual(self._evaluate([7.0, 8.0, 9.0]), [1.0, 8.0, 2.0])
+        self.assertEqual(self._evaluate([10.0, 11.0, 12.0]), [1.0, 8.0, 2.0])
+        # A contact dropped by one detection and found by a later one starts over, like its multipliers
+        self._detect([(0, 1), (0, 3)])
+        self.assertEqual(self._evaluate([13.0, 14.0]), [1.0, 8.0])
+        self._detect([(0, 1), (0, 3), (1, 2)])
+        self.assertEqual(self._evaluate([15.0, 16.0, 17.0]), [1.0, 8.0, 17.0])
+        # Time step 2: every limit is recomputed, persisting contacts included
+        self._detect([(0, 1), (0, 3), (1, 2)])
+        self.cs.reset_friction_limits()
+        self.assertEqual(self._evaluate([0.5, 0.0, 3.0]), [0.5, 0.0, 3.0])
+        self.assertEqual(self._evaluate([4.0, 4.0, 4.0]), [0.5, 0.0, 3.0])
+
+
+if __name__ == "__main__":
+    wp.init()
+    unittest.main()
