@@ -1,5 +1,5 @@
 # Paper parameters, converted from accelerated-vbd-extras/parameters/gpu/empty_basket.Params_3_10_5.h5
-#   (extras commit c2e74d9, sha256 c694af1ecc2ccdff), 2026-10-19.
+#   (extras commit 53951d2, sha256 c694af1ecc2ccdff), 2026-10-20.
 # Hand-tuned values from the source are unchanged. Edit a copy, not this file (see README.md).
 #
 # Added for the accelerated solvers (not hand-tuned):
@@ -15,10 +15,10 @@
 #   Solver.AAAVBD.lipschitz_normalization
 #   Solver.AndersonSolver.linear_solver
 #   Solver.AndersonSolver.vbd_iters_per_anderson_iter
+#   Solver.Convergence.astol
 #   Solver.Convergence.check_interval
-#   Solver.Convergence.displacement_floor
 #   Solver.Convergence.ftol
-#   Solver.Convergence.rtol
+#   Solver.Convergence.rstol
 #   Solver.Newton.LinearSolver.atol
 #   Solver.Newton.LinearSolver.n_max_iters
 #   Solver.Newton.LinearSolver.rtol
@@ -148,10 +148,10 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
+astol = 1e-06
 check_interval = 20
-displacement_floor = 1e-06
 ftol = 0.5
-rtol = 0.01
+rstol = 0.01
 
 [Solver.Newton]
 linear_solver = 1
