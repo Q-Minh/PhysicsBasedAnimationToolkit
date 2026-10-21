@@ -541,41 +541,20 @@ def _git_dirty() -> bool:
         return False
 
 
-def software_versions(nvidia_smi: str | None) -> dict:
-    """Versions of what the timings depend on: Warp, the CUDA driver and toolkit Warp uses, the GPU driver
-    (from nvidia-smi, "" without it), Python and the GPU/array libraries; "" where unknown."""
+def software_versions() -> dict:
+    """Versions of what the timings depend on: Warp, the CUDA driver and toolkit versions Warp reports, and
+    pbatoolkit ("" if its package metadata is missing)."""
     import importlib.metadata
-    import platform
 
-    def package(name: str) -> str:
-        try:
-            return importlib.metadata.version(name)
-        except importlib.metadata.PackageNotFoundError:
-            return ""
-
-    gpu_driver = ""
-    if nvidia_smi:
-        try:
-            gpu_driver = subprocess.check_output(
-                [nvidia_smi, f"--id={wp.get_device().uuid}", "--query-gpu=driver_version", "--format=csv,noheader"],
-                text=True,
-                timeout=10,
-            ).strip()
-        except (OSError, subprocess.SubprocessError):
-            pass
-    import cupy
-
+    try:
+        pbatoolkit = importlib.metadata.version("pbatoolkit")
+    except importlib.metadata.PackageNotFoundError:
+        pbatoolkit = ""
     return {
         "version_warp": wp.__version__,
         "version_cuda_driver": ".".join(str(v) for v in wp.get_cuda_driver_version()),
         "version_cuda_toolkit": ".".join(str(v) for v in wp.get_cuda_toolkit_version()),
-        "version_gpu_driver": gpu_driver,
-        "version_python": platform.python_version(),
-        "version_numpy": np.__version__,
-        "version_cupy": cupy.__version__,
-        "version_cuda_cccl": package("cuda-cccl"),
-        "version_pbatoolkit": package("pbatoolkit"),
-        "version_h5py": h5py.__version__,
+        "version_pbatoolkit": pbatoolkit,
     }
 
 
@@ -652,7 +631,7 @@ def main():
             device=wp.get_device().name,
             git_commit=_git_commit(),
             git_dirty=_git_dirty(),
-            **software_versions(nvidia_smi),
+            **software_versions(),
             date=time.strftime("%Y-%m-%d %H:%M:%S"),
             sim_params=" + ".join(args.sim_params + [f"--set {o}" for o in args.overrides]) or "(code defaults)",
             solvers=[s.name for s in solvers],
@@ -804,10 +783,10 @@ class TestRecords(unittest.TestCase):
 
     def test_versions_and_gpu_state(self):
         wp.init()
-        v = software_versions(None)
+        v = software_versions()
+        self.assertEqual(set(v), {"version_warp", "version_cuda_driver", "version_cuda_toolkit", "version_pbatoolkit"})
         self.assertEqual(v["version_warp"], wp.__version__)
         self.assertRegex(v["version_cuda_driver"], r"^\d+\.\d+$")
-        self.assertEqual(v["version_gpu_driver"], "")  # no nvidia-smi given
         self.assertTrue(all(isinstance(x, str) for x in v.values()))
         self.assertEqual(gpu_state(None, "GPU-0"), {})
         self.assertEqual(gpu_state("path/to/missing/nvidia-smi", "GPU-0"), {})
