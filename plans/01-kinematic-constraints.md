@@ -1,6 +1,6 @@
 # Task 1: Kinematic Dirichlet constraints on the GPU
 
-## Handoff (2026-10-20)
+## Handoff (2026-10-21)
 
 Read first: `MASTER.md` (rules), `python/tools/sim/CLAUDE.md` ("Kinematic constraints", contact), `python/tools/vbd/CLAUDE.md`,
 skills `sim-kinematics` and `sim-run`. Local locations (venv, extras repo, main checkout with `data/`) are in `CLAUDE.local.md`.
@@ -18,12 +18,25 @@ skills `sim-kinematics` and `sim-run`. Local locations (venv, extras repo, main 
 - **Scene configs' contact margin:** `python/tools/sim/configs/scenes/*.toml` (`[Contact.ContactDynamics] dmin`).
 
 ### 2. Current state
-- Everything is merged into dev. My merges: `c41bc1ad` kinematic constraints · `65fc5fe1` GPU reads CPU scene files ·
-  `b31e53f7` plane/static mesh colliders · `c06e7c08` finite planes are plates · `b1cfe462` dump_to_scene · `0d1ad502`
-  rim_patch_scene · `bb05a622` lower friction penalties · `ae0b35b5` AL warm start + detection band + TIMESTEP default ·
-  `6d29fbe0` and `148d9113` viewer plays GPU outputs · `42c4e719` scene-config margin 1e-3.
-- No unmerged branches and no uncommitted changes. The task 1 worktree (`pbat-kinematics`) sits on the merged
-  `feature/scene-config-margin` (`df03c2a1`). To resume: `git switch -c feature/<new> dev` there. The scratch worktree is removed.
+- Everything is merged into dev. Kinematics/contact merges: `c41bc1ad` kinematic constraints · `65fc5fe1` GPU reads CPU
+  scene files · `b31e53f7` plane/static mesh colliders · `c06e7c08` finite planes are plates · `b1cfe462` dump_to_scene ·
+  `0d1ad502` rim_patch_scene · `bb05a622` lower friction penalties · `ae0b35b5` AL warm start + detection band + TIMESTEP
+  default · `6d29fbe0` and `148d9113` viewer plays GPU outputs · `42c4e719` scene-config margin 1e-3.
+- **20-21 Oct (benchmark viewer and material views, all on dev):**
+  - `python/tools/sim/benchmark_viewer.py` (new, skill `sim-benchmarks`): side-by-side solver trajectories of a results
+    file (`ea85fb4a`), overlays of x*, xtilde, start state (dynamic) and X (static) (`3045712a`), hide all solver meshes
+    (`4c7e6c10`), material color modes (`bc062b16`) and lumped mass mode (`985529c4`).
+  - `python/tools/vbd/ui/material.py` (new, numpy only; tests `python -m unittest python.tools.vbd.ui.material`): the CPU
+    editor's names, log10(value + 1) scale, Young's range (5, 9) and colormaps, shared by every mesh GUI (`8ba139ac`).
+    Masses show as log10(m) over their 2-98th percentiles, with massless nodes at the smallest mass (`c27d92c6`).
+  - The same Lame mu, lambda, Young's modulus and Mass quantities in the GPU GUI (`c2000639`), the CPU editor (`d78a32b0`,
+    adds Young's), the modalrom GUI (`9719f01e`) and the benchmark browser (`dd995243`, `aa6e5d77`).
+  - modalrom: a .msh input's lumped mass matrix was not diagonal; now row sums (`40888576`, test
+    `python/examples/test_modalrom.py`).
+  - The viewer crash on static sample 4 was the mislabelled trajectories (MASTER); my frame-dropping branch was deleted
+    unmerged. The coordinator later changed the viewer's default error colors (`4b4cd56a`) and added `benchmark_video.py`.
+- No unmerged branches and no uncommitted changes. The `pbat-kinematics` worktree is detached at `84e164f1`, 13 commits
+  behind dev `b4e73feb` and none ahead. To resume: `git switch -c feature/<new> dev` there.
 
 ### 3. Key decisions (maintainer's unless noted)
 - **Constraints** (Q1-Q11 below): closed form from per-node anchors, composed in library order; half-open windows on the step
@@ -78,6 +91,12 @@ skills `sim-kinematics` and `sim-run`. Local locations (venv, extras repo, main 
 5. **CONSTANT 1e6** isn't a safe body-body fallback: BeamFallingOnBeam loses the beam with VBD/AAAVBD.
 6. **Older gaps** (still open): GPU outputs store only the initial `dmask`; GPU VBD sags about 6x more than CPU VBD on the
    held beam (a solver difference, not kinematics); OGC crashes once bodies touch (low priority).
+
+7. **Viewer and results:** the full results file `data/benchmarks/results/trampolines.h5` has snapshots for samples 0, 4,
+   9, 13, 18, 22, 27, 31 only. Its `dataset` attribute is repo-relative, so outside the main checkout pass `--dataset`.
+   The material views were checked by screenshot only; the maintainer hasn't reviewed them interactively.
+8. **Trampoline pass-through check** (sphere through the plate): cancelled; the maintainer tests the trampolines
+   interactively. Nothing to do unless asked.
 
 ### 6. How to resume
 - Run from the repo root with the venv's python; `data/` lives in the main checkout.
