@@ -92,7 +92,7 @@ Use `samples/x`, not `samples/q`: modes have been mass-normalized since `c03f8cd
 ## Quality checks (report them with every batch)
 
 - **`rhat < 1.05`.** Otherwise raise `--samples`/`--pool` or `--burn-in`. Microcanonical with 100 samples can exceed 1.05 (e.g. 1.08).
-- **`energy_noise_warning = False`.** pbat's energy is float32, with ~1e-4 J absolute noise, so energies ≲ 1 J on the beam can't be resolved.
+- **`energy_noise_warning = False`.** pbat's energy is float32, with ~1e-4 J absolute noise, so energies ≲ 1 J on the beam can't be resolved. Microcanonical pools generated before `samples_energy_noise` overstate the noise on soft scenes (e.g. a false warning on the Y = 1e5 trampoline at 1e4 J); `python recompute_energy_noise.py -d <dataset>.h5` (`--dry-run` to preview) corrects a dataset's attributes in place without resampling.
 - **`star_violations = 0`** for polar.
 - **`importance_weights_required = False`**, i.e. not a ray batch.
 - **`samples/min_J`.** Values ≤ 0 mean inverted elements. They're allowed, but report them.

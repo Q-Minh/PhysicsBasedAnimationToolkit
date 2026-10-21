@@ -306,6 +306,7 @@ $q = \sqrt{2E}\, s \odot \theta$ of the linearized level set, near where they sa
 re-measures it at its samples instead, as the largest $\varepsilon$ over 4 evenly spaced samples of each chain
 (`rom_mcmc.samples_energy_noise`). On soft scenes that probe point lies far outside $\mathcal{U} < E$, e.g. at
 $10^{13}$ J for $E = 10^4$ J on the $Y = 10^5$ circle trampoline, and overstated the noise by up to $10^9$×.
+`recompute_energy_noise.py` corrects datasets generated before this change in place, without resampling.
 Tolerances then follow $\varepsilon$:
 
 - the star-shape crossing check ignores points within $10\varepsilon$ of $E^\star$;
