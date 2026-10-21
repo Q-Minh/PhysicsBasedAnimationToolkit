@@ -42,11 +42,13 @@ python -m python.tools.sim.benchmark --dataset data/benchmarks/trampolines-test.
     --sets Y1e6/static/E10000 --solvers AAAVBD --sample-end 1 --budget 5 -o out/one.h5
 
 # Pilot (Newton only), then every solver: a fixed 5 s for the static benchmark, Newton's median time
-# to 99% for the dynamic ones, at most 3 s
+# to 99% for the dynamic ones, at most 3 s; Newton's CG cap is 1000 for the static Y1e8 and het problems
 python -m python.tools.sim.benchmark --dataset DATASET.h5 --solvers Newton --max-seconds 60 \
     --sim-params python/tools/sim/configs/benchmark/shared.toml -o out/pilot.h5
 python -m python.tools.sim.benchmark --dataset DATASET.h5 --budget-from out/pilot.h5 --budget static=5 --budget-cap 3 \
-    --sim-params python/tools/sim/configs/benchmark/shared.toml --scene-params Y1e8=y1e8.toml -o out/results.h5
+    --sim-params python/tools/sim/configs/benchmark/shared.toml \
+    --scene-params static/Y1e8=python/tools/sim/configs/benchmark/newton_cg1000.toml \
+    --scene-params static/het=python/tools/sim/configs/benchmark/newton_cg1000.toml -o out/results.h5
 python -m python.tools.sim.benchmark_plot out/results.h5 -o out/fig/benchmark
 
 # Only some sets (fnmatch patterns over the names in the dataset's `sets` attribute)
@@ -61,7 +63,7 @@ python -m python.tools.sim.benchmark ... --save-spec out/case.h5 -o out/a.h5
 python -m python.tools.sim.benchmark --spec out/case.h5 -o out/b.h5
 ```
 
-The problems are posed on the dataset's stored FEM (per scene), whose Dirichlet nodes stay fixed at rest. No scene or Dump is passed. **Parameters:** `--sim-params` applies to every scene, then `--scene-params SCENE=A.toml[,B.toml]` (once per scene), then `--set`. `configs/benchmark/shared.toml` holds the settings every scene shares: AAAVBD's shared parameter set and the Inverse vertex solve for every VBD-family solver.
+The problems are posed on the dataset's stored FEM (per scene), whose Dirichlet nodes stay fixed at rest. No scene or Dump is passed. **Parameters:** `--sim-params` applies to every scene, then `--scene-params SCENE=A.toml[,B.toml]` (every benchmark of the scene), then `--scene-params BENCHMARK/SCENE=A.toml[,B.toml]` (one benchmark's problems of it, e.g. `static/Y1e8=`), then `--set`; each key at most once. Each case records its files in `scene_params`. `configs/benchmark/shared.toml` holds the settings every scene shares: AAAVBD's shared parameter set, the Inverse vertex solve for every VBD-family solver, and Anderson's 2 sweeps per step. `configs/benchmark/newton_cg1000.toml` raises Newton's CG cap to 1000, for `static/Y1e8` and `static/het`.
 
 Translating requests:
 
@@ -76,7 +78,7 @@ Translating requests:
 | "Iteration budget N" | `--max-iterations N`: counts VBD sweeps, **Anderson steps** (p sweeps each when `vbd_iters_per_anderson_iter = p`) or Newton steps |
 | "Stop at 95%" | `--target-reduction 0.95` (default: the highest level) |
 | "With a load" | the StaticSolveSpec's `fext_scale` (via `--spec`). Static benchmark problems are load-free by design |
-| "Use parameters P" / "change key K" / "for scene S" | `--sim-params P.toml ...` / `--set K=V` / `--scene-params S=P.toml` (see the `sim-run` skill; check with `python -m python.tools.sim.config show`) |
+| "Use parameters P" / "change key K" / "for scene S" / "for scene S, static only" | `--sim-params P.toml ...` / `--set K=V` / `--scene-params S=P.toml` / `--scene-params static/S=P.toml` (see the `sim-run` skill; check with `python -m python.tools.sim.config show`) |
 | "Coarser/finer graph blocks" | `--block N` (default 16, rounded up to a multiple of Anderson's m). Iterations a block runs past the stop are dropped, so it doesn't change the results |
 | "Other camera" | `benchmark_plot --elev E --azim A` (defaults 28, -62) |
 | "Trajectories for a video" | `--snapshots`: F = `--snapshot-video-seconds` x `--snapshot-fps` frames (default 5 s x 24 = 120; `--snapshot-frames F` overrides) at equal solver-time intervals over the budget, plus level crossings, for `--snapshot-fraction` of each set's samples (default 1: all; ~F x N x 12 bytes each, ~15 MB on the trampolines; the run prints its disk estimate first). `--snapshot-memory-mb` (default 32) caps the device ring of `--snapshot-ring-ratio` x F slots (default 2) |
@@ -86,8 +88,8 @@ Translating requests:
 ## Outputs
 
 - **`results.h5`** (layout in `benchmark_results.py`'s docstring):
-  - root attributes: levels, budget factor, statistic, pilot and options, dataset, device, commit, date, parameter sources, solvers, Newton CG limits; the `StaticSolveSpec` and `dataset_attrs` groups;
-  - `/<benchmark>/<case>`: the case's scene, label, energy, set, `budget` and `budget_source`;
+  - root attributes: levels, budget factor, statistic, pilot and options, dataset, device, commit, date, parameter sources, solvers; the `StaticSolveSpec` and `dataset_attrs` groups;
+  - `/<benchmark>/<case>`: the case's scene, label, energy, set, `budget`, `budget_source`, `scene_params` and Newton's CG limits (`newton_cg_*`);
   - `/<benchmark>/<case>/<solver>`: per sample, e0, iterations, sweeps, solver time, host time (the solve's wall-clock time: minus the solver time, the per-solve overhead), final e/e0, `termination` (`target`, `iteration_cap`, `time_cap`, `non_finite`, or Newton's `newton_non_descent`, `newton_line_search_failed` or `newton_zero_gradient`; Newton stops at its first rejected step, at the float32 floor usually `newton_line_search_failed`), and per sample and level `crossing_time`, `crossing_iteration`, `increment`, `reached` and `skipped` (NaN or -1 when not reached);
   - `aggregate/{increment,crossing_time}/{count,mean,std,min,max,median,q25,q75}` per level, over the samples that reached it;
   - `logs/<sample>/{error,time,sweeps}`: the full per-iteration logs.
@@ -103,7 +105,7 @@ When comparing solvers, use the time to reach each error level, not the time per
 - **Dynamic h:** dynamic problems take h from the set and override `Integration.dt`, the substeps and the BDF order. At small h (1e-4), steps start close to their solution (e0 ~ 1e-3), so float32 rounding floors the error around e/e0 ~ 1e-5 to 1e-4.
 - **Solver parameters:** they come only from `--sim-params`, `--scene-params` and `--set`; without them, the code defaults apply (`configs/defaults.toml`). Pass the scene's config (e.g. `configs/paper/<scene>.toml`) for meaningful solver parameters.
 - **Stopping:** solver `gtol`, `n_max_iters` and `n_subproblem_max_iters` don't stop benchmark solves; the target and the caps do. Newton's CG absolute tolerance is set to 0 (its relative one stays), since in h²-scaled units at small h the gradient drops below it after one step. Vertex-solve and acceleration parameters still matter.
-- **Newton** runs eagerly with host syncs, so its times are noisier. Static problems need `Solver.Newton.LinearSolver.n_max_iters` of about 1500–3000; the default 500 leaves Newton steps inexact.
+- **Newton** runs eagerly with host syncs, so its times are noisier. Its CG cap (`Solver.Newton.LinearSolver.n_max_iters`) trades exact steps for time: the pilot (2026-10-20) found the default 500 fastest to 99%, except on the static Y1e8 and het problems (1000, `newton_cg1000.toml`). Re-check it when the levels change.
 - **Quiet GPU:** timings are only valid while nothing else runs. Reserve the GPU in `plans/MASTER.md` while parallel sessions are active.
 - **Problem sets:** sets that need importance weights (ray sampler) are refused. R-hat ≥ 1.05 and nonzero gravity only warn. Static problems should be gravity-free.
 - **First solve:** the first solve per solver and set includes kernel compilation and graph capture in its host time, but not in the reported times.
