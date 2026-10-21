@@ -938,9 +938,9 @@ Answer when back; each has the coordinator's recommendation.
     run. Note: a median budget leaves Newton itself at ~N/2 at the top level by construction; `max` avoids that.
     **Maintainer (2026-10-20 evening):** no pilot runs for budgets. Per sample, Newton runs first to completion, up
     to a global max budget (practical cap only); its time T_N (or the cap) is every other solver's budget on that
-    sample, and all timings are normalized by T_N. Floor check approved with AAAVBD and Newton only; benchmark error
-    in float64 if cheap; solvers stay float32. Unresolvable cells: a red x or grey-out, not text. playback_factor
-    stays per trajectory, stored for a renderer. All sent to task 3 (float64 error, floor check, then per-sample
+    sample, and all timings are normalized by T_N. Floor check approved with AAAVBD and Newton only; float64 benchmark
+    error dropped (x, x* float32 and close: the difference is exact, no floor from the norm); solvers stay float32. Unresolvable cells: a red x or grey-out, not text. playback_factor
+    stays per trajectory, stored for a renderer. All sent to task 3 (floor check, then per-sample
     normalization). Open: Newton's "completion" if it stalls in float32 before the top level; float64 references
     (task 4, re-explained, awaiting the maintainer).
     **Answers (later, 2026-10-20):** float64 references: wait for the floor check, maintainer leaning strongly to no
