@@ -3,8 +3,9 @@ Convergence curves of a benchmark results file (``benchmark.py``): the relative 
 against solver time over the problem's normalization time T_N (Newton's time to its highest level, or the
 fixed budget), one curve per solver, one panel per chosen problem. They show what the bar charts
 (``benchmark_plot.py``) summarize per level: e.g. the VBD family's sub-linear tails, or a solver stalling
-at a float32 floor. Run the benchmark with ``--budget-factor`` above 1 (e.g. 5) so the curves extend past
-Newton's time.
+at a float32 floor. Each curve is the solve's whole log, up to the run's budget (``benchmark.py
+--budget-factor``, 2 x T_N in the full run, ``configs/benchmark/trampolines.toml``), past the 1 x T_N that the
+bar charts score by default (``benchmark_plot.py --budget-factor``), from the same results file.
 
 - dotted horizontal lines: the benchmark's accuracy levels (e/e0 = 1 - level);
 - dashed vertical line: t = T_N;
