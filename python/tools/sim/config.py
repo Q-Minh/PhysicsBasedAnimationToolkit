@@ -286,10 +286,10 @@ def _describe(sources: list, name: str) -> tuple[bool, type | None, str]:
     return False, None, ""
 
 
-def _flatten(cfg: dict, prefix: str = ""):
+def flatten(cfg: dict, prefix: str = ""):
     for k, v in cfg.items():
         if isinstance(v, dict):
-            yield from _flatten(v, f"{prefix}{k}.")
+            yield from flatten(v, f"{prefix}{k}.")
         else:
             yield f"{prefix}{k}", v
 
@@ -303,7 +303,7 @@ def describe_params(prefix: str = "") -> list[dict]:
 
     sources = _param_sources()
     rows = []
-    for key, default in _flatten(read(DEFAULTS_TOML)):
+    for key, default in flatten(read(DEFAULTS_TOML)):
         if prefix and not (key == prefix or key.startswith(prefix.rstrip(".") + ".")):
             continue
         table, _, name = key.rpartition(".")
@@ -416,7 +416,7 @@ class TestConfig(unittest.TestCase):
         rows = {r["key"]: r for r in describe_params()}
         # Every serialized key maps to a parameter object, so the listing follows the serializers
         self.assertEqual([k for k, r in rows.items() if not r["found"]], [])
-        self.assertEqual(set(rows), {k for k, _ in _flatten(read(DEFAULTS_TOML))})
+        self.assertEqual(set(rows), {k for k, _ in flatten(read(DEFAULTS_TOML))})
         vlinsolve = rows["Solver.AAAVBD.vlinsolve"]
         self.assertEqual((vlinsolve["type"], vlinsolve["enum"][0]), ("enum", "Inverse"))
         self.assertIn("Relative", rows["Solver.Newton.LinearSolver.rtol"]["description"])

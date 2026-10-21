@@ -201,6 +201,11 @@ def parse_args():
                         help="Run file (benchmark_run.py): the run's options ([run]), shared and per-case solver "
                         "parameters ([case.\"SCENE\"], [case.\"BENCHMARK/SCENE\"]). Options given here win over it, "
                         "then --sim-params / --scene-params, then --set.")
+    parser.add_argument("--list", action="store_true", dest="list_cases",
+                        help="List the dataset's problem sets (from --dataset or the run file) as run-file case keys "
+                        "(BENCHMARK/SCENE), with kind, h, scene, energy, problem count, mesh, materials, Dirichlet "
+                        "nodes and the dynamic sets' reference accuracy, plus the levels, budget and case parameters "
+                        "a --run file gives them; then exit (no GPU, no sample batches loaded).")
     parser.add_argument("--dry-run", action="store_true", dest="dry_run",
                         help="Print each case's sets, levels, budget and effective Newton CG settings, and exit "
                         "without solving (no GPU).")
@@ -381,6 +386,96 @@ def case_config(args, run_file, benchmark: str, scene: str, scene_params: dict) 
     --sim-params and the case's --scene-params files, then --set."""
     sources = args.sim_params + results.scene_params_for(scene_params, benchmark, scene)
     return config.merge(benchmark_run.case_parameters(run_file, benchmark, scene), config.resolve(sources, args.overrides))
+
+
+def _short(v: float) -> str:
+    """3 significant digits, exponents without '+' and leading zeros: 1e6, 2.5e-5, 0.45."""
+    return f"{v:.3g}".replace("e+0", "e").replace("e+", "e").replace("e-0", "e-")
+
+
+def _fem_summary(group: h5py.Group) -> dict:
+    """Mesh size, materials and Dirichlet nodes of a serialized FemElastoDynamics (a dataset's ``fem`` group)."""
+    found = {}
+
+    def visit(name, obj):
+        if isinstance(obj, h5py.Dataset) and name.rsplit("/", 1)[-1] in ("X", "E", "lamegU", "egU", "dmask", "m"):
+            found.setdefault(name.rsplit("/", 1)[-1], obj)
+
+    group.visititems(visit)
+    n_nodes, n_tets = int(found["X"].shape[1]), int(found["E"].shape[1])
+    # One quadrature point per element (the first): Young's modulus and Poisson ratio from its Lame coefficients
+    mu, lam = np.asarray(found["lamegU"][()], dtype=np.float64)
+    _, first = np.unique(np.asarray(found["egU"][()]).ravel(), return_index=True)
+    mu, lam = mu[first], lam[first]
+    young = np.array([float(f"{v:.3g}") for v in mu * (3 * lam + 2 * mu) / (lam + mu)])
+    poisson = sorted({float(f"{v:.3g}") for v in lam / (2 * (lam + mu))})
+    values, counts = np.unique(young, return_counts=True)
+    dmask = np.asarray(found["dmask"][()]).ravel() != 0
+    return {
+        "nodes": n_nodes,
+        "tets": n_tets,
+        "materials": ", ".join(f"E {_short(v)} ({c} tets)" for v, c in zip(values, counts))
+        + f"; nu {', '.join(_short(v) for v in poisson)}",
+        "dirichlet": int(dmask.sum()),
+        "m": np.asarray(found["m"][()], dtype=np.float64).ravel(),
+        "free": ~dmask,
+    }
+
+
+def list_sets(dataset: str, set_names: list[str]) -> list[dict]:
+    """Per problem set, what a run file needs to target it: ``key`` (the run-file case key BENCHMARK/SCENE),
+    ``set``, ``benchmark``, ``problem``, ``h``, ``scene``, ``label``, ``energy``, ``problems``, ``nodes``, ``tets``,
+    ``materials`` (Young's moduli with their tet counts, Poisson ratios), ``dirichlet`` (fixed nodes), and for
+    dynamic sets ``reference_accuracy``: the median over its problems of the reference's relative accuracy
+    ref_error_mnorm / |x - x_ref|_M. Reads attributes, the FEM's mesh and materials and, for dynamic sets,
+    the samples' x and x_ref; no GPU."""
+    rows, fems = [], {}
+    with h5py.File(dataset, "r") as f:
+        for name in set_names:
+            g = f[name]
+            attrs = dict(g.attrs)
+            problem = str(attrs.get("problem", "static"))
+            h = float(attrs["h"]) if problem != "static" and "h" in attrs else None
+            scene, label, fem = _scene_of(dataset, f, attrs)
+            if fem not in fems:
+                fems[fem] = _fem_summary(f[fem])
+            info = fems[fem]
+            benchmark = results.benchmark_name(problem, h)
+            row = {
+                "key": f"{benchmark}/{scene}", "set": name, "benchmark": benchmark, "problem": problem, "h": h,
+                "scene": scene, "label": label, "energy": float(attrs.get("target_energy", math.nan)),
+                "problems": int(g["samples/x"].shape[0]),
+                **{k: info[k] for k in ("nodes", "tets", "materials", "dirichlet")},
+            }
+            if problem == "dynamic" and "samples/ref_error_mnorm" in g:
+                d = np.asarray(g["samples/x"][()], dtype=np.float64) - np.asarray(g["samples/x_ref"][()], dtype=np.float64)
+                e0 = np.sqrt(np.einsum("n,snd->s", info["m"] * info["free"], d * d))
+                bound = np.asarray(g["samples/ref_error_mnorm"][()], dtype=np.float64)
+                row["reference_accuracy"] = float(np.median(bound / np.maximum(e0, 1e-30)))
+            rows.append(row)
+    return rows
+
+
+def print_sets(rows: list[dict], run_file, levels_table, fixed_budgets: dict, scene_params: dict, args) -> None:
+    """Print :func:`list_sets`, with the levels, budget and case parameters the run would give each set."""
+    for r in rows:
+        kind = "static" if r["problem"] == "static" else f"dynamic, h = {r['h']:g} s"
+        print(f"{r['key']}  [case.\"{r['key']}\"]")
+        print(f"    set {r['set']}: {kind}, scene {r['scene']} ({r['label']}), E = {r['energy']:g} J, "
+              f"{r['problems']} problems")
+        print(f"    mesh {r['nodes']} nodes, {r['tets']} tets; {r['materials']}; {r['dirichlet']} Dirichlet nodes"
+              + (f"; reference accuracy (median) {_short(r['reference_accuracy'])} e0" if "reference_accuracy" in r else ""))
+        if run_file is not None or args.levels:
+            levels = ",".join(f"{v:g}" for v in results.levels_for(levels_table, r["benchmark"]))
+            seconds, _ = results.fixed_budget(fixed_budgets, r["benchmark"], r["key"].split("/", 1)[1])
+            print(f"    levels {levels}; budget "
+                  + (f"fixed {seconds:g} s" if seconds is not None else f"{args.budget_factor:g} x Newton's T_N"))
+        # The run file's parameters for this case beyond its shared ones (case.SCENE, case.BENCHMARK/SCENE)
+        shared = dict(config.flatten(run_file.shared)) if run_file is not None else {}
+        case_only = [f"{k}={v}" for k, v in config.flatten(benchmark_run.case_parameters(run_file, r["benchmark"], r["scene"]))
+                     if shared.get(k, object()) != v]
+        if case_only:
+            print(f"    case parameters: {', '.join(case_only)}")
 
 
 def dataset_benchmark_scenes(dataset: str) -> list[tuple[str, str]]:
@@ -600,6 +695,14 @@ def main():
     except ValueError as e:
         raise SystemExit(str(e))
     spec = make_spec(args)
+    if args.list_cases:
+        try:
+            fixed_budgets = results.parse_budget_options(args.budget, "--budget")
+        except ValueError as e:
+            raise SystemExit(str(e))
+        print_sets(list_sets(spec.dataset, select_sets(spec)), run_file, levels_table, fixed_budgets,
+                   results.parse_scene_params(args.scene_params), args)
+        return
     if args.save_spec:
         with h5py.File(args.save_spec, "w") as f:
             spec.serialize(f.create_group("StaticSolveSpec"))
@@ -825,6 +928,59 @@ class TestRecords(unittest.TestCase):
         self.assertEqual(v["version_warp"], wp.__version__)
         self.assertRegex(v["version_cuda_driver"], r"^\d+\.\d+$")
         self.assertTrue(all(isinstance(x, str) for x in v.values()))
+
+
+class TestListSets(unittest.TestCase):
+    def test_synthetic(self):
+        import tempfile
+
+        rng = np.random.default_rng(0)
+        N, T, S = 6, 4, 3
+        mu = np.array([1.0, 1.0, 1.0, 100.0])  # two materials, nu = 0.25 (lambda = mu)
+        x = rng.standard_normal((S, N, 3))
+        x_ref = x + 0.1 * rng.standard_normal((S, N, 3))
+        m = np.arange(1.0, N + 1.0)
+        dmask = np.array([1, 0, 0, 0, 0, 1])
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "d.h5")
+            with h5py.File(path, "w") as f:
+                f.attrs.update(dataset_format=static.DATASET_FORMAT, sets=["S/static/E5", "S/dynamic_h0.01/E5"])
+                f.create_group("S").attrs["label"] = "Scene S"
+                fem = f.create_group("S/fem/pbat.sim.dynamics.FemElastoDynamics")
+                fem.create_dataset("pbat.fem.Mesh/X", data=np.zeros((3, N)))
+                fem.create_dataset("pbat.fem.Mesh/E", data=np.zeros((4, T), dtype=np.int64))
+                fem.create_dataset("lamegU", data=np.stack([mu, mu]))
+                fem.create_dataset("egU", data=np.arange(T)[:, None])
+                fem.create_dataset("dmask", data=dmask[:, None])
+                fem.create_dataset("m", data=m[:, None])
+                for name, problem in [("S/static/E5", "static"), ("S/dynamic_h0.01/E5", "dynamic")]:
+                    g = f.create_group(name)
+                    g.attrs.update(problem=problem, h=0.01, scene="S", fem="S/fem", target_energy=5.0)
+                    g.create_dataset("samples/x", data=x)
+                    if problem == "dynamic":
+                        g.create_dataset("samples/x_ref", data=x_ref)
+                        g.create_dataset("samples/ref_error_mnorm", data=np.full(S, 1e-4))
+            rows = list_sets(path, ["S/static/E5", "S/dynamic_h0.01/E5"])
+        self.assertEqual([r["key"] for r in rows], ["static/S", "dynamic_h0.01/S"])
+        r = rows[1]
+        self.assertEqual((r["problem"], r["h"], r["scene"], r["label"], r["energy"], r["problems"]),
+                         ("dynamic", 0.01, "S", "Scene S", 5.0, S))
+        self.assertEqual((r["nodes"], r["tets"], r["dirichlet"]), (N, T, 2))
+        self.assertEqual(r["materials"], "E 2.5 (3 tets), E 250 (1 tets); nu 0.25")  # E = 2 mu (1 + nu)
+        free = dmask == 0
+        e0 = np.sqrt(np.sum(m[None, free, None] * (x - x_ref)[:, free] ** 2, axis=(1, 2)))
+        self.assertAlmostEqual(r["reference_accuracy"], float(np.median(1e-4 / e0)))
+        self.assertNotIn("reference_accuracy", rows[0])
+
+    def test_pilot_dataset(self):
+        # The repo's git-ignored data/ (the main checkout), or PBAT_BENCHMARK_PILOT (e.g. from a worktree)
+        repo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+        path = os.environ.get("PBAT_BENCHMARK_PILOT", os.path.join(repo, "data", "benchmarks", "trampolines-pilot.h5"))
+        if not os.path.isfile(path):
+            self.skipTest("trampolines-pilot.h5 not found (set PBAT_BENCHMARK_PILOT to path/to/trampolines-pilot.h5)")
+        (row,) = list_sets(path, ["het/static/E10000"])
+        self.assertEqual(row["key"], "static/het")
+        self.assertEqual(row["materials"], "E 1e6 (31539 tets), E 1e8 (10049 tets); nu 0.45")
 
 
 if __name__ == "__main__":
