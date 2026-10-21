@@ -5,14 +5,16 @@ Two tree nodes, read top to bottom:
 
 - **Last step**: per substep, how the solve ended and what it used, one fact per row. VBD family: result,
   outer iterations and sweeps against their budgets, and the final ratios of the gradient residual and
-  the penetration to their tolerances (at most 1 passes). Newton: the outer test, and per subproblem its
-  status, Newton steps, CG iterations and line-search backtracks.
+  the penetration to their tolerances (at most 1 passes). Newton: the outer test with the same two ratios
+  (at the end, at the first test, and after each subproblem), and per subproblem its status, Newton steps,
+  CG iterations and line-search backtracks.
 - **Last N steps**: the same counts summarized over a rolling window (``StatusLog.summary``).
 
 Visible text stays short; tooltips explain each row. ``SimulationState.step`` records the statuses with
 data it already synchronizes on, so the panel reads host memory only.
 """
 
+import numpy as np
 import polyscope.imgui as imgui
 
 from ..gpu.newton.solver import SubproblemStatus
@@ -27,7 +29,7 @@ _RESULT = {
     SolveEnd.GRADIENT_UNMET: (
         "Budget: gradient unmet",
         "The outer iterations ran out with the gradient test unmet (the step is feasible).\n"
-        "More sweeps or outer iterations, or a looser Solver.Convergence.rtol, would help.",
+        "More sweeps or outer iterations, or looser Solver.Convergence.rstol/astol, would help.",
     ),
     SolveEnd.FEASIBILITY_UNMET: (
         "Budget: feasibility unmet",
@@ -59,12 +61,25 @@ _SUBPROBLEM = {
 
 _RESIDUAL_TIP = (
     "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
-    "Relative test (Solver.Convergence.rtol > 0): sqrt(sum |g_i|^2 / m_i) / (rtol * RMS displacement scale),\n"
-    "with g the gradient of the step's Lagrangian. Absolute test: |g| / gtol."
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * L),\n"
+    "mass-weighted, g the gradient of the step's Lagrangian, L the scene's mean body bounding-box diagonal.\n"
+    "Absolute test (both 0, or static): |g| / gtol."
 )
 _PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
     "at the end of the solve; at most 1 is feasible."
+)
+_NEWTON_RESIDUAL_TIP = (
+    "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
+    "RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * L), mass-weighted, g the gradient of the step's Lagrangian,\n"
+    "L the scene's mean body bounding-box diagonal.\n"
+    "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
+)
+_NEWTON_PENETRATION_TIP = (
+    "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
+    "{when}; at most 1 is feasible. Part of the stationarity outer test only (the absolute test, as C++'s,\n"
+    "checks the gradient alone)."
 )
 
 
@@ -100,7 +115,23 @@ class _Rows:
 
 
 def _ratio(value: float) -> str:
-    return f"{value:.3g}"
+    return "n/a" if np.isnan(value) else f"{value:.3g}"
+
+
+def _ratio_rows(rows: _Rows, prefix: str, gradient: float, feasibility: float, when: str):
+    """Residual and penetration rows of one Newton outer test, ``when`` naming it in the tooltips."""
+    rows.row(
+        f"{prefix}Residual / tol",
+        _ratio(gradient),
+        _NEWTON_RESIDUAL_TIP.format(when=when),
+        _WARN if gradient > 1 else None,
+    )
+    rows.row(
+        f"{prefix}Penetration / tol",
+        _ratio(feasibility),
+        _NEWTON_PENETRATION_TIP.format(when=when),
+        _WARN if feasibility > 1 else None,
+    )
 
 
 def _draw_vbd_solve(r, rows: _Rows):
@@ -132,11 +163,20 @@ def _draw_newton_solve(s, subproblems, rows: _Rows):
         "The Lagrangian gradient test and feasibility, tested before each subproblem and after the last one.",
         _GOOD if passed else _WARN,
     )
+    _ratio_rows(rows, "", float(s["gradient_ratio"]), float(s["feasibility_ratio"]), "at the end of the solve")
     rows.row(
         "Outer iterations",
         f"{int(s['outer'])} / {int(s['max_outer'])}",
         "Augmented-Lagrangian outer iterations run / budget (Solver.Newton.n_max_iters).",
     )
+    if subproblems.shape[0]:
+        _ratio_rows(
+            rows,
+            "Initial ",
+            float(s["initial_gradient_ratio"]),
+            float(s["initial_feasibility_ratio"]),
+            "at the first outer test (before subproblem 0)",
+        )
     for p in subproblems:
         k = int(p["outer"])
         status = SubproblemStatus(int(p["status"]))
@@ -160,6 +200,13 @@ def _draw_newton_solve(s, subproblems, rows: _Rows):
             "  Line-search backtracks",
             f"{int(p['backtracks'])}",
             "Step-size reductions over all of the subproblem's line searches (0: every full step was accepted).",
+        )
+        _ratio_rows(
+            rows,
+            "  ",
+            float(p["gradient_ratio"]),
+            float(p["feasibility_ratio"]),
+            f"at the outer test after subproblem {k} (after its contact detection and dual update)",
         )
 
 
@@ -283,6 +330,13 @@ def _draw_window(log):
                 f"{n['backtracks']}",
                 "Step-size reductions over all line searches in the window.",
             )
+            _ratio_rows(
+                rows,
+                "Worst ",
+                n["gradient_ratio_max"],
+                n["feasibility_ratio_max"],
+                "at the end of the window's worst solve",
+            )
 
 
 def draw_status_panel(state, ui_state):
@@ -295,6 +349,14 @@ def draw_status_panel(state, ui_state):
     if not imgui.TreeNode("Solve status"):
         return
     imgui.PushID("solve_status")
+    check = getattr(state, "convergence", None)
+    if check is not None:
+        astol, L = float(check.params.astol), check.length_scale
+        imgui.Text(f"Absolute stationarity tolerance: {astol * L:.3g} m")
+        _tooltip(
+            f"astol * L = {astol:.3g} * {L:.3g} m: the residual RMS(M^-1 g) below which the gradient test always\n"
+            "passes (dynamic problems), L being the mean bounding-box diagonal of the scene's bodies at rest."
+        )
     log = state.status_log
     if log.last_step is None:
         imgui.Text("No solves recorded yet")
@@ -333,7 +395,7 @@ class TestStatusPanel(unittest.TestCase):
         log = StatusLog()
         log.add_vbd(0, 0, rows, 0, 5, 500)
         sub = NewtonSubproblemRecord(SubproblemStatus.LINE_SEARCH_FAILED, 2, 500, True, 9)
-        log.add_newton(1, [NewtonSolveRecord(1, False, (sub,))], 5, 10, 500)
+        log.add_newton(1, [NewtonSolveRecord(1, False, (sub,), ((40.0, float("nan")), (2.5, 0.5)))], 5, 10, 500)
         fake = mock.MagicMock()
         fake.TreeNode.return_value = True
         fake.TreeNodeEx.return_value = True
@@ -359,6 +421,12 @@ class TestStatusPanel(unittest.TestCase):
         self.assertIn("Budget: both unmet", shown)
         self.assertIn("Converged", shown)
         self.assertIn("0 / 5", shown)
+        # Newton's outer-test ratios: initial, after the subproblem and at the end
+        self.assertIn("Initial Residual / tol", shown)
+        self.assertIn("40", shown)
+        self.assertIn("n/a", shown)
+        # The solve's result and after subproblem 0 (first draw), the window's worst (first two draws)
+        self.assertEqual(shown.count("2.5"), 4)
         # No comma-delimited lists in the visible values
         self.assertFalse(any("," in t for t in shown if not t.startswith("Time steps")))
         tips = " ".join(str(c.args[0]) for c in fake.SetTooltip.call_args_list)

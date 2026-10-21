@@ -1,5 +1,5 @@
 # Every parameter the GPU simulators serialize, with its code default.
-# Generated 2026-10-19 with config.params_dict on a default SimulationState. Regenerate it when
+# Generated 2026-10-20 with config.params_dict on a default SimulationState. Regenerate it when
 # parameters are added (see README.md). Useful as a reference or as an `extends` base.
 
 [Contact.CDType.OGC]
@@ -95,10 +95,10 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
+astol = 0.0005
 check_interval = 20
-displacement_floor = 1e-06
 ftol = 0.5
-rtol = 0.01
+rstol = 0.01
 
 [Solver.Newton]
 linear_solver = 0

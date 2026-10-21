@@ -7,9 +7,9 @@
 # (below dmin + band) starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
 # The penalty is adaptive per time step (the code default, per the maintainer) instead of the paper
 # file's constant gamman.
-# Detection is scaled to the geometry (maintainer): the trampoline is 10 cm thick and the sphere 1.8 m
-# across, so the default 1 mm band missed contacts and let sphere vertices reach the far side of the plate,
-# whose contacts then pulled the sphere through. band = 2 cm and max_dist = 30 cm fix it.
+# Detection band (maintainer): the default 1 mm band missed contacts on the 10 cm plate and let sphere vertices
+# reach its far side, whose contacts then pulled the sphere through; a 2 cm band fixed that but made the sphere
+# stick to the trampoline under Newton. band = 2 mm, close to dmin, fixes the sticking; max_dist = 30 cm.
 extends = ["../paper/trampoline_soft-stiff.Params.5Substeps.toml"]
 
 [Integration]
@@ -20,7 +20,7 @@ dmin = 1e-3
 penalty_adaptivity = 1  # TIMESTEP, with the code's gamman_adaptive / gammaf_adaptive
 
 [Contact.CDType.VertexSdf]
-band = 0.02  # 2 cm: these meshes are metre-scale (4 m x 10 cm plate, 1.8 m sphere, ~7 cm edges)
+band = 0.002  # 2 mm, close to dmin (a 2 cm band made the sphere stick under Newton)
 max_dist = 0.3
 
 [Solver.AAAVBD]
