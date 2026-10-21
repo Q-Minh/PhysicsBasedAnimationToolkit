@@ -38,7 +38,9 @@ Which sampler to use:
 
 Energies come from pbat in float32, so they carry an absolute round-off noise floor (about 1e-4 J on
 MediumLongBendingBeam). Each chain measures it and keeps its tolerances above it, and batches report it as
-`energy_noise`, `energy_tolerance` and `energy_noise_warning` (set when the tolerance exceeds 1e-3 E).
+`energy_noise`, `energy_tolerance` and `energy_noise_warning` (set when the tolerance exceeds 1e-3 E). The
+microcanonical sampler measures it at its samples (samples_energy_noise); pool_energy_noise recomputes it for a
+stored pool.
 
 Usage (modalrom.py builds the model; see its build_rom and reduced_model):
 
@@ -60,6 +62,8 @@ import scipy.linalg
 import scipy.optimize
 
 WEIGHTS = ("mass", "uniform", "area")
+# Energy tolerances are this many times the measured energy noise standard deviation
+NOISE_FACTOR = 10.0
 
 
 class QuadraticManifold:
@@ -288,6 +292,54 @@ def estimate_energy_noise(model, q: np.ndarray, n: int = 33, rel: float = 1e-3) 
     return float(np.std(residual))
 
 
+def samples_energy_noise(model, q: np.ndarray, n_probes: int = 4) -> float:
+    """The largest energy noise (estimate_energy_noise) at n_probes evenly spaced samples of a chain.
+
+    Measures the noise where a chain actually lives. The microcanonical sampler uses it instead of the probe point
+    on the linearized level set U = E, which on soft models can lie at energies many orders of magnitude above E
+    and grossly overstate the noise.
+
+    Args:
+        model: Reduced model exposing energy(q).
+        q (np.ndarray): |# samples| x m samples of one chain, in chain order.
+        n_probes (int): Number of samples to probe (each costs 33 energy evaluations).
+
+    Returns:
+        float: The largest estimated noise standard deviation over the probed samples.
+    """
+    probes = np.unique(np.linspace(0, q.shape[0] - 1, min(n_probes, q.shape[0])).round().astype(int))
+    return max(estimate_energy_noise(model, q[i]) for i in probes)
+
+
+def pool_energy_noise(model, q: np.ndarray, n_chains: int) -> float:
+    """samples_energy_noise of a run_chains pool: the largest over its chains, as run_chains reports it.
+
+    Recomputes a microcanonical pool's energy_noise from its stored samples (run_chains concatenates the chains'
+    samples, ceil(|# samples| / n_chains) per chain).
+
+    Args:
+        model: Reduced model exposing energy(q), the one the pool was sampled on.
+        q (np.ndarray): |# samples| x m pooled samples.
+        n_chains (int): Number of chains of the pool.
+
+    Returns:
+        float: The pool's energy noise.
+    """
+    per_chain = -(-q.shape[0] // n_chains)
+    return max(samples_energy_noise(model, q[i : i + per_chain]) for i in range(0, q.shape[0], per_chain))
+
+
+def energy_noise_stats(noise: float, target_energy: float, noise_factor: float = NOISE_FACTOR) -> dict:
+    """A batch's energy-noise statistics: energy_noise, energy_tolerance (noise_factor times the noise) and
+    energy_noise_warning (set when the tolerance exceeds 1e-3 of the target energy)."""
+    tolerance = noise_factor * noise
+    return dict(
+        energy_noise=noise,
+        energy_tolerance=tolerance,
+        energy_noise_warning=bool(tolerance > 1e-3 * target_energy),
+    )
+
+
 def integrated_autocorrelation_time(x: np.ndarray, c: float = 5.0) -> float:
     """Integrated autocorrelation time of a scalar chain, with Sokal's automatic window.
 
@@ -371,7 +423,8 @@ class _Chain:
     _observables() -> np.ndarray, the scalars whose autocorrelation sets the thinning.
 
     The energy may be noisy (e.g. pbat evaluates it in float32). The noise floor is measured once
-    near the level set, and energy tolerances are kept above noise_factor times it.
+    near the level set, and energy tolerances are kept above noise_factor times it. Subclasses whose samples
+    needn't be near that point (microcanonical) re-measure it at their samples (_samples_energy_noise).
 
     A run has three phases (see run_chain):
         burn_in            adapts the step size sigma with the Robbins-Monro update
@@ -399,7 +452,7 @@ class _Chain:
         rng: np.random.Generator,
         step: float,
         target_acceptance: float,
-        noise_factor: float = 10.0,
+        noise_factor: float = NOISE_FACTOR,
     ):
         self.model = model
         self.target_energy = energy
@@ -411,6 +464,7 @@ class _Chain:
         self.n_accepted = 0
         self.thin = None
         self.tau = None
+        self.noise_factor = noise_factor
         q = np.sqrt(2 * energy) * model.scale * self._random_direction()
         self.energy_noise = estimate_energy_noise(model, q)
         self.energy_atol = noise_factor * self.energy_noise
@@ -502,6 +556,9 @@ class _Chain:
                 q[i], e[i], logp[i] = self.q, self.e, self.logp
         tau = max(integrated_autocorrelation_time(o) for o in obs.T)
         steps = self.n_steps - steps0
+        noise = self._samples_energy_noise(q)
+        if noise is not None:
+            self.energy_noise, self.energy_atol = noise, self.noise_factor * noise
         qdot = None
         if hasattr(self, "sample_velocity"):
             qdot = np.array([self.sample_velocity(qi, ei) for qi, ei in zip(q, e)])
@@ -513,11 +570,13 @@ class _Chain:
             ess=steps / tau,
             star_violations=self.star_violations,
             importance_weights_required=isinstance(self, RaySampler),
-            energy_noise=self.energy_noise,
-            energy_tolerance=self.energy_atol,
-            energy_noise_warning=self.energy_atol > 1e-3 * self.target_energy,
+            **energy_noise_stats(self.energy_noise, self.target_energy, self.noise_factor),
         )
         return SampleBatch(q, e, logp, stats, qdot=qdot, trace=obs)
+
+    def _samples_energy_noise(self, q: np.ndarray) -> float | None:
+        """The energy noise measured at the samples q of a run, replacing the initial estimate, or None to keep it."""
+        return None
 
 
 class PolarMetropolis(_Chain):
@@ -770,6 +829,11 @@ class MicrocanonicalMetropolis(_Chain):
 
     def _observables(self) -> np.ndarray:
         return np.append(self.y, self.logp)
+
+    def _samples_energy_noise(self, q: np.ndarray) -> float:
+        # The probe on the linearized level set can be far outside U < E (e.g. 1e13 J at E = 1e4 J on a soft
+        # trampoline); the samples are where the energies are actually evaluated
+        return samples_energy_noise(self.model, q)
 
     def sample_velocity(self, q: np.ndarray, e: float) -> np.ndarray:
         """Draws qdot given q, s.t. 1/2 qdot^T M_r(q) qdot = E - U(q), from the exact conditional distribution.
