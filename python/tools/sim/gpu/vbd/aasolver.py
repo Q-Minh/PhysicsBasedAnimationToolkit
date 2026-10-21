@@ -20,6 +20,9 @@ from ..contact.dynamics import MeshDynamics as ContactDynamics
 # Gram kernel tiling: each block multiplies one (m+1, _GRAM_TILE_K) tile of [F f]^T by its transpose.
 _GRAM_TILE_K = 256
 _GRAM_BLOCK_DIM = 64
+# The per-tile products are then summed in a fixed order, one block per entry of G, so that G (and hence
+# Anderson) is bit-reproducible run to run, which atomic accumulation is not.
+_GRAM_REDUCE_BLOCK_DIM = 32
 _SOLVE_BLOCK_DIM = 32
 # float32 Gram entries carry relative rounding errors of about m * eps, so pivots below that level
 # (relative to the largest diagonal entry) are noise. This floors the Cholesky rank threshold.
@@ -70,6 +73,11 @@ def _anderson_residual_kernel(
 _anderson_kernel_cache: dict = {}
 
 
+def gram_tiles(n_nodes: int) -> int:
+    """Number of ``TILE_K``-column tiles of ``[F f]^T`` (blocks of the Gram pass) for ``n_nodes`` nodes."""
+    return (3 * n_nodes + _GRAM_TILE_K - 1) // _GRAM_TILE_K
+
+
 def anderson_kernels(m: int):
     """Build (or fetch) the Anderson least-squares kernels specialized on the window size ``m``.
 
@@ -78,15 +86,18 @@ def anderson_kernels(m: int):
     one captured CUDA graph valid while the window fills up.
 
     Returns:
-        (gram, solve_cholesky, solve_pcg): Warp kernels. ``gram`` accumulates the Gram matrix of
-        ``[F f]`` into ``G`` (tiled launch over ``3N``). Both solves read ``G`` and write
-        ``gamma``, using ``G[:mk, :mk] = F^T F`` and ``G[:mk, m] = F^T f``.
+        (gram, gram_reduce, solve_cholesky, solve_pcg): Warp kernels. ``gram`` writes the Gram
+        matrix of each ``(m+1, TILE_K)`` tile of ``[F f]^T`` to its own row of the partial
+        products (tiled launch over ``3N``), and ``gram_reduce`` sums them into ``G`` in a fixed
+        order. Both solves read ``G`` and write ``gamma``, using ``G[:mk, :mk] = F^T F`` and
+        ``G[:mk, m] = F^T f``.
     """
     if m in _anderson_kernel_cache:
         return _anderson_kernel_cache[m]
 
     M = m
     MP = m + 1
+    MP2 = MP * MP
     vecM = wp.types.vector(length=M, dtype=wp.float32)
     matM = wp.types.matrix(shape=(M, M), dtype=wp.float32)
     rank_floor = float(M) * _FLOAT32_EPS
@@ -114,11 +125,25 @@ def anderson_kernels(m: int):
         return wp.float32(0.0)
 
     @wp.kernel(module="unique")
-    def gram(FfT: wp.array2d[wp.float32], G: wp.array2d[wp.float32]):
-        """Accumulate ``G += T T^T`` for this block's ``(m+1, TILE_K)`` tile ``T`` of ``[F f]^T``."""
+    def gram(FfT: wp.array2d[wp.float32], Gp: wp.array2d[wp.float32]):
+        """Store ``T T^T``, row-major, in ``Gp[i]`` for block ``i``'s ``(m+1, TILE_K)`` tile ``T`` of ``[F f]^T``."""
         i = wp.tid()
         t = wp.tile_load(FfT, shape=(MP, _GRAM_TILE_K), offset=(0, i * _GRAM_TILE_K))
-        wp.tile_atomic_add(G, wp.tile_matmul(t, wp.tile_transpose(t)))
+        TtT = wp.tile_matmul(t, wp.tile_transpose(t))
+        wp.tile_store(Gp, wp.tile_reshape(TtT, shape=(1, MP2)), offset=(i, 0))
+
+    @wp.kernel(module="unique")
+    def gram_reduce(Gp: wp.array2d[wp.float32], G: wp.array2d[wp.float32]):
+        """Sum the rows of ``Gp`` into ``G`` in a fixed order: block ``e`` reduces column ``e`` of ``Gp``."""
+        e, lane = wp.tid()
+        s = wp.float32(0.0)
+        r = lane
+        while r < Gp.shape[0]:
+            s += Gp[r, e]
+            r += _GRAM_REDUCE_BLOCK_DIM
+        total = wp.tile_sum(wp.tile(s))
+        if lane == 0:
+            G[e // MP, e % MP] = total[0]
 
     @wp.kernel(module="unique")
     def solve_cholesky(
@@ -238,7 +263,7 @@ def anderson_kernels(m: int):
                 gj = wp.float32(0.0)
             gamma[j] = gj
 
-    kernels = (gram, solve_cholesky, solve_pcg)
+    kernels = (gram, gram_reduce, solve_cholesky, solve_pcg)
     _anderson_kernel_cache[m] = kernels
     return kernels
 
@@ -348,18 +373,24 @@ def anderson_mix(x: wp.array, params: AndersonParams, mk: int):
     """Solve the Anderson least-squares problem and mix the accelerated iterate into ``x``.
 
     Forms the Gram matrix of ``[F f]`` in one pass over ``F`` (``G[:mk, :mk] = F^T F``,
-    ``G[:mk, m] = F^T f``), solves ``F^T F gamma = F^T f`` with the selected method (see
+    ``G[:mk, m] = F^T f``), summing the per-tile products in a fixed order so that runs are
+    bit-reproducible, solves ``F^T F gamma = F^T f`` with the selected method (see
     :class:`AndersonLinearSolver`), then applies ``x = xkm1 + beta * fk - (X + beta * F) gamma``.
     """
     n_nodes = x.shape[0]
-    gram, solve_cholesky, solve_pcg = params.kernels
+    gram, gram_reduce, solve_cholesky, solve_pcg = params.kernels
     with profiling.scope("anderson.gram"):
-        params.G.zero_()
         wp.launch_tiled(
             kernel=gram,
-            dim=[(3 * n_nodes + _GRAM_TILE_K - 1) // _GRAM_TILE_K],
-            inputs=[params.FfT_flat, params.G],
+            dim=[gram_tiles(n_nodes)],
+            inputs=[params.FfT_flat, params.Gp],
             block_dim=_GRAM_BLOCK_DIM,
+        )
+        wp.launch_tiled(
+            kernel=gram_reduce,
+            dim=[params.Gp.shape[1]],
+            inputs=[params.Gp, params.G],
+            block_dim=_GRAM_REDUCE_BLOCK_DIM,
         )
     with profiling.scope("anderson.solve"):
         if params.linear_solver == AndersonLinearSolver.NormalEquations:

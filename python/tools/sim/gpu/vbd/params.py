@@ -457,6 +457,7 @@ class AndersonParams(Params):
       - XkT: `(m, 3N)` C-contiguous CuPy ndarray of step differences, laid out like `FkT`
       - Xk, Fk, fk: zero-copy `wp.vec3f` views over `XkT`, `FkT` and the last row of `FfT`
       - FfT_flat: zero-copy `(m+1, 3N)` `wp.float32` view over `FfT` for tile loads
+      - Gp: `(n_tiles, (m+1)^2)` per-tile partial Gram matrices, summed in a fixed order into G
       - G: `(m+1, m+1)` Gram matrix of `[F f]`
       - linear_solver: Cholesky or Jacobi-preconditioned CG solve of the normal equations
       - vbd_iters_per_anderson_iter: number of VBD sweeps composing the fixed-point map that
@@ -505,14 +506,17 @@ class AndersonParams(Params):
         self.FfT_flat: wp.array2d[wp.float32] = wp.array(  # pyright: ignore[reportAttributeAccessIssue]
             self.FfT, dtype=wp.float32, copy=False
         )
+        from .aasolver import anderson_kernels, gram_tiles
+
+        self.Gp: wp.array2d[wp.float32] = wp.zeros(  # pyright: ignore[reportAttributeAccessIssue]
+            (gram_tiles(n_nodes), (self.m + 1) ** 2), dtype=wp.float32
+        )
         self.G: wp.array2d[wp.float32] = wp.zeros(  # pyright: ignore[reportAttributeAccessIssue]
             (self.m + 1, self.m + 1), dtype=wp.float32
         )
         self.gammak: wp.array[wp.float32] = wp.zeros((self.m,), dtype=wp.float32)
         # Kernels are specialized on the window size m (static tile shapes), and must exist before
         # any CUDA graph capture starts, so that capture's module force-load includes them.
-        from .aasolver import anderson_kernels
-
         self.kernels = anderson_kernels(self.m)
 
 
