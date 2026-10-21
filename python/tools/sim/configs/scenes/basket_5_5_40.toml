@@ -119,7 +119,7 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
-astol = 1e-06
+astol = 0.0001
 check_interval = 20
 ftol = 0.5
 rstol = 0.01
