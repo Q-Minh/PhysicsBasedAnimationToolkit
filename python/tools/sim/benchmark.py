@@ -645,6 +645,9 @@ def main():
                 batch, group = c.batch, groups[c.set_name]
                 # Newton's CG limits, per case: --scene-params may set them per scene and benchmark
                 group.attrs.update(newton_cg_n_max_iters=cg.n_max_iters, newton_cg_rtol=cg.rtol, newton_cg_atol=cg.atol)
+                # Every solver parameter of the case's simulation, as configured (before the per-solve
+                # overrides the module docstring lists), so the run can be reproduced from the file alone
+                group.attrs["sim_params_toml"] = config.dumps(config.params_dict(state))
                 static.check_sample_batch(batch, state.fem)
                 for w in batch.warnings():
                     print(f"Warning: {batch.path}: {w}")
