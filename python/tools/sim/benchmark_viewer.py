@@ -835,7 +835,9 @@ def main():
     ps.set_program_name("Benchmark trajectories")
     ps.set_up_dir("z_up")
     ps.set_front_dir("neg_y_front")
-    ps.set_ground_plane_mode("shadow_only")
+    # Data exploration: no ground plane (it only gives simulations a floor reference), best anti-aliasing
+    ps.set_ground_plane_mode("none")
+    ps.set_SSAA_factor(4)
     ps.init()
     viewer = Viewer(args.dataset)
     if args.results is not None:
