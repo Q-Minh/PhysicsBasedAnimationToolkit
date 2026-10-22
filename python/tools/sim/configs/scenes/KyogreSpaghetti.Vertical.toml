@@ -1,5 +1,5 @@
 # Scene config: KyogreSpaghetti.Vertical, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/kyogre-spaghetti_vertical.h5: kyogre-spaghetti_3_planes.h5 with only the soft Kyogre (Young's modulus 1e6), stood nose up (2.26 m tall) between the pillars, clear of them by at least 1 cm (maintainer, 2026-10-21: the lying Kyogres barely deformed).
+# For: data/scenarios/KyogreSpaghetti.Vertical.h5: KyogreSpaghetti.h5 with only the soft Kyogre (Young's modulus 1e6), stood nose up (2.26 m tall) between the pillars, clear of them by at least 1 cm (maintainer, 2026-10-21: the lying Kyogres barely deformed).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #

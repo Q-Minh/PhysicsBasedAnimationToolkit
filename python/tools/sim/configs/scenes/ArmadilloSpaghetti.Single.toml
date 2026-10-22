@@ -1,5 +1,5 @@
 # Scene config: ArmadilloSpaghetti.Single, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/armadillo-spaghetti_single.h5: armadillo-spaghetti_cylinders.h5 with stiffer pillars (Young's modulus 1e7) and one softer armadillo (8e5) at mid-height (z -0.6 to 0.6 m), the same pose otherwise, 4.2 cm from the pillars; 1.1M tets (maintainer, 2026-10-21).
+# For: data/scenarios/ArmadilloSpaghetti.Single.h5: ArmadilloSpaghetti.Cylinders.h5 with stiffer pillars (Young's modulus 1e7) and one softer armadillo (8e5) at mid-height (z -0.6 to 0.6 m), the same pose otherwise, 4.2 cm from the pillars; 1.1M tets (maintainer, 2026-10-21).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #

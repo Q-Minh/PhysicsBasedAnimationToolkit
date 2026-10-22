@@ -1,5 +1,5 @@
 # Scene config: KyogreSpaghetti, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/kyogre-spaghetti_3_planes.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane 2 cm beyond the four twisted pillars (the pillars span 0.2 x 0.2 x 3.6 m; two Kyogres between them).
+# For: data/scenarios/KyogreSpaghetti.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane 2 cm beyond the four twisted pillars (the pillars span 0.2 x 0.2 x 3.6 m; two Kyogres between them).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #

@@ -1,5 +1,5 @@
 # Scene config: ArmadilloSpaghetti.Fine, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/armadillo-spaghetti_fine.h5: armadillo-spaghetti.h5 with the pillars re-tetrahedralized by fTetWild (ideal edge 1.8 cm, mean 1.9 cm; 194k tets each, quality at least 0.127, against the original 54.5k tets with slivers down to 0.012) and the twist constraints rebuilt on their end caps; 1.1M tets in all (maintainer, 2026-10-21: the original pillars' slivers degenerate when they tangle).
+# For: data/scenarios/ArmadilloSpaghetti.Fine.h5: ArmadilloSpaghetti.h5 with the pillars re-tetrahedralized by fTetWild (ideal edge 1.8 cm, mean 1.9 cm; 194k tets each, quality at least 0.127, against the original 54.5k tets with slivers down to 0.012) and the twist constraints rebuilt on their end caps; 1.1M tets in all (maintainer, 2026-10-21: the original pillars' slivers degenerate when they tangle).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #

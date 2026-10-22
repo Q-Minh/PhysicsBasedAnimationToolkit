@@ -71,7 +71,7 @@ Read with: `python/examples/docs/sampling-methods.md` (methods, §8 benchmark pr
 **5. Open items** (each waits on the maintainer)
 - **Full benchmark dataset:** on hold until the benchmark design is fixed (MASTER.md "Benchmark plan"). Next:
   get the energies, problems per level, sets (h values) and scenes (`trampoline.h5`, `trampoline.Y1e7.h5`,
-  circle variants `trampoline_circle_Y1e6/Y1e7.h5`), then size pools/chains for R̂ < 1.05 and validate on
+  circle variants `TrampolineCircle.{1MPa,10MPa}.h5`), then size pools/chains for R̂ < 1.05 and validate on
   1 static + 1 dynamic problem before the full run (announce CPU runs in MASTER.md).
 - `modalrom.py --sampler` CLI default is still polar while the docs prefer microcanonical: ask whether to switch.
 - Question 4 (velocity notes) is moot unless the maintainer still has notes; milestone 2 used the decisions above.
