@@ -63,8 +63,11 @@ def _snapshot_and_reset_constraints(
     """Copy slot k of the current arrays to the previous snapshot, then reset it to defaults.
 
     Slot k gets the key (u, v) of the new contact k, or the empty-slot sentinel u = n_u past the
-    contacts, so that the next update can find it. gamma (1), the multipliers (0) and the frozen
-    Coulomb limit (unset) are reset, and s is recomputed by the solver's dual updates.
+    contacts, so that the next update can find it. gamma (1), the multipliers (0), the slack (0) and
+    the frozen Coulomb limit (unset) are reset; the warm start then restores a persisting contact's
+    state. The solvers refresh s from the positions before using it (VBD before every sweep, Newton
+    before every step's gradient), but without the reset a new contact would inherit the slack of the
+    slot's previous contact until then.
     """
     k = wp.tid()  # type: ignore
     u_prev[k] = u[k]
@@ -80,6 +83,7 @@ def _snapshot_and_reset_constraints(
         v[k] = contacts.v[k]
     else:
         u[k] = n_u
+    s[k] = wp.float32(0)
     gamma[k] = wp.float32(1)
     lambda_n[k] = wp.float32(0)
     lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))
@@ -223,7 +227,7 @@ class ConstraintSet:
         1. **Snapshot and reset** (:func:`_snapshot_and_reset_constraints`): copy every field's
            current slot to alternate (the previous snapshot), then set each slot's key ``(u, v)``
            to its new contact's (``u = n_u`` past the contacts), gamma to 1, the multipliers
-           to 0 and the frozen Coulomb limit to unset.
+           and the slack to 0 and the frozen Coulomb limit to unset.
         2. **Warm start** (:func:`_warm_start_constraints`): for each valid previous pair whose
            ``(u, v)`` appears in the new forward contact list, copy ``s``, ``gamma``,
            ``lambda_n``, ``lambda_f``, ``friction_limit`` to the corresponding current slot. It writes arbitrary
@@ -361,6 +365,14 @@ class TestFrozenFrictionLimit(unittest.TestCase):
         self._detect([(0, 1), (0, 2), (0, 3), (1, 2)])
         self.assertEqual(self._evaluate([1.0, 0.75, 1.0, 1.0]), [0.5, 0.75, 2.5, 3.0])
         self.assertEqual(self._evaluate([1.0, 9.0, 1.0, 1.0]), [0.5, 0.75, 2.5, 3.0])
+
+    def test_new_contacts_start_at_zero_slack(self):
+        # Persisting contacts keep their slack; a new contact in a slot that held another contact's
+        # slack starts at 0
+        self._detect([(0, 1), (1, 2)])
+        self.cs.s.current.assign(np.array([0.3, 0.5] + [7.0] * (self.capacity - 2), dtype=np.float32))
+        self._detect([(0, 1), (0, 3), (1, 2)])
+        self.assertEqual(self.cs.s.current.numpy()[:3].tolist(), [np.float32(0.3), 0.0, 0.5])
 
 
 if __name__ == "__main__":
