@@ -329,6 +329,14 @@ SCENES = {
         "video, pillars close to the armadillo and thin enough to wrap it rather than push it out)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "armadillo_spaghetti_fall": Scene(
+        "defaults",
+        "data/scenarios/armadillo-spaghetti_fall.h5: armadillo-spaghetti_close.h5 with gravity (-9.81 m/s^2 in z) on "
+        "every body and the armadillo's torso core (its 1295 nodes within 15 cm of its centroid) held by a Fixed "
+        "transform for the first second, then released, so it falls into the already tangling pillars (maintainer, "
+        "2026-10-21)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "armadillo_pull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
