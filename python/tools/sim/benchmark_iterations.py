@@ -22,7 +22,8 @@ Usage:
     python -m python.tools.sim.benchmark_iterations results.h5 -o out/tables/iterations \
         [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--budget-factor 2]
 
-Writes ``<prefix>.md`` and ``<prefix>.tex`` (booktabs and multirow tables). The Markdown keeps the quartiles;
+Writes ``<prefix>.md`` and one ``<prefix>_<benchmark>.tex`` per benchmark (booktabs and multirow tables), which
+the paper ``\input``'s one by one. The Markdown keeps the quartiles;
 the LaTeX is the paper's: medians only (``171k``, ``18.6k``), the reached fraction as a superscript, materials as
 in the figures (``$E = 10^{5}$ Pa``), one ``table*`` per benchmark with a caption opening with its title in bold.
 """
@@ -227,7 +228,8 @@ def latex(benchmark: str, levels, rows, factor: float) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Iteration counts to each accuracy level of a benchmark results file.")
     parser.add_argument("results", help="Results file (.h5) from python -m python.tools.sim.benchmark.")
-    parser.add_argument("-o", "--output", required=True, help="Output prefix: writes <prefix>.md and .tex.")
+    parser.add_argument("-o", "--output", required=True,
+                        help="Output prefix: writes <prefix>.md and <prefix>_<benchmark>.tex per benchmark.")
     parser.add_argument("--benchmarks", nargs="+", default=None,
                         help="Benchmarks to tabulate (default: all in the file).")
     parser.add_argument("--solvers", default=None, help="Comma-separated solvers (default: the file's).")
@@ -246,14 +248,17 @@ def main():
               "Median [25th-75th percentile] over the samples that reached the level; n/N when not all did. "
               "VBD family: sweeps; Newton: steps (cumulative CG iterations). Bold: the fewest sweeps in the VBD "
               "family among the solvers that reached the level on at least half the samples.", ""]
-        tex = ["% Needs \\usepackage{booktabs, multirow}", ""]
+        # One LaTeX file per benchmark, so the paper \input's the tables it wants and a regenerated file never
+        # overwrites a choice made by hand (maintainer)
+        files = {f"{args.output}.md": None}
         for benchmark in benchmarks:
             levels, rows = table_rows(f, benchmark, solvers, factor)
             md.append(markdown(benchmark, levels, rows, factor))
-            tex.append(latex(benchmark, levels, rows, factor))
+            files[f"{args.output}_{benchmark}.tex"] = (
+                "% Needs \\usepackage{booktabs, multirow}\n\n" + latex(benchmark, levels, rows, factor))
+        files[f"{args.output}.md"] = "\n".join(md)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    for ext, text in (("md", "\n".join(md)), ("tex", "\n".join(tex))):
-        path = f"{args.output}.{ext}"
+    for path, text in files.items():
         with open(path, "w", encoding="utf-8") as out:
             out.write(text)
         print(f"Wrote {path}")
