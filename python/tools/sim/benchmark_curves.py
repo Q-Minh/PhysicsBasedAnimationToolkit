@@ -40,7 +40,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from . import benchmark_results as results  # noqa: E402
-from .benchmark_plot import SOLVER_NAMES, benchmark_title, case_label, solver_color  # noqa: E402
+from .benchmark_plot import SOLVER_NAMES, benchmark_title, case_label, solver_color, use_paper_fonts  # noqa: E402
 
 
 def sample_index(g: h5py.Group, sample: int) -> int:
@@ -122,7 +122,7 @@ def plot_problem(
         ax.set_xlim(0.7 * t_start, x_end)
     else:
         ax.set_xlim(0.0, x_end)
-    ax.set_xlabel("Solver time / T_N")
+    ax.set_xlabel("Solver time / $T_N$")
     which = f"sample {sample}" if sample is not None else f"{len(samples)} samples"
     ax.set_title(f"{benchmark_title(benchmark)}: {case_label(g, case).replace(chr(10), ', ')}, {which}", fontsize=9)
     ax.grid(True, which="major", color="#EEEEEE", linewidth=0.5)
@@ -143,7 +143,11 @@ def main():
     parser.add_argument("--xscale", choices=("log", "linear"), default="log",
                         help="Time axis scale (default: %(default)s).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
+    parser.add_argument("--font-dir", default=None, dest="font_dir",
+                        help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
+                        "installed fonts).")
     args = parser.parse_args()
+    use_paper_fonts(args.font_dir)
     with h5py.File(args.results, "r") as f:
         results.check_format(f, args.results)
         solvers = args.solvers.split(",") if args.solvers else [str(s) for s in f.attrs["solvers"]]
@@ -161,7 +165,7 @@ def main():
                 raise SystemExit(f"{args.results} has no {problem}")
             drawn += [s for s in plot_problem(ax, f, benchmark, case, None if args.all_samples else args.sample, solvers,
                                                      args.xscale) if s not in drawn]
-        axes[0][0].set_ylabel("Relative error e / e0")
+        axes[0][0].set_ylabel("Relative error $e / e_0$")
         handles = [plt.Line2D([], [], color=solver_color(s, solvers), linewidth=1.5, label=SOLVER_NAMES.get(s, s))
                    for s in drawn]
         if args.all_samples:

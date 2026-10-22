@@ -39,10 +39,17 @@ Usage:
         [--budget-factor 1] [--elev 28] [--azim -62] [--dpi 200]
 
 Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark.
+
+Fonts: Linux Libertine, the font of ACM's acmart template (SIGGRAPH, TOG), from ``--font-dir``, the
+``PBAT_FONT_DIR`` environment variable or the installed fonts (:func:`use_paper_fonts`; get it from
+https://sourceforge.net/projects/linuxlibertine/files/linuxlibertine/5.3.0/, the OpenType release); without it,
+a warning and Matplotlib's serif font. No grid lines (maintainer).
 """
 
 import argparse
+import glob
 import os
+import warnings
 
 import h5py
 import matplotlib
@@ -64,6 +71,43 @@ SOLVER_COLORS = {
 }
 SOLVER_NAMES = {"AndersonSolver": "Anderson"}
 OTHER_COLORS = ["#56B4E9", "#F0E442", "#000000"]
+# Linux Libertine, the font of ACM's acmart template (SIGGRAPH, TOG): its OpenType family name, then other names
+PAPER_FONTS = ("Linux Libertine O", "Linux Libertine", "Libertinus Serif")
+
+
+def use_paper_fonts(font_dir: str | None = None) -> str | None:
+    """Sets Matplotlib's text and math fonts to Linux Libertine (``PAPER_FONTS``), from ``font_dir``, else the
+    ``PBAT_FONT_DIR`` environment variable's directory, else the installed fonts (also ones installed after
+    Matplotlib built its font cache). Returns the family used; without one, warns and keeps Matplotlib's serif."""
+    from matplotlib import font_manager
+
+    def add(paths):
+        for path in paths:
+            try:
+                font_manager.fontManager.addfont(path)
+            except (OSError, RuntimeError, ValueError):
+                pass
+
+    for directory in (font_dir, os.environ.get("PBAT_FONT_DIR")):
+        if directory:
+            add(sorted(glob.glob(os.path.join(directory, "*.otf")) + glob.glob(os.path.join(directory, "*.ttf"))))
+
+    def family():
+        names = {f.name for f in font_manager.fontManager.ttflist}
+        return next((name for name in PAPER_FONTS if name in names), None)
+
+    if family() is None:
+        add(p for p in font_manager.findSystemFonts() if "libertin" in os.path.basename(p).lower())
+    name = family()
+    matplotlib.rcParams["pdf.fonttype"] = 42  # embed the fonts as TrueType/OpenType, editable text in the PDF
+    if name is None:
+        warnings.warn("Linux Libertine not found (--font-dir, PBAT_FONT_DIR or an installed font): using Matplotlib's "
+                      "serif font")
+        matplotlib.rcParams["font.family"] = "serif"
+        return None
+    matplotlib.rcParams.update({"font.family": name, "mathtext.fontset": "custom", "mathtext.rm": name,
+                                "mathtext.it": f"{name}:italic", "mathtext.bf": f"{name}:bold"})
+    return name
 
 
 def benchmark_title(benchmark: str) -> str:
@@ -190,7 +234,8 @@ def plot_benchmark(
     bar_w, bar_d = 0.8 * slot, 0.4
     box_w, box_d = slot, 0.5  # min/max box footprint, around the mean bar
     x_range, y_range = (-0.6, len(cases) - 0.4), (-0.6, n_l - 0.4)
-    aspect = (max(1.6, 1.1 * len(cases)), max(1.8, 0.3 * n_l), 1.0)
+    # Depth long enough that the level labels don't crowd under the camera's foreshortening
+    aspect = (max(1.6, 1.1 * len(cases)), max(2.4, 0.45 * n_l), 1.0)
     a_el, a_az = np.radians(elev), np.radians(azim)
     toward_camera = np.array([np.cos(a_el) * np.cos(a_az), np.cos(a_el) * np.sin(a_az)])
     # Slots along x within a case: the first solver at the slot furthest from the camera
@@ -258,25 +303,25 @@ def plot_benchmark(
     ax.set_xticks(range(len(cases)))
     ax.set_xticklabels([case_label(g, c) for c, g in cases], fontsize=8)
     ax.set_yticks(range(n_l))
-    ax.set_yticklabels([f"{100 * v:g}%" for v in levels], fontsize=8)
+    ax.set_yticklabels([f"{100 * v:g}" for v in levels], fontsize=8, ha="left", va="center")
     ax.set_xlim(*x_range)
     ax.set_ylim(*y_range)
     ax.set_zlim(0.0, z_max)
     ax.set_xlabel("Scene", labelpad=10)
-    ax.set_ylabel("Error reduction", labelpad=8)
+    ax.set_ylabel("Error reduction (%)", labelpad=8)
     fixed = [("budget" in g.attrs) for _, g in cases]
-    norm = "budget" if all(fixed) else "Newton's time T_N" if not any(fixed) else "T_N or budget"
-    ax.set_zlabel(f"Mean incremental time / {norm}", labelpad=8)
+    norm = "budget" if all(fixed) else "$T_N$" if not any(fixed) else "$T_N$ or budget"
+    ax.set_zlabel(f"Mean incremental time / {norm}", labelpad=16)  # clear of the depth axis label
     ax.tick_params(axis="z", labelsize=8)
     ax.set_box_aspect(aspect, zoom=0.95)
+    ax.grid(False)  # the grid lines carry nothing the axes and bars don't (maintainer)
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1, 1, 1, 0))
-        axis._axinfo["grid"]["color"] = (0.85, 0.85, 0.85, 1)
     handles = [Patch(color=solver_color(s, solvers), label=SOLVER_NAMES.get(s, s)) for s in solvers]
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
     fig.legend(handles=handles, loc="upper right", fontsize=8, frameon=False)
     fig.suptitle(benchmark_title(benchmark), x=0.02, ha="left", fontsize=11)
-    within = "" if all(fixed) else f" within {factor:g} x T_N"
+    within = "" if all(fixed) else f" within {factor:g} × $T_N$ (Newton's time to its highest level)"
     unresolved = any(resolvable_samples(g, solvers) is not None for _, g in cases)
     reference = (
         "; no bar: not reached, or beyond the reference's accuracy for most samples (elsewhere, the samples it "
@@ -308,7 +353,11 @@ def main():
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
+    parser.add_argument("--font-dir", default=None, dest="font_dir",
+                        help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
+                        "installed fonts).")
     args = parser.parse_args()
+    use_paper_fonts(args.font_dir)
     with h5py.File(args.results, "r") as f:
         results.check_format(f, args.results)
         solvers = args.solvers.split(",") if args.solvers else [str(s) for s in f.attrs["solvers"]]
