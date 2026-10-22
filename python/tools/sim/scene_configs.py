@@ -43,7 +43,7 @@ class Rule:
 
 @dataclass
 class Scene:
-    source: str  # configs/paper/<source>.toml
+    source: str  # configs/paper/<source>.toml, or "defaults" (configs/defaults.toml) for a scene without a paper config
     scene_files: str  # which scenes it is for
     rules: list[Rule]
     notes: list[str] = field(default_factory=list)
@@ -129,6 +129,22 @@ SPHERE_BAND = Rule(
     {"Contact.CDType.VertexSdf.band": 1e-2},
 )
 TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
+ARMADILLO_GAMMAS = Rule(
+    "AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a "
+    "documented per-scene exception): pulled hard, then suddenly released, its energy changes abruptly, where AAAVBD "
+    "needs gammadown/gammadownS 0.75 and gammaup/gammaupS 0.5 to stay stable, the most aggressive values that do. It "
+    "shows AAAVBD's limitation and its controllability.",
+    {"Solver.AAAVBD.gammadown": 0.75, "Solver.AAAVBD.gammadownS": 0.75, "Solver.AAAVBD.gammaup": 0.5,
+     "Solver.AAAVBD.gammaupS": 0.5},
+)
+ARMADILLO_BUDGET = Rule(
+    "The maintainer's budget for the armadillo (2026-10-21; no contact): 1 outer iteration x 1000 sweeps for every "
+    "VBD-family solver, and Newton 1 x 30 Newton steps (usually ending early; after the release it sometimes runs all "
+    "30 with a small residual, line search keeping it stable; CG mostly ends under 1000 iterations, so the CG "
+    "defaults are kept).",
+    {**_per_solver("n_max_iters", 1), **_per_solver("n_subproblem_max_iters", 1000), "Solver.Newton.n_max_iters": 1,
+     "Solver.Newton.newton.n_max_iters": 30},
+)
 CAPSULE_CONTACT = Rule(
     "Contact scaled to the capsule bowl's size, about 8.8 m across (maintainer, 2026-10-21): VertexSdf max_dist 50 cm "
     "and band 1 cm, and a 1 cm AL margin dmin; the friction (mu_f 0.2) and vertex-face contact capacity (0.5) it was "
@@ -218,6 +234,11 @@ SCENES = {
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
         [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET],
     ),
+    "armadillo_pull": Scene(
+        "defaults",
+        "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
+        [INVERSE, ARMADILLO_GAMMAS, ARMADILLO_BUDGET],
+    ),
     "empty_basket": Scene(
         "empty_basket.Params_3_10_5",
         "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
@@ -294,7 +315,8 @@ def _read(path: pathlib.Path) -> dict:
 def build(name: str) -> tuple[dict, list[str]]:
     """The scene's full config and its header."""
     scene = SCENES[name]
-    source = _flatten(config.read(CONFIGS / "paper" / f"{scene.source}.toml"))
+    source_path = CONFIGS / "defaults.toml" if scene.source == "defaults" else CONFIGS / "paper" / f"{scene.source}.toml"
+    source = _flatten(config.read(source_path))
     keys = set(_flatten(_read(CONFIGS / "defaults.toml")))
     cfg, why = dict(source), {}
     for rule in scene.rules:
@@ -307,7 +329,7 @@ def build(name: str) -> tuple[dict, list[str]]:
     header = [
         f"Scene config: {name}, every serialized parameter written out (diff it against configs/paper).",
         f"For: {scene.scene_files}.",
-        f"Source: configs/paper/{scene.source}.toml. Keys not listed below have the source's values.",
+        f"Source: configs/{source_path.relative_to(CONFIGS).as_posix()}. Keys not listed below have the source's values.",
         f"Generated {datetime.date.today().isoformat()} by python/tools/sim/scene_configs.py; edit SCENES there, "
         "not this file.",
     ]

@@ -1,0 +1,153 @@
+# Scene config: armadillo_pull, every serialized parameter written out (diff it against configs/paper).
+# For: sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released).
+# Source: configs/defaults.toml. Keys not listed below have the source's values.
+# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+#
+# Differs from the source:
+# - AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a
+#   documented per-scene exception): pulled hard, then suddenly released, its energy changes abruptly, where
+#   AAAVBD needs gammadown/gammadownS 0.75 and gammaup/gammaupS 0.5 to stay stable, the most aggressive values
+#   that do. It shows AAAVBD's limitation and its controllability.
+#     Solver.AAAVBD.gammadown = 0.75 (source 0.9900000095367432)
+#     Solver.AAAVBD.gammadownS = 0.75 (source 0.949999988079071)
+# - The maintainer's budget for the armadillo (2026-10-21; no contact): 1 outer iteration x 1000 sweeps for
+#   every VBD-family solver, and Newton 1 x 30 Newton steps (usually ending early; after the release it
+#   sometimes runs all 30 with a small residual, line search keeping it stable; CG mostly ends under 1000
+#   iterations, so the CG defaults are kept).
+#     Solver.AAAVBD.n_subproblem_max_iters = 1000 (source 100)
+#     Solver.AndersonSolver.n_subproblem_max_iters = 1000 (source 100)
+#     Solver.Chebyshev.n_subproblem_max_iters = 1000 (source 100)
+#     Solver.Newton.newton.n_max_iters = 30 (source 10)
+#     Solver.VBD.n_subproblem_max_iters = 1000 (source 100)
+
+[Contact.CDType.OGC]
+arq = 1.0
+deactivate = 0
+gammap = 0.45
+r = 0.003
+truncation_strategy = 0
+
+[Contact.CDType.VertexSdf]
+band = 0.001
+deactivate = 0
+max_dist = 0.05
+use_step_filter = 0
+
+[Contact.ContactDynamics]
+decay = 0.5
+dmin = 0.002
+gammaf = 1000.0
+gammaf_adaptive = 0.01
+gamman = 10000.0
+gamman_adaptive = 1.0
+min_sigma_n = 1.0
+mu_f = 0.2
+penalty_adaptivity = 1
+
+[Contact.ContactStorage]
+n_ee_contact_capacity = 0.2
+n_ve_contact_capacity = 0.05
+n_vf_contact_capacity = 0.5
+n_vv_contact_capacity = 0.05
+
+[Integration]
+bdf_scheme = 1
+dt = 0.01
+init_strategy = 2
+substeps = 1
+
+[Solver.AAAVBD]
+betaG0 = 0.5
+betaR = 0.0
+betaup = 1.0
+e_penalty_stiffness = 0
+gammadown = 0.75
+gammadownS = 0.75
+gammaup = 0.5
+gammaupS = 0.5
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+lipschitz_normalization = 1
+n_max_iters = 1
+n_subproblem_max_iters = 1000
+rhohat = 0.004999999888241291
+rhohatS = 0.004999999888241291
+surface_stencil_surface_neighbours_only = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+warm_start_beta = 2
+
+[Solver.AndersonSolver]
+beta = 1.0
+betaR = 0.0
+cod_numerical_zero = 1.000000013351432e-10
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+linear_solver = 0
+m = 5
+n_max_iters = 1
+n_subproblem_max_iters = 1000
+vbd_iters_per_anderson_iter = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Chebyshev]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 1000
+rho = 0.8999999761581421
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Convergence]
+astol = 0.5
+check_interval = 20
+ftol = 0.5
+rstol = 0.01
+
+[Solver.Newton]
+init_strategy = 0
+linear_solver = 0
+n_max_iters = 1
+spd_correction = 2
+
+[Solver.Newton.LinearSolver]
+atol = 1e-10
+n_max_iters = 2000
+rtol = 1e-06
+
+[Solver.Newton.newton]
+gtol2 = 9.99999905104687e-09
+n_max_iters = 30
+
+[Solver.Newton.newton.line_search]
+alpha = 1.0
+c = 9.999999747378752e-05
+n_max_iters = 20
+tau = 0.5
+
+[Solver.VBD]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 1000
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
