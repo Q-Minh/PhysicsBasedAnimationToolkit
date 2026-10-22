@@ -280,9 +280,10 @@ SCENES = {
         "data/scenarios/dragon-spaghetti_horizontal.h5: kyogre-spaghetti_vertical.h5 with the Stanford dragon (data/"
         "stanford-dragon.ply tetrahedralized with fTetWild through pytetwild, edge length 0.025 of the bounding-box "
         "diagonal, envelope 5e-4: 204k tets, quality at least 0.057; data/stanford-dragon_ftetwild.msh) in place of "
-        "the Kyogre, soft (Young's modulus 1e6), 2.26 m long, lying horizontally at mid-height, turned so the four "
-        "pillars stand in its gaps, at least 1 cm clear (maintainer, 2026-10-21: the vertical dragon only caught one "
-        "hand)",
+        "the Kyogre, soft (Young's modulus 1e6), 2.26 m long, lying horizontally at mid-height near the twist axis "
+        "(its head 0.37 m from it), with the pillars spread 1.2x from the axis (centers 1.2 m apart) so they clear it "
+        "by at least 1 cm and close in on it from all sides (maintainer, 2026-10-21: the vertical dragon only caught "
+        "one hand; aim for a highly tangled dragon)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
     "armadillo_pull": Scene(
