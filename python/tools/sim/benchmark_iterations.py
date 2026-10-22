@@ -22,7 +22,9 @@ Usage:
     python -m python.tools.sim.benchmark_iterations results.h5 -o out/tables/iterations \
         [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--budget-factor 2]
 
-Writes ``<prefix>.md`` and ``<prefix>.tex`` (booktabs and multirow tables).
+Writes ``<prefix>.md`` and ``<prefix>.tex`` (booktabs and multirow tables). The Markdown keeps the quartiles;
+the LaTeX is the paper's: medians only (``171k``, ``18.6k``), the reached fraction as a superscript, materials as
+in the figures (``$E = 10^{5}$ Pa``), one ``table*`` per benchmark with a caption opening with its title in bold.
 """
 
 import argparse
@@ -34,7 +36,9 @@ import h5py
 import numpy as np
 
 from . import benchmark_results as results
-from .benchmark_plot import SOLVER_NAMES, benchmark_title, resolvable_samples, unresolvable_levels
+from .benchmark_plot import (
+    SOLVER_NAMES, benchmark_header, benchmark_title, case_label, resolvable_samples, unresolvable_levels,
+)
 
 
 def crossing_counts(
@@ -96,7 +100,8 @@ def quartiles(values: np.ndarray) -> tuple[float, float, float]:
 
 def table_rows(f: h5py.File, benchmark: str, solvers: list[str], factor: float) -> tuple[list, list]:
     """The benchmark's levels and rows (case label, solver name, cells); a cell is a dict with ``text``
-    (plain), ``bold`` and ``note`` or None."""
+    (plain, the Markdown table's), ``bold``, and for the LaTeX table ``median``, ``cg`` (Newton's median CG
+    iterations, else None), ``k`` and ``n`` (samples that reached the level, of those counted), or ``beyond``."""
     levels = results.benchmark_levels(f, benchmark)
     rows = []
     for b, case, g in results.iter_cases(f):
@@ -112,30 +117,31 @@ def table_rows(f: h5py.File, benchmark: str, solvers: list[str], factor: float) 
             row = []
             for j in range(len(levels)):
                 if unresolvable[j]:
-                    row.append({"text": "beyond ref.", "bold": False})
+                    row.append({"text": "beyond ref.", "bold": False, "beyond": True})
                     continue
                 n = int(counted[:, j].sum())
                 reached = (counts[:, j] >= 0) & counted[:, j]
                 k = int(reached.sum())
                 if k == 0:
-                    row.append({"text": f"- (0/{n})", "bold": False})
+                    row.append({"text": f"- (0/{n})", "bold": False, "median": None, "k": 0, "n": n})
                     continue
                 q25, q50, q75 = quartiles(counts[reached, j])
+                cg = float(np.median(cgs[reached, j])) if cgs is not None else None
                 if cgs is not None:
-                    text = f"{q50:.0f} ({np.median(cgs[reached, j]):.0f} CG)"
+                    text = f"{q50:.0f} ({cg:.0f} CG)"
                 else:
                     text = f"{q50:.0f} [{q25:.0f}-{q75:.0f}]"
                     if 2 * k >= n:
                         medians.setdefault(j, []).append((q50, solver))
                 if k < n:
                     text += f" ({k}/{n})"
-                row.append({"text": text, "bold": False})
+                row.append({"text": text, "bold": False, "median": q50, "cg": cg, "k": k, "n": n})
             cells[solver] = row
         for j, candidates in medians.items():
             best = min(q for q, _ in candidates)
             for q, solver in candidates:
                 cells[solver][j]["bold"] = q == best
-        label = str(g.attrs.get("label", case))
+        label = case_label(g, case)
         rows += [(label, SOLVER_NAMES.get(s, s), cells[s]) for s in present]
     return levels, rows
 
@@ -162,13 +168,47 @@ def latex_escape(text: str) -> str:
     return text.replace("%", r"\%").replace("_", r"\_").replace("-", "--")
 
 
+def compact(count: float) -> str:
+    """A count in at most 3 significant digits with a k or M suffix: 373, 1.89k, 18.6k, 171k, 1.2M."""
+    for scale, suffix in ((1e6, "M"), (1e3, "k")):
+        if count >= scale:
+            return f"{count / scale:.3g}{suffix}"
+    return f"{count:.0f}"
+
+
+def latex_cell(cell: dict) -> str:
+    """The paper's cell: the median count (Newton: steps, then CG iterations in parentheses), in bold for the
+    column's fewest sweeps, and the samples that reached the level as a superscript when not all did; -- when
+    none did, "beyond ref." past the reference's accuracy."""
+    if cell.get("beyond"):
+        return r"\emph{beyond ref.}"
+    if cell["median"] is None:
+        return "--"
+    text = compact(cell["median"]) + (f" ({compact(cell['cg'])})" if cell["cg"] is not None else "")
+    if cell["bold"]:
+        text = rf"\textbf{{{text}}}"
+    if cell["k"] < cell["n"]:
+        text += rf"$^{{{cell['k']}/{cell['n']}}}$"
+    return text
+
+
 def latex(benchmark: str, levels, rows, factor: float) -> str:
+    """One benchmark's table for the paper (``table*``, text width): rows grouped by material, one column per
+    level, cells from :func:`latex_cell`, and a caption that opens with its title in bold."""
     n_cols = len(levels)
-    out = [r"\begin{table}", r"\centering", r"\small",
-           rf"\caption{{{benchmark_title(benchmark)}: iterations to each error reduction within {factor:g}"
-           r" $\times$ $T_N$ (median [25th--75th percentile]; VBD sweeps, Newton steps and CG iterations).}",
+    header = benchmark_header(benchmark)
+    out = [r"\begin{table*}", r"\centering", r"\small",
+           rf"\caption{{\textbf{{Iterations to accuracy in {header[:1].lower() + header[1:]}.}} Median number of "
+           r"iterations to reach each level of error reduction $1 - e/e_0$ within "
+           rf"${factor:g}\,T_N$, over the samples that reach it: VBD sweeps for the VBD family (an Anderson "
+           r"iteration counts its sweeps), and for Newton, Newton steps followed by the conjugate gradient "
+           r"iterations of all its linear solves in parentheses. A superscript gives the fraction of samples that "
+           r"reach the level when not all do, and -- means none does. Bold: the fewest sweeps in the VBD family "
+           r"among the solvers that reach the level on at least half the samples.}",
+           rf"\label{{tab:iterations-{benchmark.replace('_', '-').replace('.', '')}}}",
            r"\begin{tabular}{ll" + "r" * n_cols + "}", r"\toprule",
-           "Scene & Solver & " + " & ".join(latex_escape(level_header(v)) for v in levels) + r" \\", r"\midrule"]
+           "Material & Solver & " + " & ".join(latex_escape(level_header(v)) for v in levels) + r" \\",
+           r"\midrule"]
     groups = {}
     for label, _, _ in rows:
         groups[label] = groups.get(label, 0) + 1
@@ -176,11 +216,11 @@ def latex(benchmark: str, levels, rows, factor: float) -> str:
     for label, solver, cells in rows:
         if previous is not None and label != previous:
             out.append(r"\midrule")
-        scene = rf"\multirow{{{groups[label]}}}{{*}}{{{latex_escape(label)}}}" if label != previous else ""
+        # The label is already LaTeX (math for the modulus), so it isn't escaped
+        scene = rf"\multirow{{{groups[label]}}}{{*}}{{{label}}}" if label != previous else ""
         previous = label
-        texts = [rf"\textbf{{{latex_escape(c['text'])}}}" if c["bold"] else latex_escape(c["text"]) for c in cells]
-        out.append(" & ".join([scene, latex_escape(solver)] + texts) + r" \\")
-    out += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+        out.append(" & ".join([scene, latex_escape(solver)] + [latex_cell(c) for c in cells]) + r" \\")
+    out += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     return "\n".join(out) + "\n"
 
 
