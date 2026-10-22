@@ -36,9 +36,12 @@ back; the legend lists them in the same order, back to front. ``--solver-order``
 Usage:
     python -m python.tools.sim.benchmark_plot results.h5 -o out/figures/benchmark \
         [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--solver-order Newton,VBD,...] \
-        [--budget-factor 1] [--elev 28] [--azim -62] [--dpi 200]
+        [--budget-factor 1] [--width 5.5] [--no-legend] [--title] [--elev 28] [--azim -62] [--dpi 200]
 
-Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark.
+Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark, and with ``--no-legend`` the legend alone as
+``<prefix>_legend.pdf``. ``--width`` renders each chart at the width the paper prints it, so its 8 pt labels
+print at 8 pt; at a column's width (about 3.4 in) the 3D box gets too small to read, so the paper stacks the
+charts at about 0.8 x the text width.
 
 Fonts: the figure text is in Linux Biolinum, the sans serif of ACM's acmart template (SIGGRAPH, TOG), whose
 body text is Linux Libertine; from ``--font-dir``, the ``PBAT_FONT_DIR`` environment variable or the installed
@@ -239,12 +242,13 @@ def budget_factor(f: h5py.File, factor: float | None) -> float:
 
 def plot_benchmark(
     f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None,
-    factor: float | None = None, counts: bool = False, title: bool = False,
+    factor: float | None = None, counts: bool = False, title: bool = False, legend: bool = True, scale: float = 1.0,
 ):
     """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
     ``solver_order`` (back to front) overrides :func:`depth_order`. ``factor``: the budget factor the bars
     score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs. ``counts``
-    labels the bars with n/N (see the module docstring). ``title`` draws the benchmark's title above the legend.
+    labels the bars with n/N (see the module docstring). ``title`` draws the benchmark's title above the legend,
+    ``legend`` the solver legend. ``scale`` multiplies the figure's size but not its fonts (:func:`plot_at_width`).
     Returns the figure and the region to save (:func:`frame`)."""
     levels = results.benchmark_levels(f, benchmark)
     factor = budget_factor(f, factor)
@@ -303,7 +307,7 @@ def plot_benchmark(
                 bars.append((xc, j, 0.0, mean[j], color, None, False, bar_w, bar_d))
                 z_top = max(z_top, hi[j])
 
-    fig = plt.figure(figsize=(max(7.0, 1.6 * len(cases) + 4.0), FIGURE_HEIGHT))
+    fig = plt.figure(figsize=(scale * max(7.0, 1.6 * len(cases) + 4.0), scale * FIGURE_HEIGHT))
     # The 3D axes fill the figure: a 3D axes draws its box inside its area at a fixed scale. The saved region is
     # cropped to the drawn plot (frame), so the figure's size only sets the box's scale
     ax = fig.add_axes((-0.08, 0.05, 1.0, 0.9), projection="3d", computed_zorder=False)
@@ -350,14 +354,44 @@ def plot_benchmark(
     ax.grid(False)  # the grid lines carry nothing the axes and bars don't (maintainer)
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1, 1, 1, 0))
+    return fig, frame(fig, ax, benchmark_title(benchmark) if title else None, legend_handles(solvers) if legend else None)
+
+
+def legend_handles(solvers: list[str]) -> list[Patch]:
+    """The solver legend's entries, in ``solvers``' order, then the min-max box."""
     handles = [Patch(color=solver_color(s, solvers), label=SOLVER_NAMES.get(s, s)) for s in solvers]
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
-    return fig, frame(fig, ax, benchmark_title(benchmark) if title else None, handles)
+    return handles
 
 
-def frame(fig, ax, title: str | None, handles: list) -> Bbox:
-    """Center a one-row legend, and the title if any, above the drawn plot and return the region to save
-    (inches). By default the figures have no title and no caption: the paper's LaTeX figure carries them, as
+def legend_figure(solvers: list[str]) -> tuple:
+    """The solver legend alone, one row, for a figure that stacks several charts drawn without theirs
+    (``--no-legend``). Returns the figure and the region to save (inches)."""
+    fig = plt.figure(figsize=(8.0, 0.5))
+    legend = fig.legend(handles=legend_handles(solvers), loc="center", ncol=len(solvers) + 1, fontsize=8,
+                        frameon=False, borderaxespad=0, borderpad=0)
+    fig.canvas.draw()
+    region = legend.get_window_extent(fig.canvas.get_renderer()).padded(FRAME_PAD * fig.dpi)
+    return fig, region.transformed(fig.dpi_scale_trans.inverted())
+
+
+def plot_at_width(width: float | None, *args, **kwargs) -> tuple:
+    """:func:`plot_benchmark` with its saved region ``width`` inches wide (None: the natural size): the figure is
+    scaled and its fonts aren't, so the labels print at their nominal size where the paper places the chart at
+    that width. The region doesn't scale exactly with the figure (fonts and paddings), so a few redraws converge."""
+    scale = 1.0
+    for _ in range(6):
+        fig, region = plot_benchmark(*args, **kwargs, scale=scale)
+        if width is None or abs(region.width - width) <= 0.01:
+            break
+        plt.close(fig)
+        scale *= width / region.width
+    return fig, region
+
+
+def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
+    """Center a one-row legend (if ``handles``), and the title if any, above the drawn plot and return the region
+    to save (inches). By default the figures have no title and no caption: the paper's LaTeX figure carries them, as
     sub-figure labels and a caption (maintainer). A 3D axes fills its area and draws its box inside it at a fixed
     scale, so a tight bounding box would keep the whole area's margins: the plot's extent is measured from the
     box's panes, its axes (ticks and titles) and its texts."""
@@ -370,10 +404,12 @@ def frame(fig, ax, title: str | None, handles: list) -> Bbox:
     pad = FRAME_PAD * fig.dpi  # pixels
     to_figure = fig.transFigure.inverted()
     cx = to_figure.transform(((plot.x0 + plot.x1) / 2, 0))[0]
-    legend = fig.legend(handles=handles, loc="lower center", ncol=len(handles), fontsize=8, frameon=False,
-                        bbox_to_anchor=to_figure.transform(((plot.x0 + plot.x1) / 2, plot.y1 + pad)),
-                        borderaxespad=0, borderpad=0)
-    shown = [plot, legend.get_window_extent(renderer)]
+    shown = [plot]
+    if handles:
+        legend = fig.legend(handles=handles, loc="lower center", ncol=len(handles), fontsize=8, frameon=False,
+                            bbox_to_anchor=to_figure.transform(((plot.x0 + plot.x1) / 2, plot.y1 + pad)),
+                            borderaxespad=0, borderpad=0)
+        shown.append(legend.get_window_extent(renderer))
     if title:
         suptitle = fig.suptitle(title, x=cx, y=to_figure.transform((0, shown[-1].y1 + pad))[1], ha="center",
                                 va="bottom", fontsize=11)
@@ -400,6 +436,13 @@ def main():
                         help="Label the bars with n/N, the samples that reached the level (see the module docstring).")
     parser.add_argument("--title", action="store_true",
                         help="Draw the benchmark's title (default: none, the paper's sub-figure labels name them).")
+    parser.add_argument("--width", type=float, default=None,
+                        help="Printed width of each chart in inches (e.g. 5.5 for 0.8 x TOG's 7 in text width): the "
+                        "figure is scaled, its fonts aren't, so the labels print at their nominal size when the paper "
+                        "places it at this width (default: the natural size, about 6.2 in).")
+    parser.add_argument("--no-legend", action="store_false", dest="legend",
+                        help="Draw the charts without their solver legend, and write the legend alone to "
+                        "<prefix>_legend.pdf, for a figure that stacks several charts under one legend.")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -419,10 +462,18 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         for benchmark in benchmarks:
             order = args.solver_order.split(",") if args.solver_order else None
-            fig, region = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor, args.counts,
-                                         args.title)
+            fig, region = plot_at_width(args.width, f, benchmark, solvers, args.elev, args.azim, order, factor,
+                                        args.counts, args.title, args.legend)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
+                fig.savefig(path, dpi=args.dpi, bbox_inches=region)
+                print(f"Wrote {path}")
+            plt.close(fig)
+        if not args.legend:
+            # One legend for all the charts: the file's solver order, since each chart orders its own by depth
+            fig, region = legend_figure([s for s in solvers if any(s in g for _, _, g in results.iter_cases(f))])
+            for ext in ("pdf", "png"):
+                path = f"{args.output}_legend.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
                 print(f"Wrote {path}")
             plt.close(fig)
