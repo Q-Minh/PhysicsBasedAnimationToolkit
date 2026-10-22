@@ -50,6 +50,7 @@ Matplotlib's default font. No grid lines (maintainer).
 import argparse
 import glob
 import os
+import re
 import warnings
 
 import h5py
@@ -140,8 +141,19 @@ def solver_color(solver: str, solvers: list[str]) -> str:
     return OTHER_COLORS[others.index(solver) % len(OTHER_COLORS)]
 
 
+def material_label(label: str) -> str:
+    """A run file's case label for the paper: Young's modulus as math, ``Y = 1e5`` -> ``$E = 10^{5}$ Pa``, and
+    other labels capitalized (``heterogeneous`` -> ``Heterogeneous``)."""
+    m = re.fullmatch(r"Y\s*=\s*([0-9.]+)[eE]([+-]?\d+)", label.strip())
+    if m is None:
+        return label[:1].upper() + label[1:]
+    mantissa, exponent = float(m.group(1)), int(m.group(2))
+    power = f"10^{{{exponent}}}"
+    return f"$E = {power}$ Pa" if mantissa == 1 else rf"$E = {mantissa:g} \times {power}$ Pa"
+
+
 def case_label(group: h5py.Group, case: str) -> str:
-    label = str(group.attrs.get("label", group.attrs.get("scene", case)))
+    label = material_label(str(group.attrs.get("label", group.attrs.get("scene", case))))
     if case != group.attrs.get("scene", case):  # one case per energy level of the scene
         label += f"\nE = {float(group.attrs['energy']):g} J"
     return label
@@ -227,12 +239,13 @@ def budget_factor(f: h5py.File, factor: float | None) -> float:
 
 def plot_benchmark(
     f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None,
-    factor: float | None = None, counts: bool = False,
+    factor: float | None = None, counts: bool = False, title: bool = False,
 ):
     """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
     ``solver_order`` (back to front) overrides :func:`depth_order`. ``factor``: the budget factor the bars
     score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs. ``counts``
-    labels the bars with n/N (see the module docstring). Returns the figure and the region to save (:func:`frame`)."""
+    labels the bars with n/N (see the module docstring). ``title`` draws the benchmark's title above the legend.
+    Returns the figure and the region to save (:func:`frame`)."""
     levels = results.benchmark_levels(f, benchmark)
     factor = budget_factor(f, factor)
     run = float(f.attrs.get("budget_factor", 1.0))
@@ -339,14 +352,15 @@ def plot_benchmark(
         axis.pane.set_facecolor((1, 1, 1, 0))
     handles = [Patch(color=solver_color(s, solvers), label=SOLVER_NAMES.get(s, s)) for s in solvers]
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
-    return fig, frame(fig, ax, benchmark_title(benchmark), handles)
+    return fig, frame(fig, ax, benchmark_title(benchmark) if title else None, handles)
 
 
-def frame(fig, ax, title: str, handles: list) -> Bbox:
-    """Center the title and a one-row legend above the drawn plot and return the region to save (inches). The
-    figures have no caption: the paper's LaTeX figure carries it (maintainer). A 3D axes fills its area and draws its box inside it at a fixed scale,
-    so a tight bounding box would keep the whole area's margins: the plot's extent is measured from the box's
-    panes, its axes (ticks and titles) and its texts."""
+def frame(fig, ax, title: str | None, handles: list) -> Bbox:
+    """Center a one-row legend, and the title if any, above the drawn plot and return the region to save
+    (inches). By default the figures have no title and no caption: the paper's LaTeX figure carries them, as
+    sub-figure labels and a caption (maintainer). A 3D axes fills its area and draws its box inside it at a fixed
+    scale, so a tight bounding box would keep the whole area's margins: the plot's extent is measured from the
+    box's panes, its axes (ticks and titles) and its texts."""
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     axes = (ax.xaxis, ax.yaxis, ax.zaxis)
@@ -359,10 +373,11 @@ def frame(fig, ax, title: str, handles: list) -> Bbox:
     legend = fig.legend(handles=handles, loc="lower center", ncol=len(handles), fontsize=8, frameon=False,
                         bbox_to_anchor=to_figure.transform(((plot.x0 + plot.x1) / 2, plot.y1 + pad)),
                         borderaxespad=0, borderpad=0)
-    top = legend.get_window_extent(renderer).y1
-    suptitle = fig.suptitle(title, x=cx, y=to_figure.transform((0, top + pad))[1], ha="center", va="bottom",
-                            fontsize=11)
-    shown = [plot] + [a.get_window_extent(renderer) for a in (legend, suptitle)]
+    shown = [plot, legend.get_window_extent(renderer)]
+    if title:
+        suptitle = fig.suptitle(title, x=cx, y=to_figure.transform((0, shown[-1].y1 + pad))[1], ha="center",
+                                va="bottom", fontsize=11)
+        shown.append(suptitle.get_window_extent(renderer))
     return Bbox.union(shown).padded(pad).transformed(fig.dpi_scale_trans.inverted())
 
 
@@ -383,6 +398,8 @@ def main():
                         "larger one is re-scored from its logs). Default: 1, or the run's factor when smaller.")
     parser.add_argument("--counts", action="store_true",
                         help="Label the bars with n/N, the samples that reached the level (see the module docstring).")
+    parser.add_argument("--title", action="store_true",
+                        help="Draw the benchmark's title (default: none, the paper's sub-figure labels name them).")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -402,7 +419,8 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         for benchmark in benchmarks:
             order = args.solver_order.split(",") if args.solver_order else None
-            fig, region = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor, args.counts)
+            fig, region = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor, args.counts,
+                                         args.title)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
