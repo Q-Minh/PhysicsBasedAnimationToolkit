@@ -966,8 +966,9 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   per-sweep cost by phase group; per-step final ratios and early exits at the budget); Newton only per-step costs, in
   ONE table over every other paper scene for all 5 solvers ("expected efficiency" for the videos, plus residuals).
   Phase names and colours approved. Task 2 is planning runs and costs.
-- P8. **Basket slot** (~35-40 min per solver for full runs, with the maintainer), and its budget: keep the paper's
-  400 sweeps (every step hits it, gradient ratio 128-351 at the start) or raise it?
+- P8. **BasketOfFruit: on hold** until the maintainer tunes its per-solver iteration budgets (not run yet; no basket
+  runs of any kind until then). CapsulesIntoBowl is tuned and approved for all profiling, the all-scenes table's
+  row (all 5 solvers) and offline trajectory exports for rendering (2026-10-22).
 
 ### Pending maintainer decisions (2026-10-20, maintainer away; the coordinator keeps this list current)
 
