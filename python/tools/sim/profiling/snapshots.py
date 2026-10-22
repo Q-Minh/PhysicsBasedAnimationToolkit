@@ -17,7 +17,11 @@ Polyscope has no headless backend on Windows: rendering opens a window briefly.
 Usage (from the repo root):
 
     python -m python.tools.sim.profiling.snapshots out.h5 --times 0.9 1.4 2.9 --view view.json -o out/snap \
-        [--pick] [--size 1200 1200] [--colors "#e69f00" "#9db4c0" "#56b4e9"]
+        [--pick] [--look-at X Y Z TX TY TZ] [--size 1200 1200] [--colors "#b9c3c9" "#e69f00" "#56b4e9"] \
+        [--translucent 0 2 --opacity 0.35]
+
+The capsule bowl's paper snapshots: ``--look-at 10.6 -10.6 7 0 0 0 --colors "#b9c3c9" "#e69f00" "#56b4e9"
+--translucent 0 2`` (tubes and bowl translucent, so the capsules show inside them).
 
 Writes ``<prefix>_<i>.png`` (i = 1, 2, ... in time order) and prints each image's frame time.
 """
