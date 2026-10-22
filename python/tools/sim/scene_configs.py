@@ -335,7 +335,7 @@ SCENES = {
         "slice at 50-55% of its height, where only the torso is) on the twist axis, turned so the pillars clear it by "
         "2.7 cm (the bounding-box center left the curved, leaning body 24 cm off the axis), gravity (-9.81 m/s^2 in z) on "
         "every body and the armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm "
-        "under its surface) held by a Fixed transform for the first second, then released, so it falls into the "
+        "under its surface) held by a Fixed transform for the first 0.45 s (was 1 s; freezes), then released, so it falls into the "
         "already tangling pillars (maintainer, 2026-10-21). The held nodes stay off the surface: holding surface nodes "
         "(a 15 cm ball reached the thin torso's skin) pits the pillars' prescribed twist against prescribed armadillo "
         "nodes in contact, with no feasible position, and the simulation froze",
