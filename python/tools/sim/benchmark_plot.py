@@ -71,6 +71,8 @@ SOLVER_COLORS = {
     "Newton": "#E69F00",
 }
 SOLVER_NAMES = {"AndersonSolver": "Anderson"}
+FIGURE_HEIGHT = 4.2  # inches; the box's height at BOX_ZOOM, with the title and caption
+BOX_ZOOM = 1.35  # the 3D box's scale in its axes (Matplotlib's default 1 leaves wide margins)
 OTHER_COLORS = ["#56B4E9", "#F0E442", "#000000"]
 # The Linux Libertine family of ACM's acmart template (SIGGRAPH, TOG): Linux Libertine (serif, body text), Linux
 # Biolinum (sans serif, headings) and Linux Libertine Mono (code). OpenType family names first, then other names.
@@ -286,8 +288,11 @@ def plot_benchmark(
                 bars.append((xc, j, 0.0, mean[j], color, None, False, bar_w, bar_d))
                 z_top = max(z_top, hi[j])
 
-    fig = plt.figure(figsize=(max(7.0, 1.6 * len(cases) + 4.0), 5.6))
-    ax = fig.add_subplot(projection="3d", computed_zorder=False)
+    fig = plt.figure(figsize=(max(7.0, 1.6 * len(cases) + 4.0), FIGURE_HEIGHT))
+    # The 3D axes fill the figure (a 3D axes' box is drawn inside its area at a fixed scale, and its area, not the
+    # box, bounds the saved figure), between the title and the caption, shifted left: at the default camera the
+    # box and its axis labels sit right of the axes' center
+    ax = fig.add_axes((-0.08, 0.05, 1.0, 0.9), projection="3d", computed_zorder=False)
     ax.view_init(elev=elev, azim=azim)
     # Back to front: position along the direction toward the camera, in displayed (box-aspect) units
     scale = np.array([aspect[0] / (x_range[1] - x_range[0]), aspect[1] / (y_range[1] - y_range[0])])
@@ -298,13 +303,14 @@ def plot_benchmark(
     labels = []
     for order, (x, y, z0, dz, color, label, is_box, w, d) in enumerate(bars):
         if is_box:
-            ax.bar3d(x - w / 2, y - d / 2, z0, w, d, max(dz, 1e-9), color=color, alpha=0.18,
-                     edgecolor=color, linewidth=0.3, shade=False, zorder=order)
+            collection = ax.bar3d(x - w / 2, y - d / 2, z0, w, d, max(dz, 1e-9), color=color, alpha=0.18,
+                                  edgecolor=color, linewidth=0.3, shade=False, zorder=order)
             if label:
                 labels.append((x, y, z0 + dz, label, order))
         else:
-            ax.bar3d(x - w / 2, y - d / 2, 0.0, w, d, max(dz, 1e-9), color=color, alpha=1.0,
-                     edgecolor="white", linewidth=0.2, shade=True, zorder=order)
+            collection = ax.bar3d(x - w / 2, y - d / 2, 0.0, w, d, max(dz, 1e-9), color=color, alpha=1.0,
+                                  edgecolor="white", linewidth=0.2, shade=True, zorder=order)
+        collection.set_clip_on(False)  # the zoomed box (BOX_ZOOM) may reach past the axes' clip box
     z_max = 1.08 * z_top if z_top > 0 else 1.0
     labels += [(x, y, z, label, len(bars)) for x, y, z, label in floating]
     for x, y, z, label, order in labels:
@@ -318,14 +324,14 @@ def plot_benchmark(
     ax.set_xlim(*x_range)
     ax.set_ylim(*y_range)
     ax.set_zlim(0.0, z_max)
-    ax.set_xlabel("Material", labelpad=10)
+    ax.set_xlabel("Material", labelpad=18)
     ax.set_ylabel(r"$1 - e/e_0$ (%)", labelpad=8)
     fixed = [("budget" in g.attrs) for _, g in cases]
     norm = "T" if all(fixed) else "T_N" if not any(fixed) else "T_N (or T)"
     ax.zaxis.set_rotate_label(False)  # upright: the title is short enough to read without tilting one's head
     ax.set_zlabel(rf"$\Delta t / {norm}$", labelpad=12, rotation=0)  # clear of the depth axis label
     ax.tick_params(axis="z", labelsize=8)
-    ax.set_box_aspect(aspect, zoom=0.95)
+    ax.set_box_aspect(aspect, zoom=BOX_ZOOM)
     ax.grid(False)  # the grid lines carry nothing the axes and bars don't (maintainer)
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1, 1, 1, 0))
