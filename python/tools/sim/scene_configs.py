@@ -278,7 +278,8 @@ SCENES = {
     "dragon_spaghetti_vertical": Scene(
         "defaults",
         "data/scenarios/dragon-spaghetti_vertical.h5: kyogre-spaghetti_vertical.h5 with the Stanford dragon (data/"
-        "stanford-dragon.ply, isotropically remeshed and tetrahedralized with TetGen: 24k tets, 4 below quality 0.03) "
+        "stanford-dragon.ply tetrahedralized with fTetWild through pytetwild, edge length 0.025 of the bounding-box "
+        "diagonal, envelope 5e-4: 204k tets, quality at least 0.057; data/stanford-dragon_ftetwild.msh) "
         "in place of the Kyogre, soft (Young's modulus 1e6), nose up, 2.26 m long, clear of the pillars by at least "
         "1 cm",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
