@@ -71,6 +71,12 @@ The `simulate.py` arguments after `--` are passed through unchanged, so `--sim-p
   python -m python.tools.sim.profiling.report out/vbd.json out/aaavbd.json -o out/report.html --note "trampoline, Dump params"
   ```
 
+- **Per-step statistics** (in the same report, `profiling/step_stats.py`): quantiles of step and phase times, the phases over the run, and the steps grouped by percentiles of their GPU time and of their peak node speed (`--slices 10,90`), each group with a phase donut, early exits, iterations, ms/iteration and residual ratios. Every profile entry already carries the step's solve statuses (`simulate.py` writes them). The peak speeds come from the run's saved frames, added in a separate step before `report`; run `simulate.py` with `--fps` at the step rate (1 / dt) for one value per step:
+
+  ```bash
+  python -m python.tools.sim.profiling.trajectory out/aaavbd.json out/aaavbd_traj.h5   # adds peak_speed per step
+  ```
+
 - **HTML, overheads:** a production time budget, the anatomy timeline, kernel comparisons and before/after timings, plus "stall hotspots by function" when given `ncu.py --lineinfo` summaries.
 
   ```bash
