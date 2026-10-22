@@ -1092,3 +1092,7 @@ Answer when back; each has the coordinator's recommendation.
     **Answered (2026-10-20):** A (deterministic Gram, if the cost is negligible; sent to task 2) and more than one sweep per
     Anderson step (p = 2; sent to task 3; cf. "Periodic Anderson Acceleration", which uses many sweeps per step). Adaptive
     p is out of scope (it would be a new Anderson-VBD method). Anderson's stalls are a weakness to highlight, not hide.
+- 2026-10-21 · task 3 · **GPU run START** (~5 min total from 19:50, short headless processes, timings irrelevant): Newton jaggedness diagnosis on trampoline_circle_soft-stiff + sphere (AAAVBD to first contact, then ~6 steps of AAAVBD / Newton / Newton with per-step slack refresh). Will log END.
+- 2026-10-21 · task 3 · **GPU run END** (Newton jaggedness diagnosis, 3 short headless processes, ~5 min). The GPU is free.
+- 2026-10-21 · task 3 · **GPU run START** (< 2 min, one headless process, timings irrelevant): Newton slack-refresh fix confirmation on trampoline_circle_soft-stiff + sphere (4 Newton steps after first contact). Will log END.
+- 2026-10-21 · task 3 · **GPU run END** (Newton slack-refresh confirmation). The GPU is free.
