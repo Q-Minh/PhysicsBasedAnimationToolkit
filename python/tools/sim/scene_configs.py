@@ -137,8 +137,11 @@ KYOGRE_CONTACT = Rule(
 )
 KYOGRE_BUDGET = Rule(
     "The maintainer's budget for the kyogre spaghetti scene (2026-10-21, tested with AAAVBD): no substeps, 5 x 80 = "
-    "400 sweeps per step for every VBD-family solver.",
-    {"Integration.substeps": 1, **_per_solver("n_max_iters", 5), **_per_solver("n_subproblem_max_iters", 80)},
+    "400 sweeps per step for every VBD-family solver; Newton 20 x 2 with a tighter CG (rtol 1e-8, at most 4000 "
+    "iterations), since the energy stiffens as the pillars tangle (maintainer).",
+    {"Integration.substeps": 1, **_per_solver("n_max_iters", 5), **_per_solver("n_subproblem_max_iters", 80),
+     "Solver.Newton.n_max_iters": 20, "Solver.Newton.newton.n_max_iters": 2,
+     "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
 )
 ARMADILLO_GAMMAS = Rule(
     "AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a "
@@ -257,6 +260,13 @@ SCENES = {
         ["It explodes at time step 378: the pillars tangle so much that some surface triangles invert or degenerate, "
          "and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = "
          "10 ms); going further would need a finer mesh (maintainer, 2026-10-21)."],
+    ),
+    "kyogre_spaghetti_vertical": Scene(
+        "defaults",
+        "data/scenarios/kyogre-spaghetti_vertical.h5: kyogre-spaghetti_3_planes.h5 with only the soft Kyogre (Young's "
+        "modulus 1e6), stood nose up (2.26 m tall) between the pillars, clear of them by at least 1 cm (maintainer, "
+        "2026-10-21: the lying Kyogres barely deformed)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
     "armadillo_pull": Scene(
         "defaults",

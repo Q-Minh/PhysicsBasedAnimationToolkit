@@ -14,13 +14,18 @@
 #     Contact.CDType.VertexSdf.max_dist = 0.2 (source 0.05)
 #     Contact.ContactDynamics.dmin = 0.01 (source 0.002)
 # - The maintainer's budget for the kyogre spaghetti scene (2026-10-21, tested with AAAVBD): no substeps, 5 x 80
-#   = 400 sweeps per step for every VBD-family solver.
+#   = 400 sweeps per step for every VBD-family solver; Newton 20 x 2 with a tighter CG (rtol 1e-8, at most 4000
+#   iterations), since the energy stiffens as the pillars tangle (maintainer).
 #     Solver.AAAVBD.n_max_iters = 5 (source 1)
 #     Solver.AAAVBD.n_subproblem_max_iters = 80 (source 100)
 #     Solver.AndersonSolver.n_max_iters = 5 (source 1)
 #     Solver.AndersonSolver.n_subproblem_max_iters = 80 (source 100)
 #     Solver.Chebyshev.n_max_iters = 5 (source 1)
 #     Solver.Chebyshev.n_subproblem_max_iters = 80 (source 100)
+#     Solver.Newton.n_max_iters = 20 (source 1)
+#     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
+#     Solver.Newton.LinearSolver.rtol = 1e-08 (source 1e-06)
+#     Solver.Newton.newton.n_max_iters = 2 (source 10)
 #     Solver.VBD.n_max_iters = 5 (source 1)
 #     Solver.VBD.n_subproblem_max_iters = 80 (source 100)
 #
@@ -130,17 +135,17 @@ rstol = 0.01
 [Solver.Newton]
 init_strategy = 0
 linear_solver = 0
-n_max_iters = 1
+n_max_iters = 20
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]
 atol = 1e-10
-n_max_iters = 2000
-rtol = 1e-06
+n_max_iters = 4000
+rtol = 1e-08
 
 [Solver.Newton.newton]
 gtol2 = 9.99999905104687e-09
-n_max_iters = 10
+n_max_iters = 2
 
 [Solver.Newton.newton.line_search]
 alpha = 1.0
