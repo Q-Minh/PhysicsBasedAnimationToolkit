@@ -97,6 +97,12 @@ def _detect_vertex_mesh_contacts(
             if sd < -mesh_depth[m]:
                 continue
         tsdmin = wp.min(tsdmin, sd)
+        # TODO: Runs aren't reproducible when vertices sit exactly over a partner's vertices: two unit cubes
+        # stacked 2 mm apart with aligned grids (checkpoint.py's test scene without its xy offset) gave VBD and
+        # AAAVBD runs differing from the second step, by up to 1 cm after 10 steps (2026-10-21). Suspected: the
+        # closest point is then a shared vertex or edge, so which face the query returns, and so the feature
+        # below (VF, VE or VV, from exact zero barycentrics), is a tie. Offsetting the cube made runs
+        # bit-identical. A deterministic tie-break (e.g. the smallest face index) would fix it.
         if sd < threshold:
             is_j_zero = wp.int32(b0 == wp.float32(0))
             is_k_zero = wp.int32(b1 == wp.float32(0))

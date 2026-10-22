@@ -10,22 +10,34 @@ parameter files (TOML configs, or HDF5 exported from the GUI's "I/O > Export Par
 Usage:
     python -m python.tools.sim.simulate --fem-elasto-dynamics dump.h5:fem -o out.h5 \
         [--sim-params params.toml ...] [--set Solver.VBD.gtol=1e-4] [--solver AAAVBD] [--cd VertexSdf] [--duration 10] [--fps 60] \
-        [--profile kernels --profile-out profile.json --profile-warmup 10]
+        [--profile kernels --profile-out profile.json --profile-warmup 10] \
+        [--checkpoint-every 50] [--resume out.checkpoint.h5[:step]]
 
 With ``--profile``, the steps after ``--profile-warmup`` run eagerly (no CUDA graph). ``kernels``
 attributes the GPU busy time of every Warp launch to the profiling scope that issued it and prints a
 per-phase summary. ``nvtx`` emits NVTX ranges for Nsight Systems (see
 ``python/tools/sim/profiling/nsys.py``).
+
+Checkpoints (``checkpoint.py``) let a heavy run be replayed from just before a failure. ``--checkpoint-every N``
+writes the full simulation state every N time steps to ``<output>.checkpoint.h5`` (``-o out.h5`` writes
+``out.checkpoint.h5``, overwritten at start), one group per step, closing the file after each. ``--resume
+ckpt.h5[:step]`` loads the problem as usual (``--scene`` or ``--fem-elasto-dynamics``, ``--sim-params``,
+``--set``), then restores the checkpoint of that step (default: the file's latest) and continues to
+``--duration``, which stays the total simulated time. It needs the checkpointed run's problem, contact
+capacities, ``dt``, substeps and BDF scheme; other parameters (e.g. the solver's) may change. The resumed
+output's frames keep the uninterrupted run's numbers, so it starts at the first frame at or after the resumed
+step.
 """
 
 import argparse
 import math
+import os
 import time
 import h5py
 import warp as wp
 from tqdm import tqdm
 
-from . import config
+from . import checkpoint, config
 from .gpu.common import profiling
 from .profiling import results as profiling_results
 from .state import (
@@ -138,7 +150,35 @@ def parse_args():
         "unprofiled, with graph capture when the solver supports it.",
         dest="profile_warmup",
     )
+    parser.add_argument(
+        "--checkpoint-every",
+        type=int,
+        default=0,
+        help="Write the full simulation state every N time steps to <output>.checkpoint.h5 (0: never), "
+        "for --resume.",
+        dest="checkpoint_every",
+    )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        metavar="CKPT.h5[:STEP]",
+        help="Continue from the checkpoint of time step STEP (default: the file's latest) in a "
+        "--checkpoint-every file. The problem and parameters are loaded as usual first.",
+        dest="resume",
+    )
     return parser.parse_args()
+
+
+def checkpoint_path(output: str) -> str:
+    """The checkpoint file of the output ``out.h5``: ``out.checkpoint.h5``."""
+    root, ext = os.path.splitext(output)
+    return f"{root}.checkpoint{ext or '.h5'}"
+
+
+def frame_index(t: int, dt: float, fps: float) -> int:
+    """The number of frames an uninterrupted run writes before time step t's state (see should_save)."""
+    return sum(should_save(k, dt, fps) for k in range(t))
 
 
 def _write_frame(h5f: h5py.File, state: SimulationState, frame: int, status_from: int) -> int:
@@ -172,6 +212,17 @@ def main():
     if args.sim_params or args.overrides:
         config.load_sim_params(state, args.sim_params, args.overrides)
     state.reset()
+    if args.resume:
+        resume_path, resume_step = checkpoint.parse_spec(args.resume)
+        checkpoint.restore(state, resume_path, resume_step)
+        print(f"Resumed from step {state.t} of {resume_path}")
+    first_step = state.t
+    ckpt_path = None
+    if args.checkpoint_every > 0:
+        ckpt_path = checkpoint_path(args.output)
+        if args.resume and os.path.abspath(ckpt_path) == os.path.abspath(resume_path):
+            raise ValueError(f"--resume reads {ckpt_path}, which this run's checkpoints would overwrite: change -o")
+        h5py.File(ckpt_path, "w").close()
     backend = profiling.Backend(args.profile)
     recorder = None
     if backend != profiling.Backend.OFF or args.profile_out:
@@ -192,19 +243,22 @@ def main():
     h5f = init_h5_serialization(state.fem_cpu, args.output, args.fps)
     h5f["params"].attrs["solver"] = state.solver.name
     h5f["params"].attrs["cd"] = state.cd_type.name
+    if args.resume:
+        h5f["params"].attrs["resumed_from"] = f"{resume_path}:{first_step}"
     serialize_params(state, h5f["params"])
 
-    frame = 0
+    frame = frame_index(first_step, state.dt, args.fps)
     t_last_flush = time.perf_counter()
     t_start = t_last_flush
     pbar = None
     measuring = False
-    status_from = 0
+    status_from = first_step
     try:
-        status_from = _write_frame(h5f, state, frame, status_from)
-        frame += 1
+        if should_save(state.t, state.dt, args.fps):
+            status_from = _write_frame(h5f, state, frame, status_from)
+            frame += 1
         while state.t < n_steps:
-            profile_step = recorder is not None and state.t >= args.profile_warmup
+            profile_step = recorder is not None and state.t >= first_step + args.profile_warmup
             if profile_step and not measuring:
                 # Warm-up steps run unprofiled (with graph capture, when supported). Profiling, and an
                 # attached profiler's capture range (nsys --capture-range=cudaProfilerApi), start here.
@@ -231,6 +285,8 @@ def main():
             if should_save(state.t, state.dt, args.fps):
                 status_from = _write_frame(h5f, state, frame, status_from)
                 frame += 1
+            if ckpt_path is not None and state.t % args.checkpoint_every == 0:
+                checkpoint.write(state, ckpt_path)
             if time.perf_counter() - t_last_flush >= 1.0:
                 h5f.flush()
                 t_last_flush = time.perf_counter()
@@ -253,8 +309,8 @@ def main():
         h5f.close()
     elapsed = time.perf_counter() - t_start
     print(
-        f"Simulated {state.t} steps ({state.t * state.dt:.4f}s) in {elapsed:.2f}s wall time, "
-        f"wrote {frame} frames to {args.output}"
+        f"Simulated {state.t - first_step} steps (to {state.t * state.dt:.4f}s) in {elapsed:.2f}s wall time, "
+        f"wrote {frame - frame_index(first_step, state.dt, args.fps)} frames to {args.output}"
     )
     print("Solve status:")
     for line in state.status_log.format_summary():
