@@ -936,11 +936,30 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-22 · coordinator · **GPU run START** (~10 min, approved): ArmadilloSpaghetti.Fall (thickened armadillo; the GUI froze at step 170), headless AAAVBD 5 x 80 to step 168 with checkpoints every 10 steps.
 - 2026-10-22 · coordinator · **GPU run END**: ArmadilloSpaghetti.Fall headless 5 x 80 to step 168 (~12 min): healthy, residual ratio rising to ~1.1e3, penetration spike 2.24 at step 166 (GUI froze at 170). **GPU run START** (~2 min): locate the penetrations, steps 164-170 from the step-160 checkpoint.
 - 2026-10-22 · coordinator · **GPU run END** (~2 min). **Correction:** the armadillo 'penetrations' (steps 82-84 thin, 166/170 thickened) are false: those pillar vertices are outside the armadillo (winding number 0, 11-20 mm from its surface). Cause: VertexSdf classifies VF/VE/VV by exact-zero barycentrics (sd.py), so a vertex whose closest point is on a concave edge stays VF with that face's normal and gets a negative gap (step 170: closest point on edge ab, 10.7 mm away, (p - q).n = -8.6 mm, reported penetration 18.6 mm). The thin-features diagnosis was wrong; thickening didn't help (GUI froze at 170). Fix delegated to task 1.
+- 2026-10-22 · coordinator · **GPU run START** (~5 min, approved): ArmadilloSpaghetti.Fall after the VertexSdf classification fix (130f608a), resumed from step 160 for 60 steps, VE count vs capacity.
 ## Open questions for the maintainer
 
 1. ~~Approve Phase 0?~~ **Answered:** yes, but only after all task-level open questions are answered.
 2. ~~Commit `plans/`?~~ **Answered:** track them in git during the effort, delete at the end.
 3. ~~Branch names?~~ **Answered:** spell out `feature/`; worktree names are fine.
+
+### Pending maintainer decisions, paper results (2026-10-22; the coordinator keeps this list current)
+
+Answered 2026-10-22: profiling shows AAAVBD only (its cost breakdown; a VBD comparison maybe later), so the
+`timeline` figure and `table` only; CapsulesIntoBowl 6 s, BasketOfFruit 3 s (extendable); calibration runs approved.
+Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, tables/profiling_table.tex.
+
+- P1. **BasketOfFruit profiling slot.** ~45 min of GPU (AAAVBD kernels + production runs), heavy, so with the
+  maintainer: when? (task 2 sends a calibrated estimate first)
+- P2. **Phase group names and colours** (profiling/paper_figures.py PHASE_GROUPS): vertex sweeps blue, contact
+  detection orange, contact update green, residuals amber, mixing pink, Newton CG dark green, Newton assembly/line
+  search violet, other grey. Changes?
+- P3. **Which armadillo for ArmadilloSpaghetti.Fall** after the VertexSdf fix: the thickened mesh (205k tets, now
+  the scene file) or the original (162k, ArmadilloSpaghetti.Fall.ThinFeatures.h5)? Thickening came from a
+  misdiagnosis.
+- P4. **Iteration tables' budget:** 2 x T_N (the earlier choice) while the bars score 1 x T_N; keep? And drop the
+  h = 1e-4 table (1-3 sweeps everywhere) from the paper?
+- P5. **Delete the old spaghetti scene variants** (keep ArmadilloSpaghetti.Fall): the maintainer said "not right now".
 
 ### Pending maintainer decisions (2026-10-20, maintainer away; the coordinator keeps this list current)
 
@@ -1115,3 +1134,5 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-21 · task 1 · **GPU run END** (checkpoint/resume tests, ~17 min, longer than estimated: unit-test reruns after a nondeterministic test scene). The GPU is free.
 - 2026-10-21 · task 1 · **GPU run START** (~2 min from 23:28, two short headless processes, timings irrelevant): Newton straight-vs-straight reproducibility on BeamFallingOnBeam (0.5 s each). Will log END.
 - 2026-10-21 · task 1 · **GPU run END** (Newton reproducibility, 2 runs, ~2.5 min). The GPU is free.
+- 2026-10-22 · task 1 · **GPU run START** (~8-9 min from 08:03, maintainer-approved, short processes, timings irrelevant): vertex SDF classification fix (fix/vertex-sdf-classification): checkpoint and contact unit tests, aligned-cube tie determinism (VBD/AAAVBD 3 x 10 steps), BeamFallingOnBeam AAAVBD VE/VF counts vs capacity before/after. Will log END.
+- 2026-10-22 · task 1 · **GPU run END** (vertex SDF classification checks, ~6 min): unit tests OK (sd, dynamics, constraints, checkpoint); aligned-cube runs still irreproducible; BeamFallingOnBeam VE peak 121 -> 138 of 230. The GPU is free.
