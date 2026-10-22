@@ -311,6 +311,13 @@ SCENES = {
         "cm from them; 1.26M tets in all (maintainer, 2026-10-21: spaghetti are round)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "armadillo_spaghetti_single": Scene(
+        "defaults",
+        "data/scenarios/armadillo-spaghetti_single.h5: armadillo-spaghetti_cylinders.h5 with stiffer pillars (Young's "
+        "modulus 1e7) and one softer armadillo (8e5) at mid-height (z -0.6 to 0.6 m), the same pose otherwise, 4.2 cm "
+        "from the pillars; 1.1M tets (maintainer, 2026-10-21)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "armadillo_pull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
