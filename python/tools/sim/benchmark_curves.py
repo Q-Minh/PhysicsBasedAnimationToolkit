@@ -26,7 +26,11 @@ Usage:
         [--problems static/Y1e6 dynamic_h0.01/Y1e7] [--sample 0 | --all-samples] [--solvers VBD,AAAVBD,...] \
         [--xscale log] [--dpi 200]
 
-Writes ``<prefix>.pdf`` and ``.png``: one panel per problem (default: the first case of each benchmark).
+Writes ``<prefix>.pdf`` and ``.png``: one panel per problem (default: the first case of each benchmark). With
+``--grid``, every problem in one figure for the paper (a full page): a row per case, a column per benchmark
+(static, then the time steps from the largest), column headers and row labels in the figure, one legend, the
+levels labeled on the right column, ``--width`` inches wide (default 7, TOG's text width) with the fonts at
+their nominal size.
 """
 
 import argparse
@@ -69,10 +73,12 @@ def error_reached(x: np.ndarray, e: np.ndarray, grid: np.ndarray) -> np.ndarray:
 
 
 def plot_problem(
-    ax, f: h5py.File, benchmark: str, case: str, sample: int | None, solvers: list[str], xscale: str = "log"
+    ax, f: h5py.File, benchmark: str, case: str, sample: int | None, solvers: list[str], xscale: str = "log",
+    title: bool = True, level_labels: bool = True,
 ) -> list[str]:
     """One panel: e/e0 against t / T_N (``xscale`` "log" or "linear") for each solver of the case, for one
-    ``sample``, or over all of them (None: min-max band and median). Returns the solvers drawn."""
+    ``sample``, or over all of them (None: min-max band and median). ``title`` names the problem above the
+    panel, ``level_labels`` writes the levels right of it. Returns the solvers drawn."""
     g = f[f"{benchmark}/{case}"]
     levels = results.benchmark_levels(f, benchmark)
     present = [s for s in solvers if s in g]
@@ -106,7 +112,9 @@ def plot_problem(
     x_end = t_end * (1.15 if xscale == "log" else 1.0)
     for level in levels:
         ax.axhline(1.0 - level, color="#BBBBBB", linewidth=0.6, linestyle=":", zorder=0)
-        ax.text(x_end * (1.04 if xscale == "log" else 1.01), 1.0 - level, f"{100 * level:g}%", fontsize=6, color="#777777", va="center")
+        if level_labels:
+            ax.text(x_end * (1.04 if xscale == "log" else 1.01), 1.0 - level, f"{100 * level:g}%", fontsize=6,
+                    color="#777777", va="center")
     ax.axvline(1.0, color="#777777", linewidth=0.8, linestyle="--", zorder=0)
     if bounds is not None:
         # Darker below every sample's reference accuracy, lighter where only some can't resolve the error
@@ -123,10 +131,70 @@ def plot_problem(
     else:
         ax.set_xlim(0.0, x_end)
     ax.set_xlabel(r"$\dfrac{t}{T_N}$")
-    which = f"sample {sample}" if sample is not None else f"{len(samples)} samples"
-    ax.set_title(f"{benchmark_title(benchmark)}: {case_label(g, case).replace(chr(10), ', ')}, {which}", fontsize=9)
+    if title:
+        which = f"sample {sample}" if sample is not None else f"{len(samples)} samples"
+        ax.set_title(f"{benchmark_title(benchmark)}: {case_label(g, case).replace(chr(10), ', ')}, {which}",
+                     fontsize=9)
     ax.grid(True, which="major", color="#EEEEEE", linewidth=0.5)
     return present
+
+
+GRID_PAD = 0.02  # inches around the saved --grid figure (Matplotlib's default 0.1 would widen it)
+
+
+def legend_handles(drawn: list[str], solvers: list[str], all_samples: bool, short: bool = False) -> list:
+    """The legend's entries: a line per solver drawn, the min-max band (``all_samples``; ``short`` leaves what
+    the line is to the caption), and the reference's accuracy."""
+    handles = [plt.Line2D([], [], color=solver_color(s, solvers), linewidth=1.5, label=SOLVER_NAMES.get(s, s))
+               for s in drawn]
+    if all_samples:
+        handles.append(matplotlib.patches.Patch(facecolor=(0.5, 0.5, 0.5, 0.15), edgecolor="none",
+                                                label="min–max" if short else "min–max (line: median)"))
+    handles.append(matplotlib.patches.Patch(color="#DDDDDD", label="below reference accuracy"))
+    return handles
+
+
+def benchmark_header(benchmark: str) -> str:
+    """A benchmark's column header in the grid, with the time step as math: ``Elastodynamics, $h = 10^{-2}$ s``."""
+    if benchmark.startswith("dynamic_h"):
+        h = float(benchmark[len("dynamic_h"):])
+        exponent = np.log10(h)
+        value = f"10^{{{int(round(exponent))}}}" if abs(exponent - round(exponent)) < 1e-9 else f"{h:g}"
+        return f"Elastodynamics, $h = {value}$ s"
+    return benchmark_title(benchmark)
+
+
+def plot_grid(f: h5py.File, sample: int | None, solvers: list[str], xscale: str, width: float) -> tuple:
+    """Every problem of the file: one row per case (material), one column per benchmark, ``width`` inches wide
+    with the fonts at their nominal size (the paper's full-page figure). Columns are headed by their benchmark and
+    rows labeled by their case; the time axis is titled on the bottom row, the error axis on the left column, the
+    levels on the right column. Returns the figure and the solvers drawn."""
+    # Static first, then the time steps from the largest down, as in the bar figures
+    benchmarks = sorted((str(b) for b in f.attrs["benchmarks"]),
+                        key=lambda b: (b.startswith("dynamic_h"), -float(b[len("dynamic_h"):]) if b.startswith("dynamic_h") else 0.0))
+    cases = []
+    for b, c, _ in results.iter_cases(f):
+        if c not in cases:
+            cases.append(c)
+    rows, cols = len(cases), len(benchmarks)
+    fig, axes = plt.subplots(rows, cols, figsize=(width, 1.42 * rows + 0.5), squeeze=False, layout="constrained")
+    drawn = []
+    for i, case in enumerate(cases):
+        for j, benchmark in enumerate(benchmarks):
+            ax = axes[i][j]
+            if case not in f[benchmark]:
+                ax.set_visible(False)
+                continue
+            drawn += [s for s in plot_problem(ax, f, benchmark, case, sample, solvers, xscale, title=False,
+                                              level_labels=j == cols - 1) if s not in drawn]
+            ax.tick_params(labelsize=7)
+            if i < rows - 1:
+                ax.set_xlabel("")
+            if i == 0:
+                ax.set_title(benchmark_header(benchmark), fontsize=9)
+            if j == 0:
+                ax.set_ylabel(f"{case_label(f[benchmark][case], case)}\n\n" + r"$\dfrac{e}{e_0}$", fontsize=9)
+    return fig, drawn
 
 
 def main():
@@ -142,6 +210,12 @@ def main():
     parser.add_argument("--solvers", default=None, help="Comma-separated solvers (default: the file's).")
     parser.add_argument("--xscale", choices=("log", "linear"), default="log",
                         help="Time axis scale (default: %(default)s).")
+    parser.add_argument("--grid", action="store_true",
+                        help="Every problem in one figure: a row per case (material), a column per benchmark, one "
+                        "legend (the paper's full-page figure; --problems is ignored).")
+    parser.add_argument("--width", type=float, default=7.0,
+                        help="--grid: the figure's printed width in inches, fonts at their nominal size (default: "
+                        "%(default)s, TOG's text width).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
     parser.add_argument("--font-dir", default=None, dest="font_dir",
                         help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
@@ -157,28 +231,40 @@ def main():
             for b, c, _ in results.iter_cases(f):
                 first.setdefault(b, c)
             problems = [f"{b}/{c}" for b, c in first.items()]
-        fig, axes = plt.subplots(1, len(problems), figsize=(4.6 * len(problems), 3.6), squeeze=False)
-        drawn = []
-        for ax, problem in zip(axes[0], problems):
-            benchmark, _, case = problem.partition("/")
-            if benchmark not in f or case not in f[benchmark]:
-                raise SystemExit(f"{args.results} has no {problem}")
-            drawn += [s for s in plot_problem(ax, f, benchmark, case, None if args.all_samples else args.sample, solvers,
-                                                     args.xscale) if s not in drawn]
-        axes[0][0].set_ylabel(r"$\dfrac{e}{e_0}$", rotation=0, labelpad=10)  # upright: a fraction
-        handles = [plt.Line2D([], [], color=solver_color(s, solvers), linewidth=1.5, label=SOLVER_NAMES.get(s, s))
-                   for s in drawn]
-        if args.all_samples:
-            handles.append(matplotlib.patches.Patch(facecolor=(0.5, 0.5, 0.5, 0.15), edgecolor="none",
-                                                    label="min–max (line: median)"))
-        handles.append(matplotlib.patches.Patch(color="#DDDDDD", label="below reference accuracy"))
-        fig.legend(handles=handles, loc="upper center", ncol=len(handles), fontsize=8, frameon=False,
-                   bbox_to_anchor=(0.5, 1.04))
-        fig.tight_layout()
+        sample = None if args.all_samples else args.sample
+        if args.grid:
+            # The saved region is the figure plus whatever overhangs it (the legend), so a redraw or two at an
+            # adjusted width make it print at --width
+            width = args.width
+            for _ in range(4):
+                fig, drawn = plot_grid(f, sample, solvers, args.xscale, width)
+                fig.legend(handles=legend_handles(drawn, solvers, args.all_samples, short=True),
+                           loc="outside upper center", ncol=len(drawn) + 1 + args.all_samples, fontsize=8,
+                           frameon=False, columnspacing=1.2, handlelength=1.6)
+                fig.canvas.draw()  # runs the constrained layout, which places the legend
+                saved = fig.get_tightbbox(fig.canvas.get_renderer()).width + 2 * GRID_PAD
+                if abs(saved - args.width) <= 0.01:
+                    break
+                plt.close(fig)
+                width *= args.width / saved
+        else:
+            fig, axes = plt.subplots(1, len(problems), figsize=(4.6 * len(problems), 3.6), squeeze=False)
+            drawn = []
+            for ax, problem in zip(axes[0], problems):
+                benchmark, _, case = problem.partition("/")
+                if benchmark not in f or case not in f[benchmark]:
+                    raise SystemExit(f"{args.results} has no {problem}")
+                drawn += [s for s in plot_problem(ax, f, benchmark, case, sample, solvers, args.xscale)
+                          if s not in drawn]
+            axes[0][0].set_ylabel(r"$\dfrac{e}{e_0}$", rotation=0, labelpad=10)  # upright: a fraction
+            handles = legend_handles(drawn, solvers, args.all_samples)
+            fig.legend(handles=handles, loc="upper center", ncol=len(handles), fontsize=8, frameon=False,
+                       bbox_to_anchor=(0.5, 1.04))
+            fig.tight_layout()
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         for ext in ("pdf", "png"):
             path = f"{args.output}.{ext}"
-            fig.savefig(path, dpi=args.dpi, bbox_inches="tight")
+            fig.savefig(path, dpi=args.dpi, bbox_inches="tight", pad_inches=GRID_PAD if args.grid else 0.1)
             print(f"Wrote {path}")
         plt.close(fig)
 
