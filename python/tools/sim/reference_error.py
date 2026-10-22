@@ -19,7 +19,10 @@ and per body group: bodies with the same node count, i.e. copies of one mesh (``
   captured once. The checkpoints come from the reference's solver: a VBD-family run's own cross-step buffers
   (AAAVBD's betaG, the Chebyshev and Anderson histories, ...) start fresh at every reference state, as after
   ``reset()``, so each step is independent of the order of the others.
-- ``figures``: the paper's PDFs from ``global`` and ``local`` results.
+- ``figures``: the paper's PDFs from ``global`` and ``local`` results, in the benchmark figures' style (Linux
+  Biolinum, printed ``--width``, one legend on top, no titles; ``profiling/paper_figures.py``): the distance over
+  time (``global``, and per body group), the one-step error distributions (``local``), and each step's final
+  residual and penetration ratios against its one-step error (``residual``, ``penetration``).
 
 Usage (from the repo root):
 
@@ -28,7 +31,8 @@ Usage (from the repo root):
     python -m python.tools.sim.reference_error local --scene scene.h5 --sim-params p.toml [--set KEY=VALUE ...] \\
         --reference ref.h5 [--checkpoints ref.checkpoint.h5] --run AAAVBD=AAAVBD \\
         --run AAAVBD.5x10=AAAVBD,Solver.AAAVBD.n_max_iters=5,Solver.AAAVBD.n_subproblem_max_iters=10 ... -o local.h5
-    python -m python.tools.sim.reference_error figures --global global.h5 --local local.h5 -o prefix [--width 7]
+    python -m python.tools.sim.reference_error figures --global global.h5 --local local.h5 -o prefix [--width 3.3] \\
+        [--runs VBD AAAVBD ...] [--groups capsules]
 
 ``--run LABEL=SOLVER[,KEY=VALUE,...]`` adds a configuration: a solver and its overrides, applied after
 ``--sim-params`` and ``--set``.
@@ -270,6 +274,151 @@ def local_error(args):
         ref.close()
 
 
+def _run_styles(runs: list[tuple[str, str]]) -> dict[str, dict]:
+    """Line and marker styles per run label: the solver's color, then a dash pattern and a marker per further run
+    of it."""
+    from .benchmark_plot import OTHER_COLORS, SOLVER_COLORS
+
+    dashes = ("-", "--", ":", "-.", (0, (5, 1, 1, 1)))
+    markers = ("o", "s", "^", "D", "v")
+    seen: dict[str, int] = {}
+    styles = {}
+    for label, solver in runs:
+        k = seen.get(solver, 0)
+        seen[solver] = k + 1
+        color = SOLVER_COLORS.get(solver, OTHER_COLORS[len(styles) % len(OTHER_COLORS)])
+        styles[label] = dict(color=color, linestyle=dashes[k % len(dashes)], marker=markers[k % len(markers)])
+    return styles
+
+
+def _display(label: str) -> str:
+    """A run label for the figures: the solver's paper name, then whatever follows the first dot."""
+    from .benchmark_plot import SOLVER_NAMES
+
+    head, sep, tail = label.partition(".")
+    return SOLVER_NAMES.get(head, head) + (f" {tail}" if sep else "")
+
+
+def _runs(f: h5py.File, only: list[str] | None) -> list[tuple[str, str]]:
+    labels = list(f["runs"].keys()) if only is None else [r for r in only if r in f["runs"]]
+    return [(r, str(f["runs"][r].attrs.get("solver", r))) for r in labels]
+
+
+def plot_global(f: h5py.File, width: float, only: list[str] | None = None, group: str | None = None):
+    """(a) Each run's RMS distance to the reference over time, overall or for one body group."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+
+    from .profiling.paper_figures import FONT_SIZE, _legend, _style
+
+    runs = _runs(f, only)
+    styles = _run_styles(runs)
+    names = [n.decode() if isinstance(n, bytes) else n for n in f["groups/names"][()]]
+    dt = float(f.attrs["dt"])
+    fig, ax = plt.subplots(figsize=(width, 0.55 * width))
+    for label, _ in runs:
+        g = f["runs"][label]
+        y = g["rms"][()] if group is None else g["rms_group"][:, names.index(group)]
+        ax.plot(g["step"][()] * dt, y, lw=1.0, color=styles[label]["color"], linestyle=styles[label]["linestyle"])
+    _style(ax)
+    ax.set_xlabel("Time (s)", fontsize=FONT_SIZE)
+    ax.set_ylabel("RMS distance to reference (m)" if group is None else f"RMS distance, {group} (m)",
+                  fontsize=FONT_SIZE)
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
+    _legend(fig, [Line2D([], [], lw=1.0, color=styles[r]["color"], linestyle=styles[r]["linestyle"], label=_display(r))
+                  for r, _ in runs])
+    return fig
+
+
+def plot_local(f: h5py.File, width: float, only: list[str] | None = None):
+    """(b) Each run's one-step errors e: a box from the 25th to the 75th percentile with the median, whiskers from
+    the 5th to the 95th percentile and the maximum as a dot, on a log axis."""
+    import matplotlib.pyplot as plt
+
+    from .profiling.paper_figures import FONT_SIZE, INK, _style
+
+    runs = _runs(f, only)
+    styles = _run_styles(runs)
+    fig, ax = plt.subplots(figsize=(width, 0.18 * width + 0.11 * len(runs)))
+    for i, (label, _) in enumerate(runs):
+        e = f["runs"][label]["e_rel"][()]
+        y = len(runs) - 1 - i
+        p5, p25, p50, p75, p95 = np.percentile(e, (5, 25, 50, 75, 95))
+        ax.plot([p5, p25], [y, y], color=INK, lw=0.6)
+        ax.plot([p75, p95], [y, y], color=INK, lw=0.6)
+        ax.add_patch(plt.Rectangle((p25, y - 0.3), p75 - p25, 0.6, facecolor=styles[label]["color"], edgecolor=INK,
+                                   lw=0.5))
+        ax.plot([p50, p50], [y - 0.3, y + 0.3], color=INK, lw=1.0)
+        ax.plot([e.max()], [y], marker="o", ms=2, color=INK)
+    ax.set_xscale("log")
+    ax.set_yticks(range(len(runs)))
+    ax.set_yticklabels([_display(r) for r, _ in reversed(runs)], fontsize=FONT_SIZE)
+    ax.set_ylim(-0.6, len(runs) - 0.4)
+    _style(ax)
+    ax.set_xlabel(r"One-step error $\|x - x_\mathrm{ref}\|_M \,/\, \|x_\mathrm{ref} - x_\mathrm{ref}^t\|_M$",
+                  fontsize=FONT_SIZE)
+    return fig
+
+
+def plot_residual(f: h5py.File, width: float, only: list[str] | None = None, field: str = "gradient_ratio"):
+    """(c) Each step's final residual (or penetration) ratio to its tolerance, at most 1 passes, against its one-step
+    error: filled markers for steps that passed the test, hollow ones for steps that ran out of budget."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+
+    from .profiling.paper_figures import FONT_SIZE, INK, _legend, _style
+
+    runs = _runs(f, only)
+    styles = _run_styles(runs)
+    fig, ax = plt.subplots(figsize=(width, 0.7 * width))
+    for label, _ in runs:
+        g = f["runs"][label]
+        r, e, ok = g[field][()], g["e_rel"][()], g["converged"][()].astype(bool)
+        color, marker = styles[label]["color"], styles[label]["marker"]
+        ax.scatter(r[ok], e[ok], s=6, color=color, marker=marker, lw=0, alpha=0.8)
+        ax.scatter(r[~ok], e[~ok], s=6, facecolor="none", edgecolor=color, marker=marker, lw=0.5, alpha=0.8)
+    ax.axvline(1.0, color=INK, lw=0.5, ls=":")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    _style(ax)
+    what = "Residual" if field == "gradient_ratio" else "Penetration"
+    ax.set_xlabel(f"{what} / tolerance at the end of the step", fontsize=FONT_SIZE)
+    ax.set_ylabel("One-step error", fontsize=FONT_SIZE)
+    _legend(fig, [Line2D([], [], lw=0, marker=styles[r]["marker"], ms=3, color=styles[r]["color"], label=_display(r))
+                  for r, _ in runs])
+    return fig
+
+
+def figures(args):
+    """Writes the PDFs of the module docstring's ``figures``."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from .benchmark_plot import use_paper_fonts
+    from .profiling.paper_figures import PAD
+
+    use_paper_fonts(args.font_dir)
+    out = []
+    if args.global_results:
+        with h5py.File(args.global_results, "r") as f:
+            out.append(("global", plot_global(f, args.width, args.runs)))
+            for group in args.groups:
+                out.append((f"global.{group}", plot_global(f, args.width, args.runs, group)))
+    if args.local_results:
+        with h5py.File(args.local_results, "r") as f:
+            out.append(("local", plot_local(f, args.width, args.runs)))
+            out.append(("residual", plot_residual(f, args.width, args.runs)))
+            out.append(("penetration", plot_residual(f, args.width, args.runs, "feasibility_ratio")))
+    for name, fig in out:
+        path = f"{args.output}.{name}.pdf"
+        fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
+        plt.close(fig)
+        print(f"Wrote {path}")
+
+
 def parse_group(spec: str) -> tuple[int, str]:
     count, sep, name = spec.partition("=")
     if not sep or not count.isdigit() or not name:
@@ -306,6 +455,14 @@ def parse_args(argv=None):
     loc.add_argument("-v", "--verbose", action="store_true", help="Print every step")
     loc.add_argument("-o", "--output", required=True,
                      help="Output .h5; runs are added to it, replacing runs of the same label")
+    fig = sub.add_parser("figures", help="The paper's PDFs from global and local results")
+    fig.add_argument("--global", dest="global_results", default=None, help="global results (.h5)")
+    fig.add_argument("--local", dest="local_results", default=None, help="local results (.h5)")
+    fig.add_argument("--runs", nargs="+", default=None, help="Only these run labels, in this order")
+    fig.add_argument("--groups", nargs="+", default=[], help="Also plot the global distance of these body groups")
+    fig.add_argument("--width", type=float, default=3.3, help="Printed width (inches)")
+    fig.add_argument("--font-dir", default=None, dest="font_dir", help="Directory with the Linux Biolinum fonts")
+    fig.add_argument("-o", "--output", required=True, help="Output prefix: <prefix>.<figure>.pdf")
     return parser.parse_args(argv)
 
 
@@ -318,6 +475,8 @@ def main(argv=None):
         global_error(args.reference, args.runs, labels, args.output, dict(parse_group(g) for g in args.group))
     elif args.command == "local":
         local_error(args)
+    else:
+        figures(args)
 
 
 class TestReferenceError(unittest.TestCase):
