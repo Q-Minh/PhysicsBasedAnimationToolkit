@@ -50,7 +50,6 @@ Matplotlib's default font. No grid lines (maintainer).
 import argparse
 import glob
 import os
-import re
 import warnings
 
 import h5py
@@ -75,7 +74,7 @@ SOLVER_COLORS = {
 SOLVER_NAMES = {"AndersonSolver": "Anderson"}
 FIGURE_HEIGHT = 4.2  # inches; with BOX_ZOOM, sets the box's scale
 BOX_ZOOM = 1.35  # the 3D box's scale in its axes (Matplotlib's default 1 leaves wide margins)
-FRAME_PAD = 6 / 72  # inches between the plot, its legend, title and caption, and around the saved region
+FRAME_PAD = 6 / 72  # inches between the plot, its legend and title, and around the saved region
 OTHER_COLORS = ["#56B4E9", "#F0E442", "#000000"]
 # The Linux Libertine family of ACM's acmart template (SIGGRAPH, TOG): Linux Libertine (serif, body text), Linux
 # Biolinum (sans serif, headings) and Linux Libertine Mono (code). OpenType family names first, then other names.
@@ -339,23 +338,12 @@ def plot_benchmark(
         axis.pane.set_facecolor((1, 1, 1, 0))
     handles = [Patch(color=solver_color(s, solvers), label=SOLVER_NAMES.get(s, s)) for s in solvers]
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
-    within = "" if all(fixed) else f" within {factor:g} × $T_N$"
-    norm_text = ("$T$: the fixed budget" if all(fixed) else "$T_N$: Newton's time to its highest level"
-                 + ("" if not any(fixed) else " ($T$: a fixed budget)"))
-    unresolved = any(resolvable_samples(g, solvers) is not None for _, g in cases)
-    reference = (
-        "; no bar: not reached, or beyond the reference's accuracy for most samples (elsewhere, the samples it "
-        "can't resolve are left out)" if unresolved else "; no bar: not reached"
-    )
-    count_text = "; n/N: samples that reached it (always shown at the highest level drawn)" if counts else ""
-    caption = (rf"Bars: mean time $\Delta t$ from the previous level's crossing, over the samples that reached "
-               f"the level{within}; {norm_text}; $e/e_0$: relative error{count_text}{reference}")
-    return fig, frame(fig, ax, benchmark_title(benchmark), handles, caption)
+    return fig, frame(fig, ax, benchmark_title(benchmark), handles)
 
 
-def frame(fig, ax, title: str, handles: list, caption: str) -> Bbox:
-    """Center the title and a one-row legend above the drawn plot, wrap the caption to the plot's width below it,
-    and return the region to save (inches). A 3D axes fills its area and draws its box inside it at a fixed scale,
+def frame(fig, ax, title: str, handles: list) -> Bbox:
+    """Center the title and a one-row legend above the drawn plot and return the region to save (inches). The
+    figures have no caption: the paper's LaTeX figure carries it (maintainer). A 3D axes fills its area and draws its box inside it at a fixed scale,
     so a tight bounding box would keep the whole area's margins: the plot's extent is measured from the box's
     panes, its axes (ticks and titles) and its texts."""
     fig.canvas.draw()
@@ -373,28 +361,8 @@ def frame(fig, ax, title: str, handles: list, caption: str) -> Bbox:
     top = legend.get_window_extent(renderer).y1
     suptitle = fig.suptitle(title, x=cx, y=to_figure.transform((0, top + pad))[1], ha="center", va="bottom",
                             fontsize=11)
-    style = dict(fontsize=7, color="#555555", ha="left", va="top")
-    lines = wrap(fig, renderer, caption, plot.width, style)
-    text = fig.text(*to_figure.transform((plot.x0, plot.y0 - pad)), "\n".join(lines), **style)
-    shown = [plot] + [a.get_window_extent(renderer) for a in (legend, suptitle, text)]
+    shown = [plot] + [a.get_window_extent(renderer) for a in (legend, suptitle)]
     return Bbox.union(shown).padded(pad).transformed(fig.dpi_scale_trans.inverted())
-
-
-def wrap(fig, renderer, text: str, width: float, style: dict) -> list[str]:
-    """Greedily break ``text`` into lines at most ``width`` pixels wide in ``style``, keeping each $...$ math run on
-    one line."""
-    words = re.findall(r"\$[^$]*\$\S*|\S+", text)
-    lines = []
-    for word in words:
-        candidate = f"{lines[-1]} {word}" if lines else word
-        probe = fig.text(0, 0, candidate, **style)
-        fits = probe.get_window_extent(renderer).width <= width
-        probe.remove()
-        if lines and fits:
-            lines[-1] = candidate
-        else:
-            lines.append(word)
-    return lines
 
 
 def main():
