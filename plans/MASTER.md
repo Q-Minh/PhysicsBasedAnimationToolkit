@@ -968,9 +968,20 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   per-sweep cost by phase group; per-step final ratios and early exits at the budget); Newton only per-step costs, in
   ONE table over every other paper scene for all 5 solvers ("expected efficiency" for the videos, plus residuals).
   Phase names and colours approved. Task 2 is planning runs and costs.
-- P8. **BasketOfFruit: on hold** until the maintainer tunes its per-solver iteration budgets (not run yet; no basket
-  runs of any kind until then). CapsulesIntoBowl is tuned and approved for all profiling, the all-scenes table's
-  row (all 5 solvers) and offline trajectory exports for rendering (2026-10-22).
+- P8. **BasketOfFruit: on hold** until the maintainer tunes its per-solver budgets. CapsulesIntoBowl is tuned and
+  approved for all profiling, its table row and trajectory exports.
+- P9. **All-scenes step-time table: waits** for the maintainer's final scene set and parameters. It is ONE table
+  ("GPU time per time step", tab:scenes; the capsule-only profiling table merges into it, without the kernel-union
+  and overlap columns, keeping production step time). A placeholder is at data/profiling/paper/scenes_table.tex.
+  Open for later: the trampoline variant(s), durations, Newton runs (full where <= 30 min, else 10-step windows
+  from AAAVBD checkpoints, marked as windowed), and total CG iterations in the status log (a small solver-side change).
+- P10. **Solver figure panel (b)** waits for task 3's error-vs-converged-Newton analysis on the capsules (global
+  M-norm error over time, one-step error from reference states, residual ratio vs actual error).
+- P11. **Delete?** data/scenarios/ArmadilloSpaghetti.Fall.Thickened.h5 (unused) and data/stanford-dragon_ftetwild.msh.
+- P12. **Timeline snapshot times** (0.4, 0.9, 2.88, 3.94, 5.0 s; camera between two tubes): OK as rendered?
+
+In progress (2026-10-22): task 1 repo trajectory viewer (python/tools/sim/trajectory_viewer.py); task 3 converged
+Newton reference and error analysis on the capsules; coordinator armadillo 8e5 + fix check (step-60 blow-up at 1e6).
 
 ### Pending maintainer decisions (2026-10-20, maintainer away; the coordinator keeps this list current)
 
@@ -1159,3 +1170,5 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 2 · **GPU run END** (4 runs, ~50 s wall each). The GPU is free.
 - 2026-10-22 · task 2 · **GPU run START** (~18 min, approved; timings measured, keep the GPU and CPU quiet): CapsulesIntoBowl Newton 6 s production run, fps 60. Will log END.
 - 2026-10-22 · task 2 · **GPU run END** (1177 s wall; Newton mean 1.94 s/step, CG ≤ 440 of 2000, no line-search failures, 7% early exits). The GPU is free.
+- 2026-10-22 · task 2 · **GPU run START** (~3 min, approved, timings irrelevant): Polyscope snapshot renders of the CapsulesIntoBowl AAAVBD trajectory (opens a window briefly). Will log END.
+- 2026-10-22 · task 2 · **GPU run END** (snapshot renders, a few short Polyscope windows). The GPU is free.
