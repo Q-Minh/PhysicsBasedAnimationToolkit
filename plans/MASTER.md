@@ -958,16 +958,16 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   search violet, other grey. Changes?
 - ~~P3. Which armadillo~~ **Answered:** the original (data/scenarios/ArmadilloSpaghetti.Fall.h5 again; the thickened
   one is ArmadilloSpaghetti.Fall.Thickened.h5, unused, kept until the maintainer says it can go).
-- P4. ~~Iteration tables' budget~~ **Answered:** keep 2 x T_N. Still open: drop the h = 1e-4 table (1-3 sweeps
-  everywhere) from the paper?
-- ~~P5. Old spaghetti variants~~ **Answered, done:** deleted (scene files, configs, SCENES), keeping
-  ArmadilloSpaghetti.Fall and KyogreSpaghetti (Melissa's, with the floor and ceiling planes).
-- P6. **ArmadilloSpaghetti.Fall's twist:** the unbounded +-180 deg/s twist crushes the armadillo (inverted elements,
-  folded surface, blow-up at ~step 175). Bound its duration (e.g. 1-1.5 turns), slow it, and/or stiffen the
-  armadillo? (coordinator recommends bounding it)
-- P7. **Profiling solver comparison:** the coordinator's design (per-sweep cost by phase group per VBD-family
-  solver; per-step final residual/penetration ratios and early exits at the scene's budget; Newton in the text)
-  — approve? And the basket's panel (b): all of VBD, Chebyshev, Anderson (~1 h), VBD only, or the capsules only?
+- ~~P4. Iteration tables~~ **Answered:** keep 2 x T_N, and keep the h = 1e-4 table for now.
+- ~~P5. Old spaghetti variants~~ **Answered, done:** deleted, keeping ArmadilloSpaghetti.Fall and KyogreSpaghetti.
+- ~~P6. ArmadilloSpaghetti.Fall's twist~~ **Answered:** armadillo Young's modulus 8e5 -> 1e6 (done in the scene file);
+  the twist stays. To test headless when the GPU is free.
+- ~~P7. Profiling scope~~ **Answered:** VBD family compared on BasketOfFruit and CapsulesIntoBowl (AAAVBD timeline;
+  per-sweep cost by phase group; per-step final ratios and early exits at the budget); Newton only per-step costs, in
+  ONE table over every other paper scene for all 5 solvers ("expected efficiency" for the videos, plus residuals).
+  Phase names and colours approved. Task 2 is planning runs and costs.
+- P8. **Basket slot** (~35-40 min per solver for full runs, with the maintainer), and its budget: keep the paper's
+  400 sweeps (every step hits it, gradient ratio 128-351 at the start) or raise it?
 
 ### Pending maintainer decisions (2026-10-20, maintainer away; the coordinator keeps this list current)
 
