@@ -286,6 +286,15 @@ SCENES = {
         "one hand; aim for a highly tangled dragon)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "armadillo_spaghetti": Scene(
+        "defaults",
+        "data/scenarios/armadillo-spaghetti.h5: the twisted pillars of kyogre-spaghetti_vertical.h5 with two armadillos "
+        "(data/armadillo.mesh, 162k tets each, 1.2 m tall, a third of the pillars' height) centered on the twist axis, "
+        "turned so the pillars stand in their gaps (at least 1 cm clear): a stiffer one low (Young's modulus 1e7, z "
+        "-1.5 to -0.3 m) and a softer one high (1e6, z 0.3 to 1.5 m), as in the JGS2-GQ paper's scene (maintainer, "
+        "2026-10-21: the Kyogre and the dragon weren't held by the pillars)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "armadillo_pull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
