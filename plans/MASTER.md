@@ -1002,6 +1002,10 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   aligned corners at edge distance ~0), improves BeamFallingOnBeam (worst residual/tol 323 -> 49, penetration 1.19 ->
   0.06), CubeFallingOnPlaneFast is different but no worse; the armadillo still blows up (step 61). Caveats: changes
   every VertexSdf trajectory, more first-detection contacts in fast scenes (capacities), a second BVH set per component.
+  Measured (CPU, from checkpoints): the global widening (max |xtilde - xt|, up to 10 cm) overflows the capsules' VE
+  capacity 2.4-2.8x at steps 100/250 (pairs dropped silently; VF up to 77%); the armadillo stays within capacity but the
+  widening reaches the floor/ceiling planes (+1.9k VF on kinematic pillar ends). Options with adoption: raise
+  n_ve_contact_capacity (~0.15 for the capsules), cap the widening, or widen only where needed (untested).
 - P16. **ArmadilloSpaghetti.Fall** blows up at ~step 60 at 1 MPa with every detector variant: its solves sit at 200-500x
   the residual tolerance from the start and the armadillo is squeezed between two pillars. A scene/budget decision.
 
