@@ -129,6 +129,20 @@ SPHERE_BAND = Rule(
     {"Contact.CDType.VertexSdf.band": 1e-2},
 )
 TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
+CAPSULE_CONTACT = Rule(
+    "Contact scaled to the capsule bowl's size, about 8.8 m across (maintainer, 2026-10-21): VertexSdf max_dist 50 cm "
+    "and band 1 cm, and a 1 cm AL margin dmin; the friction (mu_f 0.2) and vertex-face contact capacity (0.5) it was "
+    "tested with, the code defaults.",
+    {"Contact.CDType.VertexSdf.max_dist": 0.5, "Contact.CDType.VertexSdf.band": 1e-2, "Contact.ContactDynamics.dmin": 1e-2,
+     "Contact.ContactDynamics.mu_f": 0.2, "Contact.ContactStorage.n_vf_contact_capacity": 0.5},
+)
+CAPSULE_BUDGET = Rule(
+    "The maintainer's budget for the capsule bowl (2026-10-21): no substeps, 10 outer iterations (contact detection "
+    "passes) x 20 sweeps = 200 sweeps per step for every VBD-family solver, and Newton 10 x 2 (the paper file gives 5 "
+    "substeps of 3 x 3 sweeps).",
+    {"Integration.substeps": 1, **_per_solver("n_max_iters", 10), **_per_solver("n_subproblem_max_iters", 20),
+     "Solver.Newton.n_max_iters": 10, "Solver.Newton.newton.n_max_iters": 2},
+)
 
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
@@ -200,10 +214,9 @@ SCENES = {
     ),
     "capsules_into_bowl": Scene(
         "capsules_into_bowl",
-        "final_scenes/capsule_bowl.h5 (Young's modulus 1e5 to 1e6)",
-        [*SOLVERS, *CONTACT],
-        ["Budgets kept: 5 substeps of 3 x 3 = 45 sweeps per frame, below the guidance's ~100 for soft higher-res "
-         "meshes (230k tets), though not a stiff scene."],
+        "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
+        "the bodies span about 8.8 x 8.8 x 8.5 m)",
+        [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET],
     ),
     "empty_basket": Scene(
         "empty_basket.Params_3_10_5",
