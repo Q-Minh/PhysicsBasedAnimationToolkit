@@ -927,6 +927,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-21 · coordinator · **GPU run END** (baseline): freeze reproduced headless, step 185 blew up (NaN, 480 s step; VF buffer full only after the explosion), preceded by unconverged steps (400/400 sweeps from step 1, penetration > tol from step 170, residual doubling from step 181). The GPU is free for task 1's checkpoint tests; my 10 x 80 run follows.
 - 2026-10-21 · coordinator · **GPU run START** (maintainer-approved, ~15 min): armadillo_spaghetti_fall headless to step ~190 with AAAVBD 10 x 80 sweeps (twice the baseline budget). Will log END.
 - 2026-10-21 · coordinator · **GPU run END** (10 x 80): blew up earlier, at step 85 (penetration oscillating 0.3 <-> 5 between steps, residual doubling, speeds 5-7 m/s against a 1.5 cm detection distance). The GPU is free.
+- 2026-10-22 · coordinator · **GPU run START** (~12 min, approved): armadillo_spaghetti_fall contact variants, a 10 x 80 checkpoint run to step 70, then variants resumed from it.
+- 2026-10-22 · coordinator · **GPU run END** (~25 min, over the 12 min estimate: each variant ran to its 5 min kill). Resumed from step 70: the control reproduced the uninterrupted run (blow-up at 85); a 2 cm band blew up at 72, plain VBD at 74, conservative gammas at 82. The GPU is free.
 ## Open questions for the maintainer
 
 1. ~~Approve Phase 0?~~ **Answered:** yes, but only after all task-level open questions are answered.
@@ -1105,3 +1107,4 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-21 · task 1 · **GPU run START** (~2 min from 22:56, short headless processes, timings irrelevant): checkpoint/resume tests (2-cube unit test, BeamFallingOnBeam straight vs. resumed). Will log END.
 - 2026-10-21 · task 1 · **GPU run END** (checkpoint/resume tests, ~17 min, longer than estimated: unit-test reruns after a nondeterministic test scene). The GPU is free.
 - 2026-10-21 · task 1 · **GPU run START** (~2 min from 23:28, two short headless processes, timings irrelevant): Newton straight-vs-straight reproducibility on BeamFallingOnBeam (0.5 s each). Will log END.
+- 2026-10-21 · task 1 · **GPU run END** (Newton reproducibility, 2 runs, ~2.5 min). The GPU is free.
