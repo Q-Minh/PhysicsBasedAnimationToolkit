@@ -105,7 +105,10 @@ def _detect_vertex_mesh_contacts(
         # AAAVBD runs differing from the second step, by up to 1 cm after 10 steps (2026-10-21). Suspected: the
         # closest point is then a shared vertex or edge, so which face the query returns, and so the feature
         # below (VF, VE or VV, from exact zero barycentrics), is a tie. Offsetting the cube made runs
-        # bit-identical. A deterministic tie-break (e.g. the smallest face index) would fix it.
+        # bit-identical. Not the feature: since it comes from the closest point's region (the same whichever
+        # face shares the closest edge or vertex), one of two repeat runs still differed from the first step
+        # (VBD 7.8 mm, AAAVBD 11.5 mm after 10 steps, 2026-10-22). Left to check: the signed distance's last
+        # bits (from the returned face's barycentrics), and the order-dependent work after detection.
         if sd < threshold:
             # The closest feature (face interior, edge or vertex) comes from the closest point's Voronoi region
             # of the face, whose barycentrics are exactly zero off the interior, as C++ OGC's
