@@ -9,30 +9,44 @@ backend: graph replay for the VBD family) give the true step times. Production r
 runs by scene and solver. They are separate runs whose trajectories differ slightly (contact is chaotic and
 GPU arithmetic order isn't deterministic), so they are compared as distributions, never step by step.
 
-- ``timeline``: one row per kernels result (e.g. AAAVBD on each scene). Left: GPU time per step over the
-  simulated time, stacked by phase group, with the paired production run's step time as a line, and below
-  it the peak node speed (``profiling/trajectory.py``) on the same time axis. Right: one phase donut per
-  slice of the steps by percentiles of their GPU time (default: the fastest 10%, P10-P90, the slowest 10%)
-  or of their peak speed (``--slice-by speed``), with the slice's median step time in the center and its
-  median iterations and early exits below.
-- ``solvers``: one row per kernels result (e.g. every solver on one scene). Left: each phase group's share
-  of the GPU time per step, with the mean kernel union per step at the bar's end. Middle: the step time distribution
-  (box: quartiles, whiskers: P10-P90, tick: median) of the production run, or of the kernel union without
-  one, and the kernel union's median as a diamond. Right: the fraction of solves that exited early (passed
-  their convergence tests within the budget), with the median iterations per step.
-- ``table``: a LaTeX ``table*`` (booktabs) with one row per kernels result: production step time (mean,
+- ``timeline``: one row per kernels result (e.g. AAAVBD on one scene): GPU time per step over the simulated
+  time, stacked by phase group, with the paired production run's step time as a line, and below it the peak
+  node speed (``profiling/trajectory.py``) on the same time axis. ``--snapshots TIME=IMAGE ...`` adds a row of
+  simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at
+  their times on the plots (first row only).
+- ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
+  short fixed-budget kernels runs (no early exit, e.g. every solver resumed from the same checkpoint): each
+  phase group's share of the GPU time, with the GPU time per sweep at the bar's end. The other columns, from
+  full production runs (``--production``), show what each solver's budget buys: the distribution per step of
+  the final gradient ratio and of the penetration (feasibility) ratio to their tolerances (box: quartiles,
+  whiskers: P10-P90, dot: maximum; log axes, ratios below 1e-3 drawn at 1e-3, a dashed line at the
+  tolerance), the fraction of early exits and, with ``--step-times``, the step time.
+- ``table``: a LaTeX ``table*`` (booktabs) with one row per solver and scene: production step time (mean,
   median, P90), the kernel union's median and its ratio to production, the overlap of phases across
-  streams, early exits, median iterations, time per iteration and the worst residual ratios.
+  streams (kernels runs), early exits, median iterations, time per iteration and the worst residual ratios
+  (production runs when given, else kernels runs).
+- ``slices``: Markdown, per kernels result: the steps grouped by percentiles of their GPU time
+  (``--slices``, default the fastest 10%, P10-P90 and the slowest 10%) with each group's median step time,
+  median iterations and early exits, for the paper's text.
+- ``sweeps``: the ``solvers`` figure's first column for several scenes, one panel per scene.
+- ``budget``: the ``solvers`` figure's other columns for several scenes, one block of rows per scene.
+- ``scenes``: a LaTeX ``table*`` with one row per production result, grouped by scene: step time (mean,
+  median, P90), median iterations (VBD sweeps, or Newton steps with the median of a step's most CG
+  iterations of one linear solve), early exits, and the median and worst gradient and penetration ratios.
 
 Usage (from the repo root):
 
-    python -m python.tools.sim.profiling.paper_figures timeline k_basket.json k_capsules.json \
-        --production p_basket.json p_capsules.json -o data/figures/profiling/timeline \
-        [--labels basket_of_fruit="Basket of fruit" ...] [--width 7] [--bin 1] [--slices 10,90] [--slice-by time]
-    python -m python.tools.sim.profiling.paper_figures solvers k_*.json --production p_*.json \
-        -o data/figures/profiling/solvers [--width 7]
+    python -m python.tools.sim.profiling.paper_figures timeline k_capsules.json --production p_capsules.json \
+        -o data/figures/profiling/timeline [--labels capsule_bowl="Capsules into bowl"] [--width 7] [--bin 5] \
+        [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
+    python -m python.tools.sim.profiling.paper_figures solvers k_fixed_*.json --production p_*.json \
+        -o data/figures/profiling/solvers [--step-times]
     python -m python.tools.sim.profiling.paper_figures table k_*.json --production p_*.json \
         -o data/tables/profiling.tex [--labels ...]
+    python -m python.tools.sim.profiling.paper_figures slices k_*.json -o data/tables/slices.md [--slices 10,90]
+    python -m python.tools.sim.profiling.paper_figures sweeps k_fixed_*.json -o data/figures/profiling/sweeps
+    python -m python.tools.sim.profiling.paper_figures budget p_*.json -o data/figures/profiling/budget [--step-times]
+    python -m python.tools.sim.profiling.paper_figures scenes p_*.json -o data/tables/scenes.tex [--labels ...]
 
 Figures follow ``benchmark_plot.py``: Linux Biolinum (``--font-dir``, ``PBAT_FONT_DIR`` or installed), rendered
 at the printed width (``--width``, inches) with 7-8 pt text, no titles (the LaTeX caption carries them; rows
@@ -53,7 +67,7 @@ from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter  # noqa: 
 from matplotlib.transforms import Bbox  # noqa: E402
 
 from . import results, step_stats  # noqa: E402
-from ..benchmark_plot import SOLVER_NAMES, use_paper_fonts  # noqa: E402
+from ..benchmark_plot import SOLVER_COLORS, SOLVER_NAMES, use_paper_fonts  # noqa: E402
 
 # The paper's phase groups, in drawing order (bottom of the stack first): name -> (scope names, color). Scope
 # names are innermost scopes (results.leaf); a scope in no group is drawn as OTHER. AAAVBD's acceleration runs
@@ -131,14 +145,13 @@ def bin_steps(values: np.ndarray, n: int) -> np.ndarray:
     return np.add.reduceat(values, starts) / counts
 
 
-def slice_header(s: dict, edges: tuple[float, ...], what: str) -> str:
-    """A slice's column header: ``Fastest 10%`` / ``Slowest 10%`` for the outer slices of step time
-    (``Slowest`` / ``Fastest`` for speed), else its percentile range."""
-    low, high = ("Fastest", "Slowest") if what == "time" else ("Slowest", "Fastest")
+def slice_header(s: dict, edges: tuple[float, ...]) -> str:
+    """A slice of the steps by step time: ``Fastest 10%`` / ``Slowest 10%`` for the outer slices, else its
+    percentile range."""
     if s["lo"] == 0.0:
-        return f"{low} {edges[0]:g}%"
+        return f"Fastest {edges[0]:g}%"
     if s["hi"] == 100.0:
-        return f"{high} {100.0 - edges[-1]:g}%"
+        return f"Slowest {100.0 - edges[-1]:g}%"
     return f"P{s['lo']:g}–P{s['hi']:g}"
 
 
@@ -151,11 +164,6 @@ def _fmt_ms(ms: float | None) -> str:
 def _iterations_text(summary: dict, unit: str) -> str:
     it = summary["iterations"]
     return "" if it is None or not unit else f"{it:.0f} {unit}"
-
-
-def _early_text(summary: dict) -> str:
-    e = summary["early_exit"]
-    return "" if e is None else f"{100 * e:.0f}% early exits"
 
 
 def _style(ax):
@@ -176,39 +184,44 @@ def _legend(fig, handles, ncol=None):
                columnspacing=1.2, handletextpad=0.4)
 
 
-def _donut(ax, phases: dict[str, float], center: str):
-    groups = [g for g, v in phases.items() if v > 0]
-    ax.set_aspect("equal")
-    if not groups:  # an empty slice (ties at a percentile fall into the lower slice)
-        ax.add_patch(plt.Circle((0, 0), 0.81, fill=False, edgecolor=OTHER_COLOR, linewidth=0.5))
-        ax.set_xlim(-1, 1)
-        ax.set_ylim(-1, 1)
-        ax.axis("off")
-        ax.text(0, 0, "no steps", ha="center", va="center", fontsize=FONT_SIZE, color=INK)
-        return
-    ax.pie([phases[g] for g in groups], colors=[group_color(g) for g in groups], startangle=90, counterclock=False,
-           wedgeprops={"width": 0.38, "edgecolor": "white", "linewidth": 0.6})
-    ax.text(0, 0, center, ha="center", va="center", fontsize=FONT_SIZE, color=INK)
+def _marker(ax, x: float, number: int, y: float = 1.0):
+    """A snapshot's number in a small circle at data x and axes y."""
+    ax.text(x, y, str(number), transform=ax.get_xaxis_transform(), ha="center", va="center", fontsize=FONT_SIZE - 1,
+            fontweight="bold", color=INK, clip_on=False,
+            bbox={"boxstyle": "circle,pad=0.18", "facecolor": "white", "edgecolor": INK, "linewidth": 0.5})
 
 
 def plot_timeline(kernels: list[dict], production: list[dict | None], labels: list[str], width: float = 7.0,
-                  bin_n: int = 1, edges: tuple[float, ...] = (10.0, 90.0), slice_by: str = "time"):
-    """The ``timeline`` figure (see the module docstring): one row per kernels result."""
-    key = {"time": "time_ms", "speed": "peak_speed"}[slice_by]
+                  bin_n: int = 1, snapshots: list[tuple[float, str]] | None = None):
+    """The ``timeline`` figure (see the module docstring): one row per kernels result, the first one under its
+    ``snapshots`` (simulated time, image path), numbered at their times on the plots."""
     tables = [step_stats.per_step(k) for k in kernels]
-    n_slices = len(edges) + 1
     rows = len(kernels)
     has_speed = [bool(np.isfinite(t["peak_speed"]).any()) for t in tables]
-    fig = plt.figure(figsize=(width, 1.75 * rows))
-    grid = fig.add_gridspec(rows, 1 + n_slices, width_ratios=[4.2] + [1.0] * n_slices, hspace=0.55, wspace=0.12)
+    snapshots = sorted(snapshots or [])
+    images = [plt.imread(path) for _, path in snapshots]
+    image_height = width / len(images) * images[0].shape[0] / images[0].shape[1] if images else 0.0
+    heights = []
+    for speed in has_speed:
+        heights += [1.5, 0.5 if speed else 0.001]
+    fig = plt.figure(figsize=(width, image_height + sum(heights) + 0.45 * rows))
+    outer = fig.add_gridspec(2, 1, height_ratios=[max(image_height, 1e-3), sum(heights) + 0.45 * rows], hspace=0.12)
+    if images:
+        strip_of_images = outer[0].subgridspec(1, len(images), wspace=0.03)
+        for i, image in enumerate(images):
+            ax = fig.add_subplot(strip_of_images[i])
+            ax.imshow(image)
+            ax.set_axis_off()
+            ax.text(0.04, 0.96, str(i + 1), transform=ax.transAxes, ha="left", va="top", fontsize=8,
+                    fontweight="bold", color=INK)
+    grid = outer[1].subgridspec(2 * rows, 1, height_ratios=heights, hspace=0.15)
     present: list[str] = []
     drew_production = False
     for r, (result, table, prod, label) in enumerate(zip(kernels, tables, production, labels)):
         groups = group_phases(table["phases"])
         present += [g for g in groups if g not in present]
         x = bin_steps(step_seconds(result, table["t"]), bin_n)
-        left = grid[r, 0].subgridspec(2, 1, height_ratios=[3.0, 1.0 if has_speed[r] else 0.001], hspace=0.12)
-        area = fig.add_subplot(left[0])
+        area = fig.add_subplot(grid[2 * r])
         area.stackplot(x, *[bin_steps(v, bin_n) for v in groups.values()],
                        colors=[group_color(g) for g in groups], linewidth=0)
         if prod is not None:
@@ -219,122 +232,180 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
         area.set_xlim(x[0], x[-1])
         area.set_ylim(bottom=0)
         area.set_ylabel("GPU time (ms)", fontsize=FONT_SIZE)
-        area.text(0, 1.04, label, transform=area.transAxes, ha="left", va="bottom", fontsize=8, fontweight="bold",
-                  color=INK)
+        if rows > 1 or not images:
+            area.text(0, 1.04, label, transform=area.transAxes, ha="left", va="bottom", fontsize=8,
+                      fontweight="bold", color=INK)
         _style(area)
-        last = area
+        axes = [area]
         if has_speed[r]:
             area.tick_params(labelbottom=False)
-            strip = fig.add_subplot(left[1], sharex=area)
+            strip = fig.add_subplot(grid[2 * r + 1], sharex=area)
             strip.plot(x, bin_steps(table["peak_speed"], bin_n), color=INK, linewidth=0.6)
             strip.set_ylim(bottom=0)
             strip.set_ylabel("Speed\n(m/s)", fontsize=FONT_SIZE)
             _style(strip)
-            last = strip
+            axes.append(strip)
         if r == rows - 1:
-            last.set_xlabel("Time (s)" if "dt" in result["metadata"] else "Time step", fontsize=FONT_SIZE)
-        slices = step_stats.percentile_slices(table[key], edges)
-        for c, s in enumerate(slices):
-            ax = fig.add_subplot(grid[r, 1 + c])
-            summary = step_stats.summarize_slice(table, s["mask"])
-            grouped = {g: float(v[s["mask"]].mean()) if s["mask"].any() else 0.0 for g, v in groups.items()}
-            _donut(ax, grouped, _fmt_ms(summary["time_ms"]))
-            if r == 0:
-                ax.set_title(slice_header(s, edges, slice_by), fontsize=FONT_SIZE, color=INK, pad=2)
-            below = [t for t in (_iterations_text(summary, table["unit"]), _early_text(summary)) if t]
-            ax.text(0.5, -0.04, "\n".join(below), transform=ax.transAxes, ha="center", va="top",
-                    fontsize=FONT_SIZE - 1, color=INK)
+            axes[-1].set_xlabel("Time (s)" if "dt" in result["metadata"] else "Time step", fontsize=FONT_SIZE)
+        if r == 0:
+            for i, (t, _) in enumerate(snapshots):
+                for ax in axes:
+                    ax.axvline(t, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
+                _marker(area, t, i + 1)
     handles = [Patch(color=group_color(g), label=g) for g in present]
     if drew_production:
         handles.append(Line2D([], [], color=INK, linewidth=0.6, label="Step time (graph replay)"))
-    _legend(fig, handles, ncol=min(len(handles), 5))
+    _legend(fig, handles, ncol=min(len(handles), 6))
     return fig
 
 
-def plot_solvers(kernels: list[dict], production: list[dict | None], width: float = 7.0):
-    """The ``solvers`` figure (see the module docstring): one row per kernels result, top to bottom."""
-    tables = [step_stats.per_step(k) for k in kernels]
-    names = [solver_name(k) for k in kernels]
-    n = len(kernels)
-    fig, (share, dist, early) = plt.subplots(1, 3, figsize=(width, 0.32 * n + 0.75), sharey=True,
-                                             gridspec_kw={"width_ratios": [2.4, 2.0, 1.4], "wspace": 0.3})
-    y = np.arange(n)[::-1]
+def slices_text(kernels: list[dict], labels: dict[str, str], edges: tuple[float, ...] = (10.0, 90.0)) -> str:
+    """Markdown: per kernels result, its steps grouped by percentiles of their GPU time (default: the fastest
+    10%, P10-P90, the slowest 10%), with each group's median step time, median iterations and early exits."""
+    out = []
+    for k in kernels:
+        table = step_stats.per_step(k)
+        out += [f"## {labels.get(scene_key(k), scene_key(k))}, {solver_name(k)}", "",
+                "| Steps | Count | Median step time | Median iterations | Early exits |", "| --- | --- | --- | --- | --- |"]
+        for sl in step_stats.percentile_slices(table["time_ms"], edges):
+            summary = step_stats.summarize_slice(table, sl["mask"])
+            early = "-" if summary["early_exit"] is None else f"{100 * summary['early_exit']:.0f}%"
+            out.append(f"| {slice_header(sl, edges)} | {summary['steps']} | {_fmt_ms(summary['time_ms'])} | "
+                       f"{_iterations_text(summary, table['unit']) or '-'} | {early} |")
+        out.append("")
+    return "\n".join(out)
+
+
+def solver_rank(result: dict) -> tuple[int, str]:
+    """Sort key: the benchmark figures' solver order (VBD, AAAVBD, Chebyshev, Anderson, Newton), then others."""
+    solver = str(result["metadata"].get("solver", ""))
+    order = list(SOLVER_COLORS)
+    return (order.index(solver) if solver in order else len(order), solver)
+
+
+def solver_rows(kernels: list[dict], production: list[dict]) -> list[tuple[dict | None, dict | None]]:
+    """(kernels, production) pairs by scene and solver, either side possibly None, sorted by scene (order of
+    first appearance) and :func:`solver_rank`."""
+    rows: dict[tuple, list] = {}
+    for i, group in enumerate((kernels, production)):
+        for r in group:
+            rows.setdefault((scene_key(r), r["metadata"].get("solver")), [None, None])[i] = r
+    scenes = list(dict.fromkeys(k for k, _ in rows))
+    pairs = [tuple(v) for v in rows.values()]
+    return sorted(pairs, key=lambda kp: (scenes.index(scene_key(kp[0] or kp[1])), solver_rank(kp[0] or kp[1])))
+
+
+def _sweeps_panel(ax, runs: list[dict | None], y: np.ndarray) -> list[str]:
+    """Bars of each phase group's share of :func:`ms_per_sweep` per run (None: no bar) at rows ``y``, with the
+    total GPU time per sweep at the bars' ends. Returns the groups drawn."""
     present: list[str] = []
-    for yi, table in zip(y, tables):
-        groups = {g: float(v.mean()) for g, v in group_phases(table["phases"]).items()}
-        present += [g for g in groups if g not in present]
-        total = sum(groups.values())
-        left = 0.0
-        for g, ms in groups.items():
-            w = 100.0 * ms / total if total > 0 else 0.0
-            share.barh(yi, w, left=left, height=0.62, color=group_color(g), edgecolor="white", linewidth=0.6)
-            left += w
-        share.text(101.5, yi, _fmt_ms(float(np.nanmean(table["time_ms"]))), va="center", ha="left",
-                   fontsize=FONT_SIZE - 1, color=INK)
-    share.set_xlim(0, 100)
-    share.set_xlabel("Share of GPU time per step (%)", fontsize=FONT_SIZE)
-    share.set_yticks(y, names)
-
-    any_production = any(p is not None for p in production)
-    for yi, table, prod in zip(y, tables, production):
-        times = step_stats.per_step(prod)["time_ms"] if prod is not None else table["time_ms"]
-        d = step_stats.describe(times)
-        if d is None:
+    for yi, r in zip(y, runs):
+        if r is None:
             continue
-        dist.plot([d["P10"], d["P90"]], [yi, yi], color=INK, linewidth=0.6)
-        dist.barh(yi, d["Q3"] - d["Q1"], left=d["Q1"], height=0.5, color="#dcdcdc", edgecolor=INK, linewidth=0.5)
-        dist.plot([d["median"]] * 2, [yi - 0.25, yi + 0.25], color=INK, linewidth=1.0)
-        if prod is not None:
-            u = step_stats.describe(table["time_ms"])
-            if u is not None:
-                dist.plot(u["median"], yi, marker="D", markersize=3, markerfacecolor="white",
-                          markeredgecolor=INK, markeredgewidth=0.6, linestyle="none")
-    dist.set_xscale("log")
-    dist.xaxis.set_major_locator(LogLocator(subs=(1.0, 2.0, 5.0)))
-    dist.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
-    dist.xaxis.set_minor_formatter(NullFormatter())
-    dist.set_xlabel("Step time (ms)" if any_production else "Step time, kernel union (ms)", fontsize=FONT_SIZE)
+        per_sweep = ms_per_sweep(r)
+        total = sum(per_sweep.values())
+        left = 0.0
+        for g, ms in per_sweep.items():
+            present += [g] if g not in present else []
+            share = 100.0 * ms / total if total > 0 else 0.0
+            ax.barh(yi, share, left=left, height=0.62, color=group_color(g), edgecolor="white", linewidth=0.6)
+            left += share
+        ax.text(102, yi, f"{total:.3g}", va="center", ha="left", fontsize=FONT_SIZE - 1, color=INK)
+    ax.text(102, len(y) - 0.45, "ms/sweep", va="bottom", ha="left", fontsize=FONT_SIZE - 1, color=INK)
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("Share of GPU time (%)", fontsize=FONT_SIZE)
+    return present
 
+
+BUDGET_COLUMNS = ("gradient", "feasibility", "early", "time")
+
+
+def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
+    """One :data:`BUDGET_COLUMNS` quantity per row from production runs' per-step tables (None: nothing)."""
     for yi, table in zip(y, tables):
-        s = step_stats.summarize_slice(table, np.ones(table["t"].size, dtype=bool))
-        if s["early_exit"] is not None:
-            early.barh(yi, 100.0 * s["early_exit"], height=0.5, color="#8c8c8c", linewidth=0)
-        text = _iterations_text(s, table["unit"]) or "n/a"
-        early.text(102, yi, text, va="center", ha="left", fontsize=FONT_SIZE - 1, color=INK)
-    early.set_xlim(0, 100)
-    early.set_xlabel("Early exits (%)", fontsize=FONT_SIZE)
-    for ax in (share, dist, early):
-        _style(ax)
-        ax.spines["left"].set_visible(False)
-        ax.tick_params(axis="y", length=0)
-        ax.patch.set_visible(False)  # the bar-end labels reach into the next panel
+        if table is None:
+            continue
+        if column == "gradient":
+            _box(ax, yi, table["gradient_ratio"], RATIO_FLOOR)
+        elif column == "feasibility":
+            _box(ax, yi, table["feasibility_ratio"], RATIO_FLOOR)
+        elif column == "early":
+            summary = step_stats.summarize_slice(table, np.ones(table["t"].size, dtype=bool))
+            if summary["early_exit"] is not None:
+                early = 100.0 * summary["early_exit"]
+                ax.barh(yi, early, height=0.5, color="#8c8c8c", linewidth=0)
+                ax.text(early + 3, yi, f"{early:.0f}%", va="center", ha="left", fontsize=FONT_SIZE - 1, color=INK)
+        else:
+            _box(ax, yi, table["time_ms"])
+    if column in ("gradient", "feasibility"):
+        _log_axis(ax)
+        ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
+        ax.set_xlabel("Gradient ratio per step" if column == "gradient" else "Penetration ratio per step",
+                      fontsize=FONT_SIZE)
+    elif column == "early":
+        ax.set_xlim(0, 100)
+        ax.set_xlabel("Early exits (%)", fontsize=FONT_SIZE)
+    else:
+        _log_axis(ax)
+        ax.set_xlabel("Step time (ms)", fontsize=FONT_SIZE)
 
-    handles = [Patch(color=group_color(g), label=g) for g in present]
-    if any_production:
-        handles += [Patch(facecolor="#dcdcdc", edgecolor=INK, linewidth=0.5, label="Graph replay"),
-                    Line2D([], [], marker="D", markersize=3, markerfacecolor="white", markeredgecolor=INK,
-                           markeredgewidth=0.6, linestyle="none", label="Kernel union (median)")]
-    _legend(fig, handles, ncol=min(len(handles), 5))
+
+def _row_axes(ax, y: np.ndarray, names: list[str] | None):
+    ax.set_ylim(-0.6, len(y) - 0.4)
+    ax.set_yticks(y, names if names is not None else [])
+    _style(ax)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+    ax.patch.set_visible(False)  # bar-end labels may reach into the next panel
+
+
+def _box_handles() -> list:
+    return [Patch(facecolor="#dcdcdc", edgecolor=INK, linewidth=0.5, label="Quartiles"),
+            Line2D([], [], color=INK, linewidth=0.6, label="P10\u2013P90"),
+            Line2D([], [], color=INK, marker="o", markersize=2, linestyle="none", label="Maximum"),
+            Line2D([], [], color=INK, linewidth=0.5, linestyle=(0, (2, 2)), label="Tolerance")]
+
+
+def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0, step_times: bool = True):
+    """The ``solvers`` figure (see the module docstring): one row per solver of one scene, the first column
+    from fixed-budget kernels runs, the others from full production runs."""
+    rows = solver_rows(kernels, production)
+    y = np.arange(len(rows))[::-1]
+    columns = BUDGET_COLUMNS if step_times else BUDGET_COLUMNS[:-1]
+    ratios = [2.0] + [{"early": 1.0}.get(c, 1.5) for c in columns]
+    fig, axes = plt.subplots(1, 1 + len(columns), figsize=(width, 0.3 * len(rows) + 0.85),
+                             gridspec_kw={"width_ratios": ratios, "wspace": 0.28})
+    names = [solver_name(k or p) for k, p in rows]
+    present = _sweeps_panel(axes[0], [k for k, _ in rows], y)
+    _row_axes(axes[0], y, names)
+    tables = [step_stats.per_step(p) if p is not None else None for _, p in rows]
+    for ax, column in zip(axes[1:], columns):
+        _budget_panel(ax, column, tables, y)
+        _row_axes(ax, y, None)
+    _legend(fig, [Patch(color=group_color(g), label=g) for g in present] + _box_handles(), ncol=6)
     return fig
 
 
-def table_row(kernels: dict, production: dict | None) -> dict:
-    """One row of the ``table``: step time statistics (production if given), the kernel union's median and
-    its ratio to production's, the phases' overlap across streams, and the solve outcome statistics."""
-    table = step_stats.per_step(kernels)
+def table_row(kernels: dict | None, production: dict | None) -> dict:
+    """One row of the ``table``: step time statistics (production), the kernel union's median and its ratio
+    to production's, the phases' overlap across streams (kernels), and the solve outcome statistics and time
+    per iteration (production if given, else kernels). Either run may be None."""
+    ktable = step_stats.per_step(kernels) if kernels is not None else None
+    ptable = step_stats.per_step(production) if production is not None else None
+    table = ptable if ptable is not None else ktable
     s = step_stats.summarize_slice(table, np.ones(table["t"].size, dtype=bool))
-    union = step_stats.describe(table["time_ms"])
-    prod = step_stats.describe(step_stats.per_step(production)["time_ms"]) if production is not None else None
+    union = step_stats.describe(ktable["time_ms"]) if ktable is not None else None
+    prod = step_stats.describe(ptable["time_ms"]) if ptable is not None else None
     ratio = None
     if union is not None and prod is not None:
         ratio = union["median"] / max(prod["median"], 1e-9)
     return {
-        "scene": scene_key(kernels),
-        "solver": solver_name(kernels),
+        "scene": scene_key(kernels or production),
+        "solver": solver_name(kernels or production),
         "production": prod,
         "union": union,
         "union_ratio": ratio,
-        "overlap": step_stats.union_overlap(table),
+        "overlap": step_stats.union_overlap(ktable) if ktable is not None else None,
         "early_exit": s["early_exit"],
         "iterations": s["iterations"],
         "unit": table["unit"],
@@ -345,9 +416,10 @@ def table_row(kernels: dict, production: dict | None) -> dict:
 
 
 def _num(x, digits: int = 3) -> str:
+    """``digits`` significant digits, without an exponent at or above 10^digits (1943, not 1.94e+03)."""
     if x is None or not np.isfinite(x):
         return "--"
-    return f"{x:.{digits}g}"
+    return f"{x:.0f}" if abs(x) >= 10**digits else f"{x:.{digits}g}"
 
 
 def latex_table(rows: list[dict], labels: dict[str, str]) -> str:
@@ -390,6 +462,158 @@ def latex_table(rows: list[dict], labels: dict[str, str]) -> str:
     return "\n".join(out) + "\n"
 
 
+RATIO_FLOOR = 1e-3  # ratios below it (e.g. no penetration at all) are drawn at it, on log axes
+
+
+def by_scene(runs: list[dict]) -> dict[str, list[dict]]:
+    """Results grouped by :func:`scene_key`, in order of first appearance."""
+    out: dict[str, list[dict]] = {}
+    for r in runs:
+        out.setdefault(scene_key(r), []).append(r)
+    return out
+
+
+def ms_per_sweep(result: dict) -> dict[str, float]:
+    """Each phase group's GPU time per iteration (VBD sweep): its total over the steps divided by the
+    steps' total iterations."""
+    table = step_stats.per_step(result)
+    iterations = float(np.nansum(table["iterations"]))
+    if iterations <= 0:
+        return {}
+    return {g: float(v.sum()) / iterations for g, v in group_phases(table["phases"]).items()}
+
+
+def _box(ax, y: float, values: np.ndarray, floor: float | None = None, height: float = 0.5):
+    """A horizontal box: quartiles, P10-P90 whiskers, a median tick and the maximum as a dot (values below
+    ``floor`` drawn at it)."""
+    v = np.asarray(values, dtype=float)
+    if floor is not None:
+        v = np.maximum(v, floor)
+    d = step_stats.describe(v)
+    if d is None:
+        return
+    ax.plot([d["P10"], d["P90"]], [y, y], color=INK, linewidth=0.6)
+    ax.barh(y, d["Q3"] - d["Q1"], left=d["Q1"], height=height, color="#dcdcdc", edgecolor=INK, linewidth=0.5)
+    ax.plot([d["median"]] * 2, [y - height / 2, y + height / 2], color=INK, linewidth=1.0)
+    ax.plot(d["max"], y, marker="o", markersize=2, color=INK, linestyle="none")
+
+
+def _log_axis(ax):
+    """Log x axis with plain-number ticks: 1-2-5 within a narrow range, decades over a wide one (call after
+    drawing, so the limits are known)."""
+    ax.set_xscale("log")
+    lo, hi = ax.get_xlim()
+    ax.xaxis.set_major_locator(LogLocator(subs=(1.0, 2.0, 5.0) if hi / lo < 300 else (1.0,)))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    ax.xaxis.set_minor_formatter(NullFormatter())
+
+
+def plot_sweeps(runs: list[dict], labels: dict[str, str], width: float = 7.0):
+    """The ``sweeps`` figure (see the module docstring): one panel per scene, one stacked bar per solver."""
+    scenes = {k: sorted(v, key=solver_rank) for k, v in by_scene(runs).items()}
+    n_rows = max(len(v) for v in scenes.values())
+    fig, axes = plt.subplots(1, len(scenes), figsize=(width, 0.32 * n_rows + 0.7), squeeze=False,
+                             gridspec_kw={"wspace": 0.35})
+    present: list[str] = []
+    for ax, (scene, rows) in zip(axes[0], scenes.items()):
+        y = np.arange(len(rows))[::-1]
+        present += [g for g in _sweeps_panel(ax, rows, y) if g not in present]
+        _row_axes(ax, y, [solver_name(r) for r in rows])
+        ax.text(0, 1.04, labels.get(scene, scene), transform=ax.transAxes, ha="left", va="bottom", fontsize=8,
+                fontweight="bold", color=INK)
+    _legend(fig, [Patch(color=group_color(g), label=g) for g in present], ncol=6)
+    return fig
+
+
+def plot_budget(runs: list[dict], labels: dict[str, str], width: float = 7.0, step_times: bool = False):
+    """The ``budget`` figure (see the module docstring): one block of rows per scene (a row per solver),
+    a column per quantity, all from the steps' solve statuses (and step times)."""
+    scenes = {k: sorted(v, key=solver_rank) for k, v in by_scene(runs).items()}
+    columns = BUDGET_COLUMNS if step_times else BUDGET_COLUMNS[:-1]
+    n_rows = [len(v) for v in scenes.values()]
+    fig = plt.figure(figsize=(width, 0.3 * sum(n_rows) + 0.55 * len(scenes) + 0.3))
+    grid = fig.add_gridspec(len(scenes), len(columns), height_ratios=n_rows, hspace=0.9, wspace=0.3,
+                            width_ratios=[{"early": 1.0}.get(c, 1.6) for c in columns])
+    for s, (scene, rows) in enumerate(scenes.items()):
+        y = np.arange(len(rows))[::-1]
+        tables = [step_stats.per_step(r) for r in rows]
+        axes = [fig.add_subplot(grid[s, c]) for c in range(len(columns))]
+        for ax, column in zip(axes, columns):
+            _budget_panel(ax, column, tables, y)
+            _row_axes(ax, y, [solver_name(r) for r in rows] if ax is axes[0] else None)
+        axes[0].text(0, 1.06, labels.get(scene, scene), transform=axes[0].transAxes, ha="left", va="bottom",
+                     fontsize=8, fontweight="bold", color=INK)
+    _legend(fig, _box_handles())
+    return fig
+
+
+def scenes_row(production: dict) -> dict:
+    """One row of the ``scenes`` table: a production run's step times, iterations, early exits and residual
+    ratios (median and worst), from its steps' solve statuses."""
+    table = step_stats.per_step(production)
+    status = [s.get("status") or {} for s in production["steps"]]
+    cg = [max((r["max_cg_iters"] for r in st["newton"]), default=0) for st in status if "newton" in st]
+
+    def stat(key, name):
+        d = step_stats.describe(table[key])
+        return d[name] if d else None
+
+    summary = step_stats.summarize_slice(table, np.ones(table["t"].size, dtype=bool))
+    return {
+        "scene": scene_key(production),
+        "solver": solver_name(production),
+        "steps": int(table["t"].size),
+        "time": step_stats.describe(table["time_ms"]),
+        "iterations": stat("iterations", "median"),
+        "unit": table["unit"],
+        "max_cg": float(np.median(cg)) if cg else None,
+        "early_exit": summary["early_exit"],
+        "gradient_median": stat("gradient_ratio", "median"),
+        "gradient_max": stat("gradient_ratio", "max"),
+        "feasibility_median": stat("feasibility_ratio", "median"),
+        "feasibility_max": stat("feasibility_ratio", "max"),
+    }
+
+
+def latex_scenes(rows: list[dict], labels: dict[str, str]) -> str:
+    """The ``scenes`` table (booktabs, multirow): rows grouped by scene, numbers to 3 significant digits."""
+    out = [r"\begin{table*}", r"\centering", r"\small",
+           r"\caption{\textbf{Expected efficiency per time step.} Production runs (CUDA graph replay for the VBD "
+           r"family; Newton runs eagerly with host synchronization) over each scene's trajectory. Iterations: "
+           r"median VBD sweeps, or Newton steps per time step, with the median of the most conjugate gradient "
+           r"iterations of one linear solve in parentheses; early exits: time steps whose solve passed its "
+           r"convergence tests within the budget; residual ratios to their tolerances per time step (median and "
+           r"worst; at most 1 passes): the gradient and the penetration into the contact margin.}",
+           r"\label{tab:scenes}",
+           r"\begin{tabular}{llrrrrrrrrr}", r"\toprule",
+           r"& & \multicolumn{3}{c}{Step time (ms)} & & & \multicolumn{2}{c}{Gradient ratio} & "
+           r"\multicolumn{2}{c}{Penetration ratio} \\",
+           r"\cmidrule(lr){3-5} \cmidrule(lr){8-9} \cmidrule(lr){10-11}",
+           r"Scene & Solver & mean & median & P90 & Iterations & Early exits & median & worst & median & worst \\",
+           r"\midrule"]
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row["scene"]] = counts.get(row["scene"], 0) + 1
+    previous = None
+    for row in rows:
+        if previous is not None and row["scene"] != previous:
+            out.append(r"\midrule")
+        label = labels.get(row["scene"], row["scene"].replace("_", r"\_"))
+        scene = rf"\multirow{{{counts[row['scene']]}}}{{*}}{{{label}}}" if row["scene"] != previous else ""
+        previous = row["scene"]
+        t = row["time"] or {}
+        iterations = "--" if row["iterations"] is None else f"{row['iterations']:.0f}"
+        if row["max_cg"] is not None:
+            iterations += f" ({row['max_cg']:.0f})"
+        early = "--" if row["early_exit"] is None else f"{100 * row['early_exit']:.0f}\\%"
+        cells = [scene, row["solver"], _num(t.get("mean")), _num(t.get("median")), _num(t.get("P90")), iterations,
+                 early, _num(row["gradient_median"]), _num(row["gradient_max"]), _num(row["feasibility_median"]),
+                 _num(row["feasibility_max"])]
+        out.append(" & ".join(cells) + r" \\")
+    out += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
+    return "\n".join(out) + "\n"
+
+
 def _parse_labels(items: list[str]) -> dict[str, str]:
     labels = {}
     for item in items:
@@ -402,12 +626,15 @@ def _parse_labels(items: list[str]) -> dict[str, str]:
 
 def main():
     parser = argparse.ArgumentParser(description="Paper figures and tables of profiling results.")
-    parser.add_argument("kind", choices=["timeline", "solvers", "table"], help="What to write (see the docstring).")
-    parser.add_argument("kernels", nargs="+", help="Kernels-backend results (.json), one per row.")
+    parser.add_argument("kind", choices=["timeline", "solvers", "table", "slices", "sweeps", "budget", "scenes"],
+                        help="What to write (see the docstring).")
+    parser.add_argument("kernels", nargs="+",
+                        help="Results (.json), one per row: kernels-backend runs (timeline, solvers, table, sweeps) "
+                        "or production runs (budget, scenes).")
     parser.add_argument("--production", nargs="*", default=[],
                         help="Production results (.json), paired with the kernels results by scene and solver.")
     parser.add_argument("-o", "--output", required=True,
-                        help="Output: <output>.pdf for figures, the .tex file for the table.")
+                        help="Output: <output>.pdf for figures, the .tex or .md file for tables.")
     parser.add_argument("--labels", nargs="*", default=[], metavar="SCENE=LABEL",
                         help="Row labels per scene key (the scene file's name without extension), e.g. "
                         "basket_of_fruit=\"Basket of fruit\" (default: the key).")
@@ -415,31 +642,48 @@ def main():
                         help="Printed width in inches (7: TOG's text width, 3.33: a column); fonts at nominal size.")
     parser.add_argument("--bin", type=int, default=1, dest="bin_n",
                         help="timeline: average the time series over blocks of this many steps.")
+    parser.add_argument("--snapshots", nargs="*", default=[], metavar="TIME=IMAGE",
+                        help="timeline: snapshot images and their simulated times (s), e.g. 0.9=snap_1.png.")
     parser.add_argument("--slices", default="10,90",
-                        help="timeline: percentile edges of the donut slices (default: 10,90).")
-    parser.add_argument("--slice-by", choices=["time", "speed"], default="time", dest="slice_by",
-                        help="timeline: slice the steps by GPU time or by peak node speed.")
+                        help="slices: percentile edges of the step-time slices (default: 10,90).")
+    parser.add_argument("--step-times", action="store_true", dest="step_times",
+                        help="solvers, budget: add a column with the step time distribution.")
     parser.add_argument("--font-dir", default=None, dest="font_dir",
                         help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
                         "installed fonts).")
     args = parser.parse_args()
     kernels = [results.load(p) for p in args.kernels]
-    production = pair_production(kernels, [results.load(p) for p in args.production])
+    production_runs = [results.load(p) for p in args.production]
+    production = pair_production(kernels, production_runs)
     labels = _parse_labels(args.labels)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
-    if args.kind == "table":
-        text = latex_table([table_row(k, p) for k, p in zip(kernels, production)], labels)
+    if args.kind in ("table", "scenes", "slices"):
+        if args.kind == "table":
+            text = latex_table([table_row(k, p) for k, p in solver_rows(kernels, production_runs)], labels)
+        elif args.kind == "scenes":
+            text = latex_scenes([scenes_row(k) for k in kernels], labels)
+        else:
+            text = slices_text(kernels, labels, tuple(float(e) for e in args.slices.split(",")))
         with open(args.output, "w", encoding="utf-8") as f:
-            f.write("% Needs \\usepackage{booktabs, multirow}\n\n" + text)
+            f.write(text if args.kind == "slices" else "% Needs \\usepackage{booktabs, multirow}\n\n" + text)
         print(f"Wrote {args.output}")
         return
     use_paper_fonts(args.font_dir)
     if args.kind == "timeline":
-        edges = tuple(float(e) for e in args.slices.split(","))
+        snapshots = []
+        for item in args.snapshots:
+            time, sep, path = item.partition("=")
+            if not sep:
+                raise SystemExit(f"--snapshots expects TIME=IMAGE, got {item!r}")
+            snapshots.append((float(time), path))
         fig = plot_timeline(kernels, production, [labels.get(scene_key(k), scene_key(k)) for k in kernels],
-                            args.width, args.bin_n, edges, args.slice_by)
+                            args.width, args.bin_n, snapshots)
+    elif args.kind == "solvers":
+        fig = plot_solvers(kernels, production_runs, args.width, args.step_times)
+    elif args.kind == "sweeps":
+        fig = plot_sweeps(kernels, labels, args.width)
     else:
-        fig = plot_solvers(kernels, production, args.width)
+        fig = plot_budget(kernels, labels, args.width, args.step_times)
     path = f"{args.output}.pdf"
     fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
     plt.close(fig)
@@ -475,7 +719,8 @@ class TestPaperFigures(unittest.TestCase):
 
     @staticmethod
     def _production(kernels: dict):
-        steps = [{"t": s["t"], "step_timeline_ms": s["step_union_ms"] * 1.08} for s in kernels["steps"]]
+        steps = [{"t": s["t"], "step_timeline_ms": s["step_union_ms"] * 1.08, "status": s["status"]}
+                 for s in kernels["steps"]]
         return {"source": "production", "metadata": dict(kernels["metadata"]), "steps": steps}
 
     def test_groups(self):
@@ -513,21 +758,62 @@ class TestPaperFigures(unittest.TestCase):
         self.assertIn("25\\%", text)
         self.assertEqual(text.count(r"\\"), 2 + 2)  # two header rows and one per result
 
+    def test_sweeps_budget_scenes(self):
+        import tempfile
+
+        k = self._kernels()
+        per_sweep = ms_per_sweep(k)
+        # 15 steps without contact, 25 with; 3200 sweeps (every 4th step exits early at 20)
+        self.assertAlmostEqual(per_sweep["Vertex sweeps"], (15 * 8.0 + 25 * 12.0) / 3200)
+        self.assertAlmostEqual(per_sweep["Contact detection"], (15 * 0.5 + 25 * 2.0) / 3200)
+        newton = self._production(k)
+        newton["metadata"]["solver"] = "Newton"
+        for i, s in enumerate(newton["steps"]):
+            s["status"] = {"newton": [{"substep": 0, "outer": 3, "converged": i % 2 == 0, "newton_steps": 6,
+                                       "max_cg_iters": 100 + i, "gradient_ratio": 0.5, "feasibility_ratio": 0.0}]}
+        row = scenes_row(newton)
+        self.assertEqual((row["solver"], row["iterations"], row["early_exit"]), ("Newton", 6.0, 0.5))
+        self.assertAlmostEqual(row["max_cg"], 100 + 19.5)
+        vbd = self._production(self._kernels("VBD"))
+        rows = solver_rows([k], [self._production(k), vbd])
+        self.assertEqual([(a is None, solver_name(a or b)) for a, b in rows], [(True, "VBD"), (False, "AAAVBD")])
+        only_production = table_row(None, vbd)
+        self.assertIsNone(only_production["union"])
+        self.assertIsNone(only_production["overlap"])
+        self.assertAlmostEqual(only_production["production"]["max"], 14.45 * 1.08)
+        aaavbd = scenes_row(self._production(k))
+        self.assertEqual((aaavbd["early_exit"], aaavbd["max_cg"]), (0.25, None))
+        text = latex_scenes([row, aaavbd], {})
+        self.assertIn("6 (120)", text)
+        self.assertIn(r"\multirow{2}{*}{basket\_of\_fruit}", text)
+        with tempfile.TemporaryDirectory() as d:
+            runs = [k, self._kernels("VBD"), self._kernels(scene="path/to/capsule_bowl.h5")]
+            for name, fig in (("sweeps", plot_sweeps(runs, {})), ("budget", plot_budget(runs, {}, step_times=True))):
+                path = os.path.join(d, f"{name}.pdf")
+                fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
+                plt.close(fig)
+                self.assertGreater(os.path.getsize(path), 1000)
+
     def test_figures_render(self):
         import tempfile
 
         k = [self._kernels(), self._kernels(scene="path/to/capsule_bowl.h5")]
         p = [self._production(k[0]), None]
         with tempfile.TemporaryDirectory() as d:
+            image = os.path.join(d, "snap.png")
+            plt.imsave(image, np.ones((30, 40, 3)))
             for name, fig in (("timeline", plot_timeline(k, p, ["A", "B"], bin_n=2)),
-                              ("speed", plot_timeline(k, p, ["A", "B"], slice_by="speed")),
-                              ("solvers", plot_solvers([k[0], self._kernels("VBD")], p))):
+                              ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
+                              ("solvers", plot_solvers([self._kernels("VBD"), k[0]], [p[0]], step_times=True))):
                 path = os.path.join(d, f"{name}.pdf")
                 fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
                 plt.close(fig)
                 self.assertGreater(os.path.getsize(path), 1000)
-        self.assertEqual(slice_header({"lo": 0.0, "hi": 10.0}, (10.0, 90.0), "time"), "Fastest 10%")
-        self.assertEqual(slice_header({"lo": 90.0, "hi": 100.0}, (10.0, 90.0), "speed"), "Fastest 10%")
+        self.assertEqual(slice_header({"lo": 0.0, "hi": 10.0}, (10.0, 90.0)), "Fastest 10%")
+        self.assertEqual(slice_header({"lo": 90.0, "hi": 100.0}, (10.0, 90.0)), "Slowest 10%")
+        text = slices_text(k[:1], {"basket_of_fruit": "Basket"})
+        self.assertIn("## Basket, AAAVBD", text)
+        self.assertIn("| Fastest 10% | 15 | 8.95 ms | 100 sweeps | 27% |", text)  # ties: every no-contact step
 
 
 if __name__ == "__main__":
