@@ -981,6 +981,17 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
 - P11. **Delete?** data/scenarios/ArmadilloSpaghetti.Fall.Thickened.h5 (unused) and data/stanford-dragon_ftetwild.msh.
 - P12. **Timeline snapshot times** (0.4, 0.9, 2.88, 3.94, 5.0 s; camera between two tubes): OK as rendered?
 
+- P13. **Newton friction at impacts** (task 3, confirmed): the per-step frozen Coulomb limit C comes from the first
+  positive normal-force estimate, which is 5-27x the step's final force at an impact (a deeply penetrating early
+  iterate) and 2-12x on unloading (the previous step's warm-started lambda_n): friction ratio 1.86 over the impact
+  window (3.8 at the impact step) vs AAAVBD 1.01. Options: **F1** (recommended) C = mu_f lambda_n of the current
+  outer iteration, fixed within the subproblem; **F2** per-step freeze that can only decrease; **F3** freeze per
+  subproblem. The freeze was the maintainer's design (2026-10-20), so their call.
+- P14. **Capsule reference:** a converged Newton isn't reachable as configured (50 x 10 at tight tolerances: the
+  gradient ratio flatlines at ~160, the contact set flip-flops between outer iterations, ~60 s/step). Options: **R1**
+  Newton 100 x 1 (~2 h if it converges); **R2** a VBD-family reference with a large budget and no early exit (~10-20 min);
+  **R3** (recommended) both, with their distance as the reference's uncertainty. R3's calibration (~10 min) is queued.
+
 In progress (2026-10-22): task 1 repo trajectory viewer (python/tools/sim/trajectory_viewer.py); task 3 converged
 Newton reference and error analysis on the capsules; coordinator armadillo 8e5 + fix check (step-60 blow-up at 1e6).
 
@@ -1174,3 +1185,12 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 2 · **GPU run START** (~3 min, approved, timings irrelevant): Polyscope snapshot renders of the CapsulesIntoBowl AAAVBD trajectory (opens a window briefly). Will log END.
 - 2026-10-22 · task 2 · **GPU run END** (snapshot renders, a few short Polyscope windows). The GPU is free.
 - 2026-10-22 · task 3 · **GPU run START** (~5 min, short headless processes, timings irrelevant): Newton friction check, 15° incline cube at CapsulesIntoBowl's contact settings, Newton vs AAAVBD (rest, fast slider, drop; mu_f 0.2 and 0). Will log END.
+- 2026-10-22 · task 3 · **GPU run END** (incline friction check, 8 short processes, ~7 min). The GPU is free.
+- 2026-10-22 · task 2 · **GPU run START** (~3 min, approved, timings irrelevant): high-resolution Polyscope snapshot re-render of the CapsulesIntoBowl AAAVBD trajectory (short windows). Will log END.
+- 2026-10-22 · task 3 · **GPU run START** (~6 min, coordinator's slot, short headless processes, timings irrelevant): incline friction check 2: drop and impact (Newton, AAAVBD, mu_f 0.2), and mu_f = 0 with early exit off (AAAVBD, VBD, 10 x 20). Will log END.
+- 2026-10-22 · task 2 · **GPU run END** (high-resolution snapshot re-render, a few short Polyscope windows; it overlapped task 3's start, timings irrelevant for both).
+- 2026-10-22 · task 3 · **GPU run END** (incline friction check 2, 7 short processes, ~5 min). The GPU is free.
+- 2026-10-22 · task 1 · **GPU run START** (coordinator's slot, timings irrelevant): ArmadilloSpaghetti.Fall VE-normal investigation: resume the 1 MPa checkpoint at step 50, step to ~61 with contact snapshots (new and pre-130f608a classification), then fix candidates. Short headless processes, a few minutes each. Will log END.
+- 2026-10-22 · task 1 · **GPU run END** (ArmadilloSpaghetti.Fall VE-normal investigation, part 1: 2 resumes of the 1 MPa checkpoint 50 -> 60, new and pre-130f608a classification, ~12 min). The GPU is free.
+- 2026-10-22 · task 3 · **GPU run START** (~15-17 min, coordinator's slot, timings irrelevant): Newton impact friction diagnostic on the incline (~2 min), then the frictionless Newton reference calibration on CapsulesIntoBowl (2 settings x 20 steps from AAAVBD's checkpoints at steps 100 and 300). Will log END.
+- 2026-10-22 · task 3 · **GPU run END** (impact diagnostic + reference calibration A at step 100, stopped after 2 steps of ~60 s each: Newton stagnates; ~22 min). The GPU is free.
