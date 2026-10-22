@@ -318,6 +318,15 @@ SCENES = {
         "from the pillars; 1.1M tets (maintainer, 2026-10-21)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "armadillo_spaghetti_close": Scene(
+        "defaults",
+        "data/scenarios/armadillo-spaghetti_close.h5: armadillo-spaghetti_single.h5 with thinner pillars (cylinders of "
+        "0.1 m diameter, fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's "
+        "modulus 1e7) moved in to 0.52 m from the twist axis (0.735 m apart, was 1.0 m), and the armadillo (8e5) "
+        "turned a further 29 deg so they clear it by 2.1 cm; 0.99M tets (maintainer, 2026-10-21: as in the JGS2-GQ "
+        "video, pillars close to the armadillo and thin enough to wrap it rather than push it out)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "armadillo_pull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
