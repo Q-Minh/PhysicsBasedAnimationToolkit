@@ -1,7 +1,7 @@
-# Scene config: armadillo_spaghetti_fine, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/armadillo-spaghetti_fine.h5: armadillo-spaghetti.h5 with the pillars re-tetrahedralized by fTetWild (ideal edge 1.8 cm, mean 1.9 cm; 194k tets each, quality at least 0.127, against the original 54.5k tets with slivers down to 0.012) and the twist constraints rebuilt on their end caps; 1.1M tets in all (maintainer, 2026-10-21: the original pillars' slivers degenerate when they tangle).
+# Scene config: ArmadilloSpaghetti.Cylinders, every serialized parameter written out (diff it against configs/paper).
+# For: data/scenarios/armadillo-spaghetti_cylinders.h5: armadillo-spaghetti.h5 with round pillars, cylinders of 0.2 m diameter inscribed in the original square ones, tetrahedralized by fTetWild (ideal edge 1.8 cm, mean 1.7 cm; 233k tets each, quality at least 0.126) with the twist constraints on their end caps; the armadillos are 4.2 cm from them; 1.26M tets in all (maintainer, 2026-10-21: spaghetti are round).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
