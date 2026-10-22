@@ -326,11 +326,11 @@ def plot_benchmark(
     ax.set_ylim(*y_range)
     ax.set_zlim(0.0, z_max)
     ax.set_xlabel("Material", labelpad=18)
-    ax.set_ylabel(r"$1 - e/e_0$ (%)", labelpad=8)
+    ax.set_ylabel(r"$1 - \dfrac{e}{e_0}$ (%)", labelpad=8)
     fixed = [("budget" in g.attrs) for _, g in cases]
     norm = "T" if all(fixed) else "T_N" if not any(fixed) else "T_N (or T)"
     ax.zaxis.set_rotate_label(False)  # upright: the title is short enough to read without tilting one's head
-    ax.set_zlabel(rf"$\Delta t / {norm}$", labelpad=12, rotation=0)  # clear of the depth axis label
+    ax.set_zlabel(rf"$\dfrac{{\Delta t}}{{{norm}}}$", labelpad=12, rotation=0)  # clear of the depth axis label
     ax.tick_params(axis="z", labelsize=8)
     ax.set_box_aspect(aspect, zoom=BOX_ZOOM)
     ax.grid(False)  # the grid lines carry nothing the axes and bars don't (maintainer)

@@ -122,7 +122,7 @@ def plot_problem(
         ax.set_xlim(0.7 * t_start, x_end)
     else:
         ax.set_xlim(0.0, x_end)
-    ax.set_xlabel("$t / T_N$")
+    ax.set_xlabel(r"$\dfrac{t}{T_N}$")
     which = f"sample {sample}" if sample is not None else f"{len(samples)} samples"
     ax.set_title(f"{benchmark_title(benchmark)}: {case_label(g, case).replace(chr(10), ', ')}, {which}", fontsize=9)
     ax.grid(True, which="major", color="#EEEEEE", linewidth=0.5)
@@ -165,7 +165,7 @@ def main():
                 raise SystemExit(f"{args.results} has no {problem}")
             drawn += [s for s in plot_problem(ax, f, benchmark, case, None if args.all_samples else args.sample, solvers,
                                                      args.xscale) if s not in drawn]
-        axes[0][0].set_ylabel("$e / e_0$")
+        axes[0][0].set_ylabel(r"$\dfrac{e}{e_0}$", rotation=0, labelpad=10)  # upright: a fraction
         handles = [plt.Line2D([], [], color=solver_color(s, solvers), linewidth=1.5, label=SOLVER_NAMES.get(s, s))
                    for s in drawn]
         if args.all_samples:
