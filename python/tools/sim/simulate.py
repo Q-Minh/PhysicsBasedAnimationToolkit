@@ -143,12 +143,15 @@ def parse_args():
 
 def _write_frame(h5f: h5py.File, state: SimulationState, frame: int, status_from: int) -> int:
     """Same layout as ui._serialize_simulation, plus ``sim/<frame>/solve_status``: the statuses of the
-    time steps since the previous frame, ``[status_from, state.t)`` (see status.StatusLog).
+    time steps since the previous frame, ``[status_from, state.t)`` (see status.StatusLog), and the
+    attribute ``sim/<frame>.attrs["t"]``, the time step count at the frame.
 
     Returns:
         int: The first time step of the next frame's statuses.
     """
     h5f.create_dataset(f"sim/{frame:08d}/x", data=state.fem.data.x.numpy())
+    # The time step count at the frame, so frames can be matched to steps (profiling/trajectory.py)
+    h5f[f"sim/{frame:08d}"].attrs["t"] = state.t
     state.status_log.write_h5(
         h5f.require_group(f"sim/{frame:08d}/solve_status"), steps=(status_from, state.t)
     )
