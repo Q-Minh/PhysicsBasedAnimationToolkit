@@ -1,3 +1,5 @@
+import unittest
+
 import warp as wp
 from ...common import profiling
 import cupy as cp
@@ -6,6 +8,7 @@ import numpy as np
 from . import pairs
 from ..multimesh import MultiMesh, MultiMeshData
 from .. import halfedges
+from .. import queries
 from .cd import ContactDetection
 from ...common import reduce, lower_bound
 from ....common.fields import DocField, SerializableMixin
@@ -102,11 +105,23 @@ def _detect_vertex_mesh_contacts(
         # AAAVBD runs differing from the second step, by up to 1 cm after 10 steps (2026-10-21). Suspected: the
         # closest point is then a shared vertex or edge, so which face the query returns, and so the feature
         # below (VF, VE or VV, from exact zero barycentrics), is a tie. Offsetting the cube made runs
-        # bit-identical. A deterministic tie-break (e.g. the smallest face index) would fix it.
+        # bit-identical. Not the feature: since it comes from the closest point's region (the same whichever
+        # face shares the closest edge or vertex), one of two repeat runs still differed from the first step
+        # (VBD 7.8 mm, AAAVBD 11.5 mm after 10 steps, 2026-10-22). Left to check: the signed distance's last
+        # bits (from the returned face's barycentrics), and the order-dependent work after detection.
         if sd < threshold:
-            is_j_zero = wp.int32(b0 == wp.float32(0))
-            is_k_zero = wp.int32(b1 == wp.float32(0))
-            is_l_zero = wp.int32(b2 == wp.float32(0))
+            # The closest feature (face interior, edge or vertex) comes from the closest point's Voronoi region
+            # of the face, whose barycentrics are exactly zero off the interior, as C++ OGC's
+            # (UvwPointInTriangle) and the second pass's (pairs._compute_vf_contact_data). Warp's barycentrics
+            # aren't: w = 1 - u - v is ~1e-8 on the edge jk, which made such contacts VF, with the face normal.
+            # Behind a sharp edge (faces' normals more than 90 deg apart) the vertex is then behind that face's
+            # plane though outside the body, a false penetration of up to the distance (ArmadilloSpaghetti.Fall).
+            # The feature no longer depends on which of the faces sharing the closest edge or vertex the query
+            # returns.
+            uvw = queries.closest_point_triangle(xi, xj, xk, xl)
+            is_j_zero = wp.int32(uvw[0] == wp.float32(0))
+            is_k_zero = wp.int32(uvw[1] == wp.float32(0))
+            is_l_zero = wp.int32(uvw[2] == wp.float32(0))
             nz = is_j_zero + is_k_zero + is_l_zero
             if nz == 0:
                 # Triangle contact
@@ -521,3 +536,111 @@ class Sd(ContactDetection):
     def supports_conditional_capture(self) -> bool:
         # Only the refit allocates, and it lives in prepare_detection
         return True
+
+
+@wp.kernel
+def _edge_region_barycentrics(
+    mesh: wp.uint64,
+    x: wp.array[wp.vec3f],
+    P: wp.array[wp.vec3f],
+    warp_w: wp.array[wp.float32],
+    uvw: wp.array[wp.vec3f],
+):
+    t = wp.tid()
+    qp = wp.mesh_query_point_no_sign(mesh, x[t], wp.float32(10))
+    warp_w[t] = wp.float32(1) - qp.u - qp.v  # type: ignore
+    uvw[t] = queries.closest_point_triangle(x[t], P[0], P[1], P[2])
+
+
+class TestFeatureClassification(unittest.TestCase):
+    """The closest feature of a detected vertex (VF, VE or VV) comes from exact zero barycentrics of the
+    closest point's region, not from Warp's mesh query."""
+
+    def test_edge_region_is_exact(self):
+        """Points beyond edge jk of a triangle: Warp's w = 1 - u - v is often not exactly 0 there (298 of
+        these 1000 points, |w| up to 3e-8, Warp 1.17), the region-based barycentrics are."""
+        rng = np.random.default_rng(0)
+        P = np.array([[0.1, 0.0, 0.0], [0.9, 0.2, 0.0], [0.3, 0.8, 0.05]], dtype=np.float32)
+        e = P[1] - P[0]
+        normal = np.cross(e, P[2] - P[0])
+        normal /= np.linalg.norm(normal)
+        out = np.cross(e, normal)
+        out *= -np.sign(np.dot(out, P[2] - P[0])) / np.linalg.norm(out)  # in plane, away from P[2]
+        n = 1000
+        X = (
+            P[0]
+            + rng.uniform(0.05, 0.95, (n, 1)) * e
+            + rng.uniform(1e-3, 1e-2, (n, 1)) * out
+            + rng.uniform(-1e-2, 1e-2, (n, 1)) * normal
+        ).astype(np.float32)
+        mesh = wp.Mesh(wp.array(P, dtype=wp.vec3f), wp.array([0, 1, 2], dtype=wp.int32))
+        warp_w = wp.zeros(n, dtype=wp.float32)
+        uvw = wp.zeros(n, dtype=wp.vec3f)
+        wp.launch(
+            _edge_region_barycentrics,
+            dim=n,
+            inputs=[mesh.id, wp.array(X, dtype=wp.vec3f), wp.array(P, dtype=wp.vec3f), warp_w, uvw],
+        )
+        warp_w, uvw = warp_w.numpy(), uvw.numpy()
+        self.assertGreater(int(np.count_nonzero(warp_w)), 0, "no inexact Warp barycentric: the case isn't covered")
+        np.testing.assert_array_equal(uvw[:, 2], 0)
+        self.assertTrue(np.all((uvw[:, 0] > 0) & (uvw[:, 1] > 0)))
+
+    def test_sharp_edge(self):
+        """Vertices 2.5 mm outside a sharp wedge's apex edge (22.6 deg), in the edge's region and behind one
+        face's plane: each is a VE contact at its true distance, with no penetration. With Warp's
+        barycentrics, one of them was a VF contact with the face normal, at gap -2.3 mm."""
+        from pbatoolkit import pbat, pypbat
+        from ....state import SimulationState, load_params
+
+        # The wedge: cross-section (x, z) apex (0, 0), (-1, 0.2), (-1, -0.2), extruded along y over [0, 1]
+        W = np.array([[x, y, z] for y in (0.0, 1.0) for x, z in ((0, 0), (-1, 0.2), (-1, -0.2))])
+        C = [np.array([[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5]])]
+        n_top = np.array([0.2, 0.0, 1.0]) / np.hypot(0.2, 1.0)
+        n_bottom = np.array([0.2, 0.0, -1.0]) / np.hypot(0.2, 1.0)
+        distance = 2.5e-3
+        X, probes = [W], []
+        for q, y in enumerate(np.linspace(0.15, 0.9, 6)):
+            # Mostly along one face's normal: behind the other face's plane
+            d = 0.1 * n_top + n_bottom if q % 2 == 0 else n_top + 0.1 * n_bottom
+            p = np.array([0.0, y, 0.0]) + distance * d / np.linalg.norm(d)
+            probes.append(len(W) + 4 * q)
+            X.append([p, p + [0.05, 0, 0.02], p + [0.05, 0.02, -0.02], p + [0.05, -0.02, -0.02]])
+            C.append(np.array([[0, 1, 2, 3]]) + probes[-1])
+        X, C = np.vstack(X), np.vstack(C)
+        for e in C:  # positive volumes
+            a, b, c, d = X[e]
+            if np.dot(np.cross(b - a, c - a), d - a) < 0:
+                e[[2, 3]] = e[[3, 2]]
+        fem = pbat.sim.dynamics.FemElastoDynamics(X.T, C.T)
+        fem.set_mass_matrix(1e3)
+        fem.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))
+        fem.set_time_integration_scheme(dt=1e-2, s=1)
+        state = SimulationState(fem, load_params(fem), None)
+        for k in ("vv", "ve", "vf"):  # the default multipliers of 30 vertices leave one VE slot
+            setattr(state.contact_storage_params, f"n_{k}_contact_capacity", 1.0)
+        state.reset()
+        dmin = float(state.contact.params.dmin)
+        self.assertLess(dmin, distance)
+        state.detector.detect_contacts()
+        state.contact.update_constraint_set()
+        contacts = state.detector._contacts
+        n_vv, n_ve, n_vf, _ = (int(c) for c in contacts.num_contacts)
+        self.assertEqual((n_vv, n_ve, n_vf), (0, len(probes), 0))
+        V, F = state.multimesh.data.V.numpy(), state.multimesh.data.F.numpy()
+        x = state.fem.data.x.numpy()
+        u, he = contacts.ve_contacts
+        data = contacts.read_data[0]
+        t, normals = data.ve_bary.numpy(), data.ve_bases.n.numpy()
+        self.assertEqual(sorted(int(V[i]) for i in u[:n_ve]), probes)
+        for c in range(n_ve):
+            f, h = divmod(int(he[c]), 3)
+            xc = (1 - t[c]) * x[F[f][h]] + t[c] * x[F[f][(h + 1) % 3]]
+            self.assertAlmostEqual(float(np.dot(x[V[u[c]]] - xc, normals[c])), distance, delta=1e-6)
+        state.convergence._measure_penetration()
+        self.assertEqual(float(state.convergence.penetration.numpy()[0]), 0.0)
+
+
+if __name__ == "__main__":
+    wp.init()
+    unittest.main()
