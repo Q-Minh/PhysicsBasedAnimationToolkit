@@ -107,6 +107,9 @@ def _energy_inertial(
         return
     if fem.is_static != 0:
         # Static objective Psi(x) - fext^T x
+        # TODO: -fext^T x is large next to the energy changes near convergence (~1e3 J, measured on
+        # static solves), so its float32 roundoff adds noise to the Armijo test; -fext^T (x - X) (same
+        # gradient, constant shift) would reduce it. Only worth it if static Newton line searches stall.
         f_obj_partial[i] = -wp.dot(fem.fext[i], fem.x[i])  # type: ignore
     else:
         diff = fem.x[i] - fem.xtilde[i]
@@ -1308,6 +1311,14 @@ def _assemble_hessian(
     )
 
 
+# TODO: One-sided (slack-eliminated) AL contact terms with a semismooth Newton. With s fixed within a Newton
+# step, a contact inside the detection band but not pressed is a two-sided spring of stiffness sigma_n
+# (adapted to the stiffest partner) that holds its gap for the step. Eliminating s gives
+# E = (max(0, lambda - sigma c)^2 - lambda^2) / (2 sigma), C^1, with the Hessian block sigma n n^T only on
+# active contacts (lambda - sigma c > 0). Evidence: after the slack refresh, the soft-stiff trampoline +
+# sphere (steps 253-256) still has a contact-region roughness p95 of ~0.065, against AAAVBD's 0.033. A
+# GPU-only deviation from C++ (which fixes s per step); risk: active-set switching between Newton steps
+# and within the line search (energy only C^1, Hessian discontinuous) can cost backtracks or chatter.
 def _subproblem_gradient(
     fem: FemElastoDynamics,
     contact: ContactDynamics,

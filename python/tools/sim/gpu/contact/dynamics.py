@@ -901,6 +901,10 @@ class MeshDynamics:
             main_stream.wait_stream(stream)
         self._reduce_penalty_parameters(main_stream)
 
+    # TODO: Per-contact (local) penalties, as C++ ESALPenaltyStiffness's local option: one global sigma_n set
+    # by the stiffest contact's Rayleigh quotient also applies to soft-side contacts, which may worsen CG
+    # conditioning and stiffen soft-on-stiff contact (suspected, unmeasured, for Newton on the
+    # heterogeneous trampoline + sphere and its CG iteration counts).
     def adapt_penalty_parameters_to_hessian(self, H, dmask: wp.array):
         """Adapt the penalties to an assembled Hessian, as C++ ``MeshDynamics::UpdatePenaltyParameter``
         (GPU Newton): ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient
