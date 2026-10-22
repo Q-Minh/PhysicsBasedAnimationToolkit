@@ -28,6 +28,10 @@
 #     Solver.Newton.newton.n_max_iters = 2 (source 10)
 #     Solver.VBD.n_max_iters = 5 (source 1)
 #     Solver.VBD.n_subproblem_max_iters = 80 (source 100)
+#
+# Notes:
+# - The thick pillars trap part of the armadillo, but the simulation freezes near time step 200 (maintainer,
+#   2026-10-21, cause not investigated); armadillo_spaghetti_close tries thinner pillars closer to it.
 
 [Contact.CDType.OGC]
 arq = 1.0
