@@ -76,7 +76,7 @@ skills `sim-kinematics` and `sim-run`. Local locations (venv, extras repo, main 
   before the next GPU run.
 
 ### 5. Open items (each with a next step)
-1. **mat_on_stilts_3 with `configs/scenes/mat_on_stilts.toml`** (AAAVBD, 1 substep, 5 x 80): after the 2 s release, the mat
+1. **mat_on_stilts_3 with `configs/scenes/MatOnStilts.toml`** (AAAVBD, 1 substep, 5 x 80): after the 2 s release, the mat
    penetrates about 2 cm, loses contact by about 3.5 s and falls (z −26 m at 5 s). This happens at dmin 1e-3 and −1e-4, and
    with the TIMESTEP penalty, while the config header says it was stable. Next: check whether it tunnels or slides off
    (play the output in the editor); compare with the 10-substep paper config; bisect from `ff63102b`/`78232143`, the commits that introduced it and changed it to 5 x 80.
@@ -110,8 +110,8 @@ skills `sim-kinematics` and `sim-run`. Local locations (venv, extras repo, main 
   - `--fem data/BeamFallingOnBeam.Dump.h5:fem` (body-body).
   - Kinematics: `data/scenarios/TwistPullBeam.h5`, `prisms/*/twisting_beam_*.h5`, `spaghetti/spaghetti-tangle-het_block_*.h5`.
 - Cheap contact scenes (about 50-100 ms/step): `path/to/accelerated-vbd-extras/final_scenes/trampolines/trampoline_circle_{soft-stiff,stiff-soft}__with_sphere.h5`
-  with `configs/scenes/trampoline_{soft-stiff,stiff-soft}.toml`, and `final_scenes/mat_on_stilts_3.h5` with
-  `configs/scenes/mat_on_stilts.toml`. The sphere or mat is released at 2 s, so simulate about 5 s.
+  with `configs/scenes/Trampoline.{SoftStiff,StiffSoft}.toml`, and `final_scenes/mat_on_stilts_3.h5` with
+  `configs/scenes/MatOnStilts.toml`. The sphere or mat is released at 2 s, so simulate about 5 s.
 - Measuring (scratch scripts are gone; rebuild them from these APIs):
   - Deepest and resting gaps: `state.detector._sds`.
   - Pair counts vs capacity: `state.contact.contacts.read_data[0].{vv,ve,vf,ee}.prefix[-1]` and `.capacity`.
