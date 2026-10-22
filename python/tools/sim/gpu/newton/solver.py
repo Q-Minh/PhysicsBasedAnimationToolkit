@@ -5,7 +5,9 @@ Outer loop mirrors ``gpu/vbd/solver.py``.  Newton-specific work lives in
 ``prepare_subproblem`` and ``solve_subproblem``
 """
 
+import unittest
 from enum import IntEnum
+from types import SimpleNamespace
 from typing import NamedTuple
 
 import cuda.compute
@@ -1306,6 +1308,29 @@ def _assemble_hessian(
     )
 
 
+def _subproblem_gradient(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+    main_stream: wp.Stream,
+) -> None:
+    """The subproblem's augmented-Lagrangian gradient at the current (accepted) iterate, after a
+    slack-only dual update there, as C++ ``ToGradient(..., bForSubproblem = true)``: the slack is
+    ``max(0, c_n - lambda_n / sigma_n)`` at these positions, then held for the Newton step's Hessian
+    and line-search energies. The VBD family refreshes it before every sweep the same way. Without it,
+    a subproblem used the slack of the previous subproblem's end, or, for contacts detected since,
+    a stale value, which pushed or pulled vertices at random (jagged interfaces) and fooled the decay
+    test of :func:`finalize_subproblem`."""
+    contact.update_dual(
+        fem.data.x,
+        fem.xt,
+        request_slack_update=True,
+        request_decay_update=False,
+        request_lagrange_multiplier_update=False,
+    )
+    params._gradient_norm.compute_gradient(main_stream)
+
+
 @profiling.scoped("newton.subproblem")
 def solve_subproblem(
     fem: FemElastoDynamics,
@@ -1315,7 +1340,9 @@ def solve_subproblem(
     """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
 
     The subproblem converges when its augmented-Lagrangian gradient passes the shared stationarity test
-    (``Solver.Convergence.rstol`` or ``astol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``.
+    (``Solver.Convergence.rstol`` or ``astol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``. Each
+    gradient (the subproblem's start and after each accepted step) first refreshes the contact slack
+    at the iterate (:func:`_subproblem_gradient`).
 
     Returns:
         SubproblemStatus: Why it stopped. A rejected step (``NON_DESCENT``, ``LINE_SEARCH_FAILED``)
@@ -1336,7 +1363,7 @@ def solve_subproblem(
         )
         return status
 
-    params._gradient_norm.compute_gradient(main_stream)
+    _subproblem_gradient(fem, contact, params, main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
         if check is not None:
             if check.relative_test(params._g):
@@ -1403,7 +1430,7 @@ def solve_subproblem(
         if not accepted:
             wp.copy(fem.data.x, x_backup)
             return done(SubproblemStatus.LINE_SEARCH_FAILED)
-        params._gradient_norm.compute_gradient(main_stream)
+        _subproblem_gradient(fem, contact, params, main_stream)
     return done(SubproblemStatus.STEPPED)
 
 
@@ -1522,3 +1549,35 @@ class NewtonSolver:
     @property
     def supports_graph_capture(self):
         return False
+
+
+class TestSubproblemGradient(unittest.TestCase):
+    """The subproblem gradient refreshes the contact slack (only) at the iterate first."""
+
+    def test_slack_refresh_precedes_gradient(self):
+        calls = []
+        fem = SimpleNamespace(data=SimpleNamespace(x="x"), xt="xt")
+        contact = SimpleNamespace(update_dual=lambda *args, **kwargs: calls.append(("update_dual", args, kwargs)))
+        params = SimpleNamespace(
+            _gradient_norm=SimpleNamespace(compute_gradient=lambda stream: calls.append(("gradient", stream)))
+        )
+        _subproblem_gradient(fem, contact, params, "stream")
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "update_dual",
+                    ("x", "xt"),
+                    dict(
+                        request_slack_update=True,
+                        request_decay_update=False,
+                        request_lagrange_multiplier_update=False,
+                    ),
+                ),
+                ("gradient", "stream"),
+            ],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
