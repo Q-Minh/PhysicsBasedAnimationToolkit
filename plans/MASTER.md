@@ -988,10 +988,13 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   window (3.8 at the impact step) vs AAAVBD 1.01. Options: **F1** (recommended) C = mu_f lambda_n of the current
   outer iteration, fixed within the subproblem; **F2** per-step freeze that can only decrease; **F3** freeze per
   subproblem. The freeze was the maintainer's design (2026-10-20), so their call.
-- P14. **Capsule reference:** a converged Newton isn't reachable as configured (50 x 10 at tight tolerances: the
-  gradient ratio flatlines at ~160, the contact set flip-flops between outer iterations, ~60 s/step). Options: **R1**
-  Newton 100 x 1 (~2 h if it converges); **R2** a VBD-family reference with a large budget and no early exit (~10-20 min);
-  **R3** (recommended) both, with their distance as the reference's uncertainty. R3's calibration (~10 min) is queued.
+- P14. **Capsule reference** (R3 calibration done): no solver reaches the default tolerance at the sampled states:
+  Newton 100 x 1, AAAVBD 10 x 200 and VBD 10 x 200 all floor at ~5-9x it (cause not diagnosed). VBD vs AAAVBD
+  references agree within 0.05-0.2% of a step after one step (sub-mm over 10 steps); Newton differs by ~0.8% per step,
+  systematically dissipative (kinetic energy -1.2 to -1.7% over 10 steps, frictionless). Costs for 6 s: AAAVBD ~12-15
+  min, VBD ~10-12, Newton 70-110 (not converging). Task 3 recommends **AAAVBD 10 x 200 (early exit off) as the
+  reference, VBD 10 x 200 as its uncertainty** (~25 min); 'converged' then means two independent high-budget solvers
+  agree.
 
 In progress (2026-10-22): task 1 repo trajectory viewer (python/tools/sim/trajectory_viewer.py); task 3 converged
 Newton reference and error analysis on the capsules; coordinator armadillo 8e5 + fix check (step-60 blow-up at 1e6).
@@ -1197,3 +1200,5 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 3 · **GPU run END** (impact diagnostic + reference calibration A at step 100, stopped after 2 steps of ~60 s each: Newton stagnates; ~22 min). The GPU is free.
 - 2026-10-22 · task 1 · **GPU run START** (coordinator's slot, timings irrelevant): ArmadilloSpaghetti.Fall at 1 MPa from step 0 with the pre-130f608a classification (temporary switch), to step ~80 or blow-up. One headless process, ~5-8 min. Will log END.
 - 2026-10-22 · task 1 · **GPU run END** (ArmadilloSpaghetti.Fall 1 MPa from step 0, old classification: NaN at step 61, ~6 min). The GPU is free.
+- 2026-10-22 · task 3 · **GPU run START** (~10-12 min, coordinator's slot, timings irrelevant): CapsulesIntoBowl reference calibration R3, frictionless: Newton 100 x 1, AAAVBD and VBD 10 x 200, 10 steps each from AAAVBD's states at steps 100 and 300. Will log END.
+- 2026-10-22 · task 3 · **GPU run END** (reference calibration R3, 6 short runs, 10:13-10:20). The GPU is free.
