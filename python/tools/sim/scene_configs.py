@@ -267,7 +267,8 @@ SCENES = {
         "and its top and bottom ends turned at -180 and 180 deg/s) on four round pillars, cylinders 0.1 m in diameter "
         "(fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) 0.52 m "
         "from the twist axis (0.735 m apart), around one soft armadillo (data/armadillo.mesh, 162k tets, 1.2 m tall, "
-        "Young's modulus 8e5; tet quality at least 0.23, triangle angles at least 11 deg) whose waist (the slice at "
+        "Young's modulus 1e6, was 8e5 until it froze crushed, 2026-10-22; tet quality at least 0.23, triangle angles "
+        "at least 11 deg) whose waist (the slice at "
         "50-55% of its height, where only the torso is) is on the twist axis, turned so the pillars clear it by "
         "2.7 cm; 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body, and the armadillo's interior core "
         "(its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed "
@@ -281,7 +282,7 @@ SCENES = {
         ["It freezes at about step 175 (1.75 s): the unbounded twist keeps tightening the stiff pillars around the "
          "soft armadillo, whose elements near (-0.68, 1.37, -0.42) m invert from step 170; its surface there folds "
          "flat, contacts with the folded edge flip sign, and the step diverges. Every step runs its full budget with "
-         "the residual ~1e3 x its tolerance (2026-10-22). Bounding the twist's duration is the open fix."],
+         "the residual ~1e3 x its tolerance (2026-10-22, at Young's modulus 8e5; the maintainer then stiffened it to 1e6)."],
     ),
     "ArmadilloPull": Scene(
         "defaults",
