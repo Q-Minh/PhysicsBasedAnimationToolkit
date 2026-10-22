@@ -268,6 +268,14 @@ SCENES = {
         "2026-10-21: the lying Kyogres barely deformed)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "dragon_spaghetti_vertical": Scene(
+        "defaults",
+        "data/scenarios/dragon-spaghetti_vertical.h5: kyogre-spaghetti_vertical.h5 with the Stanford dragon (data/"
+        "stanford-dragon.ply, isotropically remeshed and tetrahedralized with TetGen: 24k tets, 4 below quality 0.03) "
+        "in place of the Kyogre, soft (Young's modulus 1e6), nose up, 2.26 m long, clear of the pillars by at least "
+        "1 cm",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "armadillo_pull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
