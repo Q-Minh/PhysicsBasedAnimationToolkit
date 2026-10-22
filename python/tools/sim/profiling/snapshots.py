@@ -9,7 +9,8 @@ capsules, the tubes and the bowl of the capsule bowl) and share a color, assigne
 
 The camera is a Polyscope view JSON file (``--view``). ``--pick`` opens the viewer instead, with a frame slider
 and a button that saves the current view to ``--view``, so the camera can be chosen interactively and
-reused. Without a view file, the camera starts at Polyscope's home view of the first frame.
+reused. Without a view file, the camera is ``--look-at`` (camera position and target), else Polyscope's home
+view of the first frame, and is saved to ``--view`` if given.
 
 Polyscope has no headless backend on Windows: rendering opens a window briefly.
 
@@ -92,10 +93,16 @@ def main():
     parser.add_argument("-o", "--output", default=None, help="Output prefix: writes <prefix>_<i>.png.")
     parser.add_argument("--view", default=None, help="Polyscope view JSON file (read, or written by --pick).")
     parser.add_argument("--pick", action="store_true", help="Open the viewer to choose and save the camera.")
+    parser.add_argument("--look-at", type=float, nargs=6, default=None, metavar=("X", "Y", "Z", "TX", "TY", "TZ"),
+                        dest="look_at", help="Camera position and target, without a view file.")
     parser.add_argument("--size", type=int, nargs=2, default=(1200, 1200), metavar=("W", "H"),
                         help="Window size in pixels before cropping.")
     parser.add_argument("--colors", nargs="*", default=list(DEFAULT_COLORS),
                         help="Colors per body type, in node order.")
+    parser.add_argument("--translucent", type=int, nargs="*", default=[],
+                        help="Body types (indices in node order) drawn translucent, e.g. containers that hide "
+                        "what is inside them.")
+    parser.add_argument("--opacity", type=float, default=0.35, help="Opacity of the --translucent types.")
     args = parser.parse_args()
 
     import polyscope as ps
@@ -116,6 +123,8 @@ def main():
         ps.set_ground_plane_mode("none")
         ps.set_SSAA_factor(4)
         ps.set_background_color((1.0, 1.0, 1.0))
+        if args.translucent:
+            ps.set_transparency_mode("pretty")
         ps.set_window_size(*args.size)
         ps.init()
         ps.set_window_size(*args.size)
@@ -125,10 +134,19 @@ def main():
             mesh = ps.register_surface_mesh(f"type {k}", x0, faces[face_type == k],
                                             color=_rgb(args.colors[k % len(args.colors)]), edge_width=0.0)
             mesh.set_back_face_policy("identical")
+            if k in args.translucent:
+                mesh.set_transparency(args.opacity)
             meshes.append(mesh)
         if args.view and os.path.isfile(args.view):
             with open(args.view, encoding="utf-8") as v:
                 ps.set_view_from_json(v.read())
+        else:
+            if args.look_at:
+                ps.look_at(args.look_at[:3], args.look_at[3:])
+            if args.view:
+                with open(args.view, "w", encoding="utf-8") as v:
+                    v.write(ps.get_view_as_json())
+                print(f"Wrote {args.view}")
 
         def show(i: int):
             x = positions(i)
