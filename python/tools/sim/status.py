@@ -279,6 +279,47 @@ class StatusLog:
             ]
         return lines
 
+    def step_entry(self, step: int) -> dict:
+        """Time step ``step``'s solves as JSON-serializable lists, one entry per substep, for profiling
+        results (``profiling/results.py``, a step's ``status``). Enums are names, NaN ratios None.
+
+        Returns:
+            dict: ``vbd`` (the :data:`VBD_DTYPE` fields but ``step``/``solver``) and/or ``newton`` (the
+            :data:`NEWTON_SOLVE_DTYPE` fields but ``step``, plus its subproblems' totals: ``newton_steps``,
+            ``backtracks``, ``cg_capped`` (count), ``max_cg_iters``, ``max_newton_steps``, ``cg_cap`` and
+            ``statuses``, subproblem counts by :class:`SubproblemStatus` name); empty if none recorded.
+        """
+
+        def value(x):
+            x = x.item()
+            return None if isinstance(x, float) and np.isnan(x) else x
+
+        out: dict = {}
+        v = self._steps(self.vbd, (step, step + 1))
+        if v.shape[0]:
+            fields = [f for f in VBD_DTYPE.names if f not in ("step", "solver")]
+            out["vbd"] = [
+                {f: SolveEnd(int(r[f])).name if f == "reason" else value(r[f]) for f in fields} for r in v
+            ]
+        n = self._steps(self.newton_solves, (step, step + 1))
+        if n.shape[0]:
+            sp = self._steps(self.newton_subproblems, (step, step + 1))
+            out["newton"] = []
+            for r in n:
+                s = sp[sp["substep"] == r["substep"]]
+                entry = {f: value(r[f]) for f in NEWTON_SOLVE_DTYPE.names if f != "step"}
+                entry.update(
+                    newton_steps=int(s["newton_steps"].sum()),
+                    backtracks=int(s["backtracks"].sum()),
+                    cg_capped=int(s["cg_capped"].sum()),
+                    max_cg_iters=int(s["max_cg_iters"].max(initial=0)),
+                    max_newton_steps=int(s["max_newton_steps"].max(initial=0)),
+                    cg_cap=int(s["cg_cap"].max(initial=0)),
+                    statuses={e.name: int((s["status"] == e).sum()) for e in SubproblemStatus},
+                )
+                out["newton"].append(entry)
+        return out
+
     def write_h5(self, group, steps: tuple[int, int] | None = None) -> None:
         """Write the log under an h5py group: datasets ``vbd``, ``newton_solves`` and
         ``newton_subproblems`` (structured, empty ones omitted), with enum names as attributes.
@@ -381,6 +422,18 @@ class TestStatusLog(unittest.TestCase):
                 self.assertEqual(f["sim/00000002/solve_status/newton_solves"][()]["step"].tolist(), [2])
                 self.assertNotIn("vbd", f["sim/00000002/solve_status"])
                 self.assertEqual(len(f["sim/00000003/solve_status"]), 0)
+        # One step's solves as JSON, for profiling results
+        e = log.step_entry(0)
+        self.assertEqual([r["reason"] for r in e["vbd"]], ["CONVERGED", "GRADIENT_UNMET"])
+        self.assertEqual((e["vbd"][1]["substep"], e["vbd"][1]["sweeps"], e["vbd"][1]["max_sweeps"]), (1, 20, 400))
+        self.assertNotIn("newton", e)
+        e = log.step_entry(2)["newton"][0]
+        self.assertEqual((e["converged"], e["gradient_ratio"], e["newton_steps"], e["cg_capped"]), (False, 2.5, 3, 1))
+        self.assertEqual((e["max_cg_iters"], e["backtracks"], e["statuses"]["LINE_SEARCH_FAILED"]), (300, 12, 1))
+        self.assertEqual(log.step_entry(7), {})
+        import json
+
+        json.dumps(log.step_entry(2), allow_nan=False)
         for t in range(3, 103):  # grows past the initial capacity
             log.add_vbd(t, 1, self._rows([2 * t, 2 * t + 1]), 0, 5, 400)
         self.assertEqual(log.vbd.shape[0], 204)

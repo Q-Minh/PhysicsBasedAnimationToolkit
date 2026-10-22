@@ -217,11 +217,13 @@ def main():
             if profile_step:
                 wp.get_stream().record_event(step_events[1])
                 step_profile = profiling.end_step()
+                # The step's solve statuses, already on the host (SimulationState.step reads them)
+                status = state.status_log.step_entry(state.t - 1)
                 if step_profile is not None:
-                    recorder.add_step(state.t - 1, step_profile)
+                    recorder.add_step(state.t - 1, step_profile, status)
                 elif backend == profiling.Backend.OFF:
                     recorder.add_step_timeline(
-                        state.t - 1, wp.get_event_elapsed_time(*step_events)
+                        state.t - 1, wp.get_event_elapsed_time(*step_events), status
                     )
             if should_save(state.t, state.dt, args.fps):
                 status_from = _write_frame(h5f, state, frame, status_from)
