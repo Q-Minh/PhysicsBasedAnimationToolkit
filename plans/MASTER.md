@@ -931,6 +931,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-22 · coordinator · **GPU run END** (~25 min, over the 12 min estimate: each variant ran to its 5 min kill). Resumed from step 70: the control reproduced the uninterrupted run (blow-up at 85); a 2 cm band blew up at 72, plain VBD at 74, conservative gammas at 82. The GPU is free.
 - 2026-10-22 · coordinator · **GPU run START** (~2 min, approved): armadillo_spaghetti_fall, locate the deepest penetrations (resume from step 80, 2 steps).
 - 2026-10-22 · coordinator · **GPU run END** (~3 min): resumed from step 70 (identical to the uninterrupted run); the step-82 spike is two pillar B3 surface vertices 16-20 mm inside the armadillo near its feet (z = -0.69), moving at 0.4 m/s, every other contact within tolerance. The GPU is free.
+- 2026-10-22 · coordinator · **GPU run START** (~2 min, approved): armadillo_spaghetti_fall, save positions at steps 80-82 to locate the penetrated armadillo region.
+- 2026-10-22 · coordinator · **GPU run END** (~2 min): steps 82-84 penetrations are pillar vertices (B2, B3) 2-2.5 cm inside one armadillo foot (rest thickness 13-23 mm), dragged 19 cm by the twist; the armadillo's thin features (ears 6 mm, hands 8-15 mm, toes 13 mm) are below the contact distance. Thickening the armadillo (1 cm offset, fTetWild). The GPU is free.
 ## Open questions for the maintainer
 
 1. ~~Approve Phase 0?~~ **Answered:** yes, but only after all task-level open questions are answered.
