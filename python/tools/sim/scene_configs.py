@@ -275,13 +275,14 @@ SCENES = {
         "the ground (maintainer, 2026-10-21; the scene has no gravity)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "dragon_spaghetti_vertical": Scene(
+    "dragon_spaghetti_horizontal": Scene(
         "defaults",
-        "data/scenarios/dragon-spaghetti_vertical.h5: kyogre-spaghetti_vertical.h5 with the Stanford dragon (data/"
+        "data/scenarios/dragon-spaghetti_horizontal.h5: kyogre-spaghetti_vertical.h5 with the Stanford dragon (data/"
         "stanford-dragon.ply tetrahedralized with fTetWild through pytetwild, edge length 0.025 of the bounding-box "
-        "diagonal, envelope 5e-4: 204k tets, quality at least 0.057; data/stanford-dragon_ftetwild.msh) "
-        "in place of the Kyogre, soft (Young's modulus 1e6), nose up, 2.26 m long, clear of the pillars by at least "
-        "1 cm",
+        "diagonal, envelope 5e-4: 204k tets, quality at least 0.057; data/stanford-dragon_ftetwild.msh) in place of "
+        "the Kyogre, soft (Young's modulus 1e6), 2.26 m long, lying horizontally at mid-height, turned so the four "
+        "pillars stand in its gaps, at least 1 cm clear (maintainer, 2026-10-21: the vertical dragon only caught one "
+        "hand)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
     "armadillo_pull": Scene(
