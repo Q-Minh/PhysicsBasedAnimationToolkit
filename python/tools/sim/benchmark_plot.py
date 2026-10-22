@@ -50,6 +50,7 @@ Matplotlib's default font. No grid lines (maintainer).
 import argparse
 import glob
 import os
+import re
 import warnings
 
 import h5py
@@ -59,6 +60,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
+from matplotlib.transforms import Bbox  # noqa: E402
 
 from . import benchmark_results as results  # noqa: E402
 
@@ -71,8 +73,9 @@ SOLVER_COLORS = {
     "Newton": "#E69F00",
 }
 SOLVER_NAMES = {"AndersonSolver": "Anderson"}
-FIGURE_HEIGHT = 4.2  # inches; the box's height at BOX_ZOOM, with the title and caption
+FIGURE_HEIGHT = 4.2  # inches; with BOX_ZOOM, sets the box's scale
 BOX_ZOOM = 1.35  # the 3D box's scale in its axes (Matplotlib's default 1 leaves wide margins)
+FRAME_PAD = 6 / 72  # inches between the plot, its legend, title and caption, and around the saved region
 OTHER_COLORS = ["#56B4E9", "#F0E442", "#000000"]
 # The Linux Libertine family of ACM's acmart template (SIGGRAPH, TOG): Linux Libertine (serif, body text), Linux
 # Biolinum (sans serif, headings) and Linux Libertine Mono (code). OpenType family names first, then other names.
@@ -230,7 +233,7 @@ def plot_benchmark(
     """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
     ``solver_order`` (back to front) overrides :func:`depth_order`. ``factor``: the budget factor the bars
     score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs. ``counts``
-    labels the bars with n/N (see the module docstring)."""
+    labels the bars with n/N (see the module docstring). Returns the figure and the region to save (:func:`frame`)."""
     levels = results.benchmark_levels(f, benchmark)
     factor = budget_factor(f, factor)
     run = float(f.attrs.get("budget_factor", 1.0))
@@ -289,9 +292,8 @@ def plot_benchmark(
                 z_top = max(z_top, hi[j])
 
     fig = plt.figure(figsize=(max(7.0, 1.6 * len(cases) + 4.0), FIGURE_HEIGHT))
-    # The 3D axes fill the figure (a 3D axes' box is drawn inside its area at a fixed scale, and its area, not the
-    # box, bounds the saved figure), between the title and the caption, shifted left: at the default camera the
-    # box and its axis labels sit right of the axes' center
+    # The 3D axes fill the figure: a 3D axes draws its box inside its area at a fixed scale. The saved region is
+    # cropped to the drawn plot (frame), so the figure's size only sets the box's scale
     ax = fig.add_axes((-0.08, 0.05, 1.0, 0.9), projection="3d", computed_zorder=False)
     ax.view_init(elev=elev, azim=azim)
     # Back to front: position along the direction toward the camera, in displayed (box-aspect) units
@@ -337,8 +339,6 @@ def plot_benchmark(
         axis.pane.set_facecolor((1, 1, 1, 0))
     handles = [Patch(color=solver_color(s, solvers), label=SOLVER_NAMES.get(s, s)) for s in solvers]
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
-    fig.legend(handles=handles, loc="upper right", fontsize=8, frameon=False)
-    fig.suptitle(benchmark_title(benchmark), x=0.02, ha="left", fontsize=11)
     within = "" if all(fixed) else f" within {factor:g} × $T_N$"
     norm_text = ("$T$: the fixed budget" if all(fixed) else "$T_N$: Newton's time to its highest level"
                  + ("" if not any(fixed) else " ($T$: a fixed budget)"))
@@ -348,10 +348,53 @@ def plot_benchmark(
         "can't resolve are left out)" if unresolved else "; no bar: not reached"
     )
     count_text = "; n/N: samples that reached it (always shown at the highest level drawn)" if counts else ""
-    fig.text(0.02, 0.02, rf"Bars: mean time $\Delta t$ from the previous level's crossing, over the samples that reached "
-             f"the level{within}; {norm_text}; $e/e_0$: relative error{count_text}{reference}",
-             fontsize=7, color="#555555")
-    return fig
+    caption = (rf"Bars: mean time $\Delta t$ from the previous level's crossing, over the samples that reached "
+               f"the level{within}; {norm_text}; $e/e_0$: relative error{count_text}{reference}")
+    return fig, frame(fig, ax, benchmark_title(benchmark), handles, caption)
+
+
+def frame(fig, ax, title: str, handles: list, caption: str) -> Bbox:
+    """Center the title and a one-row legend above the drawn plot, wrap the caption to the plot's width below it,
+    and return the region to save (inches). A 3D axes fills its area and draws its box inside it at a fixed scale,
+    so a tight bounding box would keep the whole area's margins: the plot's extent is measured from the box's
+    panes, its axes (ticks and titles) and its texts."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    axes = (ax.xaxis, ax.yaxis, ax.zaxis)
+    parts = [a.get_tightbbox(renderer) for a in axes] + [a.pane.get_window_extent(renderer) for a in axes]
+    parts += [t.get_window_extent(renderer) for t in ax.texts]
+    plot = Bbox.union([b for b in parts if b is not None and b.width > 0])
+    pad = FRAME_PAD * fig.dpi  # pixels
+    to_figure = fig.transFigure.inverted()
+    cx = to_figure.transform(((plot.x0 + plot.x1) / 2, 0))[0]
+    legend = fig.legend(handles=handles, loc="lower center", ncol=len(handles), fontsize=8, frameon=False,
+                        bbox_to_anchor=to_figure.transform(((plot.x0 + plot.x1) / 2, plot.y1 + pad)),
+                        borderaxespad=0, borderpad=0)
+    top = legend.get_window_extent(renderer).y1
+    suptitle = fig.suptitle(title, x=cx, y=to_figure.transform((0, top + pad))[1], ha="center", va="bottom",
+                            fontsize=11)
+    style = dict(fontsize=7, color="#555555", ha="left", va="top")
+    lines = wrap(fig, renderer, caption, plot.width, style)
+    text = fig.text(*to_figure.transform((plot.x0, plot.y0 - pad)), "\n".join(lines), **style)
+    shown = [plot] + [a.get_window_extent(renderer) for a in (legend, suptitle, text)]
+    return Bbox.union(shown).padded(pad).transformed(fig.dpi_scale_trans.inverted())
+
+
+def wrap(fig, renderer, text: str, width: float, style: dict) -> list[str]:
+    """Greedily break ``text`` into lines at most ``width`` pixels wide in ``style``, keeping each $...$ math run on
+    one line."""
+    words = re.findall(r"\$[^$]*\$\S*|\S+", text)
+    lines = []
+    for word in words:
+        candidate = f"{lines[-1]} {word}" if lines else word
+        probe = fig.text(0, 0, candidate, **style)
+        fits = probe.get_window_extent(renderer).width <= width
+        probe.remove()
+        if lines and fits:
+            lines[-1] = candidate
+        else:
+            lines.append(word)
+    return lines
 
 
 def main():
@@ -390,10 +433,10 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         for benchmark in benchmarks:
             order = args.solver_order.split(",") if args.solver_order else None
-            fig = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor, args.counts)
+            fig, region = plot_benchmark(f, benchmark, solvers, args.elev, args.azim, order, factor, args.counts)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
-                fig.savefig(path, dpi=args.dpi, bbox_inches="tight")
+                fig.savefig(path, dpi=args.dpi, bbox_inches=region)
                 print(f"Wrote {path}")
             plt.close(fig)
 
