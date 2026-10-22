@@ -219,6 +219,12 @@ def external_acceleration(fext: np.ndarray, m: np.ndarray, dmask: np.ndarray) ->
 def absolute_stationarity_tolerance(astol: float, acceleration: float, h: float) -> float:
     """The absolute term of the stationarity test, ``astol * |a| * h^2`` (m), for the external
     acceleration ``acceleration`` (m/s^2) and the time step ``h`` (s)."""
+    # TODO: A residual-based float32 noise floor, backward-error style: estimate the rounding noise of g
+    # from the absolute values of the force terms that sum to it (inertial, elastic, contact), e.g.
+    # ulp * sum_i (|m_i (x_i - x~_i)| + |h^2 f_el,i| + |h^2 f_c,i|), and let the test pass below it. Why:
+    # stiff scenes near rest can have a float32 floor, about (h omega)^2 ulps, above both of the test's
+    # terms, so they run their full budget. Not implemented (2026-10-20); see python/tools/sim/CLAUDE.md
+    # ("Convergence and early exit").
     return float(astol) * float(acceleration) * float(h) ** 2
 
 

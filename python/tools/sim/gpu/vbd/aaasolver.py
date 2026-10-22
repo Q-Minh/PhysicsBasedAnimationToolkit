@@ -103,6 +103,11 @@ def compute_thread_local_stencil_gradient_augmentation(
     """Compute thread-local stencil gradient augmentation for vertex i: the sum of its neighbours'
     gradients ``gk[j]``. With ``surface_neighbours_only`` (``Params.surface_stencil_surface_neighbours_only``),
     surface vertices sum only their surface neighbours, as in C++ ``vbd::Iterate``."""
+    # TODO: Pre-filter the surface neighbours: build a surface-only copy of GVVp/GVVadj once on the host,
+    # so surface vertices loop over their surface neighbours only, without loading GXV[j] and then
+    # discarding gk[j]. Why: the vertex solve is latency-bound (~74% long-scoreboard stalls, ncu), and
+    # AAAVBD's vertex solve takes 9.2 us vs VBD's 7.6 us on the trampoline (ncu, 2026-10-18). Maintainer
+    # approved it with the other cheap kernel changes, but it wasn't implemented. Check bit-identity.
     ai = wp.vec3f()
     nbegin = GVVp[i]
     nend = GVVp[i + 1]
@@ -200,6 +205,11 @@ def _accelerated_vertex_solve_kernel(
         wp.tile_reduce(wp.add, His)[0],  # pyright: ignore[reportIndexIssue]
     )
     eps = wp.float32(1e-10)  # pyright: ignore[reportArgumentType]
+    # TODO: The acceleration functions (the stencil gather below and the beta adaptation) hold ~25% of
+    # the vertex solve's stall samples (ncu --lineinfo, trampoline, 2026-10-18, before the load hoisting
+    # cut the kernel from 10.5 to 9.2 us). One idea: issue the gk[j] gather before the elastic gather and
+    # the tile reductions, so its scattered loads overlap them. GVV is the coloring adjacency, so no
+    # neighbour is written during this launch. Re-measure with ncu --lineinfo on dev first.
     # Augment residual
     ai = wp.vec3f()
     if k > 0 or kp > 0:  # type: ignore
@@ -253,6 +263,12 @@ def _accelerated_vertex_solve_kernel(
             )
         )
         lam = wp.max(lam, wp.float32(0))
+        # TODO: Cap the augmentation in the H^-1 norm: scale lam so that lam^2 a^T H^-1 a <= g^T H^-1 g,
+        # using this vertex's 3x3 H, so the augmented step still decreases the local model. The betaG
+        # shrink rule stays untouched (maintainer). Why: free stilt-top nodes between pinned nodes (tet
+        # quality 0.05-0.1) plus contact destabilize the acceleration on mat_on_stilts_3 with the
+        # 5-substep paper config (stable with 10 substeps, gammadownS 0.90 or warm_start_beta 1). Idea
+        # only, not tried; as a GPU-only AAAVBD switch if the maintainer asks.
         gi += lam * ai  # pyright: ignore[reportOperatorIssue]
         # Solve local system: x -= H^{-1} g
         dxi = integrate_positions(

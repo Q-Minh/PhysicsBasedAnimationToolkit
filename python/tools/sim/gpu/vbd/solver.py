@@ -327,6 +327,11 @@ def solve_outer_loop(
             if detect_inside:
                 cd.filter_step()
 
+    # TODO: Fuse the remaining boundary copies and fills (between outer iterations: dual update,
+    # filtering, detection, constraint-set update). Why: in the captured graph each copy or fill node
+    # waited ~10 us; ~7.6 ms of a ~83 ms trampoline AAAVBD step was boundary gaps (profiling.anatomy,
+    # 2026-10-18). That was before the constraint-set update was fused into two kernels (ae18a043,
+    # -2...3%), so re-measure on dev to see what's left before fusing anything.
     def update_constraints():
         with profiling.scope("solve.finalize_subproblem"):
             if detect_inside:

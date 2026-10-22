@@ -836,6 +836,12 @@ class MeshDynamics:
             request_decay_update: Whether to update the decay variable.
             request_lagrange_multiplier_update: Whether to update the Lagrange multipliers.
         """
+        # TODO: Early-out for the per-sweep slack-only update (the VBD family's subproblem_iteration): the
+        # 4 kernels launch over each type's full capacity before every sweep, even with no contacts. One
+        # idea: skip them under a device flag of active contacts set at the constraint-set update (like
+        # in_contact), e.g. with wp.capture_if. Why: they are fixed graph nodes per sweep, next to the xb
+        # copy (trampoline traces, 2026-10-17). Their cost wasn't measured separately; size it with
+        # profiling.anatomy on dev first.
         meshes = self.meshes.data
         contacts = self.contacts._data
         main_stream = wp.get_stream()
