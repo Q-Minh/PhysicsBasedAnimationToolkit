@@ -332,9 +332,11 @@ SCENES = {
     "armadillo_spaghetti_fall": Scene(
         "defaults",
         "data/scenarios/armadillo-spaghetti_fall.h5: armadillo-spaghetti_close.h5 with gravity (-9.81 m/s^2 in z) on "
-        "every body and the armadillo's torso core (its 1295 nodes within 15 cm of its centroid) held by a Fixed "
-        "transform for the first second, then released, so it falls into the already tangling pillars (maintainer, "
-        "2026-10-21)",
+        "every body and the armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm "
+        "under its surface) held by a Fixed transform for the first second, then released, so it falls into the "
+        "already tangling pillars (maintainer, 2026-10-21). The held nodes stay off the surface: holding surface nodes "
+        "(a 15 cm ball reached the thin torso's skin) pits the pillars' prescribed twist against prescribed armadillo "
+        "nodes in contact, with no feasible position, and the simulation froze",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
     "armadillo_pull": Scene(
