@@ -81,3 +81,36 @@ two-sided springs whose activity changes between iterations (the one-sided AL id
 **For the paper.** A "converged" second-order reference isn't available by just raising Newton's budget on
 contact-rich scenes. Its residual floor has to be checked, and a reference's own uncertainty should be reported
 (e.g. the distance between two independent references).
+
+## 3. High-budget references: a shared residual floor, and GPU Newton dissipates
+
+**Setup.** CapsulesIntoBowl, `mu_f = 0`, 10 steps each from AAAVBD's checkpointed states at 1 s and 3 s (task 2's
+production run). Tolerances are 100x tighter than the defaults (rstol 1e-4, astol 5e-3), so nothing exits early and
+the reported ratio / 100 is the ratio at the defaults exactly (2026-10-22):
+
+| Configuration | Gradient ratio at the defaults, 1 s (p50 / max) | 3 s (p50 / max) | s/step |
+|---|---|---|---|
+| Newton, 100 outer x 1 Newton step | 8.6 / 9.1 | 5.2 / 5.6 | ~7-11 |
+| AAAVBD, 10 x 200 sweeps | 7.3 / 9.0 | 6.5 / 7.3 | ~1.2-1.5 |
+| VBD, 10 x 200 sweeps | 7.2 / 8.5 | 6.8 / 7.4 | ~1.0-1.2 |
+
+With 10-100x the tuned budgets, all three end at ~5-9x the default tolerance. Newton's ratio still creeps down
+over its outer iterations at 1 s (~33, 18, 11, 8 at outer iterations 1, 10, 50, 100) and is flat at ~5 from outer
+iteration 10 at 3 s.
+
+**Distances between the references** (mass-weighted RMS; the reference steps move the nodes ~23 mm at 1 s and ~8 mm
+at 3 s per step):
+
+| Pair | 1 step, 1 s | 1 step, 3 s | 10 steps, 1 s | 10 steps, 3 s |
+|---|---|---|---|---|
+| VBD vs AAAVBD | 0.043 mm (0.19%) | 0.004 mm (0.05%) | 0.44 mm | 0.18 mm |
+| Newton vs either | 0.20 mm (0.85%) | 0.058 mm (0.77%) | 5.4 mm | 0.85 mm |
+
+The capsules carry the Newton difference (14.4 mm after 10 steps at 1 s; tubes 0.8 mm, bowl 0). It's systematic:
+after 10 steps, Newton's capsules have 1.7% (1 s) and 1.2% (3 s) less kinetic energy than both VBD-family
+references, without friction. Newton dissipates contact motion that the VBD family keeps, consistent with Newton's
+slower capsules in side-by-side runs.
+
+**For the paper.** No solver reaches the residual tolerance at these states, so a "converged" reference here means
+agreement between two independent high-budget solvers (VBD and AAAVBD agree within 0.05-0.2% of a step), not a
+residual test. Residuals at the same level (Newton ~5-9, VBD family ~6-9) come with systematically different motion.
