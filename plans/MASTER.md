@@ -996,6 +996,15 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   reference, VBD 10 x 200 as its uncertainty** (~25 min); 'converged' then means two independent high-budget solvers
   agree.
 
+- P15. **Adopt detect-at-xt for VertexSdf?** (task 1's A/B; candidate on feature/sdf-detect-at-xt, uncommitted): a
+  step's first detection at xt with the threshold widened by max |xtilde - xt|, as C++ InitializeSolve/OGC. It fixes
+  CubeFallingOnCube on dev (the falling cube passes through the fixed one with default params; the predictor puts
+  aligned corners at edge distance ~0), improves BeamFallingOnBeam (worst residual/tol 323 -> 49, penetration 1.19 ->
+  0.06), CubeFallingOnPlaneFast is different but no worse; the armadillo still blows up (step 61). Caveats: changes
+  every VertexSdf trajectory, more first-detection contacts in fast scenes (capacities), a second BVH set per component.
+- P16. **ArmadilloSpaghetti.Fall** blows up at ~step 60 at 1 MPa with every detector variant: its solves sit at 200-500x
+  the residual tolerance from the start and the armadillo is squeezed between two pillars. A scene/budget decision.
+
 In progress (2026-10-22): task 1 repo trajectory viewer (python/tools/sim/trajectory_viewer.py); task 3 converged
 Newton reference and error analysis on the capsules; coordinator armadillo 8e5 + fix check (step-60 blow-up at 1e6).
 
@@ -1202,3 +1211,5 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 1 · **GPU run END** (ArmadilloSpaghetti.Fall 1 MPa from step 0, old classification: NaN at step 61, ~6 min). The GPU is free.
 - 2026-10-22 · task 3 · **GPU run START** (~10-12 min, coordinator's slot, timings irrelevant): CapsulesIntoBowl reference calibration R3, frictionless: Newton 100 x 1, AAAVBD and VBD 10 x 200, 10 steps each from AAAVBD's states at steps 100 and 300. Will log END.
 - 2026-10-22 · task 3 · **GPU run END** (reference calibration R3, 6 short runs, 10:13-10:20). The GPU is free.
+- 2026-10-22 · task 1 · **GPU run START** (coordinator's slot, approved, timings irrelevant): detect-at-xt A/B. CubeFallingOnCube, BeamFallingOnBeam, CubeFallingOnPlaneFast (2 s, baseline x2 + candidate, ~5 min), then ArmadilloSpaghetti.Fall 1 MPa from step 0 with the candidate to blow-up or step ~190 (~6-10 min). Will log END.
+- 2026-10-22 · task 1 · **GPU run END** (detect-at-xt A/B: 3 cheap scenes x 4 runs, then ArmadilloSpaghetti.Fall 1 MPa from step 0 with the candidate: NaN at step 61; ~12 min). The GPU is free.
