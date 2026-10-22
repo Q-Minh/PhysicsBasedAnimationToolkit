@@ -929,6 +929,8 @@ your ownership, planned GPU-heavy runs, C++ change requests.
 - 2026-10-21 · coordinator · **GPU run END** (10 x 80): blew up earlier, at step 85 (penetration oscillating 0.3 <-> 5 between steps, residual doubling, speeds 5-7 m/s against a 1.5 cm detection distance). The GPU is free.
 - 2026-10-22 · coordinator · **GPU run START** (~12 min, approved): armadillo_spaghetti_fall contact variants, a 10 x 80 checkpoint run to step 70, then variants resumed from it.
 - 2026-10-22 · coordinator · **GPU run END** (~25 min, over the 12 min estimate: each variant ran to its 5 min kill). Resumed from step 70: the control reproduced the uninterrupted run (blow-up at 85); a 2 cm band blew up at 72, plain VBD at 74, conservative gammas at 82. The GPU is free.
+- 2026-10-22 · coordinator · **GPU run START** (~2 min, approved): armadillo_spaghetti_fall, locate the deepest penetrations (resume from step 80, 2 steps).
+- 2026-10-22 · coordinator · **GPU run END** (~3 min): resumed from step 70 (identical to the uninterrupted run); the step-82 spike is two pillar B3 surface vertices 16-20 mm inside the armadillo near its feet (z = -0.69), moving at 0.4 m/s, every other contact within tolerance. The GPU is free.
 ## Open questions for the maintainer
 
 1. ~~Approve Phase 0?~~ **Answered:** yes, but only after all task-level open questions are answered.
