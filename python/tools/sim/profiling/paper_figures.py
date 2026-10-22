@@ -247,7 +247,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     handles = [Patch(color=group_color(g), label=g) for g in present]
     if drew_production:
         handles.append(Line2D([], [], color=INK, linewidth=0.6, label="Step time (graph replay)"))
-    _legend(fig, handles, ncol=min(len(handles), 5))
+    _legend(fig, handles, ncol=min(len(handles), 6))
     return fig
 
 
@@ -314,7 +314,7 @@ def plot_solvers(kernels: list[dict], production: list[dict | None], width: floa
         handles += [Patch(facecolor="#dcdcdc", edgecolor=INK, linewidth=0.5, label="Graph replay"),
                     Line2D([], [], marker="D", markersize=3, markerfacecolor="white", markeredgecolor=INK,
                            markeredgewidth=0.6, linestyle="none", label="Kernel union (median)")]
-    _legend(fig, handles, ncol=min(len(handles), 5))
+    _legend(fig, handles, ncol=min(len(handles), 6))
     return fig
 
 
