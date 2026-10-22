@@ -366,7 +366,7 @@ def draw_status_panel(state, ui_state):
         if imgui.TreeNodeEx("Last step", imgui.ImGuiTreeNodeFlags_DefaultOpen):
             _draw_last_step(log)
             imgui.TreePop()
-        if imgui.TreeNodeEx(f"Last {_window['steps']} steps###window", imgui.ImGuiTreeNodeFlags_DefaultOpen):
+        if imgui.TreeNode(f"Last {_window['steps']} steps###window"):  # closed by default (maintainer)
             _draw_window(log)
             imgui.TreePop()
     imgui.PopID()
