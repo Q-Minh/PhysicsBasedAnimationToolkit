@@ -94,3 +94,65 @@ def collider_faces(E: np.ndarray, F: np.ndarray, n_nodes: int) -> np.ndarray:
     in_elements = np.zeros(n_nodes, dtype=bool)
     in_elements[E.ravel()] = True
     return F[~in_elements[F].any(axis=1)]
+
+
+def scene_extents(
+    X: np.ndarray, E: np.ndarray, contact_geometry: ContactGeometry | None
+) -> tuple[np.ndarray, np.ndarray | None]:
+    """The scene's size: bounding-box extents of its elastic bodies, and of the bodies with its static mesh
+    colliders.
+
+    Plane colliders, infinite or finite, are left out: they enter as flat quads (`scenario.static_meshes`), told
+    apart from static meshes by their zero thickness.
+
+    Args:
+        X: `3 x |# nodes|` node positions.
+        E: `4 x |# tetrahedra|` FEM elements: the bodies' nodes.
+        contact_geometry: The scene's contact geometry, one component per body, then per collider; None without
+            colliders.
+
+    Returns:
+        `(3,)` extents of the bodies, and `(3,)` extents of the bodies with the static mesh colliders (None
+        without static mesh colliders).
+    """
+    bodies = X[:, np.unique(E)]
+    extents = np.ptp(bodies, axis=1)
+    if contact_geometry is None:
+        return extents, None
+    in_elements = np.zeros(X.shape[1], dtype=bool)
+    in_elements[E.ravel()] = True
+    V, VP = np.asarray(contact_geometry.mesh.V), np.asarray(contact_geometry.mesh.VP)
+    meshes = []
+    for c in range(len(VP) - 1):
+        nodes = V[VP[c] : VP[c + 1]]
+        if nodes.size == 0 or in_elements[nodes].any():  # a body
+            continue
+        P = X[:, nodes]
+        s = np.linalg.svd(P - P.mean(axis=1, keepdims=True), compute_uv=False)
+        if s[-1] > 1e-9 * max(s[0], 1e-30):  # not flat: a static mesh, not a plane's quad
+            meshes.append(P)
+    if not meshes:
+        return extents, None
+    allP = np.hstack([bodies, *meshes])
+    return extents, np.ptp(allP, axis=1)
+
+
+import unittest
+
+
+class TestSceneExtents(unittest.TestCase):
+    def test_bodies_meshes_and_planes(self):
+        # A unit tetrahedron (nodes 0-3), a static tetrahedron's surface 2 m away (4-7), a plane's quad (8-11)
+        body = np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
+        X = np.hstack([body, body + np.array([[2.0], [0.0], [0.0]]),
+                       np.array([[-50, 50, 50, -50], [-50, -50, 50, 50], [-1, -1, -1, -1]], dtype=float)])
+        E = np.arange(4).reshape(4, 1)
+        mesh = typing.NamedTuple("Mesh", [("V", np.ndarray), ("VP", np.ndarray)])(np.arange(12), np.array([0, 4, 8, 12]))
+        bodies, with_meshes = scene_extents(X, E, ContactGeometry(mesh, np.full(3, np.inf)))
+        np.testing.assert_allclose(bodies, [1, 1, 1])
+        np.testing.assert_allclose(with_meshes, [3, 1, 1])  # the plane is left out
+        self.assertIsNone(scene_extents(X[:, :4], E, None)[1])
+
+
+if __name__ == "__main__":
+    unittest.main()

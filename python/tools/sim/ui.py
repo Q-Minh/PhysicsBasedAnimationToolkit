@@ -17,7 +17,7 @@ from pbatoolkit import pbat
 import numpy as np
 from . import config, gpu
 from .panels.common import draw_params, try_draw_tooltip
-from .colliders import collider_faces
+from .colliders import collider_faces, scene_extents
 from .panels.kinematics import draw_kinematics_panel
 from .panels.profiling import draw_profiling_panel, profile_step
 from .panels.static import draw_static_panel
@@ -61,6 +61,8 @@ class UIState:
         self.serialization_path: str | None = None
         self.serialization_h5: h5py.File | None = None
         self.serialization_time_since_flush: float = 0.0
+        # Bounding-box extents of the bodies, and with the static mesh colliders (colliders.scene_extents)
+        self.scene_extents: tuple | None = None
 
 
 def _serialize_simulation(state: SimulationState, ui_state: UIState):
@@ -99,6 +101,14 @@ def make_callback(
         if imgui.BeginTabBar("MainTabs"):
             if imgui.BeginTabItem("Simulation", True)[0]:
                 imgui.Text(f"Step: {state.t}  Time: {state.t * state.dt:.4f}s")
+                if ui_state.scene_extents is not None:
+                    bodies, with_meshes = ui_state.scene_extents
+                    imgui.Text("Scene size (bodies): " + " x ".join(f"{v:.3g}" for v in bodies) + " m")
+                    if imgui.IsItemHovered():
+                        imgui.SetTooltip("Bounding box of the elastic bodies at load, x by y by z; plane colliders are "
+                                         "left out")
+                    if with_meshes is not None:
+                        imgui.Text("With static mesh colliders: " + " x ".join(f"{v:.3g}" for v in with_meshes) + " m")
                 imgui.Separator()
 
                 # --- Integration controls ---
@@ -427,6 +437,7 @@ def main():
     params_cpu = load_params(fem_cpu)
     state = SimulationState(fem_cpu, params_cpu, kinematics, contact_geometry)
     ui_state = UIState()
+    ui_state.scene_extents = scene_extents(fem_cpu.x, fem_cpu.E, contact_geometry)
     mesh_name = "Mesh"
 
     # Setup polyscope
