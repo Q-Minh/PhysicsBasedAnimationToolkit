@@ -84,6 +84,7 @@ The `simulate.py` arguments after `--` are passed through unchanged, so `--sim-p
       --ncu AAAVBD=out/aaavbd_ncu.ncu.json --production AAAVBD=out/aaavbd_prod.json --findings findings.txt -o out/overheads.html
   ```
 
+- **Paper figures** (`profiling/paper_figures.py`, PDFs in the benchmark figures' style: Biolinum, printed `--width`, one legend, no titles): `timeline` (phase groups over simulated time with a peak-speed strip, and slice donuts; one row per scene), `solvers` (per-solver phase shares, production step-time distribution, early exits) and `table` (a LaTeX `table*`). Each pairs a `kernels` result with a production one of the same scene and solver; phase groups are its `PHASE_GROUPS`.
 - **Publishing:** to share a report, publish the HTML as an Artifact.
 
 When the user asks for "HTML output", run the matching measurement (above) to JSON first, then `report` (phases across solvers) or `overheads` (production overheads). "JSON only" stops at `--profile-out`.
