@@ -332,8 +332,9 @@ SCENES = {
     "ArmadilloSpaghetti.Fall": Scene(
         "defaults",
         "data/scenarios/ArmadilloSpaghetti.Fall.h5: ArmadilloSpaghetti.Fall.ThinFeatures.h5 with the armadillo "
-        "thickened, since the original's thin features (ears 6 mm, hands 8-15 mm, toes 13 mm) are below the contact "
-        "distance: pillar vertices ended up 2-2.5 cm inside a foot (freeze diagnosis, 2026-10-22). Its surface is "
+        "thickened (thin features: ears 6 mm, hands 8-15 mm, toes 13 mm), which a misdiagnosis of the freeze "
+        "suggested: the pillar vertices reported 2-2.5 cm inside a foot were in fact outside it, false penetrations "
+        "from VertexSdf's face/edge classification (2026-10-22); the thickened scene froze too. Its surface is "
         "the 1 cm offset (signed distance iso-surface) scaled back to the original height (x 0.984) about the same "
         "center, re-tetrahedralized by fTetWild at 2 cm edges: 205k tets (was 162k), thinnest feature 16 mm, 15% "
         "more volume, 2.4 cm clearance to the pillars, 7493 held core nodes by the same rule (fTetWild's interior "
