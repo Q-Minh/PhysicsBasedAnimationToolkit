@@ -253,6 +253,12 @@ def _accelerated_vertex_solve_kernel(
             )
         )
         lam = wp.max(lam, wp.float32(0))
+        # TODO: Cap the augmentation in the H^-1 norm: scale lam so that lam^2 a^T H^-1 a <= g^T H^-1 g,
+        # using this vertex's 3x3 H, so the augmented step still decreases the local model. The betaG
+        # shrink rule stays untouched (maintainer). Why: free stilt-top nodes between pinned nodes (tet
+        # quality 0.05-0.1) plus contact destabilize the acceleration on mat_on_stilts_3 with the
+        # 5-substep paper config (stable with 10 substeps, gammadownS 0.90 or warm_start_beta 1). Idea
+        # only, not tried; as a GPU-only AAAVBD switch if the maintainer asks.
         gi += lam * ai  # pyright: ignore[reportOperatorIssue]
         # Solve local system: x -= H^{-1} g
         dxi = integrate_positions(
