@@ -40,10 +40,11 @@ Usage:
 
 Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark.
 
-Fonts: Linux Libertine, the font of ACM's acmart template (SIGGRAPH, TOG), from ``--font-dir``, the
-``PBAT_FONT_DIR`` environment variable or the installed fonts (:func:`use_paper_fonts`; get it from
-https://sourceforge.net/projects/linuxlibertine/files/linuxlibertine/5.3.0/, the OpenType release); without it,
-a warning and Matplotlib's serif font. No grid lines (maintainer).
+Fonts: the figure text is in Linux Biolinum, the sans serif of ACM's acmart template (SIGGRAPH, TOG), whose
+body text is Linux Libertine; from ``--font-dir``, the ``PBAT_FONT_DIR`` environment variable or the installed
+fonts (:func:`use_paper_fonts`; the OpenType release:
+https://sourceforge.net/projects/linuxlibertine/files/linuxlibertine/5.3.0/); without it, a warning and
+Matplotlib's default font. No grid lines (maintainer).
 """
 
 import argparse
@@ -71,14 +72,19 @@ SOLVER_COLORS = {
 }
 SOLVER_NAMES = {"AndersonSolver": "Anderson"}
 OTHER_COLORS = ["#56B4E9", "#F0E442", "#000000"]
-# Linux Libertine, the font of ACM's acmart template (SIGGRAPH, TOG): its OpenType family name, then other names
-PAPER_FONTS = ("Linux Libertine O", "Linux Libertine", "Libertinus Serif")
+# The Linux Libertine family of ACM's acmart template (SIGGRAPH, TOG): Linux Libertine (serif, body text), Linux
+# Biolinum (sans serif, headings) and Linux Libertine Mono (code). OpenType family names first, then other names.
+PAPER_SANS = ("Linux Biolinum O", "Linux Biolinum", "Libertinus Sans")
+PAPER_SERIF = ("Linux Libertine O", "Linux Libertine", "Libertinus Serif")
+PAPER_MONO = ("Linux Libertine Mono O", "Libertinus Mono")
 
 
 def use_paper_fonts(font_dir: str | None = None) -> str | None:
-    """Sets Matplotlib's text and math fonts to Linux Libertine (``PAPER_FONTS``), from ``font_dir``, else the
-    ``PBAT_FONT_DIR`` environment variable's directory, else the installed fonts (also ones installed after
-    Matplotlib built its font cache). Returns the family used; without one, warns and keeps Matplotlib's serif."""
+    """Sets Matplotlib's fonts to the Linux Libertine family: figure text and math in Linux Biolinum (the sans
+    serif), with Linux Libertine as the serif and Linux Libertine Mono as the monospace font. The fonts come from
+    ``font_dir``, else the ``PBAT_FONT_DIR`` environment variable's directory, else the installed fonts (also ones
+    installed after Matplotlib built its font cache). Returns the sans family used; without it, warns and keeps
+    Matplotlib's fonts."""
     from matplotlib import font_manager
 
     def add(paths):
@@ -92,22 +98,27 @@ def use_paper_fonts(font_dir: str | None = None) -> str | None:
         if directory:
             add(sorted(glob.glob(os.path.join(directory, "*.otf")) + glob.glob(os.path.join(directory, "*.ttf"))))
 
-    def family():
+    def first(families):
         names = {f.name for f in font_manager.fontManager.ttflist}
-        return next((name for name in PAPER_FONTS if name in names), None)
+        return next((name for name in families if name in names), None)
 
-    if family() is None:
-        add(p for p in font_manager.findSystemFonts() if "libertin" in os.path.basename(p).lower())
-    name = family()
+    if first(PAPER_SANS) is None or first(PAPER_SERIF) is None:
+        add(p for p in font_manager.findSystemFonts()
+            if any(key in os.path.basename(p).lower() for key in ("libertin", "biolin")))
+    sans, serif, mono = first(PAPER_SANS), first(PAPER_SERIF), first(PAPER_MONO)
     matplotlib.rcParams["pdf.fonttype"] = 42  # embed the fonts as TrueType/OpenType, editable text in the PDF
-    if name is None:
-        warnings.warn("Linux Libertine not found (--font-dir, PBAT_FONT_DIR or an installed font): using Matplotlib's "
-                      "serif font")
-        matplotlib.rcParams["font.family"] = "serif"
+    for key, name in (("font.serif", serif), ("font.monospace", mono)):
+        if name is not None:
+            matplotlib.rcParams[key] = [name, *matplotlib.rcParams[key]]
+    if sans is None:
+        warnings.warn("Linux Biolinum not found (--font-dir, PBAT_FONT_DIR or an installed font): using Matplotlib's "
+                      "default font")
         return None
-    matplotlib.rcParams.update({"font.family": name, "mathtext.fontset": "custom", "mathtext.rm": name,
-                                "mathtext.it": f"{name}:italic", "mathtext.bf": f"{name}:bold"})
-    return name
+    matplotlib.rcParams.update({"font.family": "sans-serif", "font.sans-serif": [sans, *matplotlib.rcParams["font.sans-serif"]],
+                                "mathtext.fontset": "custom", "mathtext.rm": sans, "mathtext.sf": sans,
+                                "mathtext.it": f"{sans}:italic", "mathtext.bf": f"{sans}:bold",
+                                "mathtext.bfit": f"{sans}:bold"})  # Biolinum has no bold italic
+    return sans
 
 
 def benchmark_title(benchmark: str) -> str:
