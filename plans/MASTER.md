@@ -1005,6 +1005,12 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
 - P16. **ArmadilloSpaghetti.Fall** blows up at ~step 60 at 1 MPa with every detector variant: its solves sit at 200-500x
   the residual tolerance from the start and the armadillo is squeezed between two pillars. A scene/budget decision.
 
+- P17. **Outer stopping test's contact artefact** (task 3): the capsule residual floor (5-9x tolerance for every solver)
+  sits at ~2% of contacts that end the step pressed with lambda_n = 0, i.e. (re)entered the constraint set at the final
+  detection after the last dual update; free nodes are converged (0.002-0.16 m/s^2). Options (shared stopping test):
+  **T1** test after the last dual update, before the final re-detection, on the set the step solved; **T2** carry lambda
+  across a vertex's pair changes; **T3** new final-detection contacts start at lambda = sigma max(-c_n, 0). Optional.
+
 In progress (2026-10-22): task 1 repo trajectory viewer (python/tools/sim/trajectory_viewer.py); task 3 converged
 Newton reference and error analysis on the capsules; coordinator armadillo 8e5 + fix check (step-60 blow-up at 1e6).
 
@@ -1213,3 +1219,7 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 3 · **GPU run END** (reference calibration R3, 6 short runs, 10:13-10:20). The GPU is free.
 - 2026-10-22 · task 1 · **GPU run START** (coordinator's slot, approved, timings irrelevant): detect-at-xt A/B. CubeFallingOnCube, BeamFallingOnBeam, CubeFallingOnPlaneFast (2 s, baseline x2 + candidate, ~5 min), then ArmadilloSpaghetti.Fall 1 MPa from step 0 with the candidate to blow-up or step ~190 (~6-10 min). Will log END.
 - 2026-10-22 · task 1 · **GPU run END** (detect-at-xt A/B: 3 cheap scenes x 4 runs, then ArmadilloSpaghetti.Fall 1 MPa from step 0 with the candidate: NaN at step 61; ~12 min). The GPU is free.
+- 2026-10-22 · task 3 · **GPU run START** (~3 min, coordinator's slot, timings irrelevant): CapsulesIntoBowl residual-floor breakdown, one frictionless VBD 10 x 200 solve from AAAVBD's states at steps 100 and 300. Will log END.
+- 2026-10-22 · task 3 · **GPU run END** (residual-floor breakdown, 4 short runs incl. a fix-and-rerun, ~7 min). The GPU is free.
+- 2026-10-22 · task 3 · **GPU run START** (~3 min, coordinator's slot, timings irrelevant): residual-floor follow-up, contact identity of the floor (VBD 10 x 200 from steps 100 and 300). Will log END.
+- 2026-10-22 · task 3 · **GPU run END** (residual-floor follow-up, 2 short runs). The GPU is free.
