@@ -318,11 +318,12 @@ def plot_benchmark(
     ax.set_xlim(*x_range)
     ax.set_ylim(*y_range)
     ax.set_zlim(0.0, z_max)
-    ax.set_xlabel("Scene", labelpad=10)
+    ax.set_xlabel("Material", labelpad=10)
     ax.set_ylabel(r"$1 - e/e_0$ (%)", labelpad=8)
     fixed = [("budget" in g.attrs) for _, g in cases]
     norm = "T" if all(fixed) else "T_N" if not any(fixed) else "T_N (or T)"
-    ax.set_zlabel(rf"$\Delta t / {norm}$", labelpad=12)  # clear of the depth axis label
+    ax.zaxis.set_rotate_label(False)  # upright: the title is short enough to read without tilting one's head
+    ax.set_zlabel(rf"$\Delta t / {norm}$", labelpad=12, rotation=0)  # clear of the depth axis label
     ax.tick_params(axis="z", labelsize=8)
     ax.set_box_aspect(aspect, zoom=0.95)
     ax.grid(False)  # the grid lines carry nothing the axes and bars don't (maintainer)
