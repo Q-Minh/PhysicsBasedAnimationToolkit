@@ -177,12 +177,12 @@ CAPSULE_BUDGET = Rule(
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
-        "basket_of_fruit.Params_3_10_15",
+        "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
         [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT],
     ),
     "Celebration": Scene(
-        "celebration.Params_1_5_30",
+        "Celebration",
         "final_scenes/celebration.h5 (Young's modulus 1e6 to 1e8)",
         [
             _stiff_budget("1 x 5 x 30 = 150 sweeps"),
@@ -201,7 +201,7 @@ SCENES = {
     # play the output to see whether it tunnels or slides off, compare with the 10-substep paper config, and
     # bisect from ff63102b/78232143, which introduced this config and changed it to 5 x 80.
     "MatOnStilts": Scene(
-        "mat_on_stilts.Params.5Substeps",
+        "MatOnStilts.5Substeps",
         "final_scenes/mat_on_stilts_3.h5 (Young's modulus 1e6 to 1e8)",
         [
             _stiff_budget(
@@ -211,22 +211,22 @@ SCENES = {
             *SOLVERS,
             *HET_CONTACT,
         ],
-        ["The paper's 10-substep file (mat_on_stilts.Params.10Substeps) differs from the 5-substep one only in "
+        ["The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in "
          "substeps, which this config overrides."],
     ),
     "Trampoline.SoftStiff": Scene(
-        "trampoline_soft-stiff.Params.5Substeps",
+        "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE],
     ),
     "Trampoline.StiffSoft": Scene(
-        "trampoline_stiff-soft.Params.5Substeps",
+        "Trampoline.StiffSoft.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
          *TRAMPOLINE],
     ),
     "Trampoline.SoftSoft": Scene(
-        "trampoline_soft-stiff.Params.5Substeps",
+        "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-soft[__with_sphere].h5 (homogeneous, Young's "
         "modulus 1e6)",
         [
@@ -240,14 +240,14 @@ SCENES = {
     ),
     # The other paper configs: the durable rules only, budgets unchanged
     "Trampoline.StiffSphere": Scene(
-        "trampoline_stiff_sphere.Params.5Substeps",
+        "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
         [*SOLVERS, *HET_CONTACT, *TRAMPOLINE],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
     "CapsulesIntoBowl": Scene(
-        "capsules_into_bowl",
+        "CapsulesIntoBowl",
         "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
         [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET],
@@ -347,7 +347,7 @@ SCENES = {
         [INVERSE, ARMADILLO_GAMMAS, ARMADILLO_BUDGET],
     ),
     "EmptyBasket": Scene(
-        "empty_basket.Params_3_10_5",
+        "EmptyBasket",
         "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
         "recorded)",
         [*SOLVERS, *CONTACT],
@@ -355,14 +355,14 @@ SCENES = {
          "Young's modulus ~1e7."],
     ),
     "BasketOfOranges": Scene(
-        "basket_5_5_40",
+        "BasketOfOranges",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
         [*SOLVERS, *HET_CONTACT],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget
     "BirthdayBanner": Scene(
-        "birthday_banner.Params_1_2000",
+        "BirthdayBanner",
         "the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh)",
         [*SOLVERS],
         ["Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters are kept.",
@@ -370,7 +370,7 @@ SCENES = {
     ),
     **{
         f"BendingBeam.{name}": Scene(
-            f"beam{y}.GroundTruth",
+            f"BendingBeam.{name}.GroundTruth",
             f"final_scenes/bending_beams/small_beam{'_het' if y == '_het' else 'Y' + y}.h5 ("
             + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
             + ")",
@@ -378,7 +378,7 @@ SCENES = {
             ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
              "Budgets kept: the paper's ground-truth budgets, chosen to match Newton's behaviour "
              "(accelerated-vbd-extras/parameters/gpu/beam.GroundTruth.Notes.txt)."]
-            + (["The paper's beam1e7.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant "
+            + (["The paper's BendingBeam.10MPa.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant "
                 "of this scene."] if y == "1e7" else []),
         )
         for y, name in (("1e5", "100kPa"), ("1e6", "1MPa"), ("1e7", "10MPa"), ("1e8", "100MPa"),

@@ -1,6 +1,6 @@
 # Scene config: BendingBeam.10MPa, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/bending_beams/small_beamY1e7.h5 (homogeneous, Young's modulus 1e7).
-# Source: configs/paper/beam1e7.GroundTruth.toml. Keys not listed below have the source's values.
+# Source: configs/paper/BendingBeam.10MPa.GroundTruth.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
@@ -14,8 +14,8 @@
 # - Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.
 # - Budgets kept: the paper's ground-truth budgets, chosen to match Newton's behaviour
 #   (accelerated-vbd-extras/parameters/gpu/beam.GroundTruth.Notes.txt).
-# - The paper's beam1e7.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant of this
-#   scene.
+# - The paper's BendingBeam.10MPa.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant
+#   of this scene.
 
 [Contact.CDType.OGC]
 arq = 1.0

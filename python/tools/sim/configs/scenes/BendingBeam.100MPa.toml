@@ -1,6 +1,6 @@
 # Scene config: BendingBeam.100MPa, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/bending_beams/small_beamY1e8.h5 (homogeneous, Young's modulus 1e8).
-# Source: configs/paper/beam1e8.GroundTruth.toml. Keys not listed below have the source's values.
+# Source: configs/paper/BendingBeam.100MPa.GroundTruth.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:

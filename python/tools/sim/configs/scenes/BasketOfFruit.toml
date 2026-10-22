@@ -1,6 +1,6 @@
 # Scene config: BasketOfFruit, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8).
-# Source: configs/paper/basket_of_fruit.Params_3_10_15.toml. Keys not listed below have the source's values.
+# Source: configs/paper/BasketOfFruit.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:

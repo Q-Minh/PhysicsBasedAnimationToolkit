@@ -11,8 +11,8 @@ Usage, from the repository root:
     python -m python.tools.sim.paper_configs check --extras path/to/accelerated-vbd-extras
 
 ``make`` converts the extras repository's **committed** ``parameters/gpu/*.h5`` files (uncommitted local
-changes are ignored, by the maintainer's choice) to ``configs/paper/<stem>.toml``, following the rules in
-``configs/README.md`` ("Paper configs"), and regenerates ``configs/defaults.toml``. Run it after a change to
+changes are ignored, by the maintainer's choice) to ``configs/paper/<name>.toml``, named by :data:`NAMES`,
+following the rules in ``configs/README.md`` ("Paper configs"), and regenerates ``configs/defaults.toml``. Run it after a change to
 the serialized parameters (a parameter added, removed or given a new default).
 
 ``check`` verifies that each paper ``.toml`` loads to exactly the same parameters as its ``.h5`` (both through
@@ -41,10 +41,40 @@ from .gpu.vbd.params import STENCIL_GRADIENT_ACCELERATION_KEYS
 
 CONFIGS = pathlib.Path(__file__).parent / "configs"
 DEFAULT_PROBLEM = "data/scenarios/MediumLongBendingBeam.Dump.h5:fem"
+# Each source's config name (CLAUDE.md, "Names of config/params and scene files"): the scene, then what tells
+# files of one scene apart. Budget digits are dropped; each header records its source file.
+NAMES = {
+    "basket_5_5_40": "BasketOfOranges",
+    "basket_of_fruit.Params_3_10_15": "BasketOfFruit",
+    "beam1e5.GroundTruth": "BendingBeam.100kPa.GroundTruth",
+    "beam1e6.GroundTruth": "BendingBeam.1MPa.GroundTruth",
+    "beam1e7.GroundTruth": "BendingBeam.10MPa.GroundTruth",
+    "beam1e7.GroundTruth.5Substeps": "BendingBeam.10MPa.GroundTruth.5Substeps",
+    "beam1e8.GroundTruth": "BendingBeam.100MPa.GroundTruth",
+    "beam_het.GroundTruth": "BendingBeam.Heterogeneous.GroundTruth",
+    "beams_strict_budget": "BendingBeam.StrictBudget",
+    "birthday_banner.Params_1_2000": "BirthdayBanner",
+    "capsules_into_bowl": "CapsulesIntoBowl",
+    "celebration.Params_1_5_30": "Celebration",
+    "default": "Default",
+    "empty_basket.Params_3_10_5": "EmptyBasket",
+    "mat_on_stilts.Params.10Substeps": "MatOnStilts.10Substeps",
+    "mat_on_stilts.Params.5Substeps": "MatOnStilts.5Substeps",
+    "trampoline_soft-stiff.Params.5Substeps": "Trampoline.SoftStiff.5Substeps",
+    "trampoline_stiff-soft.Params.5Substeps": "Trampoline.StiffSoft.5Substeps",
+    "trampoline_stiff_sphere.Params.5Substeps": "Trampoline.StiffSphere.5Substeps",
+}
 
 
 def _git(extras: pathlib.Path, *args: str) -> str:
     return subprocess.run(["git", "-C", str(extras), *args], capture_output=True, text=True, check=True).stdout.strip()
+
+
+def _name(rel: str) -> str:
+    stem = pathlib.PurePosixPath(rel).stem
+    if stem not in NAMES:
+        raise KeyError(f"{rel} has no config name: add it to paper_configs.NAMES")
+    return NAMES[stem]
 
 
 def _committed_sources(extras: pathlib.Path, tmp: pathlib.Path) -> list[tuple[str, pathlib.Path]]:
@@ -121,7 +151,7 @@ def make(extras: pathlib.Path, problem: str) -> None:
                 ]
             if unknown:
                 header += ["", "Dropped (not serialized by the current code):"] + [f"  {k}" for k in unknown]
-            out = CONFIGS / "paper" / f"{pathlib.PurePosixPath(rel).stem}.toml"
+            out = CONFIGS / "paper" / f"{_name(rel)}.toml"
             out.write_text(config.dumps(cfg, header), encoding="utf-8")
             print(f"{out.name}: augmented {len(augmented)}, defaults {len(from_defaults)}, dropped {len(unknown)}")
 
@@ -141,7 +171,7 @@ def check(extras: pathlib.Path, problem: str) -> int:
     bad = 0
     with tempfile.TemporaryDirectory() as tmp:
         for rel, blob in _committed_sources(extras, pathlib.Path(tmp)):
-            stem = pathlib.PurePosixPath(rel).stem
+            name = _name(rel)
             with h5py.File(blob, "r") as f:
                 st.deserialize_params(from_h5, f)
                 present = {g for g in ("Solver/Chebyshev", "Solver/AndersonSolver") if g in f}
@@ -149,7 +179,7 @@ def check(extras: pathlib.Path, problem: str) -> int:
                 f.visititems(lambda n, o: raw.update({f"{n}/{k}": np.asarray(v).item() for k, v in o.attrs.items()}))
             with warnings.catch_warnings(record=True) as caught:
                 warnings.simplefilter("always")
-                config.load_sim_params(from_toml, [str(CONFIGS / "paper" / f"{stem}.toml")])
+                config.load_sim_params(from_toml, [str(CONFIGS / "paper" / f"{name}.toml")])
             a, b = _serialized(from_h5), _serialized(from_toml)
             # .toml vs .h5 through the loaders; the augmented tables have no .h5 counterpart
             skip = {"Solver/Chebyshev", "Solver/AndersonSolver"} - present
@@ -167,7 +197,7 @@ def check(extras: pathlib.Path, problem: str) -> int:
                     problems.append(f"{key}: file {value!r} vs loaded {b[key]!r}")
             problems += [f"warning: {w.message}" for w in caught]
             bad += bool(problems)
-            print(f"{stem}: {'OK' if not problems else 'MISMATCH'}" + "".join(f"\n  {p}" for p in problems))
+            print(f"{name}: {'OK' if not problems else 'MISMATCH'}" + "".join(f"\n  {p}" for p in problems))
     print(f"{bad} mismatching config(s)")
     return bad
 

@@ -1,6 +1,6 @@
 # Scene config: BirthdayBanner, every serialized parameter written out (diff it against configs/paper).
 # For: the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh).
-# Source: configs/paper/birthday_banner.Params_1_2000.toml. Keys not listed below have the source's values.
+# Source: configs/paper/BirthdayBanner.toml. Keys not listed below have the source's values.
 # Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
