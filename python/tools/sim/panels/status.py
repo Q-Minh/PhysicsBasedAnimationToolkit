@@ -6,8 +6,9 @@ Two tree nodes, read top to bottom:
 - **Last step**: per substep, how the solve ended and what it used, one fact per row. VBD family: result,
   outer iterations and sweeps against their budgets, and the final ratios of the gradient residual and
   the penetration to their tolerances (at most 1 passes). Newton: the outer test with the same two ratios
-  (at the end, at the first test, and after each subproblem), and per subproblem its status, Newton steps,
-  CG iterations and line-search backtracks.
+  (at the end and at the first test), counts of subproblems that converged, hit the CG cap or rejected a
+  step, and, in a "Subproblems" node (closed by default), one subproblem at a time, picked with a slider: its
+  status, Newton steps, CG iterations, line-search backtracks and the outer test after it.
 - **Last N steps**: the same counts summarized over a rolling window (``StatusLog.summary``).
 
 Visible text stays short; tooltips explain each row. ``SimulationState.step`` records the statuses with
@@ -21,6 +22,7 @@ from ..gpu.newton.solver import SubproblemStatus
 from ..gpu.vbd.convergence import SolveEnd
 
 _window = {"steps": 10}
+_subproblem = {}  # substep -> the subproblem picked in its browser (else the last one)
 _GOOD = (0.4, 0.85, 0.4, 1.0)
 _WARN = (1.0, 0.6, 0.2, 1.0)
 
@@ -177,37 +179,75 @@ def _draw_newton_solve(s, subproblems, rows: _Rows):
             float(s["initial_feasibility_ratio"]),
             "at the first outer test (before subproblem 0)",
         )
-    for p in subproblems:
-        k = int(p["outer"])
-        status = SubproblemStatus(int(p["status"]))
-        label, tip = _SUBPROBLEM[status]
-        ok = status in (SubproblemStatus.CONVERGED, SubproblemStatus.STEPPED)
-        rows.row(f"Subproblem {k}", label, tip, None if ok else _WARN)
+        n = subproblems.shape[0]
+        statuses = [SubproblemStatus(int(v)) for v in subproblems["status"]]
+        converged = sum(v == SubproblemStatus.CONVERGED for v in statuses)
+        rejected = sum(v in (SubproblemStatus.NON_DESCENT, SubproblemStatus.LINE_SEARCH_FAILED) for v in statuses)
+        capped = int(np.sum(subproblems["cg_capped"]))
+        rows.row("Subproblems", f"{n}", "Newton subproblems solved (one per outer iteration); browse them below.")
+        rows.row("  Converged", f"{converged} / {n}", "Subproblems whose augmented-Lagrangian gradient passed its test.")
         rows.row(
-            "  Newton steps",
-            f"{int(p['newton_steps'])} / {int(p['max_newton_steps'])}",
-            "Newton directions computed (one CG solve each) / budget (n_subproblem_max_iters).",
-        )
-        capped = bool(p["cg_capped"])
-        rows.row(
-            "  CG iterations (max)",
-            f"{int(p['max_cg_iters'])} / {int(p['cg_cap'])}" + ("  cap hit" if capped else ""),
-            "Most CG iterations of one Newton step / cap (Solver.Newton.LinearSolver.n_max_iters).\n"
-            "At the cap, the Newton direction is inexact.",
+            "  CG cap hit",
+            f"{capped} / {n}",
+            "Subproblems with a Newton step whose CG stopped at its cap (an inexact direction).",
             _WARN if capped else None,
         )
         rows.row(
-            "  Line-search backtracks",
-            f"{int(p['backtracks'])}",
-            "Step-size reductions over all of the subproblem's line searches (0: every full step was accepted).",
+            "  Rejected step",
+            f"{rejected} / {n}",
+            "Subproblems that ended on a rejected step (non-descent direction or failed line search).",
+            _WARN if rejected else None,
         )
-        _ratio_rows(
-            rows,
-            "  ",
-            float(p["gradient_ratio"]),
-            float(p["feasibility_ratio"]),
-            f"at the outer test after subproblem {k} (after its contact detection and dual update)",
-        )
+
+
+def _draw_subproblem(p, rows: _Rows):
+    k = int(p["outer"])
+    status = SubproblemStatus(int(p["status"]))
+    label, tip = _SUBPROBLEM[status]
+    ok = status in (SubproblemStatus.CONVERGED, SubproblemStatus.STEPPED)
+    rows.row(f"Subproblem {k}", label, tip, None if ok else _WARN)
+    rows.row(
+        "  Newton steps",
+        f"{int(p['newton_steps'])} / {int(p['max_newton_steps'])}",
+        "Newton directions computed (one CG solve each) / budget (n_subproblem_max_iters).",
+    )
+    capped = bool(p["cg_capped"])
+    rows.row(
+        "  CG iterations (max)",
+        f"{int(p['max_cg_iters'])} / {int(p['cg_cap'])}" + ("  cap hit" if capped else ""),
+        "Most CG iterations of one Newton step / cap (Solver.Newton.LinearSolver.n_max_iters).\n"
+        "At the cap, the Newton direction is inexact.",
+        _WARN if capped else None,
+    )
+    rows.row(
+        "  Line-search backtracks",
+        f"{int(p['backtracks'])}",
+        "Step-size reductions over all of the subproblem's line searches (0: every full step was accepted).",
+    )
+    _ratio_rows(
+        rows,
+        "  ",
+        float(p["gradient_ratio"]),
+        float(p["feasibility_ratio"]),
+        f"at the outer test after subproblem {k} (after its contact detection and dual update)",
+    )
+
+
+def _draw_subproblem_browser(subproblems, key: int):
+    """A closed-by-default "Subproblems" node showing one subproblem at a time, picked with a slider (by
+    default the last one; a picked index is kept across steps)."""
+    n = subproblems.shape[0]
+    if n == 0 or not imgui.TreeNode(f"Subproblems ({n})###subproblems_{key}"):
+        return
+    k = min(_subproblem.get(key, n - 1), n - 1)
+    if n > 1:
+        changed, k = imgui.SliderInt(f"Subproblem##{key}", k, 0, n - 1)
+        _tooltip("Which subproblem (outer iteration) to show.")
+        if changed:
+            _subproblem[key] = k
+    with _Rows(f"subproblem_{key}") as rows:
+        _draw_subproblem(subproblems[k], rows)
+    imgui.TreePop()
 
 
 def _draw_last_step(log):
@@ -223,11 +263,14 @@ def _draw_last_step(log):
     for sub in range(n_substeps):
         if n_substeps > 1:
             imgui.TextDisabled(f"Substep {sub}")
+        newton = subproblems[subproblems["substep"] == sub]
         with _Rows(f"last_step_{sub}") as rows:
             for r in vbd[vbd["substep"] == sub]:
                 _draw_vbd_solve(r, rows)
             for s in solves[solves["substep"] == sub]:
-                _draw_newton_solve(s, subproblems[subproblems["substep"] == sub], rows)
+                _draw_newton_solve(s, newton, rows)
+        if solves[solves["substep"] == sub].shape[0]:
+            _draw_subproblem_browser(newton, sub)
 
 
 def _draw_window(log):
@@ -434,6 +477,38 @@ class TestStatusPanel(unittest.TestCase):
         tips = " ".join(str(c.args[0]) for c in fake.SetTooltip.call_args_list)
         self.assertIn("ftol * max(|dmin|", tips)
         self.assertNotIn("%", tips)
+
+    def test_subproblem_browser(self):
+        """Newton's summary counts its subproblems; the browser shows one at a time, the last by default."""
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from ..gpu.newton.solver import NewtonSolveRecord, NewtonSubproblemRecord
+        from ..status import StatusLog
+
+        subs = (
+            NewtonSubproblemRecord(SubproblemStatus.STEPPED, 2, 500, True, 0),
+            NewtonSubproblemRecord(SubproblemStatus.CONVERGED, 1, 300, False, 1),
+            NewtonSubproblemRecord(SubproblemStatus.LINE_SEARCH_FAILED, 2, 500, False, 9),
+        )
+        log = StatusLog()
+        log.add_newton(0, [NewtonSolveRecord(3, False, subs, ((9.0, 0.1), (5.0, 0.1), (3.0, 0.1), (7.5, 0.1)))], 5, 2, 500)
+        fake = mock.MagicMock()
+        fake.TreeNode.return_value = True
+        fake.TreeNodeEx.return_value = True
+        fake.SliderInt.side_effect = lambda label, v, lo, hi: (False, v)
+        _subproblem.clear()
+        with mock.patch(f"{__name__}.imgui", fake):
+            draw_status_panel(SimpleNamespace(status_log=log), None)
+        shown = [str(c.args[-1]) for c in fake.TextColored.call_args_list] + [
+            str(c.args[0]) for c in fake.Text.call_args_list
+        ]
+        for value in ("1 / 3", "Line-search failed", "Subproblem 2"):  # converged, cap hit, rejected: 1 / 3 each
+            self.assertIn(value, shown)
+        self.assertEqual(shown.count("1 / 3"), 3)
+        self.assertNotIn("Subproblem 0", shown)  # only the picked (last) subproblem
+        (slider,) = [c for c in fake.SliderInt.call_args_list if c.args[0].startswith("Subproblem##")]
+        self.assertEqual(slider.args[1:], (2, 0, 2))
 
 
 if __name__ == "__main__":
