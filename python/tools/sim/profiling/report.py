@@ -4,19 +4,27 @@ HTML report comparing per-phase GPU cost across solvers.
 Takes one profiling result per solver (``simulate.py --profile kernels --profile-out`` or
 ``profiling/nsys.py``), plus optional production timings, and writes a self-contained HTML page: a
 summary table (busy and union time, production step time, iterations, cost per iteration), stacked
-bars of mean GPU busy time per step by phase, one part-to-whole donut per solver, a scope tree per
-solver with total (inclusive) and self times, a phase-by-solver table and the top GPU activities.
+bars of mean GPU time per step by phase, one part-to-whole donut per solver, the distribution of step
+and phase times, the steps grouped by percentiles of their GPU time and of their peak node speed (phase
+donuts, early exits, iterations and residual ratios per group), the phases over the run, a scope tree
+per solver with total (inclusive) and self times, a phase-by-solver table and the top GPU activities.
+
+Phase times are unions over streams (work running concurrently on several streams counts once), or busy
+time for results recorded without unions. Solve outcomes need the statuses ``simulate.py`` records, and
+peak speeds need ``profiling/trajectory.py``; sections without their data are left out.
 
 Usage (from the repo root):
 
-    python -m python.tools.sim.profiling.report out/vbd.json out/aaavbd.json ... -o report.html
+    python -m python.tools.sim.profiling.report out/vbd.json out/aaavbd.json ... -o report.html [--slices 10,90]
 """
 
 import argparse
 import html
 import math
 
-from . import results
+import numpy as np
+
+from . import results, step_stats
 
 # Categorical slots (light, dark), assigned to phases in fixed order of total cost; the rest fold
 # into "Other". Values from the dataviz reference palette, validated for adjacent pairs.
@@ -32,7 +40,13 @@ _SLOTS = [
 _OTHER = "Other"
 _DONUT_SEGMENTS = 6
 # Scopes whose entries count one solver iteration, for the per-iteration normalization.
-_ITERATION_SCOPES = ("vbd.sweep", "aaavbd.sweep", "newton.linear_solve")
+_ITERATION_SCOPES = step_stats.ITERATION_SCOPES
+_TIMESERIES_BINS = 300
+# Per-step quantities the steps are grouped by: key in step_stats.per_step, title, unit.
+_SLICE_BY = (
+    ("time_ms", "GPU time per step", "ms"),
+    ("peak_speed", "peak node speed", "m/s"),
+)
 
 
 def _esc(x) -> str:
@@ -202,29 +216,160 @@ def _scope_tree_section(solvers: list[str], by_solver: dict[str, dict]) -> str:
     return "".join(sections)
 
 
-def render(result_list: list[dict], note: str | None = None) -> str:
+def _fmt(x, digits: int = 3) -> str:
+    return "" if x is None or (isinstance(x, float) and not math.isfinite(x)) else f"{x:.{digits}g}"
+
+
+def _distribution_section(solvers, tables, production) -> str:
+    """Quantiles of the step time per solver (union, span, production timeline) and, collapsed, of each
+    phase's time."""
+    head = "".join(f"<th>{n}</th>" for n in ("Steps", "Mean", *step_stats.QUANTILE_NAMES))
+    rows = []
+    for s in solvers:
+        series = [("GPU union", tables[s]["time_ms"]), ("Span (eager)", tables[s]["span_ms"])]
+        if s in production:
+            series.append(("Production", step_stats.per_step(production[s])["time_ms"]))
+        for name, values in series:
+            d = step_stats.describe(values)
+            if d is None:
+                continue
+            cells = "".join(f"<td>{d[k]:.3f}</td>" for k in ("mean", *step_stats.QUANTILE_NAMES))
+            rows.append(f"<tr><td>{_esc(s)} · {_esc(name)}</td><td>{d['n']}</td>{cells}</tr>")
+    steps = f"<table><thead><tr><th>Step time (ms)</th>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+    phase_sections = []
+    for s in solvers:
+        phases = tables[s]["phases"]
+        prow = []
+        for p in sorted(phases, key=lambda p: -phases[p].mean()):
+            d = step_stats.describe(phases[p])
+            cells = "".join(f"<td>{d[k]:.3f}</td>" for k in ("mean", *step_stats.QUANTILE_NAMES))
+            prow.append(f"<tr><td>{_esc(p)}</td><td>{d['n']}</td>{cells}</tr>")
+        phase_sections.append(
+            f"<details><summary>{_esc(s)}: phase times per step</summary><table><thead><tr><th>Phase (ms)</th>"
+            f"{head}</tr></thead><tbody>{''.join(prow)}</tbody></table></details>"
+        )
+    return steps + "".join(phase_sections)
+
+
+def _slices_section(solvers, tables, keep, colored, edges, key, unit) -> str:
+    """Per solver: one phase donut per percentile slice of ``key``, and a table of the slices' solve
+    outcomes. Empty if no solver has the quantity."""
+    blocks = []
+    for s in solvers:
+        table = tables[s]
+        slices = step_stats.percentile_slices(table[key], edges)
+        if not slices:
+            continue
+        donuts, rows = [], []
+        for sl in slices:
+            summary = step_stats.summarize_slice(table, sl["mask"])
+            vrange = (f"{_fmt(sl['vmin'])}–{_fmt(sl['vmax'])} {unit}" if sl["vmin"] is not None else "empty")
+            if summary["steps"]:
+                name = f"{s} {sl['label']}"
+                donuts.append(
+                    f"<figure>{_donut(name, _fold(summary['phases'], keep[s]), colored)}"
+                    f"<figcaption>{_esc(sl['label'])}<br>{_esc(vrange)}</figcaption></figure>"
+                )
+            early = summary["early_exit"]
+            rows.append(
+                f"<tr><td>{_esc(sl['label'])}</td><td>{_esc(vrange)}</td><td>{summary['steps']}</td>"
+                f"<td>{_fmt(summary['time_ms'])}</td><td>{_fmt(summary['iterations'])}</td>"
+                f"<td>{_fmt(summary['ms_per_iteration'])}</td>"
+                f"<td>{_fmt(summary['outer'])}</td>"
+                f"<td>{'' if early is None else f'{100 * early:.0f}%'}"
+                f"<span class='pct'>{summary['solves']} solves</span></td>"
+                f"<td>{_fmt(summary['gradient_ratio_median'])}</td><td>{_fmt(summary['gradient_ratio_max'])}</td>"
+                f"<td>{_fmt(summary['feasibility_ratio_max'])}</td><td>{_fmt(summary['peak_speed'])}</td></tr>"
+            )
+        unit_iter = table["unit"] or "iterations"
+        blocks.append(
+            f"<h3>{_esc(s)}</h3><div class='donuts'>{''.join(donuts)}</div>"
+            "<table class='wrap'><thead><tr><th>Slice</th><th>Range</th><th>Steps</th><th>Median step (ms)</th>"
+            f"<th>Median {_esc(unit_iter)}</th><th>Median ms per {_esc(unit_iter.rstrip('s'))}</th>"
+            "<th>Median outer</th><th>Early exits</th>"
+            "<th>Median gradient ratio</th><th>Worst gradient ratio</th><th>Worst feasibility ratio</th>"
+            f"<th>Median peak speed (m/s)</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
+        )
+    return "".join(blocks)
+
+
+def _timeseries(solver, table, keep, colored) -> str:
+    """Stacked areas of the phase times over the run, averaged over at most :data:`_TIMESERIES_BINS`
+    bins of consecutive steps."""
+    t = table["t"]
+    n = t.shape[0]
+    if n < 2:
+        return ""
+    names = list(keep) + [_OTHER]
+    others = [p for p in table["phases"] if p not in keep]
+    series = {p: table["phases"][p] for p in keep if p in table["phases"]}
+    series[_OTHER] = sum((table["phases"][p] for p in others), np.zeros(n))
+    edges = np.linspace(0, n, min(n, _TIMESERIES_BINS) + 1).astype(int)
+    binned = {p: np.array([v[a:b].mean() for a, b in zip(edges[:-1], edges[1:])]) for p, v in series.items()}
+    xs = np.array([t[a:b].mean() for a, b in zip(edges[:-1], edges[1:])])
+    width, height, left, bottom, top = 760, 200, 50, 22, 18
+    plot_w, plot_h = width - left - 10, height - bottom - top
+    total = sum(binned.values())
+    vmax = float(total.max()) or 1.0
+    x = lambda v: left + plot_w * (v - xs[0]) / max(xs[-1] - xs[0], 1e-9)
+    y = lambda v: top + plot_h * (1 - v / vmax)
+    out = [f'<svg class="chart" viewBox="0 0 {width} {height}" role="img" '
+           f'aria-label="{_esc(solver)} phase times over the run">']
+    tick = 10 ** math.floor(math.log10(vmax))
+    tick = next(k * tick for k in (1, 2, 5, 10) if vmax / (k * tick) <= 5)
+    v = 0.0
+    while v <= vmax * 1.0001:
+        out.append(f'<line class="grid" x1="{left}" x2="{width - 10}" y1="{y(v):.1f}" y2="{y(v):.1f}"/>'
+                   f'<text class="tick" x="{left - 6}" y="{y(v) + 4:.1f}" text-anchor="end">{v:g}</text>')
+        v += tick
+    for frac, anchor in ((0.0, "start"), (0.5, "middle"), (1.0, "end")):
+        tv = xs[0] + frac * (xs[-1] - xs[0])
+        out.append(f'<text class="tick" x="{x(tv):.1f}" y="{height - 6}" text-anchor="{anchor}">step {tv:.0f}</text>')
+    out.append(f'<text class="tick" x="{left - 6}" y="{top + 2}" text-anchor="end" dy="-0.2em">ms</text>')
+    base = np.zeros_like(xs)
+    for p in names:
+        if p not in binned or not binned[p].any():
+            continue
+        upper = base + binned[p]
+        pts = [f"{x(a):.1f},{y(b):.1f}" for a, b in zip(xs, upper)]
+        pts += [f"{x(a):.1f},{y(b):.1f}" for a, b in zip(xs[::-1], base[::-1])]
+        tip = f"{solver} · {p}: mean {binned[p].mean():.3f} ms/step"
+        out.append(f'<polygon class="mark" data-tip="{_esc(tip)}" fill="{_color(p, colored)}" '
+                   f'points="{" ".join(pts)}"/>')
+        base = upper
+    out.append("</svg>")
+    return "".join(out)
+
+
+def render(result_list: list[dict], note: str | None = None, edges: tuple[float, ...] = (10.0, 90.0)) -> str:
     """Render the comparison page for one phase-timed result per solver, plus optional production
-    results (``source: "production"``, graph replay timings) for the same solvers."""
+    results (``source: "production"``, graph replay timings) for the same solvers. ``edges`` are the
+    percentiles that group steps into slices."""
     production = {
         r["metadata"].get("solver"): r for r in result_list if r["source"] == "production"
     }
     result_list = [r for r in result_list if r["source"] != "production"]
     solvers = [r["metadata"].get("solver", f"run {i}") for i, r in enumerate(result_list)]
     by_solver = {s: r for s, r in zip(solvers, result_list)}
-    per_solver = {s: results.mean_busy_ms_per_step(r, by_leaf=True) for s, r in by_solver.items()}
+    tables = {s: step_stats.per_step(r) for s, r in by_solver.items()}
+    unions = all(step_stats.has_unions(r) for r in result_list)
+    measure = "GPU time (union over streams)" if unions else "GPU busy time"
+    per_solver = {s: {p: float(v.mean()) for p, v in tables[s]["phases"].items()} for s in solvers}
     order = _phase_order(per_solver)
     colored = [p for p in order if p != results.UNSCOPED][: len(_SLOTS)]
     folded = {s: _fold(per_solver[s], colored) for s in solvers}
     legend_phases = colored + ([_OTHER] if any(_OTHER in f for f in folded.values()) else [])
+    legend_html = _legend(legend_phases, colored)
 
     meta = result_list[0]["metadata"]
     sources = sorted({r["source"] for r in result_list})
     rows = []
     for s in solvers:
         r = by_solver[s]
-        total = sum(per_solver[s].values())
+        total = sum(results.mean_busy_ms_per_step(r).values())
         iters, unit = _iterations_per_step(r)
         union = _mean(r, "step_union_ms")
+        per_iter = union if union is not None else total
         launches = sum(sum(st["launches"].values()) for st in r["steps"]) / max(len(r["steps"]), 1)
         prod = _mean(production[s], "step_timeline_ms") if s in production else None
         prod_mode = production[s]["metadata"].get("execution", "") if s in production else ""
@@ -235,13 +380,14 @@ def render(result_list: list[dict], note: str | None = None) -> str:
             f"{f'<span class=pct>{_esc(prod_mode)}</span>' if prod_mode else ''}</td>"
             f"<td>{launches:.0f}</td>"
             f"<td>{f'{iters:.0f} {_esc(unit)}s' if iters else ''}</td>"
-            f"<td>{'' if not iters else f'{1000 * total / iters:.1f}'}</td></tr>"
+            f"<td>{'' if not iters else f'{1000 * per_iter / iters:.1f}'}</td></tr>"
         )
     summary = (
         "<table><thead><tr><th>Solver</th><th>Steps</th><th>GPU busy (ms/step)</th>"
         "<th>GPU union (ms/step)</th><th>Production step (ms)</th><th>Activities/step</th>"
         "<th>Iterations/step</th>"
-        "<th>µs per iteration</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+        f"<th>µs per iteration ({'union' if unions else 'busy'})</th></tr></thead><tbody>"
+        + "".join(rows) + "</tbody></table>"
     )
     phase_rows = []
     for p in order:
@@ -257,12 +403,22 @@ def render(result_list: list[dict], note: str | None = None) -> str:
         + "".join(f"<th>{_esc(s)}</th>" for s in solvers)
         + "</tr></thead><tbody>" + "".join(phase_rows) + "</tbody></table>"
     )
-    donuts = []
+    donuts, keep = [], {}
     for s in solvers:
         top = sorted(per_solver[s], key=lambda p: -per_solver[s][p])
-        keep = [p for p in top if p in colored][: _DONUT_SEGMENTS - 1]
-        donuts.append(f'<figure>{_donut(s, _fold(per_solver[s], keep), colored)}'
+        keep[s] = [p for p in top if p in colored][: _DONUT_SEGMENTS - 1]
+        donuts.append(f'<figure>{_donut(s, _fold(per_solver[s], keep[s]), colored)}'
                       f"<figcaption>{_esc(s)}</figcaption></figure>")
+    slices = []
+    for key, title, unit in _SLICE_BY:
+        body = _slices_section(solvers, tables, keep, colored, edges, key, unit)
+        if body:
+            slices.append(f"<h2>Steps by percentile of {_esc(title)}</h2><div class='card'>{legend_html}{body}</div>")
+    timeseries = "".join(
+        f"<h3>{_esc(s)}</h3>{_timeseries(s, tables[s], keep[s], colored)}" for s in solvers
+    )
+    overlaps = [step_stats.union_overlap(tables[s]) for s in solvers]
+    overlap = max((o for o in overlaps if o is not None), default=None)
     kernel_sections = []
     for s in solvers:
         r = by_solver[s]
@@ -293,6 +449,18 @@ def render(result_list: list[dict], note: str | None = None) -> str:
         "Busy time sums the GPU duration of every activity attributed to a phase (the innermost "
         "profiling scope open at launch). Steps ran eagerly; host launch overhead and idle gaps "
         "are excluded. "
+        + ("Phase times in the charts, distributions and slices are unions over streams: the time a "
+           "phase's activities keep the GPU busy, with work running concurrently on several streams "
+           "counted once. They exclude graph or kernel launch overhead and the gaps between kernels, "
+           "which production runs (graph replay) include. "
+           if unions else "")
+        + (f"Phase unions add up to {100 * overlap:.2g}% more than the step unions (phases overlapping "
+           "in time). " if overlap else "")
+        + "Slices group each solver's own steps by percentiles of a per-step quantity; ties at a "
+        "percentile fall into the lower slice. Early exits are the solves (one per substep) that passed "
+        "their convergence tests within the budget; ratios are the final residuals to their tolerances "
+        "(at most 1 passes), worst over a step's substeps. Peak node speed is the largest node "
+        "displacement between saved frames over their time interval (profiling/trajectory.py). "
         + ("Nsight Systems times every kernel, including CUB and cupy ones; the union column "
            "does not double-count work running concurrently on several streams. "
            if "nsys" in sources else "")
@@ -311,9 +479,13 @@ def render(result_list: list[dict], note: str | None = None) -> str:
         slot_vars_light="".join(f"--series-{i + 1}:{l};" for i, (l, _) in enumerate(_SLOTS)),
         slot_vars_dark="".join(f"--series-{i + 1}:{d};" for i, (_, d) in enumerate(_SLOTS)),
         summary=summary,
-        legend=_legend(legend_phases, colored),
+        measure=_esc(measure),
+        legend=legend_html,
         bars=_stacked_bars(solvers, folded, colored),
         donuts="".join(donuts),
+        distribution=_distribution_section(solvers, tables, production),
+        slices="".join(slices),
+        timeseries=timeseries,
         phase_table=phase_table,
         scope_tree=_scope_tree_section(solvers, by_solver),
         kernels="".join(kernel_sections),
@@ -341,12 +513,13 @@ body {{ margin:0; background:var(--page); color:var(--ink);
 main {{ max-width:960px; margin:0 auto; padding-block:32px 64px;
   padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }}
 h1 {{ font-size:28px; margin:0 0 4px; }} h2 {{ font-size:18px; margin:36px 0 12px; }}
+h3 {{ font-size:15px; margin:20px 0 8px; color:var(--ink-2); }}
 .sub {{ color:var(--ink-2); margin:0 0 24px; overflow-wrap:anywhere; }}
 .card {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;
   overflow-x:auto; }}
 table {{ border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; font-size:14px; }}
 th, td {{ text-align:right; padding:6px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }}
-th:first-child, td:first-child {{ text-align:left; }} th {{ color:var(--ink-2); font-weight:600; }}
+th:first-child, td:first-child {{ text-align:left; }} table.wrap th {{ white-space:normal; }} th {{ color:var(--ink-2); font-weight:600; }}
 .pct {{ color:var(--muted); margin-left:6px; font-size:12px; }}
 .kname {{ text-align:left; white-space:normal; overflow-wrap:anywhere; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 12px; font-size:13px; color:var(--ink-2); }}
@@ -391,10 +564,15 @@ _PAGE = (
 <h1>{title}</h1>
 <p class="sub">{scene}</p>{note_html}
 <div class="card">{summary}</div>
-<h2>GPU busy time per step, by phase</h2>
+<h2>{measure} per step, by phase</h2>
 <div class="card">{legend}{bars}</div>
 <h2>Share of each phase</h2>
 <div class="card">{legend}<div class="donuts">{donuts}</div></div>
+<h2>Distribution of step times</h2>
+<div class="card">{distribution}</div>
+{slices}
+<h2>Phases over the run</h2>
+<div class="card">{legend}{timeseries}</div>
 <h2>Scope tree</h2>
 <div class="card">{scope_tree}
 <p class="note">Total includes nested scopes; self is the scope's own work. Busy times sum activity durations, so
@@ -416,8 +594,15 @@ def main():
     parser.add_argument("results", nargs="+", help="Profiling result .json files, one per solver.")
     parser.add_argument("-o", "--out", required=True, help="Output .html.", dest="out")
     parser.add_argument("--note", default=None, help="Context shown under the title.")
+    parser.add_argument(
+        "--slices",
+        default="10,90",
+        help="Percentiles that group the steps into slices, comma-separated (default: 10,90, i.e. the lowest "
+        "10%%, the middle 80%% and the highest 10%%).",
+    )
     args = parser.parse_args()
-    page = render([results.load(p) for p in args.results], args.note)
+    edges = tuple(float(e) for e in args.slices.split(","))
+    page = render([results.load(p) for p in args.results], args.note, edges)
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(page)
     print(f"Wrote {args.out}")

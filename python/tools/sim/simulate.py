@@ -143,12 +143,15 @@ def parse_args():
 
 def _write_frame(h5f: h5py.File, state: SimulationState, frame: int, status_from: int) -> int:
     """Same layout as ui._serialize_simulation, plus ``sim/<frame>/solve_status``: the statuses of the
-    time steps since the previous frame, ``[status_from, state.t)`` (see status.StatusLog).
+    time steps since the previous frame, ``[status_from, state.t)`` (see status.StatusLog), and the
+    attribute ``sim/<frame>.attrs["t"]``, the time step count at the frame.
 
     Returns:
         int: The first time step of the next frame's statuses.
     """
     h5f.create_dataset(f"sim/{frame:08d}/x", data=state.fem.data.x.numpy())
+    # The time step count at the frame, so frames can be matched to steps (profiling/trajectory.py)
+    h5f[f"sim/{frame:08d}"].attrs["t"] = state.t
     state.status_log.write_h5(
         h5f.require_group(f"sim/{frame:08d}/solve_status"), steps=(status_from, state.t)
     )
@@ -217,11 +220,13 @@ def main():
             if profile_step:
                 wp.get_stream().record_event(step_events[1])
                 step_profile = profiling.end_step()
+                # The step's solve statuses, already on the host (SimulationState.step reads them)
+                status = state.status_log.step_entry(state.t - 1)
                 if step_profile is not None:
-                    recorder.add_step(state.t - 1, step_profile)
+                    recorder.add_step(state.t - 1, step_profile, status)
                 elif backend == profiling.Backend.OFF:
                     recorder.add_step_timeline(
-                        state.t - 1, wp.get_event_elapsed_time(*step_events)
+                        state.t - 1, wp.get_event_elapsed_time(*step_events), status
                     )
             if should_save(state.t, state.dt, args.fps):
                 status_from = _write_frame(h5f, state, frame, status_from)

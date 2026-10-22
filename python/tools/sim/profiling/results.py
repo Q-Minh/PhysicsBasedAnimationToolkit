@@ -19,8 +19,12 @@ Nsight Systems importer, so reports can consume either. Layout::
                                        # path and ancestor path (inclusive unions can't be summed)
          "step_union_ms": ms,          # union over the whole step
          "step_span_ms": ms,           # first activity start to last activity end
-         "step_timeline_ms": ms}       # production runs only (no per-phase timings): step GPU
+         "step_timeline_ms": ms,       # production runs only (no per-phase timings): step GPU
                                        # time from CUDA events around it, i.e. graph replay
+         "status": {...},              # simulate.py: the step's solve statuses, one entry per substep
+                                       # (status.StatusLog.step_entry: outcome, iterations, ratios)
+         "peak_speed": m/s}            # profiling/trajectory.py: the largest node speed over the
+                                       # frame interval that contains the step (from saved frames)
       ],
       "kernels": [{"path": str, "name": str, "busy_ms": ms, "count": n}]  # summed over steps
     }
@@ -60,28 +64,34 @@ class ProfileRecorder:
         self.steps: list[dict] = []
         self._kernels: dict[tuple[str, str], list] = {}
 
-    def add_step(self, t: int, profile: "StepProfile"):
-        """Add one profiled step's timings and accumulate its per-kernel totals."""
-        self.steps.append(
-            {
-                "t": t,
-                "busy_ms": profile.busy_ms,
-                "launches": profile.launches,
-                "calls": profile.calls,
-                "union_ms": profile.union_ms,
-                "union_incl_ms": profile.union_incl_ms,
-                "step_union_ms": profile.step_union_ms,
-                "step_span_ms": profile.step_span_ms,
-            }
-        )
+    def add_step(self, t: int, profile: "StepProfile", status: dict | None = None):
+        """Add one profiled step's timings, and its solve statuses if given (``status.StatusLog.step_entry``),
+        and accumulate its per-kernel totals."""
+        step = {
+            "t": t,
+            "busy_ms": profile.busy_ms,
+            "launches": profile.launches,
+            "calls": profile.calls,
+            "union_ms": profile.union_ms,
+            "union_incl_ms": profile.union_incl_ms,
+            "step_union_ms": profile.step_union_ms,
+            "step_span_ms": profile.step_span_ms,
+        }
+        if status is not None:
+            step["status"] = status
+        self.steps.append(step)
         for key, (ms, count) in profile.kernels.items():
             acc = self._kernels.setdefault(key, [0.0, 0])
             acc[0] += ms
             acc[1] += count
 
-    def add_step_timeline(self, t: int, step_timeline_ms: float):
-        """Record only a step's GPU timeline (production runs, without per-phase timings)."""
-        self.steps.append({"t": t, "busy_ms": {}, "launches": {}, "step_timeline_ms": step_timeline_ms})
+    def add_step_timeline(self, t: int, step_timeline_ms: float, status: dict | None = None):
+        """Record only a step's GPU timeline (production runs, without per-phase timings), and its solve
+        statuses if given."""
+        step = {"t": t, "busy_ms": {}, "launches": {}, "step_timeline_ms": step_timeline_ms}
+        if status is not None:
+            step["status"] = status
+        self.steps.append(step)
 
     def to_dict(self) -> dict:
         """The run as a profiling result dict (schema above), kernels sorted by busy time."""
