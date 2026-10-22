@@ -23,6 +23,10 @@ Restoring copies into the state's existing arrays, so registered handles and a c
 It needs the same problem (mesh, kinematic constraints, contact capacities), ``dt``, ``substeps`` and
 ``bdf_scheme``. Other parameters may differ: resuming with another solver starts that solver's buffers fresh.
 OGC's detector state isn't stored.
+
+A resumed run is bit-identical to the uninterrupted one for the VBD family. GPU Newton runs aren't reproducible even
+uninterrupted (BeamFallingOnBeam: two identical runs differ by up to 5.4 mm over 0.5 s), so its resumed runs match
+only as closely.
 """
 
 import cupy as cp

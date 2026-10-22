@@ -1526,6 +1526,10 @@ class NewtonSolver:
     def __init__(self):
         pass
 
+    # TODO: GPU Newton runs aren't reproducible: two identical BeamFallingOnBeam runs (0.5 s, 50 steps) differ from
+    # the first step, by up to 5.4e-3 m (2026-10-21), so checkpoint resumes are only approximate for Newton (the VBD
+    # family's are bit-exact). The cause hasn't been located. Suspects: the atomic triplet/BSR Hessian assembly,
+    # CG's dot-product reductions and the penalty adaptation's reductions.
     def solve(
         self,
         fem: FemElastoDynamics,
