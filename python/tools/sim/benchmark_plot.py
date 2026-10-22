@@ -51,6 +51,7 @@ Matplotlib's default font. No grid lines (maintainer).
 """
 
 import argparse
+import functools
 import glob
 import os
 import re
@@ -144,19 +145,49 @@ def solver_color(solver: str, solvers: list[str]) -> str:
     return OTHER_COLORS[others.index(solver) % len(OTHER_COLORS)]
 
 
-def material_label(label: str) -> str:
-    """A run file's case label for the paper: Young's modulus as math, ``Y = 1e5`` -> ``$E = 10^{5}$ Pa``, and
-    other labels capitalized (``heterogeneous`` -> ``Heterogeneous``)."""
-    m = re.fullmatch(r"Y\s*=\s*([0-9.]+)[eE]([+-]?\d+)", label.strip())
-    if m is None:
-        return label[:1].upper() + label[1:]
-    mantissa, exponent = float(m.group(1)), int(m.group(2))
-    power = f"10^{{{exponent}}}"
-    return f"$E = {power}$ Pa" if mantissa == 1 else rf"$E = {mantissa:g} \times {power}$ Pa"
+def modulus_math(value: float) -> str:
+    """A Young's modulus as math: ``10^{6}``, or ``2.5 \\times 10^{6}``."""
+    exponent = int(np.floor(np.log10(value)))
+    mantissa = float(f"{value / 10.0 ** exponent:.3g}")
+    if mantissa == 10:
+        mantissa, exponent = 1.0, exponent + 1
+    return f"10^{{{exponent}}}" if mantissa == 1 else rf"{mantissa:g} \times 10^{{{exponent}}}"
+
+
+def material_label(label: str, moduli: np.ndarray | None = None) -> str:
+    """A run file's case label for the paper: Young's modulus as math, ``Y = 1e5`` -> ``$E = 10^{5}$ Pa``. Other
+    labels (``heterogeneous``) show the scene's ``moduli`` if known, as a set when there are several
+    (``$E \\in \\{10^{6}, 10^{8}\\}$ Pa``), else they are capitalized."""
+    m = re.fullmatch(r"Y\s*=\s*([0-9.]+[eE][+-]?\d+)", label.strip())
+    if m is not None:
+        return f"$E = {modulus_math(float(m.group(1)))}$ Pa"
+    if moduli is not None and len(moduli):
+        if len(moduli) == 1:
+            return f"$E = {modulus_math(moduli[0])}$ Pa"
+        return rf"$E \in \{{{', '.join(modulus_math(v) for v in moduli)}\}}$ Pa"
+    return label[:1].upper() + label[1:]
+
+
+@functools.lru_cache
+def scene_moduli(dataset: str, scene: str) -> tuple[float, ...] | None:
+    """The distinct Young's moduli of a benchmark dataset's scene, from its FEM's Lamé parameters (rows mu,
+    lambda per quadrature point): E = mu (3 lambda + 2 mu) / (lambda + mu), to 3 significant digits. None if the
+    dataset or the parameters can't be read (e.g. the dataset has moved)."""
+    try:
+        with h5py.File(dataset, "r") as f:
+            lame = np.asarray(f[f"{scene}/fem/pbat.sim.dynamics.FemElastoDynamics/lamegU"], dtype=np.float64)
+    except (OSError, KeyError):
+        return None
+    mu, lam = lame[0], lame[1]
+    E = mu * (3 * lam + 2 * mu) / (lam + mu)
+    return tuple(sorted({float(f"{v:.3g}") for v in E}))
 
 
 def case_label(group: h5py.Group, case: str) -> str:
-    label = material_label(str(group.attrs.get("label", group.attrs.get("scene", case))))
+    scene = str(group.attrs.get("scene", case))
+    dataset = group.file.attrs.get("dataset")
+    moduli = scene_moduli(str(dataset), scene) if dataset is not None else None
+    label = material_label(str(group.attrs.get("label", scene)), moduli)
     if case != group.attrs.get("scene", case):  # one case per energy level of the scene
         label += f"\nE = {float(group.attrs['energy']):g} J"
     return label
