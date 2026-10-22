@@ -129,6 +129,17 @@ SPHERE_BAND = Rule(
     {"Contact.CDType.VertexSdf.band": 1e-2},
 )
 TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
+KYOGRE_CONTACT = Rule(
+    "Contact for the kyogre spaghetti scene (maintainer, 2026-10-21): VertexSdf max_dist 20 cm and band 5 mm, and a "
+    "1 cm AL margin dmin. The scene file's floor and ceiling planes sit 2 cm from the pillars' ends, beyond the "
+    "detection distance dmin + band = 1.5 cm, so they report no contacts.",
+    {"Contact.CDType.VertexSdf.max_dist": 0.2, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
+)
+KYOGRE_BUDGET = Rule(
+    "The maintainer's budget for the kyogre spaghetti scene (2026-10-21, tested with AAAVBD): no substeps, 5 x 80 = "
+    "400 sweeps per step for every VBD-family solver.",
+    {"Integration.substeps": 1, **_per_solver("n_max_iters", 5), **_per_solver("n_subproblem_max_iters", 80)},
+)
 ARMADILLO_GAMMAS = Rule(
     "AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a "
     "documented per-scene exception): pulled hard, then suddenly released, its energy changes abruptly, where AAAVBD "
@@ -237,6 +248,15 @@ SCENES = {
         "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
         [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET],
+    ),
+    "kyogre_spaghetti": Scene(
+        "defaults",
+        "data/scenarios/kyogre-spaghetti_3_planes.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane "
+        "2 cm beyond the four twisted pillars (the pillars span 0.2 x 0.2 x 3.6 m; two Kyogres between them)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+        ["It explodes at time step 378: the pillars tangle so much that some surface triangles invert or degenerate, "
+         "and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = "
+         "10 ms); going further would need a finer mesh (maintainer, 2026-10-21)."],
     ),
     "armadillo_pull": Scene(
         "defaults",
