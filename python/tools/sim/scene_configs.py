@@ -268,6 +268,13 @@ SCENES = {
         "2026-10-21: the lying Kyogres barely deformed)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "kyogre_spaghetti_nose_down": Scene(
+        "defaults",
+        "data/scenarios/kyogre-spaghetti_nose_down.h5: kyogre-spaghetti_vertical.h5 with the Kyogre nose down, its "
+        "nose 2 cm above the floor plane (beyond the 1.5 cm detection distance), so the tangling pillars push it into "
+        "the ground (maintainer, 2026-10-21; the scene has no gravity)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "dragon_spaghetti_vertical": Scene(
         "defaults",
         "data/scenarios/dragon-spaghetti_vertical.h5: kyogre-spaghetti_vertical.h5 with the Stanford dragon (data/"
