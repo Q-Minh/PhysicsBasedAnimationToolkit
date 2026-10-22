@@ -706,7 +706,8 @@ class Params(SerializableMixin):
     # TODO: No penalty is right for every scene yet (2026-10-20, circle trampolines with sphere, released at 2 s):
     # - The paper configs' CONSTANT gamman 2e4 (sigma 2 at dt 0.01) lets the sphere penetrate 1-5 cm on impact.
     # - TIMESTEP 1 (this default) fixes stiff-soft (deepest +0.4 mm, rests at +1.0 mm) but goes non-finite on
-    #   soft-stiff at step 258, just after the impact. Untried: more substeps, gammaupS.
+    #   soft-stiff at step 258, just after the impact. Untried: more substeps, gammaupS. That was at the 2 mm band,
+    #   before the sphere trampolines' 1 cm band and Newton's per-step slack refresh (2026-10-21), so it may be stale.
     # - CONSTANT 1e6 isn't a safe body-body fallback: BeamFallingOnBeam loses the beam with VBD and AAAVBD.
     # Choosing the paper's penalty is the maintainer's decision.
     penalty_adaptivity = DocField(
