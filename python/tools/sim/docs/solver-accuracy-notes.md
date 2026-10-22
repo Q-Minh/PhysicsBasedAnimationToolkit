@@ -114,3 +114,35 @@ slower capsules in side-by-side runs.
 **For the paper.** No solver reaches the residual tolerance at these states, so a "converged" reference here means
 agreement between two independent high-budget solvers (VBD and AAAVBD agree within 0.05-0.2% of a step), not a
 residual test. Residuals at the same level (Newton ~5-9, VBD family ~6-9) come with systematically different motion.
+
+## 4. The residual floor is at a few contacts that end the step without a multiplier
+
+**Setup.** As in 3: one VBD 10 x 200 solve (frictionless) from the 1 s and 3 s states. Then a per-node breakdown of
+the outer test's Lagrangian gradient, in residual acceleration |g_i| / (m_i h²). The default tolerance is
+4.9 m/s² (2026-10-22, scratch diagnostic).
+
+- **Not float32.** Repeated evaluations differ by 3e-5 m/s². eps × the sum of the absolute values of all terms
+  per node bounds rounding at 0.005 m/s², a ratio of 0.001, against the floor's 6-8.
+- **Only at contacts.** Capsule contact nodes hold 96.5% (1 s) and 99.3% (3 s) of Σ |g_i|² / m_i. The rest is at
+  tube and bowl contact nodes, and 0.0% at nodes without contacts. Those are converged: capsules p50 0.03 m/s²,
+  tubes p50 0.16 m/s², bowl 0.002 m/s².
+- **A heavy tail.** At capsule contact nodes the residual's p50 is 0.4-0.6 m/s², but its p99 is 1300-2000 and its
+  max 3500-3900 m/s². Elastic (186 m/s² RMS) and contact (178) forces nearly cancel, leaving 40 (1 s) and 30 (3 s).
+- **Pressed contacts without a multiplier.** Of 3330 (1 s) and 3771 (3 s) vertex-face contacts, 75 and 71 (~2%)
+  end the step pressed into the AL margin (c_n < 0, 0.2-2 mm into the 1 cm margin) with lambda_n = 0. Their nodes
+  hold 97.6% and 93.9% of the residual. The worst nodes are all such vertices. Most of them had the same
+  (vertex, face) key at the step's start, so they aren't new contacts.
+
+The dual update gives every pressed contact lambda_n > 0 (`contact.dynamics._apply_dual_update`). A pressed contact
+with lambda_n = 0 after the step's last outer iteration therefore (re)entered the constraint set at the final
+detection, after the last dual update: in the sweeps the AL penalty held it, but the test's Lagrangian force
+-lambda grad c is 0. A contact that is dropped and found again within a step restarts at lambda = 0. That suggests
+fast-sliding capsule vertices flicker between vertex-face, vertex-edge and neighbouring-face pairs across the 10
+detections (not verified per detection). So the floor is mostly an artefact of the measure: the test evaluates
+the multipliers of a constraint set the step's solve never used.
+
+**For the paper.** Every solver's "unconverged" ratio of 5-9 on this scene comes from ~2% of contacts, not from
+unresolved elasticity. A residual-based comparison would rank solvers by how their contact sets flicker at the last
+detection. Possible fixes, all of which change the shared stopping test (not done): test before the final
+re-detection; carry lambda across a vertex's pair changes; or give contacts new at the final detection
+lambda = sigma max(-c_n, 0).
