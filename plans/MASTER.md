@@ -956,12 +956,18 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
 - P2. **Phase group names and colours** (profiling/paper_figures.py PHASE_GROUPS): vertex sweeps blue, contact
   detection orange, contact update green, residuals amber, mixing pink, Newton CG dark green, Newton assembly/line
   search violet, other grey. Changes?
-- P3. **Which armadillo for ArmadilloSpaghetti.Fall** after the VertexSdf fix: the thickened mesh (205k tets, now
-  the scene file) or the original (162k, ArmadilloSpaghetti.Fall.ThinFeatures.h5)? Thickening came from a
-  misdiagnosis.
-- P4. **Iteration tables' budget:** 2 x T_N (the earlier choice) while the bars score 1 x T_N; keep? And drop the
-  h = 1e-4 table (1-3 sweeps everywhere) from the paper?
-- P5. **Delete the old spaghetti scene variants** (keep ArmadilloSpaghetti.Fall): the maintainer said "not right now".
+- ~~P3. Which armadillo~~ **Answered:** the original (data/scenarios/ArmadilloSpaghetti.Fall.h5 again; the thickened
+  one is ArmadilloSpaghetti.Fall.Thickened.h5, unused, kept until the maintainer says it can go).
+- P4. ~~Iteration tables' budget~~ **Answered:** keep 2 x T_N. Still open: drop the h = 1e-4 table (1-3 sweeps
+  everywhere) from the paper?
+- ~~P5. Old spaghetti variants~~ **Answered, done:** deleted (scene files, configs, SCENES), keeping
+  ArmadilloSpaghetti.Fall and KyogreSpaghetti (Melissa's, with the floor and ceiling planes).
+- P6. **ArmadilloSpaghetti.Fall's twist:** the unbounded +-180 deg/s twist crushes the armadillo (inverted elements,
+  folded surface, blow-up at ~step 175). Bound its duration (e.g. 1-1.5 turns), slow it, and/or stiffen the
+  armadillo? (coordinator recommends bounding it)
+- P7. **Profiling solver comparison:** the coordinator's design (per-sweep cost by phase group per VBD-family
+  solver; per-step final residual/penetration ratios and early exits at the scene's budget; Newton in the text)
+  — approve? And the basket's panel (b): all of VBD, Chebyshev, Anderson (~1 h), VBD only, or the capsules only?
 
 ### Pending maintainer decisions (2026-10-20, maintainer away; the coordinator keeps this list current)
 
