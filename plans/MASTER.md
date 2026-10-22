@@ -960,7 +960,7 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   search violet, other grey. Changes?
 - ~~P3. Which armadillo~~ **Answered:** the original (data/scenarios/ArmadilloSpaghetti.Fall.h5 again; the thickened
   one is ArmadilloSpaghetti.Fall.Thickened.h5, unused, kept until the maintainer says it can go).
-- ~~P4. Iteration tables~~ **Answered:** keep 2 x T_N, and keep the h = 1e-4 table for now.
+- ~~P4. Iteration tables~~ **Answered (2026-10-22, later):** dropped from the paper as redundant: the profiling figures show AAAVBD's per-iteration overhead and the convergence curves show the small-time-step behavior. The tool (benchmark_iterations.py) and data/benchmarks/results/tables/ stay for reference.
 - ~~P5. Old spaghetti variants~~ **Answered, done:** deleted, keeping ArmadilloSpaghetti.Fall and KyogreSpaghetti.
 - ~~P6. ArmadilloSpaghetti.Fall's twist~~ **Answered:** armadillo Young's modulus 8e5 -> 1e6 (done in the scene file);
   the twist stays. To test headless when the GPU is free.
@@ -1172,3 +1172,4 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 2 · **GPU run END** (1177 s wall; Newton mean 1.94 s/step, CG ≤ 440 of 2000, no line-search failures, 7% early exits). The GPU is free.
 - 2026-10-22 · task 2 · **GPU run START** (~3 min, approved, timings irrelevant): Polyscope snapshot renders of the CapsulesIntoBowl AAAVBD trajectory (opens a window briefly). Will log END.
 - 2026-10-22 · task 2 · **GPU run END** (snapshot renders, a few short Polyscope windows). The GPU is free.
+- 2026-10-22 · task 3 · **GPU run START** (~5 min, short headless processes, timings irrelevant): Newton friction check, 15° incline cube at CapsulesIntoBowl's contact settings, Newton vs AAAVBD (rest, fast slider, drop; mu_f 0.2 and 0). Will log END.
