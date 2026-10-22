@@ -145,6 +145,16 @@ def solver_color(solver: str, solvers: list[str]) -> str:
     return OTHER_COLORS[others.index(solver) % len(OTHER_COLORS)]
 
 
+def benchmark_header(benchmark: str) -> str:
+    """A benchmark's column header for the paper (grid column headers, table captions), with the time step as math: ``Elastodynamics, $h = 10^{-2}$ s``."""
+    if benchmark.startswith("dynamic_h"):
+        h = float(benchmark[len("dynamic_h"):])
+        exponent = np.log10(h)
+        value = f"10^{{{int(round(exponent))}}}" if abs(exponent - round(exponent)) < 1e-9 else f"{h:g}"
+        return f"Elastodynamics, $h = {value}$ s"
+    return benchmark_title(benchmark)
+
+
 def modulus_math(value: float) -> str:
     """A Young's modulus as math: ``10^{6}``, or ``2.5 \\times 10^{6}``."""
     exponent = int(np.floor(np.log10(value)))

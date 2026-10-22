@@ -44,7 +44,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from . import benchmark_results as results  # noqa: E402
-from .benchmark_plot import SOLVER_NAMES, benchmark_title, case_label, solver_color, use_paper_fonts  # noqa: E402
+from .benchmark_plot import (  # noqa: E402
+    SOLVER_NAMES, benchmark_header, benchmark_title, case_label, solver_color, use_paper_fonts,
+)
 
 
 def sample_index(g: h5py.Group, sample: int) -> int:
@@ -152,16 +154,6 @@ def legend_handles(drawn: list[str], solvers: list[str], all_samples: bool, shor
                                                 label="min–max" if short else "min–max (line: median)"))
     handles.append(matplotlib.patches.Patch(color="#DDDDDD", label="below reference accuracy"))
     return handles
-
-
-def benchmark_header(benchmark: str) -> str:
-    """A benchmark's column header in the grid, with the time step as math: ``Elastodynamics, $h = 10^{-2}$ s``."""
-    if benchmark.startswith("dynamic_h"):
-        h = float(benchmark[len("dynamic_h"):])
-        exponent = np.log10(h)
-        value = f"10^{{{int(round(exponent))}}}" if abs(exponent - round(exponent)) < 1e-9 else f"{h:g}"
-        return f"Elastodynamics, $h = {value}$ s"
-    return benchmark_title(benchmark)
 
 
 def plot_grid(f: h5py.File, sample: int | None, solvers: list[str], xscale: str, width: float) -> tuple:
