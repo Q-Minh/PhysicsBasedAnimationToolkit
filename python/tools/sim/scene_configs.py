@@ -303,6 +303,14 @@ SCENES = {
         "(maintainer, 2026-10-21: the original pillars' slivers degenerate when they tangle)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "armadillo_spaghetti_cylinders": Scene(
+        "defaults",
+        "data/scenarios/armadillo-spaghetti_cylinders.h5: armadillo-spaghetti.h5 with round pillars, cylinders of 0.2 m "
+        "diameter inscribed in the original square ones, tetrahedralized by fTetWild (ideal edge 1.8 cm, mean 1.7 cm; "
+        "233k tets each, quality at least 0.126) with the twist constraints on their end caps; the armadillos are 4.2 "
+        "cm from them; 1.26M tets in all (maintainer, 2026-10-21: spaghetti are round)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "armadillo_pull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
