@@ -107,6 +107,9 @@ def _energy_inertial(
         return
     if fem.is_static != 0:
         # Static objective Psi(x) - fext^T x
+        # TODO: -fext^T x is large next to the energy changes near convergence (~1e3 J, measured on
+        # static solves), so its float32 roundoff adds noise to the Armijo test; -fext^T (x - X) (same
+        # gradient, constant shift) would reduce it. Only worth it if static Newton line searches stall.
         f_obj_partial[i] = -wp.dot(fem.fext[i], fem.x[i])  # type: ignore
     else:
         diff = fem.x[i] - fem.xtilde[i]
