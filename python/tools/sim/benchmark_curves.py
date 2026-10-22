@@ -29,8 +29,8 @@ Usage:
 Writes ``<prefix>.pdf`` and ``.png``: one panel per problem (default: the first case of each benchmark). With
 ``--grid``, every problem in one figure for the paper (a full page): a row per case, a column per benchmark
 (static, then the time steps from the largest), column headers and row labels in the figure, one legend, the
-levels labeled on the right column, ``--width`` inches wide (default 7, TOG's text width) with the fonts at
-their nominal size.
+levels as dotted lines without labels (the error axis's ticks give them; maintainer), ``--width`` inches wide
+(default 7, TOG's text width) with the fonts at their nominal size.
 """
 
 import argparse
@@ -167,8 +167,8 @@ def benchmark_header(benchmark: str) -> str:
 def plot_grid(f: h5py.File, sample: int | None, solvers: list[str], xscale: str, width: float) -> tuple:
     """Every problem of the file: one row per case (material), one column per benchmark, ``width`` inches wide
     with the fonts at their nominal size (the paper's full-page figure). Columns are headed by their benchmark and
-    rows labeled by their case; the time axis is titled on the bottom row, the error axis on the left column, the
-    levels on the right column. Returns the figure and the solvers drawn."""
+    rows labeled by their case; the time axis is titled on the bottom row and the error axis on the left column.
+    The levels are dotted lines without labels. Returns the figure and the solvers drawn."""
     # Static first, then the time steps from the largest down, as in the bar figures
     benchmarks = sorted((str(b) for b in f.attrs["benchmarks"]),
                         key=lambda b: (b.startswith("dynamic_h"), -float(b[len("dynamic_h"):]) if b.startswith("dynamic_h") else 0.0))
@@ -186,7 +186,7 @@ def plot_grid(f: h5py.File, sample: int | None, solvers: list[str], xscale: str,
                 ax.set_visible(False)
                 continue
             drawn += [s for s in plot_problem(ax, f, benchmark, case, sample, solvers, xscale, title=False,
-                                              level_labels=j == cols - 1) if s not in drawn]
+                                              level_labels=False) if s not in drawn]
             ax.tick_params(labelsize=7)
             if i < rows - 1:
                 ax.set_xlabel("")
