@@ -205,7 +205,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
         strip_of_images = outer[0].subgridspec(1, len(images), wspace=0.03)
         for i, image in enumerate(images):
             ax = fig.add_subplot(strip_of_images[i])
-            ax.imshow(image)
+            ax.imshow(image, interpolation="none")  # embedded in the PDF at its own resolution, not resampled
             ax.set_axis_off()
             ax.text(0.04, 0.96, str(i + 1), transform=ax.transAxes, ha="left", va="top", fontsize=8,
                     fontweight="bold", color=INK)

@@ -18,7 +18,7 @@ Usage (from the repo root):
 
     python -m python.tools.sim.profiling.snapshots out.h5 --times 0.9 1.4 2.9 --view view.json -o out/snap \
         [--pick] [--look-at X Y Z TX TY TZ] [--size 1200 1200] [--colors "#b9c3c9" "#e69f00" "#56b4e9"] \
-        [--translucent 0 2 --opacity 0.35]
+        [--translucent 0 2 --opacity 0.35] [--ssaa 4] [--transparency-passes 8]
 
 The capsule bowl's paper snapshots: ``--look-at 10.6 -10.6 7 0 0 0 --colors "#b9c3c9" "#e69f00" "#56b4e9"
 --translucent 0 2`` (tubes and bowl translucent, so the capsules show inside them).
@@ -107,6 +107,10 @@ def main():
                         help="Body types (indices in node order) drawn translucent, e.g. containers that hide "
                         "what is inside them.")
     parser.add_argument("--opacity", type=float, default=0.35, help="Opacity of the --translucent types.")
+    parser.add_argument("--ssaa", type=int, default=4, help="Polyscope's supersampling factor.")
+    parser.add_argument("--transparency-passes", type=int, default=8, dest="transparency_passes",
+                        help="Depth-peeling passes of the translucent rendering (more: fewer artifacts where "
+                        "translucent surfaces overlap).")
     args = parser.parse_args()
 
     import polyscope as ps
@@ -125,10 +129,11 @@ def main():
         ps.set_up_dir("z_up")
         ps.set_front_dir("neg_y_front")
         ps.set_ground_plane_mode("none")
-        ps.set_SSAA_factor(4)
+        ps.set_SSAA_factor(args.ssaa)
         ps.set_background_color((1.0, 1.0, 1.0))
         if args.translucent:
             ps.set_transparency_mode("pretty")
+            ps.set_transparency_render_passes(args.transparency_passes)
         ps.set_window_size(*args.size)
         ps.init()
         ps.set_window_size(*args.size)
@@ -136,7 +141,8 @@ def main():
         x0 = positions(0)
         for k in range(int(types.max()) + 1):
             mesh = ps.register_surface_mesh(f"type {k}", x0, faces[face_type == k],
-                                            color=_rgb(args.colors[k % len(args.colors)]), edge_width=0.0)
+                                            color=_rgb(args.colors[k % len(args.colors)]), edge_width=0.0,
+                                            smooth_shade=True)
             mesh.set_back_face_policy("identical")
             if k in args.translucent:
                 mesh.set_transparency(args.opacity)
@@ -144,6 +150,7 @@ def main():
         if args.view and os.path.isfile(args.view):
             with open(args.view, encoding="utf-8") as v:
                 ps.set_view_from_json(v.read())
+            ps.set_window_size(*args.size)  # the view JSON stores a window size; --size decides the resolution
         else:
             if args.look_at:
                 ps.look_at(args.look_at[:3], args.look_at[3:])
