@@ -1104,3 +1104,4 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-21 · task 2 · **GPU run END** (profiling report check, 2 short headless runs, 22:35). The GPU is free.
 - 2026-10-21 · task 1 · **GPU run START** (~2 min from 22:56, short headless processes, timings irrelevant): checkpoint/resume tests (2-cube unit test, BeamFallingOnBeam straight vs. resumed). Will log END.
 - 2026-10-21 · task 1 · **GPU run END** (checkpoint/resume tests, ~17 min, longer than estimated: unit-test reruns after a nondeterministic test scene). The GPU is free.
+- 2026-10-21 · task 1 · **GPU run START** (~2 min from 23:28, two short headless processes, timings irrelevant): Newton straight-vs-straight reproducibility on BeamFallingOnBeam (0.5 s each). Will log END.
