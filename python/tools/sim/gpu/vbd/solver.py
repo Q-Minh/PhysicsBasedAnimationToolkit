@@ -497,6 +497,9 @@ def solve_subproblem(
         subproblem_iteration(fem, contact, params, kp)
 
 
+# TODO: GPU VBD sags about 6x more than CPU VBD on the same beam with held ends and no motion (mean z -0.54 vs
+# -0.08 at 0.5 s, 2026-10-18), so it's a solver difference, not the kinematic constraints. Not investigated; the
+# cpu-gpu-parity agent is the place to start.
 class VbdSolver:
 
     def __init__(self):

@@ -347,6 +347,10 @@ class Params(SerializableMixin):
 class Sd(ContactDetection):
     """Vertex-(Mesh)SDF based contact detection."""
 
+    # TODO: CubeFallingOnCube's cubes pass through each other, before and after the detection band (2026-10-20).
+    # Detection is vertex-only (no edge-edge pairs), which misses edges crossing with no vertex inside; edge-edge
+    # pairs are the likely fix.
+
     _wp_meshes: list[wp.Mesh]
     _mesh_ids: wp.array[wp.uint64]
     _mesh_kind: wp.array[wp.int32]  # (# meshes,) MESH_CLOSED, MESH_OPEN or MESH_PLANE
