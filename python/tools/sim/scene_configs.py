@@ -331,7 +331,9 @@ SCENES = {
     ),
     "armadillo_spaghetti_fall": Scene(
         "defaults",
-        "data/scenarios/armadillo-spaghetti_fall.h5: armadillo-spaghetti_close.h5 with gravity (-9.81 m/s^2 in z) on "
+        "data/scenarios/armadillo-spaghetti_fall.h5: armadillo-spaghetti_close.h5 with the armadillo's waist (the "
+        "slice at 50-55% of its height, where only the torso is) on the twist axis, turned so the pillars clear it by "
+        "2.7 cm (the bounding-box center left the curved, leaning body 24 cm off the axis), gravity (-9.81 m/s^2 in z) on "
         "every body and the armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm "
         "under its surface) held by a Fixed transform for the first second, then released, so it falls into the "
         "already tangling pillars (maintainer, 2026-10-21). The held nodes stay off the surface: holding surface nodes "
