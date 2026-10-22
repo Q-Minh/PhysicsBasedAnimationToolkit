@@ -176,13 +176,13 @@ CAPSULE_BUDGET = Rule(
 
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
-    "basket_of_fruit": Scene(
-        "basket_of_fruit.Params_3_10_15",
+    "BasketOfFruit": Scene(
+        "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
         [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT],
     ),
-    "celebration": Scene(
-        "celebration.Params_1_5_30",
+    "Celebration": Scene(
+        "Celebration",
         "final_scenes/celebration.h5 (Young's modulus 1e6 to 1e8)",
         [
             _stiff_budget("1 x 5 x 30 = 150 sweeps"),
@@ -200,8 +200,8 @@ SCENES = {
     # 3.5 s and falls (z -26 m at 5 s), at dmin 1e-3 and -1e-4 and with the TIMESTEP penalty (2026-10-20). Next:
     # play the output to see whether it tunnels or slides off, compare with the 10-substep paper config, and
     # bisect from ff63102b/78232143, which introduced this config and changed it to 5 x 80.
-    "mat_on_stilts": Scene(
-        "mat_on_stilts.Params.5Substeps",
+    "MatOnStilts": Scene(
+        "MatOnStilts.5Substeps",
         "final_scenes/mat_on_stilts_3.h5 (Young's modulus 1e6 to 1e8)",
         [
             _stiff_budget(
@@ -211,22 +211,22 @@ SCENES = {
             *SOLVERS,
             *HET_CONTACT,
         ],
-        ["The paper's 10-substep file (mat_on_stilts.Params.10Substeps) differs from the 5-substep one only in "
+        ["The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in "
          "substeps, which this config overrides."],
     ),
-    "trampoline_soft-stiff": Scene(
-        "trampoline_soft-stiff.Params.5Substeps",
+    "Trampoline.SoftStiff": Scene(
+        "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE],
     ),
-    "trampoline_stiff-soft": Scene(
-        "trampoline_stiff-soft.Params.5Substeps",
+    "Trampoline.StiffSoft": Scene(
+        "Trampoline.StiffSoft.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
          *TRAMPOLINE],
     ),
-    "trampoline_soft-soft": Scene(
-        "trampoline_soft-stiff.Params.5Substeps",
+    "Trampoline.SoftSoft": Scene(
+        "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-soft[__with_sphere].h5 (homogeneous, Young's "
         "modulus 1e6)",
         [
@@ -239,45 +239,45 @@ SCENES = {
         ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's."],
     ),
     # The other paper configs: the durable rules only, budgets unchanged
-    "trampoline_stiff_sphere": Scene(
-        "trampoline_stiff_sphere.Params.5Substeps",
+    "Trampoline.StiffSphere": Scene(
+        "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
         [*SOLVERS, *HET_CONTACT, *TRAMPOLINE],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
-    "capsules_into_bowl": Scene(
-        "capsules_into_bowl",
+    "CapsulesIntoBowl": Scene(
+        "CapsulesIntoBowl",
         "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
         [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET],
     ),
-    "kyogre_spaghetti": Scene(
+    "KyogreSpaghetti": Scene(
         "defaults",
-        "data/scenarios/kyogre-spaghetti_3_planes.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane "
+        "data/scenarios/KyogreSpaghetti.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane "
         "2 cm beyond the four twisted pillars (the pillars span 0.2 x 0.2 x 3.6 m; two Kyogres between them)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
         ["It explodes at time step 378: the pillars tangle so much that some surface triangles invert or degenerate, "
          "and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = "
          "10 ms); going further would need a finer mesh (maintainer, 2026-10-21)."],
     ),
-    "kyogre_spaghetti_vertical": Scene(
+    "KyogreSpaghetti.Vertical": Scene(
         "defaults",
-        "data/scenarios/kyogre-spaghetti_vertical.h5: kyogre-spaghetti_3_planes.h5 with only the soft Kyogre (Young's "
+        "data/scenarios/KyogreSpaghetti.Vertical.h5: KyogreSpaghetti.h5 with only the soft Kyogre (Young's "
         "modulus 1e6), stood nose up (2.26 m tall) between the pillars, clear of them by at least 1 cm (maintainer, "
         "2026-10-21: the lying Kyogres barely deformed)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "kyogre_spaghetti_nose_down": Scene(
+    "KyogreSpaghetti.NoseDown": Scene(
         "defaults",
-        "data/scenarios/kyogre-spaghetti_nose_down.h5: kyogre-spaghetti_vertical.h5 with the Kyogre nose down, its "
+        "data/scenarios/KyogreSpaghetti.NoseDown.h5: KyogreSpaghetti.Vertical.h5 with the Kyogre nose down, its "
         "nose 2 cm above the floor plane (beyond the 1.5 cm detection distance), so the tangling pillars push it into "
         "the ground (maintainer, 2026-10-21; the scene has no gravity)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "dragon_spaghetti_horizontal": Scene(
+    "DragonSpaghetti.Horizontal": Scene(
         "defaults",
-        "data/scenarios/dragon-spaghetti_horizontal.h5: kyogre-spaghetti_vertical.h5 with the Stanford dragon (data/"
+        "data/scenarios/DragonSpaghetti.Horizontal.h5: KyogreSpaghetti.Vertical.h5 with the Stanford dragon (data/"
         "stanford-dragon.ply tetrahedralized with fTetWild through pytetwild, edge length 0.025 of the bounding-box "
         "diagonal, envelope 5e-4: 204k tets, quality at least 0.057; data/stanford-dragon_ftetwild.msh) in place of "
         "the Kyogre, soft (Young's modulus 1e6), 2.26 m long, lying horizontally at mid-height near the twist axis "
@@ -286,52 +286,55 @@ SCENES = {
         "one hand; aim for a highly tangled dragon)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "armadillo_spaghetti": Scene(
+    "ArmadilloSpaghetti": Scene(
         "defaults",
-        "data/scenarios/armadillo-spaghetti.h5: the twisted pillars of kyogre-spaghetti_vertical.h5 with two armadillos "
+        "data/scenarios/ArmadilloSpaghetti.h5: the twisted pillars of KyogreSpaghetti.Vertical.h5 with two armadillos "
         "(data/armadillo.mesh, 162k tets each, 1.2 m tall, a third of the pillars' height) centered on the twist axis, "
         "turned so the pillars stand in their gaps (at least 1 cm clear): a stiffer one low (Young's modulus 1e7, z "
         "-1.5 to -0.3 m) and a softer one high (1e6, z 0.3 to 1.5 m), as in the JGS2-GQ paper's scene (maintainer, "
         "2026-10-21: the Kyogre and the dragon weren't held by the pillars)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "armadillo_spaghetti_fine": Scene(
+    "ArmadilloSpaghetti.Fine": Scene(
         "defaults",
-        "data/scenarios/armadillo-spaghetti_fine.h5: armadillo-spaghetti.h5 with the pillars re-tetrahedralized by "
+        "data/scenarios/ArmadilloSpaghetti.Fine.h5: ArmadilloSpaghetti.h5 with the pillars re-tetrahedralized by "
         "fTetWild (ideal edge 1.8 cm, mean 1.9 cm; 194k tets each, quality at least 0.127, against the original 54.5k "
         "tets with slivers down to 0.012) and the twist constraints rebuilt on their end caps; 1.1M tets in all "
         "(maintainer, 2026-10-21: the original pillars' slivers degenerate when they tangle)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "armadillo_spaghetti_cylinders": Scene(
+    "ArmadilloSpaghetti.Cylinders": Scene(
         "defaults",
-        "data/scenarios/armadillo-spaghetti_cylinders.h5: armadillo-spaghetti.h5 with round pillars, cylinders of 0.2 m "
+        "data/scenarios/ArmadilloSpaghetti.Cylinders.h5: ArmadilloSpaghetti.h5 with round pillars, cylinders of 0.2 m "
         "diameter inscribed in the original square ones, tetrahedralized by fTetWild (ideal edge 1.8 cm, mean 1.7 cm; "
         "233k tets each, quality at least 0.126) with the twist constraints on their end caps; the armadillos are 4.2 "
         "cm from them; 1.26M tets in all (maintainer, 2026-10-21: spaghetti are round)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "armadillo_spaghetti_single": Scene(
+    "ArmadilloSpaghetti.Single": Scene(
         "defaults",
-        "data/scenarios/armadillo-spaghetti_single.h5: armadillo-spaghetti_cylinders.h5 with stiffer pillars (Young's "
+        "data/scenarios/ArmadilloSpaghetti.Single.h5: ArmadilloSpaghetti.Cylinders.h5 with stiffer pillars (Young's "
         "modulus 1e7) and one softer armadillo (8e5) at mid-height (z -0.6 to 0.6 m), the same pose otherwise, 4.2 cm "
         "from the pillars; 1.1M tets (maintainer, 2026-10-21)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
         ["The thick pillars trap part of the armadillo, but the simulation freezes near time step 200 (maintainer, "
-         "2026-10-21, cause not investigated); armadillo_spaghetti_close tries thinner pillars closer to it."],
+         "2026-10-21, cause not investigated); ArmadilloSpaghetti.Close tries thinner pillars closer to it."],
     ),
-    "armadillo_spaghetti_close": Scene(
+    "ArmadilloSpaghetti.Close": Scene(
         "defaults",
-        "data/scenarios/armadillo-spaghetti_close.h5: armadillo-spaghetti_single.h5 with thinner pillars (cylinders of "
+        "data/scenarios/ArmadilloSpaghetti.Close.h5: ArmadilloSpaghetti.Single.h5 with thinner pillars (cylinders of "
         "0.1 m diameter, fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's "
         "modulus 1e7) moved in to 0.52 m from the twist axis (0.735 m apart, was 1.0 m), and the armadillo (8e5) "
         "turned a further 29 deg so they clear it by 2.1 cm; 0.99M tets (maintainer, 2026-10-21: as in the JGS2-GQ "
         "video, pillars close to the armadillo and thin enough to wrap it rather than push it out)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "armadillo_spaghetti_fall": Scene(
+    "ArmadilloSpaghetti.Fall": Scene(
         "defaults",
-        "data/scenarios/armadillo-spaghetti_fall.h5: armadillo-spaghetti_close.h5 with the armadillo's waist (the "
+        "data/scenarios/ArmadilloSpaghetti.Fall.h5: ArmadilloSpaghetti.Fall.ThinFeatures.h5 with the armadillo "
+        "thickened (a 1 cm offset, fTetWild), since the original's thin features (ears 6 mm, hands 8-15 mm, toes "
+        "13 mm) are below the contact distance: pillar vertices ended up 2-2.5 cm inside a foot (freeze diagnosis, "
+        "2026-10-22). ArmadilloSpaghetti.Fall.ThinFeatures.h5: ArmadilloSpaghetti.Close.h5 with the armadillo's waist (the "
         "slice at 50-55% of its height, where only the torso is) on the twist axis, turned so the pillars clear it by "
         "2.7 cm (the bounding-box center left the curved, leaning body 24 cm off the axis), gravity (-9.81 m/s^2 in z) on "
         "every body and the armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm "
@@ -341,36 +344,36 @@ SCENES = {
         "nodes in contact, with no feasible position, and the simulation froze",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
-    "armadillo_pull": Scene(
+    "ArmadilloPull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
         [INVERSE, ARMADILLO_GAMMAS, ARMADILLO_BUDGET],
     ),
-    "empty_basket": Scene(
-        "empty_basket.Params_3_10_5",
+    "EmptyBasket": Scene(
+        "EmptyBasket",
         "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
         "recorded)",
         [*SOLVERS, *CONTACT],
         ["Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for "
          "Young's modulus ~1e7."],
     ),
-    "basket_5_5_40": Scene(
-        "basket_5_5_40",
+    "BasketOfOranges": Scene(
+        "BasketOfOranges",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
         [*SOLVERS, *HET_CONTACT],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget
-    "birthday_banner": Scene(
-        "birthday_banner.Params_1_2000",
+    "BirthdayBanner": Scene(
+        "BirthdayBanner",
         "the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh)",
         [*SOLVERS],
         ["Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters are kept.",
          "Budgets kept: 1 x 2000 sweeps per step."],
     ),
     **{
-        f"beam{y}": Scene(
-            f"beam{y}.GroundTruth",
+        f"BendingBeam.{name}": Scene(
+            f"BendingBeam.{name}.GroundTruth",
             f"final_scenes/bending_beams/small_beam{'_het' if y == '_het' else 'Y' + y}.h5 ("
             + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
             + ")",
@@ -378,10 +381,11 @@ SCENES = {
             ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
              "Budgets kept: the paper's ground-truth budgets, chosen to match Newton's behaviour "
              "(accelerated-vbd-extras/parameters/gpu/beam.GroundTruth.Notes.txt)."]
-            + (["The paper's beam1e7.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant "
+            + (["The paper's BendingBeam.10MPa.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant "
                 "of this scene."] if y == "1e7" else []),
         )
-        for y in ("1e5", "1e6", "1e7", "1e8", "_het")
+        for y, name in (("1e5", "100kPa"), ("1e6", "1MPa"), ("1e7", "10MPa"), ("1e8", "100MPa"),
+                        ("_het", "Heterogeneous"))
     },
 }
 

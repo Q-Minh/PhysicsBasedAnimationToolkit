@@ -32,7 +32,7 @@ which benchmark.py and benchmark_browser.py read:
 
 A problem set is addressed as dataset.h5:<scene>/<set>/E{E}, e.g. dataset.h5:Y1e6/static/E10000.
 
-Each input is a CPU editor scene file (e.g. data/scenarios/trampoline_circle_Y1e6.h5), whose FemElastoDynamics is
+Each input is a CPU editor scene file (e.g. data/scenarios/TrampolineCircle.1MPa.h5), whose FemElastoDynamics is
 built the way the editor builds it, or a stored FemElastoDynamics given as filepath:h5path (e.g. an editor Dump's
 fem group). It provides the mesh, masses, Stable Neo-Hookean material, Dirichlet constraints and gravity. The
 problems live in the time span [0, max(--dt)] with the Dirichlet nodes fixed at rest and no collision geometry, so
@@ -73,8 +73,8 @@ Sampling and the reference solves run on the CPU. The samples' quality is in eac
 
 Usage:
     # Two scenes at the default level (10000 J), 10 problems each, h = 1e-4 and 1e-2 s
-    python make_benchmark.py -i Y1e6=path/to/PhysicsBasedAnimationToolkit/data/scenarios/trampoline_circle_Y1e6.h5 \\
-        -i Y1e7=path/to/PhysicsBasedAnimationToolkit/data/scenarios/trampoline_circle_Y1e7.h5 \\
+    python make_benchmark.py -i Y1e6=path/to/PhysicsBasedAnimationToolkit/data/scenarios/TrampolineCircle.1MPa.h5 \\
+        -i Y1e7=path/to/PhysicsBasedAnimationToolkit/data/scenarios/TrampolineCircle.10MPa.h5 \\
         -o path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5
 
     # Chosen energies, problem counts and time steps; e.g. 100 problems at 10000 J from a pool of 2000
@@ -121,7 +121,7 @@ def parse_scene(spec: str) -> typing.Tuple[str, str]:
 
     Args:
         spec (str): name=input, or just input, whose file name without extension is then the name (e.g.
-            trampoline_circle_Y1e6 for data/scenarios/trampoline_circle_Y1e6.h5).
+            TrampolineCircle.1MPa for data/scenarios/TrampolineCircle.1MPa.h5).
 
     Returns:
         typing.Tuple[str, str]: The scene's name (its group in the dataset) and the input.
@@ -474,7 +474,7 @@ if __name__ == "__main__":
         "--input",
         help="A scene of the benchmark as name=input, repeated for several scenes; the name is the scene's group in "
         "the dataset (no / or :; default: the input's file name without extension). The input is a CPU editor scene "
-        "file (e.g. data/scenarios/trampoline_circle_Y1e6.h5) or filepath:h5path of an hdf5 file storing "
+        "file (e.g. data/scenarios/TrampolineCircle.1MPa.h5) or filepath:h5path of an hdf5 file storing "
         "a FemElastoDynamics (e.g. scene.Dump.h5:fem), which provides the mesh, material, masses, Dirichlet "
         "constraints and gravity. A scene's constraints acting during [0, max(--dt)] must keep their nodes fixed "
         "throughout, and it can't have static colliders; "

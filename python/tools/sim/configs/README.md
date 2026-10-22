@@ -27,7 +27,7 @@ Floats are written exactly. A value that came from a C++ `float` therefore reads
 
 ```bash
 python -m python.tools.sim.simulate --fem-elasto-dynamics dump.h5:fem -o out.h5 \
-    --sim-params python/tools/sim/configs/paper/beam1e6.GroundTruth.toml my_tweaks.toml \
+    --sim-params python/tools/sim/configs/paper/BendingBeam.1MPa.GroundTruth.toml my_tweaks.toml \
     --set Solver.VBD.gtol=1e-4 --set Solver.Convergence.check_interval=10
 ```
 
@@ -61,7 +61,7 @@ python -m python.tools.sim.config params Solver.Newton
 - **Partial override:** write only the keys you change and `extends` the config you start from:
 
   ```toml
-  extends = ["paper/beam1e6.GroundTruth.toml"]
+  extends = ["paper/BendingBeam.1MPa.GroundTruth.toml"]
 
   [Solver.AndersonSolver]
   vbd_iters_per_anderson_iter = 4
@@ -78,6 +78,7 @@ The checks compare against the code's keys, not against `defaults.toml`. Even so
 
 - **Never edit them, and never modify the HDF5 originals.** To change something, `extends` the paper config in a new file.
 - **Provenance:** each file's header records its source file, the extras commit, the source's SHA-256 prefix and the date.
+- **Names** follow the repository's naming convention (root `CLAUDE.md`, "Names of config/params and scene files"), not the extras repo's: `paper_configs.NAMES` maps each source to its name, e.g. `beam1e7.GroundTruth.h5` to `BendingBeam.10MPa.GroundTruth.toml` and `celebration.Params_1_5_30.h5` to `Celebration.toml` (budget digits dropped).
 
 The conversion followed these rules:
 

@@ -1,7 +1,7 @@
-# Scene config: kyogre_spaghetti_nose_down, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/kyogre-spaghetti_nose_down.h5: kyogre-spaghetti_vertical.h5 with the Kyogre nose down, its nose 2 cm above the floor plane (beyond the 1.5 cm detection distance), so the tangling pillars push it into the ground (maintainer, 2026-10-21; the scene has no gravity).
+# Scene config: ArmadilloSpaghetti.Single, every serialized parameter written out (diff it against configs/paper).
+# For: data/scenarios/ArmadilloSpaghetti.Single.h5: ArmadilloSpaghetti.Cylinders.h5 with stiffer pillars (Young's modulus 1e7) and one softer armadillo (8e5) at mid-height (z -0.6 to 0.6 m), the same pose otherwise, 4.2 cm from the pillars; 1.1M tets (maintainer, 2026-10-21).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
@@ -28,6 +28,10 @@
 #     Solver.Newton.newton.n_max_iters = 2 (source 10)
 #     Solver.VBD.n_max_iters = 5 (source 1)
 #     Solver.VBD.n_subproblem_max_iters = 80 (source 100)
+#
+# Notes:
+# - The thick pillars trap part of the armadillo, but the simulation freezes near time step 200 (maintainer,
+#   2026-10-21, cause not investigated); ArmadilloSpaghetti.Close tries thinner pillars closer to it.
 
 [Contact.CDType.OGC]
 arq = 1.0

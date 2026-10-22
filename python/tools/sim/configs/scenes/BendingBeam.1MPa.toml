@@ -1,7 +1,7 @@
-# Scene config: beam_het, every serialized parameter written out (diff it against configs/paper).
-# For: final_scenes/bending_beams/small_beam_het.h5 (Young's modulus 1e6 to 1e8).
-# Source: configs/paper/beam_het.GroundTruth.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Scene config: BendingBeam.1MPa, every serialized parameter written out (diff it against configs/paper).
+# For: final_scenes/bending_beams/small_beamY1e6.h5 (homogeneous, Young's modulus 1e6).
+# Source: configs/paper/BendingBeam.1MPa.GroundTruth.toml. Keys not listed below have the source's values.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -9,10 +9,6 @@
 #     Solver.AndersonSolver.vlinsolve = 0 (source 3)
 #     Solver.Chebyshev.vlinsolve = 0 (source 3)
 #     Solver.VBD.vlinsolve = 0 (source 3)
-# - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
-#   0.5/0.3): the Lipschitz normalization is meant to make them problem-invariant.
-#     Solver.AAAVBD.gammaup = 0.5 (source 0.8999999761581421)
-#     Solver.AAAVBD.gammaupS = 0.3 (source 0.8500000238418579)
 #
 # Notes:
 # - Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.
@@ -63,14 +59,14 @@ e_penalty_stiffness = 0
 gammadown = 0.9900000095367432
 gammadownS = 0.949999988079071
 gammaup = 0.5
-gammaupS = 0.3
+gammaupS = 0.30000001192092896
 gtol = 0.0010000000474974513
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 lipschitz_normalization = 1
 n_max_iters = 1
-n_subproblem_max_iters = 2000
+n_subproblem_max_iters = 60
 rhohat = 0.004999999888241291
 rhohatS = 0.004999999888241291
 surface_stencil_surface_neighbours_only = 1
@@ -91,7 +87,7 @@ kp = 0
 linear_solver = 0
 m = 5
 n_max_iters = 1
-n_subproblem_max_iters = 24000
+n_subproblem_max_iters = 2800
 vbd_iters_per_anderson_iter = 1
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -105,7 +101,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 24000
+n_subproblem_max_iters = 2800
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -120,7 +116,7 @@ rstol = 0.01
 [Solver.Newton]
 init_strategy = 0
 linear_solver = 1
-n_max_iters = 70
+n_max_iters = 20
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]
@@ -129,7 +125,7 @@ n_max_iters = 2000
 rtol = 1e-06
 
 [Solver.Newton.newton]
-gtol2 = 9.999999974752427e-07
+gtol2 = 9.99999905104687e-09
 n_max_iters = 1
 
 [Solver.Newton.newton.line_search]
@@ -146,7 +142,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 24000
+n_subproblem_max_iters = 2800
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25

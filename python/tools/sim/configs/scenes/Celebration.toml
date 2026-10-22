@@ -1,20 +1,15 @@
-# Scene config: basket_of_fruit, every serialized parameter written out (diff it against configs/paper).
-# For: final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8).
-# Source: configs/paper/basket_of_fruit.Params_3_10_15.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Scene config: Celebration, every serialized parameter written out (diff it against configs/paper).
+# For: final_scenes/celebration.h5 (Young's modulus 1e6 to 1e8).
+# Source: configs/paper/Celebration.toml. Keys not listed below have the source's values.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
-#   VBD-family solver (the paper file gives 3 substeps of 10 x 15 = 450 sweeps).
-#     Integration.substeps = 1 (source 3)
-#     Solver.AAAVBD.n_max_iters = 5 (source 10)
-#     Solver.AAAVBD.n_subproblem_max_iters = 80 (source 15)
-#     Solver.AndersonSolver.n_max_iters = 5 (source 10)
-#     Solver.AndersonSolver.n_subproblem_max_iters = 80 (source 15)
-#     Solver.Chebyshev.n_max_iters = 5 (source 10)
-#     Solver.Chebyshev.n_subproblem_max_iters = 80 (source 15)
-#     Solver.VBD.n_max_iters = 5 (source 10)
-#     Solver.VBD.n_subproblem_max_iters = 80 (source 15)
+#   VBD-family solver (the paper file gives 1 x 5 x 30 = 150 sweeps).
+#     Solver.AAAVBD.n_subproblem_max_iters = 80 (source 30)
+#     Solver.AndersonSolver.n_subproblem_max_iters = 80 (source 30)
+#     Solver.Chebyshev.n_subproblem_max_iters = 80 (source 30)
+#     Solver.VBD.n_subproblem_max_iters = 80 (source 30)
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
 #     Solver.AAAVBD.vlinsolve = 0 (source 3)
 #     Solver.AndersonSolver.vlinsolve = 0 (source 3)
@@ -34,9 +29,15 @@
 #   with strict CG (rtol 1e-9, at most 4000 iterations) (maintainer, 2026-10-20): with 5 x 2 and the default CG,
 #   the sphere's contact with the stiff trampoline center was unstable; 30 x 1 with strict CG is stable, if
 #   slow.
-#     Solver.Newton.n_max_iters = 30 (source 100)
+#     Solver.Newton.n_max_iters = 30 (source 70)
 #     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
+# - max_dist 30 cm, scaled to the geometry (maintainer): the base plate is 10 cm thick and the letters' edges ~4
+#   cm.
+#     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
+#
+# Notes:
+# - The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's.
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -48,7 +49,7 @@ truncation_strategy = 0
 [Contact.CDType.VertexSdf]
 band = 0.002
 deactivate = 0
-max_dist = 0.019999999552965164
+max_dist = 0.3
 use_step_filter = 0
 
 [Contact.ContactDynamics]
@@ -148,7 +149,7 @@ n_max_iters = 4000
 rtol = 1e-09
 
 [Solver.Newton.newton]
-gtol2 = 4.999999873689376e-06
+gtol2 = 9.999999974752427e-07
 n_max_iters = 1
 
 [Solver.Newton.newton.line_search]

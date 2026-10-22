@@ -14,11 +14,11 @@ The benchmark trampolines (data/scenarios), from the paper's circle trampoline m
 (path/to/accelerated-vbd-extras/final_scenes/trampolines; the circle files share one mesh and one region layout:
 region 1 is the outer ring, r > 1, and region 2 the center, r < 1):
     S=path/to/accelerated-vbd-extras/final_scenes/trampolines/trampoline_circle_stiff-soft.h5
-    for Y in 1e5 1e6 1e7 1e8; do
-        python -m python.tools.vbd.rim_patch_scene $S data/scenarios/trampoline_circle_Y$Y.h5 --youngs $Y
+    for YE in 1e5=100kPa 1e6=1MPa 1e7=10MPa 1e8=100MPa; do
+        python -m python.tools.vbd.rim_patch_scene $S data/scenarios/TrampolineCircle.${YE#*=}.h5 --youngs ${YE%=*}
     done
     # Heterogeneous: stiff 1e8 center, soft 1e6 outer ring
-    python -m python.tools.vbd.rim_patch_scene $S data/scenarios/trampoline_circle_het.h5 --youngs 1e6         --regions-from $S --region-youngs 2=1e8
+    python -m python.tools.vbd.rim_patch_scene $S data/scenarios/TrampolineCircle.Heterogeneous.h5 --youngs 1e6         --regions-from $S --region-youngs 2=1e8
 """
 
 import argparse

@@ -1,9 +1,20 @@
-# Scene config: empty_basket, every serialized parameter written out (diff it against configs/paper).
-# For: probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not recorded).
-# Source: configs/paper/empty_basket.Params_3_10_5.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Scene config: BasketOfFruit, every serialized parameter written out (diff it against configs/paper).
+# For: final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8).
+# Source: configs/paper/BasketOfFruit.toml. Keys not listed below have the source's values.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
+# - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
+#   VBD-family solver (the paper file gives 3 substeps of 10 x 15 = 450 sweeps).
+#     Integration.substeps = 1 (source 3)
+#     Solver.AAAVBD.n_max_iters = 5 (source 10)
+#     Solver.AAAVBD.n_subproblem_max_iters = 80 (source 15)
+#     Solver.AndersonSolver.n_max_iters = 5 (source 10)
+#     Solver.AndersonSolver.n_subproblem_max_iters = 80 (source 15)
+#     Solver.Chebyshev.n_max_iters = 5 (source 10)
+#     Solver.Chebyshev.n_subproblem_max_iters = 80 (source 15)
+#     Solver.VBD.n_max_iters = 5 (source 10)
+#     Solver.VBD.n_subproblem_max_iters = 80 (source 15)
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
 #     Solver.AAAVBD.vlinsolve = 0 (source 3)
 #     Solver.AndersonSolver.vlinsolve = 0 (source 3)
@@ -19,13 +30,13 @@
 # - VertexSdf band 2 mm, close to dmin (maintainer): a 2 cm band made the sphere stick to the trampolines under
 #   Newton, and the 1 mm default once let bodies pass through 10 cm plates. max_dist is kept.
 #     Contact.CDType.VertexSdf.band = 0.002 (source 0.001)
-# - Newton with contact: 5 outer iterations (contact detection passes) x 2 Newton steps (maintainer).
-#     Solver.Newton.n_max_iters = 5 (source 100)
-#     Solver.Newton.newton.n_max_iters = 2 (source 1)
-#
-# Notes:
-# - Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for Young's
-#   modulus ~1e7.
+# - Newton on heterogeneous soft-stiff contact: 30 outer iterations (contact detection passes) x 1 Newton step,
+#   with strict CG (rtol 1e-9, at most 4000 iterations) (maintainer, 2026-10-20): with 5 x 2 and the default CG,
+#   the sphere's contact with the stiff trampoline center was unstable; 30 x 1 with strict CG is stable, if
+#   slow.
+#     Solver.Newton.n_max_iters = 30 (source 100)
+#     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
+#     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -61,7 +72,7 @@ n_vv_contact_capacity = 0.05000000074505806
 bdf_scheme = 1
 dt = 0.009999999776482582
 init_strategy = 2
-substeps = 3
+substeps = 1
 
 [Solver.AAAVBD]
 betaG0 = 0.5
@@ -77,8 +88,8 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 lipschitz_normalization = 1
-n_max_iters = 10
-n_subproblem_max_iters = 5
+n_max_iters = 5
+n_subproblem_max_iters = 80
 rhohat = 0.004999999888241291
 rhohatS = 0.004999999888241291
 surface_stencil_surface_neighbours_only = 1
@@ -98,8 +109,8 @@ k = 0
 kp = 0
 linear_solver = 0
 m = 5
-n_max_iters = 10
-n_subproblem_max_iters = 5
+n_max_iters = 5
+n_subproblem_max_iters = 80
 vbd_iters_per_anderson_iter = 1
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -112,8 +123,8 @@ gtol = 0.0010000000474974513
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
-n_max_iters = 10
-n_subproblem_max_iters = 5
+n_max_iters = 5
+n_subproblem_max_iters = 80
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -128,17 +139,17 @@ rstol = 0.01
 [Solver.Newton]
 init_strategy = 0
 linear_solver = 1
-n_max_iters = 5
+n_max_iters = 30
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]
 atol = 1e-10
-n_max_iters = 2000
-rtol = 1e-06
+n_max_iters = 4000
+rtol = 1e-09
 
 [Solver.Newton.newton]
 gtol2 = 4.999999873689376e-06
-n_max_iters = 2
+n_max_iters = 1
 
 [Solver.Newton.newton.line_search]
 alpha = 1.0
@@ -153,8 +164,8 @@ gtol = 0.0010000000474974513
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
-n_max_iters = 10
-n_subproblem_max_iters = 5
+n_max_iters = 5
+n_subproblem_max_iters = 80
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25

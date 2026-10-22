@@ -1,7 +1,7 @@
-# Scene config: beam1e5, every serialized parameter written out (diff it against configs/paper).
-# For: final_scenes/bending_beams/small_beamY1e5.h5 (homogeneous, Young's modulus 1e5).
-# Source: configs/paper/beam1e5.GroundTruth.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Scene config: BendingBeam.100MPa, every serialized parameter written out (diff it against configs/paper).
+# For: final_scenes/bending_beams/small_beamY1e8.h5 (homogeneous, Young's modulus 1e8).
+# Source: configs/paper/BendingBeam.100MPa.GroundTruth.toml. Keys not listed below have the source's values.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -66,7 +66,7 @@ k = 0
 kp = 0
 lipschitz_normalization = 1
 n_max_iters = 1
-n_subproblem_max_iters = 45
+n_subproblem_max_iters = 2000
 rhohat = 0.004999999888241291
 rhohatS = 0.004999999888241291
 surface_stencil_surface_neighbours_only = 1
@@ -87,7 +87,7 @@ kp = 0
 linear_solver = 0
 m = 5
 n_max_iters = 1
-n_subproblem_max_iters = 150
+n_subproblem_max_iters = 24000
 vbd_iters_per_anderson_iter = 1
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -101,7 +101,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 150
+n_subproblem_max_iters = 24000
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -116,7 +116,7 @@ rstol = 0.01
 [Solver.Newton]
 init_strategy = 0
 linear_solver = 1
-n_max_iters = 10
+n_max_iters = 70
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]
@@ -125,7 +125,7 @@ n_max_iters = 2000
 rtol = 1e-06
 
 [Solver.Newton.newton]
-gtol2 = 9.99999905104687e-09
+gtol2 = 9.999999974752427e-07
 n_max_iters = 1
 
 [Solver.Newton.newton.line_search]
@@ -142,7 +142,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 150
+n_subproblem_max_iters = 24000
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25

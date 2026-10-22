@@ -1,7 +1,7 @@
-# Scene config: kyogre_spaghetti_vertical, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/kyogre-spaghetti_vertical.h5: kyogre-spaghetti_3_planes.h5 with only the soft Kyogre (Young's modulus 1e6), stood nose up (2.26 m tall) between the pillars, clear of them by at least 1 cm (maintainer, 2026-10-21: the lying Kyogres barely deformed).
+# Scene config: ArmadilloSpaghetti.Close, every serialized parameter written out (diff it against configs/paper).
+# For: data/scenarios/ArmadilloSpaghetti.Close.h5: ArmadilloSpaghetti.Single.h5 with thinner pillars (cylinders of 0.1 m diameter, fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) moved in to 0.52 m from the twist axis (0.735 m apart, was 1.0 m), and the armadillo (8e5) turned a further 29 deg so they clear it by 2.1 cm; 0.99M tets (maintainer, 2026-10-21: as in the JGS2-GQ video, pillars close to the armadillo and thin enough to wrap it rather than push it out).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS

@@ -1,7 +1,7 @@
-# Scene config: armadillo_spaghetti_single, every serialized parameter written out (diff it against configs/paper).
-# For: data/scenarios/armadillo-spaghetti_single.h5: armadillo-spaghetti_cylinders.h5 with stiffer pillars (Young's modulus 1e7) and one softer armadillo (8e5) at mid-height (z -0.6 to 0.6 m), the same pose otherwise, 4.2 cm from the pillars; 1.1M tets (maintainer, 2026-10-21).
+# Scene config: ArmadilloSpaghetti, every serialized parameter written out (diff it against configs/paper).
+# For: data/scenarios/ArmadilloSpaghetti.h5: the twisted pillars of KyogreSpaghetti.Vertical.h5 with two armadillos (data/armadillo.mesh, 162k tets each, 1.2 m tall, a third of the pillars' height) centered on the twist axis, turned so the pillars stand in their gaps (at least 1 cm clear): a stiffer one low (Young's modulus 1e7, z -1.5 to -0.3 m) and a softer one high (1e6, z 0.3 to 1.5 m), as in the JGS2-GQ paper's scene (maintainer, 2026-10-21: the Kyogre and the dragon weren't held by the pillars).
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
-# Generated 2026-10-21 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
@@ -28,10 +28,6 @@
 #     Solver.Newton.newton.n_max_iters = 2 (source 10)
 #     Solver.VBD.n_max_iters = 5 (source 1)
 #     Solver.VBD.n_subproblem_max_iters = 80 (source 100)
-#
-# Notes:
-# - The thick pillars trap part of the armadillo, but the simulation freezes near time step 200 (maintainer,
-#   2026-10-21, cause not investigated); armadillo_spaghetti_close tries thinner pillars closer to it.
 
 [Contact.CDType.OGC]
 arq = 1.0
