@@ -319,10 +319,10 @@ def plot_benchmark(
     ax.set_ylim(*y_range)
     ax.set_zlim(0.0, z_max)
     ax.set_xlabel("Scene", labelpad=10)
-    ax.set_ylabel("Error reduction (%)", labelpad=8)
+    ax.set_ylabel(r"$1 - e/e_0$ (%)", labelpad=8)
     fixed = [("budget" in g.attrs) for _, g in cases]
-    norm = "budget" if all(fixed) else "$T_N$" if not any(fixed) else "$T_N$ or budget"
-    ax.set_zlabel(f"Mean incremental time / {norm}", labelpad=16)  # clear of the depth axis label
+    norm = "T" if all(fixed) else "T_N" if not any(fixed) else "T_N (or T)"
+    ax.set_zlabel(rf"$\Delta t / {norm}$", labelpad=12)  # clear of the depth axis label
     ax.tick_params(axis="z", labelsize=8)
     ax.set_box_aspect(aspect, zoom=0.95)
     ax.grid(False)  # the grid lines carry nothing the axes and bars don't (maintainer)
@@ -332,14 +332,17 @@ def plot_benchmark(
     handles.append(Patch(facecolor=(0.5, 0.5, 0.5, 0.18), edgecolor="grey", label="min-max"))
     fig.legend(handles=handles, loc="upper right", fontsize=8, frameon=False)
     fig.suptitle(benchmark_title(benchmark), x=0.02, ha="left", fontsize=11)
-    within = "" if all(fixed) else f" within {factor:g} × $T_N$ (Newton's time to its highest level)"
+    within = "" if all(fixed) else f" within {factor:g} × $T_N$"
+    norm_text = ("$T$: the fixed budget" if all(fixed) else "$T_N$: Newton's time to its highest level"
+                 + ("" if not any(fixed) else " ($T$: a fixed budget)"))
     unresolved = any(resolvable_samples(g, solvers) is not None for _, g in cases)
     reference = (
         "; no bar: not reached, or beyond the reference's accuracy for most samples (elsewhere, the samples it "
         "can't resolve are left out)" if unresolved else "; no bar: not reached"
     )
     count_text = "; n/N: samples that reached it (always shown at the highest level drawn)" if counts else ""
-    fig.text(0.02, 0.02, f"Bars: mean over the samples that reached the level{within}{count_text}{reference}",
+    fig.text(0.02, 0.02, rf"Bars: mean time $\Delta t$ from the previous level's crossing, over the samples that reached "
+             f"the level{within}; {norm_text}; $e/e_0$: relative error{count_text}{reference}",
              fontsize=7, color="#555555")
     return fig
 
