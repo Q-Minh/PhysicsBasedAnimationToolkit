@@ -434,6 +434,8 @@ class SimulationState:
         self, contact_pair_storage: gpu.contact.mesh.pairs.ContactPairs
     ) -> gpu.contact.mesh.cd.ContactDetection:
         """Instantiate and register the currently selected contact detection algorithm."""
+        # TODO: OGC crashes once bodies touch (seen 2026-10-18 on CubeFallingOnCube, before and after the kinematic
+        # constraints), so contact scenes use VertexSdf. Low priority.
         if self.cd_type == CDType.OGC:
             detector = gpu.contact.mesh.ogc.Ogc(self.cd_params[CDType.OGC])
         elif self.cd_type == CDType.VertexSdf:
@@ -605,6 +607,9 @@ def init_h5_serialization(
         "lame_lambda", data=fem_cpu.lamegU[1, :]
     )  # (Q,) 2nd Lame parameter
     grp.create_dataset("m", data=fem_cpu.m)  # (N,) lumped masses
+    # TODO: Kinematic constraints change the Dirichlet set during a run, but outputs store only this initial mask, so
+    # the editor's trajectory viewer can't show which nodes are held or released at a given frame. Write the mask per
+    # frame (or the constraint windows) if that's needed.
     grp.create_dataset("dmask", data=fem_cpu.dmask)  # (N,) Dirichlet mask
     h5f.create_group("sim")
     grp = h5f.create_group("params")

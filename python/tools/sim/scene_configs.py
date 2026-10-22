@@ -182,6 +182,10 @@ SCENES = {
         ],
         ["The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's."],
     ),
+    # TODO: With this config (AAAVBD), the mat penetrates about 2 cm after its 2 s release, loses contact by about
+    # 3.5 s and falls (z -26 m at 5 s), at dmin 1e-3 and -1e-4 and with the TIMESTEP penalty (2026-10-20). Next:
+    # play the output to see whether it tunnels or slides off, compare with the 10-substep paper config, and
+    # bisect from ff63102b/78232143, which introduced this config and changed it to 5 x 80.
     "mat_on_stilts": Scene(
         "mat_on_stilts.Params.5Substeps",
         "final_scenes/mat_on_stilts_3.h5 (Young's modulus 1e6 to 1e8)",

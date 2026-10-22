@@ -703,6 +703,12 @@ class Params(SerializableMixin):
     min_sigma_n = DocField(
         1.0, "Floor of the effective normal penalty with adaptive penalties (gamman_adaptive * sigma_n)"
     )
+    # TODO: No penalty is right for every scene yet (2026-10-20, circle trampolines with sphere, released at 2 s):
+    # - The paper configs' CONSTANT gamman 2e4 (sigma 2 at dt 0.01) lets the sphere penetrate 1-5 cm on impact.
+    # - TIMESTEP 1 (this default) fixes stiff-soft (deepest +0.4 mm, rests at +1.0 mm) but goes non-finite on
+    #   soft-stiff at step 258, just after the impact. Untried: more substeps, gammaupS.
+    # - CONSTANT 1e6 isn't a safe body-body fallback: BeamFallingOnBeam loses the beam with VBD and AAAVBD.
+    # Choosing the paper's penalty is the maintainer's decision.
     penalty_adaptivity = DocField(
         PenaltyAdaptivity.TIMESTEP,
         "CONSTANT: penalties gamman * dt^2 and gammaf * dt^2. TIMESTEP / SUBPROBLEM: sigma_n = sigma_f = the largest "

@@ -503,6 +503,9 @@ def main():
             raise RuntimeError(f"Failed to serialize frame {t} to archive: {e}") from e
 
     pbar = tqdm(total=int(args.duration / dt), desc="Simulating", unit="step")
+    # TODO: A resumed run re-anchors the kinematic constraints at the resumed frame's positions. That's exact unless
+    # non-commuting motions (e.g. a rotation and a translation) overlap on the same nodes; storing the anchors in
+    # the output would make resuming exact.
     if args.start_from > 0:
         t = args.start_from
         archive = pbat.io.Archive(out_file, flags=pbat.io.AccessMode.ReadWrite)
