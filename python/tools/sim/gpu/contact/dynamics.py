@@ -988,6 +988,47 @@ def _friction_newton_step_terms(
     hessian_scale[k] = capped_friction_scale(c_f[k], lambda_f[k], sigma_f, Cs)
 
 
+@wp.kernel
+def _slack_only_dual_update(
+    c_n: wp.array[wp.float32],
+    s: wp.array[wp.float32],
+    gamma: wp.array[wp.float32],
+    lambda_n: wp.array[wp.float32],
+    lambda_f: wp.array[wp.vec2f],
+    sigma_n: wp.float32,
+):
+    k = wp.tid()
+    _apply_dual_update(
+        c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
+        wp.float32(0.5), True, False, False,
+    )
+
+
+class TestSlackOnlyDualUpdate(unittest.TestCase):
+    """The slack refresh of GPU Newton's subproblem gradients and the VBD sweeps (Warp's CPU device):
+    s = max(0, c_n - lambda_n / sigma_n), with gamma and the multipliers unchanged."""
+
+    def test_slack_only(self):
+        sigma_n = 100.0
+        c_n = [0.02, 0.02, -0.01, 0.0]  # gap - dmin
+        lambda_n = [0.0, 1.0, 0.5, 3.0]
+        with wp.ScopedDevice("cpu"):
+            s = wp.array([7.0] * 4, dtype=wp.float32)  # stale values
+            gamma = wp.array([0.25] * 4, dtype=wp.float32)
+            lam = wp.array(lambda_n, dtype=wp.float32)
+            lam_f = wp.array([(0.1, 0.2)] * 4, dtype=wp.vec2f)
+            wp.launch(
+                _slack_only_dual_update,
+                dim=4,
+                inputs=[wp.array(c_n, dtype=wp.float32), s, gamma, lam, lam_f, sigma_n],
+            )
+            expected = [max(0.0, c - l / sigma_n) for c, l in zip(c_n, lambda_n)]
+            np.testing.assert_allclose(s.numpy(), expected, atol=1e-7)
+            self.assertEqual(gamma.numpy().tolist(), [0.25] * 4)
+            self.assertEqual(lam.numpy().tolist(), lambda_n)
+            np.testing.assert_allclose(lam_f.numpy(), [(0.1, 0.2)] * 4, rtol=1e-7)
+
+
 class TestNewtonFrictionConsistency(unittest.TestCase):
     """GPU Newton's gradient, line-search energy and Hessian use the same Coulomb limit per contact,
     set or unset (Warp's CPU device)."""
