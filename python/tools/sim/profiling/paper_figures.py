@@ -21,18 +21,15 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   the final gradient ratio and of the penetration (feasibility) ratio to their tolerances (box: quartiles,
   whiskers: P10-P90, dot: maximum; log axes, ratios below 1e-3 drawn at 1e-3, a dashed line at the
   tolerance), the fraction of early exits and, with ``--step-times``, the step time.
-- ``table``: a LaTeX ``table*`` (booktabs) with one row per solver and scene: production step time (mean,
-  median, P90), the kernel union's median and its ratio to production, the overlap of phases across
-  streams (kernels runs), early exits, median iterations, time per iteration and the worst residual ratios
-  (production runs when given, else kernels runs).
 - ``slices``: Markdown, per kernels result: the steps grouped by percentiles of their GPU time
   (``--slices``, default the fastest 10%, P10-P90 and the slowest 10%) with each group's median step time,
   median iterations and early exits, for the paper's text.
 - ``sweeps``: the ``solvers`` figure's first column for several scenes, one panel per scene.
 - ``budget``: the ``solvers`` figure's other columns for several scenes, one block of rows per scene.
-- ``scenes``: a LaTeX ``table*`` with one row per production result, grouped by scene: step time (mean,
-  median, P90), median iterations (VBD sweeps, or Newton steps with the median of a step's most CG
-  iterations of one linear solve), early exits, and the median and worst gradient and penetration ratios.
+- ``scenes``: the paper's LaTeX ``table*`` of production runs (graph replay for the VBD family, eager for
+  Newton): two lines per scene (its nodes, tetrahedra and time step h), a column per solver (VBD, AAAVBD,
+  Chebyshev, Anderson, Newton; -- without a run): the mean step time in ms with the P90 in parentheses, then
+  the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits.
 
 Usage (from the repo root):
 
@@ -41,8 +38,6 @@ Usage (from the repo root):
         [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
     python -m python.tools.sim.profiling.paper_figures solvers k_fixed_*.json --production p_*.json \
         -o data/figures/profiling/solvers [--step-times]
-    python -m python.tools.sim.profiling.paper_figures table k_*.json --production p_*.json \
-        -o data/tables/profiling.tex [--labels ...]
     python -m python.tools.sim.profiling.paper_figures slices k_*.json -o data/tables/slices.md [--slices 10,90]
     python -m python.tools.sim.profiling.paper_figures sweeps k_fixed_*.json -o data/figures/profiling/sweeps
     python -m python.tools.sim.profiling.paper_figures budget p_*.json -o data/figures/profiling/budget [--step-times]
@@ -386,80 +381,11 @@ def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0
     return fig
 
 
-def table_row(kernels: dict | None, production: dict | None) -> dict:
-    """One row of the ``table``: step time statistics (production), the kernel union's median and its ratio
-    to production's, the phases' overlap across streams (kernels), and the solve outcome statistics and time
-    per iteration (production if given, else kernels). Either run may be None."""
-    ktable = step_stats.per_step(kernels) if kernels is not None else None
-    ptable = step_stats.per_step(production) if production is not None else None
-    table = ptable if ptable is not None else ktable
-    s = step_stats.summarize_slice(table, np.ones(table["t"].size, dtype=bool))
-    union = step_stats.describe(ktable["time_ms"]) if ktable is not None else None
-    prod = step_stats.describe(ptable["time_ms"]) if ptable is not None else None
-    ratio = None
-    if union is not None and prod is not None:
-        ratio = union["median"] / max(prod["median"], 1e-9)
-    return {
-        "scene": scene_key(kernels or production),
-        "solver": solver_name(kernels or production),
-        "production": prod,
-        "union": union,
-        "union_ratio": ratio,
-        "overlap": step_stats.union_overlap(ktable) if ktable is not None else None,
-        "early_exit": s["early_exit"],
-        "iterations": s["iterations"],
-        "unit": table["unit"],
-        "ms_per_iteration": s["ms_per_iteration"],
-        "gradient_ratio_max": s["gradient_ratio_max"],
-        "feasibility_ratio_max": s["feasibility_ratio_max"],
-    }
-
-
 def _num(x, digits: int = 3) -> str:
     """``digits`` significant digits, without an exponent at or above 10^digits (1943, not 1.94e+03)."""
     if x is None or not np.isfinite(x):
         return "--"
     return f"{x:.0f}" if abs(x) >= 10**digits else f"{x:.{digits}g}"
-
-
-def latex_table(rows: list[dict], labels: dict[str, str]) -> str:
-    """The ``table`` (booktabs, multirow): rows grouped by scene, numbers to 3 significant digits."""
-    out = [r"\begin{table*}", r"\centering", r"\small",
-           r"\caption{\textbf{GPU time per time step.} Step time of the production runs (CUDA graph replay "
-           r"for the VBD family) and median of the profiled runs' kernel union over streams, which excludes "
-           r"graph launch overhead and the gaps between kernels; overlap: time the phases run concurrently on "
-           r"several streams; early exits: solves that passed their convergence tests within their budget; "
-           r"iterations: VBD sweeps or Newton steps per time step (median); worst residual ratios to their "
-           r"tolerances (gradient, feasibility).}",
-           r"\label{tab:profiling}",
-           r"\begin{tabular}{llrrrrrrrrrrr}", r"\toprule",
-           r"& & \multicolumn{3}{c}{Step time (ms)} & \multicolumn{2}{c}{Kernel union} & & & & & "
-           r"\multicolumn{2}{c}{Worst ratio} \\",
-           r"\cmidrule(lr){3-5} \cmidrule(lr){6-7} \cmidrule(lr){12-13}",
-           r"Scene & Solver & mean & median & P90 & median (ms) & / step & Overlap & Early exits & Iterations & "
-           r"ms / iter. & gradient & feasibility \\",
-           r"\midrule"]
-    counts: dict[str, int] = {}
-    for row in rows:
-        counts[row["scene"]] = counts.get(row["scene"], 0) + 1
-    previous = None
-    for row in rows:
-        if previous is not None and row["scene"] != previous:
-            out.append(r"\midrule")
-        label = labels.get(row["scene"], row["scene"].replace("_", r"\_"))
-        scene = rf"\multirow{{{counts[row['scene']]}}}{{*}}{{{label}}}" if row["scene"] != previous else ""
-        previous = row["scene"]
-        p = row["production"] or {}
-        pct = (lambda v: "--" if v is None else f"{100 * v:.0f}\\%")
-        cells = [scene, row["solver"], _num(p.get("mean")), _num(p.get("median")), _num(p.get("P90")),
-                 _num(row["union"]["median"] if row["union"] else None), _num(row["union_ratio"], 2),
-                 pct(row["overlap"]), pct(row["early_exit"]),
-                 "--" if row["iterations"] is None else f"{row['iterations']:.0f}",
-                 _num(row["ms_per_iteration"]), _num(row["gradient_ratio_max"]),
-                 _num(row["feasibility_ratio_max"])]
-        out.append(" & ".join(cells) + r" \\")
-    out += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
-    return "\n".join(out) + "\n"
 
 
 RATIO_FLOOR = 1e-3  # ratios below it (e.g. no penetration at all) are drawn at it, on log axes
@@ -547,69 +473,68 @@ def plot_budget(runs: list[dict], labels: dict[str, str], width: float = 7.0, st
     return fig
 
 
-def scenes_row(production: dict) -> dict:
-    """One row of the ``scenes`` table: a production run's step times, iterations, early exits and residual
-    ratios (median and worst), from its steps' solve statuses."""
+SCENE_SOLVERS = ("VBD", "AAAVBD", "Chebyshev", "AndersonSolver", "Newton")  # the table's columns
+
+
+def scene_cell(production: dict) -> dict:
+    """One solver's cell of the ``scenes`` table, from its production run: the step time's mean and P90 (ms),
+    the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits."""
     table = step_stats.per_step(production)
-    status = [s.get("status") or {} for s in production["steps"]]
-    cg = [max((r["max_cg_iters"] for r in st["newton"]), default=0) for st in status if "newton" in st]
-
-    def stat(key, name):
-        d = step_stats.describe(table[key])
-        return d[name] if d else None
-
+    time = step_stats.describe(table["time_ms"])
+    iterations = step_stats.describe(table["iterations"])
     summary = step_stats.summarize_slice(table, np.ones(table["t"].size, dtype=bool))
     return {
-        "scene": scene_key(production),
-        "solver": solver_name(production),
-        "steps": int(table["t"].size),
-        "time": step_stats.describe(table["time_ms"]),
-        "iterations": stat("iterations", "median"),
-        "unit": table["unit"],
-        "max_cg": float(np.median(cg)) if cg else None,
+        "mean": time["mean"] if time else None,
+        "P90": time["P90"] if time else None,
+        "iterations": iterations["median"] if iterations else None,
         "early_exit": summary["early_exit"],
-        "gradient_median": stat("gradient_ratio", "median"),
-        "gradient_max": stat("gradient_ratio", "max"),
-        "feasibility_median": stat("feasibility_ratio", "median"),
-        "feasibility_max": stat("feasibility_ratio", "max"),
     }
 
 
-def latex_scenes(rows: list[dict], labels: dict[str, str]) -> str:
-    """The ``scenes`` table (booktabs, multirow): rows grouped by scene, numbers to 3 significant digits."""
+def _compact(count: float) -> str:
+    """A count in at most 3 significant digits, with a k from 10^4 and an M from 10^6: 3269, 54.5k, 1.81M."""
+    if count >= 1e6:
+        return f"{count / 1e6:.3g}M"
+    if count >= 1e4:
+        return f"{count / 1e3:.3g}k"
+    return f"{count:.0f}"
+
+
+def latex_scenes(runs: list[dict], labels: dict[str, str]) -> str:
+    """The ``scenes`` table (booktabs): two lines per scene, a column per solver of :data:`SCENE_SOLVERS`.
+    The scene's nodes, tetrahedra and time step h come from its runs' metadata; per solver, the first line is
+    the mean step time (P90) in ms, the second the median iterations per step and the early exits."""
     out = [r"\begin{table*}", r"\centering", r"\small",
-           r"\caption{\textbf{Expected efficiency per time step.} Production runs (CUDA graph replay for the VBD "
-           r"family; Newton runs eagerly with host synchronization) over each scene's trajectory. Iterations: "
-           r"median VBD sweeps, or Newton steps per time step, with the median of the most conjugate gradient "
-           r"iterations of one linear solve in parentheses; early exits: time steps whose solve passed its "
-           r"convergence tests within the budget; residual ratios to their tolerances per time step (median and "
-           r"worst; at most 1 passes): the gradient and the penetration into the contact margin.}",
+           r"\caption{\textbf{GPU time per time step.} Mean time per time step of each solver on the scenes of the "
+           r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
+           r"with the 90th percentile in parentheses, and below, the median iterations per time step (VBD sweeps; "
+           r"Newton steps) and the fraction of time steps that pass their convergence test within the budget.}",
            r"\label{tab:scenes}",
-           r"\begin{tabular}{llrrrrrrrrr}", r"\toprule",
-           r"& & \multicolumn{3}{c}{Step time (ms)} & & & \multicolumn{2}{c}{Gradient ratio} & "
-           r"\multicolumn{2}{c}{Penetration ratio} \\",
-           r"\cmidrule(lr){3-5} \cmidrule(lr){8-9} \cmidrule(lr){10-11}",
-           r"Scene & Solver & mean & median & P90 & Iterations & Early exits & median & worst & median & worst \\",
+           r"\setlength{\tabcolsep}{4pt}",
+           r"\begin{tabular}{lrrr ccccc}", r"\toprule",
+           r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits} \\",
+           r"\cmidrule(lr){5-9}",
+           r"Scene & Nodes & Tets & $h$ (ms) & " + " & ".join(SOLVER_NAMES.get(v, v) for v in SCENE_SOLVERS) + r" \\",
            r"\midrule"]
-    counts: dict[str, int] = {}
-    for row in rows:
-        counts[row["scene"]] = counts.get(row["scene"], 0) + 1
-    previous = None
-    for row in rows:
-        if previous is not None and row["scene"] != previous:
-            out.append(r"\midrule")
-        label = labels.get(row["scene"], row["scene"].replace("_", r"\_"))
-        scene = rf"\multirow{{{counts[row['scene']]}}}{{*}}{{{label}}}" if row["scene"] != previous else ""
-        previous = row["scene"]
-        t = row["time"] or {}
-        iterations = "--" if row["iterations"] is None else f"{row['iterations']:.0f}"
-        if row["max_cg"] is not None:
-            iterations += f" ({row['max_cg']:.0f})"
-        early = "--" if row["early_exit"] is None else f"{100 * row['early_exit']:.0f}\\%"
-        cells = [scene, row["solver"], _num(t.get("mean")), _num(t.get("median")), _num(t.get("P90")), iterations,
-                 early, _num(row["gradient_median"]), _num(row["gradient_max"]), _num(row["feasibility_median"]),
-                 _num(row["feasibility_max"])]
-        out.append(" & ".join(cells) + r" \\")
+    for scene, rows in by_scene(runs).items():
+        by_solver = {r["metadata"].get("solver"): r for r in rows}
+        meta = rows[0]["metadata"]
+        h = 1e3 * float(meta.get("dt", float("nan"))) / max(int(meta.get("substeps", 1)), 1)
+        first = [labels.get(scene, scene.replace("_", r"\_")),
+                 _compact(meta["n_nodes"]) if "n_nodes" in meta else "--",
+                 _compact(meta["n_elements"]) if "n_elements" in meta else "--", _num(h)]
+        second = ["", "", "", ""]
+        for solver in SCENE_SOLVERS:
+            if solver not in by_solver:
+                first.append("--")
+                second.append("--")
+                continue
+            c = scene_cell(by_solver[solver])
+            first.append(f"{_num(c['mean'])} ({_num(c['P90'])})")
+            iterations = "--" if c["iterations"] is None else f"{c['iterations']:.0f}"
+            early = "--" if c["early_exit"] is None else f"{100 * c['early_exit']:.0f}\\%"
+            second.append(f"{iterations}, {early}")
+        out += [" & ".join(first) + r" \\", " & ".join(second) + r" \\"]
     out += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     return "\n".join(out) + "\n"
 
@@ -626,10 +551,10 @@ def _parse_labels(items: list[str]) -> dict[str, str]:
 
 def main():
     parser = argparse.ArgumentParser(description="Paper figures and tables of profiling results.")
-    parser.add_argument("kind", choices=["timeline", "solvers", "table", "slices", "sweeps", "budget", "scenes"],
+    parser.add_argument("kind", choices=["timeline", "solvers", "slices", "sweeps", "budget", "scenes"],
                         help="What to write (see the docstring).")
     parser.add_argument("kernels", nargs="+",
-                        help="Results (.json), one per row: kernels-backend runs (timeline, solvers, table, sweeps) "
+                        help="Results (.json), one per row: kernels-backend runs (timeline, solvers, slices, sweeps) "
                         "or production runs (budget, scenes).")
     parser.add_argument("--production", nargs="*", default=[],
                         help="Production results (.json), paired with the kernels results by scene and solver.")
@@ -657,15 +582,13 @@ def main():
     production = pair_production(kernels, production_runs)
     labels = _parse_labels(args.labels)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
-    if args.kind in ("table", "scenes", "slices"):
-        if args.kind == "table":
-            text = latex_table([table_row(k, p) for k, p in solver_rows(kernels, production_runs)], labels)
-        elif args.kind == "scenes":
-            text = latex_scenes([scenes_row(k) for k in kernels], labels)
+    if args.kind in ("scenes", "slices"):
+        if args.kind == "scenes":
+            text = "% Needs \\usepackage{booktabs}\n\n" + latex_scenes(kernels, labels)
         else:
             text = slices_text(kernels, labels, tuple(float(e) for e in args.slices.split(",")))
         with open(args.output, "w", encoding="utf-8") as f:
-            f.write(text if args.kind == "slices" else "% Needs \\usepackage{booktabs, multirow}\n\n" + text)
+            f.write(text)
         print(f"Wrote {args.output}")
         return
     use_paper_fonts(args.font_dir)
@@ -715,7 +638,9 @@ class TestPaperFigures(unittest.TestCase):
                                     "max_outer": 5, "max_sweeps": 100}]},
                 "peak_speed": 0.1 * t,
             })
-        return {"source": "kernels", "metadata": {"scene": scene, "solver": solver, "dt": 0.01}, "steps": steps}
+        metadata = {"scene": scene, "solver": solver, "dt": 0.01, "substeps": 1, "n_nodes": 54502,
+                    "n_elements": 231338}
+        return {"source": "kernels", "metadata": metadata, "steps": steps}
 
     @staticmethod
     def _production(kernels: dict):
@@ -746,17 +671,23 @@ class TestPaperFigures(unittest.TestCase):
         np.testing.assert_allclose(bin_steps(np.arange(5.0), 2), [0.5, 2.5, 4.0])
         np.testing.assert_allclose(step_seconds(k[0], np.array([10, 20])), [0.1, 0.2])
 
-    def test_table(self):
+    def test_scenes_table(self):
         k = self._kernels()
-        row = table_row(k, self._production(k))
-        self.assertAlmostEqual(row["union_ratio"], 1 / 1.08)
-        self.assertEqual(row["early_exit"], 0.25)
-        self.assertEqual((row["iterations"], row["unit"]), (100.0, "sweeps"))
-        self.assertEqual(row["overlap"], 0.0)
-        text = latex_table([row, table_row(self._kernels("VBD"), None)], {"basket_of_fruit": "Basket of fruit"})
-        self.assertIn(r"\multirow{2}{*}{Basket of fruit}", text)
-        self.assertIn("25\\%", text)
-        self.assertEqual(text.count(r"\\"), 2 + 2)  # two header rows and one per result
+        newton = self._production(k)
+        newton["metadata"]["solver"] = "Newton"
+        for i, step in enumerate(newton["steps"]):
+            step["status"] = {"newton": [{"substep": 0, "outer": 3, "converged": i % 2 == 0, "newton_steps": 6,
+                                          "gradient_ratio": 0.5, "feasibility_ratio": 0.0}]}
+        cell = scene_cell(self._production(k))
+        # Production times: the union x 1.08, 15 steps at 8.95 ms and 25 at 14.45 ms
+        self.assertAlmostEqual(cell["mean"], (15 * 8.95 + 25 * 14.45) / 40 * 1.08)
+        self.assertEqual((cell["iterations"], cell["early_exit"]), (100.0, 0.25))
+        capsules = self._production(self._kernels("VBD", scene="path/to/capsule_bowl.h5"))
+        text = latex_scenes([self._production(k), newton, capsules], {"basket_of_fruit": "Basket of fruit"})
+        self.assertIn(r"Basket of fruit & 54.5k & 231k & 10 & -- & 13.4 (15.6) & -- & -- & 13.4 (15.6) \\", text)
+        self.assertIn(r" &  &  &  & -- & 100, 25\% & -- & -- & 6, 50\% \\", text)
+        self.assertIn(r"capsule\_bowl & 54.5k & 231k & 10 & 13.4 (15.6) & -- & -- & -- & -- \\", text)
+        self.assertEqual((_compact(3269), _compact(1809486)), ("3269", "1.81M"))
 
     def test_sweeps_budget_scenes(self):
         import tempfile
@@ -766,26 +697,9 @@ class TestPaperFigures(unittest.TestCase):
         # 15 steps without contact, 25 with; 3200 sweeps (every 4th step exits early at 20)
         self.assertAlmostEqual(per_sweep["Vertex sweeps"], (15 * 8.0 + 25 * 12.0) / 3200)
         self.assertAlmostEqual(per_sweep["Contact detection"], (15 * 0.5 + 25 * 2.0) / 3200)
-        newton = self._production(k)
-        newton["metadata"]["solver"] = "Newton"
-        for i, s in enumerate(newton["steps"]):
-            s["status"] = {"newton": [{"substep": 0, "outer": 3, "converged": i % 2 == 0, "newton_steps": 6,
-                                       "max_cg_iters": 100 + i, "gradient_ratio": 0.5, "feasibility_ratio": 0.0}]}
-        row = scenes_row(newton)
-        self.assertEqual((row["solver"], row["iterations"], row["early_exit"]), ("Newton", 6.0, 0.5))
-        self.assertAlmostEqual(row["max_cg"], 100 + 19.5)
         vbd = self._production(self._kernels("VBD"))
         rows = solver_rows([k], [self._production(k), vbd])
         self.assertEqual([(a is None, solver_name(a or b)) for a, b in rows], [(True, "VBD"), (False, "AAAVBD")])
-        only_production = table_row(None, vbd)
-        self.assertIsNone(only_production["union"])
-        self.assertIsNone(only_production["overlap"])
-        self.assertAlmostEqual(only_production["production"]["max"], 14.45 * 1.08)
-        aaavbd = scenes_row(self._production(k))
-        self.assertEqual((aaavbd["early_exit"], aaavbd["max_cg"]), (0.25, None))
-        text = latex_scenes([row, aaavbd], {})
-        self.assertIn("6 (120)", text)
-        self.assertIn(r"\multirow{2}{*}{basket\_of\_fruit}", text)
         with tempfile.TemporaryDirectory() as d:
             runs = [k, self._kernels("VBD"), self._kernels(scene="path/to/capsule_bowl.h5")]
             for name, fig in (("sweeps", plot_sweeps(runs, {})), ("budget", plot_budget(runs, {}, step_times=True))):
