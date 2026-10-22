@@ -274,6 +274,7 @@ def _slices_section(solvers, tables, keep, colored, edges, key, unit) -> str:
             rows.append(
                 f"<tr><td>{_esc(sl['label'])}</td><td>{_esc(vrange)}</td><td>{summary['steps']}</td>"
                 f"<td>{_fmt(summary['time_ms'])}</td><td>{_fmt(summary['iterations'])}</td>"
+                f"<td>{_fmt(summary['ms_per_iteration'])}</td>"
                 f"<td>{_fmt(summary['outer'])}</td>"
                 f"<td>{'' if early is None else f'{100 * early:.0f}%'}"
                 f"<span class='pct'>{summary['solves']} solves</span></td>"
@@ -283,8 +284,9 @@ def _slices_section(solvers, tables, keep, colored, edges, key, unit) -> str:
         unit_iter = table["unit"] or "iterations"
         blocks.append(
             f"<h3>{_esc(s)}</h3><div class='donuts'>{''.join(donuts)}</div>"
-            "<table><thead><tr><th>Slice</th><th>Range</th><th>Steps</th><th>Median step (ms)</th>"
-            f"<th>Median {_esc(unit_iter)}</th><th>Median outer</th><th>Early exits</th>"
+            "<table class='wrap'><thead><tr><th>Slice</th><th>Range</th><th>Steps</th><th>Median step (ms)</th>"
+            f"<th>Median {_esc(unit_iter)}</th><th>Median ms per {_esc(unit_iter.rstrip('s'))}</th>"
+            "<th>Median outer</th><th>Early exits</th>"
             "<th>Median gradient ratio</th><th>Worst gradient ratio</th><th>Worst feasibility ratio</th>"
             f"<th>Median peak speed (m/s)</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
         )
@@ -517,7 +519,7 @@ h3 {{ font-size:15px; margin:20px 0 8px; color:var(--ink-2); }}
   overflow-x:auto; }}
 table {{ border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; font-size:14px; }}
 th, td {{ text-align:right; padding:6px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }}
-th:first-child, td:first-child {{ text-align:left; }} th {{ color:var(--ink-2); font-weight:600; }}
+th:first-child, td:first-child {{ text-align:left; }} table.wrap th {{ white-space:normal; }} th {{ color:var(--ink-2); font-weight:600; }}
 .pct {{ color:var(--muted); margin-left:6px; font-size:12px; }}
 .kname {{ text-align:left; white-space:normal; overflow-wrap:anywhere; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 12px; font-size:13px; color:var(--ink-2); }}

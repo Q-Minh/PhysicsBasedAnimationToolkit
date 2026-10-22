@@ -166,7 +166,8 @@ def percentile_slices(values: np.ndarray, edges: tuple[float, ...] = (10.0, 90.0
 
 def summarize_slice(table: dict, mask: np.ndarray) -> dict:
     """A slice of :func:`per_step` arrays: step count, mean phase times (ms/step), medians of the step
-    time, iterations, outer iterations and peak speed, the early-exit fraction of its solves, and the
+    time, iterations, time per iteration (``ms_per_iteration``, separating more iterations from more
+    expensive ones), outer iterations and peak speed, the early-exit fraction of its solves, and the
     worst and median per-step gradient ratios and the worst feasibility ratio."""
 
     def median(key):
@@ -177,11 +178,14 @@ def summarize_slice(table: dict, mask: np.ndarray) -> dict:
     grad = describe(table["gradient_ratio"][mask])
     feas = describe(table["feasibility_ratio"][mask])
     n = int(mask.sum())
+    with np.errstate(divide="ignore", invalid="ignore"):
+        per_iteration = describe(np.where(table["iterations"] > 0, table["time_ms"] / table["iterations"], np.nan)[mask])
     return {
         "steps": n,
         "phases": {p: float(v[mask].mean()) if n else 0.0 for p, v in table["phases"].items()},
         "time_ms": median("time_ms"),
         "iterations": median("iterations"),
+        "ms_per_iteration": per_iteration["median"] if per_iteration else None,
         "outer": median("outer"),
         "peak_speed": median("peak_speed"),
         "solves": int(solves),
@@ -260,6 +264,7 @@ class TestStepStats(unittest.TestCase):
         self.assertEqual(top["phases"]["aaavbd.sweep"], 11.0)
         fast = summarize_slice(table, slices[0]["mask"])
         self.assertEqual((fast["early_exit"], fast["iterations"]), (1.0, 40.0))
+        self.assertAlmostEqual(fast["ms_per_iteration"], 3.5 / 40)
         # Ties fall into the lower slice: speeds 0..4 twice each
         speed = percentile_slices(table["peak_speed"], (50.0,))
         self.assertEqual([int(s["mask"].sum()) for s in speed], [6, 4])
