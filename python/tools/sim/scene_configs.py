@@ -332,9 +332,12 @@ SCENES = {
     "ArmadilloSpaghetti.Fall": Scene(
         "defaults",
         "data/scenarios/ArmadilloSpaghetti.Fall.h5: ArmadilloSpaghetti.Fall.ThinFeatures.h5 with the armadillo "
-        "thickened (a 1 cm offset, fTetWild), since the original's thin features (ears 6 mm, hands 8-15 mm, toes "
-        "13 mm) are below the contact distance: pillar vertices ended up 2-2.5 cm inside a foot (freeze diagnosis, "
-        "2026-10-22). ArmadilloSpaghetti.Fall.ThinFeatures.h5: ArmadilloSpaghetti.Close.h5 with the armadillo's waist (the "
+        "thickened, since the original's thin features (ears 6 mm, hands 8-15 mm, toes 13 mm) are below the contact "
+        "distance: pillar vertices ended up 2-2.5 cm inside a foot (freeze diagnosis, 2026-10-22). Its surface is "
+        "the 1 cm offset (signed distance iso-surface) scaled back to the original height (x 0.984) about the same "
+        "center, re-tetrahedralized by fTetWild at 2 cm edges: 205k tets (was 162k), thinnest feature 16 mm, 15% "
+        "more volume, 2.4 cm clearance to the pillars, 7493 held core nodes by the same rule (fTetWild's interior "
+        "is denser). ArmadilloSpaghetti.Fall.ThinFeatures.h5: ArmadilloSpaghetti.Close.h5 with the armadillo's waist (the "
         "slice at 50-55% of its height, where only the torso is) on the twist axis, turned so the pillars clear it by "
         "2.7 cm (the bounding-box center left the curved, leaning body 24 cm off the axis), gravity (-9.81 m/s^2 in z) on "
         "every body and the armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm "
