@@ -468,6 +468,17 @@ class Sd(ContactDetection):
 
     @profiling.scoped("contact.detect")
     def detect_contacts(self, from_xt: bool = False, prepared: bool = False):
+        # TODO: from_xt is ignored: a step's first detection (the solvers' initialize_solve, from_xt=True) runs at x,
+        # the init_strategy's predictor, while C++ vbd::InitializeSolve builds the constraint set at xt and OGC's
+        # detect_contacts honors the flag. Why it matters: fast bodies start a step deep inside their partners, where
+        # the closest point of a thin part can be on its far side. ArmadilloSpaghetti.Fall (1 MPa, AAAVBD 5 x 80,
+        # predictor x + dt v + dt^2/2 g, resumed at step 50; 2026-10-22, pre-130f608a feature classification):
+        # the last detection of step 57 had no penetrating contact, the first of step 58 had 923 penetrating VF
+        # contacts up to 25 mm deep, the first of step 59 491 up to 56 mm (pillars 5 cm in radius), and step 60
+        # diverged. Not fixed yet because detecting at xt changes every VertexSdf scene's first contact set: the
+        # threshold dmin + band doesn't grow with |xtilde - xt| as OGC's query radius does, so contacts the predictor
+        # reaches would appear only after the first outer iteration. The second pass (assemble_contacts) and the
+        # normal orientation would need the same positions. Validate on a fast impact and this scene.
         if self.inactive:
             return
         if not prepared:
