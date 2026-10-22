@@ -295,6 +295,14 @@ SCENES = {
         "2026-10-21: the Kyogre and the dragon weren't held by the pillars)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
     ),
+    "armadillo_spaghetti_fine": Scene(
+        "defaults",
+        "data/scenarios/armadillo-spaghetti_fine.h5: armadillo-spaghetti.h5 with the pillars re-tetrahedralized by "
+        "fTetWild (ideal edge 1.8 cm, mean 1.9 cm; 194k tets each, quality at least 0.127, against the original 54.5k "
+        "tets with slivers down to 0.012) and the twist constraints rebuilt on their end caps; 1.1M tets in all "
+        "(maintainer, 2026-10-21: the original pillars' slivers degenerate when they tangle)",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+    ),
     "armadillo_pull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
