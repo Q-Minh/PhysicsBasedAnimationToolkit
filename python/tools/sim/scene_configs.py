@@ -261,92 +261,27 @@ SCENES = {
          "and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = "
          "10 ms); going further would need a finer mesh (maintainer, 2026-10-21)."],
     ),
-    "KyogreSpaghetti.Vertical": Scene(
-        "defaults",
-        "data/scenarios/KyogreSpaghetti.Vertical.h5: KyogreSpaghetti.h5 with only the soft Kyogre (Young's "
-        "modulus 1e6), stood nose up (2.26 m tall) between the pillars, clear of them by at least 1 cm (maintainer, "
-        "2026-10-21: the lying Kyogres barely deformed)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-    ),
-    "KyogreSpaghetti.NoseDown": Scene(
-        "defaults",
-        "data/scenarios/KyogreSpaghetti.NoseDown.h5: KyogreSpaghetti.Vertical.h5 with the Kyogre nose down, its "
-        "nose 2 cm above the floor plane (beyond the 1.5 cm detection distance), so the tangling pillars push it into "
-        "the ground (maintainer, 2026-10-21; the scene has no gravity)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-    ),
-    "DragonSpaghetti.Horizontal": Scene(
-        "defaults",
-        "data/scenarios/DragonSpaghetti.Horizontal.h5: KyogreSpaghetti.Vertical.h5 with the Stanford dragon (data/"
-        "stanford-dragon.ply tetrahedralized with fTetWild through pytetwild, edge length 0.025 of the bounding-box "
-        "diagonal, envelope 5e-4: 204k tets, quality at least 0.057; data/stanford-dragon_ftetwild.msh) in place of "
-        "the Kyogre, soft (Young's modulus 1e6), 2.26 m long, lying horizontally at mid-height near the twist axis "
-        "(its head 0.37 m from it), with the pillars spread 1.2x from the axis (centers 1.2 m apart) so they clear it "
-        "by at least 1 cm and close in on it from all sides (maintainer, 2026-10-21: the vertical dragon only caught "
-        "one hand; aim for a highly tangled dragon)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-    ),
-    "ArmadilloSpaghetti": Scene(
-        "defaults",
-        "data/scenarios/ArmadilloSpaghetti.h5: the twisted pillars of KyogreSpaghetti.Vertical.h5 with two armadillos "
-        "(data/armadillo.mesh, 162k tets each, 1.2 m tall, a third of the pillars' height) centered on the twist axis, "
-        "turned so the pillars stand in their gaps (at least 1 cm clear): a stiffer one low (Young's modulus 1e7, z "
-        "-1.5 to -0.3 m) and a softer one high (1e6, z 0.3 to 1.5 m), as in the JGS2-GQ paper's scene (maintainer, "
-        "2026-10-21: the Kyogre and the dragon weren't held by the pillars)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-    ),
-    "ArmadilloSpaghetti.Fine": Scene(
-        "defaults",
-        "data/scenarios/ArmadilloSpaghetti.Fine.h5: ArmadilloSpaghetti.h5 with the pillars re-tetrahedralized by "
-        "fTetWild (ideal edge 1.8 cm, mean 1.9 cm; 194k tets each, quality at least 0.127, against the original 54.5k "
-        "tets with slivers down to 0.012) and the twist constraints rebuilt on their end caps; 1.1M tets in all "
-        "(maintainer, 2026-10-21: the original pillars' slivers degenerate when they tangle)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-    ),
-    "ArmadilloSpaghetti.Cylinders": Scene(
-        "defaults",
-        "data/scenarios/ArmadilloSpaghetti.Cylinders.h5: ArmadilloSpaghetti.h5 with round pillars, cylinders of 0.2 m "
-        "diameter inscribed in the original square ones, tetrahedralized by fTetWild (ideal edge 1.8 cm, mean 1.7 cm; "
-        "233k tets each, quality at least 0.126) with the twist constraints on their end caps; the armadillos are 4.2 "
-        "cm from them; 1.26M tets in all (maintainer, 2026-10-21: spaghetti are round)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-    ),
-    "ArmadilloSpaghetti.Single": Scene(
-        "defaults",
-        "data/scenarios/ArmadilloSpaghetti.Single.h5: ArmadilloSpaghetti.Cylinders.h5 with stiffer pillars (Young's "
-        "modulus 1e7) and one softer armadillo (8e5) at mid-height (z -0.6 to 0.6 m), the same pose otherwise, 4.2 cm "
-        "from the pillars; 1.1M tets (maintainer, 2026-10-21)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-        ["The thick pillars trap part of the armadillo, but the simulation freezes near time step 200 (maintainer, "
-         "2026-10-21, cause not investigated); ArmadilloSpaghetti.Close tries thinner pillars closer to it."],
-    ),
-    "ArmadilloSpaghetti.Close": Scene(
-        "defaults",
-        "data/scenarios/ArmadilloSpaghetti.Close.h5: ArmadilloSpaghetti.Single.h5 with thinner pillars (cylinders of "
-        "0.1 m diameter, fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's "
-        "modulus 1e7) moved in to 0.52 m from the twist axis (0.735 m apart, was 1.0 m), and the armadillo (8e5) "
-        "turned a further 29 deg so they clear it by 2.1 cm; 0.99M tets (maintainer, 2026-10-21: as in the JGS2-GQ "
-        "video, pillars close to the armadillo and thin enough to wrap it rather than push it out)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
-    ),
     "ArmadilloSpaghetti.Fall": Scene(
         "defaults",
-        "data/scenarios/ArmadilloSpaghetti.Fall.h5: ArmadilloSpaghetti.Fall.ThinFeatures.h5 with the armadillo "
-        "thickened (thin features: ears 6 mm, hands 8-15 mm, toes 13 mm), which a misdiagnosis of the freeze "
-        "suggested: the pillar vertices reported 2-2.5 cm inside a foot were in fact outside it, false penetrations "
-        "from VertexSdf's face/edge classification (2026-10-22); the thickened scene froze too. Its surface is "
-        "the 1 cm offset (signed distance iso-surface) scaled back to the original height (x 0.984) about the same "
-        "center, re-tetrahedralized by fTetWild at 2 cm edges: 205k tets (was 162k), thinnest feature 16 mm, 15% "
-        "more volume, 2.4 cm clearance to the pillars, 7493 held core nodes by the same rule (fTetWild's interior "
-        "is denser). ArmadilloSpaghetti.Fall.ThinFeatures.h5: ArmadilloSpaghetti.Close.h5 with the armadillo's waist (the "
-        "slice at 50-55% of its height, where only the torso is) on the twist axis, turned so the pillars clear it by "
-        "2.7 cm (the bounding-box center left the curved, leaning body 24 cm off the axis), gravity (-9.81 m/s^2 in z) on "
-        "every body and the armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm "
-        "under its surface) held by a Fixed transform for the first 0.45 s (was 1 s; freezes), then released, so it falls into the "
-        "already tangling pillars (maintainer, 2026-10-21). The held nodes stay off the surface: holding surface nodes "
-        "(a 15 cm ball reached the thin torso's skin) pits the pillars' prescribed twist against prescribed armadillo "
-        "nodes in contact, with no feasible position, and the simulation froze",
+        "data/scenarios/ArmadilloSpaghetti.Fall.h5: the twist of KyogreSpaghetti.h5 (its floor and ceiling planes, "
+        "and its top and bottom ends turned at -180 and 180 deg/s) on four round pillars, cylinders 0.1 m in diameter "
+        "(fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) 0.52 m "
+        "from the twist axis (0.735 m apart), around one soft armadillo (data/armadillo.mesh, 162k tets, 1.2 m tall, "
+        "Young's modulus 8e5; tet quality at least 0.23, triangle angles at least 11 deg) whose waist (the slice at "
+        "50-55% of its height, where only the torso is) is on the twist axis, turned so the pillars clear it by "
+        "2.7 cm; 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body, and the armadillo's interior core "
+        "(its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed "
+        "transform for the first 0.45 s, then released, so it falls into the already tangling pillars (maintainer, "
+        "2026-10-21, after the JGS2-GQ paper's scene: thin pillars close to the armadillo wrap it rather than push it "
+        "out). The held nodes stay off the surface: holding surface nodes pits the pillars' prescribed twist against "
+        "prescribed armadillo nodes in contact, with no feasible position, and the simulation froze. "
+        "ArmadilloSpaghetti.Fall.Thickened.h5 (not used) has the armadillo thickened by a 1 cm offset, from a "
+        "misdiagnosis of the freeze (2026-10-22)",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+        ["It freezes at about step 175 (1.75 s): the unbounded twist keeps tightening the stiff pillars around the "
+         "soft armadillo, whose elements near (-0.68, 1.37, -0.42) m invert from step 170; its surface there folds "
+         "flat, contacts with the folded edge flip sign, and the step diverges. Every step runs its full budget with "
+         "the residual ~1e3 x its tolerance (2026-10-22). Bounding the twist's duration is the open fix."],
     ),
     "ArmadilloPull": Scene(
         "defaults",
