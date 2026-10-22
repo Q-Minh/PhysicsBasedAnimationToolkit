@@ -1308,6 +1308,14 @@ def _assemble_hessian(
     )
 
 
+# TODO: One-sided (slack-eliminated) AL contact terms with a semismooth Newton. With s fixed within a Newton
+# step, a contact inside the detection band but not pressed is a two-sided spring of stiffness sigma_n
+# (adapted to the stiffest partner) that holds its gap for the step. Eliminating s gives
+# E = (max(0, lambda - sigma c)^2 - lambda^2) / (2 sigma), C^1, with the Hessian block sigma n n^T only on
+# active contacts (lambda - sigma c > 0). Evidence: after the slack refresh, the soft-stiff trampoline +
+# sphere (steps 253-256) still has a contact-region roughness p95 of ~0.065, against AAAVBD's 0.033. A
+# GPU-only deviation from C++ (which fixes s per step); risk: active-set switching between Newton steps
+# and within the line search (energy only C^1, Hessian discontinuous) can cost backtracks or chatter.
 def _subproblem_gradient(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
