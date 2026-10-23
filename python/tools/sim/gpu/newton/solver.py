@@ -670,7 +670,7 @@ def _compute_ee_contact_hessian_triplets(
     ib = halfedges.outgoing_vertex(contact.meshes.F, he_u)
     ic = halfedges.incoming_vertex(contact.meshes.F, he_v)
     id = halfedges.outgoing_vertex(contact.meshes.F, he_v)
-    gamma = contact.cvf.gamma[c]
+    gamma = contact.cee.gamma[c]
     sigma_n = contact.gamma_n * contact.sigma_n[0]
     sigma_f = contact.gamma_f * contact.sigma_f[0]
     du = ((b0 * x[ia] + b1 * x[ib]) - (b0 * xt[ia] + b1 * xt[ib])) - (
@@ -692,7 +692,7 @@ def _compute_ee_contact_hessian_triplets(
     d1 = is_dirichlet_node(dmask, ib)  # type: ignore
     d2 = is_dirichlet_node(dmask, ic)  # type: ignore
     d3 = is_dirichlet_node(dmask, id)  # type: ignore
-    offset = offsets[K_VF_TRIPLETS] + c * 16  # 4^2
+    offset = offsets[K_EE_TRIPLETS] + c * 16  # 4^2
     # Block row 0
     if (not d0) and (not d0):
         params.Hrows[offset + 0] = ia
@@ -1592,6 +1592,92 @@ class TestSubproblemGradient(unittest.TestCase):
                 ("gradient", "stream"),
             ],
         )
+
+
+class TestEeContactHessianTriplets(unittest.TestCase):
+    """An edge-edge contact's Hessian triplets land in the EE slots, scaled by its own decay gamma (Warp's CPU
+    device). They used to overwrite the VF slots, scaled by the VF contact's gamma at the same index."""
+
+    def test_one_edge_edge_contact(self):
+        from ..contact.constraints import ConstraintSetData
+        from ..contact.mesh.pairs import ContactPairsData
+        from ..contact.multimesh import MultiMeshData
+        from ..contact.pairs import PairsData
+
+        with wp.ScopedDevice("cpu"):
+            # Half-edge he of face he // 3 runs from F[he // 3][he % 3] to the next vertex: he 0 is edge (0, 1)
+            # and he 3 is edge (3, 4). Vertices 2 and 5 only complete the faces.
+            F = [(0, 1, 2), (3, 4, 5)]
+            x = np.array(
+                [[0, 0, 0], [1, 0, 0], [9, 9, 9], [0.5, -0.5, 0.01], [0.5, 0.5, 0.01], [9, 9, 9]], dtype=np.float32
+            )
+            n_u = 6
+            ee = PairsData()
+            ee.prefix = wp.array([0] + [1] * n_u, dtype=wp.uint64)  # one contact, of half-edge u = 0
+            ee.u = wp.array([0], dtype=wp.uint32)
+            ee.v = wp.array([3], dtype=wp.uint32)
+            bases = ContactBasesData()
+            n, t, b = np.eye(3, dtype=np.float32)[[2, 0, 1]]
+            bases.n, bases.t, bases.b = (wp.array([a], dtype=wp.vec3f) for a in (n, t, b))
+            contacts = ContactPairsData()
+            contacts.ee = ee
+            contacts.ee_bases = bases
+            b1, b3 = 0.25, 0.5
+            contacts.ee_bary = wp.array([(b1, b3)], dtype=wp.vec2f)
+            meshes = MultiMeshData()
+            meshes.F = wp.array(F, dtype=wp.vec3i)
+
+            def constraint_set(gamma):
+                cs = ConstraintSetData()
+                cs.s = wp.zeros(1, dtype=wp.float32)
+                cs.gamma = wp.array([gamma], dtype=wp.float32)
+                cs.lambda_n = wp.array([1.0], dtype=wp.float32)
+                cs.lambda_f = wp.zeros(1, dtype=wp.vec2f)
+                return cs
+
+            contact = ContactDynamicsData()
+            contact.meshes = meshes
+            contact.contacts = contacts
+            contact.cvf = constraint_set(0.5)
+            gamma_ee = 2.0
+            contact.cee = constraint_set(gamma_ee)
+            contact.gamma_n = 1.0
+            contact.gamma_f = 1.0
+            sigma_n, sigma_f = 100.0, 10.0
+            contact.sigma_n = wp.array([sigma_n], dtype=wp.float32)
+            contact.sigma_f = wp.array([sigma_f], dtype=wp.float32)
+            contact.dmin = 0.0
+            contact.mu_f = 0.2
+            n_slots = 2 * 16  # VF slots 0-15, then EE slots 16-31
+            params = ParamsData()
+            params.Hrows = wp.full(n_slots, -1, dtype=wp.int32)
+            params.Hcols = wp.full(n_slots, -1, dtype=wp.int32)
+            params.Hvals = wp.zeros(n_slots, dtype=wp.mat33f)
+            offsets = np.zeros(K_EE_TRIPLETS + 1, dtype=np.int32)
+            offsets[K_VF_TRIPLETS], offsets[K_EE_TRIPLETS] = 0, 16
+            xs = wp.array(x, dtype=wp.vec3f)
+            # Inputs by name, so the test holds whatever else the kernel reads
+            values = dict(
+                x=xs,
+                xt=xs,  # no tangential motion: f = -lambda_f = 0, so the friction scale is 1
+                dmask=wp.zeros(len(x), dtype=wp.int32),
+                contact=contact,
+                n_u=n_u,
+                friction_limit=wp.full(1, 1.0, dtype=wp.float32),
+                params=params,
+                offsets=wp.array(offsets, dtype=wp.int32),
+            )
+            kernel = _compute_ee_contact_hessian_triplets
+            wp.launch(kernel, dim=1, inputs=[values[arg.label] for arg in kernel.adj.args])
+            rows, cols, vals = params.Hrows.numpy(), params.Hcols.numpy(), params.Hvals.numpy()
+        self.assertTrue((rows[:16] == -1).all() and (cols[:16] == -1).all(), "EE triplets wrote VF slots")
+        H = gamma_ee * (sigma_n * np.outer(n, n) + sigma_f * (np.outer(t, t) + np.outer(b, b)))
+        nodes, coef = (0, 1, 3, 4), (1 - b1, b1, -(1 - b3), -b3)
+        for r in range(4):
+            for c in range(4):
+                k = 16 + 4 * r + c
+                self.assertEqual((rows[k], cols[k]), (nodes[r], nodes[c]))
+                np.testing.assert_allclose(vals[k], coef[r] * coef[c] * H, rtol=1e-6, atol=1e-6)
 
 
 if __name__ == "__main__":
