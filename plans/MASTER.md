@@ -979,7 +979,7 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   from AAAVBD checkpoints, marked as windowed), and total CG iterations in the status log (a small solver-side change).
 - P10. **Solver figure panel (b)** waits for task 3's error-vs-converged-Newton analysis on the capsules (global
   M-norm error over time, one-step error from reference states, residual ratio vs actual error).
-- ~~P11. Delete?~~ **Answered, done (2026-10-22 evening):** ArmadilloSpaghetti.Fall.Thickened.h5 and data/stanford-dragon_ftetwild.msh deleted.
+- ~~P11. Delete?~~ **Answered, done (2026-10-22 evening):** ArmadilloSpaghetti.Fall.Thickened.h5 deleted. data/stanford-dragon_ftetwild.msh was deleted, then restored bit-identically from the fTetWild output (the maintainer keeps it as a general-purpose model for future scenes).
 - P12. **Timeline snapshot times** (0.4, 0.9, 2.88, 3.94, 5.0 s; camera between two tubes): OK as rendered?
 
 - P13. **Answered: F1 + A** (C = mu_f max(lambda_n, 0); contacts with lambda_n = 0 get a live mu_f max(-sigma_n c_n, 0), the 10-21 rule; validation slot approved, F1 vs F1+A). Earlier: **F1** (2026-10-22 evening; task 3 implements, after the AAAVBD check). **Newton friction at impacts** (task 3, confirmed): the per-step frozen Coulomb limit C comes from the first
@@ -1233,3 +1233,4 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 2 · **GPU run START** (~5 min, coordinator's slot, timings irrelevant): P17/T2 "before" contact history, CapsulesIntoBowl one solve from AAAVBD's checkpoints at steps 100 and 300, VBD 10 x 200 frictionless and AAAVBD production settings (4 short headless processes). Will log END.
 - 2026-10-22 · task 2 · **GPU run END** (P17/T2 "before" contact history, 5 short runs, ~3 min). The GPU is free.
 - 2026-10-22 · task 3 · **GPU run START** (~9 min, maintainer-approved slot, timings irrelevant): 1b AAAVBD hypothesis, one-step convergence of the VBD family from 18 states of AAAVBD's CapsulesIntoBowl production run (smoke test first). One headless process. Will log END.
+- 2026-10-22 · task 3 · **GPU run END** (1b AAAVBD hypothesis: smoke test + one run, 495 AAAVBD steps, 18 states x 3 long solves + 4 traced solvers, ~8 min). The GPU is free.
