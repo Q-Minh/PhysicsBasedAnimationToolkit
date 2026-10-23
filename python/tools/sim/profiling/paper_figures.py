@@ -10,11 +10,12 @@ runs by scene and solver. They are separate runs whose trajectories differ sligh
 GPU arithmetic order isn't deterministic), so they are compared as distributions, never step by step.
 
 - ``timeline``: one row per kernels result (e.g. AAAVBD on one scene): GPU time per step over the simulated
-  time, stacked by phase group, with the step time of the paired production run and of the scene's other
-  production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis, the production
-  runs' final gradient ratio to its tolerance per step (log axis, thin raw lines under a rolling median of
-  ``--smooth`` steps, a dashed line at 1), over the peak node speed (``profiling/trajectory.py``) on a right
-  axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines. Without
+  time, stacked by phase group (groups under 3% of the row's GPU time fold into a top "Other" band, which has
+  a legend entry only if it reaches 3% itself), with the step time of the paired production run and of the
+  scene's other production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis,
+  the production runs' final gradient ratio to its tolerance per step (log axis, thin raw lines under a rolling
+  median of ``--smooth`` steps, a dashed line at 1), over the peak node speed (``profiling/trajectory.py``) on a
+  right axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines. Without
   solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...`` adds a row of simulation
   snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at their times
   on the plots (first row only).
@@ -116,6 +117,17 @@ def group_phases(phases: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     return {g: out[g] for g in order if g in out and np.any(out[g] > 0)}
 
 
+def fold_small_groups(groups: dict[str, np.ndarray], share: float) -> dict[str, np.ndarray]:
+    """``groups`` (:func:`group_phases`) with those under ``share`` of the total time summed into :data:`OTHER`,
+    drawn last (on top of the stack)."""
+    total = max(sum(float(v.sum()) for v in groups.values()), 1e-12)
+    out = {g: v for g, v in groups.items() if g != OTHER and v.sum() >= share * total}
+    rest = [v for g, v in groups.items() if g not in out]
+    if rest:
+        out[OTHER] = np.sum(rest, axis=0)
+    return out
+
+
 def scene_key(result: dict) -> str:
     """A result's scene as a short key: the scene file's name without extension and group,
     e.g. ``basket_of_fruit`` for ``path/to/basket_of_fruit.h5:fem``."""
@@ -158,6 +170,9 @@ def bin_steps(values: np.ndarray, n: int) -> np.ndarray:
 
 
 SMOOTH_STEPS = 9  # timeline: the rolling median's window over the per-step residual ratios
+# timeline: phase groups under this share of a row's GPU time fold into Other, which gets a legend entry only if
+# it reaches it too (thinner bands are under ~1 pt at print size)
+TIMELINE_MIN_SHARE = 0.03
 SPEED_FILL = "#d9d9d9"  # timeline: the peak speed behind the residual ratios
 HALO = [patheffects.withStroke(linewidth=1.8, foreground="white")]  # lines drawn over the phase bands
 
@@ -290,12 +305,13 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             ax.text(0.04, 0.96, str(i + 1), transform=ax.transAxes, ha="left", va="top", fontsize=8,
                     fontweight="bold", color=INK)
     grid = outer[1].subgridspec(2 * rows, 1, height_ratios=heights, hspace=0.15)
-    present: list[str] = []
+    present: list[str] = []  # phase groups with a legend entry
     solvers: dict[str, str] = {}  # drawn production runs: solver name -> color
     drew_speed = False
     for r, (result, table, runs, label) in enumerate(zip(kernels, tables, runs_per_row, labels)):
-        groups = group_phases(table["phases"])
-        present += [g for g in groups if g not in present]
+        groups = fold_small_groups(group_phases(table["phases"]), TIMELINE_MIN_SHARE)
+        total = max(sum(float(v.sum()) for v in groups.values()), 1e-12)
+        present += [g for g in groups if g not in present and groups[g].sum() >= TIMELINE_MIN_SHARE * total]
         x = bin_steps(step_seconds(result, table["t"]), bin_n)
         area = fig.add_subplot(grid[2 * r])
         area.stackplot(x, *[bin_steps(v, bin_n) for v in groups.values()],
@@ -332,7 +348,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                 for ax in axes:
                     ax.axvline(t, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
                 _marker(area, t, i + 1)
-    handles = [Patch(color=group_color(g), label=g) for g in present]
+    handles = [Patch(color=group_color(g), label=g) for g in [*PHASE_GROUPS, OTHER] if g in present]
     handles += [Line2D([], [], color=color, linewidth=0.8, label=name) for name, color in solvers.items()]
     if drew_speed:
         handles.append(Patch(color=SPEED_FILL, alpha=0.6, label="Peak speed"))
@@ -754,6 +770,12 @@ class TestPaperFigures(unittest.TestCase):
         groups = group_phases(table["phases"])
         self.assertEqual(list(groups), ["Vertex sweeps", "Contact detection", "Contact update", "Residuals", OTHER])
         np.testing.assert_allclose(groups["Contact detection"][-1], 2.0)
+        small = {"Vertex sweeps": np.array([90.0, 90.0]), "Residuals": np.array([2.0, 2.0]),
+                 OTHER: np.array([1.0, 1.0]), "Contact update": np.array([0.5, 0.5])}
+        folded = fold_small_groups(small, 0.03)
+        self.assertEqual(list(folded), ["Vertex sweeps", OTHER])
+        np.testing.assert_allclose(folded[OTHER], [3.5, 3.5])
+        self.assertEqual(list(fold_small_groups(small, 0.01)), ["Vertex sweeps", "Residuals", OTHER])
 
     def test_pairing_and_bins(self):
         k = [self._kernels(), self._kernels("VBD"), self._kernels(scene="path/to/capsule_bowl.h5")]
