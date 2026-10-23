@@ -629,6 +629,12 @@ auto BuildVertexEquation(
 /**
  * @brief Adapt stencil gradient acceleration parameter for vertex i and compute the stencil
  * gradient augmentation.
+ *
+ * There is no augmentation at a subproblem's first iteration (`params.kp == 0`), for every outer
+ * iteration `params.k`: the neighbours' stored gradients are from the previous subproblem, before its
+ * dual update and contact re-detection changed the objective, and `betaG` adapts only from `kp > 0`.
+ * Augmenting there made the error jump at every outer iteration's first sweep on impacts (GPU
+ * AAAVBD, CapsulesIntoBowl; python/tools/sim/docs/solver-accuracy-notes.md, entry 5).
  * @param i Vertex index
  * @param xi Current position of vertex i
  * @param gi Total gradient at vertex i
@@ -676,7 +682,7 @@ inline math::linalg::mini::SVector<Scalar, 3> ComputeStencilGradientAugmentation
     params.Hnk(i)    = Norm(Hi);
     // Compute weighted stencil gradient augmentation
     mini::SVector<Scalar, 3> ai = mini::Zeros<Scalar, 3, 1>();
-    if (params.kp == 0 and params.k == 0)
+    if (params.kp == 0)
         return ai;
     auto nbegin = params.GVVp(i);
     auto nend   = params.GVVp(i + 1);
