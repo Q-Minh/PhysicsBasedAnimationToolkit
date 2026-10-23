@@ -21,7 +21,13 @@ def frozen_friction_limit(
     normal force) while no positive estimate is stored, then, from the contact's first strictly positive
     estimate in the step, which it stores in ``friction_limit[k]``, the stored value until
     :meth:`ConstraintSet.reset_friction_limits` (GPU Newton). A contact detected but not yet pressed
-    (estimate 0) thus gets friction once it carries load, within the same step."""
+    (estimate 0) thus gets friction once it carries load, within the same step.
+
+    Kept on purpose (maintainer, 2026-10-22: "for Newton, we best over-estimate the normal contact force"): the
+    first estimate over-estimates the normal force at impacts (friction ratio 1.25 on the incline impact), but the
+    alternatives under-estimate it while sliding. mu_f lambda_n lags the load the penalty carries, and a re-freeze at
+    each subproblem reads the multiplier's dip between outer iterations (a 0.65-0.75 friction regime). Evidence and
+    the alternatives' branches: python/tools/sim/docs/solver-accuracy-notes.md, entry 6."""
     C = friction_limit[k]
     if C < wp.float32(0):
         C = estimate
