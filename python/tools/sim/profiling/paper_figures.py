@@ -13,12 +13,12 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   time, stacked by phase group (groups under 3% of the row's GPU time fold into a top "Other" band, which has
   a legend entry only if it reaches 3% itself), with the step time of the paired production run and of the
   scene's other production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis,
-  the production runs' final gradient ratio to its tolerance per step (log axis, thin raw lines under a rolling
-  median of ``--smooth`` steps, a dashed line at 1), over the peak node speed (``profiling/trajectory.py``) on a
-  right axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines. Without
-  solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...`` adds a row of simulation
-  snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at their times
-  on the plots (first row only).
+  the production runs' final gradient ratio to its tolerance per step (log axis, its rolling median over
+  ``--smooth`` steps, a dashed line at 1), over the peak node speed (``profiling/trajectory.py``) on a right
+  axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines, each with
+  its own legend entry. Without solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...``
+  adds a row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the
+  numbers marked at their times on the plots (first row only).
 - ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
   short fixed-budget kernels runs (no early exit, e.g. every solver resumed from the same checkpoint): each
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. The other columns, from
@@ -240,27 +240,39 @@ def _marker(ax, x: float, number: int, y: float = 1.0):
             bbox={"boxstyle": "circle,pad=0.18", "facecolor": "white", "edgecolor": INK, "linewidth": 0.5})
 
 
-def _residual_strip(strip, x: np.ndarray, kernels_speed: np.ndarray, runs: list[dict], smooth: int):
-    """The timeline's lower strip: each production run's final gradient ratio per step (raw and its rolling
-    median) on a log axis, over the peak speed on a right axis (see the module docstring); ``x`` and
-    ``kernels_speed`` are the kernels run's step times (s) and peak speeds, drawn if the runs have none."""
+SPEED_DOTS = (0, (1, 1.5))  # timeline: the other production runs' peak speeds
+
+
+def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, runs: list[dict],
+                    smooth: int) -> list:
+    """The timeline's lower strip: each production run's final gradient ratio per step (its rolling median) on a
+    log axis, over the peak speed on a right axis (see the module docstring); ``x`` and ``kernels_speed`` are
+    the ``kernels`` run's step times (s) and peak speeds, drawn if the runs have none. Returns the speeds'
+    legend handles."""
     speed = strip.twinx()
-    filled = False
+    handles = []
+    medians = [np.array([1.0])]  # the y range covers the tolerance line
     for i, run in enumerate(runs):
         table = step_stats.per_step(run)
-        x = step_seconds(run, table["t"])
+        xr = step_seconds(run, table["t"])
         if i == 0 and np.isfinite(table["peak_speed"]).any():
-            speed.fill_between(x, table["peak_speed"], color=SPEED_FILL, alpha=0.6, linewidth=0)
-            filled = True
+            speed.fill_between(xr, table["peak_speed"], color=SPEED_FILL, alpha=0.6, linewidth=0)
+            handles.append(Patch(color=SPEED_FILL, alpha=0.6, label=f"{solver_name(run)} peak speed"))
         elif i > 0 and np.isfinite(table["peak_speed"]).any():
-            speed.plot(x, table["peak_speed"], color=solver_color(run), linewidth=0.5, linestyle=(0, (1, 1.5)))
+            speed.plot(xr, table["peak_speed"], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS)
+            handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
+                                  label=f"{solver_name(run)} peak speed"))
         ratio = np.maximum(table["gradient_ratio"], RATIO_FLOOR)
-        strip.plot(x, ratio, color=solver_color(run), linewidth=0.3, alpha=0.35)
-        strip.plot(x, rolling_median(ratio, smooth), color=solver_color(run), linewidth=0.8)
-    if not filled and np.isfinite(kernels_speed).any():
+        medians.append(rolling_median(ratio, smooth))
+        strip.plot(xr, medians[-1], color=solver_color(run), linewidth=0.8)
+    if not any(isinstance(h, Patch) for h in handles) and np.isfinite(kernels_speed).any():
         speed.fill_between(x, kernels_speed, color=SPEED_FILL, alpha=0.6, linewidth=0)
+        handles.insert(0, Patch(color=SPEED_FILL, alpha=0.6, label=f"{solver_name(kernels)} peak speed"))
     strip.axhline(1.0, color=INK, linewidth=0.5, linestyle=(0, (3, 2)))
     strip.set_yscale("log")
+    values = np.concatenate(medians)
+    values = values[np.isfinite(values) & (values > 0)]
+    strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
     _log_axis(strip, "y")
     strip.set_ylabel("Residual /\ntolerance", fontsize=FONT_SIZE)
     speed.set_ylim(bottom=0)
@@ -273,6 +285,7 @@ def _residual_strip(strip, x: np.ndarray, kernels_speed: np.ndarray, runs: list[
         speed.spines[side].set_visible(False)
     speed.spines["right"].set_linewidth(0.5)
     speed.tick_params(labelsize=FONT_SIZE, length=2, width=0.5, pad=1.5, colors="#7f7f7f")
+    return handles
 
 
 def plot_timeline(kernels: list[dict], production: list[dict | None], labels: list[str], width: float = 7.0,
@@ -307,7 +320,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     grid = outer[1].subgridspec(2 * rows, 1, height_ratios=heights, hspace=0.15)
     present: list[str] = []  # phase groups with a legend entry
     solvers: dict[str, str] = {}  # drawn production runs: solver name -> color
-    drew_speed = False
+    speeds: dict[str, object] = {}  # peak speeds' legend handles by label
     for r, (result, table, runs, label) in enumerate(zip(kernels, tables, runs_per_row, labels)):
         groups = fold_small_groups(group_phases(table["phases"]), TIMELINE_MIN_SHARE)
         total = max(sum(float(v.sum()) for v in groups.values()), 1e-12)
@@ -333,8 +346,9 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             area.tick_params(labelbottom=False)
             strip = fig.add_subplot(grid[2 * r + 1], sharex=area)
             if has_ratio[r]:
-                _residual_strip(strip, step_seconds(result, table["t"]), table["peak_speed"], runs, smooth)
-                drew_speed = True
+                for h in _residual_strip(strip, step_seconds(result, table["t"]), result, table["peak_speed"], runs,
+                                         smooth):
+                    speeds.setdefault(h.get_label(), h)
             else:
                 strip.plot(x, bin_steps(table["peak_speed"], bin_n), color=INK, linewidth=0.6)
                 strip.set_ylim(bottom=0)
@@ -350,8 +364,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                 _marker(area, t, i + 1)
     handles = [Patch(color=group_color(g), label=g) for g in [*PHASE_GROUPS, OTHER] if g in present]
     handles += [Line2D([], [], color=color, linewidth=0.8, label=name) for name, color in solvers.items()]
-    if drew_speed:
-        handles.append(Patch(color=SPEED_FILL, alpha=0.6, label="Peak speed"))
+    handles += list(speeds.values())
     _legend(fig, handles, ncol=min(len(handles), 6))
     return fig
 
@@ -836,7 +849,11 @@ class TestPaperFigures(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             image = os.path.join(d, "snap.png")
             plt.imsave(image, np.ones((30, 40, 3)))
-            for name, fig in (("timeline", plot_timeline(k, p, ["A", "B"], bin_n=2, others=[[vbd], []])),
+            timeline = plot_timeline(k, p, ["A", "B"], bin_n=2, others=[[vbd], []])
+            # Contact update and residuals fold into Other; the speed fill falls back to the kernels run's
+            self.assertEqual([t.get_text() for t in timeline.legends[0].get_texts()],
+                             ["Vertex sweeps", "Contact detection", OTHER, "AAAVBD", "VBD", "AAAVBD peak speed"])
+            for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", plot_solvers([self._kernels("VBD"), k[0]], [p[0]], step_times=True))):
                 path = os.path.join(d, f"{name}.pdf")
