@@ -211,6 +211,11 @@ def _accelerated_vertex_solve_kernel(
     # the tile reductions, so its scattered loads overlap them. GVV is the coloring adjacency, so no
     # neighbour is written during this launch. Re-measure with ncu --lineinfo on dev first.
     # Augment residual
+    # TODO: At a subproblem's first sweep (kp = 0, k > 0) the stencil sums the neighbours' g_k from the previous
+    # subproblem, before its dual update and re-detection changed the objective, and betaG adapts only from kp > 0
+    # (as C++ ComputeStencilGradientAugmentation). At CapsulesIntoBowl's impacts this makes AAAVBD's error jump
+    # 1.5-5x at those sweeps, and at 6 of 11 impact states it ends behind plain VBD (docs/solver-accuracy-notes.md,
+    # entry 5, 2026-10-22). Ideas, not tried: skip the augmentation at kp = 0 as for k = 0, or refresh g_k there.
     ai = wp.vec3f()
     if k > 0 or kp > 0:  # type: ignore
         ail = compute_thread_local_stencil_gradient_augmentation(
