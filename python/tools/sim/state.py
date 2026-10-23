@@ -9,6 +9,7 @@ simulation parameters and trajectories. Nothing here depends on Polyscope, imgui
 
 import enum
 import gc
+import warnings
 import h5py
 import warp as wp
 from pbatoolkit import pbat
@@ -375,6 +376,7 @@ class SimulationState:
         self.params[SolverType.Newton] = newton_params
         # Per-solve statuses, recorded by step() (see status.py)
         self.status_log = StatusLog()
+        self._warned_overflows: set[str] = set()  # contact types whose dropped pairs were reported
         self._construct_convergence_check()
         # Contact detection algorithm selection
         self.cd_type: CDType = CDType.VertexSdf
@@ -504,15 +506,33 @@ class SimulationState:
         if vbd_family:
             # Async copy into pinned memory, covered by the synchronization below
             self.convergence.enqueue_status_readback()
+        self.contact.contacts.enqueue_requested_peak_readback()
         self.t += 1
         wp.synchronize()
         self._record_status(vbd_family)
+        self._warn_dropped_contacts()
         self.contact_browser.update(
             self.fem.data.x, self.multimesh, self.contact.contacts
         )
         self.contact_overview.update(
             self.fem.data.x, self.multimesh, self.contact.contacts
         )
+
+    def _warn_dropped_contacts(self):
+        """Warn, once per contact type, when a detection requested more pairs than the storage holds: the
+        excess pairs are dropped (host-only, after the step's sync)."""
+        pairs = self.contact.contacts
+        for name, requested, capacity in zip(("vv", "ve", "vf", "ee"), pairs.requested_peaks(), pairs.capacity):
+            if requested > capacity and name not in self._warned_overflows:
+                self._warned_overflows.add(name)
+                warnings.warn(
+                    f"Time step {self.t - 1}: contact detection found {requested} {name.upper()} pairs, more than "
+                    f"the capacity {capacity}; the excess pairs are dropped. Raise "
+                    f"Contact.ContactStorage.n_{name}_contact_capacity (now "
+                    f"{getattr(self.contact_storage_params, f'n_{name}_contact_capacity'):g}).",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
 
     def _record_status(self, vbd_family: bool):
         """Append this step's solve statuses to ``status_log`` (host-only, after the step's sync)."""
@@ -541,6 +561,7 @@ class SimulationState:
     def reset(self):
         self.t = 0
         self.status_log.clear()
+        self._warned_overflows.clear()
         sdt = self.dt / self.substeps
         self.fem_cpu.set_time_integration_scheme(sdt, self.bdf_scheme)
         self.fem_cpu.set_initial_conditions(self.fem_cpu.X, self.v0)
@@ -762,6 +783,32 @@ class TestNewtonInitStrategy(unittest.TestCase):
             c = self._make_state()
             deserialize_params(c, f)
             self.assertEqual(c.newton_gpu_params.init_strategy, Init.Position)
+
+
+class TestDroppedContacts(unittest.TestCase):
+    """A warning, when detection requests more pairs than the storage holds."""
+
+    def test_warns_about_dropped_pairs(self):
+        from pbatoolkit import pypbat
+
+        # Two unit cubes, the top one 1 mm above the fixed bottom one: their 8 facing vertices are VV pairs, and
+        # the default capacities give 1 VV slot for these 16 vertices
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+        X = np.vstack([V, V + [0.0, 0.0, 1.001]]).astype(np.float64)
+        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+        fem_cpu.set_mass_matrix(1e3)
+        fem_cpu.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))  # pyright: ignore[reportArgumentType]
+        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
+        fem_cpu.constrain(np.repeat([1, 0], 8))
+        state = SimulationState(fem_cpu, load_params(fem_cpu))
+        state.reset()
+        pairs = state.contact.contacts
+        self.assertEqual(pairs.capacity[0], 1)
+        with self.assertWarnsRegex(RuntimeWarning, "VV pairs, more than the capacity 1;"):
+            state.step()
+        self.assertGreaterEqual(pairs.requested_peaks()[0], 8)
 
 
 if __name__ == "__main__":
