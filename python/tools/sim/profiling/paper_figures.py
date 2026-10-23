@@ -462,7 +462,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
     if column in ("gradient", "feasibility"):
         _log_axis(ax)
         ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
-        ax.set_xlabel("Residual ratio per step" if column == "gradient" else "Penetration ratio per step",
+        ax.set_xlabel("Residual ratio" if column == "gradient" else "Penetration ratio",
                       fontsize=FONT_SIZE)
     elif column == "early":
         ax.set_xlim(0, 100)
@@ -470,7 +470,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
     elif column == "sweeps":
         ax.set_xlim(left=0)
         ax.xaxis.set_major_locator(MultipleLocator(50))
-        ax.set_xlabel("Sweeps per step", fontsize=FONT_SIZE)
+        ax.set_xlabel("Sweeps", fontsize=FONT_SIZE)
     else:
         _log_axis(ax)
         ax.set_xlabel("Step time (ms)", fontsize=FONT_SIZE)
@@ -885,7 +885,7 @@ class TestPaperFigures(unittest.TestCase):
             self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
                              ["Vertex sweeps", "Contact detection", "Quartiles"])
             self.assertEqual([ax.get_xlabel() for ax in solvers.axes[1:]],
-                             ["Residual ratio per step", "Penetration ratio per step", "Sweeps per step", "Step time (ms)"])
+                             ["Residual ratio", "Penetration ratio", "Sweeps", "Step time (ms)"])
             for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", solvers)):
