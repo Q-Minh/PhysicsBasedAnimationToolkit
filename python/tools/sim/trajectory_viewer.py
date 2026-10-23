@@ -23,7 +23,8 @@ files, which store the FEM at the root (``FemElastoDynamics/{X,E,m}``) and each 
   the penetration to their tolerances), and with a reference the mass-weighted RMS distance
   sqrt(sum_i m_i |x_i - x_ref,i|^2 / sum_i m_i) (the M-norm, over the bodies' nodes), with a plot of it over
   time, filled in progressively in the background.
-- Static colliders (element-less nodes after the bodies') are drawn as points; their triangles aren't stored.
+- Static colliders (element-less nodes after the bodies') are drawn as translucent points; their triangles aren't
+  stored. The view is framed on the bodies: huge plane colliders would otherwise make it tiny.
 
 Usage (from the repo root):
 
@@ -37,7 +38,7 @@ Tests: ``python -m unittest python.tools.sim.trajectory_viewer``.
 
 import argparse
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import math
 import os
 import time
@@ -285,6 +286,7 @@ class Viewer:
         self.play, self.rate = False, 1.0
         self.clock_time = time.time()
         self.overlay, self.spacing, self.opacity = False, 1.15, 0.5
+        self.collider_opacity = 0.3
         self.color_mode = 0
         self.auto_scale = {0: False, 1: True}  # per color mode: the largest value at the frame, else the fixed max
         self.fixed_max = {0: 10.0, 1: 0.01}  # m/s, m
@@ -346,13 +348,31 @@ class Viewer:
 
     # --- Meshes ---
 
-    def frame_camera(self):
-        """Looks at the copies from the front and above, all of them in view (as the benchmark viewer)."""
+    def body_bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """The copies' bounding box at rest, over the bodies' nodes only (colliders such as planes can be huge)."""
+        X = self.scene.X[self.scene.body_nodes] if len(self.scene.body_nodes) else self.scene.X
+        lo, hi = X.min(axis=0), X.max(axis=0)
+        return lo, hi + self.offset(len(self.trajectories) - 1)
+
+    def update_extents(self):
+        """With colliders, polyscope's scene extents (length scale and bounding box, which set its home view and
+        clipping) are the copies' bodies', not its automatic ones over every structure."""
         import polyscope as ps
 
-        X = self.scene.X
-        lo, hi = X.min(axis=0), X.max(axis=0)
+        if len(self.scene.colliders):
+            lo, hi = self.body_bounds()
+            ps.set_automatically_compute_scene_extents(False)
+            ps.set_bounding_box(lo, hi)
+            ps.set_length_scale(max(float(np.linalg.norm(hi - lo)), 1e-6))
+
+    def frame_camera(self):
+        """Looks at the copies' bodies from the front and above, all of them in view (as the benchmark viewer)."""
+        import polyscope as ps
+
+        self.update_extents()
         last = self.offset(len(self.trajectories) - 1)
+        lo, hi = self.body_bounds()
+        hi = hi - last  # one copy's box
         center = (lo + hi + last) / 2
         # The row's width at the horizontal half-angle of polyscope's default 45 degree vertical field of view (16:10
         # window), and at least one copy's bounding sphere in the vertical field of view (overlaid copies)
@@ -387,6 +407,7 @@ class Viewer:
             if self.points:
                 self.points[i].update_point_positions(x[s.colliders] + self.offset(i))
                 self.points[i].set_enabled(not self.overlay or i == 0)
+                self.points[i].set_transparency(self.collider_opacity)
             if self.dirty:  # the color mode may have changed
                 mesh.remove_all_quantities()
         if self.color_mode in (0, 1) and (self.color_mode == 0 or self.reference is not None):
@@ -444,7 +465,14 @@ class Viewer:
             changed, self.opacity = imgui.SliderFloat("Opacity", self.opacity, 0.05, 1.0, format="%.2f")
         else:
             changed, self.spacing = imgui.SliderFloat("Spacing", self.spacing, 1.0, 3.0, format="%.2f")
+            if changed:
+                self.update_extents()  # the row's
         self.dirty |= changed
+        if self.points:
+            imgui.SetNextItemWidth(width * 0.3)
+            changed, self.collider_opacity = imgui.SliderFloat("Collider opacity", self.collider_opacity, 0.0, 1.0,
+                                                               format="%.2f")
+            self.dirty |= changed
         modes = list(COLOR_MODES) if self.reference is not None else [m for i, m in enumerate(COLOR_MODES) if i != 1]
         index = modes.index(COLOR_MODES[self.color_mode])
         imgui.SetNextItemWidth(width * 0.5)
@@ -731,6 +759,16 @@ class TestTrajectoryViewer(unittest.TestCase):
                 viewer = Viewer(scene, trs, ref)
                 viewer.register()
                 self.assertEqual(ps.register_point_cloud.call_count, 2)  # the collider node, at each copy
+                # The scene extents are the bodies' (not the collider's), over the row of copies
+                ps.set_automatically_compute_scene_extents.assert_called_with(False)
+                lo, hi = ps.set_bounding_box.call_args.args
+                bodies = scene.X[scene.body_nodes]
+                np.testing.assert_allclose(lo, bodies.min(axis=0))
+                np.testing.assert_allclose(hi, bodies.max(axis=0) + viewer.offset(len(trs) - 1))
+                viewer.callback()
+                for points in viewer.points:  # translucent colliders
+                    points.set_transparency.assert_called_with(viewer.collider_opacity)
+                self.assertEqual(viewer.collider_opacity, 0.3)
                 for overlay in (False, True):
                     viewer.overlay = overlay
                     for mode in range(len(COLOR_MODES)):
@@ -754,6 +792,15 @@ class TestTrajectoryViewer(unittest.TestCase):
                 viewer.play, viewer.clock_time = True, time.time() - 1.0  # past the end: back to the start
                 viewer.callback()
                 self.assertEqual(viewer.frame, 0)
+                # Without colliders, polyscope keeps its automatic scene extents
+                ps.set_automatically_compute_scene_extents.reset_mock()
+                ps.set_bounding_box.reset_mock()
+                plain = Viewer(replace(scene, colliders=np.zeros(0, dtype=np.int64)), trs, ref)
+                plain.register()
+                plain.callback()
+                ps.set_automatically_compute_scene_extents.assert_not_called()
+                ps.set_bounding_box.assert_not_called()
+                self.assertEqual(plain.points, [])
             finally:
                 for tr in (*trs, ref):
                     tr.close()
