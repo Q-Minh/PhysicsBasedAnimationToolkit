@@ -979,12 +979,19 @@ class Params:
             op=cuda.compute.OpKind.PLUS,
         )
         # Hessian triplet offsets
-        # TODO: Contact triplets fill each type's full capacity, and the BSR assembly (prune_numerical_zeros=False)
-        # processes all of them every Newton step, whatever the live contact count: raising CapsulesIntoBowl's
-        # capacities from 1513/1513/15137 to 5146/15137/30274 VV/VE/VF slots (and EE from 18127 to 1) made its Newton
-        # steps 4.8% slower (116.7 to 122.3 ms from step 0, 2026-10-22), and the baskets' new capacities add ~490k
-        # slots. Idea: assemble only the live pairs (offsets from the per-type counts), so the capacity doesn't count
-        # against Newton's step times.
+        # TODO: Contact triplets fill each type's full capacity, and the BSR assembly processes all of them every Newton
+        # step, whatever the live contact count: raising CapsulesIntoBowl's capacities from 1513/1513/15137 to
+        # 5146/15137/30274 VV/VE/VF slots (and EE from 18127 to 1) made its Newton steps 4.8% slower (116.7 to 122.3 ms
+        # from step 0, 2026-10-22; remeasured 115.6 to 123.2 ms), and the baskets' new capacities add ~490k slots. A
+        # bit of overhead, negligible for the paper's results (maintainer). Tried and dropped (branch
+        # feature/newton-live-contact-triplets, 2026-10-22): the live contacts' triplets packed after the FEM's at
+        # device offsets from the pairs' prefix counts. A device count isn't enough: Warp 1.17's CUDA
+        # bsr_set_from_triplets masks the triplets past it but still radix-sorts the whole arrays (native/sparse.cu),
+        # so the count has to be read on the host and the arrays sliced to it. The packed matrix was bit-identical to
+        # this layout's at one capsule assembly, yet Newton's results changed systematically (CapsulesIntoBowl from
+        # AAAVBD's step-200 state: 115-123 line-search backtracks and 0 of 60 subproblems converged, against 0 and 10
+        # in two dev runs; from step 0, 1.6e-4 m after one step against dev's 5e-7 m run-to-run), cause not found,
+        # and step times didn't improve.
         self._hessian_triplet_counts = [
             n_nodes,
             n_elems * (4**2),
