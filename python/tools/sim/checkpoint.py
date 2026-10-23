@@ -12,6 +12,10 @@ A checkpoint file holds one group per checkpointed time step, ``<t:08d>`` (``sta
 - ``contact/<vv|ve|vf|ee>/{u,v,s,gamma,lambda_n,lambda_f,friction_limit}``: each contact type's current AL
   state and keys (u, v), from which the next step's first constraint-set update warm starts. The detected
   pairs aren't stored: every step detects them again from ``xt`` before reading them.
+- ``contact/<vv|ve|vf>/{tangent,bitangent}``: the vertex contacts' tangent bases, in which their lambda_f is
+  expressed, for the feature transitions of that update (``constraints.carry_across_features``). Older
+  checkpoints have none: a contact whose feature changes at the resumed step's first update then starts its
+  lambda_f over.
 - ``contact/{sigma_n,sigma_f}``: the penalties (adaptive ones are recomputed each step or subproblem).
 - ``detection/sds``: the vertex SDF's signed distances, if VertexSdf detects.
 - ``solver/<SolverType name>/...``: the active solver's buffers that carry across time steps. The
@@ -37,6 +41,7 @@ import warp as wp
 FORMAT_VERSION = 1
 
 _CONSTRAINT_FIELDS = ("u", "v", "s", "gamma", "lambda_n", "lambda_f", "friction_limit")
+_TANGENT_FIELDS = ("tangent", "bitangent")  # vertex contact sets only
 _VBD_FIELDS = ("xb", "gk", "xk", "Hnk", "betaG", "Qnk", "Qfk")
 _SOLVER_FIELDS = {
     "Chebyshev": ("omega", "xkm1", "xkm2"),
@@ -72,6 +77,9 @@ def _state_arrays(state) -> dict:
     ):
         for field in _CONSTRAINT_FIELDS:
             arrays[f"contact/{name}/{field}"] = getattr(cset, field).current
+        if name != "ee":
+            for field in _TANGENT_FIELDS:
+                arrays[f"contact/{name}/{field}"] = getattr(cset, field)
     sds = getattr(state.detector, "_sds", None)
     if sds is not None:
         arrays["detection/sds"] = sds
@@ -168,6 +176,9 @@ def restore(state, path: str, step: int | None = None) -> int:
             )
         for key, dst in _state_arrays(state).items():
             if key not in grp:
+                if key.endswith(_TANGENT_FIELDS):  # an older checkpoint: transitions start lambda_f over
+                    dst.zero_()
+                    continue
                 if key.startswith("solver/") or key == "detection/sds":
                     continue
                 raise ValueError(f"The checkpoint has no {key}")

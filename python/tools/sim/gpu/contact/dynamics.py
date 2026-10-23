@@ -14,6 +14,7 @@ from .constraints import (
     FRICTION_LIMIT_UNSET,
     ConstraintSet,
     ConstraintSetData,
+    carry_across_features,
     frozen_friction_limit,
     stored_friction_limit,
 )
@@ -750,6 +751,12 @@ class MeshDynamics:
         self._data.cve = self.cve.data
         self._data.cvf = self.cvf.data
         self._data.cee = self.cee.data
+        fcontacts = self._data.contacts
+        self._transition_sets = (
+            self.cvv.transition_data(fcontacts.vv_bases),
+            self.cve.transition_data(fcontacts.ve_bases),
+            self.cvf.transition_data(fcontacts.vf_bases),
+        )
         self._data.Qc = wp.zeros(
             vv_capacity + ve_capacity + vf_capacity + ee_capacity, dtype=wp.float32
         )
@@ -775,7 +782,9 @@ class MeshDynamics:
 
     @profiling.scoped("contact.constraint_set")
     def update_constraint_set(self):
-        """Prepare constraint sets for a new step, warm-starting from the previous snapshot.
+        """Prepare constraint sets for a new step, warm-starting from the previous snapshot: by exact key
+        (:meth:`ConstraintSet.update_constraint_set`), then, for vertex contacts whose partner feature changed to
+        an adjacent one, from the vertex's previous contact (:func:`constraints.carry_across_features`).
 
         Preconditions:
         - self.contacts must be up-to-date
@@ -797,6 +806,11 @@ class MeshDynamics:
             with wp.ScopedStream(stream, sync_enter=False):
                 cset.update_constraint_set(cuv)
             main_stream.wait_stream(stream)
+        carry_across_features(self.meshes.data, self._transition_sets, self.cvf.n_u)
+        for cset, bases in zip(
+            (self.cvv, self.cve, self.cvf), (contacts.vv_bases, contacts.ve_bases, contacts.vf_bases)
+        ):
+            cset.store_tangent_bases(bases)
         # Vertex solves skip the contact gather of vertices without any pair.
         wp.launch(_flag_contact_vertices, dim=self.meshes.data.GXV.shape[0], inputs=[self._data])
 
