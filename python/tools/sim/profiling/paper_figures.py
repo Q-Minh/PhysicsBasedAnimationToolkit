@@ -74,7 +74,8 @@ from ..benchmark_plot import SOLVER_COLORS, SOLVER_NAMES, use_paper_fonts  # noq
 # The paper's phase groups, in drawing order (bottom of the stack first): name -> (scope names, color). Scope
 # names are innermost scopes (results.leaf); a scope in no group is drawn as OTHER. AAAVBD's acceleration runs
 # inside its vertex-solve kernel (aaavbd.sweep), so it has no group: its cost shows in its time per sweep
-# against VBD's. Colors: muted olive, khaki, slate and brown tones, none sharing a hue with a solver's color
+# against VBD's. Anderson's history updates run directly in its subproblem scope (anderson.subproblem's self
+# time), so they count as Mixing. Colors: muted olive, khaki, slate and brown tones, none sharing a hue with a solver's color
 # (benchmark_plot.SOLVER_COLORS), so phase fills never read as the solver lines drawn over them. Sweeps, detection
 # and Other are at least 14 apart in OKLab (x100) under normal vision and simulated color vision deficiencies
 # (Machado et al. 2009), every pair at least 4.9.
@@ -83,7 +84,8 @@ PHASE_GROUPS = {
     "Contact detection": (("contact.detect", "contact.filter", "contact.constraint_set"), "#ded5b3"),
     "Contact update": (("contact.dual", "contact.penalty", "newton.adapt_penalty"), "#3f3f30"),
     "Residuals": (("newton.gradient", "newton.convergence"), "#6f8094"),
-    "Mixing": (("chebyshev.mix", "anderson.mix", "anderson.gram", "anderson.solve"), "#9c7f66"),
+    "Mixing": (("chebyshev.mix", "anderson.subproblem", "anderson.mix", "anderson.gram", "anderson.solve"),
+               "#9c7f66"),
     "Newton CG": (("newton.linear_solve",), "#5c6b70"),
     "Newton assembly, line search": (("newton.assemble", "newton.line_search", "newton.energy"), "#f0ede4"),
 }
@@ -775,6 +777,7 @@ class TestPaperFigures(unittest.TestCase):
     def test_groups(self):
         self.assertEqual(phase_group("aaavbd.sweep"), "Vertex sweeps")
         self.assertEqual(phase_group("contact.constraint_set"), "Contact detection")
+        self.assertEqual(phase_group("anderson.subproblem"), "Mixing")  # its history updates
         self.assertEqual(phase_group("step.setup"), OTHER)
         self.assertEqual(phase_group(results.UNSCOPED), OTHER)
         scopes = [s for scopes, _ in PHASE_GROUPS.values() for s in scopes]
