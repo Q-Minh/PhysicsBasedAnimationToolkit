@@ -26,8 +26,10 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   100%. The other columns, from full production runs (``--production``), show what each solver's budget buys:
   the distribution per step of the final gradient ratio and of the penetration (feasibility) ratio to their
   tolerances (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below 1e-3 drawn at 1e-3, a
-  dashed line at the tolerance) and, with ``--step-times``, the step time. Early exits aren't shown: their
-  fraction doesn't say how soon a solver exits.
+  dashed line at the tolerance), the sweeps per step (linear axis) and, with ``--step-times``, the step time.
+  Sweep counts are quantized by the convergence test, which runs every ``Solver.Convergence.check_interval``
+  sweeps and after each subproblem (20 sweeps on CapsulesIntoBowl, so every count is a multiple of 20). Early
+  exits aren't shown: their fraction doesn't say how soon a solver exits.
 - ``slices``: Markdown, per kernels result: the steps grouped by percentiles of their GPU time
   (``--slices``, default the fastest 10%, P10-P90 and the slowest 10%) with each group's median step time,
   median iterations and early exits, for the paper's text.
@@ -67,7 +69,7 @@ import numpy as np  # noqa: E402
 from matplotlib import patheffects  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
-from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter  # noqa: E402
+from matplotlib.ticker import FuncFormatter, LogLocator, MultipleLocator, NullFormatter  # noqa: E402
 from matplotlib.transforms import Bbox  # noqa: E402
 
 from . import results, step_stats  # noqa: E402
@@ -438,7 +440,8 @@ BUDGET_COLUMNS = ("gradient", "feasibility", "early", "time")
 
 
 def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
-    """One :data:`BUDGET_COLUMNS` quantity per row from production runs' per-step tables (None: nothing)."""
+    """One :data:`BUDGET_COLUMNS` quantity, or ``"sweeps"`` (iterations per step), per row from production runs'
+    per-step tables (None: nothing)."""
     for yi, table in zip(y, tables):
         if table is None:
             continue
@@ -452,6 +455,8 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
                 early = 100.0 * summary["early_exit"]
                 ax.barh(yi, early, height=0.5, color="#8c8c8c", linewidth=0)
                 ax.text(early + 3, yi, f"{early:.0f}%", va="center", ha="left", fontsize=FONT_SIZE - 1, color=INK)
+        elif column == "sweeps":
+            _box(ax, yi, table["iterations"])
         else:
             _box(ax, yi, table["time_ms"])
     if column in ("gradient", "feasibility"):
@@ -462,6 +467,10 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
     elif column == "early":
         ax.set_xlim(0, 100)
         ax.set_xlabel("Early exits (%)", fontsize=FONT_SIZE)
+    elif column == "sweeps":
+        ax.set_xlim(left=0)
+        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.set_xlabel("Sweeps per step", fontsize=FONT_SIZE)
     else:
         _log_axis(ax)
         ax.set_xlabel("Step time (ms)", fontsize=FONT_SIZE)
@@ -497,8 +506,8 @@ def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0
     rows = solver_rows(kernels, production)
     y = np.arange(len(rows))[::-1]
     # No early exits: their fraction reads as speed, which it isn't (a solver can exit as often as another,
-    # but after fewer sweeps)
-    columns = [c for c in BUDGET_COLUMNS if c != "early" and (step_times or c != "time")]
+    # but after fewer sweeps). Sweeps per step instead, then the time they cost
+    columns = ["gradient", "feasibility", "sweeps"] + (["time"] if step_times else [])
     ratios = [2.4] + [1.5] * len(columns)
     fig, axes = plt.subplots(1, 1 + len(columns), figsize=(width, 0.3 * len(rows) + 0.85),
                              gridspec_kw={"width_ratios": ratios, "wspace": 0.28})
@@ -876,7 +885,7 @@ class TestPaperFigures(unittest.TestCase):
             self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
                              ["Vertex sweeps", "Contact detection", "Quartiles"])
             self.assertEqual([ax.get_xlabel() for ax in solvers.axes[1:]],
-                             ["Gradient ratio per step", "Penetration ratio per step", "Step time (ms)"])
+                             ["Gradient ratio per step", "Penetration ratio per step", "Sweeps per step", "Step time (ms)"])
             for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", solvers)):
