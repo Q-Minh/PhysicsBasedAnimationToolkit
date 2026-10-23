@@ -35,11 +35,33 @@ def _detect_vertex_mesh_contacts(
     mesh_depth: wp.array[wp.float32],
     max_dist: wp.float32,
     threshold: wp.float32,
+    widen: wp.int32,
+    x0: wp.array[wp.vec3f],
+    motion: wp.array[wp.float32],
     sds: wp.array[wp.float32],
     x: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # type: ignore
     contacts: pairs.ContactPairsData,  # type: ignore
 ):
+    """One block per contact vertex v: its pairs with every other contact component (at most one per component).
+
+    Notation:
+
+    - i = meshes.V[v] is the vertex's node; x[i] its position where detection runs (xt_i at a time step's first
+      detection, widen != 0, else the current iterate), and x0_i = x0[i] the step's starting iterate (the init
+      strategy's predictor for the VBD family, xt for Newton's Position).
+    - For each partner component m: c is the vertex's closest point on m at x, on the face with nodes j, k, l and
+      barycentrics b0, b1, b2 (c = b0 x_j + b1 x_k + b2 x_l); sd is the signed distance to it (or to the plane, for
+      plane colliders) and n the plane's normal.
+    - delta = (x0_i - xt_i) - sum_a b_a (x0_a - xt_a), a over j, k, l: the vertex's motion relative to c from xt
+      to x0.
+    - gap0 = sd - |delta| on meshes, a lower bound of the distance from x0_i to c's position at x0, and
+      sd + n . delta on planes, the exact distance at x0. The detection gap is gap = sd, or min(sd, gap0) with
+      widen; a pair is detected when gap < threshold (dmin + band).
+    - The query radius of the pair (v, m) is max(max_dist, threshold + |x0_i - xt_i| + motion[m]) with widen, else
+      max_dist: motion[m] = max |x0_a - xt_a| over m's vertices, so it reaches every face the relative motion can
+      bring within the threshold.
+    """
     tid = wp.tid()
     block_dim = wp.block_dim()
     block_id = tid // block_dim  # pyright: ignore[reportOperatorIssue]
@@ -62,17 +84,28 @@ def _detect_vertex_mesh_contacts(
 
     # 1. Detect thread local contacts
     tsdmin = max_dist
+    # With widen (a time step's first detection, at x = xt), pairs are also detected when the step's starting
+    # iterate x0 may bring them within the threshold: the vertex's own motion x0 - xt (the init strategy's
+    # predictor for the VBD family, none for Newton's Position) relative to its partner's closest point.
+    di = wp.vec3f(0.0)
+    if widen != 0:
+        di = x0[i] - xi
     # The loop variable m must not be reassigned in the body (k below is a node index).
     for m in range(local_tid, mesh_ids.shape[0], block_dim):
         if m == b:
             continue
+        # The query reaches every face that the relative motion can bring within the threshold: the vertex's own
+        # motion plus the partner's largest (motion[m]), as OGC's adaptive query radius
+        query_dist = max_dist
+        if widen != 0:
+            query_dist = wp.max(max_dist, threshold + wp.norm_l2(di) + motion[m])
         # Closed meshes sign the distance by ray parity. Open ones can't, so they use the closest face's
         # normal. Planes are queried at any distance, so that fast vertices can't tunnel through them.
         kind = mesh_kind[m]
         if kind == MESH_CLOSED:
-            qp = wp.mesh_query_point(mesh_ids[m], xi, max_dist)  # type: ignore
+            qp = wp.mesh_query_point(mesh_ids[m], xi, query_dist)  # type: ignore
         elif kind == MESH_OPEN:
-            qp = wp.mesh_query_point_sign_normal(mesh_ids[m], xi, max_dist)  # type: ignore
+            qp = wp.mesh_query_point_sign_normal(mesh_ids[m], xi, query_dist)  # type: ignore
         else:
             qp = wp.mesh_query_point_no_sign(mesh_ids[m], xi, wp.float32(1e6))  # type: ignore
         if not qp.result:  # type: ignore
@@ -85,6 +118,7 @@ def _detect_vertex_mesh_contacts(
         b0, b1, b2 = qp.u, qp.v, (wp.float32(1) - qp.u - qp.v)  # type: ignore
         xc = b0 * xj + b1 * xk + b2 * xl  # type: ignore
         sd = qp.sign * wp.norm_l2(xi - xc)  # type: ignore
+        n = wp.vec3f(0.0)
         if kind == MESH_PLANE:
             # Signed distance to the plane, for vertices over the plane's extent only (the closest
             # point is then the vertex's projection)
@@ -99,7 +133,23 @@ def _detect_vertex_mesh_contacts(
             # Finite planes are plates: vertices deeper than their thickness passed under or beside them
             if sd < -mesh_depth[m]:
                 continue
-        tsdmin = wp.min(tsdmin, sd)
+        # The gap that decides detection. With widen, also the gap at x0, estimated from the vertex's motion relative
+        # to its closest point, delta: sd - |delta| (a lower bound of its distance to that point at x0) for meshes,
+        # and the exact sd + n . delta for (flat) planes, so that motion along a plane (twisted bodies' ends next to
+        # one) doesn't widen. Relative motion, not the fastest body's (a global widening, as OGC's query radius):
+        # on CapsulesIntoBowl's checkpoints, the global one overflowed the VE capacity about 2x (2541 and 2998 pairs
+        # for 1513 at steps 100 and 250), and it brought ArmadilloSpaghetti.Fall's floor and ceiling planes into
+        # range; this one missed none of the pairs detected at x0 and found 1-3x as many VE and VF pairs (both
+        # scenes' checkpoints, surface vertices, CPU, 2026-10-22).
+        gap = sd
+        if widen != 0:
+            delta = di - (b0 * (x0[j] - xj) + b1 * (x0[k] - xk) + b2 * (x0[l] - xl))  # type: ignore
+            if kind == MESH_PLANE:
+                gap = wp.min(sd, sd + wp.dot(n, delta))
+            else:
+                gap = sd - wp.norm_l2(delta)
+        # For the step filter: with widen, the estimated gap at x0, as when detection was at x0
+        tsdmin = wp.min(tsdmin, gap)
         # TODO: Runs aren't reproducible when vertices sit exactly over a partner's vertices: two unit cubes
         # stacked 2 mm apart with aligned grids (checkpoint.py's test scene without its xy offset) gave VBD and
         # AAAVBD runs differing from the second step, by up to 1 cm after 10 steps (2026-10-21). Suspected: the
@@ -109,7 +159,7 @@ def _detect_vertex_mesh_contacts(
         # face shares the closest edge or vertex), one of two repeat runs still differed from the first step
         # (VBD 7.8 mm, AAAVBD 11.5 mm after 10 steps, 2026-10-22). Left to check: the signed distance's last
         # bits (from the returned face's barycentrics), and the order-dependent work after detection.
-        if sd < threshold:
+        if gap < threshold:
             # The closest feature (face interior, edge or vertex) comes from the closest point's Voronoi region
             # of the face, whose barycentrics are exactly zero off the interior, as C++ OGC's
             # (UvwPointInTriangle) and the second pass's (pairs._compute_vf_contact_data). Warp's barycentrics
@@ -201,6 +251,20 @@ def _detect_vertex_mesh_contacts(
     bsdmin = wp.tile(tsdmin)  # type: ignore
     sdmin = wp.tile_extract(wp.tile_min(bsdmin), 0)  # type: ignore
     sds[v] = sdmin  # type: ignore
+
+
+@wp.kernel
+def _component_motion(
+    xt: wp.array[wp.vec3f],
+    x0: wp.array[wp.vec3f],
+    meshes: MultiMeshData,  # type: ignore
+    motion: wp.array[wp.float32],
+):
+    """motion[b] = max |x0_i - xt_i| over the vertices i of contact component b (motion zeroed before)."""
+    v = wp.tid()
+    b = lower_bound(meshes.VP, meshes.VP.shape[0], v + 1) - 1  # type: ignore
+    i = meshes.V[v]
+    wp.atomic_max(motion, b, wp.norm_l2(x0[i] - xt[i]))
 
 
 @wp.func
@@ -416,6 +480,11 @@ class Sd(ContactDetection):
             for b in range(FP.shape[0] - 1)
         ]
         self._mesh_ids = wp.array([m.id for m in self._wp_meshes], dtype=wp.uint64)
+        # The same meshes over xt, for a time step's first detection (from_xt)
+        self._wp_meshes_xt = [wp.Mesh(self._xt, wp.array(data=Fb[b], dtype=wp.int32)) for b in range(FP.shape[0] - 1)]
+        self._mesh_ids_xt = wp.array([m.id for m in self._wp_meshes_xt], dtype=wp.uint64)
+        # (# meshes,) each component's largest motion |x0 - xt| from xt to the time step's starting iterate x0
+        self._motion = wp.zeros(FP.shape[0] - 1, dtype=wp.float32)
         X = self._x.numpy()
         self._mesh_kind = wp.array(
             [_mesh_kind(Fb[b].get().reshape(-1, 3), X) for b in range(len(Fb))],
@@ -449,6 +518,15 @@ class Sd(ContactDetection):
 
     def on_time_step_started(self):
         self.request_step_filter = True
+        if self.inactive:
+            return
+        # x is the step's starting iterate: the solvers call this after the time integration setup
+        self._motion.zero_()
+        wp.launch(
+            _component_motion,
+            dim=self._meshes.n_verts,
+            inputs=[self._xt, self._x, self._meshes.data, self._motion],  # type: ignore
+        )
 
     @profiling.scoped("contact.detect")
     def prepare_detection(self):
@@ -458,9 +536,9 @@ class Sd(ContactDetection):
             return
         self._refit()
 
-    def _refit(self):
+    def _refit(self, meshes: list | None = None):
         main_stream = wp.get_stream()
-        for mesh, stream in zip(self._wp_meshes, self._mesh_streams):
+        for mesh, stream in zip(meshes or self._wp_meshes, self._mesh_streams):
             stream.wait_stream(main_stream)
             with wp.ScopedStream(stream, sync_enter=False, sync_exit=False):
                 mesh.refit()
@@ -468,21 +546,20 @@ class Sd(ContactDetection):
 
     @profiling.scoped("contact.detect")
     def detect_contacts(self, from_xt: bool = False, prepared: bool = False):
-        # TODO: from_xt is ignored: a step's first detection (the solvers' initialize_solve, from_xt=True) runs at x,
-        # the init_strategy's predictor, while C++ vbd::InitializeSolve builds the constraint set at xt and OGC's
-        # detect_contacts honors the flag. Why it matters: fast bodies start a step deep inside their partners, where
-        # the closest point of a thin part can be on its far side. ArmadilloSpaghetti.Fall (1 MPa, AAAVBD 5 x 80,
-        # predictor x + dt v + dt^2/2 g, resumed at step 50; 2026-10-22, pre-130f608a feature classification):
-        # the last detection of step 57 had no penetrating contact, the first of step 58 had 923 penetrating VF
-        # contacts up to 25 mm deep, the first of step 59 491 up to 56 mm (pillars 5 cm in radius), and step 60
-        # diverged. Not fixed yet because detecting at xt changes every VertexSdf scene's first contact set: the
-        # threshold dmin + band doesn't grow with |xtilde - xt| as OGC's query radius does, so contacts the predictor
-        # reaches would appear only after the first outer iteration. The second pass (assemble_contacts) and the
-        # normal orientation would need the same positions. Validate on a fast impact and this scene.
         if self.inactive:
             return
+        # A time step's first detection (the solvers' initialize_solve, from_xt) is at xt, as C++
+        # vbd::InitializeSolve builds the constraint set at xt and OGC honors from_xt, and also finds the pairs
+        # that the step's starting iterate x (the init strategy's) may bring within the threshold (see the
+        # kernel). Detecting at the predictor x instead (until 2026-10-22) started fast bodies deep inside their
+        # partners, where the closest point of a thin part can be on its far side: ArmadilloSpaghetti.Fall's
+        # first detection of step 58 had 923 penetrating VF contacts up to 25 mm deep (pillars 5 cm in radius),
+        # and step 60 diverged; CubeFallingOnCube's top cube fell through the bottom one (aligned grids: the
+        # predictor put vertices on the bottom cube's vertical edges, with horizontal normals).
+        x = self._xt if from_xt else self._x
         if not prepared:
-            self._refit()  # unscoped, so the refit doesn't nest as contact.detect/contact.detect
+            # unscoped, so the refit doesn't nest as contact.detect/contact.detect
+            self._refit(self._wp_meshes_xt if from_xt else self._wp_meshes)
         main_stream = wp.get_stream()
         self._contacts.clear()
         n_verts = self._meshes.data.V.shape[0]
@@ -491,20 +568,23 @@ class Sd(ContactDetection):
             _detect_vertex_mesh_contacts,
             dim=n_verts * block_dim,
             inputs=[
-                self._mesh_ids,
+                self._mesh_ids_xt if from_xt else self._mesh_ids,
                 self._mesh_kind,
                 self._mesh_depth,
                 self.params.max_dist,  # max_dist
                 self._contact_dmin + self.params.band,  # detection threshold
+                int(from_xt),  # widen
+                self._x,  # x0: the iterate
+                self._motion,
                 self._sds,
-                self._x,
+                x,
                 self._meshes.data,  # type: ignore
                 self._contacts.write_data,  # type: ignore
             ],
             block_dim=block_dim,
             stream=main_stream,
         )
-        self._contacts.assemble_contacts(self._x, with_reverse_contacts=True)
+        self._contacts.assemble_contacts(x, with_reverse_contacts=True)
         # Normals point from the partner surface to the vertex, on both sides of the surface: assemble_contacts
         # computes them as from outside (OGC's convention)
         contact_data = self._contacts.read_data[0]
@@ -522,7 +602,7 @@ class Sd(ContactDetection):
             wp.launch(
                 kernel=kernel,
                 dim=capacity,
-                inputs=[self._x, self._meshes.data] + extra + [self._meshes.n_verts],
+                inputs=[x, self._meshes.data] + extra + [self._meshes.n_verts],
                 stream=stream,
             )
             main_stream.wait_stream(stream)
@@ -690,6 +770,56 @@ class TestSurfaceVertices(unittest.TestCase):
         u = np.concatenate([contacts.vv_contacts[0], contacts.ve_contacts[0], contacts.vf_contacts[0]])
         self.assertGreater(len(u), 0)
         self.assertFalse(np.isin(V[u], [8, 17]).any(), "an interior node has a pair")
+
+
+class TestFirstDetection(unittest.TestCase):
+    """A time step's first detection is at xt and reaches the pairs the starting iterate brings within the
+    threshold: two aligned unit cubes, the top one 5 mm above the fixed bottom one and falling at 3 m/s, so that
+    its predictor ends 2.5 cm inside (CubeFallingOnCube's tunneling: detected at the predictor, the vertices were
+    on the bottom cube's vertical edges, closest to its side faces, with horizontal normals)."""
+
+    gap = 5e-3
+
+    def _state(self):
+        from pbatoolkit import pbat, pypbat
+        from ....state import SimulationState, load_params
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+        X = np.vstack([V, V + [0.0, 0.0, 1.0 + self.gap]]).astype(np.float64)  # aligned grids
+        fem = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+        fem.set_mass_matrix(1e3)
+        fem.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))
+        fem.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+        fem.set_time_integration_scheme(dt=1e-2, s=1)
+        fem.constrain(np.repeat([1, 0], 8))
+        v = np.zeros((3, 16))
+        v[2, 8:] = -3.0
+        fem.set_initial_conditions(fem.x, v)
+        state = SimulationState(fem, load_params(fem), None)
+        for k in ("vv", "ve", "vf"):  # the default multipliers of 16 vertices leave one VV slot
+            setattr(state.contact_storage_params, f"n_{k}_contact_capacity", 1.0)
+        state.reset()
+        return state
+
+    def test_detects_at_xt(self):
+        state = self._state()
+        threshold = float(state.contact.params.dmin) + float(state.detector.params.band)
+        self.assertLess(threshold, self.gap, "the pairs must be beyond the threshold at xt")
+        state.fem.setup_time_integration_optimization(state.step_init_strategy())
+        self.assertLess(float(state.fem.data.x.numpy()[8:, 2].min()), 1.0 - 0.02, "the predictor must penetrate")
+        state.detector.on_time_step_started()
+        state.detector.detect_contacts(from_xt=True)
+        contacts = state.detector._contacts
+        self.assertEqual(tuple(int(c) for c in contacts.num_contacts)[:3], (8, 0, 0))
+        V = state.multimesh.data.V.numpy()
+        xt = state.fem.xt.numpy()
+        u, w = contacts.vv_contacts
+        normals = contacts.read_data[0].vv_bases.n.numpy()[: len(u)]
+        for c in range(len(u)):
+            self.assertGreater(abs(float(normals[c][2])), 0.99)  # the cubes' facing vertices
+            self.assertAlmostEqual(float(np.dot(xt[V[u[c]]] - xt[V[w[c]]], normals[c])), self.gap, delta=1e-5)
+
 
 if __name__ == "__main__":
     wp.init()
