@@ -250,3 +250,61 @@ Chebyshev's 2.0x, and its error after 200 sweeps is close to Chebyshev's 0.012.
 
 B doesn't help, and its extra pass costs 2%. The harm isn't the staleness of g_k: it is applying the augmentation at
 the first sweep after the objective changed, before betaG can adapt.
+
+## 6. GPU Newton's Coulomb limit: why the per-step freeze stays
+
+**Question.** GPU Newton caps the augmented friction force at a Coulomb limit
+C = mu_f max(lambda_n − sigma_n c_n, 0). C is frozen per contact for the time step, at its first positive estimate
+(`contact.constraints.frozen_friction_limit`). At an impact that first estimate comes from a deeply penetrating early
+iterate, 5-27x the step's final normal force, so impacts get too much friction. Three alternatives were tried
+(2026-10-22). The records are on the branches `feature/newton-friction-limit` (F1, F1+A) and
+`feature/newton-friction-subproblem-freeze` (F3), both unmerged:
+- **F1:** C = mu_f max(lambda_n, 0), the multiplier of the current outer iteration, fixed within the subproblem.
+- **F1+A:** F1, plus the live estimate mu_f max(−sigma_n c_n, 0) for contacts with lambda_n = 0.
+- **F3:** the per-step freeze's estimate, re-frozen at each subproblem's start.
+
+**Setup.**
+- **Incline.** `data/scenarios/planes/CubeOnInfiniteInclinedPlane.h5` (15°), with CapsulesIntoBowl's contact settings
+  and Newton 10 outer iterations x 2 Newton steps. Accelerations are fitted over the second and third thirds of each
+  run. The impact case lifts the cube 10 cm and launches it at 3 m/s along the slope and 2 m/s into the plane.
+- **Capsules.** Newton resumed from AAAVBD's CapsulesIntoBowl checkpoint at step 200, for 15 steps of the 2.1-2.4 s
+  impacts.
+
+Sliding acceleration (m/s²) on the incline, with Coulomb in brackets, and the impact window's friction ratio (1 is
+Coulomb; AAAVBD 1.01):
+
+| Case | Per-step freeze (kept) | F1 | F1+A | F3 |
+|---|---|---|---|---|
+| From rest, mu_f 0.2 (0.644) | 0.52 | 0.90 | −0.09 (sticks) | 1.16 |
+| From rest, mu_f 0.3 (sticks) | sticks | sticks | −0.39 | sticks |
+| Sliding at 3 m/s, mu_f 0.2 (0.644) | 0.67 | 1.02 | −1.47 | 0.85 |
+| Sliding at 3 m/s, mu_f 0.3 (−0.30) | −0.56 | +0.43 (never stops) | −2.65 | +0.02 (never stops) |
+| Sliding, 1 outer iteration, mu_f 0.2 / 0.3 | 0.68 / −0.32 | 0.33 / −0.94 | 0.11 / −0.36 | as the freeze |
+| Impact window friction ratio | 1.25 | 0.90 | 0.88 | 1.02 |
+| Steps passing the outer test, from rest at 0.2 | 147 / 150 | 143 | 6 | 143 |
+
+No variant had line-search failures. With one outer iteration per step, F3 is the per-step freeze.
+
+**Mechanisms.**
+- **F1 under-frictions sliding.** Part of the normal load is carried by the penalty term sigma_n (−c_n), and
+  lambda_n lags it, so mu_f lambda_n is too low. It also runs loaded contacts without friction until their first dual
+  update: on the capsules, 18% of loaded contact-subproblems at 10 outer iterations and 29% at 1 (a whole step).
+- **A makes Newton stall.** The live limit differs between contacts with and without a multiplier, and it makes the
+  line-search energy inexact. The outer test then fails almost every step, and the stalled iterates over-friction.
+- **F3 settles into a slower regime.** The per-step freeze and F3 are identical while steps take one outer
+  iteration. Once F3's steps need two (from step ~58, every step from 75), each step runs the same cycle (sums over
+  the cube's contacts, in units of its normal load):
+  - the first subproblem freezes C/mu_f = 1.07;
+  - its dual update dips lambda_n from 0.94 to 0.80;
+  - the second subproblem re-freezes at 0.79;
+  - the last dual update brings lambda_n back to 0.94.
+
+  The step's motion comes from the last subproblem, so the friction ratio settles at 0.65-0.75. It is self-reinforcing:
+  weaker friction means faster sliding, the outer test fails after the first subproblem, and a second one runs.
+- **The per-step freeze** keeps the step's first, larger estimate. It over-estimates the normal force at impacts
+  (1.25), and in steady sliding it stays within 0.8-1.04x Coulomb's acceleration.
+
+**Decision** (maintainer, 2026-10-22, provisional). Keep the per-step freeze: "for Newton, we best over-estimate the
+normal contact force". Every alternative that tracks the normal force within a step, from the multiplier or from
+re-estimates, under-estimates it while sliding, through the multiplier's lag or a dip between outer iterations. Too
+little friction lets bodies slide that should stop. Too much, at an impact, mostly shortens a slide.
