@@ -979,16 +979,16 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   from AAAVBD checkpoints, marked as windowed), and total CG iterations in the status log (a small solver-side change).
 - P10. **Solver figure panel (b)** waits for task 3's error-vs-converged-Newton analysis on the capsules (global
   M-norm error over time, one-step error from reference states, residual ratio vs actual error).
-- P11. **Delete?** data/scenarios/ArmadilloSpaghetti.Fall.Thickened.h5 (unused) and data/stanford-dragon_ftetwild.msh.
+- ~~P11. Delete?~~ **Answered, done (2026-10-22 evening):** ArmadilloSpaghetti.Fall.Thickened.h5 and data/stanford-dragon_ftetwild.msh deleted.
 - P12. **Timeline snapshot times** (0.4, 0.9, 2.88, 3.94, 5.0 s; camera between two tubes): OK as rendered?
 
-- P13. **Newton friction at impacts** (task 3, confirmed): the per-step frozen Coulomb limit C comes from the first
+- P13. **Answered: F1** (2026-10-22 evening; task 3 implements, after the AAAVBD check). **Newton friction at impacts** (task 3, confirmed): the per-step frozen Coulomb limit C comes from the first
   positive normal-force estimate, which is 5-27x the step's final force at an impact (a deeply penetrating early
   iterate) and 2-12x on unloading (the previous step's warm-started lambda_n): friction ratio 1.86 over the impact
   window (3.8 at the impact step) vs AAAVBD 1.01. Options: **F1** (recommended) C = mu_f lambda_n of the current
   outer iteration, fixed within the subproblem; **F2** per-step freeze that can only decrease; **F3** freeze per
   subproblem. The freeze was the maintainer's design (2026-10-20), so their call.
-- P14. **Capsule reference** (R3 calibration done): no solver reaches the default tolerance at the sampled states:
+- ~~P14.~~ **Dropped (maintainer, 2026-10-22 evening):** no trajectory ground truth is determinable for this scene with our setup. Instead task 3 tests the maintainer's hypothesis that AAAVBD's stencil gradient augmentation (smoothness assumption) loses its edge over the VBD family at abrupt high-to-low velocity transitions (impacts): existing production data first, then one-step runs from shared checkpoints, per-step convergence vs an abruptness measure, AAAVBD's betaG. Old entry: **Capsule reference** (R3 calibration done): no solver reaches the default tolerance at the sampled states:
   Newton 100 x 1, AAAVBD 10 x 200 and VBD 10 x 200 all floor at ~5-9x it (cause not diagnosed). VBD vs AAAVBD
   references agree within 0.05-0.2% of a step after one step (sub-mm over 10 steps); Newton differs by ~0.8% per step,
   systematically dissipative (kinetic energy -1.2 to -1.7% over 10 steps, frictionless). Costs for 6 s: AAAVBD ~12-15
@@ -1006,10 +1006,10 @@ Figure names in the maintainer's Overleaf: figures/profiling/timeline.pdf, table
   capacity 2.4-2.8x at steps 100/250 (pairs dropped silently; VF up to 77%); the armadillo stays within capacity but the
   widening reaches the floor/ceiling planes (+1.9k VF on kinematic pillar ends). Options with adoption: raise
   n_ve_contact_capacity (~0.15 for the capsules), cap the widening, or widen only where needed (untested).
-- P16. **ArmadilloSpaghetti.Fall** blows up at ~step 60 at 1 MPa with every detector variant: its solves sit at 200-500x
+- P16. **Answered: try substeps** (2026-10-22 evening): 5 substeps, total sweeps per 10 ms kept at ~400 (1 x 80 per substep first); task 1, AAAVBD, dev's detector. **ArmadilloSpaghetti.Fall** blows up at ~step 60 at 1 MPa with every detector variant: its solves sit at 200-500x
   the residual tolerance from the start and the armadillo is squeezed between two pillars. A scene/budget decision.
 
-- P17. **Outer stopping test's contact artefact** (task 3): the capsule residual floor (5-9x tolerance for every solver)
+- P17. **Maintainer prefers T2 if easy** (smooth force transitions across contact-feature changes; T3 judged unnecessary, T1 questioned). Task 2 checks (CPU) whether the pressed lambda = 0 contacts are feature changes, drops/re-finds or new, and scopes T2. **Outer stopping test's contact artefact** (task 3): the capsule residual floor (5-9x tolerance for every solver)
   sits at ~2% of contacts that end the step pressed with lambda_n = 0, i.e. (re)entered the constraint set at the final
   detection after the last dual update; free nodes are converged (0.002-0.16 m/s^2). Options (shared stopping test):
   **T1** test after the last dual update, before the final re-detection, on the set the step solved; **T2** carry lambda
