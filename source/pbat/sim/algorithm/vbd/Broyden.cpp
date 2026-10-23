@@ -178,6 +178,9 @@ BroydenTestSetup SetupBroydenTest(pbat::Index maxIters = 10)
 
 } // namespace
 
+// TODO: This test fails nondeterministically (2026-10-22): its CHECKs failed in two builds and it threw NaN/Inf after
+// IntegratePositions in a third, with and without the kp == 0 augmentation change. Not investigated; the
+// parallel (TBB) vertex solves are the likely source of the run-to-run differences.
 TEST_CASE("[sim][algorithm][vbd] Broyden")
 {
     using namespace pbat;

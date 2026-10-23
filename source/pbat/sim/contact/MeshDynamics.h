@@ -177,6 +177,11 @@ class MeshDynamics
          * @param xc `kDofs x 1` stencil node positions at the linearization point
          * @param xtc `kDofs x 1` stencil node positions at time t (for friction chat)
          */
+        // TODO: n = diff / d has no zero-distance guard, so a stencil at zero distance (e.g. a vertex exactly on its
+        // closest face) gets a NaN normal, gradient and tangent basis: in the "Cube sliding on plane" doctest
+        // (plain VBD) such linearizations happened 126 times, and the first made its vertex solve NaN (2026-10-22).
+        // Idea: take the direction of the same stencil at xt (where the step started, outside the contact), else
+        // the face normal, else the previous linearization's.
         void ComputeLinearization(auto&& xc, auto&& xtc)
         {
             using namespace math::linalg::mini;
