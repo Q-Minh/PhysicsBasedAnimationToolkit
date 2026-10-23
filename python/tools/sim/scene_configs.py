@@ -275,9 +275,7 @@ SCENES = {
         "transform for the first 0.45 s, then released, so it falls into the already tangling pillars (maintainer, "
         "2026-10-21, after the JGS2-GQ paper's scene: thin pillars close to the armadillo wrap it rather than push it "
         "out). The held nodes stay off the surface: holding surface nodes pits the pillars' prescribed twist against "
-        "prescribed armadillo nodes in contact, with no feasible position, and the simulation froze. "
-        "ArmadilloSpaghetti.Fall.Thickened.h5 (not used) has the armadillo thickened by a 1 cm offset, from a "
-        "misdiagnosis of the freeze (2026-10-22)",
+        "prescribed armadillo nodes in contact, with no feasible position, and the simulation froze",
         [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
         ["It freezes at about step 175 (1.75 s): the unbounded twist keeps tightening the stiff pillars around the "
          "soft armadillo, whose elements near (-0.68, 1.37, -0.42) m invert from step 170; its surface there folds "
