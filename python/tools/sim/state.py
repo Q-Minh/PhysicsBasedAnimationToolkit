@@ -791,8 +791,8 @@ class TestDroppedContacts(unittest.TestCase):
     def test_warns_about_dropped_pairs(self):
         from pbatoolkit import pypbat
 
-        # Two unit cubes, the top one 1 mm above the fixed bottom one: their 8 facing vertices are VV pairs, and
-        # the default capacities give 1 VV slot for these 16 vertices
+        # Two unit cubes, the top one 1 mm above the fixed bottom one: their 8 facing vertices are VV pairs, and a
+        # zero VV multiplier leaves 1 slot
         V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
         C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
         X = np.vstack([V, V + [0.0, 0.0, 1.001]]).astype(np.float64)
@@ -803,12 +803,32 @@ class TestDroppedContacts(unittest.TestCase):
         fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
         fem_cpu.constrain(np.repeat([1, 0], 8))
         state = SimulationState(fem_cpu, load_params(fem_cpu))
+        state.contact_storage_params.n_vv_contact_capacity = 0.0
         state.reset()
         pairs = state.contact.contacts
         self.assertEqual(pairs.capacity[0], 1)
         with self.assertWarnsRegex(RuntimeWarning, "VV pairs, more than the capacity 1;"):
             state.step()
         self.assertGreaterEqual(pairs.requested_peaks()[0], 8)
+
+    def test_small_meshes_get_the_minimum_capacity(self):
+        """The default multipliers of a 16-vertex scene (0.05 x 16 VV slots) give the minimum capacity, 64 slots per
+        type, and a zero multiplier 1 slot."""
+        from pbatoolkit import pypbat
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+        X = np.vstack([V, V + [0.0, 0.0, 1.001]]).astype(np.float64)
+        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+        fem_cpu.set_mass_matrix(1e3)
+        fem_cpu.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))  # pyright: ignore[reportArgumentType]
+        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
+        state = SimulationState(fem_cpu, load_params(fem_cpu))
+        self.assertEqual(state.multimesh.n_verts, 16)
+        self.assertEqual(state.contact.contacts.capacity, (64, 64, 64, 64))
+        state.contact_storage_params.n_ee_contact_capacity = 0.0
+        state.reset()
+        self.assertEqual(state.contact.contacts.capacity, (64, 64, 64, 1))
 
 
 if __name__ == "__main__":

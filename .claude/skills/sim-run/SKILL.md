@@ -92,7 +92,7 @@ Frequently changed keys:
 | `Solver.Newton.n_max_iters`, `Solver.Newton.newton.n_max_iters`, `Solver.Newton.LinearSolver.*` | Newton's outer (AL) iterations; Newton steps per outer iteration; CG limits |
 | `Contact.ContactDynamics.*`, `Contact.CDType.VertexSdf.*` | Contact penalties, friction `mu_f`, AL margin `dmin`; vertex SDF detects below `dmin + VertexSdf.band` (`VertexSdf.dmin` is deprecated) |
 | `Contact.ContactDynamics.penalty_adaptivity`, `.gamman_adaptive` | 0 constant, 1 per time step, 2 per subproblem. Default: 1 (TIMESTEP), with `gamman_adaptive` 1. Adaptive penalties scale the largest vertex-Hessian Rayleigh quotient by `gamman_adaptive` (C++'s default 1). The contact multipliers are warm-started across steps, so softer penalties (`gamman_adaptive` 0.1, or CONSTANT at `gamman` 1e4) eject resting bodies |
-| `Contact.ContactStorage.n_*_contact_capacity` | Contact-pair capacity multipliers. Contacts beyond capacity are dropped, with a `RuntimeWarning` from `SimulationState.step` (once per type; `ContactPairs.requested_peaks()` has the counts requested) |
+| `Contact.ContactStorage.n_*_contact_capacity` | Contact-pair capacity multipliers (at least 64 slots per type; a zero multiplier gives 1). Contacts beyond capacity are dropped, with a `RuntimeWarning` from `SimulationState.step` (once per type; `ContactPairs.requested_peaks()` has the counts requested) |
 
 ## Tuning (maintainer's guidance)
 

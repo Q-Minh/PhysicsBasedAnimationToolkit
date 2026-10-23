@@ -13,19 +13,31 @@ from .. import halfedges
 from .. import queries
 
 
+# The fewest slots of a contact type with a positive capacity multiplier: small meshes' multipliers otherwise left
+# 1 slot, e.g. CubeFallingOnCube's 16 vertices (0.05 x 16), and dropped pairs (4 VV pairs found for 1 slot,
+# 2026-10-22)
+MIN_CAPACITY = 64
+
+
 class Params(SerializableMixin):
     n_vv_contact_capacity = DocField(
-        0.05, "Vertex-vertex capacity multiplier (x num_vertices)."
+        0.05, "Vertex-vertex capacity multiplier (x num_vertices; at least 64 slots, 1 for a zero multiplier)."
     )
     n_ve_contact_capacity = DocField(
-        0.05, "Vertex-edge capacity multiplier (x num_vertices)."
+        0.05, "Vertex-edge capacity multiplier (x num_vertices; at least 64 slots, 1 for a zero multiplier)."
     )
     n_vf_contact_capacity = DocField(
-        0.5, "Vertex-face capacity multiplier (x num_vertices)."
+        0.5, "Vertex-face capacity multiplier (x num_vertices; at least 64 slots, 1 for a zero multiplier)."
     )
     n_ee_contact_capacity = DocField(
-        0.2, "Edge-edge capacity multiplier (x num_edges)."
+        0.2, "Edge-edge capacity multiplier (x num_edges; at least 64 slots, 1 for a zero multiplier)."
     )
+
+
+def capacity(multiplier: float, n: int) -> int:
+    """A contact type's pair capacity: ``multiplier * n`` slots, at least :data:`MIN_CAPACITY`, or 1 slot for a zero
+    multiplier (e.g. EE pairs, which VertexSdf doesn't detect)."""
+    return max(MIN_CAPACITY, int(multiplier * n)) if multiplier > 0 else 1
 
 
 @wp.struct
@@ -324,10 +336,10 @@ class ContactPairs:
         # At least 1 slot per type: cuda.compute caches its radix sort by array types, and a sort built
         # from empty arrays turns later sorts of the same types into keys-only sorts (their values are
         # never written), e.g. the VF sort on tiny meshes like CubeFallingOnCube.
-        vv_capacity = max(1, int(params.n_vv_contact_capacity * meshes.n_verts))  # type: ignore
-        ve_capacity = max(1, int(params.n_ve_contact_capacity * meshes.n_verts))  # type: ignore
-        vf_capacity = max(1, int(params.n_vf_contact_capacity * meshes.n_verts))  # type: ignore
-        ee_capacity = max(1, int(params.n_ee_contact_capacity * meshes.n_edges))  # type: ignore
+        vv_capacity = capacity(params.n_vv_contact_capacity, meshes.n_verts)  # type: ignore
+        ve_capacity = capacity(params.n_ve_contact_capacity, meshes.n_verts)  # type: ignore
+        vf_capacity = capacity(params.n_vf_contact_capacity, meshes.n_verts)  # type: ignore
+        ee_capacity = capacity(params.n_ee_contact_capacity, meshes.n_edges)  # type: ignore
 
         # Pair storage
         self._vv, self._rvv = Pairs(meshes.n_verts, meshes.n_verts, vv_capacity), Pairs(

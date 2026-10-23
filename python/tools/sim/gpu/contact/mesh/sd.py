@@ -708,7 +708,7 @@ class TestFeatureClassification(unittest.TestCase):
         fem.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))
         fem.set_time_integration_scheme(dt=1e-2, s=1)
         state = SimulationState(fem, load_params(fem), None)
-        for k in ("vv", "ve", "vf"):  # the default multipliers of 30 vertices leave one VE slot
+        for k in ("vv", "ve", "vf"):  # a slot per vertex
             setattr(state.contact_storage_params, f"n_{k}_contact_capacity", 1.0)
         state.reset()
         dmin = float(state.contact.params.dmin)
@@ -797,7 +797,7 @@ class TestFirstDetection(unittest.TestCase):
         v[2, 8:] = -3.0
         fem.set_initial_conditions(fem.x, v)
         state = SimulationState(fem, load_params(fem), None)
-        for k in ("vv", "ve", "vf"):  # the default multipliers of 16 vertices leave one VV slot
+        for k in ("vv", "ve", "vf"):  # a slot per vertex
             setattr(state.contact_storage_params, f"n_{k}_contact_capacity", 1.0)
         state.reset()
         return state
