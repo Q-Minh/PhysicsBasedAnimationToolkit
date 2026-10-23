@@ -214,7 +214,7 @@ def _accelerated_vertex_solve_kernel(
     # No augmentation at a subproblem's first sweep (kp = 0), for every k: the neighbours' stored g_k are from the
     # previous subproblem, before its dual update and re-detection changed the objective, and betaG adapts only from
     # kp > 0. With it, AAAVBD's error jumped 1.5-5x at those sweeps at CapsulesIntoBowl's impacts
-    # (docs/solver-accuracy-notes.md, entry 5). C++ ComputeStencilGradientAugmentation augments for k > 0 or kp > 0.
+    # (docs/solver-accuracy-notes.md, entry 5). As C++ vbd::detail::ComputeStencilGradientAugmentation.
     ai = wp.vec3f()
     if kp > 0:  # type: ignore
         ail = compute_thread_local_stencil_gradient_augmentation(
