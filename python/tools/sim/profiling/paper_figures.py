@@ -21,11 +21,13 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   numbers marked at their times on the plots (first row only).
 - ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
   short fixed-budget kernels runs (no early exit, e.g. every solver resumed from the same checkpoint): each
-  phase group's share of the GPU time, with the GPU time per sweep at the bar's end. The other columns, from
-  full production runs (``--production``), show what each solver's budget buys: the distribution per step of
-  the final gradient ratio and of the penetration (feasibility) ratio to their tolerances (box: quartiles,
-  whiskers: P10-P90, dot: maximum; log axes, ratios below 1e-3 drawn at 1e-3, a dashed line at the
-  tolerance), the fraction of early exits and, with ``--step-times``, the step time.
+  phase group's share of the GPU time, with the GPU time per sweep at the bar's end. Groups shared by every
+  solver and negligible (:data:`SOLVERS_OMITTED`) are left out without renormalizing, so the bars end short of
+  100%. The other columns, from full production runs (``--production``), show what each solver's budget buys:
+  the distribution per step of the final gradient ratio and of the penetration (feasibility) ratio to their
+  tolerances (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below 1e-3 drawn at 1e-3, a
+  dashed line at the tolerance) and, with ``--step-times``, the step time. Early exits aren't shown: their
+  fraction doesn't say how soon a solver exits.
 - ``slices``: Markdown, per kernels result: the steps grouped by percentiles of their GPU time
   (``--slices``, default the fastest 10%, P10-P90 and the slowest 10%) with each group's median step time,
   median iterations and early exits, for the paper's text.
@@ -74,7 +76,8 @@ from ..benchmark_plot import SOLVER_COLORS, SOLVER_NAMES, use_paper_fonts  # noq
 # The paper's phase groups, in drawing order (bottom of the stack first): name -> (scope names, color). Scope
 # names are innermost scopes (results.leaf); a scope in no group is drawn as OTHER. AAAVBD's acceleration runs
 # inside its vertex-solve kernel (aaavbd.sweep), so it has no group: its cost shows in its time per sweep
-# against VBD's. Colors: muted olive, khaki, slate and brown tones, none sharing a hue with a solver's color
+# against VBD's. Anderson's history updates run directly in its subproblem scope (anderson.subproblem's self
+# time), so they count as Mixing. Colors: muted olive, khaki, slate and brown tones, none sharing a hue with a solver's color
 # (benchmark_plot.SOLVER_COLORS), so phase fills never read as the solver lines drawn over them. Sweeps, detection
 # and Other are at least 14 apart in OKLab (x100) under normal vision and simulated color vision deficiencies
 # (Machado et al. 2009), every pair at least 4.9.
@@ -83,7 +86,8 @@ PHASE_GROUPS = {
     "Contact detection": (("contact.detect", "contact.filter", "contact.constraint_set"), "#ded5b3"),
     "Contact update": (("contact.dual", "contact.penalty", "newton.adapt_penalty"), "#3f3f30"),
     "Residuals": (("newton.gradient", "newton.convergence"), "#6f8094"),
-    "Mixing": (("chebyshev.mix", "anderson.mix", "anderson.gram", "anderson.solve"), "#9c7f66"),
+    "Mixing": (("chebyshev.mix", "anderson.subproblem", "anderson.mix", "anderson.gram", "anderson.solve"),
+               "#9c7f66"),
     "Newton CG": (("newton.linear_solve",), "#5c6b70"),
     "Newton assembly, line search": (("newton.assemble", "newton.line_search", "newton.energy"), "#f0ede4"),
 }
@@ -405,9 +409,10 @@ def solver_rows(kernels: list[dict], production: list[dict]) -> list[tuple[dict 
     return sorted(pairs, key=lambda kp: (scenes.index(scene_key(kp[0] or kp[1])), solver_rank(kp[0] or kp[1])))
 
 
-def _sweeps_panel(ax, runs: list[dict | None], y: np.ndarray) -> list[str]:
+def _sweeps_panel(ax, runs: list[dict | None], y: np.ndarray, omit: tuple[str, ...] = ()) -> list[str]:
     """Bars of each phase group's share of :func:`ms_per_sweep` per run (None: no bar) at rows ``y``, with the
-    total GPU time per sweep at the bars' ends. Returns the groups drawn."""
+    total GPU time per sweep at the bars' ends. Groups in ``omit`` aren't drawn, but still count in the total.
+    Returns the groups drawn."""
     present: list[str] = []
     for yi, r in zip(y, runs):
         if r is None:
@@ -416,6 +421,8 @@ def _sweeps_panel(ax, runs: list[dict | None], y: np.ndarray) -> list[str]:
         total = sum(per_sweep.values())
         left = 0.0
         for g, ms in per_sweep.items():
+            if g in omit:
+                continue
             present += [g] if g not in present else []
             share = 100.0 * ms / total if total > 0 else 0.0
             ax.barh(yi, share, left=left, height=0.62, color=group_color(g), edgecolor="white", linewidth=0.6)
@@ -476,23 +483,33 @@ def _box_handles() -> list:
             Line2D([], [], color=INK, linewidth=0.5, linestyle=(0, (2, 2)), label="Tolerance")]
 
 
+# Phase groups the solvers figure leaves out: in the VBD family, the same code in every solver and under 1% of its
+# GPU time (CapsulesIntoBowl, fixed budget: Contact update 0.6%; Residuals 0.3%, 0.6% for VBD, whose only sweep
+# block per subproblem ends with an inner test that repeats the outer one; Other 0.2%). Bars aren't renormalized,
+# so they end short of 100% by the omitted share. Newton's Contact update and Residuals hold its own scopes
+# (newton.adapt_penalty, newton.convergence): check them before plotting a Newton row.
+SOLVERS_OMITTED = ("Contact update", "Residuals", OTHER)
+
+
 def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0, step_times: bool = True):
     """The ``solvers`` figure (see the module docstring): one row per solver of one scene, the first column
     from fixed-budget kernels runs, the others from full production runs."""
     rows = solver_rows(kernels, production)
     y = np.arange(len(rows))[::-1]
-    columns = BUDGET_COLUMNS if step_times else BUDGET_COLUMNS[:-1]
-    ratios = [2.0] + [{"early": 1.0}.get(c, 1.5) for c in columns]
+    # No early exits: their fraction reads as speed, which it isn't (a solver can exit as often as another,
+    # but after fewer sweeps)
+    columns = [c for c in BUDGET_COLUMNS if c != "early" and (step_times or c != "time")]
+    ratios = [2.4] + [1.5] * len(columns)
     fig, axes = plt.subplots(1, 1 + len(columns), figsize=(width, 0.3 * len(rows) + 0.85),
                              gridspec_kw={"width_ratios": ratios, "wspace": 0.28})
     names = [solver_name(k or p) for k, p in rows]
-    present = _sweeps_panel(axes[0], [k for k, _ in rows], y)
+    present = _sweeps_panel(axes[0], [k for k, _ in rows], y, SOLVERS_OMITTED)
     _row_axes(axes[0], y, names)
     tables = [step_stats.per_step(p) if p is not None else None for _, p in rows]
     for ax, column in zip(axes[1:], columns):
         _budget_panel(ax, column, tables, y)
         _row_axes(ax, y, None)
-    _legend(fig, [Patch(color=group_color(g), label=g) for g in present] + _box_handles(), ncol=6)
+    _legend(fig, [Patch(color=group_color(g), label=g) for g in present] + _box_handles())
     return fig
 
 
@@ -775,6 +792,7 @@ class TestPaperFigures(unittest.TestCase):
     def test_groups(self):
         self.assertEqual(phase_group("aaavbd.sweep"), "Vertex sweeps")
         self.assertEqual(phase_group("contact.constraint_set"), "Contact detection")
+        self.assertEqual(phase_group("anderson.subproblem"), "Mixing")  # its history updates
         self.assertEqual(phase_group("step.setup"), OTHER)
         self.assertEqual(phase_group(results.UNSCOPED), OTHER)
         scopes = [s for scopes, _ in PHASE_GROUPS.values() for s in scopes]
@@ -853,9 +871,15 @@ class TestPaperFigures(unittest.TestCase):
             # Contact update and residuals fold into Other; the speed fill falls back to the kernels run's
             self.assertEqual([t.get_text() for t in timeline.legends[0].get_texts()],
                              ["Vertex sweeps", "Contact detection", OTHER, "AAAVBD", "VBD", "AAAVBD peak speed"])
+            solvers = plot_solvers([self._kernels("VBD"), k[0]], [p[0]], step_times=True)
+            # Contact update, residuals and Other left out; no early-exit panel
+            self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
+                             ["Vertex sweeps", "Contact detection", "Quartiles"])
+            self.assertEqual([ax.get_xlabel() for ax in solvers.axes[1:]],
+                             ["Gradient ratio per step", "Penetration ratio per step", "Step time (ms)"])
             for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
-                              ("solvers", plot_solvers([self._kernels("VBD"), k[0]], [p[0]], step_times=True))):
+                              ("solvers", solvers)):
                 path = os.path.join(d, f"{name}.pdf")
                 fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
                 plt.close(fig)
