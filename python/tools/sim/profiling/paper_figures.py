@@ -10,10 +10,14 @@ runs by scene and solver. They are separate runs whose trajectories differ sligh
 GPU arithmetic order isn't deterministic), so they are compared as distributions, never step by step.
 
 - ``timeline``: one row per kernels result (e.g. AAAVBD on one scene): GPU time per step over the simulated
-  time, stacked by phase group, with the paired production run's step time as a line, and below it the peak
-  node speed (``profiling/trajectory.py``) on the same time axis. ``--snapshots TIME=IMAGE ...`` adds a row of
-  simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at
-  their times on the plots (first row only).
+  time, stacked by phase group, with the step time of the paired production run and of the scene's other
+  production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis, the production
+  runs' final gradient ratio to its tolerance per step (log axis, thin raw lines under a rolling median of
+  ``--smooth`` steps, a dashed line at 1), over the peak node speed (``profiling/trajectory.py``) on a right
+  axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines. Without
+  solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...`` adds a row of simulation
+  snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at their times
+  on the plots (first row only).
 - ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
   short fixed-budget kernels runs (no early exit, e.g. every solver resumed from the same checkpoint): each
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. The other columns, from
@@ -34,8 +38,8 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
 Usage (from the repo root):
 
     python -m python.tools.sim.profiling.paper_figures timeline k_capsules.json --production p_capsules.json \
-        -o data/figures/profiling/timeline [--labels capsule_bowl="Capsules into bowl"] [--width 7] [--bin 5] \
-        [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
+        p_capsules_vbd.json -o data/figures/profiling/timeline [--labels capsule_bowl="Capsules into bowl"] \
+        [--width 7] [--bin 5] [--smooth 9] [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
     python -m python.tools.sim.profiling.paper_figures solvers k_fixed_*.json --production p_*.json \
         -o data/figures/profiling/solvers [--step-times]
     python -m python.tools.sim.profiling.paper_figures slices k_*.json -o data/tables/slices.md [--slices 10,90]
@@ -50,12 +54,14 @@ and columns have headers in the figure), one legend on top, no grid lines, PDF o
 
 import argparse
 import os
+import warnings
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from matplotlib import patheffects  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
 from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter  # noqa: E402
@@ -125,6 +131,14 @@ def pair_production(kernels: list[dict], production: list[dict]) -> list[dict | 
     return [by_key.get((scene_key(k), k["metadata"].get("solver"))) for k in kernels]
 
 
+def other_production(kernels: list[dict], production: list[dict]) -> list[list[dict]]:
+    """For each kernels result, the production results of the same scene and other solvers, in the benchmark
+    figures' solver order."""
+    return [sorted((p for p in production if scene_key(p) == scene_key(k)
+                    and p["metadata"].get("solver") != k["metadata"].get("solver")), key=solver_rank)
+            for k in kernels]
+
+
 def step_seconds(result: dict, t: np.ndarray) -> np.ndarray:
     """Simulated time (s) at the start of each step, from the result's time step."""
     return t * float(result["metadata"].get("dt", 1.0))
@@ -138,6 +152,28 @@ def bin_steps(values: np.ndarray, n: int) -> np.ndarray:
     starts = np.arange(0, values.size, n)
     counts = np.diff(np.append(starts, values.size))
     return np.add.reduceat(values, starts) / counts
+
+
+SMOOTH_STEPS = 9  # timeline: the rolling median's window over the per-step residual ratios
+SPEED_FILL = "#d9d9d9"  # timeline: the peak speed behind the residual ratios
+HALO = [patheffects.withStroke(linewidth=1.8, foreground="white")]  # lines drawn over the phase bands
+
+
+def rolling_median(values: np.ndarray, n: int) -> np.ndarray:
+    """Centered rolling median over ``n`` values (rounded up to odd), ignoring NaNs, with shorter windows at the
+    ends; NaN where a window has no value."""
+    v = np.asarray(values, dtype=float)
+    if n <= 1 or v.size == 0:
+        return v
+    half = n // 2
+    windows = np.lib.stride_tricks.sliding_window_view(np.pad(v, half, constant_values=np.nan), 2 * half + 1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN windows
+        return np.nanmedian(windows, axis=1)
+
+
+def solver_color(result: dict) -> str:
+    return SOLVER_COLORS.get(result["metadata"].get("solver"), INK)
 
 
 def slice_header(s: dict, edges: tuple[float, ...]) -> str:
@@ -186,19 +222,60 @@ def _marker(ax, x: float, number: int, y: float = 1.0):
             bbox={"boxstyle": "circle,pad=0.18", "facecolor": "white", "edgecolor": INK, "linewidth": 0.5})
 
 
+def _residual_strip(strip, x: np.ndarray, kernels_speed: np.ndarray, runs: list[dict], smooth: int):
+    """The timeline's lower strip: each production run's final gradient ratio per step (raw and its rolling
+    median) on a log axis, over the peak speed on a right axis (see the module docstring); ``x`` and
+    ``kernels_speed`` are the kernels run's step times (s) and peak speeds, drawn if the runs have none."""
+    speed = strip.twinx()
+    filled = False
+    for i, run in enumerate(runs):
+        table = step_stats.per_step(run)
+        x = step_seconds(run, table["t"])
+        if i == 0 and np.isfinite(table["peak_speed"]).any():
+            speed.fill_between(x, table["peak_speed"], color=SPEED_FILL, alpha=0.6, linewidth=0)
+            filled = True
+        elif i > 0 and np.isfinite(table["peak_speed"]).any():
+            speed.plot(x, table["peak_speed"], color=solver_color(run), linewidth=0.5, linestyle=(0, (1, 1.5)))
+        ratio = np.maximum(table["gradient_ratio"], RATIO_FLOOR)
+        strip.plot(x, ratio, color=solver_color(run), linewidth=0.3, alpha=0.35)
+        strip.plot(x, rolling_median(ratio, smooth), color=solver_color(run), linewidth=0.8)
+    if not filled and np.isfinite(kernels_speed).any():
+        speed.fill_between(x, kernels_speed, color=SPEED_FILL, alpha=0.6, linewidth=0)
+    strip.axhline(1.0, color=INK, linewidth=0.5, linestyle=(0, (3, 2)))
+    strip.set_yscale("log")
+    _log_axis(strip, "y")
+    strip.set_ylabel("Residual /\ntolerance", fontsize=FONT_SIZE)
+    speed.set_ylim(bottom=0)
+    speed.set_ylabel("Peak speed\n(m/s)", fontsize=FONT_SIZE, color="#7f7f7f")
+    # The ratios over the speed fill: the left axes in front, without their background
+    strip.set_zorder(speed.get_zorder() + 1)
+    strip.patch.set_visible(False)
+    _style(strip)
+    for side in ("top", "left", "bottom"):
+        speed.spines[side].set_visible(False)
+    speed.spines["right"].set_linewidth(0.5)
+    speed.tick_params(labelsize=FONT_SIZE, length=2, width=0.5, pad=1.5, colors="#7f7f7f")
+
+
 def plot_timeline(kernels: list[dict], production: list[dict | None], labels: list[str], width: float = 7.0,
-                  bin_n: int = 1, snapshots: list[tuple[float, str]] | None = None):
+                  bin_n: int = 1, snapshots: list[tuple[float, str]] | None = None,
+                  others: list[list[dict]] | None = None, smooth: int = SMOOTH_STEPS):
     """The ``timeline`` figure (see the module docstring): one row per kernels result, the first one under its
-    ``snapshots`` (simulated time, image path), numbered at their times on the plots."""
+    ``snapshots`` (simulated time, image path), numbered at their times on the plots. ``others`` are each row's
+    production runs of other solvers (:func:`other_production`), drawn over the paired ``production`` run."""
     tables = [step_stats.per_step(k) for k in kernels]
     rows = len(kernels)
+    others = others or [[] for _ in kernels]
+    runs_per_row = [([prod] if prod is not None else []) + list(more) for prod, more in zip(production, others)]
+    has_ratio = [any(np.isfinite(step_stats.per_step(run)["gradient_ratio"]).any() for run in runs)
+                 for runs in runs_per_row]
     has_speed = [bool(np.isfinite(t["peak_speed"]).any()) for t in tables]
     snapshots = sorted(snapshots or [])
     images = [plt.imread(path) for _, path in snapshots]
     image_height = width / len(images) * images[0].shape[0] / images[0].shape[1] if images else 0.0
     heights = []
-    for speed in has_speed:
-        heights += [1.5, 0.5 if speed else 0.001]
+    for ratio, speed in zip(has_ratio, has_speed):
+        heights += [1.5, 0.9 if ratio else 0.5 if speed else 0.001]
     fig = plt.figure(figsize=(width, image_height + sum(heights) + 0.45 * rows))
     outer = fig.add_gridspec(2, 1, height_ratios=[max(image_height, 1e-3), sum(heights) + 0.45 * rows], hspace=0.12)
     if images:
@@ -211,19 +288,20 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                     fontweight="bold", color=INK)
     grid = outer[1].subgridspec(2 * rows, 1, height_ratios=heights, hspace=0.15)
     present: list[str] = []
-    drew_production = False
-    for r, (result, table, prod, label) in enumerate(zip(kernels, tables, production, labels)):
+    solvers: dict[str, str] = {}  # drawn production runs: solver name -> color
+    drew_speed = False
+    for r, (result, table, runs, label) in enumerate(zip(kernels, tables, runs_per_row, labels)):
         groups = group_phases(table["phases"])
         present += [g for g in groups if g not in present]
         x = bin_steps(step_seconds(result, table["t"]), bin_n)
         area = fig.add_subplot(grid[2 * r])
         area.stackplot(x, *[bin_steps(v, bin_n) for v in groups.values()],
                        colors=[group_color(g) for g in groups], linewidth=0)
-        if prod is not None:
-            ptable = step_stats.per_step(prod)
-            area.plot(bin_steps(step_seconds(prod, ptable["t"]), bin_n), bin_steps(ptable["time_ms"], bin_n),
-                      color=INK, linewidth=0.6)
-            drew_production = True
+        for run in runs:
+            ptable = step_stats.per_step(run)
+            area.plot(bin_steps(step_seconds(run, ptable["t"]), bin_n), bin_steps(ptable["time_ms"], bin_n),
+                      color=solver_color(run), linewidth=0.6, path_effects=HALO)
+            solvers.setdefault(solver_name(run), solver_color(run))
         area.set_xlim(x[0], x[-1])
         area.set_ylim(bottom=0)
         area.set_ylabel("GPU time (ms)", fontsize=FONT_SIZE)
@@ -232,13 +310,17 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                       fontweight="bold", color=INK)
         _style(area)
         axes = [area]
-        if has_speed[r]:
+        if has_ratio[r] or has_speed[r]:
             area.tick_params(labelbottom=False)
             strip = fig.add_subplot(grid[2 * r + 1], sharex=area)
-            strip.plot(x, bin_steps(table["peak_speed"], bin_n), color=INK, linewidth=0.6)
-            strip.set_ylim(bottom=0)
-            strip.set_ylabel("Speed\n(m/s)", fontsize=FONT_SIZE)
-            _style(strip)
+            if has_ratio[r]:
+                _residual_strip(strip, step_seconds(result, table["t"]), table["peak_speed"], runs, smooth)
+                drew_speed = True
+            else:
+                strip.plot(x, bin_steps(table["peak_speed"], bin_n), color=INK, linewidth=0.6)
+                strip.set_ylim(bottom=0)
+                strip.set_ylabel("Speed\n(m/s)", fontsize=FONT_SIZE)
+                _style(strip)
             axes.append(strip)
         if r == rows - 1:
             axes[-1].set_xlabel("Time (s)" if "dt" in result["metadata"] else "Time step", fontsize=FONT_SIZE)
@@ -248,8 +330,9 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                     ax.axvline(t, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
                 _marker(area, t, i + 1)
     handles = [Patch(color=group_color(g), label=g) for g in present]
-    if drew_production:
-        handles.append(Line2D([], [], color=INK, linewidth=0.6, label="Step time (graph replay)"))
+    handles += [Line2D([], [], color=color, linewidth=0.8, label=name) for name, color in solvers.items()]
+    if drew_speed:
+        handles.append(Patch(color=SPEED_FILL, alpha=0.6, label="Peak speed"))
     _legend(fig, handles, ncol=min(len(handles), 6))
     return fig
 
@@ -424,14 +507,15 @@ def _box(ax, y: float, values: np.ndarray, floor: float | None = None, height: f
     ax.plot(d["max"], y, marker="o", markersize=2, color=INK, linestyle="none")
 
 
-def _log_axis(ax):
-    """Log x axis with plain-number ticks: 1-2-5 within a narrow range, decades over a wide one (call after
-    drawing, so the limits are known)."""
-    ax.set_xscale("log")
-    lo, hi = ax.get_xlim()
-    ax.xaxis.set_major_locator(LogLocator(subs=(1.0, 2.0, 5.0) if hi / lo < 300 else (1.0,)))
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
-    ax.xaxis.set_minor_formatter(NullFormatter())
+def _log_axis(ax, which: str = "x"):
+    """Log x (or y) axis with plain-number ticks: 1-2-5 within a narrow range, decades over a wide one (call
+    after drawing, so the limits are known)."""
+    getattr(ax, f"set_{which}scale")("log")
+    lo, hi = getattr(ax, f"get_{which}lim")()
+    axis = getattr(ax, f"{which}axis")
+    axis.set_major_locator(LogLocator(subs=(1.0, 2.0, 5.0) if hi / lo < 300 else (1.0,)))
+    axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    axis.set_minor_formatter(NullFormatter())
 
 
 def plot_sweeps(runs: list[dict], labels: dict[str, str], width: float = 7.0):
@@ -567,6 +651,8 @@ def main():
                         help="Printed width in inches (7: TOG's text width, 3.33: a column); fonts at nominal size.")
     parser.add_argument("--bin", type=int, default=1, dest="bin_n",
                         help="timeline: average the time series over blocks of this many steps.")
+    parser.add_argument("--smooth", type=int, default=SMOOTH_STEPS,
+                        help="timeline: steps in the rolling median over the residual ratios.")
     parser.add_argument("--snapshots", nargs="*", default=[], metavar="TIME=IMAGE",
                         help="timeline: snapshot images and their simulated times (s), e.g. 0.9=snap_1.png.")
     parser.add_argument("--slices", default="10,90",
@@ -600,7 +686,8 @@ def main():
                 raise SystemExit(f"--snapshots expects TIME=IMAGE, got {item!r}")
             snapshots.append((float(time), path))
         fig = plot_timeline(kernels, production, [labels.get(scene_key(k), scene_key(k)) for k in kernels],
-                            args.width, args.bin_n, snapshots)
+                            args.width, args.bin_n, snapshots, other_production(kernels, production_runs),
+                            args.smooth)
     elif args.kind == "solvers":
         fig = plot_solvers(kernels, production_runs, args.width, args.step_times)
     elif args.kind == "sweeps":
@@ -647,6 +734,11 @@ class TestPaperFigures(unittest.TestCase):
         steps = [{"t": s["t"], "step_timeline_ms": s["step_union_ms"] * 1.08, "status": s["status"]}
                  for s in kernels["steps"]]
         return {"source": "production", "metadata": dict(kernels["metadata"]), "steps": steps}
+
+    def test_rolling_median(self):
+        v = np.array([1.0, 9.0, 2.0, np.nan, 3.0, 100.0, 4.0])
+        self.assertEqual(rolling_median(v, 3).tolist(), [5.0, 2.0, 5.5, 2.5, 51.5, 4.0, 52.0])
+        self.assertEqual(rolling_median(v, 1).tolist()[:3], [1.0, 9.0, 2.0])
 
     def test_groups(self):
         self.assertEqual(phase_group("aaavbd.sweep"), "Vertex sweeps")
@@ -713,10 +805,13 @@ class TestPaperFigures(unittest.TestCase):
 
         k = [self._kernels(), self._kernels(scene="path/to/capsule_bowl.h5")]
         p = [self._production(k[0]), None]
+        vbd = self._production(self._kernels("VBD"))
+        self.assertEqual([[solver_name(o) for o in row] for row in other_production(k, [p[0], vbd])],
+                         [["VBD"], []])
         with tempfile.TemporaryDirectory() as d:
             image = os.path.join(d, "snap.png")
             plt.imsave(image, np.ones((30, 40, 3)))
-            for name, fig in (("timeline", plot_timeline(k, p, ["A", "B"], bin_n=2)),
+            for name, fig in (("timeline", plot_timeline(k, p, ["A", "B"], bin_n=2, others=[[vbd], []])),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", plot_solvers([self._kernels("VBD"), k[0]], [p[0]], step_times=True))):
                 path = os.path.join(d, f"{name}.pdf")
