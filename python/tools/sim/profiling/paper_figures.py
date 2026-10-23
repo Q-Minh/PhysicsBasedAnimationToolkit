@@ -73,18 +73,21 @@ from ..benchmark_plot import SOLVER_COLORS, SOLVER_NAMES, use_paper_fonts  # noq
 # The paper's phase groups, in drawing order (bottom of the stack first): name -> (scope names, color). Scope
 # names are innermost scopes (results.leaf); a scope in no group is drawn as OTHER. AAAVBD's acceleration runs
 # inside its vertex-solve kernel (aaavbd.sweep), so it has no group: its cost shows in its time per sweep
-# against VBD's. Colors: the profiling report's categorical palette, in its validated order.
+# against VBD's. Colors: muted olive, khaki, slate and brown tones, none sharing a hue with a solver's color
+# (benchmark_plot.SOLVER_COLORS), so phase fills never read as the solver lines drawn over them. Sweeps, detection
+# and Other are at least 14 apart in OKLab (x100) under normal vision and simulated color vision deficiencies
+# (Machado et al. 2009), every pair at least 4.9.
 PHASE_GROUPS = {
-    "Vertex sweeps": (("vbd.sweep", "aaavbd.sweep"), "#2a78d6"),
-    "Contact detection": (("contact.detect", "contact.filter", "contact.constraint_set"), "#eb6834"),
-    "Contact update": (("contact.dual", "contact.penalty", "newton.adapt_penalty"), "#1baf7a"),
-    "Residuals": (("newton.gradient", "newton.convergence"), "#eda100"),
-    "Mixing": (("chebyshev.mix", "anderson.mix", "anderson.gram", "anderson.solve"), "#e87ba4"),
-    "Newton CG": (("newton.linear_solve",), "#008300"),
-    "Newton assembly, line search": (("newton.assemble", "newton.line_search", "newton.energy"), "#6250d6"),
+    "Vertex sweeps": (("vbd.sweep", "aaavbd.sweep"), "#77764f"),
+    "Contact detection": (("contact.detect", "contact.filter", "contact.constraint_set"), "#ded5b3"),
+    "Contact update": (("contact.dual", "contact.penalty", "newton.adapt_penalty"), "#3f3f30"),
+    "Residuals": (("newton.gradient", "newton.convergence"), "#6f8094"),
+    "Mixing": (("chebyshev.mix", "anderson.mix", "anderson.gram", "anderson.solve"), "#9c7f66"),
+    "Newton CG": (("newton.linear_solve",), "#5c6b70"),
+    "Newton assembly, line search": (("newton.assemble", "newton.line_search", "newton.energy"), "#f0ede4"),
 }
 OTHER = "Other"
-OTHER_COLOR = "#a3a3a3"
+OTHER_COLOR = "#a49e94"
 INK = "#333333"  # text and neutral marks
 FONT_SIZE = 7
 PAD = 0.02  # inches around the saved figure
