@@ -652,6 +652,45 @@ class TestFeatureClassification(unittest.TestCase):
         self.assertEqual(float(state.convergence.penetration.numpy()[0]), 0.0)
 
 
+class TestSurfaceVertices(unittest.TestCase):
+    def test_interior_nodes_have_no_pairs(self):
+        """Scenes with colliders build their contact surface from a triangle mesh over every node
+        (colliders.add_colliders): its vertices must be the surface ones only, or interior nodes run detection and
+        get pairs (158 of ArmadilloSpaghetti.Fall's 1647 pairs at step 50, CPU count, 2026-10-22). Two cubes with
+        a center node each, 1 mm apart, with a detection threshold that reaches the centers."""
+        from pbatoolkit import pbat, pypbat
+        from ....colliders import add_colliders
+        from ....state import CDType, SimulationState, load_params
+
+        corners = np.array([[x, y, z] for z in (0, 1) for y in (0, 1) for x in (0, 1)], dtype=np.float64)
+        faces = [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]]
+        C = [[q[0], q[k], q[k + 1], 8] for q in faces for k in (1, 2)]  # 2 tets per face, to the center node
+        X = np.vstack([corners, [0.5, 0.5, 0.5], corners + [0.0, 0.0, 1.001], [0.5, 0.5, 1.501]])
+        E = np.vstack([C, np.array(C) + 9])
+        for e in E:  # positive volumes
+            a, b, c, d = X[e]
+            if np.dot(np.cross(b - a, c - a), d - a) < 0:
+                e[[2, 3]] = e[[3, 2]]
+        fem = pbat.sim.dynamics.FemElastoDynamics(X.T, E.T)
+        fem.set_mass_matrix(1e3)
+        fem.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))
+        fem.set_time_integration_scheme(dt=1e-2, s=1)
+        _, geometry = add_colliders(fem, np.array([0, 9, 18]), [])
+        self.assertEqual(np.asarray(geometry.mesh.V).tolist(), [i for i in range(18) if i not in (8, 17)])
+        state = SimulationState(fem, load_params(fem), None, geometry)
+        state.cd_params[CDType.VertexSdf].band = 0.6
+        state.cd_params[CDType.VertexSdf].max_dist = 1.0
+        for k in ("vv", "ve", "vf"):
+            setattr(state.contact_storage_params, f"n_{k}_contact_capacity", 1.0)
+        state.reset()
+        self.assertGreater(float(state.contact.params.dmin) + 0.6, 0.501, "the threshold must reach the centers")
+        state.detector.detect_contacts()
+        contacts = state.detector._contacts
+        V = state.multimesh.data.V.numpy()
+        u = np.concatenate([contacts.vv_contacts[0], contacts.ve_contacts[0], contacts.vf_contacts[0]])
+        self.assertGreater(len(u), 0)
+        self.assertFalse(np.isin(V[u], [8, 17]).any(), "an interior node has a pair")
+
 if __name__ == "__main__":
     wp.init()
     unittest.main()
