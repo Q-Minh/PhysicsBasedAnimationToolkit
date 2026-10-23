@@ -485,6 +485,14 @@ TEST_CASE("[sim][algorithm][vbd] Core")
     CHECK_LT(gnorm, g0norm);
 }
 
+// TODO: This test fails: NaN/Inf after IntegratePositions, with and without the kp == 0 augmentation change (2026-10-22).
+// With the default parameters (stencil acceleration on), the cube has already diverged at step 35 (a vertex at
+// (25.7, -14.0, -4.7) m, elastic gradient ~1e7, a near rank-1 vertex Hessian that the absolute hessZero test lets
+// through). As plain VBD (betaG0 = gammadown = gammadownS = gammaup = gammaupS = 0) it fails at step 43: a vertex
+// resting on the plane gets a NaN contact gradient, because MeshDynamics' ComputeLinearization normalizes the
+// stencil's difference with no zero-distance guard (TODO there). Guarding it (taking the direction at xt) moves the
+// failure to step 49, where the cube has gone through the plane and blown up, so the fast impact itself diverges
+// in C++ VBD + OGC; not investigated further.
 TEST_CASE("[type:integration][sim][algorithm][vbd] Cube sliding on plane")
 {
     using namespace pbat;

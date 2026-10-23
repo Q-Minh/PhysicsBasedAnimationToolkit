@@ -48,6 +48,8 @@ void NesterovIntegrator::Solve(Scalar sdt, Scalar sdt2, Index iterations)
 
 #include <doctest/doctest.h>
 
+// TODO: This legacy integrator's test fails (2026-10-22): the vertices neither all fall nor only fall, and the
+// gradient and objective don't decrease (4 CHECKs). Not investigated (the legacy vbd API is being deprecated).
 TEST_CASE("[sim][vbd] NesterovIntegrator")
 {
     using namespace pbat;
