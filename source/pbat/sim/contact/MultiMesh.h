@@ -156,10 +156,16 @@ struct MultiMesh
      * @brief Construct a new Multi Mesh object from a triangle mesh `F` with node connected
      * component labels `XCC`.
      *
+     * `F` may reference a subset of the nodes, e.g. the boundary of a tetrahedral mesh over all its
+     * nodes. The vertices `V` are the nodes that `F` references (sorted, unique), as
+     * ConstructFromTetrahedralMesh's boundary vertices, and `GXV` maps the other nodes to `-1`, so
+     * the result has the tetrahedral construction's format. If `F` references every node, `V` lists
+     * all of them.
+     *
      * @tparam TDerivedF Triangle matrix type
      * @tparam TDerivedXCC Connected component label vector type
      * @param F `3 x |# triangles|` array of triangle element indices
-     * @param XCC `|# nodes| x 1` array of node connected component labels
+     * @param XCC `|# nodes| x 1` array of node connected component labels, sorted by component
      * @param nComponents Number of connected components (optional)
      */
     template <class TDerivedF, class TDerivedXCC>
@@ -299,10 +305,15 @@ inline void MultiMesh<TIndex>::ConstructFromTriangleMesh(
     FP.resize(nComponents + 1);
     EP.resize(nComponents + 1);
     F = Fin;
-    V = Eigen::Vector<TIndex, Eigen::Dynamic>::LinSpaced(
-        static_cast<TIndex>(XCC.size()),
-        TIndex(0),
-        static_cast<TIndex>(XCC.size()) - TIndex(1));
+    // The vertices are the referenced nodes, in increasing order
+    auto const nNodes = XCC.size();
+    Eigen::Vector<bool, Eigen::Dynamic> bReferenced =
+        Eigen::Vector<bool, Eigen::Dynamic>::Constant(nNodes, false);
+    bReferenced(F.reshaped()).setConstant(true);
+    V.resize(bReferenced.count());
+    for (TIndex i = 0, v = 0; i < static_cast<TIndex>(nNodes); ++i)
+        if (bReferenced(i))
+            V(v++) = i;
     VP.setZero();
     FP.setZero();
     // Count connected component occurrences in VP[1:] and FP[1:]
@@ -312,8 +323,13 @@ inline void MultiMesh<TIndex>::ConstructFromTriangleMesh(
     std::inclusive_scan(VP.begin() + 1, VP.end(), VP.begin() + 1);
     std::inclusive_scan(FP.begin() + 1, FP.end(), FP.begin() + 1);
     BoundaryTriangulationEdges(F, XCC, E, EP, GVHEp, GVHEadj, GHEF, EHE);
-    // Compute point to vertex mapping
-    GXV = V;
+    // Compute point to vertex mapping, -1 for unreferenced nodes
+    auto const nVertices = static_cast<TIndex>(V.size());
+    GXV                  = Eigen::Vector<TIndex, Eigen::Dynamic>::Constant(nNodes, TIndex(-1));
+    GXV(V)               = Eigen::Vector<TIndex, Eigen::Dynamic>::LinSpaced(
+        nVertices,
+        TIndex(0),
+        nVertices - TIndex(1));
 }
 
 template <common::CIndex TIndex>
