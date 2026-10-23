@@ -308,7 +308,9 @@ SCENES = {
         "Young's modulus 1e6, was 8e5 until it froze crushed, 2026-10-22; tet quality at least 0.23, triangle angles "
         "at least 11 deg) whose waist (the slice at "
         "50-55% of its height, where only the torso is) is on the twist axis, turned so the pillars clear it by "
-        "2.7 cm; 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body, and the armadillo's interior core "
+        "2.7 cm, and lowered 15 cm along the twist axis (z from -0.75 to 0.45 m; floor 1.07 m below it), so that the "
+        "pillars tangle it rather than push it up or down (maintainer, 2026-10-22; the previous pose, centered at "
+        "z = 0, is data/scenarios/ArmadilloSpaghetti.Fall.Previous.h5); 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body, and the armadillo's interior core "
         "(its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed "
         "transform for the first 0.45 s, then released, so it falls into the already tangling pillars (maintainer, "
         "2026-10-21, after the JGS2-GQ paper's scene: thin pillars close to the armadillo wrap it rather than push it "
@@ -323,7 +325,8 @@ SCENES = {
          "detectors alike. With 5 substeps of 1 x 80 it stayed finite, with no inverted element, to 4 s: the "
          "feasibility ratio stayed at most 0.26 (1.3 mm), the residual ratio (against the 2 ms substep's tolerance) "
          "rose from ~130 at step 60 to ~4400 at step 400 as the pillars tangle, and steps took 3.3 s at 0.6 s and 13 s "
-         "at 4 s with the contacts (AAAVBD, 2026-10-22, before the MultiMesh fix and the first detection at xt).",
+         "at 4 s with the contacts (AAAVBD, 2026-10-22, in the previous pose, before the MultiMesh fix and the first "
+         "detection at xt).",
          MULTIMESH_FIX_NOTE],
     ),
     "ArmadilloPull": Scene(
