@@ -28,11 +28,26 @@
 #     Solver.Newton.newton.n_max_iters = 2 (source 10)
 #     Solver.VBD.n_max_iters = 5 (source 1)
 #     Solver.VBD.n_subproblem_max_iters = 80 (source 100)
+# - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
+#   gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a
+#   sixth, a closed triangle mesh's feature shares (V : E : F = 1 : 3 : 2, by Euler's formula with E = 3V and F
+#   = 2V; the measured peaks were at most 39% VE and 7% VV pairs), and no EE pairs, which VertexSdf doesn't
+#   detect (the storage keeps 1 slot) (maintainer, 2026-10-22: conservatively rather than minimally; dropped
+#   pairs now warn).
+#     Contact.ContactStorage.n_ee_contact_capacity = 0.0 (source 0.2)
+#     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05)
+#     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.5)
+#     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05)
 #
 # Notes:
 # - It explodes at time step 378: the pillars tangle so much that some surface triangles invert or degenerate,
 #   and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = 10
 #   ms); going further would need a finer mesh (maintainer, 2026-10-21).
+# - Until the MultiMesh fix of 2026-10-22 (ConstructFromTriangleMesh's vertices are the nodes its triangles
+#   reference), this scene's contact multimesh, built over its plane colliders, listed every FEM node as a
+#   vertex: VertexSdf also detected from interior nodes, and GPU AAAVBD treated every node as a surface node
+#   (surface parameters and stencils). AAAVBD results from before it used that classification, and its
+#   checkpoints from before it don't resume (their per-vertex arrays have the old size).
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -59,10 +74,10 @@ mu_f = 0.2
 penalty_adaptivity = 1
 
 [Contact.ContactStorage]
-n_ee_contact_capacity = 0.2
-n_ve_contact_capacity = 0.05
-n_vf_contact_capacity = 0.5
-n_vv_contact_capacity = 0.05
+n_ee_contact_capacity = 0.0
+n_ve_contact_capacity = 0.5
+n_vf_contact_capacity = 1.0
+n_vv_contact_capacity = 0.17
 
 [Integration]
 bdf_scheme = 1

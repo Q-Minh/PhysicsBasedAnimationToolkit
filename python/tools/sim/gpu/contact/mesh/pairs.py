@@ -13,19 +13,31 @@ from .. import halfedges
 from .. import queries
 
 
+# The fewest slots of a contact type with a positive capacity multiplier: small meshes' multipliers otherwise left
+# 1 slot, e.g. CubeFallingOnCube's 16 vertices (0.05 x 16), and dropped pairs (4 VV pairs found for 1 slot,
+# 2026-10-22)
+MIN_CAPACITY = 64
+
+
 class Params(SerializableMixin):
     n_vv_contact_capacity = DocField(
-        0.05, "Vertex-vertex capacity multiplier (x num_vertices)."
+        0.05, "Vertex-vertex capacity multiplier (x num_vertices; at least 64 slots, 1 for a zero multiplier)."
     )
     n_ve_contact_capacity = DocField(
-        0.05, "Vertex-edge capacity multiplier (x num_vertices)."
+        0.05, "Vertex-edge capacity multiplier (x num_vertices; at least 64 slots, 1 for a zero multiplier)."
     )
     n_vf_contact_capacity = DocField(
-        0.5, "Vertex-face capacity multiplier (x num_vertices)."
+        0.5, "Vertex-face capacity multiplier (x num_vertices; at least 64 slots, 1 for a zero multiplier)."
     )
     n_ee_contact_capacity = DocField(
-        0.2, "Edge-edge capacity multiplier (x num_edges)."
+        0.2, "Edge-edge capacity multiplier (x num_edges; at least 64 slots, 1 for a zero multiplier)."
     )
+
+
+def capacity(multiplier: float, n: int) -> int:
+    """A contact type's pair capacity: ``multiplier * n`` slots, at least :data:`MIN_CAPACITY`, or 1 slot for a zero
+    multiplier (e.g. EE pairs, which VertexSdf doesn't detect)."""
+    return max(MIN_CAPACITY, int(multiplier * n)) if multiplier > 0 else 1
 
 
 @wp.struct
@@ -93,6 +105,22 @@ class ReverseContactPairsData:
     ree2ee: wp.array[
         wp.int32
     ]  # (ee_capacity,) reverse-ee index -> forward-ee index, of size # edge-edge contacts
+
+
+@wp.kernel
+def _record_requested_pairs(
+    vv: PairsData,  # pyright: ignore[reportGeneralTypeIssues]
+    ve: PairsData,  # pyright: ignore[reportGeneralTypeIssues]
+    vf: PairsData,  # pyright: ignore[reportGeneralTypeIssues]
+    ee: PairsData,  # pyright: ignore[reportGeneralTypeIssues]
+    nu: wp.vec4i,  # each type's number of u primitives: the index of its total count in prefix
+    peak: wp.array[wp.uint64],
+):
+    """peak[t] = max(peak[t], the pairs of type t detected), before assembly clamps the counts to the capacity."""
+    peak[0] = wp.max(peak[0], vv.prefix[nu[0]])
+    peak[1] = wp.max(peak[1], ve.prefix[nu[1]])
+    peak[2] = wp.max(peak[2], vf.prefix[nu[2]])
+    peak[3] = wp.max(peak[3], ee.prefix[nu[3]])
 
 
 @wp.kernel
@@ -308,10 +336,10 @@ class ContactPairs:
         # At least 1 slot per type: cuda.compute caches its radix sort by array types, and a sort built
         # from empty arrays turns later sorts of the same types into keys-only sorts (their values are
         # never written), e.g. the VF sort on tiny meshes like CubeFallingOnCube.
-        vv_capacity = max(1, int(params.n_vv_contact_capacity * meshes.n_verts))  # type: ignore
-        ve_capacity = max(1, int(params.n_ve_contact_capacity * meshes.n_verts))  # type: ignore
-        vf_capacity = max(1, int(params.n_vf_contact_capacity * meshes.n_verts))  # type: ignore
-        ee_capacity = max(1, int(params.n_ee_contact_capacity * meshes.n_edges))  # type: ignore
+        vv_capacity = capacity(params.n_vv_contact_capacity, meshes.n_verts)  # type: ignore
+        ve_capacity = capacity(params.n_ve_contact_capacity, meshes.n_verts)  # type: ignore
+        vf_capacity = capacity(params.n_vf_contact_capacity, meshes.n_verts)  # type: ignore
+        ee_capacity = capacity(params.n_ee_contact_capacity, meshes.n_edges)  # type: ignore
 
         # Pair storage
         self._vv, self._rvv = Pairs(meshes.n_verts, meshes.n_verts, vv_capacity), Pairs(
@@ -481,6 +509,11 @@ class ContactPairs:
         # Stream parallelism
         self._streams = [wp.Stream() for _ in range(24)]
 
+        # The most pairs of each type (vv, ve, vf, ee) a detection requested since construction, and its host copy:
+        # pairs beyond the capacity are dropped (see requested_peaks)
+        self._requested_peak = wp.zeros(4, dtype=wp.uint64)
+        self._requested_peak_host = wp.zeros(4, dtype=wp.uint64, device="cpu", pinned=True)
+
     def clear(self):
         """Clear all contact pair data. Resets all empty contacts to their sentinel values."""
         main_stream = wp.get_stream()
@@ -543,8 +576,16 @@ class ContactPairs:
         Args:
             x (wp.array[wp.vec3f]): Vertex positions
         """
-        # 0. Fork all streams so that they are register in a CUDA graph
+        # The detected counts, before the forward prefix pass recounts them from the stored (at most capacity) pairs
         main_stream = wp.get_stream()
+        wp.launch(
+            _record_requested_pairs,
+            dim=1,
+            inputs=[self._vv.data, self._ve.data, self._vf.data, self._ee.data,
+                    wp.vec4i(self._vv.nu, self._ve.nu, self._vf.nu, self._ee.nu), self._requested_peak],
+            stream=main_stream,
+        )
+        # 0. Fork all streams so that they are register in a CUDA graph
         for stream in self._streams:
             stream.wait_stream(main_stream)
 
@@ -709,6 +750,17 @@ class ContactPairs:
         """Return read data for contact pairs, where it is safe to access
         prefix, u, v for forward and reverse contacts."""
         return self._data, self._rdata
+
+    def enqueue_requested_peak_readback(self) -> None:
+        """Queue an asynchronous copy of the requested pair peaks into pinned host memory on the current stream.
+        Doesn't synchronize: :meth:`requested_peaks` is valid after the next synchronization of that stream."""
+        wp.copy(self._requested_peak_host, self._requested_peak)
+
+    def requested_peaks(self) -> Tuple[int, int, int, int]:
+        """The most pairs of each type (vv, ve, vf, ee) a detection requested since construction, from the last
+        :meth:`enqueue_requested_peak_readback` (after a synchronization). Host-only. Above :attr:`capacity`, the
+        excess pairs were dropped: raise the ``n_*_contact_capacity`` params."""
+        return tuple(int(c) for c in self._requested_peak_host.numpy())  # type: ignore
 
     @property
     def capacity(self) -> Tuple[int, int, int, int]:

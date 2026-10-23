@@ -143,6 +143,17 @@ KYOGRE_BUDGET = Rule(
      "Solver.Newton.n_max_iters": 20, "Solver.Newton.newton.n_max_iters": 2,
      "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
 )
+ARMADILLO_SPAGHETTI_BUDGET = Rule(
+    "5 substeps per 10 ms step for the armadillo spaghetti fall (maintainer, 2026-10-22), each of 1 outer iteration x 80 "
+    "sweeps for every VBD-family solver, the same 400 sweeps and more contact detections per 10 ms than the kyogre "
+    "budget's 5 x 80 without substeps: with 1 substep, AAAVBD diverged (NaN) at step 60 with every detector; with 5 it "
+    "stayed finite, with no inverted element, to 4 s. Newton's 20 outer iterations per step are split across the "
+    "substeps, 4 per substep with the kyogre budget's inner settings (2 Newton steps, CG rtol 1e-8, at most 4000 "
+    "iterations); untested.",
+    {"Integration.substeps": 5, **_per_solver("n_max_iters", 1), **_per_solver("n_subproblem_max_iters", 80),
+     "Solver.Newton.n_max_iters": 4, "Solver.Newton.newton.n_max_iters": 2,
+     "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
+)
 ARMADILLO_GAMMAS = Rule(
     "AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a "
     "documented per-scene exception): pulled hard, then suddenly released, its energy changes abruptly, where AAAVBD "
@@ -161,10 +172,9 @@ ARMADILLO_BUDGET = Rule(
 )
 CAPSULE_CONTACT = Rule(
     "Contact scaled to the capsule bowl's size, about 8.8 m across (maintainer, 2026-10-21): VertexSdf max_dist 50 cm "
-    "and band 1 cm, and a 1 cm AL margin dmin; the friction (mu_f 0.2) and vertex-face contact capacity (0.5) it was "
-    "tested with, the code defaults.",
+    "and band 1 cm, and a 1 cm AL margin dmin; the friction (mu_f 0.2) it was tested with, the code default.",
     {"Contact.CDType.VertexSdf.max_dist": 0.5, "Contact.CDType.VertexSdf.band": 1e-2, "Contact.ContactDynamics.dmin": 1e-2,
-     "Contact.ContactDynamics.mu_f": 0.2, "Contact.ContactStorage.n_vf_contact_capacity": 0.5},
+     "Contact.ContactDynamics.mu_f": 0.2},
 )
 CAPSULE_BUDGET = Rule(
     "The maintainer's budget for the capsule bowl (2026-10-21): no substeps, 10 outer iterations (contact detection "
@@ -174,12 +184,35 @@ CAPSULE_BUDGET = Rule(
      "Solver.Newton.n_max_iters": 10, "Solver.Newton.newton.n_max_iters": 2},
 )
 
+
+# Contact pair capacities, as multipliers of the contact multimesh's vertices (its surface vertices)
+CONTACT_CAPACITIES = Rule(
+    "Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf "
+    "gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a sixth, "
+    "a closed triangle mesh's feature shares (V : E : F = 1 : 3 : 2, by Euler's formula with E = 3V and F = 2V; the "
+    "measured peaks were at most 39% VE and 7% VV pairs), and no EE pairs, which VertexSdf doesn't detect (the "
+    "storage keeps 1 slot) (maintainer, 2026-10-22: conservatively rather than minimally; dropped pairs now warn).",
+    {
+        "Contact.ContactStorage.n_vf_contact_capacity": 1.0,
+        "Contact.ContactStorage.n_ve_contact_capacity": 0.5,
+        "Contact.ContactStorage.n_vv_contact_capacity": 0.17,
+        "Contact.ContactStorage.n_ee_contact_capacity": 0.0,
+    },
+)
+MULTIMESH_FIX_NOTE = (
+    "Until the MultiMesh fix of 2026-10-22 (ConstructFromTriangleMesh's vertices are the nodes its triangles "
+    "reference), this scene's contact multimesh, built over its plane colliders, listed every FEM node as a vertex: "
+    "VertexSdf also detected from interior nodes, and GPU AAAVBD treated every node as a surface node (surface "
+    "parameters and stencils). AAAVBD results from before it used that classification, and its checkpoints from "
+    "before it don't resume (their per-vertex arrays have the old size)."
+)
+
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
-        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT],
+        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT, CONTACT_CAPACITIES],
     ),
     "Celebration": Scene(
         "Celebration",
@@ -193,6 +226,7 @@ SCENES = {
                 "letters' edges ~4 cm.",
                 {"Contact.CDType.VertexSdf.max_dist": 0.3},
             ),
+            CONTACT_CAPACITIES,
         ],
         ["The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's."],
     ),
@@ -210,6 +244,7 @@ SCENES = {
             ),
             *SOLVERS,
             *HET_CONTACT,
+            CONTACT_CAPACITIES,
         ],
         ["The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in "
          "substeps, which this config overrides."],
@@ -217,13 +252,14 @@ SCENES = {
     "Trampoline.SoftStiff": Scene(
         "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
-        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE],
+        [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE,
+         CONTACT_CAPACITIES],
     ),
     "Trampoline.StiffSoft": Scene(
         "Trampoline.StiffSoft.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
-         *TRAMPOLINE],
+         *TRAMPOLINE, CONTACT_CAPACITIES],
     ),
     "Trampoline.SoftSoft": Scene(
         "Trampoline.SoftStiff.5Substeps",
@@ -235,6 +271,7 @@ SCENES = {
             *SOLVERS,
             *CONTACT,
             *TRAMPOLINE,
+            CONTACT_CAPACITIES,
         ],
         ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's."],
     ),
@@ -242,7 +279,7 @@ SCENES = {
     "Trampoline.StiffSphere": Scene(
         "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE],
+        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
@@ -250,16 +287,17 @@ SCENES = {
         "CapsulesIntoBowl",
         "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
-        [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET],
+        [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET, CONTACT_CAPACITIES],
     ),
     "KyogreSpaghetti": Scene(
         "defaults",
         "data/scenarios/KyogreSpaghetti.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane "
         "2 cm beyond the four twisted pillars (the pillars span 0.2 x 0.2 x 3.6 m; two Kyogres between them)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET, CONTACT_CAPACITIES],
         ["It explodes at time step 378: the pillars tangle so much that some surface triangles invert or degenerate, "
          "and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = "
-         "10 ms); going further would need a finer mesh (maintainer, 2026-10-21)."],
+         "10 ms); going further would need a finer mesh (maintainer, 2026-10-21).",
+         MULTIMESH_FIX_NOTE],
     ),
     "ArmadilloSpaghetti.Fall": Scene(
         "defaults",
@@ -270,17 +308,26 @@ SCENES = {
         "Young's modulus 1e6, was 8e5 until it froze crushed, 2026-10-22; tet quality at least 0.23, triangle angles "
         "at least 11 deg) whose waist (the slice at "
         "50-55% of its height, where only the torso is) is on the twist axis, turned so the pillars clear it by "
-        "2.7 cm; 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body, and the armadillo's interior core "
+        "2.7 cm, and lowered 15 cm along the twist axis (z from -0.75 to 0.45 m; floor 1.07 m below it), so that the "
+        "pillars tangle it rather than push it up or down (maintainer, 2026-10-22; the previous pose, centered at "
+        "z = 0, is data/scenarios/ArmadilloSpaghetti.Fall.Previous.h5); 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body, and the armadillo's interior core "
         "(its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed "
         "transform for the first 0.45 s, then released, so it falls into the already tangling pillars (maintainer, "
         "2026-10-21, after the JGS2-GQ paper's scene: thin pillars close to the armadillo wrap it rather than push it "
         "out). The held nodes stay off the surface: holding surface nodes pits the pillars' prescribed twist against "
         "prescribed armadillo nodes in contact, with no feasible position, and the simulation froze",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET],
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, ARMADILLO_SPAGHETTI_BUDGET, CONTACT_CAPACITIES],
         ["It freezes at about step 175 (1.75 s): the unbounded twist keeps tightening the stiff pillars around the "
          "soft armadillo, whose elements near (-0.68, 1.37, -0.42) m invert from step 170; its surface there folds "
          "flat, contacts with the folded edge flip sign, and the step diverges. Every step runs its full budget with "
-         "the residual ~1e3 x its tolerance (2026-10-22, at Young's modulus 8e5; the maintainer then stiffened it to 1e6)."],
+         "the residual ~1e3 x its tolerance (2026-10-22, at Young's modulus 8e5; the maintainer then stiffened it to 1e6).",
+         "At 1 MPa without substeps (AAAVBD 5 x 80), it diverged (NaN) at step 60, with dev's and the detect-at-xt "
+         "detectors alike. With 5 substeps of 1 x 80 it stayed finite, with no inverted element, to 4 s: the "
+         "feasibility ratio stayed at most 0.26 (1.3 mm), the residual ratio (against the 2 ms substep's tolerance) "
+         "rose from ~130 at step 60 to ~4400 at step 400 as the pillars tangle, and steps took 3.3 s at 0.6 s and 13 s "
+         "at 4 s with the contacts (AAAVBD, 2026-10-22, in the previous pose, before the MultiMesh fix and the first "
+         "detection at xt).",
+         MULTIMESH_FIX_NOTE],
     ),
     "ArmadilloPull": Scene(
         "defaults",
@@ -291,14 +338,14 @@ SCENES = {
         "EmptyBasket",
         "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
         "recorded)",
-        [*SOLVERS, *CONTACT],
+        [*SOLVERS, *CONTACT, CONTACT_CAPACITIES],
         ["Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for "
          "Young's modulus ~1e7."],
     ),
     "BasketOfOranges": Scene(
         "BasketOfOranges",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
-        [*SOLVERS, *HET_CONTACT],
+        [*SOLVERS, *HET_CONTACT, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget

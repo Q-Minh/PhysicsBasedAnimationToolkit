@@ -979,6 +979,12 @@ class Params:
             op=cuda.compute.OpKind.PLUS,
         )
         # Hessian triplet offsets
+        # TODO: Contact triplets fill each type's full capacity, and the BSR assembly (prune_numerical_zeros=False)
+        # processes all of them every Newton step, whatever the live contact count: raising CapsulesIntoBowl's
+        # capacities from 1513/1513/15137 to 5146/15137/30274 VV/VE/VF slots (and EE from 18127 to 1) made its Newton
+        # steps 4.8% slower (116.7 to 122.3 ms from step 0, 2026-10-22), and the baskets' new capacities add ~490k
+        # slots. Idea: assemble only the live pairs (offsets from the per-type counts), so the capacity doesn't count
+        # against Newton's step times.
         self._hessian_triplet_counts = [
             n_nodes,
             n_elems * (4**2),
