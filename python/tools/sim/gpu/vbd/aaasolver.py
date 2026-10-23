@@ -211,13 +211,12 @@ def _accelerated_vertex_solve_kernel(
     # the tile reductions, so its scattered loads overlap them. GVV is the coloring adjacency, so no
     # neighbour is written during this launch. Re-measure with ncu --lineinfo on dev first.
     # Augment residual
-    # TODO: At a subproblem's first sweep (kp = 0, k > 0) the stencil sums the neighbours' g_k from the previous
-    # subproblem, before its dual update and re-detection changed the objective, and betaG adapts only from kp > 0
-    # (as C++ ComputeStencilGradientAugmentation). At CapsulesIntoBowl's impacts this makes AAAVBD's error jump
-    # 1.5-5x at those sweeps, and at 6 of 11 impact states it ends behind plain VBD (docs/solver-accuracy-notes.md,
-    # entry 5, 2026-10-22). Ideas, not tried: skip the augmentation at kp = 0 as for k = 0, or refresh g_k there.
+    # No augmentation at a subproblem's first sweep (kp = 0), for every k: the neighbours' stored g_k are from the
+    # previous subproblem, before its dual update and re-detection changed the objective, and betaG adapts only from
+    # kp > 0. With it, AAAVBD's error jumped 1.5-5x at those sweeps at CapsulesIntoBowl's impacts
+    # (docs/solver-accuracy-notes.md, entry 5). C++ ComputeStencilGradientAugmentation augments for k > 0 or kp > 0.
     ai = wp.vec3f()
-    if k > 0 or kp > 0:  # type: ignore
+    if kp > 0:  # type: ignore
         ail = compute_thread_local_stencil_gradient_augmentation(
             local_tid=local_tid,  # pyright: ignore[reportArgumentType]
             block_dims=block_dims,  # pyright: ignore[reportArgumentType]
@@ -322,8 +321,8 @@ def subproblem_iteration(
 ):
     """Iteration ``kp`` of subproblem ``k``: slack dual update, then one accelerated sweep.
 
-    The sweep only distinguishes ``k == 0 and kp == 0`` (no stencil gradient augmentation yet) and
-    ``kp == 0`` (no acceleration parameter adaptation yet) from later iterations.
+    The sweep only distinguishes ``kp == 0`` (no stencil gradient augmentation and no acceleration parameter
+    adaptation yet) from later iterations.
     """
     contact.update_dual(
         fem.data.x,
