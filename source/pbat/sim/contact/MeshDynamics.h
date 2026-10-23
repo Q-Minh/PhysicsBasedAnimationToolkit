@@ -181,7 +181,9 @@ class MeshDynamics
         // closest face) gets a NaN normal, gradient and tangent basis: in the "Cube sliding on plane" doctest
         // (plain VBD) such linearizations happened 126 times, and the first made its vertex solve NaN (2026-10-22).
         // Idea: take the direction of the same stencil at xt (where the step started, outside the contact), else
-        // the face normal, else the previous linearization's.
+        // the face normal, else the previous linearization's. A patch doing this, with doctests (a point on a triangle,
+        // coincident points, crossing edges), was written and set aside while CPU C++ work is on hold (maintainer,
+        // 2026-10-22): it removes the NaN, but the doctest then still diverges at the fast impact (step 49).
         void ComputeLinearization(auto&& xc, auto&& xtc)
         {
             using namespace math::linalg::mini;
