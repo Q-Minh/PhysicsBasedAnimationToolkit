@@ -232,3 +232,21 @@ velocity jump within a step's smooth subproblem doesn't.
 Possible fixes, not tried (a TODO in `gpu/vbd/aaasolver.py`):
 - skip the augmentation at a subproblem's first sweep (kp = 0), as for k = 0;
 - or refresh g_k at the subproblem's start.
+
+**Follow-up: the two fixes** (Q8, 2026-10-22). The same 18 states and protocol, with AAAVBD changed in two ways:
+- A: no augmentation at any subproblem's first sweep (kp = 0 for every k, as for k = 0);
+- B: a pass that stores every vertex's current g_k, x_k and |H| before the first sweep of each later subproblem.
+
+The unchanged AAAVBD reproduced the numbers above exactly.
+
+| | Sweeps to 0.1 e0 vs VBD, smooth / impacts (median, impact min) | e/e0 at 200 sweeps, impacts (median / max) | Impact states behind VBD | Error jumps at impacts | ms per step |
+|---|---|---|---|---|---|
+| Current | 4.2x / 1.84x (never) | 0.054 / 0.22 | 6 of 11 | 39 | 182.7 |
+| A (skip) | 4.2x / 2.39x (1.10x) | 0.014 / 0.027 | 0 | 1 | 181.9 |
+| B (refresh) | 4.4x / 2.10x (never) | 0.069 / 0.27 | 6 | 38 | 185.7 |
+
+A removes the sawtooth and the stagnation at no cost, and keeps the smooth-step lead. At impacts its 2.4x is above
+Chebyshev's 2.0x, and its error after 200 sweeps is close to Chebyshev's 0.012.
+
+B doesn't help, and its extra pass costs 2%. The harm isn't the staleness of g_k: it is applying the augmentation at
+the first sweep after the objective changed, before betaG can adapt.
