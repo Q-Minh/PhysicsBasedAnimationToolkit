@@ -1235,3 +1235,4 @@ Answer when back; each has the coordinator's recommendation.
 - 2026-10-22 · task 3 · **GPU run START** (~9 min, maintainer-approved slot, timings irrelevant): 1b AAAVBD hypothesis, one-step convergence of the VBD family from 18 states of AAAVBD's CapsulesIntoBowl production run (smoke test first). One headless process. Will log END.
 - 2026-10-22 · task 3 · **GPU run END** (1b AAAVBD hypothesis: smoke test + one run, 495 AAAVBD steps, 18 states x 3 long solves + 4 traced solvers, ~8 min). The GPU is free.
 - 2026-10-22 · coordinator · **GPU run START** (maintainer's interactive GUI session: ArmadilloSpaghetti.Fall, 5 substeps, AAAVBD 1 x 80). Then task 1's 2 s -> 4 s continuation, then task 3's F1/F1+A validation. Will log END.
+- 2026-10-22 · coordinator · **GPU run END** (maintainer's armadillo GUI session closed). Next: task 3 (F1/F1+A validation, then AAAVBD kp=0 fixes A/B), then task 1's armadillo 2 s -> 4 s offline with trajectory export.
