@@ -286,7 +286,7 @@ class Viewer:
         self.play, self.rate = False, 1.0
         self.clock_time = time.time()
         self.overlay, self.spacing, self.opacity = False, 1.15, 0.5
-        self.collider_opacity = 0.3
+        self.collider_opacity = 0.7
         self.color_mode = 0
         self.auto_scale = {0: False, 1: True}  # per color mode: the largest value at the frame, else the fixed max
         self.fixed_max = {0: 10.0, 1: 0.01}  # m/s, m
@@ -768,7 +768,7 @@ class TestTrajectoryViewer(unittest.TestCase):
                 viewer.callback()
                 for points in viewer.points:  # translucent colliders
                     points.set_transparency.assert_called_with(viewer.collider_opacity)
-                self.assertEqual(viewer.collider_opacity, 0.3)
+                self.assertEqual(viewer.collider_opacity, 0.7)
                 for overlay in (False, True):
                     viewer.overlay = overlay
                     for mode in range(len(COLOR_MODES)):
