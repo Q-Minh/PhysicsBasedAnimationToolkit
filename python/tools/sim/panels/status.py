@@ -8,7 +8,9 @@ Two tree nodes, read top to bottom:
   the penetration to their tolerances (at most 1 passes). Newton: the outer test with the same two ratios
   (at the end and at the first test), counts of subproblems that converged, hit the CG cap or rejected a
   step, and, in a "Subproblems" node (closed by default), one subproblem at a time, picked with a slider: its
-  status, Newton steps, CG iterations, line-search backtracks and the outer test after it.
+  status, Newton steps, CG iterations, line-search backtracks and the outer test after it. With substeps,
+  a summary (substeps that passed, worst ratios) comes first, then one substep at a time, picked with a
+  slider (by default the last one; a picked index is kept across steps).
 - **Last N steps**: the same counts summarized over a rolling window (``StatusLog.summary``).
 
 Visible text stays short; tooltips explain each row. ``SimulationState.step`` records the statuses with
@@ -23,6 +25,7 @@ from ..gpu.vbd.convergence import SolveEnd
 
 _window = {"steps": 10}
 _subproblem = {}  # substep -> the subproblem picked in its browser (else the last one)
+_substep = {}  # "picked": the substep picked in the last step's browser (else the last one)
 _GOOD = (0.4, 0.85, 0.4, 1.0)
 _WARN = (1.0, 0.6, 0.2, 1.0)
 
@@ -250,6 +253,30 @@ def _draw_subproblem_browser(subproblems, key: int):
     imgui.TreePop()
 
 
+def _draw_substeps_summary(vbd, solves, n: int):
+    """The time step's substeps at a glance: how many passed their tests and the worst final ratios."""
+    passed = int(np.sum(vbd["reason"] == int(SolveEnd.CONVERGED))) + int(np.sum(solves["converged"]))
+    gradient = max(np.max(vbd["gradient_ratio"], initial=0.0), np.max(solves["gradient_ratio"], initial=0.0))
+    feasibility = max(
+        np.max(vbd["feasibility_ratio"], initial=0.0), np.max(solves["feasibility_ratio"], initial=0.0)
+    )
+    with _Rows("substeps") as rows:
+        rows.row("Substeps", f"{n}", "Solves of this time step, one per substep; browse them below.")
+        rows.row(
+            "  Passed",
+            f"{passed} / {n}",
+            "Substeps whose solve passed its tests (gradient and feasibility) within the budget.",
+            _GOOD if passed == n else _WARN,
+        )
+        rows.row("  Worst residual / tol", _ratio(float(gradient)), _RESIDUAL_TIP, None if gradient <= 1 else _WARN)
+        rows.row(
+            "  Worst penetration / tol",
+            _ratio(float(feasibility)),
+            _PENETRATION_TIP,
+            None if feasibility <= 1 else _WARN,
+        )
+
+
 def _draw_last_step(log):
     last = log.last_step
     vbd = log.vbd
@@ -260,9 +287,16 @@ def _draw_last_step(log):
     subproblems = subproblems[subproblems["step"] == last]
     n_substeps = max(vbd.shape[0], solves.shape[0])
     imgui.Text(f"Time step {last}")
-    for sub in range(n_substeps):
-        if n_substeps > 1:
-            imgui.TextDisabled(f"Substep {sub}")
+    shown = range(n_substeps)
+    if n_substeps > 1:
+        _draw_substeps_summary(vbd, solves, n_substeps)
+        k = min(_substep.get("picked", n_substeps - 1), n_substeps - 1)
+        changed, k = imgui.SliderInt("Substep##last_step", k, 0, n_substeps - 1)
+        _tooltip("Which substep of the time step to show.")
+        if changed:
+            _substep["picked"] = k
+        shown = (k,)
+    for sub in shown:
         newton = subproblems[subproblems["substep"] == sub]
         with _Rows(f"last_step_{sub}") as rows:
             for r in vbd[vbd["substep"] == sub]:
@@ -509,6 +543,42 @@ class TestStatusPanel(unittest.TestCase):
         self.assertNotIn("Subproblem 0", shown)  # only the picked (last) subproblem
         (slider,) = [c for c in fake.SliderInt.call_args_list if c.args[0].startswith("Subproblem##")]
         self.assertEqual(slider.args[1:], (2, 0, 2))
+
+    def test_substep_browser(self):
+        """With substeps, a summary of all of them, then one substep at a time, the last by default."""
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from ..status import StatusLog
+
+        rows = np.zeros(
+            3,
+            dtype=[("solve", np.int32), ("outer", np.int32), ("sweeps", np.int32), ("reason", np.int32),
+                   ("gradient_ratio", np.float32), ("feasibility_ratio", np.float32)],
+        )
+        rows["solve"] = [0, 1, 2]
+        rows["sweeps"] = [11, 22, 33]
+        rows["reason"] = [int(SolveEnd.CONVERGED), int(SolveEnd.BOTH_UNMET), int(SolveEnd.CONVERGED)]
+        rows["gradient_ratio"] = [0.5, 7.25, 0.75]
+        log = StatusLog()
+        log.add_vbd(0, 0, rows, 0, 5, 500)
+        fake = mock.MagicMock()
+        fake.TreeNode.return_value = True
+        fake.TreeNodeEx.return_value = True
+        fake.SliderInt.side_effect = lambda label, v, lo, hi: (False, v)
+        _substep.clear()
+        with mock.patch(f"{__name__}.imgui", fake):
+            draw_status_panel(SimpleNamespace(status_log=log), None)
+        shown = [str(c.args[-1]) for c in fake.TextColored.call_args_list] + [
+            str(c.args[0]) for c in fake.Text.call_args_list
+        ]
+        self.assertIn("2 / 3", shown)  # substeps that passed
+        self.assertIn("7.25", shown)  # the worst residual ratio, from substep 1
+        self.assertIn("33 / 500", shown)  # the picked (last) substep's sweeps
+        self.assertNotIn("11 / 500", shown)
+        (slider,) = [c for c in fake.SliderInt.call_args_list if c.args[0].startswith("Substep##")]
+        self.assertEqual(slider.args[1:], (2, 0, 2))
+        self.assertEqual(fake.PushID.call_count, fake.PopID.call_count)
 
 
 if __name__ == "__main__":
