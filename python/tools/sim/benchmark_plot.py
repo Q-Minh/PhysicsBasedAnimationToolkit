@@ -42,9 +42,9 @@ Usage:
 ``--frames PREFIX`` adds ``benchmark_frames.py``'s example problems left of each chart as a 2 x 2 grid
 (:func:`add_frames`): a homogeneous case colored by the error and the heterogeneous case colored by Lame lambda in
 columns headed by the cases' labels, their initial iterates above their reference solutions, a colorbar under each
-column. The grid reaches into the chart's empty top left corner, as large as fits with the figure at most 7 in wide
-(ACM TOG's text width); the chart keeps its size (the paper's: ``--width 5.6``). After a benchmark re-run, regenerate
-the frames first (``benchmark_frames.py``). Its headers are the cases' labels, as on the chart's material axis.
+column. The grid is as tall as the chart's saved region and sits left of it: the chart is exactly as without
+``--frames``, and the figure gets wider (the paper scales it). After a benchmark re-run, regenerate the frames first
+(``benchmark_frames.py``). The grid's headers are the cases' labels, as on the chart's material axis.
 
 ``--dataset`` gives the dataset when the results file's ``dataset`` attribute doesn't resolve (it is relative to the
 main checkout's root, so e.g. from a worktree), for the case labels' moduli: without it, the heterogeneous case is
@@ -475,22 +475,15 @@ def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
     return Bbox.union(shown).padded(pad).transformed(fig.dpi_scale_trans.inverted())
 
 
-# Frames (--frames): a 2 x 2 grid left of the chart, reaching into its empty space, as large as fits, the figure at most
-# ACM TOG's text width
-FRAMES_PAGE_WIDTH = 7.0  # inches: the widest the saved region may get with the frames
-FRAMES_MAX_WIDTH = 2.0  # inches: the widest frames tried
-FRAMES_STEP = 0.02  # inches: the placement search's resolution
-FRAMES_CLEARANCE = 0.06  # inches kept clear between the grid's elements and the chart's marks
-# A pixel is one of the chart's marks if a channel is this far below white (of 1): the bars' translucent min-max boxes
-# are (0.1 and more), the 3D box's faint pane edges aren't (0.03 at most), so the frames may cover those
-FRAMES_INK = 0.05
+# Frames (--frames): a 2 x 2 grid of example problems left of the chart, as tall as its saved region
 FRAMES_ROWS = {"initial": "Initial iterate", "reference": "Reference"}
 FRAMES_COLUMNS = ("error", "material")  # benchmark_frames.py's pairs, left to right
 FRAMES_TEXT_SIZE = 7  # pt
 FRAMES_GAP = 2 / 72  # inches between the grid's labels, frames and colorbars
 FRAMES_COLUMN_GAP = 0.06  # inches between the grid's columns, at least
+FRAMES_MARGIN = 0.08  # inches between the grid and the chart's region
 FRAMES_BAR_HEIGHT = 0.055  # inches
-FRAMES_BAR_LABELS = 0.24  # inches under a colorbar: its tick labels and title
+FRAMES_BAR_LABELS = 0.3  # inches under a colorbar: its tick labels and title
 
 
 def load_frames(prefix: str, benchmark: str) -> dict:
@@ -559,117 +552,51 @@ def _wrapped(text: str) -> str:
     return text[:i] + "\n" + text[i + 1:]
 
 
-def _frames_grid(frames: dict, width: float, headers: dict, sizes: dict) -> tuple[list, float]:
-    """The grid at frame ``width`` (inches): its elements (kind, key, x0, y0, w, h) relative to its top left corner (y
-    down) and its height. Columns are :data:`FRAMES_COLUMNS` under their ``headers``, rows :data:`FRAMES_ROWS` with
-    their labels rotated at the left (on two lines if one is longer than the row is high), and a colorbar under each
-    column. ``sizes`` holds the texts' extents (:func:`_text_size`), the row labels' also :func:`_wrapped`."""
-    heights = {r: max(width * frames[c][f"{r}_image"].shape[0] / frames[c][f"{r}_image"].shape[1]
-                      for c in FRAMES_COLUMNS) for r in FRAMES_ROWS}
-    rows = {r: text if sizes[("row", text)][1] <= heights[r] else _wrapped(text) for r, text in FRAMES_ROWS.items()}
-    label_w = max(sizes[("row", text)][0] for text in rows.values())
-    header_h = max(sizes[("header", c)][1] for c in FRAMES_COLUMNS)
-    # Column pitch: the frames' width, or more if the headers would run into each other
-    pitch = max(width + FRAMES_COLUMN_GAP,
-                (sizes[("header", FRAMES_COLUMNS[0])][0] + sizes[("header", FRAMES_COLUMNS[1])][0]) / 2 + FRAMES_COLUMN_GAP)
-    x_frames = label_w + FRAMES_GAP
-    items = []
-    for j, c in enumerate(FRAMES_COLUMNS):
-        hw, hh = sizes[("header", c)]
-        items.append(("header", c, x_frames + j * pitch + (width - hw) / 2, header_h - hh, hw, hh))
-    y = header_h + FRAMES_GAP
-    for r, text in rows.items():
-        h = heights[r]
-        lw, lh = sizes[("row", text)]
-        items.append(("row", text, x_frames - FRAMES_GAP - lw, y + (h - lh) / 2, lw, lh))
-        for j, c in enumerate(FRAMES_COLUMNS):
-            items.append(("frame", (c, r), x_frames + j * pitch, y, width, h))
-        y += h + FRAMES_GAP
-    for j, c in enumerate(FRAMES_COLUMNS):
-        x = x_frames + j * pitch
-        items.append(("colorbar", c, x + 0.06 * width, y, 0.88 * width, FRAMES_BAR_HEIGHT))
-        items.append(("colorbar labels", c, x, y + FRAMES_BAR_HEIGHT, width, FRAMES_BAR_LABELS))
-    return items, y + FRAMES_BAR_HEIGHT + FRAMES_BAR_LABELS
-
-
-def _ink_table(fig) -> tuple[np.ndarray, float]:
-    """The drawn figure's marks (:data:`FRAMES_INK`) as a summed-area table over its canvas pixels (row 0 at the
-    top), and its pixels per inch."""
-    fig.canvas.draw()
-    rgb = np.asarray(fig.canvas.buffer_rgba(), dtype=np.float64)[..., :3] / 255
-    ink = ((1.0 - rgb).max(axis=2) > FRAMES_INK).astype(np.int64)
-    table = np.zeros((ink.shape[0] + 1, ink.shape[1] + 1), dtype=np.int64)
-    table[1:, 1:] = ink.cumsum(axis=0).cumsum(axis=1)
-    return table, float(fig.dpi)
-
-
-def _clear(table: np.ndarray, dpi: float, fig_h: float, x0: float, x1: float, tops: np.ndarray, y0: float,
-           y1: float) -> np.ndarray:
-    """Per grid top in ``tops`` (inches, figure coordinates), whether the box x0..x1 by y0..y1 below that top (inches
-    down from it, plus :data:`FRAMES_CLEARANCE` around) holds none of the chart's marks. Off the canvas is clear."""
-    rows, cols = table.shape[0] - 1, table.shape[1] - 1
-    pad = FRAMES_CLEARANCE
-    c0 = int(np.clip(np.floor((x0 - pad) * dpi), 0, cols))
-    c1 = int(np.clip(np.ceil((x1 + pad) * dpi), 0, cols))
-    r0 = np.clip(np.floor((fig_h - tops + y0 - pad) * dpi), 0, rows).astype(np.int64)
-    r1 = np.clip(np.ceil((fig_h - tops + y1 + pad) * dpi), 0, rows).astype(np.int64)
-    return table[r1, c1] - table[r0, c1] - table[r1, c0] + table[r0, c0] == 0
-
-
-def add_frames(fig, region: Bbox, frames: dict, headers: dict, page_width: float = FRAMES_PAGE_WIDTH) -> Bbox:
-    """:func:`load_frames`' pairs as a 2 x 2 grid left of a chart's saved ``region`` (inches): columns
+def add_frames(fig, region: Bbox, frames: dict, headers: dict) -> Bbox:
+    """:func:`load_frames`' pairs as a 2 x 2 grid left of a chart's saved ``region`` (inches), as tall as it: columns
     :data:`FRAMES_COLUMNS` under ``headers`` (e.g. the cases' labels), rows the initial iterate and the reference
-    solution, labeled at the left, and each column's colorbar below it. The frames get the largest width at which
-    the grid, its left edge at most ``page_width`` minus the region's width left of the region, fits within the
-    region's height clear of the chart's marks (bars, axes, labels, legend; :data:`FRAMES_INK`,
-    :data:`FRAMES_CLEARANCE`), so it reaches into the chart's empty top left corner; it sits as high as it fits, and
-    as far right as that width allows. The chart isn't touched, and the frames' white background is transparent (the
-    3D box's faint pane edges show through). Returns the region to save, widened to the grid. ValueError if no width
-    from 0.3 in fits."""
+    solution sharing the height left by the headers and the colorbars, labeled at the left (rotated, on two lines if
+    longer than the row), and each column's colorbar at the bottom. The frames are as tall as their rows, their width
+    following from their aspect. The chart isn't touched. Returns the region to save, widened to the grid."""
     fig_w, fig_h = fig.get_size_inches()
-    budget = max(page_width - region.width, 0.0)
     sizes = {("row", t): _text_size(fig, t, rotation=90) for text in FRAMES_ROWS.values() for t in (text, _wrapped(text))}
     sizes.update({("header", c): _text_size(fig, headers[c]) for c in FRAMES_COLUMNS})
-    table, dpi = _ink_table(fig)
-    for width in np.arange(FRAMES_MAX_WIDTH, 0.3 - 1e-9, -FRAMES_STEP):
-        items, height = _frames_grid(frames, width, headers, sizes)
-        tops = np.arange(region.y1, region.y0 + height - 1e-9, -FRAMES_STEP)
-        if tops.size == 0:
-            continue
-        for extension in np.arange(0.0, budget + 1e-9, FRAMES_STEP):
-            x0 = region.x0 - extension
-            clear = np.ones(tops.size, dtype=bool)
-            for _, _, ix, iy, iw, ih in items:
-                clear &= _clear(table, dpi, fig_h, x0 + ix, x0 + ix + iw, tops, iy, iy + ih)
-                if not clear.any():
-                    break
-            if clear.any():
-                top = float(tops[clear][0])
-                break
-        else:
-            continue
-        break
-    else:
-        raise ValueError("the frames don't fit beside the chart")
-    for kind, key, ix, iy, iw, ih in items:
-        box = ((x0 + ix) / fig_w, (top - iy - ih) / fig_h, iw / fig_w, ih / fig_h)
-        center = ((x0 + ix + iw / 2) / fig_w, (top - iy - ih / 2) / fig_h)
-        if kind == "header":
-            fig.text(*center, headers[key], fontsize=FRAMES_TEXT_SIZE, ha="center", va="center", multialignment="center")
-        elif kind == "row":
-            fig.text(*center, key, fontsize=FRAMES_TEXT_SIZE, rotation=90, ha="center", va="center",
-                     multialignment="center")
-        elif kind == "frame":
-            column, row = key
-            image = np.asarray(frames[column][f"{row}_image"], dtype=np.float64)[..., :3]
+    header_h = max(sizes[("header", c)][1] for c in FRAMES_COLUMNS)
+    bars_h = FRAMES_GAP + FRAMES_BAR_HEIGHT + FRAMES_BAR_LABELS
+    row_h = (region.height - header_h - bars_h - len(FRAMES_ROWS) * FRAMES_GAP) / len(FRAMES_ROWS)
+    width = min(row_h * frames[c][f"{r}_image"].shape[1] / frames[c][f"{r}_image"].shape[0]
+                for c in FRAMES_COLUMNS for r in FRAMES_ROWS)
+    rows = {r: text if sizes[("row", text)][1] <= row_h else _wrapped(text) for r, text in FRAMES_ROWS.items()}
+    label_w = max(sizes[("row", text)][0] for text in rows.values())
+    # Column pitch: the frames' width, or more if the headers would run into each other
+    pitch = max(width, (sizes[("header", FRAMES_COLUMNS[0])][0] + sizes[("header", FRAMES_COLUMNS[1])][0]) / 2)
+    pitch += FRAMES_COLUMN_GAP
+    x_frames = region.x0 - FRAMES_MARGIN - pitch - width  # the first column's left edge
+    left = x_frames - FRAMES_GAP - label_w
+
+    def place(x: float, top: float, w: float, h: float) -> tuple:  # inches (top down from the region's top) -> figure
+        return (x / fig_w, (region.y1 - top - h) / fig_h, w / fig_w, h / fig_h)
+
+    for j, c in enumerate(FRAMES_COLUMNS):
+        fig.text((x_frames + j * pitch + width / 2) / fig_w, (region.y1 - header_h / 2) / fig_h, headers[c],
+                 fontsize=FRAMES_TEXT_SIZE, ha="center", va="center", multialignment="center")
+    top = header_h + FRAMES_GAP
+    for r, text in rows.items():
+        fig.text((x_frames - FRAMES_GAP - label_w / 2) / fig_w, (region.y1 - top - row_h / 2) / fig_h, text,
+                 fontsize=FRAMES_TEXT_SIZE, rotation=90, ha="center", va="center", multialignment="center")
+        for j, c in enumerate(FRAMES_COLUMNS):
+            image = np.asarray(frames[c][f"{r}_image"], dtype=np.float64)[..., :3]
+            h = width * image.shape[0] / image.shape[1]
             alpha = np.clip((1.0 - image.min(axis=2)) / 0.04, 0.0, 1.0)  # white transparent, antialiased edges partly
-            ax = fig.add_axes(box)
+            ax = fig.add_axes(place(x_frames + j * pitch, top + (row_h - h) / 2, width, h))
             ax.imshow(np.dstack([image, alpha]), interpolation="lanczos")
             ax.set_axis_off()
-        elif kind == "colorbar":
-            _frames_colorbar(fig.add_axes(box), frames[key])
-    left = min(x0 + ix for _, _, ix, _, _, _ in items)
-    return Bbox.from_extents(min(region.x0, left), region.y0, region.x1, region.y1)
+        top += row_h + FRAMES_GAP
+    for j, c in enumerate(FRAMES_COLUMNS):
+        box = place(x_frames + j * pitch + 0.06 * width, region.height - FRAMES_BAR_LABELS - FRAMES_BAR_HEIGHT,
+                    0.88 * width, FRAMES_BAR_HEIGHT)
+        _frames_colorbar(fig.add_axes(box), frames[c])
+    return Bbox.from_extents(left, region.y0, region.x1, region.y1)
 
 
 def main():
@@ -768,23 +695,25 @@ class TestFrames(unittest.TestCase):
                 json.dump(spec, f)
             frames = load_frames(prefix, "static")
             self.assertEqual(frames["error"]["initial_image"].shape[:2], (30, 40))
-            # A chart whose marks fill its region's right part and bottom: the grid goes left of it, into the top left
+            # A chart filling its region: the grid goes left of it, as tall as it
             fig = plt.figure(figsize=(6.0, 3.0))
-            chart = fig.add_axes((0.4, 0.0, 0.6, 1.0))
+            chart = fig.add_axes((0.0, 0.0, 1.0, 1.0))
             chart.set_axis_off()
             chart.add_patch(plt.Rectangle((0, 0), 1, 1, color="k"))
-            fig.add_artist(plt.Rectangle((0, 0), 1, 0.3, color="k", transform=fig.transFigure))
             region = Bbox.from_extents(0.0, 0.0, 6.0, 3.0)
             headers = {"error": "$E = 10^{7}$ Pa", "material": "$E \\in \\{10^{6}, 10^{8}\\}$ Pa"}
-            saved = add_frames(fig, region, frames, headers, page_width=7.0)
-            self.assertLessEqual(saved.width, 7.0 + 1e-9)
+            saved = add_frames(fig, region, frames, headers)
             self.assertEqual((saved.x1, saved.y0, saved.y1), (6.0, 0.0, 3.0))
+            self.assertLess(saved.x0, -1.0)
             self.assertEqual(len(fig.axes), 1 + 4 + 2)  # the chart, 4 frames, 2 colorbars
+            bars = [ax for ax in fig.axes[1:] if ax.get_xlabel()]
+            frame_axes = [ax for ax in fig.axes[1:] if ax not in bars]
             for ax in fig.axes[1:]:
-                box = ax.get_position()
-                # Clear of the chart's marks: left of the chart's axes, above the bottom band
-                self.assertLessEqual(box.x1 * 6.0, 0.4 * 6.0 + 1e-6)
-                self.assertGreaterEqual(box.y0 * 3.0, 0.3 * 3.0 - 1e-6)
+                self.assertLessEqual(ax.get_position().x1 * 6.0, -FRAMES_MARGIN + 1e-6)  # left of the chart
+            # Two rows sharing the height above the colorbars: each frame about half of it
+            heights = [ax.get_position().height * 3.0 for ax in frame_axes]
+            self.assertGreater(min(heights), 1.0)
+            self.assertLess(max(ax.get_position().y0 for ax in bars) * 3.0, 0.5)
             self.assertEqual([t.get_text() for t in fig.axes[-1].get_xticklabels()], ["$10^{5}$", "$10^{8}$"])
             path = os.path.join(d, "out.pdf")
             fig.savefig(path, bbox_inches=saved)
