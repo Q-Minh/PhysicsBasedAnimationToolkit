@@ -5,8 +5,8 @@ benchmark: every trajectory sample of every case in turn, each played over all i
 Each clip is what the viewer shows with its defaults: the solvers' copies side by side, labeled with their names
 and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initial error, or a fraction of it
 per problem (``--error-fraction``, as the viewer's: values above it saturate, so a stalled solve stays bright);
-plus a title (benchmark, scene, sample, solver time over T_N and the slowdown) and the color scale with its
-fraction.
+plus a title (benchmark, the case's material as in the paper figures, e.g. "E = 10⁵ Pa", sample, solver time
+over T_N and the slowdown) and the color scale with its fraction.
 Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0 with the
 caption "Initial", so viewers see the problem before the solvers change the shape; the caption goes when the
 solve starts. Frames are evenly spaced in solver time over the problem's budget and play at
@@ -39,6 +39,7 @@ Tests: ``python -m unittest python.tools.sim.benchmark_video``.
 import argparse
 import math
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -46,7 +47,7 @@ import warnings
 
 import numpy as np
 
-from .benchmark_plot import benchmark_title, register_paper_fonts
+from .benchmark_plot import benchmark_title, case_label, register_paper_fonts
 from .benchmark_viewer import (COLOR_MODES, ErrorFractions, Viewer, _rgb, add_error_fraction_argument,
                                check_error_fractions, display_name, slowdown_text, solver_color)
 
@@ -54,6 +55,19 @@ TEXT_SCALE = 2.0  # the labels and titles, over imgui's default font, for a 1080
 TEXT_PIXELS = 34  # the paper font's size in pixels at a 1080-pixel video height, scaled with it
 TEXT_COLOR = (0.1, 0.1, 0.1, 1.0)
 HOLD_SECONDS = 1.0  # each clip's start state, held before the solve
+
+
+SUPERSCRIPTS = str.maketrans("0123456789-+", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺")
+
+
+def plain_label(label: str, unicode: bool = True) -> str:
+    """A paper figure's label (math as Matplotlib mathtext, e.g. ``$E \\in \\{10^{6}, 10^{8}\\}$ Pa``) as plain text:
+    ``E ∈ {10⁶, 10⁸} Pa``, or without ``unicode`` (imgui's default font), ``E in {10^6, 10^8} Pa``. Lines join
+    with commas."""
+    text = label.replace("$", "").replace("\n", ", ").replace("\\{", "{").replace("\\}", "}")
+    text = text.replace("\\in", "∈" if unicode else "in").replace("\\times", "×" if unicode else "x")
+    return re.sub(r"\^\{([^}]*)\}", lambda m: m.group(1).translate(SUPERSCRIPTS) if unicode else f"^{m.group(1)}",
+                  text)
 
 
 def paper_font_file(font_dir: str | None = None) -> str | None:
@@ -94,6 +108,7 @@ class Recorder:
         self.font_file = font_file
         self.fonts = {}  # Pillow fonts by pixel size
         self.texts = []  # with font_file, this frame's (x, y, text, color, center) in window coordinates
+        self.labels = {}  # the cases' titles (plain_label of benchmark_plot.case_label), by (benchmark, case)
         self.initial = False  # the hold: the start state, captioned "Initial"
 
     def font(self, height: int):
@@ -104,6 +119,18 @@ class Recorder:
         if size not in self.fonts:
             self.fonts[size] = ImageFont.truetype(self.font_file, size)
         return self.fonts[size]
+
+    def case_label(self) -> str:
+        """The selected case's material as in the paper figures (``benchmark_plot.case_label``), as plain text."""
+        import h5py
+
+        v, s = self.viewer, self.viewer.selection
+        key = (s.benchmark, s.case)
+        if key not in self.labels:
+            with h5py.File(v.path, "r") as f:
+                label = case_label(f[s.benchmark][s.case], s.case, v.dataset)
+            self.labels[key] = plain_label(label, unicode=self.font_file is not None)
+        return self.labels[key]
 
     def line_height(self) -> float:
         """The titles' and labels' line spacing in window coordinates."""
@@ -164,7 +191,7 @@ class Recorder:
         draw = imgui.GetForegroundDrawList()
         self.texts = []
         line = self.line_height()
-        self.draw_text(draw, 24, 20, f"{benchmark_title(s.benchmark)}: {s.label}, sample {s.sample}")
+        self.draw_text(draw, 24, 20, f"{benchmark_title(s.benchmark)}: {self.case_label()}, sample {s.sample}")
         self.draw_text(draw, 24, 20 + line, f"Solver time {v.t / s.T_N:.3f} T_N  (T_N = {s.T_N:.4g} s, "
                                             f"{slowdown_text(s.playback_factor)})")
         self.draw_text(draw, 24, 20 + 2 * line, f"Color: {COLOR_MODES[v.color_mode]}, {v.scale_text()}")
@@ -361,6 +388,14 @@ class TestBenchmarkVideo(unittest.TestCase):
         with self.assertRaises(SystemExit):  # an entry matching no problem
             check_error_fractions(ErrorFractions(["static/T=0.1"]), viewer.cases)
 
+    def test_plain_label(self):
+        """The paper figures' case labels as plain text, with and without Unicode; the title uses them."""
+        self.assertEqual(plain_label("$E = 10^{5}$ Pa"), "E = 10⁵ Pa")
+        self.assertEqual(plain_label(r"$E \in \{10^{6}, 10^{8}\}$ Pa"), "E ∈ {10⁶, 10⁸} Pa")
+        self.assertEqual(plain_label(r"$E \in \{10^{6}, 10^{8}\}$ Pa", unicode=False), "E in {10^6, 10^8} Pa")
+        self.assertEqual(plain_label("$E = 2.5 \\times 10^{-3}$ Pa\nE = 500 J"), "E = 2.5 × 10⁻³ Pa, E = 500 J")
+        self.assertEqual(plain_label("Heterogeneous"), "Heterogeneous")
+
     def test_paper_font(self):
         """With a font file, the texts are composited onto the captured frames (none drawn by imgui); the paper
         font's file, when found, is Linux Biolinum."""
@@ -394,6 +429,8 @@ class TestBenchmarkVideo(unittest.TestCase):
             self.assertEqual(image.shape, (360, 640, 3))
             self.assertTrue((image[:60, :300] < 128).any())  # the dark titles, top left
         self.assertEqual(recorder.font(360).size, round(TEXT_PIXELS * 360 / 1080))
+        # The title's material: the cube's two materials, E = mu (3 lambda + 2 mu) / (lambda + mu) = 2.8 mu
+        self.assertEqual(recorder.labels[viewer.selection.benchmark, "S"], "E ∈ {2.8 × 10⁵, 2.8 × 10⁷} Pa")
 
     def test_hold(self):
         """The hold: round(S x fps) copies of one captured start state, captioned "Initial" at t = 0, then the
