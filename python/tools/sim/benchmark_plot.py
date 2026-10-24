@@ -39,10 +39,12 @@ Usage:
         [--budget-factor 1] [--width 5.5] [--no-legend] [--frames PREFIX] [--dataset DATASET] \
         [--title] [--elev 28] [--azim -62] [--dpi 200]
 
-``--frames PREFIX`` adds ``benchmark_frames.py``'s example problems left of each chart as a 2 x 2 grid
-(:func:`add_frames`): a homogeneous case colored by the error and the heterogeneous case colored by Lame lambda in
-columns headed by the cases' labels, their initial iterates above their reference solutions, a colorbar under each
-column. The grid sits left of the chart, its headers in line with the chart's top (the legend's entries, else the 3D
+``--frames PREFIX`` adds ``benchmark_frames.py``'s example problems left of each chart as a grid (:func:`add_frames`):
+a homogeneous case colored by the error and the heterogeneous case colored by Lame lambda in columns headed by the
+cases' labels, their initial iterates above their reference solutions, a colorbar under each column. ``--columns
+[BENCHMARK=]PAIRS`` chooses the columns per chart: by default both on the static chart, the error pair on the
+h = 1e-2 chart and the material pair on the h = 1e-4 chart, which the paper stacks (the two single-column grids come
+out equally wide, so the stacked charts line up). The grid sits left of the chart, its headers in line with the chart's top (the legend's entries, else the 3D
 box's top edge) and its colorbar titles on the baseline of the last material label: the chart is exactly as without
 ``--frames``, and the figure gets wider (the paper scales it). After a benchmark re-run, regenerate the frames first
 (``benchmark_frames.py``). The grid's headers are the cases' labels, as on the chart's material axis.
@@ -479,6 +481,9 @@ def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
 # Frames (--frames): a 2 x 2 grid of example problems left of the chart, as tall as its saved region
 FRAMES_ROWS = {"initial": "Initial iterate", "reference": "Reference"}
 FRAMES_COLUMNS = ("error", "material")  # benchmark_frames.py's pairs, left to right
+# --columns' defaults: both pairs on the static chart; one each on the dynamic charts, which the paper stacks (h = 1e-2
+# above h = 1e-4), so each shows one example and the stacked charts line up
+FRAMES_COLUMNS_DEFAULT = ["error,material", "dynamic_h0.01=error", "dynamic_h0.0001=material"]
 FRAMES_TEXT_SIZE = 7  # pt
 FRAMES_GAP = 2 / 72  # inches between the grid's labels, frames and colorbars
 FRAMES_COLUMN_GAP = 0.06  # inches between the grid's columns, at least
@@ -575,43 +580,53 @@ def _frames_anchors(fig, region: Bbox) -> tuple[str, float, float]:
     return header[0], header[1], bottom
 
 
-def add_frames(fig, region: Bbox, frames: dict, headers: dict) -> Bbox:
-    """:func:`load_frames`' pairs as a 2 x 2 grid left of a chart's saved ``region`` (inches), as tall as it: columns
-    :data:`FRAMES_COLUMNS` under ``headers`` (e.g. the cases' labels), rows the initial iterate and the reference
+def add_frames(fig, region: Bbox, frames: dict, headers: dict, columns: tuple[str, ...] = FRAMES_COLUMNS) -> Bbox:
+    """:func:`load_frames`' pairs as a grid left of a chart's saved ``region`` (inches), as tall as it: ``columns`` (of
+    :data:`FRAMES_COLUMNS`, left to right) under ``headers`` (e.g. the cases' labels), rows the initial iterate and the
+    reference
     solution, labeled at the left (rotated, on two lines if longer than the row), and each column's colorbar at the
     bottom. The headers line up with the chart's top and the colorbars' titles with its last material label
     (:func:`_frames_anchors`, the chart being ``fig.axes[0]``); the rows share the height between them, the frames as
     tall as their rows, their width following from their aspect. The chart isn't touched. Returns the region to save,
-    widened to the grid."""
+    widened to the grid. The rows' height is measured with every pair's header and colorbar (those of ``frames``
+    and ``headers``), shown or not, so grids with as many columns beside equally tall charts come out equally wide,
+    whichever columns they show (the frames' width follows from the height), unless a header is wider than the
+    frames."""
     fig_w, fig_h = fig.get_size_inches()
     renderer = fig.canvas.get_renderer()
     align, header_y, title_y = _frames_anchors(fig, region)
     inches = lambda artist: artist.get_window_extent(renderer).transformed(fig.dpi_scale_trans.inverted())  # noqa: E731
-    # The texts and colorbars at their heights first (their extents set the rows'), placed along x once the frames'
-    # width is known
+    # Every pair's texts and colorbar at their heights first (their extents set the rows'), placed along x once the
+    # frames' width is known; the columns not shown are removed after measuring
+    measured = [c for c in FRAMES_COLUMNS if c in frames and c in headers]
     header_texts = {c: fig.text(0, header_y / fig_h, headers[c], fontsize=FRAMES_TEXT_SIZE, ha="center", va=align,
-                                multialignment="center") for c in FRAMES_COLUMNS}
+                                multialignment="center") for c in measured}
     bars, title_texts = {}, {}
-    for c in FRAMES_COLUMNS:
+    for c in measured:
         bars[c] = fig.add_axes((0, 0, 1 / fig_w, FRAMES_BAR_HEIGHT / fig_h))
         title_texts[c] = fig.text(0, title_y / fig_h, _frames_colorbar(bars[c], frames[c]), fontsize=FRAMES_TEXT_SIZE,
                                   ha="center", va="baseline")
     fig.canvas.draw()
     title_top = max(inches(t).y1 for t in title_texts.values())
-    labels_bottom = min(inches(t).y0 for c in FRAMES_COLUMNS for t in bars[c].get_xticklabels() if t.get_text())
+    labels_bottom = min(inches(t).y0 for c in measured for t in bars[c].get_xticklabels() if t.get_text())
     bar_y = FRAMES_GAP + title_top - labels_bottom  # moves the colorbars up until their tick labels clear the titles
     rows_top = min(inches(t).y0 for t in header_texts.values()) - FRAMES_GAP
+    for c in set(measured) - set(columns):
+        header_texts.pop(c).remove()
+        title_texts.pop(c).remove()
+        bars.pop(c).remove()
     rows_bottom = bar_y + FRAMES_BAR_HEIGHT + FRAMES_GAP
     row_h = (rows_top - rows_bottom - (len(FRAMES_ROWS) - 1) * FRAMES_GAP) / len(FRAMES_ROWS)
     width = min(row_h * frames[c][f"{r}_image"].shape[1] / frames[c][f"{r}_image"].shape[0]
-                for c in FRAMES_COLUMNS for r in FRAMES_ROWS)
+                for c in measured for r in FRAMES_ROWS)
     sizes = {t: _text_size(fig, t, rotation=90) for text in FRAMES_ROWS.values() for t in (text, _wrapped(text))}
     rows = {r: text if sizes[text][1] <= row_h else _wrapped(text) for r, text in FRAMES_ROWS.items()}
     label_w = max(sizes[text][0] for text in rows.values())
-    # Column pitch: the frames' width, or more if the headers would run into each other
-    pitch = max(width, sum(inches(t).width for t in header_texts.values()) / 2) + FRAMES_COLUMN_GAP
-    x_frames = region.x0 - FRAMES_MARGIN - pitch - width  # the first column's left edge
-    for j, c in enumerate(FRAMES_COLUMNS):
+    # Column pitch: the frames' width, or more if neighboring headers would run into each other
+    widths = [inches(header_texts[c]).width for c in columns]
+    pitch = max([width] + [(a + b) / 2 for a, b in zip(widths, widths[1:])]) + FRAMES_COLUMN_GAP
+    x_frames = region.x0 - FRAMES_MARGIN - (len(columns) - 1) * pitch - width  # the first column's left edge
+    for j, c in enumerate(columns):
         x = x_frames + j * pitch
         header_texts[c].set_x((x + width / 2) / fig_w)
         title_texts[c].set_x((x + width / 2) / fig_w)
@@ -620,7 +635,7 @@ def add_frames(fig, region: Bbox, frames: dict, headers: dict) -> Bbox:
     for r, text in rows.items():
         fig.text((x_frames - FRAMES_GAP - label_w / 2) / fig_w, (top - row_h / 2) / fig_h, text,
                  fontsize=FRAMES_TEXT_SIZE, rotation=90, ha="center", va="center", multialignment="center")
-        for j, c in enumerate(FRAMES_COLUMNS):
+        for j, c in enumerate(columns):
             image = np.asarray(frames[c][f"{r}_image"], dtype=np.float64)[..., :3]
             h = width * image.shape[0] / image.shape[1]
             alpha = np.clip((1.0 - image.min(axis=2)) / 0.04, 0.0, 1.0)  # white transparent, antialiased edges partly
@@ -659,8 +674,12 @@ def main():
                         help="Draw the charts without their solver legend, and write the legend alone to "
                         "<prefix>_legend.pdf, for a figure that stacks several charts under one legend.")
     parser.add_argument("--frames", default=None,
-                        help="Prefix of benchmark_frames.py's output: adds its example problems' frames as a 2 x 2 grid "
-                        "left of each chart (see add_frames).")
+                        help="Prefix of benchmark_frames.py's output: adds its example problems' frames as a grid left "
+                        "of each chart (see add_frames).")
+    parser.add_argument("--columns", action="append", default=list(FRAMES_COLUMNS_DEFAULT),
+                        help="[BENCHMARK=]PAIRS, the comma-separated frame pairs (error, material) of the grid, "
+                        "repeatable; a benchmark's own entry wins (default: error,material, dynamic_h0.01=error, "
+                        "dynamic_h0.0001=material).")
     parser.add_argument("--dataset", default=None,
                         help="The dataset file the results were run on, for the case labels' moduli (default: the "
                         "results file's dataset attribute, relative to the main checkout's root).")
@@ -687,9 +706,10 @@ def main():
                                         args.counts, args.title, args.legend, dataset=args.dataset)
             if args.frames:
                 frames = load_frames(args.frames, benchmark)
+                columns = tuple(results.per_benchmark(args.columns, benchmark).split(","))
                 headers = {c: case_label(f[benchmark][frames[c]["case"]], frames[c]["case"], args.dataset)
-                           for c in FRAMES_COLUMNS}
-                region = add_frames(fig, region, frames, headers)
+                           for c in FRAMES_COLUMNS}  # all of them: the rows' height is measured with each
+                region = add_frames(fig, region, frames, headers, columns)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
@@ -760,6 +780,17 @@ class TestFrames(unittest.TestCase):
             fig.savefig(path, bbox_inches=saved)
             plt.close(fig)
             self.assertGreater(os.path.getsize(path), 1000)
+            # Single columns (the stacked dynamic charts): one colorbar and two frames each, equally wide grids
+            widths = []
+            for column in FRAMES_COLUMNS:
+                fig = plt.figure(figsize=(6.0, 3.0))
+                fig.add_axes((0.1, 0.2, 0.85, 0.6)).set_xticks([0, 1], ["A", "$E \\in \\{1\\}$ Pa"])
+                one = add_frames(fig, region, frames, headers, (column,))
+                self.assertEqual(len(fig.axes), 1 + 1 + 2)
+                widths.append(region.x0 - one.x0)
+                plt.close(fig)
+            self.assertAlmostEqual(widths[0], widths[1])
+            self.assertLess(widths[0], region.x0 - saved.x0)
 
 
 if __name__ == "__main__":
