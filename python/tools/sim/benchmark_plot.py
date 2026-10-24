@@ -43,6 +43,10 @@ initial iterate above its reference solution, a homogeneous case colored by the 
 heterogeneous case colored by Lame lambda on the right, each pair with its colorbar, in two 0.75 in columns (with
 ``--width 5.5``, 7 in in all, ACM TOG's text width). The chart keeps its size.
 
+``--dataset`` gives the dataset when the results file's ``dataset`` attribute doesn't resolve (it is relative to the
+main checkout's root, so e.g. from a worktree), for the case labels' moduli: without it, the heterogeneous case is
+labeled "Heterogeneous" instead of its set of Young's moduli, as in the other benchmark figures.
+
 Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark, and with ``--no-legend`` the legend alone as
 ``<prefix>_legend.pdf``. ``--width`` renders each chart at the width the paper prints it, so its 8 pt labels
 print at 8 pt; at a column's width (about 3.4 in) the 3D box gets too small to read, so the paper stacks the
@@ -199,9 +203,11 @@ def scene_moduli(dataset: str, scene: str) -> tuple[float, ...] | None:
     return tuple(sorted({float(f"{v:.3g}") for v in E}))
 
 
-def case_label(group: h5py.Group, case: str) -> str:
+def case_label(group: h5py.Group, case: str, dataset: str | None = None) -> str:
+    """A case's label for the paper (:func:`material_label`), its moduli from ``dataset`` (default: the results file's
+    ``dataset`` attribute, e.g. a path relative to the main checkout's root)."""
     scene = str(group.attrs.get("scene", case))
-    dataset = group.file.attrs.get("dataset")
+    dataset = dataset or group.file.attrs.get("dataset")
     moduli = scene_moduli(str(dataset), scene) if dataset is not None else None
     label = material_label(str(group.attrs.get("label", scene)), moduli)
     if case != group.attrs.get("scene", case):  # one case per energy level of the scene
@@ -290,12 +296,14 @@ def budget_factor(f: h5py.File, factor: float | None) -> float:
 def plot_benchmark(
     f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None,
     factor: float | None = None, counts: bool = False, title: bool = False, legend: bool = True, scale: float = 1.0,
+    dataset: str | None = None,
 ):
     """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
     ``solver_order`` (back to front) overrides :func:`depth_order`. ``factor``: the budget factor the bars
     score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs. ``counts``
     labels the bars with n/N (see the module docstring). ``title`` draws the benchmark's title above the legend,
     ``legend`` the solver legend. ``scale`` multiplies the figure's size but not its fonts (:func:`plot_at_width`).
+    ``dataset``: the dataset file for the case labels (:func:`case_label`).
     Returns the figure and the region to save (:func:`frame`)."""
     levels = results.benchmark_levels(f, benchmark)
     factor = budget_factor(f, factor)
@@ -383,7 +391,7 @@ def plot_benchmark(
                 zorder=len(bars) + order)
 
     ax.set_xticks(range(len(cases)))
-    ax.set_xticklabels([case_label(g, c) for c, g in cases], fontsize=8)
+    ax.set_xticklabels([case_label(g, c, dataset) for c, g in cases], fontsize=8)
     ax.set_yticks(range(n_l))
     ax.set_yticklabels([f"{100 * v:g}" for v in levels], fontsize=8, ha="left", va="center")
     ax.set_xlim(*x_range)
@@ -572,6 +580,9 @@ def main():
     parser.add_argument("--frames", default=None,
                         help="Prefix of benchmark_frames.py's output: adds its example problem's frames beside each "
                         "chart, the error pair to the left and the material pair to the right (see add_frames).")
+    parser.add_argument("--dataset", default=None,
+                        help="The dataset file the results were run on, for the case labels' moduli (default: the "
+                        "results file's dataset attribute, relative to the main checkout's root).")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -592,7 +603,7 @@ def main():
         for benchmark in benchmarks:
             order = args.solver_order.split(",") if args.solver_order else None
             fig, region = plot_at_width(args.width, f, benchmark, solvers, args.elev, args.azim, order, factor,
-                                        args.counts, args.title, args.legend)
+                                        args.counts, args.title, args.legend, dataset=args.dataset)
             if args.frames:
                 region = add_frames(fig, region, load_frames(args.frames, benchmark))
             for ext in ("pdf", "png"):
