@@ -3,9 +3,10 @@ Records the benchmark viewer's side-by-side solver comparisons (``benchmark_view
 benchmark: every trajectory sample of every case in turn, each played over all its frames.
 
 Each clip is what the viewer shows with its defaults: the solvers' copies side by side, labeled with their names
-and e/e0, colored by the per-vertex error |x - x*| from 0 to a fraction of the problem's initial error (the
-viewer's default, or ``--error-fraction``; values above it saturate, so a stalled solve stays bright); plus a
-title (benchmark, scene, sample, solver time over T_N and the slowdown) and the color scale with its fraction.
+and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initial error, or a fraction of it
+per problem (``--error-fraction``, as the viewer's: values above it saturate, so a stalled solve stays bright);
+plus a title (benchmark, scene, sample, solver time over T_N and the slowdown) and the color scale with its
+fraction.
 Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0 with the
 caption "Initial", so viewers see the problem before the solvers change the shape; the caption goes when the
 solve starts. Frames are evenly spaced in solver time over the problem's budget and play at
@@ -27,7 +28,8 @@ binary, then ``PATH``.
 Usage:
     python -m python.tools.sim.benchmark_video path/to/results.h5 -o out/videos/trampolines \
         [--dataset path/to/trampolines.h5] [--benchmarks static ...] [--cases Y1e6 ...] [--samples 0 4 ...] \
-        [--width 1920 --height 1080] [--crf 18] [--ffmpeg path/to/ffmpeg] [--error-fraction 0.03]         [--hold-seconds 1] [--font-dir path/to/fonts]
+        [--width 1920 --height 1080] [--crf 18] [--ffmpeg path/to/ffmpeg] [--hold-seconds 1] \
+        [--font-dir path/to/fonts] [--error-fraction static/Y1e5=0.2 ...]
 
 Writes ``<prefix>_<benchmark>.mp4`` per benchmark.
 
@@ -45,8 +47,8 @@ import warnings
 import numpy as np
 
 from .benchmark_plot import benchmark_title, register_paper_fonts
-from .benchmark_viewer import (COLOR_MODES, ERROR_FRACTION, ERROR_FRACTION_RANGE, Viewer, _rgb, display_name,
-                               slowdown_text, solver_color)
+from .benchmark_viewer import (COLOR_MODES, ErrorFractions, Viewer, _rgb, add_error_fraction_argument,
+                               check_error_fractions, display_name, slowdown_text, solver_color)
 
 TEXT_SCALE = 2.0  # the labels and titles, over imgui's default font, for a 1080p video (without the paper font)
 TEXT_PIXELS = 34  # the paper font's size in pixels at a 1080-pixel video height, scaled with it
@@ -228,10 +230,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--height", type=int, default=1080, help="Video height (default: %(default)s).")
     parser.add_argument("--crf", type=int, default=18, help="x264 quality, lower is better (default: %(default)s).")
     parser.add_argument("--ffmpeg", default=None, help="ffmpeg executable (default: FFMPEG, imageio-ffmpeg, PATH).")
-    parser.add_argument("--error-fraction", type=float, default=ERROR_FRACTION, dest="error_fraction", metavar="F",
-                        help="The error colors' max as a fraction F of each problem's initial error, "
-                        f"{ERROR_FRACTION_RANGE[0]:g} to {ERROR_FRACTION_RANGE[1]:g} (default: the viewer's, "
-                        "%(default)g).")
+    add_error_fraction_argument(parser)
     parser.add_argument("--hold-seconds", type=float, default=HOLD_SECONDS, dest="hold_seconds", metavar="S",
                         help="Seconds of video each clip holds the start state, captioned \"Initial\", before the "
                         "solve; 0: no hold (default: %(default)g).")
@@ -241,9 +240,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.hold_seconds < 0:
         parser.error(f"--hold-seconds must be at least 0, got {args.hold_seconds:g}")
-    lo, hi = ERROR_FRACTION_RANGE
-    if not lo <= args.error_fraction <= hi:
-        parser.error(f"--error-fraction must be in [{lo:g}, {hi:g}], got {args.error_fraction:g}")
+    try:
+        args.error_fractions = ErrorFractions(args.error_fractions)
+    except ValueError as e:
+        parser.error(str(e))
     return args
 
 
@@ -264,10 +264,11 @@ def main():
     ps.set_open_imgui_window_for_user_callback(False)
     ps.init()
     ps.set_window_size(args.width, args.height)
-    viewer = Viewer(args.dataset, args.error_fraction)
+    viewer = Viewer(args.dataset, args.error_fractions)
     viewer.load(args.results)
     if viewer.error:
         raise SystemExit(viewer.error)
+    check_error_fractions(args.error_fractions, viewer.cases)
     recorder = Recorder(viewer, args.hold_seconds, font_file)
     ps.set_user_callback(recorder.callback)
 
@@ -331,22 +332,23 @@ class TestBenchmarkVideo(unittest.TestCase):
         return ps, imgui, texts
 
     def test_error_fraction(self):
-        """--error-fraction reaches the viewer's color scale, and the caption gives the clamped max and fraction."""
+        """--error-fraction entries reach the viewer's color scale per problem, and the caption gives the clamped
+        max and fraction."""
         import sys
         import tempfile
         from unittest import mock
 
         from .benchmark_viewer import TestBenchmarkViewer
 
-        self.assertEqual(parse_args(["r.h5", "-o", "out"]).error_fraction, ERROR_FRACTION)
-        with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
-            parse_args(["r.h5", "-o", "out", "--error-fraction", "0"])
-        args = parse_args(["r.h5", "-o", "out", "--error-fraction", "0.05"])
+        for bad in ("0", "S:x=0.1", "static/=0.1"):
+            with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+                parse_args(["r.h5", "-o", "out", "--error-fraction", bad])
+        args = parse_args(["r.h5", "-o", "out", "--error-fraction", "0.5", "--error-fraction", "dynamic_h0.01/S=0.05"])
         ps, imgui, texts = self.stubs()
         with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
                                                                                   "polyscope.imgui": imgui}):
             dataset, path, _ = TestBenchmarkViewer.write_files(root)
-            viewer = Viewer(dataset, args.error_fraction)
+            viewer = Viewer(dataset, args.error_fractions)
             viewer.load(path, "dynamic_h0.01", "S", TestBenchmarkViewer.SAMPLE)
             self.assertIsNone(viewer.error)
             recorder = Recorder(viewer)
@@ -355,6 +357,9 @@ class TestBenchmarkVideo(unittest.TestCase):
         self.assertAlmostEqual(viewer.vmax, 0.05 * viewer.initial_error(), places=6)
         caption = f"Color: {COLOR_MODES[0]}, 0 to {viewer.vmax:.4g} m (5% of the initial error)"
         self.assertIn(caption, texts)
+        self.assertEqual(args.error_fractions("static", "S", TestBenchmarkViewer.SAMPLE), 0.5)
+        with self.assertRaises(SystemExit):  # an entry matching no problem
+            check_error_fractions(ErrorFractions(["static/T=0.1"]), viewer.cases)
 
     def test_paper_font(self):
         """With a font file, the texts are composited onto the captured frames (none drawn by imgui); the paper
