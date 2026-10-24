@@ -42,7 +42,8 @@ Usage:
 ``--frames PREFIX`` adds ``benchmark_frames.py``'s example problems left of each chart as a 2 x 2 grid
 (:func:`add_frames`): a homogeneous case colored by the error and the heterogeneous case colored by Lame lambda in
 columns headed by the cases' labels, their initial iterates above their reference solutions, a colorbar under each
-column. The grid is as tall as the chart's saved region and sits left of it: the chart is exactly as without
+column. The grid sits left of the chart, its headers in line with the chart's top (the legend's entries, else the 3D
+box's top edge) and its colorbar titles on the baseline of the last material label: the chart is exactly as without
 ``--frames``, and the figure gets wider (the paper scales it). After a benchmark re-run, regenerate the frames first
 (``benchmark_frames.py``). The grid's headers are the cases' labels, as on the chart's material axis.
 
@@ -483,7 +484,6 @@ FRAMES_GAP = 2 / 72  # inches between the grid's labels, frames and colorbars
 FRAMES_COLUMN_GAP = 0.06  # inches between the grid's columns, at least
 FRAMES_MARGIN = 0.08  # inches between the grid and the chart's region
 FRAMES_BAR_HEIGHT = 0.055  # inches
-FRAMES_BAR_LABELS = 0.3  # inches under a colorbar: its tick labels and title
 
 
 def load_frames(prefix: str, benchmark: str) -> dict:
@@ -503,8 +503,9 @@ def _length_text(meters: float) -> str:
     return f"{meters:.3g} m" if meters >= 0.01 else f"{1e3 * meters:.3g} mm"
 
 
-def _frames_colorbar(cax, pair: dict):
-    """A pair's colorbar from its rendered shades, with its quantity's ticks and label."""
+def _frames_colorbar(cax, pair: dict) -> str:
+    """A pair's colorbar from its rendered shades, with its quantity's ticks. Returns its title (the caller places
+    it)."""
     from matplotlib.ticker import FixedLocator, NullFormatter
 
     shades = np.asarray(pair["shades"])
@@ -524,14 +525,15 @@ def _frames_colorbar(cax, pair: dict):
         cax.xaxis.set_minor_locator(FixedLocator(at))
         cax.xaxis.set_minor_formatter(NullFormatter())
         cax.tick_params(axis="x", which="minor", length=1.2, width=0.4)
-        cax.set_xlabel(r"$\lambda$ (Pa)", fontsize=7, labelpad=1)
+        title = r"$\lambda$ (Pa)"
     else:
         cax.set_xticks([pair["vmin"], pair["vmax"]], ["0", _length_text(pair["vmax"])])
         labels = cax.get_xticklabels()
         labels[0].set_ha("left")
         labels[-1].set_ha("right")
-        cax.set_xlabel(r"$|x - x^*|$", fontsize=7, labelpad=1)
+        title = r"$|x - x^*|$"
     cax.set_xlim(pair["vmin"], pair["vmax"])
+    return title
 
 
 def _text_size(fig, text: str, rotation: float = 0.0) -> tuple[float, float]:
@@ -552,51 +554,81 @@ def _wrapped(text: str) -> str:
     return text[:i] + "\n" + text[i + 1:]
 
 
+def _baseline(text, renderer) -> float:
+    """A drawn horizontal text's baseline (display pixels)."""
+    return text.get_window_extent(renderer).y0 - text._get_layout(renderer)[0].y0
+
+
+def _frames_anchors(fig, region: Bbox) -> tuple[str, float, float]:
+    """The grid's vertical anchors (inches, figure coordinates) from the drawn chart: the column headers' (alignment,
+    y), on the legend entries' baseline, or without a legend with their tops at the plot's top (``region`` less
+    :data:`FRAME_PAD`: the 3D box's top edge); and the colorbar titles' baseline, the chart's last x tick label's (the
+    material axis' last case), or without one the plot's bottom."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    if fig.legends:
+        header = ("baseline", float(np.mean([_baseline(t, renderer) for t in fig.legends[0].get_texts()])) / fig.dpi)
+    else:
+        header = ("top", region.y1 - FRAME_PAD)
+    ticks = [t for t in fig.axes[0].get_xticklabels() if t.get_visible() and t.get_text()]
+    bottom = _baseline(ticks[-1], renderer) / fig.dpi if ticks else region.y0 + FRAME_PAD
+    return header[0], header[1], bottom
+
+
 def add_frames(fig, region: Bbox, frames: dict, headers: dict) -> Bbox:
     """:func:`load_frames`' pairs as a 2 x 2 grid left of a chart's saved ``region`` (inches), as tall as it: columns
     :data:`FRAMES_COLUMNS` under ``headers`` (e.g. the cases' labels), rows the initial iterate and the reference
-    solution sharing the height left by the headers and the colorbars, labeled at the left (rotated, on two lines if
-    longer than the row), and each column's colorbar at the bottom. The frames are as tall as their rows, their width
-    following from their aspect. The chart isn't touched. Returns the region to save, widened to the grid."""
+    solution, labeled at the left (rotated, on two lines if longer than the row), and each column's colorbar at the
+    bottom. The headers line up with the chart's top and the colorbars' titles with its last material label
+    (:func:`_frames_anchors`, the chart being ``fig.axes[0]``); the rows share the height between them, the frames as
+    tall as their rows, their width following from their aspect. The chart isn't touched. Returns the region to save,
+    widened to the grid."""
     fig_w, fig_h = fig.get_size_inches()
-    sizes = {("row", t): _text_size(fig, t, rotation=90) for text in FRAMES_ROWS.values() for t in (text, _wrapped(text))}
-    sizes.update({("header", c): _text_size(fig, headers[c]) for c in FRAMES_COLUMNS})
-    header_h = max(sizes[("header", c)][1] for c in FRAMES_COLUMNS)
-    bars_h = FRAMES_GAP + FRAMES_BAR_HEIGHT + FRAMES_BAR_LABELS
-    row_h = (region.height - header_h - bars_h - len(FRAMES_ROWS) * FRAMES_GAP) / len(FRAMES_ROWS)
+    renderer = fig.canvas.get_renderer()
+    align, header_y, title_y = _frames_anchors(fig, region)
+    inches = lambda artist: artist.get_window_extent(renderer).transformed(fig.dpi_scale_trans.inverted())  # noqa: E731
+    # The texts and colorbars at their heights first (their extents set the rows'), placed along x once the frames'
+    # width is known
+    header_texts = {c: fig.text(0, header_y / fig_h, headers[c], fontsize=FRAMES_TEXT_SIZE, ha="center", va=align,
+                                multialignment="center") for c in FRAMES_COLUMNS}
+    bars, title_texts = {}, {}
+    for c in FRAMES_COLUMNS:
+        bars[c] = fig.add_axes((0, 0, 1 / fig_w, FRAMES_BAR_HEIGHT / fig_h))
+        title_texts[c] = fig.text(0, title_y / fig_h, _frames_colorbar(bars[c], frames[c]), fontsize=FRAMES_TEXT_SIZE,
+                                  ha="center", va="baseline")
+    fig.canvas.draw()
+    title_top = max(inches(t).y1 for t in title_texts.values())
+    labels_bottom = min(inches(t).y0 for c in FRAMES_COLUMNS for t in bars[c].get_xticklabels() if t.get_text())
+    bar_y = FRAMES_GAP + title_top - labels_bottom  # moves the colorbars up until their tick labels clear the titles
+    rows_top = min(inches(t).y0 for t in header_texts.values()) - FRAMES_GAP
+    rows_bottom = bar_y + FRAMES_BAR_HEIGHT + FRAMES_GAP
+    row_h = (rows_top - rows_bottom - (len(FRAMES_ROWS) - 1) * FRAMES_GAP) / len(FRAMES_ROWS)
     width = min(row_h * frames[c][f"{r}_image"].shape[1] / frames[c][f"{r}_image"].shape[0]
                 for c in FRAMES_COLUMNS for r in FRAMES_ROWS)
-    rows = {r: text if sizes[("row", text)][1] <= row_h else _wrapped(text) for r, text in FRAMES_ROWS.items()}
-    label_w = max(sizes[("row", text)][0] for text in rows.values())
+    sizes = {t: _text_size(fig, t, rotation=90) for text in FRAMES_ROWS.values() for t in (text, _wrapped(text))}
+    rows = {r: text if sizes[text][1] <= row_h else _wrapped(text) for r, text in FRAMES_ROWS.items()}
+    label_w = max(sizes[text][0] for text in rows.values())
     # Column pitch: the frames' width, or more if the headers would run into each other
-    pitch = max(width, (sizes[("header", FRAMES_COLUMNS[0])][0] + sizes[("header", FRAMES_COLUMNS[1])][0]) / 2)
-    pitch += FRAMES_COLUMN_GAP
+    pitch = max(width, sum(inches(t).width for t in header_texts.values()) / 2) + FRAMES_COLUMN_GAP
     x_frames = region.x0 - FRAMES_MARGIN - pitch - width  # the first column's left edge
-    left = x_frames - FRAMES_GAP - label_w
-
-    def place(x: float, top: float, w: float, h: float) -> tuple:  # inches (top down from the region's top) -> figure
-        return (x / fig_w, (region.y1 - top - h) / fig_h, w / fig_w, h / fig_h)
-
     for j, c in enumerate(FRAMES_COLUMNS):
-        fig.text((x_frames + j * pitch + width / 2) / fig_w, (region.y1 - header_h / 2) / fig_h, headers[c],
-                 fontsize=FRAMES_TEXT_SIZE, ha="center", va="center", multialignment="center")
-    top = header_h + FRAMES_GAP
+        x = x_frames + j * pitch
+        header_texts[c].set_x((x + width / 2) / fig_w)
+        title_texts[c].set_x((x + width / 2) / fig_w)
+        bars[c].set_position(((x + 0.06 * width) / fig_w, bar_y / fig_h, 0.88 * width / fig_w, FRAMES_BAR_HEIGHT / fig_h))
+    top = rows_top
     for r, text in rows.items():
-        fig.text((x_frames - FRAMES_GAP - label_w / 2) / fig_w, (region.y1 - top - row_h / 2) / fig_h, text,
+        fig.text((x_frames - FRAMES_GAP - label_w / 2) / fig_w, (top - row_h / 2) / fig_h, text,
                  fontsize=FRAMES_TEXT_SIZE, rotation=90, ha="center", va="center", multialignment="center")
         for j, c in enumerate(FRAMES_COLUMNS):
             image = np.asarray(frames[c][f"{r}_image"], dtype=np.float64)[..., :3]
             h = width * image.shape[0] / image.shape[1]
             alpha = np.clip((1.0 - image.min(axis=2)) / 0.04, 0.0, 1.0)  # white transparent, antialiased edges partly
-            ax = fig.add_axes(place(x_frames + j * pitch, top + (row_h - h) / 2, width, h))
+            ax = fig.add_axes(((x_frames + j * pitch) / fig_w, (top - (row_h + h) / 2) / fig_h, width / fig_w, h / fig_h))
             ax.imshow(np.dstack([image, alpha]), interpolation="lanczos")
             ax.set_axis_off()
-        top += row_h + FRAMES_GAP
-    for j, c in enumerate(FRAMES_COLUMNS):
-        box = place(x_frames + j * pitch + 0.06 * width, region.height - FRAMES_BAR_LABELS - FRAMES_BAR_HEIGHT,
-                    0.88 * width, FRAMES_BAR_HEIGHT)
-        _frames_colorbar(fig.add_axes(box), frames[c])
-    return Bbox.from_extents(left, region.y0, region.x1, region.y1)
+        top -= row_h + FRAMES_GAP
+    return Bbox.from_extents(x_frames - FRAMES_GAP - label_w, region.y0, region.x1, region.y1)
 
 
 def main():
@@ -695,26 +727,34 @@ class TestFrames(unittest.TestCase):
                 json.dump(spec, f)
             frames = load_frames(prefix, "static")
             self.assertEqual(frames["error"]["initial_image"].shape[:2], (30, 40))
-            # A chart filling its region: the grid goes left of it, as tall as it
+            # A chart with x tick labels and a legend on top: the grid goes left of it, its headers on the legend's
+            # baseline, its colorbar titles on the last tick label's
             fig = plt.figure(figsize=(6.0, 3.0))
-            chart = fig.add_axes((0.0, 0.0, 1.0, 1.0))
-            chart.set_axis_off()
-            chart.add_patch(plt.Rectangle((0, 0), 1, 1, color="k"))
+            chart = fig.add_axes((0.1, 0.2, 0.85, 0.6))
+            chart.bar([0, 1], [1, 2], label="bars")
+            chart.set_xticks([0, 1], ["A", "$E \\in \\{1\\}$ Pa"])
+            fig.legend(loc="upper center")
             region = Bbox.from_extents(0.0, 0.0, 6.0, 3.0)
             headers = {"error": "$E = 10^{7}$ Pa", "material": "$E \\in \\{10^{6}, 10^{8}\\}$ Pa"}
+            texts_before = len(fig.texts)
             saved = add_frames(fig, region, frames, headers)
             self.assertEqual((saved.x1, saved.y0, saved.y1), (6.0, 0.0, 3.0))
             self.assertLess(saved.x0, -1.0)
-            self.assertEqual(len(fig.axes), 1 + 4 + 2)  # the chart, 4 frames, 2 colorbars
-            bars = [ax for ax in fig.axes[1:] if ax.get_xlabel()]
-            frame_axes = [ax for ax in fig.axes[1:] if ax not in bars]
+            self.assertEqual(len(fig.axes), 1 + 2 + 4)  # the chart, 2 colorbars, 4 frames
+            bars, frame_axes = fig.axes[1:3], fig.axes[3:]
             for ax in fig.axes[1:]:
                 self.assertLessEqual(ax.get_position().x1 * 6.0, -FRAMES_MARGIN + 1e-6)  # left of the chart
-            # Two rows sharing the height above the colorbars: each frame about half of it
-            heights = [ax.get_position().height * 3.0 for ax in frame_axes]
-            self.assertGreater(min(heights), 1.0)
-            self.assertLess(max(ax.get_position().y0 for ax in bars) * 3.0, 0.5)
-            self.assertEqual([t.get_text() for t in fig.axes[-1].get_xticklabels()], ["$10^{5}$", "$10^{8}$"])
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+            header, title = fig.texts[texts_before], fig.texts[texts_before + 2]  # the first header and title
+            self.assertAlmostEqual(_baseline(header, renderer), _baseline(fig.legends[0].get_texts()[0], renderer),
+                                   delta=1.0)
+            self.assertAlmostEqual(_baseline(title, renderer), _baseline(chart.get_xticklabels()[-1], renderer),
+                                   delta=1.0)
+            # Two rows sharing the height between: each frame a good part of it, the colorbars below them
+            self.assertGreater(min(ax.get_position().height * 3.0 for ax in frame_axes), 0.6)
+            self.assertLess(max(ax.get_position().y1 for ax in bars), min(ax.get_position().y0 for ax in frame_axes))
+            self.assertEqual([t.get_text() for t in bars[1].get_xticklabels()], ["$10^{5}$", "$10^{8}$"])
             path = os.path.join(d, "out.pdf")
             fig.savefig(path, bbox_inches=saved)
             plt.close(fig)
