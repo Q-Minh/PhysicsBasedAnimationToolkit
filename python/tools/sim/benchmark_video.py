@@ -1,6 +1,8 @@
 """
 Records the benchmark viewer's side-by-side solver comparisons (``benchmark_viewer.py``) to videos, one MP4 per
-benchmark: every trajectory sample of every case in turn, each played over all its frames.
+benchmark: every trajectory sample of every case in turn, each played over all its frames. With
+``--samples-per-case N``, a case's N samples with the largest initial error (its largest vertex error |x(0) - x*|,
+the color scale's; read from the first frames only), in sample order; the choice is printed with the errors.
 
 Each clip is what the viewer shows with its defaults: the solvers' copies side by side, labeled with their names
 and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initial error, or a fraction of it
@@ -28,6 +30,7 @@ binary, then ``PATH``.
 Usage:
     python -m python.tools.sim.benchmark_video path/to/results.h5 -o out/videos/trampolines \
         [--dataset path/to/trampolines.h5] [--benchmarks static ...] [--cases Y1e6 ...] [--samples 0 4 ...] \
+        [--samples-per-case 3] \
         [--width 1920 --height 1080] [--crf 18] [--ffmpeg path/to/ffmpeg] [--hold-seconds 1] \
         [--font-dir path/to/fonts] [--error-fraction static/Y1e5=0.2 ...]
 
@@ -48,8 +51,9 @@ import warnings
 import numpy as np
 
 from .benchmark_plot import benchmark_title, case_label, register_paper_fonts
-from .benchmark_viewer import (COLOR_MODES, ErrorFractions, Viewer, _rgb, add_error_fraction_argument,
-                               check_error_fractions, display_name, slowdown_text, solver_color)
+from .benchmark_viewer import (COLOR_MODES, FEM_GROUP, MESH_GROUP, ErrorFractions, Viewer, _rgb,
+                               add_error_fraction_argument, boundary_triangles, check_error_fractions, display_name,
+                               problem_fem_group, slowdown_text, solver_color, solver_order)
 
 TEXT_SCALE = 2.0  # the labels and titles, over imgui's default font, for a 1080p video (without the paper font)
 TEXT_PIXELS = 34  # the paper font's size in pixels at a 1080-pixel video height, scaled with it
@@ -80,6 +84,58 @@ def paper_font_file(font_dir: str | None = None) -> str | None:
                       "uses imgui's default font")
         return None
     return font_manager.findfont(font_manager.FontProperties(family=sans), fallback_to_default=False)
+
+
+def initial_errors(path: str, benchmark: str, case: str, samples: list[int],
+                   dataset: str | None = None) -> dict[int, float]:
+    """The samples' initial errors, as the viewer's "Initial error" color scale (``Viewer.initial_error``): the
+    largest |x_i(0) - x*_i| over the boundary vertices, x(0) being the first frame of the first solver with the
+    sample's trajectory (every solver starts there). Reads only those frames and, for dynamic problems, x_ref."""
+    import h5py
+
+    with h5py.File(path, "r") as f:
+        g = f[benchmark][case]
+        dataset = dataset or str(f.attrs["dataset"])
+        set_name, problem = str(g.attrs["set"]), str(g.attrs["problem"])
+        solvers = solver_order(f, g)
+        x0 = {}
+        for sample in samples:
+            key = f"trajectories/{sample:06d}/x"
+            x0[sample] = g[next(solver for solver in solvers if key in g[solver])][key][0]
+    with h5py.File(dataset, "r") as d:
+        mesh = d[problem_fem_group(d, set_name)][FEM_GROUP][MESH_GROUP]
+        X = mesh["X"][()].T.astype(np.float64)
+        vertices = np.unique(boundary_triangles(X, mesh["E"][()].T))
+        references = None if problem == "static" else d[set_name]["samples"]["x_ref"]
+        errors = {}
+        for sample, x in x0.items():
+            reference = X if references is None else references[sample].astype(np.float64)
+            errors[sample] = float(np.linalg.norm(x[vertices].astype(np.float64) - reference[vertices], axis=1).max())
+    return errors
+
+
+def top_samples(errors: dict[int, float], n: int) -> list[int]:
+    """The ``n`` samples of ``errors`` with the largest initial errors (ties: the lower sample), in sample order."""
+    return sorted(sorted(errors, key=lambda sample: (-errors[sample], sample))[:n])
+
+
+def recorded_samples(path: str, cases: list, samples: list[int] | None = None, samples_per_case: int | None = None,
+                     dataset: str | None = None) -> list[list[int]]:
+    """Per case of ``cases`` (``benchmark_viewer.list_cases``), the samples to record: those in ``samples`` (all
+    without it), then of them the ``samples_per_case`` with the largest initial errors (:func:`top_samples`), each
+    case's choice printed with the errors."""
+    out = []
+    for benchmark, case, _, case_samples in cases:
+        candidates = [s for s in case_samples if samples is None or s in samples]
+        if samples_per_case is None or not candidates:
+            out.append(candidates)
+            continue
+        errors = initial_errors(path, benchmark, case, candidates, dataset)
+        chosen = top_samples(errors, samples_per_case)
+        print(f"{benchmark}/{case}: samples " + ", ".join(f"{s} ({errors[s]:.4g} m)" for s in chosen) +
+              f", the {len(chosen)} of {len(candidates)} with the largest initial errors", flush=True)
+        out.append(chosen)
+    return out
 
 
 def find_ffmpeg(path: str | None) -> str:
@@ -253,6 +309,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cases", nargs="+", default=None, help="Cases (scenes) to record (default: all).")
     parser.add_argument("--samples", nargs="+", type=int, default=None,
                         help="Samples to record (default: every sample with a trajectory).")
+    parser.add_argument("--samples-per-case", type=int, default=None, dest="samples_per_case", metavar="N",
+                        help="Per case, record only the N samples (of --samples, if given) with the largest initial "
+                        "error, the largest |x(0) - x*| at a vertex (ties: the lower sample), in sample order "
+                        "(default: every sample).")
     parser.add_argument("--width", type=int, default=1920, help="Video width (default: %(default)s).")
     parser.add_argument("--height", type=int, default=1080, help="Video height (default: %(default)s).")
     parser.add_argument("--crf", type=int, default=18, help="x264 quality, lower is better (default: %(default)s).")
@@ -267,6 +327,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.hold_seconds < 0:
         parser.error(f"--hold-seconds must be at least 0, got {args.hold_seconds:g}")
+    if args.samples_per_case is not None and args.samples_per_case < 1:
+        parser.error(f"--samples-per-case must be at least 1, got {args.samples_per_case}")
     try:
         args.error_fractions = ErrorFractions(args.error_fractions)
     except ValueError as e:
@@ -299,22 +361,32 @@ def main():
     recorder = Recorder(viewer, args.hold_seconds, font_file)
     ps.set_user_callback(recorder.callback)
 
-    cases = [(i, b, c, samples) for i, (b, c, _, samples) in enumerate(viewer.cases)
-             if (args.benchmarks is None or b in args.benchmarks) and (args.cases is None or c in args.cases)]
-    benchmarks = list(dict.fromkeys(b for _, b, _, _ in cases))
+    indices = [i for i, (b, c, _, _) in enumerate(viewer.cases)
+               if (args.benchmarks is None or b in args.benchmarks) and (args.cases is None or c in args.cases)]
+    chosen = recorded_samples(args.results, [viewer.cases[i] for i in indices], args.samples, args.samples_per_case,
+                              args.dataset)
+    cases = [(i, viewer.cases[i][0], viewer.cases[i][1], viewer.cases[i][3], recorded)
+             for i, recorded in zip(indices, chosen)]
+    if args.samples_per_case is not None:
+        # Entries naming only samples of the recorded cases left out by --samples or the pick (all entries were
+        # checked against every sample above)
+        elsewhere = args.error_fractions.unmatched([(b, c, [], s) for _, b, c, s, _ in cases])
+        unrecorded = [spec for spec in args.error_fractions.unmatched([(b, c, [], r) for _, b, c, _, r in cases])
+                      if spec not in elsewhere]
+        if unrecorded:
+            print(f"Note: --error-fraction {', '.join(unrecorded)}: not among the recorded samples", flush=True)
+    benchmarks = list(dict.fromkeys(b for _, b, _, _, _ in cases))
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     start = time.time()
     for benchmark in benchmarks:
         path = f"{args.output}_{benchmark}.mp4"
         process = None
         n = 0
-        for i, b, c, samples in cases:
+        for i, b, c, samples, recorded in cases:
             if b != benchmark:
                 continue
-            for j, sample in enumerate(samples):
-                if args.samples is not None and sample not in args.samples:
-                    continue
-                for image in recorder.frames(i, j):
+            for sample in recorded:
+                for image in recorder.frames(i, samples.index(sample)):
                     if process is None:
                         h, w = image.shape[:2]
                         fps = viewer.selection.n_frames / viewer.selection.video_seconds
@@ -387,6 +459,80 @@ class TestBenchmarkVideo(unittest.TestCase):
         self.assertEqual(args.error_fractions("static", "S", TestBenchmarkViewer.SAMPLE), 0.5)
         with self.assertRaises(SystemExit):  # an entry matching no problem
             check_error_fractions(ErrorFractions(["static/T=0.1"]), viewer.cases)
+
+    def test_samples_per_case(self):
+        """--samples-per-case: per case, the samples with the largest initial errors (ties: the lower sample), in
+        sample order, after --samples; the errors are the viewer's color scale's."""
+        import sys
+        import tempfile
+        from unittest import mock
+
+        import h5py
+
+        from . import benchmark_results as results
+        from .benchmark_viewer import TestBenchmarkViewer, list_cases
+
+        self.assertIsNone(parse_args(["r.h5", "-o", "out"]).samples_per_case)
+        with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+            parse_args(["r.h5", "-o", "out", "--samples-per-case", "0"])
+        self.assertEqual(top_samples({4: 0.2, 1: 0.5, 3: 0.5, 0: 0.3}, 2), [1, 3])
+        self.assertEqual(top_samples({3: 0.5, 1: 0.5}, 1), [1])  # a tie: the lower sample
+        self.assertEqual(top_samples({2: 0.1, 0: 0.3}, 5), [0, 2])
+        X, _ = TestBenchmarkViewer.cube()
+        # Static samples: one boundary vertex displaced by d from X = x*; samples 1 and 3 tie
+        displacements = {0: 0.3, 1: 0.5, 2: 0.1, 3: 0.5, 4: 0.2}
+        ps, imgui, _ = self.stubs()
+        with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
+                                                                                  "polyscope.imgui": imgui}):
+            dataset, _, shapes = TestBenchmarkViewer.write_files(root)
+            path = os.path.join(root, "samples.h5")
+            starts = {"static": {}, "dynamic_h0.01": {s: shapes["x"][s] for s in range(2)}}
+            for sample, d in displacements.items():
+                starts["static"][sample] = X.astype(np.float32)
+                starts["static"][sample][5, 2] += d
+            levels = (0.5,)
+            with h5py.File(path, "w") as f:
+                f.attrs.update(format=results.FORMAT, version=results.VERSION, dataset=dataset,
+                               solvers=["VBD", "Newton"])
+                for benchmark, problem in (("static", "static"), ("dynamic_h0.01", "dynamic")):
+                    case = results.require_case(f, benchmark, "S", {"set": f"S/{benchmark}/E1", "problem": problem},
+                                                levels=levels)
+                    for solver in ("VBD", "Newton"):
+                        summaries, logs, trajectories = [], [], []
+                        for sample, x0 in starts[benchmark].items():
+                            c = results.level_crossings(np.array([1.0, 0.4]), np.array([0.0, 1.0]), levels)
+                            summaries.append(dict(sample=sample, e0=1.0, iterations=1, sweeps=1, solver_time=1.0,
+                                                  final_relative_error=0.4, termination="target",
+                                                  deformation_energy=0.0, crossings=c, budget=1.0,
+                                                  normalization=1.0))
+                            logs.append((np.array([1.0, 0.4]), np.array([0.0, 1.0]), np.array([0, 1])))
+                            # VBD has no trajectory of sample 0: its start is Newton's first frame
+                            trajectories.append(None if solver == "VBD" and sample == 0 else dict(
+                                iteration=np.array([0, 1]), t=np.array([0.0, 1.0]), t_target=np.array([0.0, 1.0]),
+                                level_frames=np.array([1]), level_exact=np.array([True]),
+                                x=np.stack([x0, X.astype(np.float32)]), requested_frames=1, ring_slots=2, stride=1,
+                                device_bytes=0, video_seconds=2.0, playback_factor=2.0))
+                        results.write_solver(case, solver, levels, summaries, logs, trajectories)
+            cases = list_cases(path)
+            for benchmark, case, _, samples in cases:  # the viewer's initial errors
+                errors = initial_errors(path, benchmark, case, samples)
+                viewer = Viewer(dataset)
+                for sample in samples:
+                    viewer.load(path, benchmark, case, sample)
+                    self.assertIsNone(viewer.error)
+                    self.assertEqual(errors[sample], viewer.initial_error())
+                if benchmark == "static":
+                    for sample, d in displacements.items():
+                        self.assertAlmostEqual(errors[sample], d, places=6)
+            with mock.patch("builtins.print") as printed:
+                self.assertEqual(recorded_samples(path, cases, samples_per_case=3), [[0, 1, 3], [0, 1]])
+                self.assertEqual(recorded_samples(path, cases, [2, 3, 4], 2), [[3, 4], []])
+                self.assertEqual(recorded_samples(path, cases, [2, 4]), [[2, 4], []])  # without a pick: --samples
+                self.assertEqual(recorded_samples(path, cases), [[0, 1, 2, 3, 4], [0, 1]])
+            self.assertIn("static/S: samples 3 (0.5 m), 4 (0.2 m), the 2 of 3 with the largest initial errors",
+                          [call.args[0] for call in printed.call_args_list])
+            # The typo guard checks every sample, recorded or not
+            check_error_fractions(ErrorFractions(["static/S:2=0.1"]), cases)
 
     def test_plain_label(self):
         """The paper figures' case labels as plain text, with and without Unicode; the title uses them."""

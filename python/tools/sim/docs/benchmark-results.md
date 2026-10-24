@@ -240,7 +240,7 @@ the viewers need the full results and the dataset.
 | `benchmark_iterations.py` | tables of iterations to each level, median [25th–75th percentile] VBD sweeps, or Newton steps and CG iterations, with n/N, as Markdown and LaTeX | `python -m python.tools.sim.benchmark_iterations RESULTS.h5 -o TABLES/iterations [--budget-factor 2]` |
 | `benchmark_thin.py` | the thin copy of a results file (2.6), checked against the full one | `python -m python.tools.sim.benchmark_thin RESULTS.h5 -o RESULTS-thin.h5 [--max-entries 1000]` |
 | `benchmark_viewer.py` | interactive Polyscope viewer of the trajectories: the solvers side by side, in sync, with the reference, inertial target and start-state overlays, error colors and per-level jumps | `python -m python.tools.sim.benchmark_viewer RESULTS.h5 [--dataset path/to/trampolines.h5]` |
-| `benchmark_video.py` | MP4s of the viewer's side-by-side comparisons, one per benchmark: every trajectory sample, each opening on its start state for a second ("Initial"), titled and labeled in Linux Biolinum (6.1) | `python -m python.tools.sim.benchmark_video RESULTS.h5 -o VIDEOS/trampolines [--benchmarks static] [--cases Y1e5] [--samples 0] [--error-fraction ...]` |
+| `benchmark_video.py` | MP4s of the viewer's side-by-side comparisons, one per benchmark: every trajectory sample (or per case the N with the largest initial error, `--samples-per-case N`), each opening on its start state for a second ("Initial"), titled and labeled in Linux Biolinum (6.1) | `python -m python.tools.sim.benchmark_video RESULTS.h5 -o VIDEOS/trampolines [--benchmarks static] [--cases Y1e5] [--samples 0] [--samples-per-case 3] [--error-fraction ...]` |
 | `python/examples/benchmark_browser.py` | interactive Polyscope browser of the dataset: each problem's start state, velocities, inertial target and reference, with energies and sampler diagnostics | `cd python/examples && python benchmark_browser.py -d path/to/trampolines.h5` |
 
 - **Plotting dependencies:** the plotting and table scripts need `h5py`, `numpy` and `matplotlib`. The viewers also
@@ -259,7 +259,7 @@ videos use:
 
 ```bash
 python -m python.tools.sim.benchmark_video data/benchmarks/results/trampolines.30kJ.h5 \
-    -o data/benchmarks/results/videos/trampolines.30kJ \
+    -o data/benchmarks/results/videos/trampolines.30kJ --samples-per-case 3 \
     --error-fraction static/Y1e5=0.2 --error-fraction static/Y1e6=0.2 \
     --error-fraction static/Y1e7=0.5 --error-fraction static/Y1e7:0=0.2 \
     --error-fraction static/het=0.5 --error-fraction static/het:9=0.3 \
@@ -272,6 +272,12 @@ How they were chosen, from each trajectory sample's last frame (2 x T_N): a prob
 ends unconverged (e/e0 > 1e-2); the fraction is the largest of 1, 0.5, 0.3, 0.2, 0.1, 0.05, 0.03 that puts that
 solver's largest vertex error between 0.3 and 1 of the scale (visible, not saturated), while the converged solvers
 stay dark. A case takes the value most of its samples agree on, and a sample outside that band gets its own.
+
+The videos show 3 of each case's 8 trajectory samples (`--samples-per-case 3`): those with the largest initial
+error, the largest vertex error |x(0) − x\*| (the color scale's 100%), in sample order; the script prints its pick
+with the errors. The fractions were chosen over all 8 samples, and every picked sample is in the band at its
+fraction (0.34–0.85 of the scale); the entries of dynamic_h0.01/Y1e8 sample 13 and het sample 22 match unpicked
+samples and only apply in the viewer.
 
 | Problems | Fraction | Why |
 |---|---|---|
