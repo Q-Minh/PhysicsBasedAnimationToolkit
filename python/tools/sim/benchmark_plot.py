@@ -625,7 +625,8 @@ def add_frames(fig, region: Bbox, frames: dict, headers: dict) -> Bbox:
             h = width * image.shape[0] / image.shape[1]
             alpha = np.clip((1.0 - image.min(axis=2)) / 0.04, 0.0, 1.0)  # white transparent, antialiased edges partly
             ax = fig.add_axes(((x_frames + j * pitch) / fig_w, (top - (row_h + h) / 2) / fig_h, width / fig_w, h / fig_h))
-            ax.imshow(np.dstack([image, alpha]), interpolation="lanczos")
+            # Unresampled: vector outputs (PDF) embed the frame at its own resolution, not at the save dpi
+            ax.imshow(np.dstack([image, alpha]), interpolation="none")
             ax.set_axis_off()
         top -= row_h + FRAMES_GAP
     return Bbox.from_extents(x_frames - FRAMES_GAP - label_w, region.y0, region.x1, region.y1)
