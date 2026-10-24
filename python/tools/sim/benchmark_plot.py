@@ -104,12 +104,12 @@ PAPER_SERIF = ("Linux Libertine O", "Linux Libertine", "Libertinus Serif")
 PAPER_MONO = ("Linux Libertine Mono O", "Libertinus Mono")
 
 
-def use_paper_fonts(font_dir: str | None = None) -> str | None:
-    """Sets Matplotlib's fonts to the Linux Libertine family: figure text and math in Linux Biolinum (the sans
-    serif), with Linux Libertine as the serif and Linux Libertine Mono as the monospace font. The fonts come from
-    ``font_dir``, else the ``PBAT_FONT_DIR`` environment variable's directory, else the installed fonts (also ones
-    installed after Matplotlib built its font cache). Returns the sans family used; without it, warns and keeps
-    Matplotlib's fonts."""
+def register_paper_fonts(font_dir: str | None = None) -> tuple[str | None, str | None, str | None]:
+    """Registers the Linux Libertine family with Matplotlib's font manager: the fonts in ``font_dir``, else in the
+    ``PBAT_FONT_DIR`` environment variable's directory, else the installed fonts (also ones installed after
+    Matplotlib built its font cache). Returns the family names found for Linux Biolinum (the sans serif), Linux
+    Libertine (the serif) and Linux Libertine Mono, None for those missing; ``font_manager.findfont`` gives
+    their files."""
     from matplotlib import font_manager
 
     def add(paths):
@@ -130,7 +130,15 @@ def use_paper_fonts(font_dir: str | None = None) -> str | None:
     if first(PAPER_SANS) is None or first(PAPER_SERIF) is None:
         add(p for p in font_manager.findSystemFonts()
             if any(key in os.path.basename(p).lower() for key in ("libertin", "biolin")))
-    sans, serif, mono = first(PAPER_SANS), first(PAPER_SERIF), first(PAPER_MONO)
+    return first(PAPER_SANS), first(PAPER_SERIF), first(PAPER_MONO)
+
+
+def use_paper_fonts(font_dir: str | None = None) -> str | None:
+    """Sets Matplotlib's fonts to the Linux Libertine family: figure text and math in Linux Biolinum (the sans
+    serif), with Linux Libertine as the serif and Linux Libertine Mono as the monospace font. The fonts come from
+    ``font_dir``, else the ``PBAT_FONT_DIR`` environment variable's directory, else the installed fonts
+    (:func:`register_paper_fonts`). Returns the sans family used; without it, warns and keeps Matplotlib's fonts."""
+    sans, serif, mono = register_paper_fonts(font_dir)
     matplotlib.rcParams["pdf.fonttype"] = 42  # embed the fonts as TrueType/OpenType, editable text in the PDF
     for key, name in (("font.serif", serif), ("font.monospace", mono)):
         if name is not None:
