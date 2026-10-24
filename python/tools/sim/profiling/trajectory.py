@@ -7,6 +7,11 @@ They come from the saved frames, so they need neither a GPU nor changes to the s
   between them, given to every time step of that frame interval. Peaks shorter than a frame interval are
   smoothed out; run ``simulate.py`` with ``--fps`` at the step rate (1 / dt) for one value per step. Steps
   after the last frame get none.
+- ``rms_speed`` (m/s): over the same frame interval, the mass-weighted RMS node speed sqrt(sum_i m_i |v_i|^2 /
+  sum_i m_i) = sqrt(2 K / M), the overall motion (tied to the kinetic energy K, comparable across scenes since it
+  doesn't grow with the node count). Over the free nodes only (``FemElastoDynamics/dmask`` 0, masses
+  ``FemElastoDynamics/m``): Dirichlet nodes, static or kinematically driven, are left out, so static colliders
+  don't dilute it, but anchored deformable bodies' free nodes count. Without masses in the output, unweighted.
 
 Usage (from the repo root; adds the keys to the result in place, or writes ``-o``):
 
@@ -37,29 +42,38 @@ def frame_steps(h5f: h5py.File) -> np.ndarray:
     return np.array(steps, dtype=np.int64)
 
 
-def peak_speeds(h5f: h5py.File) -> tuple[np.ndarray, np.ndarray]:
-    """Peak node speed per frame interval.
+def frame_speeds(h5f: h5py.File) -> tuple[np.ndarray, dict[str, np.ndarray]]:
+    """Node speeds per frame interval: the peak and the mass-weighted RMS (see the module docstring).
 
     Returns:
-        tuple[np.ndarray, np.ndarray]: The time step count at each frame (F,) and the largest node speed
-        (m/s) between consecutive frames (F - 1,).
+        tuple[np.ndarray, dict[str, np.ndarray]]: The time step count at each frame (F,), and ``peak_speed`` and
+        ``rms_speed`` (m/s) between consecutive frames, each (F - 1,).
     """
     steps = frame_steps(h5f)
     dt = float(h5f["params/Integration"].attrs["dt"])
     frames = sorted(k for k in h5f["sim"].keys() if k.isdigit())
-    speeds = np.zeros(max(len(frames) - 1, 0))
-    x0 = h5f["sim"][frames[0]]["x"][()] if frames else None
+    fem = h5f.get("FemElastoDynamics")
+    n_nodes = h5f["sim"][frames[0]]["x"].shape[0] if frames else 0
+    m = np.asarray(fem["m"], dtype=np.float64) if fem is not None and "m" in fem else np.ones(n_nodes)
+    free = np.asarray(fem["dmask"]) == 0 if fem is not None and "dmask" in fem else np.ones(n_nodes, dtype=bool)
+    w = np.where(free, m, 0.0)
+    w = w / max(float(w.sum()), 1e-30)
+    out = {key: np.zeros(max(len(frames) - 1, 0)) for key in ("peak_speed", "rms_speed")}
+    x0 = h5f["sim"][frames[0]]["x"][()].astype(np.float64) if frames else None
     for f in range(1, len(frames)):
-        x1 = h5f["sim"][frames[f]]["x"][()]
+        x1 = h5f["sim"][frames[f]]["x"][()].astype(np.float64)
         elapsed = (steps[f] - steps[f - 1]) * dt
-        speeds[f - 1] = np.linalg.norm(x1 - x0, axis=1).max() / elapsed if elapsed > 0 else 0.0
+        if elapsed > 0:
+            speed2 = np.sum((x1 - x0) ** 2, axis=1) / elapsed**2
+            out["peak_speed"][f - 1] = np.sqrt(speed2.max())
+            out["rms_speed"][f - 1] = np.sqrt(w @ speed2)
         x0 = x1
-    return steps, speeds
+    return steps, out
 
 
-def annotate(result: dict, steps: np.ndarray, speeds: np.ndarray) -> int:
-    """Set each step's ``peak_speed`` from its frame interval: time step t (from count t to t + 1) lies
-    in the interval of frames f - 1 and f with ``steps[f - 1] <= t < steps[f]``.
+def annotate(result: dict, steps: np.ndarray, speeds: dict[str, np.ndarray]) -> int:
+    """Set each step's speeds (:func:`frame_speeds`) from its frame interval: time step t (from count t to t + 1)
+    lies in the interval of frames f - 1 and f with ``steps[f - 1] <= t < steps[f]``.
 
     Returns:
         int: The number of steps annotated.
@@ -68,10 +82,12 @@ def annotate(result: dict, steps: np.ndarray, speeds: np.ndarray) -> int:
     for step in result["steps"]:
         f = int(np.searchsorted(steps, step["t"], side="right"))
         if 1 <= f < len(steps):
-            step["peak_speed"] = float(speeds[f - 1])
+            for key, values in speeds.items():
+                step[key] = float(values[f - 1])
             n += 1
         else:
-            step.pop("peak_speed", None)
+            for key in speeds:
+                step.pop(key, None)
     return n
 
 
@@ -87,11 +103,11 @@ def main():
         dt = float(h5f["params/Integration"].attrs["dt"])
         if "dt" in result["metadata"] and not np.isclose(result["metadata"]["dt"], dt):
             raise ValueError(f"time steps differ: result dt {result['metadata']['dt']}, trajectory dt {dt}")
-        steps, speeds = peak_speeds(h5f)
+        steps, speeds = frame_speeds(h5f)
     n = annotate(result, steps, speeds)
     out = args.out or args.result
     results.save(result, out)
-    print(f"Annotated {n} of {len(result['steps'])} steps with peak_speed, wrote {out}")
+    print(f"Annotated {n} of {len(result['steps'])} steps with {', '.join(speeds)}, wrote {out}")
 
 
 import unittest
@@ -104,6 +120,8 @@ class TestTrajectory(unittest.TestCase):
         with h5py.File(path, "w") as f:
             f.create_group("params").attrs["fps"] = fps
             f["params"].create_group("Integration").attrs["dt"] = dt
+            f.create_dataset("FemElastoDynamics/m", data=np.array([1.0, 3.0, 5.0]))
+            f.create_dataset("FemElastoDynamics/dmask", data=np.array([0, 0, 1]))  # node 2 held
             for frame, t in enumerate([0, 2, 4, 6]):
                 x = np.zeros((3, 3))
                 x[1, 0] = 0.1 * frame**2  # node 1 moves 0.1, 0.3, 0.5 m per frame interval
@@ -121,15 +139,18 @@ class TestTrajectory(unittest.TestCase):
                 path = os.path.join(d, "out.h5")
                 self._write(path, with_t)
                 with h5py.File(path, "r") as f:
-                    steps, speeds = peak_speeds(f)
+                    steps, speeds = frame_speeds(f)
             self.assertEqual(steps.tolist(), [0, 2, 4, 6])
-            np.testing.assert_allclose(speeds, [5.0, 15.0, 25.0])
+            np.testing.assert_allclose(speeds["peak_speed"], [5.0, 15.0, 25.0])
+            # Node 1 (mass 3 of the free 4) moves, node 0 doesn't, node 2 is held: sqrt(3/4) of node 1's speed
+            np.testing.assert_allclose(speeds["rms_speed"], np.sqrt(0.75) * np.array([5.0, 15.0, 25.0]))
             result = {"steps": [{"t": t} for t in range(8)]}
             self.assertEqual(annotate(result, steps, speeds), 6)
             np.testing.assert_allclose([s["peak_speed"] for s in result["steps"][:6]],
                                        [5.0, 5.0, 15.0, 15.0, 25.0, 25.0])
+            np.testing.assert_allclose(result["steps"][2]["rms_speed"], np.sqrt(0.75) * 15.0)
             self.assertNotIn("peak_speed", result["steps"][6])
-            self.assertNotIn("peak_speed", result["steps"][7])
+            self.assertNotIn("rms_speed", result["steps"][7])
 
 
 if __name__ == "__main__":

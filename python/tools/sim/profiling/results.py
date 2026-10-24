@@ -23,8 +23,10 @@ Nsight Systems importer, so reports can consume either. Layout::
                                        # time from CUDA events around it, i.e. graph replay
          "status": {...},              # simulate.py: the step's solve statuses, one entry per substep
                                        # (status.StatusLog.step_entry: outcome, iterations, ratios)
-         "peak_speed": m/s}            # profiling/trajectory.py: the largest node speed over the
+         "peak_speed": m/s,            # profiling/trajectory.py: the largest node speed over the
                                        # frame interval that contains the step (from saved frames)
+         "rms_speed": m/s}             # profiling/trajectory.py: the free nodes' mass-weighted RMS
+                                       # speed over that interval, sqrt(2 K / M)
       ],
       "kernels": [{"path": str, "name": str, "busy_ms": ms, "count": n}]  # summed over steps
     }

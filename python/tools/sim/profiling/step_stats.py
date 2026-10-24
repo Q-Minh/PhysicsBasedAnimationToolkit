@@ -98,7 +98,7 @@ def per_step(result: dict) -> dict:
     """Per-step arrays of a result, in step order.
 
     Returns:
-        dict: ``t``, ``time_ms`` (:func:`step_time_ms`), ``span_ms``, ``peak_speed``, the
+        dict: ``t``, ``time_ms`` (:func:`step_time_ms`), ``span_ms``, ``peak_speed``, ``rms_speed``, the
         :func:`solve_outcome` fields ``solves``, ``converged``, ``iterations``, ``outer``,
         ``gradient_ratio``, ``feasibility_ratio`` (NaN where unknown), ``unit`` (a string) and
         ``phases`` (phase name -> per-step ms, 0 where a step has no work in it).
@@ -113,6 +113,7 @@ def per_step(result: dict) -> dict:
         "time_ms": np.array([step_time_ms(s) for s in steps]),
         "span_ms": np.array([s.get("step_span_ms", nan) for s in steps], dtype=float),
         "peak_speed": np.array([s.get("peak_speed", nan) for s in steps], dtype=float),
+        "rms_speed": np.array([s.get("rms_speed", nan) for s in steps], dtype=float),
         **{k: np.array([o[k] for o in outcomes], dtype=float)
            for k in ("solves", "converged", "iterations", "outer", "gradient_ratio", "feasibility_ratio")},
         "unit": next((o["unit"] for o in outcomes if o["unit"]), ""),
